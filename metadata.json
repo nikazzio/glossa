@@ -1,0 +1,6 @@
+{
+  "name": "TransLab: Multi-Stage AI Translator",
+  "description": "Advanced translation pipeline with chunking, glossary support, multi-stage refinement, and LLM-as-a-judge error detection.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
