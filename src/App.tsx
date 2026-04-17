@@ -14,6 +14,7 @@ import {
   Edit3,
   Search,
   ArrowRight,
+  ArrowRightLeft,
   Settings,
   Layers,
   ShieldCheck,
@@ -22,7 +23,9 @@ import {
   ChevronUp,
   X,
   RefreshCcw,
-  Zap
+  Zap,
+  Copy,
+  Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { llmService } from './services/llmService.ts';
@@ -50,6 +53,19 @@ const MODEL_OPTIONS: Record<ModelProvider, string[]> = {
   deepseek: ['deepseek-chat', 'deepseek-reasoner']
 };
 
+const LANGUAGES = [
+  "English",
+  "Italian",
+  "Spanish",
+  "French",
+  "German",
+  "Portuguese",
+  "Japanese",
+  "Chinese",
+  "Korean",
+  "Russian"
+];
+
 export default function App() {
   const [inputText, setInputText] = useState("");
   const [showSettings, setShowSettings] = useState(false);
@@ -60,21 +76,31 @@ export default function App() {
     judgePrompt: DEFAULT_JUDGE_PROMPT,
     judgeModel: "gemini-3-flash-preview",
     judgeProvider: "gemini",
-    glossary: []
+    glossary: [],
+    useChunking: true
   });
   const [chunks, setChunks] = useState<TranslationChunk[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const generateChunks = useCallback(() => {
     if (!inputText.trim()) return;
-    const items = inputText.split('\n\n').filter(p => p.trim()).map((text, i) => ({
+    const texts = config.useChunking !== false 
+      ? inputText.split('\n\n').filter(p => p.trim()) 
+      : [inputText.trim()].filter(Boolean);
+
+    const items = texts.map((text, i) => ({
       id: `chunk-${i}`,
       originalText: text,
       stageResults: {},
       judgeResult: { content: "", status: 'idle', score: 0, issues: [] } as JudgeResult,
+      currentDraft: ""
     }));
     setChunks(items);
-  }, [inputText]);
+  }, [inputText, config.useChunking]);
+
+  const updateChunkDraft = (chunkId: string, draft: string) => {
+    setChunks(prev => prev.map(c => c.id === chunkId ? { ...c, currentDraft: draft } : c));
+  };
 
   const updateChunkStage = (chunkId: string, stageId: string, result: PipelineResult) => {
     setChunks(prev => prev.map(c => c.id === chunkId ? {
@@ -98,11 +124,15 @@ export default function App() {
     setChunks(prev => prev.map(c => ({
         ...c,
         stageResults: {},
-        judgeResult: { content: "", status: 'idle', score: 0, issues: [] } as JudgeResult
+        judgeResult: { content: "", status: 'idle', score: 0, issues: [] } as JudgeResult,
+        currentDraft: "" // Reset draft
     })));
 
-    for (const chunk of chunks) {
-      let currentInput = chunk.originalText;
+    // To ensure UI gets the most up to date drafts in one pass
+    const processedChunks: TranslationChunk[] = [...chunks];
+
+    for (let cIdx = 0; cIdx < processedChunks.length; cIdx++) {
+      const chunk = processedChunks[cIdx];
       let lastResult = "";
 
       // Execute each enabled stage
@@ -116,9 +146,13 @@ export default function App() {
           updateChunkStage(chunk.id, stage.id, { content: result, status: 'completed' });
         } catch (error: any) {
           updateChunkStage(chunk.id, stage.id, { content: "", status: 'error', error: error.message });
-          // Stop pipeline for this chunk on error
           break;
         }
+      }
+
+      // Update current draft state before judging
+      if (lastResult) {
+        updateChunkDraft(chunk.id, lastResult);
       }
 
       // Final Audit (Judge)
@@ -130,6 +164,25 @@ export default function App() {
         } catch (error: any) {
             updateChunkJudge(chunk.id, { content: lastResult, status: 'error', score: 0, issues: [], error: error.message });
         }
+      }
+    }
+    setIsProcessing(false);
+  };
+
+  const runAuditOnly = async () => {
+    if (chunks.length === 0) return;
+    setIsProcessing(true);
+
+    for (const chunk of chunks) {
+      const textToAudit = chunk.currentDraft;
+      if (!textToAudit) continue;
+
+      updateChunkJudge(chunk.id, { content: "", status: 'processing', score: 0, issues: [] });
+      try {
+          const judgeData = await llmService.judgeTranslation(chunk.originalText, textToAudit, config);
+          updateChunkJudge(chunk.id, { ...judgeData, content: textToAudit, status: 'completed' });
+      } catch (error: any) {
+          updateChunkJudge(chunk.id, { content: textToAudit, status: 'error', score: 0, issues: [], error: error.message });
       }
     }
     setIsProcessing(false);
@@ -187,20 +240,40 @@ export default function App() {
               <div className="space-y-4">
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-editorial-muted">Language Pair</label>
                 <div className="flex items-center gap-3">
-                  <input 
+                  <select 
                     value={config.sourceLanguage}
                     onChange={e => setConfig(prev => ({ ...prev, sourceLanguage: e.target.value }))}
-                    placeholder="From"
-                    className="w-full bg-editorial-textbox border-none px-3 py-2 text-xs font-mono outline-none focus:ring-1 focus:ring-editorial-ink/10"
-                  />
-                  <ArrowRight size={14} className="text-editorial-muted shrink-0" />
-                  <input 
+                    className="w-full bg-editorial-textbox border-none px-3 py-2 text-xs font-mono outline-none focus:ring-1 focus:ring-editorial-ink/10 appearance-none"
+                  >
+                    {LANGUAGES.map(lang => <option key={lang} value={lang}>{lang}</option>)}
+                  </select>
+                  <button 
+                    onClick={() => setConfig(prev => ({ ...prev, sourceLanguage: prev.targetLanguage, targetLanguage: prev.sourceLanguage }))}
+                    className="text-editorial-muted hover:text-editorial-ink transition-colors hover:scale-110 shrink-0"
+                    title="Swap Languages"
+                  >
+                    <ArrowRightLeft size={14} />
+                  </button>
+                  <select 
                     value={config.targetLanguage}
                     onChange={e => setConfig(prev => ({ ...prev, targetLanguage: e.target.value }))}
-                    placeholder="To"
-                    className="w-full bg-editorial-textbox border-none px-3 py-2 text-xs font-mono outline-none focus:ring-1 focus:ring-editorial-ink/10"
-                  />
+                    className="w-full bg-editorial-textbox border-none px-3 py-2 text-xs font-mono outline-none focus:ring-1 focus:ring-editorial-ink/10 appearance-none"
+                  >
+                    {LANGUAGES.map(lang => <option key={lang} value={lang}>{lang}</option>)}
+                  </select>
                 </div>
+                
+                <label className="flex items-center gap-2 mt-4 cursor-pointer w-max group">
+                  <input 
+                    type="checkbox" 
+                    checked={config.useChunking !== false} 
+                    onChange={e => setConfig(prev => ({...prev, useChunking: e.target.checked}))} 
+                    className="accent-editorial-ink w-3 h-3" 
+                  />
+                  <span className="text-[10px] uppercase font-bold tracking-widest text-editorial-muted group-hover:text-editorial-ink transition-colors">
+                    Auto-Segment (Paragraphs)
+                  </span>
+                </label>
               </div>
             </div>
 
@@ -242,12 +315,12 @@ export default function App() {
                       {MODEL_OPTIONS[config.judgeProvider].map(m => <option key={m} value={m}>{m}</option>)}
                     </select>
                 </div>
-                <textarea 
+                  <textarea 
                   value={config.judgePrompt}
                   onChange={e => setConfig(prev => ({ ...prev, judgePrompt: e.target.value }))}
                   placeholder="Audit instructions..."
-                  rows={4}
-                  className="w-full bg-editorial-textbox border-none p-4 text-xs font-mono outline-none leading-relaxed resize-none"
+                  rows={6}
+                  className="w-full bg-editorial-textbox border-none p-4 text-xs font-mono outline-none leading-relaxed resize-y"
                 />
               </div>
             </div>
@@ -288,23 +361,39 @@ export default function App() {
             </div>
           </div>
           
-          <button 
-            onClick={runPipeline}
-            disabled={isProcessing || chunks.length === 0}
-            className="mt-10 bg-editorial-ink text-white px-6 py-4 text-[11px] font-bold uppercase tracking-[2px] transition-all hover:bg-black/90 disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
-          >
-            {isProcessing ? (
-              <span className="flex items-center justify-center gap-2">
-                <Loader2 className="animate-spin" size={14} /> 
-                Executing...
-              </span>
-            ) : <span className="flex items-center justify-center gap-2"><Play size={14} fill="currentColor" /> Begin Pipeline</span>}
-          </button>
+          <div className="mt-10 flex flex-col gap-3 shrink-0">
+            <button 
+              onClick={runPipeline}
+              disabled={isProcessing || chunks.length === 0}
+              className="bg-editorial-ink text-white px-6 py-4 text-[11px] font-bold uppercase tracking-[2px] transition-all hover:bg-black/90 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              {isProcessing ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="animate-spin" size={14} /> 
+                  Executing...
+                </span>
+              ) : <span className="flex items-center justify-center gap-2"><Play size={14} fill="currentColor" /> Begin Pipeline</span>}
+            </button>
+            <button 
+              onClick={runAuditOnly}
+              disabled={isProcessing || chunks.length === 0}
+              className="bg-transparent border border-editorial-ink text-editorial-ink px-6 py-4 text-[11px] font-bold uppercase tracking-[2px] transition-all hover:bg-editorial-ink/5 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              Run Audit Only
+            </button>
+          </div>
         </section>
 
         {/* Panel 2: Stream */}
         <section className="col-span-1 md:col-span-6 bg-white p-8 overflow-y-auto max-h-[calc(100vh-140px)] border-r border-editorial-border custom-scrollbar">
-          <h2 className="font-display text-sm uppercase tracking-wider border-b border-editorial-ink pb-2 mb-10 inline-block">Production Stream</h2>
+          <div className="flex items-center justify-between border-b border-editorial-ink pb-2 mb-10">
+            <h2 className="font-display text-sm uppercase tracking-wider inline-block">Production Stream</h2>
+            {chunks.length > 0 && (
+              <button onClick={() => setChunks([])} className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted hover:text-red-500 transition-colors flex items-center gap-1">
+                 <Trash2 size={12} /> Clear Stream
+              </button>
+            )}
+          </div>
           
           <div className="space-y-16">
             {!chunks.length && (
@@ -361,6 +450,19 @@ export default function App() {
                           </div>
                       );
                   })}
+                  
+                  <div className="space-y-3 mt-8">
+                    <div className="flex items-center justify-between">
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-editorial-muted">Candidate Translation</label>
+                        <CopyButton text={chunk.currentDraft || ""} />
+                    </div>
+                    <textarea
+                       value={chunk.currentDraft || ""}
+                       onChange={(e) => updateChunkDraft(chunk.id, e.target.value)}
+                       className="w-full bg-editorial-bg/50 border border-editorial-border p-4 text-sm font-sans outline-none focus:ring-1 focus:ring-editorial-ink/10 resize-y min-h-[100px] leading-relaxed transition-all"
+                       placeholder="Output will appear here. Edit manually before auditing..."
+                    />
+                  </div>
                 </div>
               </div>
             ))}
@@ -422,6 +524,13 @@ export default function App() {
           </div>
 
           <div className="mt-auto space-y-4">
+             <button 
+                onClick={runAuditOnly}
+                disabled={isProcessing || chunks.length === 0}
+                className="w-full bg-transparent border border-editorial-ink text-editorial-ink px-4 py-4 text-[11px] font-bold uppercase tracking-[3px] hover:bg-editorial-ink hover:text-white transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group shadow-sm active:translate-y-px"
+              >
+                <RefreshCcw size={14} className={isProcessing ? "animate-spin" : ""} /> Re-Evaluate Drafts
+              </button>
              <button 
                 onClick={() => setChunks([])}
                 className="w-full border border-editorial-border px-4 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-red-50 hover:text-red-500 transition-all flex items-center justify-center gap-2"
@@ -544,8 +653,8 @@ function StageCard({ stage, index, onUpdate, onRemove }: {
                       value={stage.prompt}
                       onChange={e => onUpdate({ prompt: e.target.value })}
                       placeholder="Stage specific prompt..."
-                      rows={4}
-                      className="w-full bg-editorial-textbox border-none p-3 text-[11px] font-mono outline-none leading-relaxed resize-none"
+                      rows={6}
+                      className="w-full bg-editorial-textbox border-none p-3 text-[11px] font-mono outline-none leading-relaxed resize-y"
                     />
                 </div>
             )}
@@ -606,4 +715,22 @@ function calculateCompositeScore(chunks: TranslationChunk[]) {
 
 function indexPad(n: number): string {
   return n < 10 ? `0${n}` : String(n);
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <button 
+      onClick={handleCopy} 
+      className="text-editorial-muted hover:text-editorial-ink transition-colors flex items-center gap-1.5 text-[9px] uppercase font-bold tracking-widest"
+    >
+       {copied ? <Check size={12} /> : <Copy size={12} />}
+       {copied ? 'Copied' : 'Copy'}
+    </button>
+  );
 }

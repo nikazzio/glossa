@@ -20,6 +20,7 @@ export interface TranslationChunk {
   originalText: string;
   stageResults: Record<string, PipelineResult>; // Key is stage id
   judgeResult: JudgeResult;
+  currentDraft?: string;
 }
 
 export interface PipelineResult {
@@ -48,4 +49,5 @@ export interface PipelineConfig {
   judgeModel: string;
   judgeProvider: ModelProvider;
   glossary: GlossaryEntry[];
+  useChunking?: boolean;
 }
