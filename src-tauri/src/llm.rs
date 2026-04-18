@@ -701,3 +701,240 @@ pub async fn test_provider_connection(
         Err(e) => Err(e),
     }
 }
+
+// ── Tests ────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_config() -> PipelineConfig {
+        PipelineConfig {
+            source_language: "English".into(),
+            target_language: "Italian".into(),
+            stages: vec![],
+            judge_prompt: "Evaluate translation quality.".into(),
+            judge_model: "gemini-3-flash-preview".into(),
+            judge_provider: "gemini".into(),
+            glossary: vec![
+                GlossaryEntry {
+                    term: "API".into(),
+                    translation: "API".into(),
+                    notes: Some("Keep as-is".into()),
+                },
+            ],
+            use_chunking: Some(true),
+        }
+    }
+
+    fn make_stage(provider: &str) -> StageConfig {
+        StageConfig {
+            id: "stg-1".into(),
+            name: "Translation".into(),
+            prompt: "Translate accurately.".into(),
+            model: "test-model".into(),
+            provider: provider.into(),
+            enabled: true,
+        }
+    }
+
+    // ── extract_streaming_text ───────────────────────────────────────
+
+    #[test]
+    fn extract_gemini_streaming() {
+        let data = r#"{"candidates":[{"content":{"parts":[{"text":"Ciao"}]}}]}"#;
+        assert_eq!(extract_streaming_text("gemini", data), Some("Ciao".into()));
+    }
+
+    #[test]
+    fn extract_openai_streaming() {
+        let data = r#"{"choices":[{"delta":{"content":"Hello"}}]}"#;
+        assert_eq!(extract_streaming_text("openai", data), Some("Hello".into()));
+    }
+
+    #[test]
+    fn extract_deepseek_streaming() {
+        let data = r#"{"choices":[{"delta":{"content":"Bonjour"}}]}"#;
+        assert_eq!(extract_streaming_text("deepseek", data), Some("Bonjour".into()));
+    }
+
+    #[test]
+    fn extract_ollama_streaming() {
+        let data = r#"{"choices":[{"delta":{"content":"Hola"}}]}"#;
+        assert_eq!(extract_streaming_text("ollama", data), Some("Hola".into()));
+    }
+
+    #[test]
+    fn extract_anthropic_content_block_delta() {
+        let data = r#"{"type":"content_block_delta","delta":{"text":"Guten Tag"}}"#;
+        assert_eq!(extract_streaming_text("anthropic", data), Some("Guten Tag".into()));
+    }
+
+    #[test]
+    fn extract_anthropic_non_delta_returns_none() {
+        let data = r#"{"type":"message_start","message":{"id":"msg_1"}}"#;
+        assert_eq!(extract_streaming_text("anthropic", data), None);
+    }
+
+    #[test]
+    fn extract_unknown_provider_returns_none() {
+        let data = r#"{"text":"hello"}"#;
+        assert_eq!(extract_streaming_text("unknown", data), None);
+    }
+
+    #[test]
+    fn extract_invalid_json_returns_none() {
+        assert_eq!(extract_streaming_text("gemini", "not json"), None);
+    }
+
+    #[test]
+    fn extract_empty_content_returns_empty_string() {
+        let data = r#"{"choices":[{"delta":{"content":""}}]}"#;
+        assert_eq!(extract_streaming_text("openai", data), Some("".into()));
+    }
+
+    #[test]
+    fn extract_missing_path_returns_none() {
+        let data = r#"{"choices":[]}"#;
+        assert_eq!(extract_streaming_text("openai", data), None);
+    }
+
+    // ── build_stage_prompts ─────────────────────────────────────────
+
+    #[test]
+    fn stage_prompt_without_previous() {
+        let config = make_config();
+        let stage = make_stage("gemini");
+        let (system, user) = build_stage_prompts("Hello world", &stage, &config, &None);
+
+        assert!(system.contains("English to Italian"));
+        assert!(system.contains("Translate accurately."));
+        assert!(system.contains("API -> API"));
+        assert!(user.contains("Hello world"));
+        assert!(!user.contains("Previous Iteration"));
+    }
+
+    #[test]
+    fn stage_prompt_with_previous() {
+        let config = make_config();
+        let stage = make_stage("openai");
+        let prev = Some("Ciao mondo".to_string());
+        let (system, user) = build_stage_prompts("Hello world", &stage, &config, &prev);
+
+        assert!(system.contains("English to Italian"));
+        assert!(user.contains("Hello world"));
+        assert!(user.contains("Ciao mondo"));
+        assert!(user.contains("Previous Iteration"));
+    }
+
+    #[test]
+    fn stage_prompt_empty_glossary() {
+        let mut config = make_config();
+        config.glossary = vec![];
+        let stage = make_stage("gemini");
+        let (system, _) = build_stage_prompts("text", &stage, &config, &None);
+
+        assert!(system.contains("No specific glossary entries"));
+    }
+
+    #[test]
+    fn stage_prompt_multiple_glossary_entries() {
+        let mut config = make_config();
+        config.glossary = vec![
+            GlossaryEntry { term: "API".into(), translation: "API".into(), notes: Some("tech".into()) },
+            GlossaryEntry { term: "bug".into(), translation: "errore".into(), notes: None },
+        ];
+        let stage = make_stage("gemini");
+        let (system, _) = build_stage_prompts("text", &stage, &config, &None);
+
+        assert!(system.contains("API -> API (tech)"));
+        assert!(system.contains("bug -> errore ()"));
+    }
+
+    // ── build_judge_prompts ─────────────────────────────────────────
+
+    #[test]
+    fn judge_prompt_includes_source_and_target() {
+        let config = make_config();
+        let (system, user) = build_judge_prompts("Hello", "Ciao", &config);
+
+        assert!(system.contains("English"));
+        assert!(system.contains("Italian"));
+        assert!(system.contains("Hello"));
+        assert!(system.contains("Ciao"));
+        assert!(system.contains("score"));
+        assert!(system.contains("issues"));
+        assert!(user.contains("audit"));
+    }
+
+    #[test]
+    fn judge_prompt_includes_instructions() {
+        let config = make_config();
+        let (system, _) = build_judge_prompts("src", "tgt", &config);
+
+        assert!(system.contains("Evaluate translation quality."));
+    }
+
+    #[test]
+    fn judge_prompt_includes_glossary_json() {
+        let config = make_config();
+        let (system, _) = build_judge_prompts("src", "tgt", &config);
+
+        assert!(system.contains("API"));
+        assert!(system.contains("Keep as-is"));
+    }
+
+    // ── Serialization ───────────────────────────────────────────────
+
+    #[test]
+    fn glossary_entry_deserializes() {
+        let json = r#"{"term":"API","translation":"API","notes":"Keep"}"#;
+        let entry: GlossaryEntry = serde_json::from_str(json).unwrap();
+        assert_eq!(entry.term, "API");
+        assert_eq!(entry.notes, Some("Keep".into()));
+    }
+
+    #[test]
+    fn judge_issue_serializes_type_as_type() {
+        let issue = JudgeIssue {
+            issue_type: "fluency".into(),
+            severity: "low".into(),
+            description: "Minor".into(),
+            suggested_fix: None,
+        };
+        let json = serde_json::to_string(&issue).unwrap();
+        assert!(json.contains(r#""type":"fluency"#));
+        assert!(!json.contains("issue_type"));
+    }
+
+    #[test]
+    fn stream_token_serializes_camel_case() {
+        let token = StreamToken {
+            stream_id: "s1".into(),
+            token: "hi".into(),
+            done: false,
+        };
+        let json = serde_json::to_string(&token).unwrap();
+        assert!(json.contains("streamId"));
+        assert!(!json.contains("stream_id"));
+    }
+
+    #[test]
+    fn pipeline_config_roundtrip() {
+        let config = make_config();
+        let json = serde_json::to_string(&config).unwrap();
+        let parsed: PipelineConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.source_language, "English");
+        assert_eq!(parsed.glossary.len(), 1);
+    }
+
+    // ── call_provider routing ───────────────────────────────────────
+
+    #[tokio::test]
+    async fn call_provider_rejects_unknown() {
+        let client = Client::new();
+        let result = call_provider(&client, "fake_provider", "m", "s", "u", "k", false).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Unsupported provider"));
+    }
+}

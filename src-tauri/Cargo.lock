@@ -1716,6 +1716,7 @@ dependencies = [
  "tauri-plugin-log",
  "tauri-plugin-sql",
  "tauri-plugin-store",
+ "tokio",
 ]
 
 [[package]]
