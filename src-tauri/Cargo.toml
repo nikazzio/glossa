@@ -1,6 +1,6 @@
 [package]
 name = "glossa"
-version = "0.1.0"
+version = "0.1.0" # x-release-please-version
 description = "Multi-stage AI translation pipeline for scholars"
 authors = ["Niki Corradetti"]
 license = "MIT"

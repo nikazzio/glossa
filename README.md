@@ -193,10 +193,7 @@ glossa/
 
 ## Contributing
 
-1. Fork the repo and create a branch
-2. Make your changes
-3. Run `npm run lint` (TypeScript check) and `npm run tauri:build` (full build)
-4. Open a PR
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, commit conventions, and the release process.
 
 ## License
 
