@@ -24,6 +24,7 @@ pub fn run() {
       llm::optimize_prompt,
       llm::save_api_key,
       llm::get_api_key_status,
+      llm::delete_api_key,
       llm::test_provider_connection,
     ])
     .run(tauri::generate_context!())

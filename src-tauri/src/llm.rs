@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use reqwest::Client;
 use tauri::AppHandle;
-use tauri_plugin_store::StoreExt;
 
 // ── Types matching frontend ──────────────────────────────────────────
 
@@ -55,23 +54,32 @@ pub struct JudgeResponse {
     pub content: String,
 }
 
-// ── API Key management ───────────────────────────────────────────────
+// ── API Key management (OS Keychain) ─────────────────────────────────
+
+const KEYRING_SERVICE: &str = "io.github.nikazzio.glossa";
+
+fn keyring_entry(provider: &str) -> Result<keyring::Entry, String> {
+    let username = format!("{}_API_KEY", provider.to_uppercase());
+    keyring::Entry::new(KEYRING_SERVICE, &username)
+        .map_err(|e| format!("Keyring error: {e}"))
+}
 
 fn get_api_key(app: &AppHandle, provider: &str) -> Result<String, String> {
-    // Try store first
-    let store = app.store("api-keys.json")
-        .map_err(|e| format!("Failed to open key store: {e}"))?;
-
-    let store_key = format!("{}_API_KEY", provider.to_uppercase());
-    if let Some(val) = store.get(&store_key) {
-        if let Some(key) = val.as_str() {
-            if !key.is_empty() {
-                return Ok(key.to_string());
+    // 1. Try OS keychain
+    if let Ok(entry) = keyring_entry(provider) {
+        if let Ok(secret) = entry.get_password() {
+            if !secret.is_empty() {
+                return Ok(secret);
             }
         }
     }
 
-    // Fallback to environment variable
+    // 2. Migrate from legacy tauri-plugin-store if present
+    if let Ok(key) = migrate_from_store(app, provider) {
+        return Ok(key);
+    }
+
+    // 3. Fallback to environment variable
     let env_key = match provider {
         "gemini" => "GEMINI_API_KEY",
         "openai" => "OPENAI_API_KEY",
@@ -84,19 +92,48 @@ fn get_api_key(app: &AppHandle, provider: &str) -> Result<String, String> {
         .map_err(|_| format!("{env_key} is not configured. Set it in Settings."))
 }
 
-#[tauri::command]
-pub async fn save_api_key(app: AppHandle, provider: String, key: String) -> Result<(), String> {
-    let store = app.store("api-keys.json")
-        .map_err(|e| format!("Failed to open key store: {e}"))?;
+/// One-time migration: read from old JSON store, save to keychain, delete from store.
+fn migrate_from_store(app: &AppHandle, provider: &str) -> Result<String, String> {
+    use tauri_plugin_store::StoreExt;
+
+    let store = app.store("api-keys.json").map_err(|e| format!("{e}"))?;
     let store_key = format!("{}_API_KEY", provider.to_uppercase());
-    store.set(&store_key, serde_json::Value::String(key));
-    store.save().map_err(|e| format!("Failed to save key: {e}"))?;
-    Ok(())
+
+    if let Some(val) = store.get(&store_key) {
+        if let Some(key) = val.as_str() {
+            if !key.is_empty() {
+                // Save to keychain
+                if let Ok(entry) = keyring_entry(provider) {
+                    let _ = entry.set_password(key);
+                }
+                // Remove from plain-text store
+                store.delete(&store_key);
+                let _ = store.save();
+                log::info!("Migrated {provider} API key from store to OS keychain");
+                return Ok(key.to_string());
+            }
+        }
+    }
+    Err("Not in legacy store".into())
+}
+
+#[tauri::command]
+pub async fn save_api_key(provider: String, key: String) -> Result<(), String> {
+    let entry = keyring_entry(&provider)?;
+    entry.set_password(&key)
+        .map_err(|e| format!("Failed to save to keychain: {e}"))
 }
 
 #[tauri::command]
 pub async fn get_api_key_status(app: AppHandle, provider: String) -> Result<bool, String> {
     Ok(get_api_key(&app, &provider).is_ok())
+}
+
+#[tauri::command]
+pub async fn delete_api_key(provider: String) -> Result<(), String> {
+    let entry = keyring_entry(&provider)?;
+    entry.delete_credential()
+        .map_err(|e| format!("Failed to delete from keychain: {e}"))
 }
 
 // ── Provider implementations ─────────────────────────────────────────

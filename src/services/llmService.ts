@@ -42,11 +42,15 @@ export const llmService = {
 };
 
 /**
- * Settings service for API key management via Tauri store.
+ * Settings service for API key management via OS Keychain.
  */
 export const settingsService = {
   async saveApiKey(provider: string, key: string): Promise<void> {
     return invoke('save_api_key', { provider, key });
+  },
+
+  async deleteApiKey(provider: string): Promise<void> {
+    return invoke('delete_api_key', { provider });
   },
 
   async isKeyConfigured(provider: string): Promise<boolean> {
