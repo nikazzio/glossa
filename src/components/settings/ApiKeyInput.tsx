@@ -55,7 +55,7 @@ export function ApiKeyInput({ label, provider }: ApiKeyInputProps) {
             value={keyValue}
             onChange={(e) => setKeyValue(e.target.value)}
             placeholder={t('settings.pasteApiKey')}
-            className="flex-1 bg-editorial-textbox border-none px-3 py-2 text-[10px] font-mono outline-none"
+            className="flex-1 bg-editorial-textbox border-none px-3 py-2 text-[10px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleSave();
               if (e.key === 'Escape') { setEditing(false); setKeyValue(''); }
@@ -65,14 +65,14 @@ export function ApiKeyInput({ label, provider }: ApiKeyInputProps) {
           <button
             onClick={handleSave}
             disabled={saving || !keyValue.trim()}
-            className="p-1.5 text-editorial-ink hover:text-editorial-accent disabled:opacity-30"
-            title={t('settings.save')}
+            className="p-1.5 text-editorial-ink hover:text-editorial-accent disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            aria-label={t('settings.save')}
           >
             {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
           </button>
           <button
             onClick={() => { setEditing(false); setKeyValue(''); }}
-            className="p-1.5 text-editorial-muted hover:text-editorial-ink text-[10px]"
+            className="p-1.5 text-editorial-muted hover:text-editorial-ink text-[10px] focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
           >
             {t('settings.cancel')}
           </button>
@@ -101,8 +101,8 @@ export function ApiKeyInput({ label, provider }: ApiKeyInputProps) {
         {isConfigured && (
           <button
             onClick={handleDelete}
-            className="p-1.5 text-editorial-muted hover:text-red-500 transition-colors"
-            title={t('settings.removeFromKeychain')}
+            className="p-1.5 text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            aria-label={t('settings.removeFromKeychain')}
           >
             <Trash2 size={14} />
           </button>

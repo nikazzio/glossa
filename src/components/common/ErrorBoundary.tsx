@@ -33,15 +33,15 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       }
 
       return (
-        <div className="flex flex-col items-center justify-center p-8 gap-4 text-center">
-          <AlertCircle size={32} className="text-red-500" />
+        <div className="flex flex-col items-center justify-center p-8 gap-4 text-center" role="alert" aria-live="assertive">
+          <AlertCircle size={32} className="text-editorial-accent" />
           <h3 className="font-display text-lg">{i18n.t('errors.somethingWentWrong')}</h3>
           <p className="text-xs text-editorial-muted max-w-md">
             {this.state.error?.message || i18n.t('errors.unexpectedError')}
           </p>
           <button
             onClick={() => this.setState({ hasError: false, error: null })}
-            className="px-4 py-2 bg-editorial-ink text-white text-[10px] font-bold uppercase tracking-widest hover:opacity-90"
+            className="px-4 py-2 bg-editorial-ink text-white text-[10px] font-bold uppercase tracking-widest hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
           >
             {i18n.t('errors.tryAgain')}
           </button>

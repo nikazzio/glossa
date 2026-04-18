@@ -62,8 +62,8 @@ export function Header() {
         {/* File actions */}
         <button
           onClick={handleImport}
-          className="p-2 border border-editorial-border text-editorial-muted hover:text-editorial-ink hover:bg-white transition-colors"
-          title={t('files.import')}
+          className="p-2 border border-editorial-border text-editorial-muted hover:text-editorial-ink hover:bg-editorial-textbox/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          aria-label={t('files.import')}
         >
           <Upload size={16} />
         </button>
@@ -71,15 +71,15 @@ export function Header() {
           <div className="flex items-center gap-0.5">
             <button
               onClick={() => handleExport('txt')}
-              className="p-2 border border-editorial-border text-editorial-muted hover:text-editorial-ink hover:bg-white transition-colors"
-              title={t('files.exportTxt')}
+              className="p-2 border border-editorial-border text-editorial-muted hover:text-editorial-ink hover:bg-editorial-textbox/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              aria-label={t('files.exportTxt')}
             >
               <Download size={16} />
             </button>
             <button
               onClick={() => handleExport('bilingual')}
-              className="px-2 py-2 border border-editorial-border text-editorial-muted hover:text-editorial-ink hover:bg-white transition-colors text-[9px] font-bold uppercase"
-              title={t('files.exportBilingual')}
+              className="px-2 py-2 border border-editorial-border text-editorial-muted hover:text-editorial-ink hover:bg-editorial-textbox/50 transition-colors text-[9px] font-bold uppercase focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              aria-label={t('files.exportBilingual')}
             >
               MD
             </button>
@@ -91,16 +91,16 @@ export function Header() {
         {/* Project actions */}
         <button
           onClick={() => setShowProjectPanel(true)}
-          className="p-2 border border-editorial-border text-editorial-muted hover:text-editorial-ink hover:bg-white transition-colors"
-          title={t('projects.title')}
+          className="p-2 border border-editorial-border text-editorial-muted hover:text-editorial-ink hover:bg-editorial-textbox/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          aria-label={t('projects.title')}
         >
           <FolderOpen size={16} />
         </button>
         {currentProjectId && (
           <button
             onClick={handleSave}
-            className="p-2 border border-editorial-border text-editorial-muted hover:text-editorial-ink hover:bg-white transition-colors"
-            title={t('projects.save')}
+            className="p-2 border border-editorial-border text-editorial-muted hover:text-editorial-ink hover:bg-editorial-textbox/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            aria-label={t('projects.save')}
           >
             <Save size={16} />
           </button>
@@ -115,23 +115,23 @@ export function Header() {
 
         <button
           onClick={toggleLang}
-          className="flex items-center gap-1.5 px-2 py-1.5 border border-editorial-border text-[10px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-ink hover:bg-white transition-colors"
-          title={t('language.label')}
+          className="flex items-center gap-1.5 px-2 py-1.5 border border-editorial-border text-[10px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-ink hover:bg-editorial-textbox/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          aria-label={t('language.label')}
         >
           <Globe size={14} />
           {i18n.language.toUpperCase()}
         </button>
         <button
           onClick={() => setShowSettings(true)}
-          className="p-2 border border-editorial-border hover:bg-editorial-ink hover:text-white transition-colors"
-          title={t('header.settings')}
+          className="p-2 border border-editorial-border hover:bg-editorial-ink hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          aria-label={t('header.settings')}
         >
           <Settings size={16} />
         </button>
         <button
           onClick={() => setShowHelp(true)}
-          className="p-2 border border-editorial-border text-editorial-muted hover:text-editorial-ink hover:bg-white transition-colors"
-          title={t('help.title')}
+          className="p-2 border border-editorial-border text-editorial-muted hover:text-editorial-ink hover:bg-editorial-textbox/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          aria-label={t('help.title')}
         >
           <HelpCircle size={16} />
         </button>

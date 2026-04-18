@@ -30,7 +30,20 @@
     "candidateTranslation": "Candidate Translation",
     "candidatePlaceholder": "Output will appear here. Edit manually before auditing...",
     "newStage": "New Stage",
-    "stagePromptPlaceholder": "Stage specific prompt..."
+    "stagePromptPlaceholder": "Stage specific prompt...",
+    "addStage": "Add stage",
+    "removeStage": "Remove stage",
+    "enableStage": "Enable stage",
+    "disableStage": "Disable stage",
+    "expandStage": "Expand stage",
+    "collapseStage": "Collapse stage",
+    "stageName": "Stage name",
+    "sourceLanguage": "Source language",
+    "targetLanguage": "Target language",
+    "addGlossaryEntry": "Add glossary entry",
+    "removeGlossaryEntry": "Remove glossary entry",
+    "copy": "Copy",
+    "copied": "Copied"
   },
   "audit": {
     "title": "Audit Logs",
@@ -88,7 +101,8 @@
     "save": "Save",
     "saved": "Project saved",
     "namePlaceholder": "Project name...",
-    "empty": "No projects yet. Create one to save your work."
+    "empty": "No projects yet. Create one to save your work.",
+    "delete": "Delete"
   },
   "files": {
     "import": "Import text file",

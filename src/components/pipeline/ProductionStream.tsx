@@ -10,13 +10,13 @@ export function ProductionStream() {
   const { t } = useTranslation();
 
   return (
-    <section className="col-span-1 md:col-span-6 bg-white p-8 overflow-y-auto max-h-[calc(100vh-140px)] border-r border-editorial-border custom-scrollbar">
+    <section className="col-span-1 md:col-span-6 bg-editorial-bg p-8 overflow-y-auto max-h-[calc(100vh-140px)] border-r border-editorial-border custom-scrollbar">
       <div className="flex items-center justify-between border-b border-editorial-ink pb-2 mb-10">
         <h2 className="font-display text-sm uppercase tracking-wider inline-block">{t('pipeline.productionStream')}</h2>
         {chunks.length > 0 && (
           <button
             onClick={clearChunks}
-            className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted hover:text-red-500 transition-colors flex items-center gap-1"
+            className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent transition-colors flex items-center gap-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
           >
             <Trash2 size={12} /> {t('pipeline.clearStream')}
           </button>
@@ -34,12 +34,12 @@ export function ProductionStream() {
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 placeholder={t('pipeline.inputPlaceholder')}
-                className="w-full bg-editorial-textbox border-none p-8 text-sm font-mono outline-none leading-relaxed resize-none min-h-[400px]"
+                className="w-full bg-editorial-textbox border-none p-8 text-sm font-mono outline-none leading-relaxed resize-none min-h-[400px] focus-visible:ring-2 focus-visible:ring-editorial-accent"
               />
             </div>
             <button
               onClick={generateChunks}
-              className="w-full bg-editorial-ink text-white px-6 py-5 text-[11px] font-bold uppercase tracking-[3px] hover:shadow-xl transition-all"
+              className="w-full bg-editorial-ink text-white px-6 py-5 text-[11px] font-bold uppercase tracking-[3px] hover:shadow-xl transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
             >
               {t('pipeline.stageContent')}
             </button>
@@ -86,18 +86,18 @@ export function ProductionStream() {
                       key={stage.id}
                       className={`relative border p-6 bg-editorial-bg/10 animate-in fade-in slide-in-from-left-2 duration-300 ${
                         result.status === 'error'
-                          ? 'border-red-300 bg-red-50/30'
+                          ? 'border-editorial-accent/30 bg-editorial-textbox/30'
                           : 'border-editorial-border'
                       }`}
                     >
-                      <span className="absolute -top-3 left-6 bg-white border border-editorial-border px-2 font-display italic text-[10px]">
+                      <span className="absolute -top-3 left-6 bg-editorial-bg border border-editorial-border px-2 font-display italic text-[10px]">
                         {stage.name}
                       </span>
                       <div className="text-sm leading-relaxed overflow-hidden">
                         {result.status === 'processing' ? (
                           <ProcessingLine />
                         ) : result.status === 'error' ? (
-                          <div className="flex items-start gap-2 text-red-600">
+                          <div className="flex items-start gap-2 text-editorial-accent">
                             <AlertTriangle size={14} className="mt-0.5 shrink-0" />
                             <span className="text-xs font-mono">{result.error || t('errors.unknownError')}</span>
                           </div>
@@ -120,7 +120,7 @@ export function ProductionStream() {
                 <textarea
                   value={chunk.currentDraft || ''}
                   onChange={(e) => updateChunkDraft(chunk.id, e.target.value)}
-                  className="w-full bg-editorial-bg/50 border border-editorial-border p-4 text-sm font-sans outline-none focus:ring-1 focus:ring-editorial-ink/10 resize-y min-h-[100px] leading-relaxed transition-all"
+                  className="w-full bg-editorial-bg/50 border border-editorial-border p-4 text-sm font-sans outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent resize-y min-h-[100px] leading-relaxed transition-all"
                   placeholder={t('pipeline.candidatePlaceholder')}
                 />
               </div>

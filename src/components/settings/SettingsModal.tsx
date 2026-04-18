@@ -5,11 +5,13 @@ import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { ApiKeyInput } from './ApiKeyInput';
 import { ollamaService } from '../../services/llmService';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 export function SettingsModal() {
   const { showSettings, setShowSettings, ollamaStatus, ollamaModels, setOllamaModels, setOllamaStatus } = usePipelineStore();
   const { t } = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
+  const trapRef = useFocusTrap(showSettings, () => setShowSettings(false));
 
   useEffect(() => {
     if (showSettings && ollamaStatus === 'unknown') {
@@ -34,7 +36,13 @@ export function SettingsModal() {
   return (
     <AnimatePresence>
       {showSettings && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 sm:p-12">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-6 sm:p-12"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="settings-title"
+          ref={trapRef}
+        >
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -50,11 +58,12 @@ export function SettingsModal() {
           >
             <button
               onClick={() => setShowSettings(false)}
-              className="absolute top-8 right-8 text-editorial-muted hover:text-editorial-ink"
+              className="absolute top-8 right-8 text-editorial-muted hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              aria-label={t('settings.saveClose')}
             >
               <X size={24} />
             </button>
-            <h2 className="font-display text-3xl italic tracking-tight mb-12">{t('settings.title')}</h2>
+            <h2 id="settings-title" className="font-display text-3xl italic tracking-tight mb-12">{t('settings.title')}</h2>
 
             <div className="space-y-12">
               {/* Cloud Providers */}
@@ -81,16 +90,17 @@ export function SettingsModal() {
                       <Server size={16} className="text-editorial-muted" />
                       <span className="text-xs font-mono">localhost:11434</span>
                       {ollamaStatus === 'connected' && (
-                        <CheckCircle2 size={12} className="text-green-600" />
+                        <CheckCircle2 size={12} className="text-editorial-ink" />
                       )}
                       {ollamaStatus === 'disconnected' && (
-                        <XCircle size={12} className="text-red-500" />
+                        <XCircle size={12} className="text-editorial-accent" />
                       )}
                     </div>
                     <button
                       onClick={refreshOllama}
                       disabled={refreshing}
-                      className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-ink transition-colors disabled:opacity-30"
+                      className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-ink transition-colors disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                      aria-label={t('ollama.refresh')}
                     >
                       <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
                       {t('ollama.refresh')}
@@ -139,7 +149,7 @@ export function SettingsModal() {
               <div className="pt-8 border-t border-editorial-border flex justify-end">
                 <button
                   onClick={() => setShowSettings(false)}
-                  className="bg-editorial-ink text-white px-8 py-4 text-[11px] font-bold uppercase tracking-widest transition-all hover:opacity-90 active:scale-95"
+                  className="bg-editorial-ink text-white px-8 py-4 text-[11px] font-bold uppercase tracking-widest transition-all hover:opacity-90 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
                 >
                   {t('settings.saveClose')}
                 </button>

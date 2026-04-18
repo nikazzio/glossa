@@ -5,7 +5,7 @@ interface StatusIndicatorProps {
 
 export function StatusIndicator({ status, label }: StatusIndicatorProps) {
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className="flex flex-col items-center gap-1" role="status" aria-label={`${label}: ${status}`}>
       <div
         className={`w-1.5 h-1.5 rounded-full ${
           status === 'completed'
@@ -13,7 +13,7 @@ export function StatusIndicator({ status, label }: StatusIndicatorProps) {
             : status === 'processing'
               ? 'bg-editorial-accent animate-pulse'
               : status === 'error'
-                ? 'bg-red-500'
+                ? 'bg-editorial-accent'
                 : 'bg-editorial-border'
         }`}
       />
@@ -24,7 +24,7 @@ export function StatusIndicator({ status, label }: StatusIndicatorProps) {
             : status === 'processing'
               ? 'text-editorial-accent'
               : status === 'error'
-                ? 'text-red-500'
+                ? 'text-editorial-accent'
                 : 'text-editorial-muted opacity-40'
         }`}
       >

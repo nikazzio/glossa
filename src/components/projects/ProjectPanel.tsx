@@ -3,6 +3,7 @@ import { FolderOpen, Plus, Trash2, Save, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { useProjectStore } from '../../stores/projectStore';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 export function ProjectPanel() {
   const { t } = useTranslation();
@@ -20,6 +21,7 @@ export function ProjectPanel() {
 
   const [newName, setNewName] = useState('');
   const [creating, setCreating] = useState(false);
+  const trapRef = useFocusTrap(showProjectPanel, () => setShowProjectPanel(false));
 
   useEffect(() => {
     if (showProjectPanel) loadProjects();
@@ -35,7 +37,13 @@ export function ProjectPanel() {
   return (
     <AnimatePresence>
       {showProjectPanel && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 sm:p-12">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-6 sm:p-12"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="project-title"
+          ref={trapRef}
+        >
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -51,12 +59,13 @@ export function ProjectPanel() {
           >
             <button
               onClick={() => setShowProjectPanel(false)}
-              className="absolute top-6 right-6 text-editorial-muted hover:text-editorial-ink"
+              className="absolute top-6 right-6 text-editorial-muted hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              aria-label={t('settings.saveClose')}
             >
               <X size={20} />
             </button>
 
-            <h2 className="font-display text-2xl italic tracking-tight mb-8 flex items-center gap-3">
+            <h2 id="project-title" className="font-display text-2xl italic tracking-tight mb-8 flex items-center gap-3">
               <FolderOpen size={24} className="text-editorial-accent" />
               {t('projects.title')}
             </h2>
@@ -69,7 +78,8 @@ export function ProjectPanel() {
                 </span>
                 <button
                   onClick={saveCurrentProject}
-                  className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-editorial-ink hover:text-editorial-accent transition-colors"
+                  className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-editorial-ink hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  aria-label={t('projects.save')}
                 >
                   <Save size={12} /> {t('projects.save')}
                 </button>
@@ -120,12 +130,15 @@ export function ProjectPanel() {
               {projects.map((project) => (
                 <div
                   key={project.id}
-                  className={`flex items-center gap-3 p-3 border transition-colors cursor-pointer group ${
+                  role="button"
+                  tabIndex={0}
+                  className={`flex items-center gap-3 p-3 border transition-colors cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
                     project.id === currentProjectId
-                      ? 'border-editorial-ink bg-white'
-                      : 'border-editorial-border hover:bg-white/50'
+                      ? 'border-editorial-ink bg-editorial-bg'
+                      : 'border-editorial-border hover:bg-editorial-textbox/50'
                   }`}
                   onClick={() => { openProject(project.id); setShowProjectPanel(false); }}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openProject(project.id); setShowProjectPanel(false); } }}
                 >
                   <FolderOpen
                     size={16}
@@ -144,7 +157,8 @@ export function ProjectPanel() {
                       e.stopPropagation();
                       removeProject(project.id);
                     }}
-                    className="p-1 text-editorial-muted opacity-0 group-hover:opacity-100 hover:text-red-500 transition-all"
+                    className="p-1 text-editorial-muted opacity-0 group-hover:opacity-100 focus:opacity-100 hover:text-editorial-accent transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    aria-label={`${t('projects.delete')} ${project.name}`}
                   >
                     <Trash2 size={14} />
                   </button>
