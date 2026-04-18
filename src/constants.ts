@@ -27,6 +27,7 @@ export const MODEL_OPTIONS: Record<ModelProvider, string[]> = {
   openai: ['gpt-4o', 'gpt-4o-mini', 'o1-preview'],
   anthropic: ['claude-3-5-sonnet-latest', 'claude-3-haiku-latest'],
   deepseek: ['deepseek-chat', 'deepseek-reasoner'],
+  ollama: [], // Dynamic — populated at runtime from local Ollama instance
 };
 
 export const LANGUAGES = [

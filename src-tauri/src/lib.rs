@@ -22,12 +22,15 @@ pub fn run() {
     })
     .invoke_handler(tauri::generate_handler![
       llm::run_stage,
+      llm::run_stage_stream,
       llm::judge_translation,
       llm::optimize_prompt,
       llm::save_api_key,
       llm::get_api_key_status,
       llm::delete_api_key,
       llm::test_provider_connection,
+      llm::list_ollama_models,
+      llm::check_ollama_status,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

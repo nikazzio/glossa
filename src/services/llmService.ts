@@ -1,11 +1,19 @@
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import type { PipelineConfig, PipelineStageConfig, JudgeResult } from '../types';
+
+interface StreamTokenPayload {
+  streamId: string;
+  token: string;
+  done: boolean;
+}
 
 /**
  * LLM Service — delegates all AI calls to the Tauri Rust backend.
  * API keys are stored securely in the OS-level store, never in the browser.
  */
 export const llmService = {
+  /** Non-streaming stage execution (fallback) */
   async runStage(
     text: string,
     stage: PipelineStageConfig,
@@ -18,6 +26,39 @@ export const llmService = {
       config,
       previousResult: previousResult || null,
     });
+  },
+
+  /**
+   * Streaming stage execution — sets up event listener, invokes backend,
+   * calls onToken for each token, cleans up listener, returns full text.
+   */
+  async runStageStream(
+    text: string,
+    stage: PipelineStageConfig,
+    config: PipelineConfig,
+    previousResult: string | undefined,
+    onToken: (token: string) => void,
+  ): Promise<string> {
+    const streamId = `stream-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    const unlisten = await listen<StreamTokenPayload>('stream-token', (event) => {
+      if (event.payload.streamId === streamId && !event.payload.done) {
+        onToken(event.payload.token);
+      }
+    });
+
+    try {
+      const result = await invoke<string>('run_stage_stream', {
+        text,
+        stage,
+        config,
+        previousResult: previousResult || null,
+        streamId,
+      });
+      return result;
+    } finally {
+      unlisten();
+    }
   },
 
   async judgeTranslation(
@@ -38,6 +79,19 @@ export const llmService = {
 
   async testConnection(provider: string): Promise<boolean> {
     return invoke<boolean>('test_provider_connection', { provider });
+  },
+};
+
+/**
+ * Ollama service for local model management.
+ */
+export const ollamaService = {
+  async listModels(): Promise<string[]> {
+    return invoke<string[]>('list_ollama_models');
+  },
+
+  async checkStatus(): Promise<boolean> {
+    return invoke<boolean>('check_ollama_status');
   },
 };
 

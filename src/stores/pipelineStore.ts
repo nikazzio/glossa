@@ -15,17 +15,22 @@ interface PipelineState {
   chunks: TranslationChunk[];
   isProcessing: boolean;
   showSettings: boolean;
+  ollamaModels: string[];
+  ollamaStatus: 'unknown' | 'connected' | 'disconnected';
 
   setInputText: (text: string) => void;
   setShowSettings: (show: boolean) => void;
   setIsProcessing: (processing: boolean) => void;
   setConfig: (updater: PipelineConfig | ((prev: PipelineConfig) => PipelineConfig)) => void;
   setChunks: (updater: TranslationChunk[] | ((prev: TranslationChunk[]) => TranslationChunk[])) => void;
+  setOllamaModels: (models: string[]) => void;
+  setOllamaStatus: (status: 'unknown' | 'connected' | 'disconnected') => void;
 
   // Pipeline actions
   generateChunks: () => void;
   clearChunks: () => void;
   updateChunkStage: (chunkId: string, stageId: string, result: PipelineResult) => void;
+  appendChunkStageContent: (chunkId: string, stageId: string, token: string) => void;
   updateChunkJudge: (chunkId: string, result: JudgeResult) => void;
   updateChunkDraft: (chunkId: string, draft: string) => void;
 
@@ -50,10 +55,14 @@ export const usePipelineStore = create<PipelineState>((set, get) => ({
   chunks: [],
   isProcessing: false,
   showSettings: false,
+  ollamaModels: [],
+  ollamaStatus: 'unknown',
 
   setInputText: (text) => set({ inputText: text }),
   setShowSettings: (show) => set({ showSettings: show }),
   setIsProcessing: (processing) => set({ isProcessing: processing }),
+  setOllamaModels: (models) => set({ ollamaModels: models }),
+  setOllamaStatus: (status) => set({ ollamaStatus: status }),
 
   setConfig: (updater) =>
     set((state) => ({
@@ -89,6 +98,24 @@ export const usePipelineStore = create<PipelineState>((set, get) => ({
       chunks: state.chunks.map((c) =>
         c.id === chunkId
           ? { ...c, stageResults: { ...c.stageResults, [stageId]: result } }
+          : c
+      ),
+    })),
+
+  appendChunkStageContent: (chunkId, stageId, token) =>
+    set((state) => ({
+      chunks: state.chunks.map((c) =>
+        c.id === chunkId
+          ? {
+              ...c,
+              stageResults: {
+                ...c.stageResults,
+                [stageId]: {
+                  ...(c.stageResults[stageId] || { status: 'processing' }),
+                  content: (c.stageResults[stageId]?.content || '') + token,
+                },
+              },
+            }
           : c
       ),
     })),

@@ -1,4 +1,4 @@
-export type ModelProvider = 'gemini' | 'openai' | 'anthropic' | 'deepseek';
+export type ModelProvider = 'gemini' | 'openai' | 'anthropic' | 'deepseek' | 'ollama';
 
 export interface GlossaryEntry {
   term: string;

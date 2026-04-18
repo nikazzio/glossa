@@ -47,7 +47,7 @@
     "title": "Global Config / Secrets",
     "providerConfig": "Provider Configuration",
     "securityAdvisory": "Security Advisory",
-    "securityMessage": "API keys are stored securely in your operating system's keychain. They never leave your device.",
+    "securityMessage": "API keys are stored securely in your operating system's keychain. They never leave your device. Ollama runs entirely on your machine — no data is sent to external servers.",
     "secretsPanel": "Secrets panel",
     "saveClose": "Save & Close",
     "clickToConfigure": "Click to configure",
@@ -55,6 +55,14 @@
     "save": "Save",
     "cancel": "Cancel",
     "removeFromKeychain": "Remove from keychain"
+  },
+  "ollama": {
+    "title": "Ollama (Local Models)",
+    "refresh": "Refresh",
+    "availableModels": "Available Models",
+    "notRunning": "Ollama is not running. Start it with 'ollama serve' to use local models.",
+    "noModels": "Ollama is running but no models are installed. Run 'ollama pull <model>' to get started.",
+    "modelPlaceholder": "Type model name..."
   },
   "errors": {
     "somethingWentWrong": "Something went wrong",

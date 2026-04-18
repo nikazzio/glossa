@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use reqwest::Client;
-use tauri::AppHandle;
+use tauri::{AppHandle, Emitter};
 
 // ── Types matching frontend ──────────────────────────────────────────
 
@@ -54,9 +54,18 @@ pub struct JudgeResponse {
     pub content: String,
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct StreamToken {
+    stream_id: String,
+    token: String,
+    done: bool,
+}
+
 // ── API Key management (OS Keychain) ─────────────────────────────────
 
 const KEYRING_SERVICE: &str = "io.github.nikazzio.glossa";
+const OLLAMA_BASE_URL: &str = "http://localhost:11434";
 
 fn keyring_entry(provider: &str) -> Result<keyring::Entry, String> {
     let username = format!("{}_API_KEY", provider.to_uppercase());
@@ -65,6 +74,11 @@ fn keyring_entry(provider: &str) -> Result<keyring::Entry, String> {
 }
 
 fn get_api_key(app: &AppHandle, provider: &str) -> Result<String, String> {
+    // Ollama doesn't need an API key
+    if provider == "ollama" {
+        return Ok(String::new());
+    }
+
     // 1. Try OS keychain
     if let Ok(entry) = keyring_entry(provider) {
         if let Ok(secret) = entry.get_password() {
@@ -136,7 +150,7 @@ pub async fn delete_api_key(provider: String) -> Result<(), String> {
         .map_err(|e| format!("Failed to delete from keychain: {e}"))
 }
 
-// ── Provider implementations ─────────────────────────────────────────
+// ── Non-streaming provider implementations ───────────────────────────
 
 async fn call_gemini(
     client: &Client,
@@ -213,11 +227,12 @@ async fn call_openai_compatible(
         body["response_format"] = serde_json::json!({"type": "json_object"});
     }
 
-    let resp = client.post(&url)
-        .header("Authorization", format!("Bearer {api_key}"))
-        .json(&body)
-        .send()
-        .await
+    let mut req = client.post(&url).json(&body);
+    if !api_key.is_empty() {
+        req = req.header("Authorization", format!("Bearer {api_key}"));
+    }
+
+    let resp = req.send().await
         .map_err(|e| format!("API request failed: {e}"))?;
 
     let status = resp.status();
@@ -282,7 +297,7 @@ async fn call_anthropic(
         .ok_or_else(|| "No text in Anthropic response".to_string())
 }
 
-/// Route a call to the correct provider
+/// Route a non-streaming call to the correct provider
 async fn call_provider(
     client: &Client,
     provider: &str,
@@ -297,7 +312,193 @@ async fn call_provider(
         "openai" => call_openai_compatible(client, "https://api.openai.com/v1", model, system_prompt, user_prompt, api_key, json_mode).await,
         "deepseek" => call_openai_compatible(client, "https://api.deepseek.com", model, system_prompt, user_prompt, api_key, json_mode).await,
         "anthropic" => call_anthropic(client, model, system_prompt, user_prompt, api_key, json_mode).await,
+        "ollama" => call_openai_compatible(client, &format!("{OLLAMA_BASE_URL}/v1"), model, system_prompt, user_prompt, api_key, json_mode).await,
         _ => Err(format!("Unsupported provider: {provider}")),
+    }
+}
+
+// ── Streaming implementation ─────────────────────────────────────────
+
+/// Extract text token from a streaming SSE data payload based on provider
+fn extract_streaming_text(provider: &str, data: &str) -> Option<String> {
+    let json: serde_json::Value = serde_json::from_str(data).ok()?;
+
+    match provider {
+        "gemini" => {
+            json["candidates"][0]["content"]["parts"][0]["text"]
+                .as_str()
+                .map(|s| s.to_string())
+        }
+        "openai" | "deepseek" | "ollama" => {
+            json["choices"][0]["delta"]["content"]
+                .as_str()
+                .map(|s| s.to_string())
+        }
+        "anthropic" => {
+            if json["type"].as_str() == Some("content_block_delta") {
+                json["delta"]["text"]
+                    .as_str()
+                    .map(|s| s.to_string())
+            } else {
+                None
+            }
+        }
+        _ => None,
+    }
+}
+
+/// Build an HTTP request with streaming enabled for the given provider
+async fn build_streaming_request(
+    client: &Client,
+    provider: &str,
+    model: &str,
+    system_prompt: &str,
+    user_prompt: &str,
+    api_key: &str,
+) -> Result<reqwest::Response, String> {
+    match provider {
+        "gemini" => {
+            let url = format!(
+                "https://generativelanguage.googleapis.com/v1beta/models/{model}:streamGenerateContent?alt=sse&key={api_key}"
+            );
+            let body = serde_json::json!({
+                "systemInstruction": { "parts": [{"text": system_prompt}] },
+                "contents": [{ "role": "user", "parts": [{"text": user_prompt}] }]
+            });
+            client.post(&url).json(&body).send().await
+                .map_err(|e| format!("Gemini request failed: {e}"))
+        }
+        "openai" | "deepseek" | "ollama" => {
+            let base_url = match provider {
+                "openai" => "https://api.openai.com/v1".to_string(),
+                "deepseek" => "https://api.deepseek.com".to_string(),
+                "ollama" => format!("{OLLAMA_BASE_URL}/v1"),
+                _ => unreachable!(),
+            };
+            let url = format!("{base_url}/chat/completions");
+            let body = serde_json::json!({
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                "stream": true
+            });
+            let mut req = client.post(&url).json(&body);
+            if !api_key.is_empty() {
+                req = req.header("Authorization", format!("Bearer {api_key}"));
+            }
+            req.send().await.map_err(|e| format!("API request failed: {e}"))
+        }
+        "anthropic" => {
+            let body = serde_json::json!({
+                "model": model,
+                "max_tokens": 4096,
+                "system": system_prompt,
+                "messages": [{"role": "user", "content": user_prompt}],
+                "stream": true
+            });
+            client.post("https://api.anthropic.com/v1/messages")
+                .header("x-api-key", api_key)
+                .header("anthropic-version", "2023-06-01")
+                .header("content-type", "application/json")
+                .json(&body)
+                .send().await
+                .map_err(|e| format!("Anthropic request failed: {e}"))
+        }
+        _ => Err(format!("Unsupported provider for streaming: {provider}")),
+    }
+}
+
+/// Read an SSE stream, emit tokens via Tauri events, return the full text
+async fn stream_response(
+    app: &AppHandle,
+    mut resp: reqwest::Response,
+    provider: &str,
+    stream_id: &str,
+) -> Result<String, String> {
+    let mut full_text = String::new();
+    let mut buffer = String::new();
+
+    loop {
+        match resp.chunk().await {
+            Ok(Some(bytes)) => {
+                buffer.push_str(&String::from_utf8_lossy(&bytes));
+
+                // Process complete SSE lines
+                while let Some(pos) = buffer.find('\n') {
+                    let line = buffer[..pos].trim_end().to_string();
+                    buffer = buffer[pos + 1..].to_string();
+
+                    if let Some(data) = line.strip_prefix("data: ") {
+                        if data == "[DONE]" { continue; }
+                        if let Some(text) = extract_streaming_text(provider, data) {
+                            if !text.is_empty() {
+                                full_text.push_str(&text);
+                                let _ = app.emit("stream-token", StreamToken {
+                                    stream_id: stream_id.to_string(),
+                                    token: text,
+                                    done: false,
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            Ok(None) => break,
+            Err(e) => return Err(format!("Stream error: {e}")),
+        }
+    }
+
+    let _ = app.emit("stream-token", StreamToken {
+        stream_id: stream_id.to_string(),
+        token: String::new(),
+        done: true,
+    });
+
+    Ok(full_text)
+}
+
+// ── Ollama-specific commands ─────────────────────────────────────────
+
+#[tauri::command]
+pub async fn list_ollama_models() -> Result<Vec<String>, String> {
+    let client = Client::new();
+    let resp = client.get(format!("{OLLAMA_BASE_URL}/api/tags"))
+        .timeout(std::time::Duration::from_secs(3))
+        .send()
+        .await
+        .map_err(|_| "Cannot connect to Ollama. Is it running?".to_string())?;
+
+    if !resp.status().is_success() {
+        return Err("Ollama returned an error".into());
+    }
+
+    let json: serde_json::Value = resp.json().await
+        .map_err(|e| format!("Invalid Ollama response: {e}"))?;
+
+    let models = json["models"]
+        .as_array()
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|m| m["name"].as_str().map(|s| s.to_string()))
+                .collect()
+        })
+        .unwrap_or_default();
+
+    Ok(models)
+}
+
+#[tauri::command]
+pub async fn check_ollama_status() -> Result<bool, String> {
+    let client = Client::new();
+    match client.get(format!("{OLLAMA_BASE_URL}/"))
+        .timeout(std::time::Duration::from_secs(3))
+        .send()
+        .await
+    {
+        Ok(resp) => Ok(resp.status().is_success()),
+        Err(_) => Ok(false),
     }
 }
 
@@ -380,6 +581,33 @@ pub async fn run_stage(
 }
 
 #[tauri::command]
+pub async fn run_stage_stream(
+    app: AppHandle,
+    text: String,
+    stage: StageConfig,
+    config: PipelineConfig,
+    previous_result: Option<String>,
+    stream_id: String,
+) -> Result<String, String> {
+    let api_key = get_api_key(&app, &stage.provider)?;
+    let client = Client::new();
+    let (system_prompt, user_prompt) = build_stage_prompts(&text, &stage, &config, &previous_result);
+
+    let resp = build_streaming_request(
+        &client, &stage.provider, &stage.model,
+        &system_prompt, &user_prompt, &api_key,
+    ).await?;
+
+    let status = resp.status();
+    if !status.is_success() {
+        let text = resp.text().await.unwrap_or_default();
+        return Err(format!("API error ({status}): {text}"));
+    }
+
+    stream_response(&app, resp, &stage.provider, &stream_id).await
+}
+
+#[tauri::command]
 pub async fn judge_translation(
     app: AppHandle,
     original_text: String,
@@ -445,6 +673,11 @@ pub async fn test_provider_connection(
     app: AppHandle,
     provider: String,
 ) -> Result<bool, String> {
+    if provider == "ollama" {
+        return check_ollama_status().await
+            .and_then(|ok| if ok { Ok(true) } else { Err("Ollama is not running".into()) });
+    }
+
     let api_key = get_api_key(&app, &provider)?;
     let client = Client::new();
 

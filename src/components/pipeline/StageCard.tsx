@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronUp, ChevronDown, Trash2, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { PipelineStageConfig, ModelProvider } from '../../types';
 import { MODEL_OPTIONS } from '../../constants';
+import { usePipelineStore } from '../../stores/pipelineStore';
+import { ollamaService } from '../../services/llmService';
 
 interface StageCardProps {
   stage: PipelineStageConfig;
@@ -11,9 +13,30 @@ interface StageCardProps {
   onRemove: () => void;
 }
 
+function useModelOptions(provider: ModelProvider): string[] {
+  const ollamaModels = usePipelineStore((s) => s.ollamaModels);
+  const setOllamaModels = usePipelineStore((s) => s.setOllamaModels);
+  const setOllamaStatus = usePipelineStore((s) => s.setOllamaStatus);
+
+  useEffect(() => {
+    if (provider === 'ollama' && ollamaModels.length === 0) {
+      ollamaService.listModels()
+        .then((models) => {
+          setOllamaModels(models);
+          setOllamaStatus('connected');
+        })
+        .catch(() => setOllamaStatus('disconnected'));
+    }
+  }, [provider, ollamaModels.length, setOllamaModels, setOllamaStatus]);
+
+  if (provider === 'ollama') return ollamaModels;
+  return MODEL_OPTIONS[provider] || [];
+}
+
 export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const { t } = useTranslation();
+  const modelOptions = useModelOptions(stage.provider);
 
   return (
     <div
@@ -52,12 +75,16 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
           <div className="flex gap-2">
             <select
               value={stage.provider}
-              onChange={(e) =>
+              onChange={(e) => {
+                const newProvider = e.target.value as ModelProvider;
+                const models = newProvider === 'ollama'
+                  ? usePipelineStore.getState().ollamaModels
+                  : MODEL_OPTIONS[newProvider];
                 onUpdate({
-                  provider: e.target.value as ModelProvider,
-                  model: MODEL_OPTIONS[e.target.value as ModelProvider][0],
-                })
-              }
+                  provider: newProvider,
+                  model: models[0] || '',
+                });
+              }}
               className="bg-editorial-textbox border-none px-2 py-1 text-[10px] font-bold uppercase outline-none"
             >
               {Object.keys(MODEL_OPTIONS).map((p) => (
@@ -66,17 +93,38 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
                 </option>
               ))}
             </select>
-            <select
-              value={stage.model}
-              onChange={(e) => onUpdate({ model: e.target.value })}
-              className="flex-1 bg-editorial-textbox border-none px-2 py-1 text-[10px] font-mono outline-none"
-            >
-              {MODEL_OPTIONS[stage.provider].map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
+            {modelOptions.length > 0 ? (
+              <select
+                value={stage.model}
+                onChange={(e) => onUpdate({ model: e.target.value })}
+                className="flex-1 bg-editorial-textbox border-none px-2 py-1 text-[10px] font-mono outline-none"
+              >
+                {modelOptions.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            ) : stage.provider === 'ollama' ? (
+              <input
+                value={stage.model}
+                onChange={(e) => onUpdate({ model: e.target.value })}
+                placeholder={t('ollama.modelPlaceholder')}
+                className="flex-1 bg-editorial-textbox border-none px-2 py-1 text-[10px] font-mono outline-none"
+              />
+            ) : (
+              <select
+                value={stage.model}
+                onChange={(e) => onUpdate({ model: e.target.value })}
+                className="flex-1 bg-editorial-textbox border-none px-2 py-1 text-[10px] font-mono outline-none"
+              >
+                {MODEL_OPTIONS[stage.provider]?.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
           <textarea
             value={stage.prompt}

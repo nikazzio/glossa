@@ -8,6 +8,7 @@ import type { JudgeResult } from '../types';
 
 /**
  * Hook that encapsulates pipeline execution logic.
+ * Uses streaming for translation stages, non-streaming for judge.
  * Includes retry with exponential backoff and toast notifications.
  */
 export function usePipeline() {
@@ -18,6 +19,7 @@ export function usePipeline() {
     setIsProcessing,
     setChunks,
     updateChunkStage,
+    appendChunkStageContent,
     updateChunkJudge,
     updateChunkDraft,
   } = usePipelineStore();
@@ -48,7 +50,14 @@ export function usePipeline() {
         updateChunkStage(chunk.id, stage.id, { content: '', status: 'processing' });
         try {
           const result = await withRetry(
-            () => llmService.runStage(chunk.originalText, stage, config, lastResult),
+            async () => {
+              // Reset content for each retry attempt
+              updateChunkStage(chunk.id, stage.id, { content: '', status: 'processing' });
+              return llmService.runStageStream(
+                chunk.originalText, stage, config, lastResult || undefined,
+                (token) => appendChunkStageContent(chunk.id, stage.id, token),
+              );
+            },
             { label: `Stage "${stage.name}"` },
           );
           lastResult = result;
@@ -70,7 +79,7 @@ export function usePipeline() {
         updateChunkDraft(chunk.id, lastResult);
       }
 
-      // Final Audit (Judge)
+      // Final Audit (Judge) — non-streaming since it returns structured JSON
       if (lastResult) {
         updateChunkJudge(chunk.id, { content: '', status: 'processing', score: 0, issues: [] });
         try {
@@ -105,7 +114,7 @@ export function usePipeline() {
     } else {
       toast.warning(t('errors.pipelineCompletedWithErrors', { count: errorCount }));
     }
-  }, [chunks, config, t, setIsProcessing, setChunks, updateChunkStage, updateChunkJudge, updateChunkDraft]);
+  }, [chunks, config, t, setIsProcessing, setChunks, updateChunkStage, appendChunkStageContent, updateChunkJudge, updateChunkDraft]);
 
   const runAuditOnly = useCallback(async () => {
     if (chunks.length === 0) return;

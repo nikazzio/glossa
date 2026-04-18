@@ -10,6 +10,12 @@ interface PipelineConfigProps {
   onRunAuditOnly: () => void;
 }
 
+function useJudgeModelOptions(provider: ModelProvider): string[] {
+  const ollamaModels = usePipelineStore((s) => s.ollamaModels);
+  if (provider === 'ollama') return ollamaModels;
+  return MODEL_OPTIONS[provider] || [];
+}
+
 export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfigProps) {
   const {
     config,
@@ -21,6 +27,7 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfig
     updateStage,
   } = usePipelineStore();
   const { t } = useTranslation();
+  const judgeModels = useJudgeModelOptions(config.judgeProvider);
 
   return (
     <section className="col-span-1 md:col-span-3 border-r border-editorial-border p-8 flex flex-col gap-8 bg-editorial-bg/50 overflow-y-auto max-h-[calc(100vh-140px)] custom-scrollbar">
@@ -113,28 +120,51 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfig
             <div className="flex gap-2">
               <select
                 value={config.judgeProvider}
-                onChange={(e) =>
+                onChange={(e) => {
+                  const newProvider = e.target.value as ModelProvider;
+                  const models = newProvider === 'ollama'
+                    ? usePipelineStore.getState().ollamaModels
+                    : MODEL_OPTIONS[newProvider];
                   setConfig((prev) => ({
                     ...prev,
-                    judgeProvider: e.target.value as ModelProvider,
-                    judgeModel: MODEL_OPTIONS[e.target.value as ModelProvider][0],
-                  }))
-                }
+                    judgeProvider: newProvider,
+                    judgeModel: models[0] || '',
+                  }));
+                }}
                 className="bg-editorial-textbox border-none px-2 py-1 text-[10px] font-bold uppercase outline-none"
               >
                 {Object.keys(MODEL_OPTIONS).map((p) => (
                   <option key={p} value={p}>{p}</option>
                 ))}
               </select>
-              <select
-                value={config.judgeModel}
-                onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
-                className="flex-1 bg-editorial-textbox border-none px-2 py-1 text-[10px] font-mono outline-none"
-              >
-                {MODEL_OPTIONS[config.judgeProvider].map((m) => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
-              </select>
+              {judgeModels.length > 0 ? (
+                <select
+                  value={config.judgeModel}
+                  onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
+                  className="flex-1 bg-editorial-textbox border-none px-2 py-1 text-[10px] font-mono outline-none"
+                >
+                  {judgeModels.map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              ) : config.judgeProvider === 'ollama' ? (
+                <input
+                  value={config.judgeModel}
+                  onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
+                  placeholder={t('ollama.modelPlaceholder')}
+                  className="flex-1 bg-editorial-textbox border-none px-2 py-1 text-[10px] font-mono outline-none"
+                />
+              ) : (
+                <select
+                  value={config.judgeModel}
+                  onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
+                  className="flex-1 bg-editorial-textbox border-none px-2 py-1 text-[10px] font-mono outline-none"
+                >
+                  {MODEL_OPTIONS[config.judgeProvider]?.map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              )}
             </div>
             <textarea
               value={config.judgePrompt}

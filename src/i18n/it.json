@@ -47,7 +47,7 @@
     "title": "Configurazione / Chiavi API",
     "providerConfig": "Configurazione Provider",
     "securityAdvisory": "Avviso di Sicurezza",
-    "securityMessage": "Le chiavi API sono conservate in modo sicuro nel portachiavi del sistema operativo. Non lasciano mai il tuo dispositivo.",
+    "securityMessage": "Le chiavi API sono conservate in modo sicuro nel portachiavi del sistema operativo. Non lasciano mai il tuo dispositivo. Ollama gira interamente sulla tua macchina — nessun dato viene inviato a server esterni.",
     "secretsPanel": "Pannello segreti",
     "saveClose": "Salva e Chiudi",
     "clickToConfigure": "Clicca per configurare",
@@ -55,6 +55,14 @@
     "save": "Salva",
     "cancel": "Annulla",
     "removeFromKeychain": "Rimuovi dal portachiavi"
+  },
+  "ollama": {
+    "title": "Ollama (Modelli Locali)",
+    "refresh": "Aggiorna",
+    "availableModels": "Modelli Disponibili",
+    "notRunning": "Ollama non è in esecuzione. Avvialo con 'ollama serve' per usare modelli locali.",
+    "noModels": "Ollama è attivo ma non ci sono modelli installati. Esegui 'ollama pull <modello>' per iniziare.",
+    "modelPlaceholder": "Nome del modello..."
   },
   "errors": {
     "somethingWentWrong": "Qualcosa è andato storto",
