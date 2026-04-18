@@ -6,3 +6,17 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Rust / Tauri
+src-tauri/target/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+Thumbs.db
+Desktop.ini
