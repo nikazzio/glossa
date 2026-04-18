@@ -1,4 +1,5 @@
 import { Plus, ArrowRightLeft, Play, Loader2, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { ModelProvider } from '../../types';
 import { MODEL_OPTIONS, LANGUAGES } from '../../constants';
 import { usePipelineStore } from '../../stores/pipelineStore';
@@ -19,6 +20,7 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfig
     removeStage,
     updateStage,
   } = usePipelineStore();
+  const { t } = useTranslation();
 
   return (
     <section className="col-span-1 md:col-span-3 border-r border-editorial-border p-8 flex flex-col gap-8 bg-editorial-bg/50 overflow-y-auto max-h-[calc(100vh-140px)] custom-scrollbar">
@@ -26,11 +28,11 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfig
         {/* Language Pair */}
         <div>
           <h2 className="font-display text-sm uppercase tracking-wider border-b border-editorial-ink pb-2 mb-8 inline-block">
-            Global Setup
+            {t('pipeline.globalSetup')}
           </h2>
           <div className="space-y-4">
             <label className="block text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
-              Language Pair
+              {t('pipeline.languagePair')}
             </label>
             <div className="flex items-center gap-3">
               <select
@@ -51,7 +53,7 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfig
                   }))
                 }
                 className="text-editorial-muted hover:text-editorial-ink transition-colors hover:scale-110 shrink-0"
-                title="Swap Languages"
+                title={t('pipeline.swapLanguages')}
               >
                 <ArrowRightLeft size={14} />
               </button>
@@ -74,7 +76,7 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfig
                 className="accent-editorial-ink w-3 h-3"
               />
               <span className="text-[10px] uppercase font-bold tracking-widest text-editorial-muted group-hover:text-editorial-ink transition-colors">
-                Auto-Segment (Paragraphs)
+                {t('pipeline.autoSegment')}
               </span>
             </label>
           </div>
@@ -83,7 +85,7 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfig
         {/* Stages */}
         <div>
           <div className="flex items-center justify-between border-b border-editorial-ink pb-2 mb-8">
-            <h2 className="font-display text-sm uppercase tracking-wider">Stages</h2>
+            <h2 className="font-display text-sm uppercase tracking-wider">{t('pipeline.stages')}</h2>
             <button onClick={addStage} className="text-editorial-accent hover:scale-110 transition-transform">
               <Plus size={18} />
             </button>
@@ -105,7 +107,7 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfig
         {/* Audit Guard */}
         <div>
           <h2 className="font-display text-sm uppercase tracking-wider border-b border-editorial-ink pb-2 mb-8 inline-block">
-            Audit Guard
+            {t('pipeline.auditGuard')}
           </h2>
           <div className="space-y-4">
             <div className="flex gap-2">
@@ -137,7 +139,7 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfig
             <textarea
               value={config.judgePrompt}
               onChange={(e) => setConfig((prev) => ({ ...prev, judgePrompt: e.target.value }))}
-              placeholder="Audit instructions..."
+              placeholder={t('pipeline.auditPlaceholder')}
               rows={6}
               className="w-full bg-editorial-textbox border-none p-4 text-xs font-mono outline-none leading-relaxed resize-y"
             />
@@ -148,7 +150,7 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfig
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <label className="block text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
-              Keyword Registry
+              {t('pipeline.keywordRegistry')}
             </label>
             <Plus
               cursor="pointer"
@@ -175,7 +177,7 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfig
                     })
                   }
                   className="w-full bg-editorial-textbox border-none p-2 text-[10px] font-mono outline-none"
-                  placeholder="Source"
+                  placeholder={t('pipeline.source')}
                 />
                 <X
                   size={10}
@@ -197,7 +199,7 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfig
                     })
                   }
                   className="w-full bg-editorial-textbox border-none p-2 text-[10px] font-mono outline-none"
-                  placeholder="Target"
+                  placeholder={t('pipeline.target')}
                 />
               </div>
             ))}
@@ -216,11 +218,11 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfig
           {isProcessing ? (
             <span className="flex items-center justify-center gap-2">
               <Loader2 className="animate-spin" size={14} />
-              Executing...
+              {t('pipeline.executing')}
             </span>
           ) : (
             <span className="flex items-center justify-center gap-2">
-              <Play size={14} fill="currentColor" /> Begin Pipeline
+              <Play size={14} fill="currentColor" /> {t('pipeline.beginPipeline')}
             </span>
           )}
         </button>
@@ -230,7 +232,7 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfig
           disabled={isProcessing || chunks.length === 0}
           className="bg-transparent border border-editorial-ink text-editorial-ink px-6 py-4 text-[11px] font-bold uppercase tracking-[2px] transition-all hover:bg-editorial-ink/5 disabled:opacity-30 disabled:cursor-not-allowed"
         >
-          Run Audit Only
+          {t('pipeline.runAuditOnly')}
         </button>
       </div>
     </section>

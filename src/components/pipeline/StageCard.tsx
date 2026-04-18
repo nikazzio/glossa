@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ChevronUp, ChevronDown, Trash2, ShieldCheck } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { PipelineStageConfig, ModelProvider } from '../../types';
 import { MODEL_OPTIONS } from '../../constants';
 
@@ -12,6 +13,7 @@ interface StageCardProps {
 
 export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const { t } = useTranslation();
 
   return (
     <div
@@ -79,7 +81,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
           <textarea
             value={stage.prompt}
             onChange={(e) => onUpdate({ prompt: e.target.value })}
-            placeholder="Stage specific prompt..."
+            placeholder={t('pipeline.stagePromptPlaceholder')}
             rows={6}
             className="w-full bg-editorial-textbox border-none p-3 text-[11px] font-mono outline-none leading-relaxed resize-y"
           />

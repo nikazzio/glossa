@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../stores/pipelineStore';
 import { llmService } from '../services/llmService';
 import { withRetry, friendlyError } from '../utils/retry';
@@ -20,6 +21,7 @@ export function usePipeline() {
     updateChunkJudge,
     updateChunkDraft,
   } = usePipelineStore();
+  const { t } = useTranslation();
 
   const runPipeline = useCallback(async () => {
     if (chunks.length === 0) return;
@@ -59,7 +61,7 @@ export function usePipeline() {
             status: 'error',
             error: msg,
           });
-          toast.error(`Stage "${stage.name}" failed`, { description: msg });
+          toast.error(t('errors.stageFailed', { name: stage.name }), { description: msg });
           break;
         }
       }
@@ -91,7 +93,7 @@ export function usePipeline() {
             issues: [],
             error: msg,
           });
-          toast.error('Audit failed', { description: msg });
+          toast.error(t('errors.auditFailed'), { description: msg });
         }
       }
     }
@@ -99,11 +101,11 @@ export function usePipeline() {
     setIsProcessing(false);
 
     if (errorCount === 0) {
-      toast.success('Pipeline completed successfully');
+      toast.success(t('errors.pipelineCompleted'));
     } else {
-      toast.warning(`Pipeline completed with ${errorCount} error(s)`);
+      toast.warning(t('errors.pipelineCompletedWithErrors', { count: errorCount }));
     }
-  }, [chunks, config, setIsProcessing, setChunks, updateChunkStage, updateChunkJudge, updateChunkDraft]);
+  }, [chunks, config, t, setIsProcessing, setChunks, updateChunkStage, updateChunkJudge, updateChunkDraft]);
 
   const runAuditOnly = useCallback(async () => {
     if (chunks.length === 0) return;
@@ -136,16 +138,16 @@ export function usePipeline() {
           issues: [],
           error: msg,
         });
-        toast.error('Audit failed', { description: msg });
+        toast.error(t('errors.auditFailed'), { description: msg });
       }
     }
 
     setIsProcessing(false);
 
     if (errorCount === 0) {
-      toast.success('Re-evaluation completed');
+      toast.success(t('errors.reEvalCompleted'));
     }
-  }, [chunks, config, setIsProcessing, updateChunkJudge]);
+  }, [chunks, config, t, setIsProcessing, updateChunkJudge]);
 
   return { runPipeline, runAuditOnly, isProcessing };
 }

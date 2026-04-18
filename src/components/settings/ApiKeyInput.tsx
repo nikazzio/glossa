@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Key, CheckCircle2, Save, Loader2, Trash2, Shield } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { settingsService } from '../../services/llmService';
 
 interface ApiKeyInputProps {
@@ -12,6 +13,7 @@ export function ApiKeyInput({ label, provider }: ApiKeyInputProps) {
   const [keyValue, setKeyValue] = useState('');
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     settingsService.isKeyConfigured(provider)
@@ -52,7 +54,7 @@ export function ApiKeyInput({ label, provider }: ApiKeyInputProps) {
             type="password"
             value={keyValue}
             onChange={(e) => setKeyValue(e.target.value)}
-            placeholder="Paste API key..."
+            placeholder={t('settings.pasteApiKey')}
             className="flex-1 bg-editorial-textbox border-none px-3 py-2 text-[10px] font-mono outline-none"
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleSave();
@@ -64,7 +66,7 @@ export function ApiKeyInput({ label, provider }: ApiKeyInputProps) {
             onClick={handleSave}
             disabled={saving || !keyValue.trim()}
             className="p-1.5 text-editorial-ink hover:text-editorial-accent disabled:opacity-30"
-            title="Save"
+            title={t('settings.save')}
           >
             {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
           </button>
@@ -72,7 +74,7 @@ export function ApiKeyInput({ label, provider }: ApiKeyInputProps) {
             onClick={() => { setEditing(false); setKeyValue(''); }}
             className="p-1.5 text-editorial-muted hover:text-editorial-ink text-[10px]"
           >
-            Cancel
+            {t('settings.cancel')}
           </button>
         </div>
       </div>
@@ -92,7 +94,7 @@ export function ApiKeyInput({ label, provider }: ApiKeyInputProps) {
         >
           <Key size={14} className={isConfigured ? 'text-editorial-accent' : 'text-editorial-muted opacity-20'} />
           <span className="flex-1 text-[10px] font-mono truncate">
-            {isConfigured ? '••••••••••••••••' : 'Click to configure'}
+            {isConfigured ? '••••••••••••••••' : t('settings.clickToConfigure')}
           </span>
           {isConfigured && <CheckCircle2 size={12} className="text-editorial-ink" />}
         </button>
@@ -100,7 +102,7 @@ export function ApiKeyInput({ label, provider }: ApiKeyInputProps) {
           <button
             onClick={handleDelete}
             className="p-1.5 text-editorial-muted hover:text-red-500 transition-colors"
-            title="Remove from keychain"
+            title={t('settings.removeFromKeychain')}
           >
             <Trash2 size={14} />
           </button>

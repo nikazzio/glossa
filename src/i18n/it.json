@@ -3,20 +3,34 @@
     "title": "Glossa // Pipeline",
     "subtitle": "Pipeline Multi-LLM v1.0"
   },
+  "header": {
+    "settings": "Impostazioni"
+  },
   "pipeline": {
     "globalSetup": "Configurazione Globale",
     "languagePair": "Coppia Linguistica",
+    "swapLanguages": "Inverti Lingue",
+    "autoSegment": "Segmentazione Automatica (Paragrafi)",
     "stages": "Fasi",
     "auditGuard": "Controllo Qualità",
+    "auditPlaceholder": "Istruzioni per l'audit...",
     "keywordRegistry": "Registro Termini",
+    "source": "Sorgente",
+    "target": "Destinazione",
     "beginPipeline": "Avvia Pipeline",
     "executing": "In esecuzione...",
+    "runAuditOnly": "Solo Audit",
     "productionStream": "Flusso Produzione",
+    "clearStream": "Pulisci Flusso",
     "inputContent": "Contenuto Input",
     "inputPlaceholder": "Incolla il materiale sorgente qui...",
     "stageContent": "Prepara Contenuto",
     "unit": "Unità",
-    "originalSource": "Testo Originale"
+    "originalSource": "Testo Originale",
+    "candidateTranslation": "Traduzione Candidata",
+    "candidatePlaceholder": "Il risultato apparirà qui. Modifica manualmente prima dell'audit...",
+    "newStage": "Nuova Fase",
+    "stagePromptPlaceholder": "Prompt specifico per la fase..."
   },
   "audit": {
     "title": "Log Audit",
@@ -24,23 +38,38 @@
     "anomaliesDetected": "Anomalie Rilevate",
     "pipelineClear": "Audit Pipeline Superato",
     "noRecord": "Nessun Audit",
+    "reEvaluate": "Rivaluta Bozze",
     "clearStream": "Pulisci Flusso",
-    "fix": "CORREZIONE"
+    "fix": "CORREZIONE",
+    "auditFailed": "Audit fallito"
   },
   "settings": {
     "title": "Configurazione / Chiavi API",
     "providerConfig": "Configurazione Provider",
     "securityAdvisory": "Avviso di Sicurezza",
-    "securityMessage": "Le chiavi API vengono lette dalle variabili d'ambiente in produzione. Definirle qui localmente (prefisso VITE_) sovrascrive i valori predefiniti per questa sessione.",
+    "securityMessage": "Le chiavi API sono conservate in modo sicuro nel portachiavi del sistema operativo. Non lasciano mai il tuo dispositivo.",
+    "secretsPanel": "Pannello segreti",
     "saveClose": "Salva e Chiudi",
-    "notConfigured": "Non configurato"
+    "clickToConfigure": "Clicca per configurare",
+    "pasteApiKey": "Incolla chiave API...",
+    "save": "Salva",
+    "cancel": "Annulla",
+    "removeFromKeychain": "Rimuovi dal portachiavi"
   },
-  "common": {
-    "from": "Da",
-    "to": "A",
-    "source": "Sorgente",
-    "target": "Destinazione",
-    "error": "Qualcosa è andato storto",
-    "tryAgain": "Riprova"
+  "errors": {
+    "somethingWentWrong": "Qualcosa è andato storto",
+    "unexpectedError": "Si è verificato un errore imprevisto.",
+    "tryAgain": "Riprova",
+    "unknownError": "Errore sconosciuto",
+    "stageFailed": "Fase \"{{name}}\" fallita",
+    "auditFailed": "Audit fallito",
+    "pipelineCompleted": "Pipeline completata con successo",
+    "pipelineCompletedWithErrors": "Pipeline completata con {{count}} errore/i",
+    "reEvalCompleted": "Rivalutazione completata"
+  },
+  "language": {
+    "label": "Lingua",
+    "en": "English",
+    "it": "Italiano"
   }
 }

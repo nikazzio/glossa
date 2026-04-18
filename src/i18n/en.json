@@ -3,20 +3,34 @@
     "title": "Glossa // Pipeline",
     "subtitle": "Multi-LLM Pipeline v1.0"
   },
+  "header": {
+    "settings": "Settings"
+  },
   "pipeline": {
     "globalSetup": "Global Setup",
     "languagePair": "Language Pair",
+    "swapLanguages": "Swap Languages",
+    "autoSegment": "Auto-Segment (Paragraphs)",
     "stages": "Stages",
     "auditGuard": "Audit Guard",
+    "auditPlaceholder": "Audit instructions...",
     "keywordRegistry": "Keyword Registry",
+    "source": "Source",
+    "target": "Target",
     "beginPipeline": "Begin Pipeline",
     "executing": "Executing...",
+    "runAuditOnly": "Run Audit Only",
     "productionStream": "Production Stream",
+    "clearStream": "Clear Stream",
     "inputContent": "Input Content",
     "inputPlaceholder": "Paste source material here...",
     "stageContent": "Stage Content to Stream",
     "unit": "Unit",
-    "originalSource": "Original Source"
+    "originalSource": "Original Source",
+    "candidateTranslation": "Candidate Translation",
+    "candidatePlaceholder": "Output will appear here. Edit manually before auditing...",
+    "newStage": "New Stage",
+    "stagePromptPlaceholder": "Stage specific prompt..."
   },
   "audit": {
     "title": "Audit Logs",
@@ -24,23 +38,38 @@
     "anomaliesDetected": "Anomalies Detected",
     "pipelineClear": "Pipeline Audit Clear",
     "noRecord": "No Audit Record",
+    "reEvaluate": "Re-Evaluate Drafts",
     "clearStream": "Clear Stream",
-    "fix": "FIX"
+    "fix": "FIX",
+    "auditFailed": "Audit failed"
   },
   "settings": {
     "title": "Global Config / Secrets",
     "providerConfig": "Provider Configuration",
     "securityAdvisory": "Security Advisory",
-    "securityMessage": "API keys are retrieved from environment variables for production runs. Defining them here locally (via VITE_ prefix) overrides defaults for this session.",
+    "securityMessage": "API keys are stored securely in your operating system's keychain. They never leave your device.",
+    "secretsPanel": "Secrets panel",
     "saveClose": "Save & Close",
-    "notConfigured": "Not configured"
+    "clickToConfigure": "Click to configure",
+    "pasteApiKey": "Paste API key...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "removeFromKeychain": "Remove from keychain"
   },
-  "common": {
-    "from": "From",
-    "to": "To",
-    "source": "Source",
-    "target": "Target",
-    "error": "Something went wrong",
-    "tryAgain": "Try Again"
+  "errors": {
+    "somethingWentWrong": "Something went wrong",
+    "unexpectedError": "An unexpected error occurred.",
+    "tryAgain": "Try Again",
+    "unknownError": "Unknown error",
+    "stageFailed": "Stage \"{{name}}\" failed",
+    "auditFailed": "Audit failed",
+    "pipelineCompleted": "Pipeline completed successfully",
+    "pipelineCompletedWithErrors": "Pipeline completed with {{count}} error(s)",
+    "reEvalCompleted": "Re-evaluation completed"
+  },
+  "language": {
+    "label": "Language",
+    "en": "English",
+    "it": "Italiano"
   }
 }

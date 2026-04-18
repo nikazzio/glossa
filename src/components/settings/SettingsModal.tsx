@@ -1,10 +1,12 @@
 import { X, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { ApiKeyInput } from './ApiKeyInput';
 
 export function SettingsModal() {
   const { showSettings, setShowSettings } = usePipelineStore();
+  const { t } = useTranslation();
 
   return (
     <AnimatePresence>
@@ -29,12 +31,12 @@ export function SettingsModal() {
             >
               <X size={24} />
             </button>
-            <h2 className="font-display text-3xl italic tracking-tight mb-12">Global Config / Secrets</h2>
+            <h2 className="font-display text-3xl italic tracking-tight mb-12">{t('settings.title')}</h2>
 
             <div className="space-y-12">
               <div className="space-y-4">
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
-                  Provider Configuration
+                  {t('settings.providerConfig')}
                 </label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <ApiKeyInput label="Gemini (Native)" provider="gemini" />
@@ -47,12 +49,9 @@ export function SettingsModal() {
               <div className="p-8 border border-editorial-border bg-editorial-textbox/20 flex gap-4 items-start">
                 <AlertCircle size={20} className="text-editorial-accent shrink-0" />
                 <div className="space-y-2">
-                  <h4 className="text-[11px] font-bold uppercase tracking-widest">Security Advisory</h4>
+                  <h4 className="text-[11px] font-bold uppercase tracking-widest">{t('settings.securityAdvisory')}</h4>
                   <p className="text-xs text-editorial-muted leading-relaxed">
-                    API keys are retrieved from environment variables for production runs. Defining them here
-                    locally (via VITE_ prefix) overrides defaults for this session. Always prefer the project's{' '}
-                    <span className="text-editorial-ink font-bold">Secrets panel</span> for sensitive
-                    integration.
+                    {t('settings.securityMessage')}
                   </p>
                 </div>
               </div>
@@ -62,7 +61,7 @@ export function SettingsModal() {
                   onClick={() => setShowSettings(false)}
                   className="bg-editorial-ink text-white px-8 py-4 text-[11px] font-bold uppercase tracking-widest transition-all hover:opacity-90 active:scale-95"
                 >
-                  Save & Close
+                  {t('settings.saveClose')}
                 </button>
               </div>
             </div>

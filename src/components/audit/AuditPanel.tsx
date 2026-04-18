@@ -1,4 +1,5 @@
 import { ShieldCheck, RefreshCcw, AlertTriangle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { calculateCompositeScore } from '../../utils';
 
@@ -8,6 +9,7 @@ interface AuditPanelProps {
 
 export function AuditPanel({ onRunAuditOnly }: AuditPanelProps) {
   const { chunks, clearChunks, isProcessing } = usePipelineStore();
+  const { t } = useTranslation();
 
   const hasCompletedAudits = chunks.length > 0 && chunks.some((c) => c.judgeResult.status === 'completed');
   const hasErrorAudits = chunks.length > 0 && chunks.some((c) => c.judgeResult.status === 'error');
@@ -18,7 +20,7 @@ export function AuditPanel({ onRunAuditOnly }: AuditPanelProps) {
   return (
     <section className="col-span-1 md:col-span-3 p-8 bg-editorial-bg overflow-y-auto max-h-[calc(100vh-140px)] flex flex-col gap-10 custom-scrollbar">
       <h2 className="font-display text-sm uppercase tracking-wider border-b border-editorial-ink pb-2 mb-4 inline-block">
-        Audit Logs
+        {t('audit.title')}
       </h2>
 
       <div className="flex flex-col gap-12 flex-1">
@@ -32,7 +34,7 @@ export function AuditPanel({ onRunAuditOnly }: AuditPanelProps) {
                   <span className="text-base text-editorial-muted ml-1 font-sans">/100</span>
                 </div>
                 <div className="text-[8px] text-center uppercase font-bold tracking-[4px] text-editorial-muted">
-                  Composite Index
+                  {t('audit.compositeIndex')}
                 </div>
               </div>
             )}
@@ -49,7 +51,7 @@ export function AuditPanel({ onRunAuditOnly }: AuditPanelProps) {
                     >
                       <AlertTriangle size={14} className="mt-0.5 shrink-0" />
                       <span className="text-[10px] font-mono">
-                        {c.judgeResult.error || 'Audit failed'}
+                        {c.judgeResult.error || t('audit.auditFailed')}
                       </span>
                     </div>
                   ))}
@@ -59,7 +61,7 @@ export function AuditPanel({ onRunAuditOnly }: AuditPanelProps) {
             {/* Issues */}
             <div className="space-y-4">
               <label className="block text-[9px] font-bold uppercase tracking-[2px] text-editorial-muted border-b border-editorial-border pb-1">
-                Anomalies Detected
+                {t('audit.anomaliesDetected')}
               </label>
               <ul className="divide-y divide-editorial-border/50">
                 {chunks
@@ -80,7 +82,7 @@ export function AuditPanel({ onRunAuditOnly }: AuditPanelProps) {
                       </span>
                       {issue.suggestedFix && (
                         <div className="mt-2 text-[10px] font-mono text-editorial-muted bg-white p-2 rounded-sm border-l-2 border-editorial-accent">
-                          FIX: {issue.suggestedFix}
+                          {t('audit.fix')}: {issue.suggestedFix}
                         </div>
                       )}
                     </li>
@@ -88,7 +90,7 @@ export function AuditPanel({ onRunAuditOnly }: AuditPanelProps) {
                 {allClear && (
                   <div className="text-center py-20 opacity-20 italic font-display flex flex-col items-center gap-4">
                     <ShieldCheck size={40} strokeWidth={1} />
-                    <span className="text-[10px] uppercase tracking-widest">Pipeline Audit Clear</span>
+                    <span className="text-[10px] uppercase tracking-widest">{t('audit.pipelineClear')}</span>
                   </div>
                 )}
               </ul>
@@ -97,7 +99,7 @@ export function AuditPanel({ onRunAuditOnly }: AuditPanelProps) {
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center opacity-10 font-display text-center px-6">
             <ShieldCheck size={48} strokeWidth={1} />
-            <span className="text-[10px] uppercase tracking-[4px] font-bold mt-4">No Audit Record</span>
+            <span className="text-[10px] uppercase tracking-[4px] font-bold mt-4">{t('audit.noRecord')}</span>
           </div>
         )}
       </div>
@@ -108,13 +110,13 @@ export function AuditPanel({ onRunAuditOnly }: AuditPanelProps) {
           disabled={isProcessing || chunks.length === 0}
           className="w-full bg-transparent border border-editorial-ink text-editorial-ink px-4 py-4 text-[11px] font-bold uppercase tracking-[3px] hover:bg-editorial-ink hover:text-white transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group shadow-sm active:translate-y-px"
         >
-          <RefreshCcw size={14} className={isProcessing ? 'animate-spin' : ''} /> Re-Evaluate Drafts
+          <RefreshCcw size={14} className={isProcessing ? 'animate-spin' : ''} /> {t('audit.reEvaluate')}
         </button>
         <button
           onClick={clearChunks}
           className="w-full border border-editorial-border px-4 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-red-50 hover:text-red-500 transition-all flex items-center justify-center gap-2"
         >
-          Clear Stream
+          {t('audit.clearStream')}
         </button>
       </div>
     </section>

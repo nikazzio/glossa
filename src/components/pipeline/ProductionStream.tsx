@@ -1,4 +1,5 @@
 import { Trash2, AlertTriangle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { StatusIndicator, ProcessingLine, CopyButton } from '../common';
 import { indexPad } from '../../utils';
@@ -6,17 +7,18 @@ import { indexPad } from '../../utils';
 export function ProductionStream() {
   const { inputText, setInputText, chunks, config, generateChunks, clearChunks, updateChunkDraft } =
     usePipelineStore();
+  const { t } = useTranslation();
 
   return (
     <section className="col-span-1 md:col-span-6 bg-white p-8 overflow-y-auto max-h-[calc(100vh-140px)] border-r border-editorial-border custom-scrollbar">
       <div className="flex items-center justify-between border-b border-editorial-ink pb-2 mb-10">
-        <h2 className="font-display text-sm uppercase tracking-wider inline-block">Production Stream</h2>
+        <h2 className="font-display text-sm uppercase tracking-wider inline-block">{t('pipeline.productionStream')}</h2>
         {chunks.length > 0 && (
           <button
             onClick={clearChunks}
             className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted hover:text-red-500 transition-colors flex items-center gap-1"
           >
-            <Trash2 size={12} /> Clear Stream
+            <Trash2 size={12} /> {t('pipeline.clearStream')}
           </button>
         )}
       </div>
@@ -26,12 +28,12 @@ export function ProductionStream() {
           <div className="space-y-8 max-w-2xl mx-auto py-12">
             <div className="space-y-4">
               <label className="block text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
-                Input Content
+                {t('pipeline.inputContent')}
               </label>
               <textarea
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder="Paste source material here..."
+                placeholder={t('pipeline.inputPlaceholder')}
                 className="w-full bg-editorial-textbox border-none p-8 text-sm font-mono outline-none leading-relaxed resize-none min-h-[400px]"
               />
             </div>
@@ -39,7 +41,7 @@ export function ProductionStream() {
               onClick={generateChunks}
               className="w-full bg-editorial-ink text-white px-6 py-5 text-[11px] font-bold uppercase tracking-[3px] hover:shadow-xl transition-all"
             >
-              Stage Content to Stream
+              {t('pipeline.stageContent')}
             </button>
           </div>
         )}
@@ -51,7 +53,7 @@ export function ProductionStream() {
           >
             <div className="flex items-center justify-between">
               <span className="font-display italic text-2xl text-editorial-accent tracking-tighter">
-                Unit {indexPad(idx + 1)}
+                {t('pipeline.unit')} {indexPad(idx + 1)}
               </span>
               <div className="flex gap-4">
                 {config.stages
@@ -69,7 +71,7 @@ export function ProductionStream() {
 
             <div className="space-y-4">
               <p className="text-xs text-editorial-muted font-mono leading-relaxed opacity-50 mb-6 italic">
-                Original Source: &quot;{chunk.originalText.slice(0, 150)}
+                {t('pipeline.originalSource')}: &quot;{chunk.originalText.slice(0, 150)}
                 {chunk.originalText.length > 150 ? '...' : ''}&quot;
               </p>
 
@@ -97,7 +99,7 @@ export function ProductionStream() {
                         ) : result.status === 'error' ? (
                           <div className="flex items-start gap-2 text-red-600">
                             <AlertTriangle size={14} className="mt-0.5 shrink-0" />
-                            <span className="text-xs font-mono">{result.error || 'Unknown error'}</span>
+                            <span className="text-xs font-mono">{result.error || t('errors.unknownError')}</span>
                           </div>
                         ) : (
                           <div className="text-editorial-ink">{result.content}</div>
@@ -111,7 +113,7 @@ export function ProductionStream() {
               <div className="space-y-3 mt-8">
                 <div className="flex items-center justify-between">
                   <label className="block text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
-                    Candidate Translation
+                    {t('pipeline.candidateTranslation')}
                   </label>
                   <CopyButton text={chunk.currentDraft || ''} />
                 </div>
@@ -119,7 +121,7 @@ export function ProductionStream() {
                   value={chunk.currentDraft || ''}
                   onChange={(e) => updateChunkDraft(chunk.id, e.target.value)}
                   className="w-full bg-editorial-bg/50 border border-editorial-border p-4 text-sm font-sans outline-none focus:ring-1 focus:ring-editorial-ink/10 resize-y min-h-[100px] leading-relaxed transition-all"
-                  placeholder="Output will appear here. Edit manually before auditing..."
+                  placeholder={t('pipeline.candidatePlaceholder')}
                 />
               </div>
             </div>
