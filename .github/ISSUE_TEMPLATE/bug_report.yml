@@ -1,0 +1,49 @@
+name: 🐛 Bug Report
+description: Report a bug or unexpected behavior
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug!
+
+  - type: input
+    id: version
+    attributes:
+      label: Glossa version
+      placeholder: e.g. 0.2.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - Linux
+        - Windows
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      placeholder: Describe what you expected vs what actually happened.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open Glossa
+        2. Go to settings
+        3. ...
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error logs (if any)
+      render: shell

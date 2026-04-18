@@ -1,0 +1,38 @@
+name: ✨ Feature Request
+description: Suggest a new feature or improvement
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have an idea for Glossa? We'd love to hear it!
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      placeholder: Describe the use case or pain point.
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      placeholder: How should it work? Be as detailed as you like.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Pipeline / Stages
+        - Audit / Judge
+        - LLM Providers
+        - Ollama
+        - Projects / Files
+        - UI / UX
+        - Performance
+        - Other
