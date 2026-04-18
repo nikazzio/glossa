@@ -12,7 +12,7 @@ If you discover a security vulnerability in Glossa, please report it responsibly
 
 **Do NOT open a public issue.**
 
-Instead, use GitHub Security Advisories to report the issue privately, and include:
+Instead, use [GitHub Security Advisories](https://github.com/nikazzio/glossa/security/advisories/new) to report the issue privately, and include:
 
 1. A description of the vulnerability
 2. Steps to reproduce (if applicable)

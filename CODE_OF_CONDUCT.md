@@ -30,9 +30,10 @@ Examples of unacceptable behavior:
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the project maintainers. All complaints will be reviewed and
-investigated and will result in a response that is deemed necessary and
-appropriate to the circumstances.
+reported via [GitHub Security Advisories](https://github.com/nikazzio/glossa/security/advisories/new)
+or by opening a private issue. All complaints will be reviewed and investigated
+and will result in a response that is deemed necessary and appropriate to the
+circumstances.
 
 ## Attribution
 
