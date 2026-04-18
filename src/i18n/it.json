@@ -30,7 +30,20 @@
     "candidateTranslation": "Traduzione Candidata",
     "candidatePlaceholder": "Il risultato apparirà qui. Modifica manualmente prima dell'audit...",
     "newStage": "Nuova Fase",
-    "stagePromptPlaceholder": "Prompt specifico per la fase..."
+    "stagePromptPlaceholder": "Prompt specifico per la fase...",
+    "addStage": "Aggiungi fase",
+    "removeStage": "Rimuovi fase",
+    "enableStage": "Abilita fase",
+    "disableStage": "Disabilita fase",
+    "expandStage": "Espandi fase",
+    "collapseStage": "Comprimi fase",
+    "stageName": "Nome fase",
+    "sourceLanguage": "Lingua di partenza",
+    "targetLanguage": "Lingua di arrivo",
+    "addGlossaryEntry": "Aggiungi voce al glossario",
+    "removeGlossaryEntry": "Rimuovi voce dal glossario",
+    "copy": "Copia",
+    "copied": "Copiato"
   },
   "audit": {
     "title": "Log Audit",
@@ -88,7 +101,8 @@
     "save": "Salva",
     "saved": "Progetto salvato",
     "namePlaceholder": "Nome del progetto...",
-    "empty": "Nessun progetto. Creane uno per salvare il lavoro."
+    "empty": "Nessun progetto. Creane uno per salvare il lavoro.",
+    "delete": "Elimina"
   },
   "files": {
     "import": "Importa file di testo",

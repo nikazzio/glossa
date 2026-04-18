@@ -40,7 +40,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
 
   return (
     <div
-      className={`relative border border-editorial-border p-5 bg-white transition-all ${
+      className={`relative border border-editorial-border p-5 bg-editorial-bg transition-all ${
         !stage.enabled ? 'grayscale opacity-40' : 'shadow-sm'
       }`}
     >
@@ -50,21 +50,36 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
           <input
             value={stage.name}
             onChange={(e) => onUpdate({ name: e.target.value })}
-            className="bg-transparent border-none p-0 font-display text-sm focus:outline-none w-32 border-b border-transparent focus:border-editorial-ink/20"
+            className="bg-transparent border-none p-0 font-display text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent w-32 border-b border-transparent focus:border-editorial-ink/20"
+            aria-label={t('pipeline.stageName')}
           />
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={() => onUpdate({ enabled: !stage.enabled })} className="text-editorial-muted">
+          <button
+            onClick={() => onUpdate({ enabled: !stage.enabled })}
+            className="text-editorial-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            aria-label={stage.enabled ? t('pipeline.disableStage') : t('pipeline.enableStage')}
+            aria-pressed={stage.enabled}
+          >
             {stage.enabled ? (
               <ShieldCheck size={14} className="text-editorial-ink" />
             ) : (
               <div className="w-3.5 h-3.5 border-2 border-editorial-muted rounded-sm" />
             )}
           </button>
-          <button onClick={() => setIsExpanded(!isExpanded)} className="text-editorial-muted">
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="text-editorial-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            aria-expanded={isExpanded}
+            aria-label={isExpanded ? t('pipeline.collapseStage') : t('pipeline.expandStage')}
+          >
             {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </button>
-          <button onClick={onRemove} className="text-editorial-muted hover:text-red-500 overflow-hidden">
+          <button
+            onClick={onRemove}
+            className="text-editorial-muted hover:text-editorial-accent overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            aria-label={t('pipeline.removeStage')}
+          >
             <Trash2 size={14} />
           </button>
         </div>
@@ -85,7 +100,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
                   model: models[0] || '',
                 });
               }}
-              className="bg-editorial-textbox border-none px-2 py-1 text-[10px] font-bold uppercase outline-none"
+              className="bg-editorial-textbox border-none px-2 py-1 text-[10px] font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             >
               {Object.keys(MODEL_OPTIONS).map((p) => (
                 <option key={p} value={p}>
@@ -97,7 +112,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
               <select
                 value={stage.model}
                 onChange={(e) => onUpdate({ model: e.target.value })}
-                className="flex-1 bg-editorial-textbox border-none px-2 py-1 text-[10px] font-mono outline-none"
+                className="flex-1 bg-editorial-textbox border-none px-2 py-1 text-[10px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               >
                 {modelOptions.map((m) => (
                   <option key={m} value={m}>
@@ -110,13 +125,13 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
                 value={stage.model}
                 onChange={(e) => onUpdate({ model: e.target.value })}
                 placeholder={t('ollama.modelPlaceholder')}
-                className="flex-1 bg-editorial-textbox border-none px-2 py-1 text-[10px] font-mono outline-none"
+                className="flex-1 bg-editorial-textbox border-none px-2 py-1 text-[10px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               />
             ) : (
               <select
                 value={stage.model}
                 onChange={(e) => onUpdate({ model: e.target.value })}
-                className="flex-1 bg-editorial-textbox border-none px-2 py-1 text-[10px] font-mono outline-none"
+                className="flex-1 bg-editorial-textbox border-none px-2 py-1 text-[10px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               >
                 {MODEL_OPTIONS[stage.provider]?.map((m) => (
                   <option key={m} value={m}>
@@ -131,7 +146,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
             onChange={(e) => onUpdate({ prompt: e.target.value })}
             placeholder={t('pipeline.stagePromptPlaceholder')}
             rows={6}
-            className="w-full bg-editorial-textbox border-none p-3 text-[11px] font-mono outline-none leading-relaxed resize-y"
+            className="w-full bg-editorial-textbox border-none p-3 text-[11px] font-mono outline-none leading-relaxed resize-y focus-visible:ring-2 focus-visible:ring-editorial-accent"
           />
         </div>
       )}

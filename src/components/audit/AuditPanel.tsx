@@ -47,7 +47,7 @@ export function AuditPanel({ onRunAuditOnly }: AuditPanelProps) {
                   .map((c) => (
                     <div
                       key={c.id}
-                      className="flex items-start gap-2 bg-red-50 border border-red-200 p-3 text-red-700"
+                      className="flex items-start gap-2 bg-editorial-textbox/30 border border-editorial-accent/30 p-3 text-editorial-accent"
                     >
                       <AlertTriangle size={14} className="mt-0.5 shrink-0" />
                       <span className="text-[10px] font-mono">
@@ -67,11 +67,11 @@ export function AuditPanel({ onRunAuditOnly }: AuditPanelProps) {
                 {chunks
                   .flatMap((c) => c.judgeResult.issues)
                   .map((issue, i) => (
-                    <li key={i} className="py-4 hover:bg-white/30 px-2 -mx-2 transition-colors rounded-sm">
+                    <li key={i} className="py-4 hover:bg-editorial-textbox/30 px-2 -mx-2 transition-colors rounded-sm">
                       <div className="flex items-center gap-2 mb-1">
                         <span
                           className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-sm ${
-                            issue.severity === 'high' ? 'bg-red-500 text-white' : 'bg-editorial-ink text-white'
+                            issue.severity === 'high' ? 'bg-editorial-accent text-white' : 'bg-editorial-ink text-white'
                           }`}
                         >
                           {issue.type}
@@ -81,7 +81,7 @@ export function AuditPanel({ onRunAuditOnly }: AuditPanelProps) {
                         &quot;{issue.description}&quot;
                       </span>
                       {issue.suggestedFix && (
-                        <div className="mt-2 text-[10px] font-mono text-editorial-muted bg-white p-2 rounded-sm border-l-2 border-editorial-accent">
+                        <div className="mt-2 text-[10px] font-mono text-editorial-muted bg-editorial-bg p-2 rounded-sm border-l-2 border-editorial-accent">
                           {t('audit.fix')}: {issue.suggestedFix}
                         </div>
                       )}
@@ -108,13 +108,13 @@ export function AuditPanel({ onRunAuditOnly }: AuditPanelProps) {
         <button
           onClick={onRunAuditOnly}
           disabled={isProcessing || chunks.length === 0}
-          className="w-full bg-transparent border border-editorial-ink text-editorial-ink px-4 py-4 text-[11px] font-bold uppercase tracking-[3px] hover:bg-editorial-ink hover:text-white transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group shadow-sm active:translate-y-px"
+          className="w-full bg-transparent border border-editorial-ink text-editorial-ink px-4 py-4 text-[11px] font-bold uppercase tracking-[3px] hover:bg-editorial-ink hover:text-white transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed group shadow-sm active:translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
         >
           <RefreshCcw size={14} className={isProcessing ? 'animate-spin' : ''} /> {t('audit.reEvaluate')}
         </button>
         <button
           onClick={clearChunks}
-          className="w-full border border-editorial-border px-4 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-red-50 hover:text-red-500 transition-all flex items-center justify-center gap-2"
+          className="w-full border border-editorial-border px-4 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-editorial-textbox/50 hover:text-editorial-accent transition-all flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
         >
           {t('audit.clearStream')}
         </button>

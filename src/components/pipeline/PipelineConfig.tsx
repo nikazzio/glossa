@@ -45,7 +45,8 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfig
               <select
                 value={config.sourceLanguage}
                 onChange={(e) => setConfig((prev) => ({ ...prev, sourceLanguage: e.target.value }))}
-                className="w-full bg-editorial-textbox border-none px-3 py-2 text-xs font-mono outline-none focus:ring-1 focus:ring-editorial-ink/10 appearance-none"
+                className="w-full bg-editorial-textbox border-none px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
+                aria-label={t('pipeline.sourceLanguage')}
               >
                 {LANGUAGES.map((lang) => (
                   <option key={lang} value={lang}>{lang}</option>
@@ -59,15 +60,16 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfig
                     targetLanguage: prev.sourceLanguage,
                   }))
                 }
-                className="text-editorial-muted hover:text-editorial-ink transition-colors hover:scale-110 shrink-0"
-                title={t('pipeline.swapLanguages')}
+                className="text-editorial-muted hover:text-editorial-ink transition-colors hover:scale-110 shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                aria-label={t('pipeline.swapLanguages')}
               >
                 <ArrowRightLeft size={14} />
               </button>
               <select
                 value={config.targetLanguage}
                 onChange={(e) => setConfig((prev) => ({ ...prev, targetLanguage: e.target.value }))}
-                className="w-full bg-editorial-textbox border-none px-3 py-2 text-xs font-mono outline-none focus:ring-1 focus:ring-editorial-ink/10 appearance-none"
+                className="w-full bg-editorial-textbox border-none px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
+                aria-label={t('pipeline.targetLanguage')}
               >
                 {LANGUAGES.map((lang) => (
                   <option key={lang} value={lang}>{lang}</option>
@@ -93,7 +95,7 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfig
         <div>
           <div className="flex items-center justify-between border-b border-editorial-ink pb-2 mb-8">
             <h2 className="font-display text-sm uppercase tracking-wider">{t('pipeline.stages')}</h2>
-            <button onClick={addStage} className="text-editorial-accent hover:scale-110 transition-transform">
+            <button onClick={addStage} className="text-editorial-accent hover:scale-110 transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent" aria-label={t('pipeline.addStage')}>
               <Plus size={18} />
             </button>
           </div>
@@ -182,17 +184,18 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfig
             <label className="block text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
               {t('pipeline.keywordRegistry')}
             </label>
-            <Plus
-              cursor="pointer"
-              size={14}
-              className="text-editorial-accent"
+            <button
               onClick={() =>
                 setConfig((prev) => ({
                   ...prev,
                   glossary: [...prev.glossary, { term: '', translation: '' }],
                 }))
               }
-            />
+              className="text-editorial-accent hover:scale-110 transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              aria-label={t('pipeline.addGlossaryEntry')}
+            >
+              <Plus size={14} />
+            </button>
           </div>
           <div className="space-y-2">
             {config.glossary.map((g, i) => (
@@ -206,19 +209,22 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfig
                       return { ...prev, glossary: n };
                     })
                   }
-                  className="w-full bg-editorial-textbox border-none p-2 text-[10px] font-mono outline-none"
+                  className="w-full bg-editorial-textbox border-none p-2 text-[10px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   placeholder={t('pipeline.source')}
+                  aria-label={`${t('pipeline.source')} ${i + 1}`}
                 />
-                <X
-                  size={10}
-                  className="cursor-pointer opacity-0 group-hover:opacity-100 text-red-500"
+                <button
                   onClick={() =>
                     setConfig((prev) => ({
                       ...prev,
                       glossary: prev.glossary.filter((_, idx) => idx !== i),
                     }))
                   }
-                />
+                  className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-editorial-muted hover:text-editorial-accent transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent shrink-0"
+                  aria-label={`${t('pipeline.removeGlossaryEntry')} ${i + 1}`}
+                >
+                  <X size={10} />
+                </button>
                 <input
                   value={g.translation}
                   onChange={(e) =>
@@ -228,8 +234,9 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfig
                       return { ...prev, glossary: n };
                     })
                   }
-                  className="w-full bg-editorial-textbox border-none p-2 text-[10px] font-mono outline-none"
+                  className="w-full bg-editorial-textbox border-none p-2 text-[10px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   placeholder={t('pipeline.target')}
+                  aria-label={`${t('pipeline.target')} ${i + 1}`}
                 />
               </div>
             ))}
@@ -243,7 +250,7 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfig
           type="button"
           onClick={onRunPipeline}
           disabled={isProcessing || chunks.length === 0}
-          className="bg-editorial-ink text-white px-6 py-4 text-[11px] font-bold uppercase tracking-[2px] transition-all hover:bg-black/90 disabled:opacity-30 disabled:cursor-not-allowed"
+          className="bg-editorial-ink text-white px-6 py-4 text-[11px] font-bold uppercase tracking-[2px] transition-all hover:bg-editorial-ink/90 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
         >
           {isProcessing ? (
             <span className="flex items-center justify-center gap-2">
@@ -260,7 +267,7 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfig
           type="button"
           onClick={onRunAuditOnly}
           disabled={isProcessing || chunks.length === 0}
-          className="bg-transparent border border-editorial-ink text-editorial-ink px-6 py-4 text-[11px] font-bold uppercase tracking-[2px] transition-all hover:bg-editorial-ink/5 disabled:opacity-30 disabled:cursor-not-allowed"
+          className="bg-transparent border border-editorial-ink text-editorial-ink px-6 py-4 text-[11px] font-bold uppercase tracking-[2px] transition-all hover:bg-editorial-ink/5 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
         >
           {t('pipeline.runAuditOnly')}
         </button>

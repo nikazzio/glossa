@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { X, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface HelpGuideProps {
   open: boolean;
@@ -13,6 +14,7 @@ type Section = 'overview' | 'pipeline' | 'streaming' | 'audit' | 'projects' | 'p
 export function HelpGuide({ open, onClose }: HelpGuideProps) {
   const [activeSection, setActiveSection] = useState<Section>('overview');
   const { t } = useTranslation();
+  const trapRef = useFocusTrap(open, onClose);
 
   const sections: { id: Section; label: string }[] = [
     { id: 'overview', label: t('help.sections.overview') },
@@ -29,7 +31,13 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
   return (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="help-title"
+          ref={trapRef}
+        >
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -45,16 +53,16 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
           >
             {/* Sidebar */}
             <nav className="w-56 shrink-0 border-r border-editorial-border bg-editorial-textbox/30 p-6 overflow-y-auto">
-              <h3 className="font-display text-xl italic tracking-tight mb-6">{t('help.title')}</h3>
+              <h3 id="help-title" className="font-display text-xl italic tracking-tight mb-6">{t('help.title')}</h3>
               <ul className="space-y-1">
                 {sections.map((s) => (
                   <li key={s.id}>
                     <button
                       onClick={() => setActiveSection(s.id)}
-                      className={`w-full text-left px-3 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors flex items-center gap-2 ${
+                      className={`w-full text-left px-3 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
                         activeSection === s.id
                           ? 'bg-editorial-ink text-white'
-                          : 'text-editorial-muted hover:text-editorial-ink hover:bg-white/50'
+                          : 'text-editorial-muted hover:text-editorial-ink hover:bg-editorial-textbox/50'
                       }`}
                     >
                       <ChevronRight size={10} className={activeSection === s.id ? 'opacity-100' : 'opacity-0'} />
@@ -69,7 +77,8 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
             <div className="flex-1 overflow-y-auto p-10 custom-scrollbar">
               <button
                 onClick={onClose}
-                className="absolute top-6 right-6 text-editorial-muted hover:text-editorial-ink"
+                className="absolute top-6 right-6 text-editorial-muted hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                aria-label={t('settings.saveClose')}
               >
                 <X size={20} />
               </button>
@@ -206,7 +215,7 @@ function AuditSection() {
         {(['glossary', 'accuracy', 'fluency', 'grammar'] as const).map((type) => (
           <div key={type} className="flex items-start gap-3 p-4 bg-editorial-textbox/20 border border-editorial-border">
             <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 shrink-0 ${
-              type === 'grammar' ? 'bg-red-500 text-white' : 'bg-editorial-ink text-white'
+              type === 'grammar' ? 'bg-editorial-accent text-white' : 'bg-editorial-ink text-white'
             }`}>
               {type}
             </span>
