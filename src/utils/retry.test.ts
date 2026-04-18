@@ -83,20 +83,27 @@ describe('withRetry', () => {
   });
 
   it('retries on network errors and succeeds', async () => {
-    vi.useRealTimers();
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    vi.useFakeTimers();
     const fn = vi.fn()
       .mockRejectedValueOnce(new Error('network error'))
       .mockResolvedValue('recovered');
 
-    const result = await withRetry(fn, { maxRetries: 3, baseDelayMs: 1 });
+    const promise = withRetry(fn, { maxRetries: 3, baseDelayMs: 10 });
+    await vi.advanceTimersByTimeAsync(50);
+    const result = await promise;
     expect(result).toBe('recovered');
     expect(fn).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it('throws after exhausting retries', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
     vi.useRealTimers();
     const fn = vi.fn().mockRejectedValue(new Error('network error'));
     await expect(withRetry(fn, { maxRetries: 2, baseDelayMs: 1 })).rejects.toThrow('network error');
-    expect(fn).toHaveBeenCalledTimes(3); // initial + 2 retries
+    expect(fn).toHaveBeenCalledTimes(3);
+    vi.restoreAllMocks();
   });
 });

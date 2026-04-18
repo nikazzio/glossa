@@ -16,7 +16,7 @@ describe('indexPad', () => {
 
 describe('calculateCompositeScore', () => {
   const makeChunk = (score: number, status: 'completed' | 'idle' = 'completed'): TranslationChunk => ({
-    id: `chunk-${Math.random()}`,
+    id: `chunk-test`,
     originalText: 'test',
     stageResults: {},
     judgeResult: { content: '', status, score, issues: [] },

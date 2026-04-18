@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { usePipelineStore } from './pipelineStore';
-import { act } from '@testing-library/react';
 
 describe('pipelineStore', () => {
   beforeEach(() => {
