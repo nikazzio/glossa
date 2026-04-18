@@ -1,0 +1,46 @@
+{
+  "app": {
+    "title": "Glossa // Pipeline",
+    "subtitle": "Pipeline Multi-LLM v1.0"
+  },
+  "pipeline": {
+    "globalSetup": "Configurazione Globale",
+    "languagePair": "Coppia Linguistica",
+    "stages": "Fasi",
+    "auditGuard": "Controllo Qualità",
+    "keywordRegistry": "Registro Termini",
+    "beginPipeline": "Avvia Pipeline",
+    "executing": "In esecuzione...",
+    "productionStream": "Flusso Produzione",
+    "inputContent": "Contenuto Input",
+    "inputPlaceholder": "Incolla il materiale sorgente qui...",
+    "stageContent": "Prepara Contenuto",
+    "unit": "Unità",
+    "originalSource": "Testo Originale"
+  },
+  "audit": {
+    "title": "Log Audit",
+    "compositeIndex": "Indice Composito",
+    "anomaliesDetected": "Anomalie Rilevate",
+    "pipelineClear": "Audit Pipeline Superato",
+    "noRecord": "Nessun Audit",
+    "clearStream": "Pulisci Flusso",
+    "fix": "CORREZIONE"
+  },
+  "settings": {
+    "title": "Configurazione / Chiavi API",
+    "providerConfig": "Configurazione Provider",
+    "securityAdvisory": "Avviso di Sicurezza",
+    "securityMessage": "Le chiavi API vengono lette dalle variabili d'ambiente in produzione. Definirle qui localmente (prefisso VITE_) sovrascrive i valori predefiniti per questa sessione.",
+    "saveClose": "Salva e Chiudi",
+    "notConfigured": "Non configurato"
+  },
+  "common": {
+    "from": "Da",
+    "to": "A",
+    "source": "Sorgente",
+    "target": "Destinazione",
+    "error": "Qualcosa è andato storto",
+    "tryAgain": "Riprova"
+  }
+}
