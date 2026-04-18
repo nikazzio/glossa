@@ -37,10 +37,10 @@ export function SettingsModal() {
                   Provider Configuration
                 </label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <ApiKeyInput label="Gemini (Native)" envKey="GEMINI_API_KEY" />
-                  <ApiKeyInput label="OpenAI" envKey="OPENAI_API_KEY" />
-                  <ApiKeyInput label="Anthropic" envKey="ANTHROPIC_API_KEY" />
-                  <ApiKeyInput label="DeepSeek" envKey="DEEPSEEK_API_KEY" />
+                  <ApiKeyInput label="Gemini (Native)" provider="gemini" />
+                  <ApiKeyInput label="OpenAI" provider="openai" />
+                  <ApiKeyInput label="Anthropic" provider="anthropic" />
+                  <ApiKeyInput label="DeepSeek" provider="deepseek" />
                 </div>
               </div>
 
