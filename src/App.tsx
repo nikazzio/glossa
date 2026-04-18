@@ -4,6 +4,7 @@ import { AuditPanel } from './components/audit';
 import { SettingsModal } from './components/settings';
 import { ErrorBoundary } from './components/common';
 import { usePipeline } from './hooks/usePipeline';
+import { Toaster } from 'sonner';
 
 export default function App() {
   const { runPipeline, runAuditOnly } = usePipeline();
@@ -21,6 +22,17 @@ export default function App() {
 
         <SettingsModal />
       </div>
+      <Toaster
+        position="bottom-right"
+        toastOptions={{
+          style: {
+            fontFamily: 'var(--font-sans, system-ui)',
+            fontSize: '12px',
+          },
+        }}
+        richColors
+        closeButton
+      />
     </ErrorBoundary>
   );
 }

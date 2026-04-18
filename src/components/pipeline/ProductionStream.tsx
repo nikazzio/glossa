@@ -1,4 +1,4 @@
-import { Trash2 } from 'lucide-react';
+import { Trash2, AlertTriangle } from 'lucide-react';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { StatusIndicator, ProcessingLine, CopyButton } from '../common';
 import { indexPad } from '../../utils';
@@ -82,7 +82,11 @@ export function ProductionStream() {
                   return (
                     <div
                       key={stage.id}
-                      className="relative border border-editorial-border p-6 bg-editorial-bg/10 animate-in fade-in slide-in-from-left-2 duration-300"
+                      className={`relative border p-6 bg-editorial-bg/10 animate-in fade-in slide-in-from-left-2 duration-300 ${
+                        result.status === 'error'
+                          ? 'border-red-300 bg-red-50/30'
+                          : 'border-editorial-border'
+                      }`}
                     >
                       <span className="absolute -top-3 left-6 bg-white border border-editorial-border px-2 font-display italic text-[10px]">
                         {stage.name}
@@ -90,6 +94,11 @@ export function ProductionStream() {
                       <div className="text-sm leading-relaxed overflow-hidden">
                         {result.status === 'processing' ? (
                           <ProcessingLine />
+                        ) : result.status === 'error' ? (
+                          <div className="flex items-start gap-2 text-red-600">
+                            <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+                            <span className="text-xs font-mono">{result.error || 'Unknown error'}</span>
+                          </div>
                         ) : (
                           <div className="text-editorial-ink">{result.content}</div>
                         )}

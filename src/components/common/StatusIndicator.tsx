@@ -23,7 +23,9 @@ export function StatusIndicator({ status, label }: StatusIndicatorProps) {
             ? 'text-editorial-ink'
             : status === 'processing'
               ? 'text-editorial-accent'
-              : 'text-editorial-muted opacity-40'
+              : status === 'error'
+                ? 'text-red-500'
+                : 'text-editorial-muted opacity-40'
         }`}
       >
         {label}

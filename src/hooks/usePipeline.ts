@@ -1,11 +1,13 @@
 import { useCallback } from 'react';
+import { toast } from 'sonner';
 import { usePipelineStore } from '../stores/pipelineStore';
 import { llmService } from '../services/llmService';
+import { withRetry, friendlyError } from '../utils/retry';
 import type { JudgeResult } from '../types';
 
 /**
  * Hook that encapsulates pipeline execution logic.
- * Returns `runPipeline`, `runAuditOnly`, and the processing state.
+ * Includes retry with exponential backoff and toast notifications.
  */
 export function usePipeline() {
   const {
@@ -33,6 +35,8 @@ export function usePipeline() {
       }))
     );
 
+    let errorCount = 0;
+
     for (const chunk of chunks) {
       let lastResult = '';
 
@@ -41,15 +45,21 @@ export function usePipeline() {
 
         updateChunkStage(chunk.id, stage.id, { content: '', status: 'processing' });
         try {
-          const result = await llmService.runStage(chunk.originalText, stage, config, lastResult);
+          const result = await withRetry(
+            () => llmService.runStage(chunk.originalText, stage, config, lastResult),
+            { label: `Stage "${stage.name}"` },
+          );
           lastResult = result;
           updateChunkStage(chunk.id, stage.id, { content: result, status: 'completed' });
         } catch (error: any) {
+          errorCount++;
+          const msg = friendlyError(error.message ?? String(error));
           updateChunkStage(chunk.id, stage.id, {
             content: '',
             status: 'error',
-            error: error.message,
+            error: msg,
           });
+          toast.error(`Stage "${stage.name}" failed`, { description: msg });
           break;
         }
       }
@@ -62,30 +72,44 @@ export function usePipeline() {
       if (lastResult) {
         updateChunkJudge(chunk.id, { content: '', status: 'processing', score: 0, issues: [] });
         try {
-          const judgeData = await llmService.judgeTranslation(chunk.originalText, lastResult, config);
+          const judgeData = await withRetry(
+            () => llmService.judgeTranslation(chunk.originalText, lastResult, config),
+            { label: 'Audit' },
+          );
           updateChunkJudge(chunk.id, {
             ...judgeData,
             content: lastResult,
             status: 'completed',
           } as JudgeResult);
         } catch (error: any) {
+          errorCount++;
+          const msg = friendlyError(error.message ?? String(error));
           updateChunkJudge(chunk.id, {
             content: lastResult,
             status: 'error',
             score: 0,
             issues: [],
-            error: error.message,
+            error: msg,
           });
+          toast.error('Audit failed', { description: msg });
         }
       }
     }
 
     setIsProcessing(false);
+
+    if (errorCount === 0) {
+      toast.success('Pipeline completed successfully');
+    } else {
+      toast.warning(`Pipeline completed with ${errorCount} error(s)`);
+    }
   }, [chunks, config, setIsProcessing, setChunks, updateChunkStage, updateChunkJudge, updateChunkDraft]);
 
   const runAuditOnly = useCallback(async () => {
     if (chunks.length === 0) return;
     setIsProcessing(true);
+
+    let errorCount = 0;
 
     for (const chunk of chunks) {
       const textToAudit = chunk.currentDraft;
@@ -93,24 +117,34 @@ export function usePipeline() {
 
       updateChunkJudge(chunk.id, { content: '', status: 'processing', score: 0, issues: [] });
       try {
-        const judgeData = await llmService.judgeTranslation(chunk.originalText, textToAudit, config);
+        const judgeData = await withRetry(
+          () => llmService.judgeTranslation(chunk.originalText, textToAudit, config),
+          { label: 'Audit' },
+        );
         updateChunkJudge(chunk.id, {
           ...judgeData,
           content: textToAudit,
           status: 'completed',
         } as JudgeResult);
       } catch (error: any) {
+        errorCount++;
+        const msg = friendlyError(error.message ?? String(error));
         updateChunkJudge(chunk.id, {
           content: textToAudit,
           status: 'error',
           score: 0,
           issues: [],
-          error: error.message,
+          error: msg,
         });
+        toast.error('Audit failed', { description: msg });
       }
     }
 
     setIsProcessing(false);
+
+    if (errorCount === 0) {
+      toast.success('Re-evaluation completed');
+    }
   }, [chunks, config, setIsProcessing, updateChunkJudge]);
 
   return { runPipeline, runAuditOnly, isProcessing };

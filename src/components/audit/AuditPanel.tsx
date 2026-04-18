@@ -1,4 +1,4 @@
-import { ShieldCheck, RefreshCcw } from 'lucide-react';
+import { ShieldCheck, RefreshCcw, AlertTriangle } from 'lucide-react';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { calculateCompositeScore } from '../../utils';
 
@@ -10,6 +10,7 @@ export function AuditPanel({ onRunAuditOnly }: AuditPanelProps) {
   const { chunks, clearChunks, isProcessing } = usePipelineStore();
 
   const hasCompletedAudits = chunks.length > 0 && chunks.some((c) => c.judgeResult.status === 'completed');
+  const hasErrorAudits = chunks.length > 0 && chunks.some((c) => c.judgeResult.status === 'error');
   const allClear =
     chunks.length > 0 &&
     chunks.every((c) => c.judgeResult.status === 'completed' && c.judgeResult.issues.length === 0);
@@ -21,18 +22,39 @@ export function AuditPanel({ onRunAuditOnly }: AuditPanelProps) {
       </h2>
 
       <div className="flex flex-col gap-12 flex-1">
-        {hasCompletedAudits ? (
+        {hasCompletedAudits || hasErrorAudits ? (
           <div className="space-y-12 animate-in fade-in slide-in-from-right-4 duration-500">
             {/* Score */}
-            <div className="space-y-1">
-              <div className="text-7xl font-display text-center tracking-tighter">
-                {calculateCompositeScore(chunks)}
-                <span className="text-base text-editorial-muted ml-1 font-sans">/100</span>
+            {hasCompletedAudits && (
+              <div className="space-y-1">
+                <div className="text-7xl font-display text-center tracking-tighter">
+                  {calculateCompositeScore(chunks)}
+                  <span className="text-base text-editorial-muted ml-1 font-sans">/100</span>
+                </div>
+                <div className="text-[8px] text-center uppercase font-bold tracking-[4px] text-editorial-muted">
+                  Composite Index
+                </div>
               </div>
-              <div className="text-[8px] text-center uppercase font-bold tracking-[4px] text-editorial-muted">
-                Composite Index
+            )}
+
+            {/* Audit Errors */}
+            {hasErrorAudits && (
+              <div className="space-y-3">
+                {chunks
+                  .filter((c) => c.judgeResult.status === 'error')
+                  .map((c) => (
+                    <div
+                      key={c.id}
+                      className="flex items-start gap-2 bg-red-50 border border-red-200 p-3 text-red-700"
+                    >
+                      <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+                      <span className="text-[10px] font-mono">
+                        {c.judgeResult.error || 'Audit failed'}
+                      </span>
+                    </div>
+                  ))}
               </div>
-            </div>
+            )}
 
             {/* Issues */}
             <div className="space-y-4">
