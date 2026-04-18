@@ -22,7 +22,6 @@ body:
       options:
         - Linux
         - Windows
-        - macOS
     validations:
       required: true
 
