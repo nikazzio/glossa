@@ -98,5 +98,116 @@
     "exportBilingual": "Export bilingual .md",
     "exported": "File exported successfully",
     "exportError": "Export failed"
+  },
+  "help": {
+    "title": "User Guide",
+    "sections": {
+      "overview": "Overview",
+      "pipeline": "Pipeline",
+      "streaming": "Streaming",
+      "audit": "Audit",
+      "projects": "Projects",
+      "providers": "Providers",
+      "ollama": "Ollama",
+      "glossary": "Glossary",
+      "shortcuts": "Toolbar"
+    },
+    "overview": {
+      "title": "What is Glossa?",
+      "p1": "Glossa is a multi-stage AI translation pipeline designed for scholars, philologists, and professional translators. Instead of a single-shot translation, it chains multiple LLM passes — each with its own instructions and model — to iteratively refine the output.",
+      "p2": "An AI judge then audits the final translation against your glossary and quality criteria, scoring it and listing specific issues with suggested fixes.",
+      "flowTitle": "Translation workflow:",
+      "step1": "Paste or import your source text",
+      "step2": "Text passes through Stage 1 (initial draft)",
+      "step3": "Stage 2+ refine the translation (fluency, register, etc.)",
+      "step4": "AI Judge audits: score, issues, suggested fixes",
+      "step5": "You edit the candidate translation manually",
+      "step6": "Export as .txt or bilingual .md",
+      "p3": "Each stage can use a different model and provider. For example, use Gemini for a fast initial draft, then Claude for stylistic refinement, and GPT-4o as the judge. Or run everything locally with Ollama."
+    },
+    "pipeline": {
+      "title": "Pipeline Configuration",
+      "intro": "The left panel contains all pipeline settings. Here's how to set up a translation run:",
+      "configTitle": "Language pair",
+      "configDesc": "Select source and target languages from the dropdowns. Use the swap button (⇄) to quickly reverse the direction. Enable 'Auto-Segment' to split the text into paragraph-level chunks for independent processing.",
+      "stagesTitle": "Translation stages",
+      "stagesDesc": "Each stage represents one LLM pass. Click the + button to add stages. Expand a stage to configure its provider, model, and prompt. The prompt tells the LLM what to focus on — e.g., 'Focus on literal accuracy' for stage 1, 'Make it sound natural and fluent' for stage 2. You can disable stages without deleting them.",
+      "runTitle": "Running the pipeline",
+      "runDesc": "After pasting your text in the center panel and clicking 'Stage Content to Stream', press 'Begin Pipeline'. Each stage runs sequentially per chunk, and you'll see tokens stream in real time. The judge runs automatically after all stages complete.",
+      "editTitle": "Editing the result",
+      "editDesc": "The 'Candidate Translation' box is fully editable. Make manual corrections, then click 'Re-Evaluate Drafts' in the audit panel to get an updated score on your edits.",
+      "tipTitle": "Pro tip: mix providers",
+      "tipDesc": "Use different models for different stages. A fast model (Gemini Flash, DeepSeek) works well for initial drafts, while a stronger model (GPT-4o, Claude Sonnet) excels at refinement and judging. Ollama models are ideal for offline work or sensitive content."
+    },
+    "streaming": {
+      "title": "Real-time Streaming",
+      "p1": "All translation stages stream tokens in real time. As the LLM generates text, you see it appear word by word in the stage output box. This gives immediate feedback and lets you spot issues early without waiting for the full response.",
+      "p2": "Streaming works across all five providers: Gemini, OpenAI, Anthropic, DeepSeek, and Ollama. The connection uses Server-Sent Events (SSE) on the backend, with Tauri events relaying tokens to the frontend.",
+      "p3": "The AI Judge does not stream — it returns structured JSON (score + issues) which is displayed once complete. If a stage fails during streaming, the system retries automatically with exponential backoff (up to 3 attempts)."
+    },
+    "audit": {
+      "title": "Audit & Quality Control",
+      "intro": "The right panel shows audit results from the AI Judge. After the pipeline completes, each chunk is evaluated and assigned a composite score (0–100). The judge produces four categories of issues:",
+      "glossaryIssue": "The translation deviates from the terms defined in your Keyword Registry.",
+      "accuracyIssue": "The meaning of the source text is not faithfully rendered in the translation.",
+      "fluencyIssue": "The translation reads unnaturally or has awkward phrasing in the target language.",
+      "grammarIssue": "Grammatical errors, incorrect conjugations, or syntactic issues in the output.",
+      "reeval": "After manually editing the candidate translation, click 'Re-Evaluate Drafts' to run the judge again on your updated text. This lets you iterate until the score meets your standards without re-running the entire pipeline."
+    },
+    "projects": {
+      "title": "Projects & Files",
+      "intro": "Glossa saves your work in local SQLite — all data stays on your machine.",
+      "createTitle": "Create a project",
+      "createDesc": "Click the folder icon (📂) in the toolbar to open the Projects panel. Type a name and click Create. The project stores your pipeline configuration, glossary, and all translation results.",
+      "saveTitle": "Save your work",
+      "saveDesc": "Click the save icon (💾) at any time to persist the current state. When you reopen a project, the full pipeline config, stages, glossary, and translations are restored exactly as you left them.",
+      "importExportTitle": "Import and export",
+      "importExportDesc": "Use the upload icon (⬆) to import a .txt or .md file as source text. Use the download icon (⬇) to export the translation as plain text, or click 'MD' for a bilingual Markdown document with original text, translation, audit score, and issues."
+    },
+    "providers": {
+      "title": "LLM Providers",
+      "intro": "Glossa supports five providers. Each stage and the judge can use a different provider and model. Configure API keys in Settings (⚙️).",
+      "provider": "Provider",
+      "models": "Models",
+      "notes": "Notes",
+      "geminiNote": "Google's models. Fast and cost-effective.",
+      "openaiNote": "GPT-4o family. Strong general-purpose translation.",
+      "anthropicNote": "Claude models. Excellent for nuanced, literary text.",
+      "deepseekNote": "Chinese AI lab. Competitive pricing, good multilingual support.",
+      "ollamaModels": "Any installed model",
+      "ollamaNote": "Runs locally. No API key. Fully private.",
+      "security": "API keys are stored in your operating system's keychain (GNOME Keyring on Linux, Keychain on macOS, Credential Manager on Windows). They are never written to disk in plain text and never sent anywhere except to the provider's API endpoint."
+    },
+    "ollama": {
+      "title": "Using Ollama",
+      "intro": "Ollama lets you run open-source LLMs entirely on your machine. No API key needed, no data leaves your computer. This is ideal for sensitive documents or offline work.",
+      "installTitle": "Install Ollama",
+      "installDesc": "Download from ollama.com or use the install script:",
+      "pullTitle": "Pull a model",
+      "pullDesc": "Download the model you want to use. Popular choices for translation:",
+      "serveTitle": "Start the server",
+      "serveDesc": "Ollama must be running in the background. If it's not already:",
+      "useTitle": "Use in Glossa",
+      "useDesc": "Open Settings — the Ollama section shows connection status and available models. Select 'ollama' as the provider in any stage or the judge, then pick a model from the dropdown.",
+      "recommendedTitle": "Recommended models for translation",
+      "recommendedDesc": "For general translation: llama3.2 (8B), mistral (7B), or gemma2 (9B). For higher quality on a capable machine: llama3.1:70b or mixtral:8x7b. Smaller models (< 3B parameters) may produce lower quality translations."
+    },
+    "glossary": {
+      "title": "Keyword Registry (Glossary)",
+      "intro": "The Keyword Registry lets you define mandatory term translations. For each entry, specify the source term and its required translation. These terms are enforced across all pipeline stages.",
+      "usage": "Add entries in the left panel under 'Keyword Registry'. For example: 'λόγος → discourse (not 'word' or 'reason')'. Each stage's system prompt includes the full glossary, instructing the LLM to use these exact translations.",
+      "audit": "The AI Judge specifically checks glossary adherence. If the translation uses a different term than what's defined in the registry, it will flag a 'glossary' issue with severity and a suggested fix. This is especially valuable for technical, legal, or academic texts where terminology must be consistent."
+    },
+    "shortcuts": {
+      "title": "Toolbar Reference",
+      "openSettings": "Open Settings (API keys, Ollama)",
+      "switchLang": "Switch interface language (EN/IT)",
+      "openProjects": "Open Projects panel",
+      "importFile": "Import source text file",
+      "saveProject": "Save current project",
+      "exportTxt": "Export translation as .txt",
+      "exportMd": "Export bilingual Markdown",
+      "headerIcon": "header icon"
+    }
   }
 }

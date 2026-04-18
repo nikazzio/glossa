@@ -1,14 +1,17 @@
-import { Settings, Globe, FolderOpen, Upload, Download, Save } from 'lucide-react';
+import { Settings, Globe, FolderOpen, Upload, Download, Save, HelpCircle } from 'lucide-react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { importTextFile, exportTranslation, exportBilingual } from '../../services/fileService';
+import { HelpGuide } from '../help';
 
 export function Header() {
   const { setShowSettings, setInputText, chunks } = usePipelineStore();
   const { currentProjectId, setShowProjectPanel, saveCurrentProject, projects } = useProjectStore();
   const { t, i18n } = useTranslation();
+  const [showHelp, setShowHelp] = useState(false);
 
   const currentProject = projects.find((p) => p.id === currentProjectId);
 
@@ -125,7 +128,16 @@ export function Header() {
         >
           <Settings size={16} />
         </button>
+        <button
+          onClick={() => setShowHelp(true)}
+          className="p-2 border border-editorial-border text-editorial-muted hover:text-editorial-ink hover:bg-white transition-colors"
+          title={t('help.title')}
+        >
+          <HelpCircle size={16} />
+        </button>
       </div>
+
+      <HelpGuide open={showHelp} onClose={() => setShowHelp(false)} />
     </header>
   );
 }
