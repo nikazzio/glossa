@@ -71,5 +71,24 @@
     "label": "Language",
     "en": "English",
     "it": "Italiano"
+  },
+  "projects": {
+    "title": "Projects",
+    "current": "Current",
+    "new": "New Project",
+    "create": "Create",
+    "save": "Save",
+    "saved": "Project saved",
+    "namePlaceholder": "Project name...",
+    "empty": "No projects yet. Create one to save your work."
+  },
+  "files": {
+    "import": "Import text file",
+    "imported": "File imported successfully",
+    "importError": "Import failed",
+    "exportTxt": "Export as .txt",
+    "exportBilingual": "Export bilingual .md",
+    "exported": "File exported successfully",
+    "exportError": "Export failed"
   }
 }

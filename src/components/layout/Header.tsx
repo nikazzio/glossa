@@ -1,22 +1,115 @@
-import { Settings, Globe } from 'lucide-react';
+import { Settings, Globe, FolderOpen, Upload, Download, Save } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { usePipelineStore } from '../../stores/pipelineStore';
+import { useProjectStore } from '../../stores/projectStore';
+import { importTextFile, exportTranslation, exportBilingual } from '../../services/fileService';
 
 export function Header() {
-  const { setShowSettings } = usePipelineStore();
+  const { setShowSettings, setInputText, chunks } = usePipelineStore();
+  const { currentProjectId, setShowProjectPanel, saveCurrentProject, projects } = useProjectStore();
   const { t, i18n } = useTranslation();
+
+  const currentProject = projects.find((p) => p.id === currentProjectId);
 
   const toggleLang = () => {
     i18n.changeLanguage(i18n.language === 'en' ? 'it' : 'en');
   };
 
+  const handleImport = async () => {
+    try {
+      const text = await importTextFile();
+      if (text) {
+        setInputText(text);
+        toast.success(t('files.imported'));
+      }
+    } catch (err: any) {
+      toast.error(t('files.importError'), { description: err.message });
+    }
+  };
+
+  const handleExport = async (type: 'txt' | 'md' | 'bilingual') => {
+    try {
+      const ok = type === 'bilingual'
+        ? await exportBilingual(chunks)
+        : await exportTranslation(chunks, type);
+      if (ok) toast.success(t('files.exported'));
+    } catch (err: any) {
+      toast.error(t('files.exportError'), { description: err.message });
+    }
+  };
+
+  const handleSave = async () => {
+    await saveCurrentProject();
+    toast.success(t('projects.saved'));
+  };
+
   return (
-    <header className="px-10 py-10 border-b border-editorial-border bg-editorial-bg flex flex-col md:flex-row md:items-end justify-between gap-4">
-      <div className="brand font-display italic text-4xl tracking-tight">{t('app.title')}</div>
-      <div className="flex items-center gap-6">
-        <div className="text-[10px] font-bold tracking-[2px] uppercase text-editorial-muted">
+    <header className="px-10 py-6 border-b border-editorial-border bg-editorial-bg flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex items-center gap-4">
+        <div className="brand font-display italic text-3xl tracking-tight">{t('app.title')}</div>
+        {currentProject && (
+          <span className="text-[10px] font-mono text-editorial-muted bg-editorial-textbox/50 px-2 py-1 border border-editorial-border">
+            {currentProject.name}
+          </span>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2">
+        {/* File actions */}
+        <button
+          onClick={handleImport}
+          className="p-2 border border-editorial-border text-editorial-muted hover:text-editorial-ink hover:bg-white transition-colors"
+          title={t('files.import')}
+        >
+          <Upload size={16} />
+        </button>
+        {chunks.length > 0 && (
+          <div className="flex items-center gap-0.5">
+            <button
+              onClick={() => handleExport('txt')}
+              className="p-2 border border-editorial-border text-editorial-muted hover:text-editorial-ink hover:bg-white transition-colors"
+              title={t('files.exportTxt')}
+            >
+              <Download size={16} />
+            </button>
+            <button
+              onClick={() => handleExport('bilingual')}
+              className="px-2 py-2 border border-editorial-border text-editorial-muted hover:text-editorial-ink hover:bg-white transition-colors text-[9px] font-bold uppercase"
+              title={t('files.exportBilingual')}
+            >
+              MD
+            </button>
+          </div>
+        )}
+
+        <div className="w-px h-6 bg-editorial-border mx-1" />
+
+        {/* Project actions */}
+        <button
+          onClick={() => setShowProjectPanel(true)}
+          className="p-2 border border-editorial-border text-editorial-muted hover:text-editorial-ink hover:bg-white transition-colors"
+          title={t('projects.title')}
+        >
+          <FolderOpen size={16} />
+        </button>
+        {currentProjectId && (
+          <button
+            onClick={handleSave}
+            className="p-2 border border-editorial-border text-editorial-muted hover:text-editorial-ink hover:bg-white transition-colors"
+            title={t('projects.save')}
+          >
+            <Save size={16} />
+          </button>
+        )}
+
+        <div className="w-px h-6 bg-editorial-border mx-1" />
+
+        {/* App version */}
+        <div className="text-[9px] font-bold tracking-[2px] uppercase text-editorial-muted hidden md:block">
           {t('app.subtitle')}
         </div>
+
         <button
           onClick={toggleLang}
           className="flex items-center gap-1.5 px-2 py-1.5 border border-editorial-border text-[10px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-ink hover:bg-white transition-colors"
@@ -30,7 +123,7 @@ export function Header() {
           className="p-2 border border-editorial-border hover:bg-editorial-ink hover:text-white transition-colors"
           title={t('header.settings')}
         >
-          <Settings size={18} />
+          <Settings size={16} />
         </button>
       </div>
     </header>
