@@ -4,6 +4,8 @@ import {
   createProject,
   deleteProject,
   getProjectConfig,
+  loadTranslations,
+  restoreTranslations,
   saveProjectConfig,
   saveTranslations,
   type Project,
@@ -44,10 +46,14 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   openProject: async (id: string) => {
-    const config = await getProjectConfig(id);
+    const [config, savedTranslations] = await Promise.all([
+      getProjectConfig(id),
+      loadTranslations(id),
+    ]);
     if (!config) return;
 
     const pipeline = usePipelineStore.getState();
+    const restoredChunks = restoreTranslations(savedTranslations);
     pipeline.setConfig({
       ...pipeline.config,
       stages: config.stages.length > 0 ? config.stages : pipeline.config.stages,
@@ -57,6 +63,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       useChunking: config.useChunking,
       glossary: config.glossary,
     });
+    pipeline.setChunks(restoredChunks);
+    pipeline.setInputText(restoredChunks.map((chunk) => chunk.originalText).join('\n\n'));
 
     set({ currentProjectId: id });
   },
