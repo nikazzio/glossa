@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/nikazzio/glossa/compare/glossa-v0.2.1...glossa-v0.2.2) (2026-04-19)
+
+
+### 🐛 Bug Fixes
+
+* configure tauri updater for release builds ([#31](https://github.com/nikazzio/glossa/issues/31)) ([3a0a9d6](https://github.com/nikazzio/glossa/commit/3a0a9d6e50b1b706693ef061792f03cc3f3c9fdd))
+
 ## [0.2.1](https://github.com/nikazzio/glossa/compare/glossa-v0.2.0...glossa-v0.2.1) (2026-04-19)
 
 
