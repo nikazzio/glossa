@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/nikazzio/glossa/compare/glossa-v0.2.0...glossa-v0.2.1) (2026-04-19)
+
+
+### 🐛 Bug Fixes
+
+* restore saved translations when reopening projects ([#27](https://github.com/nikazzio/glossa/issues/27)) ([a549c68](https://github.com/nikazzio/glossa/commit/a549c686d7c073eef163d64ddb1a430ca3f27119))
+
 ## [0.2.0](https://github.com/nikazzio/glossa/compare/glossa-v0.1.0...glossa-v0.2.0) (2026-04-18)
 
 
