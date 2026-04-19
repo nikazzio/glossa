@@ -1,7 +1,7 @@
 {
   "name": "glossa",
   "private": true,
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Multi-stage AI translation pipeline for scholars",
   "type": "module",
   "scripts": {
