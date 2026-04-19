@@ -78,6 +78,24 @@ npm run tauri:build
 Outputs `.deb`, `.rpm`, and `.AppImage` on Linux; `.dmg` on macOS; `.msi` on Windows.  
 Bundles are in `src-tauri/target/release/bundle/`.
 
+### Verify release downloads
+
+GitHub Releases include machine-readable SHA-256 checksum files so you can verify downloaded assets before running them.
+
+Windows PowerShell:
+```powershell
+Get-FileHash .\Glossa-setup.exe -Algorithm SHA256
+```
+
+Windows CMD:
+```cmd
+certutil -hashfile Glossa-setup.exe SHA256
+```
+
+Compare the resulting hash with the corresponding entry in `SHA256SUMS-*.txt`.
+
+Note: Tauri updater artifacts are also signed for in-app update verification, but that signature is separate from Windows Authenticode code signing and does not suppress SmartScreen warnings.
+
 ## Configuration
 
 ### API keys

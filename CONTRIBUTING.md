@@ -91,6 +91,8 @@ Releases are fully automated via [release-please](https://github.com/googleapis/
    - A git tag `vX.Y.Z` is created
    - GitHub Actions builds the app on Linux and Windows in parallel
    - Binaries (`.deb`, `.rpm`, `.AppImage`, `.msi`, `.exe`) are uploaded to a GitHub Release
+   - Platform-specific `SHA256SUMS-*.txt` files are uploaded for integrity verification
+   - Release builds also generate signed Tauri updater artifacts when updater signing secrets are configured
 
 ### Build targets
 
@@ -137,3 +139,12 @@ refactor: clean up stores    ──┘
 3. Push and open a PR
 4. CI runs lint + cargo check automatically
 5. After review, merge to `main`
+
+## Release secrets
+
+The automated release workflow expects these repository secrets for Tauri updater artifact signing:
+
+- `TAURI_SIGNING_PRIVATE_KEY`
+- `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (optional if the private key has no password)
+
+These are used for Tauri updater artifact signing only. They do **not** replace Windows Authenticode code signing.
