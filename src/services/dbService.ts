@@ -9,6 +9,16 @@ async function getDb(): Promise<Database> {
   return db;
 }
 
+async function ensureColumn(table: string, column: string, definition: string): Promise<void> {
+  const conn = await getDb();
+  const columns = await conn.select<Array<{ name: string }>>(`PRAGMA table_info(${table})`);
+  if (columns.some((existing) => existing.name === column)) {
+    return;
+  }
+
+  await conn.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+}
+
 /** Run migrations on app startup */
 export async function initDatabase(): Promise<void> {
   const conn = await getDb();
@@ -76,9 +86,12 @@ export async function initDatabase(): Promise<void> {
       stage_results TEXT DEFAULT '{}',
       judge_score REAL DEFAULT 0,
       judge_issues TEXT DEFAULT '[]',
+      judge_result TEXT DEFAULT '',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  await ensureColumn('translations', 'judge_result', "TEXT DEFAULT ''");
 
   await conn.execute(`
     CREATE TABLE IF NOT EXISTS app_settings (

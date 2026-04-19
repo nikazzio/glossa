@@ -1,5 +1,11 @@
 import { select, execute } from './dbService';
-import type { PipelineConfig, PipelineStageConfig, GlossaryEntry, TranslationChunk } from '../types';
+import type {
+  GlossaryEntry,
+  JudgeResult,
+  PipelineConfig,
+  PipelineStageConfig,
+  TranslationChunk,
+} from '../types';
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -20,7 +26,45 @@ export interface SavedTranslation {
   stage_results: string; // JSON
   judge_score: number;
   judge_issues: string; // JSON
+  judge_result?: string; // JSON
   created_at: string;
+}
+
+function parseJson<T>(value: string | undefined, fallback: T): T {
+  if (!value) return fallback;
+
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+function restoreJudgeResult(row: SavedTranslation): JudgeResult {
+  const legacyIssues = parseJson<JudgeResult['issues']>(row.judge_issues, []);
+  const legacyFallback: JudgeResult = {
+    content: row.final_translation,
+    status: row.final_translation || row.judge_score > 0 || legacyIssues.length > 0 ? 'completed' : 'idle',
+    score: row.judge_score,
+    issues: legacyIssues,
+  };
+
+  const restored = parseJson<Partial<JudgeResult>>(row.judge_result, legacyFallback);
+  return {
+    ...legacyFallback,
+    ...restored,
+    issues: restored.issues ?? legacyFallback.issues,
+  };
+}
+
+export function restoreTranslations(rows: SavedTranslation[]): TranslationChunk[] {
+  return rows.map((row) => ({
+    id: row.id,
+    originalText: row.original_text,
+    stageResults: parseJson(row.stage_results, {}),
+    judgeResult: restoreJudgeResult(row),
+    currentDraft: row.final_translation || '',
+  }));
 }
 
 // ── Projects CRUD ────────────────────────────────────────────────────
@@ -133,8 +177,9 @@ export async function saveTranslations(projectId: string, chunks: TranslationChu
 
   for (const chunk of chunks) {
     await execute(
-      `INSERT INTO translations (id, project_id, original_text, final_translation, stage_results, judge_score, judge_issues)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      `INSERT INTO translations (
+         id, project_id, original_text, final_translation, stage_results, judge_score, judge_issues, judge_result
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
       [
         chunk.id,
         projectId,
@@ -143,6 +188,7 @@ export async function saveTranslations(projectId: string, chunks: TranslationChu
         JSON.stringify(chunk.stageResults),
         chunk.judgeResult.score,
         JSON.stringify(chunk.judgeResult.issues),
+        JSON.stringify(chunk.judgeResult),
       ],
     );
   }
