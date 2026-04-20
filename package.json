@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.2.2",
   "description": "Multi-stage AI translation pipeline for scholars",
+  "license": "GPL-3.0-only",
   "type": "module",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
