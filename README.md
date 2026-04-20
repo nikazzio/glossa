@@ -215,4 +215,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, commit conventions
 
 ## License
 
-GNU GPL v3.0 — see [LICENSE](LICENSE) for details.
+GNU GPL v3.0 or later — see [LICENSE](LICENSE) for details.
