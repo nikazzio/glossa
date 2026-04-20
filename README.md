@@ -9,7 +9,7 @@ A desktop application that chains multiple LLM passes — draft, refinement, aud
 [![Tauri v2](https://img.shields.io/badge/Tauri-v2-blue?logo=tauri)](https://v2.tauri.app)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev)
 [![Rust](https://img.shields.io/badge/Rust-backend-orange?logo=rust)](https://rust-lang.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
 </div>
 
@@ -215,4 +215,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, commit conventions
 
 ## License
 
-MIT — see [LICENSE](LICENSE) for details.
+GNU GPL v3.0 or later — see [LICENSE](LICENSE) for details.
