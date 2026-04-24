@@ -76,6 +76,7 @@ describe('projectStore', () => {
       judgeModel: 'claude-3-5-sonnet',
       judgeProvider: 'anthropic',
       useChunking: false,
+      targetChunkCount: 0,
       glossary: [{ term: 'logos', translation: 'logos', notes: 'retain Greek' }],
     });
 
@@ -85,13 +86,15 @@ describe('projectStore', () => {
         project_id: 'proj-1',
         original_text: 'Original paragraph',
         final_translation: 'Translated paragraph',
+        chunk_status: 'completed',
         stage_results: JSON.stringify({
           'stg-1': {
             content: 'Translated paragraph',
             status: 'completed',
           },
         }),
-        judge_score: 92,
+        judge_status: 'completed',
+        judge_rating: 'excellent',
         judge_issues: JSON.stringify([
           {
             type: 'fluency',
@@ -99,18 +102,6 @@ describe('projectStore', () => {
             description: 'Minor smoothing needed',
           },
         ]),
-        judge_result: JSON.stringify({
-          content: 'Translated paragraph',
-          status: 'completed',
-          score: 92,
-          issues: [
-            {
-              type: 'fluency',
-              severity: 'low',
-              description: 'Minor smoothing needed',
-            },
-          ],
-        }),
         created_at: '2026-04-19T00:00:00Z',
       },
     ];
@@ -138,6 +129,7 @@ describe('projectStore', () => {
       {
         id: 'chunk-0',
         originalText: 'Original paragraph',
+        status: 'completed',
         stageResults: {
           'stg-1': {
             content: 'Translated paragraph',
@@ -147,7 +139,7 @@ describe('projectStore', () => {
         judgeResult: {
           content: 'Translated paragraph',
           status: 'completed',
-          score: 92,
+          rating: 'excellent',
           issues: [
             {
               type: 'fluency',
@@ -168,6 +160,7 @@ describe('projectStore', () => {
       judgeModel: '',
       judgeProvider: '',
       useChunking: true,
+      targetChunkCount: 0,
       glossary: [],
     });
     projectServiceMocks.loadTranslations.mockResolvedValue([]);

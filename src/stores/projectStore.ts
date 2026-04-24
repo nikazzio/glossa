@@ -30,7 +30,15 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   currentProjectId: null,
   showProjectPanel: false,
 
-  setShowProjectPanel: (show) => set({ showProjectPanel: show }),
+  setShowProjectPanel: (show) => {
+    set({ showProjectPanel: show });
+    if (show) {
+      // Close stacking modals so focus traps don't fight each other.
+      const pipeline = usePipelineStore.getState();
+      if (pipeline.showSettings) pipeline.setShowSettings(false);
+      if (pipeline.showHelp) pipeline.setShowHelp(false);
+    }
+  },
 
   loadProjects: async () => {
     const projects = await listProjects();
@@ -61,6 +69,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       judgeModel: config.judgeModel || pipeline.config.judgeModel,
       judgeProvider: (config.judgeProvider as any) || pipeline.config.judgeProvider,
       useChunking: config.useChunking,
+      targetChunkCount: config.targetChunkCount,
       glossary: config.glossary,
     });
     pipeline.setChunks(restoredChunks);

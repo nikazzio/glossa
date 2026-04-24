@@ -6,8 +6,11 @@ import type {
   PipelineResult,
   JudgeResult,
   ModelProvider,
+  GlossaryEntry,
+  ChunkStatus,
 } from '../types';
 import { DEFAULT_STAGES, DEFAULT_JUDGE_PROMPT } from '../constants';
+import { chunkText, findBestSplitIndex, generateId, qualityDefault } from '../utils';
 
 interface PipelineState {
   inputText: string;
@@ -15,11 +18,13 @@ interface PipelineState {
   chunks: TranslationChunk[];
   isProcessing: boolean;
   showSettings: boolean;
+  showHelp: boolean;
   ollamaModels: string[];
   ollamaStatus: 'unknown' | 'connected' | 'disconnected';
 
   setInputText: (text: string) => void;
   setShowSettings: (show: boolean) => void;
+  setShowHelp: (show: boolean) => void;
   setIsProcessing: (processing: boolean) => void;
   setConfig: (updater: PipelineConfig | ((prev: PipelineConfig) => PipelineConfig)) => void;
   setChunks: (updater: TranslationChunk[] | ((prev: TranslationChunk[]) => TranslationChunk[])) => void;
@@ -33,11 +38,20 @@ interface PipelineState {
   appendChunkStageContent: (chunkId: string, stageId: string, token: string) => void;
   updateChunkJudge: (chunkId: string, result: JudgeResult) => void;
   updateChunkDraft: (chunkId: string, draft: string) => void;
+  updateChunkStatus: (chunkId: string, status: ChunkStatus) => void;
+  updateChunkOriginalText: (chunkId: string, text: string) => void;
+  splitChunk: (chunkId: string) => void;
+  mergeChunkWithNext: (chunkId: string) => void;
 
   // Config actions
   addStage: () => void;
   removeStage: (id: string) => void;
   updateStage: (id: string, updates: Partial<PipelineStageConfig>) => void;
+
+  // Glossary actions
+  addGlossaryEntry: () => void;
+  updateGlossaryEntry: (id: string, updates: Partial<GlossaryEntry>) => void;
+  removeGlossaryEntry: (id: string) => void;
 }
 
 export const usePipelineStore = create<PipelineState>((set, get) => ({
@@ -51,15 +65,24 @@ export const usePipelineStore = create<PipelineState>((set, get) => ({
     judgeProvider: 'gemini',
     glossary: [],
     useChunking: true,
+    targetChunkCount: 0,
   },
   chunks: [],
   isProcessing: false,
   showSettings: false,
+  showHelp: false,
   ollamaModels: [],
   ollamaStatus: 'unknown',
 
   setInputText: (text) => set({ inputText: text }),
-  setShowSettings: (show) => set({ showSettings: show }),
+  setShowSettings: (show) => {
+    set({ showSettings: show, ...(show ? { showHelp: false } : {}) });
+    if (show) closeProjectPanelIfOpen();
+  },
+  setShowHelp: (show) => {
+    set({ showHelp: show, ...(show ? { showSettings: false } : {}) });
+    if (show) closeProjectPanelIfOpen();
+  },
   setIsProcessing: (processing) => set({ isProcessing: processing }),
   setOllamaModels: (models) => set({ ollamaModels: models }),
   setOllamaStatus: (status) => set({ ollamaStatus: status }),
@@ -77,15 +100,17 @@ export const usePipelineStore = create<PipelineState>((set, get) => ({
   generateChunks: () => {
     const { inputText, config } = get();
     if (!inputText.trim()) return;
-    const texts = config.useChunking !== false
-      ? inputText.split('\n\n').filter((p) => p.trim())
-      : [inputText.trim()].filter(Boolean);
+    const texts = chunkText(inputText, {
+      useChunking: config.useChunking,
+      targetChunkCount: config.targetChunkCount,
+    });
 
     const items = texts.map((text, i) => ({
       id: `chunk-${i}`,
       originalText: text,
+      status: 'ready' as const,
       stageResults: {},
-      judgeResult: { content: '', status: 'idle' as const, score: 0, issues: [] },
+      judgeResult: createEmptyJudgeResult(),
       currentDraft: '',
     }));
     set({ chunks: items });
@@ -134,6 +159,69 @@ export const usePipelineStore = create<PipelineState>((set, get) => ({
       ),
     })),
 
+  updateChunkStatus: (chunkId, status) =>
+    set((state) => ({
+      chunks: state.chunks.map((c) => (c.id === chunkId ? { ...c, status } : c)),
+    })),
+
+  updateChunkOriginalText: (chunkId, text) =>
+    set((state) => ({
+      chunks: state.chunks.map((c) =>
+        c.id === chunkId ? resetChunkForSourceEdit({ ...c, originalText: text }) : c
+      ),
+    })),
+
+  splitChunk: (chunkId) =>
+    set((state) => {
+      const index = state.chunks.findIndex((c) => c.id === chunkId);
+      if (index === -1) return {};
+
+      const chunk = state.chunks[index];
+      const splitAt = findBestSplitIndex(chunk.originalText);
+      if (!splitAt) return {};
+
+      const firstText = chunk.originalText.slice(0, splitAt).trim();
+      const secondText = chunk.originalText.slice(splitAt).trim();
+      if (!firstText || !secondText) return {};
+
+      const first = resetChunkForSourceEdit({ ...chunk, originalText: firstText });
+      const second = resetChunkForSourceEdit({
+        ...chunk,
+        id: generateId('chunk'),
+        originalText: secondText,
+      });
+
+      return {
+        chunks: [
+          ...state.chunks.slice(0, index),
+          first,
+          second,
+          ...state.chunks.slice(index + 1),
+        ],
+      };
+    }),
+
+  mergeChunkWithNext: (chunkId) =>
+    set((state) => {
+      const index = state.chunks.findIndex((c) => c.id === chunkId);
+      if (index === -1 || index >= state.chunks.length - 1) return {};
+
+      const current = state.chunks[index];
+      const next = state.chunks[index + 1];
+      const merged = resetChunkForSourceEdit({
+        ...current,
+        originalText: `${current.originalText.trim()}\n\n${next.originalText.trim()}`,
+      });
+
+      return {
+        chunks: [
+          ...state.chunks.slice(0, index),
+          merged,
+          ...state.chunks.slice(index + 2),
+        ],
+      };
+    }),
+
   addStage: () =>
     set((state) => ({
       config: {
@@ -167,4 +255,56 @@ export const usePipelineStore = create<PipelineState>((set, get) => ({
         stages: state.config.stages.map((s) => (s.id === id ? { ...s, ...updates } : s)),
       },
     })),
+
+  addGlossaryEntry: () =>
+    set((state) => ({
+      config: {
+        ...state.config,
+        glossary: [
+          ...state.config.glossary,
+          { id: generateId('gloss'), term: '', translation: '' },
+        ],
+      },
+    })),
+
+  updateGlossaryEntry: (id, updates) =>
+    set((state) => ({
+      config: {
+        ...state.config,
+        glossary: state.config.glossary.map((g) => (g.id === id ? { ...g, ...updates } : g)),
+      },
+    })),
+
+  removeGlossaryEntry: (id) =>
+    set((state) => ({
+      config: {
+        ...state.config,
+        glossary: state.config.glossary.filter((g) => g.id !== id),
+      },
+    })),
 }));
+
+function createEmptyJudgeResult(): JudgeResult {
+  return { content: '', status: 'idle', rating: qualityDefault(), issues: [] };
+}
+
+function resetChunkForSourceEdit<T extends TranslationChunk>(chunk: T): T {
+  return {
+    ...chunk,
+    status: 'ready',
+    stageResults: {},
+    judgeResult: createEmptyJudgeResult(),
+    currentDraft: '',
+  };
+}
+
+// Lazy access to avoid a circular import with projectStore.
+function closeProjectPanelIfOpen() {
+  void import('./projectStore').then(({ useProjectStore }) => {
+    const projectStore = useProjectStore.getState();
+    if (projectStore.showProjectPanel) {
+      // Set directly to avoid re-triggering the cross-store close logic.
+      useProjectStore.setState({ showProjectPanel: false });
+    }
+  });
+}

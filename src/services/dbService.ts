@@ -42,7 +42,8 @@ export async function initDatabase(): Promise<void> {
       judge_prompt TEXT DEFAULT '',
       judge_model TEXT DEFAULT 'gemini-3-flash-preview',
       judge_provider TEXT DEFAULT 'gemini',
-      use_chunking INTEGER DEFAULT 1
+      use_chunking INTEGER DEFAULT 1,
+      target_chunk_count INTEGER DEFAULT 0
     )
   `);
 
@@ -83,15 +84,16 @@ export async function initDatabase(): Promise<void> {
       project_id TEXT REFERENCES projects(id) ON DELETE CASCADE,
       original_text TEXT NOT NULL,
       final_translation TEXT DEFAULT '',
+      chunk_status TEXT DEFAULT 'ready',
       stage_results TEXT DEFAULT '{}',
-      judge_score REAL DEFAULT 0,
+      judge_status TEXT DEFAULT 'idle',
+      judge_rating TEXT DEFAULT 'fair',
       judge_issues TEXT DEFAULT '[]',
-      judge_result TEXT DEFAULT '',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
-  await ensureColumn('translations', 'judge_result', "TEXT DEFAULT ''");
+  await ensureColumn('pipeline_configs', 'target_chunk_count', "INTEGER DEFAULT 0");
 
   await conn.execute(`
     CREATE TABLE IF NOT EXISTS app_settings (

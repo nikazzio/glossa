@@ -3,7 +3,7 @@ import { PipelineConfig, ProductionStream } from './components/pipeline';
 import { AuditPanel } from './components/audit';
 import { SettingsModal } from './components/settings';
 import { ProjectPanel } from './components/projects';
-import { ErrorBoundary } from './components/common';
+import { ErrorBoundary, ConfirmDialog } from './components/common';
 import { usePipeline } from './hooks/usePipeline';
 import { Toaster } from 'sonner';
 
@@ -23,6 +23,7 @@ export default function App() {
 
         <SettingsModal />
         <ProjectPanel />
+        <ConfirmDialog />
       </div>
       <Toaster
         position="bottom-right"

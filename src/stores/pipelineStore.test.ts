@@ -12,7 +12,7 @@ describe('pipelineStore', () => {
     store.setOllamaModels([]);
     store.setOllamaStatus('unknown');
     // Reset config to defaults (especially useChunking)
-    store.setConfig((prev) => ({ ...prev, useChunking: true }));
+    store.setConfig((prev) => ({ ...prev, useChunking: true, targetChunkCount: 0 }));
   });
 
   describe('basic setters', () => {
@@ -97,11 +97,21 @@ describe('pipelineStore', () => {
       usePipelineStore.getState().generateChunks();
       const chunk = usePipelineStore.getState().chunks[0];
       expect(chunk.id).toBe('chunk-0');
+      expect(chunk.status).toBe('ready');
       expect(chunk.stageResults).toEqual({});
       expect(chunk.judgeResult.status).toBe('idle');
-      expect(chunk.judgeResult.score).toBe(0);
+      expect(chunk.judgeResult.rating).toBe('fair');
       expect(chunk.judgeResult.issues).toEqual([]);
       expect(chunk.currentDraft).toBe('');
+    });
+
+    it('generates the requested number of chunks when a target is configured', () => {
+      usePipelineStore.getState().setConfig((prev) => ({ ...prev, targetChunkCount: 2 }));
+      usePipelineStore.getState().setInputText(
+        'First paragraph here.\n\nSecond paragraph here.\n\nThird paragraph here.\n\nFourth paragraph here.',
+      );
+      usePipelineStore.getState().generateChunks();
+      expect(usePipelineStore.getState().chunks).toHaveLength(2);
     });
   });
 
@@ -132,17 +142,47 @@ describe('pipelineStore', () => {
       usePipelineStore.getState().updateChunkJudge('chunk-0', {
         content: 'Audit result',
         status: 'completed',
-        score: 8.5,
+        rating: 'excellent',
         issues: [{ type: 'fluency', severity: 'low', description: 'Minor issue' }],
       });
       const judge = usePipelineStore.getState().chunks[0].judgeResult;
-      expect(judge.score).toBe(8.5);
+      expect(judge.rating).toBe('excellent');
       expect(judge.issues).toHaveLength(1);
     });
 
     it('updates chunk draft', () => {
       usePipelineStore.getState().updateChunkDraft('chunk-0', 'Edited translation');
       expect(usePipelineStore.getState().chunks[0].currentDraft).toBe('Edited translation');
+    });
+
+    it('updates chunk source text', () => {
+      usePipelineStore.getState().updateChunkOriginalText('chunk-0', 'Edited source');
+      expect(usePipelineStore.getState().chunks[0].originalText).toBe('Edited source');
+      expect(usePipelineStore.getState().chunks[0].status).toBe('ready');
+    });
+
+    it('splits a chunk into two editable source chunks', () => {
+      usePipelineStore.getState().setInputText('First sentence. Second sentence.');
+      usePipelineStore.getState().generateChunks();
+      usePipelineStore.getState().splitChunk('chunk-0');
+
+      const chunks = usePipelineStore.getState().chunks;
+      expect(chunks).toHaveLength(2);
+      expect(chunks[0].originalText).toContain('First');
+      expect(chunks[1].originalText).toContain('Second');
+      expect(chunks.every((chunk) => chunk.status === 'ready')).toBe(true);
+    });
+
+    it('merges a chunk with the following chunk', () => {
+      usePipelineStore.getState().setInputText('First paragraph.\n\nSecond paragraph.');
+      usePipelineStore.getState().generateChunks();
+      usePipelineStore.getState().mergeChunkWithNext('chunk-0');
+
+      const chunks = usePipelineStore.getState().chunks;
+      expect(chunks).toHaveLength(1);
+      expect(chunks[0].originalText).toContain('First paragraph.');
+      expect(chunks[0].originalText).toContain('Second paragraph.');
+      expect(chunks[0].status).toBe('ready');
     });
 
     it('does not affect other chunks', () => {

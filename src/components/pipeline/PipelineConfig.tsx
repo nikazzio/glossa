@@ -1,5 +1,7 @@
-import { Plus, ArrowRightLeft, Play, Loader2, X } from 'lucide-react';
+import { Plus, ArrowRightLeft, Play, Loader2, X, AlertTriangle } from 'lucide-react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import type { ModelProvider } from '../../types';
 import { MODEL_OPTIONS, LANGUAGES } from '../../constants';
 import { usePipelineStore } from '../../stores/pipelineStore';
@@ -25,9 +27,57 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfig
     addStage,
     removeStage,
     updateStage,
+    addGlossaryEntry,
+    updateGlossaryEntry,
+    removeGlossaryEntry,
+    ollamaStatus,
   } = usePipelineStore();
   const { t } = useTranslation();
   const judgeModels = useJudgeModelOptions(config.judgeProvider);
+
+  const cannotRun = isProcessing || chunks.length === 0;
+  const runReason = isProcessing
+    ? t('pipeline.runDisabledProcessing')
+    : chunks.length === 0
+      ? t('pipeline.runDisabledNoChunks')
+      : undefined;
+  const judgeOllamaOffline =
+    config.judgeProvider === 'ollama' && ollamaStatus === 'disconnected';
+
+  // Trimmed-lowercase view for duplicate detection (warn but do not block).
+  const duplicateTermIds = useMemo(() => {
+    const seen = new Map<string, string>();
+    const dupes = new Set<string>();
+    for (const entry of config.glossary) {
+      const key = entry.term.trim().toLowerCase();
+      if (!key) continue;
+      const existing = seen.get(key);
+      if (existing) {
+        dupes.add(existing);
+        if (entry.id) dupes.add(entry.id);
+      } else if (entry.id) {
+        seen.set(key, entry.id);
+      }
+    }
+    return dupes;
+  }, [config.glossary]);
+
+  const handleJudgeProviderChange = (newProvider: ModelProvider) => {
+    const models =
+      newProvider === 'ollama'
+        ? usePipelineStore.getState().ollamaModels
+        : MODEL_OPTIONS[newProvider];
+    setConfig((prev) => ({
+      ...prev,
+      judgeProvider: newProvider,
+      judgeModel: models[0] || '',
+    }));
+    if (newProvider === 'ollama' && usePipelineStore.getState().ollamaStatus === 'unknown') {
+      toast.message(t('ollama.selectedButUnchecked'));
+    } else if (newProvider === 'ollama' && usePipelineStore.getState().ollamaStatus === 'disconnected') {
+      toast.warning(t('ollama.selectedButOffline'));
+    }
+  };
 
   return (
     <section className="col-span-1 md:col-span-3 border-r border-editorial-border p-8 flex flex-col gap-8 bg-editorial-bg/50 overflow-y-auto max-h-[calc(100vh-140px)] custom-scrollbar">
@@ -60,6 +110,7 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfig
                     targetLanguage: prev.sourceLanguage,
                   }))
                 }
+                title={t('pipeline.swapLanguages')}
                 className="text-editorial-muted hover:text-editorial-ink transition-colors hover:scale-110 shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 aria-label={t('pipeline.swapLanguages')}
               >
@@ -95,7 +146,12 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfig
         <div>
           <div className="flex items-center justify-between border-b border-editorial-ink pb-2 mb-8">
             <h2 className="font-display text-sm uppercase tracking-wider">{t('pipeline.stages')}</h2>
-            <button onClick={addStage} className="text-editorial-accent hover:scale-110 transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent" aria-label={t('pipeline.addStage')}>
+            <button
+              onClick={addStage}
+              title={t('pipeline.addStage')}
+              className="text-editorial-accent hover:scale-110 transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              aria-label={t('pipeline.addStage')}
+            >
               <Plus size={18} />
             </button>
           </div>
@@ -122,18 +178,8 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfig
             <div className="flex gap-2">
               <select
                 value={config.judgeProvider}
-                onChange={(e) => {
-                  const newProvider = e.target.value as ModelProvider;
-                  const models = newProvider === 'ollama'
-                    ? usePipelineStore.getState().ollamaModels
-                    : MODEL_OPTIONS[newProvider];
-                  setConfig((prev) => ({
-                    ...prev,
-                    judgeProvider: newProvider,
-                    judgeModel: models[0] || '',
-                  }));
-                }}
-                className="bg-editorial-textbox border-none px-2 py-1 text-[10px] font-bold uppercase outline-none"
+                onChange={(e) => handleJudgeProviderChange(e.target.value as ModelProvider)}
+                className="bg-editorial-textbox border-none px-2 py-1 text-[10px] font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               >
                 {Object.keys(MODEL_OPTIONS).map((p) => (
                   <option key={p} value={p}>{p}</option>
@@ -168,12 +214,18 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfig
                 </select>
               )}
             </div>
+            {judgeOllamaOffline && (
+              <div className="flex items-center gap-2 text-[10px] text-editorial-accent">
+                <AlertTriangle size={12} />
+                <span>{t('ollama.selectedButOffline')}</span>
+              </div>
+            )}
             <textarea
               value={config.judgePrompt}
               onChange={(e) => setConfig((prev) => ({ ...prev, judgePrompt: e.target.value }))}
               placeholder={t('pipeline.auditPlaceholder')}
               rows={6}
-              className="w-full bg-editorial-textbox border-none p-4 text-xs font-mono outline-none leading-relaxed resize-y"
+              className="w-full bg-editorial-textbox border-none p-4 text-xs font-mono outline-none leading-relaxed resize-y focus-visible:ring-2 focus-visible:ring-editorial-accent"
             />
           </div>
         </div>
@@ -183,14 +235,15 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfig
           <div className="flex items-center justify-between">
             <label className="block text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
               {t('pipeline.keywordRegistry')}
+              {config.glossary.length > 0 && (
+                <span className="ml-2 text-editorial-muted/70 normal-case font-mono tracking-normal">
+                  ({config.glossary.length})
+                </span>
+              )}
             </label>
             <button
-              onClick={() =>
-                setConfig((prev) => ({
-                  ...prev,
-                  glossary: [...prev.glossary, { term: '', translation: '' }],
-                }))
-              }
+              onClick={addGlossaryEntry}
+              title={t('pipeline.addGlossaryEntry')}
               className="text-editorial-accent hover:scale-110 transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               aria-label={t('pipeline.addGlossaryEntry')}
             >
@@ -198,48 +251,54 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfig
             </button>
           </div>
           <div className="space-y-2">
-            {config.glossary.map((g, i) => (
-              <div key={i} className="flex gap-2 items-center group">
-                <input
-                  value={g.term}
-                  onChange={(e) =>
-                    setConfig((prev) => {
-                      const n = [...prev.glossary];
-                      n[i] = { ...n[i], term: e.target.value };
-                      return { ...prev, glossary: n };
-                    })
-                  }
-                  className="w-full bg-editorial-textbox border-none p-2 text-[10px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  placeholder={t('pipeline.source')}
-                  aria-label={`${t('pipeline.source')} ${i + 1}`}
-                />
-                <button
-                  onClick={() =>
-                    setConfig((prev) => ({
-                      ...prev,
-                      glossary: prev.glossary.filter((_, idx) => idx !== i),
-                    }))
-                  }
-                  className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-editorial-muted hover:text-editorial-accent transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent shrink-0"
-                  aria-label={`${t('pipeline.removeGlossaryEntry')} ${i + 1}`}
-                >
-                  <X size={10} />
-                </button>
-                <input
-                  value={g.translation}
-                  onChange={(e) =>
-                    setConfig((prev) => {
-                      const n = [...prev.glossary];
-                      n[i] = { ...n[i], translation: e.target.value };
-                      return { ...prev, glossary: n };
-                    })
-                  }
-                  className="w-full bg-editorial-textbox border-none p-2 text-[10px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  placeholder={t('pipeline.target')}
-                  aria-label={`${t('pipeline.target')} ${i + 1}`}
-                />
-              </div>
-            ))}
+            {config.glossary.map((g, i) => {
+              const rowKey = g.id ?? `gloss-fallback-${i}`;
+              const isDuplicate = g.id ? duplicateTermIds.has(g.id) : false;
+              const removeLabel = `${t('pipeline.removeGlossaryEntry')} ${i + 1}`;
+              return (
+                <div key={rowKey} className="space-y-1">
+                  <div className="flex gap-2 items-center">
+                    <input
+                      value={g.term}
+                      onChange={(e) =>
+                        g.id
+                          ? updateGlossaryEntry(g.id, { term: e.target.value })
+                          : undefined
+                      }
+                      className={`w-full bg-editorial-textbox border-none p-2 text-[10px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                        isDuplicate ? 'ring-1 ring-editorial-warning' : ''
+                      }`}
+                      placeholder={t('pipeline.source')}
+                      aria-label={`${t('pipeline.source')} ${i + 1}`}
+                    />
+                    <button
+                      onClick={() => g.id && removeGlossaryEntry(g.id)}
+                      title={removeLabel}
+                      className="text-editorial-muted/60 hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent shrink-0 p-1"
+                      aria-label={removeLabel}
+                    >
+                      <X size={12} />
+                    </button>
+                    <input
+                      value={g.translation}
+                      onChange={(e) =>
+                        g.id
+                          ? updateGlossaryEntry(g.id, { translation: e.target.value })
+                          : undefined
+                      }
+                      className="w-full bg-editorial-textbox border-none p-2 text-[10px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                      placeholder={t('pipeline.target')}
+                      aria-label={`${t('pipeline.target')} ${i + 1}`}
+                    />
+                  </div>
+                  {isDuplicate && (
+                    <span className="text-[9px] uppercase tracking-widest text-editorial-warning font-bold pl-1">
+                      {t('pipeline.duplicateTerm')}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -249,7 +308,8 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfig
         <button
           type="button"
           onClick={onRunPipeline}
-          disabled={isProcessing || chunks.length === 0}
+          disabled={cannotRun}
+          title={runReason ?? t('pipeline.beginPipeline')}
           className="bg-editorial-ink text-white px-6 py-4 text-[11px] font-bold uppercase tracking-[2px] transition-all hover:bg-editorial-ink/90 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
         >
           {isProcessing ? (
@@ -266,7 +326,8 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfig
         <button
           type="button"
           onClick={onRunAuditOnly}
-          disabled={isProcessing || chunks.length === 0}
+          disabled={cannotRun}
+          title={runReason ?? t('pipeline.runAuditOnly')}
           className="bg-transparent border border-editorial-ink text-editorial-ink px-6 py-4 text-[11px] font-bold uppercase tracking-[2px] transition-all hover:bg-editorial-ink/5 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
         >
           {t('pipeline.runAuditOnly')}

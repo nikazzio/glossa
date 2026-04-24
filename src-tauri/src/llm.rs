@@ -49,7 +49,7 @@ pub struct JudgeIssue {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JudgeResponse {
-    pub score: f64,
+    pub rating: String,
     pub issues: Vec<JudgeIssue>,
     pub content: String,
 }
@@ -73,7 +73,7 @@ fn keyring_entry(provider: &str) -> Result<keyring::Entry, String> {
         .map_err(|e| format!("Keyring error: {e}"))
 }
 
-fn get_api_key(app: &AppHandle, provider: &str) -> Result<String, String> {
+fn get_api_key(provider: &str) -> Result<String, String> {
     // Ollama doesn't need an API key
     if provider == "ollama" {
         return Ok(String::new());
@@ -88,12 +88,7 @@ fn get_api_key(app: &AppHandle, provider: &str) -> Result<String, String> {
         }
     }
 
-    // 2. Migrate from legacy tauri-plugin-store if present
-    if let Ok(key) = migrate_from_store(app, provider) {
-        return Ok(key);
-    }
-
-    // 3. Fallback to environment variable
+    // 2. Fallback to environment variable
     let env_key = match provider {
         "gemini" => "GEMINI_API_KEY",
         "openai" => "OPENAI_API_KEY",
@@ -106,31 +101,6 @@ fn get_api_key(app: &AppHandle, provider: &str) -> Result<String, String> {
         .map_err(|_| format!("{env_key} is not configured. Set it in Settings."))
 }
 
-/// One-time migration: read from old JSON store, save to keychain, delete from store.
-fn migrate_from_store(app: &AppHandle, provider: &str) -> Result<String, String> {
-    use tauri_plugin_store::StoreExt;
-
-    let store = app.store("api-keys.json").map_err(|e| format!("{e}"))?;
-    let store_key = format!("{}_API_KEY", provider.to_uppercase());
-
-    if let Some(val) = store.get(&store_key) {
-        if let Some(key) = val.as_str() {
-            if !key.is_empty() {
-                // Save to keychain
-                if let Ok(entry) = keyring_entry(provider) {
-                    let _ = entry.set_password(key);
-                }
-                // Remove from plain-text store
-                store.delete(&store_key);
-                let _ = store.save();
-                log::info!("Migrated {provider} API key from store to OS keychain");
-                return Ok(key.to_string());
-            }
-        }
-    }
-    Err("Not in legacy store".into())
-}
-
 #[tauri::command]
 pub async fn save_api_key(provider: String, key: String) -> Result<(), String> {
     let entry = keyring_entry(&provider)?;
@@ -139,8 +109,8 @@ pub async fn save_api_key(provider: String, key: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn get_api_key_status(app: AppHandle, provider: String) -> Result<bool, String> {
-    Ok(get_api_key(&app, &provider).is_ok())
+pub async fn get_api_key_status(provider: String) -> Result<bool, String> {
+    Ok(get_api_key(&provider).is_ok())
 }
 
 #[tauri::command]
@@ -550,7 +520,9 @@ fn build_judge_prompts(
          Specific Audit Instructions:\n{instructions}\n\n\
          Glossary to adhere to: {glossary_json}\n\n\
          You MUST respond with a valid JSON object containing:\n\
-         - score: number (0-10)\n\
+         - rating: one of 'critical', 'poor', 'fair', 'good', 'excellent' \
+           (semantic translation quality: critical=unusable, poor=weak, fair=usable with revision, \
+           good=solid, excellent=publication-ready)\n\
          - issues: array of objects {{ type: 'glossary'|'fluency'|'accuracy'|'grammar', \
            severity: 'low'|'medium'|'high', description: string, suggestedFix: string }}",
         src = config.source_language,
@@ -563,17 +535,31 @@ fn build_judge_prompts(
     (system_prompt, user_prompt)
 }
 
+fn parse_judge_rating(parsed: &serde_json::Value) -> String {
+    if let Some(raw) = parsed["rating"].as_str() {
+        match raw.trim().to_lowercase().as_str() {
+            "critical" | "critico" | "critica" => return "critical".to_string(),
+            "poor" | "scarso" => return "poor".to_string(),
+            "fair" | "sufficiente" | "accettabile" | "discreto" => return "fair".to_string(),
+            "good" | "buono" => return "good".to_string(),
+            "excellent" | "ottimo" => return "excellent".to_string(),
+            _ => {}
+        }
+    }
+
+    "fair".to_string()
+}
+
 // ── Tauri Commands ───────────────────────────────────────────────────
 
 #[tauri::command]
 pub async fn run_stage(
-    app: AppHandle,
     text: String,
     stage: StageConfig,
     config: PipelineConfig,
     previous_result: Option<String>,
 ) -> Result<String, String> {
-    let api_key = get_api_key(&app, &stage.provider)?;
+    let api_key = get_api_key(&stage.provider)?;
     let client = Client::new();
     let (system_prompt, user_prompt) = build_stage_prompts(&text, &stage, &config, &previous_result);
 
@@ -589,7 +575,7 @@ pub async fn run_stage_stream(
     previous_result: Option<String>,
     stream_id: String,
 ) -> Result<String, String> {
-    let api_key = get_api_key(&app, &stage.provider)?;
+    let api_key = get_api_key(&stage.provider)?;
     let client = Client::new();
     let (system_prompt, user_prompt) = build_stage_prompts(&text, &stage, &config, &previous_result);
 
@@ -609,12 +595,11 @@ pub async fn run_stage_stream(
 
 #[tauri::command]
 pub async fn judge_translation(
-    app: AppHandle,
     original_text: String,
     translation: String,
     config: PipelineConfig,
 ) -> Result<JudgeResponse, String> {
-    let api_key = get_api_key(&app, &config.judge_provider)?;
+    let api_key = get_api_key(&config.judge_provider)?;
     let client = Client::new();
     let (system_prompt, user_prompt) = build_judge_prompts(&original_text, &translation, &config);
 
@@ -626,7 +611,7 @@ pub async fn judge_translation(
     let parsed: serde_json::Value = serde_json::from_str(&result_text)
         .map_err(|e| format!("Failed to parse judge JSON: {e}. Raw: {result_text}"))?;
 
-    let score = parsed["score"].as_f64().unwrap_or(0.0);
+    let rating = parse_judge_rating(&parsed);
     let issues: Vec<JudgeIssue> = parsed["issues"]
         .as_array()
         .map(|arr| {
@@ -644,7 +629,7 @@ pub async fn judge_translation(
         .unwrap_or_default();
 
     Ok(JudgeResponse {
-        score,
+        rating,
         issues,
         content: translation,
     })
@@ -652,10 +637,9 @@ pub async fn judge_translation(
 
 #[tauri::command]
 pub async fn optimize_prompt(
-    app: AppHandle,
     current_prompt: String,
 ) -> Result<String, String> {
-    let api_key = get_api_key(&app, "gemini")?;
+    let api_key = get_api_key("gemini")?;
     let client = Client::new();
 
     let user_prompt = format!(
@@ -670,7 +654,6 @@ pub async fn optimize_prompt(
 
 #[tauri::command]
 pub async fn test_provider_connection(
-    app: AppHandle,
     provider: String,
 ) -> Result<bool, String> {
     if provider == "ollama" {
@@ -678,7 +661,7 @@ pub async fn test_provider_connection(
             .and_then(|ok| if ok { Ok(true) } else { Err("Ollama is not running".into()) });
     }
 
-    let api_key = get_api_key(&app, &provider)?;
+    let api_key = get_api_key(&provider)?;
     let client = Client::new();
 
     let result = call_provider(
@@ -862,7 +845,12 @@ mod tests {
         assert!(system.contains("Italian"));
         assert!(system.contains("Hello"));
         assert!(system.contains("Ciao"));
-        assert!(system.contains("score"));
+        assert!(system.contains("rating"));
+        assert!(system.contains("critical"));
+        assert!(system.contains("poor"));
+        assert!(system.contains("fair"));
+        assert!(system.contains("good"));
+        assert!(system.contains("excellent"));
         assert!(system.contains("issues"));
         assert!(user.contains("audit"));
     }
@@ -882,6 +870,21 @@ mod tests {
 
         assert!(system.contains("API"));
         assert!(system.contains("Keep as-is"));
+    }
+
+    #[test]
+    fn parses_semantic_judge_rating() {
+        let parsed = parse_judge_rating(&serde_json::json!({"rating": "sufficiente"}));
+        assert_eq!(parsed, "fair");
+
+        let parsed = parse_judge_rating(&serde_json::json!({"rating": "ottimo"}));
+        assert_eq!(parsed, "excellent");
+    }
+
+    #[test]
+    fn defaults_unknown_judge_rating_to_fair() {
+        let parsed = parse_judge_rating(&serde_json::json!({"rating": "ambiguous"}));
+        assert_eq!(parsed, "fair");
     }
 
     // ── Serialization ───────────────────────────────────────────────

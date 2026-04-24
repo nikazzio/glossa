@@ -1733,7 +1733,7 @@ checksum = "0cc23270f6e1808e30a928bdc84dea0b9b4136a8bc82338574f23baf47bbd280"
 
 [[package]]
 name = "glossa"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "keyring",
  "log",
@@ -1746,7 +1746,6 @@ dependencies = [
  "tauri-plugin-fs",
  "tauri-plugin-log",
  "tauri-plugin-sql",
- "tauri-plugin-store",
  "tauri-plugin-updater",
  "tokio",
 ]
@@ -5220,22 +5219,6 @@ dependencies = [
  "time",
  "tokio",
  "uuid",
-]
-
-[[package]]
-name = "tauri-plugin-store"
-version = "2.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ca1a8ff83c269b115e98726ffc13f9e548a10161544a92ad121d6d0a96e16ea"
-dependencies = [
- "dunce",
- "serde",
- "serde_json",
- "tauri",
- "tauri-plugin",
- "thiserror 2.0.18",
- "tokio",
- "tracing",
 ]
 
 [[package]]

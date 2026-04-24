@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../stores/pipelineStore';
 import { llmService } from '../services/llmService';
 import { withRetry, friendlyError } from '../utils/retry';
+import { qualityDefault, qualityFailure } from '../utils';
 import type { JudgeResult } from '../types';
 
 /**
@@ -22,6 +23,7 @@ export function usePipeline() {
     appendChunkStageContent,
     updateChunkJudge,
     updateChunkDraft,
+    updateChunkStatus,
   } = usePipelineStore();
   const { t } = useTranslation();
 
@@ -33,8 +35,9 @@ export function usePipeline() {
     setChunks((prev) =>
       prev.map((c) => ({
         ...c,
+        status: 'ready' as const,
         stageResults: {},
-        judgeResult: { content: '', status: 'idle' as const, score: 0, issues: [] },
+        judgeResult: { content: '', status: 'idle' as const, rating: qualityDefault(), issues: [] },
         currentDraft: '',
       }))
     );
@@ -43,6 +46,8 @@ export function usePipeline() {
 
     for (const chunk of chunks) {
       let lastResult = '';
+      let hadStageFailure = false;
+      updateChunkStatus(chunk.id, 'processing');
 
       for (const stage of config.stages) {
         if (!stage.enabled) continue;
@@ -70,6 +75,8 @@ export function usePipeline() {
             status: 'error',
             error: msg,
           });
+          updateChunkStatus(chunk.id, 'error');
+          hadStageFailure = true;
           toast.error(t('errors.stageFailed', { name: stage.name }), { description: msg });
           break;
         }
@@ -81,7 +88,7 @@ export function usePipeline() {
 
       // Final Audit (Judge) — non-streaming since it returns structured JSON
       if (lastResult) {
-        updateChunkJudge(chunk.id, { content: '', status: 'processing', score: 0, issues: [] });
+        updateChunkJudge(chunk.id, { content: '', status: 'processing', rating: qualityDefault(), issues: [] });
         try {
           const judgeData = await withRetry(
             () => llmService.judgeTranslation(chunk.originalText, lastResult, config),
@@ -92,18 +99,24 @@ export function usePipeline() {
             content: lastResult,
             status: 'completed',
           } as JudgeResult);
+          updateChunkStatus(chunk.id, 'completed');
         } catch (error: any) {
           errorCount++;
           const msg = friendlyError(error.message ?? String(error));
           updateChunkJudge(chunk.id, {
             content: lastResult,
             status: 'error',
-            score: 0,
+            rating: qualityFailure(),
             issues: [],
             error: msg,
           });
+          updateChunkStatus(chunk.id, 'error');
           toast.error(t('errors.auditFailed'), { description: msg });
         }
+      }
+
+      if (!lastResult && !hadStageFailure) {
+        updateChunkStatus(chunk.id, 'ready');
       }
     }
 
@@ -114,7 +127,7 @@ export function usePipeline() {
     } else {
       toast.warning(t('errors.pipelineCompletedWithErrors', { count: errorCount }));
     }
-  }, [chunks, config, t, setIsProcessing, setChunks, updateChunkStage, appendChunkStageContent, updateChunkJudge, updateChunkDraft]);
+  }, [chunks, config, t, setIsProcessing, setChunks, updateChunkStage, appendChunkStageContent, updateChunkJudge, updateChunkDraft, updateChunkStatus]);
 
   const runAuditOnly = useCallback(async () => {
     if (chunks.length === 0) return;
@@ -126,7 +139,8 @@ export function usePipeline() {
       const textToAudit = chunk.currentDraft;
       if (!textToAudit) continue;
 
-      updateChunkJudge(chunk.id, { content: '', status: 'processing', score: 0, issues: [] });
+      updateChunkStatus(chunk.id, 'processing');
+      updateChunkJudge(chunk.id, { content: '', status: 'processing', rating: qualityDefault(), issues: [] });
       try {
         const judgeData = await withRetry(
           () => llmService.judgeTranslation(chunk.originalText, textToAudit, config),
@@ -137,16 +151,18 @@ export function usePipeline() {
           content: textToAudit,
           status: 'completed',
         } as JudgeResult);
+        updateChunkStatus(chunk.id, 'completed');
       } catch (error: any) {
         errorCount++;
         const msg = friendlyError(error.message ?? String(error));
         updateChunkJudge(chunk.id, {
           content: textToAudit,
           status: 'error',
-          score: 0,
+          rating: qualityFailure(),
           issues: [],
           error: msg,
         });
+        updateChunkStatus(chunk.id, 'error');
         toast.error(t('errors.auditFailed'), { description: msg });
       }
     }
@@ -156,7 +172,7 @@ export function usePipeline() {
     if (errorCount === 0) {
       toast.success(t('errors.reEvalCompleted'));
     }
-  }, [chunks, config, t, setIsProcessing, updateChunkJudge]);
+  }, [chunks, config, t, setIsProcessing, updateChunkJudge, updateChunkStatus]);
 
   return { runPipeline, runAuditOnly, isProcessing };
 }

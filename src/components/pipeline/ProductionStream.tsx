@@ -2,12 +2,38 @@ import { Trash2, AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { StatusIndicator, ProcessingLine, CopyButton } from '../common';
-import { indexPad } from '../../utils';
+import { estimateTextStats, indexPad, recommendChunkCount } from '../../utils';
+import { confirm } from '../../stores/confirmStore';
 
 export function ProductionStream() {
-  const { inputText, setInputText, chunks, config, generateChunks, clearChunks, updateChunkDraft } =
+  const {
+    inputText,
+    setInputText,
+    chunks,
+    config,
+    setConfig,
+    isProcessing,
+    generateChunks,
+    clearChunks,
+    updateChunkDraft,
+    updateChunkOriginalText,
+    splitChunk,
+    mergeChunkWithNext,
+  } =
     usePipelineStore();
   const { t } = useTranslation();
+  const stats = estimateTextStats(inputText);
+  const recommendedChunks = recommendChunkCount(inputText);
+
+  const handleClearStream = async () => {
+    const ok = await confirm({
+      title: t('pipeline.confirmClearTitle'),
+      message: t('pipeline.confirmClearMessage'),
+      confirmLabel: t('pipeline.clearStream'),
+      danger: true,
+    });
+    if (ok) clearChunks();
+  };
 
   return (
     <section className="col-span-1 md:col-span-6 bg-editorial-bg p-8 overflow-y-auto max-h-[calc(100vh-140px)] border-r border-editorial-border custom-scrollbar">
@@ -15,7 +41,8 @@ export function ProductionStream() {
         <h2 className="font-display text-sm uppercase tracking-wider inline-block">{t('pipeline.productionStream')}</h2>
         {chunks.length > 0 && (
           <button
-            onClick={clearChunks}
+            onClick={handleClearStream}
+            title={t('pipeline.clearStream')}
             className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent transition-colors flex items-center gap-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
           >
             <Trash2 size={12} /> {t('pipeline.clearStream')}
@@ -36,6 +63,40 @@ export function ProductionStream() {
                 placeholder={t('pipeline.inputPlaceholder')}
                 className="w-full bg-editorial-textbox border-none p-8 text-sm font-mono outline-none leading-relaxed resize-none min-h-[400px] focus-visible:ring-2 focus-visible:ring-editorial-accent"
               />
+              <div className="grid grid-cols-3 gap-3 text-[10px] font-mono text-editorial-muted">
+                <span>{t('pipeline.words')}: {stats.words}</span>
+                <span>{t('pipeline.paragraphs')}: {stats.paragraphs}</span>
+                <span>{t('pipeline.recommendedChunks')}: {recommendedChunks || '-'}</span>
+              </div>
+              {config.useChunking !== false && (
+                <div className="flex flex-col sm:flex-row gap-3 sm:items-center bg-editorial-textbox/50 border border-editorial-border p-4">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
+                    {t('pipeline.targetChunks')}
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={config.targetChunkCount || 0}
+                    onChange={(e) => setConfig((prev) => ({
+                      ...prev,
+                      targetChunkCount: Math.max(0, Number(e.target.value) || 0),
+                    }))}
+                    className="w-24 bg-editorial-bg border border-editorial-border px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    aria-label={t('pipeline.targetChunks')}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setConfig((prev) => ({ ...prev, targetChunkCount: recommendedChunks }))}
+                    disabled={recommendedChunks === 0}
+                    className="text-[10px] font-bold uppercase tracking-widest text-editorial-accent disabled:text-editorial-muted disabled:opacity-50"
+                  >
+                    {t('pipeline.useRecommendation')}
+                  </button>
+                  <span className="text-[10px] text-editorial-muted">
+                    {t('pipeline.zeroMeansAuto')}
+                  </span>
+                </div>
+              )}
             </div>
             <button
               onClick={generateChunks}
@@ -46,15 +107,36 @@ export function ProductionStream() {
           </div>
         )}
 
+        {chunks.length > 0 && (
+          <div className="border border-editorial-border bg-editorial-textbox/30 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
+                {t('pipeline.chunkPreview')}
+              </div>
+              <div className="text-xs font-mono text-editorial-ink">
+                {chunks.length} {t('pipeline.unitsReady')}
+              </div>
+            </div>
+            <div className="text-[10px] text-editorial-muted leading-relaxed max-w-md">
+              {t('pipeline.chunkPreviewHint')}
+            </div>
+          </div>
+        )}
+
         {chunks.map((chunk, idx) => (
           <div
             key={chunk.id}
             className="space-y-8 border-b border-editorial-border pb-16 last:border-0 last:pb-0 group"
           >
             <div className="flex items-center justify-between">
-              <span className="font-display italic text-2xl text-editorial-accent tracking-tighter">
-                {t('pipeline.unit')} {indexPad(idx + 1)}
-              </span>
+              <div className="flex items-center gap-3">
+                <span className="font-display italic text-2xl text-editorial-accent tracking-tighter">
+                  {t('pipeline.unit')} {indexPad(idx + 1)}
+                </span>
+                <span className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted border border-editorial-border px-2 py-1">
+                  {t(`pipeline.chunkStatus.${chunk.status}`)}
+                </span>
+              </div>
               <div className="flex gap-4">
                 {config.stages
                   .filter((s) => s.enabled)
@@ -70,10 +152,37 @@ export function ProductionStream() {
             </div>
 
             <div className="space-y-4">
-              <p className="text-xs text-editorial-muted font-mono leading-relaxed opacity-50 mb-6 italic">
-                {t('pipeline.originalSource')}: &quot;{chunk.originalText.slice(0, 150)}
-                {chunk.originalText.length > 150 ? '...' : ''}&quot;
-              </p>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
+                    {t('pipeline.originalSource')}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => splitChunk(chunk.id)}
+                      disabled={isProcessing || chunk.originalText.trim().length < 2}
+                      className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    >
+                      {t('pipeline.splitChunk')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => mergeChunkWithNext(chunk.id)}
+                      disabled={isProcessing || idx === chunks.length - 1}
+                      className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    >
+                      {t('pipeline.mergeNext')}
+                    </button>
+                  </div>
+                </div>
+                <textarea
+                  value={chunk.originalText}
+                  onChange={(e) => updateChunkOriginalText(chunk.id, e.target.value)}
+                  disabled={isProcessing}
+                  className="w-full bg-editorial-textbox/60 border border-editorial-border p-4 text-xs font-mono outline-none leading-relaxed resize-y min-h-[120px] disabled:opacity-70 focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                />
+              </div>
 
               {config.stages
                 .filter((s) => s.enabled)

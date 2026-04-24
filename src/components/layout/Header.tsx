@@ -1,5 +1,4 @@
 import { Settings, Globe, FolderOpen, Upload, Download, Save, HelpCircle } from 'lucide-react';
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { usePipelineStore } from '../../stores/pipelineStore';
@@ -8,10 +7,9 @@ import { importTextFile, exportTranslation, exportBilingual } from '../../servic
 import { HelpGuide } from '../help';
 
 export function Header() {
-  const { setShowSettings, setInputText, chunks } = usePipelineStore();
+  const { setShowSettings, setShowHelp, showHelp, setInputText, chunks } = usePipelineStore();
   const { currentProjectId, setShowProjectPanel, saveCurrentProject, projects } = useProjectStore();
   const { t, i18n } = useTranslation();
-  const [showHelp, setShowHelp] = useState(false);
 
   const currentProject = projects.find((p) => p.id === currentProjectId);
 
@@ -43,18 +41,36 @@ export function Header() {
   };
 
   const handleSave = async () => {
-    await saveCurrentProject();
-    toast.success(t('projects.saved'));
+    try {
+      await saveCurrentProject();
+      toast.success(t('projects.saved'));
+    } catch (err: any) {
+      toast.error(t('projects.saveFailed'), { description: err?.message });
+    }
   };
+
+  const importLabel = t('files.import');
+  const exportTxtLabel = t('files.exportTxt');
+  const exportMdLabel = t('files.exportBilingual');
+  const projectsLabel = t('projects.title');
+  const saveLabel = t('projects.save');
+  const langLabel = t('language.label');
+  const settingsLabel = t('header.settings');
+  const helpLabel = t('help.title');
 
   return (
     <header className="px-10 py-6 border-b border-editorial-border bg-editorial-bg flex flex-col md:flex-row md:items-center justify-between gap-4">
       <div className="flex items-center gap-4">
         <div className="brand font-display italic text-3xl tracking-tight">{t('app.title')}</div>
         {currentProject && (
-          <span className="text-[10px] font-mono text-editorial-muted bg-editorial-textbox/50 px-2 py-1 border border-editorial-border">
+          <button
+            onClick={() => setShowProjectPanel(true)}
+            title={projectsLabel}
+            aria-label={`${projectsLabel}: ${currentProject.name}`}
+            className="text-[10px] font-mono text-editorial-muted bg-editorial-textbox/50 px-2 py-1 border border-editorial-border hover:text-editorial-ink hover:border-editorial-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          >
             {currentProject.name}
-          </span>
+          </button>
         )}
       </div>
 
@@ -62,8 +78,9 @@ export function Header() {
         {/* File actions */}
         <button
           onClick={handleImport}
+          title={importLabel}
           className="p-2 border border-editorial-border text-editorial-muted hover:text-editorial-ink hover:bg-editorial-textbox/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-          aria-label={t('files.import')}
+          aria-label={importLabel}
         >
           <Upload size={16} />
         </button>
@@ -71,15 +88,17 @@ export function Header() {
           <div className="flex items-center gap-0.5">
             <button
               onClick={() => handleExport('txt')}
+              title={exportTxtLabel}
               className="p-2 border border-editorial-border text-editorial-muted hover:text-editorial-ink hover:bg-editorial-textbox/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              aria-label={t('files.exportTxt')}
+              aria-label={exportTxtLabel}
             >
               <Download size={16} />
             </button>
             <button
               onClick={() => handleExport('bilingual')}
+              title={exportMdLabel}
               className="px-2 py-2 border border-editorial-border text-editorial-muted hover:text-editorial-ink hover:bg-editorial-textbox/50 transition-colors text-[9px] font-bold uppercase focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              aria-label={t('files.exportBilingual')}
+              aria-label={exportMdLabel}
             >
               MD
             </button>
@@ -91,16 +110,18 @@ export function Header() {
         {/* Project actions */}
         <button
           onClick={() => setShowProjectPanel(true)}
+          title={projectsLabel}
           className="p-2 border border-editorial-border text-editorial-muted hover:text-editorial-ink hover:bg-editorial-textbox/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-          aria-label={t('projects.title')}
+          aria-label={projectsLabel}
         >
           <FolderOpen size={16} />
         </button>
         {currentProjectId && (
           <button
             onClick={handleSave}
+            title={saveLabel}
             className="p-2 border border-editorial-border text-editorial-muted hover:text-editorial-ink hover:bg-editorial-textbox/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            aria-label={t('projects.save')}
+            aria-label={saveLabel}
           >
             <Save size={16} />
           </button>
@@ -115,23 +136,26 @@ export function Header() {
 
         <button
           onClick={toggleLang}
+          title={langLabel}
           className="flex items-center gap-1.5 px-2 py-1.5 border border-editorial-border text-[10px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-ink hover:bg-editorial-textbox/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-          aria-label={t('language.label')}
+          aria-label={langLabel}
         >
           <Globe size={14} />
           {i18n.language.toUpperCase()}
         </button>
         <button
           onClick={() => setShowSettings(true)}
+          title={settingsLabel}
           className="p-2 border border-editorial-border hover:bg-editorial-ink hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-          aria-label={t('header.settings')}
+          aria-label={settingsLabel}
         >
           <Settings size={16} />
         </button>
         <button
           onClick={() => setShowHelp(true)}
+          title={helpLabel}
           className="p-2 border border-editorial-border text-editorial-muted hover:text-editorial-ink hover:bg-editorial-textbox/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-          aria-label={t('help.title')}
+          aria-label={helpLabel}
         >
           <HelpCircle size={16} />
         </button>

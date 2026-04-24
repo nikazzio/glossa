@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
-import { X, AlertCircle, Server, RefreshCw, CheckCircle2, XCircle } from 'lucide-react';
+import { useState } from 'react';
+import { X, AlertCircle, Server, RefreshCw, CheckCircle2, XCircle, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { ApiKeyInput } from './ApiKeyInput';
 import { ollamaService } from '../../services/llmService';
@@ -13,21 +14,19 @@ export function SettingsModal() {
   const [refreshing, setRefreshing] = useState(false);
   const trapRef = useFocusTrap(showSettings, () => setShowSettings(false));
 
-  useEffect(() => {
-    if (showSettings && ollamaStatus === 'unknown') {
-      refreshOllama();
-    }
-  }, [showSettings]);
-
   const refreshOllama = async () => {
     setRefreshing(true);
     try {
       const models = await ollamaService.listModels();
       setOllamaModels(models);
       setOllamaStatus('connected');
-    } catch {
+      toast.success(t('ollama.connected', { count: models.length }));
+    } catch (err: any) {
       setOllamaModels([]);
       setOllamaStatus('disconnected');
+      toast.error(t('ollama.disconnected'), {
+        description: err?.message,
+      });
     } finally {
       setRefreshing(false);
     }
@@ -58,8 +57,9 @@ export function SettingsModal() {
           >
             <button
               onClick={() => setShowSettings(false)}
+              title={t('settings.close')}
               className="absolute top-8 right-8 text-editorial-muted hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              aria-label={t('settings.saveClose')}
+              aria-label={t('settings.close')}
             >
               <X size={24} />
             </button>
@@ -90,15 +90,19 @@ export function SettingsModal() {
                       <Server size={16} className="text-editorial-muted" />
                       <span className="text-xs font-mono">localhost:11434</span>
                       {ollamaStatus === 'connected' && (
-                        <CheckCircle2 size={12} className="text-editorial-ink" />
+                        <CheckCircle2 size={12} className="text-editorial-ink" aria-label={t('ollama.connected', { count: ollamaModels.length })} />
                       )}
                       {ollamaStatus === 'disconnected' && (
-                        <XCircle size={12} className="text-editorial-accent" />
+                        <XCircle size={12} className="text-editorial-accent" aria-label={t('ollama.disconnected')} />
+                      )}
+                      {ollamaStatus === 'unknown' && (
+                        <HelpCircle size={12} className="text-editorial-muted" aria-label={t('ollama.unchecked')} />
                       )}
                     </div>
                     <button
-                      onClick={refreshOllama}
+                      onClick={() => refreshOllama()}
                       disabled={refreshing}
+                      title={t('ollama.refresh')}
                       className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-ink transition-colors disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                       aria-label={t('ollama.refresh')}
                     >
@@ -125,6 +129,12 @@ export function SettingsModal() {
                   {ollamaStatus === 'disconnected' && (
                     <p className="text-xs text-editorial-muted italic">
                       {t('ollama.notRunning')}
+                    </p>
+                  )}
+
+                  {ollamaStatus === 'unknown' && (
+                    <p className="text-xs text-editorial-muted italic">
+                      {t('ollama.uncheckedHint')}
                     </p>
                   )}
 

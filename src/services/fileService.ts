@@ -1,6 +1,7 @@
 import { open, save } from '@tauri-apps/plugin-dialog';
 import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import type { TranslationChunk } from '../types';
+import { qualityExportLabel } from '../utils';
 
 // ── Import ───────────────────────────────────────────────────────────
 
@@ -56,8 +57,8 @@ export async function exportBilingual(
     lines.push(`## Segment ${i + 1}`, '');
     lines.push('**Original:**', '', chunk.originalText, '');
     lines.push('**Translation:**', '', chunk.currentDraft || '_No translation_', '');
-    if (chunk.judgeResult.score > 0) {
-      lines.push(`**Score:** ${chunk.judgeResult.score}/10`, '');
+    if (chunk.judgeResult.status === 'completed') {
+      lines.push(`**Quality:** ${qualityExportLabel(chunk.judgeResult.rating)}`, '');
     }
     if (chunk.judgeResult.issues.length > 0) {
       lines.push('**Issues:**', '');
@@ -72,6 +73,7 @@ export async function exportBilingual(
   await writeTextFile(path, lines.join('\n'));
   return true;
 }
+
 
 // ── Helpers ──────────────────────────────────────────────────────────
 

@@ -1,6 +1,9 @@
 export type ModelProvider = 'gemini' | 'openai' | 'anthropic' | 'deepseek' | 'ollama';
+export type QualityRating = 'critical' | 'poor' | 'fair' | 'good' | 'excellent';
+export type ChunkStatus = 'ready' | 'processing' | 'completed' | 'error';
 
 export interface GlossaryEntry {
+  id?: string;
   term: string;
   translation: string;
   notes?: string;
@@ -18,6 +21,7 @@ export interface PipelineStageConfig {
 export interface TranslationChunk {
   id: string;
   originalText: string;
+  status: ChunkStatus;
   stageResults: Record<string, PipelineResult>; // Key is stage id
   judgeResult: JudgeResult;
   currentDraft?: string;
@@ -30,7 +34,7 @@ export interface PipelineResult {
 }
 
 export interface JudgeResult extends PipelineResult {
-  score: number; // 0-10
+  rating: QualityRating;
   issues: Issue[];
 }
 
@@ -50,4 +54,5 @@ export interface PipelineConfig {
   judgeProvider: ModelProvider;
   glossary: GlossaryEntry[];
   useChunking?: boolean;
+  targetChunkCount?: number;
 }

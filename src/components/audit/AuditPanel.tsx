@@ -1,11 +1,18 @@
 import { ShieldCheck, RefreshCcw, AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
-import { calculateCompositeScore } from '../../utils';
+import { calculateCompositeQuality, indexPad, qualityLabelKey, qualityTone } from '../../utils';
+import { confirm } from '../../stores/confirmStore';
 
 interface AuditPanelProps {
   onRunAuditOnly: () => void;
 }
+
+const QUALITY_TONE_COLOR: Record<ReturnType<typeof qualityTone>, string> = {
+  strong: 'text-editorial-success',
+  ok: 'text-editorial-warning',
+  weak: 'text-editorial-accent',
+};
 
 export function AuditPanel({ onRunAuditOnly }: AuditPanelProps) {
   const { chunks, clearChunks, isProcessing } = usePipelineStore();
@@ -16,6 +23,28 @@ export function AuditPanel({ onRunAuditOnly }: AuditPanelProps) {
   const allClear =
     chunks.length > 0 &&
     chunks.every((c) => c.judgeResult.status === 'completed' && c.judgeResult.issues.length === 0);
+
+  const compositeQuality = calculateCompositeQuality(chunks);
+  const compositeTone = qualityTone(compositeQuality);
+  const compositeLevelLabel = t(qualityLabelKey(compositeQuality));
+  const compositeTitle = `${compositeLevelLabel} - ${t('audit.compositeTooltip')}`;
+
+  const cannotRun = isProcessing || chunks.length === 0;
+  const reEvaluateReason = isProcessing
+    ? t('pipeline.runDisabledProcessing')
+    : chunks.length === 0
+      ? t('pipeline.runDisabledNoChunks')
+      : undefined;
+
+  const handleClearStream = async () => {
+    const ok = await confirm({
+      title: t('pipeline.confirmClearTitle'),
+      message: t('pipeline.confirmClearMessage'),
+      confirmLabel: t('audit.clearStream'),
+      danger: true,
+    });
+    if (ok) clearChunks();
+  };
 
   return (
     <section className="col-span-1 md:col-span-3 p-8 bg-editorial-bg overflow-y-auto max-h-[calc(100vh-140px)] flex flex-col gap-10 custom-scrollbar">
@@ -28,13 +57,31 @@ export function AuditPanel({ onRunAuditOnly }: AuditPanelProps) {
           <div className="space-y-12 animate-in fade-in slide-in-from-right-4 duration-500">
             {/* Score */}
             {hasCompletedAudits && (
-              <div className="space-y-1">
-                <div className="text-7xl font-display text-center tracking-tighter">
-                  {calculateCompositeScore(chunks)}
-                  <span className="text-base text-editorial-muted ml-1 font-sans">/100</span>
+              <div className="space-y-6" title={compositeTitle} aria-label={compositeTitle}>
+                <div className="space-y-1">
+                  <div className={`text-5xl font-display text-center tracking-tighter ${QUALITY_TONE_COLOR[compositeTone]}`}>
+                    {compositeLevelLabel}
+                  </div>
+                  <div className="text-[8px] text-center uppercase font-bold tracking-[4px] text-editorial-muted">
+                    {t('audit.compositeQuality')}
+                  </div>
                 </div>
-                <div className="text-[8px] text-center uppercase font-bold tracking-[4px] text-editorial-muted">
-                  {t('audit.compositeIndex')}
+                <div className="space-y-2">
+                  <label className="block text-[9px] font-bold uppercase tracking-[2px] text-editorial-muted border-b border-editorial-border pb-1">
+                    {t('audit.chunkQuality')}
+                  </label>
+                  {chunks.map((chunk, index) => (
+                    chunk.judgeResult.status === 'completed' && (
+                      <div key={chunk.id} className="flex items-center justify-between text-[10px] font-mono border border-editorial-border/70 px-3 py-2">
+                        <span className="text-editorial-muted">
+                          {t('pipeline.unit')} {indexPad(index + 1)}
+                        </span>
+                        <span className={QUALITY_TONE_COLOR[qualityTone(chunk.judgeResult.rating)]}>
+                          {t(qualityLabelKey(chunk.judgeResult.rating))}
+                        </span>
+                      </div>
+                    )
+                  ))}
                 </div>
               </div>
             )}
@@ -107,14 +154,17 @@ export function AuditPanel({ onRunAuditOnly }: AuditPanelProps) {
       <div className="mt-auto space-y-4">
         <button
           onClick={onRunAuditOnly}
-          disabled={isProcessing || chunks.length === 0}
+          disabled={cannotRun}
+          title={reEvaluateReason ?? t('audit.reEvaluate')}
           className="w-full bg-transparent border border-editorial-ink text-editorial-ink px-4 py-4 text-[11px] font-bold uppercase tracking-[3px] hover:bg-editorial-ink hover:text-white transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed group shadow-sm active:translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
         >
           <RefreshCcw size={14} className={isProcessing ? 'animate-spin' : ''} /> {t('audit.reEvaluate')}
         </button>
         <button
-          onClick={clearChunks}
-          className="w-full border border-editorial-border px-4 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-editorial-textbox/50 hover:text-editorial-accent transition-all flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          onClick={handleClearStream}
+          disabled={chunks.length === 0}
+          title={chunks.length === 0 ? t('pipeline.runDisabledNoChunks') : t('audit.clearStream')}
+          className="w-full border border-editorial-border px-4 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-editorial-textbox/50 hover:text-editorial-accent transition-all flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {t('audit.clearStream')}
         </button>

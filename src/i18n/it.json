@@ -42,12 +42,45 @@
     "targetLanguage": "Lingua di arrivo",
     "addGlossaryEntry": "Aggiungi voce al glossario",
     "removeGlossaryEntry": "Rimuovi voce dal glossario",
+    "duplicateTerm": "Termine duplicato",
     "copy": "Copia",
-    "copied": "Copiato"
+    "copied": "Copiato",
+    "copyFailed": "Copia non riuscita",
+    "runDisabledNoChunks": "Prepara prima il contenuto da elaborare",
+    "runDisabledProcessing": "Pipeline in esecuzione, attendi…",
+    "words": "Parole",
+    "paragraphs": "Paragrafi",
+    "recommendedChunks": "Chunk suggeriti",
+    "targetChunks": "Numero chunk",
+    "useRecommendation": "Usa suggerimento",
+    "zeroMeansAuto": "0 mantiene la segmentazione automatica per paragrafi.",
+    "chunkPreview": "Anteprima Chunk",
+    "unitsReady": "unità pronte",
+    "chunkPreviewHint": "Controlla i chunk sorgente prima di avviare la pipeline. Puoi modificarli, dividerli o unirli quando la pipeline è ferma.",
+    "splitChunk": "Dividi",
+    "mergeNext": "Unisci successivo",
+    "chunkStatus": {
+      "ready": "Pronto",
+      "processing": "In corso",
+      "completed": "Completato",
+      "error": "Errore"
+    },
+    "confirmClearTitle": "Pulire il flusso?",
+    "confirmClearMessage": "Eliminerai tutti i blocchi, le bozze candidate e i risultati dell'audit. L'azione non è reversibile.",
+    "confirmRemoveStageTitle": "Rimuovere questa fase?",
+    "confirmRemoveStageMessage": "La fase \"{{name}}\" verrà eliminata dalla pipeline. Puoi sempre disabilitarla invece per conservarla."
   },
   "audit": {
     "title": "Log Audit",
-    "compositeIndex": "Indice Composito",
+    "compositeQuality": "Qualità Composita",
+    "chunkQuality": "Qualità per Chunk",
+    "compositeTooltip": "Qualità semantica sintetizzata su tutti i chunk completati.",
+    "ratingNone": "Non valutato",
+    "ratingCritical": "Critico",
+    "ratingPoor": "Scarso",
+    "ratingFair": "Sufficiente",
+    "ratingGood": "Buono",
+    "ratingExcellent": "Ottimo",
     "anomaliesDetected": "Anomalie Rilevate",
     "pipelineClear": "Audit Pipeline Superato",
     "noRecord": "Nessun Audit",
@@ -63,11 +96,16 @@
     "securityMessage": "Le chiavi API sono conservate in modo sicuro nel portachiavi del sistema operativo. Non lasciano mai il tuo dispositivo. Ollama gira interamente sulla tua macchina — nessun dato viene inviato a server esterni.",
     "secretsPanel": "Pannello segreti",
     "saveClose": "Salva e Chiudi",
+    "close": "Chiudi",
     "clickToConfigure": "Clicca per configurare",
     "pasteApiKey": "Incolla chiave API...",
     "save": "Salva",
     "cancel": "Annulla",
-    "removeFromKeychain": "Rimuovi dal portachiavi"
+    "removeFromKeychain": "Rimuovi dal portachiavi",
+    "keySaved": "Chiave {{provider}} salvata nel portachiavi",
+    "keySaveFailed": "Salvataggio chiave {{provider}} fallito",
+    "keyDeleted": "Chiave {{provider}} rimossa dal portachiavi",
+    "keyDeleteFailed": "Rimozione chiave {{provider}} fallita"
   },
   "ollama": {
     "title": "Ollama (Modelli Locali)",
@@ -75,7 +113,12 @@
     "availableModels": "Modelli Disponibili",
     "notRunning": "Ollama non è in esecuzione. Avvialo con 'ollama serve' per usare modelli locali.",
     "noModels": "Ollama è attivo ma non ci sono modelli installati. Esegui 'ollama pull <modello>' per iniziare.",
-    "modelPlaceholder": "Nome del modello..."
+    "modelPlaceholder": "Nome del modello...",
+    "connected": "Ollama connesso, {{count}} modello(i) disponibile(i)",
+    "disconnected": "Ollama non raggiungibile su localhost:11434",
+    "selectedButOffline": "Hai selezionato Ollama ma non è connesso — verifica le Impostazioni",
+    "unchecked": "Stato Ollama non verificato",
+    "uncheckedHint": "Stato non verificato. Clicca «Aggiorna» per controllare la connessione e caricare i modelli locali."
   },
   "errors": {
     "somethingWentWrong": "Qualcosa è andato storto",
@@ -93,6 +136,11 @@
     "en": "English",
     "it": "Italiano"
   },
+  "common": {
+    "confirm": "Conferma",
+    "cancel": "Annulla",
+    "delete": "Elimina"
+  },
   "projects": {
     "title": "Progetti",
     "current": "Attuale",
@@ -100,9 +148,27 @@
     "create": "Crea",
     "save": "Salva",
     "saved": "Progetto salvato",
+    "saveFailed": "Salvataggio progetto fallito",
     "namePlaceholder": "Nome del progetto...",
     "empty": "Nessun progetto. Creane uno per salvare il lavoro.",
-    "delete": "Elimina"
+    "delete": "Elimina",
+    "confirmDeleteTitle": "Eliminare il progetto?",
+    "confirmDeleteMessage": "\"{{name}}\" verrà rimosso definitivamente, incluse tutte le traduzioni salvate. L'operazione non è reversibile.",
+    "deleted": "Progetto eliminato",
+    "deleteFailed": "Eliminazione del progetto fallita",
+    "updatedJustNow": "aggiornato adesso",
+    "updatedMinutesAgo_one": "aggiornato {{count}} minuto fa",
+    "updatedMinutesAgo_other": "aggiornato {{count}} minuti fa",
+    "updatedHoursAgo_one": "aggiornato {{count}} ora fa",
+    "updatedHoursAgo_other": "aggiornato {{count}} ore fa",
+    "updatedDaysAgo_one": "aggiornato {{count}} giorno fa",
+    "updatedDaysAgo_other": "aggiornato {{count}} giorni fa",
+    "updatedWeeksAgo_one": "aggiornato {{count}} settimana fa",
+    "updatedWeeksAgo_other": "aggiornato {{count}} settimane fa",
+    "updatedMonthsAgo_one": "aggiornato {{count}} mese fa",
+    "updatedMonthsAgo_other": "aggiornato {{count}} mesi fa",
+    "updatedYearsAgo_one": "aggiornato {{count}} anno fa",
+    "updatedYearsAgo_other": "aggiornato {{count}} anni fa"
   },
   "files": {
     "import": "Importa file di testo",
@@ -129,12 +195,12 @@
     "overview": {
       "title": "Cos'è Glossa?",
       "p1": "Glossa è una pipeline di traduzione AI multi-stadio progettata per studiosi, filologi e traduttori professionisti. Invece di una traduzione in un solo passaggio, concatena più passaggi LLM — ognuno con istruzioni e modello propri — per raffinare iterativamente il risultato.",
-      "p2": "Un giudice AI verifica poi la traduzione finale confrontandola con il glossario e i criteri di qualità, assegnando un punteggio e segnalando problemi specifici con correzioni suggerite.",
+      "p2": "Un giudice AI verifica poi la traduzione finale confrontandola con il glossario e i criteri di qualità, assegnando una valutazione semantica e segnalando problemi specifici con correzioni suggerite.",
       "flowTitle": "Flusso di traduzione:",
       "step1": "Incolla o importa il testo sorgente",
       "step2": "Il testo passa per la Fase 1 (bozza iniziale)",
       "step3": "Le Fasi 2+ raffinano la traduzione (fluidità, registro, ecc.)",
-      "step4": "Il Giudice AI valuta: punteggio, problemi, correzioni suggerite",
+      "step4": "Il Giudice AI valuta: qualità, problemi, correzioni suggerite",
       "step5": "Modifichi manualmente la traduzione candidata",
       "step6": "Esporti come .txt o .md bilingue",
       "p3": "Ogni fase può usare un modello e provider diverso. Ad esempio, usa Gemini per una bozza veloce, poi Claude per il raffinamento stilistico, e GPT-4o come giudice. Oppure esegui tutto in locale con Ollama."
@@ -149,7 +215,7 @@
       "runTitle": "Esecuzione della pipeline",
       "runDesc": "Dopo aver incollato il testo nel pannello centrale e cliccato 'Prepara Contenuto', premi 'Avvia Pipeline'. Ogni fase viene eseguita in sequenza per ogni blocco e vedrai i token apparire in tempo reale. Il giudice si avvia automaticamente dopo tutte le fasi.",
       "editTitle": "Modifica del risultato",
-      "editDesc": "Il box 'Traduzione Candidata' è completamente modificabile. Apporta le correzioni manuali, poi clicca 'Rivaluta Bozze' nel pannello audit per ottenere un punteggio aggiornato sulle tue modifiche.",
+      "editDesc": "Il box 'Traduzione Candidata' è completamente modificabile. Apporta le correzioni manuali, poi clicca 'Rivaluta Bozze' nel pannello audit per ottenere una valutazione aggiornata sulle tue modifiche.",
       "tipTitle": "Consiglio: mescola i provider",
       "tipDesc": "Usa modelli diversi per fasi diverse. Un modello veloce (Gemini Flash, DeepSeek) va bene per le bozze iniziali, mentre un modello più potente (GPT-4o, Claude Sonnet) eccelle nel raffinamento e nella valutazione. I modelli Ollama sono ideali per il lavoro offline o contenuti sensibili."
     },
@@ -157,16 +223,16 @@
       "title": "Streaming in Tempo Reale",
       "p1": "Tutte le fasi di traduzione mostrano i token in tempo reale. Man mano che l'LLM genera il testo, lo vedrai apparire parola per parola nel box di output della fase. Questo dà un feedback immediato e permette di individuare problemi subito senza attendere la risposta completa.",
       "p2": "Lo streaming funziona su tutti e cinque i provider: Gemini, OpenAI, Anthropic, DeepSeek e Ollama. La connessione usa Server-Sent Events (SSE) nel backend, con eventi Tauri che trasmettono i token al frontend.",
-      "p3": "Il Giudice AI non usa lo streaming — restituisce JSON strutturato (punteggio + problemi) visualizzato una volta completato. Se una fase fallisce durante lo streaming, il sistema riprova automaticamente con backoff esponenziale (fino a 3 tentativi)."
+      "p3": "Il Giudice AI non usa lo streaming — restituisce JSON strutturato (valutazione qualità + problemi) visualizzato una volta completato. Se una fase fallisce durante lo streaming, il sistema riprova automaticamente con backoff esponenziale (fino a 3 tentativi)."
     },
     "audit": {
       "title": "Audit e Controllo Qualità",
-      "intro": "Il pannello destro mostra i risultati dell'audit del Giudice AI. Dopo il completamento della pipeline, ogni blocco viene valutato e riceve un punteggio composito (0–100). Il giudice produce quattro categorie di problemi:",
+      "intro": "Il pannello destro mostra i risultati dell'audit del Giudice AI. Dopo il completamento della pipeline, ogni blocco riceve una valutazione semantica della qualità. Il giudice produce quattro categorie di problemi:",
       "glossaryIssue": "La traduzione si discosta dai termini definiti nel Registro Termini.",
       "accuracyIssue": "Il significato del testo sorgente non è fedelmente reso nella traduzione.",
       "fluencyIssue": "La traduzione suona innaturale o ha formulazioni goffe nella lingua di destinazione.",
       "grammarIssue": "Errori grammaticali, coniugazioni errate o problemi sintattici nell'output.",
-      "reeval": "Dopo aver modificato manualmente la traduzione candidata, clicca 'Rivaluta Bozze' per rieseguire il giudice sul testo aggiornato. Questo permette di iterare fino a raggiungere il punteggio desiderato senza rieseguire l'intera pipeline."
+      "reeval": "Dopo aver modificato manualmente la traduzione candidata, clicca 'Rivaluta Bozze' per rieseguire il giudice sul testo aggiornato. Questo permette di iterare fino a raggiungere la qualità desiderata senza rieseguire l'intera pipeline."
     },
     "projects": {
       "title": "Progetti e File",
@@ -176,7 +242,7 @@
       "saveTitle": "Salva il lavoro",
       "saveDesc": "Clicca l'icona salvataggio (💾) in qualsiasi momento per persistere lo stato corrente. Quando riapri un progetto, la configurazione completa, le fasi, il glossario e le traduzioni vengono ripristinati esattamente come li avevi lasciati.",
       "importExportTitle": "Importa ed esporta",
-      "importExportDesc": "Usa l'icona upload (⬆) per importare un file .txt o .md come testo sorgente. Usa l'icona download (⬇) per esportare la traduzione come testo semplice, o clicca 'MD' per un documento Markdown bilingue con testo originale, traduzione, punteggio audit e problemi."
+      "importExportDesc": "Usa l'icona upload (⬆) per importare un file .txt o .md come testo sorgente. Usa l'icona download (⬇) per esportare la traduzione come testo semplice, o clicca 'MD' per un documento Markdown bilingue con testo originale, traduzione, qualità audit e problemi."
     },
     "providers": {
       "title": "Provider LLM",
