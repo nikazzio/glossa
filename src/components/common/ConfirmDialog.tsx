@@ -17,7 +17,7 @@ export function ConfirmDialog() {
           role="dialog"
           aria-modal="true"
           aria-labelledby="confirm-title"
-          aria-describedby="confirm-message"
+          aria-describedby={request.message ? 'confirm-message' : undefined}
           ref={trapRef}
         >
           <motion.div

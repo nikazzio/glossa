@@ -73,7 +73,7 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfig
       judgeModel: models[0] || '',
     }));
     if (newProvider === 'ollama' && usePipelineStore.getState().ollamaStatus === 'unknown') {
-      toast.message(t('ollama.selectedButUnchecked'));
+      toast.message(t('ollama.uncheckedHint'));
     } else if (newProvider === 'ollama' && usePipelineStore.getState().ollamaStatus === 'disconnected') {
       toast.warning(t('ollama.selectedButOffline'));
     }
