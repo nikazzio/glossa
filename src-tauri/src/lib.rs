@@ -7,6 +7,7 @@ pub fn run() {
   // panic on missing plugin config.
   #[allow(unused_mut)]
   let mut builder = tauri::Builder::default()
+    .manage(llm::StreamRegistry::new())
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_fs::init())
     .plugin(
@@ -33,6 +34,7 @@ pub fn run() {
     .invoke_handler(tauri::generate_handler![
       llm::run_stage,
       llm::run_stage_stream,
+      llm::cancel_stream,
       llm::judge_translation,
       llm::optimize_prompt,
       llm::save_api_key,

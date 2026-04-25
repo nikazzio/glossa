@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../stores/pipelineStore';
-import { llmService } from '../services/llmService';
+import { llmService, isStreamCancelledError } from '../services/llmService';
 import { withRetry, friendlyError } from '../utils/retry';
 import { qualityDefault, qualityFailure } from '../utils';
 import type { JudgeResult } from '../types';
@@ -29,6 +29,7 @@ export function usePipeline() {
   const { t } = useTranslation();
 
   const runPipeline = useCallback(async () => {
+    if (usePipelineStore.getState().isProcessing) return;
     if (chunks.length === 0) return;
     usePipelineStore.getState().clearCancelRequest();
     setIsProcessing(true);
@@ -76,6 +77,15 @@ export function usePipeline() {
           lastResult = result;
           updateChunkStage(chunk.id, stage.id, { content: result, status: 'completed' });
         } catch (error: any) {
+          if (isStreamCancelledError(error)) {
+            // User-initiated cancel: clear the in-flight stage placeholder
+            // and reset the chunk status so the UI does not show a stuck
+            // "processing" badge after the toast confirms the stop.
+            updateChunkStage(chunk.id, stage.id, { content: '', status: 'idle' });
+            updateChunkStatus(chunk.id, 'ready');
+            cancelled = true;
+            break;
+          }
           errorCount++;
           const msg = friendlyError(error.message ?? String(error));
           updateChunkStage(chunk.id, stage.id, {
@@ -89,6 +99,7 @@ export function usePipeline() {
           break;
         }
       }
+      if (cancelled) break;
 
       if (lastResult) {
         updateChunkDraft(chunk.id, lastResult);
@@ -146,6 +157,7 @@ export function usePipeline() {
   }, [chunks, config, t, setIsProcessing, setChunks, updateChunkStage, appendChunkStageContent, updateChunkJudge, updateChunkDraft, updateChunkStatus]);
 
   const runAuditOnly = useCallback(async () => {
+    if (usePipelineStore.getState().isProcessing) return;
     if (chunks.length === 0) return;
     usePipelineStore.getState().clearCancelRequest();
     setIsProcessing(true);
@@ -207,6 +219,14 @@ export function usePipeline() {
 
   const cancelPipeline = useCallback(() => {
     requestCancel();
+    const streamId = usePipelineStore.getState().activeStreamId;
+    if (streamId) {
+      // Best-effort: tell the backend to drop the in-flight HTTP request
+      // so the provider stops billing immediately. Failures are silent
+      // because the cancelRequested flag will still stop the loop between
+      // chunks.
+      llmService.cancelStream(streamId).catch(() => {});
+    }
     toast.message(t('pipeline.stopRequested'));
   }, [requestCancel, t]);
 

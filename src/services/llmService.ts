@@ -1,6 +1,18 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import type { PipelineConfig, PipelineStageConfig, JudgeResult } from '../types';
+import { usePipelineStore } from '../stores/pipelineStore';
+
+/// Sentinel string returned by the Rust backend when a stream is
+/// cancelled via cancel_stream. Exposed so the pipeline runner can
+/// suppress the error toast for user-initiated cancels.
+export const STREAM_CANCELLED_ERROR = 'Stream cancelled';
+
+export function isStreamCancelledError(error: unknown): boolean {
+  if (!error) return false;
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes(STREAM_CANCELLED_ERROR);
+}
 
 interface StreamTokenPayload {
   streamId: string;
@@ -47,6 +59,7 @@ export const llmService = {
       }
     });
 
+    usePipelineStore.getState().setActiveStreamId(streamId);
     try {
       const result = await invoke<string>('run_stage_stream', {
         text,
@@ -58,7 +71,12 @@ export const llmService = {
       return result;
     } finally {
       unlisten();
+      usePipelineStore.getState().setActiveStreamId(null);
     }
+  },
+
+  async cancelStream(streamId: string): Promise<void> {
+    return invoke('cancel_stream', { streamId });
   },
 
   async judgeTranslation(

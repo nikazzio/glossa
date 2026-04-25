@@ -1,7 +1,17 @@
 use serde::{Deserialize, Serialize};
 use reqwest::Client;
-use tauri::{AppHandle, Emitter, Manager};
-use std::{fs, path::PathBuf, time::Duration};
+use tauri::{AppHandle, Emitter, Manager, State};
+use tokio::sync::Notify;
+use std::{
+    collections::HashMap,
+    fs,
+    path::PathBuf,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex,
+    },
+    time::Duration,
+};
 
 // ── Types matching frontend ──────────────────────────────────────────
 
@@ -63,6 +73,99 @@ struct StreamToken {
     done: bool,
 }
 
+// ── Stream cancellation registry ─────────────────────────────────────
+
+/// Cancellation handle stored in `StreamRegistry`.
+///
+/// `flag` is the synchronous source of truth (cheap atomic load before
+/// each chunk). `notify` lets a task that is currently parked on
+/// `resp.chunk().await` wake up immediately when cancellation is
+/// requested, instead of waiting for the next byte from the provider.
+pub struct CancelToken {
+    flag: AtomicBool,
+    notify: Notify,
+}
+
+impl CancelToken {
+    fn new() -> Self {
+        Self {
+            flag: AtomicBool::new(false),
+            notify: Notify::new(),
+        }
+    }
+
+    fn cancel(&self) {
+        self.flag.store(true, Ordering::Release);
+        self.notify.notify_waiters();
+    }
+
+    fn is_cancelled(&self) -> bool {
+        self.flag.load(Ordering::Acquire)
+    }
+}
+
+/// Tracks in-flight streaming requests so the frontend can interrupt them.
+///
+/// When the user clicks "Stop", the frontend invokes `cancel_stream` with
+/// the active stream id. The matching `CancelToken` is flipped and its
+/// `Notify` fires; the SSE loop drops the response (closing the TCP
+/// connection so the provider stops billing) and returns
+/// `STREAM_CANCELLED_ERROR`.
+#[derive(Default)]
+pub struct StreamRegistry {
+    cancels: Mutex<HashMap<String, Arc<CancelToken>>>,
+}
+
+impl StreamRegistry {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    fn register(&self, stream_id: &str) -> Arc<CancelToken> {
+        let token = Arc::new(CancelToken::new());
+        self.cancels
+            .lock()
+            .expect("StreamRegistry mutex poisoned")
+            .insert(stream_id.to_string(), Arc::clone(&token));
+        token
+    }
+
+    fn unregister(&self, stream_id: &str) {
+        self.cancels
+            .lock()
+            .expect("StreamRegistry mutex poisoned")
+            .remove(stream_id);
+    }
+
+    fn cancel(&self, stream_id: &str) {
+        if let Some(token) = self
+            .cancels
+            .lock()
+            .expect("StreamRegistry mutex poisoned")
+            .get(stream_id)
+        {
+            token.cancel();
+        }
+    }
+}
+
+/// RAII guard that unregisters a stream id from the registry on drop,
+/// even if the surrounding future is cancelled or panics.
+struct StreamGuard<'a> {
+    registry: &'a StreamRegistry,
+    stream_id: String,
+}
+
+impl Drop for StreamGuard<'_> {
+    fn drop(&mut self) {
+        self.registry.unregister(&self.stream_id);
+    }
+}
+
+/// Sentinel string used to identify a user-cancelled stream in error
+/// flows; the frontend checks for this prefix to suppress the toast.
+pub const STREAM_CANCELLED_ERROR: &str = "Stream cancelled";
+
 // ── API Key management (OS Keychain) ─────────────────────────────────
 
 const KEYRING_SERVICE: &str = "io.github.nikazzio.glossa";
@@ -82,6 +185,63 @@ fn build_http_client() -> Result<Client, String> {
         .timeout(Duration::from_secs(HTTP_REQUEST_TIMEOUT_SECS))
         .build()
         .map_err(|e| format!("Failed to build HTTP client: {e}"))
+}
+
+/// Map an HTTP status to a short, user-safe explanation.
+///
+/// The provider response body may contain echoed prompts, headers, or PII;
+/// we never propagate it to the frontend. The full body is logged via a
+/// helper that compiles to a no-op outside `debug_assertions`, so release
+/// binaries cannot surface the body even if a logger is wired up.
+fn format_api_error(provider_label: &str, status: reqwest::StatusCode, body: &str) -> String {
+    log_response_body(provider_label, status, body);
+    let user_message = match status.as_u16() {
+        400 => "bad request — check the model name or prompt",
+        401 | 403 => "API key not authorized",
+        404 => "model or endpoint not found",
+        408 => "the provider timed out",
+        413 => "input too large for the model",
+        429 => "rate limited — retry shortly",
+        500..=599 => "provider unavailable",
+        _ => "unexpected response",
+    };
+    format!("{provider_label} API error ({status}): {user_message}")
+}
+
+/// Log the raw provider response body. Compiles to a no-op in release
+/// builds so prompts/PII cannot leak through the logging subsystem.
+#[cfg(debug_assertions)]
+fn log_response_body(provider_label: &str, status: reqwest::StatusCode, body: &str) {
+    log::debug!("{provider_label} API error body ({status}): {body}");
+}
+
+#[cfg(not(debug_assertions))]
+fn log_response_body(_provider_label: &str, _status: reqwest::StatusCode, _body: &str) {}
+
+/// Pick a short label from a base URL so error messages identify the
+/// provider without leaking the URL itself.
+fn provider_label_from_url(base_url: &str) -> &'static str {
+    if base_url.contains("api.openai.com") {
+        "OpenAI"
+    } else if base_url.contains("api.deepseek.com") {
+        "DeepSeek"
+    } else if base_url.contains("11434") {
+        "Ollama"
+    } else {
+        "Provider"
+    }
+}
+
+/// Map a provider id (as used internally) to a human-readable label.
+fn provider_label(provider: &str) -> &'static str {
+    match provider {
+        "gemini" => "Gemini",
+        "openai" => "OpenAI",
+        "deepseek" => "DeepSeek",
+        "anthropic" => "Anthropic",
+        "ollama" => "Ollama",
+        _ => "Provider",
+    }
 }
 
 fn legacy_store_path(app: &AppHandle) -> Result<PathBuf, String> {
@@ -231,7 +391,7 @@ async fn call_gemini(
     let text = resp.text().await.map_err(|e| format!("Failed to read response: {e}"))?;
 
     if !status.is_success() {
-        return Err(format!("Gemini API error ({status}): {text}"));
+        return Err(format_api_error("Gemini", status, &text));
     }
 
     let json: serde_json::Value = serde_json::from_str(&text)
@@ -278,7 +438,7 @@ async fn call_openai_compatible(
     let text = resp.text().await.map_err(|e| format!("Failed to read response: {e}"))?;
 
     if !status.is_success() {
-        return Err(format!("API error ({status}): {text}"));
+        return Err(format_api_error(provider_label_from_url(base_url), status, &text));
     }
 
     let json: serde_json::Value = serde_json::from_str(&text)
@@ -324,7 +484,7 @@ async fn call_anthropic(
     let text = resp.text().await.map_err(|e| format!("Failed to read response: {e}"))?;
 
     if !status.is_success() {
-        return Err(format!("Anthropic API error ({status}): {text}"));
+        return Err(format_api_error("Anthropic", status, &text));
     }
 
     let json: serde_json::Value = serde_json::from_str(&text)
@@ -449,18 +609,37 @@ async fn build_streaming_request(
     }
 }
 
-/// Read an SSE stream, emit tokens via Tauri events, return the full text
+/// Read an SSE stream, emit tokens via Tauri events, return the full text.
+///
+/// On every iteration `tokio::select!` races the next chunk read against
+/// the cancellation `Notify`. If cancel fires while the task is parked
+/// on a slow/idle provider, the response is dropped (closing the TCP
+/// connection so the provider stops billing) and `STREAM_CANCELLED_ERROR`
+/// is returned without waiting for the next byte.
 async fn stream_response(
     app: &AppHandle,
     mut resp: reqwest::Response,
     provider: &str,
     stream_id: &str,
+    cancel: &Arc<CancelToken>,
 ) -> Result<String, String> {
     let mut full_text = String::new();
     let mut buffer = String::new();
 
     loop {
-        match resp.chunk().await {
+        if cancel.is_cancelled() {
+            drop(resp);
+            return Err(STREAM_CANCELLED_ERROR.to_string());
+        }
+        let chunk_result = tokio::select! {
+            biased;
+            _ = cancel.notify.notified() => {
+                drop(resp);
+                return Err(STREAM_CANCELLED_ERROR.to_string());
+            }
+            chunk = resp.chunk() => chunk,
+        };
+        match chunk_result {
             Ok(Some(bytes)) => {
                 buffer.push_str(&String::from_utf8_lossy(&bytes));
 
@@ -639,6 +818,7 @@ pub async fn run_stage(
 #[tauri::command]
 pub async fn run_stage_stream(
     app: AppHandle,
+    registry: State<'_, StreamRegistry>,
     text: String,
     stage: StageConfig,
     config: PipelineConfig,
@@ -649,6 +829,16 @@ pub async fn run_stage_stream(
     let client = build_http_client()?;
     let (system_prompt, user_prompt) = build_stage_prompts(&text, &stage, &config, &previous_result);
 
+    let cancel = registry.register(&stream_id);
+    let _guard = StreamGuard {
+        registry: registry.inner(),
+        stream_id: stream_id.clone(),
+    };
+
+    if cancel.is_cancelled() {
+        return Err(STREAM_CANCELLED_ERROR.to_string());
+    }
+
     let resp = build_streaming_request(
         &client, &stage.provider, &stage.model,
         &system_prompt, &user_prompt, &api_key,
@@ -657,10 +847,17 @@ pub async fn run_stage_stream(
     let status = resp.status();
     if !status.is_success() {
         let text = resp.text().await.unwrap_or_default();
-        return Err(format!("API error ({status}): {text}"));
+        return Err(format_api_error(provider_label(&stage.provider), status, &text));
     }
 
-    stream_response(&app, resp, &stage.provider, &stream_id).await
+    stream_response(&app, resp, &stage.provider, &stream_id, &cancel).await
+}
+
+/// Mark a streaming request as cancelled. Idempotent and safe to call
+/// after the stream has finished — unknown ids are ignored.
+#[tauri::command]
+pub fn cancel_stream(registry: State<'_, StreamRegistry>, stream_id: String) {
+    registry.cancel(&stream_id);
 }
 
 #[tauri::command]
@@ -1039,5 +1236,139 @@ mod tests {
         let result = call_provider(&client, "fake_provider", "m", "s", "u", "k", false).await;
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("Unsupported provider"));
+    }
+
+    // ── error sanitization ──────────────────────────────────────────
+
+    #[test]
+    fn format_api_error_omits_response_body() {
+        let secret = "user prompt: Confidential unpublished manuscript text";
+        let msg = format_api_error(
+            "OpenAI",
+            reqwest::StatusCode::UNAUTHORIZED,
+            secret,
+        );
+        assert!(!msg.contains(secret), "response body must not leak: {msg}");
+        assert!(msg.contains("OpenAI"));
+        assert!(msg.contains("API key not authorized"));
+    }
+
+    #[test]
+    fn format_api_error_maps_common_statuses() {
+        let cases = [
+            (reqwest::StatusCode::BAD_REQUEST, "bad request"),
+            (reqwest::StatusCode::FORBIDDEN, "API key not authorized"),
+            (reqwest::StatusCode::NOT_FOUND, "model or endpoint not found"),
+            (reqwest::StatusCode::TOO_MANY_REQUESTS, "rate limited"),
+            (reqwest::StatusCode::BAD_GATEWAY, "provider unavailable"),
+        ];
+        for (status, expected) in cases {
+            let msg = format_api_error("Anthropic", status, "any body");
+            assert!(
+                msg.contains(expected),
+                "status {status} should map to '{expected}', got: {msg}"
+            );
+        }
+    }
+
+    #[test]
+    fn provider_label_from_url_identifies_known_hosts() {
+        assert_eq!(provider_label_from_url("https://api.openai.com/v1"), "OpenAI");
+        assert_eq!(provider_label_from_url("https://api.deepseek.com"), "DeepSeek");
+        assert_eq!(provider_label_from_url("http://localhost:11434/v1"), "Ollama");
+        assert_eq!(provider_label_from_url("https://example.com"), "Provider");
+    }
+
+    #[test]
+    fn provider_label_handles_all_supported_providers() {
+        assert_eq!(provider_label("gemini"), "Gemini");
+        assert_eq!(provider_label("openai"), "OpenAI");
+        assert_eq!(provider_label("deepseek"), "DeepSeek");
+        assert_eq!(provider_label("anthropic"), "Anthropic");
+        assert_eq!(provider_label("ollama"), "Ollama");
+        assert_eq!(provider_label("unknown"), "Provider");
+    }
+
+    // ── stream registry ─────────────────────────────────────────────
+
+    #[test]
+    fn stream_registry_register_returns_unflagged_handle() {
+        let registry = StreamRegistry::new();
+        let token = registry.register("s-1");
+        assert!(!token.is_cancelled());
+    }
+
+    #[test]
+    fn stream_registry_cancel_flips_the_flag() {
+        let registry = StreamRegistry::new();
+        let token = registry.register("s-1");
+        registry.cancel("s-1");
+        assert!(token.is_cancelled());
+    }
+
+    #[test]
+    fn stream_registry_cancel_unknown_id_is_noop() {
+        let registry = StreamRegistry::new();
+        // Must not panic, must not poison the mutex
+        registry.cancel("never-registered");
+        let token = registry.register("now-real");
+        assert!(!token.is_cancelled());
+    }
+
+    #[test]
+    fn stream_registry_unregister_drops_the_handle() {
+        let registry = StreamRegistry::new();
+        let token = registry.register("s-1");
+        registry.unregister("s-1");
+        // After unregister, cancelling the same id is a no-op against the
+        // already-removed entry — but the original Arc still observes its
+        // previous value (false), proving the flag wasn't touched.
+        registry.cancel("s-1");
+        assert!(!token.is_cancelled());
+    }
+
+    #[test]
+    fn stream_guard_unregisters_on_drop() {
+        let registry = StreamRegistry::new();
+        let token = registry.register("s-1");
+        {
+            let _guard = StreamGuard {
+                registry: &registry,
+                stream_id: "s-1".to_string(),
+            };
+        } // guard drops here
+        // After drop, cancelling has no effect on the registered handle
+        registry.cancel("s-1");
+        assert!(!token.is_cancelled());
+    }
+
+    #[tokio::test]
+    async fn cancel_token_wakes_a_parked_waiter() {
+        // Verify Notify wakes a task that is awaiting notified() the
+        // moment cancel() is called. This is the property that makes
+        // the SSE select! responsive even while a provider is idle.
+        let token = Arc::new(CancelToken::new());
+        let listener = {
+            let token = Arc::clone(&token);
+            tokio::spawn(async move {
+                token.notify.notified().await;
+                token.is_cancelled()
+            })
+        };
+
+        // Yield once so the listener actually parks on notified().
+        tokio::task::yield_now().await;
+
+        token.cancel();
+
+        let observed = tokio::time::timeout(
+            std::time::Duration::from_millis(50),
+            listener,
+        )
+        .await
+        .expect("listener did not wake within 50ms")
+        .expect("listener task panicked");
+
+        assert!(observed, "cancel flag must be set when notify wakes");
     }
 }
