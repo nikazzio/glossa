@@ -31,15 +31,15 @@ describe('projectService glossary persistence', () => {
       targetChunkCount: 8,
     };
 
-    await saveProjectConfig('proj-1', config);
+    await saveProjectConfig('proj-1', config, 'document');
 
     expect(dbMocks.execute).toHaveBeenCalledWith(
       expect.stringContaining('UPDATE pipeline_configs SET'),
       expect.arrayContaining([8, 'proj-1']),
     );
     expect(dbMocks.execute).toHaveBeenCalledWith(
-      expect.stringContaining('UPDATE projects SET source_language = $1, target_language = $2'),
-      ['Italian', 'English', 'proj-1'],
+      expect.stringContaining('view_mode = $3'),
+      ['Italian', 'English', 'document', 'proj-1'],
     );
     expect(dbMocks.execute).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO glossaries'),

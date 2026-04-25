@@ -11,6 +11,8 @@ import {
   type Project,
 } from '../services/projectService';
 import { usePipelineStore } from './pipelineStore';
+import { useChunksStore } from './chunksStore';
+import { useUiStore } from './uiStore';
 
 interface ProjectState {
   projects: Project[];
@@ -33,10 +35,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   setShowProjectPanel: (show) => {
     set({ showProjectPanel: show });
     if (show) {
-      // Close stacking modals so focus traps don't fight each other.
-      const pipeline = usePipelineStore.getState();
-      if (pipeline.showSettings) pipeline.setShowSettings(false);
-      if (pipeline.showHelp) pipeline.setShowHelp(false);
+      const ui = useUiStore.getState();
+      if (ui.showSettings) ui.setShowSettings(false);
+      if (ui.showHelp) ui.setShowHelp(false);
     }
   },
 
@@ -47,8 +48,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   createAndOpen: async (name: string) => {
     const pipeline = usePipelineStore.getState();
+    const ui = useUiStore.getState();
     const id = await createProject(name, pipeline.config.sourceLanguage, pipeline.config.targetLanguage);
-    await saveProjectConfig(id, pipeline.config);
+    await saveProjectConfig(id, pipeline.config, ui.viewMode);
     await get().loadProjects();
     set({ currentProjectId: id });
   },
@@ -61,6 +63,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     if (!config) return;
 
     const pipeline = usePipelineStore.getState();
+    const chunksStore = useChunksStore.getState();
+    const ui = useUiStore.getState();
     const restoredChunks = restoreTranslations(savedTranslations);
     pipeline.setConfig({
       ...pipeline.config,
@@ -74,8 +78,10 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       targetChunkCount: config.targetChunkCount,
       glossary: config.glossary,
     });
-    pipeline.setChunks(restoredChunks);
+    chunksStore.setChunks(restoredChunks);
     pipeline.setInputText(restoredChunks.map((chunk) => chunk.originalText).join('\n\n'));
+    ui.setViewMode(config.viewMode ?? (restoredChunks.length > 1 ? 'document' : 'sandbox'));
+    ui.setSelectedChunkId(restoredChunks[0]?.id ?? null);
 
     set({ currentProjectId: id });
   },
@@ -94,7 +100,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     if (!currentProjectId) return;
 
     const pipeline = usePipelineStore.getState();
-    await saveProjectConfig(currentProjectId, pipeline.config);
-    await saveTranslations(currentProjectId, pipeline.chunks);
+    const chunksStore = useChunksStore.getState();
+    const ui = useUiStore.getState();
+    await saveProjectConfig(currentProjectId, pipeline.config, ui.viewMode);
+    await saveTranslations(currentProjectId, chunksStore.chunks);
   },
 }));

@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import type { PipelineConfig, PipelineStageConfig, JudgeResult } from '../types';
-import { usePipelineStore } from '../stores/pipelineStore';
+import { useChunksStore } from '../stores/chunksStore';
 
 /// Sentinel string returned by the Rust backend when a stream is
 /// cancelled via cancel_stream. Exposed so the pipeline runner can
@@ -59,7 +59,7 @@ export const llmService = {
       }
     });
 
-    usePipelineStore.getState().setActiveStreamId(streamId);
+    useChunksStore.getState().setActiveStreamId(streamId);
     try {
       const result = await invoke<string>('run_stage_stream', {
         text,
@@ -71,7 +71,7 @@ export const llmService = {
       return result;
     } finally {
       unlisten();
-      usePipelineStore.getState().setActiveStreamId(null);
+      useChunksStore.getState().setActiveStreamId(null);
     }
   },
 

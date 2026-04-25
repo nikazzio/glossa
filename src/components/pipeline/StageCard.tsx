@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { PipelineStageConfig, ModelProvider } from '../../types';
 import { MODEL_OPTIONS } from '../../constants';
-import { usePipelineStore } from '../../stores/pipelineStore';
+import { useUiStore } from '../../stores/uiStore';
 import { confirm } from '../../stores/confirmStore';
 
 interface StageCardProps {
@@ -15,7 +15,7 @@ interface StageCardProps {
 }
 
 function useModelOptions(provider: ModelProvider): string[] {
-  const ollamaModels = usePipelineStore((s) => s.ollamaModels);
+  const ollamaModels = useUiStore((s) => s.ollamaModels);
   if (provider === 'ollama') return ollamaModels;
   return MODEL_OPTIONS[provider] || [];
 }
@@ -24,22 +24,22 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
   const [isExpanded, setIsExpanded] = useState(false);
   const { t } = useTranslation();
   const modelOptions = useModelOptions(stage.provider);
-  const ollamaStatus = usePipelineStore((s) => s.ollamaStatus);
+  const ollamaStatus = useUiStore((s) => s.ollamaStatus);
   const showOllamaOfflineWarning =
     stage.provider === 'ollama' && ollamaStatus === 'disconnected';
 
   const handleProviderChange = (newProvider: ModelProvider) => {
     const models =
       newProvider === 'ollama'
-        ? usePipelineStore.getState().ollamaModels
+        ? useUiStore.getState().ollamaModels
         : MODEL_OPTIONS[newProvider];
     onUpdate({
       provider: newProvider,
       model: models[0] || '',
     });
-    if (newProvider === 'ollama' && usePipelineStore.getState().ollamaStatus === 'unknown') {
+    if (newProvider === 'ollama' && useUiStore.getState().ollamaStatus === 'unknown') {
       toast.message(t('ollama.uncheckedHint'));
-    } else if (newProvider === 'ollama' && usePipelineStore.getState().ollamaStatus === 'disconnected') {
+    } else if (newProvider === 'ollama' && useUiStore.getState().ollamaStatus === 'disconnected') {
       toast.warning(t('ollama.selectedButOffline'));
     }
   };

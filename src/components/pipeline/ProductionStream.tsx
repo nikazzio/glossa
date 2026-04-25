@@ -1,6 +1,7 @@
 import { Trash2, AlertTriangle, Pencil, RotateCcw, ScanLine } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
+import { useChunksStore } from '../../stores/chunksStore';
 import { StatusIndicator, ProcessingLine, CopyButton } from '../common';
 import { estimateTextStats, indexPad, recommendChunkCount } from '../../utils';
 import { confirm } from '../../stores/confirmStore';
@@ -17,9 +18,11 @@ export function ProductionStream({
   const {
     inputText,
     setInputText,
-    chunks,
     config,
     setConfig,
+  } = usePipelineStore();
+  const {
+    chunks,
     isProcessing,
     generateChunks,
     clearChunks,
@@ -28,8 +31,7 @@ export function ProductionStream({
     splitChunk,
     mergeChunkWithNext,
     unlockChunkForEdit,
-  } =
-    usePipelineStore();
+  } = useChunksStore();
   const { t } = useTranslation();
   const stats = estimateTextStats(inputText);
   const recommendedChunks = recommendChunkCount(inputText);

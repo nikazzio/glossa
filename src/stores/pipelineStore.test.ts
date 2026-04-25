@@ -1,300 +1,65 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { usePipelineStore } from './pipelineStore';
 
 describe('pipelineStore', () => {
   beforeEach(() => {
-    // Reset store state between tests
-    const store = usePipelineStore.getState();
-    store.setInputText('');
-    store.clearChunks();
-    store.setIsProcessing(false);
-    store.setShowSettings(false);
-    store.setOllamaModels([]);
-    store.setOllamaStatus('unknown');
-    // Reset config to defaults (especially useChunking)
-    store.setConfig((prev) => ({ ...prev, useChunking: true, targetChunkCount: 0 }));
-  });
-
-  describe('basic setters', () => {
-    it('sets input text', () => {
-      usePipelineStore.getState().setInputText('Hello world');
-      expect(usePipelineStore.getState().inputText).toBe('Hello world');
-    });
-
-    it('toggles settings visibility', () => {
-      usePipelineStore.getState().setShowSettings(true);
-      expect(usePipelineStore.getState().showSettings).toBe(true);
-    });
-
-    it('sets processing state', () => {
-      usePipelineStore.getState().setIsProcessing(true);
-      expect(usePipelineStore.getState().isProcessing).toBe(true);
-    });
-
-    it('tracks cancel requests for long-running execution', () => {
-      usePipelineStore.getState().requestCancel();
-      expect(usePipelineStore.getState().cancelRequested).toBe(true);
-      usePipelineStore.getState().clearCancelRequest();
-      expect(usePipelineStore.getState().cancelRequested).toBe(false);
-    });
-
-    it('sets ollama models', () => {
-      usePipelineStore.getState().setOllamaModels(['llama3', 'mistral']);
-      expect(usePipelineStore.getState().ollamaModels).toEqual(['llama3', 'mistral']);
-    });
-
-    it('sets ollama status', () => {
-      usePipelineStore.getState().setOllamaStatus('connected');
-      expect(usePipelineStore.getState().ollamaStatus).toBe('connected');
+    usePipelineStore.setState({
+      inputText: '',
+      config: {
+        sourceLanguage: 'English',
+        targetLanguage: 'Italian',
+        stages: [
+          {
+            id: 'stg-default',
+            name: 'Initial Pass',
+            prompt: 'Translate literally',
+            model: 'gemini-3-flash-preview',
+            provider: 'gemini',
+            enabled: true,
+          },
+        ],
+        judgePrompt: 'Judge',
+        judgeModel: 'gemini-3-flash-preview',
+        judgeProvider: 'gemini',
+        glossary: [],
+        useChunking: true,
+        targetChunkCount: 0,
+      },
     });
   });
 
-  describe('config management', () => {
-    it('updates config with object', () => {
-      const newConfig = { ...usePipelineStore.getState().config, sourceLanguage: 'French' };
-      usePipelineStore.getState().setConfig(newConfig);
-      expect(usePipelineStore.getState().config.sourceLanguage).toBe('French');
-    });
-
-    it('updates config with function', () => {
-      usePipelineStore.getState().setConfig((prev) => ({
-        ...prev,
-        targetLanguage: 'Spanish',
-      }));
-      expect(usePipelineStore.getState().config.targetLanguage).toBe('Spanish');
-    });
+  it('stores input text independently from chunk runtime state', () => {
+    usePipelineStore.getState().setInputText('Lorem ipsum');
+    expect(usePipelineStore.getState().inputText).toBe('Lorem ipsum');
   });
 
-  describe('chunk generation', () => {
-    it('generates chunks from paragraphs when chunking enabled', () => {
-      usePipelineStore.getState().setInputText('Paragraph one.\n\nParagraph two.');
-      usePipelineStore.getState().generateChunks();
-      const chunks = usePipelineStore.getState().chunks;
-      expect(chunks).toHaveLength(2);
-      expect(chunks[0].originalText).toBe('Paragraph one.');
-      expect(chunks[1].originalText).toBe('Paragraph two.');
-    });
+  it('adds and updates stages inside config', () => {
+    usePipelineStore.getState().addStage();
+    const added = usePipelineStore.getState().config.stages.at(-1);
+    expect(added?.name).toBe('New Stage');
 
-    it('generates single chunk when chunking disabled', () => {
-      usePipelineStore.getState().setConfig((prev) => ({ ...prev, useChunking: false }));
-      usePipelineStore.getState().setInputText('Paragraph one.\n\nParagraph two.');
-      usePipelineStore.getState().generateChunks();
-      const chunks = usePipelineStore.getState().chunks;
-      expect(chunks).toHaveLength(1);
-      expect(chunks[0].originalText).toContain('Paragraph one.');
-      expect(chunks[0].originalText).toContain('Paragraph two.');
-    });
-
-    it('does not generate chunks from empty input', () => {
-      usePipelineStore.getState().setInputText('   ');
-      usePipelineStore.getState().generateChunks();
-      expect(usePipelineStore.getState().chunks).toHaveLength(0);
-    });
-
-    it('clears chunks', () => {
-      usePipelineStore.getState().setInputText('Some text');
-      usePipelineStore.getState().generateChunks();
-      expect(usePipelineStore.getState().chunks.length).toBeGreaterThan(0);
-      usePipelineStore.getState().clearChunks();
-      expect(usePipelineStore.getState().chunks).toHaveLength(0);
-    });
-
-    it('initializes chunks with correct structure', () => {
-      usePipelineStore.getState().setInputText('Test text');
-      usePipelineStore.getState().generateChunks();
-      const chunk = usePipelineStore.getState().chunks[0];
-      expect(chunk.id).toBe('chunk-0');
-      expect(chunk.status).toBe('ready');
-      expect(chunk.stageResults).toEqual({});
-      expect(chunk.judgeResult.status).toBe('idle');
-      expect(chunk.judgeResult.rating).toBe('fair');
-      expect(chunk.judgeResult.issues).toEqual([]);
-      expect(chunk.currentDraft).toBe('');
-    });
-
-    it('generates the requested number of chunks when a target is configured', () => {
-      usePipelineStore.getState().setConfig((prev) => ({ ...prev, targetChunkCount: 2 }));
-      usePipelineStore.getState().setInputText(
-        'First paragraph here.\n\nSecond paragraph here.\n\nThird paragraph here.\n\nFourth paragraph here.',
-      );
-      usePipelineStore.getState().generateChunks();
-      expect(usePipelineStore.getState().chunks).toHaveLength(2);
-    });
+    if (!added) throw new Error('expected stage');
+    usePipelineStore.getState().updateStage(added.id, { name: 'Refinement' });
+    expect(usePipelineStore.getState().config.stages.at(-1)?.name).toBe('Refinement');
   });
 
-  describe('chunk updates', () => {
-    beforeEach(() => {
-      usePipelineStore.getState().setInputText('Test chunk');
-      usePipelineStore.getState().generateChunks();
+  it('manages glossary entries through config actions', () => {
+    usePipelineStore.getState().addGlossaryEntry();
+    const entry = usePipelineStore.getState().config.glossary[0];
+    expect(entry.term).toBe('');
+
+    if (!entry.id) throw new Error('expected glossary id');
+    usePipelineStore.getState().updateGlossaryEntry(entry.id, {
+      term: 'logos',
+      translation: 'logos',
     });
 
-    it('updates stage result for a chunk', () => {
-      usePipelineStore.getState().updateChunkStage('chunk-0', 'stg-1', {
-        content: 'Translated text',
-        status: 'completed',
-      });
-      const result = usePipelineStore.getState().chunks[0].stageResults['stg-1'];
-      expect(result.content).toBe('Translated text');
-      expect(result.status).toBe('completed');
+    expect(usePipelineStore.getState().config.glossary[0]).toMatchObject({
+      term: 'logos',
+      translation: 'logos',
     });
 
-    it('appends streaming tokens to stage content', () => {
-      usePipelineStore.getState().appendChunkStageContent('chunk-0', 'stg-1', 'Hello');
-      usePipelineStore.getState().appendChunkStageContent('chunk-0', 'stg-1', ' world');
-      const result = usePipelineStore.getState().chunks[0].stageResults['stg-1'];
-      expect(result.content).toBe('Hello world');
-    });
-
-    it('updates judge result for a chunk', () => {
-      usePipelineStore.getState().updateChunkJudge('chunk-0', {
-        content: 'Audit result',
-        status: 'completed',
-        rating: 'excellent',
-        issues: [{ type: 'fluency', severity: 'low', description: 'Minor issue' }],
-      });
-      const judge = usePipelineStore.getState().chunks[0].judgeResult;
-      expect(judge.rating).toBe('excellent');
-      expect(judge.issues).toHaveLength(1);
-    });
-
-    it('updates chunk draft', () => {
-      usePipelineStore.getState().updateChunkDraft('chunk-0', 'Edited translation');
-      expect(usePipelineStore.getState().chunks[0].currentDraft).toBe('Edited translation');
-    });
-
-    it('updates chunk source text', () => {
-      usePipelineStore.getState().updateChunkOriginalText('chunk-0', 'Edited source');
-      expect(usePipelineStore.getState().chunks[0].originalText).toBe('Edited source');
-      expect(usePipelineStore.getState().chunks[0].status).toBe('ready');
-    });
-
-    it('splits a chunk into two editable source chunks', () => {
-      usePipelineStore.getState().setInputText('First sentence. Second sentence.');
-      usePipelineStore.getState().generateChunks();
-      usePipelineStore.getState().splitChunk('chunk-0');
-
-      const chunks = usePipelineStore.getState().chunks;
-      expect(chunks).toHaveLength(2);
-      expect(chunks[0].originalText).toContain('First');
-      expect(chunks[1].originalText).toContain('Second');
-      expect(chunks.every((chunk) => chunk.status === 'ready')).toBe(true);
-    });
-
-    it('merges a chunk with the following chunk', () => {
-      usePipelineStore.getState().setInputText('First paragraph.\n\nSecond paragraph.');
-      usePipelineStore.getState().generateChunks();
-      usePipelineStore.getState().mergeChunkWithNext('chunk-0');
-
-      const chunks = usePipelineStore.getState().chunks;
-      expect(chunks).toHaveLength(1);
-      expect(chunks[0].originalText).toContain('First paragraph.');
-      expect(chunks[0].originalText).toContain('Second paragraph.');
-      expect(chunks[0].status).toBe('ready');
-    });
-
-    it('does not affect other chunks', () => {
-      usePipelineStore.getState().setInputText('First paragraph here\n\nSecond paragraph here');
-      usePipelineStore.getState().generateChunks();
-      usePipelineStore.getState().updateChunkDraft('chunk-0', 'Modified');
-      expect(usePipelineStore.getState().chunks[1].currentDraft).toBe('');
-    });
-  });
-
-  describe('chunk operations are guarded against data loss', () => {
-    beforeEach(() => {
-      usePipelineStore.getState().setInputText('First sentence. Second sentence.');
-      usePipelineStore.getState().generateChunks();
-      // Mark the only chunk as completed with a translation + audit
-      usePipelineStore.getState().updateChunkDraft('chunk-0', 'Tradotto');
-      usePipelineStore.getState().updateChunkStatus('chunk-0', 'completed');
-      usePipelineStore.getState().updateChunkJudge('chunk-0', {
-        content: 'Tradotto', status: 'completed', rating: 'good', issues: [],
-      });
-    });
-
-    it('splitChunk is a no-op on a completed chunk', () => {
-      usePipelineStore.getState().splitChunk('chunk-0');
-      const chunks = usePipelineStore.getState().chunks;
-      expect(chunks).toHaveLength(1);
-      expect(chunks[0].currentDraft).toBe('Tradotto');
-      expect(chunks[0].status).toBe('completed');
-    });
-
-    it('mergeChunkWithNext is a no-op when either chunk is completed', () => {
-      usePipelineStore.getState().setInputText('A\n\nB');
-      usePipelineStore.getState().generateChunks();
-      // chunk-0 stays ready; chunk-1 becomes completed
-      usePipelineStore.getState().updateChunkDraft('chunk-1', 'Tradotto B');
-      usePipelineStore.getState().updateChunkStatus('chunk-1', 'completed');
-
-      usePipelineStore.getState().mergeChunkWithNext('chunk-0');
-      const chunks = usePipelineStore.getState().chunks;
-      expect(chunks).toHaveLength(2);
-      expect(chunks[1].currentDraft).toBe('Tradotto B');
-    });
-
-    it('resetCompletedChunks wipes only completed entries', () => {
-      // Add a second, untranslated chunk
-      usePipelineStore.getState().setInputText('A\n\nB');
-      usePipelineStore.getState().generateChunks();
-      usePipelineStore.getState().updateChunkDraft('chunk-0', 'Tradotto');
-      usePipelineStore.getState().updateChunkStatus('chunk-0', 'completed');
-
-      usePipelineStore.getState().resetCompletedChunks();
-      const chunks = usePipelineStore.getState().chunks;
-      expect(chunks[0].status).toBe('ready');
-      expect(chunks[0].currentDraft).toBe('');
-      expect(chunks[1].status).toBe('ready');
-    });
-
-    it('unlockChunkForEdit resets the targeted chunk and leaves others alone', () => {
-      usePipelineStore.getState().setInputText('A\n\nB');
-      usePipelineStore.getState().generateChunks();
-      usePipelineStore.getState().updateChunkDraft('chunk-0', 'Tradotto A');
-      usePipelineStore.getState().updateChunkStatus('chunk-0', 'completed');
-      usePipelineStore.getState().updateChunkDraft('chunk-1', 'Tradotto B');
-      usePipelineStore.getState().updateChunkStatus('chunk-1', 'completed');
-
-      usePipelineStore.getState().unlockChunkForEdit('chunk-0');
-      const chunks = usePipelineStore.getState().chunks;
-      expect(chunks[0].status).toBe('ready');
-      expect(chunks[0].currentDraft).toBe('');
-      expect(chunks[1].status).toBe('completed');
-      expect(chunks[1].currentDraft).toBe('Tradotto B');
-    });
-
-    it('unlockChunkForEdit is a no-op on a non-completed chunk', () => {
-      usePipelineStore.getState().updateChunkStatus('chunk-0', 'ready');
-      usePipelineStore.getState().updateChunkDraft('chunk-0', 'should stay');
-
-      usePipelineStore.getState().unlockChunkForEdit('chunk-0');
-      expect(usePipelineStore.getState().chunks[0].currentDraft).toBe('should stay');
-    });
-  });
-
-  describe('stage management', () => {
-    it('adds a new stage', () => {
-      const initialCount = usePipelineStore.getState().config.stages.length;
-      usePipelineStore.getState().addStage();
-      expect(usePipelineStore.getState().config.stages.length).toBe(initialCount + 1);
-      const newStage = usePipelineStore.getState().config.stages.at(-1)!;
-      expect(newStage.name).toBe('New Stage');
-      expect(newStage.enabled).toBe(true);
-    });
-
-    it('removes a stage by id', () => {
-      const stages = usePipelineStore.getState().config.stages;
-      const idToRemove = stages[0].id;
-      usePipelineStore.getState().removeStage(idToRemove);
-      expect(usePipelineStore.getState().config.stages.find((s) => s.id === idToRemove)).toBeUndefined();
-    });
-
-    it('updates a stage', () => {
-      const stageId = usePipelineStore.getState().config.stages[0].id;
-      usePipelineStore.getState().updateStage(stageId, { name: 'Renamed', provider: 'openai' });
-      const updated = usePipelineStore.getState().config.stages.find((s) => s.id === stageId)!;
-      expect(updated.name).toBe('Renamed');
-      expect(updated.provider).toBe('openai');
-    });
+    usePipelineStore.getState().removeGlossaryEntry(entry.id);
+    expect(usePipelineStore.getState().config.glossary).toEqual([]);
   });
 });

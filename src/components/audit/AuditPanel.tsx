@@ -1,7 +1,7 @@
 import { ChevronDown, ChevronRight, ScanLine, ShieldCheck, RefreshCcw, AlertTriangle } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { usePipelineStore } from '../../stores/pipelineStore';
+import { useChunksStore } from '../../stores/chunksStore';
 import { calculateCompositeQuality, indexPad, qualityLabelKey, qualityTone } from '../../utils';
 import { confirm } from '../../stores/confirmStore';
 import type { TranslationChunk } from '../../types';
@@ -18,7 +18,7 @@ const QUALITY_TONE_COLOR: Record<ReturnType<typeof qualityTone>, string> = {
 };
 
 export function AuditPanel({ onRunAuditOnly, onReauditChunk }: AuditPanelProps) {
-  const { chunks, clearChunks, isProcessing } = usePipelineStore();
+  const { chunks, clearChunks, isProcessing } = useChunksStore();
   const { t } = useTranslation();
 
   // Track which chunks are expanded in the drill-down. Default closed.

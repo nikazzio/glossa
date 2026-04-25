@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../stores/pipelineStore';
+import { useChunksStore } from '../stores/chunksStore';
 import { llmService, isStreamCancelledError } from '../services/llmService';
 import { withRetry, friendlyError } from '../utils/retry';
 import { qualityDefault, qualityFailure } from '../utils';
@@ -21,9 +22,6 @@ type ChunkOutcome = 'completed' | 'failed' | 'cancelled' | 'skipped';
  */
 export function usePipeline() {
   const {
-    config,
-    isProcessing,
-    setIsProcessing,
     updateChunkStage,
     appendChunkStageContent,
     updateChunkJudge,
@@ -31,7 +29,10 @@ export function usePipeline() {
     updateChunkStatus,
     clearChunkStages,
     requestCancel,
-  } = usePipelineStore();
+    setIsProcessing,
+  } = useChunksStore();
+  const { config } = usePipelineStore();
+  const isProcessing = useChunksStore((state) => state.isProcessing);
   const { t } = useTranslation();
 
   // ── Internal helpers ────────────────────────────────────────────────
@@ -52,7 +53,7 @@ export function usePipeline() {
     chunk: TranslationChunk,
     options: { skipIfCompleted: boolean },
   ): Promise<ChunkOutcome> => {
-    if (usePipelineStore.getState().cancelRequested) return 'cancelled';
+    if (useChunksStore.getState().cancelRequested) return 'cancelled';
     if (options.skipIfCompleted && chunk.status === 'completed') return 'skipped';
 
     // Reset only this chunk so we don't carry over a previous run's
@@ -173,14 +174,14 @@ export function usePipeline() {
   // ── Exported callables ──────────────────────────────────────────────
 
   const runPipeline = useCallback(async () => {
-    if (usePipelineStore.getState().isProcessing) return;
+    if (useChunksStore.getState().isProcessing) return;
     // Read chunks from the store at invocation time so callers that
     // mutate the store right before invoking us (e.g. the "Re-run all"
     // button which resetCompletedChunks() then runPipeline()) see the
     // freshest state instead of a stale useCallback closure.
-    const liveChunks = usePipelineStore.getState().chunks;
+    const liveChunks = useChunksStore.getState().chunks;
     if (liveChunks.length === 0) return;
-    usePipelineStore.getState().clearCancelRequest();
+    useChunksStore.getState().clearCancelRequest();
     setIsProcessing(true);
 
     let errorCount = 0;
@@ -193,7 +194,7 @@ export function usePipeline() {
     }
 
     setIsProcessing(false);
-    usePipelineStore.getState().clearCancelRequest();
+    useChunksStore.getState().clearCancelRequest();
 
     if (cancelled) {
       toast.message(t('pipeline.stopConfirmed'));
@@ -205,10 +206,10 @@ export function usePipeline() {
   }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages]);
 
   const runSingleChunk = useCallback(async (chunkId: string) => {
-    if (usePipelineStore.getState().isProcessing) return;
-    const chunk = usePipelineStore.getState().chunks.find((c) => c.id === chunkId);
+    if (useChunksStore.getState().isProcessing) return;
+    const chunk = useChunksStore.getState().chunks.find((c) => c.id === chunkId);
     if (!chunk) return;
-    usePipelineStore.getState().clearCancelRequest();
+    useChunksStore.getState().clearCancelRequest();
     setIsProcessing(true);
 
     // Force a redo even if this chunk was already completed — the user
@@ -216,7 +217,7 @@ export function usePipeline() {
     const outcome = await executePipelineForChunk(chunk, { skipIfCompleted: false });
 
     setIsProcessing(false);
-    usePipelineStore.getState().clearCancelRequest();
+    useChunksStore.getState().clearCancelRequest();
 
     if (outcome === 'cancelled') {
       toast.message(t('pipeline.stopConfirmed'));
@@ -229,17 +230,17 @@ export function usePipeline() {
   }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages]);
 
   const runAuditOnly = useCallback(async () => {
-    if (usePipelineStore.getState().isProcessing) return;
-    const liveChunks = usePipelineStore.getState().chunks;
+    if (useChunksStore.getState().isProcessing) return;
+    const liveChunks = useChunksStore.getState().chunks;
     if (liveChunks.length === 0) return;
-    usePipelineStore.getState().clearCancelRequest();
+    useChunksStore.getState().clearCancelRequest();
     setIsProcessing(true);
 
     let errorCount = 0;
     let cancelled = false;
 
     for (const chunk of liveChunks) {
-      if (usePipelineStore.getState().cancelRequested) {
+      if (useChunksStore.getState().cancelRequested) {
         cancelled = true;
         break;
       }
@@ -248,14 +249,14 @@ export function usePipeline() {
       if (outcome === 'cancelled') { cancelled = true; break; }
       if (outcome === 'failed') errorCount++;
 
-      if (usePipelineStore.getState().cancelRequested) {
+      if (useChunksStore.getState().cancelRequested) {
         cancelled = true;
         break;
       }
     }
 
     setIsProcessing(false);
-    usePipelineStore.getState().clearCancelRequest();
+    useChunksStore.getState().clearCancelRequest();
 
     if (cancelled) {
       toast.message(t('pipeline.stopConfirmed'));
@@ -265,20 +266,20 @@ export function usePipeline() {
   }, [config, t, setIsProcessing, updateChunkJudge, updateChunkStatus]);
 
   const auditSingleChunk = useCallback(async (chunkId: string) => {
-    if (usePipelineStore.getState().isProcessing) return;
-    const chunk = usePipelineStore.getState().chunks.find((c) => c.id === chunkId);
+    if (useChunksStore.getState().isProcessing) return;
+    const chunk = useChunksStore.getState().chunks.find((c) => c.id === chunkId);
     if (!chunk) return;
     if (!chunk.currentDraft) {
       toast.message(t('pipeline.auditSkippedNoDraft'));
       return;
     }
-    usePipelineStore.getState().clearCancelRequest();
+    useChunksStore.getState().clearCancelRequest();
     setIsProcessing(true);
 
     const outcome = await runJudgeForChunk(chunk, chunk.currentDraft);
 
     setIsProcessing(false);
-    usePipelineStore.getState().clearCancelRequest();
+    useChunksStore.getState().clearCancelRequest();
 
     if (outcome === 'cancelled') {
       toast.message(t('pipeline.stopConfirmed'));
@@ -289,7 +290,7 @@ export function usePipeline() {
 
   const cancelPipeline = useCallback(() => {
     requestCancel();
-    const streamId = usePipelineStore.getState().activeStreamId;
+    const streamId = useChunksStore.getState().activeStreamId;
     if (streamId) {
       // Best-effort: tell the backend to drop the in-flight HTTP request
       // so the provider stops billing immediately. Failures are silent

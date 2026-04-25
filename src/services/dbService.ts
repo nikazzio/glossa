@@ -94,6 +94,7 @@ export async function initDatabase(): Promise<void> {
   `);
 
   await ensureColumn('pipeline_configs', 'target_chunk_count', "INTEGER DEFAULT 0");
+  await ensureColumn('projects', 'view_mode', 'TEXT DEFAULT NULL');
   await ensureColumn('translations', 'chunk_status', "TEXT DEFAULT 'ready'");
   await ensureColumn('translations', 'judge_status', "TEXT DEFAULT 'idle'");
   await ensureColumn('translations', 'judge_rating', "TEXT DEFAULT 'fair'");
