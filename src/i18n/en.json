@@ -80,7 +80,13 @@
     "rerunAll": "Re-run all",
     "rerunAllHint": "Discard the {{count}} completed translation(s) and run the pipeline from scratch.",
     "confirmRerunAllTitle": "Re-run the whole pipeline?",
-    "confirmRerunAllMessage": "{{count}} completed translation(s) and their audits will be discarded before the pipeline restarts. This cannot be undone."
+    "confirmRerunAllMessage": "{{count}} completed translation(s) and their audits will be discarded before the pipeline restarts. This cannot be undone.",
+    "singleChunkCompleted": "Chunk re-translated",
+    "singleChunkAudited": "Chunk audit refreshed",
+    "auditSkippedNoDraft": "Nothing to audit yet — translate this chunk first.",
+    "chunkActions": "Chunk actions",
+    "retranslateChunk": "Re-translate this chunk",
+    "reauditChunk": "Re-audit this chunk"
   },
   "audit": {
     "title": "Audit Logs",
@@ -94,6 +100,8 @@
     "ratingGood": "Good",
     "ratingExcellent": "Excellent",
     "anomaliesDetected": "Anomalies Detected",
+    "issuesCount": "{{count}} issue(s)",
+    "noIssues": "No issues",
     "pipelineClear": "Pipeline Audit Clear",
     "noRecord": "No Audit Record",
     "reEvaluate": "Re-Evaluate Drafts",

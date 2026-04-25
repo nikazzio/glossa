@@ -1,11 +1,14 @@
-import { ShieldCheck, RefreshCcw, AlertTriangle } from 'lucide-react';
+import { ChevronDown, ChevronRight, ScanLine, ShieldCheck, RefreshCcw, AlertTriangle } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { calculateCompositeQuality, indexPad, qualityLabelKey, qualityTone } from '../../utils';
 import { confirm } from '../../stores/confirmStore';
+import type { TranslationChunk } from '../../types';
 
 interface AuditPanelProps {
   onRunAuditOnly: () => void;
+  onReauditChunk: (chunkId: string) => void;
 }
 
 const QUALITY_TONE_COLOR: Record<ReturnType<typeof qualityTone>, string> = {
@@ -14,12 +17,18 @@ const QUALITY_TONE_COLOR: Record<ReturnType<typeof qualityTone>, string> = {
   weak: 'text-editorial-accent',
 };
 
-export function AuditPanel({ onRunAuditOnly }: AuditPanelProps) {
+export function AuditPanel({ onRunAuditOnly, onReauditChunk }: AuditPanelProps) {
   const { chunks, clearChunks, isProcessing } = usePipelineStore();
   const { t } = useTranslation();
 
-  const hasCompletedAudits = chunks.length > 0 && chunks.some((c) => c.judgeResult.status === 'completed');
-  const hasErrorAudits = chunks.length > 0 && chunks.some((c) => c.judgeResult.status === 'error');
+  // Track which chunks are expanded in the drill-down. Default closed.
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  const auditedChunks = useMemo(
+    () => chunks.filter((c) => c.judgeResult.status === 'completed' || c.judgeResult.status === 'error'),
+    [chunks],
+  );
+  const hasCompletedAudits = auditedChunks.some((c) => c.judgeResult.status === 'completed');
   const allClear =
     chunks.length > 0 &&
     chunks.every((c) => c.judgeResult.status === 'completed' && c.judgeResult.issues.length === 0);
@@ -46,6 +55,15 @@ export function AuditPanel({ onRunAuditOnly }: AuditPanelProps) {
     if (ok) clearChunks();
   };
 
+  const toggleExpanded = (chunkId: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(chunkId)) next.delete(chunkId);
+      else next.add(chunkId);
+      return next;
+    });
+  };
+
   return (
     <section className="col-span-1 md:col-span-3 p-8 bg-editorial-bg overflow-y-auto max-h-[calc(100vh-140px)] flex flex-col gap-10 custom-scrollbar">
       <h2 className="font-display text-sm uppercase tracking-wider border-b border-editorial-ink pb-2 mb-4 inline-block">
@@ -53,95 +71,49 @@ export function AuditPanel({ onRunAuditOnly }: AuditPanelProps) {
       </h2>
 
       <div className="flex flex-col gap-12 flex-1">
-        {hasCompletedAudits || hasErrorAudits ? (
-          <div className="space-y-12 animate-in fade-in slide-in-from-right-4 duration-500">
-            {/* Score */}
+        {auditedChunks.length > 0 ? (
+          <div className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-500">
+            {/* Composite Score */}
             {hasCompletedAudits && (
-              <div className="space-y-6" title={compositeTitle} aria-label={compositeTitle}>
-                <div className="space-y-1">
-                  <div className={`text-5xl font-display text-center tracking-tighter ${QUALITY_TONE_COLOR[compositeTone]}`}>
-                    {compositeLevelLabel}
-                  </div>
-                  <div className="text-[8px] text-center uppercase font-bold tracking-[4px] text-editorial-muted">
-                    {t('audit.compositeQuality')}
-                  </div>
+              <div className="space-y-2" title={compositeTitle} aria-label={compositeTitle}>
+                <div className={`text-5xl font-display text-center tracking-tighter ${QUALITY_TONE_COLOR[compositeTone]}`}>
+                  {compositeLevelLabel}
                 </div>
-                <div className="space-y-2">
-                  <label className="block text-[9px] font-bold uppercase tracking-[2px] text-editorial-muted border-b border-editorial-border pb-1">
-                    {t('audit.chunkQuality')}
-                  </label>
-                  {chunks.map((chunk, index) => (
-                    chunk.judgeResult.status === 'completed' && (
-                      <div key={chunk.id} className="flex items-center justify-between text-[10px] font-mono border border-editorial-border/70 px-3 py-2">
-                        <span className="text-editorial-muted">
-                          {t('pipeline.unit')} {indexPad(index + 1)}
-                        </span>
-                        <span className={QUALITY_TONE_COLOR[qualityTone(chunk.judgeResult.rating)]}>
-                          {t(qualityLabelKey(chunk.judgeResult.rating))}
-                        </span>
-                      </div>
-                    )
-                  ))}
+                <div className="text-[8px] text-center uppercase font-bold tracking-[4px] text-editorial-muted">
+                  {t('audit.compositeQuality')}
                 </div>
               </div>
             )}
 
-            {/* Audit Errors */}
-            {hasErrorAudits && (
-              <div className="space-y-3">
-                {chunks
-                  .filter((c) => c.judgeResult.status === 'error')
-                  .map((c) => (
-                    <div
-                      key={c.id}
-                      className="flex items-start gap-2 bg-editorial-textbox/30 border border-editorial-accent/30 p-3 text-editorial-accent"
-                    >
-                      <AlertTriangle size={14} className="mt-0.5 shrink-0" />
-                      <span className="text-[10px] font-mono">
-                        {c.judgeResult.error || t('audit.auditFailed')}
-                      </span>
-                    </div>
-                  ))}
-              </div>
-            )}
-
-            {/* Issues */}
-            <div className="space-y-4">
+            {/* Per-chunk drill-down */}
+            <div className="space-y-3">
               <label className="block text-[9px] font-bold uppercase tracking-[2px] text-editorial-muted border-b border-editorial-border pb-1">
-                {t('audit.anomaliesDetected')}
+                {t('audit.chunkQuality')}
               </label>
-              <ul className="divide-y divide-editorial-border/50">
-                {chunks
-                  .flatMap((c) => c.judgeResult.issues)
-                  .map((issue, i) => (
-                    <li key={i} className="py-4 hover:bg-editorial-textbox/30 px-2 -mx-2 transition-colors rounded-sm">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span
-                          className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-sm ${
-                            issue.severity === 'high' ? 'bg-editorial-accent text-white' : 'bg-editorial-ink text-white'
-                          }`}
-                        >
-                          {issue.type}
-                        </span>
-                      </div>
-                      <span className="font-display italic text-sm leading-snug block text-editorial-ink">
-                        &quot;{issue.description}&quot;
-                      </span>
-                      {issue.suggestedFix && (
-                        <div className="mt-2 text-[10px] font-mono text-editorial-muted bg-editorial-bg p-2 rounded-sm border-l-2 border-editorial-accent">
-                          {t('audit.fix')}: {issue.suggestedFix}
-                        </div>
-                      )}
-                    </li>
-                  ))}
-                {allClear && (
-                  <div className="text-center py-20 opacity-20 italic font-display flex flex-col items-center gap-4">
-                    <ShieldCheck size={40} strokeWidth={1} />
-                    <span className="text-[10px] uppercase tracking-widest">{t('audit.pipelineClear')}</span>
-                  </div>
-                )}
-              </ul>
+              {chunks.map((chunk, index) => {
+                if (chunk.judgeResult.status !== 'completed' && chunk.judgeResult.status !== 'error') {
+                  return null;
+                }
+                return (
+                  <ChunkAuditCard
+                    key={chunk.id}
+                    chunk={chunk}
+                    index={index}
+                    isExpanded={expanded.has(chunk.id)}
+                    onToggle={() => toggleExpanded(chunk.id)}
+                    onReaudit={() => onReauditChunk(chunk.id)}
+                    isProcessing={isProcessing}
+                  />
+                );
+              })}
             </div>
+
+            {allClear && (
+              <div className="text-center py-12 opacity-25 italic font-display flex flex-col items-center gap-4">
+                <ShieldCheck size={40} strokeWidth={1} />
+                <span className="text-[10px] uppercase tracking-widest">{t('audit.pipelineClear')}</span>
+              </div>
+            )}
           </div>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center opacity-10 font-display text-center px-6">
@@ -170,5 +142,118 @@ export function AuditPanel({ onRunAuditOnly }: AuditPanelProps) {
         </button>
       </div>
     </section>
+  );
+}
+
+interface ChunkAuditCardProps {
+  chunk: TranslationChunk;
+  index: number;
+  isExpanded: boolean;
+  onToggle: () => void;
+  onReaudit: () => void;
+  isProcessing: boolean;
+}
+
+function ChunkAuditCard({
+  chunk, index, isExpanded, onToggle, onReaudit, isProcessing,
+}: ChunkAuditCardProps) {
+  const { t } = useTranslation();
+  const { judgeResult } = chunk;
+  const isError = judgeResult.status === 'error';
+  const issues = judgeResult.issues;
+  const hasIssues = issues.length > 0;
+
+  const ratingTone = qualityTone(judgeResult.rating);
+  const ratingLabel = t(qualityLabelKey(judgeResult.rating));
+
+  const cardId = `audit-card-${chunk.id}`;
+  const panelId = `audit-panel-${chunk.id}`;
+
+  return (
+    <div className="border border-editorial-border/70 bg-editorial-textbox/10">
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          id={cardId}
+          aria-expanded={isExpanded}
+          aria-controls={panelId}
+          onClick={onToggle}
+          className="flex-1 flex items-center justify-between gap-2 px-3 py-2 text-left hover:bg-editorial-textbox/40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+        >
+          <span className="flex items-center gap-2 text-[10px] font-mono">
+            {isExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
+            <span className="text-editorial-muted">
+              {t('pipeline.unit')} {indexPad(index + 1)}
+            </span>
+            {isError ? (
+              <span className="text-editorial-accent flex items-center gap-1">
+                <AlertTriangle size={11} /> {t('audit.auditFailed')}
+              </span>
+            ) : (
+              <span className={QUALITY_TONE_COLOR[ratingTone]}>{ratingLabel}</span>
+            )}
+          </span>
+          <span className="text-[9px] uppercase tracking-widest text-editorial-muted">
+            {hasIssues ? t('audit.issuesCount', { count: issues.length }) : t('audit.noIssues')}
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onReaudit(); }}
+          disabled={isProcessing || !chunk.currentDraft}
+          title={chunk.currentDraft ? t('pipeline.reauditChunk') : t('pipeline.auditSkippedNoDraft')}
+          aria-label={t('pipeline.reauditChunk')}
+          className="px-2 py-2 text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+        >
+          <ScanLine size={12} />
+        </button>
+      </div>
+
+      {isExpanded && (
+        <div
+          id={panelId}
+          role="region"
+          aria-labelledby={cardId}
+          className="border-t border-editorial-border/50 px-3 py-3 space-y-3 animate-in fade-in duration-200"
+        >
+          {isError && (
+            <div className="flex items-start gap-2 text-editorial-accent text-[10px] font-mono">
+              <AlertTriangle size={12} className="mt-0.5 shrink-0" />
+              <span>{judgeResult.error || t('audit.auditFailed')}</span>
+            </div>
+          )}
+          {!isError && !hasIssues && (
+            <div className="text-[10px] italic text-editorial-muted py-2">
+              {t('audit.noIssues')}
+            </div>
+          )}
+          {hasIssues && (
+            <ul className="space-y-3">
+              {issues.map((issue, i) => (
+                <li key={i} className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-sm ${
+                        issue.severity === 'high' ? 'bg-editorial-accent text-white' : 'bg-editorial-ink text-white'
+                      }`}
+                    >
+                      {issue.type}
+                    </span>
+                  </div>
+                  <p className="font-display italic text-sm leading-snug text-editorial-ink">
+                    &quot;{issue.description}&quot;
+                  </p>
+                  {issue.suggestedFix && (
+                    <div className="text-[10px] font-mono text-editorial-muted bg-editorial-bg p-2 rounded-sm border-l-2 border-editorial-accent">
+                      {t('audit.fix')}: {issue.suggestedFix}
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

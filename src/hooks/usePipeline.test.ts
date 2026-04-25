@@ -32,7 +32,10 @@ vi.mock('sonner', () => ({
 
 describe('usePipeline', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    // Use resetAllMocks (not clearAllMocks) so mockResolvedValueOnce /
+    // mockImplementationOnce queues from a previous test cannot leak
+    // into the next one.
+    vi.resetAllMocks();
 
     const store = usePipelineStore.getState();
     store.setInputText('');
@@ -266,5 +269,187 @@ describe('usePipeline', () => {
     expect(usePipelineStore.getState().chunks[1].currentDraft).toBe('');
     expect(usePipelineStore.getState().isProcessing).toBe(false);
     expect(usePipelineStore.getState().cancelRequested).toBe(false);
+  });
+
+  it('stops audit-only runs before the next chunk when cancel is requested', async () => {
+    usePipelineStore.getState().setChunks((prev) =>
+      prev.map((c, index) => ({
+        ...c,
+        currentDraft: index === 0 ? 'Draft 0' : 'Draft 1',
+        status: 'completed' as const,
+      })),
+    );
+
+    llmMocks.judgeTranslation
+      .mockImplementationOnce(async () => {
+        usePipelineStore.getState().requestCancel();
+        return { content: '', rating: 'good', issues: [] };
+      })
+      .mockResolvedValueOnce({ content: '', rating: 'good', issues: [] });
+
+    const { result } = renderHook(() => usePipeline());
+
+    await act(async () => {
+      await result.current.runAuditOnly();
+    });
+
+    expect(llmMocks.judgeTranslation).toHaveBeenCalledTimes(1);
+    expect(toast.message).toHaveBeenCalledWith('pipeline.stopConfirmed');
+    expect(usePipelineStore.getState().chunks[1].judgeResult.status).toBe('idle');
+    expect(usePipelineStore.getState().cancelRequested).toBe(false);
+  });
+
+  describe('runSingleChunk', () => {
+    it('translates only the targeted chunk and leaves siblings untouched', async () => {
+      llmMocks.runStageStream.mockResolvedValue('Translated only chunk-1');
+      llmMocks.judgeTranslation.mockResolvedValue({
+        content: '', rating: 'good', issues: [],
+      });
+
+      const { result } = renderHook(() => usePipeline());
+      await act(async () => {
+        await result.current.runSingleChunk('chunk-1');
+      });
+
+      expect(llmMocks.runStageStream).toHaveBeenCalledTimes(1);
+      expect(llmMocks.judgeTranslation).toHaveBeenCalledTimes(1);
+      expect(usePipelineStore.getState().chunks[0].currentDraft).toBe('');
+      expect(usePipelineStore.getState().chunks[0].status).toBe('ready');
+      expect(usePipelineStore.getState().chunks[1].currentDraft).toBe('Translated only chunk-1');
+      expect(usePipelineStore.getState().chunks[1].status).toBe('completed');
+    });
+
+    it('redoes a chunk even if it was already completed (no skip)', async () => {
+      // Pre-seed chunk-0 as completed with old data.
+      usePipelineStore.getState().setChunks((prev) =>
+        prev.map((c, i) =>
+          i === 0
+            ? { ...c, status: 'completed' as const, currentDraft: 'OLD' }
+            : c,
+        ),
+      );
+
+      llmMocks.runStageStream.mockResolvedValue('NEW');
+      llmMocks.judgeTranslation.mockResolvedValue({
+        content: '', rating: 'good', issues: [],
+      });
+
+      const { result } = renderHook(() => usePipeline());
+      await act(async () => {
+        await result.current.runSingleChunk('chunk-0');
+      });
+
+      expect(llmMocks.runStageStream).toHaveBeenCalledTimes(1);
+      expect(usePipelineStore.getState().chunks[0].currentDraft).toBe('NEW');
+    });
+
+    it('is a no-op when isProcessing is already true', async () => {
+      usePipelineStore.getState().setIsProcessing(true);
+
+      const { result } = renderHook(() => usePipeline());
+      await act(async () => {
+        await result.current.runSingleChunk('chunk-0');
+      });
+
+      expect(llmMocks.runStageStream).not.toHaveBeenCalled();
+      expect(llmMocks.judgeTranslation).not.toHaveBeenCalled();
+    });
+
+    it('does nothing if the chunk id is unknown', async () => {
+      const { result } = renderHook(() => usePipeline());
+      await act(async () => {
+        await result.current.runSingleChunk('does-not-exist');
+      });
+      expect(llmMocks.runStageStream).not.toHaveBeenCalled();
+      expect(usePipelineStore.getState().isProcessing).toBe(false);
+    });
+
+    it('does not report success when no stage produces output', async () => {
+      llmMocks.runStageStream.mockResolvedValue('');
+
+      const { result } = renderHook(() => usePipeline());
+      await act(async () => {
+        await result.current.runSingleChunk('chunk-0');
+      });
+
+      expect(llmMocks.judgeTranslation).not.toHaveBeenCalled();
+      expect(usePipelineStore.getState().chunks[0].status).toBe('ready');
+      expect(usePipelineStore.getState().chunks[0].currentDraft).toBe('');
+      expect(toast.success).not.toHaveBeenCalledWith('pipeline.singleChunkCompleted');
+    });
+  });
+
+  describe('auditSingleChunk', () => {
+    it('runs only the judge for the targeted chunk', async () => {
+      // Both chunks already have a draft — only chunk-1 should be re-audited.
+      usePipelineStore.getState().setChunks((prev) =>
+        prev.map((c, i) => ({
+          ...c,
+          currentDraft: i === 0 ? 'Draft 0' : 'Draft 1',
+          status: 'completed' as const,
+        })),
+      );
+
+      llmMocks.judgeTranslation.mockResolvedValue({
+        content: '', rating: 'excellent', issues: [],
+      });
+
+      const { result } = renderHook(() => usePipeline());
+      await act(async () => {
+        await result.current.auditSingleChunk('chunk-1');
+      });
+
+      expect(llmMocks.runStageStream).not.toHaveBeenCalled();
+      expect(llmMocks.judgeTranslation).toHaveBeenCalledTimes(1);
+      expect(usePipelineStore.getState().chunks[0].judgeResult.rating).toBe('fair'); // untouched
+      expect(usePipelineStore.getState().chunks[1].judgeResult.rating).toBe('excellent');
+    });
+
+    it('marks the chunk as processing while the audit request is in flight', async () => {
+      usePipelineStore.getState().setChunks((prev) =>
+        prev.map((c, i) => ({
+          ...c,
+          currentDraft: i === 0 ? 'Draft 0' : '',
+          status: i === 0 ? 'completed' as const : c.status,
+        })),
+      );
+
+      const observedStatuses: string[] = [];
+      llmMocks.judgeTranslation.mockImplementation(async () => {
+        observedStatuses.push(usePipelineStore.getState().chunks[0].status);
+        return { content: '', rating: 'excellent', issues: [] };
+      });
+
+      const { result } = renderHook(() => usePipeline());
+      await act(async () => {
+        await result.current.auditSingleChunk('chunk-0');
+      });
+
+      expect(observedStatuses).toEqual(['processing']);
+      expect(usePipelineStore.getState().chunks[0].status).toBe('completed');
+    });
+
+    it('does nothing when the targeted chunk has no draft', async () => {
+      const { result } = renderHook(() => usePipeline());
+      await act(async () => {
+        await result.current.auditSingleChunk('chunk-0');
+      });
+      expect(llmMocks.judgeTranslation).not.toHaveBeenCalled();
+      expect(toast.message).toHaveBeenCalledWith('pipeline.auditSkippedNoDraft');
+    });
+
+    it('is a no-op when isProcessing is already true', async () => {
+      usePipelineStore.getState().setIsProcessing(true);
+      usePipelineStore.getState().setChunks((prev) =>
+        prev.map((c) => ({ ...c, currentDraft: 'Draft' })),
+      );
+
+      const { result } = renderHook(() => usePipeline());
+      await act(async () => {
+        await result.current.auditSingleChunk('chunk-0');
+      });
+
+      expect(llmMocks.judgeTranslation).not.toHaveBeenCalled();
+    });
   });
 });

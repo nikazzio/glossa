@@ -1,11 +1,19 @@
-import { Trash2, AlertTriangle, Pencil } from 'lucide-react';
+import { Trash2, AlertTriangle, Pencil, RotateCcw, ScanLine } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { StatusIndicator, ProcessingLine, CopyButton } from '../common';
 import { estimateTextStats, indexPad, recommendChunkCount } from '../../utils';
 import { confirm } from '../../stores/confirmStore';
 
-export function ProductionStream() {
+interface ProductionStreamProps {
+  onRetranslateChunk: (chunkId: string) => void;
+  onReauditChunk: (chunkId: string) => void;
+}
+
+export function ProductionStream({
+  onRetranslateChunk,
+  onReauditChunk,
+}: ProductionStreamProps) {
   const {
     inputText,
     setInputText,
@@ -165,11 +173,33 @@ export function ProductionStream() {
 
             <div className="space-y-4">
               <div className="space-y-3">
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
                     {t('pipeline.originalSource')}
                   </label>
-                  <div className="flex items-center gap-2">
+                  <div
+                    role="toolbar"
+                    aria-label={t('pipeline.chunkActions')}
+                    className="flex items-center gap-2 flex-wrap"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => onRetranslateChunk(chunk.id)}
+                      disabled={isProcessing || chunk.originalText.trim().length === 0}
+                      title={t('pipeline.retranslateChunk')}
+                      className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent flex items-center gap-1"
+                    >
+                      <RotateCcw size={11} /> {t('pipeline.retranslateChunk')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onReauditChunk(chunk.id)}
+                      disabled={isProcessing || !chunk.currentDraft}
+                      title={chunk.currentDraft ? t('pipeline.reauditChunk') : t('pipeline.auditSkippedNoDraft')}
+                      className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent flex items-center gap-1"
+                    >
+                      <ScanLine size={11} /> {t('pipeline.reauditChunk')}
+                    </button>
                     {chunk.status === 'completed' ? (
                       <button
                         type="button"
