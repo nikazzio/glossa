@@ -66,6 +66,36 @@ describe('usePipeline', () => {
     ]);
   });
 
+  it('is a no-op when runPipeline is invoked while already processing', async () => {
+    usePipelineStore.getState().setIsProcessing(true);
+
+    const { result } = renderHook(() => usePipeline());
+
+    await act(async () => {
+      await result.current.runPipeline();
+    });
+
+    expect(llmMocks.runStageStream).not.toHaveBeenCalled();
+    expect(llmMocks.judgeTranslation).not.toHaveBeenCalled();
+    expect(usePipelineStore.getState().isProcessing).toBe(true);
+  });
+
+  it('is a no-op when runAuditOnly is invoked while already processing', async () => {
+    usePipelineStore.getState().setIsProcessing(true);
+    usePipelineStore.getState().setChunks((prev) =>
+      prev.map((c) => ({ ...c, currentDraft: 'draft' })),
+    );
+
+    const { result } = renderHook(() => usePipeline());
+
+    await act(async () => {
+      await result.current.runAuditOnly();
+    });
+
+    expect(llmMocks.judgeTranslation).not.toHaveBeenCalled();
+    expect(usePipelineStore.getState().isProcessing).toBe(true);
+  });
+
   it('stops after the current chunk when cancel is requested', async () => {
     llmMocks.runStageStream
       .mockImplementationOnce(async () => {

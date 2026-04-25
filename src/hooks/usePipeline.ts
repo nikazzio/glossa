@@ -29,6 +29,7 @@ export function usePipeline() {
   const { t } = useTranslation();
 
   const runPipeline = useCallback(async () => {
+    if (usePipelineStore.getState().isProcessing) return;
     if (chunks.length === 0) return;
     usePipelineStore.getState().clearCancelRequest();
     setIsProcessing(true);
@@ -146,6 +147,7 @@ export function usePipeline() {
   }, [chunks, config, t, setIsProcessing, setChunks, updateChunkStage, appendChunkStageContent, updateChunkJudge, updateChunkDraft, updateChunkStatus]);
 
   const runAuditOnly = useCallback(async () => {
+    if (usePipelineStore.getState().isProcessing) return;
     if (chunks.length === 0) return;
     usePipelineStore.getState().clearCancelRequest();
     setIsProcessing(true);
