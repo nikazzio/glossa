@@ -64,7 +64,7 @@ export function usePipeline() {
     updateChunkDraft(chunk.id, '');
 
     let lastResult = '';
-    let hadStageFailure = false;
+    let producedOutput = false;
     updateChunkStatus(chunk.id, 'processing');
 
     for (const stage of config.stages) {
@@ -83,7 +83,10 @@ export function usePipeline() {
           },
           { label: `Stage "${stage.name}"` },
         );
-        lastResult = result;
+        if (result) {
+          lastResult = result;
+          producedOutput = true;
+        }
         updateChunkStage(chunk.id, stage.id, { content: result, status: 'completed' });
       } catch (error: any) {
         if (isStreamCancelledError(error)) {
@@ -97,21 +100,21 @@ export function usePipeline() {
         });
         updateChunkStatus(chunk.id, 'error');
         toast.error(t('errors.stageFailed', { name: stage.name }), { description: msg });
-        hadStageFailure = true;
         return 'failed';
       }
     }
 
-    if (lastResult) updateChunkDraft(chunk.id, lastResult);
+    if (!producedOutput) {
+      updateChunkStatus(chunk.id, 'ready');
+      return 'skipped';
+    }
+
+    updateChunkDraft(chunk.id, lastResult);
 
     if (lastResult) {
       const auditOutcome = await runJudgeForChunk(chunk, lastResult);
       if (auditOutcome === 'failed') return 'failed';
       if (auditOutcome === 'cancelled') return 'cancelled';
-    }
-
-    if (!lastResult && !hadStageFailure) {
-      updateChunkStatus(chunk.id, 'ready');
     }
 
     return 'completed';
@@ -136,6 +139,7 @@ export function usePipeline() {
     // nothing extra and matches the documented "stop after the current
     // chunk" behaviour. The outer loops still check cancel between chunks.
 
+    updateChunkStatus(chunk.id, 'processing');
     updateChunkJudge(chunk.id, {
       content: '', status: 'processing', rating: qualityDefault(), issues: [],
     });
@@ -235,9 +239,19 @@ export function usePipeline() {
     let cancelled = false;
 
     for (const chunk of liveChunks) {
+      if (usePipelineStore.getState().cancelRequested) {
+        cancelled = true;
+        break;
+      }
+
       const outcome = await runJudgeForChunk(chunk, chunk.currentDraft);
       if (outcome === 'cancelled') { cancelled = true; break; }
       if (outcome === 'failed') errorCount++;
+
+      if (usePipelineStore.getState().cancelRequested) {
+        cancelled = true;
+        break;
+      }
     }
 
     setIsProcessing(false);
