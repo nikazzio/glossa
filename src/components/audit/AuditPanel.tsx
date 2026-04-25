@@ -162,8 +162,8 @@ export function AuditPanel({ onRunAuditOnly }: AuditPanelProps) {
         </button>
         <button
           onClick={handleClearStream}
-          disabled={chunks.length === 0}
-          title={chunks.length === 0 ? t('pipeline.runDisabledNoChunks') : t('audit.clearStream')}
+          disabled={chunks.length === 0 || isProcessing}
+          title={chunks.length === 0 ? t('pipeline.runDisabledNoChunks') : isProcessing ? t('pipeline.runDisabledProcessing') : t('audit.clearStream')}
           className="w-full border border-editorial-border px-4 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-editorial-textbox/50 hover:text-editorial-accent transition-all flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {t('audit.clearStream')}

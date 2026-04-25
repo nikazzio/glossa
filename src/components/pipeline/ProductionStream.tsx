@@ -42,8 +42,9 @@ export function ProductionStream() {
         {chunks.length > 0 && (
           <button
             onClick={handleClearStream}
+            disabled={isProcessing}
             title={t('pipeline.clearStream')}
-            className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent transition-colors flex items-center gap-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent transition-colors flex items-center gap-1 disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
           >
             <Trash2 size={12} /> {t('pipeline.clearStream')}
           </button>

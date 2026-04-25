@@ -31,6 +31,13 @@ describe('pipelineStore', () => {
       expect(usePipelineStore.getState().isProcessing).toBe(true);
     });
 
+    it('tracks cancel requests for long-running execution', () => {
+      usePipelineStore.getState().requestCancel();
+      expect(usePipelineStore.getState().cancelRequested).toBe(true);
+      usePipelineStore.getState().clearCancelRequest();
+      expect(usePipelineStore.getState().cancelRequested).toBe(false);
+    });
+
     it('sets ollama models', () => {
       usePipelineStore.getState().setOllamaModels(['llama3', 'mistral']);
       expect(usePipelineStore.getState().ollamaModels).toEqual(['llama3', 'mistral']);

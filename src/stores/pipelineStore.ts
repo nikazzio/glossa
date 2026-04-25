@@ -17,6 +17,7 @@ interface PipelineState {
   config: PipelineConfig;
   chunks: TranslationChunk[];
   isProcessing: boolean;
+  cancelRequested: boolean;
   showSettings: boolean;
   showHelp: boolean;
   ollamaModels: string[];
@@ -26,6 +27,8 @@ interface PipelineState {
   setShowSettings: (show: boolean) => void;
   setShowHelp: (show: boolean) => void;
   setIsProcessing: (processing: boolean) => void;
+  requestCancel: () => void;
+  clearCancelRequest: () => void;
   setConfig: (updater: PipelineConfig | ((prev: PipelineConfig) => PipelineConfig)) => void;
   setChunks: (updater: TranslationChunk[] | ((prev: TranslationChunk[]) => TranslationChunk[])) => void;
   setOllamaModels: (models: string[]) => void;
@@ -69,6 +72,7 @@ export const usePipelineStore = create<PipelineState>((set, get) => ({
   },
   chunks: [],
   isProcessing: false,
+  cancelRequested: false,
   showSettings: false,
   showHelp: false,
   ollamaModels: [],
@@ -84,6 +88,8 @@ export const usePipelineStore = create<PipelineState>((set, get) => ({
     if (show) closeProjectPanelIfOpen();
   },
   setIsProcessing: (processing) => set({ isProcessing: processing }),
+  requestCancel: () => set({ cancelRequested: true }),
+  clearCancelRequest: () => set({ cancelRequested: false }),
   setOllamaModels: (models) => set({ ollamaModels: models }),
   setOllamaStatus: (status) => set({ ollamaStatus: status }),
 

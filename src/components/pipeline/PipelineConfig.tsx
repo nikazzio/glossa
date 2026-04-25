@@ -10,6 +10,7 @@ import { StageCard } from './StageCard';
 interface PipelineConfigProps {
   onRunPipeline: () => void;
   onRunAuditOnly: () => void;
+  onCancelPipeline: () => void;
 }
 
 function useJudgeModelOptions(provider: ModelProvider): string[] {
@@ -18,7 +19,7 @@ function useJudgeModelOptions(provider: ModelProvider): string[] {
   return MODEL_OPTIONS[provider] || [];
 }
 
-export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfigProps) {
+export function PipelineConfig({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: PipelineConfigProps) {
   const {
     config,
     setConfig,
@@ -31,6 +32,7 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfig
     updateGlossaryEntry,
     removeGlossaryEntry,
     ollamaStatus,
+    cancelRequested,
   } = usePipelineStore();
   const { t } = useTranslation();
   const judgeModels = useJudgeModelOptions(config.judgeProvider);
@@ -332,6 +334,17 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly }: PipelineConfig
         >
           {t('pipeline.runAuditOnly')}
         </button>
+        {isProcessing && (
+          <button
+            type="button"
+            onClick={onCancelPipeline}
+            disabled={cancelRequested}
+            title={cancelRequested ? t('pipeline.stopping') : t('pipeline.stopPipeline')}
+            className="bg-transparent border border-editorial-accent text-editorial-accent px-6 py-4 text-[11px] font-bold uppercase tracking-[2px] transition-all hover:bg-editorial-accent/5 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
+          >
+            {cancelRequested ? t('pipeline.stopping') : t('pipeline.stopPipeline')}
+          </button>
+        )}
       </div>
     </section>
   );

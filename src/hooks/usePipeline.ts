@@ -24,11 +24,13 @@ export function usePipeline() {
     updateChunkJudge,
     updateChunkDraft,
     updateChunkStatus,
+    requestCancel,
   } = usePipelineStore();
   const { t } = useTranslation();
 
   const runPipeline = useCallback(async () => {
     if (chunks.length === 0) return;
+    usePipelineStore.getState().clearCancelRequest();
     setIsProcessing(true);
 
     // Clear previous results
@@ -43,8 +45,14 @@ export function usePipeline() {
     );
 
     let errorCount = 0;
+    let cancelled = false;
 
     for (const chunk of chunks) {
+      if (usePipelineStore.getState().cancelRequested) {
+        cancelled = true;
+        break;
+      }
+
       let lastResult = '';
       let hadStageFailure = false;
       updateChunkStatus(chunk.id, 'processing');
@@ -118,11 +126,19 @@ export function usePipeline() {
       if (!lastResult && !hadStageFailure) {
         updateChunkStatus(chunk.id, 'ready');
       }
+
+      if (usePipelineStore.getState().cancelRequested) {
+        cancelled = true;
+        break;
+      }
     }
 
     setIsProcessing(false);
+    usePipelineStore.getState().clearCancelRequest();
 
-    if (errorCount === 0) {
+    if (cancelled) {
+      toast.message(t('pipeline.stopConfirmed'));
+    } else if (errorCount === 0) {
       toast.success(t('errors.pipelineCompleted'));
     } else {
       toast.warning(t('errors.pipelineCompletedWithErrors', { count: errorCount }));
@@ -131,11 +147,18 @@ export function usePipeline() {
 
   const runAuditOnly = useCallback(async () => {
     if (chunks.length === 0) return;
+    usePipelineStore.getState().clearCancelRequest();
     setIsProcessing(true);
 
     let errorCount = 0;
+    let cancelled = false;
 
     for (const chunk of chunks) {
+      if (usePipelineStore.getState().cancelRequested) {
+        cancelled = true;
+        break;
+      }
+
       const textToAudit = chunk.currentDraft;
       if (!textToAudit) continue;
 
@@ -165,14 +188,27 @@ export function usePipeline() {
         updateChunkStatus(chunk.id, 'error');
         toast.error(t('errors.auditFailed'), { description: msg });
       }
+
+      if (usePipelineStore.getState().cancelRequested) {
+        cancelled = true;
+        break;
+      }
     }
 
     setIsProcessing(false);
+    usePipelineStore.getState().clearCancelRequest();
 
-    if (errorCount === 0) {
+    if (cancelled) {
+      toast.message(t('pipeline.stopConfirmed'));
+    } else if (errorCount === 0) {
       toast.success(t('errors.reEvalCompleted'));
     }
   }, [chunks, config, t, setIsProcessing, updateChunkJudge, updateChunkStatus]);
 
-  return { runPipeline, runAuditOnly, isProcessing };
+  const cancelPipeline = useCallback(() => {
+    requestCancel();
+    toast.message(t('pipeline.stopRequested'));
+  }, [requestCancel, t]);
+
+  return { runPipeline, runAuditOnly, cancelPipeline, isProcessing };
 }

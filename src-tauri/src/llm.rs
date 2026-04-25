@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use reqwest::Client;
 use tauri::{AppHandle, Emitter, Manager};
-use std::{fs, path::PathBuf};
+use std::{fs, path::PathBuf, time::Duration};
 
 // ── Types matching frontend ──────────────────────────────────────────
 
@@ -67,11 +67,21 @@ struct StreamToken {
 
 const KEYRING_SERVICE: &str = "io.github.nikazzio.glossa";
 const OLLAMA_BASE_URL: &str = "http://localhost:11434";
+const HTTP_CONNECT_TIMEOUT_SECS: u64 = 10;
+const HTTP_REQUEST_TIMEOUT_SECS: u64 = 120;
 
 fn keyring_entry(provider: &str) -> Result<keyring::Entry, String> {
     let username = format!("{}_API_KEY", provider.to_uppercase());
     keyring::Entry::new(KEYRING_SERVICE, &username)
         .map_err(|e| format!("Keyring error: {e}"))
+}
+
+fn build_http_client() -> Result<Client, String> {
+    Client::builder()
+        .connect_timeout(Duration::from_secs(HTTP_CONNECT_TIMEOUT_SECS))
+        .timeout(Duration::from_secs(HTTP_REQUEST_TIMEOUT_SECS))
+        .build()
+        .map_err(|e| format!("Failed to build HTTP client: {e}"))
 }
 
 fn legacy_store_path(app: &AppHandle) -> Result<PathBuf, String> {
@@ -620,7 +630,7 @@ pub async fn run_stage(
     previous_result: Option<String>,
 ) -> Result<String, String> {
     let api_key = get_api_key(&app, &stage.provider)?;
-    let client = Client::new();
+    let client = build_http_client()?;
     let (system_prompt, user_prompt) = build_stage_prompts(&text, &stage, &config, &previous_result);
 
     call_provider(&client, &stage.provider, &stage.model, &system_prompt, &user_prompt, &api_key, false).await
@@ -636,7 +646,7 @@ pub async fn run_stage_stream(
     stream_id: String,
 ) -> Result<String, String> {
     let api_key = get_api_key(&app, &stage.provider)?;
-    let client = Client::new();
+    let client = build_http_client()?;
     let (system_prompt, user_prompt) = build_stage_prompts(&text, &stage, &config, &previous_result);
 
     let resp = build_streaming_request(
@@ -661,7 +671,7 @@ pub async fn judge_translation(
     config: PipelineConfig,
 ) -> Result<JudgeResponse, String> {
     let api_key = get_api_key(&app, &config.judge_provider)?;
-    let client = Client::new();
+    let client = build_http_client()?;
     let (system_prompt, user_prompt) = build_judge_prompts(&original_text, &translation, &config);
 
     let result_text = call_provider(
@@ -702,7 +712,7 @@ pub async fn optimize_prompt(
     current_prompt: String,
 ) -> Result<String, String> {
     let api_key = get_api_key(&app, "gemini")?;
-    let client = Client::new();
+    let client = build_http_client()?;
 
     let user_prompt = format!(
         "The user is using the following prompt for an AI-powered translation pipeline. \
@@ -725,7 +735,7 @@ pub async fn test_provider_connection(
     }
 
     let api_key = get_api_key(&app, &provider)?;
-    let client = Client::new();
+    let client = build_http_client()?;
 
     let result = call_provider(
         &client, &provider,
@@ -948,6 +958,12 @@ mod tests {
     fn defaults_unknown_judge_rating_to_fair() {
         let parsed = parse_judge_rating(&serde_json::json!({"rating": "ambiguous"}));
         assert_eq!(parsed, "fair");
+    }
+
+    #[test]
+    fn builds_http_client_with_timeouts() {
+        let client = build_http_client();
+        assert!(client.is_ok());
     }
 
     #[test]
