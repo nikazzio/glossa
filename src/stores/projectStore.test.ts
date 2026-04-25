@@ -62,6 +62,8 @@ describe('projectStore', () => {
 
   it('opens a project and restores saved chunks with stage and judge data', async () => {
     projectServiceMocks.getProjectConfig.mockResolvedValue({
+      sourceLanguage: 'Latin',
+      targetLanguage: 'Italian',
       stages: [
         {
           id: 'stg-1',
@@ -123,6 +125,8 @@ describe('projectStore', () => {
         enabled: true,
       },
     ]);
+    expect(pipeline.config.sourceLanguage).toBe('Latin');
+    expect(pipeline.config.targetLanguage).toBe('Italian');
     expect(pipeline.config.judgeProvider).toBe('anthropic');
     expect(pipeline.config.useChunking).toBe(false);
     expect(pipeline.chunks).toEqual([
@@ -155,6 +159,8 @@ describe('projectStore', () => {
 
   it('clears stale chunks when opening a project with no saved translations', async () => {
     projectServiceMocks.getProjectConfig.mockResolvedValue({
+      sourceLanguage: 'English',
+      targetLanguage: 'Italian',
       stages: [],
       judgePrompt: '',
       judgeModel: '',
@@ -173,5 +179,21 @@ describe('projectStore', () => {
 
     expect(useProjectStore.getState().currentProjectId).toBe('proj-empty');
     expect(usePipelineStore.getState().chunks).toEqual([]);
+  });
+
+  it('persists chunk clearing by saving an empty translation list', async () => {
+    useProjectStore.setState({ currentProjectId: 'proj-1' });
+    usePipelineStore.getState().clearChunks();
+
+    await useProjectStore.getState().saveCurrentProject();
+
+    expect(projectServiceMocks.saveProjectConfig).toHaveBeenCalledWith(
+      'proj-1',
+      expect.objectContaining({
+        sourceLanguage: 'English',
+        targetLanguage: 'Italian',
+      }),
+    );
+    expect(projectServiceMocks.saveTranslations).toHaveBeenCalledWith('proj-1', []);
   });
 });

@@ -64,6 +64,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const restoredChunks = restoreTranslations(savedTranslations);
     pipeline.setConfig({
       ...pipeline.config,
+      sourceLanguage: config.sourceLanguage,
+      targetLanguage: config.targetLanguage,
       stages: config.stages.length > 0 ? config.stages : pipeline.config.stages,
       judgePrompt: config.judgePrompt || pipeline.config.judgePrompt,
       judgeModel: config.judgeModel || pipeline.config.judgeModel,
@@ -93,9 +95,6 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
     const pipeline = usePipelineStore.getState();
     await saveProjectConfig(currentProjectId, pipeline.config);
-
-    if (pipeline.chunks.length > 0) {
-      await saveTranslations(currentProjectId, pipeline.chunks);
-    }
+    await saveTranslations(currentProjectId, pipeline.chunks);
   },
 }));

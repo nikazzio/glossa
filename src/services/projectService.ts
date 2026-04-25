@@ -113,6 +113,8 @@ export async function deleteProject(id: string): Promise<void> {
 // ── Pipeline Config persistence ──────────────────────────────────────
 
 export async function getProjectConfig(projectId: string): Promise<{
+  sourceLanguage: string;
+  targetLanguage: string;
   stages: PipelineStageConfig[];
   judgePrompt: string;
   judgeModel: string;
@@ -122,13 +124,29 @@ export async function getProjectConfig(projectId: string): Promise<{
   glossary: GlossaryEntry[];
 } | null> {
   const rows = await select<{
+    source_language: string;
+    target_language: string;
     stages: string;
     judge_prompt: string;
     judge_model: string;
     judge_provider: string;
     use_chunking: number;
     target_chunk_count?: number;
-  }>('SELECT * FROM pipeline_configs WHERE project_id = $1', [projectId]);
+  }>(
+    `SELECT
+       p.source_language,
+       p.target_language,
+       pc.stages,
+       pc.judge_prompt,
+       pc.judge_model,
+       pc.judge_provider,
+       pc.use_chunking,
+       pc.target_chunk_count
+     FROM pipeline_configs pc
+     JOIN projects p ON p.id = pc.project_id
+     WHERE pc.project_id = $1`,
+    [projectId],
+  );
 
   if (rows.length === 0) return null;
   const row = rows[0];
@@ -142,6 +160,8 @@ export async function getProjectConfig(projectId: string): Promise<{
   );
 
   return {
+    sourceLanguage: row.source_language,
+    targetLanguage: row.target_language,
     stages: JSON.parse(row.stages),
     judgePrompt: row.judge_prompt,
     judgeModel: row.judge_model,
@@ -173,9 +193,12 @@ export async function saveProjectConfig(projectId: string, config: PipelineConfi
       projectId,
     ],
   );
+  await execute(
+    `UPDATE projects SET source_language = $1, target_language = $2, updated_at = CURRENT_TIMESTAMP
+     WHERE id = $3`,
+    [config.sourceLanguage, config.targetLanguage, projectId],
+  );
   await saveProjectGlossary(projectId, config);
-  // Touch project timestamp
-  await execute('UPDATE projects SET updated_at = CURRENT_TIMESTAMP WHERE id = $1', [projectId]);
 }
 
 async function saveProjectGlossary(projectId: string, config: PipelineConfig): Promise<void> {

@@ -38,6 +38,10 @@ describe('projectService glossary persistence', () => {
       expect.arrayContaining([8, 'proj-1']),
     );
     expect(dbMocks.execute).toHaveBeenCalledWith(
+      expect.stringContaining('UPDATE projects SET source_language = $1, target_language = $2'),
+      ['Italian', 'English', 'proj-1'],
+    );
+    expect(dbMocks.execute).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO glossaries'),
       expect.arrayContaining(['glossary-proj-1']),
     );
@@ -59,6 +63,8 @@ describe('projectService glossary persistence', () => {
     dbMocks.select
       .mockResolvedValueOnce([
         {
+          source_language: 'Latin',
+          target_language: 'English',
           stages: '[]',
           judge_prompt: 'Judge',
           judge_model: 'gemini-3-flash-preview',
@@ -78,6 +84,8 @@ describe('projectService glossary persistence', () => {
 
     const config = await getProjectConfig('proj-1');
 
+    expect(config?.sourceLanguage).toBe('Latin');
+    expect(config?.targetLanguage).toBe('English');
     expect(config?.targetChunkCount).toBe(5);
     expect(config?.glossary).toEqual([
       {
