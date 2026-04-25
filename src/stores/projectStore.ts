@@ -30,7 +30,15 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   currentProjectId: null,
   showProjectPanel: false,
 
-  setShowProjectPanel: (show) => set({ showProjectPanel: show }),
+  setShowProjectPanel: (show) => {
+    set({ showProjectPanel: show });
+    if (show) {
+      // Close stacking modals so focus traps don't fight each other.
+      const pipeline = usePipelineStore.getState();
+      if (pipeline.showSettings) pipeline.setShowSettings(false);
+      if (pipeline.showHelp) pipeline.setShowHelp(false);
+    }
+  },
 
   loadProjects: async () => {
     const projects = await listProjects();
@@ -56,11 +64,14 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const restoredChunks = restoreTranslations(savedTranslations);
     pipeline.setConfig({
       ...pipeline.config,
+      sourceLanguage: config.sourceLanguage,
+      targetLanguage: config.targetLanguage,
       stages: config.stages.length > 0 ? config.stages : pipeline.config.stages,
       judgePrompt: config.judgePrompt || pipeline.config.judgePrompt,
       judgeModel: config.judgeModel || pipeline.config.judgeModel,
       judgeProvider: (config.judgeProvider as any) || pipeline.config.judgeProvider,
       useChunking: config.useChunking,
+      targetChunkCount: config.targetChunkCount,
       glossary: config.glossary,
     });
     pipeline.setChunks(restoredChunks);
@@ -84,9 +95,6 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
     const pipeline = usePipelineStore.getState();
     await saveProjectConfig(currentProjectId, pipeline.config);
-
-    if (pipeline.chunks.length > 0) {
-      await saveTranslations(currentProjectId, pipeline.chunks);
-    }
+    await saveTranslations(currentProjectId, pipeline.chunks);
   },
 }));

@@ -3,12 +3,12 @@ import { PipelineConfig, ProductionStream } from './components/pipeline';
 import { AuditPanel } from './components/audit';
 import { SettingsModal } from './components/settings';
 import { ProjectPanel } from './components/projects';
-import { ErrorBoundary } from './components/common';
+import { ErrorBoundary, ConfirmDialog } from './components/common';
 import { usePipeline } from './hooks/usePipeline';
 import { Toaster } from 'sonner';
 
 export default function App() {
-  const { runPipeline, runAuditOnly } = usePipeline();
+  const { runPipeline, runAuditOnly, cancelPipeline } = usePipeline();
 
   return (
     <ErrorBoundary>
@@ -16,13 +16,18 @@ export default function App() {
         <Header />
 
         <main className="grid grid-cols-1 md:grid-cols-12 min-h-[calc(100vh-140px)]">
-          <PipelineConfig onRunPipeline={runPipeline} onRunAuditOnly={runAuditOnly} />
+          <PipelineConfig
+            onRunPipeline={runPipeline}
+            onRunAuditOnly={runAuditOnly}
+            onCancelPipeline={cancelPipeline}
+          />
           <ProductionStream />
           <AuditPanel onRunAuditOnly={runAuditOnly} />
         </main>
 
         <SettingsModal />
         <ProjectPanel />
+        <ConfirmDialog />
       </div>
       <Toaster
         position="bottom-right"

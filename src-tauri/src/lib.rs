@@ -2,15 +2,24 @@ mod llm;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-  tauri::Builder::default()
-    .plugin(tauri_plugin_updater::Builder::new().build())
-    .plugin(tauri_plugin_store::Builder::new().build())
+  // The updater plugin requires `plugins.updater` config which only ships in
+  // tauri.release.conf.json. Skip it in debug builds so `tauri dev` doesn't
+  // panic on missing plugin config.
+  #[allow(unused_mut)]
+  let mut builder = tauri::Builder::default()
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_fs::init())
     .plugin(
       tauri_plugin_sql::Builder::default()
         .build(),
-    )
+    );
+
+  #[cfg(not(debug_assertions))]
+  {
+    builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
+  }
+
+  builder
     .setup(|app| {
       if cfg!(debug_assertions) {
         app.handle().plugin(

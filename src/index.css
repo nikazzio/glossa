@@ -12,6 +12,8 @@
   --color-editorial-muted: #888888;
   --color-editorial-border: #E5E5E1;
   --color-editorial-textbox: #F2F0ED;
+  --color-editorial-success: #4F7A4A;
+  --color-editorial-warning: #B8852E;
 }
 
 /* Consistent focus-visible ring across the app */

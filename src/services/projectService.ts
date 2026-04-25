@@ -6,6 +6,7 @@ import type {
   PipelineStageConfig,
   TranslationChunk,
 } from '../types';
+import { normalizeQualityRating, qualityDefault } from '../utils';
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -23,10 +24,11 @@ export interface SavedTranslation {
   project_id: string;
   original_text: string;
   final_translation: string;
+  chunk_status: TranslationChunk['status'];
   stage_results: string; // JSON
-  judge_score: number;
+  judge_status: JudgeResult['status'];
+  judge_rating: JudgeResult['rating'];
   judge_issues: string; // JSON
-  judge_result?: string; // JSON
   created_at: string;
 }
 
@@ -41,30 +43,26 @@ function parseJson<T>(value: string | undefined, fallback: T): T {
 }
 
 function restoreJudgeResult(row: SavedTranslation): JudgeResult {
-  const legacyIssues = parseJson<JudgeResult['issues']>(row.judge_issues, []);
-  const legacyFallback: JudgeResult = {
-    content: row.final_translation,
-    status: row.final_translation || row.judge_score > 0 || legacyIssues.length > 0 ? 'completed' : 'idle',
-    score: row.judge_score,
-    issues: legacyIssues,
-  };
-
-  const restored = parseJson<Partial<JudgeResult>>(row.judge_result, legacyFallback);
   return {
-    ...legacyFallback,
-    ...restored,
-    issues: restored.issues ?? legacyFallback.issues,
+    content: row.final_translation,
+    status: row.judge_status || 'idle',
+    rating: normalizeQualityRating(row.judge_rating),
+    issues: parseJson<JudgeResult['issues']>(row.judge_issues, []),
   };
 }
 
 export function restoreTranslations(rows: SavedTranslation[]): TranslationChunk[] {
-  return rows.map((row) => ({
-    id: row.id,
-    originalText: row.original_text,
-    stageResults: parseJson(row.stage_results, {}),
-    judgeResult: restoreJudgeResult(row),
-    currentDraft: row.final_translation || '',
-  }));
+  return rows.map((row) => {
+    const judgeResult = restoreJudgeResult(row);
+    return {
+      id: row.id,
+      originalText: row.original_text,
+      status: row.chunk_status || (judgeResult.status === 'completed' ? 'completed' : 'ready'),
+      stageResults: parseJson(row.stage_results, {}),
+      judgeResult,
+      currentDraft: row.final_translation || '',
+    };
+  });
 }
 
 // ── Projects CRUD ────────────────────────────────────────────────────
@@ -115,58 +113,136 @@ export async function deleteProject(id: string): Promise<void> {
 // ── Pipeline Config persistence ──────────────────────────────────────
 
 export async function getProjectConfig(projectId: string): Promise<{
+  sourceLanguage: string;
+  targetLanguage: string;
   stages: PipelineStageConfig[];
   judgePrompt: string;
   judgeModel: string;
   judgeProvider: string;
   useChunking: boolean;
+  targetChunkCount: number;
   glossary: GlossaryEntry[];
 } | null> {
   const rows = await select<{
+    source_language: string;
+    target_language: string;
     stages: string;
     judge_prompt: string;
     judge_model: string;
     judge_provider: string;
     use_chunking: number;
-  }>('SELECT * FROM pipeline_configs WHERE project_id = $1', [projectId]);
+    target_chunk_count?: number;
+  }>(
+    `SELECT
+       p.source_language,
+       p.target_language,
+       pc.stages,
+       pc.judge_prompt,
+       pc.judge_model,
+       pc.judge_provider,
+       pc.use_chunking,
+       pc.target_chunk_count
+     FROM pipeline_configs pc
+     JOIN projects p ON p.id = pc.project_id
+     WHERE pc.project_id = $1`,
+    [projectId],
+  );
 
   if (rows.length === 0) return null;
   const row = rows[0];
 
   // Load glossary entries
-  const glossaryRows = await select<{ term: string; translation: string; notes: string }>(
-    `SELECT ge.term, ge.translation, ge.notes FROM glossary_entries ge
+  const glossaryRows = await select<{ id: string; term: string; translation: string; notes: string }>(
+    `SELECT ge.id, ge.term, ge.translation, ge.notes FROM glossary_entries ge
      JOIN project_glossaries pg ON ge.glossary_id = pg.glossary_id
      WHERE pg.project_id = $1`,
     [projectId],
   );
 
   return {
+    sourceLanguage: row.source_language,
+    targetLanguage: row.target_language,
     stages: JSON.parse(row.stages),
     judgePrompt: row.judge_prompt,
     judgeModel: row.judge_model,
     judgeProvider: row.judge_provider,
     useChunking: row.use_chunking === 1,
-    glossary: glossaryRows.map((g) => ({ term: g.term, translation: g.translation, notes: g.notes })),
+    targetChunkCount: row.target_chunk_count ?? 0,
+    glossary: glossaryRows.map((g, i) => ({
+      id: g.id || `gloss-loaded-${projectId}-${i}`,
+      term: g.term,
+      translation: g.translation,
+      notes: g.notes,
+    })),
   };
 }
 
 export async function saveProjectConfig(projectId: string, config: PipelineConfig): Promise<void> {
   await execute(
     `UPDATE pipeline_configs SET
-      stages = $1, judge_prompt = $2, judge_model = $3, judge_provider = $4, use_chunking = $5
-     WHERE project_id = $6`,
+      stages = $1, judge_prompt = $2, judge_model = $3, judge_provider = $4, use_chunking = $5,
+      target_chunk_count = $6
+     WHERE project_id = $7`,
     [
       JSON.stringify(config.stages),
       config.judgePrompt,
       config.judgeModel,
       config.judgeProvider,
       config.useChunking !== false ? 1 : 0,
+      config.targetChunkCount ?? 0,
       projectId,
     ],
   );
-  // Touch project timestamp
-  await execute('UPDATE projects SET updated_at = CURRENT_TIMESTAMP WHERE id = $1', [projectId]);
+  await execute(
+    `UPDATE projects SET source_language = $1, target_language = $2, updated_at = CURRENT_TIMESTAMP
+     WHERE id = $3`,
+    [config.sourceLanguage, config.targetLanguage, projectId],
+  );
+  await saveProjectGlossary(projectId, config);
+}
+
+async function saveProjectGlossary(projectId: string, config: PipelineConfig): Promise<void> {
+  const glossaryId = `glossary-${projectId}`;
+
+  await execute(
+    `INSERT INTO glossaries (id, name, source_language, target_language)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT(id) DO UPDATE SET
+       name = $2,
+       source_language = $3,
+       target_language = $4`,
+    [
+      glossaryId,
+      `Project glossary ${projectId}`,
+      config.sourceLanguage,
+      config.targetLanguage,
+    ],
+  );
+
+  await execute(
+    'INSERT OR IGNORE INTO project_glossaries (project_id, glossary_id) VALUES ($1, $2)',
+    [projectId, glossaryId],
+  );
+
+  await execute('DELETE FROM glossary_entries WHERE glossary_id = $1', [glossaryId]);
+
+  const entries = config.glossary.filter(
+    (entry) => entry.term.trim() && entry.translation.trim(),
+  );
+
+  for (const [index, entry] of entries.entries()) {
+    await execute(
+      `INSERT INTO glossary_entries (id, glossary_id, term, translation, notes)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [
+        entry.id || `gloss-entry-${projectId}-${index}`,
+        glossaryId,
+        entry.term.trim(),
+        entry.translation.trim(),
+        entry.notes?.trim() || '',
+      ],
+    );
+  }
 }
 
 // ── Translations persistence ─────────────────────────────────────────
@@ -178,17 +254,19 @@ export async function saveTranslations(projectId: string, chunks: TranslationChu
   for (const chunk of chunks) {
     await execute(
       `INSERT INTO translations (
-         id, project_id, original_text, final_translation, stage_results, judge_score, judge_issues, judge_result
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+         id, project_id, original_text, final_translation, chunk_status, stage_results,
+         judge_status, judge_rating, judge_issues
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
       [
         chunk.id,
         projectId,
         chunk.originalText,
         chunk.currentDraft || '',
+        chunk.status,
         JSON.stringify(chunk.stageResults),
-        chunk.judgeResult.score,
+        chunk.judgeResult.status,
+        chunk.judgeResult.rating || qualityDefault(),
         JSON.stringify(chunk.judgeResult.issues),
-        JSON.stringify(chunk.judgeResult),
       ],
     );
   }

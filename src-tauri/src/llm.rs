@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use reqwest::Client;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
+use std::{fs, path::PathBuf, time::Duration};
 
 // ── Types matching frontend ──────────────────────────────────────────
 
@@ -49,7 +50,7 @@ pub struct JudgeIssue {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JudgeResponse {
-    pub score: f64,
+    pub rating: String,
     pub issues: Vec<JudgeIssue>,
     pub content: String,
 }
@@ -66,11 +67,74 @@ struct StreamToken {
 
 const KEYRING_SERVICE: &str = "io.github.nikazzio.glossa";
 const OLLAMA_BASE_URL: &str = "http://localhost:11434";
+const HTTP_CONNECT_TIMEOUT_SECS: u64 = 10;
+const HTTP_REQUEST_TIMEOUT_SECS: u64 = 120;
 
 fn keyring_entry(provider: &str) -> Result<keyring::Entry, String> {
     let username = format!("{}_API_KEY", provider.to_uppercase());
     keyring::Entry::new(KEYRING_SERVICE, &username)
         .map_err(|e| format!("Keyring error: {e}"))
+}
+
+fn build_http_client() -> Result<Client, String> {
+    Client::builder()
+        .connect_timeout(Duration::from_secs(HTTP_CONNECT_TIMEOUT_SECS))
+        .timeout(Duration::from_secs(HTTP_REQUEST_TIMEOUT_SECS))
+        .build()
+        .map_err(|e| format!("Failed to build HTTP client: {e}"))
+}
+
+fn legacy_store_path(app: &AppHandle) -> Result<PathBuf, String> {
+    let config_dir = app
+        .path()
+        .app_config_dir()
+        .map_err(|e| format!("Failed to resolve app config directory: {e}"))?;
+    Ok(config_dir.join("api-keys.json"))
+}
+
+fn legacy_store_key(provider: &str) -> String {
+    format!("{}_API_KEY", provider.to_uppercase())
+}
+
+fn read_legacy_api_key_from_store_value(value: &serde_json::Value, provider: &str) -> Option<String> {
+    let store_key = legacy_store_key(provider);
+    value[store_key.as_str()]
+        .as_str()
+        .map(str::trim)
+        .filter(|key| !key.is_empty())
+        .map(ToOwned::to_owned)
+}
+
+fn migrate_from_legacy_store(app: &AppHandle, provider: &str) -> Result<String, String> {
+    let store_path = legacy_store_path(app)?;
+    if !store_path.exists() {
+        return Err("Legacy store not found".into());
+    }
+
+    let contents = fs::read_to_string(&store_path)
+        .map_err(|e| format!("Failed to read legacy store: {e}"))?;
+    let mut parsed: serde_json::Value = serde_json::from_str(&contents)
+        .map_err(|e| format!("Failed to parse legacy store: {e}"))?;
+
+    let key = read_legacy_api_key_from_store_value(&parsed, provider)
+        .ok_or_else(|| "Provider key not present in legacy store".to_string())?;
+
+    if let Ok(entry) = keyring_entry(provider) {
+        entry
+            .set_password(&key)
+            .map_err(|e| format!("Failed to migrate legacy key to keychain: {e}"))?;
+    }
+
+    if let Some(object) = parsed.as_object_mut() {
+        object.remove(&legacy_store_key(provider));
+        let serialized = serde_json::to_string_pretty(&parsed)
+            .map_err(|e| format!("Failed to rewrite legacy store: {e}"))?;
+        fs::write(&store_path, serialized)
+            .map_err(|e| format!("Failed to update legacy store: {e}"))?;
+    }
+
+    log::info!("Migrated {provider} API key from legacy store to OS keychain");
+    Ok(key)
 }
 
 fn get_api_key(app: &AppHandle, provider: &str) -> Result<String, String> {
@@ -88,8 +152,8 @@ fn get_api_key(app: &AppHandle, provider: &str) -> Result<String, String> {
         }
     }
 
-    // 2. Migrate from legacy tauri-plugin-store if present
-    if let Ok(key) = migrate_from_store(app, provider) {
+    // 2. Migrate from legacy store if present
+    if let Ok(key) = migrate_from_legacy_store(app, provider) {
         return Ok(key);
     }
 
@@ -104,31 +168,6 @@ fn get_api_key(app: &AppHandle, provider: &str) -> Result<String, String> {
 
     std::env::var(env_key)
         .map_err(|_| format!("{env_key} is not configured. Set it in Settings."))
-}
-
-/// One-time migration: read from old JSON store, save to keychain, delete from store.
-fn migrate_from_store(app: &AppHandle, provider: &str) -> Result<String, String> {
-    use tauri_plugin_store::StoreExt;
-
-    let store = app.store("api-keys.json").map_err(|e| format!("{e}"))?;
-    let store_key = format!("{}_API_KEY", provider.to_uppercase());
-
-    if let Some(val) = store.get(&store_key) {
-        if let Some(key) = val.as_str() {
-            if !key.is_empty() {
-                // Save to keychain
-                if let Ok(entry) = keyring_entry(provider) {
-                    let _ = entry.set_password(key);
-                }
-                // Remove from plain-text store
-                store.delete(&store_key);
-                let _ = store.save();
-                log::info!("Migrated {provider} API key from store to OS keychain");
-                return Ok(key.to_string());
-            }
-        }
-    }
-    Err("Not in legacy store".into())
 }
 
 #[tauri::command]
@@ -550,7 +589,9 @@ fn build_judge_prompts(
          Specific Audit Instructions:\n{instructions}\n\n\
          Glossary to adhere to: {glossary_json}\n\n\
          You MUST respond with a valid JSON object containing:\n\
-         - score: number (0-10)\n\
+         - rating: one of 'critical', 'poor', 'fair', 'good', 'excellent' \
+           (semantic translation quality: critical=unusable, poor=weak, fair=usable with revision, \
+           good=solid, excellent=publication-ready)\n\
          - issues: array of objects {{ type: 'glossary'|'fluency'|'accuracy'|'grammar', \
            severity: 'low'|'medium'|'high', description: string, suggestedFix: string }}",
         src = config.source_language,
@@ -561,6 +602,21 @@ fn build_judge_prompts(
     let user_prompt = "Perform the audit now and return the JSON report.".to_string();
 
     (system_prompt, user_prompt)
+}
+
+fn parse_judge_rating(parsed: &serde_json::Value) -> String {
+    if let Some(raw) = parsed["rating"].as_str() {
+        match raw.trim().to_lowercase().as_str() {
+            "critical" | "critico" | "critica" => return "critical".to_string(),
+            "poor" | "scarso" => return "poor".to_string(),
+            "fair" | "sufficiente" | "accettabile" | "discreto" => return "fair".to_string(),
+            "good" | "buono" => return "good".to_string(),
+            "excellent" | "ottimo" => return "excellent".to_string(),
+            _ => {}
+        }
+    }
+
+    "fair".to_string()
 }
 
 // ── Tauri Commands ───────────────────────────────────────────────────
@@ -574,7 +630,7 @@ pub async fn run_stage(
     previous_result: Option<String>,
 ) -> Result<String, String> {
     let api_key = get_api_key(&app, &stage.provider)?;
-    let client = Client::new();
+    let client = build_http_client()?;
     let (system_prompt, user_prompt) = build_stage_prompts(&text, &stage, &config, &previous_result);
 
     call_provider(&client, &stage.provider, &stage.model, &system_prompt, &user_prompt, &api_key, false).await
@@ -590,7 +646,7 @@ pub async fn run_stage_stream(
     stream_id: String,
 ) -> Result<String, String> {
     let api_key = get_api_key(&app, &stage.provider)?;
-    let client = Client::new();
+    let client = build_http_client()?;
     let (system_prompt, user_prompt) = build_stage_prompts(&text, &stage, &config, &previous_result);
 
     let resp = build_streaming_request(
@@ -615,7 +671,7 @@ pub async fn judge_translation(
     config: PipelineConfig,
 ) -> Result<JudgeResponse, String> {
     let api_key = get_api_key(&app, &config.judge_provider)?;
-    let client = Client::new();
+    let client = build_http_client()?;
     let (system_prompt, user_prompt) = build_judge_prompts(&original_text, &translation, &config);
 
     let result_text = call_provider(
@@ -626,7 +682,7 @@ pub async fn judge_translation(
     let parsed: serde_json::Value = serde_json::from_str(&result_text)
         .map_err(|e| format!("Failed to parse judge JSON: {e}. Raw: {result_text}"))?;
 
-    let score = parsed["score"].as_f64().unwrap_or(0.0);
+    let rating = parse_judge_rating(&parsed);
     let issues: Vec<JudgeIssue> = parsed["issues"]
         .as_array()
         .map(|arr| {
@@ -644,7 +700,7 @@ pub async fn judge_translation(
         .unwrap_or_default();
 
     Ok(JudgeResponse {
-        score,
+        rating,
         issues,
         content: translation,
     })
@@ -656,7 +712,7 @@ pub async fn optimize_prompt(
     current_prompt: String,
 ) -> Result<String, String> {
     let api_key = get_api_key(&app, "gemini")?;
-    let client = Client::new();
+    let client = build_http_client()?;
 
     let user_prompt = format!(
         "The user is using the following prompt for an AI-powered translation pipeline. \
@@ -679,7 +735,7 @@ pub async fn test_provider_connection(
     }
 
     let api_key = get_api_key(&app, &provider)?;
-    let client = Client::new();
+    let client = build_http_client()?;
 
     let result = call_provider(
         &client, &provider,
@@ -862,7 +918,12 @@ mod tests {
         assert!(system.contains("Italian"));
         assert!(system.contains("Hello"));
         assert!(system.contains("Ciao"));
-        assert!(system.contains("score"));
+        assert!(system.contains("rating"));
+        assert!(system.contains("critical"));
+        assert!(system.contains("poor"));
+        assert!(system.contains("fair"));
+        assert!(system.contains("good"));
+        assert!(system.contains("excellent"));
         assert!(system.contains("issues"));
         assert!(user.contains("audit"));
     }
@@ -882,6 +943,48 @@ mod tests {
 
         assert!(system.contains("API"));
         assert!(system.contains("Keep as-is"));
+    }
+
+    #[test]
+    fn parses_semantic_judge_rating() {
+        let parsed = parse_judge_rating(&serde_json::json!({"rating": "sufficiente"}));
+        assert_eq!(parsed, "fair");
+
+        let parsed = parse_judge_rating(&serde_json::json!({"rating": "ottimo"}));
+        assert_eq!(parsed, "excellent");
+    }
+
+    #[test]
+    fn defaults_unknown_judge_rating_to_fair() {
+        let parsed = parse_judge_rating(&serde_json::json!({"rating": "ambiguous"}));
+        assert_eq!(parsed, "fair");
+    }
+
+    #[test]
+    fn builds_http_client_with_timeouts() {
+        let client = build_http_client();
+        assert!(client.is_ok());
+    }
+
+    #[test]
+    fn reads_legacy_api_key_from_store_file_contents() {
+        let value = serde_json::json!({
+            "OPENAI_API_KEY": "legacy-secret",
+            "GEMINI_API_KEY": "other-secret"
+        });
+
+        let parsed = read_legacy_api_key_from_store_value(&value, "openai");
+        assert_eq!(parsed, Some("legacy-secret".into()));
+    }
+
+    #[test]
+    fn ignores_empty_legacy_api_keys() {
+        let value = serde_json::json!({
+            "OPENAI_API_KEY": ""
+        });
+
+        let parsed = read_legacy_api_key_from_store_value(&value, "openai");
+        assert_eq!(parsed, None);
     }
 
     // ── Serialization ───────────────────────────────────────────────

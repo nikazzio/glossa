@@ -19,6 +19,10 @@
     "target": "Target",
     "beginPipeline": "Begin Pipeline",
     "executing": "Executing...",
+    "stopPipeline": "Request Stop",
+    "stopping": "Stopping...",
+    "stopRequested": "Stop requested. Glossa will finish the current chunk and then stop.",
+    "stopConfirmed": "Pipeline stopped after the current chunk.",
     "runAuditOnly": "Run Audit Only",
     "productionStream": "Production Stream",
     "clearStream": "Clear Stream",
@@ -42,12 +46,45 @@
     "targetLanguage": "Target language",
     "addGlossaryEntry": "Add glossary entry",
     "removeGlossaryEntry": "Remove glossary entry",
+    "duplicateTerm": "Duplicate term",
     "copy": "Copy",
-    "copied": "Copied"
+    "copied": "Copied",
+    "copyFailed": "Copy failed",
+    "runDisabledNoChunks": "Stage some content first",
+    "runDisabledProcessing": "Pipeline is running, please wait…",
+    "words": "Words",
+    "paragraphs": "Paragraphs",
+    "recommendedChunks": "Suggested chunks",
+    "targetChunks": "Target chunks",
+    "useRecommendation": "Use suggestion",
+    "zeroMeansAuto": "0 keeps paragraph-based auto segmentation.",
+    "chunkPreview": "Chunk Preview",
+    "unitsReady": "units ready",
+    "chunkPreviewHint": "Review source chunks before running the pipeline. You can edit, split, or merge chunks while the pipeline is idle.",
+    "splitChunk": "Split",
+    "mergeNext": "Merge next",
+    "chunkStatus": {
+      "ready": "Ready",
+      "processing": "Processing",
+      "completed": "Completed",
+      "error": "Error"
+    },
+    "confirmClearTitle": "Clear the stream?",
+    "confirmClearMessage": "All chunks, candidate drafts, and audit results will be discarded. This cannot be undone.",
+    "confirmRemoveStageTitle": "Remove this stage?",
+    "confirmRemoveStageMessage": "Stage \"{{name}}\" will be deleted from the pipeline. You can disable it instead to keep its configuration."
   },
   "audit": {
     "title": "Audit Logs",
-    "compositeIndex": "Composite Index",
+    "compositeQuality": "Composite Quality",
+    "chunkQuality": "Chunk Quality",
+    "compositeTooltip": "Semantic quality synthesized across all completed chunks.",
+    "ratingNone": "Not rated",
+    "ratingCritical": "Critical",
+    "ratingPoor": "Poor",
+    "ratingFair": "Sufficient",
+    "ratingGood": "Good",
+    "ratingExcellent": "Excellent",
     "anomaliesDetected": "Anomalies Detected",
     "pipelineClear": "Pipeline Audit Clear",
     "noRecord": "No Audit Record",
@@ -63,11 +100,16 @@
     "securityMessage": "API keys are stored securely in your operating system's keychain. They never leave your device. Ollama runs entirely on your machine — no data is sent to external servers.",
     "secretsPanel": "Secrets panel",
     "saveClose": "Save & Close",
+    "close": "Close",
     "clickToConfigure": "Click to configure",
     "pasteApiKey": "Paste API key...",
     "save": "Save",
     "cancel": "Cancel",
-    "removeFromKeychain": "Remove from keychain"
+    "removeFromKeychain": "Remove from keychain",
+    "keySaved": "{{provider}} key saved to keychain",
+    "keySaveFailed": "Failed to save {{provider}} key",
+    "keyDeleted": "{{provider}} key removed from keychain",
+    "keyDeleteFailed": "Failed to remove {{provider}} key"
   },
   "ollama": {
     "title": "Ollama (Local Models)",
@@ -75,7 +117,12 @@
     "availableModels": "Available Models",
     "notRunning": "Ollama is not running. Start it with 'ollama serve' to use local models.",
     "noModels": "Ollama is running but no models are installed. Run 'ollama pull <model>' to get started.",
-    "modelPlaceholder": "Type model name..."
+    "modelPlaceholder": "Type model name...",
+    "connected": "Ollama connected, {{count}} model(s) available",
+    "disconnected": "Ollama not reachable on localhost:11434",
+    "selectedButOffline": "You picked Ollama but it isn't connected — check Settings",
+    "unchecked": "Ollama status not checked",
+    "uncheckedHint": "Status unchecked. Click \"Refresh\" to verify the connection and load local models."
   },
   "errors": {
     "somethingWentWrong": "Something went wrong",
@@ -93,6 +140,11 @@
     "en": "English",
     "it": "Italiano"
   },
+  "common": {
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "delete": "Delete"
+  },
   "projects": {
     "title": "Projects",
     "current": "Current",
@@ -100,9 +152,27 @@
     "create": "Create",
     "save": "Save",
     "saved": "Project saved",
+    "saveFailed": "Failed to save project",
     "namePlaceholder": "Project name...",
     "empty": "No projects yet. Create one to save your work.",
-    "delete": "Delete"
+    "delete": "Delete",
+    "confirmDeleteTitle": "Delete this project?",
+    "confirmDeleteMessage": "\"{{name}}\" will be permanently removed, including all saved translations. This cannot be undone.",
+    "deleted": "Project deleted",
+    "deleteFailed": "Failed to delete project",
+    "updatedJustNow": "updated just now",
+    "updatedMinutesAgo_one": "updated {{count}} minute ago",
+    "updatedMinutesAgo_other": "updated {{count}} minutes ago",
+    "updatedHoursAgo_one": "updated {{count}} hour ago",
+    "updatedHoursAgo_other": "updated {{count}} hours ago",
+    "updatedDaysAgo_one": "updated {{count}} day ago",
+    "updatedDaysAgo_other": "updated {{count}} days ago",
+    "updatedWeeksAgo_one": "updated {{count}} week ago",
+    "updatedWeeksAgo_other": "updated {{count}} weeks ago",
+    "updatedMonthsAgo_one": "updated {{count}} month ago",
+    "updatedMonthsAgo_other": "updated {{count}} months ago",
+    "updatedYearsAgo_one": "updated {{count}} year ago",
+    "updatedYearsAgo_other": "updated {{count}} years ago"
   },
   "files": {
     "import": "Import text file",
@@ -129,12 +199,12 @@
     "overview": {
       "title": "What is Glossa?",
       "p1": "Glossa is a multi-stage AI translation pipeline designed for scholars, philologists, and professional translators. Instead of a single-shot translation, it chains multiple LLM passes — each with its own instructions and model — to iteratively refine the output.",
-      "p2": "An AI judge then audits the final translation against your glossary and quality criteria, scoring it and listing specific issues with suggested fixes.",
+      "p2": "An AI judge then audits the final translation against your glossary and quality criteria, assigning a semantic quality label and listing specific issues with suggested fixes.",
       "flowTitle": "Translation workflow:",
       "step1": "Paste or import your source text",
       "step2": "Text passes through Stage 1 (initial draft)",
       "step3": "Stage 2+ refine the translation (fluency, register, etc.)",
-      "step4": "AI Judge audits: score, issues, suggested fixes",
+      "step4": "AI Judge audits: quality label, issues, suggested fixes",
       "step5": "You edit the candidate translation manually",
       "step6": "Export as .txt or bilingual .md",
       "p3": "Each stage can use a different model and provider. For example, use Gemini for a fast initial draft, then Claude for stylistic refinement, and GPT-4o as the judge. Or run everything locally with Ollama."
@@ -149,7 +219,7 @@
       "runTitle": "Running the pipeline",
       "runDesc": "After pasting your text in the center panel and clicking 'Stage Content to Stream', press 'Begin Pipeline'. Each stage runs sequentially per chunk, and you'll see tokens stream in real time. The judge runs automatically after all stages complete.",
       "editTitle": "Editing the result",
-      "editDesc": "The 'Candidate Translation' box is fully editable. Make manual corrections, then click 'Re-Evaluate Drafts' in the audit panel to get an updated score on your edits.",
+      "editDesc": "The 'Candidate Translation' box is fully editable. Make manual corrections, then click 'Re-Evaluate Drafts' in the audit panel to get an updated quality judgment on your edits.",
       "tipTitle": "Pro tip: mix providers",
       "tipDesc": "Use different models for different stages. A fast model (Gemini Flash, DeepSeek) works well for initial drafts, while a stronger model (GPT-4o, Claude Sonnet) excels at refinement and judging. Ollama models are ideal for offline work or sensitive content."
     },
@@ -157,16 +227,16 @@
       "title": "Real-time Streaming",
       "p1": "All translation stages stream tokens in real time. As the LLM generates text, you see it appear word by word in the stage output box. This gives immediate feedback and lets you spot issues early without waiting for the full response.",
       "p2": "Streaming works across all five providers: Gemini, OpenAI, Anthropic, DeepSeek, and Ollama. The connection uses Server-Sent Events (SSE) on the backend, with Tauri events relaying tokens to the frontend.",
-      "p3": "The AI Judge does not stream — it returns structured JSON (score + issues) which is displayed once complete. If a stage fails during streaming, the system retries automatically with exponential backoff (up to 3 attempts)."
+      "p3": "The AI Judge does not stream — it returns structured JSON (quality rating + issues) which is displayed once complete. If a stage fails during streaming, the system retries automatically with exponential backoff (up to 3 attempts)."
     },
     "audit": {
       "title": "Audit & Quality Control",
-      "intro": "The right panel shows audit results from the AI Judge. After the pipeline completes, each chunk is evaluated and assigned a composite score (0–100). The judge produces four categories of issues:",
+      "intro": "The right panel shows audit results from the AI Judge. After the pipeline completes, each chunk receives a semantic quality label. The judge produces four categories of issues:",
       "glossaryIssue": "The translation deviates from the terms defined in your Keyword Registry.",
       "accuracyIssue": "The meaning of the source text is not faithfully rendered in the translation.",
       "fluencyIssue": "The translation reads unnaturally or has awkward phrasing in the target language.",
       "grammarIssue": "Grammatical errors, incorrect conjugations, or syntactic issues in the output.",
-      "reeval": "After manually editing the candidate translation, click 'Re-Evaluate Drafts' to run the judge again on your updated text. This lets you iterate until the score meets your standards without re-running the entire pipeline."
+      "reeval": "After manually editing the candidate translation, click 'Re-Evaluate Drafts' to run the judge again on your updated text. This lets you iterate until the quality judgment meets your standards without re-running the entire pipeline."
     },
     "projects": {
       "title": "Projects & Files",
@@ -176,7 +246,7 @@
       "saveTitle": "Save your work",
       "saveDesc": "Click the save icon (💾) at any time to persist the current state. When you reopen a project, the full pipeline config, stages, glossary, and translations are restored exactly as you left them.",
       "importExportTitle": "Import and export",
-      "importExportDesc": "Use the upload icon (⬆) to import a .txt or .md file as source text. Use the download icon (⬇) to export the translation as plain text, or click 'MD' for a bilingual Markdown document with original text, translation, audit score, and issues."
+      "importExportDesc": "Use the upload icon (⬆) to import a .txt or .md file as source text. Use the download icon (⬇) to export the translation as plain text, or click 'MD' for a bilingual Markdown document with original text, translation, audit quality, and issues."
     },
     "providers": {
       "title": "LLM Providers",

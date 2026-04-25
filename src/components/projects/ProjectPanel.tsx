@@ -2,8 +2,11 @@ import { useState, useEffect } from 'react';
 import { FolderOpen, Plus, Trash2, Save, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { useProjectStore } from '../../stores/projectStore';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { confirm } from '../../stores/confirmStore';
+import { relativeDateUnit } from '../../utils';
 
 export function ProjectPanel() {
   const { t } = useTranslation();
@@ -34,6 +37,39 @@ export function ProjectPanel() {
     setCreating(false);
   };
 
+  const handleSave = async () => {
+    try {
+      await saveCurrentProject();
+      toast.success(t('projects.saved'));
+    } catch (err: any) {
+      toast.error(t('projects.saveFailed'), { description: err?.message });
+    }
+  };
+
+  const handleDelete = async (project: { id: string; name: string }) => {
+    const ok = await confirm({
+      title: t('projects.confirmDeleteTitle'),
+      message: t('projects.confirmDeleteMessage', { name: project.name }),
+      confirmLabel: t('common.delete'),
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await removeProject(project.id);
+      toast.success(t('projects.deleted'));
+    } catch (err: any) {
+      toast.error(t('projects.deleteFailed'), { description: err?.message });
+    }
+  };
+
+  const formatRelative = (updatedAt: string) => {
+    const unit = relativeDateUnit(updatedAt);
+    if (unit.key === 'justNow') return t('projects.updatedJustNow');
+    return t(`projects.updated${unit.key.charAt(0).toUpperCase()}${unit.key.slice(1)}`, {
+      count: unit.count,
+    });
+  };
+
   return (
     <AnimatePresence>
       {showProjectPanel && (
@@ -59,8 +95,9 @@ export function ProjectPanel() {
           >
             <button
               onClick={() => setShowProjectPanel(false)}
+              title={t('settings.close')}
               className="absolute top-6 right-6 text-editorial-muted hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              aria-label={t('settings.saveClose')}
+              aria-label={t('settings.close')}
             >
               <X size={20} />
             </button>
@@ -77,7 +114,8 @@ export function ProjectPanel() {
                   {t('projects.current')}: {projects.find((p) => p.id === currentProjectId)?.name}
                 </span>
                 <button
-                  onClick={saveCurrentProject}
+                  onClick={handleSave}
+                  title={t('projects.save')}
                   className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-editorial-ink hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   aria-label={t('projects.save')}
                 >
@@ -92,7 +130,10 @@ export function ProjectPanel() {
                 <input
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleCreate();
+                    if (e.key === 'Escape') { setCreating(false); setNewName(''); }
+                  }}
                   placeholder={t('projects.namePlaceholder')}
                   className="flex-1 bg-editorial-textbox border-none px-3 py-2 text-xs font-mono outline-none"
                   autoFocus
@@ -106,6 +147,8 @@ export function ProjectPanel() {
                 </button>
                 <button
                   onClick={() => { setCreating(false); setNewName(''); }}
+                  title={t('common.cancel')}
+                  aria-label={t('common.cancel')}
                   className="px-2 text-editorial-muted hover:text-editorial-ink"
                 >
                   <X size={14} />
@@ -127,43 +170,51 @@ export function ProjectPanel() {
                   {t('projects.empty')}
                 </p>
               )}
-              {projects.map((project) => (
-                <div
-                  key={project.id}
-                  role="button"
-                  tabIndex={0}
-                  className={`flex items-center gap-3 p-3 border transition-colors cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                    project.id === currentProjectId
-                      ? 'border-editorial-ink bg-editorial-bg'
-                      : 'border-editorial-border hover:bg-editorial-textbox/50'
-                  }`}
-                  onClick={() => { openProject(project.id); setShowProjectPanel(false); }}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openProject(project.id); setShowProjectPanel(false); } }}
-                >
-                  <FolderOpen
-                    size={16}
-                    className={project.id === currentProjectId ? 'text-editorial-accent' : 'text-editorial-muted'}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-display truncate">{project.name}</div>
-                    <div className="text-[9px] text-editorial-muted font-mono">
-                      {project.source_language} → {project.target_language}
-                      {' · '}
-                      {new Date(project.updated_at).toLocaleDateString()}
-                    </div>
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeProject(project.id);
-                    }}
-                    className="p-1 text-editorial-muted opacity-0 group-hover:opacity-100 focus:opacity-100 hover:text-editorial-accent transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                    aria-label={`${t('projects.delete')} ${project.name}`}
+              {projects.map((project) => {
+                const absoluteDate = new Date(project.updated_at).toLocaleString();
+                const relativeLabel = formatRelative(project.updated_at);
+                return (
+                  <div
+                    key={project.id}
+                    role="button"
+                    tabIndex={0}
+                    className={`flex items-center gap-3 p-3 border transition-colors cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                      project.id === currentProjectId
+                        ? 'border-editorial-ink bg-editorial-bg'
+                        : 'border-editorial-border hover:bg-editorial-textbox/50'
+                    }`}
+                    onClick={() => { openProject(project.id); setShowProjectPanel(false); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openProject(project.id); setShowProjectPanel(false); } }}
                   >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              ))}
+                    <FolderOpen
+                      size={16}
+                      className={project.id === currentProjectId ? 'text-editorial-accent' : 'text-editorial-muted'}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-display truncate">{project.name}</div>
+                      <div
+                        className="text-[9px] text-editorial-muted font-mono"
+                        title={absoluteDate}
+                      >
+                        {project.source_language} → {project.target_language}
+                        {' · '}
+                        {relativeLabel}
+                      </div>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(project);
+                      }}
+                      title={`${t('projects.delete')} ${project.name}`}
+                      className="p-1 text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                      aria-label={`${t('projects.delete')} ${project.name}`}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </motion.div>
         </div>

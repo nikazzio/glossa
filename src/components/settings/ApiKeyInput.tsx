@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Key, CheckCircle2, Save, Loader2, Trash2, Shield } from 'lucide-react';
+import { Key, CheckCircle2, Save, Loader2, Trash2, Shield, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { settingsService } from '../../services/llmService';
 
 interface ApiKeyInputProps {
@@ -29,8 +30,11 @@ export function ApiKeyInput({ label, provider }: ApiKeyInputProps) {
       setIsConfigured(true);
       setKeyValue('');
       setEditing(false);
-    } catch (err) {
-      console.error('Failed to save key:', err);
+      toast.success(t('settings.keySaved', { provider: label }));
+    } catch (err: any) {
+      toast.error(t('settings.keySaveFailed', { provider: label }), {
+        description: err?.message,
+      });
     } finally {
       setSaving(false);
     }
@@ -40,8 +44,11 @@ export function ApiKeyInput({ label, provider }: ApiKeyInputProps) {
     try {
       await settingsService.deleteApiKey(provider);
       setIsConfigured(false);
-    } catch (err) {
-      console.error('Failed to delete key:', err);
+      toast.success(t('settings.keyDeleted', { provider: label }));
+    } catch (err: any) {
+      toast.error(t('settings.keyDeleteFailed', { provider: label }), {
+        description: err?.message,
+      });
     }
   };
 
@@ -65,6 +72,7 @@ export function ApiKeyInput({ label, provider }: ApiKeyInputProps) {
           <button
             onClick={handleSave}
             disabled={saving || !keyValue.trim()}
+            title={t('settings.save')}
             className="p-1.5 text-editorial-ink hover:text-editorial-accent disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             aria-label={t('settings.save')}
           >
@@ -72,9 +80,11 @@ export function ApiKeyInput({ label, provider }: ApiKeyInputProps) {
           </button>
           <button
             onClick={() => { setEditing(false); setKeyValue(''); }}
-            className="p-1.5 text-editorial-muted hover:text-editorial-ink text-[10px] focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            title={t('settings.cancel')}
+            aria-label={t('settings.cancel')}
+            className="p-1.5 text-editorial-muted hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
           >
-            {t('settings.cancel')}
+            <X size={14} />
           </button>
         </div>
       </div>
@@ -90,7 +100,8 @@ export function ApiKeyInput({ label, provider }: ApiKeyInputProps) {
       <div className="flex items-center gap-2">
         <button
           onClick={() => setEditing(true)}
-          className="flex items-center gap-3 bg-editorial-textbox px-3 py-2 flex-1 text-left hover:bg-editorial-textbox/80 transition-colors"
+          title={isConfigured ? t('settings.save') : t('settings.clickToConfigure')}
+          className="flex items-center gap-3 bg-editorial-textbox px-3 py-2 flex-1 text-left hover:bg-editorial-textbox/80 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
         >
           <Key size={14} className={isConfigured ? 'text-editorial-accent' : 'text-editorial-muted opacity-20'} />
           <span className="flex-1 text-[10px] font-mono truncate">
@@ -101,6 +112,7 @@ export function ApiKeyInput({ label, provider }: ApiKeyInputProps) {
         {isConfigured && (
           <button
             onClick={handleDelete}
+            title={t('settings.removeFromKeychain')}
             className="p-1.5 text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             aria-label={t('settings.removeFromKeychain')}
           >

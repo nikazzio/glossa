@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { calculateCompositeScore, indexPad } from './index';
+import {
+  calculateCompositeQuality,
+  chunkText,
+  estimateTextStats,
+  indexPad,
+  normalizeQualityRating,
+  recommendChunkCount,
+} from './index';
 import type { TranslationChunk } from '../types';
 
 describe('indexPad', () => {
@@ -14,34 +21,70 @@ describe('indexPad', () => {
   });
 });
 
-describe('calculateCompositeScore', () => {
-  const makeChunk = (score: number, status: 'completed' | 'idle' = 'completed'): TranslationChunk => ({
+describe('calculateCompositeQuality', () => {
+  const makeChunk = (
+    rating: 'critical' | 'poor' | 'fair' | 'good' | 'excellent',
+    status: 'completed' | 'idle' = 'completed',
+  ): TranslationChunk => ({
     id: `chunk-test`,
     originalText: 'test',
+    status: status === 'completed' ? 'completed' : 'ready',
     stageResults: {},
-    judgeResult: { content: '', status, score, issues: [] },
+    judgeResult: { content: '', status, rating, issues: [] },
   });
 
   it('returns 0 for empty chunks', () => {
-    expect(calculateCompositeScore([])).toBe(0);
+    expect(calculateCompositeQuality([])).toBeNull();
   });
 
   it('returns 0 when no chunks are completed', () => {
-    expect(calculateCompositeScore([makeChunk(8, 'idle')])).toBe(0);
+    expect(calculateCompositeQuality([makeChunk('excellent', 'idle')])).toBeNull();
   });
 
-  it('calculates average score × 10', () => {
-    const chunks = [makeChunk(8), makeChunk(6)];
-    expect(calculateCompositeScore(chunks)).toBe(70); // (8+6)/2 * 10
+  it('returns the semantic average quality for completed chunks on a five-level scale', () => {
+    const chunks = [makeChunk('excellent'), makeChunk('good'), makeChunk('fair')];
+    expect(calculateCompositeQuality(chunks)).toBe('good');
   });
 
   it('ignores non-completed chunks', () => {
-    const chunks = [makeChunk(10), makeChunk(5, 'idle')];
-    expect(calculateCompositeScore(chunks)).toBe(100); // only 10 counted
+    const chunks = [makeChunk('good'), makeChunk('poor', 'idle')];
+    expect(calculateCompositeQuality(chunks)).toBe('good');
+  });
+});
+
+describe('normalizeQualityRating', () => {
+  it('accepts semantic ratings returned by the judge', () => {
+    expect(normalizeQualityRating('critico')).toBe('critical');
+    expect(normalizeQualityRating('scarso')).toBe('poor');
+    expect(normalizeQualityRating('sufficiente')).toBe('fair');
+    expect(normalizeQualityRating('buono')).toBe('good');
+    expect(normalizeQualityRating('ottimo')).toBe('excellent');
+  });
+});
+
+describe('document chunking', () => {
+  it('estimates words and recommends long-document chunk counts', () => {
+    const text = Array.from({ length: 1500 }, (_, i) => `word${i}`).join(' ');
+    expect(estimateTextStats(text).words).toBe(1500);
+    expect(recommendChunkCount(text)).toBe(3);
   });
 
-  it('rounds the result', () => {
-    const chunks = [makeChunk(7), makeChunk(8), makeChunk(9)];
-    expect(calculateCompositeScore(chunks)).toBe(80); // (7+8+9)/3 * 10 = 80
+  it('splits text into a requested number of chunks', () => {
+    const text = [
+      'One two three four.',
+      'Five six seven eight.',
+      'Nine ten eleven twelve.',
+      'Thirteen fourteen fifteen sixteen.',
+    ].join('\n\n');
+
+    const chunks = chunkText(text, { useChunking: true, targetChunkCount: 2 });
+    expect(chunks).toHaveLength(2);
+    expect(chunks[0]).toContain('One two');
+    expect(chunks[1]).toContain('Thirteen');
+  });
+
+  it('falls back to one chunk when chunking is disabled', () => {
+    const text = 'First paragraph.\n\nSecond paragraph.';
+    expect(chunkText(text, { useChunking: false, targetChunkCount: 4 })).toEqual([text]);
   });
 });
