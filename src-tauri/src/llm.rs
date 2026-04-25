@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use reqwest::Client;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
+use std::{fs, path::PathBuf};
 
 // ── Types matching frontend ──────────────────────────────────────────
 
@@ -73,7 +74,60 @@ fn keyring_entry(provider: &str) -> Result<keyring::Entry, String> {
         .map_err(|e| format!("Keyring error: {e}"))
 }
 
-fn get_api_key(provider: &str) -> Result<String, String> {
+fn legacy_store_path(app: &AppHandle) -> Result<PathBuf, String> {
+    let config_dir = app
+        .path()
+        .app_config_dir()
+        .map_err(|e| format!("Failed to resolve app config directory: {e}"))?;
+    Ok(config_dir.join("api-keys.json"))
+}
+
+fn legacy_store_key(provider: &str) -> String {
+    format!("{}_API_KEY", provider.to_uppercase())
+}
+
+fn read_legacy_api_key_from_store_value(value: &serde_json::Value, provider: &str) -> Option<String> {
+    let store_key = legacy_store_key(provider);
+    value[store_key.as_str()]
+        .as_str()
+        .map(str::trim)
+        .filter(|key| !key.is_empty())
+        .map(ToOwned::to_owned)
+}
+
+fn migrate_from_legacy_store(app: &AppHandle, provider: &str) -> Result<String, String> {
+    let store_path = legacy_store_path(app)?;
+    if !store_path.exists() {
+        return Err("Legacy store not found".into());
+    }
+
+    let contents = fs::read_to_string(&store_path)
+        .map_err(|e| format!("Failed to read legacy store: {e}"))?;
+    let mut parsed: serde_json::Value = serde_json::from_str(&contents)
+        .map_err(|e| format!("Failed to parse legacy store: {e}"))?;
+
+    let key = read_legacy_api_key_from_store_value(&parsed, provider)
+        .ok_or_else(|| "Provider key not present in legacy store".to_string())?;
+
+    if let Ok(entry) = keyring_entry(provider) {
+        entry
+            .set_password(&key)
+            .map_err(|e| format!("Failed to migrate legacy key to keychain: {e}"))?;
+    }
+
+    if let Some(object) = parsed.as_object_mut() {
+        object.remove(&legacy_store_key(provider));
+        let serialized = serde_json::to_string_pretty(&parsed)
+            .map_err(|e| format!("Failed to rewrite legacy store: {e}"))?;
+        fs::write(&store_path, serialized)
+            .map_err(|e| format!("Failed to update legacy store: {e}"))?;
+    }
+
+    log::info!("Migrated {provider} API key from legacy store to OS keychain");
+    Ok(key)
+}
+
+fn get_api_key(app: &AppHandle, provider: &str) -> Result<String, String> {
     // Ollama doesn't need an API key
     if provider == "ollama" {
         return Ok(String::new());
@@ -88,7 +142,12 @@ fn get_api_key(provider: &str) -> Result<String, String> {
         }
     }
 
-    // 2. Fallback to environment variable
+    // 2. Migrate from legacy store if present
+    if let Ok(key) = migrate_from_legacy_store(app, provider) {
+        return Ok(key);
+    }
+
+    // 3. Fallback to environment variable
     let env_key = match provider {
         "gemini" => "GEMINI_API_KEY",
         "openai" => "OPENAI_API_KEY",
@@ -109,8 +168,8 @@ pub async fn save_api_key(provider: String, key: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn get_api_key_status(provider: String) -> Result<bool, String> {
-    Ok(get_api_key(&provider).is_ok())
+pub async fn get_api_key_status(app: AppHandle, provider: String) -> Result<bool, String> {
+    Ok(get_api_key(&app, &provider).is_ok())
 }
 
 #[tauri::command]
@@ -554,12 +613,13 @@ fn parse_judge_rating(parsed: &serde_json::Value) -> String {
 
 #[tauri::command]
 pub async fn run_stage(
+    app: AppHandle,
     text: String,
     stage: StageConfig,
     config: PipelineConfig,
     previous_result: Option<String>,
 ) -> Result<String, String> {
-    let api_key = get_api_key(&stage.provider)?;
+    let api_key = get_api_key(&app, &stage.provider)?;
     let client = Client::new();
     let (system_prompt, user_prompt) = build_stage_prompts(&text, &stage, &config, &previous_result);
 
@@ -575,7 +635,7 @@ pub async fn run_stage_stream(
     previous_result: Option<String>,
     stream_id: String,
 ) -> Result<String, String> {
-    let api_key = get_api_key(&stage.provider)?;
+    let api_key = get_api_key(&app, &stage.provider)?;
     let client = Client::new();
     let (system_prompt, user_prompt) = build_stage_prompts(&text, &stage, &config, &previous_result);
 
@@ -595,11 +655,12 @@ pub async fn run_stage_stream(
 
 #[tauri::command]
 pub async fn judge_translation(
+    app: AppHandle,
     original_text: String,
     translation: String,
     config: PipelineConfig,
 ) -> Result<JudgeResponse, String> {
-    let api_key = get_api_key(&config.judge_provider)?;
+    let api_key = get_api_key(&app, &config.judge_provider)?;
     let client = Client::new();
     let (system_prompt, user_prompt) = build_judge_prompts(&original_text, &translation, &config);
 
@@ -637,9 +698,10 @@ pub async fn judge_translation(
 
 #[tauri::command]
 pub async fn optimize_prompt(
+    app: AppHandle,
     current_prompt: String,
 ) -> Result<String, String> {
-    let api_key = get_api_key("gemini")?;
+    let api_key = get_api_key(&app, "gemini")?;
     let client = Client::new();
 
     let user_prompt = format!(
@@ -654,6 +716,7 @@ pub async fn optimize_prompt(
 
 #[tauri::command]
 pub async fn test_provider_connection(
+    app: AppHandle,
     provider: String,
 ) -> Result<bool, String> {
     if provider == "ollama" {
@@ -661,7 +724,7 @@ pub async fn test_provider_connection(
             .and_then(|ok| if ok { Ok(true) } else { Err("Ollama is not running".into()) });
     }
 
-    let api_key = get_api_key(&provider)?;
+    let api_key = get_api_key(&app, &provider)?;
     let client = Client::new();
 
     let result = call_provider(
@@ -885,6 +948,27 @@ mod tests {
     fn defaults_unknown_judge_rating_to_fair() {
         let parsed = parse_judge_rating(&serde_json::json!({"rating": "ambiguous"}));
         assert_eq!(parsed, "fair");
+    }
+
+    #[test]
+    fn reads_legacy_api_key_from_store_file_contents() {
+        let value = serde_json::json!({
+            "OPENAI_API_KEY": "legacy-secret",
+            "GEMINI_API_KEY": "other-secret"
+        });
+
+        let parsed = read_legacy_api_key_from_store_value(&value, "openai");
+        assert_eq!(parsed, Some("legacy-secret".into()));
+    }
+
+    #[test]
+    fn ignores_empty_legacy_api_keys() {
+        let value = serde_json::json!({
+            "OPENAI_API_KEY": ""
+        });
+
+        let parsed = read_legacy_api_key_from_store_value(&value, "openai");
+        assert_eq!(parsed, None);
     }
 
     // ── Serialization ───────────────────────────────────────────────
