@@ -32,7 +32,7 @@
 
 ### S1-T1 — Abilitare Content Security Policy
 - **Severity**: BLOCKER
-- **Status**: todo
+- **Status**: done (commit 61b40b3)
 - **File**: `src-tauri/tauri.conf.json:24-26`
 - **Problema**: `"csp": null`. Una XSS in qualsiasi dipendenza npm può chiamare `invoke()` ed esfiltrare keychain/DB.
 - **Fix**:
@@ -50,7 +50,7 @@
 
 ### S1-T2 — Restringere lo scope delle capabilities filesystem
 - **Severity**: BLOCKER
-- **Status**: todo
+- **Status**: done (commit 9776536)
 - **File**: `src-tauri/capabilities/default.json:18-20`
 - **Problema**: `fs:allow-read-text-file` e `fs:allow-write-text-file` senza `scope`: webview legge/scrive qualunque file di testo accessibile al processo.
 - **Fix**:
@@ -74,7 +74,7 @@
 
 ### S1-T3 — Cancellation token per stream LLM nel backend Rust
 - **Severity**: BLOCKER
-- **Status**: todo
+- **Status**: done (commit 8944c19)
 - **File**: `src-tauri/src/llm.rs` (in particolare la funzione `stream_response` / `run_stage_stream`); `src-tauri/src/lib.rs` (registrazione comando)
 - **Problema**: Lo stream non si interrompe quando l'utente clicca "Stop". Verificato con grep: zero `AbortHandle`/`tokio::sync` nel codice. Conseguenze: spreco di crediti API, UI bloccata fino al timeout.
 - **Fix proposto**:
@@ -91,7 +91,7 @@
 
 ### S1-T4 — Sanificare i messaggi di errore HTTP
 - **Severity**: BLOCKER
-- **Status**: todo
+- **Status**: done (commit a434da1)
 - **File**: `src-tauri/src/llm.rs:234, 281, 327, 660`
 - **Problema**: `Err(format!("API error ({status}): {text}"))` rilancia il body completo della response al frontend. Il body può contenere il prompt utente (testo accademico riservato), header echoati, PII.
 - **Fix**:
@@ -108,7 +108,7 @@
 
 ### S1-T5 — Guard idempotente su runPipeline / runAuditOnly
 - **Severity**: MAJOR (vicino BLOCKER per UX)
-- **Status**: todo
+- **Status**: done (commit e05c002)
 - **File**: `src/hooks/usePipeline.ts:31-35, 148-152`
 - **Problema**: nessun `if (isProcessing) return` come prima riga. Doppio click rapido può scatenare due esecuzioni parallele prima che React batching propaghi `setIsProcessing(true)`.
 - **Fix**:
@@ -285,11 +285,11 @@
 ## Progress overview
 
 ### Sprint 1 (BLOCKER per MVP)
-- [ ] S1-T1 — CSP abilitata
-- [ ] S1-T2 — fs capabilities scoped
-- [ ] S1-T3 — Stream cancellation (Rust)
-- [ ] S1-T4 — Error message sanitization
-- [ ] S1-T5 — runPipeline guard idempotente
+- [x] S1-T1 — CSP abilitata (61b40b3)
+- [x] S1-T2 — fs capabilities scoped (9776536)
+- [x] S1-T3 — Stream cancellation (Rust) (8944c19)
+- [x] S1-T4 — Error message sanitization (a434da1)
+- [x] S1-T5 — runPipeline guard idempotente (e05c002)
 
 ### Sprint 2 (release readiness)
 - [ ] S2-T1 — macOS build in release.yml
