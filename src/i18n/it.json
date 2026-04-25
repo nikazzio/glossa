@@ -80,7 +80,13 @@
     "rerunAll": "Rilancia tutto",
     "rerunAllHint": "Scarta le {{count}} traduzioni completate e rilancia la pipeline da zero.",
     "confirmRerunAllTitle": "Rilanciare l'intera pipeline?",
-    "confirmRerunAllMessage": "{{count}} traduzioni completate e i relativi audit verranno scartati prima del riavvio della pipeline. L'azione non è reversibile."
+    "confirmRerunAllMessage": "{{count}} traduzioni completate e i relativi audit verranno scartati prima del riavvio della pipeline. L'azione non è reversibile.",
+    "singleChunkCompleted": "Blocco ritradotto",
+    "singleChunkAudited": "Audit del blocco aggiornato",
+    "auditSkippedNoDraft": "Nessuna traduzione da valutare — traduci prima questo blocco.",
+    "chunkActions": "Azioni blocco",
+    "retranslateChunk": "Ri-traduci questo blocco",
+    "reauditChunk": "Ri-valuta questo blocco"
   },
   "audit": {
     "title": "Log Audit",
@@ -94,6 +100,8 @@
     "ratingGood": "Buono",
     "ratingExcellent": "Ottimo",
     "anomaliesDetected": "Anomalie Rilevate",
+    "issuesCount": "{{count}} problema/i",
+    "noIssues": "Nessun problema",
     "pipelineClear": "Audit Pipeline Superato",
     "noRecord": "Nessun Audit",
     "reEvaluate": "Rivaluta Bozze",

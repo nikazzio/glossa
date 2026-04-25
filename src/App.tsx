@@ -8,7 +8,13 @@ import { usePipeline } from './hooks/usePipeline';
 import { Toaster } from 'sonner';
 
 export default function App() {
-  const { runPipeline, runAuditOnly, cancelPipeline } = usePipeline();
+  const {
+    runPipeline,
+    runAuditOnly,
+    runSingleChunk,
+    auditSingleChunk,
+    cancelPipeline,
+  } = usePipeline();
 
   return (
     <ErrorBoundary>
@@ -21,8 +27,14 @@ export default function App() {
             onRunAuditOnly={runAuditOnly}
             onCancelPipeline={cancelPipeline}
           />
-          <ProductionStream />
-          <AuditPanel onRunAuditOnly={runAuditOnly} />
+          <ProductionStream
+            onRetranslateChunk={runSingleChunk}
+            onReauditChunk={auditSingleChunk}
+          />
+          <AuditPanel
+            onRunAuditOnly={runAuditOnly}
+            onReauditChunk={auditSingleChunk}
+          />
         </main>
 
         <SettingsModal />

@@ -5,12 +5,19 @@ import { usePipelineStore } from '../stores/pipelineStore';
 import { llmService, isStreamCancelledError } from '../services/llmService';
 import { withRetry, friendlyError } from '../utils/retry';
 import { qualityDefault, qualityFailure } from '../utils';
-import type { JudgeResult } from '../types';
+import type { JudgeResult, TranslationChunk } from '../types';
+
+type ChunkOutcome = 'completed' | 'failed' | 'cancelled' | 'skipped';
 
 /**
  * Hook that encapsulates pipeline execution logic.
  * Uses streaming for translation stages, non-streaming for judge.
  * Includes retry with exponential backoff and toast notifications.
+ *
+ * Public surface:
+ *  - runPipeline / runAuditOnly: iterate over every chunk
+ *  - runSingleChunk / auditSingleChunk: same logic restricted to one chunk
+ *  - cancelPipeline: cancel whatever is in flight
  */
 export function usePipeline() {
   const {
@@ -27,6 +34,140 @@ export function usePipeline() {
   } = usePipelineStore();
   const { t } = useTranslation();
 
+  // ── Internal helpers ────────────────────────────────────────────────
+  // These run the full per-chunk flow. They are plain async functions
+  // (not useCallback) because they only need to be referentially stable
+  // for the lifetime of a single invocation; the exported callbacks
+  // pull them in fresh and that is fine.
+
+  /**
+   * Run all enabled translation stages and the audit for a single chunk.
+   * Returns an outcome so the caller can aggregate batch counters.
+   *
+   * `skipIfCompleted` is true for the full-pipeline batch run (preserve
+   * already-translated chunks) and false for an explicit per-chunk
+   * re-run (the user asked for it, redo everything).
+   */
+  const executePipelineForChunk = async (
+    chunk: TranslationChunk,
+    options: { skipIfCompleted: boolean },
+  ): Promise<ChunkOutcome> => {
+    if (usePipelineStore.getState().cancelRequested) return 'cancelled';
+    if (options.skipIfCompleted && chunk.status === 'completed') return 'skipped';
+
+    // Reset only this chunk so we don't carry over a previous run's
+    // stage outputs / draft / audit if it cancels or fails early.
+    clearChunkStages(chunk.id);
+    updateChunkJudge(chunk.id, {
+      content: '', status: 'idle', rating: qualityDefault(), issues: [],
+    });
+    updateChunkDraft(chunk.id, '');
+
+    let lastResult = '';
+    let hadStageFailure = false;
+    updateChunkStatus(chunk.id, 'processing');
+
+    for (const stage of config.stages) {
+      if (!stage.enabled) continue;
+
+      updateChunkStage(chunk.id, stage.id, { content: '', status: 'processing' });
+      try {
+        const result = await withRetry(
+          async () => {
+            // Reset content for each retry attempt
+            updateChunkStage(chunk.id, stage.id, { content: '', status: 'processing' });
+            return llmService.runStageStream(
+              chunk.originalText, stage, config, lastResult || undefined,
+              (token) => appendChunkStageContent(chunk.id, stage.id, token),
+            );
+          },
+          { label: `Stage "${stage.name}"` },
+        );
+        lastResult = result;
+        updateChunkStage(chunk.id, stage.id, { content: result, status: 'completed' });
+      } catch (error: any) {
+        if (isStreamCancelledError(error)) {
+          updateChunkStage(chunk.id, stage.id, { content: '', status: 'idle' });
+          updateChunkStatus(chunk.id, 'ready');
+          return 'cancelled';
+        }
+        const msg = friendlyError(error.message ?? String(error));
+        updateChunkStage(chunk.id, stage.id, {
+          content: '', status: 'error', error: msg,
+        });
+        updateChunkStatus(chunk.id, 'error');
+        toast.error(t('errors.stageFailed', { name: stage.name }), { description: msg });
+        hadStageFailure = true;
+        return 'failed';
+      }
+    }
+
+    if (lastResult) updateChunkDraft(chunk.id, lastResult);
+
+    if (lastResult) {
+      const auditOutcome = await runJudgeForChunk(chunk, lastResult);
+      if (auditOutcome === 'failed') return 'failed';
+      if (auditOutcome === 'cancelled') return 'cancelled';
+    }
+
+    if (!lastResult && !hadStageFailure) {
+      updateChunkStatus(chunk.id, 'ready');
+    }
+
+    return 'completed';
+  };
+
+  /**
+   * Run the judge call for a chunk. Used both as the audit step at the
+   * end of executePipelineForChunk and as the body of runAuditOnly /
+   * auditSingleChunk.
+   *
+   * `existingDraft` is what we send to the judge — for the pipeline
+   * flow this is the latest stage output; for re-audit it's the
+   * chunk.currentDraft (which the user may have hand-edited).
+   */
+  const runJudgeForChunk = async (
+    chunk: TranslationChunk,
+    textToAudit: string,
+  ): Promise<ChunkOutcome> => {
+    if (!textToAudit) return 'skipped';
+    // We do NOT short-circuit on cancelRequested here — once we have a
+    // complete translation for this chunk, finishing the audit costs
+    // nothing extra and matches the documented "stop after the current
+    // chunk" behaviour. The outer loops still check cancel between chunks.
+
+    updateChunkJudge(chunk.id, {
+      content: '', status: 'processing', rating: qualityDefault(), issues: [],
+    });
+    try {
+      const judgeData = await withRetry(
+        () => llmService.judgeTranslation(chunk.originalText, textToAudit, config),
+        { label: 'Audit' },
+      );
+      updateChunkJudge(chunk.id, {
+        ...judgeData,
+        content: textToAudit,
+        status: 'completed',
+      } as JudgeResult);
+      updateChunkStatus(chunk.id, 'completed');
+      return 'completed';
+    } catch (error: any) {
+      const msg = friendlyError(error.message ?? String(error));
+      updateChunkJudge(chunk.id, {
+        content: textToAudit,
+        status: 'error',
+        rating: qualityFailure(),
+        issues: [],
+        error: msg,
+      });
+      updateChunkStatus(chunk.id, 'error');
+      toast.error(t('errors.auditFailed'), { description: msg });
+      return 'failed';
+    }
+  };
+
+  // ── Exported callables ──────────────────────────────────────────────
+
   const runPipeline = useCallback(async () => {
     if (usePipelineStore.getState().isProcessing) return;
     // Read chunks from the store at invocation time so callers that
@@ -42,115 +183,9 @@ export function usePipeline() {
     let cancelled = false;
 
     for (const chunk of liveChunks) {
-      if (usePipelineStore.getState().cancelRequested) {
-        cancelled = true;
-        break;
-      }
-
-      // Skip already-translated chunks. The user can call
-      // resetCompletedChunks() ("Re-run all" button) before runPipeline
-      // if they really want to redo everything; otherwise we preserve
-      // their work.
-      if (chunk.status === 'completed') continue;
-
-      // Reset only the chunk we are about to process. Siblings keep
-      // their existing translations and audits. Wipe stage results
-      // too so a previous run's later-stage output doesn't linger
-      // when the new run fails or cancels at an earlier stage.
-      clearChunkStages(chunk.id);
-      updateChunkJudge(chunk.id, {
-        content: '', status: 'idle', rating: qualityDefault(), issues: [],
-      });
-      updateChunkDraft(chunk.id, '');
-
-      let lastResult = '';
-      let hadStageFailure = false;
-      updateChunkStatus(chunk.id, 'processing');
-
-      for (const stage of config.stages) {
-        if (!stage.enabled) continue;
-
-        updateChunkStage(chunk.id, stage.id, { content: '', status: 'processing' });
-        try {
-          const result = await withRetry(
-            async () => {
-              // Reset content for each retry attempt
-              updateChunkStage(chunk.id, stage.id, { content: '', status: 'processing' });
-              return llmService.runStageStream(
-                chunk.originalText, stage, config, lastResult || undefined,
-                (token) => appendChunkStageContent(chunk.id, stage.id, token),
-              );
-            },
-            { label: `Stage "${stage.name}"` },
-          );
-          lastResult = result;
-          updateChunkStage(chunk.id, stage.id, { content: result, status: 'completed' });
-        } catch (error: any) {
-          if (isStreamCancelledError(error)) {
-            // User-initiated cancel: clear the in-flight stage placeholder
-            // and reset the chunk status so the UI does not show a stuck
-            // "processing" badge after the toast confirms the stop.
-            updateChunkStage(chunk.id, stage.id, { content: '', status: 'idle' });
-            updateChunkStatus(chunk.id, 'ready');
-            cancelled = true;
-            break;
-          }
-          errorCount++;
-          const msg = friendlyError(error.message ?? String(error));
-          updateChunkStage(chunk.id, stage.id, {
-            content: '',
-            status: 'error',
-            error: msg,
-          });
-          updateChunkStatus(chunk.id, 'error');
-          hadStageFailure = true;
-          toast.error(t('errors.stageFailed', { name: stage.name }), { description: msg });
-          break;
-        }
-      }
-      if (cancelled) break;
-
-      if (lastResult) {
-        updateChunkDraft(chunk.id, lastResult);
-      }
-
-      // Final Audit (Judge) — non-streaming since it returns structured JSON
-      if (lastResult) {
-        updateChunkJudge(chunk.id, { content: '', status: 'processing', rating: qualityDefault(), issues: [] });
-        try {
-          const judgeData = await withRetry(
-            () => llmService.judgeTranslation(chunk.originalText, lastResult, config),
-            { label: 'Audit' },
-          );
-          updateChunkJudge(chunk.id, {
-            ...judgeData,
-            content: lastResult,
-            status: 'completed',
-          } as JudgeResult);
-          updateChunkStatus(chunk.id, 'completed');
-        } catch (error: any) {
-          errorCount++;
-          const msg = friendlyError(error.message ?? String(error));
-          updateChunkJudge(chunk.id, {
-            content: lastResult,
-            status: 'error',
-            rating: qualityFailure(),
-            issues: [],
-            error: msg,
-          });
-          updateChunkStatus(chunk.id, 'error');
-          toast.error(t('errors.auditFailed'), { description: msg });
-        }
-      }
-
-      if (!lastResult && !hadStageFailure) {
-        updateChunkStatus(chunk.id, 'ready');
-      }
-
-      if (usePipelineStore.getState().cancelRequested) {
-        cancelled = true;
-        break;
-      }
+      const outcome = await executePipelineForChunk(chunk, { skipIfCompleted: true });
+      if (outcome === 'cancelled') { cancelled = true; break; }
+      if (outcome === 'failed') errorCount++;
     }
 
     setIsProcessing(false);
@@ -165,6 +200,30 @@ export function usePipeline() {
     }
   }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages]);
 
+  const runSingleChunk = useCallback(async (chunkId: string) => {
+    if (usePipelineStore.getState().isProcessing) return;
+    const chunk = usePipelineStore.getState().chunks.find((c) => c.id === chunkId);
+    if (!chunk) return;
+    usePipelineStore.getState().clearCancelRequest();
+    setIsProcessing(true);
+
+    // Force a redo even if this chunk was already completed — the user
+    // explicitly asked for it via the per-chunk action menu.
+    const outcome = await executePipelineForChunk(chunk, { skipIfCompleted: false });
+
+    setIsProcessing(false);
+    usePipelineStore.getState().clearCancelRequest();
+
+    if (outcome === 'cancelled') {
+      toast.message(t('pipeline.stopConfirmed'));
+    } else if (outcome === 'completed') {
+      toast.success(t('pipeline.singleChunkCompleted'));
+    } else if (outcome === 'failed') {
+      // Per-chunk failure already raised a toast inside the helper; no
+      // extra summary toast is needed.
+    }
+  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages]);
+
   const runAuditOnly = useCallback(async () => {
     if (usePipelineStore.getState().isProcessing) return;
     const liveChunks = usePipelineStore.getState().chunks;
@@ -176,45 +235,9 @@ export function usePipeline() {
     let cancelled = false;
 
     for (const chunk of liveChunks) {
-      if (usePipelineStore.getState().cancelRequested) {
-        cancelled = true;
-        break;
-      }
-
-      const textToAudit = chunk.currentDraft;
-      if (!textToAudit) continue;
-
-      updateChunkStatus(chunk.id, 'processing');
-      updateChunkJudge(chunk.id, { content: '', status: 'processing', rating: qualityDefault(), issues: [] });
-      try {
-        const judgeData = await withRetry(
-          () => llmService.judgeTranslation(chunk.originalText, textToAudit, config),
-          { label: 'Audit' },
-        );
-        updateChunkJudge(chunk.id, {
-          ...judgeData,
-          content: textToAudit,
-          status: 'completed',
-        } as JudgeResult);
-        updateChunkStatus(chunk.id, 'completed');
-      } catch (error: any) {
-        errorCount++;
-        const msg = friendlyError(error.message ?? String(error));
-        updateChunkJudge(chunk.id, {
-          content: textToAudit,
-          status: 'error',
-          rating: qualityFailure(),
-          issues: [],
-          error: msg,
-        });
-        updateChunkStatus(chunk.id, 'error');
-        toast.error(t('errors.auditFailed'), { description: msg });
-      }
-
-      if (usePipelineStore.getState().cancelRequested) {
-        cancelled = true;
-        break;
-      }
+      const outcome = await runJudgeForChunk(chunk, chunk.currentDraft);
+      if (outcome === 'cancelled') { cancelled = true; break; }
+      if (outcome === 'failed') errorCount++;
     }
 
     setIsProcessing(false);
@@ -224,6 +247,29 @@ export function usePipeline() {
       toast.message(t('pipeline.stopConfirmed'));
     } else if (errorCount === 0) {
       toast.success(t('errors.reEvalCompleted'));
+    }
+  }, [config, t, setIsProcessing, updateChunkJudge, updateChunkStatus]);
+
+  const auditSingleChunk = useCallback(async (chunkId: string) => {
+    if (usePipelineStore.getState().isProcessing) return;
+    const chunk = usePipelineStore.getState().chunks.find((c) => c.id === chunkId);
+    if (!chunk) return;
+    if (!chunk.currentDraft) {
+      toast.message(t('pipeline.auditSkippedNoDraft'));
+      return;
+    }
+    usePipelineStore.getState().clearCancelRequest();
+    setIsProcessing(true);
+
+    const outcome = await runJudgeForChunk(chunk, chunk.currentDraft);
+
+    setIsProcessing(false);
+    usePipelineStore.getState().clearCancelRequest();
+
+    if (outcome === 'cancelled') {
+      toast.message(t('pipeline.stopConfirmed'));
+    } else if (outcome === 'completed') {
+      toast.success(t('pipeline.singleChunkAudited'));
     }
   }, [config, t, setIsProcessing, updateChunkJudge, updateChunkStatus]);
 
@@ -240,5 +286,12 @@ export function usePipeline() {
     toast.message(t('pipeline.stopRequested'));
   }, [requestCancel, t]);
 
-  return { runPipeline, runAuditOnly, cancelPipeline, isProcessing };
+  return {
+    runPipeline,
+    runSingleChunk,
+    runAuditOnly,
+    auditSingleChunk,
+    cancelPipeline,
+    isProcessing,
+  };
 }
