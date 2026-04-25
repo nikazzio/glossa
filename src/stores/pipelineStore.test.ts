@@ -200,6 +200,78 @@ describe('pipelineStore', () => {
     });
   });
 
+  describe('chunk operations are guarded against data loss', () => {
+    beforeEach(() => {
+      usePipelineStore.getState().setInputText('First sentence. Second sentence.');
+      usePipelineStore.getState().generateChunks();
+      // Mark the only chunk as completed with a translation + audit
+      usePipelineStore.getState().updateChunkDraft('chunk-0', 'Tradotto');
+      usePipelineStore.getState().updateChunkStatus('chunk-0', 'completed');
+      usePipelineStore.getState().updateChunkJudge('chunk-0', {
+        content: 'Tradotto', status: 'completed', rating: 'good', issues: [],
+      });
+    });
+
+    it('splitChunk is a no-op on a completed chunk', () => {
+      usePipelineStore.getState().splitChunk('chunk-0');
+      const chunks = usePipelineStore.getState().chunks;
+      expect(chunks).toHaveLength(1);
+      expect(chunks[0].currentDraft).toBe('Tradotto');
+      expect(chunks[0].status).toBe('completed');
+    });
+
+    it('mergeChunkWithNext is a no-op when either chunk is completed', () => {
+      usePipelineStore.getState().setInputText('A\n\nB');
+      usePipelineStore.getState().generateChunks();
+      // chunk-0 stays ready; chunk-1 becomes completed
+      usePipelineStore.getState().updateChunkDraft('chunk-1', 'Tradotto B');
+      usePipelineStore.getState().updateChunkStatus('chunk-1', 'completed');
+
+      usePipelineStore.getState().mergeChunkWithNext('chunk-0');
+      const chunks = usePipelineStore.getState().chunks;
+      expect(chunks).toHaveLength(2);
+      expect(chunks[1].currentDraft).toBe('Tradotto B');
+    });
+
+    it('resetCompletedChunks wipes only completed entries', () => {
+      // Add a second, untranslated chunk
+      usePipelineStore.getState().setInputText('A\n\nB');
+      usePipelineStore.getState().generateChunks();
+      usePipelineStore.getState().updateChunkDraft('chunk-0', 'Tradotto');
+      usePipelineStore.getState().updateChunkStatus('chunk-0', 'completed');
+
+      usePipelineStore.getState().resetCompletedChunks();
+      const chunks = usePipelineStore.getState().chunks;
+      expect(chunks[0].status).toBe('ready');
+      expect(chunks[0].currentDraft).toBe('');
+      expect(chunks[1].status).toBe('ready');
+    });
+
+    it('unlockChunkForEdit resets the targeted chunk and leaves others alone', () => {
+      usePipelineStore.getState().setInputText('A\n\nB');
+      usePipelineStore.getState().generateChunks();
+      usePipelineStore.getState().updateChunkDraft('chunk-0', 'Tradotto A');
+      usePipelineStore.getState().updateChunkStatus('chunk-0', 'completed');
+      usePipelineStore.getState().updateChunkDraft('chunk-1', 'Tradotto B');
+      usePipelineStore.getState().updateChunkStatus('chunk-1', 'completed');
+
+      usePipelineStore.getState().unlockChunkForEdit('chunk-0');
+      const chunks = usePipelineStore.getState().chunks;
+      expect(chunks[0].status).toBe('ready');
+      expect(chunks[0].currentDraft).toBe('');
+      expect(chunks[1].status).toBe('completed');
+      expect(chunks[1].currentDraft).toBe('Tradotto B');
+    });
+
+    it('unlockChunkForEdit is a no-op on a non-completed chunk', () => {
+      usePipelineStore.getState().updateChunkStatus('chunk-0', 'ready');
+      usePipelineStore.getState().updateChunkDraft('chunk-0', 'should stay');
+
+      usePipelineStore.getState().unlockChunkForEdit('chunk-0');
+      expect(usePipelineStore.getState().chunks[0].currentDraft).toBe('should stay');
+    });
+  });
+
   describe('stage management', () => {
     it('adds a new stage', () => {
       const initialCount = usePipelineStore.getState().config.stages.length;

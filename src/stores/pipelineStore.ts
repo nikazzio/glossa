@@ -47,6 +47,9 @@ interface PipelineState {
   updateChunkOriginalText: (chunkId: string, text: string) => void;
   splitChunk: (chunkId: string) => void;
   mergeChunkWithNext: (chunkId: string) => void;
+  resetCompletedChunks: () => void;
+  unlockChunkForEdit: (chunkId: string) => void;
+  clearChunkStages: (chunkId: string) => void;
 
   // Config actions
   addStage: () => void;
@@ -187,6 +190,11 @@ export const usePipelineStore = create<PipelineState>((set, get) => ({
       if (index === -1) return {};
 
       const chunk = state.chunks[index];
+      // Guard: don't destroy translation/audit data on a chunk that is
+      // already done or running. The UI hides these buttons in those
+      // states; this is the defence-in-depth layer.
+      if (chunk.status === 'completed' || chunk.status === 'processing') return {};
+
       const splitAt = findBestSplitIndex(chunk.originalText);
       if (!splitAt) return {};
 
@@ -218,6 +226,10 @@ export const usePipelineStore = create<PipelineState>((set, get) => ({
 
       const current = state.chunks[index];
       const next = state.chunks[index + 1];
+      // Guard: refuse if either side has data we'd silently drop.
+      const isDirty = (s: ChunkStatus) => s === 'completed' || s === 'processing';
+      if (isDirty(current.status) || isDirty(next.status)) return {};
+
       const merged = resetChunkForSourceEdit({
         ...current,
         originalText: `${current.originalText.trim()}\n\n${next.originalText.trim()}`,
@@ -231,6 +243,27 @@ export const usePipelineStore = create<PipelineState>((set, get) => ({
         ],
       };
     }),
+
+  resetCompletedChunks: () =>
+    set((state) => ({
+      chunks: state.chunks.map((c) =>
+        c.status === 'completed' ? resetChunkForSourceEdit(c) : c,
+      ),
+    })),
+
+  unlockChunkForEdit: (chunkId) =>
+    set((state) => ({
+      chunks: state.chunks.map((c) =>
+        c.id === chunkId && c.status === 'completed' ? resetChunkForSourceEdit(c) : c,
+      ),
+    })),
+
+  clearChunkStages: (chunkId) =>
+    set((state) => ({
+      chunks: state.chunks.map((c) =>
+        c.id === chunkId ? { ...c, stageResults: {} } : c,
+      ),
+    })),
 
   addStage: () =>
     set((state) => ({
