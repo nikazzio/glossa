@@ -49,6 +49,7 @@ interface PipelineState {
   mergeChunkWithNext: (chunkId: string) => void;
   resetCompletedChunks: () => void;
   unlockChunkForEdit: (chunkId: string) => void;
+  clearChunkStages: (chunkId: string) => void;
 
   // Config actions
   addStage: () => void;
@@ -254,6 +255,13 @@ export const usePipelineStore = create<PipelineState>((set, get) => ({
     set((state) => ({
       chunks: state.chunks.map((c) =>
         c.id === chunkId && c.status === 'completed' ? resetChunkForSourceEdit(c) : c,
+      ),
+    })),
+
+  clearChunkStages: (chunkId) =>
+    set((state) => ({
+      chunks: state.chunks.map((c) =>
+        c.id === chunkId ? { ...c, stageResults: {} } : c,
       ),
     })),
 

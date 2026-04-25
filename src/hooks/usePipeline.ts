@@ -15,7 +15,6 @@ import type { JudgeResult } from '../types';
 export function usePipeline() {
   const {
     config,
-    chunks,
     isProcessing,
     setIsProcessing,
     updateChunkStage,
@@ -23,20 +22,26 @@ export function usePipeline() {
     updateChunkJudge,
     updateChunkDraft,
     updateChunkStatus,
+    clearChunkStages,
     requestCancel,
   } = usePipelineStore();
   const { t } = useTranslation();
 
   const runPipeline = useCallback(async () => {
     if (usePipelineStore.getState().isProcessing) return;
-    if (chunks.length === 0) return;
+    // Read chunks from the store at invocation time so callers that
+    // mutate the store right before invoking us (e.g. the "Re-run all"
+    // button which resetCompletedChunks() then runPipeline()) see the
+    // freshest state instead of a stale useCallback closure.
+    const liveChunks = usePipelineStore.getState().chunks;
+    if (liveChunks.length === 0) return;
     usePipelineStore.getState().clearCancelRequest();
     setIsProcessing(true);
 
     let errorCount = 0;
     let cancelled = false;
 
-    for (const chunk of chunks) {
+    for (const chunk of liveChunks) {
       if (usePipelineStore.getState().cancelRequested) {
         cancelled = true;
         break;
@@ -49,7 +54,10 @@ export function usePipeline() {
       if (chunk.status === 'completed') continue;
 
       // Reset only the chunk we are about to process. Siblings keep
-      // their existing translations and audits.
+      // their existing translations and audits. Wipe stage results
+      // too so a previous run's later-stage output doesn't linger
+      // when the new run fails or cancels at an earlier stage.
+      clearChunkStages(chunk.id);
       updateChunkJudge(chunk.id, {
         content: '', status: 'idle', rating: qualityDefault(), issues: [],
       });
@@ -155,18 +163,19 @@ export function usePipeline() {
     } else {
       toast.warning(t('errors.pipelineCompletedWithErrors', { count: errorCount }));
     }
-  }, [chunks, config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, updateChunkJudge, updateChunkDraft, updateChunkStatus]);
+  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages]);
 
   const runAuditOnly = useCallback(async () => {
     if (usePipelineStore.getState().isProcessing) return;
-    if (chunks.length === 0) return;
+    const liveChunks = usePipelineStore.getState().chunks;
+    if (liveChunks.length === 0) return;
     usePipelineStore.getState().clearCancelRequest();
     setIsProcessing(true);
 
     let errorCount = 0;
     let cancelled = false;
 
-    for (const chunk of chunks) {
+    for (const chunk of liveChunks) {
       if (usePipelineStore.getState().cancelRequested) {
         cancelled = true;
         break;
@@ -216,7 +225,7 @@ export function usePipeline() {
     } else if (errorCount === 0) {
       toast.success(t('errors.reEvalCompleted'));
     }
-  }, [chunks, config, t, setIsProcessing, updateChunkJudge, updateChunkStatus]);
+  }, [config, t, setIsProcessing, updateChunkJudge, updateChunkStatus]);
 
   const cancelPipeline = useCallback(() => {
     requestCancel();
