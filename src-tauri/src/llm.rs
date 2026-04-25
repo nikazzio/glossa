@@ -84,6 +84,52 @@ fn build_http_client() -> Result<Client, String> {
         .map_err(|e| format!("Failed to build HTTP client: {e}"))
 }
 
+/// Map an HTTP status to a short, user-safe explanation.
+///
+/// The provider response body may contain echoed prompts, headers, or PII;
+/// we never propagate it to the frontend. The full body is logged at
+/// `debug` level, which is only active in `debug_assertions` builds.
+fn format_api_error(provider_label: &str, status: reqwest::StatusCode, body: &str) -> String {
+    log::debug!("{provider_label} API error body ({status}): {body}");
+    let user_message = match status.as_u16() {
+        400 => "bad request — check the model name or prompt",
+        401 | 403 => "API key not authorized",
+        404 => "model or endpoint not found",
+        408 => "the provider timed out",
+        413 => "input too large for the model",
+        429 => "rate limited — retry shortly",
+        500..=599 => "provider unavailable",
+        _ => "unexpected response",
+    };
+    format!("{provider_label} API error ({status}): {user_message}")
+}
+
+/// Pick a short label from a base URL so error messages identify the
+/// provider without leaking the URL itself.
+fn provider_label_from_url(base_url: &str) -> &'static str {
+    if base_url.contains("api.openai.com") {
+        "OpenAI"
+    } else if base_url.contains("api.deepseek.com") {
+        "DeepSeek"
+    } else if base_url.contains("11434") {
+        "Ollama"
+    } else {
+        "Provider"
+    }
+}
+
+/// Map a provider id (as used internally) to a human-readable label.
+fn provider_label(provider: &str) -> &'static str {
+    match provider {
+        "gemini" => "Gemini",
+        "openai" => "OpenAI",
+        "deepseek" => "DeepSeek",
+        "anthropic" => "Anthropic",
+        "ollama" => "Ollama",
+        _ => "Provider",
+    }
+}
+
 fn legacy_store_path(app: &AppHandle) -> Result<PathBuf, String> {
     let config_dir = app
         .path()
@@ -231,7 +277,7 @@ async fn call_gemini(
     let text = resp.text().await.map_err(|e| format!("Failed to read response: {e}"))?;
 
     if !status.is_success() {
-        return Err(format!("Gemini API error ({status}): {text}"));
+        return Err(format_api_error("Gemini", status, &text));
     }
 
     let json: serde_json::Value = serde_json::from_str(&text)
@@ -278,7 +324,7 @@ async fn call_openai_compatible(
     let text = resp.text().await.map_err(|e| format!("Failed to read response: {e}"))?;
 
     if !status.is_success() {
-        return Err(format!("API error ({status}): {text}"));
+        return Err(format_api_error(provider_label_from_url(base_url), status, &text));
     }
 
     let json: serde_json::Value = serde_json::from_str(&text)
@@ -324,7 +370,7 @@ async fn call_anthropic(
     let text = resp.text().await.map_err(|e| format!("Failed to read response: {e}"))?;
 
     if !status.is_success() {
-        return Err(format!("Anthropic API error ({status}): {text}"));
+        return Err(format_api_error("Anthropic", status, &text));
     }
 
     let json: serde_json::Value = serde_json::from_str(&text)
@@ -657,7 +703,7 @@ pub async fn run_stage_stream(
     let status = resp.status();
     if !status.is_success() {
         let text = resp.text().await.unwrap_or_default();
-        return Err(format!("API error ({status}): {text}"));
+        return Err(format_api_error(provider_label(&stage.provider), status, &text));
     }
 
     stream_response(&app, resp, &stage.provider, &stream_id).await
@@ -1039,5 +1085,56 @@ mod tests {
         let result = call_provider(&client, "fake_provider", "m", "s", "u", "k", false).await;
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("Unsupported provider"));
+    }
+
+    // ── error sanitization ──────────────────────────────────────────
+
+    #[test]
+    fn format_api_error_omits_response_body() {
+        let secret = "user prompt: Confidential unpublished manuscript text";
+        let msg = format_api_error(
+            "OpenAI",
+            reqwest::StatusCode::UNAUTHORIZED,
+            secret,
+        );
+        assert!(!msg.contains(secret), "response body must not leak: {msg}");
+        assert!(msg.contains("OpenAI"));
+        assert!(msg.contains("API key not authorized"));
+    }
+
+    #[test]
+    fn format_api_error_maps_common_statuses() {
+        let cases = [
+            (reqwest::StatusCode::BAD_REQUEST, "bad request"),
+            (reqwest::StatusCode::FORBIDDEN, "API key not authorized"),
+            (reqwest::StatusCode::NOT_FOUND, "model or endpoint not found"),
+            (reqwest::StatusCode::TOO_MANY_REQUESTS, "rate limited"),
+            (reqwest::StatusCode::BAD_GATEWAY, "provider unavailable"),
+        ];
+        for (status, expected) in cases {
+            let msg = format_api_error("Anthropic", status, "any body");
+            assert!(
+                msg.contains(expected),
+                "status {status} should map to '{expected}', got: {msg}"
+            );
+        }
+    }
+
+    #[test]
+    fn provider_label_from_url_identifies_known_hosts() {
+        assert_eq!(provider_label_from_url("https://api.openai.com/v1"), "OpenAI");
+        assert_eq!(provider_label_from_url("https://api.deepseek.com"), "DeepSeek");
+        assert_eq!(provider_label_from_url("http://localhost:11434/v1"), "Ollama");
+        assert_eq!(provider_label_from_url("https://example.com"), "Provider");
+    }
+
+    #[test]
+    fn provider_label_handles_all_supported_providers() {
+        assert_eq!(provider_label("gemini"), "Gemini");
+        assert_eq!(provider_label("openai"), "OpenAI");
+        assert_eq!(provider_label("deepseek"), "DeepSeek");
+        assert_eq!(provider_label("anthropic"), "Anthropic");
+        assert_eq!(provider_label("ollama"), "Ollama");
+        assert_eq!(provider_label("unknown"), "Provider");
     }
 }
