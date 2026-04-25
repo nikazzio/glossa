@@ -79,8 +79,10 @@ export function usePipeline() {
         } catch (error: any) {
           if (isStreamCancelledError(error)) {
             // User-initiated cancel: clear the in-flight stage placeholder
-            // and let the outer cancel-loop handle UX/messaging.
+            // and reset the chunk status so the UI does not show a stuck
+            // "processing" badge after the toast confirms the stop.
             updateChunkStage(chunk.id, stage.id, { content: '', status: 'idle' });
+            updateChunkStatus(chunk.id, 'ready');
             cancelled = true;
             break;
           }

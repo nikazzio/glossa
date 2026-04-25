@@ -119,6 +119,8 @@ describe('usePipeline', () => {
     expect(llmMocks.judgeTranslation).not.toHaveBeenCalled();
     expect(usePipelineStore.getState().chunks[1].currentDraft).toBe('');
     expect(usePipelineStore.getState().isProcessing).toBe(false);
+    // Chunk status must not be left stuck on 'processing' after cancel
+    expect(usePipelineStore.getState().chunks[0].status).toBe('ready');
   });
 
   it('invokes cancel_stream on the backend when cancelPipeline runs', () => {

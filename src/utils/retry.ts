@@ -1,3 +1,5 @@
+import { STREAM_CANCELLED_ERROR } from '../services/llmService';
+
 /**
  * Retry with exponential backoff.
  * Retries on network/rate-limit errors; gives up immediately on config errors.
@@ -16,7 +18,7 @@ export async function withRetry<T>(
 
       // Don't retry config errors (missing key, unknown provider, etc.)
       // or user-initiated cancellations.
-      if (isConfigError(message) || message.includes('Stream cancelled')) throw err;
+      if (isConfigError(message) || message.includes(STREAM_CANCELLED_ERROR)) throw err;
 
       if (attempt === maxRetries) throw err;
 
