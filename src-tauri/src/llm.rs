@@ -1,7 +1,16 @@
 use serde::{Deserialize, Serialize};
 use reqwest::Client;
-use tauri::{AppHandle, Emitter, Manager};
-use std::{fs, path::PathBuf, time::Duration};
+use tauri::{AppHandle, Emitter, Manager, State};
+use std::{
+    collections::HashMap,
+    fs,
+    path::PathBuf,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex,
+    },
+    time::Duration,
+};
 
 // ── Types matching frontend ──────────────────────────────────────────
 
@@ -62,6 +71,69 @@ struct StreamToken {
     token: String,
     done: bool,
 }
+
+// ── Stream cancellation registry ─────────────────────────────────────
+
+/// Tracks in-flight streaming requests so the frontend can interrupt them.
+///
+/// When the user clicks "Stop", the frontend invokes `cancel_stream` with
+/// the active stream id. The corresponding flag flips to `true`; the SSE
+/// loop checks it on every iteration, drops the response (which closes
+/// the underlying TCP connection), and returns a `StreamCancelled` error.
+#[derive(Default)]
+pub struct StreamRegistry {
+    cancels: Mutex<HashMap<String, Arc<AtomicBool>>>,
+}
+
+impl StreamRegistry {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    fn register(&self, stream_id: &str) -> Arc<AtomicBool> {
+        let flag = Arc::new(AtomicBool::new(false));
+        self.cancels
+            .lock()
+            .expect("StreamRegistry mutex poisoned")
+            .insert(stream_id.to_string(), Arc::clone(&flag));
+        flag
+    }
+
+    fn unregister(&self, stream_id: &str) {
+        self.cancels
+            .lock()
+            .expect("StreamRegistry mutex poisoned")
+            .remove(stream_id);
+    }
+
+    fn cancel(&self, stream_id: &str) {
+        if let Some(flag) = self
+            .cancels
+            .lock()
+            .expect("StreamRegistry mutex poisoned")
+            .get(stream_id)
+        {
+            flag.store(true, Ordering::Release);
+        }
+    }
+}
+
+/// RAII guard that unregisters a stream id from the registry on drop,
+/// even if the surrounding future is cancelled or panics.
+struct StreamGuard<'a> {
+    registry: &'a StreamRegistry,
+    stream_id: String,
+}
+
+impl Drop for StreamGuard<'_> {
+    fn drop(&mut self) {
+        self.registry.unregister(&self.stream_id);
+    }
+}
+
+/// Sentinel string used to identify a user-cancelled stream in error
+/// flows; the frontend checks for this prefix to suppress the toast.
+pub const STREAM_CANCELLED_ERROR: &str = "Stream cancelled";
 
 // ── API Key management (OS Keychain) ─────────────────────────────────
 
@@ -495,17 +567,26 @@ async fn build_streaming_request(
     }
 }
 
-/// Read an SSE stream, emit tokens via Tauri events, return the full text
+/// Read an SSE stream, emit tokens via Tauri events, return the full text.
+///
+/// Checks `cancel_flag` on every chunk read. When the flag flips, the
+/// response is dropped (which closes the TCP connection so the provider
+/// stops billing) and a `STREAM_CANCELLED_ERROR` is returned.
 async fn stream_response(
     app: &AppHandle,
     mut resp: reqwest::Response,
     provider: &str,
     stream_id: &str,
+    cancel_flag: &Arc<AtomicBool>,
 ) -> Result<String, String> {
     let mut full_text = String::new();
     let mut buffer = String::new();
 
     loop {
+        if cancel_flag.load(Ordering::Acquire) {
+            drop(resp);
+            return Err(STREAM_CANCELLED_ERROR.to_string());
+        }
         match resp.chunk().await {
             Ok(Some(bytes)) => {
                 buffer.push_str(&String::from_utf8_lossy(&bytes));
@@ -685,6 +766,7 @@ pub async fn run_stage(
 #[tauri::command]
 pub async fn run_stage_stream(
     app: AppHandle,
+    registry: State<'_, StreamRegistry>,
     text: String,
     stage: StageConfig,
     config: PipelineConfig,
@@ -694,6 +776,16 @@ pub async fn run_stage_stream(
     let api_key = get_api_key(&app, &stage.provider)?;
     let client = build_http_client()?;
     let (system_prompt, user_prompt) = build_stage_prompts(&text, &stage, &config, &previous_result);
+
+    let cancel_flag = registry.register(&stream_id);
+    let _guard = StreamGuard {
+        registry: registry.inner(),
+        stream_id: stream_id.clone(),
+    };
+
+    if cancel_flag.load(Ordering::Acquire) {
+        return Err(STREAM_CANCELLED_ERROR.to_string());
+    }
 
     let resp = build_streaming_request(
         &client, &stage.provider, &stage.model,
@@ -706,7 +798,14 @@ pub async fn run_stage_stream(
         return Err(format_api_error(provider_label(&stage.provider), status, &text));
     }
 
-    stream_response(&app, resp, &stage.provider, &stream_id).await
+    stream_response(&app, resp, &stage.provider, &stream_id, &cancel_flag).await
+}
+
+/// Mark a streaming request as cancelled. Idempotent and safe to call
+/// after the stream has finished — unknown ids are ignored.
+#[tauri::command]
+pub fn cancel_stream(registry: State<'_, StreamRegistry>, stream_id: String) {
+    registry.cancel(&stream_id);
 }
 
 #[tauri::command]
@@ -1136,5 +1235,58 @@ mod tests {
         assert_eq!(provider_label("anthropic"), "Anthropic");
         assert_eq!(provider_label("ollama"), "Ollama");
         assert_eq!(provider_label("unknown"), "Provider");
+    }
+
+    // ── stream registry ─────────────────────────────────────────────
+
+    #[test]
+    fn stream_registry_register_returns_unflagged_handle() {
+        let registry = StreamRegistry::new();
+        let flag = registry.register("s-1");
+        assert!(!flag.load(Ordering::Acquire));
+    }
+
+    #[test]
+    fn stream_registry_cancel_flips_the_flag() {
+        let registry = StreamRegistry::new();
+        let flag = registry.register("s-1");
+        registry.cancel("s-1");
+        assert!(flag.load(Ordering::Acquire));
+    }
+
+    #[test]
+    fn stream_registry_cancel_unknown_id_is_noop() {
+        let registry = StreamRegistry::new();
+        // Must not panic, must not poison the mutex
+        registry.cancel("never-registered");
+        let flag = registry.register("now-real");
+        assert!(!flag.load(Ordering::Acquire));
+    }
+
+    #[test]
+    fn stream_registry_unregister_drops_the_handle() {
+        let registry = StreamRegistry::new();
+        let flag = registry.register("s-1");
+        registry.unregister("s-1");
+        // After unregister, cancelling the same id is a no-op against the
+        // already-removed entry — but the original Arc still observes its
+        // previous value (false), proving the flag wasn't touched.
+        registry.cancel("s-1");
+        assert!(!flag.load(Ordering::Acquire));
+    }
+
+    #[test]
+    fn stream_guard_unregisters_on_drop() {
+        let registry = StreamRegistry::new();
+        let flag = registry.register("s-1");
+        {
+            let _guard = StreamGuard {
+                registry: &registry,
+                stream_id: "s-1".to_string(),
+            };
+        } // guard drops here
+        // After drop, cancelling has no effect on the registered handle
+        registry.cancel("s-1");
+        assert!(!flag.load(Ordering::Acquire));
     }
 }

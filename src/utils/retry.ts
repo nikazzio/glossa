@@ -15,7 +15,8 @@ export async function withRetry<T>(
       const message: string = err?.message ?? String(err);
 
       // Don't retry config errors (missing key, unknown provider, etc.)
-      if (isConfigError(message)) throw err;
+      // or user-initiated cancellations.
+      if (isConfigError(message) || message.includes('Stream cancelled')) throw err;
 
       if (attempt === maxRetries) throw err;
 

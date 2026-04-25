@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../stores/pipelineStore';
-import { llmService } from '../services/llmService';
+import { llmService, isStreamCancelledError } from '../services/llmService';
 import { withRetry, friendlyError } from '../utils/retry';
 import { qualityDefault, qualityFailure } from '../utils';
 import type { JudgeResult } from '../types';
@@ -77,6 +77,13 @@ export function usePipeline() {
           lastResult = result;
           updateChunkStage(chunk.id, stage.id, { content: result, status: 'completed' });
         } catch (error: any) {
+          if (isStreamCancelledError(error)) {
+            // User-initiated cancel: clear the in-flight stage placeholder
+            // and let the outer cancel-loop handle UX/messaging.
+            updateChunkStage(chunk.id, stage.id, { content: '', status: 'idle' });
+            cancelled = true;
+            break;
+          }
           errorCount++;
           const msg = friendlyError(error.message ?? String(error));
           updateChunkStage(chunk.id, stage.id, {
@@ -90,6 +97,7 @@ export function usePipeline() {
           break;
         }
       }
+      if (cancelled) break;
 
       if (lastResult) {
         updateChunkDraft(chunk.id, lastResult);
@@ -209,6 +217,14 @@ export function usePipeline() {
 
   const cancelPipeline = useCallback(() => {
     requestCancel();
+    const streamId = usePipelineStore.getState().activeStreamId;
+    if (streamId) {
+      // Best-effort: tell the backend to drop the in-flight HTTP request
+      // so the provider stops billing immediately. Failures are silent
+      // because the cancelRequested flag will still stop the loop between
+      // chunks.
+      llmService.cancelStream(streamId).catch(() => {});
+    }
     toast.message(t('pipeline.stopRequested'));
   }, [requestCancel, t]);
 
