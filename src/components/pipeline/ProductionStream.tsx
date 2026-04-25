@@ -1,4 +1,4 @@
-import { Trash2, AlertTriangle } from 'lucide-react';
+import { Trash2, AlertTriangle, Pencil } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { StatusIndicator, ProcessingLine, CopyButton } from '../common';
@@ -19,6 +19,7 @@ export function ProductionStream() {
     updateChunkOriginalText,
     splitChunk,
     mergeChunkWithNext,
+    unlockChunkForEdit,
   } =
     usePipelineStore();
   const { t } = useTranslation();
@@ -33,6 +34,16 @@ export function ProductionStream() {
       danger: true,
     });
     if (ok) clearChunks();
+  };
+
+  const handleUnlockSource = async (chunkId: string) => {
+    const ok = await confirm({
+      title: t('pipeline.confirmUnlockTitle'),
+      message: t('pipeline.confirmUnlockMessage'),
+      confirmLabel: t('pipeline.unlockSource'),
+      danger: true,
+    });
+    if (ok) unlockChunkForEdit(chunkId);
   };
 
   return (
@@ -159,29 +170,49 @@ export function ProductionStream() {
                     {t('pipeline.originalSource')}
                   </label>
                   <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => splitChunk(chunk.id)}
-                      disabled={isProcessing || chunk.originalText.trim().length < 2}
-                      className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                    >
-                      {t('pipeline.splitChunk')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => mergeChunkWithNext(chunk.id)}
-                      disabled={isProcessing || idx === chunks.length - 1}
-                      className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                    >
-                      {t('pipeline.mergeNext')}
-                    </button>
+                    {chunk.status === 'completed' ? (
+                      <button
+                        type="button"
+                        onClick={() => handleUnlockSource(chunk.id)}
+                        disabled={isProcessing}
+                        className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent flex items-center gap-1"
+                        title={t('pipeline.unlockSourceHint')}
+                      >
+                        <Pencil size={11} /> {t('pipeline.unlockSource')}
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => splitChunk(chunk.id)}
+                          disabled={isProcessing || chunk.originalText.trim().length < 2}
+                          className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                        >
+                          {t('pipeline.splitChunk')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => mergeChunkWithNext(chunk.id)}
+                          disabled={
+                            isProcessing
+                            || idx === chunks.length - 1
+                            || chunks[idx + 1]?.status === 'completed'
+                            || chunks[idx + 1]?.status === 'processing'
+                          }
+                          className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                        >
+                          {t('pipeline.mergeNext')}
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
                 <textarea
                   value={chunk.originalText}
                   onChange={(e) => updateChunkOriginalText(chunk.id, e.target.value)}
                   disabled={isProcessing}
-                  className="w-full bg-editorial-textbox/60 border border-editorial-border p-4 text-xs font-mono outline-none leading-relaxed resize-y min-h-[120px] disabled:opacity-70 focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  readOnly={chunk.status === 'completed'}
+                  className="w-full bg-editorial-textbox/60 border border-editorial-border p-4 text-xs font-mono outline-none leading-relaxed resize-y min-h-[120px] disabled:opacity-70 read-only:bg-editorial-textbox/30 read-only:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 />
               </div>
 

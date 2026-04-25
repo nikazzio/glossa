@@ -1,10 +1,11 @@
-import { Plus, ArrowRightLeft, Play, Loader2, X, AlertTriangle } from 'lucide-react';
+import { Plus, ArrowRightLeft, Play, Loader2, X, AlertTriangle, RotateCcw } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { ModelProvider } from '../../types';
 import { MODEL_OPTIONS, LANGUAGES } from '../../constants';
 import { usePipelineStore } from '../../stores/pipelineStore';
+import { confirm } from '../../stores/confirmStore';
 import { StageCard } from './StageCard';
 
 interface PipelineConfigProps {
@@ -33,11 +34,26 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly, onCancelPipeline
     removeGlossaryEntry,
     ollamaStatus,
     cancelRequested,
+    resetCompletedChunks,
   } = usePipelineStore();
   const { t } = useTranslation();
   const judgeModels = useJudgeModelOptions(config.judgeProvider);
 
   const cannotRun = isProcessing || chunks.length === 0;
+  const completedCount = chunks.filter((c) => c.status === 'completed').length;
+  const canRerunAll = !isProcessing && completedCount > 0;
+
+  const handleRerunAll = async () => {
+    const ok = await confirm({
+      title: t('pipeline.confirmRerunAllTitle'),
+      message: t('pipeline.confirmRerunAllMessage', { count: completedCount }),
+      confirmLabel: t('pipeline.rerunAll'),
+      danger: true,
+    });
+    if (!ok) return;
+    resetCompletedChunks();
+    onRunPipeline();
+  };
   const runReason = isProcessing
     ? t('pipeline.runDisabledProcessing')
     : chunks.length === 0
@@ -325,6 +341,16 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly, onCancelPipeline
             </span>
           )}
         </button>
+        {canRerunAll && (
+          <button
+            type="button"
+            onClick={handleRerunAll}
+            title={t('pipeline.rerunAllHint', { count: completedCount })}
+            className="bg-transparent border border-editorial-accent text-editorial-accent px-6 py-3 text-[11px] font-bold uppercase tracking-[2px] transition-all hover:bg-editorial-accent/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2 flex items-center justify-center gap-2"
+          >
+            <RotateCcw size={13} /> {t('pipeline.rerunAll')}
+          </button>
+        )}
         <button
           type="button"
           onClick={onRunAuditOnly}

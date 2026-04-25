@@ -72,7 +72,15 @@
     "confirmClearTitle": "Clear the stream?",
     "confirmClearMessage": "All chunks, candidate drafts, and audit results will be discarded. This cannot be undone.",
     "confirmRemoveStageTitle": "Remove this stage?",
-    "confirmRemoveStageMessage": "Stage \"{{name}}\" will be deleted from the pipeline. You can disable it instead to keep its configuration."
+    "confirmRemoveStageMessage": "Stage \"{{name}}\" will be deleted from the pipeline. You can disable it instead to keep its configuration.",
+    "unlockSource": "Edit source",
+    "unlockSourceHint": "Editing the source will discard the translation for this chunk.",
+    "confirmUnlockTitle": "Edit the source text?",
+    "confirmUnlockMessage": "The translation and audit for this chunk will be discarded so you can edit. This cannot be undone.",
+    "rerunAll": "Re-run all",
+    "rerunAllHint": "Discard the {{count}} completed translation(s) and run the pipeline from scratch.",
+    "confirmRerunAllTitle": "Re-run the whole pipeline?",
+    "confirmRerunAllMessage": "{{count}} completed translation(s) and their audits will be discarded before the pipeline restarts. This cannot be undone."
   },
   "audit": {
     "title": "Audit Logs",

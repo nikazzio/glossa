@@ -75,6 +75,43 @@ describe('usePipeline', () => {
     ]);
   });
 
+  it('skips chunks that are already completed', async () => {
+    // chunk-0 is already done with a translation; only chunk-1 should run.
+    usePipelineStore.getState().setChunks((prev) =>
+      prev.map((c, i) =>
+        i === 0
+          ? {
+              ...c,
+              status: 'completed' as const,
+              currentDraft: 'Already translated',
+              stageResults: {
+                'stg-1': { content: 'Already translated', status: 'completed' as const },
+              },
+              judgeResult: { content: 'Already translated', status: 'completed' as const, rating: 'good', issues: [] },
+            }
+          : c,
+      ),
+    );
+
+    llmMocks.runStageStream.mockResolvedValue('Second translated');
+    llmMocks.judgeTranslation.mockResolvedValue({
+      content: '', rating: 'good', issues: [],
+    });
+
+    const { result } = renderHook(() => usePipeline());
+
+    await act(async () => {
+      await result.current.runPipeline();
+    });
+
+    // Only chunk-1 produces a stream call; chunk-0 was skipped.
+    expect(llmMocks.runStageStream).toHaveBeenCalledTimes(1);
+    expect(llmMocks.judgeTranslation).toHaveBeenCalledTimes(1);
+    expect(usePipelineStore.getState().chunks[0].currentDraft).toBe('Already translated');
+    expect(usePipelineStore.getState().chunks[0].status).toBe('completed');
+    expect(usePipelineStore.getState().chunks[1].currentDraft).toBe('Second translated');
+  });
+
   it('is a no-op when runPipeline is invoked while already processing', async () => {
     usePipelineStore.getState().setIsProcessing(true);
 

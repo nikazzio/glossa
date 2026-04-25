@@ -72,7 +72,15 @@
     "confirmClearTitle": "Pulire il flusso?",
     "confirmClearMessage": "Eliminerai tutti i blocchi, le bozze candidate e i risultati dell'audit. L'azione non è reversibile.",
     "confirmRemoveStageTitle": "Rimuovere questa fase?",
-    "confirmRemoveStageMessage": "La fase \"{{name}}\" verrà eliminata dalla pipeline. Puoi sempre disabilitarla invece per conservarla."
+    "confirmRemoveStageMessage": "La fase \"{{name}}\" verrà eliminata dalla pipeline. Puoi sempre disabilitarla invece per conservarla.",
+    "unlockSource": "Modifica sorgente",
+    "unlockSourceHint": "Modificare il testo sorgente eliminerà la traduzione di questo blocco.",
+    "confirmUnlockTitle": "Modificare il testo sorgente?",
+    "confirmUnlockMessage": "La traduzione e l'audit di questo blocco verranno eliminati per consentire la modifica. L'azione non è reversibile.",
+    "rerunAll": "Rilancia tutto",
+    "rerunAllHint": "Scarta le {{count}} traduzioni completate e rilancia la pipeline da zero.",
+    "confirmRerunAllTitle": "Rilanciare l'intera pipeline?",
+    "confirmRerunAllMessage": "{{count}} traduzioni completate e i relativi audit verranno scartati prima del riavvio della pipeline. L'azione non è reversibile."
   },
   "audit": {
     "title": "Log Audit",

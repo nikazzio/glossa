@@ -18,7 +18,6 @@ export function usePipeline() {
     chunks,
     isProcessing,
     setIsProcessing,
-    setChunks,
     updateChunkStage,
     appendChunkStageContent,
     updateChunkJudge,
@@ -34,17 +33,6 @@ export function usePipeline() {
     usePipelineStore.getState().clearCancelRequest();
     setIsProcessing(true);
 
-    // Clear previous results
-    setChunks((prev) =>
-      prev.map((c) => ({
-        ...c,
-        status: 'ready' as const,
-        stageResults: {},
-        judgeResult: { content: '', status: 'idle' as const, rating: qualityDefault(), issues: [] },
-        currentDraft: '',
-      }))
-    );
-
     let errorCount = 0;
     let cancelled = false;
 
@@ -53,6 +41,19 @@ export function usePipeline() {
         cancelled = true;
         break;
       }
+
+      // Skip already-translated chunks. The user can call
+      // resetCompletedChunks() ("Re-run all" button) before runPipeline
+      // if they really want to redo everything; otherwise we preserve
+      // their work.
+      if (chunk.status === 'completed') continue;
+
+      // Reset only the chunk we are about to process. Siblings keep
+      // their existing translations and audits.
+      updateChunkJudge(chunk.id, {
+        content: '', status: 'idle', rating: qualityDefault(), issues: [],
+      });
+      updateChunkDraft(chunk.id, '');
 
       let lastResult = '';
       let hadStageFailure = false;
@@ -154,7 +155,7 @@ export function usePipeline() {
     } else {
       toast.warning(t('errors.pipelineCompletedWithErrors', { count: errorCount }));
     }
-  }, [chunks, config, t, setIsProcessing, setChunks, updateChunkStage, appendChunkStageContent, updateChunkJudge, updateChunkDraft, updateChunkStatus]);
+  }, [chunks, config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, updateChunkJudge, updateChunkDraft, updateChunkStatus]);
 
   const runAuditOnly = useCallback(async () => {
     if (usePipelineStore.getState().isProcessing) return;
