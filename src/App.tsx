@@ -21,11 +21,11 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-editorial-bg text-editorial-ink font-sans">
+      <div className="min-h-screen bg-editorial-bg text-editorial-ink font-sans flex flex-col">
         <Header />
 
         {viewMode === 'document' ? (
-          <main className="grid grid-cols-1 md:grid-cols-12 min-h-[calc(100vh-140px)]">
+          <main className="grid grid-cols-1 md:grid-cols-12 flex-1 min-h-0">
             <PipelineConfig
               onRunPipeline={runPipeline}
               onRunAuditOnly={runAuditOnly}
@@ -38,7 +38,7 @@ export default function App() {
             />
           </main>
         ) : (
-          <main className="grid grid-cols-1 md:grid-cols-12 min-h-[calc(100vh-140px)]">
+          <main className="grid grid-cols-1 md:grid-cols-12 flex-1 min-h-0">
             <PipelineConfig
               onRunPipeline={runPipeline}
               onRunAuditOnly={runAuditOnly}

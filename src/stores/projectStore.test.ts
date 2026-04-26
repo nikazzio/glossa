@@ -171,4 +171,15 @@ describe('projectStore', () => {
     );
     expect(projectServiceMocks.saveTranslations).toHaveBeenCalledWith('proj-1', []);
   });
+
+  it('refuses to save while the pipeline is processing', async () => {
+    useProjectStore.setState({ currentProjectId: 'proj-1' });
+    useChunksStore.getState().setIsProcessing(true);
+
+    await expect(useProjectStore.getState().saveCurrentProject()).rejects.toThrow(
+      'Cannot save while the pipeline is processing.',
+    );
+    expect(projectServiceMocks.saveProjectConfig).not.toHaveBeenCalled();
+    expect(projectServiceMocks.saveTranslations).not.toHaveBeenCalled();
+  });
 });

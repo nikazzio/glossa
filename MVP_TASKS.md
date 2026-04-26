@@ -1,40 +1,40 @@
 # Glossa — MVP Tasks
 
-> Roadmap attiva e priorita operative.
+> Roadmap attiva e priorità operative.
 > Aggiornata al 2026-04-26 sulla base del codice in `main`, del file Repomix e dei test frontend correnti.
 
 ---
 
 ## Valutazione oggettiva
 
-- Il repo non e piu un wireframe fragile: lo Sprint 1 e chiuso, `S4-T1` e `S4-T2` risultano gia integrati su `main` (`190aa11`, `572dd17`).
-- Il frontend e in uno stato sano per continuare il refactor: `npm run lint` e `npm test` sono verdi; i test Vitest passano (`80/80`).
-- Il file precedente era dettagliato, ma non era piu un buon strumento di priorizzazione:
+- Il repo non è più un wireframe fragile: lo Sprint 1 è chiuso, `S4-T1` e `S4-T2` risultano già integrati su `main` (`190aa11`, `572dd17`).
+- Il frontend è in uno stato sano per continuare il refactor: `npm run lint` e `npm test` sono verdi; i test Vitest passano (`80/80`).
+- Il file precedente era dettagliato, ma non era più un buon strumento di prioritizzazione:
   - ordinava il lavoro per storia degli sprint, non per focus attuale;
-  - lasciava il refactor UX in fondo anche se e il track gia in corso;
+  - lasciava il refactor UX in fondo anche se è il track già in corso;
   - marcava `S4-T2` come ancora aperto, mentre il codice e i test mostrano il contrario.
-- Priorita reale oggi:
+- Priorità reale oggi:
   1. chiudere la base strutturale del refactor UX (`S4-T3`, `S4-T4`);
   2. sopra quella base, aggiungere librerie riusabili e rifiniture UX (`S4-T5a`, `S4-T5b`, `S4-T6`);
-  3. prima della prima release pubblica, chiudere i blocker di stabilita, sicurezza e packaging (`S2-*`);
-  4. solo dopo, affrontare il refactor profondo di `llm.rs` e il resto della qualita interna (`S3-*`).
+  3. prima della prima release pubblica, chiudere i blocker di stabilità, sicurezza e packaging (`S2-*`);
+  4. solo dopo, affrontare il refactor profondo di `llm.rs` e il resto della qualità interna (`S3-*`).
 
-In breve: se la domanda e "cosa fare adesso?", la risposta non e Sprint 2 o Sprint 3. La risposta e completare il refactor UX gia in atto, in ordine corretto.
+In breve: se la domanda è "cosa fare adesso?", la risposta non è Sprint 2 o Sprint 3. La risposta è completare il refactor UX già in atto, in ordine corretto.
 
 ---
 
 ## Come usare questo file
 
-- Questo documento e ordinato per **priorita corrente**, non per cronologia.
-- Gli ID esistenti (`S2-T4`, `S4-T3`, ecc.) restano invariati per continuita.
+- Questo documento è ordinato per **priorità corrente**, non per cronologia.
+- Gli ID esistenti (`S2-T4`, `S4-T3`, ecc.) restano invariati per continuità.
 - Stati ammessi:
   - `da fare`
   - `in corso`
   - `in verifica`
   - `completata`
 - Regola operativa:
-  - non aprire nuove superfici UX finche non sono chiusi i fondamenti strutturali;
-  - non lavorare sul refactor profondo backend finche il flusso utente MVP non e stabile.
+  - non aprire nuove superfici UX finché non sono chiusi i fondamenti strutturali;
+  - non lavorare sul refactor profondo backend finché il flusso utente MVP non è stabile.
 
 ---
 

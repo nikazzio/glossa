@@ -99,8 +99,12 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const { currentProjectId } = get();
     if (!currentProjectId) return;
 
-    const pipeline = usePipelineStore.getState();
     const chunksStore = useChunksStore.getState();
+    if (chunksStore.isProcessing) {
+      throw new Error('Cannot save while the pipeline is processing.');
+    }
+
+    const pipeline = usePipelineStore.getState();
     const ui = useUiStore.getState();
     await saveProjectConfig(currentProjectId, pipeline.config, ui.viewMode);
     await saveTranslations(currentProjectId, chunksStore.chunks);

@@ -4,12 +4,14 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useProjectStore } from '../../stores/projectStore';
+import { useChunksStore } from '../../stores/chunksStore';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { confirm } from '../../stores/confirmStore';
 import { relativeDateUnit } from '../../utils';
 
 export function ProjectPanel() {
   const { t } = useTranslation();
+  const isProcessing = useChunksStore((state) => state.isProcessing);
   const {
     projects,
     currentProjectId,
@@ -116,7 +118,8 @@ export function ProjectPanel() {
                 <button
                   onClick={handleSave}
                   title={t('projects.save')}
-                  className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-editorial-ink hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  disabled={isProcessing}
+                  className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-editorial-ink hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
                   aria-label={t('projects.save')}
                 >
                   <Save size={12} /> {t('projects.save')}

@@ -154,7 +154,8 @@ export function Header() {
               <button
                 onClick={handleSave}
                 title={saveLabel}
-                className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                disabled={isProcessing}
+                className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
                 aria-label={saveLabel}
               >
                 <Save size={16} />

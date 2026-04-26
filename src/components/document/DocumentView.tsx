@@ -130,7 +130,7 @@ export function DocumentView({
   const chunkTone = qualityTone(currentChunk.judgeResult.rating);
 
   return (
-    <section className="md:col-span-9 bg-[#f7f3ec] overflow-y-auto max-h-[calc(100vh-140px)] custom-scrollbar">
+    <section className="md:col-span-9 bg-[#f7f3ec] overflow-y-auto min-h-0 h-full custom-scrollbar">
       <div className="mx-auto max-w-[1500px] px-6 py-8 md:px-8 md:py-10 space-y-8">
         <div className="rounded-[28px] border border-editorial-border/80 bg-editorial-bg/90 shadow-[0_24px_80px_rgba(26,26,26,0.06)] backdrop-blur">
           <div className="flex flex-col gap-5 border-b border-editorial-border px-6 py-5 lg:flex-row lg:items-center lg:justify-between">

@@ -97,7 +97,7 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly, onCancelPipeline
   };
 
   return (
-    <section className="col-span-1 md:col-span-3 border-r border-editorial-border p-8 flex flex-col gap-8 bg-editorial-bg/50 overflow-y-auto max-h-[calc(100vh-140px)] custom-scrollbar">
+    <section className="col-span-1 md:col-span-3 border-r border-editorial-border p-8 flex flex-col gap-8 bg-editorial-bg/50 overflow-y-auto min-h-0 h-full custom-scrollbar">
       <div className="space-y-10">
         {/* Language Pair */}
         <div>
