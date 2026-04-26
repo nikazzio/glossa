@@ -37,7 +37,7 @@ describe('projectStore', () => {
     });
 
     useUiStore.setState({
-      viewMode: 'sandbox',
+      viewMode: 'document',
       documentLayout: 'auto',
       selectedChunkId: null,
       showSettings: false,
@@ -152,7 +152,7 @@ describe('projectStore', () => {
     await useProjectStore.getState().openProject('proj-empty');
 
     expect(useChunksStore.getState().chunks).toEqual([]);
-    expect(useUiStore.getState().viewMode).toBe('sandbox');
+    expect(useUiStore.getState().viewMode).toBe('document');
   });
 
   it('saves current project with chunk data and current view mode', async () => {
