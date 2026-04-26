@@ -6,6 +6,7 @@ import { SettingsModal } from './components/settings';
 import { ProjectPanel } from './components/projects';
 import { ErrorBoundary, ConfirmDialog } from './components/common';
 import { usePipeline } from './hooks/usePipeline';
+import { useProjectAutosave } from './hooks/useProjectAutosave';
 import { useUiStore } from './stores/uiStore';
 import { Toaster } from 'sonner';
 
@@ -17,6 +18,7 @@ export default function App() {
     auditSingleChunk,
     cancelPipeline,
   } = usePipeline();
+  useProjectAutosave();
   const viewMode = useUiStore((state) => state.viewMode);
 
   return (
