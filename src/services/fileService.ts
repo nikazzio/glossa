@@ -44,13 +44,6 @@ async function readImportedText(path: string): Promise<string> {
   return await readTextFile(path);
 }
 
-function extension(path: string): string {
-  const normalized = path.replace(/\\/g, '/');
-  const name = normalized.split('/').pop() ?? normalized;
-  const dot = name.lastIndexOf('.');
-  return dot >= 0 ? name.slice(dot + 1).toLowerCase() : '';
-}
-
 // ── Export ────────────────────────────────────────────────────────────
 
 export async function exportTranslation(
@@ -125,7 +118,17 @@ function buildMarkdown(chunks: TranslationChunk[]): string {
   return lines.join('\n');
 }
 
-function basename(path: string): string {
+function fileName(path: string): string {
   const normalized = path.replace(/\\/g, '/');
   return normalized.split('/').pop() || normalized;
+}
+
+function basename(path: string): string {
+  return fileName(path);
+}
+
+function extension(path: string): string {
+  const name = fileName(path);
+  const dot = name.lastIndexOf('.');
+  return dot >= 0 ? name.slice(dot + 1).toLowerCase() : '';
 }

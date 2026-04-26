@@ -6,14 +6,22 @@ use quick_xml::Reader;
 
 #[tauri::command]
 pub async fn extract_docx_text(path: String) -> Result<String, String> {
-    let bytes = fs::read(&path).map_err(|e| format!("Failed to read file: {}", e))?;
-    extract_docx_text_from_bytes(&bytes)
+    tauri::async_runtime::spawn_blocking(move || {
+        let bytes = fs::read(&path).map_err(|e| format!("Failed to read file: {}", e))?;
+        extract_docx_text_from_bytes(&bytes)
+    })
+    .await
+    .map_err(|e| format!("Document extraction task failed: {}", e))?
 }
 
 #[tauri::command]
 pub async fn extract_pdf_text(path: String) -> Result<String, String> {
-    let bytes = fs::read(&path).map_err(|e| format!("Failed to read file: {}", e))?;
-    extract_pdf_text_from_bytes(&bytes)
+    tauri::async_runtime::spawn_blocking(move || {
+        let bytes = fs::read(&path).map_err(|e| format!("Failed to read file: {}", e))?;
+        extract_pdf_text_from_bytes(&bytes)
+    })
+    .await
+    .map_err(|e| format!("Document extraction task failed: {}", e))?
 }
 
 pub fn extract_docx_text_from_bytes(bytes: &[u8]) -> Result<String, String> {
@@ -62,9 +70,11 @@ fn extract_text_from_document_xml(xml: &str) -> Result<String, String> {
             }
             Ok(Event::Text(event)) => {
                 if inside_text {
-                    let text = event
-                        .unescape()
+                    let decoded = event
+                        .decode()
                         .map_err(|e| format!("Failed to decode docx text: {}", e))?;
+                    let text = quick_xml::escape::unescape(&decoded)
+                        .map_err(|e| format!("Failed to unescape docx text: {}", e))?;
                     current.push_str(&text);
                 }
             }
