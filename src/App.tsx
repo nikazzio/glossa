@@ -37,7 +37,6 @@ export default function App() {
             <DocumentView
               onRetranslateChunk={runSingleChunk}
               onReauditChunk={auditSingleChunk}
-              onRunAuditOnly={runAuditOnly}
             />
             <InsightsDrawer onReauditChunk={auditSingleChunk} />
           </main>

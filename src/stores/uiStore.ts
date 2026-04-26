@@ -43,7 +43,12 @@ export const useUiStore = create<UiState>((set) => ({
   ollamaModels: [],
   ollamaStatus: 'unknown',
 
-  setViewMode: (mode) => set({ viewMode: mode }),
+  setViewMode: (mode) =>
+    set({
+      viewMode: mode,
+      showConfigDrawer: false,
+      showInsightsDrawer: false,
+    }),
   setDocumentLayout: (layout) => set({ documentLayout: layout }),
   setSelectedChunkId: (chunkId) => set({ selectedChunkId: chunkId }),
   setShowSettings: (show) =>

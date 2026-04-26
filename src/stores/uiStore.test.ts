@@ -63,4 +63,19 @@ describe('uiStore drawer mutual exclusion', () => {
     expect(state.showConfigDrawer).toBe(false);
     expect(state.showSettings).toBe(true);
   });
+
+  it('changing view mode closes document drawers', () => {
+    useUiStore.setState({
+      viewMode: 'document',
+      showConfigDrawer: true,
+      showInsightsDrawer: true,
+    });
+
+    useUiStore.getState().setViewMode('sandbox');
+
+    const state = useUiStore.getState();
+    expect(state.viewMode).toBe('sandbox');
+    expect(state.showConfigDrawer).toBe(false);
+    expect(state.showInsightsDrawer).toBe(false);
+  });
 });

@@ -7,14 +7,13 @@ import {
   ScanLine,
   Scissors,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
 import { confirm } from '../../stores/confirmStore';
 import {
-  calculateCompositeQuality,
   findBestSplitIndex,
   indexPad,
   qualityLabelKey,
@@ -27,7 +26,6 @@ import { useFocusTrap } from '../../hooks/useFocusTrap';
 interface DocumentViewProps {
   onRetranslateChunk: (chunkId: string) => void;
   onReauditChunk: (chunkId: string) => void;
-  onRunAuditOnly: () => void;
 }
 
 const QUALITY_TONE_COLOR: Record<ReturnType<typeof qualityTone>, string> = {
@@ -39,7 +37,6 @@ const QUALITY_TONE_COLOR: Record<ReturnType<typeof qualityTone>, string> = {
 export function DocumentView({
   onRetranslateChunk,
   onReauditChunk,
-  onRunAuditOnly,
 }: DocumentViewProps) {
   const { t } = useTranslation();
   const { config } = usePipelineStore();
@@ -85,8 +82,6 @@ export function DocumentView({
     ? t(qualityLabelKey(currentChunk.judgeResult.rating))
     : t('audit.ratingNone');
 
-  const compositeQuality = useMemo(() => calculateCompositeQuality(chunks), [chunks]);
-  const completedCount = chunks.filter((chunk) => chunk.status === 'completed').length;
 
   useEffect(() => {
     if (!chunks.length) return;
@@ -134,26 +129,9 @@ export function DocumentView({
   const nextChunk = chunks[currentIndex + 1];
   const chunkTone = qualityTone(currentChunk.judgeResult.rating);
 
-  const sourceWords = chunks.reduce(
-    (acc, chunk) => acc + countWords(chunk.originalText),
-    0,
-  );
-  const translatedWords = chunks.reduce(
-    (acc, chunk) => acc + countWords(chunk.currentDraft || ''),
-    0,
-  );
-
   return (
     <section className="w-full bg-[#f7f3ec] overflow-y-auto min-h-0 h-full custom-scrollbar">
       <div className="mx-auto max-w-[1500px] px-6 py-6 md:px-8 md:py-8 space-y-6">
-        <ProjectInfoPanel
-          chunkCount={chunks.length}
-          completedCount={completedCount}
-          sourceWords={sourceWords}
-          translatedWords={translatedWords}
-          composite={compositeQuality ? t(qualityLabelKey(compositeQuality)) : null}
-        />
-
         <div className="rounded-[24px] border border-editorial-border bg-editorial-bg/90 px-6 py-4 shadow-[0_16px_50px_rgba(26,26,26,0.05)]">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex items-center gap-3">
@@ -381,8 +359,8 @@ function SplitChunkDialog({
       aria-describedby="manual-split-hint"
       ref={trapRef}
     >
-      <div className="w-full max-w-5xl rounded-[28px] border border-editorial-border bg-editorial-bg p-6 shadow-[0_24px_80px_rgba(26,26,26,0.2)] md:p-8">
-        <div className="border-b border-editorial-border pb-4">
+      <div className="flex max-h-[90vh] w-full max-w-5xl flex-col rounded-[28px] border border-editorial-border bg-editorial-bg shadow-[0_24px_80px_rgba(26,26,26,0.2)]">
+        <div className="shrink-0 border-b border-editorial-border px-6 py-5 md:px-8 md:py-6">
           <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
             {t('document.manualSplitLabel')}
           </div>
@@ -400,42 +378,44 @@ function SplitChunkDialog({
           </p>
         </div>
 
-        <div className="mt-6 grid gap-6 xl:grid-cols-2">
-          <div className="rounded-[22px] border border-editorial-border bg-editorial-textbox/35 p-5">
-            <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
-              {t('pipeline.originalSource')}
+        <div className="flex-1 overflow-y-auto px-6 py-6 md:px-8 custom-scrollbar">
+          <div className="grid gap-6 xl:grid-cols-2">
+            <div className="rounded-[22px] border border-editorial-border bg-editorial-textbox/35 p-5">
+              <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
+                {t('pipeline.originalSource')}
+              </div>
+              <textarea
+                value={text}
+                readOnly
+                onClick={(event) => onSplitAtChange(event.currentTarget.selectionStart)}
+                onKeyUp={(event) => onSplitAtChange(event.currentTarget.selectionStart)}
+                onSelect={(event) => onSplitAtChange(event.currentTarget.selectionStart)}
+                className="min-h-[260px] w-full resize-none bg-transparent text-sm leading-7 text-editorial-ink outline-none"
+              />
             </div>
-            <textarea
-              value={text}
-              readOnly
-              onClick={(event) => onSplitAtChange(event.currentTarget.selectionStart)}
-              onKeyUp={(event) => onSplitAtChange(event.currentTarget.selectionStart)}
-              onSelect={(event) => onSplitAtChange(event.currentTarget.selectionStart)}
-              className="min-h-[260px] w-full resize-none bg-transparent text-sm leading-7 text-editorial-ink outline-none"
-            />
-          </div>
 
-          <div className="space-y-4">
-            <div className="rounded-[22px] border border-editorial-border bg-editorial-bg p-5">
-              <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
-                {t('document.splitPreviewFirst')}
+            <div className="space-y-4">
+              <div className="rounded-[22px] border border-editorial-border bg-editorial-bg p-5">
+                <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
+                  {t('document.splitPreviewFirst')}
+                </div>
+                <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-editorial-ink">
+                  {preview.beforeText || '—'}
+                </p>
               </div>
-              <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-editorial-ink">
-                {preview.beforeText || '—'}
-              </p>
-            </div>
-            <div className="rounded-[22px] border border-editorial-border bg-editorial-bg p-5">
-              <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
-                {t('document.splitPreviewSecond')}
+              <div className="rounded-[22px] border border-editorial-border bg-editorial-bg p-5">
+                <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
+                  {t('document.splitPreviewSecond')}
+                </div>
+                <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-editorial-ink">
+                  {preview.afterText || '—'}
+                </p>
               </div>
-              <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-editorial-ink">
-                {preview.afterText || '—'}
-              </p>
             </div>
           </div>
         </div>
 
-        <div className="mt-6 flex flex-col-reverse gap-3 border-t border-editorial-border pt-5 sm:flex-row sm:justify-end">
+        <div className="shrink-0 flex flex-col-reverse gap-3 border-t border-editorial-border px-6 py-4 md:px-8 sm:flex-row sm:justify-end">
           <button
             type="button"
             onClick={onCancel}
@@ -461,72 +441,4 @@ function truncateChunk(text: string) {
   const normalized = text.replace(/\s+/g, ' ').trim();
   if (normalized.length <= 58) return normalized;
   return `${normalized.slice(0, 55)}...`;
-}
-
-function countWords(text: string): number {
-  return text.trim().split(/\s+/).filter(Boolean).length;
-}
-
-interface ProjectInfoPanelProps {
-  chunkCount: number;
-  completedCount: number;
-  sourceWords: number;
-  translatedWords: number;
-  composite: string | null;
-}
-
-function ProjectInfoPanel({
-  chunkCount,
-  completedCount,
-  sourceWords,
-  translatedWords,
-  composite,
-}: ProjectInfoPanelProps) {
-  const { t } = useTranslation();
-
-  const items: Array<{ key: string; label: string; value: string }> = [
-    {
-      key: 'sourceWords',
-      label: t('document.infoSourceWords'),
-      value: sourceWords.toLocaleString(),
-    },
-    {
-      key: 'translatedWords',
-      label: t('document.infoTranslatedWords'),
-      value: translatedWords.toLocaleString(),
-    },
-    {
-      key: 'chunks',
-      label: t('document.infoChunks'),
-      value: `${completedCount} / ${chunkCount}`,
-    },
-  ];
-
-  if (composite) {
-    items.push({
-      key: 'quality',
-      label: t('document.infoQuality'),
-      value: composite,
-    });
-  }
-
-  return (
-    <section
-      aria-label={t('document.infoLabel')}
-      className="rounded-[24px] border border-editorial-border bg-editorial-bg/90 px-6 py-4 shadow-[0_16px_50px_rgba(26,26,26,0.05)]"
-    >
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
-        {items.map((item) => (
-          <div key={item.key} className="flex flex-col gap-1">
-            <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
-              {item.label}
-            </span>
-            <span className="font-display text-2xl italic text-editorial-ink">
-              {item.value}
-            </span>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
 }
