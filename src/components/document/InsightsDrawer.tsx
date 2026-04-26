@@ -1,6 +1,7 @@
 import { AlertTriangle, RefreshCcw, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
-import { Drawer, ProcessingLine } from '../common';
+import { ProcessingLine } from '../common';
 import { useUiStore } from '../../stores/uiStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
@@ -10,6 +11,8 @@ import type { TranslationChunk } from '../../types';
 interface InsightsDrawerProps {
   onReauditChunk: (chunkId: string) => void;
 }
+
+const PANEL_WIDTH = 480;
 
 const QUALITY_TONE_COLOR: Record<ReturnType<typeof qualityTone>, string> = {
   strong: 'text-editorial-success',
@@ -33,77 +36,80 @@ export function InsightsDrawer({ onReauditChunk }: InsightsDrawerProps) {
     chunks.find((chunk) => chunk.id === selectedChunkId) ?? chunks[0] ?? null;
 
   return (
-    <Drawer
-      open={showInsightsDrawer}
-      side="right"
-      onClose={() => setShowInsightsDrawer(false)}
-      ariaLabelledBy="insights-drawer-title"
-      ariaDescribedBy="insights-drawer-hint"
-    >
-      <div className="flex items-start justify-between gap-3 border-b border-editorial-border px-6 py-4">
-        <div className="min-w-0">
-          <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-            {t('document.insightsDrawerTitle')}
-          </div>
-          <h2
-            id="insights-drawer-title"
-            className="mt-1 font-display text-2xl italic tracking-tight text-editorial-ink"
-          >
-            {t('document.insightsDrawerTitle')}
-          </h2>
-          <p
-            id="insights-drawer-hint"
-            className="mt-1 text-xs leading-relaxed text-editorial-muted"
-          >
-            {t('document.insightsDrawerHint')}
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setShowInsightsDrawer(false)}
-          className="shrink-0 rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-          aria-label={t('header.closeDrawer')}
+    <AnimatePresence initial={false}>
+      {showInsightsDrawer && (
+        <motion.aside
+          key="insights-panel"
+          initial={{ width: 0, opacity: 0 }}
+          animate={{ width: PANEL_WIDTH, opacity: 1 }}
+          exit={{ width: 0, opacity: 0 }}
+          transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+          className="flex h-full overflow-hidden border-l border-editorial-border bg-editorial-bg/95"
+          role="region"
+          aria-label={t('document.insightsDrawerTitle')}
         >
-          <X size={16} />
-        </button>
-      </div>
+          <div
+            className="flex h-full flex-col"
+            style={{ width: PANEL_WIDTH }}
+          >
+            <div className="flex items-start justify-between gap-3 border-b border-editorial-border px-6 py-4">
+              <div className="min-w-0">
+                <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+                  {t('document.insightsDrawerTitle')}
+                </div>
+                <p className="mt-1 text-xs leading-relaxed text-editorial-muted">
+                  {t('document.insightsDrawerHint')}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowInsightsDrawer(false)}
+                className="shrink-0 rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                aria-label={t('header.closeDrawer')}
+              >
+                <X size={16} />
+              </button>
+            </div>
 
-      <div
-        role="tablist"
-        aria-label={t('document.insightsDrawerTitle')}
-        className="flex gap-1 border-b border-editorial-border bg-editorial-bg/60 px-4 py-2"
-      >
-        <TabButton
-          active={insightsDrawerTab === 'index'}
-          onClick={() => setInsightsDrawerTab('index')}
-          label={t('document.insightsTabIndex')}
-          controls="insights-tab-index"
-        />
-        <TabButton
-          active={insightsDrawerTab === 'audit'}
-          onClick={() => setInsightsDrawerTab('audit')}
-          label={t('document.insightsTabAudit')}
-          controls="insights-tab-audit"
-        />
-      </div>
+            <div
+              role="tablist"
+              aria-label={t('document.insightsDrawerTitle')}
+              className="flex gap-1 border-b border-editorial-border bg-editorial-bg/60 px-4 py-2"
+            >
+              <TabButton
+                active={insightsDrawerTab === 'index'}
+                onClick={() => setInsightsDrawerTab('index')}
+                label={t('document.insightsTabIndex')}
+                controls="insights-tab-index"
+              />
+              <TabButton
+                active={insightsDrawerTab === 'audit'}
+                onClick={() => setInsightsDrawerTab('audit')}
+                label={t('document.insightsTabAudit')}
+                controls="insights-tab-audit"
+              />
+            </div>
 
-      <div className="flex flex-1 flex-col overflow-y-auto bg-editorial-bg/40 custom-scrollbar">
-        {insightsDrawerTab === 'index' ? (
-          <IndexTab
-            chunks={chunks}
-            currentChunkId={currentChunk?.id ?? null}
-            onSelect={(id) => setSelectedChunkId(id)}
-          />
-        ) : (
-          <AuditTab
-            currentChunk={currentChunk}
-            stages={stages}
-            isProcessing={isProcessing}
-            onReauditChunk={onReauditChunk}
-          />
-        )}
-      </div>
-    </Drawer>
+            <div className="flex flex-1 flex-col overflow-y-auto bg-editorial-bg/40 custom-scrollbar">
+              {insightsDrawerTab === 'index' ? (
+                <IndexTab
+                  chunks={chunks}
+                  currentChunkId={currentChunk?.id ?? null}
+                  onSelect={(id) => setSelectedChunkId(id)}
+                />
+              ) : (
+                <AuditTab
+                  currentChunk={currentChunk}
+                  stages={stages}
+                  isProcessing={isProcessing}
+                  onReauditChunk={onReauditChunk}
+                />
+              )}
+            </div>
+          </div>
+        </motion.aside>
+      )}
+    </AnimatePresence>
   );
 }
 

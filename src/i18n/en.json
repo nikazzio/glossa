@@ -11,7 +11,9 @@
     "readerLayout": "Reader layout",
     "openConfig": "Open pipeline configuration",
     "openInsights": "Open insights panel",
-    "closeDrawer": "Close panel"
+    "closeDrawer": "Close panel",
+    "enterSandbox": "Switch to Sandbox",
+    "exitSandbox": "Exit Sandbox"
   },
   "pipeline": {
     "globalSetup": "Global Setup",
@@ -25,6 +27,8 @@
     "source": "Source",
     "target": "Target",
     "beginPipeline": "Begin Pipeline",
+    "run": "Run",
+    "audit": "Audit",
     "executing": "Executing...",
     "stopPipeline": "Request Stop",
     "stopping": "Stopping...",
@@ -231,6 +235,12 @@
     "compositeQuality": "Composite quality: {{quality}}",
     "indexLabel": "Chunk Index",
     "indexHint": "Jump directly to any chunk.",
+    "navigation": "Chunk navigation",
+    "infoLabel": "Project summary",
+    "infoSourceWords": "Source words",
+    "infoTranslatedWords": "Translated words",
+    "infoChunks": "Completed chunks",
+    "infoQuality": "Composite quality",
     "openInReader": "Open in document reader",
     "manualSplitLabel": "Manual Split",
     "manualSplitTitle": "Choose where this chunk should break",

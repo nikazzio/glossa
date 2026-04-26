@@ -134,92 +134,38 @@ export function DocumentView({
   const nextChunk = chunks[currentIndex + 1];
   const chunkTone = qualityTone(currentChunk.judgeResult.rating);
 
+  const sourceWords = chunks.reduce(
+    (acc, chunk) => acc + countWords(chunk.originalText),
+    0,
+  );
+  const translatedWords = chunks.reduce(
+    (acc, chunk) => acc + countWords(chunk.currentDraft || ''),
+    0,
+  );
+
   return (
     <section className="w-full bg-[#f7f3ec] overflow-y-auto min-h-0 h-full custom-scrollbar">
-      <div className="mx-auto max-w-[1500px] px-6 py-8 md:px-8 md:py-10 space-y-8">
-        <div className="rounded-[28px] border border-editorial-border/80 bg-editorial-bg/90 shadow-[0_24px_80px_rgba(26,26,26,0.06)] backdrop-blur">
-          <div className="flex flex-col gap-5 border-b border-editorial-border px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="space-y-2">
-              <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-                {t('document.headerLabel')}
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <h2 className="font-display text-3xl italic tracking-tight text-editorial-ink">
-                  {t('document.readerTitle')}
-                </h2>
-                <span className="rounded-full border border-editorial-border bg-editorial-textbox/60 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
-                  {t('document.chunkCounter', {
-                    current: currentIndex + 1,
-                    total: chunks.length,
-                  })}
-                </span>
-                <span className={`text-sm font-medium ${QUALITY_TONE_COLOR[chunkTone]}`}>
-                  {currentQualityLabel}
-                </span>
-              </div>
-            </div>
+      <div className="mx-auto max-w-[1500px] px-6 py-6 md:px-8 md:py-8 space-y-6">
+        <ProjectInfoPanel
+          chunkCount={chunks.length}
+          completedCount={completedCount}
+          sourceWords={sourceWords}
+          translatedWords={translatedWords}
+          composite={compositeQuality ? t(qualityLabelKey(compositeQuality)) : null}
+        />
 
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={onRunAuditOnly}
-                disabled={isProcessing || chunks.length === 0}
-                className="rounded-full border border-editorial-border bg-editorial-bg px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink disabled:opacity-40"
-              >
-                <ScanLine size={12} className="inline mr-1" />
-                {t('audit.reEvaluate')}
-              </button>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3 px-6 py-4 text-xs text-editorial-muted">
-            <span>{t('document.chunksReady', { count: chunks.length })}</span>
-            <span>•</span>
-            <span>{t('document.completedCount', { count: completedCount })}</span>
-            {compositeQuality && (
-              <>
-                <span>•</span>
-                <span>{t('document.compositeQuality', { quality: t(qualityLabelKey(compositeQuality)) })}</span>
-              </>
-            )}
-            <span>•</span>
-            <span>
-              {t('document.layoutResolved', {
-                layout: isBook ? t('document.layoutBook') : t('document.layoutStandard'),
-              })}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-4 rounded-[24px] border border-editorial-border bg-editorial-bg/90 px-6 py-5 shadow-[0_16px_50px_rgba(26,26,26,0.05)]">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={() => prevChunk && setSelectedChunkId(prevChunk.id)}
-                disabled={!prevChunk}
-                className="rounded-full border border-editorial-border px-3 py-2 text-editorial-muted transition-colors hover:text-editorial-ink disabled:opacity-30"
-                aria-label={t('document.previousChunk')}
-              >
-                <ChevronLeft size={16} />
-              </button>
-              <button
-                type="button"
-                onClick={() => nextChunk && setSelectedChunkId(nextChunk.id)}
-                disabled={!nextChunk}
-                className="rounded-full border border-editorial-border px-3 py-2 text-editorial-muted transition-colors hover:text-editorial-ink disabled:opacity-30"
-                aria-label={t('document.nextChunk')}
-              >
-                <ChevronRight size={16} />
-              </button>
-              <div>
-                <div className="font-display text-2xl italic text-editorial-accent">
-                  {t('pipeline.unit')} {indexPad(currentIndex + 1)}
-                </div>
-                <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
-                  {t(`pipeline.chunkStatus.${currentChunk.status}`)}
-                </div>
-              </div>
+        <div className="rounded-[24px] border border-editorial-border bg-editorial-bg/90 px-6 py-4 shadow-[0_16px_50px_rgba(26,26,26,0.05)]">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex items-center gap-3">
+              <span className="font-display text-xl italic text-editorial-accent">
+                {t('pipeline.unit')} {indexPad(currentIndex + 1)}
+              </span>
+              <span className={`text-sm font-medium ${QUALITY_TONE_COLOR[chunkTone]}`}>
+                {currentQualityLabel}
+              </span>
+              <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
+                {t(`pipeline.chunkStatus.${currentChunk.status}`)}
+              </span>
             </div>
 
             <div
@@ -231,7 +177,7 @@ export function DocumentView({
                 type="button"
                 onClick={() => onRetranslateChunk(currentChunk.id)}
                 disabled={isProcessing || currentChunk.originalText.trim().length === 0}
-                className="rounded-full border border-editorial-border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink disabled:opacity-30"
+                className="rounded-full border border-editorial-border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted transition-colors hover:text-editorial-ink disabled:opacity-30"
               >
                 <RotateCcw size={12} className="inline mr-1" />
                 {t('pipeline.retranslateChunk')}
@@ -240,7 +186,7 @@ export function DocumentView({
                 type="button"
                 onClick={() => onReauditChunk(currentChunk.id)}
                 disabled={isProcessing || !currentChunk.currentDraft}
-                className="rounded-full border border-editorial-border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink disabled:opacity-30"
+                className="rounded-full border border-editorial-border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted transition-colors hover:text-editorial-ink disabled:opacity-30"
               >
                 <ScanLine size={12} className="inline mr-1" />
                 {t('pipeline.reauditChunk')}
@@ -250,7 +196,7 @@ export function DocumentView({
                   type="button"
                   onClick={() => handleUnlockSource(currentChunk.id)}
                   disabled={isProcessing}
-                  className="rounded-full border border-editorial-border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink disabled:opacity-30"
+                  className="rounded-full border border-editorial-border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted transition-colors hover:text-editorial-ink disabled:opacity-30"
                 >
                   <Pencil size={12} className="inline mr-1" />
                   {t('pipeline.unlockSource')}
@@ -261,7 +207,7 @@ export function DocumentView({
                     type="button"
                     onClick={() => openSplitDialog(currentChunk.id, currentChunk.originalText)}
                     disabled={isProcessing || currentChunk.originalText.trim().length < 2}
-                    className="rounded-full border border-editorial-border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink disabled:opacity-30"
+                    className="rounded-full border border-editorial-border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted transition-colors hover:text-editorial-ink disabled:opacity-30"
                   >
                     <Scissors size={12} className="inline mr-1" />
                     {t('pipeline.splitChunk')}
@@ -275,7 +221,7 @@ export function DocumentView({
                       chunks[currentIndex + 1]?.status === 'completed' ||
                       chunks[currentIndex + 1]?.status === 'processing'
                     }
-                    className="rounded-full border border-editorial-border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink disabled:opacity-30"
+                    className="rounded-full border border-editorial-border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted transition-colors hover:text-editorial-ink disabled:opacity-30"
                   >
                     <Copy size={12} className="inline mr-1" />
                     {t('pipeline.mergeNext')}
@@ -285,7 +231,7 @@ export function DocumentView({
             </div>
           </div>
 
-          <div className="flex gap-3">
+          <div className="mt-3 flex gap-3">
             {config.stages
               .filter((stage) => stage.enabled)
               .map((stage, stageIndex) => (
@@ -328,6 +274,37 @@ export function DocumentView({
           </DocumentPage>
         </div>
 
+        <nav
+          aria-label={t('document.navigation')}
+          className="flex items-center justify-between gap-4 rounded-[24px] border border-editorial-border bg-editorial-bg/90 px-6 py-4 shadow-[0_16px_50px_rgba(26,26,26,0.05)]"
+        >
+          <button
+            type="button"
+            onClick={() => prevChunk && setSelectedChunkId(prevChunk.id)}
+            disabled={!prevChunk}
+            className="flex items-center gap-2 rounded-full border border-editorial-border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink disabled:opacity-30"
+            aria-label={t('document.previousChunk')}
+          >
+            <ChevronLeft size={14} />
+            {t('document.previousChunk')}
+          </button>
+          <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-editorial-muted">
+            {t('document.chunkCounter', {
+              current: currentIndex + 1,
+              total: chunks.length,
+            })}
+          </div>
+          <button
+            type="button"
+            onClick={() => nextChunk && setSelectedChunkId(nextChunk.id)}
+            disabled={!nextChunk}
+            className="flex items-center gap-2 rounded-full border border-editorial-border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink disabled:opacity-30"
+            aria-label={t('document.nextChunk')}
+          >
+            {t('document.nextChunk')}
+            <ChevronRight size={14} />
+          </button>
+        </nav>
       </div>
       {splitDraft && currentChunk.id === splitDraft.chunkId && (
         <SplitChunkDialog
@@ -484,4 +461,72 @@ function truncateChunk(text: string) {
   const normalized = text.replace(/\s+/g, ' ').trim();
   if (normalized.length <= 58) return normalized;
   return `${normalized.slice(0, 55)}...`;
+}
+
+function countWords(text: string): number {
+  return text.trim().split(/\s+/).filter(Boolean).length;
+}
+
+interface ProjectInfoPanelProps {
+  chunkCount: number;
+  completedCount: number;
+  sourceWords: number;
+  translatedWords: number;
+  composite: string | null;
+}
+
+function ProjectInfoPanel({
+  chunkCount,
+  completedCount,
+  sourceWords,
+  translatedWords,
+  composite,
+}: ProjectInfoPanelProps) {
+  const { t } = useTranslation();
+
+  const items: Array<{ key: string; label: string; value: string }> = [
+    {
+      key: 'sourceWords',
+      label: t('document.infoSourceWords'),
+      value: sourceWords.toLocaleString(),
+    },
+    {
+      key: 'translatedWords',
+      label: t('document.infoTranslatedWords'),
+      value: translatedWords.toLocaleString(),
+    },
+    {
+      key: 'chunks',
+      label: t('document.infoChunks'),
+      value: `${completedCount} / ${chunkCount}`,
+    },
+  ];
+
+  if (composite) {
+    items.push({
+      key: 'quality',
+      label: t('document.infoQuality'),
+      value: composite,
+    });
+  }
+
+  return (
+    <section
+      aria-label={t('document.infoLabel')}
+      className="rounded-[24px] border border-editorial-border bg-editorial-bg/90 px-6 py-4 shadow-[0_16px_50px_rgba(26,26,26,0.05)]"
+    >
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
+        {items.map((item) => (
+          <div key={item.key} className="flex flex-col gap-1">
+            <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
+              {item.label}
+            </span>
+            <span className="font-display text-2xl italic text-editorial-ink">
+              {item.value}
+            </span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
 }

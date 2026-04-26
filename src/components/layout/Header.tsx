@@ -1,13 +1,16 @@
 import {
   BookOpen,
+  Beaker,
+  Columns2,
   Download,
   FolderOpen,
   Globe,
   HelpCircle,
+  PanelRight,
   Save,
   Settings,
   SlidersHorizontal,
-  PanelRight,
+  Sparkles,
   Upload,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -19,6 +22,7 @@ import { useProjectStore } from '../../stores/projectStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
 import { ImportPreviewDialog } from '../document';
+import { PipelineActions } from '../pipeline';
 import { importTextFile, exportTranslation, exportBilingual } from '../../services/fileService';
 import { HelpGuide } from '../help';
 
@@ -29,7 +33,13 @@ interface PendingImport {
   targetChunkCount: number;
 }
 
-export function Header() {
+interface HeaderProps {
+  onRunPipeline?: () => void;
+  onRunAuditOnly?: () => void;
+  onCancelPipeline?: () => void;
+}
+
+export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: HeaderProps = {}) {
   const { config, setConfig } = usePipelineStore();
   const { chunks, isProcessing, loadDocument } = useChunksStore();
   const {
@@ -267,6 +277,21 @@ export function Header() {
               {i18n.language.toUpperCase()}
             </button>
             <button
+              type="button"
+              onClick={() => setViewMode(viewMode === 'sandbox' ? 'document' : 'sandbox')}
+              disabled={isProcessing}
+              title={t(viewMode === 'sandbox' ? 'header.exitSandbox' : 'header.enterSandbox')}
+              aria-label={t(viewMode === 'sandbox' ? 'header.exitSandbox' : 'header.enterSandbox')}
+              aria-pressed={viewMode === 'sandbox'}
+              className={`rounded-full border border-editorial-border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed ${
+                viewMode === 'sandbox'
+                  ? 'bg-editorial-ink text-white'
+                  : 'text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
+              }`}
+            >
+              <Beaker size={16} />
+            </button>
+            <button
               onClick={() => setShowSettings(true)}
               title={settingsLabel}
               className="rounded-full border border-editorial-border p-2 transition-colors hover:bg-editorial-ink hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
@@ -285,86 +310,46 @@ export function Header() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-              {t('header.workspaceLabel')}
-            </span>
-            <div className="flex items-center rounded-full border border-editorial-border bg-editorial-bg p-1 shadow-sm">
-              <button
-                type="button"
-                onClick={() => setViewMode('sandbox')}
+        {viewMode === 'document' && (
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div
+              role="radiogroup"
+              aria-label={t('header.readerLayout')}
+              className="flex items-center rounded-full border border-editorial-border bg-editorial-bg p-1 shadow-sm"
+            >
+              <LayoutPill
+                active={documentLayout === 'auto'}
+                onClick={() => setDocumentLayout('auto')}
                 disabled={isProcessing}
-                className={`rounded-full px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] transition-colors ${
-                  viewMode === 'sandbox'
-                    ? 'bg-editorial-ink text-white'
-                    : 'text-editorial-muted hover:text-editorial-ink'
-                }`}
-              >
-                {t('header.sandbox')}
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('document')}
+                label={t('document.layoutAuto')}
+                icon={<Sparkles size={12} />}
+              />
+              <LayoutPill
+                active={documentLayout === 'standard'}
+                onClick={() => setDocumentLayout('standard')}
                 disabled={isProcessing}
-                className={`rounded-full px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] transition-colors ${
-                  viewMode === 'document'
-                    ? 'bg-editorial-ink text-white'
-                    : 'text-editorial-muted hover:text-editorial-ink'
-                }`}
-              >
-                <BookOpen size={12} className="mr-1 inline" />
-                {t('header.document')}
-              </button>
+                label={t('document.layoutStandard')}
+                icon={<Columns2 size={12} />}
+              />
+              <LayoutPill
+                active={documentLayout === 'book'}
+                onClick={() => setDocumentLayout('book')}
+                disabled={isProcessing}
+                label={t('document.layoutBook')}
+                icon={<BookOpen size={12} />}
+              />
             </div>
-          </div>
 
-          {viewMode === 'document' && (
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-                {t('header.readerLayout')}
-              </span>
-              <div className="flex items-center rounded-full border border-editorial-border bg-editorial-bg p-1 shadow-sm">
-                <button
-                  type="button"
-                  onClick={() => setDocumentLayout('auto')}
-                  disabled={isProcessing}
-                  className={`rounded-full px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] transition-colors ${
-                    documentLayout === 'auto'
-                      ? 'bg-editorial-ink text-white'
-                      : 'text-editorial-muted hover:text-editorial-ink'
-                  }`}
-                >
-                  {t('document.layoutAuto')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDocumentLayout('standard')}
-                  disabled={isProcessing}
-                  className={`rounded-full px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] transition-colors ${
-                    documentLayout === 'standard'
-                      ? 'bg-editorial-ink text-white'
-                      : 'text-editorial-muted hover:text-editorial-ink'
-                  }`}
-                >
-                  {t('document.layoutStandard')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDocumentLayout('book')}
-                  disabled={isProcessing}
-                  className={`rounded-full px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] transition-colors ${
-                    documentLayout === 'book'
-                      ? 'bg-editorial-ink text-white'
-                      : 'text-editorial-muted hover:text-editorial-ink'
-                  }`}
-                >
-                  {t('document.layoutBook')}
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+            {onRunPipeline && onRunAuditOnly && onCancelPipeline && (
+              <PipelineActions
+                onRunPipeline={onRunPipeline}
+                onRunAuditOnly={onRunAuditOnly}
+                onCancelPipeline={onCancelPipeline}
+                variant="compact"
+              />
+            )}
+          </div>
+        )}
       </div>
 
       <HelpGuide open={showHelp} onClose={() => setShowHelp(false)} />
@@ -389,5 +374,34 @@ export function Header() {
         />
       )}
     </header>
+  );
+}
+
+interface LayoutPillProps {
+  active: boolean;
+  onClick: () => void;
+  disabled?: boolean;
+  label: string;
+  icon: React.ReactNode;
+}
+
+function LayoutPill({ active, onClick, disabled, label, icon }: LayoutPillProps) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={active}
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      disabled={disabled}
+      className={`flex items-center justify-center rounded-full p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 ${
+        active
+          ? 'bg-editorial-ink text-white'
+          : 'text-editorial-muted hover:text-editorial-ink'
+      }`}
+    >
+      {icon}
+    </button>
   );
 }

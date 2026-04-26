@@ -15,6 +15,7 @@ interface PipelineConfigProps {
   onRunAuditOnly: () => void;
   onCancelPipeline: () => void;
   className?: string;
+  showActions?: boolean;
 }
 
 const DEFAULT_PIPELINE_CONFIG_CLASSNAME =
@@ -26,7 +27,13 @@ function useJudgeModelOptions(provider: ModelProvider): string[] {
   return MODEL_OPTIONS[provider] || [];
 }
 
-export function PipelineConfig({ onRunPipeline, onRunAuditOnly, onCancelPipeline, className }: PipelineConfigProps) {
+export function PipelineConfig({
+  onRunPipeline,
+  onRunAuditOnly,
+  onCancelPipeline,
+  className,
+  showActions = true,
+}: PipelineConfigProps) {
   const {
     config,
     setConfig,
@@ -324,57 +331,58 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly, onCancelPipeline
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="mt-10 flex flex-col gap-3 shrink-0">
-        <button
-          type="button"
-          onClick={onRunPipeline}
-          disabled={cannotRun}
-          title={runReason ?? t('pipeline.beginPipeline')}
-          className="bg-editorial-ink text-white px-6 py-4 text-[11px] font-bold uppercase tracking-[2px] transition-all hover:bg-editorial-ink/90 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
-        >
-          {isProcessing ? (
-            <span className="flex items-center justify-center gap-2">
-              <Loader2 className="animate-spin" size={14} />
-              {t('pipeline.executing')}
-            </span>
-          ) : (
-            <span className="flex items-center justify-center gap-2">
-              <Play size={14} fill="currentColor" /> {t('pipeline.beginPipeline')}
-            </span>
+      {showActions && (
+        <div className="mt-10 flex flex-col gap-3 shrink-0">
+          <button
+            type="button"
+            onClick={onRunPipeline}
+            disabled={cannotRun}
+            title={runReason ?? t('pipeline.beginPipeline')}
+            className="bg-editorial-ink text-white px-6 py-4 text-[11px] font-bold uppercase tracking-[2px] transition-all hover:bg-editorial-ink/90 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
+          >
+            {isProcessing ? (
+              <span className="flex items-center justify-center gap-2">
+                <Loader2 className="animate-spin" size={14} />
+                {t('pipeline.executing')}
+              </span>
+            ) : (
+              <span className="flex items-center justify-center gap-2">
+                <Play size={14} fill="currentColor" /> {t('pipeline.beginPipeline')}
+              </span>
+            )}
+          </button>
+          {canRerunAll && (
+            <button
+              type="button"
+              onClick={handleRerunAll}
+              title={t('pipeline.rerunAllHint', { count: completedCount })}
+              className="bg-transparent border border-editorial-accent text-editorial-accent px-6 py-3 text-[11px] font-bold uppercase tracking-[2px] transition-all hover:bg-editorial-accent/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2 flex items-center justify-center gap-2"
+            >
+              <RotateCcw size={13} /> {t('pipeline.rerunAll')}
+            </button>
           )}
-        </button>
-        {canRerunAll && (
           <button
             type="button"
-            onClick={handleRerunAll}
-            title={t('pipeline.rerunAllHint', { count: completedCount })}
-            className="bg-transparent border border-editorial-accent text-editorial-accent px-6 py-3 text-[11px] font-bold uppercase tracking-[2px] transition-all hover:bg-editorial-accent/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2 flex items-center justify-center gap-2"
+            onClick={onRunAuditOnly}
+            disabled={cannotRun}
+            title={runReason ?? t('pipeline.runAuditOnly')}
+            className="bg-transparent border border-editorial-ink text-editorial-ink px-6 py-4 text-[11px] font-bold uppercase tracking-[2px] transition-all hover:bg-editorial-ink/5 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
           >
-            <RotateCcw size={13} /> {t('pipeline.rerunAll')}
+            {t('pipeline.runAuditOnly')}
           </button>
-        )}
-        <button
-          type="button"
-          onClick={onRunAuditOnly}
-          disabled={cannotRun}
-          title={runReason ?? t('pipeline.runAuditOnly')}
-          className="bg-transparent border border-editorial-ink text-editorial-ink px-6 py-4 text-[11px] font-bold uppercase tracking-[2px] transition-all hover:bg-editorial-ink/5 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
-        >
-          {t('pipeline.runAuditOnly')}
-        </button>
-        {isProcessing && (
-          <button
-            type="button"
-            onClick={onCancelPipeline}
-            disabled={cancelRequested}
-            title={cancelRequested ? t('pipeline.stopping') : t('pipeline.stopPipeline')}
-            className="bg-transparent border border-editorial-accent text-editorial-accent px-6 py-4 text-[11px] font-bold uppercase tracking-[2px] transition-all hover:bg-editorial-accent/5 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
-          >
-            {cancelRequested ? t('pipeline.stopping') : t('pipeline.stopPipeline')}
-          </button>
-        )}
-      </div>
+          {isProcessing && (
+            <button
+              type="button"
+              onClick={onCancelPipeline}
+              disabled={cancelRequested}
+              title={cancelRequested ? t('pipeline.stopping') : t('pipeline.stopPipeline')}
+              className="bg-transparent border border-editorial-accent text-editorial-accent px-6 py-4 text-[11px] font-bold uppercase tracking-[2px] transition-all hover:bg-editorial-accent/5 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
+            >
+              {cancelRequested ? t('pipeline.stopping') : t('pipeline.stopPipeline')}
+            </button>
+          )}
+        </div>
+      )}
     </section>
   );
 }

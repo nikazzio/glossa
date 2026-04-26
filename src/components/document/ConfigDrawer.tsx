@@ -58,6 +58,7 @@ export function ConfigDrawer({
         onRunPipeline={onRunPipeline}
         onRunAuditOnly={onRunAuditOnly}
         onCancelPipeline={onCancelPipeline}
+        showActions={false}
         className="flex flex-1 flex-col gap-8 overflow-y-auto bg-editorial-bg/40 p-6 custom-scrollbar"
       />
     </Drawer>
