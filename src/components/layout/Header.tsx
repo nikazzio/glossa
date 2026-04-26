@@ -316,7 +316,7 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
             <div className="flex flex-wrap items-center justify-end gap-3">
               <ActionCluster label={t('header.viewLabel')}>
                 <div
-                  role="radiogroup"
+                  role="group"
                   aria-label={t('header.readerLayout')}
                   className="flex items-center rounded-full border border-editorial-border bg-editorial-bg p-1 shadow-sm"
                 >
