@@ -3,13 +3,20 @@ import { X, AlertCircle, Server, RefreshCw, CheckCircle2, XCircle, HelpCircle } 
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { usePipelineStore } from '../../stores/pipelineStore';
+import { useUiStore } from '../../stores/uiStore';
 import { ApiKeyInput } from './ApiKeyInput';
 import { ollamaService } from '../../services/llmService';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 export function SettingsModal() {
-  const { showSettings, setShowSettings, ollamaStatus, ollamaModels, setOllamaModels, setOllamaStatus } = usePipelineStore();
+  const {
+    showSettings,
+    setShowSettings,
+    ollamaStatus,
+    ollamaModels,
+    setOllamaModels,
+    setOllamaStatus,
+  } = useUiStore();
   const { t } = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
   const trapRef = useFocusTrap(showSettings, () => setShowSettings(false));

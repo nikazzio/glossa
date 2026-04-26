@@ -5,6 +5,7 @@ import type {
   PipelineConfig,
   PipelineStageConfig,
   TranslationChunk,
+  ViewMode,
 } from '../types';
 import { normalizeQualityRating, qualityDefault } from '../utils';
 
@@ -15,6 +16,7 @@ export interface Project {
   name: string;
   source_language: string;
   target_language: string;
+  view_mode?: ViewMode | null;
   created_at: string;
   updated_at: string;
 }
@@ -115,6 +117,7 @@ export async function deleteProject(id: string): Promise<void> {
 export async function getProjectConfig(projectId: string): Promise<{
   sourceLanguage: string;
   targetLanguage: string;
+  viewMode: ViewMode | null;
   stages: PipelineStageConfig[];
   judgePrompt: string;
   judgeModel: string;
@@ -126,6 +129,7 @@ export async function getProjectConfig(projectId: string): Promise<{
   const rows = await select<{
     source_language: string;
     target_language: string;
+    view_mode: ViewMode | null;
     stages: string;
     judge_prompt: string;
     judge_model: string;
@@ -136,6 +140,7 @@ export async function getProjectConfig(projectId: string): Promise<{
     `SELECT
        p.source_language,
        p.target_language,
+       p.view_mode,
        pc.stages,
        pc.judge_prompt,
        pc.judge_model,
@@ -162,6 +167,7 @@ export async function getProjectConfig(projectId: string): Promise<{
   return {
     sourceLanguage: row.source_language,
     targetLanguage: row.target_language,
+    viewMode: row.view_mode ?? null,
     stages: JSON.parse(row.stages),
     judgePrompt: row.judge_prompt,
     judgeModel: row.judge_model,
@@ -177,7 +183,11 @@ export async function getProjectConfig(projectId: string): Promise<{
   };
 }
 
-export async function saveProjectConfig(projectId: string, config: PipelineConfig): Promise<void> {
+export async function saveProjectConfig(
+  projectId: string,
+  config: PipelineConfig,
+  viewMode: ViewMode,
+): Promise<void> {
   await execute(
     `UPDATE pipeline_configs SET
       stages = $1, judge_prompt = $2, judge_model = $3, judge_provider = $4, use_chunking = $5,
@@ -194,9 +204,13 @@ export async function saveProjectConfig(projectId: string, config: PipelineConfi
     ],
   );
   await execute(
-    `UPDATE projects SET source_language = $1, target_language = $2, updated_at = CURRENT_TIMESTAMP
-     WHERE id = $3`,
-    [config.sourceLanguage, config.targetLanguage, projectId],
+    `UPDATE projects SET
+      source_language = $1,
+      target_language = $2,
+      view_mode = $3,
+      updated_at = CURRENT_TIMESTAMP
+     WHERE id = $4`,
+    [config.sourceLanguage, config.targetLanguage, viewMode, projectId],
   );
   await saveProjectGlossary(projectId, config);
 }

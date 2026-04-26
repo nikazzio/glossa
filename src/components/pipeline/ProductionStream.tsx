@@ -1,6 +1,7 @@
 import { Trash2, AlertTriangle, Pencil, RotateCcw, ScanLine } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
+import { useChunksStore } from '../../stores/chunksStore';
 import { StatusIndicator, ProcessingLine, CopyButton } from '../common';
 import { estimateTextStats, indexPad, recommendChunkCount } from '../../utils';
 import { confirm } from '../../stores/confirmStore';
@@ -17,9 +18,11 @@ export function ProductionStream({
   const {
     inputText,
     setInputText,
-    chunks,
     config,
     setConfig,
+  } = usePipelineStore();
+  const {
+    chunks,
     isProcessing,
     generateChunks,
     clearChunks,
@@ -28,8 +31,7 @@ export function ProductionStream({
     splitChunk,
     mergeChunkWithNext,
     unlockChunkForEdit,
-  } =
-    usePipelineStore();
+  } = useChunksStore();
   const { t } = useTranslation();
   const stats = estimateTextStats(inputText);
   const recommendedChunks = recommendChunkCount(inputText);
@@ -55,7 +57,7 @@ export function ProductionStream({
   };
 
   return (
-    <section className="col-span-1 md:col-span-6 bg-editorial-bg p-8 overflow-y-auto max-h-[calc(100vh-140px)] border-r border-editorial-border custom-scrollbar">
+    <section className="col-span-1 md:col-span-6 bg-editorial-bg p-8 overflow-y-auto min-h-0 h-full border-r border-editorial-border custom-scrollbar">
       <div className="flex items-center justify-between border-b border-editorial-ink pb-2 mb-10">
         <h2 className="font-display text-sm uppercase tracking-wider inline-block">{t('pipeline.productionStream')}</h2>
         {chunks.length > 0 && (

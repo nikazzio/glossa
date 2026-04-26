@@ -1,7 +1,7 @@
 import { ChevronDown, ChevronRight, ScanLine, ShieldCheck, RefreshCcw, AlertTriangle } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { usePipelineStore } from '../../stores/pipelineStore';
+import { useChunksStore } from '../../stores/chunksStore';
 import { calculateCompositeQuality, indexPad, qualityLabelKey, qualityTone } from '../../utils';
 import { confirm } from '../../stores/confirmStore';
 import type { TranslationChunk } from '../../types';
@@ -18,7 +18,7 @@ const QUALITY_TONE_COLOR: Record<ReturnType<typeof qualityTone>, string> = {
 };
 
 export function AuditPanel({ onRunAuditOnly, onReauditChunk }: AuditPanelProps) {
-  const { chunks, clearChunks, isProcessing } = usePipelineStore();
+  const { chunks, clearChunks, isProcessing } = useChunksStore();
   const { t } = useTranslation();
 
   // Track which chunks are expanded in the drill-down. Default closed.
@@ -65,7 +65,7 @@ export function AuditPanel({ onRunAuditOnly, onReauditChunk }: AuditPanelProps) 
   };
 
   return (
-    <section className="col-span-1 md:col-span-3 p-8 bg-editorial-bg overflow-y-auto max-h-[calc(100vh-140px)] flex flex-col gap-10 custom-scrollbar">
+    <section className="col-span-1 md:col-span-3 p-8 bg-editorial-bg overflow-y-auto min-h-0 h-full flex flex-col gap-10 custom-scrollbar">
       <h2 className="font-display text-sm uppercase tracking-wider border-b border-editorial-ink pb-2 mb-4 inline-block">
         {t('audit.title')}
       </h2>

@@ -1,6 +1,9 @@
 export type ModelProvider = 'gemini' | 'openai' | 'anthropic' | 'deepseek' | 'ollama';
 export type QualityRating = 'critical' | 'poor' | 'fair' | 'good' | 'excellent';
 export type ChunkStatus = 'ready' | 'processing' | 'completed' | 'error';
+export type ViewMode = 'sandbox' | 'document';
+export type DocumentLayoutPreference = 'auto' | 'standard' | 'book';
+export type OllamaStatus = 'unknown' | 'connected' | 'disconnected';
 
 export interface GlossaryEntry {
   id?: string;

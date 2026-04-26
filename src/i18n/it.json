@@ -4,7 +4,11 @@
     "subtitle": "Pipeline Multi-LLM v1.0"
   },
   "header": {
-    "settings": "Impostazioni"
+    "settings": "Impostazioni",
+    "workspaceLabel": "Spazio di lavoro",
+    "sandbox": "Sandbox",
+    "document": "Documento",
+    "readerLayout": "Layout lettura"
   },
   "pipeline": {
     "globalSetup": "Configurazione Globale",
@@ -198,6 +202,28 @@
     "exportBilingual": "Esporta bilingue .md",
     "exported": "File esportato con successo",
     "exportError": "Esportazione fallita"
+  },
+  "document": {
+    "headerLabel": "Spazio Documento",
+    "readerTitle": "Lettore Chunk",
+    "chunkCounter": "Chunk {{current}} di {{total}}",
+    "layoutAuto": "Auto",
+    "layoutStandard": "Standard",
+    "layoutBook": "Libro",
+    "layoutResolved": "Layout attivo: {{layout}}",
+    "chunksReady": "{{count}} chunk caricati",
+    "completedCount": "{{count}} completati",
+    "compositeQuality": "Qualità composita: {{quality}}",
+    "indexLabel": "Indice Chunk",
+    "indexHint": "Salta direttamente a qualsiasi chunk.",
+    "previousChunk": "Chunk precedente",
+    "nextChunk": "Chunk successivo",
+    "leftPage": "Pagina sorgente",
+    "rightPage": "Pagina traduzione",
+    "stageTrace": "Traccia delle fasi",
+    "emptyLabel": "Modalità Documento",
+    "emptyTitle": "Nessun documento ancora preparato.",
+    "emptyBody": "Prepara un testo in più chunk per usare il lettore documento, oppure torna a Sandbox per lavorare rapidamente su un testo singolo."
   },
   "help": {
     "title": "Guida Utente",

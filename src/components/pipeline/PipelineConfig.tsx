@@ -5,6 +5,8 @@ import { toast } from 'sonner';
 import type { ModelProvider } from '../../types';
 import { MODEL_OPTIONS, LANGUAGES } from '../../constants';
 import { usePipelineStore } from '../../stores/pipelineStore';
+import { useChunksStore } from '../../stores/chunksStore';
+import { useUiStore } from '../../stores/uiStore';
 import { confirm } from '../../stores/confirmStore';
 import { StageCard } from './StageCard';
 
@@ -15,7 +17,7 @@ interface PipelineConfigProps {
 }
 
 function useJudgeModelOptions(provider: ModelProvider): string[] {
-  const ollamaModels = usePipelineStore((s) => s.ollamaModels);
+  const ollamaModels = useUiStore((s) => s.ollamaModels);
   if (provider === 'ollama') return ollamaModels;
   return MODEL_OPTIONS[provider] || [];
 }
@@ -24,18 +26,15 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly, onCancelPipeline
   const {
     config,
     setConfig,
-    chunks,
-    isProcessing,
     addStage,
     removeStage,
     updateStage,
     addGlossaryEntry,
     updateGlossaryEntry,
     removeGlossaryEntry,
-    ollamaStatus,
-    cancelRequested,
-    resetCompletedChunks,
   } = usePipelineStore();
+  const { chunks, isProcessing, cancelRequested, resetCompletedChunks } = useChunksStore();
+  const ollamaStatus = useUiStore((state) => state.ollamaStatus);
   const { t } = useTranslation();
   const judgeModels = useJudgeModelOptions(config.judgeProvider);
 
@@ -83,22 +82,22 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly, onCancelPipeline
   const handleJudgeProviderChange = (newProvider: ModelProvider) => {
     const models =
       newProvider === 'ollama'
-        ? usePipelineStore.getState().ollamaModels
+        ? useUiStore.getState().ollamaModels
         : MODEL_OPTIONS[newProvider];
     setConfig((prev) => ({
       ...prev,
       judgeProvider: newProvider,
       judgeModel: models[0] || '',
     }));
-    if (newProvider === 'ollama' && usePipelineStore.getState().ollamaStatus === 'unknown') {
+    if (newProvider === 'ollama' && useUiStore.getState().ollamaStatus === 'unknown') {
       toast.message(t('ollama.uncheckedHint'));
-    } else if (newProvider === 'ollama' && usePipelineStore.getState().ollamaStatus === 'disconnected') {
+    } else if (newProvider === 'ollama' && useUiStore.getState().ollamaStatus === 'disconnected') {
       toast.warning(t('ollama.selectedButOffline'));
     }
   };
 
   return (
-    <section className="col-span-1 md:col-span-3 border-r border-editorial-border p-8 flex flex-col gap-8 bg-editorial-bg/50 overflow-y-auto max-h-[calc(100vh-140px)] custom-scrollbar">
+    <section className="col-span-1 md:col-span-3 border-r border-editorial-border p-8 flex flex-col gap-8 bg-editorial-bg/50 overflow-y-auto min-h-0 h-full custom-scrollbar">
       <div className="space-y-10">
         {/* Language Pair */}
         <div>
