@@ -1,4 +1,4 @@
-import { chunkText, estimateTextStats, findBestSplitIndex } from './index';
+import { chunkText, estimateTextStats } from './index';
 
 export interface ImportPreviewChunk {
   index: number;
@@ -15,8 +15,6 @@ export interface ImportPreview {
 export interface SplitPreview {
   beforeText: string;
   afterText: string;
-  splitAt: number;
-  suggestedSplitAt: number;
   isValid: boolean;
 }
 
@@ -41,18 +39,16 @@ export function buildImportPreview(
 }
 
 export function buildSplitPreview(text: string, splitAt: number): SplitPreview {
-  const suggestedSplitAt = Math.max(
+  const boundedSplitAt = Math.max(
     1,
     Math.min(splitAt, Math.max(1, text.length - 1)),
   );
-  const beforeText = text.slice(0, suggestedSplitAt).trim();
-  const afterText = text.slice(suggestedSplitAt).trim();
+  const beforeText = text.slice(0, boundedSplitAt).trim();
+  const afterText = text.slice(boundedSplitAt).trim();
 
   return {
     beforeText,
     afterText,
-    splitAt,
-    suggestedSplitAt: findBestSplitIndex(text) ?? suggestedSplitAt,
     isValid: beforeText.length > 0 && afterText.length > 0,
   };
 }
