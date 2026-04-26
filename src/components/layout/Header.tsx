@@ -6,6 +6,8 @@ import {
   HelpCircle,
   Save,
   Settings,
+  SlidersHorizontal,
+  PanelRight,
   Upload,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -38,6 +40,10 @@ export function Header() {
     setViewMode,
     documentLayout,
     setDocumentLayout,
+    showConfigDrawer,
+    showInsightsDrawer,
+    setShowConfigDrawer,
+    setShowInsightsDrawer,
   } = useUiStore();
   const {
     currentProjectId,
@@ -117,6 +123,8 @@ export function Header() {
   const langLabel = t('language.label');
   const settingsLabel = t('header.settings');
   const helpLabel = t('help.title');
+  const openConfigLabel = t('header.openConfig');
+  const openInsightsLabel = t('header.openInsights');
   const saveStatusLabel =
     saveState === 'dirty'
       ? t('projects.statusDirty')
@@ -191,6 +199,40 @@ export function Header() {
                   MD
                 </button>
               </div>
+            )}
+
+            {viewMode === 'document' && (
+              <>
+                <div className="mx-1 hidden h-6 w-px bg-editorial-border md:block" />
+                <button
+                  type="button"
+                  onClick={() => setShowConfigDrawer(!showConfigDrawer)}
+                  title={openConfigLabel}
+                  aria-label={openConfigLabel}
+                  aria-pressed={showConfigDrawer}
+                  className={`rounded-full border border-editorial-border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                    showConfigDrawer
+                      ? 'bg-editorial-ink text-white'
+                      : 'text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
+                  }`}
+                >
+                  <SlidersHorizontal size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowInsightsDrawer(!showInsightsDrawer)}
+                  title={openInsightsLabel}
+                  aria-label={openInsightsLabel}
+                  aria-pressed={showInsightsDrawer}
+                  className={`rounded-full border border-editorial-border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                    showInsightsDrawer
+                      ? 'bg-editorial-ink text-white'
+                      : 'text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
+                  }`}
+                >
+                  <PanelRight size={16} />
+                </button>
+              </>
             )}
 
             <div className="mx-1 hidden h-6 w-px bg-editorial-border md:block" />

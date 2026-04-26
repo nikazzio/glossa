@@ -1,12 +1,8 @@
 import {
-  AlertTriangle,
-  BookOpen,
   ChevronLeft,
   ChevronRight,
-  Columns2,
   Copy,
   Pencil,
-  RefreshCcw,
   RotateCcw,
   ScanLine,
   Scissors,
@@ -25,7 +21,7 @@ import {
   qualityTone,
 } from '../../utils';
 import { buildSplitPreview } from '../../utils/documentWorkflow';
-import { CopyButton, ProcessingLine, StatusIndicator } from '../common';
+import { CopyButton, StatusIndicator } from '../common';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface DocumentViewProps {
@@ -60,7 +56,6 @@ export function DocumentView({
     selectedChunkId,
     setSelectedChunkId,
     documentLayout,
-    setDocumentLayout,
   } = useUiStore();
 
   const [viewportWidth, setViewportWidth] = useState(
@@ -118,7 +113,7 @@ export function DocumentView({
 
   if (!currentChunk) {
     return (
-      <section className="md:col-span-9 p-10 flex items-center justify-center bg-editorial-bg">
+      <section className="flex w-full items-center justify-center bg-editorial-bg p-10">
         <div className="max-w-xl text-center space-y-4">
           <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
             {t('document.emptyLabel')}
@@ -140,7 +135,7 @@ export function DocumentView({
   const chunkTone = qualityTone(currentChunk.judgeResult.rating);
 
   return (
-    <section className="md:col-span-9 bg-[#f7f3ec] overflow-y-auto min-h-0 h-full custom-scrollbar">
+    <section className="w-full bg-[#f7f3ec] overflow-y-auto min-h-0 h-full custom-scrollbar">
       <div className="mx-auto max-w-[1500px] px-6 py-8 md:px-8 md:py-10 space-y-8">
         <div className="rounded-[28px] border border-editorial-border/80 bg-editorial-bg/90 shadow-[0_24px_80px_rgba(26,26,26,0.06)] backdrop-blur">
           <div className="flex flex-col gap-5 border-b border-editorial-border px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
@@ -165,44 +160,6 @@ export function DocumentView({
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center rounded-full border border-editorial-border bg-editorial-bg p-1">
-                <button
-                  type="button"
-                  onClick={() => setDocumentLayout('standard')}
-                  className={`rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.25em] transition-colors ${
-                    documentLayout === 'standard'
-                      ? 'bg-editorial-ink text-white'
-                      : 'text-editorial-muted hover:text-editorial-ink'
-                  }`}
-                >
-                  <Columns2 size={12} className="inline mr-1" />
-                  {t('document.layoutStandard')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDocumentLayout('auto')}
-                  className={`rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.25em] transition-colors ${
-                    documentLayout === 'auto'
-                      ? 'bg-editorial-ink text-white'
-                      : 'text-editorial-muted hover:text-editorial-ink'
-                  }`}
-                >
-                  {t('document.layoutAuto')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDocumentLayout('book')}
-                  className={`rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.25em] transition-colors ${
-                    documentLayout === 'book'
-                      ? 'bg-editorial-ink text-white'
-                      : 'text-editorial-muted hover:text-editorial-ink'
-                  }`}
-                >
-                  <BookOpen size={12} className="inline mr-1" />
-                  {t('document.layoutBook')}
-                </button>
-              </div>
-
               <button
                 type="button"
                 onClick={onRunAuditOnly}
@@ -231,45 +188,6 @@ export function DocumentView({
                 layout: isBook ? t('document.layoutBook') : t('document.layoutStandard'),
               })}
             </span>
-          </div>
-        </div>
-
-        <div className="rounded-[24px] border border-editorial-border bg-editorial-bg/90 p-4 shadow-[0_16px_50px_rgba(26,26,26,0.05)]">
-          <div className="mb-3 flex items-center justify-between">
-            <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-              {t('document.indexLabel')}
-            </div>
-            <div className="text-[10px] text-editorial-muted">
-              {t('document.indexHint')}
-            </div>
-          </div>
-          <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
-            {chunks.map((chunk, index) => {
-              const rating =
-                chunk.judgeResult.status === 'completed'
-                  ? t(qualityLabelKey(chunk.judgeResult.rating))
-                  : t(`pipeline.chunkStatus.${chunk.status}`);
-              return (
-                <button
-                  key={chunk.id}
-                  type="button"
-                  onClick={() => setSelectedChunkId(chunk.id)}
-                  className={`min-w-[132px] rounded-2xl border px-4 py-3 text-left transition-colors ${
-                    chunk.id === currentChunk.id
-                      ? 'border-editorial-ink bg-editorial-ink text-white'
-                      : 'border-editorial-border bg-editorial-bg hover:border-editorial-ink/40'
-                  }`}
-                >
-                  <div className="text-[10px] font-bold uppercase tracking-[0.25em] opacity-80">
-                    {t('pipeline.unit')} {indexPad(index + 1)}
-                  </div>
-                  <div className="mt-2 text-[11px] font-medium leading-snug">
-                    {truncateChunk(chunk.originalText)}
-                  </div>
-                  <div className="mt-3 text-[10px] opacity-75">{rating}</div>
-                </button>
-              );
-            })}
           </div>
         </div>
 
@@ -410,121 +328,6 @@ export function DocumentView({
           </DocumentPage>
         </div>
 
-        {config.stages.filter((stage) => stage.enabled).length > 0 && (
-          <div className="rounded-[24px] border border-editorial-border bg-editorial-bg/90 p-6 shadow-[0_16px_50px_rgba(26,26,26,0.05)]">
-            <div className="mb-4 text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-              {t('document.stageTrace')}
-            </div>
-            <div className="grid gap-4 xl:grid-cols-2">
-              {config.stages
-                .filter((stage) => stage.enabled)
-                .map((stage) => {
-                  const result = currentChunk.stageResults[stage.id];
-                  if (!result || result.status === 'idle') return null;
-
-                  return (
-                    <div
-                      key={stage.id}
-                      className={`rounded-2xl border p-5 ${
-                        result.status === 'error'
-                          ? 'border-editorial-accent/40 bg-editorial-textbox/40'
-                          : 'border-editorial-border bg-editorial-bg'
-                      }`}
-                    >
-                      <div className="mb-3 flex items-center justify-between">
-                        <div className="font-display text-lg italic text-editorial-accent">
-                          {stage.name}
-                        </div>
-                        <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
-                          {result.status}
-                        </span>
-                      </div>
-                      <div className="text-sm leading-7 text-editorial-ink">
-                        {result.status === 'processing' ? (
-                          <ProcessingLine />
-                        ) : result.status === 'error' ? (
-                          <div className="flex items-start gap-2 text-editorial-accent">
-                            <AlertTriangle size={14} className="mt-1 shrink-0" />
-                            <span className="font-mono text-xs">
-                              {result.error || t('errors.unknownError')}
-                            </span>
-                          </div>
-                        ) : (
-                          result.content
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-            </div>
-          </div>
-        )}
-
-        <div className="rounded-[24px] border border-editorial-border bg-editorial-bg/90 p-6 shadow-[0_16px_50px_rgba(26,26,26,0.05)]">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-                {t('audit.title')}
-              </div>
-              <div className={`mt-2 font-display text-2xl italic ${QUALITY_TONE_COLOR[chunkTone]}`}>
-                {currentQualityLabel}
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => onReauditChunk(currentChunk.id)}
-              disabled={isProcessing || !currentChunk.currentDraft}
-              className="rounded-full border border-editorial-border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink disabled:opacity-30"
-            >
-              <RefreshCcw size={12} className="inline mr-1" />
-              {t('pipeline.reauditChunk')}
-            </button>
-          </div>
-
-          {currentChunk.judgeResult.status === 'error' && (
-            <div className="rounded-2xl border border-editorial-accent/30 bg-editorial-textbox/40 p-4 text-sm text-editorial-accent">
-              {currentChunk.judgeResult.error || t('audit.auditFailed')}
-            </div>
-          )}
-
-          {currentChunk.judgeResult.status !== 'error' &&
-            currentChunk.judgeResult.issues.length === 0 && (
-              <div className="rounded-2xl border border-editorial-border bg-editorial-bg p-5 text-sm text-editorial-muted">
-                {t('audit.noIssues')}
-              </div>
-            )}
-
-          {currentChunk.judgeResult.issues.length > 0 && (
-            <div className="space-y-4">
-              {currentChunk.judgeResult.issues.map((issue, index) => (
-                <div
-                  key={`${issue.type}-${index}`}
-                  className="rounded-2xl border border-editorial-border bg-editorial-bg p-5"
-                >
-                  <div className="mb-3 flex items-center gap-2">
-                    <span
-                      className={`rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-[0.2em] ${
-                        issue.severity === 'high'
-                          ? 'bg-editorial-accent text-white'
-                          : 'bg-editorial-ink text-white'
-                      }`}
-                    >
-                      {issue.type}
-                    </span>
-                  </div>
-                  <p className="font-display text-lg italic leading-relaxed text-editorial-ink">
-                    {issue.description}
-                  </p>
-                  {issue.suggestedFix && (
-                    <div className="mt-3 border-l-2 border-editorial-accent pl-3 text-sm text-editorial-muted">
-                      {t('audit.fix')}: {issue.suggestedFix}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
       </div>
       {splitDraft && currentChunk.id === splitDraft.chunkId && (
         <SplitChunkDialog

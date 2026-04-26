@@ -8,7 +8,10 @@
     "workspaceLabel": "Workspace",
     "sandbox": "Sandbox",
     "document": "Document",
-    "readerLayout": "Reader layout"
+    "readerLayout": "Reader layout",
+    "openConfig": "Open pipeline configuration",
+    "openInsights": "Open insights panel",
+    "closeDrawer": "Close panel"
   },
   "pipeline": {
     "globalSetup": "Global Setup",
@@ -240,6 +243,16 @@
     "leftPage": "Source page",
     "rightPage": "Translation page",
     "stageTrace": "Stage Trace",
+    "configDrawerTitle": "Pipeline configuration",
+    "configDrawerHint": "Edit stages, glossary and providers without covering the document text.",
+    "insightsDrawerTitle": "Insights panel",
+    "insightsDrawerHint": "Chunk index and judge findings for the current chunk.",
+    "insightsTabIndex": "Index",
+    "insightsTabAudit": "Audit",
+    "insightsAuditEmpty": "No judge result for this chunk yet.",
+    "insightsAuditIssues": "Issues found",
+    "insightsAuditNoIssues": "No issues raised by the judge.",
+    "insightsAuditCorrections": "Suggested corrections",
     "emptyLabel": "Document Mode",
     "emptyTitle": "No document is staged yet.",
     "emptyBody": "Prepare a text into multiple chunks to use the document reader, or switch back to Sandbox for quick single-text work."

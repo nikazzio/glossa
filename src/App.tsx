@@ -1,7 +1,7 @@
 import { Header } from './components/layout';
 import { PipelineConfig, ProductionStream } from './components/pipeline';
 import { AuditPanel } from './components/audit';
-import { DocumentView } from './components/document';
+import { ConfigDrawer, DocumentView, InsightsDrawer } from './components/document';
 import { SettingsModal } from './components/settings';
 import { ProjectPanel } from './components/projects';
 import { ErrorBoundary, ConfirmDialog } from './components/common';
@@ -27,12 +27,7 @@ export default function App() {
         <Header />
 
         {viewMode === 'document' ? (
-          <main className="grid grid-cols-1 md:grid-cols-12 flex-1 min-h-0">
-            <PipelineConfig
-              onRunPipeline={runPipeline}
-              onRunAuditOnly={runAuditOnly}
-              onCancelPipeline={cancelPipeline}
-            />
+          <main className="flex flex-1 min-h-0">
             <DocumentView
               onRetranslateChunk={runSingleChunk}
               onReauditChunk={auditSingleChunk}
@@ -55,6 +50,17 @@ export default function App() {
               onReauditChunk={auditSingleChunk}
             />
           </main>
+        )}
+
+        {viewMode === 'document' && (
+          <>
+            <ConfigDrawer
+              onRunPipeline={runPipeline}
+              onRunAuditOnly={runAuditOnly}
+              onCancelPipeline={cancelPipeline}
+            />
+            <InsightsDrawer onReauditChunk={auditSingleChunk} />
+          </>
         )}
 
         <SettingsModal />

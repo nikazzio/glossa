@@ -5,12 +5,17 @@ import type {
   ViewMode,
 } from '../types';
 
+export type InsightsDrawerTab = 'index' | 'audit';
+
 interface UiState {
   viewMode: ViewMode;
   documentLayout: DocumentLayoutPreference;
   selectedChunkId: string | null;
   showSettings: boolean;
   showHelp: boolean;
+  showConfigDrawer: boolean;
+  showInsightsDrawer: boolean;
+  insightsDrawerTab: InsightsDrawerTab;
   ollamaModels: string[];
   ollamaStatus: OllamaStatus;
 
@@ -19,6 +24,9 @@ interface UiState {
   setSelectedChunkId: (chunkId: string | null) => void;
   setShowSettings: (show: boolean) => void;
   setShowHelp: (show: boolean) => void;
+  setShowConfigDrawer: (show: boolean) => void;
+  setShowInsightsDrawer: (show: boolean, tab?: InsightsDrawerTab) => void;
+  setInsightsDrawerTab: (tab: InsightsDrawerTab) => void;
   setOllamaModels: (models: string[]) => void;
   setOllamaStatus: (status: OllamaStatus) => void;
 }
@@ -29,6 +37,9 @@ export const useUiStore = create<UiState>((set) => ({
   selectedChunkId: null,
   showSettings: false,
   showHelp: false,
+  showConfigDrawer: false,
+  showInsightsDrawer: false,
+  insightsDrawerTab: 'index',
   ollamaModels: [],
   ollamaStatus: 'unknown',
 
@@ -36,15 +47,51 @@ export const useUiStore = create<UiState>((set) => ({
   setDocumentLayout: (layout) => set({ documentLayout: layout }),
   setSelectedChunkId: (chunkId) => set({ selectedChunkId: chunkId }),
   setShowSettings: (show) =>
-    set((state) => ({
-      showSettings: show,
-      showHelp: show ? false : state.showHelp,
-    })),
+    set((state) =>
+      show
+        ? {
+            showSettings: true,
+            showHelp: false,
+            showConfigDrawer: false,
+            showInsightsDrawer: false,
+          }
+        : { showSettings: false, showHelp: state.showHelp },
+    ),
   setShowHelp: (show) =>
-    set((state) => ({
-      showHelp: show,
-      showSettings: show ? false : state.showSettings,
-    })),
+    set((state) =>
+      show
+        ? {
+            showHelp: true,
+            showSettings: false,
+            showConfigDrawer: false,
+            showInsightsDrawer: false,
+          }
+        : { showHelp: false, showSettings: state.showSettings },
+    ),
+  setShowConfigDrawer: (show) =>
+    set((state) =>
+      show
+        ? {
+            showConfigDrawer: true,
+            showInsightsDrawer: false,
+            showSettings: false,
+            showHelp: false,
+          }
+        : { showConfigDrawer: false },
+    ),
+  setShowInsightsDrawer: (show, tab) =>
+    set((state) =>
+      show
+        ? {
+            showInsightsDrawer: true,
+            insightsDrawerTab: tab ?? state.insightsDrawerTab,
+            showConfigDrawer: false,
+            showSettings: false,
+            showHelp: false,
+          }
+        : { showInsightsDrawer: false },
+    ),
+  setInsightsDrawerTab: (tab) => set({ insightsDrawerTab: tab }),
   setOllamaModels: (models) => set({ ollamaModels: models }),
   setOllamaStatus: (status) => set({ ollamaStatus: status }),
 }));

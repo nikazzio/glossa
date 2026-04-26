@@ -8,7 +8,10 @@
     "workspaceLabel": "Spazio di lavoro",
     "sandbox": "Sandbox",
     "document": "Documento",
-    "readerLayout": "Layout lettura"
+    "readerLayout": "Layout lettura",
+    "openConfig": "Apri configurazione pipeline",
+    "openInsights": "Apri pannello insight",
+    "closeDrawer": "Chiudi pannello"
   },
   "pipeline": {
     "globalSetup": "Configurazione Globale",
@@ -240,6 +243,16 @@
     "leftPage": "Pagina sorgente",
     "rightPage": "Pagina traduzione",
     "stageTrace": "Traccia delle fasi",
+    "configDrawerTitle": "Configurazione pipeline",
+    "configDrawerHint": "Modifica fasi, glossario e provider senza coprire il testo del documento.",
+    "insightsDrawerTitle": "Pannello insight",
+    "insightsDrawerHint": "Indice chunk e valutazione del giudice per il chunk corrente.",
+    "insightsTabIndex": "Indice",
+    "insightsTabAudit": "Audit",
+    "insightsAuditEmpty": "Nessuna valutazione disponibile per questo chunk.",
+    "insightsAuditIssues": "Problemi rilevati",
+    "insightsAuditNoIssues": "Nessun problema segnalato dal giudice.",
+    "insightsAuditCorrections": "Correzioni suggerite",
     "emptyLabel": "Modalità Documento",
     "emptyTitle": "Nessun documento ancora preparato.",
     "emptyBody": "Prepara un testo in più chunk per usare il lettore documento, oppure torna a Sandbox per lavorare rapidamente su un testo singolo."

@@ -14,7 +14,11 @@ interface PipelineConfigProps {
   onRunPipeline: () => void;
   onRunAuditOnly: () => void;
   onCancelPipeline: () => void;
+  className?: string;
 }
+
+const DEFAULT_PIPELINE_CONFIG_CLASSNAME =
+  'col-span-1 md:col-span-3 border-r border-editorial-border p-8 flex flex-col gap-8 bg-editorial-bg/50 overflow-y-auto min-h-0 h-full custom-scrollbar';
 
 function useJudgeModelOptions(provider: ModelProvider): string[] {
   const ollamaModels = useUiStore((s) => s.ollamaModels);
@@ -22,7 +26,7 @@ function useJudgeModelOptions(provider: ModelProvider): string[] {
   return MODEL_OPTIONS[provider] || [];
 }
 
-export function PipelineConfig({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: PipelineConfigProps) {
+export function PipelineConfig({ onRunPipeline, onRunAuditOnly, onCancelPipeline, className }: PipelineConfigProps) {
   const {
     config,
     setConfig,
@@ -97,7 +101,7 @@ export function PipelineConfig({ onRunPipeline, onRunAuditOnly, onCancelPipeline
   };
 
   return (
-    <section className="col-span-1 md:col-span-3 border-r border-editorial-border p-8 flex flex-col gap-8 bg-editorial-bg/50 overflow-y-auto min-h-0 h-full custom-scrollbar">
+    <section className={className ?? DEFAULT_PIPELINE_CONFIG_CLASSNAME}>
       <div className="space-y-10">
         {/* Language Pair */}
         <div>
