@@ -34,6 +34,9 @@ describe('projectStore', () => {
       projects: [],
       currentProjectId: null,
       showProjectPanel: false,
+      saveState: 'idle',
+      lastSaveError: null,
+      trackedSnapshot: null,
     });
 
     useUiStore.setState({
@@ -159,7 +162,7 @@ describe('projectStore', () => {
     useProjectStore.setState({ currentProjectId: 'proj-1' });
     useUiStore.getState().setViewMode('document');
 
-    await useProjectStore.getState().saveCurrentProject();
+    await useProjectStore.getState().saveCurrentProject('snapshot-1');
 
     expect(projectServiceMocks.saveProjectConfig).toHaveBeenCalledWith(
       'proj-1',
@@ -170,6 +173,8 @@ describe('projectStore', () => {
       'document',
     );
     expect(projectServiceMocks.saveTranslations).toHaveBeenCalledWith('proj-1', []);
+    expect(useProjectStore.getState().saveState).toBe('saved');
+    expect(useProjectStore.getState().trackedSnapshot).toBe('snapshot-1');
   });
 
   it('refuses to save while the pipeline is processing', async () => {
