@@ -1,14 +1,19 @@
 import {
   BookOpen,
+  Beaker,
+  Columns2,
   Download,
   FolderOpen,
   Globe,
   HelpCircle,
+  PanelRight,
   Save,
   Settings,
+  SlidersHorizontal,
+  Sparkles,
   Upload,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useProjectSnapshot } from '../../hooks/useProjectAutosave';
@@ -17,6 +22,8 @@ import { useProjectStore } from '../../stores/projectStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
 import { ImportPreviewDialog } from '../document';
+import { PipelineActions } from '../pipeline';
+import { calculateCompositeQuality, qualityLabelKey } from '../../utils';
 import { importTextFile, exportTranslation, exportBilingual } from '../../services/fileService';
 import { HelpGuide } from '../help';
 
@@ -27,7 +34,13 @@ interface PendingImport {
   targetChunkCount: number;
 }
 
-export function Header() {
+interface HeaderProps {
+  onRunPipeline?: () => void;
+  onRunAuditOnly?: () => void;
+  onCancelPipeline?: () => void;
+}
+
+export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: HeaderProps = {}) {
   const { config, setConfig } = usePipelineStore();
   const { chunks, isProcessing, loadDocument } = useChunksStore();
   const {
@@ -38,6 +51,10 @@ export function Header() {
     setViewMode,
     documentLayout,
     setDocumentLayout,
+    showConfigDrawer,
+    showInsightsDrawer,
+    setShowConfigDrawer,
+    setShowInsightsDrawer,
   } = useUiStore();
   const {
     currentProjectId,
@@ -117,6 +134,19 @@ export function Header() {
   const langLabel = t('language.label');
   const settingsLabel = t('header.settings');
   const helpLabel = t('help.title');
+  const openConfigLabel = t('header.openConfig');
+  const openInsightsLabel = t('header.openInsights');
+  const sourceWords = useMemo(
+    () => chunks.reduce((acc, chunk) => acc + countWords(chunk.originalText), 0),
+    [chunks],
+  );
+  const translatedWords = useMemo(
+    () => chunks.reduce((acc, chunk) => acc + countWords(chunk.currentDraft || ''), 0),
+    [chunks],
+  );
+  const completedCount = chunks.filter((chunk) => chunk.status === 'completed').length;
+  const compositeQuality = useMemo(() => calculateCompositeQuality(chunks), [chunks]);
+  const compositeLabel = compositeQuality ? t(qualityLabelKey(compositeQuality)) : null;
   const saveStatusLabel =
     saveState === 'dirty'
       ? t('projects.statusDirty')
@@ -163,166 +193,168 @@ export function Header() {
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={handleImport}
-              title={importLabel}
-              className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              aria-label={importLabel}
-            >
-              <Upload size={16} />
-            </button>
-            {chunks.length > 0 && (
-              <div className="flex items-center gap-1 rounded-full border border-editorial-border bg-editorial-bg px-1 py-1">
-                <button
-                  onClick={() => handleExport('txt')}
-                  title={exportTxtLabel}
-                  className="rounded-full p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  aria-label={exportTxtLabel}
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <ActionCluster label={t('header.projectLabel')}>
+              <div className="flex flex-wrap items-center gap-1">
+                <IconButton
+                  onClick={() => setShowProjectPanel(true)}
+                  title={projectsLabel}
+                  ariaLabel={projectsLabel}
                 >
-                  <Download size={16} />
-                </button>
-                <button
-                  onClick={() => handleExport('bilingual')}
-                  title={exportMdLabel}
-                  className="rounded-full px-3 py-2 text-[9px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  aria-label={exportMdLabel}
-                >
-                  MD
-                </button>
+                  <FolderOpen size={16} />
+                </IconButton>
+                <IconButton onClick={handleImport} title={importLabel} ariaLabel={importLabel}>
+                  <Upload size={16} />
+                </IconButton>
+                {chunks.length > 0 && (
+                  <>
+                    <IconButton
+                      onClick={() => handleExport('txt')}
+                      title={exportTxtLabel}
+                      ariaLabel={exportTxtLabel}
+                    >
+                      <Download size={16} />
+                    </IconButton>
+                    <TextChipButton
+                      onClick={() => handleExport('bilingual')}
+                      title={exportMdLabel}
+                      ariaLabel={exportMdLabel}
+                    >
+                      MD
+                    </TextChipButton>
+                  </>
+                )}
+                {currentProjectId && (
+                  <IconButton
+                    onClick={handleSave}
+                    title={saveLabel}
+                    ariaLabel={saveLabel}
+                    disabled={isProcessing}
+                  >
+                    <Save size={16} />
+                  </IconButton>
+                )}
               </div>
+            </ActionCluster>
+
+            {viewMode === 'document' && (
+              <ActionCluster label={t('header.workspaceLabel')}>
+                <div className="flex flex-wrap items-center gap-1">
+                  <IconButton
+                    onClick={() => setShowConfigDrawer(!showConfigDrawer)}
+                    title={openConfigLabel}
+                    ariaLabel={openConfigLabel}
+                    ariaPressed={showConfigDrawer}
+                    active={showConfigDrawer}
+                  >
+                    <SlidersHorizontal size={16} />
+                  </IconButton>
+                  <IconButton
+                    onClick={() => setShowInsightsDrawer(!showInsightsDrawer)}
+                    title={openInsightsLabel}
+                    ariaLabel={openInsightsLabel}
+                    ariaPressed={showInsightsDrawer}
+                    active={showInsightsDrawer}
+                  >
+                    <PanelRight size={16} />
+                  </IconButton>
+                </div>
+              </ActionCluster>
             )}
 
-            <div className="mx-1 hidden h-6 w-px bg-editorial-border md:block" />
-
-            <button
-              onClick={() => setShowProjectPanel(true)}
-              title={projectsLabel}
-              className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              aria-label={projectsLabel}
-            >
-              <FolderOpen size={16} />
-            </button>
-            {currentProjectId && (
-              <button
-                onClick={handleSave}
-                title={saveLabel}
-                disabled={isProcessing}
-                className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
-                aria-label={saveLabel}
-              >
-                <Save size={16} />
-              </button>
-            )}
-
-            <button
-              onClick={toggleLang}
-              title={langLabel}
-              className="flex items-center gap-1.5 rounded-full border border-editorial-border px-3 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              aria-label={langLabel}
-            >
-              <Globe size={14} />
-              {i18n.language.toUpperCase()}
-            </button>
-            <button
-              onClick={() => setShowSettings(true)}
-              title={settingsLabel}
-              className="rounded-full border border-editorial-border p-2 transition-colors hover:bg-editorial-ink hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              aria-label={settingsLabel}
-            >
-              <Settings size={16} />
-            </button>
-            <button
-              onClick={() => setShowHelp(true)}
-              title={helpLabel}
-              className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              aria-label={helpLabel}
-            >
-              <HelpCircle size={16} />
-            </button>
+            <ActionCluster label={t('header.appLabel')}>
+              <div className="flex flex-wrap items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setViewMode(viewMode === 'sandbox' ? 'document' : 'sandbox')}
+                  disabled={isProcessing}
+                  title={t(viewMode === 'sandbox' ? 'header.exitSandbox' : 'header.enterSandbox')}
+                  aria-label={t(viewMode === 'sandbox' ? 'header.exitSandbox' : 'header.enterSandbox')}
+                  aria-pressed={viewMode === 'sandbox'}
+                  className={`rounded-full border border-editorial-border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed ${
+                    viewMode === 'sandbox'
+                      ? 'bg-editorial-ink text-white'
+                      : 'text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
+                  }`}
+                >
+                  <Beaker size={16} />
+                </button>
+                <button
+                  onClick={toggleLang}
+                  title={langLabel}
+                  className="flex items-center gap-1.5 rounded-full border border-editorial-border px-3 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  aria-label={langLabel}
+                >
+                  <Globe size={14} />
+                  {i18n.language.toUpperCase()}
+                </button>
+                <IconButton
+                  onClick={() => setShowSettings(true)}
+                  title={settingsLabel}
+                  ariaLabel={settingsLabel}
+                >
+                  <Settings size={16} />
+                </IconButton>
+                <IconButton onClick={() => setShowHelp(true)} title={helpLabel} ariaLabel={helpLabel}>
+                  <HelpCircle size={16} />
+                </IconButton>
+              </div>
+            </ActionCluster>
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-              {t('header.workspaceLabel')}
-            </span>
-            <div className="flex items-center rounded-full border border-editorial-border bg-editorial-bg p-1 shadow-sm">
-              <button
-                type="button"
-                onClick={() => setViewMode('sandbox')}
-                disabled={isProcessing}
-                className={`rounded-full px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] transition-colors ${
-                  viewMode === 'sandbox'
-                    ? 'bg-editorial-ink text-white'
-                    : 'text-editorial-muted hover:text-editorial-ink'
-                }`}
-              >
-                {t('header.sandbox')}
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('document')}
-                disabled={isProcessing}
-                className={`rounded-full px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] transition-colors ${
-                  viewMode === 'document'
-                    ? 'bg-editorial-ink text-white'
-                    : 'text-editorial-muted hover:text-editorial-ink'
-                }`}
-              >
-                <BookOpen size={12} className="mr-1 inline" />
-                {t('header.document')}
-              </button>
+        {viewMode === 'document' && (
+          <div className="flex flex-col gap-3 border-t border-editorial-border/60 pt-4 xl:flex-row xl:items-center xl:justify-between">
+            <HeaderInfoBar
+              sourceWords={sourceWords}
+              translatedWords={translatedWords}
+              completedCount={completedCount}
+              chunkCount={chunks.length}
+              compositeLabel={compositeLabel}
+            />
+
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              <ActionCluster label={t('header.viewLabel')}>
+                <div
+                  role="radiogroup"
+                  aria-label={t('header.readerLayout')}
+                  className="flex items-center rounded-full border border-editorial-border bg-editorial-bg p-1 shadow-sm"
+                >
+                  <LayoutPill
+                    active={documentLayout === 'auto'}
+                    onClick={() => setDocumentLayout('auto')}
+                    disabled={isProcessing}
+                    label={t('document.layoutAuto')}
+                    icon={<Sparkles size={12} />}
+                  />
+                  <LayoutPill
+                    active={documentLayout === 'standard'}
+                    onClick={() => setDocumentLayout('standard')}
+                    disabled={isProcessing}
+                    label={t('document.layoutStandard')}
+                    icon={<Columns2 size={12} />}
+                  />
+                  <LayoutPill
+                    active={documentLayout === 'book'}
+                    onClick={() => setDocumentLayout('book')}
+                    disabled={isProcessing}
+                    label={t('document.layoutBook')}
+                    icon={<BookOpen size={12} />}
+                  />
+                </div>
+              </ActionCluster>
+
+              {onRunPipeline && onRunAuditOnly && onCancelPipeline && (
+                <PipelineActions
+                  onRunPipeline={onRunPipeline}
+                  onRunAuditOnly={onRunAuditOnly}
+                  onCancelPipeline={onCancelPipeline}
+                  variant="compact"
+                />
+              )}
             </div>
           </div>
-
-          {viewMode === 'document' && (
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-                {t('header.readerLayout')}
-              </span>
-              <div className="flex items-center rounded-full border border-editorial-border bg-editorial-bg p-1 shadow-sm">
-                <button
-                  type="button"
-                  onClick={() => setDocumentLayout('auto')}
-                  disabled={isProcessing}
-                  className={`rounded-full px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] transition-colors ${
-                    documentLayout === 'auto'
-                      ? 'bg-editorial-ink text-white'
-                      : 'text-editorial-muted hover:text-editorial-ink'
-                  }`}
-                >
-                  {t('document.layoutAuto')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDocumentLayout('standard')}
-                  disabled={isProcessing}
-                  className={`rounded-full px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] transition-colors ${
-                    documentLayout === 'standard'
-                      ? 'bg-editorial-ink text-white'
-                      : 'text-editorial-muted hover:text-editorial-ink'
-                  }`}
-                >
-                  {t('document.layoutStandard')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDocumentLayout('book')}
-                  disabled={isProcessing}
-                  className={`rounded-full px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] transition-colors ${
-                    documentLayout === 'book'
-                      ? 'bg-editorial-ink text-white'
-                      : 'text-editorial-muted hover:text-editorial-ink'
-                  }`}
-                >
-                  {t('document.layoutBook')}
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+        )}
       </div>
 
       <HelpGuide open={showHelp} onClose={() => setShowHelp(false)} />
@@ -348,4 +380,175 @@ export function Header() {
       )}
     </header>
   );
+}
+
+interface LayoutPillProps {
+  active: boolean;
+  onClick: () => void;
+  disabled?: boolean;
+  label: string;
+  icon: React.ReactNode;
+}
+
+function LayoutPill({ active, onClick, disabled, label, icon }: LayoutPillProps) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={active}
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      disabled={disabled}
+      className={`flex items-center justify-center rounded-full p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 ${
+        active
+          ? 'bg-editorial-ink text-white'
+          : 'text-editorial-muted hover:text-editorial-ink'
+      }`}
+    >
+      {icon}
+    </button>
+  );
+}
+
+function ActionCluster({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-0 rounded-full border border-editorial-border bg-editorial-bg px-1 py-1 shadow-sm">
+      <span className="px-2.5 text-[9px] font-bold uppercase tracking-[0.22em] text-editorial-muted/75">
+        {label}
+      </span>
+      <span className="mx-1 h-5 w-px bg-editorial-border/70" aria-hidden="true" />
+      {children}
+    </div>
+  );
+}
+
+interface IconButtonProps {
+  onClick: () => void;
+  children: React.ReactNode;
+  title: string;
+  ariaLabel: string;
+  active?: boolean;
+  disabled?: boolean;
+  ariaPressed?: boolean;
+}
+
+function IconButton({
+  onClick,
+  children,
+  title,
+  ariaLabel,
+  active = false,
+  disabled = false,
+  ariaPressed,
+}: IconButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      aria-label={ariaLabel}
+      aria-pressed={ariaPressed}
+      disabled={disabled}
+      className={`rounded-full border border-editorial-border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40 ${
+        active
+          ? 'bg-editorial-ink text-white'
+          : 'text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function TextChipButton({
+  onClick,
+  children,
+  title,
+  ariaLabel,
+}: {
+  onClick: () => void;
+  children: React.ReactNode;
+  title: string;
+  ariaLabel: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      aria-label={ariaLabel}
+      className="rounded-full px-3 py-2 text-[9px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+    >
+      {children}
+    </button>
+  );
+}
+
+function HeaderInfoBar({
+  sourceWords,
+  translatedWords,
+  completedCount,
+  chunkCount,
+  compositeLabel,
+}: {
+  sourceWords: number;
+  translatedWords: number;
+  completedCount: number;
+  chunkCount: number;
+  compositeLabel: string | null;
+}) {
+  const { t } = useTranslation();
+
+  const items = [
+    {
+      key: 'source',
+      label: t('document.infoSourceWords'),
+      value: sourceWords.toLocaleString(),
+    },
+    {
+      key: 'translated',
+      label: t('document.infoTranslatedWords'),
+      value: translatedWords.toLocaleString(),
+    },
+    {
+      key: 'chunks',
+      label: t('document.infoChunks'),
+      value: `${completedCount} / ${chunkCount}`,
+    },
+  ];
+
+  if (compositeLabel) {
+    items.push({
+      key: 'quality',
+      label: t('document.infoQuality'),
+      value: compositeLabel,
+    });
+  }
+
+  return (
+    <dl className="flex flex-wrap items-center gap-2 rounded-full border border-editorial-border bg-editorial-bg px-2 py-1.5 shadow-sm">
+      <div className="rounded-full bg-editorial-textbox/40 px-3 py-1 text-[9px] font-bold uppercase tracking-[0.22em] text-editorial-muted/80">
+        {t('header.summaryLabel')}
+      </div>
+      {items.map((item) => (
+        <div key={item.key} className="flex items-baseline gap-1.5 rounded-full bg-editorial-textbox/28 px-3 py-1">
+          <dt className="text-[9px] font-bold uppercase tracking-[0.16em] text-editorial-muted">
+            {item.label}
+          </dt>
+          <dd className="font-display text-sm italic text-editorial-ink">{item.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function countWords(text: string): number {
+  return text.trim().split(/\s+/).filter(Boolean).length;
 }

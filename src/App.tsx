@@ -1,7 +1,7 @@
 import { Header } from './components/layout';
 import { PipelineConfig, ProductionStream } from './components/pipeline';
 import { AuditPanel } from './components/audit';
-import { DocumentView } from './components/document';
+import { ConfigDrawer, DocumentView, InsightsDrawer } from './components/document';
 import { SettingsModal } from './components/settings';
 import { ProjectPanel } from './components/projects';
 import { ErrorBoundary, ConfirmDialog } from './components/common';
@@ -23,21 +23,22 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-editorial-bg text-editorial-ink font-sans flex flex-col">
-        <Header />
+      <div className="h-screen overflow-hidden bg-editorial-bg text-editorial-ink font-sans flex flex-col">
+        <div className="flex-shrink-0">
+          <Header
+            onRunPipeline={runPipeline}
+            onRunAuditOnly={runAuditOnly}
+            onCancelPipeline={cancelPipeline}
+          />
+        </div>
 
         {viewMode === 'document' ? (
-          <main className="grid grid-cols-1 md:grid-cols-12 flex-1 min-h-0">
-            <PipelineConfig
-              onRunPipeline={runPipeline}
-              onRunAuditOnly={runAuditOnly}
-              onCancelPipeline={cancelPipeline}
-            />
+          <main className="flex flex-1 min-h-0 overflow-hidden">
             <DocumentView
               onRetranslateChunk={runSingleChunk}
               onReauditChunk={auditSingleChunk}
-              onRunAuditOnly={runAuditOnly}
             />
+            <InsightsDrawer onReauditChunk={auditSingleChunk} />
           </main>
         ) : (
           <main className="grid grid-cols-1 md:grid-cols-12 flex-1 min-h-0">
@@ -55,6 +56,14 @@ export default function App() {
               onReauditChunk={auditSingleChunk}
             />
           </main>
+        )}
+
+        {viewMode === 'document' && (
+          <ConfigDrawer
+            onRunPipeline={runPipeline}
+            onRunAuditOnly={runAuditOnly}
+            onCancelPipeline={cancelPipeline}
+          />
         )}
 
         <SettingsModal />
