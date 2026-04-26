@@ -8,18 +8,28 @@ import {
   Settings,
   Upload,
 } from 'lucide-react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { useProjectSnapshot } from '../../hooks/useProjectAutosave';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
+import { ImportPreviewDialog } from '../document';
 import { importTextFile, exportTranslation, exportBilingual } from '../../services/fileService';
 import { HelpGuide } from '../help';
 
+interface PendingImport {
+  fileName: string;
+  text: string;
+  useChunking: boolean;
+  targetChunkCount: number;
+}
+
 export function Header() {
-  const { setInputText } = usePipelineStore();
-  const { chunks, isProcessing } = useChunksStore();
+  const { config, setConfig } = usePipelineStore();
+  const { chunks, isProcessing, loadDocument } = useChunksStore();
   const {
     setShowSettings,
     setShowHelp,
@@ -34,8 +44,11 @@ export function Header() {
     setShowProjectPanel,
     saveCurrentProject,
     projects,
+    saveState,
   } = useProjectStore();
   const { t, i18n } = useTranslation();
+  const snapshot = useProjectSnapshot();
+  const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
 
   const currentProject = projects.find((project) => project.id === currentProjectId);
 
@@ -45,14 +58,34 @@ export function Header() {
 
   const handleImport = async () => {
     try {
-      const text = await importTextFile();
-      if (text) {
-        setInputText(text);
-        toast.success(t('files.imported'));
+      const imported = await importTextFile();
+      if (imported) {
+        setPendingImport({
+          fileName: imported.name,
+          text: imported.text,
+          useChunking: config.useChunking !== false,
+          targetChunkCount: config.targetChunkCount ?? 0,
+        });
       }
     } catch (err: any) {
       toast.error(t('files.importError'), { description: err.message });
     }
+  };
+
+  const handleConfirmImport = () => {
+    if (!pendingImport) return;
+
+    setConfig((prev) => ({
+      ...prev,
+      useChunking: pendingImport.useChunking,
+      targetChunkCount: pendingImport.targetChunkCount,
+    }));
+    loadDocument(pendingImport.text, {
+      useChunking: pendingImport.useChunking,
+      targetChunkCount: pendingImport.targetChunkCount,
+    });
+    setPendingImport(null);
+    toast.success(t('files.imported'));
   };
 
   const handleExport = async (type: 'txt' | 'md' | 'bilingual') => {
@@ -69,7 +102,7 @@ export function Header() {
 
   const handleSave = async () => {
     try {
-      await saveCurrentProject();
+      await saveCurrentProject(snapshot);
       toast.success(t('projects.saved'));
     } catch (err: any) {
       toast.error(t('projects.saveFailed'), { description: err?.message });
@@ -84,6 +117,16 @@ export function Header() {
   const langLabel = t('language.label');
   const settingsLabel = t('header.settings');
   const helpLabel = t('help.title');
+  const saveStatusLabel =
+    saveState === 'dirty'
+      ? t('projects.statusDirty')
+      : saveState === 'saving'
+        ? t('projects.statusSaving')
+        : saveState === 'error'
+          ? t('projects.statusError')
+          : currentProjectId
+            ? t('projects.statusSaved')
+            : t('projects.statusDraft');
 
   return (
     <header className="border-b border-editorial-border bg-[linear-gradient(180deg,#fffdf8_0%,#f8f3ea_100%)] px-6 py-5 md:px-10">
@@ -99,14 +142,24 @@ export function Header() {
               </div>
             </div>
             {currentProject && (
-              <button
-                onClick={() => setShowProjectPanel(true)}
-                title={projectsLabel}
-                aria-label={`${projectsLabel}: ${currentProject.name}`}
-                className="rounded-full border border-editorial-border bg-editorial-bg/70 px-3 py-1.5 text-[10px] font-mono text-editorial-muted transition-colors hover:border-editorial-ink hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              >
-                {currentProject.name}
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => setShowProjectPanel(true)}
+                  title={projectsLabel}
+                  aria-label={`${projectsLabel}: ${currentProject.name}`}
+                  className="rounded-full border border-editorial-border bg-editorial-bg/70 px-3 py-1.5 text-[10px] font-mono text-editorial-muted transition-colors hover:border-editorial-ink hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                >
+                  {currentProject.name}
+                </button>
+                <span className="rounded-full border border-editorial-border/70 bg-editorial-textbox/40 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.22em] text-editorial-muted">
+                  {saveStatusLabel}
+                </span>
+              </div>
+            )}
+            {!currentProject && (
+              <span className="rounded-full border border-editorial-border/70 bg-editorial-textbox/40 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.22em] text-editorial-muted">
+                {saveStatusLabel}
+              </span>
             )}
           </div>
 
@@ -273,6 +326,26 @@ export function Header() {
       </div>
 
       <HelpGuide open={showHelp} onClose={() => setShowHelp(false)} />
+      {pendingImport && (
+        <ImportPreviewDialog
+          fileName={pendingImport.fileName}
+          text={pendingImport.text}
+          useChunking={pendingImport.useChunking}
+          targetChunkCount={pendingImport.targetChunkCount}
+          onUseChunkingChange={(value) =>
+            setPendingImport((current) =>
+              current ? { ...current, useChunking: value } : current,
+            )
+          }
+          onTargetChunkCountChange={(value) =>
+            setPendingImport((current) =>
+              current ? { ...current, targetChunkCount: value } : current,
+            )
+          }
+          onCancel={() => setPendingImport(null)}
+          onConfirm={handleConfirmImport}
+        />
+      )}
     </header>
   );
 }

@@ -13,24 +13,31 @@ import {
 import { usePipelineStore } from './pipelineStore';
 import { useChunksStore } from './chunksStore';
 import { useUiStore } from './uiStore';
+import { buildProjectSnapshot } from '../utils/projectSnapshot';
 
 interface ProjectState {
   projects: Project[];
   currentProjectId: string | null;
   showProjectPanel: boolean;
+  saveState: 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
+  lastSaveError: string | null;
+  trackedSnapshot: string | null;
 
   setShowProjectPanel: (show: boolean) => void;
   loadProjects: () => Promise<void>;
   createAndOpen: (name: string) => Promise<void>;
   openProject: (id: string) => Promise<void>;
   removeProject: (id: string) => Promise<void>;
-  saveCurrentProject: () => Promise<void>;
+  saveCurrentProject: (snapshot?: string) => Promise<void>;
 }
 
 export const useProjectStore = create<ProjectState>((set, get) => ({
   projects: [],
   currentProjectId: null,
   showProjectPanel: false,
+  saveState: 'idle',
+  lastSaveError: null,
+  trackedSnapshot: null,
 
   setShowProjectPanel: (show) => {
     set({ showProjectPanel: show });
@@ -52,7 +59,12 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const id = await createProject(name, pipeline.config.sourceLanguage, pipeline.config.targetLanguage);
     await saveProjectConfig(id, pipeline.config, ui.viewMode);
     await get().loadProjects();
-    set({ currentProjectId: id });
+    set({
+      currentProjectId: id,
+      saveState: 'saved',
+      lastSaveError: null,
+      trackedSnapshot: null,
+    });
   },
 
   openProject: async (id: string) => {
@@ -80,22 +92,32 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     });
     chunksStore.setChunks(restoredChunks);
     pipeline.setInputText(restoredChunks.map((chunk) => chunk.originalText).join('\n\n'));
-    ui.setViewMode(config.viewMode ?? (restoredChunks.length > 1 ? 'document' : 'sandbox'));
+    ui.setViewMode(config.viewMode ?? 'document');
     ui.setSelectedChunkId(restoredChunks[0]?.id ?? null);
 
-    set({ currentProjectId: id });
+    set({
+      currentProjectId: id,
+      saveState: 'saved',
+      lastSaveError: null,
+      trackedSnapshot: null,
+    });
   },
 
   removeProject: async (id: string) => {
     await deleteProject(id);
     const state = get();
     if (state.currentProjectId === id) {
-      set({ currentProjectId: null });
+      set({
+        currentProjectId: null,
+        saveState: 'idle',
+        lastSaveError: null,
+        trackedSnapshot: null,
+      });
     }
     await state.loadProjects();
   },
 
-  saveCurrentProject: async () => {
+  saveCurrentProject: async (snapshot) => {
     const { currentProjectId } = get();
     if (!currentProjectId) return;
 
@@ -106,7 +128,31 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
     const pipeline = usePipelineStore.getState();
     const ui = useUiStore.getState();
-    await saveProjectConfig(currentProjectId, pipeline.config, ui.viewMode);
-    await saveTranslations(currentProjectId, chunksStore.chunks);
+    const effectiveSnapshot =
+      snapshot ??
+      buildProjectSnapshot({
+        inputText: pipeline.inputText,
+        config: pipeline.config,
+        chunks: chunksStore.chunks,
+        viewMode: ui.viewMode,
+      });
+
+    set({ saveState: 'saving', lastSaveError: null });
+
+    try {
+      await saveProjectConfig(currentProjectId, pipeline.config, ui.viewMode);
+      await saveTranslations(currentProjectId, chunksStore.chunks);
+      set({
+        saveState: 'saved',
+        lastSaveError: null,
+        trackedSnapshot: effectiveSnapshot,
+      });
+    } catch (error: any) {
+      set({
+        saveState: 'error',
+        lastSaveError: error?.message ?? 'Failed to save project.',
+      });
+      throw error;
+    }
   },
 }));

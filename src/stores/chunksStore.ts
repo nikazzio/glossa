@@ -22,6 +22,13 @@ interface ChunksState {
   setActiveStreamId: (id: string | null) => void;
 
   generateChunks: () => void;
+  loadDocument: (
+    text: string,
+    options?: {
+      useChunking?: boolean;
+      targetChunkCount?: number;
+    },
+  ) => void;
   clearChunks: () => void;
   updateChunkStage: (chunkId: string, stageId: string, result: PipelineResult) => void;
   appendChunkStageContent: (chunkId: string, stageId: string, token: string) => void;
@@ -30,6 +37,7 @@ interface ChunksState {
   updateChunkStatus: (chunkId: string, status: ChunkStatus) => void;
   updateChunkOriginalText: (chunkId: string, text: string) => void;
   splitChunk: (chunkId: string) => void;
+  splitChunkAt: (chunkId: string, splitAt: number) => boolean;
   mergeChunkWithNext: (chunkId: string) => void;
   resetCompletedChunks: () => void;
   unlockChunkForEdit: (chunkId: string) => void;
@@ -59,21 +67,23 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
     const { inputText, config } = usePipelineStore.getState();
     if (!inputText.trim()) return;
 
-    const texts = chunkText(inputText, {
+    const chunks = buildChunks(inputText, {
       useChunking: config.useChunking,
       targetChunkCount: config.targetChunkCount,
     });
 
-    const chunks = texts.map((text, index) => ({
-      id: `chunk-${index}`,
-      originalText: text,
-      status: 'ready' as const,
-      stageResults: {},
-      judgeResult: createEmptyJudgeResult(),
-      currentDraft: '',
-    }));
-
     useUiStore.getState().setViewMode(chunks.length > 1 ? 'document' : 'sandbox');
+    syncSelectedChunk(chunks);
+    set({ chunks });
+  },
+
+  loadDocument: (text, options = {}) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+
+    const chunks = buildChunks(trimmed, options);
+    usePipelineStore.getState().setInputText(trimmed);
+    useUiStore.getState().setViewMode('document');
     syncSelectedChunk(chunks);
     set({ chunks });
   },
@@ -143,35 +153,25 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
 
   splitChunk: (chunkId) =>
     set((state) => {
-      const index = state.chunks.findIndex((chunk) => chunk.id === chunkId);
-      if (index === -1) return {};
-
-      const chunk = state.chunks[index];
-      if (chunk.status === 'completed' || chunk.status === 'processing') return {};
-
-      const splitAt = findBestSplitIndex(chunk.originalText);
+      const chunk = state.chunks.find((entry) => entry.id === chunkId);
+      const splitAt = findBestSplitIndex(chunk?.originalText ?? '');
       if (!splitAt) return {};
 
-      const firstText = chunk.originalText.slice(0, splitAt).trim();
-      const secondText = chunk.originalText.slice(splitAt).trim();
-      if (!firstText || !secondText) return {};
-
-      const first = resetChunkForSourceEdit({ ...chunk, originalText: firstText });
-      const second = resetChunkForSourceEdit({
-        ...chunk,
-        id: generateId('chunk'),
-        originalText: secondText,
-      });
-
-      const chunks = [
-        ...state.chunks.slice(0, index),
-        first,
-        second,
-        ...state.chunks.slice(index + 1),
-      ];
-      syncSelectedChunk(chunks, first.id);
-      return { chunks };
+      return splitChunkState(state.chunks, chunkId, splitAt) ?? {};
     }),
+
+  splitChunkAt: (chunkId, splitAt) => {
+    let didSplit = false;
+
+    set((state) => {
+      const next = splitChunkState(state.chunks, chunkId, splitAt);
+      if (!next) return {};
+      didSplit = true;
+      return next;
+    });
+
+    return didSplit;
+  },
 
   mergeChunkWithNext: (chunkId) =>
     set((state) => {
@@ -234,6 +234,56 @@ function resetChunkForSourceEdit<T extends TranslationChunk>(chunk: T): T {
     judgeResult: createEmptyJudgeResult(),
     currentDraft: '',
   };
+}
+
+function buildChunks(
+  text: string,
+  options: {
+    useChunking?: boolean;
+    targetChunkCount?: number;
+  },
+): TranslationChunk[] {
+  return chunkText(text, options).map((chunkTextValue, index) => ({
+    id: `chunk-${index}`,
+    originalText: chunkTextValue,
+    status: 'ready' as const,
+    stageResults: {},
+    judgeResult: createEmptyJudgeResult(),
+    currentDraft: '',
+  }));
+}
+
+function splitChunkState(
+  chunks: TranslationChunk[],
+  chunkId: string,
+  splitAt: number,
+): { chunks: TranslationChunk[] } | null {
+  const index = chunks.findIndex((chunk) => chunk.id === chunkId);
+  if (index === -1) return null;
+
+  const chunk = chunks[index];
+  if (chunk.status === 'completed' || chunk.status === 'processing') return null;
+
+  const boundedSplitAt = Math.max(1, Math.min(splitAt, chunk.originalText.length - 1));
+  const firstText = chunk.originalText.slice(0, boundedSplitAt).trim();
+  const secondText = chunk.originalText.slice(boundedSplitAt).trim();
+  if (!firstText || !secondText) return null;
+
+  const first = resetChunkForSourceEdit({ ...chunk, originalText: firstText });
+  const second = resetChunkForSourceEdit({
+    ...chunk,
+    id: generateId('chunk'),
+    originalText: secondText,
+  });
+
+  const nextChunks = [
+    ...chunks.slice(0, index),
+    first,
+    second,
+    ...chunks.slice(index + 1),
+  ];
+  syncSelectedChunk(nextChunks, first.id);
+  return { chunks: nextChunks };
 }
 
 function syncSelectedChunk(chunks: TranslationChunk[], preferredId?: string | null) {

@@ -52,6 +52,20 @@ describe('chunksStore', () => {
     expect(useUiStore.getState().viewMode).toBe('sandbox');
   });
 
+  it('loads imported text into document mode even when it becomes a single chunk', () => {
+    useChunksStore.getState().loadDocument('Single imported paragraph.', {
+      useChunking: false,
+      targetChunkCount: 0,
+    });
+
+    expect(useChunksStore.getState().chunks).toHaveLength(1);
+    expect(useChunksStore.getState().chunks[0].originalText).toBe(
+      'Single imported paragraph.',
+    );
+    expect(useUiStore.getState().viewMode).toBe('document');
+    expect(useUiStore.getState().selectedChunkId).toBe('chunk-0');
+  });
+
   it('resets derived data when editing source text', () => {
     usePipelineStore.getState().setInputText('Original');
     useChunksStore.getState().generateChunks();
@@ -91,6 +105,20 @@ describe('chunksStore', () => {
     expect(useUiStore.getState().selectedChunkId).toBe(
       useChunksStore.getState().chunks[0].id,
     );
+  });
+
+  it('splits a chunk at an explicit index chosen by the user', () => {
+    useChunksStore.getState().loadDocument('Alpha beta gamma delta', {
+      useChunking: false,
+      targetChunkCount: 0,
+    });
+
+    const didSplit = useChunksStore.getState().splitChunkAt('chunk-0', 11);
+
+    expect(didSplit).toBe(true);
+    expect(useChunksStore.getState().chunks).toHaveLength(2);
+    expect(useChunksStore.getState().chunks[0].originalText).toBe('Alpha beta');
+    expect(useChunksStore.getState().chunks[1].originalText).toBe('gamma delta');
   });
 
   it('clears chunks and returns to sandbox mode', () => {
