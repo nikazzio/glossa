@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core';
 import { open, save } from '@tauri-apps/plugin-dialog';
 import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import type { TranslationChunk } from '../types';
@@ -15,7 +16,10 @@ export async function importTextFile(): Promise<ImportedTextFile | null> {
   const path = await open({
     title: 'Import source text',
     filters: [
-      { name: 'Text files', extensions: ['txt', 'md', 'text'] },
+      { name: 'Documents', extensions: ['txt', 'md', 'text', 'docx', 'pdf'] },
+      { name: 'Plain text', extensions: ['txt', 'md', 'text'] },
+      { name: 'Word document', extensions: ['docx'] },
+      { name: 'PDF document', extensions: ['pdf'] },
       { name: 'All files', extensions: ['*'] },
     ],
     multiple: false,
@@ -25,8 +29,19 @@ export async function importTextFile(): Promise<ImportedTextFile | null> {
   return {
     path: resolvedPath,
     name: basename(resolvedPath),
-    text: await readTextFile(resolvedPath),
+    text: await readImportedText(resolvedPath),
   };
+}
+
+async function readImportedText(path: string): Promise<string> {
+  const ext = extension(path);
+  if (ext === 'docx') {
+    return await invoke<string>('extract_docx_text', { path });
+  }
+  if (ext === 'pdf') {
+    return await invoke<string>('extract_pdf_text', { path });
+  }
+  return await readTextFile(path);
 }
 
 // ── Export ────────────────────────────────────────────────────────────
@@ -103,7 +118,17 @@ function buildMarkdown(chunks: TranslationChunk[]): string {
   return lines.join('\n');
 }
 
-function basename(path: string): string {
+function fileName(path: string): string {
   const normalized = path.replace(/\\/g, '/');
   return normalized.split('/').pop() || normalized;
+}
+
+function basename(path: string): string {
+  return fileName(path);
+}
+
+function extension(path: string): string {
+  const name = fileName(path);
+  const dot = name.lastIndexOf('.');
+  return dot >= 0 ? name.slice(dot + 1).toLowerCase() : '';
 }

@@ -30,6 +30,9 @@ keyring = { version = "3", features = ["sync-secret-service", "crypto-rust"] }
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 tokio = { version = "1", features = ["sync", "macros"] }
+zip = { version = "4", default-features = false, features = ["deflate"] }
+quick-xml = "0.38"
+pdf-extract = "0.7"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt"] }
