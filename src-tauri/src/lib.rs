@@ -1,3 +1,4 @@
+mod documents;
 mod llm;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -43,6 +44,8 @@ pub fn run() {
       llm::test_provider_connection,
       llm::list_ollama_models,
       llm::check_ollama_status,
+      documents::extract_docx_text,
+      documents::extract_pdf_text,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
