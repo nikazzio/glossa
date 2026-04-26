@@ -11,12 +11,18 @@ export function useProjectSnapshot(): string {
   const inputText = usePipelineStore((state) => state.inputText);
   const config = usePipelineStore((state) => state.config);
   const chunks = useChunksStore((state) => state.chunks);
+  const isProcessing = useChunksStore((state) => state.isProcessing);
   const viewMode = useUiStore((state) => state.viewMode);
+  const lastStableSnapshotRef = useRef<string | null>(null);
 
-  return useMemo(
-    () => buildProjectSnapshot({ inputText, config, chunks, viewMode }),
-    [chunks, config, inputText, viewMode],
-  );
+  return useMemo(() => {
+    if (isProcessing && lastStableSnapshotRef.current !== null) {
+      return lastStableSnapshotRef.current;
+    }
+    const next = buildProjectSnapshot({ inputText, config, chunks, viewMode });
+    lastStableSnapshotRef.current = next;
+    return next;
+  }, [chunks, config, inputText, isProcessing, viewMode]);
 }
 
 export function useProjectAutosave(delayMs = 1200) {

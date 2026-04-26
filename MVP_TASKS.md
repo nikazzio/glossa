@@ -75,11 +75,10 @@ In breve: se la domanda è "cosa fare adesso?", la risposta non è Sprint 2 o Sp
 - **Cosa è dentro**:
   - modalità `Documento` come default operativo, con default coerente anche all'apertura di progetti vuoti (`src/stores/uiStore.ts`, `src/stores/projectStore.ts`);
   - autosave per progetti esistenti con stato esplicito `draft` / `dirty` / `saving` / `saved` / `error`, hook dedicato (`src/hooks/useProjectAutosave.ts`) e indicatore in header (`src/components/layout/Header.tsx`);
-  - `ImportPreviewDialog` per `txt`, `md`, `text` con stima parole/paragrafi/chunk e regolazione segmentazione prima della conferma (`src/components/document/ImportPreviewDialog.tsx`, `src/services/fileService.ts`, `src/utils/documentWorkflow.ts`);
+  - `ImportPreviewDialog` per `txt`, `md`, `text`, `docx` e `pdf` con stima parole/paragrafi/chunk e regolazione segmentazione prima della conferma (`src/components/document/ImportPreviewDialog.tsx`, `src/services/fileService.ts`, `src/utils/documentWorkflow.ts`); l'estrazione testuale di `docx` e `pdf` è gestita da comandi Tauri dedicati (`src-tauri/src/documents.rs`);
   - promozione esplicita da Sandbox a Documento via "apri nel lettore documento" (`src/components/pipeline/ProductionStream.tsx`);
   - split manuale del chunk con preview A/B basata su cursore (`src/components/document/DocumentView.tsx`, `splitChunkAt` in `src/stores/chunksStore.ts`).
 - **Cosa resta da chiudere prima di passare a `completata`**:
-  - estensione `ImportPreviewDialog` a `docx` e `pdf` (oggi `importTextFile` accetta solo plain text);
   - semplificazione profonda della `DocumentView` con drawer/pannelli a scomparsa:
     - testo al centro come superficie dominante;
     - trace degli stage compatta, sempre visibile;

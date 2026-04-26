@@ -1,13 +1,13 @@
-import type { usePipelineStore } from '../stores/pipelineStore';
-import type { useChunksStore } from '../stores/chunksStore';
-import type { useUiStore } from '../stores/uiStore';
+import type { PipelineConfig, TranslationChunk, ViewMode } from '../types';
 
-export function buildProjectSnapshot(input: {
+export interface ProjectSnapshotInput {
   inputText: string;
-  config: ReturnType<typeof usePipelineStore.getState>['config'];
-  chunks: ReturnType<typeof useChunksStore.getState>['chunks'];
-  viewMode: ReturnType<typeof useUiStore.getState>['viewMode'];
-}): string {
+  config: PipelineConfig;
+  chunks: TranslationChunk[];
+  viewMode: ViewMode;
+}
+
+export function buildProjectSnapshot(input: ProjectSnapshotInput): string {
   return JSON.stringify({
     inputText: input.inputText,
     config: input.config,
