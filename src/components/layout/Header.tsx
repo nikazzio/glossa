@@ -8,6 +8,7 @@ import {
   Settings,
   Upload,
 } from 'lucide-react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useProjectSnapshot } from '../../hooks/useProjectAutosave';
@@ -15,12 +16,20 @@ import { usePipelineStore } from '../../stores/pipelineStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
+import { ImportPreviewDialog } from '../document';
 import { importTextFile, exportTranslation, exportBilingual } from '../../services/fileService';
 import { HelpGuide } from '../help';
 
+interface PendingImport {
+  fileName: string;
+  text: string;
+  useChunking: boolean;
+  targetChunkCount: number;
+}
+
 export function Header() {
-  const { setInputText } = usePipelineStore();
-  const { chunks, isProcessing } = useChunksStore();
+  const { config, setConfig } = usePipelineStore();
+  const { chunks, isProcessing, loadDocument } = useChunksStore();
   const {
     setShowSettings,
     setShowHelp,
@@ -39,6 +48,7 @@ export function Header() {
   } = useProjectStore();
   const { t, i18n } = useTranslation();
   const snapshot = useProjectSnapshot();
+  const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
 
   const currentProject = projects.find((project) => project.id === currentProjectId);
 
@@ -48,14 +58,34 @@ export function Header() {
 
   const handleImport = async () => {
     try {
-      const text = await importTextFile();
-      if (text) {
-        setInputText(text);
-        toast.success(t('files.imported'));
+      const imported = await importTextFile();
+      if (imported) {
+        setPendingImport({
+          fileName: imported.name,
+          text: imported.text,
+          useChunking: config.useChunking !== false,
+          targetChunkCount: config.targetChunkCount ?? 0,
+        });
       }
     } catch (err: any) {
       toast.error(t('files.importError'), { description: err.message });
     }
+  };
+
+  const handleConfirmImport = () => {
+    if (!pendingImport) return;
+
+    setConfig((prev) => ({
+      ...prev,
+      useChunking: pendingImport.useChunking,
+      targetChunkCount: pendingImport.targetChunkCount,
+    }));
+    loadDocument(pendingImport.text, {
+      useChunking: pendingImport.useChunking,
+      targetChunkCount: pendingImport.targetChunkCount,
+    });
+    setPendingImport(null);
+    toast.success(t('files.imported'));
   };
 
   const handleExport = async (type: 'txt' | 'md' | 'bilingual') => {
@@ -296,6 +326,26 @@ export function Header() {
       </div>
 
       <HelpGuide open={showHelp} onClose={() => setShowHelp(false)} />
+      {pendingImport && (
+        <ImportPreviewDialog
+          fileName={pendingImport.fileName}
+          text={pendingImport.text}
+          useChunking={pendingImport.useChunking}
+          targetChunkCount={pendingImport.targetChunkCount}
+          onUseChunkingChange={(value) =>
+            setPendingImport((current) =>
+              current ? { ...current, useChunking: value } : current,
+            )
+          }
+          onTargetChunkCountChange={(value) =>
+            setPendingImport((current) =>
+              current ? { ...current, targetChunkCount: value } : current,
+            )
+          }
+          onCancel={() => setPendingImport(null)}
+          onConfirm={handleConfirmImport}
+        />
+      )}
     </header>
   );
 }

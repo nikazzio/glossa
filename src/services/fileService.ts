@@ -5,7 +5,13 @@ import { qualityExportLabel } from '../utils';
 
 // ── Import ───────────────────────────────────────────────────────────
 
-export async function importTextFile(): Promise<string | null> {
+export interface ImportedTextFile {
+  path: string;
+  name: string;
+  text: string;
+}
+
+export async function importTextFile(): Promise<ImportedTextFile | null> {
   const path = await open({
     title: 'Import source text',
     filters: [
@@ -15,7 +21,12 @@ export async function importTextFile(): Promise<string | null> {
     multiple: false,
   });
   if (!path) return null;
-  return readTextFile(path as string);
+  const resolvedPath = path as string;
+  return {
+    path: resolvedPath,
+    name: basename(resolvedPath),
+    text: await readTextFile(resolvedPath),
+  };
 }
 
 // ── Export ────────────────────────────────────────────────────────────
@@ -90,4 +101,9 @@ function buildMarkdown(chunks: TranslationChunk[]): string {
     lines.push(chunk.currentDraft || chunk.originalText, '');
   });
   return lines.join('\n');
+}
+
+function basename(path: string): string {
+  const normalized = path.replace(/\\/g, '/');
+  return normalized.split('/').pop() || normalized;
 }

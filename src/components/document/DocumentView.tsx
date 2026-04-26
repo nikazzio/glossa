@@ -19,10 +19,12 @@ import { useUiStore } from '../../stores/uiStore';
 import { confirm } from '../../stores/confirmStore';
 import {
   calculateCompositeQuality,
+  findBestSplitIndex,
   indexPad,
   qualityLabelKey,
   qualityTone,
 } from '../../utils';
+import { buildSplitPreview } from '../../utils/documentWorkflow';
 import { CopyButton, ProcessingLine, StatusIndicator } from '../common';
 
 interface DocumentViewProps {
@@ -49,7 +51,7 @@ export function DocumentView({
     isProcessing,
     updateChunkDraft,
     updateChunkOriginalText,
-    splitChunk,
+    splitChunkAt,
     mergeChunkWithNext,
     unlockChunkForEdit,
   } = useChunksStore();
@@ -63,6 +65,7 @@ export function DocumentView({
   const [viewportWidth, setViewportWidth] = useState(
     typeof window === 'undefined' ? 0 : window.innerWidth,
   );
+  const [splitDraft, setSplitDraft] = useState<{ chunkId: string; splitAt: number } | null>(null);
 
   useEffect(() => {
     const onResize = () => setViewportWidth(window.innerWidth);
@@ -104,6 +107,12 @@ export function DocumentView({
       danger: true,
     });
     if (ok) unlockChunkForEdit(chunkId);
+  };
+
+  const openSplitDialog = (chunkId: string, text: string) => {
+    const initialSplitAt =
+      findBestSplitIndex(text) ?? Math.max(1, Math.floor(text.length / 2));
+    setSplitDraft({ chunkId, splitAt: initialSplitAt });
   };
 
   if (!currentChunk) {
@@ -331,7 +340,7 @@ export function DocumentView({
                 <>
                   <button
                     type="button"
-                    onClick={() => splitChunk(currentChunk.id)}
+                    onClick={() => openSplitDialog(currentChunk.id, currentChunk.originalText)}
                     disabled={isProcessing || currentChunk.originalText.trim().length < 2}
                     className="rounded-full border border-editorial-border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink disabled:opacity-30"
                   >
@@ -516,6 +525,18 @@ export function DocumentView({
           )}
         </div>
       </div>
+      {splitDraft && currentChunk.id === splitDraft.chunkId && (
+        <SplitChunkDialog
+          text={currentChunk.originalText}
+          splitAt={splitDraft.splitAt}
+          onSplitAtChange={(splitAt) => setSplitDraft((current) => (current ? { ...current, splitAt } : current))}
+          onCancel={() => setSplitDraft(null)}
+          onConfirm={() => {
+            const didSplit = splitChunkAt(currentChunk.id, splitDraft.splitAt);
+            if (didSplit) setSplitDraft(null);
+          }}
+        />
+      )}
     </section>
   );
 }
@@ -550,6 +571,94 @@ function DocumentPage({
       </div>
       <div className={readOnly ? 'opacity-90' : ''}>{children}</div>
     </section>
+  );
+}
+
+function SplitChunkDialog({
+  text,
+  splitAt,
+  onSplitAtChange,
+  onCancel,
+  onConfirm,
+}: {
+  text: string;
+  splitAt: number;
+  onSplitAtChange: (splitAt: number) => void;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const { t } = useTranslation();
+  const preview = buildSplitPreview(text, splitAt);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-editorial-ink/35 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-5xl rounded-[28px] border border-editorial-border bg-editorial-bg p-6 shadow-[0_24px_80px_rgba(26,26,26,0.2)] md:p-8">
+        <div className="border-b border-editorial-border pb-4">
+          <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+            {t('document.manualSplitLabel')}
+          </div>
+          <h3 className="mt-2 font-display text-3xl italic tracking-tight text-editorial-ink">
+            {t('document.manualSplitTitle')}
+          </h3>
+          <p className="mt-2 text-sm leading-relaxed text-editorial-muted">
+            {t('document.manualSplitHint')}
+          </p>
+        </div>
+
+        <div className="mt-6 grid gap-6 xl:grid-cols-2">
+          <div className="rounded-[22px] border border-editorial-border bg-editorial-textbox/35 p-5">
+            <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
+              {t('pipeline.originalSource')}
+            </div>
+            <textarea
+              value={text}
+              readOnly
+              onClick={(event) => onSplitAtChange(event.currentTarget.selectionStart)}
+              onKeyUp={(event) => onSplitAtChange(event.currentTarget.selectionStart)}
+              onSelect={(event) => onSplitAtChange(event.currentTarget.selectionStart)}
+              className="min-h-[260px] w-full resize-none bg-transparent text-sm leading-7 text-editorial-ink outline-none"
+            />
+          </div>
+
+          <div className="space-y-4">
+            <div className="rounded-[22px] border border-editorial-border bg-editorial-bg p-5">
+              <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
+                {t('document.splitPreviewFirst')}
+              </div>
+              <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-editorial-ink">
+                {preview.beforeText || '—'}
+              </p>
+            </div>
+            <div className="rounded-[22px] border border-editorial-border bg-editorial-bg p-5">
+              <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
+                {t('document.splitPreviewSecond')}
+              </div>
+              <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-editorial-ink">
+                {preview.afterText || '—'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 flex flex-col-reverse gap-3 border-t border-editorial-border pt-5 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-full border border-editorial-border px-5 py-3 text-[11px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink"
+          >
+            {t('common.cancel')}
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={!preview.isValid}
+            className="rounded-full bg-editorial-ink px-5 py-3 text-[11px] font-bold uppercase tracking-[0.25em] text-white transition-colors hover:bg-editorial-accent disabled:opacity-40"
+          >
+            {t('document.manualSplitConfirm')}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

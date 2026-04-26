@@ -25,6 +25,7 @@ export function ProductionStream({
     chunks,
     isProcessing,
     generateChunks,
+    loadDocument,
     clearChunks,
     updateChunkDraft,
     updateChunkOriginalText,
@@ -126,6 +127,20 @@ export function ProductionStream({
             >
               {t('pipeline.stageContent')}
             </button>
+            {inputText.trim() && (
+              <button
+                type="button"
+                onClick={() =>
+                  loadDocument(inputText, {
+                    useChunking: config.useChunking,
+                    targetChunkCount: config.targetChunkCount,
+                  })
+                }
+                className="w-full rounded-full border border-editorial-border px-6 py-4 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink"
+              >
+                {t('document.openInReader')}
+              </button>
+            )}
           </div>
         )}
 
@@ -142,6 +157,18 @@ export function ProductionStream({
             <div className="text-[10px] text-editorial-muted leading-relaxed max-w-md">
               {t('pipeline.chunkPreviewHint')}
             </div>
+            <button
+              type="button"
+              onClick={() =>
+                loadDocument(inputText, {
+                  useChunking: config.useChunking,
+                  targetChunkCount: config.targetChunkCount,
+                })
+              }
+              className="rounded-full border border-editorial-border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink"
+            >
+              {t('document.openInReader')}
+            </button>
           </div>
         )}
 
