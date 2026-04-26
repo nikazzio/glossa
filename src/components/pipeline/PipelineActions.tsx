@@ -1,4 +1,4 @@
-import { Loader2, Play, ScanLine, Square } from 'lucide-react';
+import { Loader2, Play, Square } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useChunksStore } from '../../stores/chunksStore';
 
