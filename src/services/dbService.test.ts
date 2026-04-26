@@ -52,6 +52,9 @@ describe('initDatabase migrations', () => {
       expect.stringContaining('ALTER TABLE pipeline_configs ADD COLUMN target_chunk_count INTEGER DEFAULT 0'),
     );
     expect(dbState.db.execute).toHaveBeenCalledWith(
+      expect.stringContaining("ALTER TABLE pipeline_configs ADD COLUMN source_text TEXT DEFAULT ''"),
+    );
+    expect(dbState.db.execute).toHaveBeenCalledWith(
       expect.stringContaining("ALTER TABLE translations ADD COLUMN chunk_status TEXT DEFAULT 'ready'"),
     );
     expect(dbState.db.execute).toHaveBeenCalledWith(
@@ -59,6 +62,9 @@ describe('initDatabase migrations', () => {
     );
     expect(dbState.db.execute).toHaveBeenCalledWith(
       expect.stringContaining("ALTER TABLE translations ADD COLUMN judge_rating TEXT DEFAULT 'fair'"),
+    );
+    expect(dbState.db.execute).toHaveBeenCalledWith(
+      expect.stringContaining('ALTER TABLE translations ADD COLUMN position INTEGER DEFAULT NULL'),
     );
   });
 });

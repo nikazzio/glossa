@@ -1,4 +1,4 @@
-import { select, execute } from './dbService';
+import { select, execute, runInTransaction } from './dbService';
 import type {
   GlossaryEntry,
   JudgeResult,
@@ -26,6 +26,7 @@ export interface SavedTranslation {
   project_id: string;
   original_text: string;
   final_translation: string;
+  position?: number | null;
   chunk_status: TranslationChunk['status'];
   stage_results: string; // JSON
   judge_status: JudgeResult['status'];
@@ -117,6 +118,7 @@ export async function deleteProject(id: string): Promise<void> {
 export async function getProjectConfig(projectId: string): Promise<{
   sourceLanguage: string;
   targetLanguage: string;
+  inputText: string;
   viewMode: ViewMode | null;
   stages: PipelineStageConfig[];
   judgePrompt: string;
@@ -129,6 +131,7 @@ export async function getProjectConfig(projectId: string): Promise<{
   const rows = await select<{
     source_language: string;
     target_language: string;
+    source_text?: string;
     view_mode: ViewMode | null;
     stages: string;
     judge_prompt: string;
@@ -142,6 +145,7 @@ export async function getProjectConfig(projectId: string): Promise<{
        p.target_language,
        p.view_mode,
        pc.stages,
+       pc.source_text,
        pc.judge_prompt,
        pc.judge_model,
        pc.judge_provider,
@@ -167,6 +171,7 @@ export async function getProjectConfig(projectId: string): Promise<{
   return {
     sourceLanguage: row.source_language,
     targetLanguage: row.target_language,
+    inputText: row.source_text ?? '',
     viewMode: row.view_mode ?? null,
     stages: JSON.parse(row.stages),
     judgePrompt: row.judge_prompt,
@@ -188,37 +193,19 @@ export async function saveProjectConfig(
   config: PipelineConfig,
   viewMode: ViewMode,
 ): Promise<void> {
-  await execute(
-    `UPDATE pipeline_configs SET
-      stages = $1, judge_prompt = $2, judge_model = $3, judge_provider = $4, use_chunking = $5,
-      target_chunk_count = $6
-     WHERE project_id = $7`,
-    [
-      JSON.stringify(config.stages),
-      config.judgePrompt,
-      config.judgeModel,
-      config.judgeProvider,
-      config.useChunking !== false ? 1 : 0,
-      config.targetChunkCount ?? 0,
-      projectId,
-    ],
-  );
-  await execute(
-    `UPDATE projects SET
-      source_language = $1,
-      target_language = $2,
-      view_mode = $3,
-      updated_at = CURRENT_TIMESTAMP
-     WHERE id = $4`,
-    [config.sourceLanguage, config.targetLanguage, viewMode, projectId],
-  );
-  await saveProjectGlossary(projectId, config);
+  await saveProjectConfigInternal(projectId, '', config, viewMode, execute);
 }
 
-async function saveProjectGlossary(projectId: string, config: PipelineConfig): Promise<void> {
+type ExecuteQuery = (query: string, params?: unknown[]) => Promise<void>;
+
+async function saveProjectGlossary(
+  projectId: string,
+  config: PipelineConfig,
+  run: ExecuteQuery,
+): Promise<void> {
   const glossaryId = `glossary-${projectId}`;
 
-  await execute(
+  await run(
     `INSERT INTO glossaries (id, name, source_language, target_language)
      VALUES ($1, $2, $3, $4)
      ON CONFLICT(id) DO UPDATE SET
@@ -233,19 +220,19 @@ async function saveProjectGlossary(projectId: string, config: PipelineConfig): P
     ],
   );
 
-  await execute(
+  await run(
     'INSERT OR IGNORE INTO project_glossaries (project_id, glossary_id) VALUES ($1, $2)',
     [projectId, glossaryId],
   );
 
-  await execute('DELETE FROM glossary_entries WHERE glossary_id = $1', [glossaryId]);
+  await run('DELETE FROM glossary_entries WHERE glossary_id = $1', [glossaryId]);
 
   const entries = config.glossary.filter(
     (entry) => entry.term.trim() && entry.translation.trim(),
   );
 
   for (const [index, entry] of entries.entries()) {
-    await execute(
+    await run(
       `INSERT INTO glossary_entries (id, glossary_id, term, translation, notes)
        VALUES ($1, $2, $3, $4, $5)`,
       [
@@ -259,23 +246,67 @@ async function saveProjectGlossary(projectId: string, config: PipelineConfig): P
   }
 }
 
+async function saveProjectConfigInternal(
+  projectId: string,
+  inputText: string,
+  config: PipelineConfig,
+  viewMode: ViewMode,
+  run: ExecuteQuery,
+): Promise<void> {
+  await run(
+    `UPDATE pipeline_configs SET
+      stages = $1, judge_prompt = $2, judge_model = $3, judge_provider = $4, use_chunking = $5,
+      target_chunk_count = $6, source_text = $7
+     WHERE project_id = $8`,
+    [
+      JSON.stringify(config.stages),
+      config.judgePrompt,
+      config.judgeModel,
+      config.judgeProvider,
+      config.useChunking !== false ? 1 : 0,
+      config.targetChunkCount ?? 0,
+      inputText,
+      projectId,
+    ],
+  );
+  await run(
+    `UPDATE projects SET
+      source_language = $1,
+      target_language = $2,
+      view_mode = $3,
+      updated_at = CURRENT_TIMESTAMP
+     WHERE id = $4`,
+    [config.sourceLanguage, config.targetLanguage, viewMode, projectId],
+  );
+  await saveProjectGlossary(projectId, config, run);
+}
+
 // ── Translations persistence ─────────────────────────────────────────
 
 export async function saveTranslations(projectId: string, chunks: TranslationChunk[]): Promise<void> {
-  // Clear old translations for this project
-  await execute('DELETE FROM translations WHERE project_id = $1', [projectId]);
+  await saveTranslationsInternal(projectId, chunks, execute);
+  await execute('UPDATE projects SET updated_at = CURRENT_TIMESTAMP WHERE id = $1', [projectId]);
+}
 
-  for (const chunk of chunks) {
-    await execute(
+async function saveTranslationsInternal(
+  projectId: string,
+  chunks: TranslationChunk[],
+  run: ExecuteQuery,
+): Promise<void> {
+  await run('DELETE FROM translations WHERE project_id = $1', [projectId]);
+
+  for (const [position, chunk] of chunks.entries()) {
+    await run(
       `INSERT INTO translations (
-         id, project_id, original_text, final_translation, chunk_status, stage_results,
+         id, project_id, original_text, final_translation, position, chunk_status, stage_results,
          judge_status, judge_rating, judge_issues
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
       [
         chunk.id,
         projectId,
         chunk.originalText,
         chunk.currentDraft || '',
+        position,
         chunk.status,
         JSON.stringify(chunk.stageResults),
         chunk.judgeResult.status,
@@ -284,12 +315,33 @@ export async function saveTranslations(projectId: string, chunks: TranslationChu
       ],
     );
   }
-  await execute('UPDATE projects SET updated_at = CURRENT_TIMESTAMP WHERE id = $1', [projectId]);
+}
+
+export async function saveProjectState(input: {
+  projectId: string;
+  inputText: string;
+  config: PipelineConfig;
+  viewMode: ViewMode;
+  chunks: TranslationChunk[];
+}): Promise<void> {
+  await runInTransaction(async (run) => {
+    await saveProjectConfigInternal(
+      input.projectId,
+      input.inputText,
+      input.config,
+      input.viewMode,
+      run,
+    );
+    await saveTranslationsInternal(input.projectId, input.chunks, run);
+    await run('UPDATE projects SET updated_at = CURRENT_TIMESTAMP WHERE id = $1', [
+      input.projectId,
+    ]);
+  });
 }
 
 export async function loadTranslations(projectId: string): Promise<SavedTranslation[]> {
   return select<SavedTranslation>(
-    'SELECT * FROM translations WHERE project_id = $1 ORDER BY created_at',
+    'SELECT * FROM translations WHERE project_id = $1 ORDER BY CASE WHEN position IS NULL THEN 1 ELSE 0 END, position ASC, created_at ASC',
     [projectId],
   );
 }
