@@ -26,6 +26,7 @@ import {
 } from '../../utils';
 import { buildSplitPreview } from '../../utils/documentWorkflow';
 import { CopyButton, ProcessingLine, StatusIndicator } from '../common';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface DocumentViewProps {
   onRetranslateChunk: (chunkId: string) => void;
@@ -588,19 +589,33 @@ function SplitChunkDialog({
   onConfirm: () => void;
 }) {
   const { t } = useTranslation();
+  const trapRef = useFocusTrap(true, onCancel);
   const preview = buildSplitPreview(text, splitAt);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-editorial-ink/35 p-4 backdrop-blur-sm">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-editorial-ink/35 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="manual-split-title"
+      aria-describedby="manual-split-hint"
+      ref={trapRef}
+    >
       <div className="w-full max-w-5xl rounded-[28px] border border-editorial-border bg-editorial-bg p-6 shadow-[0_24px_80px_rgba(26,26,26,0.2)] md:p-8">
         <div className="border-b border-editorial-border pb-4">
           <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
             {t('document.manualSplitLabel')}
           </div>
-          <h3 className="mt-2 font-display text-3xl italic tracking-tight text-editorial-ink">
+          <h3
+            id="manual-split-title"
+            className="mt-2 font-display text-3xl italic tracking-tight text-editorial-ink"
+          >
             {t('document.manualSplitTitle')}
           </h3>
-          <p className="mt-2 text-sm leading-relaxed text-editorial-muted">
+          <p
+            id="manual-split-hint"
+            className="mt-2 text-sm leading-relaxed text-editorial-muted"
+          >
             {t('document.manualSplitHint')}
           </p>
         </div>

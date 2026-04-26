@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { buildImportPreview } from '../../utils/documentWorkflow';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface ImportPreviewDialogProps {
   fileName: string;
@@ -24,13 +25,21 @@ export function ImportPreviewDialog({
   onConfirm,
 }: ImportPreviewDialogProps) {
   const { t } = useTranslation();
+  const trapRef = useFocusTrap(true, onCancel);
   const preview = useMemo(
     () => buildImportPreview(text, { useChunking, targetChunkCount }),
     [targetChunkCount, text, useChunking],
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-editorial-ink/35 p-4 backdrop-blur-sm">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-editorial-ink/35 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="import-preview-title"
+      aria-describedby="import-preview-filename"
+      ref={trapRef}
+    >
       <div className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-[28px] border border-editorial-border bg-editorial-bg p-6 shadow-[0_24px_80px_rgba(26,26,26,0.2)] md:p-8">
         <div className="flex flex-col gap-3 border-b border-editorial-border pb-5">
           <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
@@ -38,10 +47,18 @@ export function ImportPreviewDialog({
           </div>
           <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
             <div>
-              <h2 className="font-display text-3xl italic tracking-tight text-editorial-ink">
+              <h2
+                id="import-preview-title"
+                className="font-display text-3xl italic tracking-tight text-editorial-ink"
+              >
                 {t('files.importPreviewTitle')}
               </h2>
-              <p className="mt-2 text-sm text-editorial-muted">{fileName}</p>
+              <p
+                id="import-preview-filename"
+                className="mt-2 text-sm text-editorial-muted"
+              >
+                {fileName}
+              </p>
             </div>
             <div className="grid grid-cols-3 gap-3 text-[11px] font-mono text-editorial-muted">
               <span>{t('pipeline.words')}: {preview.stats.words}</span>

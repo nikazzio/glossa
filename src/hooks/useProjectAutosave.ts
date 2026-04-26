@@ -3,20 +3,9 @@ import { usePipelineStore } from '../stores/pipelineStore';
 import { useChunksStore } from '../stores/chunksStore';
 import { useProjectStore } from '../stores/projectStore';
 import { useUiStore } from '../stores/uiStore';
+import { buildProjectSnapshot } from '../utils/projectSnapshot';
 
-export function buildProjectSnapshot(input: {
-  inputText: string;
-  config: ReturnType<typeof usePipelineStore.getState>['config'];
-  chunks: ReturnType<typeof useChunksStore.getState>['chunks'];
-  viewMode: ReturnType<typeof useUiStore.getState>['viewMode'];
-}): string {
-  return JSON.stringify({
-    inputText: input.inputText,
-    config: input.config,
-    chunks: input.chunks,
-    viewMode: input.viewMode,
-  });
-}
+export { buildProjectSnapshot };
 
 export function useProjectSnapshot(): string {
   const inputText = usePipelineStore((state) => state.inputText);
@@ -54,6 +43,8 @@ export function useProjectAutosave(delayMs = 1200) {
       return;
     }
 
+    if (saveState === 'saving') return;
+
     if (initializedProjectId.current !== currentProjectId || trackedSnapshot === null) {
       initializedProjectId.current = currentProjectId;
       useProjectStore.setState({
@@ -71,7 +62,7 @@ export function useProjectAutosave(delayMs = 1200) {
       return;
     }
 
-    if (saveState !== 'saving' && saveState !== 'saved') {
+    if (saveState !== 'saved') {
       useProjectStore.setState({ saveState: 'saved', lastSaveError: null });
     }
   }, [currentProjectId, saveState, snapshot, trackedSnapshot]);
@@ -80,6 +71,7 @@ export function useProjectAutosave(delayMs = 1200) {
     if (!currentProjectId || isProcessing || saveState !== 'dirty') return;
 
     const timer = window.setTimeout(() => {
+      if (useProjectStore.getState().saveState === 'saving') return;
       void useProjectStore.getState().saveCurrentProject(snapshot).catch(() => {});
     }, delayMs);
 

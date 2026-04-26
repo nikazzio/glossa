@@ -13,6 +13,7 @@ import {
 import { usePipelineStore } from './pipelineStore';
 import { useChunksStore } from './chunksStore';
 import { useUiStore } from './uiStore';
+import { buildProjectSnapshot } from '../utils/projectSnapshot';
 
 interface ProjectState {
   projects: Project[];
@@ -125,17 +126,26 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       throw new Error('Cannot save while the pipeline is processing.');
     }
 
-    set({ saveState: 'saving', lastSaveError: null });
-
     const pipeline = usePipelineStore.getState();
     const ui = useUiStore.getState();
+    const effectiveSnapshot =
+      snapshot ??
+      buildProjectSnapshot({
+        inputText: pipeline.inputText,
+        config: pipeline.config,
+        chunks: chunksStore.chunks,
+        viewMode: ui.viewMode,
+      });
+
+    set({ saveState: 'saving', lastSaveError: null });
+
     try {
       await saveProjectConfig(currentProjectId, pipeline.config, ui.viewMode);
       await saveTranslations(currentProjectId, chunksStore.chunks);
       set({
         saveState: 'saved',
         lastSaveError: null,
-        trackedSnapshot: snapshot ?? get().trackedSnapshot,
+        trackedSnapshot: effectiveSnapshot,
       });
     } catch (error: any) {
       set({
