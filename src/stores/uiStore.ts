@@ -24,7 +24,7 @@ interface UiState {
 }
 
 export const useUiStore = create<UiState>((set) => ({
-  viewMode: 'sandbox',
+  viewMode: 'document',
   documentLayout: 'auto',
   selectedChunkId: null,
   showSettings: false,

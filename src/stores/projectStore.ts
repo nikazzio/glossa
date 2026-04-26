@@ -80,7 +80,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     });
     chunksStore.setChunks(restoredChunks);
     pipeline.setInputText(restoredChunks.map((chunk) => chunk.originalText).join('\n\n'));
-    ui.setViewMode(config.viewMode ?? (restoredChunks.length > 1 ? 'document' : 'sandbox'));
+    ui.setViewMode(config.viewMode ?? 'document');
     ui.setSelectedChunkId(restoredChunks[0]?.id ?? null);
 
     set({ currentProjectId: id });
