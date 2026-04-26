@@ -1,22 +1,22 @@
 # Glossa — MVP Tasks
 
 > Roadmap attiva e priorità operative.
-> Aggiornata al 2026-04-26 sulla base del branch `feat/s4-t4-document-workflow`, del file Repomix, della PR `#39` e dei test frontend correnti.
+> Aggiornata al 2026-04-26 dopo il merge della PR `#40` (S4-T4) e della PR `#41` (import `docx`/`pdf`) su `main`.
 
 ---
 
 ## Valutazione oggettiva
 
-- Il repo non è più un wireframe fragile: lo Sprint 1 è chiuso, `S4-T1`, `S4-T2` e `S4-T3` risultano già integrati su `main`.
-- Il frontend è in uno stato sano per continuare il refactor: `npm run lint`, `npm test` e `npm run build` sono verdi; i test Vitest passano (`51/51`).
-- `S4-T4` è in verifica sul branch `feat/s4-t4-document-workflow`: documento come default, autosave con stato esplicito, anteprima import e split manuale del chunk sono dentro. Il pezzo ancora da chiudere è l'estensione import a `docx` / `pdf` e una semplificazione più profonda dei pannelli di `DocumentView`.
+- Il repo non è più un wireframe fragile: lo Sprint 1 è chiuso, `S4-T1`, `S4-T2`, `S4-T3` e `S4-T4` risultano integrati su `main`.
+- Il frontend è in uno stato sano per continuare il refactor: `npm run lint`, `npm test` e `npm run build` sono verdi; i test Vitest passano (`56/56`) e i test Rust su `documents` (`5/5`).
+- Il workflow documento è ora il default operativo: autosave con stato esplicito, anteprima import multi-formato (`txt` / `md` / `docx` / `pdf`), split manuale del chunk e promozione esplicita da Sandbox a Documento sono tutti su `main`. Il pezzo residuo è la semplificazione profonda dei pannelli di `DocumentView` (drawer audit/indice, riordino superfici), tracciato come `S4-T4b`.
 - Priorità reale oggi:
-  1. portare `S4-T4` da `in verifica` a `completata` chiudendo i gap di import (`docx`, `pdf`) e il riordino pannelli/drawer della `DocumentView`;
+  1. chiudere `S4-T4b` (semplificazione `DocumentView` con drawer/pannelli a scomparsa) per consolidare la UX documento prima di aprire nuove superfici;
   2. sopra quella base, aggiungere librerie riusabili e rifiniture UX (`S4-T5a`, `S4-T5b`, `S4-T6`);
   3. prima della prima release pubblica, chiudere i blocker di stabilità, sicurezza e packaging (`S2-*`);
   4. solo dopo, affrontare il refactor profondo di `llm.rs` e il resto della qualità interna (`S3-*`).
 
-In breve: se la domanda è "cosa fare adesso?", la risposta non è Sprint 2 o Sprint 3. La risposta è chiudere `S4-T4` con import multi-formato e drawer audit/indice prima di passare a `S4-T5`.
+In breve: se la domanda è "cosa fare adesso?", la risposta non è Sprint 2 o Sprint 3. La risposta è chiudere `S4-T4b` (drawer audit/indice in `DocumentView`) prima di passare a `S4-T5`.
 
 ---
 
@@ -47,6 +47,7 @@ In breve: se la domanda è "cosa fare adesso?", la risposta non è Sprint 2 o Sp
 - `S4-T1` protezione dei blocchi completati
 - `S4-T2` rilancio per blocco e drill-down audit
 - `S4-T3` split degli store (`uiStore` / `pipelineStore` / `chunksStore`) e selettore Sandbox/Documento
+- `S4-T4` workflow documento, anteprima import multi-formato (`txt` / `md` / `docx` / `pdf`), split manuale del chunk e autosave con stato esplicito
 
 ### Evidenze concrete nel codice
 
@@ -63,29 +64,33 @@ In breve: se la domanda è "cosa fare adesso?", la risposta non è Sprint 2 o Sp
 
 ### Sequenza consigliata
 
-1. `S4-T4` — workflow documento, preview import, split manuale, autosave (in verifica, residui import multi-formato e riordino pannelli)
+1. `S4-T4b` — semplificazione `DocumentView` con drawer/pannelli a scomparsa
 2. `S4-T5a` — libreria prompt
 3. `S4-T5b` — dizionari riusabili
 4. `S4-T6` — export combinato e polish UX
 
 ### S4-T4 — Workflow documento, anteprima import, split manuale e autosave
 
-- **Stato**: `in verifica`
-- **Branch corrente**: `feat/s4-t4-document-workflow`
+- **Stato**: `completata`
+- **Mergiata in**: PR `#40` (workflow / anteprima import / autosave / split manuale) e PR `#41` (estrattori `docx` / `pdf`).
 - **Cosa è dentro**:
   - modalità `Documento` come default operativo, con default coerente anche all'apertura di progetti vuoti (`src/stores/uiStore.ts`, `src/stores/projectStore.ts`);
-  - autosave per progetti esistenti con stato esplicito `draft` / `dirty` / `saving` / `saved` / `error`, hook dedicato (`src/hooks/useProjectAutosave.ts`) e indicatore in header (`src/components/layout/Header.tsx`);
-  - `ImportPreviewDialog` per `txt`, `md`, `text`, `docx` e `pdf` con stima parole/paragrafi/chunk e regolazione segmentazione prima della conferma (`src/components/document/ImportPreviewDialog.tsx`, `src/services/fileService.ts`, `src/utils/documentWorkflow.ts`); l'estrazione testuale di `docx` e `pdf` è gestita da comandi Tauri dedicati (`src-tauri/src/documents.rs`);
+  - autosave per progetti esistenti con stato esplicito `draft` / `dirty` / `saving` / `saved` / `error`, hook dedicato (`src/hooks/useProjectAutosave.ts`, snapshot cachato durante `isProcessing` per evitare `JSON.stringify` ad ogni token) e indicatore in header (`src/components/layout/Header.tsx`);
+  - `ImportPreviewDialog` per `txt`, `md`, `text`, `docx` e `pdf` con stima parole/paragrafi/chunk e regolazione segmentazione prima della conferma (`src/components/document/ImportPreviewDialog.tsx`, `src/services/fileService.ts`, `src/utils/documentWorkflow.ts`); l'estrazione testuale di `docx` e `pdf` è gestita da comandi Tauri dedicati su `spawn_blocking` (`src-tauri/src/documents.rs`);
   - promozione esplicita da Sandbox a Documento via "apri nel lettore documento" (`src/components/pipeline/ProductionStream.tsx`);
   - split manuale del chunk con preview A/B basata su cursore (`src/components/document/DocumentView.tsx`, `splitChunkAt` in `src/stores/chunksStore.ts`).
-- **Cosa resta da chiudere prima di passare a `completata`**:
-  - semplificazione profonda della `DocumentView` con drawer/pannelli a scomparsa:
-    - testo al centro come superficie dominante;
-    - trace degli stage compatta, sempre visibile;
-    - indice chunk e audit nello stesso pannello laterale a scomparsa, non più sempre aperti nel flusso verticale;
-    - colonna `PipelineConfig` meno dominante quando si è in Documento.
-- **Accettazione residua**:
-  - importare un `docx` o un `pdf` produce la stessa preview testuale e gli stessi chunk degli ingressi `txt`/`md`, oppure viene mostrato un errore esplicito non un binario sporco;
+- **Spostato a `S4-T4b`**: la semplificazione profonda dei pannelli di `DocumentView` (drawer audit/indice, riordino superfici) è scorporata in un task dedicato per non bloccare il merge del workflow.
+
+### S4-T4b — Semplificazione `DocumentView` (drawer audit/indice)
+
+- **Stato**: `da fare`
+- **Priorità**: prima cosa del blocco UX core, prosegue il lavoro di `S4-T4`.
+- **Esito atteso**:
+  - testo al centro come superficie dominante;
+  - trace degli stage compatta, sempre visibile;
+  - indice chunk e audit nello stesso pannello laterale a scomparsa, non più sempre aperti nel flusso verticale;
+  - colonna `PipelineConfig` meno dominante quando si è in Documento.
+- **Accettazione**:
   - in Documento il canvas centrale è il testo, mentre indice chunk e audit non occupano in modo fisso il canvas centrale.
 
 ### S4-T5a — Libreria di modelli di prompt
