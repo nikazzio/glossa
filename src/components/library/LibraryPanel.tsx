@@ -42,7 +42,7 @@ export function LibraryPanel() {
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
-            className="relative bg-editorial-bg w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl border border-editorial-border"
+            className="relative bg-editorial-bg w-full max-w-3xl h-[85vh] flex flex-col shadow-2xl border border-editorial-border"
           >
             <button
               onClick={() => setShowLibraryPanel(false)}

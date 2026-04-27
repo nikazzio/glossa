@@ -236,12 +236,7 @@ export function DocumentView({
                   }`}
                 >
                   <Highlighter size={12} className="inline mr-1" />
-                  {glossaryHighlightEnabled && translationHighlight.totalTerms > 0
-                    ? t('library.glossaryMatchBadge', {
-                        match: translationHighlight.matchCount,
-                        total: translationHighlight.totalTerms,
-                      })
-                    : t('library.glossaryHighlightToggle')}
+                  {t('library.glossaryHighlightToggle')}
                 </button>
               )}
             </div>

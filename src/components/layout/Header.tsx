@@ -467,81 +467,74 @@ function HeaderInfoBar({
 }) {
   const { t } = useTranslation();
 
-  const items: { key: string; label: string; value: string }[] = [
-    {
-      key: 'source',
-      label: t('document.infoSourceWords'),
-      value: sourceWords.toLocaleString(),
-    },
-    {
-      key: 'translated',
-      label: t('document.infoTranslatedWords'),
-      value: translatedWords.toLocaleString(),
-    },
-    {
-      key: 'chunks',
-      label: t('document.infoChunks'),
-      value: `${completedCount} / ${chunkCount}`,
-    },
+  const row1: { key: string; label: string; value: string }[] = [
+    { key: 'source', label: t('document.infoSourceWords'), value: sourceWords.toLocaleString() },
+    { key: 'translated', label: t('document.infoTranslatedWords'), value: translatedWords.toLocaleString() },
+    { key: 'chunks', label: t('document.infoChunks'), value: `${completedCount} / ${chunkCount}` },
   ];
-
   if (compositeLabel) {
-    items.push({
-      key: 'quality',
-      label: t('document.infoQuality'),
-      value: compositeLabel,
-    });
+    row1.push({ key: 'quality', label: t('document.infoQuality'), value: compositeLabel });
   }
 
-  items.push({
-    key: 'tokens',
-    label: t('header.tokenCount'),
-    value: totalTokens > 0 ? totalTokens.toLocaleString() : '—',
-  });
-
-  items.push({
-    key: 'cost',
-    label: t('header.estimatedCost'),
-    value: totalTokens > 0 ? `$${estimatedCostUsd.toFixed(4)}` : '—',
-  });
+  const row2: { key: string; label: string; value: string }[] = [
+    { key: 'tokens', label: t('header.tokenCount'), value: totalTokens > 0 ? totalTokens.toLocaleString() : '—' },
+    { key: 'cost', label: t('header.estimatedCost'), value: totalTokens > 0 ? `$${estimatedCostUsd.toFixed(4)}` : '—' },
+  ];
 
   return (
-    <dl className="flex flex-wrap items-center gap-2 rounded-full border border-editorial-border bg-editorial-bg px-2 py-1.5 shadow-sm">
-      <div className="rounded-full bg-editorial-textbox/40 px-3 py-1 text-[9px] font-bold uppercase tracking-[0.22em] text-editorial-muted/80">
-        {t('header.summaryLabel')}
-      </div>
-      {items.map((item) => (
-        <div key={item.key} className="flex items-baseline gap-1.5 rounded-full bg-editorial-textbox/28 px-3 py-1">
-          <dt className="text-[9px] font-bold uppercase tracking-[0.16em] text-editorial-muted">
-            {item.label}
-          </dt>
-          <dd className="font-display text-sm italic text-editorial-ink">{item.value}</dd>
+    <div className="flex flex-wrap items-start gap-2">
+      {/* Stats block */}
+      <div className="rounded-lg border border-editorial-border bg-editorial-bg px-3 py-2 shadow-sm space-y-1.5">
+        <div className="text-[9px] font-bold uppercase tracking-[0.22em] text-editorial-muted/80">
+          {t('header.summaryLabel')}
         </div>
-      ))}
+        <dl className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          {row1.map((item) => (
+            <div key={item.key} className="flex items-baseline gap-1">
+              <dt className="text-[9px] font-bold uppercase tracking-[0.14em] text-editorial-muted">{item.label}</dt>
+              <dd className="font-display text-sm italic text-editorial-ink">{item.value}</dd>
+            </div>
+          ))}
+        </dl>
+        <dl className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          {row2.map((item) => (
+            <div key={item.key} className="flex items-baseline gap-1">
+              <dt className="text-[9px] font-bold uppercase tracking-[0.14em] text-editorial-muted">{item.label}</dt>
+              <dd className="font-display text-sm italic text-editorial-muted">{item.value}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+
+      {/* Export block */}
       {hasChunks && (
-        <>
-          <span className="mx-1 h-5 w-px bg-editorial-border/70" aria-hidden="true" />
-          <button
-            type="button"
-            onClick={onExportTxt}
-            title={exportTxtLabel}
-            aria-label={exportTxtLabel}
-            className="rounded-full px-3 py-1 text-[9px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-          >
-            TXT
-          </button>
-          <button
-            type="button"
-            onClick={onExportMd}
-            title={exportMdLabel}
-            aria-label={exportMdLabel}
-            className="rounded-full px-3 py-1 text-[9px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-          >
-            MD
-          </button>
-        </>
+        <div className="rounded-lg border border-editorial-border bg-editorial-bg px-3 py-2 shadow-sm space-y-1.5">
+          <div className="text-[9px] font-bold uppercase tracking-[0.22em] text-editorial-muted/80">
+            {t('header.exportLabel')}
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={onExportTxt}
+              title={exportTxtLabel}
+              aria-label={exportTxtLabel}
+              className="rounded px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.25em] text-editorial-muted border border-editorial-border/60 transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            >
+              TXT
+            </button>
+            <button
+              type="button"
+              onClick={onExportMd}
+              title={exportMdLabel}
+              aria-label={exportMdLabel}
+              className="rounded px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.25em] text-editorial-muted border border-editorial-border/60 transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            >
+              MD
+            </button>
+          </div>
+        </div>
       )}
-    </dl>
+    </div>
   );
 }
 

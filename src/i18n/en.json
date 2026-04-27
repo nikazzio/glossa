@@ -23,7 +23,7 @@
     "estimatedCost": "Est. cost"
   },
   "pipeline": {
-    "globalSetup": "Global Setup",
+    "globalSetup": "Project Configuration",
     "languagePair": "Language Pair",
     "swapLanguages": "Swap Languages",
     "autoSegment": "Auto-Segment (Paragraphs)",
@@ -196,7 +196,9 @@
   "common": {
     "confirm": "Confirm",
     "cancel": "Cancel",
-    "delete": "Delete"
+    "delete": "Delete",
+    "save": "Save",
+    "all": "All"
   },
   "projects": {
     "title": "Projects",

@@ -1,12 +1,16 @@
-import { useState } from 'react';
-import { X, LibraryBig } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, LibraryBig, Save } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { Drawer } from '../common';
 import { PipelineConfig } from '../pipeline/PipelineConfig';
 import type { ConfigSection } from '../pipeline/PipelineConfig';
 import { useUiStore } from '../../stores/uiStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useLibraryStore } from '../../stores/libraryStore';
+import { useProjectStore } from '../../stores/projectStore';
+import { assignGlossaryToProject } from '../../services/glossaryService';
+import { upsertGlossaryEntries } from '../../services/glossaryService';
 import { DictionaryEntryEditor } from '../library';
 
 interface ConfigDrawerProps {
@@ -30,10 +34,49 @@ export function ConfigDrawer({
   const showConfigDrawer = useUiStore((state) => state.showConfigDrawer);
   const setShowConfigDrawer = useUiStore((state) => state.setShowConfigDrawer);
   const [activeTab, setActiveTab] = useState<ConfigSection>('stages');
-  const { config, setConfig } = usePipelineStore();
-  const { glossaries, setShowLibraryPanel } = useLibraryStore();
+  const [glossaryDirty, setGlossaryDirty] = useState(false);
+  const [isSavingGlossary, setIsSavingGlossary] = useState(false);
+  const { config, setConfig, assignGlossary } = usePipelineStore();
+  const { glossaries, setShowLibraryPanel, loadGlossaries, isLoaded } = useLibraryStore();
+  const { currentProjectId } = useProjectStore();
+
+  useEffect(() => {
+    if (showConfigDrawer && !isLoaded) loadGlossaries();
+  }, [showConfigDrawer, isLoaded, loadGlossaries]);
+
+  useEffect(() => {
+    setGlossaryDirty(false);
+  }, [activeTab, config.assignedGlossaryId]);
 
   const assignedGlossary = glossaries.find((g) => g.id === config.assignedGlossaryId);
+
+  const handleDictChange = async (glossaryId: string) => {
+    if (!currentProjectId) return;
+    try {
+      if (glossaryId) {
+        await assignGlossaryToProject(currentProjectId, glossaryId);
+        await assignGlossary(glossaryId);
+      } else {
+        await assignGlossary(null);
+      }
+    } catch (err: any) {
+      toast.error(t('library.dictionaryAssignError'), { description: err?.message });
+    }
+  };
+
+  const handleSaveGlossary = async () => {
+    if (!config.assignedGlossaryId) return;
+    setIsSavingGlossary(true);
+    try {
+      await upsertGlossaryEntries(config.assignedGlossaryId, config.glossary);
+      setGlossaryDirty(false);
+      toast.success(t('library.dictionarySaved'));
+    } catch (err: any) {
+      toast.error(t('library.dictionarySaveError'), { description: err?.message });
+    } finally {
+      setIsSavingGlossary(false);
+    }
+  };
 
   return (
     <Drawer
@@ -102,31 +145,54 @@ export function ConfigDrawer({
         className="flex flex-1 flex-col min-h-0"
       >
         {activeTab === 'glossary' ? (
-          <div className="flex flex-1 flex-col gap-6 overflow-y-auto bg-editorial-bg/40 p-6 custom-scrollbar">
-            {/* Dizionario assegnato */}
-            <div className="flex items-center justify-between gap-3 rounded-lg border border-editorial-border/40 bg-editorial-textbox/10 px-4 py-3">
-              <div className="min-w-0">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted mb-0.5">
+          <div className="flex flex-1 flex-col gap-4 overflow-y-auto bg-editorial-bg/40 p-6 custom-scrollbar">
+            {/* Selettore dizionario */}
+            <div className="rounded-lg border border-editorial-border/40 bg-editorial-textbox/10 px-4 py-3 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted">
                   {t('library.assignedDictionary')}
                 </p>
-                <p className="text-[12px] font-mono text-editorial-ink truncate">
-                  {assignedGlossary ? assignedGlossary.name : t('library.noDictionaryAssigned')}
-                </p>
+                <button
+                  onClick={() => setShowLibraryPanel(true, 'dictionaries')}
+                  title={t('library.openLibrary')}
+                  className="shrink-0 flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                >
+                  <LibraryBig size={12} />
+                  {t('library.openLibrary')}
+                </button>
               </div>
-              <button
-                onClick={() => setShowLibraryPanel(true, 'dictionaries')}
-                title={t('library.openLibrary')}
-                className="shrink-0 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              <select
+                value={config.assignedGlossaryId ?? ''}
+                onChange={(e) => handleDictChange(e.target.value)}
+                className="w-full bg-editorial-bg rounded py-1.5 px-2 text-[11px] font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent border border-editorial-border/40 text-editorial-ink"
               >
-                <LibraryBig size={14} />
-                {t('library.openLibrary')}
-              </button>
+                <option value="">{t('library.noDictionaryAssigned')}</option>
+                {glossaries.map((g) => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
+                ))}
+              </select>
             </div>
 
             <DictionaryEntryEditor
               entries={config.glossary}
-              onChange={(entries) => setConfig((prev) => ({ ...prev, glossary: entries }))}
+              onChange={(entries) => {
+                setConfig((prev) => ({ ...prev, glossary: entries }));
+                setGlossaryDirty(true);
+              }}
             />
+
+            {glossaryDirty && config.assignedGlossaryId && (
+              <div className="flex justify-end">
+                <button
+                  onClick={handleSaveGlossary}
+                  disabled={isSavingGlossary}
+                  className="flex items-center gap-1.5 px-4 py-2 text-[11px] font-bold uppercase tracking-widest bg-editorial-ink text-white hover:bg-editorial-ink/80 disabled:opacity-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent rounded"
+                >
+                  <Save size={13} />
+                  {t('common.save')}
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <PipelineConfig

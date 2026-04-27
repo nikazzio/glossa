@@ -1,18 +1,48 @@
 import { useEffect, useState } from 'react';
-import { Trash2, BookmarkPlus, Check, X } from 'lucide-react';
+import { Trash2, BookmarkPlus, Check, X, Wand2, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { confirm } from '../../stores/confirmStore';
 import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
+import { useUiStore } from '../../stores/uiStore';
+import { usePipelineStore } from '../../stores/pipelineStore';
+import { MODEL_OPTIONS } from '../../constants';
+import type { ModelProvider } from '../../types';
+import { llmService } from '../../services/llmService';
 
 export function PromptTemplatesTab() {
   const { t } = useTranslation();
   const { templates, isLoaded, loadTemplates, saveTemplate, deleteTemplate } = usePromptTemplateStore();
+  const { ollamaModels } = useUiStore();
+  const { config } = usePipelineStore();
   const [newName, setNewName] = useState('');
   const [newPrompt, setNewPrompt] = useState('');
   const [newContext, setNewContext] = useState<'stage' | 'audit'>('stage');
   const [creating, setCreating] = useState(false);
   const [filterContext, setFilterContext] = useState<'all' | 'stage' | 'audit'>('all');
+  const [isRefining, setIsRefining] = useState(false);
+
+  const firstActiveStage = config.stages.find((s) => s.enabled);
+  const defaultProvider: ModelProvider = (firstActiveStage?.provider as ModelProvider) ?? 'gemini';
+  const defaultModel = firstActiveStage?.model ?? (MODEL_OPTIONS[defaultProvider]?.[0] ?? '');
+  const [refineProvider, setRefineProvider] = useState<ModelProvider>(defaultProvider);
+  const [refineModel, setRefineModel] = useState<string>(defaultModel);
+
+  const modelOptions = refineProvider === 'ollama' ? ollamaModels : (MODEL_OPTIONS[refineProvider] ?? []);
+
+  const handleRefine = async () => {
+    if (!newPrompt.trim() || !refineModel.trim()) return;
+    setIsRefining(true);
+    try {
+      const refined = await llmService.refinePrompt(newPrompt, refineProvider, refineModel, newContext);
+      setNewPrompt(refined);
+      toast.success(t('pipeline.refined'));
+    } catch (err: any) {
+      toast.error(t('pipeline.refineFailed'), { description: err?.message });
+    } finally {
+      setIsRefining(false);
+    }
+  };
 
   useEffect(() => {
     if (!isLoaded) loadTemplates();
@@ -97,13 +127,53 @@ export function PromptTemplatesTab() {
               <option value="audit">{t('pipeline.tabAudit')}</option>
             </select>
           </div>
-          <textarea
-            value={newPrompt}
-            onChange={(e) => setNewPrompt(e.target.value)}
-            placeholder={t('library.templatePromptPlaceholder')}
-            rows={4}
-            className="w-full bg-transparent rounded py-1.5 px-2 text-[11px] font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent border border-editorial-border/40 resize-y"
-          />
+          {/* Prompt + refine tools */}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted">{t('pipeline.prompt')}</span>
+              <div className="flex items-center gap-1 ml-auto">
+                <select
+                  value={refineProvider}
+                  onChange={(e) => {
+                    const p = e.target.value as ModelProvider;
+                    setRefineProvider(p);
+                    setRefineModel((MODEL_OPTIONS[p]?.[0]) ?? '');
+                  }}
+                  className="bg-editorial-bg rounded py-0.5 px-1.5 text-[10px] font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent border border-editorial-border/40 text-editorial-ink"
+                >
+                  {(Object.keys(MODEL_OPTIONS) as ModelProvider[]).map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                  <option value="ollama">ollama</option>
+                </select>
+                <select
+                  value={refineModel}
+                  onChange={(e) => setRefineModel(e.target.value)}
+                  className="bg-editorial-bg rounded py-0.5 px-1.5 text-[10px] font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent border border-editorial-border/40 text-editorial-ink max-w-[120px]"
+                >
+                  {modelOptions.map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={handleRefine}
+                  disabled={isRefining || !newPrompt.trim()}
+                  title={t('pipeline.refinePrompt')}
+                  aria-label={t('pipeline.refinePrompt')}
+                  className="p-1 text-editorial-muted hover:text-editorial-accent disabled:opacity-40 focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent transition-colors"
+                >
+                  {isRefining ? <Loader2 size={13} className="animate-spin" /> : <Wand2 size={13} />}
+                </button>
+              </div>
+            </div>
+            <textarea
+              value={newPrompt}
+              onChange={(e) => setNewPrompt(e.target.value)}
+              placeholder={t('library.templatePromptPlaceholder')}
+              rows={4}
+              className="w-full bg-transparent rounded py-1.5 px-2 text-[11px] font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent border border-editorial-border/40 resize-y"
+            />
+          </div>
           <div className="flex justify-end gap-2">
             <button onClick={() => setCreating(false)} className="p-1 text-editorial-muted hover:text-editorial-ink focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent">
               <X size={14} />
