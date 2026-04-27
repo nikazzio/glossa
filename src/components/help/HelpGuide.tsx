@@ -9,7 +9,7 @@ interface HelpGuideProps {
   onClose: () => void;
 }
 
-type Section = 'overview' | 'pipeline' | 'streaming' | 'audit' | 'projects' | 'providers' | 'ollama' | 'glossary' | 'shortcuts';
+type Section = 'overview' | 'pipeline' | 'features' | 'streaming' | 'audit' | 'projects' | 'providers' | 'ollama' | 'glossary' | 'shortcuts';
 
 export function HelpGuide({ open, onClose }: HelpGuideProps) {
   const [activeSection, setActiveSection] = useState<Section>('overview');
@@ -17,15 +17,16 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
   const trapRef = useFocusTrap(open, onClose);
 
   const sections: { id: Section; label: string }[] = [
-    { id: 'overview', label: t('help.sections.overview') },
-    { id: 'pipeline', label: t('help.sections.pipeline') },
-    { id: 'streaming', label: t('help.sections.streaming') },
-    { id: 'audit', label: t('help.sections.audit') },
-    { id: 'projects', label: t('help.sections.projects') },
-    { id: 'providers', label: t('help.sections.providers') },
-    { id: 'ollama', label: t('help.sections.ollama') },
-    { id: 'glossary', label: t('help.sections.glossary') },
-    { id: 'shortcuts', label: t('help.sections.shortcuts') },
+    { id: 'overview',   label: t('help.sections.overview') },
+    { id: 'pipeline',   label: t('help.sections.pipeline') },
+    { id: 'features',   label: t('help.sections.features') },
+    { id: 'streaming',  label: t('help.sections.streaming') },
+    { id: 'audit',      label: t('help.sections.audit') },
+    { id: 'projects',   label: t('help.sections.projects') },
+    { id: 'providers',  label: t('help.sections.providers') },
+    { id: 'ollama',     label: t('help.sections.ollama') },
+    { id: 'glossary',   label: t('help.sections.glossary') },
+    { id: 'shortcuts',  label: t('help.sections.shortcuts') },
   ];
 
   return (
@@ -45,27 +46,32 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
             className="absolute inset-0 bg-editorial-ink/60 backdrop-blur-sm"
             onClick={onClose}
           />
+          {/* Fixed height so the modal never resizes when switching sections */}
           <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
+            initial={{ scale: 0.96, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
-            className="relative bg-editorial-bg w-full max-w-4xl max-h-[85vh] shadow-2xl border border-editorial-border flex overflow-hidden"
+            exit={{ scale: 0.96, opacity: 0 }}
+            className="relative bg-editorial-bg w-full max-w-4xl h-[85vh] shadow-2xl border border-editorial-border flex overflow-hidden"
           >
             {/* Sidebar */}
-            <nav className="w-56 shrink-0 border-r border-editorial-border bg-editorial-textbox/30 p-6 overflow-y-auto">
-              <h3 id="help-title" className="font-display text-xl italic tracking-tight mb-6">{t('help.title')}</h3>
-              <ul className="space-y-1">
+            <nav className="w-64 shrink-0 border-r border-editorial-border bg-editorial-textbox/30 flex flex-col overflow-hidden">
+              <div className="px-6 pt-6 pb-4 shrink-0 border-b border-editorial-border/60">
+                <h3 id="help-title" className="font-display text-2xl italic tracking-tight text-editorial-ink">
+                  {t('help.title')}
+                </h3>
+              </div>
+              <ul className="space-y-0.5 p-3 overflow-y-auto custom-scrollbar flex-1">
                 {sections.map((s) => (
                   <li key={s.id}>
                     <button
                       onClick={() => setActiveSection(s.id)}
-                      className={`w-full text-left px-3 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                      className={`w-full text-left px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent rounded ${
                         activeSection === s.id
                           ? 'bg-editorial-ink text-white'
-                          : 'text-editorial-muted hover:text-editorial-ink hover:bg-editorial-textbox/50'
+                          : 'text-editorial-ink/60 hover:text-editorial-ink hover:bg-editorial-textbox/60'
                       }`}
                     >
-                      <ChevronRight size={10} className={activeSection === s.id ? 'opacity-100' : 'opacity-0'} />
+                      <ChevronRight size={11} className={activeSection === s.id ? 'opacity-100' : 'opacity-0'} />
                       {s.label}
                     </button>
                   </li>
@@ -73,25 +79,26 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
               </ul>
             </nav>
 
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto p-10 custom-scrollbar">
+            {/* Content — fills remaining height and scrolls independently */}
+            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
               <button
                 onClick={onClose}
-                className="absolute top-6 right-6 text-editorial-muted hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                aria-label={t('settings.saveClose')}
+                className="absolute top-5 right-5 text-editorial-ink/50 hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                aria-label={t('settings.close')}
               >
-                <X size={20} />
+                <X size={18} />
               </button>
 
-              <div className="max-w-none">
-                {activeSection === 'overview' && <OverviewSection />}
-                {activeSection === 'pipeline' && <PipelineSection />}
+              <div className="max-w-none pr-4">
+                {activeSection === 'overview'  && <OverviewSection />}
+                {activeSection === 'pipeline'  && <PipelineSection />}
+                {activeSection === 'features'  && <FeaturesSection />}
                 {activeSection === 'streaming' && <StreamingSection />}
-                {activeSection === 'audit' && <AuditSection />}
-                {activeSection === 'projects' && <ProjectsSection />}
+                {activeSection === 'audit'     && <AuditSection />}
+                {activeSection === 'projects'  && <ProjectsSection />}
                 {activeSection === 'providers' && <ProvidersSection />}
-                {activeSection === 'ollama' && <OllamaSection />}
-                {activeSection === 'glossary' && <GlossarySection />}
+                {activeSection === 'ollama'    && <OllamaSection />}
+                {activeSection === 'glossary'  && <GlossarySection />}
                 {activeSection === 'shortcuts' && <ShortcutsSection />}
               </div>
             </div>
@@ -105,28 +112,49 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
 // ── Shared UI ────────────────────────────────────────────────────────
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <h2 className="font-display text-2xl italic tracking-tight mb-6 pb-2 border-b border-editorial-ink">{children}</h2>;
+  return (
+    <h2 className="font-display text-3xl italic tracking-tight mb-6 pb-3 border-b border-editorial-ink text-editorial-ink">
+      {children}
+    </h2>
+  );
 }
 
 function P({ children }: { children: React.ReactNode }) {
-  return <p className="text-sm leading-relaxed text-editorial-ink mb-4">{children}</p>;
+  return <p className="text-[13px] leading-relaxed text-editorial-ink/80 mb-4">{children}</p>;
+}
+
+function SubTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h3 className="font-display text-lg italic tracking-tight mt-8 mb-3 text-editorial-ink border-l-2 border-editorial-accent pl-3">
+      {children}
+    </h3>
+  );
 }
 
 function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
   return (
     <div className="flex gap-4 mb-6">
-      <span className="font-display italic text-2xl text-editorial-accent leading-none mt-0.5">{n}</span>
+      <span className="font-display italic text-2xl text-editorial-accent leading-none mt-0.5 shrink-0">{n}</span>
       <div>
-        <h4 className="text-xs font-bold uppercase tracking-widest mb-1">{title}</h4>
-        <div className="text-sm text-editorial-muted leading-relaxed">{children}</div>
+        <h4 className="text-xs font-bold uppercase tracking-widest mb-1.5 text-editorial-ink">{title}</h4>
+        <div className="text-[13px] text-editorial-ink/70 leading-relaxed">{children}</div>
       </div>
+    </div>
+  );
+}
+
+function Tip({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="mt-6 p-4 bg-editorial-textbox/30 border border-editorial-border">
+      <h4 className="text-[10px] font-bold uppercase tracking-widest text-editorial-accent mb-2">{title}</h4>
+      <p className="text-[13px] text-editorial-ink/70 leading-relaxed">{children}</p>
     </div>
   );
 }
 
 function Kbd({ children }: { children: React.ReactNode }) {
   return (
-    <kbd className="px-1.5 py-0.5 bg-editorial-textbox border border-editorial-border text-[10px] font-mono rounded-sm">
+    <kbd className="inline-flex items-center justify-center min-w-[24px] px-2 py-0.5 bg-editorial-textbox border border-editorial-border text-xs font-mono rounded-sm text-editorial-ink">
       {children}
     </kbd>
   );
@@ -142,20 +170,20 @@ function OverviewSection() {
       <P>{t('help.overview.p1')}</P>
       <P>{t('help.overview.p2')}</P>
 
-      <div className="my-8 p-6 bg-editorial-textbox/30 border border-editorial-border font-mono text-[11px] leading-loose">
-        <div className="text-editorial-muted mb-2">{t('help.overview.flowTitle')}</div>
-        <div className="pl-4 border-l-2 border-editorial-accent space-y-1">
-          <div>📝 {t('help.overview.step1')}</div>
-          <div className="text-editorial-muted">↓</div>
-          <div>⚙️ {t('help.overview.step2')}</div>
-          <div className="text-editorial-muted">↓</div>
-          <div>✨ {t('help.overview.step3')}</div>
-          <div className="text-editorial-muted">↓</div>
-          <div>🔍 {t('help.overview.step4')}</div>
-          <div className="text-editorial-muted">↓</div>
-          <div>✏️ {t('help.overview.step5')}</div>
-          <div className="text-editorial-muted">↓</div>
-          <div>📤 {t('help.overview.step6')}</div>
+      <div className="my-8 p-6 bg-editorial-textbox/30 border border-editorial-border font-mono text-xs leading-loose">
+        <div className="text-editorial-ink/50 mb-3 uppercase tracking-widest text-[10px] font-bold">{t('help.overview.flowTitle')}</div>
+        <div className="pl-4 border-l-2 border-editorial-accent space-y-2">
+          <div className="text-editorial-ink">📝 {t('help.overview.step1')}</div>
+          <div className="text-editorial-ink/40">↓</div>
+          <div className="text-editorial-ink">⚙️ {t('help.overview.step2')}</div>
+          <div className="text-editorial-ink/40">↓</div>
+          <div className="text-editorial-ink">✨ {t('help.overview.step3')}</div>
+          <div className="text-editorial-ink/40">↓</div>
+          <div className="text-editorial-ink">🔍 {t('help.overview.step4')}</div>
+          <div className="text-editorial-ink/40">↓</div>
+          <div className="text-editorial-ink">✏️ {t('help.overview.step5')}</div>
+          <div className="text-editorial-ink/40">↓</div>
+          <div className="text-editorial-ink">📤 {t('help.overview.step6')}</div>
         </div>
       </div>
 
@@ -184,10 +212,35 @@ function PipelineSection() {
         {t('help.pipeline.editDesc')}
       </Step>
 
-      <div className="mt-6 p-4 bg-editorial-textbox/20 border border-editorial-border">
-        <h4 className="text-[10px] font-bold uppercase tracking-widest text-editorial-accent mb-2">{t('help.pipeline.tipTitle')}</h4>
-        <p className="text-xs text-editorial-muted leading-relaxed">{t('help.pipeline.tipDesc')}</p>
-      </div>
+      <Tip title={t('help.pipeline.tipTitle')}>{t('help.pipeline.tipDesc')}</Tip>
+    </>
+  );
+}
+
+function FeaturesSection() {
+  const { t } = useTranslation();
+  return (
+    <>
+      <SectionTitle>{t('help.features.title')}</SectionTitle>
+      <P>{t('help.features.intro')}</P>
+
+      <SubTitle>{t('help.features.configDrawerTitle')}</SubTitle>
+      <P>{t('help.features.configDrawerDesc')}</P>
+
+      <SubTitle>{t('help.features.templatesTitle')}</SubTitle>
+      <P>{t('help.features.templatesDesc')}</P>
+
+      <SubTitle>{t('help.features.refineTitle')}</SubTitle>
+      <P>{t('help.features.refineDesc')}</P>
+
+      <SubTitle>{t('help.features.tokenTitle')}</SubTitle>
+      <P>{t('help.features.tokenDesc')}</P>
+
+      <SubTitle>{t('help.features.sandboxTitle')}</SubTitle>
+      <P>{t('help.features.sandboxDesc')}</P>
+
+      <SubTitle>{t('help.features.exportTitle')}</SubTitle>
+      <P>{t('help.features.exportDesc')}</P>
     </>
   );
 }
@@ -211,15 +264,15 @@ function AuditSection() {
       <SectionTitle>{t('help.audit.title')}</SectionTitle>
       <P>{t('help.audit.intro')}</P>
 
-      <div className="space-y-4 my-6">
+      <div className="space-y-3 my-6">
         {(['glossary', 'accuracy', 'fluency', 'grammar'] as const).map((type) => (
           <div key={type} className="flex items-start gap-3 p-4 bg-editorial-textbox/20 border border-editorial-border">
-            <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 shrink-0 ${
+            <span className={`text-[10px] font-bold uppercase px-2 py-0.5 shrink-0 tracking-wider ${
               type === 'grammar' ? 'bg-editorial-accent text-white' : 'bg-editorial-ink text-white'
             }`}>
               {type}
             </span>
-            <span className="text-xs text-editorial-muted">{t(`help.audit.${type}Issue`)}</span>
+            <span className="text-[13px] text-editorial-ink/75">{t(`help.audit.${type}Issue`)}</span>
           </div>
         ))}
       </div>
@@ -257,20 +310,20 @@ function ProvidersSection() {
       <P>{t('help.providers.intro')}</P>
 
       <div className="overflow-x-auto my-6">
-        <table className="w-full text-xs border-collapse">
+        <table className="w-full text-[13px] border-collapse">
           <thead>
             <tr className="border-b-2 border-editorial-ink">
-              <th className="text-left py-2 pr-4 font-bold uppercase tracking-widest text-[9px]">{t('help.providers.provider')}</th>
-              <th className="text-left py-2 pr-4 font-bold uppercase tracking-widest text-[9px]">{t('help.providers.models')}</th>
-              <th className="text-left py-2 font-bold uppercase tracking-widest text-[9px]">{t('help.providers.notes')}</th>
+              <th className="text-left py-2.5 pr-4 font-bold uppercase tracking-widest text-[10px] text-editorial-ink">{t('help.providers.provider')}</th>
+              <th className="text-left py-2.5 pr-4 font-bold uppercase tracking-widest text-[10px] text-editorial-ink">{t('help.providers.models')}</th>
+              <th className="text-left py-2.5 font-bold uppercase tracking-widest text-[10px] text-editorial-ink">{t('help.providers.notes')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-editorial-border">
-            <tr><td className="py-2 pr-4 font-bold">Gemini</td><td className="py-2 pr-4 font-mono text-[10px]">gemini-3-flash, pro, lite</td><td className="py-2 text-editorial-muted">{t('help.providers.geminiNote')}</td></tr>
-            <tr><td className="py-2 pr-4 font-bold">OpenAI</td><td className="py-2 pr-4 font-mono text-[10px]">gpt-4o, gpt-4o-mini, o1</td><td className="py-2 text-editorial-muted">{t('help.providers.openaiNote')}</td></tr>
-            <tr><td className="py-2 pr-4 font-bold">Anthropic</td><td className="py-2 pr-4 font-mono text-[10px]">claude-3.5-sonnet, haiku</td><td className="py-2 text-editorial-muted">{t('help.providers.anthropicNote')}</td></tr>
-            <tr><td className="py-2 pr-4 font-bold">DeepSeek</td><td className="py-2 pr-4 font-mono text-[10px]">deepseek-chat, reasoner</td><td className="py-2 text-editorial-muted">{t('help.providers.deepseekNote')}</td></tr>
-            <tr><td className="py-2 pr-4 font-bold">Ollama</td><td className="py-2 pr-4 font-mono text-[10px]">{t('help.providers.ollamaModels')}</td><td className="py-2 text-editorial-muted">{t('help.providers.ollamaNote')}</td></tr>
+            <tr><td className="py-2.5 pr-4 font-bold text-editorial-ink">Gemini</td><td className="py-2.5 pr-4 font-mono text-xs text-editorial-ink/70">gemini-3-flash, pro, lite</td><td className="py-2.5 text-editorial-ink/70">{t('help.providers.geminiNote')}</td></tr>
+            <tr><td className="py-2.5 pr-4 font-bold text-editorial-ink">OpenAI</td><td className="py-2.5 pr-4 font-mono text-xs text-editorial-ink/70">gpt-4o, gpt-4o-mini, o1</td><td className="py-2.5 text-editorial-ink/70">{t('help.providers.openaiNote')}</td></tr>
+            <tr><td className="py-2.5 pr-4 font-bold text-editorial-ink">Anthropic</td><td className="py-2.5 pr-4 font-mono text-xs text-editorial-ink/70">claude-3.5-sonnet, haiku</td><td className="py-2.5 text-editorial-ink/70">{t('help.providers.anthropicNote')}</td></tr>
+            <tr><td className="py-2.5 pr-4 font-bold text-editorial-ink">DeepSeek</td><td className="py-2.5 pr-4 font-mono text-xs text-editorial-ink/70">deepseek-chat, reasoner</td><td className="py-2.5 text-editorial-ink/70">{t('help.providers.deepseekNote')}</td></tr>
+            <tr><td className="py-2.5 pr-4 font-bold text-editorial-ink">Ollama</td><td className="py-2.5 pr-4 font-mono text-xs text-editorial-ink/70">{t('help.providers.ollamaModels')}</td><td className="py-2.5 text-editorial-ink/70">{t('help.providers.ollamaNote')}</td></tr>
           </tbody>
         </table>
       </div>
@@ -289,19 +342,19 @@ function OllamaSection() {
 
       <Step n={1} title={t('help.ollama.installTitle')}>
         <span>{t('help.ollama.installDesc')}</span>
-        <code className="block mt-2 p-3 bg-editorial-textbox border border-editorial-border text-[11px] font-mono">
+        <code className="block mt-2 p-3 bg-editorial-textbox border border-editorial-border text-xs font-mono text-editorial-ink">
           curl -fsSL https://ollama.com/install.sh | sh
         </code>
       </Step>
       <Step n={2} title={t('help.ollama.pullTitle')}>
         <span>{t('help.ollama.pullDesc')}</span>
-        <code className="block mt-2 p-3 bg-editorial-textbox border border-editorial-border text-[11px] font-mono">
+        <code className="block mt-2 p-3 bg-editorial-textbox border border-editorial-border text-xs font-mono text-editorial-ink">
           ollama pull llama3.2
         </code>
       </Step>
       <Step n={3} title={t('help.ollama.serveTitle')}>
         <span>{t('help.ollama.serveDesc')}</span>
-        <code className="block mt-2 p-3 bg-editorial-textbox border border-editorial-border text-[11px] font-mono">
+        <code className="block mt-2 p-3 bg-editorial-textbox border border-editorial-border text-xs font-mono text-editorial-ink">
           ollama serve
         </code>
       </Step>
@@ -309,10 +362,7 @@ function OllamaSection() {
         {t('help.ollama.useDesc')}
       </Step>
 
-      <div className="mt-6 p-4 bg-editorial-textbox/20 border border-editorial-border">
-        <h4 className="text-[10px] font-bold uppercase tracking-widest text-editorial-accent mb-2">{t('help.ollama.recommendedTitle')}</h4>
-        <p className="text-xs text-editorial-muted leading-relaxed">{t('help.ollama.recommendedDesc')}</p>
-      </div>
+      <Tip title={t('help.ollama.recommendedTitle')}>{t('help.ollama.recommendedDesc')}</Tip>
     </>
   );
 }
@@ -331,29 +381,48 @@ function GlossarySection() {
 
 function ShortcutsSection() {
   const { t } = useTranslation();
+
+  const toolbarItems = [
+    { label: t('help.shortcuts.openSettings'),  icon: '⚙' },
+    { label: t('help.shortcuts.openProjects'),  icon: '📂' },
+    { label: t('help.shortcuts.importFile'),    icon: '⬆' },
+    { label: t('help.shortcuts.saveProject'),   icon: '💾' },
+    { label: t('help.shortcuts.openConfig'),    icon: '⚙' },
+    { label: t('help.shortcuts.openInsights'),  icon: '📊' },
+    { label: t('help.shortcuts.sandbox'),       icon: '⬜' },
+    { label: t('help.shortcuts.switchLang'),    icon: '🌐' },
+  ];
+
+  const exportItems = [
+    { label: t('help.shortcuts.exportTxt'), icon: '⬇' },
+    { label: t('help.shortcuts.exportMd'),  icon: 'MD' },
+  ];
+
+  const promptItems = [
+    { label: t('help.shortcuts.refineButton'),  icon: '✦' },
+    { label: t('help.shortcuts.saveTemplate'),  icon: '🔖' },
+    { label: t('help.shortcuts.loadTemplate'),  icon: '📖' },
+  ];
+
+  const renderRow = ({ label, icon }: { label: string; icon: string }) => (
+    <div key={label} className="flex items-center justify-between py-2.5 border-b border-editorial-border last:border-0">
+      <span className="text-[13px] text-editorial-ink/80">{label}</span>
+      <Kbd>{icon}</Kbd>
+    </div>
+  );
+
   return (
     <>
       <SectionTitle>{t('help.shortcuts.title')}</SectionTitle>
 
-      <div className="space-y-3 my-6">
-        {[
-          { label: t('help.shortcuts.openSettings'), icon: '⚙️' },
-          { label: t('help.shortcuts.switchLang'), icon: '🌐' },
-          { label: t('help.shortcuts.openProjects'), icon: '📂' },
-          { label: t('help.shortcuts.importFile'), icon: '⬆' },
-          { label: t('help.shortcuts.saveProject'), icon: '💾' },
-          { label: t('help.shortcuts.exportTxt'), icon: '⬇' },
-          { label: t('help.shortcuts.exportMd'), icon: 'MD' },
-        ].map(({ label, icon }) => (
-          <div key={label} className="flex items-center justify-between py-2 border-b border-editorial-border">
-            <span className="text-xs">{label}</span>
-            <span className="flex items-center gap-1.5">
-              <Kbd>{icon}</Kbd>
-              <span className="text-[9px] text-editorial-muted uppercase">{t('help.shortcuts.headerIcon')}</span>
-            </span>
-          </div>
-        ))}
-      </div>
+      <SubTitle>{t('help.shortcuts.toolbarTitle')}</SubTitle>
+      <div className="my-4">{toolbarItems.map(renderRow)}</div>
+
+      <SubTitle>{t('help.shortcuts.exportTitle')}</SubTitle>
+      <div className="my-4">{exportItems.map(renderRow)}</div>
+
+      <SubTitle>{t('help.shortcuts.promptToolsTitle')}</SubTitle>
+      <div className="my-4">{promptItems.map(renderRow)}</div>
     </>
   );
 }

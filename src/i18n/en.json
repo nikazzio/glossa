@@ -298,13 +298,14 @@
     "sections": {
       "overview": "Overview",
       "pipeline": "Pipeline",
+      "features": "Features",
       "streaming": "Streaming",
       "audit": "Audit",
       "projects": "Projects",
       "providers": "Providers",
       "ollama": "Ollama",
       "glossary": "Glossary",
-      "shortcuts": "Toolbar"
+      "shortcuts": "Interface"
     },
     "overview": {
       "title": "What is Glossa?",
@@ -321,17 +322,33 @@
     },
     "pipeline": {
       "title": "Pipeline Configuration",
-      "intro": "The left panel contains all pipeline settings. Here's how to set up a translation run:",
+      "intro": "All pipeline settings are accessible from the configuration panel (gear icon in the header). The panel opens as a side drawer with 3 tabs and does not obscure the document. Here's how to set up a translation run:",
       "configTitle": "Language pair",
       "configDesc": "Select source and target languages from the dropdowns. Use the swap button (⇄) to quickly reverse the direction. Enable 'Auto-Segment' to split the text into paragraph-level chunks for independent processing.",
       "stagesTitle": "Translation stages",
-      "stagesDesc": "Each stage represents one LLM pass. Click the + button to add stages. Expand a stage to configure its provider, model, and prompt. The prompt tells the LLM what to focus on — e.g., 'Focus on literal accuracy' for stage 1, 'Make it sound natural and fluent' for stage 2. You can disable stages without deleting them.",
+      "stagesDesc": "Each stage represents one LLM pass. Click + to add stages. Expand a stage to configure its provider, model, and prompt. Use the wand icon to have the AI rewrite the prompt, or save/load prompts as reusable templates with the bookmark buttons. You can disable stages without deleting them.",
       "runTitle": "Running the pipeline",
-      "runDesc": "After pasting your text in the center panel and clicking 'Stage Content to Stream', press 'Begin Pipeline'. Each stage runs sequentially per chunk, and you'll see tokens stream in real time. The judge runs automatically after all stages complete.",
+      "runDesc": "After pasting your text in the center panel and clicking 'Stage Content', press 'Begin Pipeline'. Each stage runs sequentially per chunk, and you'll see tokens stream in real time. The judge runs automatically after all stages complete.",
       "editTitle": "Editing the result",
       "editDesc": "The 'Candidate Translation' box is fully editable. Make manual corrections, then click 'Re-Evaluate Drafts' in the audit panel to get an updated quality judgment on your edits.",
       "tipTitle": "Pro tip: mix providers",
       "tipDesc": "Use different models for different stages. A fast model (Gemini Flash, DeepSeek) works well for initial drafts, while a stronger model (GPT-4o, Claude Sonnet) excels at refinement and judging. Ollama models are ideal for offline work or sensitive content."
+    },
+    "features": {
+      "title": "Advanced Features",
+      "intro": "This section covers the most recent additions to Glossa.",
+      "configDrawerTitle": "Configuration Panel (3 tabs)",
+      "configDrawerDesc": "The configuration panel opens via the gear icon in the header. It is organised into three tabs: Stages (model, provider and prompt for each translation stage), Audit (AI judge configuration and evaluation templates), Registry (glossary term management). The panel is a side drawer that overlays without obstructing the document text.",
+      "templatesTitle": "Prompt Templates",
+      "templatesDesc": "Every prompt textarea — in each stage and in the Audit Guard — has save and load template buttons. Click the bookmark (+) to save the current prompt under a name; click the open book to browse and load saved templates (with search). Templates are separated by context: stage templates do not appear in the Audit section and vice versa. Saving a template with an existing name updates it automatically.",
+      "refineTitle": "Refine Prompt",
+      "refineDesc": "The wand icon next to the Prompt label in each stage and in the Audit Guard sends the current prompt to the AI using the provider and model already selected for that stage. The AI rewrites it to be more professional and effective: a specialised meta-prompt for multi-stage translation pipelines is used for stages; a QA-evaluation meta-prompt is used for the Audit Guard. The result appears immediately in the textarea — edit it freely or press Ctrl+Z to undo.",
+      "tokenTitle": "Token Count and Estimated Cost",
+      "tokenDesc": "The header displays in real time the total tokens consumed and the estimated cost for the current session, based on official pricing for each provider. Tokens are tracked separately for each stage and for the judge. The counter updates after each completed chunk.",
+      "sandboxTitle": "Sandbox and Document Mode",
+      "sandboxDesc": "The Sandbox button in the header toggles between two working modes. Sandbox is ideal for quick tests, model comparisons, and short single-text translations without chunks. Document mode activates the chunk reader, navigable index, insights panel, and advanced segmentation controls — suited for longer texts translated in multiple independent chunks.",
+      "exportTitle": "Export",
+      "exportDesc": "Export buttons are located in the Summary section of the header (visible when there are completed chunks). Export as .txt for the translated text only, or as .md for a bilingual Markdown document that includes the original text, translation, audit quality, and any issues flagged per chunk."
     },
     "streaming": {
       "title": "Real-time Streaming",
@@ -352,15 +369,15 @@
       "title": "Projects & Files",
       "intro": "Glossa saves your work in local SQLite — all data stays on your machine.",
       "createTitle": "Create a project",
-      "createDesc": "Click the folder icon (📂) in the toolbar to open the Projects panel. Type a name and click Create. The project stores your pipeline configuration, glossary, and all translation results.",
+      "createDesc": "Click the folder icon in the header to open the Projects panel. Type a name and click Create. The project stores your pipeline configuration, glossary, and all translation results.",
       "saveTitle": "Save your work",
-      "saveDesc": "Click the save icon (💾) at any time to persist the current state. When you reopen a project, the full pipeline config, stages, glossary, and translations are restored exactly as you left them.",
+      "saveDesc": "Click the save icon at any time to persist the current state. When you reopen a project, the full pipeline config, stages, glossary, and translations are restored exactly as you left them.",
       "importExportTitle": "Import and export",
-      "importExportDesc": "Use the upload icon (⬆) to import a .txt or .md file as source text. Use the download icon (⬇) to export the translation as plain text, or click 'MD' for a bilingual Markdown document with original text, translation, audit quality, and issues."
+      "importExportDesc": "Use the upload icon to import a .txt or .md file as source text. Export buttons appear in the Summary section of the header when chunks are completed: export as .txt for the translated text, or as .md for a bilingual Markdown document with original text, translation, audit quality, and issues."
     },
     "providers": {
       "title": "LLM Providers",
-      "intro": "Glossa supports five providers. Each stage and the judge can use a different provider and model. Configure API keys in Settings (⚙️).",
+      "intro": "Glossa supports five providers. Each stage and the judge can use a different provider and model. Configure API keys in Settings.",
       "provider": "Provider",
       "models": "Models",
       "notes": "Notes",
@@ -389,19 +406,28 @@
     "glossary": {
       "title": "Keyword Registry (Glossary)",
       "intro": "The Keyword Registry lets you define mandatory term translations. For each entry, specify the source term and its required translation. These terms are enforced across all pipeline stages.",
-      "usage": "Add entries in the left panel under 'Keyword Registry'. For example: 'λόγος → discourse (not 'word' or 'reason')'. Each stage's system prompt includes the full glossary, instructing the LLM to use these exact translations.",
+      "usage": "Add entries in the configuration panel under the Registry tab. For example: 'λόγος → discourse (not word or reason)'. Each stage's system prompt includes the full glossary, instructing the LLM to use these exact translations.",
       "audit": "The AI Judge specifically checks glossary adherence. If the translation uses a different term than what's defined in the registry, it will flag a 'glossary' issue with severity and a suggested fix. This is especially valuable for technical, legal, or academic texts where terminology must be consistent."
     },
     "shortcuts": {
-      "title": "Toolbar Reference",
-      "openSettings": "Open Settings (API keys, Ollama)",
-      "switchLang": "Switch interface language (EN/IT)",
+      "title": "Interface Reference",
+      "toolbarTitle": "Header toolbar",
+      "openSettings": "Settings — API keys and Ollama",
+      "switchLang": "Switch interface language (EN / IT)",
       "openProjects": "Open Projects panel",
       "importFile": "Import source text file",
       "saveProject": "Save current project",
+      "openConfig": "Open pipeline configuration panel",
+      "openInsights": "Open insights panel (Document mode)",
+      "sandbox": "Toggle Sandbox / Document mode",
+      "exportTitle": "Export (in header summary)",
       "exportTxt": "Export translation as .txt",
-      "exportMd": "Export bilingual Markdown",
-      "headerIcon": "header icon"
+      "exportMd": "Export bilingual .md document",
+      "promptToolsTitle": "Prompt tools (in stages and Audit)",
+      "refineButton": "Wand — AI-rewrites the prompt",
+      "saveTemplate": "Bookmark (+) — save prompt as template",
+      "loadTemplate": "Open book — load a saved template",
+      "headerIcon": "icon"
     }
   }
 }
