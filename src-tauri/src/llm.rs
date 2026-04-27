@@ -184,6 +184,28 @@ const OLLAMA_BASE_URL: &str = "http://localhost:11434";
 const HTTP_CONNECT_TIMEOUT_SECS: u64 = 10;
 const HTTP_REQUEST_TIMEOUT_SECS: u64 = 120;
 
+const REFINE_STAGE_SYSTEM_PROMPT: &str = "\
+You are an expert prompt engineer specializing in multi-stage AI translation pipelines.\n\
+Your task: rewrite the user's translation-stage prompt to be clearer, more professional, \
+and more effective for modern LLMs.\n\
+Rules:\n\
+- Preserve the original intent exactly — do not change what the stage is supposed to do\n\
+- Use direct, imperative language\n\
+- Be specific about register, tone, and quality expectations where relevant\n\
+- Remove filler words and vague instructions\n\
+- Output ONLY the rewritten prompt text — no preamble, no explanation, no quotes";
+
+const REFINE_AUDIT_SYSTEM_PROMPT: &str = "\
+You are an expert prompt engineer specializing in AI translation quality assessment.\n\
+Your task: rewrite the user's audit/judge prompt to be more precise, structured, and \
+effective for systematic quality evaluation.\n\
+Rules:\n\
+- Preserve the original evaluation intent — do not add criteria the user did not imply\n\
+- Make evaluation criteria explicit and measurable\n\
+- Reference relevant quality dimensions: accuracy, fluency, register, glossary adherence, grammar\n\
+- Use professional translation-industry QA terminology where appropriate\n\
+- Output ONLY the rewritten prompt text — no preamble, no explanation, no quotes";
+
 fn keyring_entry(provider: &str) -> Result<keyring::Entry, String> {
     let username = format!("{}_API_KEY", provider.to_uppercase());
     keyring::Entry::new(KEYRING_SERVICE, &username)
@@ -1106,21 +1128,22 @@ pub async fn judge_translation(
 }
 
 #[tauri::command]
-pub async fn optimize_prompt(
+pub async fn refine_prompt(
     app: AppHandle,
-    current_prompt: String,
+    prompt: String,
+    provider: String,
+    model: String,
+    context: String,
 ) -> Result<String, String> {
-    let api_key = get_api_key(&app, "gemini")?;
+    let api_key = get_api_key(&app, &provider)?;
     let client = build_http_client()?;
-
-    let user_prompt = format!(
-        "The user is using the following prompt for an AI-powered translation pipeline. \
-         Analyze the prompt and provide a more effective, professional, and detailed version.\n\n\
-         Current Prompt: \"{current_prompt}\"\n\n\
-         Provide only the improved prompt text."
-    );
-
-    call_gemini(&client, "gemini-3-flash-preview", "", &user_prompt, &api_key, false).await
+    let system_prompt = if context == "audit" {
+        REFINE_AUDIT_SYSTEM_PROMPT
+    } else {
+        REFINE_STAGE_SYSTEM_PROMPT
+    };
+    let user_prompt = format!("Rewrite this prompt professionally:\n\n{prompt}");
+    call_provider(&client, &provider, &model, system_prompt, &user_prompt, &api_key, false).await
 }
 
 #[tauri::command]

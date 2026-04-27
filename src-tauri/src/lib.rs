@@ -37,7 +37,7 @@ pub fn run() {
       llm::run_stage_stream,
       llm::cancel_stream,
       llm::judge_translation,
-      llm::optimize_prompt,
+      llm::refine_prompt,
       llm::save_api_key,
       llm::get_api_key_status,
       llm::delete_api_key,

@@ -101,8 +101,13 @@ export const llmService = {
     });
   },
 
-  async optimizePrompt(currentPrompt: string): Promise<string> {
-    return invoke<string>('optimize_prompt', { currentPrompt });
+  async refinePrompt(
+    prompt: string,
+    provider: string,
+    model: string,
+    context: 'stage' | 'audit',
+  ): Promise<string> {
+    return invoke<string>('refine_prompt', { prompt, provider, model, context });
   },
 
   async testConnection(provider: string): Promise<boolean> {

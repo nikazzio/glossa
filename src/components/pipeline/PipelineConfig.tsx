@@ -1,5 +1,5 @@
-import { Plus, ArrowRightLeft, Play, Loader2, X, AlertTriangle, RotateCcw } from 'lucide-react';
-import { useMemo } from 'react';
+import { Plus, ArrowRightLeft, Play, Loader2, X, AlertTriangle, RotateCcw, Wand2 } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { ModelProvider } from '../../types';
@@ -9,6 +9,7 @@ import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
 import { confirm } from '../../stores/confirmStore';
 import { StageCard } from './StageCard';
+import { llmService } from '../../services/llmService';
 
 export type ConfigSection = 'stages' | 'audit' | 'glossary';
 
@@ -52,6 +53,7 @@ export function PipelineConfig({
   const ollamaStatus = useUiStore((state) => state.ollamaStatus);
   const { t } = useTranslation();
   const judgeModels = useJudgeModelOptions(config.judgeProvider);
+  const [isRefiningJudge, setIsRefiningJudge] = useState(false);
 
   const cannotRun = isProcessing || chunks.length === 0;
   const completedCount = chunks.filter((c) => c.status === 'completed').length;
@@ -98,6 +100,22 @@ export function PipelineConfig({
     }
     return dupes;
   }, [config.glossary]);
+
+  const handleRefineJudgePrompt = async () => {
+    if (!config.judgePrompt.trim()) return;
+    setIsRefiningJudge(true);
+    try {
+      const refined = await llmService.refinePrompt(config.judgePrompt, config.judgeProvider, config.judgeModel, 'audit');
+      setConfig((prev) => ({ ...prev, judgePrompt: refined }));
+      toast.success(t('pipeline.refined'));
+    } catch (err: unknown) {
+      toast.error(t('pipeline.refineFailed'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setIsRefiningJudge(false);
+    }
+  };
 
   const handleJudgeProviderChange = (newProvider: ModelProvider) => {
     const models =
@@ -213,9 +231,21 @@ export function PipelineConfig({
         {/* ── Audit Guard ── */}
         {showAudit && (
           <div>
-            <h2 className="font-display text-sm uppercase tracking-wider border-b border-editorial-ink pb-2 mb-6 inline-block">
-              {t('pipeline.auditGuard')}
-            </h2>
+            <div className="flex items-center justify-between border-b border-editorial-ink pb-2 mb-6">
+              <h2 className="font-display text-sm uppercase tracking-wider">
+                {t('pipeline.auditGuard')}
+              </h2>
+              <button
+                type="button"
+                onClick={handleRefineJudgePrompt}
+                disabled={isRefiningJudge || !config.judgePrompt.trim()}
+                title={t('pipeline.refinePrompt')}
+                aria-label={t('pipeline.refinePrompt')}
+                className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40"
+              >
+                {isRefiningJudge ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
+              </button>
+            </div>
             <div className="space-y-4">
               <div className="flex gap-2">
                 <select
