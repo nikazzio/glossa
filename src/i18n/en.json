@@ -14,6 +14,7 @@
     "viewLabel": "View",
     "summaryLabel": "Summary",
     "openConfig": "Open pipeline configuration",
+    "exportLabel": "Export",
     "openInsights": "Open insights panel",
     "closeDrawer": "Close panel",
     "enterSandbox": "Switch to Sandbox",

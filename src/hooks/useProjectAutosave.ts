@@ -85,7 +85,7 @@ export function useProjectAutosave(delayMs = 1200) {
 
     const timer = window.setTimeout(() => {
       if (useProjectStore.getState().saveState === 'saving') return;
-      void useProjectStore.getState().saveCurrentProject(snapshot).catch(() => {});
+      void useProjectStore.getState().saveCurrentProject().catch(() => {});
     }, delayMs);
 
     return () => window.clearTimeout(timer);

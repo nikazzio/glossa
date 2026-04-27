@@ -1,4 +1,4 @@
-import { AlertTriangle, RefreshCcw, X } from 'lucide-react';
+import { AlertTriangle, PanelRight, RefreshCcw, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { type KeyboardEvent, useRef } from 'react';
@@ -90,7 +90,29 @@ export function InsightsDrawer({ onReauditChunk }: InsightsDrawerProps) {
   };
 
   return (
-    <AnimatePresence initial={false}>
+    <>
+      <AnimatePresence initial={false}>
+        {!showInsightsDrawer && (
+          <motion.button
+            key="insights-tab"
+            type="button"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            onClick={() => setShowInsightsDrawer(true)}
+            className="flex w-8 shrink-0 flex-col items-center justify-center gap-3 self-stretch border-l border-editorial-border bg-editorial-bg/80 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-editorial-accent"
+            aria-label={t('header.openInsights')}
+            title={t('header.openInsights')}
+          >
+            <PanelRight size={14} />
+            <span className="[writing-mode:vertical-lr] rotate-180 text-[9px] font-bold uppercase tracking-[0.3em]">
+              {t('document.insightsDrawerTitle')}
+            </span>
+          </motion.button>
+        )}
+      </AnimatePresence>
+      <AnimatePresence initial={false}>
       {showInsightsDrawer && (
         <motion.aside
           key="insights-panel"
@@ -178,7 +200,8 @@ export function InsightsDrawer({ onReauditChunk }: InsightsDrawerProps) {
           </div>
         </motion.aside>
       )}
-    </AnimatePresence>
+      </AnimatePresence>
+    </>
   );
 }
 

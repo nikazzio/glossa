@@ -9,6 +9,16 @@ async function getDb(): Promise<Database> {
   return db;
 }
 
+// Serializza tutte le write su un'unica coda JS per evitare la contesa di lock
+// SQLite quando il plugin Tauri usa un connection pool interno.
+let writeQueue: Promise<unknown> = Promise.resolve();
+
+function serializeWrite<T>(fn: () => Promise<T>): Promise<T> {
+  const next = writeQueue.then(fn, fn);
+  writeQueue = next.then(() => {}, () => {});
+  return next;
+}
+
 async function ensureColumn(table: string, column: string, definition: string): Promise<void> {
   const conn = await getDb();
   const columns = await conn.select<Array<{ name: string }>>(`PRAGMA table_info(${table})`);
@@ -22,6 +32,10 @@ async function ensureColumn(table: string, column: string, definition: string): 
 /** Run migrations on app startup */
 export async function initDatabase(): Promise<void> {
   const conn = await getDb();
+
+  await conn.execute('PRAGMA journal_mode=WAL');
+  await conn.execute('PRAGMA synchronous=NORMAL');
+  await conn.execute('PRAGMA busy_timeout=10000');
 
   await conn.execute(`
     CREATE TABLE IF NOT EXISTS projects (
@@ -46,6 +60,19 @@ export async function initDatabase(): Promise<void> {
       target_chunk_count INTEGER DEFAULT 0,
       source_text TEXT DEFAULT ''
     )
+  `);
+
+  await conn.execute(`
+    DELETE FROM pipeline_configs
+    WHERE rowid NOT IN (
+      SELECT MIN(rowid)
+      FROM pipeline_configs
+      GROUP BY project_id
+    )
+  `);
+  await conn.execute(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_pipeline_configs_project_id
+    ON pipeline_configs(project_id)
   `);
 
   await conn.execute(`
@@ -116,8 +143,10 @@ export async function initDatabase(): Promise<void> {
 // ── Generic query helpers ────────────────────────────────────────────
 
 export async function execute(query: string, params: unknown[] = []): Promise<void> {
-  const conn = await getDb();
-  await conn.execute(query, params);
+  return serializeWrite(async () => {
+    const conn = await getDb();
+    await conn.execute(query, params);
+  });
 }
 
 export async function select<T>(query: string, params: unknown[] = []): Promise<T[]> {
@@ -125,27 +154,20 @@ export async function select<T>(query: string, params: unknown[] = []): Promise<
   return conn.select<T[]>(query, params);
 }
 
+// Il plugin @tauri-apps/plugin-sql usa un connection pool interno: BEGIN/COMMIT
+// eseguiti su connessioni diverse del pool non formano una vera transazione e
+// causano lock contention (busy_timeout da 5 s). Si serializzano invece tutte
+// le write tramite la coda JS, garantendo esecuzione atomica senza lock espliciti.
 export async function runInTransaction<T>(
   fn: (executeTx: (query: string, params?: unknown[]) => Promise<void>) => Promise<T>,
 ): Promise<T> {
-  const conn = await getDb();
-  const executeTx = async (query: string, params: unknown[] = []) => {
-    await conn.execute(query, params);
-  };
-
-  await executeTx('BEGIN IMMEDIATE TRANSACTION');
-  try {
-    const result = await fn(executeTx);
-    await executeTx('COMMIT');
-    return result;
-  } catch (error) {
-    try {
-      await executeTx('ROLLBACK');
-    } catch {
-      // Preserve the original transaction error if rollback also fails.
-    }
-    throw error;
-  }
+  return serializeWrite(async () => {
+    const conn = await getDb();
+    const run = async (query: string, params: unknown[] = []) => {
+      await conn.execute(query, params);
+    };
+    return fn(run);
+  });
 }
 
 // ── App Settings ─────────────────────────────────────────────────────

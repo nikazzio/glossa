@@ -254,11 +254,25 @@ async function saveProjectConfigInternal(
   run: ExecuteQuery,
 ): Promise<void> {
   await run(
-    `UPDATE pipeline_configs SET
-      stages = $1, judge_prompt = $2, judge_model = $3, judge_provider = $4, use_chunking = $5,
-      target_chunk_count = $6, source_text = CASE WHEN $7 IS NULL THEN source_text ELSE $7 END
-     WHERE project_id = $8`,
+    `INSERT INTO pipeline_configs (
+       id, project_id, stages, judge_prompt, judge_model, judge_provider, use_chunking,
+       target_chunk_count, source_text
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9, ''))
+     ON CONFLICT(project_id) DO UPDATE SET
+       id = excluded.id,
+       stages = excluded.stages,
+       judge_prompt = excluded.judge_prompt,
+       judge_model = excluded.judge_model,
+       judge_provider = excluded.judge_provider,
+       use_chunking = excluded.use_chunking,
+       target_chunk_count = excluded.target_chunk_count,
+       source_text = CASE
+         WHEN $9 IS NULL THEN pipeline_configs.source_text
+         ELSE $9
+       END`,
     [
+      `cfg-${projectId}`,
+      projectId,
       JSON.stringify(config.stages),
       config.judgePrompt,
       config.judgeModel,
@@ -266,7 +280,6 @@ async function saveProjectConfigInternal(
       config.useChunking !== false ? 1 : 0,
       config.targetChunkCount ?? 0,
       inputText ?? null,
-      projectId,
     ],
   );
   await run(

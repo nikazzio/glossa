@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, AlertCircle, Server, RefreshCw, CheckCircle2, XCircle, HelpCircle } from 'lucide-react';
+import { X, AlertCircle, Server, RefreshCw, CheckCircle2, XCircle, HelpCircle, Sparkles, Columns2, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -16,6 +16,8 @@ export function SettingsModal() {
     ollamaModels,
     setOllamaModels,
     setOllamaStatus,
+    documentLayout,
+    setDocumentLayout,
   } = useUiStore();
   const { t } = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
@@ -73,6 +75,40 @@ export function SettingsModal() {
             <h2 id="settings-title" className="font-display text-3xl italic tracking-tight mb-12">{t('settings.title')}</h2>
 
             <div className="space-y-12">
+              {/* Layout lettura */}
+              <div className="space-y-4">
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
+                  {t('header.readerLayout')}
+                </label>
+                <div
+                  role="group"
+                  aria-label={t('header.readerLayout')}
+                  className="flex items-center gap-2"
+                >
+                  {[
+                    { value: 'auto' as const, label: t('document.layoutAuto'), icon: <Sparkles size={14} /> },
+                    { value: 'standard' as const, label: t('document.layoutStandard'), icon: <Columns2 size={14} /> },
+                    { value: 'book' as const, label: t('document.layoutBook'), icon: <BookOpen size={14} /> },
+                  ].map(({ value, label, icon }) => (
+                    <button
+                      key={value}
+                      type="button"
+                      role="radio"
+                      aria-checked={documentLayout === value}
+                      onClick={() => setDocumentLayout(value)}
+                      className={`flex items-center gap-2 border px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                        documentLayout === value
+                          ? 'border-editorial-ink bg-editorial-ink text-white'
+                          : 'border-editorial-border text-editorial-muted hover:border-editorial-ink hover:text-editorial-ink'
+                      }`}
+                    >
+                      {icon}
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Cloud Providers */}
               <div className="space-y-4">
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
@@ -168,7 +204,7 @@ export function SettingsModal() {
                   onClick={() => setShowSettings(false)}
                   className="bg-editorial-ink text-white px-8 py-4 text-[11px] font-bold uppercase tracking-widest transition-all hover:opacity-90 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
                 >
-                  {t('settings.saveClose')}
+                  {t('settings.close')}
                 </button>
               </div>
             </div>

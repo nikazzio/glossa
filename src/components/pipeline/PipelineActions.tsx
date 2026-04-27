@@ -59,7 +59,7 @@ export function PipelineActions({
             className="flex items-center gap-2 rounded-full bg-editorial-ink px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-white transition-colors hover:bg-editorial-ink/90 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
           >
             <Play size={12} fill="currentColor" />
-            <span>{t('pipeline.run')}</span>
+            <span>{t('pipeline.beginPipeline')}</span>
           </button>
         )}
       </div>

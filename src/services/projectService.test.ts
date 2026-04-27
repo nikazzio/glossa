@@ -44,11 +44,11 @@ describe('projectService glossary persistence', () => {
     await saveProjectConfig('proj-1', config, 'document');
 
     expect(dbMocks.execute).toHaveBeenCalledWith(
-      expect.stringContaining('UPDATE pipeline_configs SET'),
-      expect.arrayContaining([8, 'proj-1']),
+      expect.stringContaining('INSERT INTO pipeline_configs'),
+      expect.any(Array),
     );
     expect(dbMocks.execute).toHaveBeenCalledWith(
-      expect.stringContaining('source_text = CASE WHEN $7 IS NULL THEN source_text ELSE $7 END'),
+      expect.stringContaining('ON CONFLICT(project_id) DO UPDATE SET'),
       expect.any(Array),
     );
     expect(dbMocks.execute).toHaveBeenCalledWith(
@@ -161,8 +161,10 @@ describe('projectService glossary persistence', () => {
 
     expect(dbMocks.runInTransaction).toHaveBeenCalledTimes(1);
     expect(dbMocks.execute).toHaveBeenCalledWith(
-      expect.stringContaining('source_text = CASE WHEN $7 IS NULL THEN source_text ELSE $7 END'),
+      expect.stringContaining('INSERT INTO pipeline_configs'),
       [
+        'cfg-proj-1',
+        'proj-1',
         '[]',
         'Judge',
         'gemini-3-flash-preview',
@@ -170,7 +172,6 @@ describe('projectService glossary persistence', () => {
         1,
         2,
         'Alpha\n\nBeta',
-        'proj-1',
       ],
     );
     expect(dbMocks.execute).toHaveBeenCalledWith(

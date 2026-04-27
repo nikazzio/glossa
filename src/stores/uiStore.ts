@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type {
   DocumentLayoutPreference,
   OllamaStatus,
@@ -31,14 +32,16 @@ interface UiState {
   setOllamaStatus: (status: OllamaStatus) => void;
 }
 
-export const useUiStore = create<UiState>((set) => ({
+export const useUiStore = create<UiState>()(
+  persist(
+    (set) => ({
   viewMode: 'document',
   documentLayout: 'auto',
   selectedChunkId: null,
   showSettings: false,
   showHelp: false,
   showConfigDrawer: false,
-  showInsightsDrawer: false,
+  showInsightsDrawer: true,
   insightsDrawerTab: 'index',
   ollamaModels: [],
   ollamaStatus: 'unknown',
@@ -47,7 +50,7 @@ export const useUiStore = create<UiState>((set) => ({
     set({
       viewMode: mode,
       showConfigDrawer: false,
-      showInsightsDrawer: false,
+      showInsightsDrawer: mode === 'document',
     }),
   setDocumentLayout: (layout) => set({ documentLayout: layout }),
   setSelectedChunkId: (chunkId) => set({ selectedChunkId: chunkId }),
@@ -99,4 +102,11 @@ export const useUiStore = create<UiState>((set) => ({
   setInsightsDrawerTab: (tab) => set({ insightsDrawerTab: tab }),
   setOllamaModels: (models) => set({ ollamaModels: models }),
   setOllamaStatus: (status) => set({ ollamaStatus: status }),
-}));
+    }),
+    {
+      name: 'glossa-ui-prefs',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ documentLayout: state.documentLayout }),
+    },
+  ),
+);

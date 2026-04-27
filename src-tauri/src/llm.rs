@@ -8,10 +8,13 @@ use std::{
     path::PathBuf,
     sync::{
         atomic::{AtomicBool, Ordering},
-        Arc, Mutex,
+        Arc, LazyLock, Mutex,
     },
     time::Duration,
 };
+
+static API_KEY_CACHE: LazyLock<Mutex<HashMap<String, String>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
 
 // ── Types matching frontend ──────────────────────────────────────────
 
@@ -307,13 +310,25 @@ fn get_api_key(app: &AppHandle, provider: &str) -> Result<String, String> {
     if let Ok(entry) = keyring_entry(provider) {
         if let Ok(secret) = entry.get_password() {
             if !secret.is_empty() {
+                if let Ok(mut cache) = API_KEY_CACHE.lock() {
+                    cache.insert(provider.to_string(), secret.clone());
+                }
                 return Ok(secret);
             }
         }
     }
 
+    if let Ok(cache) = API_KEY_CACHE.lock() {
+        if let Some(secret) = cache.get(provider).filter(|secret| !secret.is_empty()) {
+            return Ok(secret.clone());
+        }
+    }
+
     // 2. Migrate from legacy store if present
     if let Ok(key) = migrate_from_legacy_store(app, provider) {
+        if let Ok(mut cache) = API_KEY_CACHE.lock() {
+            cache.insert(provider.to_string(), key.clone());
+        }
         return Ok(key);
     }
 
@@ -333,8 +348,13 @@ fn get_api_key(app: &AppHandle, provider: &str) -> Result<String, String> {
 #[tauri::command]
 pub async fn save_api_key(provider: String, key: String) -> Result<(), String> {
     let entry = keyring_entry(&provider)?;
-    entry.set_password(&key)
-        .map_err(|e| format!("Failed to save to keychain: {e}"))
+    entry
+        .set_password(&key)
+        .map_err(|e| format!("Failed to save to keychain: {e}"))?;
+    if let Ok(mut cache) = API_KEY_CACHE.lock() {
+        cache.insert(provider, key);
+    }
+    Ok(())
 }
 
 #[tauri::command]
@@ -345,8 +365,13 @@ pub async fn get_api_key_status(app: AppHandle, provider: String) -> Result<bool
 #[tauri::command]
 pub async fn delete_api_key(provider: String) -> Result<(), String> {
     let entry = keyring_entry(&provider)?;
-    entry.delete_credential()
-        .map_err(|e| format!("Failed to delete from keychain: {e}"))
+    entry
+        .delete_credential()
+        .map_err(|e| format!("Failed to delete from keychain: {e}"))?;
+    if let Ok(mut cache) = API_KEY_CACHE.lock() {
+        cache.remove(&provider);
+    }
+    Ok(())
 }
 
 // ── Non-streaming provider implementations ───────────────────────────

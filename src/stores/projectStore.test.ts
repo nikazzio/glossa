@@ -4,6 +4,7 @@ import { useChunksStore } from './chunksStore';
 import { useProjectStore } from './projectStore';
 import { useUiStore } from './uiStore';
 import type { SavedTranslation } from '../services/projectService';
+import { buildProjectSnapshot } from '../utils/projectSnapshot';
 
 const projectServiceMocks = vi.hoisted(() => ({
   listProjects: vi.fn(),
@@ -30,6 +31,7 @@ vi.mock('../services/projectService', async () => {
 describe('projectStore', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    projectServiceMocks.listProjects.mockResolvedValue([]);
 
     useProjectStore.setState({
       projects: [],
@@ -167,7 +169,14 @@ describe('projectStore', () => {
     useUiStore.getState().setViewMode('document');
     usePipelineStore.getState().setInputText('Original source draft');
 
-    await useProjectStore.getState().saveCurrentProject('snapshot-1');
+    await useProjectStore.getState().saveCurrentProject();
+
+    const expectedSnapshot = buildProjectSnapshot({
+      inputText: 'Original source draft',
+      config: usePipelineStore.getState().config,
+      chunks: [],
+      viewMode: 'document',
+    });
 
     expect(projectServiceMocks.saveProjectState).toHaveBeenCalledWith({
       projectId: 'proj-1',
@@ -180,7 +189,8 @@ describe('projectStore', () => {
       chunks: [],
     });
     expect(useProjectStore.getState().saveState).toBe('saved');
-    expect(useProjectStore.getState().trackedSnapshot).toBe('snapshot-1');
+    expect(useProjectStore.getState().trackedSnapshot).toBe(expectedSnapshot);
+    expect(projectServiceMocks.listProjects).toHaveBeenCalledTimes(1);
   });
 
   it('refuses to save while the pipeline is processing', async () => {
@@ -212,5 +222,14 @@ describe('projectStore', () => {
     });
     expect(useProjectStore.getState().saveState).toBe('saved');
     expect(useProjectStore.getState().trackedSnapshot).toBeTruthy();
+    expect(projectServiceMocks.listProjects).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not fail the save when refreshing the project list fails', async () => {
+    projectServiceMocks.listProjects.mockRejectedValueOnce(new Error('refresh failed'));
+    useProjectStore.setState({ currentProjectId: 'proj-1' });
+
+    await expect(useProjectStore.getState().saveCurrentProject()).resolves.toBeUndefined();
+    expect(useProjectStore.getState().saveState).toBe('saved');
   });
 });

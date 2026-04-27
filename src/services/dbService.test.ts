@@ -55,6 +55,12 @@ describe('initDatabase migrations', () => {
       expect.stringContaining("ALTER TABLE pipeline_configs ADD COLUMN source_text TEXT DEFAULT ''"),
     );
     expect(dbState.db.execute).toHaveBeenCalledWith(
+      expect.stringContaining('DELETE FROM pipeline_configs'),
+    );
+    expect(dbState.db.execute).toHaveBeenCalledWith(
+      expect.stringContaining('CREATE UNIQUE INDEX IF NOT EXISTS idx_pipeline_configs_project_id'),
+    );
+    expect(dbState.db.execute).toHaveBeenCalledWith(
       expect.stringContaining("ALTER TABLE translations ADD COLUMN chunk_status TEXT DEFAULT 'ready'"),
     );
     expect(dbState.db.execute).toHaveBeenCalledWith(
