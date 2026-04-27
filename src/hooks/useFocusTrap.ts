@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 /**
  * Traps focus within a container, handles Escape to close,
@@ -7,12 +7,17 @@ import { useEffect, useRef, useCallback } from 'react';
 export function useFocusTrap(isOpen: boolean, onClose: () => void) {
   const containerRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation();
-        onClose();
+        onCloseRef.current();
         return;
       }
 
@@ -38,7 +43,7 @@ export function useFocusTrap(isOpen: boolean, onClose: () => void) {
         }
       }
     },
-    [onClose]
+    [],
   );
 
   useEffect(() => {

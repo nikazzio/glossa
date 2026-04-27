@@ -1,22 +1,15 @@
 import {
-  BookOpen,
-  Beaker,
-  Columns2,
-  Download,
   FolderOpen,
   Globe,
   HelpCircle,
-  PanelRight,
   Save,
   Settings,
   SlidersHorizontal,
-  Sparkles,
   Upload,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { useProjectSnapshot } from '../../hooks/useProjectAutosave';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useChunksStore } from '../../stores/chunksStore';
@@ -49,12 +42,8 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
     showHelp,
     viewMode,
     setViewMode,
-    documentLayout,
-    setDocumentLayout,
     showConfigDrawer,
-    showInsightsDrawer,
     setShowConfigDrawer,
-    setShowInsightsDrawer,
   } = useUiStore();
   const {
     currentProjectId,
@@ -64,7 +53,6 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
     saveState,
   } = useProjectStore();
   const { t, i18n } = useTranslation();
-  const snapshot = useProjectSnapshot();
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
 
   const currentProject = projects.find((project) => project.id === currentProjectId);
@@ -119,7 +107,7 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
 
   const handleSave = async () => {
     try {
-      await saveCurrentProject(snapshot);
+      await saveCurrentProject();
       toast.success(t('projects.saved'));
     } catch (err: any) {
       toast.error(t('projects.saveFailed'), { description: err?.message });
@@ -135,7 +123,6 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
   const settingsLabel = t('header.settings');
   const helpLabel = t('help.title');
   const openConfigLabel = t('header.openConfig');
-  const openInsightsLabel = t('header.openInsights');
   const sourceWords = useMemo(
     () => chunks.reduce((acc, chunk) => acc + countWords(chunk.originalText), 0),
     [chunks],
@@ -194,7 +181,8 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
           </div>
 
           <div className="flex flex-wrap items-center justify-end gap-2">
-            <ActionCluster label={t('header.projectLabel')}>
+            {/* Azioni progetto: senza etichetta, le icone parlano da sole */}
+            <ActionCluster>
               <div className="flex flex-wrap items-center gap-1">
                 <IconButton
                   onClick={() => setShowProjectPanel(true)}
@@ -206,23 +194,16 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
                 <IconButton onClick={handleImport} title={importLabel} ariaLabel={importLabel}>
                   <Upload size={16} />
                 </IconButton>
-                {chunks.length > 0 && (
-                  <>
-                    <IconButton
-                      onClick={() => handleExport('txt')}
-                      title={exportTxtLabel}
-                      ariaLabel={exportTxtLabel}
-                    >
-                      <Download size={16} />
-                    </IconButton>
-                    <TextChipButton
-                      onClick={() => handleExport('bilingual')}
-                      title={exportMdLabel}
-                      ariaLabel={exportMdLabel}
-                    >
-                      MD
-                    </TextChipButton>
-                  </>
+                {viewMode === 'document' && (
+                  <IconButton
+                    onClick={() => setShowConfigDrawer(!showConfigDrawer)}
+                    title={openConfigLabel}
+                    ariaLabel={openConfigLabel}
+                    ariaPressed={showConfigDrawer}
+                    active={showConfigDrawer}
+                  >
+                    <SlidersHorizontal size={16} />
+                  </IconButton>
                 )}
                 {currentProjectId && (
                   <IconButton
@@ -237,48 +218,31 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
               </div>
             </ActionCluster>
 
-            {viewMode === 'document' && (
-              <ActionCluster label={t('header.workspaceLabel')}>
-                <div className="flex flex-wrap items-center gap-1">
-                  <IconButton
-                    onClick={() => setShowConfigDrawer(!showConfigDrawer)}
-                    title={openConfigLabel}
-                    ariaLabel={openConfigLabel}
-                    ariaPressed={showConfigDrawer}
-                    active={showConfigDrawer}
+            {/* Esporta: visibile solo quando ci sono chunk */}
+            {chunks.length > 0 && (
+              <ActionCluster label={t('header.exportLabel')}>
+                <div className="flex items-center gap-1">
+                  <TextChipButton
+                    onClick={() => handleExport('txt')}
+                    title={exportTxtLabel}
+                    ariaLabel={exportTxtLabel}
                   >
-                    <SlidersHorizontal size={16} />
-                  </IconButton>
-                  <IconButton
-                    onClick={() => setShowInsightsDrawer(!showInsightsDrawer)}
-                    title={openInsightsLabel}
-                    ariaLabel={openInsightsLabel}
-                    ariaPressed={showInsightsDrawer}
-                    active={showInsightsDrawer}
+                    TXT
+                  </TextChipButton>
+                  <TextChipButton
+                    onClick={() => handleExport('bilingual')}
+                    title={exportMdLabel}
+                    ariaLabel={exportMdLabel}
                   >
-                    <PanelRight size={16} />
-                  </IconButton>
+                    MD
+                  </TextChipButton>
                 </div>
               </ActionCluster>
             )}
 
-            <ActionCluster label={t('header.appLabel')}>
+            {/* Strumenti: lingua/impostazioni/aiuto senza etichetta */}
+            <ActionCluster>
               <div className="flex flex-wrap items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => setViewMode(viewMode === 'sandbox' ? 'document' : 'sandbox')}
-                  disabled={isProcessing}
-                  title={t(viewMode === 'sandbox' ? 'header.exitSandbox' : 'header.enterSandbox')}
-                  aria-label={t(viewMode === 'sandbox' ? 'header.exitSandbox' : 'header.enterSandbox')}
-                  aria-pressed={viewMode === 'sandbox'}
-                  className={`rounded-full border border-editorial-border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed ${
-                    viewMode === 'sandbox'
-                      ? 'bg-editorial-ink text-white'
-                      : 'text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
-                  }`}
-                >
-                  <Beaker size={16} />
-                </button>
                 <button
                   onClick={toggleLang}
                   title={langLabel}
@@ -300,61 +264,40 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
                 </IconButton>
               </div>
             </ActionCluster>
+
           </div>
         </div>
 
-        {viewMode === 'document' && (
-          <div className="flex flex-col gap-3 border-t border-editorial-border/60 pt-4 xl:flex-row xl:items-center xl:justify-between">
-            <HeaderInfoBar
-              sourceWords={sourceWords}
-              translatedWords={translatedWords}
-              completedCount={completedCount}
-              chunkCount={chunks.length}
-              compositeLabel={compositeLabel}
-            />
-
-            <div className="flex flex-wrap items-center justify-end gap-3">
-              <ActionCluster label={t('header.viewLabel')}>
-                <div
-                  role="group"
-                  aria-label={t('header.readerLayout')}
-                  className="flex items-center rounded-full border border-editorial-border bg-editorial-bg p-1 shadow-sm"
-                >
-                  <LayoutPill
-                    active={documentLayout === 'auto'}
-                    onClick={() => setDocumentLayout('auto')}
-                    disabled={isProcessing}
-                    label={t('document.layoutAuto')}
-                    icon={<Sparkles size={12} />}
-                  />
-                  <LayoutPill
-                    active={documentLayout === 'standard'}
-                    onClick={() => setDocumentLayout('standard')}
-                    disabled={isProcessing}
-                    label={t('document.layoutStandard')}
-                    icon={<Columns2 size={12} />}
-                  />
-                  <LayoutPill
-                    active={documentLayout === 'book'}
-                    onClick={() => setDocumentLayout('book')}
-                    disabled={isProcessing}
-                    label={t('document.layoutBook')}
-                    icon={<BookOpen size={12} />}
-                  />
-                </div>
-              </ActionCluster>
-
-              {onRunPipeline && onRunAuditOnly && onCancelPipeline && (
-                <PipelineActions
-                  onRunPipeline={onRunPipeline}
-                  onRunAuditOnly={onRunAuditOnly}
-                  onCancelPipeline={onCancelPipeline}
-                  variant="compact"
-                />
-              )}
-            </div>
+        <div className="flex flex-col gap-3 border-t border-editorial-border/60 pt-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setViewMode(viewMode === 'sandbox' ? 'document' : 'sandbox')}
+              className="rounded-full border border-editorial-border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.22em] text-editorial-muted transition-colors hover:border-editorial-ink hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            >
+              {viewMode === 'sandbox' ? t('header.exitSandbox') : t('header.sandbox')}
+            </button>
+            {viewMode === 'document' && (
+              <HeaderInfoBar
+                sourceWords={sourceWords}
+                translatedWords={translatedWords}
+                completedCount={completedCount}
+                chunkCount={chunks.length}
+                compositeLabel={compositeLabel}
+              />
+            )}
           </div>
-        )}
+          {viewMode === 'document' && onRunPipeline && onRunAuditOnly && onCancelPipeline && (
+            <div className="flex flex-wrap items-center justify-end">
+              <PipelineActions
+                onRunPipeline={onRunPipeline}
+                onRunAuditOnly={onRunAuditOnly}
+                onCancelPipeline={onCancelPipeline}
+                variant="compact"
+              />
+            </div>
+          )}
+        </div>
       </div>
 
       <HelpGuide open={showHelp} onClose={() => setShowHelp(false)} />
@@ -382,48 +325,24 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
   );
 }
 
-interface LayoutPillProps {
-  active: boolean;
-  onClick: () => void;
-  disabled?: boolean;
-  label: string;
-  icon: React.ReactNode;
-}
-
-function LayoutPill({ active, onClick, disabled, label, icon }: LayoutPillProps) {
-  return (
-    <button
-      type="button"
-      role="radio"
-      aria-checked={active}
-      aria-label={label}
-      title={label}
-      onClick={onClick}
-      disabled={disabled}
-      className={`flex items-center justify-center rounded-full p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 ${
-        active
-          ? 'bg-editorial-ink text-white'
-          : 'text-editorial-muted hover:text-editorial-ink'
-      }`}
-    >
-      {icon}
-    </button>
-  );
-}
 
 function ActionCluster({
   label,
   children,
 }: {
-  label: string;
+  label?: string;
   children: React.ReactNode;
 }) {
   return (
     <div className="flex items-center gap-0 rounded-full border border-editorial-border bg-editorial-bg px-1 py-1 shadow-sm">
-      <span className="px-2.5 text-[9px] font-bold uppercase tracking-[0.22em] text-editorial-muted/75">
-        {label}
-      </span>
-      <span className="mx-1 h-5 w-px bg-editorial-border/70" aria-hidden="true" />
+      {label && (
+        <>
+          <span className="px-2.5 text-[9px] font-bold uppercase tracking-[0.22em] text-editorial-muted/75">
+            {label}
+          </span>
+          <span className="mx-1 h-5 w-px bg-editorial-border/70" aria-hidden="true" />
+        </>
+      )}
       {children}
     </div>
   );

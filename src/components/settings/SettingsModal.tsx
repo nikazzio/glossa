@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { X, AlertCircle, Server, RefreshCw, CheckCircle2, XCircle, HelpCircle } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { X, AlertCircle, Server, RefreshCw, CheckCircle2, XCircle, HelpCircle, Sparkles, Columns2, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -16,6 +16,8 @@ export function SettingsModal() {
     ollamaModels,
     setOllamaModels,
     setOllamaStatus,
+    documentLayout,
+    setDocumentLayout,
   } = useUiStore();
   const { t } = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
@@ -73,6 +75,22 @@ export function SettingsModal() {
             <h2 id="settings-title" className="font-display text-3xl italic tracking-tight mb-12">{t('settings.title')}</h2>
 
             <div className="space-y-12">
+              {/* Layout lettura */}
+              <div className="space-y-4">
+                <p id="reader-layout-label" className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
+                  {t('header.readerLayout')}
+                </p>
+                <LayoutRadioGroup
+                  value={documentLayout}
+                  onChange={setDocumentLayout}
+                  options={[
+                    { value: 'auto', label: t('document.layoutAuto'), icon: <Sparkles size={14} /> },
+                    { value: 'standard', label: t('document.layoutStandard'), icon: <Columns2 size={14} /> },
+                    { value: 'book', label: t('document.layoutBook'), icon: <BookOpen size={14} /> },
+                  ]}
+                />
+              </div>
+
               {/* Cloud Providers */}
               <div className="space-y-4">
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
@@ -168,7 +186,7 @@ export function SettingsModal() {
                   onClick={() => setShowSettings(false)}
                   className="bg-editorial-ink text-white px-8 py-4 text-[11px] font-bold uppercase tracking-widest transition-all hover:opacity-90 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
                 >
-                  {t('settings.saveClose')}
+                  {t('settings.close')}
                 </button>
               </div>
             </div>
@@ -176,5 +194,65 @@ export function SettingsModal() {
         </div>
       )}
     </AnimatePresence>
+  );
+}
+
+interface LayoutOption {
+  value: string;
+  label: string;
+  icon: React.ReactNode;
+}
+
+function LayoutRadioGroup({
+  value,
+  onChange,
+  options,
+}: {
+  value: string;
+  onChange: (v: any) => void;
+  options: LayoutOption[];
+}) {
+  const refs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  const handleKeyDown = (e: React.KeyboardEvent, index: number) => {
+    let next = -1;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = (index + 1) % options.length;
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = (index - 1 + options.length) % options.length;
+    if (next === -1) return;
+    e.preventDefault();
+    onChange(options[next].value);
+    refs.current[next]?.focus();
+  };
+
+  return (
+    <div
+      role="radiogroup"
+      aria-labelledby="reader-layout-label"
+      className="flex items-center gap-2"
+    >
+      {options.map(({ value: optValue, label, icon }, i) => {
+        const checked = value === optValue;
+        return (
+          <button
+            key={optValue}
+            ref={(el) => { refs.current[i] = el; }}
+            type="button"
+            role="radio"
+            aria-checked={checked}
+            tabIndex={checked ? 0 : -1}
+            onClick={() => onChange(optValue)}
+            onKeyDown={(e) => handleKeyDown(e, i)}
+            className={`flex items-center gap-2 border px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+              checked
+                ? 'border-editorial-ink bg-editorial-ink text-white'
+                : 'border-editorial-border text-editorial-muted hover:border-editorial-ink hover:text-editorial-ink'
+            }`}
+          >
+            {icon}
+            {label}
+          </button>
+        );
+      })}
+    </div>
   );
 }

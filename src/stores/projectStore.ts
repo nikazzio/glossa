@@ -14,6 +14,8 @@ import { useChunksStore } from './chunksStore';
 import { useUiStore } from './uiStore';
 import { buildProjectSnapshot } from '../utils/projectSnapshot';
 
+let saveInFlight: Promise<void> | null = null;
+
 interface ProjectState {
   projects: Project[];
   currentProjectId: string | null;
@@ -27,7 +29,7 @@ interface ProjectState {
   createAndOpen: (name: string) => Promise<void>;
   openProject: (id: string) => Promise<void>;
   removeProject: (id: string) => Promise<void>;
-  saveCurrentProject: (snapshot?: string) => Promise<void>;
+  saveCurrentProject: () => Promise<void>;
 }
 
 export const useProjectStore = create<ProjectState>((set, get) => ({
@@ -74,7 +76,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       viewMode: ui.viewMode,
       chunks,
     });
-    await get().loadProjects();
+    void get().loadProjects().catch(() => {});
     set({
       currentProjectId: id,
       saveState: 'saved',
@@ -137,51 +139,62 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     await state.loadProjects();
   },
 
-  saveCurrentProject: async (snapshot) => {
+  saveCurrentProject: async () => {
     const { currentProjectId } = get();
     if (!currentProjectId) return;
 
-    const chunksStore = useChunksStore.getState();
-    if (chunksStore.isProcessing) {
-      throw new Error('Cannot save while the pipeline is processing.');
+    if (saveInFlight) {
+      return saveInFlight;
     }
 
-    const pipeline = usePipelineStore.getState();
-    const ui = useUiStore.getState();
-    const inputText =
-      chunksStore.chunks.length > 0
-        ? chunksStore.chunks.map((chunk) => chunk.originalText).join('\n\n')
-        : pipeline.inputText;
-    const effectiveSnapshot =
-      snapshot ??
-      buildProjectSnapshot({
+    const operation = (async () => {
+      const chunksStore = useChunksStore.getState();
+      if (chunksStore.isProcessing) {
+        throw new Error('Cannot save while the pipeline is processing.');
+      }
+
+      const pipeline = usePipelineStore.getState();
+      const ui = useUiStore.getState();
+      const inputText =
+        chunksStore.chunks.length > 0
+          ? chunksStore.chunks.map((chunk) => chunk.originalText).join('\n\n')
+          : pipeline.inputText;
+      const effectiveSnapshot = buildProjectSnapshot({
         inputText,
         config: pipeline.config,
         chunks: chunksStore.chunks,
         viewMode: ui.viewMode,
       });
 
-    set({ saveState: 'saving', lastSaveError: null });
+      set({ saveState: 'saving', lastSaveError: null });
 
-    try {
-      await saveProjectState({
-        projectId: currentProjectId,
-        inputText,
-        config: pipeline.config,
-        viewMode: ui.viewMode,
-        chunks: chunksStore.chunks,
-      });
-      set({
-        saveState: 'saved',
-        lastSaveError: null,
-        trackedSnapshot: effectiveSnapshot,
-      });
-    } catch (error: any) {
-      set({
-        saveState: 'error',
-        lastSaveError: error?.message ?? 'Failed to save project.',
-      });
-      throw error;
-    }
+      try {
+        await saveProjectState({
+          projectId: currentProjectId,
+          inputText,
+          config: pipeline.config,
+          viewMode: ui.viewMode,
+          chunks: chunksStore.chunks,
+        });
+        void get().loadProjects().catch(() => {});
+        set({
+          saveState: 'saved',
+          lastSaveError: null,
+          trackedSnapshot: effectiveSnapshot,
+        });
+      } catch (error: any) {
+        set({
+          saveState: 'error',
+          lastSaveError: error?.message ?? 'Failed to save project.',
+        });
+        throw error;
+      }
+    })();
+
+    saveInFlight = operation.finally(() => {
+      saveInFlight = null;
+    });
+
+    return saveInFlight;
   },
 }));
