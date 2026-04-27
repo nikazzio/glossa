@@ -3,6 +3,7 @@ import {
   Globe,
   HelpCircle,
   LayoutTemplate,
+  LibraryBig,
   Save,
   Settings,
   SlidersHorizontal,
@@ -15,6 +16,7 @@ import { usePipelineStore } from '../../stores/pipelineStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
+import { useLibraryStore } from '../../stores/libraryStore';
 import { ImportPreviewDialog } from '../document';
 import { PipelineActions } from '../pipeline';
 import { calculateCompositeQuality, qualityLabelKey } from '../../utils';
@@ -54,6 +56,7 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
     projects,
     saveState,
   } = useProjectStore();
+  const setShowLibraryPanel = useLibraryStore((state) => state.setShowLibraryPanel);
   const { t, i18n } = useTranslation();
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
 
@@ -122,6 +125,7 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
   const settingsLabel = t('header.settings');
   const helpLabel = t('help.title');
   const openConfigLabel = t('header.openConfig');
+  const libraryLabel = t('library.openLibrary');
   const sandboxLabel = viewMode === 'sandbox' ? t('header.exitSandbox') : t('header.sandbox');
 
   const sourceWords = useMemo(
@@ -229,7 +233,24 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
           </div>
 
           <div className="flex flex-wrap items-center justify-end gap-2">
-            {/* Azioni progetto */}
+            {/* Sandbox standalone */}
+            <button
+              type="button"
+              onClick={() => setViewMode(viewMode === 'sandbox' ? 'document' : 'sandbox')}
+              title={sandboxLabel}
+              aria-label={sandboxLabel}
+              aria-pressed={viewMode === 'sandbox'}
+              className={`flex items-center gap-1.5 rounded-full border px-3 py-2 text-[10px] font-bold uppercase tracking-[0.22em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                viewMode === 'sandbox'
+                  ? 'border-editorial-ink bg-editorial-ink text-white'
+                  : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
+              }`}
+            >
+              <LayoutTemplate size={13} />
+              {sandboxLabel}
+            </button>
+
+            {/* Cluster Progetto */}
             <ActionCluster>
               <div className="flex flex-wrap items-center gap-1">
                 <IconButton
@@ -266,9 +287,16 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
               </div>
             </ActionCluster>
 
-            {/* Strumenti + sandbox */}
+            {/* Cluster Generale */}
             <ActionCluster>
               <div className="flex flex-wrap items-center gap-1">
+                <IconButton
+                  onClick={() => setShowLibraryPanel(true)}
+                  title={libraryLabel}
+                  ariaLabel={libraryLabel}
+                >
+                  <LibraryBig size={16} />
+                </IconButton>
                 <button
                   onClick={toggleLang}
                   title={langLabel}
@@ -288,22 +316,6 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
                 <IconButton onClick={() => setShowHelp(true)} title={helpLabel} ariaLabel={helpLabel}>
                   <HelpCircle size={16} />
                 </IconButton>
-                <span className="mx-1 h-5 w-px bg-editorial-border/70" aria-hidden="true" />
-                <button
-                  type="button"
-                  onClick={() => setViewMode(viewMode === 'sandbox' ? 'document' : 'sandbox')}
-                  title={sandboxLabel}
-                  aria-label={sandboxLabel}
-                  aria-pressed={viewMode === 'sandbox'}
-                  className={`flex items-center gap-1.5 rounded-full border px-3 py-2 text-[10px] font-bold uppercase tracking-[0.22em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                    viewMode === 'sandbox'
-                      ? 'border-editorial-ink bg-editorial-ink text-white'
-                      : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
-                  }`}
-                >
-                  <LayoutTemplate size={13} />
-                  {sandboxLabel}
-                </button>
               </div>
             </ActionCluster>
           </div>

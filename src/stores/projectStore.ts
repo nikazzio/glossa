@@ -109,6 +109,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       useChunking: config.useChunking,
       targetChunkCount: config.targetChunkCount,
       glossary: config.glossary,
+      assignedGlossaryId: config.assignedGlossaryId,
     });
     chunksStore.setChunks(restoredChunks);
     pipeline.setInputText(restoredInputText);

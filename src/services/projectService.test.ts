@@ -60,8 +60,8 @@ describe('projectService glossary persistence', () => {
       expect.arrayContaining(['glossary-proj-1']),
     );
     expect(dbMocks.execute).toHaveBeenCalledWith(
-      expect.stringContaining('DELETE FROM glossary_entries WHERE glossary_id = $1'),
-      ['glossary-proj-1'],
+      expect.stringContaining('DELETE FROM glossary_entries WHERE glossary_id = $1 AND id NOT IN'),
+      ['glossary-proj-1', 'entry-1'],
     );
     expect(dbMocks.execute).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO glossary_entries'),
@@ -88,6 +88,7 @@ describe('projectService glossary persistence', () => {
           target_chunk_count: 5,
         },
       ])
+      .mockResolvedValueOnce([{ glossary_id: 'glossary-proj-1' }])
       .mockResolvedValueOnce([
         {
           id: 'entry-1',
@@ -103,6 +104,7 @@ describe('projectService glossary persistence', () => {
     expect(config?.targetLanguage).toBe('English');
     expect(config?.inputText).toBe('Arma virumque cano');
     expect(config?.targetChunkCount).toBe(5);
+    expect(config?.assignedGlossaryId).toBe('glossary-proj-1');
     expect(config?.glossary).toEqual([
       {
         id: 'entry-1',

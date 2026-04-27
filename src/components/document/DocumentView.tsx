@@ -2,6 +2,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Copy,
+  Highlighter,
   Pencil,
   RotateCcw,
   ScanLine,
@@ -20,8 +21,9 @@ import {
   qualityTone,
 } from '../../utils';
 import { buildSplitPreview } from '../../utils/documentWorkflow';
-import { CopyButton, StatusIndicator } from '../common';
+import { CopyButton, HighlightedText, StatusIndicator } from '../common';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useGlossaryHighlight } from '../../hooks/useGlossaryHighlight';
 
 interface DocumentViewProps {
   onRetranslateChunk: (chunkId: string) => void;
@@ -53,6 +55,8 @@ export function DocumentView({
     selectedChunkId,
     setSelectedChunkId,
     documentLayout,
+    glossaryHighlightEnabled,
+    setGlossaryHighlightEnabled,
   } = useUiStore();
 
   const [viewportWidth, setViewportWidth] = useState(
@@ -125,6 +129,19 @@ export function DocumentView({
   }
 
   const isBook = resolvedLayout === 'book';
+  const hasGlossary = config.glossary.length > 0;
+  const showHighlight = glossaryHighlightEnabled && hasGlossary;
+
+  const sourceHighlight = useGlossaryHighlight(
+    currentChunk?.originalText ?? '',
+    config.glossary,
+    'source',
+  );
+  const translationHighlight = useGlossaryHighlight(
+    currentChunk?.currentDraft ?? '',
+    config.glossary,
+    'translation',
+  );
   const prevChunk = chunks[currentIndex - 1];
   const nextChunk = chunks[currentIndex + 1];
   const chunkTone = qualityTone(currentChunk.judgeResult.rating);
@@ -206,6 +223,27 @@ export function DocumentView({
                   </button>
                 </>
               )}
+              {hasGlossary && (
+                <button
+                  type="button"
+                  onClick={() => setGlossaryHighlightEnabled(!glossaryHighlightEnabled)}
+                  aria-pressed={glossaryHighlightEnabled}
+                  title={t('library.glossaryHighlightToggle')}
+                  className={`rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                    glossaryHighlightEnabled
+                      ? 'border-editorial-ink bg-editorial-ink text-white'
+                      : 'border-editorial-border text-editorial-muted hover:text-editorial-ink'
+                  }`}
+                >
+                  <Highlighter size={12} className="inline mr-1" />
+                  {glossaryHighlightEnabled && translationHighlight.totalTerms > 0
+                    ? t('library.glossaryMatchBadge', {
+                        match: translationHighlight.matchCount,
+                        total: translationHighlight.totalTerms,
+                      })
+                    : t('library.glossaryHighlightToggle')}
+                </button>
+              )}
             </div>
           </div>
 
@@ -229,13 +267,17 @@ export function DocumentView({
             eyebrow={t('document.leftPage')}
             readOnly={currentChunk.status === 'completed'}
           >
-            <textarea
-              value={currentChunk.originalText}
-              onChange={(event) => updateChunkOriginalText(currentChunk.id, event.target.value)}
-              disabled={isProcessing}
-              readOnly={currentChunk.status === 'completed'}
-              className="min-h-[420px] w-full resize-y bg-transparent text-[15px] leading-8 text-editorial-ink outline-none disabled:opacity-70 read-only:cursor-not-allowed"
-            />
+            {showHighlight ? (
+              <HighlightedText html={sourceHighlight.html} />
+            ) : (
+              <textarea
+                value={currentChunk.originalText}
+                onChange={(event) => updateChunkOriginalText(currentChunk.id, event.target.value)}
+                disabled={isProcessing}
+                readOnly={currentChunk.status === 'completed'}
+                className="min-h-[420px] w-full resize-y bg-transparent text-[15px] leading-8 text-editorial-ink outline-none disabled:opacity-70 read-only:cursor-not-allowed"
+              />
+            )}
           </DocumentPage>
 
           <DocumentPage
@@ -243,12 +285,16 @@ export function DocumentView({
             eyebrow={t('document.rightPage')}
             actions={<CopyButton text={currentChunk.currentDraft || ''} />}
           >
-            <textarea
-              value={currentChunk.currentDraft || ''}
-              onChange={(event) => updateChunkDraft(currentChunk.id, event.target.value)}
-              className="min-h-[420px] w-full resize-y bg-transparent text-[15px] leading-8 text-editorial-ink outline-none"
-              placeholder={t('pipeline.candidatePlaceholder')}
-            />
+            {showHighlight ? (
+              <HighlightedText html={translationHighlight.html} />
+            ) : (
+              <textarea
+                value={currentChunk.currentDraft || ''}
+                onChange={(event) => updateChunkDraft(currentChunk.id, event.target.value)}
+                className="min-h-[420px] w-full resize-y bg-transparent text-[15px] leading-8 text-editorial-ink outline-none"
+                placeholder={t('pipeline.candidatePlaceholder')}
+              />
+            )}
           </DocumentPage>
         </div>
 

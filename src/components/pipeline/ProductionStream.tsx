@@ -1,10 +1,68 @@
-import { Trash2, AlertTriangle, Pencil, RotateCcw, ScanLine } from 'lucide-react';
+import { Trash2, AlertTriangle, Pencil, RotateCcw, ScanLine, Highlighter } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
-import { StatusIndicator, ProcessingLine, CopyButton } from '../common';
+import { useUiStore } from '../../stores/uiStore';
+import { StatusIndicator, ProcessingLine, CopyButton, HighlightedText } from '../common';
 import { estimateTextStats, indexPad, recommendChunkCount } from '../../utils';
 import { confirm } from '../../stores/confirmStore';
+import { useGlossaryHighlight } from '../../hooks/useGlossaryHighlight';
+import type { GlossaryEntry, TranslationChunk } from '../../types';
+
+function ChunkSourceText({
+  chunk,
+  glossary,
+  showHighlight,
+  isProcessing,
+  onUpdate,
+}: {
+  chunk: TranslationChunk;
+  glossary: GlossaryEntry[];
+  showHighlight: boolean;
+  isProcessing: boolean;
+  onUpdate: (text: string) => void;
+}) {
+  const { html } = useGlossaryHighlight(chunk.originalText, glossary, 'source');
+  if (showHighlight) {
+    return <HighlightedText html={html} className="min-h-[120px] p-4 text-xs font-mono leading-relaxed" />;
+  }
+  return (
+    <textarea
+      value={chunk.originalText}
+      onChange={(e) => onUpdate(e.target.value)}
+      disabled={isProcessing}
+      readOnly={chunk.status === 'completed'}
+      className="w-full bg-editorial-textbox/60 border border-editorial-border p-4 text-xs font-mono outline-none leading-relaxed resize-y min-h-[120px] disabled:opacity-70 read-only:bg-editorial-textbox/30 read-only:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-editorial-accent"
+    />
+  );
+}
+
+function ChunkDraftText({
+  chunk,
+  glossary,
+  showHighlight,
+  onUpdate,
+  placeholder,
+}: {
+  chunk: TranslationChunk;
+  glossary: GlossaryEntry[];
+  showHighlight: boolean;
+  onUpdate: (text: string) => void;
+  placeholder: string;
+}) {
+  const { html } = useGlossaryHighlight(chunk.currentDraft ?? '', glossary, 'translation');
+  if (showHighlight) {
+    return <HighlightedText html={html} className="min-h-[100px] p-4 text-sm font-sans leading-relaxed" />;
+  }
+  return (
+    <textarea
+      value={chunk.currentDraft || ''}
+      onChange={(e) => onUpdate(e.target.value)}
+      className="w-full bg-editorial-bg/50 border border-editorial-border p-4 text-sm font-sans outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent resize-y min-h-[100px] leading-relaxed transition-all"
+      placeholder={placeholder}
+    />
+  );
+}
 
 interface ProductionStreamProps {
   onRetranslateChunk: (chunkId: string) => void;
@@ -33,9 +91,12 @@ export function ProductionStream({
     mergeChunkWithNext,
     unlockChunkForEdit,
   } = useChunksStore();
+  const { glossaryHighlightEnabled, setGlossaryHighlightEnabled } = useUiStore();
   const { t } = useTranslation();
   const stats = estimateTextStats(inputText);
   const recommendedChunks = recommendChunkCount(inputText);
+  const hasGlossary = config.glossary.length > 0;
+  const showHighlight = glossaryHighlightEnabled && hasGlossary;
 
   const handleClearStream = async () => {
     const ok = await confirm({
@@ -61,16 +122,32 @@ export function ProductionStream({
     <section className="col-span-1 md:col-span-6 bg-editorial-bg p-8 overflow-y-auto min-h-0 h-full border-r border-editorial-border custom-scrollbar">
       <div className="flex items-center justify-between border-b border-editorial-ink pb-2 mb-10">
         <h2 className="font-display text-sm uppercase tracking-wider inline-block">{t('pipeline.productionStream')}</h2>
-        {chunks.length > 0 && (
-          <button
-            onClick={handleClearStream}
-            disabled={isProcessing}
-            title={t('pipeline.clearStream')}
-            className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent transition-colors flex items-center gap-1 disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-          >
-            <Trash2 size={12} /> {t('pipeline.clearStream')}
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {hasGlossary && (
+            <button
+              type="button"
+              onClick={() => setGlossaryHighlightEnabled(!glossaryHighlightEnabled)}
+              aria-pressed={glossaryHighlightEnabled}
+              title={t('library.glossaryHighlightToggle')}
+              className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                glossaryHighlightEnabled ? 'text-editorial-ink' : 'text-editorial-muted hover:text-editorial-ink'
+              }`}
+            >
+              <Highlighter size={12} />
+              {t('library.glossaryHighlightToggle')}
+            </button>
+          )}
+          {chunks.length > 0 && (
+            <button
+              onClick={handleClearStream}
+              disabled={isProcessing}
+              title={t('pipeline.clearStream')}
+              className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent transition-colors flex items-center gap-1 disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            >
+              <Trash2 size={12} /> {t('pipeline.clearStream')}
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="space-y-16">
@@ -266,12 +343,12 @@ export function ProductionStream({
                     )}
                   </div>
                 </div>
-                <textarea
-                  value={chunk.originalText}
-                  onChange={(e) => updateChunkOriginalText(chunk.id, e.target.value)}
-                  disabled={isProcessing}
-                  readOnly={chunk.status === 'completed'}
-                  className="w-full bg-editorial-textbox/60 border border-editorial-border p-4 text-xs font-mono outline-none leading-relaxed resize-y min-h-[120px] disabled:opacity-70 read-only:bg-editorial-textbox/30 read-only:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                <ChunkSourceText
+                  chunk={chunk}
+                  glossary={config.glossary}
+                  showHighlight={showHighlight}
+                  isProcessing={isProcessing}
+                  onUpdate={(text) => updateChunkOriginalText(chunk.id, text)}
                 />
               </div>
 
@@ -317,10 +394,11 @@ export function ProductionStream({
                   </label>
                   <CopyButton text={chunk.currentDraft || ''} />
                 </div>
-                <textarea
-                  value={chunk.currentDraft || ''}
-                  onChange={(e) => updateChunkDraft(chunk.id, e.target.value)}
-                  className="w-full bg-editorial-bg/50 border border-editorial-border p-4 text-sm font-sans outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent resize-y min-h-[100px] leading-relaxed transition-all"
+                <ChunkDraftText
+                  chunk={chunk}
+                  glossary={config.glossary}
+                  showHighlight={showHighlight}
+                  onUpdate={(text) => updateChunkDraft(chunk.id, text)}
                   placeholder={t('pipeline.candidatePlaceholder')}
                 />
               </div>

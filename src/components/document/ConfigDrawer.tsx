@@ -1,10 +1,13 @@
 import { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, LibraryBig } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Drawer } from '../common';
 import { PipelineConfig } from '../pipeline/PipelineConfig';
 import type { ConfigSection } from '../pipeline/PipelineConfig';
 import { useUiStore } from '../../stores/uiStore';
+import { usePipelineStore } from '../../stores/pipelineStore';
+import { useLibraryStore } from '../../stores/libraryStore';
+import { DictionaryEntryEditor } from '../library';
 
 interface ConfigDrawerProps {
   onRunPipeline: () => void;
@@ -27,6 +30,10 @@ export function ConfigDrawer({
   const showConfigDrawer = useUiStore((state) => state.showConfigDrawer);
   const setShowConfigDrawer = useUiStore((state) => state.setShowConfigDrawer);
   const [activeTab, setActiveTab] = useState<ConfigSection>('stages');
+  const { config, setConfig } = usePipelineStore();
+  const { glossaries, setShowLibraryPanel } = useLibraryStore();
+
+  const assignedGlossary = glossaries.find((g) => g.id === config.assignedGlossaryId);
 
   return (
     <Drawer
@@ -94,14 +101,43 @@ export function ConfigDrawer({
         aria-labelledby={`config-tab-${activeTab}`}
         className="flex flex-1 flex-col min-h-0"
       >
-        <PipelineConfig
-          onRunPipeline={onRunPipeline}
-          onRunAuditOnly={onRunAuditOnly}
-          onCancelPipeline={onCancelPipeline}
-          showActions={false}
-          visibleSection={activeTab}
-          className="flex flex-1 flex-col gap-8 overflow-y-auto bg-editorial-bg/40 p-6 custom-scrollbar"
-        />
+        {activeTab === 'glossary' ? (
+          <div className="flex flex-1 flex-col gap-6 overflow-y-auto bg-editorial-bg/40 p-6 custom-scrollbar">
+            {/* Dizionario assegnato */}
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-editorial-border/40 bg-editorial-textbox/10 px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted mb-0.5">
+                  {t('library.assignedDictionary')}
+                </p>
+                <p className="text-[12px] font-mono text-editorial-ink truncate">
+                  {assignedGlossary ? assignedGlossary.name : t('library.noDictionaryAssigned')}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowLibraryPanel(true, 'dictionaries')}
+                title={t('library.openLibrary')}
+                className="shrink-0 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              >
+                <LibraryBig size={14} />
+                {t('library.openLibrary')}
+              </button>
+            </div>
+
+            <DictionaryEntryEditor
+              entries={config.glossary}
+              onChange={(entries) => setConfig((prev) => ({ ...prev, glossary: entries }))}
+            />
+          </div>
+        ) : (
+          <PipelineConfig
+            onRunPipeline={onRunPipeline}
+            onRunAuditOnly={onRunAuditOnly}
+            onCancelPipeline={onCancelPipeline}
+            showActions={false}
+            visibleSection={activeTab}
+            className="flex flex-1 flex-col gap-8 overflow-y-auto bg-editorial-bg/40 p-6 custom-scrollbar"
+          />
+        )}
       </div>
     </Drawer>
   );

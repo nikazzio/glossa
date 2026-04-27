@@ -4,3 +4,4 @@ export { ErrorBoundary } from './ErrorBoundary';
 export { CopyButton } from './CopyButton';
 export { ConfirmDialog } from './ConfirmDialog';
 export { Drawer } from './Drawer';
+export { HighlightedText } from './HighlightedText';

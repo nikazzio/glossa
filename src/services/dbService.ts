@@ -156,6 +156,18 @@ export async function initDatabase(): Promise<void> {
     ON prompt_templates(name, context)
   `);
 
+  // Migration: rinomina i glossari legacy "Project glossary proj-xxx" con nome leggibile
+  try {
+    await conn.execute(`
+      UPDATE glossaries SET name = 'Glossario ' || p.name
+      FROM projects p
+      WHERE glossaries.id = 'glossary-' || p.id
+        AND glossaries.name LIKE 'Project glossary%'
+    `);
+  } catch {
+    // Non bloccante: fallisce silenziosamente su DB senza dati legacy
+  }
+
   console.log('[Glossa] Database initialized');
 }
 
