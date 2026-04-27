@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.3.0](https://github.com/nikazzio/glossa/compare/glossa-v0.2.2...glossa-v0.3.0) (2026-04-27)
+
+
+### ✨ Features
+
+* **chunks:** Step 1 — protect completed translations from silent data loss ([#37](https://github.com/nikazzio/glossa/issues/37)) ([190aa11](https://github.com/nikazzio/glossa/commit/190aa11ad5da7f3645757f1067c168332eeab397))
+* enhance project autosave and database schema ([#44](https://github.com/nikazzio/glossa/issues/44)) ([5ba746d](https://github.com/nikazzio/glossa/commit/5ba746daa98363fcd0554c6f57f13e57c608ffca))
+* enhance translation pipeline with chunking and quality assessment ([#34](https://github.com/nikazzio/glossa/issues/34)) ([7b5cbf7](https://github.com/nikazzio/glossa/commit/7b5cbf746ec62a3a76acbb010e94e11fe3547d09))
+* **pipeline:** Step 2 — per-chunk replay & audit drill-down ([#38](https://github.com/nikazzio/glossa/issues/38)) ([572dd17](https://github.com/nikazzio/glossa/commit/572dd179ae83154bd1ebdef446713e4ee91d872e))
+* Sprint 1 — security & robustness hardening ([#36](https://github.com/nikazzio/glossa/issues/36)) ([dfd4383](https://github.com/nikazzio/glossa/commit/dfd438300253fd418ca67a026841ef441b90bcda))
+
+
+### ♻️ Refactoring
+
+* extract chunk management logic into a dedicated chunksStore… ([#39](https://github.com/nikazzio/glossa/issues/39)) ([3521ef3](https://github.com/nikazzio/glossa/commit/3521ef3981f4cf0b75a948f11533a179cf7c1e14))
+
 ## [0.2.2](https://github.com/nikazzio/glossa/compare/glossa-v0.2.1...glossa-v0.2.2) (2026-04-19)
 
 
