@@ -87,7 +87,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
   const handleSaveTemplate = async () => {
     const name = templateName.trim();
     if (!name) return;
-    await saveTemplate(name, stage.prompt);
+    await saveTemplate(name, stage.prompt, 'stage');
     toast.success(t('pipeline.templates.saved'));
     setTemplateName('');
     setShowSaveName(false);
@@ -114,7 +114,8 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
     }
   };
 
-  const filteredTemplates = templates.filter((tmpl) =>
+  const stageTemplates = templates.filter((tmpl) => tmpl.context === 'stage');
+  const filteredTemplates = stageTemplates.filter((tmpl) =>
     tmpl.name.toLowerCase().includes(templateSearch.toLowerCase()),
   );
 

@@ -39,6 +39,7 @@ export interface PromptTemplate {
   id: string;
   name: string;
   prompt: string;
+  context: 'stage' | 'audit';
   defaultModel?: string;
   defaultProvider?: string;
   createdAt: string;

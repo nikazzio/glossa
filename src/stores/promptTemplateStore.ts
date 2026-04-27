@@ -13,6 +13,7 @@ interface PromptTemplateState {
   saveTemplate: (
     name: string,
     prompt: string,
+    context: 'stage' | 'audit',
     defaultModel?: string,
     defaultProvider?: string,
   ) => Promise<void>;
@@ -29,8 +30,8 @@ export const usePromptTemplateStore = create<PromptTemplateState>((set, get) => 
     set({ templates, isLoaded: true });
   },
 
-  saveTemplate: async (name, prompt, defaultModel, defaultProvider) => {
-    await savePromptTemplate({ name, prompt, defaultModel, defaultProvider });
+  saveTemplate: async (name, prompt, context, defaultModel, defaultProvider) => {
+    await savePromptTemplate({ name, prompt, context, defaultModel, defaultProvider });
     const templates = await getPromptTemplates();
     set({ templates });
   },

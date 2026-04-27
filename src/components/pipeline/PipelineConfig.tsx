@@ -1,5 +1,5 @@
-import { Plus, ArrowRightLeft, Play, Loader2, X, AlertTriangle, RotateCcw, Wand2 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { Plus, ArrowRightLeft, Play, Loader2, X, AlertTriangle, RotateCcw, Wand2, BookmarkPlus, BookOpen, Check, Trash2 } from 'lucide-react';
+import { useMemo, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { ModelProvider } from '../../types';
@@ -10,6 +10,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { confirm } from '../../stores/confirmStore';
 import { StageCard } from './StageCard';
 import { llmService } from '../../services/llmService';
+import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
 
 export type ConfigSection = 'stages' | 'audit' | 'glossary';
 
@@ -54,6 +55,12 @@ export function PipelineConfig({
   const { t } = useTranslation();
   const judgeModels = useJudgeModelOptions(config.judgeProvider);
   const [isRefiningJudge, setIsRefiningJudge] = useState(false);
+  const [showJudgeSaveName, setShowJudgeSaveName] = useState(false);
+  const [judgeTemplateName, setJudgeTemplateName] = useState('');
+  const [showJudgeTemplateList, setShowJudgeTemplateList] = useState(false);
+  const [judgeTemplateSearch, setJudgeTemplateSearch] = useState('');
+
+  const { templates, loadTemplates, saveTemplate, deleteTemplate } = usePromptTemplateStore();
 
   const cannotRun = isProcessing || chunks.length === 0;
   const completedCount = chunks.filter((c) => c.status === 'completed').length;
@@ -62,6 +69,29 @@ export function PipelineConfig({
   const showStages = !visibleSection || visibleSection === 'stages';
   const showAudit = !visibleSection || visibleSection === 'audit';
   const showGlossary = !visibleSection || visibleSection === 'glossary';
+
+  useEffect(() => {
+    if (showAudit) loadTemplates();
+  }, [showAudit]);
+
+  const auditTemplates = templates.filter((tmpl) => tmpl.context === 'audit');
+  const filteredJudgeTemplates = auditTemplates.filter((tmpl) =>
+    tmpl.name.toLowerCase().includes(judgeTemplateSearch.toLowerCase()),
+  );
+
+  const handleSaveJudgeTemplate = async () => {
+    const name = judgeTemplateName.trim();
+    if (!name) return;
+    await saveTemplate(name, config.judgePrompt, 'audit');
+    toast.success(t('pipeline.templates.saved'));
+    setJudgeTemplateName('');
+    setShowJudgeSaveName(false);
+  };
+
+  const handleDeleteJudgeTemplate = async (id: string) => {
+    await deleteTemplate(id);
+    toast.success(t('pipeline.templates.deleted'));
+  };
 
   const handleRerunAll = async () => {
     const ok = await confirm({
@@ -292,13 +322,120 @@ export function PipelineConfig({
                   <span>{t('ollama.selectedButOffline')}</span>
                 </div>
               )}
-              <textarea
-                value={config.judgePrompt}
-                onChange={(e) => setConfig((prev) => ({ ...prev, judgePrompt: e.target.value }))}
-                placeholder={t('pipeline.auditPlaceholder')}
-                rows={5}
-                className="w-full rounded-lg bg-editorial-textbox/40 border border-editorial-border/60 p-3 text-[12px] font-mono outline-none leading-relaxed resize-y focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              />
+
+              {/* Prompt label + template controls */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
+                    {t('pipeline.prompt')}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => { setShowJudgeSaveName(!showJudgeSaveName); setShowJudgeTemplateList(false); }}
+                      title={t('pipeline.templates.save')}
+                      aria-label={t('pipeline.templates.save')}
+                      className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                    >
+                      <BookmarkPlus size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setShowJudgeTemplateList(!showJudgeTemplateList); setShowJudgeSaveName(false); }}
+                      title={t('pipeline.templates.load')}
+                      aria-label={t('pipeline.templates.load')}
+                      className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                    >
+                      <BookOpen size={14} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Inline save name input */}
+                {showJudgeSaveName && (
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      value={judgeTemplateName}
+                      onChange={(e) => setJudgeTemplateName(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleSaveJudgeTemplate(); if (e.key === 'Escape') setShowJudgeSaveName(false); }}
+                      placeholder={t('pipeline.templates.namePlaceholder')}
+                      autoFocus
+                      className="flex-1 rounded bg-editorial-textbox/60 border border-editorial-border/60 px-2 py-1 text-[11px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSaveJudgeTemplate}
+                      disabled={!judgeTemplateName.trim()}
+                      className="text-editorial-ink hover:text-editorial-accent transition-colors disabled:opacity-40 focus:outline-none"
+                      aria-label={t('common.confirm')}
+                    >
+                      <Check size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setShowJudgeSaveName(false); setJudgeTemplateName(''); }}
+                      className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none"
+                      aria-label={t('common.cancel')}
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
+
+                {/* Template list popover */}
+                {showJudgeTemplateList && (
+                  <div className="rounded-lg border border-editorial-border bg-editorial-bg shadow-lg overflow-hidden">
+                    <div className="p-2 border-b border-editorial-border/60">
+                      <input
+                        value={judgeTemplateSearch}
+                        onChange={(e) => setJudgeTemplateSearch(e.target.value)}
+                        placeholder={t('pipeline.templates.searchPlaceholder')}
+                        autoFocus
+                        className="w-full rounded bg-editorial-textbox/60 border border-editorial-border/40 px-2 py-1 text-[11px] font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                      />
+                    </div>
+                    <ul className="max-h-48 overflow-y-auto custom-scrollbar">
+                      {filteredJudgeTemplates.length === 0 ? (
+                        <li className="px-3 py-4 text-[10px] text-editorial-muted text-center">
+                          {t('pipeline.templates.empty')}
+                        </li>
+                      ) : (
+                        filteredJudgeTemplates.map((tmpl) => (
+                          <li
+                            key={tmpl.id}
+                            className="flex items-start gap-2 px-3 py-2 hover:bg-editorial-textbox/40 group"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => { setConfig((prev) => ({ ...prev, judgePrompt: tmpl.prompt })); setShowJudgeTemplateList(false); setJudgeTemplateSearch(''); }}
+                              className="flex-1 text-left min-w-0 focus:outline-none"
+                            >
+                              <div className="text-[11px] font-bold text-editorial-ink truncate">{tmpl.name}</div>
+                              <div className="text-[10px] text-editorial-muted truncate mt-0.5 font-mono">{tmpl.prompt}</div>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteJudgeTemplate(tmpl.id)}
+                              className="shrink-0 text-editorial-muted/40 hover:text-editorial-accent transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 focus:outline-none mt-0.5"
+                              aria-label={t('common.delete')}
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </li>
+                        ))
+                      )}
+                    </ul>
+                  </div>
+                )}
+
+                <textarea
+                  value={config.judgePrompt}
+                  onChange={(e) => setConfig((prev) => ({ ...prev, judgePrompt: e.target.value }))}
+                  placeholder={t('pipeline.auditPlaceholder')}
+                  rows={5}
+                  className="w-full rounded-lg bg-editorial-textbox/40 border border-editorial-border/60 p-3 text-[12px] font-mono outline-none leading-relaxed resize-y focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                />
+              </div>
             </div>
           </div>
         )}
