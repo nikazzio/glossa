@@ -306,14 +306,23 @@ async function saveTranslationsInternal(
   chunks: TranslationChunk[],
   run: ExecuteQuery,
 ): Promise<void> {
-  await run('DELETE FROM translations WHERE project_id = $1', [projectId]);
-
+  // Upsert ogni chunk — nessun DELETE preventivo, quindi nessuna finestra
+  // in cui i dati sono assenti in caso di errore a metà operazione.
   for (const [position, chunk] of chunks.entries()) {
     await run(
       `INSERT INTO translations (
          id, project_id, original_text, final_translation, position, chunk_status, stage_results,
          judge_status, judge_rating, judge_issues
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       ON CONFLICT(id) DO UPDATE SET
+         original_text    = excluded.original_text,
+         final_translation = excluded.final_translation,
+         position         = excluded.position,
+         chunk_status     = excluded.chunk_status,
+         stage_results    = excluded.stage_results,
+         judge_status     = excluded.judge_status,
+         judge_rating     = excluded.judge_rating,
+         judge_issues     = excluded.judge_issues`,
       [
         chunk.id,
         projectId,
@@ -327,6 +336,17 @@ async function saveTranslationsInternal(
         JSON.stringify(chunk.judgeResult.issues),
       ],
     );
+  }
+
+  // Rimuovi i chunk che non fanno più parte del progetto.
+  if (chunks.length > 0) {
+    const placeholders = chunks.map((_, i) => `$${i + 2}`).join(', ');
+    await run(
+      `DELETE FROM translations WHERE project_id = $1 AND id NOT IN (${placeholders})`,
+      [projectId, ...chunks.map((c) => c.id)],
+    );
+  } else {
+    await run('DELETE FROM translations WHERE project_id = $1', [projectId]);
   }
 }
 

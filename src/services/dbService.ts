@@ -65,7 +65,7 @@ export async function initDatabase(): Promise<void> {
   await conn.execute(`
     DELETE FROM pipeline_configs
     WHERE rowid NOT IN (
-      SELECT MIN(rowid)
+      SELECT MAX(rowid)
       FROM pipeline_configs
       GROUP BY project_id
     )
@@ -157,7 +157,8 @@ export async function select<T>(query: string, params: unknown[] = []): Promise<
 // Il plugin @tauri-apps/plugin-sql usa un connection pool interno: BEGIN/COMMIT
 // eseguiti su connessioni diverse del pool non formano una vera transazione e
 // causano lock contention (busy_timeout da 5 s). Si serializzano invece tutte
-// le write tramite la coda JS, garantendo esecuzione atomica senza lock espliciti.
+// le write tramite la coda JS, garantendo esecuzione ordinata senza lock espliciti,
+// ma non atomicità o rollback tra più statement.
 export async function runInTransaction<T>(
   fn: (executeTx: (query: string, params?: unknown[]) => Promise<void>) => Promise<T>,
 ): Promise<T> {
