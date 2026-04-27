@@ -1,6 +1,7 @@
 import { AlertTriangle, RefreshCcw, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
+import { type KeyboardEvent, useRef } from 'react';
 import { ProcessingLine } from '../common';
 import { useUiStore } from '../../stores/uiStore';
 import { useChunksStore } from '../../stores/chunksStore';
@@ -14,6 +15,20 @@ interface InsightsDrawerProps {
 
 const PANEL_WIDTH = 480;
 
+type InsightsTab = 'index' | 'audit';
+
+const TAB_BUTTON_IDS: Record<InsightsTab, string> = {
+  index: 'insights-tab-button-index',
+  audit: 'insights-tab-button-audit',
+};
+
+const TAB_PANEL_IDS: Record<InsightsTab, string> = {
+  index: 'insights-tab-panel-index',
+  audit: 'insights-tab-panel-audit',
+};
+
+const TAB_ORDER: InsightsTab[] = ['index', 'audit'];
+
 const QUALITY_TONE_COLOR: Record<ReturnType<typeof qualityTone>, string> = {
   strong: 'text-editorial-success',
   ok: 'text-editorial-warning',
@@ -22,6 +37,10 @@ const QUALITY_TONE_COLOR: Record<ReturnType<typeof qualityTone>, string> = {
 
 export function InsightsDrawer({ onReauditChunk }: InsightsDrawerProps) {
   const { t } = useTranslation();
+  const tabButtonRefs = useRef<Record<InsightsTab, HTMLButtonElement | null>>({
+    index: null,
+    audit: null,
+  });
   const showInsightsDrawer = useUiStore((state) => state.showInsightsDrawer);
   const insightsDrawerTab = useUiStore((state) => state.insightsDrawerTab);
   const setShowInsightsDrawer = useUiStore((state) => state.setShowInsightsDrawer);
@@ -34,6 +53,41 @@ export function InsightsDrawer({ onReauditChunk }: InsightsDrawerProps) {
 
   const currentChunk =
     chunks.find((chunk) => chunk.id === selectedChunkId) ?? chunks[0] ?? null;
+
+  const activateTab = (tab: InsightsTab) => {
+    setInsightsDrawerTab(tab);
+    tabButtonRefs.current[tab]?.focus();
+  };
+
+  const handleTabKeyDown = (
+    currentTab: InsightsTab,
+    event: KeyboardEvent<HTMLButtonElement>,
+  ) => {
+    const currentIndex = TAB_ORDER.indexOf(currentTab);
+    let nextTab: InsightsTab | null = null;
+
+    switch (event.key) {
+      case 'ArrowLeft':
+      case 'ArrowUp':
+        nextTab = TAB_ORDER[(currentIndex - 1 + TAB_ORDER.length) % TAB_ORDER.length];
+        break;
+      case 'ArrowRight':
+      case 'ArrowDown':
+        nextTab = TAB_ORDER[(currentIndex + 1) % TAB_ORDER.length];
+        break;
+      case 'Home':
+        nextTab = TAB_ORDER[0];
+        break;
+      case 'End':
+        nextTab = TAB_ORDER[TAB_ORDER.length - 1];
+        break;
+      default:
+        return;
+    }
+
+    event.preventDefault();
+    activateTab(nextTab);
+  };
 
   return (
     <AnimatePresence initial={false}>
@@ -73,32 +127,47 @@ export function InsightsDrawer({ onReauditChunk }: InsightsDrawerProps) {
 
             <div
               role="tablist"
+              aria-orientation="horizontal"
               aria-label={t('document.insightsDrawerTitle')}
               className="flex gap-1 border-b border-editorial-border bg-editorial-bg/60 px-4 py-2"
             >
               <TabButton
+                tab="index"
                 active={insightsDrawerTab === 'index'}
-                onClick={() => setInsightsDrawerTab('index')}
+                onClick={() => activateTab('index')}
+                onKeyDown={(event) => handleTabKeyDown('index', event)}
                 label={t('document.insightsTabIndex')}
-                controls="insights-tab-index"
+                controls={TAB_PANEL_IDS.index}
+                buttonRef={(element) => {
+                  tabButtonRefs.current.index = element;
+                }}
               />
               <TabButton
+                tab="audit"
                 active={insightsDrawerTab === 'audit'}
-                onClick={() => setInsightsDrawerTab('audit')}
+                onClick={() => activateTab('audit')}
+                onKeyDown={(event) => handleTabKeyDown('audit', event)}
                 label={t('document.insightsTabAudit')}
-                controls="insights-tab-audit"
+                controls={TAB_PANEL_IDS.audit}
+                buttonRef={(element) => {
+                  tabButtonRefs.current.audit = element;
+                }}
               />
             </div>
 
             <div className="flex flex-1 flex-col overflow-y-auto bg-editorial-bg/40 custom-scrollbar">
               {insightsDrawerTab === 'index' ? (
                 <IndexTab
+                  panelId={TAB_PANEL_IDS.index}
+                  labelledBy={TAB_BUTTON_IDS.index}
                   chunks={chunks}
                   currentChunkId={currentChunk?.id ?? null}
                   onSelect={(id) => setSelectedChunkId(id)}
                 />
               ) : (
                 <AuditTab
+                  panelId={TAB_PANEL_IDS.audit}
+                  labelledBy={TAB_BUTTON_IDS.audit}
                   currentChunk={currentChunk}
                   stages={stages}
                   isProcessing={isProcessing}
@@ -114,20 +183,35 @@ export function InsightsDrawer({ onReauditChunk }: InsightsDrawerProps) {
 }
 
 interface TabButtonProps {
+  tab: InsightsTab;
   active: boolean;
   onClick: () => void;
+  onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => void;
   label: string;
   controls: string;
+  buttonRef: (element: HTMLButtonElement | null) => void;
 }
 
-function TabButton({ active, onClick, label, controls }: TabButtonProps) {
+function TabButton({
+  tab,
+  active,
+  onClick,
+  onKeyDown,
+  label,
+  controls,
+  buttonRef,
+}: TabButtonProps) {
   return (
     <button
+      id={TAB_BUTTON_IDS[tab]}
       type="button"
       role="tab"
       aria-selected={active}
       aria-controls={controls}
+      tabIndex={active ? 0 : -1}
       onClick={onClick}
+      onKeyDown={onKeyDown}
+      ref={buttonRef}
       className={`rounded-full px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
         active
           ? 'bg-editorial-ink text-white'
@@ -140,19 +224,22 @@ function TabButton({ active, onClick, label, controls }: TabButtonProps) {
 }
 
 interface IndexTabProps {
+  panelId: string;
+  labelledBy: string;
   chunks: TranslationChunk[];
   currentChunkId: string | null;
   onSelect: (id: string) => void;
 }
 
-function IndexTab({ chunks, currentChunkId, onSelect }: IndexTabProps) {
+function IndexTab({ panelId, labelledBy, chunks, currentChunkId, onSelect }: IndexTabProps) {
   const { t } = useTranslation();
 
   if (chunks.length === 0) {
     return (
       <div
-        id="insights-tab-index"
+        id={panelId}
         role="tabpanel"
+        aria-labelledby={labelledBy}
         className="px-6 py-8 text-sm text-editorial-muted"
       >
         {t('document.emptyTitle')}
@@ -162,8 +249,9 @@ function IndexTab({ chunks, currentChunkId, onSelect }: IndexTabProps) {
 
   return (
     <ul
-      id="insights-tab-index"
+      id={panelId}
       role="tabpanel"
+      aria-labelledby={labelledBy}
       className="flex flex-col gap-2 px-4 py-4"
     >
       {chunks.map((chunk, index) => {
@@ -201,20 +289,30 @@ function IndexTab({ chunks, currentChunkId, onSelect }: IndexTabProps) {
 }
 
 interface AuditTabProps {
+  panelId: string;
+  labelledBy: string;
   currentChunk: TranslationChunk | null;
   stages: ReturnType<typeof usePipelineStore.getState>['config']['stages'];
   isProcessing: boolean;
   onReauditChunk: (chunkId: string) => void;
 }
 
-function AuditTab({ currentChunk, stages, isProcessing, onReauditChunk }: AuditTabProps) {
+function AuditTab({
+  panelId,
+  labelledBy,
+  currentChunk,
+  stages,
+  isProcessing,
+  onReauditChunk,
+}: AuditTabProps) {
   const { t } = useTranslation();
 
   if (!currentChunk) {
     return (
       <div
-        id="insights-tab-audit"
+        id={panelId}
         role="tabpanel"
+        aria-labelledby={labelledBy}
         className="px-6 py-8 text-sm text-editorial-muted"
       >
         {t('document.insightsAuditEmpty')}
@@ -231,8 +329,9 @@ function AuditTab({ currentChunk, stages, isProcessing, onReauditChunk }: AuditT
 
   return (
     <div
-      id="insights-tab-audit"
+      id={panelId}
       role="tabpanel"
+      aria-labelledby={labelledBy}
       className="space-y-5 px-5 py-5"
     >
       <section className="rounded-[20px] border border-editorial-border bg-editorial-bg p-5">
@@ -263,11 +362,15 @@ function AuditTab({ currentChunk, stages, isProcessing, onReauditChunk }: AuditT
         )}
 
         {currentChunk.judgeResult.status !== 'error' &&
-          currentChunk.judgeResult.issues.length === 0 && (
-            <div className="mt-4 rounded-2xl border border-editorial-border bg-editorial-bg/60 p-4 text-sm text-editorial-muted">
-              {t('document.insightsAuditNoIssues')}
-            </div>
-          )}
+        currentChunk.judgeResult.status !== 'completed' ? (
+          <div className="mt-4 rounded-2xl border border-editorial-border bg-editorial-bg/60 p-4 text-sm text-editorial-muted">
+            {t('document.insightsAuditEmpty')}
+          </div>
+        ) : currentChunk.judgeResult.issues.length === 0 ? (
+          <div className="mt-4 rounded-2xl border border-editorial-border bg-editorial-bg/60 p-4 text-sm text-editorial-muted">
+            {t('document.insightsAuditNoIssues')}
+          </div>
+        ) : null}
 
         {currentChunk.judgeResult.issues.length > 0 && (
           <div className="mt-4 space-y-3">

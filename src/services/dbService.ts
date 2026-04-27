@@ -139,7 +139,11 @@ export async function runInTransaction<T>(
     await executeTx('COMMIT');
     return result;
   } catch (error) {
-    await executeTx('ROLLBACK');
+    try {
+      await executeTx('ROLLBACK');
+    } catch {
+      // Preserve the original transaction error if rollback also fails.
+    }
     throw error;
   }
 }

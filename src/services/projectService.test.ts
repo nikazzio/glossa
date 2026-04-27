@@ -48,6 +48,10 @@ describe('projectService glossary persistence', () => {
       expect.arrayContaining([8, 'proj-1']),
     );
     expect(dbMocks.execute).toHaveBeenCalledWith(
+      expect.stringContaining('source_text = CASE WHEN $7 IS NULL THEN source_text ELSE $7 END'),
+      expect.any(Array),
+    );
+    expect(dbMocks.execute).toHaveBeenCalledWith(
       expect.stringContaining('view_mode = $3'),
       ['Italian', 'English', 'document', 'proj-1'],
     );
@@ -157,15 +161,17 @@ describe('projectService glossary persistence', () => {
 
     expect(dbMocks.runInTransaction).toHaveBeenCalledTimes(1);
     expect(dbMocks.execute).toHaveBeenCalledWith(
-      expect.stringContaining('source_text = $7'),
-      expect.arrayContaining([
+      expect.stringContaining('source_text = CASE WHEN $7 IS NULL THEN source_text ELSE $7 END'),
+      [
+        '[]',
         'Judge',
         'gemini-3-flash-preview',
         'gemini',
+        1,
         2,
         'Alpha\n\nBeta',
         'proj-1',
-      ]),
+      ],
     );
     expect(dbMocks.execute).toHaveBeenCalledWith(
       expect.stringContaining('position'),
@@ -175,6 +181,11 @@ describe('projectService glossary persistence', () => {
       expect.stringContaining('position'),
       ['chunk-a', 'proj-1', 'Alpha', 'Alpha translated', 1, 'completed', '{}', 'completed', 'excellent', '[]'],
     );
+    expect(
+      dbMocks.execute.mock.calls.filter(
+        ([query]) => typeof query === 'string' && query.includes('UPDATE projects SET') && query.includes('updated_at = CURRENT_TIMESTAMP'),
+      ),
+    ).toHaveLength(1);
   });
 
   it('rolls back the transaction when a chunk save fails', async () => {

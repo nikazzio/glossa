@@ -193,7 +193,7 @@ export async function saveProjectConfig(
   config: PipelineConfig,
   viewMode: ViewMode,
 ): Promise<void> {
-  await saveProjectConfigInternal(projectId, '', config, viewMode, execute);
+  await saveProjectConfigInternal(projectId, undefined, config, viewMode, execute);
 }
 
 type ExecuteQuery = (query: string, params?: unknown[]) => Promise<void>;
@@ -248,7 +248,7 @@ async function saveProjectGlossary(
 
 async function saveProjectConfigInternal(
   projectId: string,
-  inputText: string,
+  inputText: string | undefined,
   config: PipelineConfig,
   viewMode: ViewMode,
   run: ExecuteQuery,
@@ -256,7 +256,7 @@ async function saveProjectConfigInternal(
   await run(
     `UPDATE pipeline_configs SET
       stages = $1, judge_prompt = $2, judge_model = $3, judge_provider = $4, use_chunking = $5,
-      target_chunk_count = $6, source_text = $7
+      target_chunk_count = $6, source_text = CASE WHEN $7 IS NULL THEN source_text ELSE $7 END
      WHERE project_id = $8`,
     [
       JSON.stringify(config.stages),
@@ -265,7 +265,7 @@ async function saveProjectConfigInternal(
       config.judgeProvider,
       config.useChunking !== false ? 1 : 0,
       config.targetChunkCount ?? 0,
-      inputText,
+      inputText ?? null,
       projectId,
     ],
   );
@@ -333,9 +333,6 @@ export async function saveProjectState(input: {
       run,
     );
     await saveTranslationsInternal(input.projectId, input.chunks, run);
-    await run('UPDATE projects SET updated_at = CURRENT_TIMESTAMP WHERE id = $1', [
-      input.projectId,
-    ]);
   });
 }
 
