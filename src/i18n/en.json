@@ -18,7 +18,9 @@
     "openInsights": "Open insights panel",
     "closeDrawer": "Close panel",
     "enterSandbox": "Switch to Sandbox",
-    "exitSandbox": "Exit Sandbox"
+    "exitSandbox": "Exit Sandbox",
+    "tokenCount": "Tokens",
+    "estimatedCost": "Est. cost"
   },
   "pipeline": {
     "globalSetup": "Global Setup",
@@ -102,7 +104,18 @@
     "auditSkippedNoDraft": "Nothing to audit yet — translate this chunk first.",
     "chunkActions": "Chunk actions",
     "retranslateChunk": "Re-translate this chunk",
-    "reauditChunk": "Re-audit this chunk"
+    "reauditChunk": "Re-audit this chunk",
+    "glossaryEmpty": "No terms in the registry. Use + to add one.",
+    "glossaryNotes": "Notes",
+    "templates": {
+      "save": "Save as template",
+      "load": "Load template",
+      "namePlaceholder": "Template name...",
+      "searchPlaceholder": "Search templates...",
+      "empty": "No saved templates",
+      "saved": "Template saved",
+      "deleted": "Template deleted"
+    }
   },
   "audit": {
     "title": "Audit Logs",

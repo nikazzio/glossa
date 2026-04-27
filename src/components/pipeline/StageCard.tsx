@@ -1,10 +1,21 @@
-import { useState } from 'react';
-import { ChevronUp, ChevronDown, Trash2, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import {
+  BookmarkPlus,
+  BookOpen,
+  ChevronUp,
+  ChevronDown,
+  Trash2,
+  ShieldCheck,
+  AlertTriangle,
+  Check,
+  X,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { PipelineStageConfig, ModelProvider } from '../../types';
 import { MODEL_OPTIONS } from '../../constants';
 import { useUiStore } from '../../stores/uiStore';
+import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
 import { confirm } from '../../stores/confirmStore';
 
 interface StageCardProps {
@@ -22,21 +33,36 @@ function useModelOptions(provider: ModelProvider): string[] {
 
 export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showSaveName, setShowSaveName] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [showTemplateList, setShowTemplateList] = useState(false);
+  const [templateSearch, setTemplateSearch] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { t } = useTranslation();
   const modelOptions = useModelOptions(stage.provider);
   const ollamaStatus = useUiStore((s) => s.ollamaStatus);
   const showOllamaOfflineWarning =
     stage.provider === 'ollama' && ollamaStatus === 'disconnected';
 
+  const { templates, loadTemplates, saveTemplate, deleteTemplate } = usePromptTemplateStore();
+
+  useEffect(() => {
+    if (isExpanded) loadTemplates();
+  }, [isExpanded]);
+
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [stage.prompt]);
+
   const handleProviderChange = (newProvider: ModelProvider) => {
     const models =
       newProvider === 'ollama'
         ? useUiStore.getState().ollamaModels
         : MODEL_OPTIONS[newProvider];
-    onUpdate({
-      provider: newProvider,
-      model: models[0] || '',
-    });
+    onUpdate({ provider: newProvider, model: models[0] || '' });
     if (newProvider === 'ollama' && useUiStore.getState().ollamaStatus === 'unknown') {
       toast.message(t('ollama.uncheckedHint'));
     } else if (newProvider === 'ollama' && useUiStore.getState().ollamaStatus === 'disconnected') {
@@ -54,15 +80,35 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
     if (ok) onRemove();
   };
 
+  const handleSaveTemplate = async () => {
+    const name = templateName.trim();
+    if (!name) return;
+    await saveTemplate(name, stage.prompt);
+    toast.success(t('pipeline.templates.saved'));
+    setTemplateName('');
+    setShowSaveName(false);
+  };
+
+  const handleDeleteTemplate = async (id: string) => {
+    await deleteTemplate(id);
+    toast.success(t('pipeline.templates.deleted'));
+  };
+
+  const filteredTemplates = templates.filter((tmpl) =>
+    tmpl.name.toLowerCase().includes(templateSearch.toLowerCase()),
+  );
+
   return (
     <div
-      className={`relative border border-editorial-border p-5 bg-editorial-bg transition-all ${
+      className={`relative rounded-lg border border-editorial-border bg-editorial-bg p-5 pb-6 transition-all ${
         !stage.enabled ? 'grayscale opacity-40' : 'shadow-sm'
       }`}
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <span className="font-display italic text-lg text-editorial-accent">#{index + 1}</span>
+          <span className="rounded-full bg-editorial-textbox/60 px-2 py-0.5 text-[10px] font-display italic text-editorial-accent">
+            #{index + 1}
+          </span>
           <input
             value={stage.name}
             onChange={(e) => onUpdate({ name: e.target.value })}
@@ -110,24 +156,20 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
             <select
               value={stage.provider}
               onChange={(e) => handleProviderChange(e.target.value as ModelProvider)}
-              className="bg-editorial-textbox border-none px-2 py-1 text-[10px] font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="bg-editorial-textbox/60 rounded border border-editorial-border/60 px-2 py-1.5 text-[11px] font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             >
               {Object.keys(MODEL_OPTIONS).map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
+                <option key={p} value={p}>{p}</option>
               ))}
             </select>
             {modelOptions.length > 0 ? (
               <select
                 value={stage.model}
                 onChange={(e) => onUpdate({ model: e.target.value })}
-                className="flex-1 bg-editorial-textbox border-none px-2 py-1 text-[10px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="flex-1 bg-editorial-textbox/60 rounded border border-editorial-border/60 px-2 py-1.5 text-[11px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               >
                 {modelOptions.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
+                  <option key={m} value={m}>{m}</option>
                 ))}
               </select>
             ) : stage.provider === 'ollama' ? (
@@ -135,35 +177,144 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
                 value={stage.model}
                 onChange={(e) => onUpdate({ model: e.target.value })}
                 placeholder={t('ollama.modelPlaceholder')}
-                className="flex-1 bg-editorial-textbox border-none px-2 py-1 text-[10px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="flex-1 bg-editorial-textbox/60 rounded border border-editorial-border/60 px-2 py-1.5 text-[11px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               />
             ) : (
               <select
                 value={stage.model}
                 onChange={(e) => onUpdate({ model: e.target.value })}
-                className="flex-1 bg-editorial-textbox border-none px-2 py-1 text-[10px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="flex-1 bg-editorial-textbox/60 rounded border border-editorial-border/60 px-2 py-1.5 text-[11px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               >
                 {MODEL_OPTIONS[stage.provider]?.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
+                  <option key={m} value={m}>{m}</option>
                 ))}
               </select>
             )}
           </div>
+
           {showOllamaOfflineWarning && (
             <div className="flex items-center gap-2 text-[10px] text-editorial-accent">
               <AlertTriangle size={12} />
               <span>{t('ollama.selectedButOffline')}</span>
             </div>
           )}
-          <textarea
-            value={stage.prompt}
-            onChange={(e) => onUpdate({ prompt: e.target.value })}
-            placeholder={t('pipeline.stagePromptPlaceholder')}
-            rows={6}
-            className="w-full bg-editorial-textbox border-none p-3 text-[11px] font-mono outline-none leading-relaxed resize-y focus-visible:ring-2 focus-visible:ring-editorial-accent"
-          />
+
+          {/* Prompt textarea with template controls */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
+                Prompt
+              </span>
+              <div className="flex items-center gap-1.5">
+                {/* Save as template */}
+                <button
+                  type="button"
+                  onClick={() => { setShowSaveName(!showSaveName); setShowTemplateList(false); }}
+                  title={t('pipeline.templates.save')}
+                  aria-label={t('pipeline.templates.save')}
+                  className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                >
+                  <BookmarkPlus size={14} />
+                </button>
+                {/* Load template */}
+                <button
+                  type="button"
+                  onClick={() => { setShowTemplateList(!showTemplateList); setShowSaveName(false); }}
+                  title={t('pipeline.templates.load')}
+                  aria-label={t('pipeline.templates.load')}
+                  className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                >
+                  <BookOpen size={14} />
+                </button>
+              </div>
+            </div>
+
+            {/* Inline save name input */}
+            {showSaveName && (
+              <div className="flex items-center gap-1.5">
+                <input
+                  value={templateName}
+                  onChange={(e) => setTemplateName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleSaveTemplate(); if (e.key === 'Escape') setShowSaveName(false); }}
+                  placeholder={t('pipeline.templates.namePlaceholder')}
+                  autoFocus
+                  className="flex-1 rounded bg-editorial-textbox/60 border border-editorial-border/60 px-2 py-1 text-[11px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                />
+                <button
+                  type="button"
+                  onClick={handleSaveTemplate}
+                  disabled={!templateName.trim()}
+                  className="text-editorial-ink hover:text-editorial-accent transition-colors disabled:opacity-40 focus:outline-none"
+                  aria-label={t('common.confirm')}
+                >
+                  <Check size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowSaveName(false); setTemplateName(''); }}
+                  className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none"
+                  aria-label={t('common.cancel')}
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+
+            {/* Template list popover */}
+            {showTemplateList && (
+              <div className="rounded-lg border border-editorial-border bg-editorial-bg shadow-lg overflow-hidden">
+                <div className="p-2 border-b border-editorial-border/60">
+                  <input
+                    value={templateSearch}
+                    onChange={(e) => setTemplateSearch(e.target.value)}
+                    placeholder={t('pipeline.templates.searchPlaceholder')}
+                    autoFocus
+                    className="w-full rounded bg-editorial-textbox/60 border border-editorial-border/40 px-2 py-1 text-[11px] font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                  />
+                </div>
+                <ul className="max-h-48 overflow-y-auto custom-scrollbar">
+                  {filteredTemplates.length === 0 ? (
+                    <li className="px-3 py-4 text-[10px] text-editorial-muted text-center">
+                      {t('pipeline.templates.empty')}
+                    </li>
+                  ) : (
+                    filteredTemplates.map((tmpl) => (
+                      <li
+                        key={tmpl.id}
+                        className="flex items-start gap-2 px-3 py-2 hover:bg-editorial-textbox/40 group"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => { onUpdate({ prompt: tmpl.prompt }); setShowTemplateList(false); setTemplateSearch(''); }}
+                          className="flex-1 text-left min-w-0 focus:outline-none"
+                        >
+                          <div className="text-[11px] font-bold text-editorial-ink truncate">{tmpl.name}</div>
+                          <div className="text-[10px] text-editorial-muted truncate mt-0.5 font-mono">{tmpl.prompt}</div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteTemplate(tmpl.id)}
+                          className="shrink-0 text-editorial-muted/40 hover:text-editorial-accent transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 focus:outline-none mt-0.5"
+                          aria-label={t('common.delete')}
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </li>
+                    ))
+                  )}
+                </ul>
+              </div>
+            )}
+
+            <textarea
+              ref={textareaRef}
+              value={stage.prompt}
+              onChange={(e) => onUpdate({ prompt: e.target.value })}
+              placeholder={t('pipeline.stagePromptPlaceholder')}
+              rows={4}
+              className="w-full rounded-lg bg-editorial-textbox/40 border border-editorial-border/60 p-3 text-[12px] font-mono outline-none leading-relaxed resize-none overflow-hidden focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            />
+          </div>
         </div>
       )}
     </div>

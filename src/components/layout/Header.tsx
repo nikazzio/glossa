@@ -19,6 +19,7 @@ import { PipelineActions } from '../pipeline';
 import { calculateCompositeQuality, qualityLabelKey } from '../../utils';
 import { importTextFile, exportTranslation, exportBilingual } from '../../services/fileService';
 import { HelpGuide } from '../help';
+import { MODEL_PRICING } from '../../constants';
 
 interface PendingImport {
   fileName: string;
@@ -134,6 +135,40 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
   const completedCount = chunks.filter((chunk) => chunk.status === 'completed').length;
   const compositeQuality = useMemo(() => calculateCompositeQuality(chunks), [chunks]);
   const compositeLabel = compositeQuality ? t(qualityLabelKey(compositeQuality)) : null;
+
+  const totalTokens = useMemo(
+    () =>
+      chunks.reduce((sum, chunk) => {
+        const stageSum = Object.values(chunk.stageResults).reduce(
+          (s, r) => s + (r.tokenUsage?.inputTokens ?? 0) + (r.tokenUsage?.outputTokens ?? 0),
+          0,
+        );
+        const judgeSum =
+          (chunk.judgeResult.tokenUsage?.inputTokens ?? 0) +
+          (chunk.judgeResult.tokenUsage?.outputTokens ?? 0);
+        return sum + stageSum + judgeSum;
+      }, 0),
+    [chunks],
+  );
+
+  const estimatedCostUsd = useMemo(
+    () =>
+      chunks.reduce((total, chunk) => {
+        let cost = 0;
+        for (const [stageId, result] of Object.entries(chunk.stageResults)) {
+          const stage = config.stages.find((s) => s.id === stageId);
+          if (!stage || !result.tokenUsage) continue;
+          const pricing = MODEL_PRICING[`${stage.provider}/${stage.model}`];
+          if (!pricing) continue;
+          cost +=
+            (result.tokenUsage.inputTokens * pricing.input +
+              result.tokenUsage.outputTokens * pricing.output) /
+            1_000_000;
+        }
+        return total + cost;
+      }, 0),
+    [chunks, config.stages],
+  );
   const saveStatusLabel =
     saveState === 'dirty'
       ? t('projects.statusDirty')
@@ -284,6 +319,8 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
                 completedCount={completedCount}
                 chunkCount={chunks.length}
                 compositeLabel={compositeLabel}
+                totalTokens={totalTokens}
+                estimatedCostUsd={estimatedCostUsd}
               />
             )}
           </div>
@@ -416,16 +453,20 @@ function HeaderInfoBar({
   completedCount,
   chunkCount,
   compositeLabel,
+  totalTokens,
+  estimatedCostUsd,
 }: {
   sourceWords: number;
   translatedWords: number;
   completedCount: number;
   chunkCount: number;
   compositeLabel: string | null;
+  totalTokens: number;
+  estimatedCostUsd: number;
 }) {
   const { t } = useTranslation();
 
-  const items = [
+  const items: { key: string; label: string; value: string }[] = [
     {
       key: 'source',
       label: t('document.infoSourceWords'),
@@ -449,6 +490,21 @@ function HeaderInfoBar({
       label: t('document.infoQuality'),
       value: compositeLabel,
     });
+  }
+
+  if (totalTokens > 0) {
+    items.push({
+      key: 'tokens',
+      label: t('header.tokenCount'),
+      value: totalTokens.toLocaleString(),
+    });
+    if (estimatedCostUsd > 0) {
+      items.push({
+        key: 'cost',
+        label: t('header.estimatedCost'),
+        value: `$${estimatedCostUsd.toFixed(4)}`,
+      });
+    }
   }
 
   return (

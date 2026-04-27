@@ -109,14 +109,14 @@ export function PipelineConfig({
 
   return (
     <section className={className ?? DEFAULT_PIPELINE_CONFIG_CLASSNAME}>
-      <div className="space-y-10">
+      <div className="space-y-8">
         {/* Language Pair */}
         <div>
-          <h2 className="font-display text-sm uppercase tracking-wider border-b border-editorial-ink pb-2 mb-8 inline-block">
+          <h2 className="font-display text-sm uppercase tracking-wider border-b border-editorial-ink pb-2 mb-6 inline-block">
             {t('pipeline.globalSetup')}
           </h2>
           <div className="space-y-4">
-            <label className="block text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
+            <label className="block text-[11px] font-bold uppercase tracking-widest text-editorial-muted">
               {t('pipeline.languagePair')}
             </label>
             <div className="flex items-center gap-3">
@@ -163,16 +163,18 @@ export function PipelineConfig({
                 onChange={(e) => setConfig((prev) => ({ ...prev, useChunking: e.target.checked }))}
                 className="accent-editorial-ink w-3 h-3"
               />
-              <span className="text-[10px] uppercase font-bold tracking-widest text-editorial-muted group-hover:text-editorial-ink transition-colors">
+              <span className="text-[11px] uppercase font-bold tracking-widest text-editorial-muted group-hover:text-editorial-ink transition-colors">
                 {t('pipeline.autoSegment')}
               </span>
             </label>
           </div>
         </div>
 
+        <hr className="border-editorial-border/60" />
+
         {/* Stages */}
         <div>
-          <div className="flex items-center justify-between border-b border-editorial-ink pb-2 mb-8">
+          <div className="flex items-center justify-between border-b border-editorial-ink pb-2 mb-6">
             <h2 className="font-display text-sm uppercase tracking-wider">{t('pipeline.stages')}</h2>
             <button
               onClick={addStage}
@@ -197,9 +199,11 @@ export function PipelineConfig({
           </div>
         </div>
 
+        <hr className="border-editorial-border/60" />
+
         {/* Audit Guard */}
         <div>
-          <h2 className="font-display text-sm uppercase tracking-wider border-b border-editorial-ink pb-2 mb-8 inline-block">
+          <h2 className="font-display text-sm uppercase tracking-wider border-b border-editorial-ink pb-2 mb-6 inline-block">
             {t('pipeline.auditGuard')}
           </h2>
           <div className="space-y-4">
@@ -207,7 +211,7 @@ export function PipelineConfig({
               <select
                 value={config.judgeProvider}
                 onChange={(e) => handleJudgeProviderChange(e.target.value as ModelProvider)}
-                className="bg-editorial-textbox border-none px-2 py-1 text-[10px] font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="bg-editorial-textbox/60 rounded border border-editorial-border/60 px-2 py-1.5 text-[11px] font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               >
                 {Object.keys(MODEL_OPTIONS).map((p) => (
                   <option key={p} value={p}>{p}</option>
@@ -217,7 +221,7 @@ export function PipelineConfig({
                 <select
                   value={config.judgeModel}
                   onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
-                  className="flex-1 bg-editorial-textbox border-none px-2 py-1 text-[10px] font-mono outline-none"
+                  className="flex-1 bg-editorial-textbox/60 rounded border border-editorial-border/60 px-2 py-1.5 text-[11px] font-mono outline-none"
                 >
                   {judgeModels.map((m) => (
                     <option key={m} value={m}>{m}</option>
@@ -228,13 +232,13 @@ export function PipelineConfig({
                   value={config.judgeModel}
                   onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
                   placeholder={t('ollama.modelPlaceholder')}
-                  className="flex-1 bg-editorial-textbox border-none px-2 py-1 text-[10px] font-mono outline-none"
+                  className="flex-1 bg-editorial-textbox/60 rounded border border-editorial-border/60 px-2 py-1.5 text-[11px] font-mono outline-none"
                 />
               ) : (
                 <select
                   value={config.judgeModel}
                   onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
-                  className="flex-1 bg-editorial-textbox border-none px-2 py-1 text-[10px] font-mono outline-none"
+                  className="flex-1 bg-editorial-textbox/60 rounded border border-editorial-border/60 px-2 py-1.5 text-[11px] font-mono outline-none"
                 >
                   {MODEL_OPTIONS[config.judgeProvider]?.map((m) => (
                     <option key={m} value={m}>{m}</option>
@@ -252,16 +256,18 @@ export function PipelineConfig({
               value={config.judgePrompt}
               onChange={(e) => setConfig((prev) => ({ ...prev, judgePrompt: e.target.value }))}
               placeholder={t('pipeline.auditPlaceholder')}
-              rows={6}
-              className="w-full bg-editorial-textbox border-none p-4 text-xs font-mono outline-none leading-relaxed resize-y focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              rows={5}
+              className="w-full rounded-lg bg-editorial-textbox/40 border border-editorial-border/60 p-3 text-[12px] font-mono outline-none leading-relaxed resize-y focus-visible:ring-2 focus-visible:ring-editorial-accent"
             />
           </div>
         </div>
 
+        <hr className="border-editorial-border/60" />
+
         {/* Glossary */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <label className="block text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
+            <label className="block text-[11px] font-bold uppercase tracking-widest text-editorial-muted">
               {t('pipeline.keywordRegistry')}
               {config.glossary.length > 0 && (
                 <span className="ml-2 text-editorial-muted/70 normal-case font-mono tracking-normal">
@@ -278,56 +284,75 @@ export function PipelineConfig({
               <Plus size={14} />
             </button>
           </div>
-          <div className="space-y-2">
-            {config.glossary.map((g, i) => {
-              const rowKey = g.id ?? `gloss-fallback-${i}`;
-              const isDuplicate = g.id ? duplicateTermIds.has(g.id) : false;
-              const removeLabel = `${t('pipeline.removeGlossaryEntry')} ${i + 1}`;
-              return (
-                <div key={rowKey} className="space-y-1">
-                  <div className="flex gap-2 items-center">
+
+          {config.glossary.length === 0 ? (
+            <p className="text-[11px] text-editorial-muted/60 text-center py-4 border border-dashed border-editorial-border/60 rounded-lg">
+              {t('pipeline.glossaryEmpty')}
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {config.glossary.map((g, i) => {
+                const rowKey = g.id ?? `gloss-fallback-${i}`;
+                const isDuplicate = g.id ? duplicateTermIds.has(g.id) : false;
+                const removeLabel = `${t('pipeline.removeGlossaryEntry')} ${i + 1}`;
+                return (
+                  <div
+                    key={rowKey}
+                    className={`rounded-lg border p-2 space-y-1.5 ${
+                      isDuplicate
+                        ? 'border-editorial-warning/60 bg-editorial-textbox/20'
+                        : 'border-editorial-border/40 bg-editorial-textbox/20'
+                    }`}
+                  >
+                    <div className="flex gap-2 items-center">
+                      <input
+                        value={g.term}
+                        onChange={(e) =>
+                          g.id ? updateGlossaryEntry(g.id, { term: e.target.value }) : undefined
+                        }
+                        className="w-full bg-transparent rounded py-2 px-2 text-[11px] font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent border border-editorial-border/40 focus:border-editorial-accent/60"
+                        placeholder={t('pipeline.source')}
+                        aria-label={`${t('pipeline.source')} ${i + 1}`}
+                      />
+                      <input
+                        value={g.translation}
+                        onChange={(e) =>
+                          g.id
+                            ? updateGlossaryEntry(g.id, { translation: e.target.value })
+                            : undefined
+                        }
+                        className="w-full bg-transparent rounded py-2 px-2 text-[11px] font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent border border-editorial-border/40 focus:border-editorial-accent/60"
+                        placeholder={t('pipeline.target')}
+                        aria-label={`${t('pipeline.target')} ${i + 1}`}
+                      />
+                      <button
+                        onClick={() => g.id && removeGlossaryEntry(g.id)}
+                        title={removeLabel}
+                        className="ml-auto text-editorial-muted/60 hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent shrink-0 p-1"
+                        aria-label={removeLabel}
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
                     <input
-                      value={g.term}
+                      value={g.notes ?? ''}
                       onChange={(e) =>
-                        g.id
-                          ? updateGlossaryEntry(g.id, { term: e.target.value })
-                          : undefined
+                        g.id ? updateGlossaryEntry(g.id, { notes: e.target.value }) : undefined
                       }
-                      className={`w-full bg-editorial-textbox border-none p-2 text-[10px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                        isDuplicate ? 'ring-1 ring-editorial-warning' : ''
-                      }`}
-                      placeholder={t('pipeline.source')}
-                      aria-label={`${t('pipeline.source')} ${i + 1}`}
+                      className="w-full bg-transparent rounded py-1.5 px-2 text-[11px] font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent border border-editorial-border/30 focus:border-editorial-accent/60 text-editorial-muted placeholder:text-editorial-muted/40"
+                      placeholder={t('pipeline.glossaryNotes')}
+                      aria-label={`${t('pipeline.glossaryNotes')} ${i + 1}`}
                     />
-                    <button
-                      onClick={() => g.id && removeGlossaryEntry(g.id)}
-                      title={removeLabel}
-                      className="text-editorial-muted/60 hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent shrink-0 p-1"
-                      aria-label={removeLabel}
-                    >
-                      <X size={12} />
-                    </button>
-                    <input
-                      value={g.translation}
-                      onChange={(e) =>
-                        g.id
-                          ? updateGlossaryEntry(g.id, { translation: e.target.value })
-                          : undefined
-                      }
-                      className="w-full bg-editorial-textbox border-none p-2 text-[10px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                      placeholder={t('pipeline.target')}
-                      aria-label={`${t('pipeline.target')} ${i + 1}`}
-                    />
+                    {isDuplicate && (
+                      <span className="text-[9px] uppercase tracking-widest text-editorial-warning font-bold pl-1">
+                        {t('pipeline.duplicateTerm')}
+                      </span>
+                    )}
                   </div>
-                  {isDuplicate && (
-                    <span className="text-[9px] uppercase tracking-widest text-editorial-warning font-bold pl-1">
-                      {t('pipeline.duplicateTerm')}
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 

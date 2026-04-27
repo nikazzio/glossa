@@ -30,6 +30,8 @@ export function usePipeline() {
     clearChunkStages,
     requestCancel,
     setIsProcessing,
+    setStageTokenUsage,
+    setJudgeTokenUsage,
   } = useChunksStore();
   const { config } = usePipelineStore();
   const isProcessing = useChunksStore((state) => state.isProcessing);
@@ -80,6 +82,7 @@ export function usePipeline() {
             return llmService.runStageStream(
               chunk.originalText, stage, config, lastResult || undefined,
               (token) => appendChunkStageContent(chunk.id, stage.id, token),
+              (usage) => setStageTokenUsage(chunk.id, stage.id, usage),
             );
           },
           { label: `Stage "${stage.name}"` },
@@ -149,6 +152,12 @@ export function usePipeline() {
         () => llmService.judgeTranslation(chunk.originalText, textToAudit, config),
         { label: 'Audit' },
       );
+      if (judgeData.inputTokens !== undefined && judgeData.outputTokens !== undefined) {
+        setJudgeTokenUsage(chunk.id, {
+          inputTokens: judgeData.inputTokens,
+          outputTokens: judgeData.outputTokens,
+        });
+      }
       updateChunkJudge(chunk.id, {
         ...judgeData,
         content: textToAudit,

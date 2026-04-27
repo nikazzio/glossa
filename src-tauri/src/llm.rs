@@ -66,6 +66,10 @@ pub struct JudgeResponse {
     pub rating: String,
     pub issues: Vec<JudgeIssue>,
     pub content: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub input_tokens: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub output_tokens: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -74,6 +78,10 @@ struct StreamToken {
     stream_id: String,
     token: String,
     done: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    input_tokens: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    output_tokens: Option<u32>,
 }
 
 // ── Stream cancellation registry ─────────────────────────────────────
@@ -521,6 +529,123 @@ async fn call_anthropic(
         .ok_or_else(|| "No text in Anthropic response".to_string())
 }
 
+/// Non-streaming call that also returns token usage for judge calls.
+async fn call_provider_for_judge(
+    client: &Client,
+    provider: &str,
+    model: &str,
+    system_prompt: &str,
+    user_prompt: &str,
+    api_key: &str,
+) -> Result<(String, Option<(u32, u32)>), String> {
+    match provider {
+        "gemini" => {
+            let url = format!(
+                "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+            );
+            let body = serde_json::json!({
+                "systemInstruction": { "parts": [{"text": system_prompt}] },
+                "contents": [{ "role": "user", "parts": [{"text": user_prompt}] }],
+                "generationConfig": { "responseMimeType": "application/json" }
+            });
+            let resp = client.post(&url).json(&body).send().await
+                .map_err(|e| format!("Gemini request failed: {e}"))?;
+            let status = resp.status();
+            let text = resp.text().await.map_err(|e| format!("Failed to read response: {e}"))?;
+            if !status.is_success() {
+                return Err(format_api_error("Gemini", status, &text));
+            }
+            let json: serde_json::Value = serde_json::from_str(&text)
+                .map_err(|e| format!("Failed to parse Gemini response: {e}"))?;
+            let content = json["candidates"][0]["content"]["parts"][0]["text"]
+                .as_str().map(|s| s.to_string())
+                .ok_or_else(|| "No text in Gemini response".to_string())?;
+            let usage = match (
+                json["usageMetadata"]["promptTokenCount"].as_u64(),
+                json["usageMetadata"]["candidatesTokenCount"].as_u64(),
+            ) {
+                (Some(i), Some(o)) => Some((i as u32, o as u32)),
+                _ => None,
+            };
+            Ok((content, usage))
+        }
+        "openai" | "deepseek" | "ollama" => {
+            let base_url = match provider {
+                "openai" => "https://api.openai.com/v1".to_string(),
+                "deepseek" => "https://api.deepseek.com".to_string(),
+                "ollama" => format!("{OLLAMA_BASE_URL}/v1"),
+                _ => unreachable!(),
+            };
+            let url = format!("{base_url}/chat/completions");
+            let body = serde_json::json!({
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                "response_format": {"type": "json_object"}
+            });
+            let mut req = client.post(&url).json(&body);
+            if !api_key.is_empty() {
+                req = req.header("Authorization", format!("Bearer {api_key}"));
+            }
+            let resp = req.send().await.map_err(|e| format!("API request failed: {e}"))?;
+            let status = resp.status();
+            let text = resp.text().await.map_err(|e| format!("Failed to read response: {e}"))?;
+            if !status.is_success() {
+                return Err(format_api_error(provider_label_from_url(&base_url), status, &text));
+            }
+            let json: serde_json::Value = serde_json::from_str(&text)
+                .map_err(|e| format!("Failed to parse response: {e}"))?;
+            let content = json["choices"][0]["message"]["content"]
+                .as_str().map(|s| s.to_string())
+                .ok_or_else(|| "No content in response".to_string())?;
+            let usage = match (
+                json["usage"]["prompt_tokens"].as_u64(),
+                json["usage"]["completion_tokens"].as_u64(),
+            ) {
+                (Some(i), Some(o)) => Some((i as u32, o as u32)),
+                _ => None,
+            };
+            Ok((content, usage))
+        }
+        "anthropic" => {
+            let body = serde_json::json!({
+                "model": model,
+                "max_tokens": 4096,
+                "system": format!("{system_prompt}\nIMPORTANT: Return ONLY valid JSON."),
+                "messages": [{"role": "user", "content": user_prompt}]
+            });
+            let resp = client.post("https://api.anthropic.com/v1/messages")
+                .header("x-api-key", api_key)
+                .header("anthropic-version", "2023-06-01")
+                .header("content-type", "application/json")
+                .json(&body)
+                .send().await
+                .map_err(|e| format!("Anthropic request failed: {e}"))?;
+            let status = resp.status();
+            let text = resp.text().await.map_err(|e| format!("Failed to read response: {e}"))?;
+            if !status.is_success() {
+                return Err(format_api_error("Anthropic", status, &text));
+            }
+            let json: serde_json::Value = serde_json::from_str(&text)
+                .map_err(|e| format!("Failed to parse Anthropic response: {e}"))?;
+            let content = json["content"][0]["text"]
+                .as_str().map(|s| s.to_string())
+                .ok_or_else(|| "No text in Anthropic response".to_string())?;
+            let usage = match (
+                json["usage"]["input_tokens"].as_u64(),
+                json["usage"]["output_tokens"].as_u64(),
+            ) {
+                (Some(i), Some(o)) => Some((i as u32, o as u32)),
+                _ => None,
+            };
+            Ok((content, usage))
+        }
+        _ => Err(format!("Unsupported provider for judge: {provider}")),
+    }
+}
+
 /// Route a non-streaming call to the correct provider
 async fn call_provider(
     client: &Client,
@@ -606,7 +731,8 @@ async fn build_streaming_request(
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
-                "stream": true
+                "stream": true,
+                "stream_options": {"include_usage": true}
             });
             let mut req = client.post(&url).json(&body);
             if !api_key.is_empty() {
@@ -650,6 +776,10 @@ async fn stream_response(
 ) -> Result<String, String> {
     let mut full_text = String::new();
     let mut buffer = String::new();
+    let mut latest_input_tokens: Option<u32> = None;
+    let mut latest_output_tokens: Option<u32> = None;
+    // Anthropic splits usage across two events; track input separately.
+    let mut anthropic_input_tokens: Option<u32> = None;
 
     loop {
         if cancel.is_cancelled() {
@@ -682,7 +812,50 @@ async fn stream_response(
                                     stream_id: stream_id.to_string(),
                                     token: text,
                                     done: false,
+                                    input_tokens: None,
+                                    output_tokens: None,
                                 });
+                            }
+                        }
+
+                        // Extract token usage from this SSE chunk.
+                        if let Ok(json) = serde_json::from_str::<serde_json::Value>(data) {
+                            match provider {
+                                "openai" | "deepseek" | "ollama" => {
+                                    // Final chunk with stream_options.include_usage = true
+                                    if let (Some(i), Some(o)) = (
+                                        json["usage"]["prompt_tokens"].as_u64(),
+                                        json["usage"]["completion_tokens"].as_u64(),
+                                    ) {
+                                        latest_input_tokens = Some(i as u32);
+                                        latest_output_tokens = Some(o as u32);
+                                    }
+                                }
+                                "gemini" => {
+                                    if let (Some(i), Some(o)) = (
+                                        json["usageMetadata"]["promptTokenCount"].as_u64(),
+                                        json["usageMetadata"]["candidatesTokenCount"].as_u64(),
+                                    ) {
+                                        latest_input_tokens = Some(i as u32);
+                                        latest_output_tokens = Some(o as u32);
+                                    }
+                                }
+                                "anthropic" => {
+                                    match json["type"].as_str() {
+                                        Some("message_start") => {
+                                            anthropic_input_tokens = json["message"]["usage"]["input_tokens"]
+                                                .as_u64().map(|n| n as u32);
+                                        }
+                                        Some("message_delta") => {
+                                            if let Some(out) = json["usage"]["output_tokens"].as_u64() {
+                                                latest_input_tokens = anthropic_input_tokens;
+                                                latest_output_tokens = Some(out as u32);
+                                            }
+                                        }
+                                        _ => {}
+                                    }
+                                }
+                                _ => {}
                             }
                         }
                     }
@@ -697,6 +870,8 @@ async fn stream_response(
         stream_id: stream_id.to_string(),
         token: String::new(),
         done: true,
+        input_tokens: latest_input_tokens,
+        output_tokens: latest_output_tokens,
     });
 
     Ok(full_text)
@@ -896,9 +1071,9 @@ pub async fn judge_translation(
     let client = build_http_client()?;
     let (system_prompt, user_prompt) = build_judge_prompts(&original_text, &translation, &config);
 
-    let result_text = call_provider(
+    let (result_text, usage) = call_provider_for_judge(
         &client, &config.judge_provider, &config.judge_model,
-        &system_prompt, &user_prompt, &api_key, true,
+        &system_prompt, &user_prompt, &api_key,
     ).await?;
 
     let parsed: serde_json::Value = serde_json::from_str(&result_text)
@@ -925,6 +1100,8 @@ pub async fn judge_translation(
         rating,
         issues,
         content: translation,
+        input_tokens: usage.map(|(i, _)| i),
+        output_tokens: usage.map(|(_, o)| o),
     })
 }
 
@@ -1238,10 +1415,31 @@ mod tests {
             stream_id: "s1".into(),
             token: "hi".into(),
             done: false,
+            input_tokens: None,
+            output_tokens: None,
         };
         let json = serde_json::to_string(&token).unwrap();
         assert!(json.contains("streamId"));
         assert!(!json.contains("stream_id"));
+        // Optional None fields must not appear in the serialized output.
+        assert!(!json.contains("inputTokens"));
+        assert!(!json.contains("outputTokens"));
+    }
+
+    #[test]
+    fn stream_token_with_usage_serializes_token_counts() {
+        let token = StreamToken {
+            stream_id: "s1".into(),
+            token: String::new(),
+            done: true,
+            input_tokens: Some(100),
+            output_tokens: Some(50),
+        };
+        let json = serde_json::to_string(&token).unwrap();
+        assert!(json.contains("inputTokens"));
+        assert!(json.contains("outputTokens"));
+        assert!(json.contains("100"));
+        assert!(json.contains("50"));
     }
 
     #[test]

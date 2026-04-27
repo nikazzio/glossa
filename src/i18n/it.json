@@ -18,7 +18,9 @@
     "openInsights": "Apri pannello insight",
     "closeDrawer": "Chiudi pannello",
     "enterSandbox": "Passa a Sandbox",
-    "exitSandbox": "Esci da Sandbox"
+    "exitSandbox": "Esci da Sandbox",
+    "tokenCount": "Token",
+    "estimatedCost": "Costo stimato"
   },
   "pipeline": {
     "globalSetup": "Configurazione Globale",
@@ -102,7 +104,18 @@
     "auditSkippedNoDraft": "Nessuna traduzione da valutare — traduci prima questo blocco.",
     "chunkActions": "Azioni blocco",
     "retranslateChunk": "Ri-traduci questo blocco",
-    "reauditChunk": "Ri-valuta questo blocco"
+    "reauditChunk": "Ri-valuta questo blocco",
+    "glossaryEmpty": "Nessun termine nel registro. Usa + per aggiungerne uno.",
+    "glossaryNotes": "Note",
+    "templates": {
+      "save": "Salva come template",
+      "load": "Carica template",
+      "namePlaceholder": "Nome template...",
+      "searchPlaceholder": "Cerca template...",
+      "empty": "Nessun template salvato",
+      "saved": "Template salvato",
+      "deleted": "Template eliminato"
+    }
   },
   "audit": {
     "title": "Log Audit",

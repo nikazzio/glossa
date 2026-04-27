@@ -26,6 +26,7 @@ export function ConfigDrawer({
       onClose={() => setShowConfigDrawer(false)}
       ariaLabelledBy="config-drawer-title"
       ariaDescribedBy="config-drawer-hint"
+      maxWidth="max-w-[560px]"
     >
       <div className="flex items-start justify-between gap-3 border-b border-editorial-border px-6 py-4">
         <div className="min-w-0">
