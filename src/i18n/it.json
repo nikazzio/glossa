@@ -106,6 +106,9 @@
     "retranslateChunk": "Ri-traduci questo blocco",
     "reauditChunk": "Ri-valuta questo blocco",
     "prompt": "Prompt",
+    "tabStages": "Fasi",
+    "tabAudit": "Audit",
+    "tabGlossary": "Registro",
     "glossaryEmpty": "Nessun termine nel registro. Usa + per aggiungerne uno.",
     "glossaryNotes": "Note",
     "templates": {
