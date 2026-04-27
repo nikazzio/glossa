@@ -3,7 +3,6 @@ import type {
   ChunkStatus,
   JudgeResult,
   PipelineResult,
-  TokenUsage,
   TranslationChunk,
 } from '../types';
 import { usePipelineStore } from './pipelineStore';
@@ -43,8 +42,6 @@ interface ChunksState {
   resetCompletedChunks: () => void;
   unlockChunkForEdit: (chunkId: string) => void;
   clearChunkStages: (chunkId: string) => void;
-  setStageTokenUsage: (chunkId: string, stageId: string, usage: TokenUsage) => void;
-  setJudgeTokenUsage: (chunkId: string, usage: TokenUsage) => void;
 }
 
 export const useChunksStore = create<ChunksState>((set, get) => ({
@@ -224,30 +221,6 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
       ),
     })),
 
-  setStageTokenUsage: (chunkId, stageId, usage) =>
-    set((state) => ({
-      chunks: state.chunks.map((chunk) => {
-        if (chunk.id !== chunkId) return chunk;
-        const existing = chunk.stageResults[stageId];
-        if (!existing) return chunk;
-        return {
-          ...chunk,
-          stageResults: {
-            ...chunk.stageResults,
-            [stageId]: { ...existing, tokenUsage: usage },
-          },
-        };
-      }),
-    })),
-
-  setJudgeTokenUsage: (chunkId, usage) =>
-    set((state) => ({
-      chunks: state.chunks.map((chunk) =>
-        chunk.id === chunkId
-          ? { ...chunk, judgeResult: { ...chunk.judgeResult, tokenUsage: usage } }
-          : chunk,
-      ),
-    })),
 }));
 
 function createEmptyJudgeResult(): JudgeResult {

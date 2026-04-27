@@ -94,11 +94,10 @@ export const llmService = {
     translation: string,
     config: PipelineConfig,
   ): Promise<Omit<JudgeResult, 'status'> & { inputTokens?: number; outputTokens?: number }> {
-    return invoke('judge_translation', {
-      originalText,
-      translation,
-      config,
-    });
+    return invoke<Omit<JudgeResult, 'status'> & { inputTokens?: number; outputTokens?: number }>(
+      'judge_translation',
+      { originalText, translation, config },
+    );
   },
 
   async refinePrompt(

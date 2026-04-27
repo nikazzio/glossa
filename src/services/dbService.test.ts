@@ -85,7 +85,7 @@ describe('initDatabase migrations', () => {
       expect.stringContaining('CREATE TABLE IF NOT EXISTS prompt_templates'),
     );
     expect(dbState.db.execute).toHaveBeenCalledWith(
-      expect.stringContaining('CREATE UNIQUE INDEX IF NOT EXISTS idx_prompt_templates_name'),
+      expect.stringContaining('CREATE UNIQUE INDEX IF NOT EXISTS idx_prompt_templates_name_context'),
     );
   });
 });

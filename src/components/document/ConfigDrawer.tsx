@@ -57,13 +57,15 @@ export function ConfigDrawer({
           </p>
 
           {/* Tab bar */}
-          <div className="mt-4 flex gap-0" role="tablist">
+          <div className="mt-4 flex gap-0" role="tablist" aria-label={t('document.configDrawerTitle')}>
             {TABS.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
+                id={`config-tab-${tab.id}`}
                 role="tab"
                 aria-selected={activeTab === tab.id}
+                aria-controls="config-tabpanel"
                 onClick={() => setActiveTab(tab.id)}
                 className={`px-4 py-2 text-[11px] font-bold uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent border-b-2 ${
                   activeTab === tab.id
@@ -86,14 +88,21 @@ export function ConfigDrawer({
         </button>
       </div>
 
-      <PipelineConfig
-        onRunPipeline={onRunPipeline}
-        onRunAuditOnly={onRunAuditOnly}
-        onCancelPipeline={onCancelPipeline}
-        showActions={false}
-        visibleSection={activeTab}
-        className="flex flex-1 flex-col gap-8 overflow-y-auto bg-editorial-bg/40 p-6 custom-scrollbar"
-      />
+      <div
+        id="config-tabpanel"
+        role="tabpanel"
+        aria-labelledby={`config-tab-${activeTab}`}
+        className="flex flex-1 flex-col min-h-0"
+      >
+        <PipelineConfig
+          onRunPipeline={onRunPipeline}
+          onRunAuditOnly={onRunAuditOnly}
+          onCancelPipeline={onCancelPipeline}
+          showActions={false}
+          visibleSection={activeTab}
+          className="flex flex-1 flex-col gap-8 overflow-y-auto bg-editorial-bg/40 p-6 custom-scrollbar"
+        />
+      </div>
     </Drawer>
   );
 }

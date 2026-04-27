@@ -30,7 +30,6 @@ export function usePipeline() {
     clearChunkStages,
     requestCancel,
     setIsProcessing,
-    setJudgeTokenUsage,
   } = useChunksStore();
   const { config } = usePipelineStore();
   const isProcessing = useChunksStore((state) => state.isProcessing);
@@ -156,16 +155,15 @@ export function usePipeline() {
         () => llmService.judgeTranslation(chunk.originalText, textToAudit, config),
         { label: 'Audit' },
       );
-      if (judgeData.inputTokens !== undefined && judgeData.outputTokens !== undefined) {
-        setJudgeTokenUsage(chunk.id, {
-          inputTokens: judgeData.inputTokens,
-          outputTokens: judgeData.outputTokens,
-        });
-      }
+      const judgeTokenUsage =
+        judgeData.inputTokens !== undefined && judgeData.outputTokens !== undefined
+          ? { inputTokens: judgeData.inputTokens, outputTokens: judgeData.outputTokens }
+          : undefined;
       updateChunkJudge(chunk.id, {
         ...judgeData,
         content: textToAudit,
         status: 'completed',
+        ...(judgeTokenUsage ? { tokenUsage: judgeTokenUsage } : {}),
       } as JudgeResult);
       updateChunkStatus(chunk.id, 'completed');
       return 'completed';
@@ -216,7 +214,7 @@ export function usePipeline() {
     } else {
       toast.warning(t('errors.pipelineCompletedWithErrors', { count: errorCount }));
     }
-  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, setJudgeTokenUsage]);
+  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages]);
 
   const runSingleChunk = useCallback(async (chunkId: string) => {
     if (useChunksStore.getState().isProcessing) return;
@@ -240,7 +238,7 @@ export function usePipeline() {
       // Per-chunk failure already raised a toast inside the helper; no
       // extra summary toast is needed.
     }
-  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, setJudgeTokenUsage]);
+  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages]);
 
   const runAuditOnly = useCallback(async () => {
     if (useChunksStore.getState().isProcessing) return;

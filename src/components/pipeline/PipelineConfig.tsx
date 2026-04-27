@@ -82,15 +82,27 @@ export function PipelineConfig({
   const handleSaveJudgeTemplate = async () => {
     const name = judgeTemplateName.trim();
     if (!name) return;
-    await saveTemplate(name, config.judgePrompt, 'audit');
-    toast.success(t('pipeline.templates.saved'));
-    setJudgeTemplateName('');
-    setShowJudgeSaveName(false);
+    try {
+      await saveTemplate(name, config.judgePrompt, 'audit');
+      toast.success(t('pipeline.templates.saved'));
+      setJudgeTemplateName('');
+      setShowJudgeSaveName(false);
+    } catch (err: unknown) {
+      toast.error(t('errors.somethingWentWrong'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    }
   };
 
   const handleDeleteJudgeTemplate = async (id: string) => {
-    await deleteTemplate(id);
-    toast.success(t('pipeline.templates.deleted'));
+    try {
+      await deleteTemplate(id);
+      toast.success(t('pipeline.templates.deleted'));
+    } catch (err: unknown) {
+      toast.error(t('errors.somethingWentWrong'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    }
   };
 
   const handleRerunAll = async () => {
@@ -268,7 +280,7 @@ export function PipelineConfig({
               <button
                 type="button"
                 onClick={handleRefineJudgePrompt}
-                disabled={isRefiningJudge || !config.judgePrompt.trim()}
+                disabled={isRefiningJudge || !config.judgePrompt.trim() || !config.judgeModel.trim()}
                 title={t('pipeline.refinePrompt')}
                 aria-label={t('pipeline.refinePrompt')}
                 className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40"

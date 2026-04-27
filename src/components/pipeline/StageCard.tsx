@@ -87,19 +87,31 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
   const handleSaveTemplate = async () => {
     const name = templateName.trim();
     if (!name) return;
-    await saveTemplate(name, stage.prompt, 'stage');
-    toast.success(t('pipeline.templates.saved'));
-    setTemplateName('');
-    setShowSaveName(false);
+    try {
+      await saveTemplate(name, stage.prompt, 'stage');
+      toast.success(t('pipeline.templates.saved'));
+      setTemplateName('');
+      setShowSaveName(false);
+    } catch (err: unknown) {
+      toast.error(t('pipeline.templates.saved'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    }
   };
 
   const handleDeleteTemplate = async (id: string) => {
-    await deleteTemplate(id);
-    toast.success(t('pipeline.templates.deleted'));
+    try {
+      await deleteTemplate(id);
+      toast.success(t('pipeline.templates.deleted'));
+    } catch (err: unknown) {
+      toast.error(t('errors.somethingWentWrong'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    }
   };
 
   const handleRefinePrompt = async () => {
-    if (!stage.prompt.trim()) return;
+    if (!stage.prompt.trim() || !stage.model.trim()) return;
     setIsRefining(true);
     try {
       const refined = await llmService.refinePrompt(stage.prompt, stage.provider, stage.model, 'stage');
@@ -231,7 +243,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
                 <button
                   type="button"
                   onClick={handleRefinePrompt}
-                  disabled={isRefining || !stage.prompt.trim()}
+                  disabled={isRefining || !stage.prompt.trim() || !stage.model.trim()}
                   title={t('pipeline.refinePrompt')}
                   aria-label={t('pipeline.refinePrompt')}
                   className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40"
