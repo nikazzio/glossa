@@ -203,7 +203,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
-                Prompt
+                {t('pipeline.prompt')}
               </span>
               <div className="flex items-center gap-1.5">
                 {/* Save as template */}

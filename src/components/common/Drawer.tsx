@@ -50,7 +50,7 @@ export function Drawer({
             animate={{ x: 0 }}
             exit={{ x: xOffscreen }}
             transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-            className={`relative ${positionClass} flex h-full w-full ${maxWidth} flex-col bg-editorial-bg ${borderClass} border-editorial-border shadow-2xl sm:w-[440px] md:w-[520px]`}
+            className={`relative ${positionClass} flex h-full w-full ${maxWidth} flex-col bg-editorial-bg ${borderClass} border-editorial-border shadow-2xl`}
           >
             {children}
           </motion.aside>

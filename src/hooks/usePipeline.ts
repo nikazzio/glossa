@@ -6,7 +6,7 @@ import { useChunksStore } from '../stores/chunksStore';
 import { llmService, isStreamCancelledError } from '../services/llmService';
 import { withRetry, friendlyError } from '../utils/retry';
 import { qualityDefault, qualityFailure } from '../utils';
-import type { JudgeResult, TranslationChunk } from '../types';
+import type { JudgeResult, TokenUsage, TranslationChunk } from '../types';
 
 type ChunkOutcome = 'completed' | 'failed' | 'cancelled' | 'skipped';
 
@@ -30,7 +30,6 @@ export function usePipeline() {
     clearChunkStages,
     requestCancel,
     setIsProcessing,
-    setStageTokenUsage,
     setJudgeTokenUsage,
   } = useChunksStore();
   const { config } = usePipelineStore();
@@ -75,14 +74,15 @@ export function usePipeline() {
 
       updateChunkStage(chunk.id, stage.id, { content: '', status: 'processing' });
       try {
+        let capturedUsage: TokenUsage | undefined;
         const result = await withRetry(
           async () => {
-            // Reset content for each retry attempt
+            capturedUsage = undefined;
             updateChunkStage(chunk.id, stage.id, { content: '', status: 'processing' });
             return llmService.runStageStream(
               chunk.originalText, stage, config, lastResult || undefined,
               (token) => appendChunkStageContent(chunk.id, stage.id, token),
-              (usage) => setStageTokenUsage(chunk.id, stage.id, usage),
+              (usage) => { capturedUsage = usage; },
             );
           },
           { label: `Stage "${stage.name}"` },
@@ -91,7 +91,11 @@ export function usePipeline() {
           lastResult = result;
           producedOutput = true;
         }
-        updateChunkStage(chunk.id, stage.id, { content: result, status: 'completed' });
+        updateChunkStage(chunk.id, stage.id, {
+          content: result,
+          status: 'completed',
+          ...(capturedUsage ? { tokenUsage: capturedUsage } : {}),
+        });
       } catch (error: any) {
         if (isStreamCancelledError(error)) {
           updateChunkStage(chunk.id, stage.id, { content: '', status: 'idle' });
@@ -212,7 +216,7 @@ export function usePipeline() {
     } else {
       toast.warning(t('errors.pipelineCompletedWithErrors', { count: errorCount }));
     }
-  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages]);
+  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, setJudgeTokenUsage]);
 
   const runSingleChunk = useCallback(async (chunkId: string) => {
     if (useChunksStore.getState().isProcessing) return;
@@ -236,7 +240,7 @@ export function usePipeline() {
       // Per-chunk failure already raised a toast inside the helper; no
       // extra summary toast is needed.
     }
-  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages]);
+  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, setJudgeTokenUsage]);
 
   const runAuditOnly = useCallback(async () => {
     if (useChunksStore.getState().isProcessing) return;

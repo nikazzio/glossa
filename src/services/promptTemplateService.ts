@@ -31,7 +31,7 @@ export async function getPromptTemplates(): Promise<PromptTemplate[]> {
 
 export async function savePromptTemplate(
   input: Omit<PromptTemplate, 'id' | 'createdAt'>,
-): Promise<string> {
+): Promise<void> {
   const id = generateId('tpl');
   await execute(
     `INSERT INTO prompt_templates (id, name, prompt, default_model, default_provider)
@@ -43,7 +43,6 @@ export async function savePromptTemplate(
        updated_at = CURRENT_TIMESTAMP`,
     [id, input.name, input.prompt, input.defaultModel ?? '', input.defaultProvider ?? ''],
   );
-  return id;
 }
 
 export async function deletePromptTemplate(id: string): Promise<void> {

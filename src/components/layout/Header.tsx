@@ -165,9 +165,19 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
               result.tokenUsage.outputTokens * pricing.output) /
             1_000_000;
         }
+        const judgeUsage = chunk.judgeResult.tokenUsage;
+        if (judgeUsage) {
+          const judgePricing = MODEL_PRICING[`${config.judgeProvider}/${config.judgeModel}`];
+          if (judgePricing) {
+            cost +=
+              (judgeUsage.inputTokens * judgePricing.input +
+                judgeUsage.outputTokens * judgePricing.output) /
+              1_000_000;
+          }
+        }
         return total + cost;
       }, 0),
-    [chunks, config.stages],
+    [chunks, config.stages, config.judgeProvider, config.judgeModel],
   );
   const saveStatusLabel =
     saveState === 'dirty'

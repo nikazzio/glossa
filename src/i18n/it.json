@@ -105,6 +105,7 @@
     "chunkActions": "Azioni blocco",
     "retranslateChunk": "Ri-traduci questo blocco",
     "reauditChunk": "Ri-valuta questo blocco",
+    "prompt": "Prompt",
     "glossaryEmpty": "Nessun termine nel registro. Usa + per aggiungerne uno.",
     "glossaryNotes": "Note",
     "templates": {

@@ -105,6 +105,7 @@
     "chunkActions": "Chunk actions",
     "retranslateChunk": "Re-translate this chunk",
     "reauditChunk": "Re-audit this chunk",
+    "prompt": "Prompt",
     "glossaryEmpty": "No terms in the registry. Use + to add one.",
     "glossaryNotes": "Notes",
     "templates": {
