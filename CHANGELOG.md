@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/nikazzio/glossa/compare/glossa-v0.3.0...glossa-v0.3.1) (2026-04-27)
+
+
+### 🐛 Bug Fixes
+
+* SQLite lock contention, header UI refactor, settings persistence ([#46](https://github.com/nikazzio/glossa/issues/46)) ([f997f4b](https://github.com/nikazzio/glossa/commit/f997f4bbce7e6672cf864f7f90cebddb73102674))
+
 ## [0.3.0](https://github.com/nikazzio/glossa/compare/glossa-v0.2.2...glossa-v0.3.0) (2026-04-27)
 
 
