@@ -220,6 +220,7 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
         chunk.id === chunkId ? { ...chunk, stageResults: {} } : chunk,
       ),
     })),
+
 }));
 
 function createEmptyJudgeResult(): JudgeResult {

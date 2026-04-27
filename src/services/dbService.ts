@@ -137,6 +137,25 @@ export async function initDatabase(): Promise<void> {
     )
   `);
 
+  await conn.execute(`
+    CREATE TABLE IF NOT EXISTS prompt_templates (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      prompt TEXT NOT NULL,
+      default_model TEXT DEFAULT '',
+      default_provider TEXT DEFAULT '',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await ensureColumn('prompt_templates', 'context', "TEXT NOT NULL DEFAULT 'stage'");
+  // Migrate unique index from (name) to (name, context) so stage/audit can share names
+  await conn.execute('DROP INDEX IF EXISTS idx_prompt_templates_name');
+  await conn.execute(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_prompt_templates_name_context
+    ON prompt_templates(name, context)
+  `);
+
   console.log('[Glossa] Database initialized');
 }
 

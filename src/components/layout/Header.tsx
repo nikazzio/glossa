@@ -2,6 +2,7 @@ import {
   FolderOpen,
   Globe,
   HelpCircle,
+  LayoutTemplate,
   Save,
   Settings,
   SlidersHorizontal,
@@ -19,6 +20,7 @@ import { PipelineActions } from '../pipeline';
 import { calculateCompositeQuality, qualityLabelKey } from '../../utils';
 import { importTextFile, exportTranslation, exportBilingual } from '../../services/fileService';
 import { HelpGuide } from '../help';
+import { MODEL_PRICING } from '../../constants';
 
 interface PendingImport {
   fileName: string;
@@ -79,7 +81,6 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
 
   const handleConfirmImport = () => {
     if (!pendingImport) return;
-
     setConfig((prev) => ({
       ...prev,
       useChunking: pendingImport.useChunking,
@@ -115,14 +116,14 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
   };
 
   const importLabel = t('files.import');
-  const exportTxtLabel = t('files.exportTxt');
-  const exportMdLabel = t('files.exportBilingual');
   const projectsLabel = t('projects.title');
   const saveLabel = t('projects.save');
   const langLabel = t('language.label');
   const settingsLabel = t('header.settings');
   const helpLabel = t('help.title');
   const openConfigLabel = t('header.openConfig');
+  const sandboxLabel = viewMode === 'sandbox' ? t('header.exitSandbox') : t('header.sandbox');
+
   const sourceWords = useMemo(
     () => chunks.reduce((acc, chunk) => acc + countWords(chunk.originalText), 0),
     [chunks],
@@ -134,6 +135,51 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
   const completedCount = chunks.filter((chunk) => chunk.status === 'completed').length;
   const compositeQuality = useMemo(() => calculateCompositeQuality(chunks), [chunks]);
   const compositeLabel = compositeQuality ? t(qualityLabelKey(compositeQuality)) : null;
+
+  const totalTokens = useMemo(
+    () =>
+      chunks.reduce((sum, chunk) => {
+        const stageSum = Object.values(chunk.stageResults).reduce(
+          (s, r) => s + (r.tokenUsage?.inputTokens ?? 0) + (r.tokenUsage?.outputTokens ?? 0),
+          0,
+        );
+        const judgeSum =
+          (chunk.judgeResult.tokenUsage?.inputTokens ?? 0) +
+          (chunk.judgeResult.tokenUsage?.outputTokens ?? 0);
+        return sum + stageSum + judgeSum;
+      }, 0),
+    [chunks],
+  );
+
+  const estimatedCostUsd = useMemo(
+    () =>
+      chunks.reduce((total, chunk) => {
+        let cost = 0;
+        for (const [stageId, result] of Object.entries(chunk.stageResults)) {
+          const stage = config.stages.find((s) => s.id === stageId);
+          if (!stage || !result.tokenUsage) continue;
+          const pricing = MODEL_PRICING[`${stage.provider}/${stage.model}`];
+          if (!pricing) continue;
+          cost +=
+            (result.tokenUsage.inputTokens * pricing.input +
+              result.tokenUsage.outputTokens * pricing.output) /
+            1_000_000;
+        }
+        const judgeUsage = chunk.judgeResult.tokenUsage;
+        if (judgeUsage) {
+          const judgePricing = MODEL_PRICING[`${config.judgeProvider}/${config.judgeModel}`];
+          if (judgePricing) {
+            cost +=
+              (judgeUsage.inputTokens * judgePricing.input +
+                judgeUsage.outputTokens * judgePricing.output) /
+              1_000_000;
+          }
+        }
+        return total + cost;
+      }, 0),
+    [chunks, config.stages, config.judgeProvider, config.judgeModel],
+  );
+
   const saveStatusLabel =
     saveState === 'dirty'
       ? t('projects.statusDirty')
@@ -148,6 +194,8 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
   return (
     <header className="border-b border-editorial-border bg-[linear-gradient(180deg,#fffdf8_0%,#f8f3ea_100%)] px-6 py-5 md:px-10">
       <div className="flex flex-col gap-5">
+
+        {/* ── Riga 1: logo + azioni ── */}
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex flex-wrap items-center gap-4">
             <div>
@@ -181,7 +229,7 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
           </div>
 
           <div className="flex flex-wrap items-center justify-end gap-2">
-            {/* Azioni progetto: senza etichetta, le icone parlano da sole */}
+            {/* Azioni progetto */}
             <ActionCluster>
               <div className="flex flex-wrap items-center gap-1">
                 <IconButton
@@ -218,29 +266,7 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
               </div>
             </ActionCluster>
 
-            {/* Esporta: visibile solo quando ci sono chunk */}
-            {chunks.length > 0 && (
-              <ActionCluster label={t('header.exportLabel')}>
-                <div className="flex items-center gap-1">
-                  <TextChipButton
-                    onClick={() => handleExport('txt')}
-                    title={exportTxtLabel}
-                    ariaLabel={exportTxtLabel}
-                  >
-                    TXT
-                  </TextChipButton>
-                  <TextChipButton
-                    onClick={() => handleExport('bilingual')}
-                    title={exportMdLabel}
-                    ariaLabel={exportMdLabel}
-                  >
-                    MD
-                  </TextChipButton>
-                </div>
-              </ActionCluster>
-            )}
-
-            {/* Strumenti: lingua/impostazioni/aiuto senza etichetta */}
+            {/* Strumenti + sandbox */}
             <ActionCluster>
               <div className="flex flex-wrap items-center gap-1">
                 <button
@@ -262,42 +288,56 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
                 <IconButton onClick={() => setShowHelp(true)} title={helpLabel} ariaLabel={helpLabel}>
                   <HelpCircle size={16} />
                 </IconButton>
+                <span className="mx-1 h-5 w-px bg-editorial-border/70" aria-hidden="true" />
+                <button
+                  type="button"
+                  onClick={() => setViewMode(viewMode === 'sandbox' ? 'document' : 'sandbox')}
+                  title={sandboxLabel}
+                  aria-label={sandboxLabel}
+                  aria-pressed={viewMode === 'sandbox'}
+                  className={`flex items-center gap-1.5 rounded-full border px-3 py-2 text-[10px] font-bold uppercase tracking-[0.22em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                    viewMode === 'sandbox'
+                      ? 'border-editorial-ink bg-editorial-ink text-white'
+                      : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
+                  }`}
+                >
+                  <LayoutTemplate size={13} />
+                  {sandboxLabel}
+                </button>
               </div>
             </ActionCluster>
-
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-editorial-border/60 pt-4 xl:flex-row xl:items-center xl:justify-between">
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setViewMode(viewMode === 'sandbox' ? 'document' : 'sandbox')}
-              className="rounded-full border border-editorial-border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.22em] text-editorial-muted transition-colors hover:border-editorial-ink hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            >
-              {viewMode === 'sandbox' ? t('header.exitSandbox') : t('header.sandbox')}
-            </button>
-            {viewMode === 'document' && (
-              <HeaderInfoBar
-                sourceWords={sourceWords}
-                translatedWords={translatedWords}
-                completedCount={completedCount}
-                chunkCount={chunks.length}
-                compositeLabel={compositeLabel}
-              />
+        {/* ── Riga 2: riepilogo + pipeline (solo documento) ── */}
+        {viewMode === 'document' && (
+          <div className="flex flex-col gap-3 border-t border-editorial-border/60 pt-4 xl:flex-row xl:items-center xl:justify-between">
+            <HeaderInfoBar
+              sourceWords={sourceWords}
+              translatedWords={translatedWords}
+              completedCount={completedCount}
+              chunkCount={chunks.length}
+              compositeLabel={compositeLabel}
+              totalTokens={totalTokens}
+              estimatedCostUsd={estimatedCostUsd}
+              hasChunks={chunks.length > 0}
+              onExportTxt={() => handleExport('txt')}
+              onExportMd={() => handleExport('bilingual')}
+              exportTxtLabel={t('files.exportTxt')}
+              exportMdLabel={t('files.exportBilingual')}
+            />
+            {onRunPipeline && onRunAuditOnly && onCancelPipeline && (
+              <div className="flex flex-wrap items-center justify-end">
+                <PipelineActions
+                  onRunPipeline={onRunPipeline}
+                  onRunAuditOnly={onRunAuditOnly}
+                  onCancelPipeline={onCancelPipeline}
+                  variant="compact"
+                />
+              </div>
             )}
           </div>
-          {viewMode === 'document' && onRunPipeline && onRunAuditOnly && onCancelPipeline && (
-            <div className="flex flex-wrap items-center justify-end">
-              <PipelineActions
-                onRunPipeline={onRunPipeline}
-                onRunAuditOnly={onRunAuditOnly}
-                onCancelPipeline={onCancelPipeline}
-                variant="compact"
-              />
-            </div>
-          )}
-        </div>
+        )}
       </div>
 
       <HelpGuide open={showHelp} onClose={() => setShowHelp(false)} />
@@ -386,46 +426,36 @@ function IconButton({
   );
 }
 
-function TextChipButton({
-  onClick,
-  children,
-  title,
-  ariaLabel,
-}: {
-  onClick: () => void;
-  children: React.ReactNode;
-  title: string;
-  ariaLabel: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      title={title}
-      aria-label={ariaLabel}
-      className="rounded-full px-3 py-2 text-[9px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-    >
-      {children}
-    </button>
-  );
-}
-
 function HeaderInfoBar({
   sourceWords,
   translatedWords,
   completedCount,
   chunkCount,
   compositeLabel,
+  totalTokens,
+  estimatedCostUsd,
+  hasChunks,
+  onExportTxt,
+  onExportMd,
+  exportTxtLabel,
+  exportMdLabel,
 }: {
   sourceWords: number;
   translatedWords: number;
   completedCount: number;
   chunkCount: number;
   compositeLabel: string | null;
+  totalTokens: number;
+  estimatedCostUsd: number;
+  hasChunks: boolean;
+  onExportTxt: () => void;
+  onExportMd: () => void;
+  exportTxtLabel: string;
+  exportMdLabel: string;
 }) {
   const { t } = useTranslation();
 
-  const items = [
+  const items: { key: string; label: string; value: string }[] = [
     {
       key: 'source',
       label: t('document.infoSourceWords'),
@@ -451,6 +481,18 @@ function HeaderInfoBar({
     });
   }
 
+  items.push({
+    key: 'tokens',
+    label: t('header.tokenCount'),
+    value: totalTokens > 0 ? totalTokens.toLocaleString() : '—',
+  });
+
+  items.push({
+    key: 'cost',
+    label: t('header.estimatedCost'),
+    value: totalTokens > 0 ? `$${estimatedCostUsd.toFixed(4)}` : '—',
+  });
+
   return (
     <dl className="flex flex-wrap items-center gap-2 rounded-full border border-editorial-border bg-editorial-bg px-2 py-1.5 shadow-sm">
       <div className="rounded-full bg-editorial-textbox/40 px-3 py-1 text-[9px] font-bold uppercase tracking-[0.22em] text-editorial-muted/80">
@@ -464,6 +506,29 @@ function HeaderInfoBar({
           <dd className="font-display text-sm italic text-editorial-ink">{item.value}</dd>
         </div>
       ))}
+      {hasChunks && (
+        <>
+          <span className="mx-1 h-5 w-px bg-editorial-border/70" aria-hidden="true" />
+          <button
+            type="button"
+            onClick={onExportTxt}
+            title={exportTxtLabel}
+            aria-label={exportTxtLabel}
+            className="rounded-full px-3 py-1 text-[9px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          >
+            TXT
+          </button>
+          <button
+            type="button"
+            onClick={onExportMd}
+            title={exportMdLabel}
+            aria-label={exportMdLabel}
+            className="rounded-full px-3 py-1 text-[9px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          >
+            MD
+          </button>
+        </>
+      )}
     </dl>
   );
 }

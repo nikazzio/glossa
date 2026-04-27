@@ -6,7 +6,7 @@ import { useChunksStore } from '../stores/chunksStore';
 import { llmService, isStreamCancelledError } from '../services/llmService';
 import { withRetry, friendlyError } from '../utils/retry';
 import { qualityDefault, qualityFailure } from '../utils';
-import type { JudgeResult, TranslationChunk } from '../types';
+import type { JudgeResult, TokenUsage, TranslationChunk } from '../types';
 
 type ChunkOutcome = 'completed' | 'failed' | 'cancelled' | 'skipped';
 
@@ -73,13 +73,15 @@ export function usePipeline() {
 
       updateChunkStage(chunk.id, stage.id, { content: '', status: 'processing' });
       try {
+        let capturedUsage: TokenUsage | undefined;
         const result = await withRetry(
           async () => {
-            // Reset content for each retry attempt
+            capturedUsage = undefined;
             updateChunkStage(chunk.id, stage.id, { content: '', status: 'processing' });
             return llmService.runStageStream(
               chunk.originalText, stage, config, lastResult || undefined,
               (token) => appendChunkStageContent(chunk.id, stage.id, token),
+              (usage) => { capturedUsage = usage; },
             );
           },
           { label: `Stage "${stage.name}"` },
@@ -88,7 +90,11 @@ export function usePipeline() {
           lastResult = result;
           producedOutput = true;
         }
-        updateChunkStage(chunk.id, stage.id, { content: result, status: 'completed' });
+        updateChunkStage(chunk.id, stage.id, {
+          content: result,
+          status: 'completed',
+          ...(capturedUsage ? { tokenUsage: capturedUsage } : {}),
+        });
       } catch (error: any) {
         if (isStreamCancelledError(error)) {
           updateChunkStage(chunk.id, stage.id, { content: '', status: 'idle' });
@@ -149,10 +155,15 @@ export function usePipeline() {
         () => llmService.judgeTranslation(chunk.originalText, textToAudit, config),
         { label: 'Audit' },
       );
+      const judgeTokenUsage =
+        judgeData.inputTokens !== undefined && judgeData.outputTokens !== undefined
+          ? { inputTokens: judgeData.inputTokens, outputTokens: judgeData.outputTokens }
+          : undefined;
       updateChunkJudge(chunk.id, {
         ...judgeData,
         content: textToAudit,
         status: 'completed',
+        ...(judgeTokenUsage ? { tokenUsage: judgeTokenUsage } : {}),
       } as JudgeResult);
       updateChunkStatus(chunk.id, 'completed');
       return 'completed';

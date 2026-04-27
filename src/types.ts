@@ -30,10 +30,26 @@ export interface TranslationChunk {
   currentDraft?: string;
 }
 
+export interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+}
+
+export interface PromptTemplate {
+  id: string;
+  name: string;
+  prompt: string;
+  context: 'stage' | 'audit';
+  defaultModel?: string;
+  defaultProvider?: string;
+  createdAt: string;
+}
+
 export interface PipelineResult {
   content: string;
   status: 'idle' | 'processing' | 'completed' | 'error';
   error?: string;
+  tokenUsage?: TokenUsage;
 }
 
 export interface JudgeResult extends PipelineResult {

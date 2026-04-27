@@ -8,6 +8,7 @@ interface DrawerProps {
   onClose: () => void;
   ariaLabelledBy: string;
   ariaDescribedBy?: string;
+  maxWidth?: string;
   children: ReactNode;
 }
 
@@ -17,6 +18,7 @@ export function Drawer({
   onClose,
   ariaLabelledBy,
   ariaDescribedBy,
+  maxWidth = 'max-w-[520px]',
   children,
 }: DrawerProps) {
   const trapRef = useFocusTrap(open, onClose);
@@ -48,7 +50,7 @@ export function Drawer({
             animate={{ x: 0 }}
             exit={{ x: xOffscreen }}
             transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-            className={`relative ${positionClass} flex h-full w-full max-w-[520px] flex-col bg-editorial-bg ${borderClass} border-editorial-border shadow-2xl sm:w-[440px] md:w-[480px]`}
+            className={`relative ${positionClass} flex h-full w-full ${maxWidth} flex-col bg-editorial-bg ${borderClass} border-editorial-border shadow-2xl`}
           >
             {children}
           </motion.aside>

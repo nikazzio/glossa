@@ -30,6 +30,21 @@ export const MODEL_OPTIONS: Record<ModelProvider, string[]> = {
   ollama: [], // Dynamic — populated at runtime from local Ollama instance
 };
 
+// Prezzi in USD per 1M token (input/output). Aggiornare periodicamente.
+export const MODEL_PRICING: Record<string, { input: number; output: number }> = {
+  'gemini/gemini-2.5-flash-preview':    { input: 0.15,  output: 0.60  },
+  'gemini/gemini-3-flash-preview':      { input: 0.075, output: 0.30  },
+  'gemini/gemini-3.1-pro-preview':      { input: 1.25,  output: 5.00  },
+  'gemini/gemini-2.5-flash-lite-preview': { input: 0.10, output: 0.40 },
+  'openai/gpt-4o':                      { input: 2.50,  output: 10.00 },
+  'openai/gpt-4o-mini':                 { input: 0.15,  output: 0.60  },
+  'openai/o1-preview':                  { input: 15.00, output: 60.00 },
+  'anthropic/claude-3-5-sonnet-latest': { input: 3.00,  output: 15.00 },
+  'anthropic/claude-3-haiku-latest':    { input: 0.25,  output: 1.25  },
+  'deepseek/deepseek-chat':             { input: 0.27,  output: 1.10  },
+  'deepseek/deepseek-reasoner':         { input: 0.55,  output: 2.19  },
+};
+
 export const LANGUAGES = [
   'English',
   'Italian',

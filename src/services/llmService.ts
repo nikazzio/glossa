@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import type { PipelineConfig, PipelineStageConfig, JudgeResult } from '../types';
+import type { PipelineConfig, PipelineStageConfig, JudgeResult, TokenUsage } from '../types';
 import { useChunksStore } from '../stores/chunksStore';
 
 /// Sentinel string returned by the Rust backend when a stream is
@@ -18,6 +18,8 @@ interface StreamTokenPayload {
   streamId: string;
   token: string;
   done: boolean;
+  inputTokens?: number;
+  outputTokens?: number;
 }
 
 /**
@@ -50,12 +52,20 @@ export const llmService = {
     config: PipelineConfig,
     previousResult: string | undefined,
     onToken: (token: string) => void,
+    onUsage?: (usage: TokenUsage) => void,
   ): Promise<string> {
     const streamId = `stream-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
     const unlisten = await listen<StreamTokenPayload>('stream-token', (event) => {
-      if (event.payload.streamId === streamId && !event.payload.done) {
+      if (event.payload.streamId !== streamId) return;
+      if (!event.payload.done) {
         onToken(event.payload.token);
+      } else if (
+        onUsage &&
+        event.payload.inputTokens !== undefined &&
+        event.payload.outputTokens !== undefined
+      ) {
+        onUsage({ inputTokens: event.payload.inputTokens, outputTokens: event.payload.outputTokens });
       }
     });
 
@@ -83,16 +93,20 @@ export const llmService = {
     originalText: string,
     translation: string,
     config: PipelineConfig,
-  ): Promise<Omit<JudgeResult, 'status'>> {
-    return invoke<Omit<JudgeResult, 'status'>>('judge_translation', {
-      originalText,
-      translation,
-      config,
-    });
+  ): Promise<Omit<JudgeResult, 'status'> & { inputTokens?: number; outputTokens?: number }> {
+    return invoke<Omit<JudgeResult, 'status'> & { inputTokens?: number; outputTokens?: number }>(
+      'judge_translation',
+      { originalText, translation, config },
+    );
   },
 
-  async optimizePrompt(currentPrompt: string): Promise<string> {
-    return invoke<string>('optimize_prompt', { currentPrompt });
+  async refinePrompt(
+    prompt: string,
+    provider: string,
+    model: string,
+    context: 'stage' | 'audit',
+  ): Promise<string> {
+    return invoke<string>('refine_prompt', { prompt, provider, model, context });
   },
 
   async testConnection(provider: string): Promise<boolean> {

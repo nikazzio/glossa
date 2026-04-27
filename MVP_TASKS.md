@@ -1,22 +1,21 @@
 # Glossa — MVP Tasks
 
 > Roadmap attiva e priorità operative.
-> Aggiornata al 2026-04-26 dopo il merge della PR `#40` (S4-T4) e della PR `#41` (import `docx`/`pdf`) su `main`.
+> Aggiornata al 2026-04-27 dopo il merge della PR `#45` (S4-T4b document drawers) e della PR `#46` (bugfix SQLite lock, header refactor, settings persistence) su `main`.
 
 ---
 
 ## Valutazione oggettiva
 
-- Il repo non è più un wireframe fragile: lo Sprint 1 è chiuso, `S4-T1`, `S4-T2`, `S4-T3` e `S4-T4` risultano integrati su `main`.
-- Il frontend è in uno stato sano per continuare il refactor: `npm run lint`, `npm test` e `npm run build` sono verdi; i test Vitest passano (`56/56`) e i test Rust su `documents` (`5/5`).
-- Il workflow documento è ora il default operativo: autosave con stato esplicito, anteprima import multi-formato (`txt` / `md` / `docx` / `pdf`), split manuale del chunk e promozione esplicita da Sandbox a Documento sono tutti su `main`. Il pezzo residuo è la semplificazione profonda dei pannelli di `DocumentView` (drawer audit/indice, riordino superfici), tracciato come `S4-T4b`.
+- Il repo non è più un wireframe fragile: lo Sprint 1 è chiuso, `S4-T1` → `S4-T4b` sono tutti integrati su `main`.
+- Il frontend è in uno stato sano: `npm run lint`, `npm test` e `npm run build` sono verdi.
+- Il workflow documento è completo e stabile: autosave, import multi-formato, split manuale, drawer audit/indice a scomparsa con tab-handle, InsightsDrawer aperto di default, header riorganizzato con Config/Export/Strumenti separati. Il bug critico del lock SQLite (busy_timeout da 5s) è risolto con write serializer + WAL mode. La preferenza layout lettura è ora persistita globalmente in localStorage.
 - Priorità reale oggi:
-  1. chiudere `S4-T4b` (semplificazione `DocumentView` con drawer/pannelli a scomparsa) per consolidare la UX documento prima di aprire nuove superfici;
-  2. sopra quella base, aggiungere librerie riusabili e rifiniture UX (`S4-T5a`, `S4-T5b`, `S4-T6`);
-  3. prima della prima release pubblica, chiudere i blocker di stabilità, sicurezza e packaging (`S2-*`);
-  4. solo dopo, affrontare il refactor profondo di `llm.rs` e il resto della qualità interna (`S3-*`).
+  1. aggiungere librerie prompt riusabili (`S4-T5a`) o dizionari (`S4-T5b`), in base a cosa vale di più per l'utente esperto;
+  2. prima della prima release pubblica, chiudere i blocker di stabilità, sicurezza e packaging (`S2-*`);
+  3. solo dopo, affrontare il refactor profondo di `llm.rs` e il resto della qualità interna (`S3-*`).
 
-In breve: se la domanda è "cosa fare adesso?", la risposta non è Sprint 2 o Sprint 3. La risposta è chiudere `S4-T4b` (drawer audit/indice in `DocumentView`) prima di passare a `S4-T5`.
+In breve: il blocco UX core è chiuso. Si può scegliere se andare verso feature (S4-T5a/b) o verso release-readiness (S2-*).
 
 ---
 
@@ -48,6 +47,7 @@ In breve: se la domanda è "cosa fare adesso?", la risposta non è Sprint 2 o Sp
 - `S4-T2` rilancio per blocco e drill-down audit
 - `S4-T3` split degli store (`uiStore` / `pipelineStore` / `chunksStore`) e selettore Sandbox/Documento
 - `S4-T4` workflow documento, anteprima import multi-formato (`txt` / `md` / `docx` / `pdf`), split manuale del chunk e autosave con stato esplicito
+- `S4-T4b` semplificazione `DocumentView`: InsightsDrawer a scomparsa con tab-handle, ConfigDrawer separato, header riorganizzato; + bugfix SQLite lock contention e persistenza `documentLayout`
 
 ### Evidenze concrete nel codice
 
@@ -64,7 +64,7 @@ In breve: se la domanda è "cosa fare adesso?", la risposta non è Sprint 2 o Sp
 
 ### Sequenza consigliata
 
-1. `S4-T4b` — semplificazione `DocumentView` con drawer/pannelli a scomparsa
+1. ~~`S4-T4b`~~ — ✅ completata
 2. `S4-T5a` — libreria prompt
 3. `S4-T5b` — dizionari riusabili
 4. `S4-T6` — export combinato e polish UX
@@ -83,15 +83,15 @@ In breve: se la domanda è "cosa fare adesso?", la risposta non è Sprint 2 o Sp
 
 ### S4-T4b — Semplificazione `DocumentView` (drawer audit/indice)
 
-- **Stato**: `da fare`
-- **Priorità**: prima cosa del blocco UX core, prosegue il lavoro di `S4-T4`.
-- **Esito atteso**:
-  - testo al centro come superficie dominante;
-  - trace degli stage compatta, sempre visibile;
-  - indice chunk e audit nello stesso pannello laterale a scomparsa, non più sempre aperti nel flusso verticale;
-  - colonna `PipelineConfig` meno dominante quando si è in Documento.
-- **Accettazione**:
-  - in Documento il canvas centrale è il testo, mentre indice chunk e audit non occupano in modo fisso il canvas centrale.
+- **Stato**: `completata`
+- **Mergiata in**: PR `#45` (drawer audit/indice) + PR `#46` (bugfix e rifinitura header/settings).
+- **Cosa è dentro**:
+  - InsightsDrawer (audit + indice chunk) aperto di default, chiudibile, con tab-handle verticale per riaprirlo senza passare dall'header;
+  - ConfigDrawer (prompt pipeline) separato dall'header, accessibile tramite icona SlidersHorizontal solo in modalità Documento;
+  - header riorganizzato: cluster PROGETTO e STRUMENTI senza label, chip TXT/MD per l'export, pulsante Sandbox testuale nella seconda riga;
+  - bugfix critico SQLite: rimosso `BEGIN/COMMIT` manuale (rotto con il connection pool Tauri), introdotta coda JS `serializeWrite` + WAL mode + `busy_timeout=10000`;
+  - `documentLayout` persistito in `localStorage` tramite `zustand/middleware/persist` (sopravvive ai riavvii, indipendente dal progetto);
+  - layout lettura spostato dal header al pannello Impostazioni.
 
 ### S4-T5a — Libreria di modelli di prompt
 
@@ -208,6 +208,7 @@ In breve: se la domanda è "cosa fare adesso?", la risposta non è Sprint 2 o Sp
 - [x] `S4-T1` — Protezione dei blocchi completati (`190aa11`)
 - [x] `S4-T2` — Rilancio per blocco e drill-down audit (`572dd17`)
 - [x] `S4-T3` — Suddivisione store e selettore Sandbox/Documento
+- [x] `S4-T4b` — Semplificazione DocumentView: drawer a scomparsa, header refactor, bugfix SQLite, persistenza layout (PR `#45` + PR `#46`)
 
 ---
 
@@ -227,9 +228,9 @@ In breve: se la domanda è "cosa fare adesso?", la risposta non è Sprint 2 o Sp
 
 ## Decisione operativa
 
-Se il focus resta il refactor che stai gia implementando, il prossimo lavoro corretto e:
+Il blocco UX core (`S4-T4b`) è chiuso. Il prossimo step dipende dalla direzione che si vuole dare:
 
-1. chiudere i residui di `S4-T4` (import `docx`/`pdf` e drawer audit/indice)
-2. poi scegliere fra `S4-T5a` e `S4-T5b` in base a cosa vuoi rendere riusabile per primo
+- **Feature per l'utente esperto**: iniziare da `S4-T5a` (libreria prompt) che porta valore immediato al workflow di traduzione.
+- **Avvicinarsi a una release pubblica**: anticipare `S2-T4` (watchdog stream bloccato) e `S2-T5` (whitelist ensureColumn) che sono i due blocker funzionali più concreti.
 
-Se invece il focus cambia da "finire il refactor" a "spedire una prima release pubblica", allora dopo `S4-T4` vanno anticipati `S2-T4`, `S2-T5` e `S2-T2`.
+I dizionari (`S4-T5b`) e l'export avanzato (`S4-T6`) vengono dopo, dipendono dalla stabilità del flusso progetto.

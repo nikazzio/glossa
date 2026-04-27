@@ -18,7 +18,9 @@
     "openInsights": "Apri pannello insight",
     "closeDrawer": "Chiudi pannello",
     "enterSandbox": "Passa a Sandbox",
-    "exitSandbox": "Esci da Sandbox"
+    "exitSandbox": "Esci da Sandbox",
+    "tokenCount": "Token",
+    "estimatedCost": "Costo stimato"
   },
   "pipeline": {
     "globalSetup": "Configurazione Globale",
@@ -102,7 +104,26 @@
     "auditSkippedNoDraft": "Nessuna traduzione da valutare — traduci prima questo blocco.",
     "chunkActions": "Azioni blocco",
     "retranslateChunk": "Ri-traduci questo blocco",
-    "reauditChunk": "Ri-valuta questo blocco"
+    "reauditChunk": "Ri-valuta questo blocco",
+    "prompt": "Prompt",
+    "tabStages": "Fasi",
+    "tabAudit": "Audit",
+    "tabGlossary": "Registro",
+    "glossaryEmpty": "Nessun termine nel registro. Usa + per aggiungerne uno.",
+    "glossaryNotes": "Note",
+    "templates": {
+      "save": "Salva come template",
+      "load": "Carica template",
+      "namePlaceholder": "Nome template...",
+      "searchPlaceholder": "Cerca template...",
+      "empty": "Nessun template salvato",
+      "saved": "Template salvato",
+      "deleted": "Template eliminato"
+    },
+    "refinePrompt": "Rifinisci prompt",
+    "refining": "Rifinendo...",
+    "refined": "Prompt rifinito",
+    "refineFailed": "Rifinizione fallita"
   },
   "audit": {
     "title": "Log Audit",
@@ -277,13 +298,14 @@
     "sections": {
       "overview": "Panoramica",
       "pipeline": "Pipeline",
+      "features": "Funzionalità",
       "streaming": "Streaming",
       "audit": "Audit",
       "projects": "Progetti",
       "providers": "Provider",
       "ollama": "Ollama",
       "glossary": "Glossario",
-      "shortcuts": "Toolbar"
+      "shortcuts": "Interfaccia"
     },
     "overview": {
       "title": "Cos'è Glossa?",
@@ -300,17 +322,33 @@
     },
     "pipeline": {
       "title": "Configurazione Pipeline",
-      "intro": "Il pannello sinistro contiene tutte le impostazioni della pipeline. Ecco come configurare una sessione di traduzione:",
+      "intro": "Tutte le impostazioni della pipeline sono accessibili dal pannello di configurazione (icona ingranaggio nell'header). Il pannello si apre su 3 tab e non oscura il documento. Ecco come configurare una sessione di traduzione:",
       "configTitle": "Coppia linguistica",
       "configDesc": "Seleziona le lingue sorgente e destinazione dai menu a tendina. Usa il pulsante di scambio (⇄) per invertire rapidamente la direzione. Attiva 'Segmentazione Automatica' per dividere il testo in blocchi per paragrafo.",
       "stagesTitle": "Fasi di traduzione",
-      "stagesDesc": "Ogni fase rappresenta un passaggio LLM. Clicca + per aggiungere fasi. Espandi una fase per configurare provider, modello e prompt. Il prompt indica all'LLM su cosa concentrarsi — es. 'Concentrati sulla fedeltà letterale' per la fase 1, 'Rendi il testo naturale e fluido' per la fase 2. Puoi disabilitare le fasi senza eliminarle.",
+      "stagesDesc": "Ogni fase rappresenta un passaggio LLM. Clicca + per aggiungere fasi. Espandi una fase per configurare provider, modello e prompt. Usa la bacchetta magica per far riscrivere il prompt dall'IA, oppure salva/carica prompt come template riutilizzabili con i pulsanti segnalibro. Puoi disabilitare le fasi senza eliminarle.",
       "runTitle": "Esecuzione della pipeline",
       "runDesc": "Dopo aver incollato il testo nel pannello centrale e cliccato 'Prepara Contenuto', premi 'Avvia Pipeline'. Ogni fase viene eseguita in sequenza per ogni blocco e vedrai i token apparire in tempo reale. Il giudice si avvia automaticamente dopo tutte le fasi.",
       "editTitle": "Modifica del risultato",
       "editDesc": "Il box 'Traduzione Candidata' è completamente modificabile. Apporta le correzioni manuali, poi clicca 'Rivaluta Bozze' nel pannello audit per ottenere una valutazione aggiornata sulle tue modifiche.",
       "tipTitle": "Consiglio: mescola i provider",
       "tipDesc": "Usa modelli diversi per fasi diverse. Un modello veloce (Gemini Flash, DeepSeek) va bene per le bozze iniziali, mentre un modello più potente (GPT-4o, Claude Sonnet) eccelle nel raffinamento e nella valutazione. I modelli Ollama sono ideali per il lavoro offline o contenuti sensibili."
+    },
+    "features": {
+      "title": "Funzionalità Avanzate",
+      "intro": "Questa sezione descrive le funzionalità più recenti aggiunte a Glossa.",
+      "configDrawerTitle": "Pannello di Configurazione (3 tab)",
+      "configDrawerDesc": "Il pannello di configurazione si apre cliccando l'icona ingranaggio nell'header. È organizzato su tre tab: Fasi (modelli, provider e prompt per ogni fase di traduzione), Audit (configurazione del giudice AI e template di valutazione), Registro (gestione del glossario dei termini). Il pannello è un drawer laterale che si sovrappone al documento senza ostruire il testo.",
+      "templatesTitle": "Template Prompt",
+      "templatesDesc": "In ogni fase di traduzione e nel Controllo Qualità puoi salvare i prompt come template riutilizzabili. Clicca il segnalibro (+) per salvare il prompt corrente assegnandogli un nome; il libro aperto per sfogliare e caricare i template salvati (con ricerca). I template sono separati per contesto: quelli salvati in una fase non appaiono nell'Audit e viceversa. Salvare un template con un nome già esistente lo aggiorna automaticamente.",
+      "refineTitle": "Rifinisci Prompt",
+      "refineDesc": "L'icona bacchetta magica accanto all'etichetta 'Prompt' in ogni fase e nel Controllo Qualità invia il prompt corrente all'IA usando il provider e modello già selezionati per quella fase. L'IA lo riscrive in modo più professionale ed efficace: per le fasi di traduzione usa un meta-prompt specializzato per pipeline multi-stadio; per il Controllo Qualità usa uno specializzato per valutazione QA. Il risultato appare immediatamente nella textarea — modificalo liberamente o usa Ctrl+Z per annullare.",
+      "tokenTitle": "Conteggio Token e Costo Stimato",
+      "tokenDesc": "L'header mostra in tempo reale il numero totale di token consumati e il costo stimato per la sessione corrente, basato sui prezzi ufficiali di ciascun provider. I token vengono tracciati separatamente per ogni fase e per il giudice. Il contatore si aggiorna dopo ogni blocco completato.",
+      "sandboxTitle": "Modalità Sandbox e Documento",
+      "sandboxDesc": "Il pulsante Sandbox nell'header alterna tra due modalità di lavoro. Sandbox è ideale per test rapidi, confronto di modelli e traduzione di brevi estratti su un testo singolo senza blocchi. Documento attiva il lettore di chunk, l'indice navigabile, il pannello insight e i controlli avanzati di segmentazione — adatto per testi lunghi da tradurre in più blocchi.",
+      "exportTitle": "Esportazione",
+      "exportDesc": "I pulsanti di esportazione si trovano nel pannello Riepilogo dell'header (visibile quando ci sono blocchi completati). Esporta come .txt per il solo testo tradotto, o come .md per un documento Markdown bilingue che include il testo originale, la traduzione, la qualità dell'audit e i problemi rilevati per ogni blocco."
     },
     "streaming": {
       "title": "Streaming in Tempo Reale",
@@ -331,15 +369,15 @@
       "title": "Progetti e File",
       "intro": "Glossa salva il tuo lavoro in SQLite locale — tutti i dati rimangono sulla tua macchina.",
       "createTitle": "Crea un progetto",
-      "createDesc": "Clicca l'icona cartella (📂) nella toolbar per aprire il pannello Progetti. Digita un nome e clicca Crea. Il progetto memorizza la configurazione della pipeline, il glossario e tutti i risultati delle traduzioni.",
+      "createDesc": "Clicca l'icona cartella nell'header per aprire il pannello Progetti. Digita un nome e clicca Crea. Il progetto memorizza la configurazione della pipeline, il glossario e tutti i risultati delle traduzioni.",
       "saveTitle": "Salva il lavoro",
-      "saveDesc": "Clicca l'icona salvataggio (💾) in qualsiasi momento per persistere lo stato corrente. Quando riapri un progetto, la configurazione completa, le fasi, il glossario e le traduzioni vengono ripristinati esattamente come li avevi lasciati.",
+      "saveDesc": "Clicca l'icona salvataggio in qualsiasi momento per persistere lo stato corrente. Quando riapri un progetto, la configurazione completa, le fasi, il glossario e le traduzioni vengono ripristinati esattamente come li avevi lasciati.",
       "importExportTitle": "Importa ed esporta",
-      "importExportDesc": "Usa l'icona upload (⬆) per importare un file .txt o .md come testo sorgente. Usa l'icona download (⬇) per esportare la traduzione come testo semplice, o clicca 'MD' per un documento Markdown bilingue con testo originale, traduzione, qualità audit e problemi."
+      "importExportDesc": "Usa l'icona upload per importare un file .txt o .md come testo sorgente. I pulsanti di esportazione appaiono nel pannello Riepilogo dell'header quando ci sono blocchi completati: esporta come .txt per il testo tradotto, o come .md per un documento Markdown bilingue con testo originale, traduzione, qualità audit e problemi."
     },
     "providers": {
       "title": "Provider LLM",
-      "intro": "Glossa supporta cinque provider. Ogni fase e il giudice possono usare un provider e modello diverso. Configura le chiavi API nelle Impostazioni (⚙️).",
+      "intro": "Glossa supporta cinque provider. Ogni fase e il giudice possono usare un provider e modello diverso. Configura le chiavi API nelle Impostazioni.",
       "provider": "Provider",
       "models": "Modelli",
       "notes": "Note",
@@ -368,19 +406,28 @@
     "glossary": {
       "title": "Registro Termini (Glossario)",
       "intro": "Il Registro Termini ti permette di definire traduzioni obbligatorie per i termini chiave. Per ogni voce, specifica il termine sorgente e la sua traduzione richiesta. Questi termini vengono imposti in tutte le fasi della pipeline.",
-      "usage": "Aggiungi voci nel pannello sinistro sotto 'Registro Termini'. Ad esempio: 'λόγος → discorso (non 'parola' o 'ragione')'. Il prompt di sistema di ogni fase include il glossario completo, istruendo l'LLM a usare queste traduzioni esatte.",
+      "usage": "Aggiungi voci nel pannello di configurazione sotto il tab Registro. Ad esempio: 'λόγος → discorso (non parola o ragione)'. Il prompt di sistema di ogni fase include il glossario completo, istruendo l'LLM a usare queste traduzioni esatte.",
       "audit": "Il Giudice AI verifica specificamente l'aderenza al glossario. Se la traduzione usa un termine diverso da quello definito nel registro, segnalerà un problema di tipo 'glossary' con gravità e correzione suggerita. Questo è particolarmente prezioso per testi tecnici, giuridici o accademici dove la terminologia deve essere coerente."
     },
     "shortcuts": {
-      "title": "Riferimento Toolbar",
-      "openSettings": "Apri Impostazioni (chiavi API, Ollama)",
-      "switchLang": "Cambia lingua interfaccia (EN/IT)",
+      "title": "Riferimento Interfaccia",
+      "toolbarTitle": "Toolbar header",
+      "openSettings": "Impostazioni — chiavi API e Ollama",
+      "switchLang": "Cambia lingua interfaccia (EN / IT)",
       "openProjects": "Apri pannello Progetti",
       "importFile": "Importa file di testo sorgente",
       "saveProject": "Salva progetto corrente",
+      "openConfig": "Apri pannello configurazione pipeline",
+      "openInsights": "Apri pannello insight (Modalità Documento)",
+      "sandbox": "Attiva / disattiva modalità Sandbox",
+      "exportTitle": "Esportazione (nel riepilogo header)",
       "exportTxt": "Esporta traduzione come .txt",
-      "exportMd": "Esporta Markdown bilingue",
-      "headerIcon": "icona header"
+      "exportMd": "Esporta documento bilingue .md",
+      "promptToolsTitle": "Strumenti Prompt (nelle fasi e nell'Audit)",
+      "refineButton": "Bacchetta — rifinisce il prompt con l'IA",
+      "saveTemplate": "Segnalibro (+) — salva il prompt come template",
+      "loadTemplate": "Libro aperto — carica un template salvato",
+      "headerIcon": "icona"
     }
   }
 }
