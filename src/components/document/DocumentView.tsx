@@ -110,6 +110,20 @@ export function DocumentView({
     setSplitDraft({ chunkId, splitAt: initialSplitAt });
   };
 
+  // Hooks devono essere chiamati prima di qualsiasi return condizionale
+  const hasGlossary = config.glossary.length > 0;
+  const showHighlight = glossaryHighlightEnabled && hasGlossary;
+  const sourceHighlight = useGlossaryHighlight(
+    currentChunk?.originalText ?? '',
+    config.glossary,
+    'source',
+  );
+  const translationHighlight = useGlossaryHighlight(
+    currentChunk?.currentDraft ?? '',
+    config.glossary,
+    'translation',
+  );
+
   if (!currentChunk) {
     return (
       <section className="flex w-full items-center justify-center bg-editorial-bg p-10">
@@ -129,19 +143,6 @@ export function DocumentView({
   }
 
   const isBook = resolvedLayout === 'book';
-  const hasGlossary = config.glossary.length > 0;
-  const showHighlight = glossaryHighlightEnabled && hasGlossary;
-
-  const sourceHighlight = useGlossaryHighlight(
-    currentChunk?.originalText ?? '',
-    config.glossary,
-    'source',
-  );
-  const translationHighlight = useGlossaryHighlight(
-    currentChunk?.currentDraft ?? '',
-    config.glossary,
-    'translation',
-  );
   const prevChunk = chunks[currentIndex - 1];
   const nextChunk = chunks[currentIndex + 1];
   const chunkTone = qualityTone(currentChunk.judgeResult.rating);
