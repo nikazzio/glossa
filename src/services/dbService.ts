@@ -43,7 +43,8 @@ export async function initDatabase(): Promise<void> {
       judge_model TEXT DEFAULT 'gemini-3-flash-preview',
       judge_provider TEXT DEFAULT 'gemini',
       use_chunking INTEGER DEFAULT 1,
-      target_chunk_count INTEGER DEFAULT 0
+      target_chunk_count INTEGER DEFAULT 0,
+      source_text TEXT DEFAULT ''
     )
   `);
 
@@ -84,6 +85,7 @@ export async function initDatabase(): Promise<void> {
       project_id TEXT REFERENCES projects(id) ON DELETE CASCADE,
       original_text TEXT NOT NULL,
       final_translation TEXT DEFAULT '',
+      position INTEGER DEFAULT NULL,
       chunk_status TEXT DEFAULT 'ready',
       stage_results TEXT DEFAULT '{}',
       judge_status TEXT DEFAULT 'idle',
@@ -94,7 +96,9 @@ export async function initDatabase(): Promise<void> {
   `);
 
   await ensureColumn('pipeline_configs', 'target_chunk_count', "INTEGER DEFAULT 0");
+  await ensureColumn('pipeline_configs', 'source_text', "TEXT DEFAULT ''");
   await ensureColumn('projects', 'view_mode', 'TEXT DEFAULT NULL');
+  await ensureColumn('translations', 'position', 'INTEGER DEFAULT NULL');
   await ensureColumn('translations', 'chunk_status', "TEXT DEFAULT 'ready'");
   await ensureColumn('translations', 'judge_status', "TEXT DEFAULT 'idle'");
   await ensureColumn('translations', 'judge_rating', "TEXT DEFAULT 'fair'");
@@ -119,6 +123,29 @@ export async function execute(query: string, params: unknown[] = []): Promise<vo
 export async function select<T>(query: string, params: unknown[] = []): Promise<T[]> {
   const conn = await getDb();
   return conn.select<T[]>(query, params);
+}
+
+export async function runInTransaction<T>(
+  fn: (executeTx: (query: string, params?: unknown[]) => Promise<void>) => Promise<T>,
+): Promise<T> {
+  const conn = await getDb();
+  const executeTx = async (query: string, params: unknown[] = []) => {
+    await conn.execute(query, params);
+  };
+
+  await executeTx('BEGIN IMMEDIATE TRANSACTION');
+  try {
+    const result = await fn(executeTx);
+    await executeTx('COMMIT');
+    return result;
+  } catch (error) {
+    try {
+      await executeTx('ROLLBACK');
+    } catch {
+      // Preserve the original transaction error if rollback also fails.
+    }
+    throw error;
+  }
 }
 
 // ── App Settings ─────────────────────────────────────────────────────

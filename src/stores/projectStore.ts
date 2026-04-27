@@ -6,8 +6,7 @@ import {
   getProjectConfig,
   loadTranslations,
   restoreTranslations,
-  saveProjectConfig,
-  saveTranslations,
+  saveProjectState,
   type Project,
 } from '../services/projectService';
 import { usePipelineStore } from './pipelineStore';
@@ -57,13 +56,30 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const pipeline = usePipelineStore.getState();
     const ui = useUiStore.getState();
     const id = await createProject(name, pipeline.config.sourceLanguage, pipeline.config.targetLanguage);
-    await saveProjectConfig(id, pipeline.config, ui.viewMode);
+    const chunks = useChunksStore.getState().chunks;
+    const inputText =
+      chunks.length > 0
+        ? chunks.map((chunk) => chunk.originalText).join('\n\n')
+        : pipeline.inputText;
+    const trackedSnapshot = buildProjectSnapshot({
+      inputText,
+      config: pipeline.config,
+      chunks,
+      viewMode: ui.viewMode,
+    });
+    await saveProjectState({
+      projectId: id,
+      inputText,
+      config: pipeline.config,
+      viewMode: ui.viewMode,
+      chunks,
+    });
     await get().loadProjects();
     set({
       currentProjectId: id,
       saveState: 'saved',
       lastSaveError: null,
-      trackedSnapshot: null,
+      trackedSnapshot,
     });
   },
 
@@ -78,6 +94,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const chunksStore = useChunksStore.getState();
     const ui = useUiStore.getState();
     const restoredChunks = restoreTranslations(savedTranslations);
+    const restoredInputText =
+      config.inputText || restoredChunks.map((chunk) => chunk.originalText).join('\n\n');
     pipeline.setConfig({
       ...pipeline.config,
       sourceLanguage: config.sourceLanguage,
@@ -91,8 +109,10 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       glossary: config.glossary,
     });
     chunksStore.setChunks(restoredChunks);
-    pipeline.setInputText(restoredChunks.map((chunk) => chunk.originalText).join('\n\n'));
-    ui.setViewMode(config.viewMode ?? 'document');
+    pipeline.setInputText(restoredInputText);
+    ui.setViewMode(
+      config.viewMode ?? (restoredChunks.length === 0 && restoredInputText.trim() ? 'sandbox' : 'document'),
+    );
     ui.setSelectedChunkId(restoredChunks[0]?.id ?? null);
 
     set({
@@ -128,10 +148,14 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
     const pipeline = usePipelineStore.getState();
     const ui = useUiStore.getState();
+    const inputText =
+      chunksStore.chunks.length > 0
+        ? chunksStore.chunks.map((chunk) => chunk.originalText).join('\n\n')
+        : pipeline.inputText;
     const effectiveSnapshot =
       snapshot ??
       buildProjectSnapshot({
-        inputText: pipeline.inputText,
+        inputText,
         config: pipeline.config,
         chunks: chunksStore.chunks,
         viewMode: ui.viewMode,
@@ -140,8 +164,13 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     set({ saveState: 'saving', lastSaveError: null });
 
     try {
-      await saveProjectConfig(currentProjectId, pipeline.config, ui.viewMode);
-      await saveTranslations(currentProjectId, chunksStore.chunks);
+      await saveProjectState({
+        projectId: currentProjectId,
+        inputText,
+        config: pipeline.config,
+        viewMode: ui.viewMode,
+        chunks: chunksStore.chunks,
+      });
       set({
         saveState: 'saved',
         lastSaveError: null,

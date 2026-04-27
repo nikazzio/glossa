@@ -19,7 +19,14 @@ export function useProjectSnapshot(): string {
     if (isProcessing && lastStableSnapshotRef.current !== null) {
       return lastStableSnapshotRef.current;
     }
-    const next = buildProjectSnapshot({ inputText, config, chunks, viewMode });
+    const effectiveInputText =
+      chunks.length > 0 ? chunks.map((chunk) => chunk.originalText).join('\n\n') : inputText;
+    const next = buildProjectSnapshot({
+      inputText: effectiveInputText,
+      config,
+      chunks,
+      viewMode,
+    });
     lastStableSnapshotRef.current = next;
     return next;
   }, [chunks, config, inputText, isProcessing, viewMode]);
