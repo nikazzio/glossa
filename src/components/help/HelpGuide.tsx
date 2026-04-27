@@ -25,7 +25,7 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
     { id: 'projects',   label: t('help.sections.projects') },
     { id: 'providers',  label: t('help.sections.providers') },
     { id: 'ollama',     label: t('help.sections.ollama') },
-    { id: 'glossary',   label: t('help.sections.glossary') },
+    { id: 'glossary',   label: t('help.sections.library') },
     { id: 'shortcuts',  label: t('help.sections.shortcuts') },
   ];
 
@@ -373,8 +373,24 @@ function GlossarySection() {
     <>
       <SectionTitle>{t('help.glossary.title')}</SectionTitle>
       <P>{t('help.glossary.intro')}</P>
-      <P>{t('help.glossary.usage')}</P>
-      <P>{t('help.glossary.audit')}</P>
+
+      <SubTitle>{t('help.glossary.libraryTitle')}</SubTitle>
+      <P>{t('help.glossary.libraryDesc')}</P>
+
+      <SubTitle>{t('help.glossary.csvTitle')}</SubTitle>
+      <P>{t('help.glossary.csvDesc')}</P>
+
+      <SubTitle>{t('help.glossary.projectTitle')}</SubTitle>
+      <P>{t('help.glossary.projectDesc')}</P>
+
+      <SubTitle>{t('help.glossary.highlightTitle')}</SubTitle>
+      <P>{t('help.glossary.highlightDesc')}</P>
+
+      <SubTitle>{t('help.glossary.auditTitle')}</SubTitle>
+      <P>{t('help.glossary.auditDesc')}</P>
+
+      <SubTitle>{t('help.glossary.templatesTitle')}</SubTitle>
+      <P>{t('help.glossary.templatesDesc')}</P>
     </>
   );
 }

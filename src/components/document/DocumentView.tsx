@@ -151,109 +151,94 @@ export function DocumentView({
     <section className="w-full bg-[#f7f3ec] overflow-y-auto min-h-0 h-full custom-scrollbar">
       <div className="mx-auto max-w-[1500px] px-6 py-6 md:px-8 md:py-8 space-y-6">
         <div className="rounded-[24px] border border-editorial-border bg-editorial-bg/90 px-6 py-4 shadow-[0_16px_50px_rgba(26,26,26,0.05)]">
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-            <div className="flex items-center gap-3">
-              <span className="font-display text-xl italic text-editorial-accent">
+          <div className="flex items-center justify-between gap-4">
+            {/* Info + status indicators — tutto su una riga */}
+            <div className="flex flex-wrap items-center gap-3 min-w-0">
+              <span className="font-display text-xl italic text-editorial-accent shrink-0">
                 {t('pipeline.unit')} {indexPad(currentIndex + 1)}
               </span>
-              <span className={`text-sm font-medium ${QUALITY_TONE_COLOR[chunkTone]}`}>
+              <span className={`font-display italic shrink-0 ${QUALITY_TONE_COLOR[chunkTone]}`}>
                 {currentQualityLabel}
               </span>
-              <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
+              <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted shrink-0">
                 {t(`pipeline.chunkStatus.${currentChunk.status}`)}
               </span>
+              <div className="flex items-center gap-2">
+                {config.stages
+                  .filter((stage) => stage.enabled)
+                  .map((stage, stageIndex) => (
+                    <StatusIndicator
+                      key={stage.id}
+                      status={currentChunk.stageResults[stage.id]?.status || 'idle'}
+                      label={indexPad(stageIndex + 1)}
+                    />
+                  ))}
+                <StatusIndicator status={currentChunk.judgeResult.status} label="Audit" />
+              </div>
             </div>
 
+            {/* Azioni — icone senza testo, stile header */}
             <div
               role="toolbar"
               aria-label={t('pipeline.chunkActions')}
-              className="flex flex-wrap items-center gap-2"
+              className="flex items-center gap-1 shrink-0"
             >
-              <button
-                type="button"
+              <ChunkIconButton
                 onClick={() => onRetranslateChunk(currentChunk.id)}
+                title={t('pipeline.retranslateChunk')}
                 disabled={isProcessing || currentChunk.originalText.trim().length === 0}
-                className="rounded-full border border-editorial-border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted transition-colors hover:text-editorial-ink disabled:opacity-30"
               >
-                <RotateCcw size={12} className="inline mr-1" />
-                {t('pipeline.retranslateChunk')}
-              </button>
-              <button
-                type="button"
+                <RotateCcw size={16} />
+              </ChunkIconButton>
+              <ChunkIconButton
                 onClick={() => onReauditChunk(currentChunk.id)}
+                title={t('pipeline.reauditChunk')}
                 disabled={isProcessing || !currentChunk.currentDraft}
-                className="rounded-full border border-editorial-border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted transition-colors hover:text-editorial-ink disabled:opacity-30"
               >
-                <ScanLine size={12} className="inline mr-1" />
-                {t('pipeline.reauditChunk')}
-              </button>
+                <ScanLine size={16} />
+              </ChunkIconButton>
               {currentChunk.status === 'completed' ? (
-                <button
-                  type="button"
+                <ChunkIconButton
                   onClick={() => handleUnlockSource(currentChunk.id)}
+                  title={t('pipeline.unlockSource')}
                   disabled={isProcessing}
-                  className="rounded-full border border-editorial-border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted transition-colors hover:text-editorial-ink disabled:opacity-30"
                 >
-                  <Pencil size={12} className="inline mr-1" />
-                  {t('pipeline.unlockSource')}
-                </button>
+                  <Pencil size={16} />
+                </ChunkIconButton>
               ) : (
                 <>
-                  <button
-                    type="button"
+                  <ChunkIconButton
                     onClick={() => openSplitDialog(currentChunk.id, currentChunk.originalText)}
+                    title={t('pipeline.splitChunk')}
                     disabled={isProcessing || currentChunk.originalText.trim().length < 2}
-                    className="rounded-full border border-editorial-border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted transition-colors hover:text-editorial-ink disabled:opacity-30"
                   >
-                    <Scissors size={12} className="inline mr-1" />
-                    {t('pipeline.splitChunk')}
-                  </button>
-                  <button
-                    type="button"
+                    <Scissors size={16} />
+                  </ChunkIconButton>
+                  <ChunkIconButton
                     onClick={() => mergeChunkWithNext(currentChunk.id)}
+                    title={t('pipeline.mergeNext')}
                     disabled={
                       isProcessing ||
                       currentIndex === chunks.length - 1 ||
                       chunks[currentIndex + 1]?.status === 'completed' ||
                       chunks[currentIndex + 1]?.status === 'processing'
                     }
-                    className="rounded-full border border-editorial-border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted transition-colors hover:text-editorial-ink disabled:opacity-30"
                   >
-                    <Copy size={12} className="inline mr-1" />
-                    {t('pipeline.mergeNext')}
-                  </button>
+                    <Copy size={16} />
+                  </ChunkIconButton>
                 </>
               )}
               {hasGlossary && (
-                <button
-                  type="button"
+                <ChunkIconButton
                   onClick={() => setGlossaryHighlightEnabled(!glossaryHighlightEnabled)}
-                  aria-pressed={glossaryHighlightEnabled}
                   title={t('library.glossaryHighlightToggle')}
-                  className={`rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                    glossaryHighlightEnabled
-                      ? 'border-editorial-ink bg-editorial-ink text-white'
-                      : 'border-editorial-border text-editorial-muted hover:text-editorial-ink'
-                  }`}
+                  active={glossaryHighlightEnabled}
+                  ariaPressed={glossaryHighlightEnabled}
                 >
-                  <Highlighter size={12} className="inline mr-1" />
-                  {t('library.glossaryHighlightToggle')}
-                </button>
+                  <Highlighter size={16} />
+                </ChunkIconButton>
               )}
             </div>
-          </div>
-
-          <div className="mt-3 flex gap-3">
-            {config.stages
-              .filter((stage) => stage.enabled)
-              .map((stage, stageIndex) => (
-                <StatusIndicator
-                  key={stage.id}
-                  status={currentChunk.stageResults[stage.id]?.status || 'idle'}
-                  label={indexPad(stageIndex + 1)}
-                />
-              ))}
-            <StatusIndicator status={currentChunk.judgeResult.status} label="Audit" />
           </div>
         </div>
 
@@ -372,6 +357,40 @@ function DocumentPage({
       </div>
       <div className={readOnly ? 'opacity-90' : ''}>{children}</div>
     </section>
+  );
+}
+
+function ChunkIconButton({
+  onClick,
+  children,
+  title,
+  disabled = false,
+  active = false,
+  ariaPressed,
+}: {
+  onClick: () => void;
+  children: React.ReactNode;
+  title: string;
+  disabled?: boolean;
+  active?: boolean;
+  ariaPressed?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      aria-label={title}
+      aria-pressed={ariaPressed}
+      disabled={disabled}
+      className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40 ${
+        active
+          ? 'border-editorial-ink bg-editorial-ink text-white'
+          : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 

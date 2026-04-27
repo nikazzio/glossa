@@ -307,6 +307,7 @@
       "providers": "Provider",
       "ollama": "Ollama",
       "glossary": "Glossario",
+      "library": "Libreria",
       "shortcuts": "Interfaccia"
     },
     "overview": {
@@ -406,10 +407,20 @@
       "recommendedDesc": "Per traduzione generale: llama3.2 (8B), mistral (7B) o gemma2 (9B). Per qualità superiore su macchine potenti: llama3.1:70b o mixtral:8x7b. Modelli più piccoli (< 3B parametri) possono produrre traduzioni di qualità inferiore."
     },
     "glossary": {
-      "title": "Registro Termini (Glossario)",
-      "intro": "Il Registro Termini ti permette di definire traduzioni obbligatorie per i termini chiave. Per ogni voce, specifica il termine sorgente e la sua traduzione richiesta. Questi termini vengono imposti in tutte le fasi della pipeline.",
-      "usage": "Aggiungi voci nel pannello di configurazione sotto il tab Registro. Ad esempio: 'λόγος → discorso (non parola o ragione)'. Il prompt di sistema di ogni fase include il glossario completo, istruendo l'LLM a usare queste traduzioni esatte.",
-      "audit": "Il Giudice AI verifica specificamente l'aderenza al glossario. Se la traduzione usa un termine diverso da quello definito nel registro, segnalerà un problema di tipo 'glossary' con gravità e correzione suggerita. Questo è particolarmente prezioso per testi tecnici, giuridici o accademici dove la terminologia deve essere coerente."
+      "title": "Libreria: Dizionari e Modelli Prompt",
+      "intro": "Glossa dispone di una libreria globale di dizionari riutilizzabili tra i progetti. Ogni dizionario raccoglie coppie termine→traduzione con note opzionali. Puoi assegnare un dizionario a un progetto, modificarne le voci e importare termini in blocco da file CSV.",
+      "libraryTitle": "Dizionari globali",
+      "libraryDesc": "Clicca l'icona Libreria nell'header (gruppo Generale, ultimo a destra) per aprire il pannello. Nel tab Dizionari puoi creare nuovi dizionari, rinominarli con doppio clic, duplicarli (Crea copia), eliminarli e importare termini da CSV/TSV. Espandi un dizionario per modificarne le voci inline.",
+      "csvTitle": "Importa da CSV/TSV",
+      "csvDesc": "Usa il pulsante Upload accanto a ogni dizionario per importare termini da file. Il wizard mostra un'anteprima delle prime 5 righe e chiede la strategia: «Aggiungi/aggiorna» aggiunge nuovi termini senza toccare quelli esistenti; «Sostituisci tutto» cancella tutte le voci e reimporta dal file. Le intestazioni riconosciute sono: termine/source/from per il termine sorgente, traduzione/target/to per la traduzione (case-insensitive). La colonna notes è opzionale.",
+      "projectTitle": "Dizionario per progetto",
+      "projectDesc": "Nel pannello Configurazione Progetto (icona ingranaggio → tab Registro) trovi un menu a tendina per selezionare il dizionario da associare al progetto. Modifica le voci inline nell'editor: le modifiche agiscono sul dizionario condiviso e vengono salvate col pulsante Salva che appare non appena si effettua una modifica. Lo stesso dizionario può essere assegnato a più progetti: le voci sono condivise e aggiornare una voce da un progetto la aggiorna per tutti.",
+      "highlightTitle": "Evidenziazione termini",
+      "highlightDesc": "Nel lettore documento e in modalità Sandbox, il pulsante Evidenzia termini (icona pennello) nella barra azioni del chunk attiva un overlay visuale. Nel testo sorgente, i termini presenti nel dizionario vengono sottolineati in blu. Nella traduzione candidata, i termini tradotti correttamente appaiono con sfondo verde; i termini sorgente trovati ma con traduzione assente o diversa appaiono con sfondo rosso. Passa con il cursore su un termine evidenziato per vedere la traduzione attesa e le eventuali note.",
+      "auditTitle": "Audit e glossario",
+      "auditDesc": "Il Giudice AI verifica specificamente l'aderenza al dizionario assegnato. Se la traduzione usa un termine diverso da quello definito nel registro, segnalerà un problema di tipo 'glossary' con gravità e correzione suggerita. Questo è particolarmente prezioso per testi tecnici, giuridici o accademici dove la terminologia deve essere coerente.",
+      "templatesTitle": "Modelli Prompt",
+      "templatesDesc": "Nel pannello Libreria (tab Modelli Prompt) gestisci la raccolta globale di template riutilizzabili. Crea un template specificando nome, contesto (Fase o Audit) e testo del prompt. Usa la bacchetta nella form di creazione per far riscrivere il prompt dall'AI: seleziona provider e modello dal menu accanto all'icona e clicca la bacchetta. I template salvati sono disponibili in tutte le fasi di traduzione e nel Controllo Qualità tramite i pulsanti segnalibro (salva/carica)."
     },
     "shortcuts": {
       "title": "Riferimento Interfaccia",
