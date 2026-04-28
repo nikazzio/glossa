@@ -42,4 +42,7 @@ debug = 1
 incremental = true
 
 [profile.release]
-strip = "debuginfo"
+opt-level = "z"      # ottimizza per dimensione (binario più piccolo = installer più leggero)
+lto = "thin"         # Link Time Optimization leggera: buon risparmio di spazio, build CI accettabile
+codegen-units = 1    # un solo codegen unit per massimizzare le ottimizzazioni del linker
+strip = "symbols"    # rimuove tutti i simboli (debug + nomi funzione) dal binario distribuito
