@@ -635,7 +635,7 @@ async fn call_provider_for_judge(
             let body = serde_json::json!({
                 "model": model,
                 "max_tokens": 4096,
-                "system": format!("{system_prompt}\nIMPORTANT: Return ONLY valid JSON."),
+                "system": format!("{system_prompt}\nIMPORTANT: Return ONLY valid JSON, with no markdown formatting, code blocks, or extra text."),
                 "messages": [{"role": "user", "content": user_prompt}]
             });
             let resp = client.post("https://api.anthropic.com/v1/messages")
@@ -1005,6 +1005,15 @@ fn build_judge_prompts(
     (system_prompt, user_prompt)
 }
 
+/// Strips markdown code fences and any preamble text that LLMs sometimes wrap around JSON output.
+fn sanitize_llm_json_output(raw: &str) -> &str {
+    let trimmed = raw.trim();
+    match (trimmed.find('{'), trimmed.rfind('}')) {
+        (Some(start), Some(end)) if end >= start => &trimmed[start..=end],
+        _ => trimmed,
+    }
+}
+
 fn parse_judge_rating(parsed: &serde_json::Value) -> String {
     if let Some(raw) = parsed["rating"].as_str() {
         match raw.trim().to_lowercase().as_str() {
@@ -1098,8 +1107,17 @@ pub async fn judge_translation(
         &system_prompt, &user_prompt, &api_key,
     ).await?;
 
-    let parsed: serde_json::Value = serde_json::from_str(&result_text)
-        .map_err(|e| format!("Failed to parse judge JSON: {e}. Raw: {result_text}"))?;
+    let sanitized = sanitize_llm_json_output(&result_text);
+    let parsed: serde_json::Value = serde_json::from_str(sanitized)
+        .map_err(|e| {
+            #[cfg(debug_assertions)]
+            {
+                let preview: String = result_text.chars().take(500).collect();
+                let truncated = if result_text.chars().nth(500).is_some() { "…" } else { "" };
+                eprintln!("Failed to parse judge JSON: {e}. Preview: {preview}{truncated}");
+            }
+            format!("Failed to parse judge JSON: {e}")
+        })?;
 
     let rating = parse_judge_rating(&parsed);
     let issues: Vec<JudgeIssue> = parsed["issues"]
@@ -1380,6 +1398,30 @@ mod tests {
     fn defaults_unknown_judge_rating_to_fair() {
         let parsed = parse_judge_rating(&serde_json::json!({"rating": "ambiguous"}));
         assert_eq!(parsed, "fair");
+    }
+
+    #[test]
+    fn sanitize_clean_json_passthrough() {
+        let s = r#"{"rating":"good","issues":[]}"#;
+        assert_eq!(sanitize_llm_json_output(s), s);
+    }
+
+    #[test]
+    fn sanitize_strips_json_fence() {
+        let s = "```json\n{\"rating\":\"good\"}\n```";
+        assert_eq!(sanitize_llm_json_output(s), r#"{"rating":"good"}"#);
+    }
+
+    #[test]
+    fn sanitize_strips_bare_fence() {
+        let s = "```\n{\"rating\":\"fair\"}\n```";
+        assert_eq!(sanitize_llm_json_output(s), r#"{"rating":"fair"}"#);
+    }
+
+    #[test]
+    fn sanitize_strips_preamble_and_fence() {
+        let s = "Sure! Here is the evaluation:\n```json\n{\"rating\":\"poor\"}\n```\n";
+        assert_eq!(sanitize_llm_json_output(s), r#"{"rating":"poor"}"#);
     }
 
     #[test]

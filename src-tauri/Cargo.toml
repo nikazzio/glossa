@@ -42,4 +42,7 @@ debug = 1
 incremental = true
 
 [profile.release]
-strip = "debuginfo"
+opt-level = "z"      # ottimizza per dimensione (binario più piccolo = installer più leggero)
+lto = "thin"         # "thin" = buon risparmio, build CI veloce; valutare "true" (full LTO, -3–8% binario) dopo aver misurato i tempi sui runner CI
+codegen-units = 1    # un solo codegen unit per massimizzare le ottimizzazioni del linker
+strip = "symbols"    # rimuove simboli da ELF/Mach-O; su MSVC i simboli sono in PDB separati (non inclusi nel bundle), quindi l'effetto su Windows è già garantito dalla pipeline di build
