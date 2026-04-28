@@ -12,6 +12,15 @@ export interface GlossaryEntry {
   notes?: string;
 }
 
+export interface Glossary {
+  id: string;
+  name: string;
+  description?: string;
+  sourceLanguage: string;
+  targetLanguage: string;
+  createdAt: string;
+}
+
 export interface PipelineStageConfig {
   id: string;
   name: string;
@@ -72,6 +81,7 @@ export interface PipelineConfig {
   judgeModel: string;
   judgeProvider: ModelProvider;
   glossary: GlossaryEntry[];
+  assignedGlossaryId?: string | null;
   useChunking?: boolean;
   targetChunkCount?: number;
 }

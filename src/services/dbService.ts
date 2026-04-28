@@ -99,6 +99,11 @@ export async function initDatabase(): Promise<void> {
   `);
 
   await conn.execute(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_glossary_entries_term
+    ON glossary_entries(glossary_id, term)
+  `);
+
+  await conn.execute(`
     CREATE TABLE IF NOT EXISTS project_glossaries (
       project_id TEXT REFERENCES projects(id) ON DELETE CASCADE,
       glossary_id TEXT REFERENCES glossaries(id) ON DELETE CASCADE,
@@ -155,6 +160,18 @@ export async function initDatabase(): Promise<void> {
     CREATE UNIQUE INDEX IF NOT EXISTS idx_prompt_templates_name_context
     ON prompt_templates(name, context)
   `);
+
+  // Migration: rinomina i glossari legacy "Project glossary proj-xxx" con nome leggibile
+  try {
+    await conn.execute(`
+      UPDATE glossaries SET name = 'Glossario ' || p.name
+      FROM projects p
+      WHERE glossaries.id = 'glossary-' || p.id
+        AND glossaries.name LIKE 'Project glossary%'
+    `);
+  } catch (error) {
+    console.warn('[Glossa] Legacy glossary rename migration failed', error);
+  }
 
   console.log('[Glossa] Database initialized');
 }

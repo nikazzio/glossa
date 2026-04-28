@@ -127,6 +127,7 @@ export async function getProjectConfig(projectId: string): Promise<{
   useChunking: boolean;
   targetChunkCount: number;
   glossary: GlossaryEntry[];
+  assignedGlossaryId: string | null;
 } | null> {
   const rows = await select<{
     source_language: string;
@@ -160,7 +161,13 @@ export async function getProjectConfig(projectId: string): Promise<{
   if (rows.length === 0) return null;
   const row = rows[0];
 
-  // Load glossary entries
+  // Glossario: prima trova l'ID assegnato, poi carica le voci
+  const pgRows = await select<{ glossary_id: string }>(
+    'SELECT glossary_id FROM project_glossaries WHERE project_id = $1 LIMIT 1',
+    [projectId],
+  );
+  const assignedGlossaryId = pgRows[0]?.glossary_id ?? null;
+
   const glossaryRows = await select<{ id: string; term: string; translation: string; notes: string }>(
     `SELECT ge.id, ge.term, ge.translation, ge.notes FROM glossary_entries ge
      JOIN project_glossaries pg ON ge.glossary_id = pg.glossary_id
@@ -179,6 +186,7 @@ export async function getProjectConfig(projectId: string): Promise<{
     judgeProvider: row.judge_provider,
     useChunking: row.use_chunking === 1,
     targetChunkCount: row.target_chunk_count ?? 0,
+    assignedGlossaryId,
     glossary: glossaryRows.map((g, i) => ({
       id: g.id || `gloss-loaded-${projectId}-${i}`,
       term: g.term,
@@ -203,46 +211,62 @@ async function saveProjectGlossary(
   config: PipelineConfig,
   run: ExecuteQuery,
 ): Promise<void> {
-  const glossaryId = `glossary-${projectId}`;
+  // Se il progetto ha già un dizionario assegnato, usa quello.
+  // Altrimenti crea/aggiorna il dizionario legacy per backward compat.
+  const glossaryId = config.assignedGlossaryId ?? `glossary-${projectId}`;
 
-  await run(
-    `INSERT INTO glossaries (id, name, source_language, target_language)
-     VALUES ($1, $2, $3, $4)
-     ON CONFLICT(id) DO UPDATE SET
-       name = $2,
-       source_language = $3,
-       target_language = $4`,
-    [
-      glossaryId,
-      `Project glossary ${projectId}`,
-      config.sourceLanguage,
-      config.targetLanguage,
-    ],
-  );
-
-  await run(
-    'INSERT OR IGNORE INTO project_glossaries (project_id, glossary_id) VALUES ($1, $2)',
-    [projectId, glossaryId],
-  );
-
-  await run('DELETE FROM glossary_entries WHERE glossary_id = $1', [glossaryId]);
+  if (!config.assignedGlossaryId) {
+    await run(
+      `INSERT INTO glossaries (id, name, source_language, target_language)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT(id) DO UPDATE SET
+         name = $2,
+         source_language = $3,
+         target_language = $4`,
+      [
+        glossaryId,
+        `Project glossary ${projectId}`,
+        config.sourceLanguage,
+        config.targetLanguage,
+      ],
+    );
+    await run(
+      'INSERT OR IGNORE INTO project_glossaries (project_id, glossary_id) VALUES ($1, $2)',
+      [projectId, glossaryId],
+    );
+  }
 
   const entries = config.glossary.filter(
     (entry) => entry.term.trim() && entry.translation.trim(),
   );
 
+  // Upsert: aggiorna per ID invece di delete+reinsert (sicuro con dizionari condivisi)
+  const usedIds: string[] = [];
   for (const [index, entry] of entries.entries()) {
+    const entryId = entry.id || `gloss-entry-${projectId}-${index}`;
+    usedIds.push(entryId);
     await run(
       `INSERT INTO glossary_entries (id, glossary_id, term, translation, notes)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [
-        entry.id || `gloss-entry-${projectId}-${index}`,
-        glossaryId,
-        entry.term.trim(),
-        entry.translation.trim(),
-        entry.notes?.trim() || '',
-      ],
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT(id) DO UPDATE SET
+         term = excluded.term,
+         translation = excluded.translation,
+         notes = excluded.notes`,
+      [entryId, glossaryId, entry.term.trim(), entry.translation.trim(), entry.notes?.trim() || ''],
     );
+  }
+
+  // Rimuovi le voci che non sono più nel progetto
+  const currentIds = usedIds;
+
+  if (currentIds.length > 0) {
+    const placeholders = currentIds.map((_, i) => `$${i + 2}`).join(', ');
+    await run(
+      `DELETE FROM glossary_entries WHERE glossary_id = $1 AND id NOT IN (${placeholders})`,
+      [glossaryId, ...currentIds],
+    );
+  } else if (entries.length === 0) {
+    await run('DELETE FROM glossary_entries WHERE glossary_id = $1', [glossaryId]);
   }
 }
 

@@ -1,7 +1,7 @@
 # Glossa — MVP Tasks
 
 > Roadmap attiva e priorità operative.
-> Aggiornata al 2026-04-27 dopo il merge della PR `#45` (S4-T4b document drawers) e della PR `#46` (bugfix SQLite lock, header refactor, settings persistence) su `main`.
+> Aggiornata al 2026-04-27 dopo il merge della PR `#48` (S4-T5a: token tracking, libreria template prompt, ConfigDrawer redesign) su `main`.
 
 ---
 
@@ -48,6 +48,7 @@ In breve: il blocco UX core è chiuso. Si può scegliere se andare verso feature
 - `S4-T3` split degli store (`uiStore` / `pipelineStore` / `chunksStore`) e selettore Sandbox/Documento
 - `S4-T4` workflow documento, anteprima import multi-formato (`txt` / `md` / `docx` / `pdf`), split manuale del chunk e autosave con stato esplicito
 - `S4-T4b` semplificazione `DocumentView`: InsightsDrawer a scomparsa con tab-handle, ConfigDrawer separato, header riorganizzato; + bugfix SQLite lock contention e persistenza `documentLayout`
+- `S4-T5a` libreria template prompt cross-project, token tracking, ConfigDrawer redesign
 
 ### Evidenze concrete nel codice
 
@@ -65,7 +66,7 @@ In breve: il blocco UX core è chiuso. Si può scegliere se andare verso feature
 ### Sequenza consigliata
 
 1. ~~`S4-T4b`~~ — ✅ completata
-2. `S4-T5a` — libreria prompt
+2. ~~`S4-T5a`~~ — ✅ completata
 3. `S4-T5b` — dizionari riusabili
 4. `S4-T6` — export combinato e polish UX
 
@@ -95,14 +96,9 @@ In breve: il blocco UX core è chiuso. Si può scegliere se andare verso feature
 
 ### S4-T5a — Libreria di modelli di prompt
 
-- **Stato**: `da fare`
-- **Priorita**: alta, ma solo dopo `S4-T3` e `S4-T4`
-- **Motivo**: e una feature ad alto valore per l'utente esperto, ma non ripara i difetti strutturali del flusso documento.
-- **Esito atteso**:
-  - tabella `prompt_templates`;
-  - editor prompt dedicato;
-  - salvataggio/caricamento cross-project;
-  - variabili evidenziate e contatore token approssimativo.
+- **Stato**: `completata`
+- **Mergiata in**: PR `#48`
+- **Cosa è dentro**: tabella `prompt_templates`, libreria template cross-project, editor prompt dedicato, token tracking nel ConfigDrawer, ConfigDrawer redesign.
 
 ### S4-T5b — Dizionari riusabili
 
@@ -209,6 +205,7 @@ In breve: il blocco UX core è chiuso. Si può scegliere se andare verso feature
 - [x] `S4-T2` — Rilancio per blocco e drill-down audit (`572dd17`)
 - [x] `S4-T3` — Suddivisione store e selettore Sandbox/Documento
 - [x] `S4-T4b` — Semplificazione DocumentView: drawer a scomparsa, header refactor, bugfix SQLite, persistenza layout (PR `#45` + PR `#46`)
+- [x] `S4-T5a` — Libreria template prompt, token tracking, ConfigDrawer redesign (PR `#48`)
 
 ---
 

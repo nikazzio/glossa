@@ -19,6 +19,7 @@ interface UiState {
   insightsDrawerTab: InsightsDrawerTab;
   ollamaModels: string[];
   ollamaStatus: OllamaStatus;
+  glossaryHighlightEnabled: boolean;
 
   setViewMode: (mode: ViewMode) => void;
   setDocumentLayout: (layout: DocumentLayoutPreference) => void;
@@ -30,6 +31,7 @@ interface UiState {
   setInsightsDrawerTab: (tab: InsightsDrawerTab) => void;
   setOllamaModels: (models: string[]) => void;
   setOllamaStatus: (status: OllamaStatus) => void;
+  setGlossaryHighlightEnabled: (enabled: boolean) => void;
 }
 
 export const useUiStore = create<UiState>()(
@@ -45,6 +47,7 @@ export const useUiStore = create<UiState>()(
   insightsDrawerTab: 'index',
   ollamaModels: [],
   ollamaStatus: 'unknown',
+  glossaryHighlightEnabled: false,
 
   setViewMode: (mode) =>
     set({
@@ -102,6 +105,7 @@ export const useUiStore = create<UiState>()(
   setInsightsDrawerTab: (tab) => set({ insightsDrawerTab: tab }),
   setOllamaModels: (models) => set({ ollamaModels: models }),
   setOllamaStatus: (status) => set({ ollamaStatus: status }),
+  setGlossaryHighlightEnabled: (enabled) => set({ glossaryHighlightEnabled: enabled }),
     }),
     {
       name: 'glossa-ui-prefs',

@@ -4,6 +4,7 @@ import { AuditPanel } from './components/audit';
 import { ConfigDrawer, DocumentView, InsightsDrawer } from './components/document';
 import { SettingsModal } from './components/settings';
 import { ProjectPanel } from './components/projects';
+import { LibraryPanel } from './components/library';
 import { ErrorBoundary, ConfirmDialog } from './components/common';
 import { usePipeline } from './hooks/usePipeline';
 import { useProjectAutosave } from './hooks/useProjectAutosave';
@@ -68,6 +69,7 @@ export default function App() {
 
         <SettingsModal />
         <ProjectPanel />
+        <LibraryPanel />
         <ConfirmDialog />
       </div>
       <Toaster

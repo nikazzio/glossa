@@ -7,6 +7,7 @@ import type {
 } from '../types';
 import { DEFAULT_STAGES, DEFAULT_JUDGE_PROMPT } from '../constants';
 import { generateId } from '../utils';
+import { getGlossaryEntries } from '../services/glossaryService';
 
 interface PipelineState {
   inputText: string;
@@ -14,6 +15,7 @@ interface PipelineState {
 
   setInputText: (text: string) => void;
   setConfig: (updater: PipelineConfig | ((prev: PipelineConfig) => PipelineConfig)) => void;
+  assignGlossary: (glossaryId: string | null) => Promise<void>;
 
   addStage: () => void;
   removeStage: (id: string) => void;
@@ -34,6 +36,7 @@ export const usePipelineStore = create<PipelineState>((set) => ({
     judgeModel: 'gemini-3-flash-preview',
     judgeProvider: 'gemini',
     glossary: [],
+    assignedGlossaryId: null,
     useChunking: true,
     targetChunkCount: 0,
   },
@@ -44,6 +47,19 @@ export const usePipelineStore = create<PipelineState>((set) => ({
     set((state) => ({
       config: typeof updater === 'function' ? updater(state.config) : updater,
     })),
+
+  assignGlossary: async (glossaryId) => {
+    if (!glossaryId) {
+      set((state) => ({
+        config: { ...state.config, assignedGlossaryId: null, glossary: [] },
+      }));
+      return;
+    }
+    const entries = await getGlossaryEntries(glossaryId);
+    set((state) => ({
+      config: { ...state.config, assignedGlossaryId: glossaryId, glossary: entries },
+    }));
+  },
 
   addStage: () =>
     set((state) => ({
