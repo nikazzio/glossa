@@ -1,5 +1,11 @@
 import { useState } from 'react';
-import { X, ChevronRight } from 'lucide-react';
+import {
+  X, ChevronRight,
+  FolderOpen, Upload, SlidersHorizontal, Save,
+  LibraryBig, Globe, Settings, HelpCircle,
+  LayoutTemplate, PanelRight,
+  Wand2, BookmarkPlus, BookOpen,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
@@ -398,29 +404,31 @@ function GlossarySection() {
 function ShortcutsSection() {
   const { t } = useTranslation();
 
-  const toolbarItems = [
-    { label: t('help.shortcuts.openSettings'),  icon: '⚙' },
-    { label: t('help.shortcuts.openProjects'),  icon: '📂' },
-    { label: t('help.shortcuts.importFile'),    icon: '⬆' },
-    { label: t('help.shortcuts.saveProject'),   icon: '💾' },
-    { label: t('help.shortcuts.openConfig'),    icon: '⚙' },
-    { label: t('help.shortcuts.openInsights'),  icon: '📊' },
-    { label: t('help.shortcuts.sandbox'),       icon: '⬜' },
-    { label: t('help.shortcuts.switchLang'),    icon: '🌐' },
+  const toolbarItems: { label: string; icon: React.ReactNode }[] = [
+    { label: t('help.shortcuts.openProjects'),  icon: <FolderOpen size={14} /> },
+    { label: t('help.shortcuts.importFile'),    icon: <Upload size={14} /> },
+    { label: t('help.shortcuts.openConfig'),    icon: <SlidersHorizontal size={14} /> },
+    { label: t('help.shortcuts.saveProject'),   icon: <Save size={14} /> },
+    { label: t('help.shortcuts.openLibrary'),   icon: <LibraryBig size={14} /> },
+    { label: t('help.shortcuts.switchLang'),    icon: <Globe size={14} /> },
+    { label: t('help.shortcuts.openSettings'),  icon: <Settings size={14} /> },
+    { label: t('help.shortcuts.openHelp'),      icon: <HelpCircle size={14} /> },
+    { label: t('help.shortcuts.sandbox'),       icon: <LayoutTemplate size={14} /> },
+    { label: t('help.shortcuts.openInsights'),  icon: <PanelRight size={14} /> },
   ];
 
-  const exportItems = [
-    { label: t('help.shortcuts.exportTxt'), icon: '⬇' },
-    { label: t('help.shortcuts.exportMd'),  icon: 'MD' },
+  const exportItems: { label: string; icon: React.ReactNode }[] = [
+    { label: t('help.shortcuts.exportTxt'), icon: <span className="font-mono text-[10px]">TXT</span> },
+    { label: t('help.shortcuts.exportMd'),  icon: <span className="font-mono text-[10px]">MD</span> },
   ];
 
-  const promptItems = [
-    { label: t('help.shortcuts.refineButton'),  icon: '✦' },
-    { label: t('help.shortcuts.saveTemplate'),  icon: '🔖' },
-    { label: t('help.shortcuts.loadTemplate'),  icon: '📖' },
+  const promptItems: { label: string; icon: React.ReactNode }[] = [
+    { label: t('help.shortcuts.refineButton'),  icon: <Wand2 size={14} /> },
+    { label: t('help.shortcuts.saveTemplate'),  icon: <BookmarkPlus size={14} /> },
+    { label: t('help.shortcuts.loadTemplate'),  icon: <BookOpen size={14} /> },
   ];
 
-  const renderRow = ({ label, icon }: { label: string; icon: string }) => (
+  const renderRow = ({ label, icon }: { label: string; icon: React.ReactNode }) => (
     <div key={label} className="flex items-center justify-between py-2.5 border-b border-editorial-border last:border-0">
       <span className="text-[13px] text-editorial-ink/80">{label}</span>
       <Kbd>{icon}</Kbd>

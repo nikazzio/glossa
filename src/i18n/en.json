@@ -425,22 +425,23 @@
     "shortcuts": {
       "title": "Interface Reference",
       "toolbarTitle": "Header toolbar",
-      "openSettings": "Settings — API keys and Ollama",
-      "switchLang": "Switch interface language (EN / IT)",
       "openProjects": "Open Projects panel",
       "importFile": "Import source text file",
-      "saveProject": "Save current project",
       "openConfig": "Open pipeline configuration panel",
-      "openInsights": "Open insights panel (Document mode)",
+      "saveProject": "Save current project",
+      "openLibrary": "Open Library (dictionaries and templates)",
+      "switchLang": "Switch interface language (EN / IT)",
+      "openSettings": "Settings — API keys and Ollama",
+      "openHelp": "Open this guide",
       "sandbox": "Toggle Sandbox / Document mode",
+      "openInsights": "Open insights panel (Document mode)",
       "exportTitle": "Export (in header summary)",
       "exportTxt": "Export translation as .txt",
       "exportMd": "Export bilingual .md document",
       "promptToolsTitle": "Prompt tools (in stages and Audit)",
       "refineButton": "Wand — AI-rewrites the prompt",
       "saveTemplate": "Bookmark (+) — save prompt as template",
-      "loadTemplate": "Open book — load a saved template",
-      "headerIcon": "icon"
+      "loadTemplate": "Open book — load a saved template"
     }
   },
   "library": {

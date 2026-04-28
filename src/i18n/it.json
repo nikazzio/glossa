@@ -425,22 +425,23 @@
     "shortcuts": {
       "title": "Riferimento Interfaccia",
       "toolbarTitle": "Toolbar header",
-      "openSettings": "Impostazioni — chiavi API e Ollama",
-      "switchLang": "Cambia lingua interfaccia (EN / IT)",
       "openProjects": "Apri pannello Progetti",
       "importFile": "Importa file di testo sorgente",
-      "saveProject": "Salva progetto corrente",
       "openConfig": "Apri pannello configurazione pipeline",
-      "openInsights": "Apri pannello insight (Modalità Documento)",
+      "saveProject": "Salva progetto corrente",
+      "openLibrary": "Apri Libreria (dizionari e template)",
+      "switchLang": "Cambia lingua interfaccia (EN / IT)",
+      "openSettings": "Impostazioni — chiavi API e Ollama",
+      "openHelp": "Apri questa guida",
       "sandbox": "Attiva / disattiva modalità Sandbox",
+      "openInsights": "Apri pannello insight (Modalità Documento)",
       "exportTitle": "Esportazione (nel riepilogo header)",
       "exportTxt": "Esporta traduzione come .txt",
       "exportMd": "Esporta documento bilingue .md",
       "promptToolsTitle": "Strumenti Prompt (nelle fasi e nell'Audit)",
       "refineButton": "Bacchetta — rifinisce il prompt con l'IA",
       "saveTemplate": "Segnalibro (+) — salva il prompt come template",
-      "loadTemplate": "Libro aperto — carica un template salvato",
-      "headerIcon": "icona"
+      "loadTemplate": "Libro aperto — carica un template salvato"
     }
   },
   "library": {

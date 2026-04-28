@@ -482,16 +482,16 @@ function HeaderInfoBar({
   ];
 
   return (
-    <div className="flex flex-wrap items-start gap-2">
+    <div className="flex flex-wrap items-stretch gap-2">
       {/* Stats block */}
       <div className="rounded-lg border border-editorial-border bg-editorial-bg px-3 py-2 shadow-sm space-y-1.5">
-        <div className="text-[9px] font-bold uppercase tracking-[0.22em] text-editorial-muted/80">
+        <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
           {t('header.summaryLabel')}
         </div>
         <dl className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
           {row1.map((item) => (
             <div key={item.key} className="flex items-baseline gap-1">
-              <dt className="text-[9px] font-bold uppercase tracking-[0.14em] text-editorial-muted">{item.label}</dt>
+              <dt className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">{item.label}</dt>
               <dd className="font-display text-sm italic text-editorial-ink">{item.value}</dd>
             </div>
           ))}
@@ -499,7 +499,7 @@ function HeaderInfoBar({
         <dl className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
           {row2.map((item) => (
             <div key={item.key} className="flex items-baseline gap-1">
-              <dt className="text-[9px] font-bold uppercase tracking-[0.14em] text-editorial-muted">{item.label}</dt>
+              <dt className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">{item.label}</dt>
               <dd className="font-display text-sm italic text-editorial-muted">{item.value}</dd>
             </div>
           ))}
@@ -508,17 +508,17 @@ function HeaderInfoBar({
 
       {/* Export block */}
       {hasChunks && (
-        <div className="rounded-lg border border-editorial-border bg-editorial-bg px-3 py-2 shadow-sm space-y-1.5">
-          <div className="text-[9px] font-bold uppercase tracking-[0.22em] text-editorial-muted/80">
+        <div className="rounded-lg border border-editorial-border bg-editorial-bg px-3 py-2 shadow-sm flex flex-col">
+          <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
             {t('header.exportLabel')}
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 mt-auto pt-1">
             <button
               type="button"
               onClick={onExportTxt}
               title={exportTxtLabel}
               aria-label={exportTxtLabel}
-              className="rounded px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.25em] text-editorial-muted border border-editorial-border/60 transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="rounded px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted border border-editorial-border/60 transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             >
               TXT
             </button>
@@ -527,7 +527,7 @@ function HeaderInfoBar({
               onClick={onExportMd}
               title={exportMdLabel}
               aria-label={exportMdLabel}
-              className="rounded px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.25em] text-editorial-muted border border-editorial-border/60 transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="rounded px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted border border-editorial-border/60 transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             >
               MD
             </button>
