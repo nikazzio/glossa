@@ -99,8 +99,8 @@ export function DictionariesTab() {
   const handleFork = async (id: string, name: string) => {
     try {
       const newId = await forkGlossary(id, `${name} (copia)`);
-      const entries = entriesMap[id] ?? await getGlossaryEntries(id);
-      setEntriesMap((prev) => ({ ...prev, [newId]: entries.map((e) => ({ ...e })) }));
+      const forkedEntries = await getGlossaryEntries(newId);
+      setEntriesMap((prev) => ({ ...prev, [newId]: forkedEntries }));
     } catch (err: any) {
       toast.error(t('library.dictionaryForkError'), { description: err?.message });
     }

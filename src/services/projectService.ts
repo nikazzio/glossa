@@ -241,8 +241,10 @@ async function saveProjectGlossary(
   );
 
   // Upsert: aggiorna per ID invece di delete+reinsert (sicuro con dizionari condivisi)
+  const usedIds: string[] = [];
   for (const [index, entry] of entries.entries()) {
     const entryId = entry.id || `gloss-entry-${projectId}-${index}`;
+    usedIds.push(entryId);
     await run(
       `INSERT INTO glossary_entries (id, glossary_id, term, translation, notes)
        VALUES ($1, $2, $3, $4, $5)
@@ -255,9 +257,7 @@ async function saveProjectGlossary(
   }
 
   // Rimuovi le voci che non sono più nel progetto
-  const currentIds = entries
-    .filter((e) => e.id)
-    .map((e) => e.id as string);
+  const currentIds = usedIds;
 
   if (currentIds.length > 0) {
     const placeholders = currentIds.map((_, i) => `$${i + 2}`).join(', ');

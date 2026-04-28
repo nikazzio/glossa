@@ -48,8 +48,6 @@ export function ConfigDrawer({
     setGlossaryDirty(false);
   }, [activeTab, config.assignedGlossaryId]);
 
-  const assignedGlossary = glossaries.find((g) => g.id === config.assignedGlossaryId);
-
   const handleDictChange = async (glossaryId: string) => {
     if (!currentProjectId) return;
     try {
@@ -57,6 +55,7 @@ export function ConfigDrawer({
         await assignGlossaryToProject(currentProjectId, glossaryId);
         await assignGlossary(glossaryId);
       } else {
+        await assignGlossaryToProject(currentProjectId, null);
         await assignGlossary(null);
       }
     } catch (err: any) {

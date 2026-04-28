@@ -115,12 +115,12 @@ export function DocumentView({
   const showHighlight = glossaryHighlightEnabled && hasGlossary;
   const sourceHighlight = useGlossaryHighlight(
     currentChunk?.originalText ?? '',
-    config.glossary,
+    showHighlight ? config.glossary : [],
     'source',
   );
   const translationHighlight = useGlossaryHighlight(
     currentChunk?.currentDraft ?? '',
-    config.glossary,
+    showHighlight ? config.glossary : [],
     'translation',
   );
 

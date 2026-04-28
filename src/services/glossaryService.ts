@@ -131,14 +131,16 @@ export async function forkGlossary(id: string, newName: string): Promise<string>
 
 export async function assignGlossaryToProject(
   projectId: string,
-  glossaryId: string,
+  glossaryId: string | null,
 ): Promise<void> {
   await runInTransaction(async (run) => {
     await run('DELETE FROM project_glossaries WHERE project_id = $1', [projectId]);
-    await run(
-      'INSERT INTO project_glossaries (project_id, glossary_id) VALUES ($1, $2)',
-      [projectId, glossaryId],
-    );
+    if (glossaryId) {
+      await run(
+        'INSERT INTO project_glossaries (project_id, glossary_id) VALUES ($1, $2)',
+        [projectId, glossaryId],
+      );
+    }
   });
 }
 
@@ -202,7 +204,7 @@ export async function importEntriesFromCsv(
         await run(
           `INSERT INTO glossary_entries (id, glossary_id, term, translation, notes)
            VALUES ($1, $2, $3, $4, $5)
-           ON CONFLICT DO NOTHING`,
+           ON CONFLICT(glossary_id, term) DO NOTHING`,
           [entry.id, glossaryId, entry.term, entry.translation, entry.notes ?? ''],
         );
       }
