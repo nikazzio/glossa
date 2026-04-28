@@ -1,8 +1,9 @@
 import { invoke } from '@tauri-apps/api/core';
 import { open, save } from '@tauri-apps/plugin-dialog';
-import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
-import type { TranslationChunk } from '../types';
+import { readTextFile, writeFile, writeTextFile } from '@tauri-apps/plugin-fs';
+import type { ExperimentalImportMode, TranslationChunk } from '../types';
 import { qualityExportLabel } from '../utils';
+import { buildMarkdownHtmlDocument, flattenMarkdownToText } from './markdown';
 
 // ── Import ───────────────────────────────────────────────────────────
 
@@ -10,6 +11,8 @@ export interface ImportedTextFile {
   path: string;
   name: string;
   text: string;
+  format?: 'plain' | 'markdown';
+  experimental?: ExperimentalImportMode;
 }
 
 export async function importTextFile(): Promise<ImportedTextFile | null> {
@@ -29,26 +32,37 @@ export async function importTextFile(): Promise<ImportedTextFile | null> {
   return {
     path: resolvedPath,
     name: basename(resolvedPath),
-    text: await readImportedText(resolvedPath),
+    ...(await readImportedText(resolvedPath)),
   };
 }
 
-async function readImportedText(path: string): Promise<string> {
+async function readImportedText(path: string): Promise<Pick<ImportedTextFile, 'text' | 'format' | 'experimental'>> {
   const ext = extension(path);
   if (ext === 'docx') {
-    return await invoke<string>('extract_docx_text', { path });
+    return {
+      text: await invoke<string>('extract_docx_markdown', { path }),
+      format: 'markdown',
+      experimental: 'docx-markdown',
+    };
   }
   if (ext === 'pdf') {
-    return await invoke<string>('extract_pdf_text', { path });
+    return {
+      text: await invoke<string>('extract_pdf_text', { path }),
+      format: 'plain',
+    };
   }
-  return await readTextFile(path);
+  return {
+    text: await readTextFile(path),
+    format: ext === 'md' ? 'markdown' : 'plain',
+  };
 }
 
 // ── Export ────────────────────────────────────────────────────────────
 
 export async function exportTranslation(
   chunks: TranslationChunk[],
-  format: 'txt' | 'md' = 'txt',
+  format: 'txt' | 'md' | 'html' | 'docx' = 'txt',
+  options: { markdownAware?: boolean } = {},
 ): Promise<boolean> {
   const ext = format;
   const path = await save({
@@ -60,9 +74,22 @@ export async function exportTranslation(
   });
   if (!path) return false;
 
-  const content = format === 'md'
-    ? buildMarkdown(chunks)
-    : buildPlainText(chunks);
+  const markdown = buildMarkdown(chunks);
+
+  if (format === 'docx') {
+    const bytes = await invoke<number[]>('export_markdown_docx', { markdown });
+    await writeFile(path, new Uint8Array(bytes));
+    return true;
+  }
+
+  const content =
+    format === 'md'
+      ? markdown
+      : format === 'html'
+        ? buildMarkdownHtmlDocument(markdown, 'Translation Export')
+        : options.markdownAware
+          ? flattenMarkdownToText(markdown)
+          : buildPlainText(chunks);
 
   await writeTextFile(path, content);
   return true;
@@ -100,6 +127,24 @@ export async function exportBilingual(
   return true;
 }
 
+export async function exportMarkdownTranslation(
+  chunks: TranslationChunk[],
+): Promise<boolean> {
+  const path = await save({
+    title: 'Export markdown translation',
+    defaultPath: 'translation.md',
+    filters: [{ name: 'Markdown', extensions: ['md'] }],
+  });
+  if (!path) return false;
+
+  const content = chunks
+    .map((chunk) => chunk.currentDraft || chunk.originalText)
+    .join('\n\n');
+
+  await writeTextFile(path, content);
+  return true;
+}
+
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
@@ -110,12 +155,10 @@ function buildPlainText(chunks: TranslationChunk[]): string {
 }
 
 function buildMarkdown(chunks: TranslationChunk[]): string {
-  const lines: string[] = ['# Translation — Glossa', ''];
-  chunks.forEach((chunk, i) => {
-    if (chunks.length > 1) lines.push(`## Segment ${i + 1}`, '');
-    lines.push(chunk.currentDraft || chunk.originalText, '');
-  });
-  return lines.join('\n');
+  return chunks
+    .map((chunk) => (chunk.currentDraft || chunk.originalText).trim())
+    .filter(Boolean)
+    .join('\n\n');
 }
 
 function fileName(path: string): string {

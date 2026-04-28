@@ -87,4 +87,26 @@ describe('document chunking', () => {
     const text = 'First paragraph.\n\nSecond paragraph.';
     expect(chunkText(text, { useChunking: false, targetChunkCount: 4 })).toEqual([text]);
   });
+
+  it('keeps markdown footnote blocks intact when chunking markdown-aware content', () => {
+    const text = [
+      'Opening paragraph with a note[^1].',
+      '',
+      '[^1]: Footnote line one',
+      'Continues on a second line.',
+      '',
+      'Closing paragraph.',
+    ].join('\n');
+
+    const chunks = chunkText(text, {
+      useChunking: true,
+      targetChunkCount: 2,
+      markdownAware: true,
+    });
+
+    expect(chunks).toHaveLength(2);
+    expect(chunks[0]).toContain('[^1]: Footnote line one');
+    expect(chunks[0]).toContain('Continues on a second line.');
+    expect(chunks[1]).toBe('Closing paragraph.');
+  });
 });

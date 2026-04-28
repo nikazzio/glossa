@@ -1,18 +1,24 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { invoke } from '@tauri-apps/api/core';
-import { open } from '@tauri-apps/plugin-dialog';
-import { readTextFile } from '@tauri-apps/plugin-fs';
-import { importTextFile } from './fileService';
+import { open, save } from '@tauri-apps/plugin-dialog';
+import { readTextFile, writeFile, writeTextFile } from '@tauri-apps/plugin-fs';
+import { exportTranslation, importTextFile } from './fileService';
 
 const invokeMock = vi.mocked(invoke);
 const openMock = vi.mocked(open);
+const saveMock = vi.mocked(save);
 const readTextFileMock = vi.mocked(readTextFile);
+const writeTextFileMock = vi.mocked(writeTextFile);
+const writeFileMock = vi.mocked(writeFile);
 
 describe('importTextFile', () => {
   beforeEach(() => {
     invokeMock.mockReset();
     openMock.mockReset();
+    saveMock.mockReset();
     readTextFileMock.mockReset();
+    writeTextFileMock.mockReset();
+    writeFileMock.mockReset();
   });
 
   it('returns null when the user cancels the dialog', async () => {
@@ -33,7 +39,12 @@ describe('importTextFile', () => {
 
     expect(readTextFileMock).toHaveBeenCalledWith('/tmp/source.txt');
     expect(invokeMock).not.toHaveBeenCalled();
-    expect(result).toEqual({ path: '/tmp/source.txt', name: 'source.txt', text: 'plain text' });
+    expect(result).toEqual({
+      path: '/tmp/source.txt',
+      name: 'source.txt',
+      text: 'plain text',
+      format: 'plain',
+    });
   });
 
   it('routes .docx files through extract_docx_text', async () => {
@@ -42,9 +53,15 @@ describe('importTextFile', () => {
 
     const result = await importTextFile();
 
-    expect(invokeMock).toHaveBeenCalledWith('extract_docx_text', { path: '/tmp/Doc.DOCX' });
+    expect(invokeMock).toHaveBeenCalledWith('extract_docx_markdown', { path: '/tmp/Doc.DOCX' });
     expect(readTextFileMock).not.toHaveBeenCalled();
-    expect(result).toEqual({ path: '/tmp/Doc.DOCX', name: 'Doc.DOCX', text: 'docx content' });
+    expect(result).toEqual({
+      path: '/tmp/Doc.DOCX',
+      name: 'Doc.DOCX',
+      text: 'docx content',
+      format: 'markdown',
+      experimental: 'docx-markdown',
+    });
   });
 
   it('routes .pdf files through extract_pdf_text', async () => {
@@ -64,7 +81,74 @@ describe('importTextFile', () => {
 
     const result = await importTextFile();
 
-    expect(invokeMock).toHaveBeenCalledWith('extract_docx_text', { path: 'C\\\\Users\\\\me\\\\report.docx' });
+    expect(invokeMock).toHaveBeenCalledWith('extract_docx_markdown', { path: 'C\\\\Users\\\\me\\\\report.docx' });
     expect(result?.name).toBe('report.docx');
+    expect(result?.format).toBe('markdown');
+    expect(result?.experimental).toBe('docx-markdown');
+  });
+});
+
+describe('exportTranslation', () => {
+  beforeEach(() => {
+    invokeMock.mockReset();
+    saveMock.mockReset();
+    writeTextFileMock.mockReset();
+    writeFileMock.mockReset();
+  });
+
+  const markdownChunks = [
+    {
+      id: 'chunk-1',
+      originalText: '# Title',
+      currentDraft: '# Titolo',
+      status: 'completed' as const,
+      stageResults: {},
+      judgeResult: { content: '# Titolo', status: 'completed' as const, rating: 'good' as const, issues: [] },
+    },
+    {
+      id: 'chunk-2',
+      originalText: 'Text with note[^1].\n\n[^1]: Footnote body',
+      currentDraft: 'Testo con nota[^1].\n\n[^1]: Corpo nota',
+      status: 'completed' as const,
+      stageResults: {},
+      judgeResult: { content: '', status: 'idle' as const, rating: 'fair' as const, issues: [] },
+    },
+  ];
+
+  it('exports markdown-aware text as semantic plain text', async () => {
+    saveMock.mockResolvedValueOnce('/tmp/translation.txt');
+
+    await exportTranslation(markdownChunks, 'txt', { markdownAware: true });
+
+    expect(writeTextFileMock).toHaveBeenCalledWith('/tmp/translation.txt', expect.any(String));
+    expect(writeTextFileMock.mock.calls[0]?.[1]).toContain('TITOLO');
+    expect(writeTextFileMock.mock.calls[0]?.[1]).toContain('Notes');
+  });
+
+  it('exports standalone html for markdown-aware documents', async () => {
+    saveMock.mockResolvedValueOnce('/tmp/translation.html');
+
+    await exportTranslation(markdownChunks, 'html', { markdownAware: true });
+
+    expect(writeTextFileMock).toHaveBeenCalledWith(
+      '/tmp/translation.html',
+      expect.stringContaining('<!doctype html>'),
+    );
+    expect(writeTextFileMock.mock.calls[0]?.[1]).toContain('href="#fn-1"');
+  });
+
+  it('exports docx bytes through the native markdown exporter', async () => {
+    saveMock.mockResolvedValueOnce('/tmp/translation.docx');
+    invokeMock.mockResolvedValueOnce([80, 75, 3, 4]);
+
+    await exportTranslation(markdownChunks, 'docx', { markdownAware: true });
+
+    expect(invokeMock).toHaveBeenCalledWith('export_markdown_docx', {
+      markdown: '# Titolo\n\nTesto con nota[^1].\n\n[^1]: Corpo nota',
+    });
+    expect(writeFileMock).toHaveBeenCalledWith(
+      '/tmp/translation.docx',
+      expect.any(Uint8Array),
+    );
   });
 });

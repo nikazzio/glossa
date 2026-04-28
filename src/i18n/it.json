@@ -244,10 +244,25 @@
     "importPreviewChunks": "Anteprima dei chunk generati",
     "importSettings": "Impostazioni di segmentazione",
     "importConfirm": "Importa nel documento",
+    "importExperimentalDocxMarkdown": "Import DOCX sperimentale: questo documento e stato convertito in Markdown per la spike della pipeline. Controlla enfasi, note e confini dei blocchi prima di tradurre.",
     "exportTxt": "Esporta come .txt",
+    "exportMarkdown": "Esporta .md tradotto",
+    "exportHtml": "Esporta .html di revisione",
+    "exportDocx": "Esporta .docx",
     "exportBilingual": "Esporta bilingue .md",
     "exported": "File esportato con successo",
-    "exportError": "Esportazione fallita"
+    "exportError": "Esportazione fallita",
+    "importWarning": {
+      "markdown": "Markdown rilevato",
+      "docx-markdown": "Conversione DOCX in Markdown",
+      "footnotes": "Note presenti"
+    }
+  },
+  "editor": {
+    "write": "Scrivi",
+    "preview": "Anteprima",
+    "split": "Dividi",
+    "previewEmpty": "Niente da mostrare in anteprima."
   },
   "document": {
     "headerLabel": "Spazio Documento",

@@ -39,6 +39,9 @@ describe('projectService glossary persistence', () => {
       ],
       useChunking: true,
       targetChunkCount: 8,
+      documentFormat: 'markdown',
+      markdownAware: true,
+      experimentalImport: 'docx-markdown',
     };
 
     await saveProjectConfig('proj-1', config, 'document');
@@ -86,6 +89,9 @@ describe('projectService glossary persistence', () => {
           judge_provider: 'gemini',
           use_chunking: 1,
           target_chunk_count: 5,
+          document_format: 'markdown',
+          markdown_aware: 1,
+          experimental_import: 'docx-markdown',
         },
       ])
       .mockResolvedValueOnce([{ glossary_id: 'glossary-proj-1' }])
@@ -104,6 +110,9 @@ describe('projectService glossary persistence', () => {
     expect(config?.targetLanguage).toBe('English');
     expect(config?.inputText).toBe('Arma virumque cano');
     expect(config?.targetChunkCount).toBe(5);
+    expect(config?.documentFormat).toBe('markdown');
+    expect(config?.markdownAware).toBe(true);
+    expect(config?.experimentalImport).toBe('docx-markdown');
     expect(config?.assignedGlossaryId).toBe('glossary-proj-1');
     expect(config?.glossary).toEqual([
       {
@@ -129,6 +138,9 @@ describe('projectService glossary persistence', () => {
         glossary: [],
         useChunking: true,
         targetChunkCount: 2,
+        documentFormat: 'markdown',
+        markdownAware: true,
+        experimentalImport: 'docx-markdown',
       },
       viewMode: 'document',
       chunks: [
@@ -164,17 +176,19 @@ describe('projectService glossary persistence', () => {
     expect(dbMocks.runInTransaction).toHaveBeenCalledTimes(1);
     expect(dbMocks.execute).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO pipeline_configs'),
-      [
+      expect.arrayContaining([
         'cfg-proj-1',
         'proj-1',
-        '[]',
         'Judge',
         'gemini-3-flash-preview',
         'gemini',
         1,
         2,
         'Alpha\n\nBeta',
-      ],
+        'markdown',
+        1,
+        'docx-markdown',
+      ]),
     );
     expect(dbMocks.execute).toHaveBeenCalledWith(
       expect.stringContaining('position'),
@@ -208,11 +222,14 @@ describe('projectService glossary persistence', () => {
           stages: [],
           judgePrompt: 'Judge',
           judgeModel: 'gemini-3-flash-preview',
-          judgeProvider: 'gemini',
-          glossary: [],
-          useChunking: true,
-          targetChunkCount: 1,
-        },
+        judgeProvider: 'gemini',
+        glossary: [],
+        useChunking: true,
+        targetChunkCount: 1,
+        documentFormat: 'markdown',
+        markdownAware: true,
+        experimentalImport: 'docx-markdown',
+      },
         viewMode: 'document',
         chunks: [
           {

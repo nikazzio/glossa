@@ -29,6 +29,8 @@ interface PendingImport {
   text: string;
   useChunking: boolean;
   targetChunkCount: number;
+  format?: 'plain' | 'markdown';
+  experimental?: 'docx-markdown';
 }
 
 interface HeaderProps {
@@ -75,6 +77,8 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
           text: imported.text,
           useChunking: config.useChunking !== false,
           targetChunkCount: config.targetChunkCount ?? 0,
+          format: imported.format,
+          experimental: imported.experimental,
         });
       }
     } catch (err: any) {
@@ -88,21 +92,27 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
       ...prev,
       useChunking: pendingImport.useChunking,
       targetChunkCount: pendingImport.targetChunkCount,
+      documentFormat: pendingImport.format ?? 'plain',
+      markdownAware: pendingImport.format === 'markdown',
+      experimentalImport: pendingImport.experimental ?? null,
     }));
     loadDocument(pendingImport.text, {
       useChunking: pendingImport.useChunking,
       targetChunkCount: pendingImport.targetChunkCount,
+      markdownAware: pendingImport.format === 'markdown',
     });
     setPendingImport(null);
     toast.success(t('files.imported'));
   };
 
-  const handleExport = async (type: 'txt' | 'md' | 'bilingual') => {
+  const handleExport = async (type: 'txt' | 'md' | 'html' | 'docx' | 'bilingual') => {
     try {
       const ok =
         type === 'bilingual'
           ? await exportBilingual(chunks)
-          : await exportTranslation(chunks, type);
+          : await exportTranslation(chunks, type, {
+              markdownAware: config.markdownAware === true,
+            });
       if (ok) toast.success(t('files.exported'));
     } catch (err: any) {
       toast.error(t('files.exportError'), { description: err.message });
@@ -333,10 +343,17 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
               totalTokens={totalTokens}
               estimatedCostUsd={estimatedCostUsd}
               hasChunks={chunks.length > 0}
+              markdownAware={config.markdownAware === true}
               onExportTxt={() => handleExport('txt')}
-              onExportMd={() => handleExport('bilingual')}
+              onExportMd={() => handleExport('md')}
+              onExportHtml={() => handleExport('html')}
+              onExportDocx={() => handleExport('docx')}
+              onExportBilingual={() => handleExport('bilingual')}
               exportTxtLabel={t('files.exportTxt')}
-              exportMdLabel={t('files.exportBilingual')}
+              exportMdLabel={t('files.exportMarkdown')}
+              exportHtmlLabel={t('files.exportHtml')}
+              exportDocxLabel={t('files.exportDocx')}
+              exportBilingualLabel={t('files.exportBilingual')}
             />
             {onRunPipeline && onRunAuditOnly && onCancelPipeline && (
               <div className="flex flex-wrap items-center justify-end">
@@ -359,6 +376,9 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
           text={pendingImport.text}
           useChunking={pendingImport.useChunking}
           targetChunkCount={pendingImport.targetChunkCount}
+          markdownAware={pendingImport.format === 'markdown'}
+          format={pendingImport.format}
+          experimental={pendingImport.experimental}
           onUseChunkingChange={(value) =>
             setPendingImport((current) =>
               current ? { ...current, useChunking: value } : current,
@@ -447,10 +467,17 @@ function HeaderInfoBar({
   totalTokens,
   estimatedCostUsd,
   hasChunks,
+  markdownAware,
   onExportTxt,
   onExportMd,
+  onExportHtml,
+  onExportDocx,
+  onExportBilingual,
   exportTxtLabel,
   exportMdLabel,
+  exportHtmlLabel,
+  exportDocxLabel,
+  exportBilingualLabel,
 }: {
   sourceWords: number;
   translatedWords: number;
@@ -460,10 +487,17 @@ function HeaderInfoBar({
   totalTokens: number;
   estimatedCostUsd: number;
   hasChunks: boolean;
+  markdownAware: boolean;
   onExportTxt: () => void;
   onExportMd: () => void;
+  onExportHtml: () => void;
+  onExportDocx: () => void;
+  onExportBilingual: () => void;
   exportTxtLabel: string;
   exportMdLabel: string;
+  exportHtmlLabel: string;
+  exportDocxLabel: string;
+  exportBilingualLabel: string;
 }) {
   const { t } = useTranslation();
 
@@ -531,6 +565,35 @@ function HeaderInfoBar({
             >
               MD
             </button>
+            <button
+              type="button"
+              onClick={onExportHtml}
+              title={exportHtmlLabel}
+              aria-label={exportHtmlLabel}
+              className="rounded px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted border border-editorial-border/60 transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            >
+              HTML
+            </button>
+            <button
+              type="button"
+              onClick={onExportDocx}
+              title={exportDocxLabel}
+              aria-label={exportDocxLabel}
+              className="rounded px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted border border-editorial-border/60 transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            >
+              DOCX
+            </button>
+            {markdownAware ? (
+              <button
+                type="button"
+                onClick={onExportBilingual}
+                title={exportBilingualLabel}
+                aria-label={exportBilingualLabel}
+                className="rounded px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted border border-editorial-border/60 transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              >
+                BI
+              </button>
+            ) : null}
           </div>
         </div>
       )}

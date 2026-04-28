@@ -244,10 +244,25 @@
     "importPreviewChunks": "Generated chunk preview",
     "importSettings": "Segmentation settings",
     "importConfirm": "Import into document",
+    "importExperimentalDocxMarkdown": "Experimental DOCX import: this document was converted to Markdown for the spike pipeline. Check emphasis, footnotes, and block boundaries before translating.",
     "exportTxt": "Export as .txt",
+    "exportMarkdown": "Export translated .md",
+    "exportHtml": "Export review .html",
+    "exportDocx": "Export .docx",
     "exportBilingual": "Export bilingual .md",
     "exported": "File exported successfully",
-    "exportError": "Export failed"
+    "exportError": "Export failed",
+    "importWarning": {
+      "markdown": "Markdown detected",
+      "docx-markdown": "DOCX to Markdown conversion",
+      "footnotes": "Footnotes present"
+    }
+  },
+  "editor": {
+    "write": "Write",
+    "preview": "Preview",
+    "split": "Split",
+    "previewEmpty": "Nothing to preview yet."
   },
   "document": {
     "headerLabel": "Document Workspace",

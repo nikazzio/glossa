@@ -21,7 +21,7 @@ import {
   qualityTone,
 } from '../../utils';
 import { buildSplitPreview } from '../../utils/documentWorkflow';
-import { CopyButton, HighlightedText, StatusIndicator } from '../common';
+import { CopyButton, MarkdownEditor, StatusIndicator } from '../common';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useGlossaryHighlight } from '../../hooks/useGlossaryHighlight';
 
@@ -106,7 +106,8 @@ export function DocumentView({
 
   const openSplitDialog = (chunkId: string, text: string) => {
     const initialSplitAt =
-      findBestSplitIndex(text) ?? Math.max(1, Math.floor(text.length / 2));
+      findBestSplitIndex(text, { markdownAware: config.markdownAware }) ??
+      Math.max(1, Math.floor(text.length / 2));
     setSplitDraft({ chunkId, splitAt: initialSplitAt });
   };
 
@@ -248,17 +249,17 @@ export function DocumentView({
             eyebrow={t('document.leftPage')}
             readOnly={currentChunk.status === 'completed'}
           >
-            {showHighlight ? (
-              <HighlightedText html={sourceHighlight.html} />
-            ) : (
-              <textarea
-                value={currentChunk.originalText}
-                onChange={(event) => updateChunkOriginalText(currentChunk.id, event.target.value)}
-                disabled={isProcessing}
-                readOnly={currentChunk.status === 'completed'}
-                className="min-h-[420px] w-full resize-y bg-transparent text-[15px] leading-8 text-editorial-ink outline-none disabled:opacity-70 read-only:cursor-not-allowed"
-              />
-            )}
+            <MarkdownEditor
+              value={currentChunk.originalText}
+              onChange={(nextValue) => updateChunkOriginalText(currentChunk.id, nextValue)}
+              markdownEnabled={config.markdownAware === true}
+              disabled={isProcessing}
+              readOnly={currentChunk.status === 'completed'}
+              minHeightClassName="min-h-[420px]"
+              textClassName="text-[15px] leading-8 text-editorial-ink"
+              previewClassName="min-h-[420px] text-[15px] leading-8 text-editorial-ink"
+              highlightHtml={showHighlight && currentChunk.status !== 'completed' ? sourceHighlight.html : null}
+            />
           </DocumentPage>
 
           <DocumentPage
@@ -266,16 +267,16 @@ export function DocumentView({
             eyebrow={t('document.rightPage')}
             actions={<CopyButton text={currentChunk.currentDraft || ''} />}
           >
-            {showHighlight ? (
-              <HighlightedText html={translationHighlight.html} />
-            ) : (
-              <textarea
-                value={currentChunk.currentDraft || ''}
-                onChange={(event) => updateChunkDraft(currentChunk.id, event.target.value)}
-                className="min-h-[420px] w-full resize-y bg-transparent text-[15px] leading-8 text-editorial-ink outline-none"
-                placeholder={t('pipeline.candidatePlaceholder')}
-              />
-            )}
+            <MarkdownEditor
+              value={currentChunk.currentDraft || ''}
+              onChange={(nextValue) => updateChunkDraft(currentChunk.id, nextValue)}
+              markdownEnabled={config.markdownAware === true}
+              minHeightClassName="min-h-[420px]"
+              textClassName="text-[15px] leading-8 text-editorial-ink"
+              previewClassName="min-h-[420px] text-[15px] leading-8 text-editorial-ink"
+              placeholder={t('pipeline.candidatePlaceholder')}
+              highlightHtml={showHighlight ? translationHighlight.html : null}
+            />
           </DocumentPage>
         </div>
 
@@ -409,7 +410,9 @@ function SplitChunkDialog({
 }) {
   const { t } = useTranslation();
   const trapRef = useFocusTrap(true, onCancel);
-  const preview = buildSplitPreview(text, splitAt);
+  const adjustedPreview = buildSplitPreview(text, splitAt, {
+    markdownAware: usePipelineStore.getState().config.markdownAware,
+  });
 
   return (
     <div
@@ -461,7 +464,7 @@ function SplitChunkDialog({
                   {t('document.splitPreviewFirst')}
                 </div>
                 <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-editorial-ink">
-                  {preview.beforeText || '—'}
+                  {adjustedPreview.beforeText || '—'}
                 </p>
               </div>
               <div className="rounded-[22px] border border-editorial-border bg-editorial-bg p-5">
@@ -469,7 +472,7 @@ function SplitChunkDialog({
                   {t('document.splitPreviewSecond')}
                 </div>
                 <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-editorial-ink">
-                  {preview.afterText || '—'}
+                  {adjustedPreview.afterText || '—'}
                 </p>
               </div>
             </div>
@@ -487,7 +490,7 @@ function SplitChunkDialog({
           <button
             type="button"
             onClick={onConfirm}
-            disabled={!preview.isValid}
+            disabled={!adjustedPreview.isValid}
             className="rounded-full bg-editorial-ink px-5 py-3 text-[11px] font-bold uppercase tracking-[0.25em] text-white transition-colors hover:bg-editorial-accent disabled:opacity-40"
           >
             {t('document.manualSplitConfirm')}

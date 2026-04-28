@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
-import { StatusIndicator, ProcessingLine, CopyButton, HighlightedText } from '../common';
+import { StatusIndicator, ProcessingLine, CopyButton, MarkdownEditor } from '../common';
 import { estimateTextStats, indexPad, recommendChunkCount } from '../../utils';
 import { confirm } from '../../stores/confirmStore';
 import { useGlossaryHighlight } from '../../hooks/useGlossaryHighlight';
@@ -23,16 +23,17 @@ function ChunkSourceText({
   onUpdate: (text: string) => void;
 }) {
   const { html } = useGlossaryHighlight(chunk.originalText, glossary, 'source');
-  if (showHighlight) {
-    return <HighlightedText html={html} className="min-h-[120px] p-4 text-xs font-mono leading-relaxed" />;
-  }
   return (
-    <textarea
+    <MarkdownEditor
       value={chunk.originalText}
-      onChange={(e) => onUpdate(e.target.value)}
+      onChange={onUpdate}
+      markdownEnabled={usePipelineStore.getState().config.markdownAware === true}
       disabled={isProcessing}
       readOnly={chunk.status === 'completed'}
-      className="w-full bg-editorial-textbox/60 border border-editorial-border p-4 text-xs font-mono outline-none leading-relaxed resize-y min-h-[120px] disabled:opacity-70 read-only:bg-editorial-textbox/30 read-only:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-editorial-accent"
+      minHeightClassName="min-h-[120px]"
+      textClassName="border border-editorial-border bg-editorial-textbox/60 p-4 text-xs font-mono leading-relaxed text-editorial-ink"
+      previewClassName="min-h-[120px] text-xs leading-relaxed text-editorial-ink"
+      highlightHtml={showHighlight && chunk.status !== 'completed' ? html : null}
     />
   );
 }
@@ -51,15 +52,16 @@ function ChunkDraftText({
   placeholder: string;
 }) {
   const { html } = useGlossaryHighlight(chunk.currentDraft ?? '', glossary, 'translation');
-  if (showHighlight) {
-    return <HighlightedText html={html} className="min-h-[100px] p-4 text-sm font-sans leading-relaxed" />;
-  }
   return (
-    <textarea
+    <MarkdownEditor
       value={chunk.currentDraft || ''}
-      onChange={(e) => onUpdate(e.target.value)}
-      className="w-full bg-editorial-bg/50 border border-editorial-border p-4 text-sm font-sans outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent resize-y min-h-[100px] leading-relaxed transition-all"
+      onChange={onUpdate}
+      markdownEnabled={usePipelineStore.getState().config.markdownAware === true}
+      minHeightClassName="min-h-[100px]"
+      textClassName="border border-editorial-border bg-editorial-bg/50 p-4 text-sm font-sans leading-relaxed text-editorial-ink"
+      previewClassName="min-h-[100px] text-sm leading-relaxed text-editorial-ink"
       placeholder={placeholder}
+      highlightHtml={showHighlight ? html : null}
     />
   );
 }
@@ -157,11 +159,14 @@ export function ProductionStream({
               <label className="block text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
                 {t('pipeline.inputContent')}
               </label>
-              <textarea
+              <MarkdownEditor
                 value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
+                onChange={setInputText}
+                markdownEnabled={config.markdownAware === true}
                 placeholder={t('pipeline.inputPlaceholder')}
-                className="w-full bg-editorial-textbox border-none p-8 text-sm font-mono outline-none leading-relaxed resize-none min-h-[400px] focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                minHeightClassName="min-h-[400px]"
+                textClassName="border-none bg-editorial-textbox p-8 text-sm font-mono leading-relaxed text-editorial-ink"
+                previewClassName="min-h-[400px] text-sm leading-relaxed text-editorial-ink"
               />
               <div className="grid grid-cols-3 gap-3 text-[10px] font-mono text-editorial-muted">
                 <span>{t('pipeline.words')}: {stats.words}</span>
@@ -211,6 +216,7 @@ export function ProductionStream({
                   loadDocument(inputText, {
                     useChunking: config.useChunking,
                     targetChunkCount: config.targetChunkCount,
+                    markdownAware: config.markdownAware,
                   })
                 }
                 className="w-full rounded-full border border-editorial-border px-6 py-4 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink"
@@ -240,6 +246,7 @@ export function ProductionStream({
                 loadDocument(inputText, {
                   useChunking: config.useChunking,
                   targetChunkCount: config.targetChunkCount,
+                  markdownAware: config.markdownAware,
                 })
               }
               className="rounded-full border border-editorial-border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink"

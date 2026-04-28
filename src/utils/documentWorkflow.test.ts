@@ -19,6 +19,19 @@ describe('documentWorkflow', () => {
     );
   });
 
+  it('keeps experimental markdown metadata in the preview result', () => {
+    const preview = buildImportPreview('Text with note[^1].\n\n[^1]: A note.', {
+      useChunking: true,
+      targetChunkCount: 0,
+      markdownAware: true,
+      format: 'markdown',
+      experimental: 'docx-markdown',
+    });
+
+    expect(preview.format).toBe('markdown');
+    expect(preview.experimental).toBe('docx-markdown');
+  });
+
   it('builds a split preview around an explicit cursor position', () => {
     const preview = buildSplitPreview('Alpha beta gamma delta', 11);
 

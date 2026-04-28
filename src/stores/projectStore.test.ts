@@ -107,6 +107,9 @@ describe('projectStore', () => {
       judgeProvider: 'anthropic',
       useChunking: false,
       targetChunkCount: 0,
+      documentFormat: 'markdown',
+      markdownAware: true,
+      experimentalImport: 'docx-markdown',
       glossary: [{ term: 'logos', translation: 'logos', notes: 'retain Greek' }],
     });
 
@@ -136,6 +139,8 @@ describe('projectStore', () => {
 
     expect(useProjectStore.getState().currentProjectId).toBe('proj-1');
     expect(usePipelineStore.getState().config.sourceLanguage).toBe('Latin');
+    expect(usePipelineStore.getState().config.documentFormat).toBe('markdown');
+    expect(usePipelineStore.getState().config.markdownAware).toBe(true);
     expect(useChunksStore.getState().chunks[0].currentDraft).toBe('Translated paragraph');
     expect(useUiStore.getState().viewMode).toBe('document');
     expect(useUiStore.getState().selectedChunkId).toBe('chunk-0');
@@ -153,6 +158,9 @@ describe('projectStore', () => {
       judgeProvider: '',
       useChunking: true,
       targetChunkCount: 0,
+      documentFormat: 'plain',
+      markdownAware: false,
+      experimentalImport: null,
       glossary: [],
     });
     projectServiceMocks.loadTranslations.mockResolvedValue([]);

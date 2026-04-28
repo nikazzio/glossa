@@ -45,6 +45,8 @@ pub fn run() {
       llm::list_ollama_models,
       llm::check_ollama_status,
       documents::extract_docx_text,
+      documents::extract_docx_markdown,
+      documents::export_markdown_docx,
       documents::extract_pdf_text,
     ])
     .run(tauri::generate_context!())

@@ -126,6 +126,9 @@ export async function getProjectConfig(projectId: string): Promise<{
   judgeProvider: string;
   useChunking: boolean;
   targetChunkCount: number;
+  documentFormat: PipelineConfig['documentFormat'];
+  markdownAware: boolean;
+  experimentalImport: PipelineConfig['experimentalImport'];
   glossary: GlossaryEntry[];
   assignedGlossaryId: string | null;
 } | null> {
@@ -140,6 +143,9 @@ export async function getProjectConfig(projectId: string): Promise<{
     judge_provider: string;
     use_chunking: number;
     target_chunk_count?: number;
+    document_format?: PipelineConfig['documentFormat'];
+    markdown_aware?: number;
+    experimental_import?: PipelineConfig['experimentalImport'];
   }>(
     `SELECT
        p.source_language,
@@ -151,7 +157,10 @@ export async function getProjectConfig(projectId: string): Promise<{
        pc.judge_model,
        pc.judge_provider,
        pc.use_chunking,
-       pc.target_chunk_count
+       pc.target_chunk_count,
+       pc.document_format,
+       pc.markdown_aware,
+       pc.experimental_import
      FROM pipeline_configs pc
      JOIN projects p ON p.id = pc.project_id
      WHERE pc.project_id = $1`,
@@ -186,6 +195,9 @@ export async function getProjectConfig(projectId: string): Promise<{
     judgeProvider: row.judge_provider,
     useChunking: row.use_chunking === 1,
     targetChunkCount: row.target_chunk_count ?? 0,
+    documentFormat: row.document_format ?? 'plain',
+    markdownAware: row.markdown_aware === 1,
+    experimentalImport: row.experimental_import ?? null,
     assignedGlossaryId,
     glossary: glossaryRows.map((g, i) => ({
       id: g.id || `gloss-loaded-${projectId}-${i}`,
@@ -280,8 +292,8 @@ async function saveProjectConfigInternal(
   await run(
     `INSERT INTO pipeline_configs (
        id, project_id, stages, judge_prompt, judge_model, judge_provider, use_chunking,
-       target_chunk_count, source_text
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9, ''))
+       target_chunk_count, source_text, document_format, markdown_aware, experimental_import
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9, ''), $10, $11, $12)
      ON CONFLICT(project_id) DO UPDATE SET
        id = excluded.id,
        stages = excluded.stages,
@@ -290,6 +302,9 @@ async function saveProjectConfigInternal(
        judge_provider = excluded.judge_provider,
        use_chunking = excluded.use_chunking,
        target_chunk_count = excluded.target_chunk_count,
+       document_format = excluded.document_format,
+       markdown_aware = excluded.markdown_aware,
+       experimental_import = excluded.experimental_import,
        source_text = CASE
          WHEN $9 IS NULL THEN pipeline_configs.source_text
          ELSE $9
@@ -304,6 +319,9 @@ async function saveProjectConfigInternal(
       config.useChunking !== false ? 1 : 0,
       config.targetChunkCount ?? 0,
       inputText ?? null,
+      config.documentFormat ?? 'plain',
+      config.markdownAware ? 1 : 0,
+      config.experimentalImport ?? null,
     ],
   );
   await run(

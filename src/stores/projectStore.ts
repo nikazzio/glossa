@@ -108,6 +108,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       judgeProvider: (config.judgeProvider as any) || pipeline.config.judgeProvider,
       useChunking: config.useChunking,
       targetChunkCount: config.targetChunkCount,
+      documentFormat: config.documentFormat ?? 'plain',
+      markdownAware: config.markdownAware ?? false,
+      experimentalImport: config.experimentalImport ?? null,
       glossary: config.glossary,
       assignedGlossaryId: config.assignedGlossaryId,
     });
