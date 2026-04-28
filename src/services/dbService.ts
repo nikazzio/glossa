@@ -19,13 +19,28 @@ function serializeWrite<T>(fn: () => Promise<T>): Promise<T> {
   return next;
 }
 
-async function ensureColumn(table: string, column: string, definition: string): Promise<void> {
+// Whitelist of (table.column) pairs allowed to be added via migration.
+// Any call with values outside this set is rejected to prevent SQL injection.
+const ALLOWED_MIGRATIONS = new Set([
+  'pipeline_configs.target_chunk_count',
+  'pipeline_configs.source_text',
+  'projects.view_mode',
+  'translations.position',
+  'translations.chunk_status',
+  'translations.judge_status',
+  'translations.judge_rating',
+  'prompt_templates.context',
+]);
+
+export async function ensureColumn(table: string, column: string, definition: string): Promise<void> {
+  if (!ALLOWED_MIGRATIONS.has(`${table}.${column}`)) {
+    throw new Error(`[dbService] ensureColumn: migration not allowed for "${table}.${column}"`);
+  }
   const conn = await getDb();
   const columns = await conn.select<Array<{ name: string }>>(`PRAGMA table_info(${table})`);
   if (columns.some((existing) => existing.name === column)) {
     return;
   }
-
   await conn.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
 }
 

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi, afterEach } from 'vitest';
 
 const dbState = vi.hoisted(() => {
   const columnsByTable = new Map<string, string[]>([
@@ -35,6 +35,23 @@ vi.mock('@tauri-apps/plugin-sql', () => ({
     load: dbState.load,
   },
 }));
+
+describe('ensureColumn whitelist', () => {
+  afterEach(() => {
+    vi.resetModules();
+    vi.clearAllMocks();
+  });
+
+  it('rejects a table/column pair not in the whitelist', async () => {
+    const { ensureColumn } = await import('./dbService');
+    await expect(ensureColumn('users', 'password', 'TEXT')).rejects.toThrow('not allowed');
+  });
+
+  it('rejects a whitelisted table with an unlisted column', async () => {
+    const { ensureColumn } = await import('./dbService');
+    await expect(ensureColumn('translations', 'evil_col', 'TEXT')).rejects.toThrow('not allowed');
+  });
+});
 
 describe('initDatabase migrations', () => {
   beforeEach(() => {
