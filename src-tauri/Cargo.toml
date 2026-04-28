@@ -43,6 +43,6 @@ incremental = true
 
 [profile.release]
 opt-level = "z"      # ottimizza per dimensione (binario più piccolo = installer più leggero)
-lto = "thin"         # Link Time Optimization leggera: buon risparmio di spazio, build CI accettabile
+lto = "thin"         # "thin" = buon risparmio, build CI veloce; valutare "true" (full LTO, -3–8% binario) dopo aver misurato i tempi su macos-latest
 codegen-units = 1    # un solo codegen unit per massimizzare le ottimizzazioni del linker
 strip = "symbols"    # rimuove tutti i simboli (debug + nomi funzione) dal binario distribuito
