@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.4.0](https://github.com/nikazzio/glossa/compare/glossa-v0.3.1...glossa-v0.4.0) (2026-04-28)
+
+
+### ✨ Features
+
+* cross-project glossary library, CSV import, glossary highlighting ([#53](https://github.com/nikazzio/glossa/issues/53)) ([249c17b](https://github.com/nikazzio/glossa/commit/249c17bf57e7b0fb41348663c858b4f41d9475e5))
+* token tracking, prompt template library, ConfigDrawer redesign (S4-T5a) ([#48](https://github.com/nikazzio/glossa/issues/48)) ([98d2bad](https://github.com/nikazzio/glossa/commit/98d2bad525b26e11d580abea811fe1aff0de71b6))
+
+
+### 🐛 Bug Fixes
+
+* **judge:** resilient JSON parsing for markdown-wrapped LLM responses ([#54](https://github.com/nikazzio/glossa/issues/54)) ([d51bf0c](https://github.com/nikazzio/glossa/commit/d51bf0cccd756de2a27958c7d0a68786ad5841c3))
+
 ## [0.3.1](https://github.com/nikazzio/glossa/compare/glossa-v0.3.0...glossa-v0.3.1) (2026-04-27)
 
 
