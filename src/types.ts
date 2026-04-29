@@ -4,6 +4,8 @@ export type ChunkStatus = 'ready' | 'processing' | 'completed' | 'error';
 export type ViewMode = 'sandbox' | 'document';
 export type DocumentLayoutPreference = 'auto' | 'standard' | 'book';
 export type OllamaStatus = 'unknown' | 'connected' | 'disconnected';
+export type DocumentFormat = 'plain' | 'markdown';
+export type ExperimentalImportMode = 'docx-markdown';
 
 export interface GlossaryEntry {
   id?: string;
@@ -37,6 +39,7 @@ export interface TranslationChunk {
   stageResults: Record<string, PipelineResult>; // Key is stage id
   judgeResult: JudgeResult;
   currentDraft?: string;
+  translationLocked?: boolean;
 }
 
 export interface TokenUsage {
@@ -84,4 +87,7 @@ export interface PipelineConfig {
   assignedGlossaryId?: string | null;
   useChunking?: boolean;
   targetChunkCount?: number;
+  documentFormat?: DocumentFormat;
+  markdownAware?: boolean;
+  experimentalImport?: ExperimentalImportMode | null;
 }

@@ -117,9 +117,10 @@ export function DictionariesTab() {
   };
 
   const handleAssign = async (glossaryId: string) => {
-    if (!currentProjectId) return;
     try {
-      await assignGlossaryToProject(currentProjectId, glossaryId);
+      if (currentProjectId) {
+        await assignGlossaryToProject(currentProjectId, glossaryId);
+      }
       await assignGlossary(glossaryId);
       toast.success(t('library.dictionaryAssigned'));
     } catch (err: any) {
@@ -219,7 +220,7 @@ export function DictionariesTab() {
                 </button>
 
                 <div className="flex items-center gap-1 shrink-0">
-                  {currentProjectId && !isAssigned && (
+                  {!isAssigned && (
                     <button
                       onClick={() => handleAssign(g.id)}
                       title={t('library.assignToProject')}

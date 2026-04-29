@@ -1,15 +1,27 @@
 import {
+  AlertCircle,
+  CircleCheck,
+  CircleDot,
+  Code2,
+  Columns2,
+  FileCode,
+  FileOutput,
+  FileText,
+  FilePen,
   FolderOpen,
   Globe,
   HelpCircle,
   LayoutTemplate,
   LibraryBig,
+  Loader2,
+  Play,
   Save,
   Settings,
   SlidersHorizontal,
+  Square,
   Upload,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { usePipelineStore } from '../../stores/pipelineStore';
@@ -18,28 +30,27 @@ import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useLibraryStore } from '../../stores/libraryStore';
 import { ImportPreviewDialog } from '../document';
-import { PipelineActions } from '../pipeline';
-import { calculateCompositeQuality, qualityLabelKey } from '../../utils';
+import { SaveProjectDialog } from '../projects';
 import { importTextFile, exportTranslation, exportBilingual } from '../../services/fileService';
 import { HelpGuide } from '../help';
-import { MODEL_PRICING } from '../../constants';
 
 interface PendingImport {
   fileName: string;
   text: string;
   useChunking: boolean;
   targetChunkCount: number;
+  format?: 'plain' | 'markdown';
+  experimental?: 'docx-markdown';
 }
 
 interface HeaderProps {
   onRunPipeline?: () => void;
-  onRunAuditOnly?: () => void;
   onCancelPipeline?: () => void;
 }
 
-export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: HeaderProps = {}) {
+export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
   const { config, setConfig } = usePipelineStore();
-  const { chunks, isProcessing, loadDocument } = useChunksStore();
+  const { chunks, isProcessing, cancelRequested, loadDocument } = useChunksStore();
   const {
     setShowSettings,
     setShowHelp,
@@ -59,6 +70,8 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
   const setShowLibraryPanel = useLibraryStore((state) => state.setShowLibraryPanel);
   const { t, i18n } = useTranslation();
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
+  const [showSaveProjectDialog, setShowSaveProjectDialog] = useState(false);
+  const [isCreatingProjectFromSave, setIsCreatingProjectFromSave] = useState(false);
 
   const currentProject = projects.find((project) => project.id === currentProjectId);
 
@@ -75,6 +88,8 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
           text: imported.text,
           useChunking: config.useChunking !== false,
           targetChunkCount: config.targetChunkCount ?? 0,
+          format: imported.format,
+          experimental: imported.experimental,
         });
       }
     } catch (err: any) {
@@ -88,21 +103,27 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
       ...prev,
       useChunking: pendingImport.useChunking,
       targetChunkCount: pendingImport.targetChunkCount,
+      documentFormat: pendingImport.format ?? 'plain',
+      markdownAware: pendingImport.format === 'markdown',
+      experimentalImport: pendingImport.experimental ?? null,
     }));
     loadDocument(pendingImport.text, {
       useChunking: pendingImport.useChunking,
       targetChunkCount: pendingImport.targetChunkCount,
+      markdownAware: pendingImport.format === 'markdown',
     });
     setPendingImport(null);
     toast.success(t('files.imported'));
   };
 
-  const handleExport = async (type: 'txt' | 'md' | 'bilingual') => {
+  const handleExport = async (type: 'txt' | 'md' | 'html' | 'docx' | 'bilingual') => {
     try {
       const ok =
         type === 'bilingual'
           ? await exportBilingual(chunks)
-          : await exportTranslation(chunks, type);
+          : await exportTranslation(chunks, type, {
+              markdownAware: config.markdownAware === true,
+            });
       if (ok) toast.success(t('files.exported'));
     } catch (err: any) {
       toast.error(t('files.exportError'), { description: err.message });
@@ -110,11 +131,28 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
   };
 
   const handleSave = async () => {
+    if (!currentProjectId) {
+      setShowSaveProjectDialog(true);
+      return;
+    }
     try {
       await saveCurrentProject();
       toast.success(t('projects.saved'));
     } catch (err: any) {
       toast.error(t('projects.saveFailed'), { description: err?.message });
+    }
+  };
+
+  const handleFirstSave = async (name: string) => {
+    try {
+      setIsCreatingProjectFromSave(true);
+      await saveCurrentProject(name);
+      setShowSaveProjectDialog(false);
+      toast.success(t('projects.saved'));
+    } catch (err: any) {
+      toast.error(t('projects.saveFailed'), { description: err?.message });
+    } finally {
+      setIsCreatingProjectFromSave(false);
     }
   };
 
@@ -127,62 +165,11 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
   const openConfigLabel = t('header.openConfig');
   const libraryLabel = t('library.openLibrary');
   const sandboxLabel = viewMode === 'sandbox' ? t('header.exitSandbox') : t('header.sandbox');
-
-  const sourceWords = useMemo(
-    () => chunks.reduce((acc, chunk) => acc + countWords(chunk.originalText), 0),
-    [chunks],
-  );
-  const translatedWords = useMemo(
-    () => chunks.reduce((acc, chunk) => acc + countWords(chunk.currentDraft || ''), 0),
-    [chunks],
-  );
-  const completedCount = chunks.filter((chunk) => chunk.status === 'completed').length;
-  const compositeQuality = useMemo(() => calculateCompositeQuality(chunks), [chunks]);
-  const compositeLabel = compositeQuality ? t(qualityLabelKey(compositeQuality)) : null;
-
-  const totalTokens = useMemo(
-    () =>
-      chunks.reduce((sum, chunk) => {
-        const stageSum = Object.values(chunk.stageResults).reduce(
-          (s, r) => s + (r.tokenUsage?.inputTokens ?? 0) + (r.tokenUsage?.outputTokens ?? 0),
-          0,
-        );
-        const judgeSum =
-          (chunk.judgeResult.tokenUsage?.inputTokens ?? 0) +
-          (chunk.judgeResult.tokenUsage?.outputTokens ?? 0);
-        return sum + stageSum + judgeSum;
-      }, 0),
-    [chunks],
-  );
-
-  const estimatedCostUsd = useMemo(
-    () =>
-      chunks.reduce((total, chunk) => {
-        let cost = 0;
-        for (const [stageId, result] of Object.entries(chunk.stageResults)) {
-          const stage = config.stages.find((s) => s.id === stageId);
-          if (!stage || !result.tokenUsage) continue;
-          const pricing = MODEL_PRICING[`${stage.provider}/${stage.model}`];
-          if (!pricing) continue;
-          cost +=
-            (result.tokenUsage.inputTokens * pricing.input +
-              result.tokenUsage.outputTokens * pricing.output) /
-            1_000_000;
-        }
-        const judgeUsage = chunk.judgeResult.tokenUsage;
-        if (judgeUsage) {
-          const judgePricing = MODEL_PRICING[`${config.judgeProvider}/${config.judgeModel}`];
-          if (judgePricing) {
-            cost +=
-              (judgeUsage.inputTokens * judgePricing.input +
-                judgeUsage.outputTokens * judgePricing.output) /
-              1_000_000;
-          }
-        }
-        return total + cost;
-      }, 0),
-    [chunks, config.stages, config.judgeProvider, config.judgeModel],
-  );
+  const exportTxtLabel = t('files.exportTxt');
+  const exportMdLabel = t('files.exportMarkdown');
+  const exportHtmlLabel = t('files.exportHtml');
+  const exportDocxLabel = t('files.exportDocx');
+  const exportBilingualLabel = t('files.exportBilingual');
 
   const saveStatusLabel =
     saveState === 'dirty'
@@ -194,6 +181,10 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
           : currentProjectId
             ? t('projects.statusSaved')
             : t('projects.statusDraft');
+
+  const runLabel = t('pipeline.beginPipeline');
+  const stopLabel = t('pipeline.stopPipeline');
+  const stoppingLabel = t('pipeline.stopping');
 
   return (
     <header className="border-b border-editorial-border bg-[linear-gradient(180deg,#fffdf8_0%,#f8f3ea_100%)] px-6 py-5 md:px-10">
@@ -220,35 +211,88 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
                 >
                   {currentProject.name}
                 </button>
-                <span className="rounded-full border border-editorial-border/70 bg-editorial-textbox/40 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.22em] text-editorial-muted">
-                  {saveStatusLabel}
-                </span>
+                <SaveStatusBadge saveState={saveState} currentProjectId={currentProjectId} label={saveStatusLabel} />
               </div>
             )}
             {!currentProject && (
-              <span className="rounded-full border border-editorial-border/70 bg-editorial-textbox/40 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.22em] text-editorial-muted">
-                {saveStatusLabel}
-              </span>
+              <SaveStatusBadge saveState={saveState} currentProjectId={currentProjectId} label={saveStatusLabel} />
             )}
           </div>
 
           <div className="flex flex-wrap items-center justify-end gap-2">
-            {/* Sandbox standalone */}
-            <button
-              type="button"
+            {/* Export cluster – visibile solo in modalità documento con chunk */}
+            {viewMode === 'document' && chunks.length > 0 && (
+              <ActionCluster>
+                <div className="flex flex-wrap items-center gap-1">
+                  <IconButton onClick={() => handleExport('txt')} title={exportTxtLabel} ariaLabel={exportTxtLabel}>
+                    <FileText size={15} />
+                  </IconButton>
+                  <IconButton onClick={() => handleExport('md')} title={exportMdLabel} ariaLabel={exportMdLabel}>
+                    <FileCode size={15} />
+                  </IconButton>
+                  <IconButton onClick={() => handleExport('html')} title={exportHtmlLabel} ariaLabel={exportHtmlLabel}>
+                    <Code2 size={15} />
+                  </IconButton>
+                  <IconButton onClick={() => handleExport('docx')} title={exportDocxLabel} ariaLabel={exportDocxLabel}>
+                    <FileOutput size={15} />
+                  </IconButton>
+                  {config.markdownAware && (
+                    <IconButton onClick={() => handleExport('bilingual')} title={exportBilingualLabel} ariaLabel={exportBilingualLabel}>
+                      <Columns2 size={15} />
+                    </IconButton>
+                  )}
+                </div>
+              </ActionCluster>
+            )}
+
+            {/* Pulsante Run/Stop pipeline – visibile solo in modalità documento */}
+            {viewMode === 'document' && onRunPipeline && onCancelPipeline && (
+              isProcessing ? (
+                cancelRequested ? (
+                  <button
+                    type="button"
+                    disabled
+                    title={stoppingLabel}
+                    aria-label={stoppingLabel}
+                    className="rounded-full border border-editorial-border p-3 text-editorial-muted opacity-50 focus:outline-none"
+                  >
+                    <Loader2 size={18} className="animate-spin" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={onCancelPipeline}
+                    title={stopLabel}
+                    aria-label={stopLabel}
+                    className="rounded-full border border-editorial-accent p-3 text-editorial-accent transition-colors hover:bg-editorial-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  >
+                    <Square size={16} fill="currentColor" />
+                  </button>
+                )
+              ) : (
+                <button
+                  type="button"
+                  onClick={onRunPipeline}
+                  title={runLabel}
+                  aria-label={runLabel}
+                  disabled={chunks.length === 0}
+                  className="rounded-full bg-editorial-ink p-3 text-white transition-colors hover:bg-editorial-ink/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
+                >
+                  <Play size={18} fill="currentColor" />
+                </button>
+              )
+            )}
+
+            {/* Sandbox – solo icona */}
+            <IconButton
               onClick={() => setViewMode(viewMode === 'sandbox' ? 'document' : 'sandbox')}
               title={sandboxLabel}
-              aria-label={sandboxLabel}
-              aria-pressed={viewMode === 'sandbox'}
-              className={`flex items-center gap-1.5 rounded-full border px-3 py-2 text-[10px] font-bold uppercase tracking-[0.22em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                viewMode === 'sandbox'
-                  ? 'border-editorial-ink bg-editorial-ink text-white'
-                  : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
-              }`}
+              ariaLabel={sandboxLabel}
+              ariaPressed={viewMode === 'sandbox'}
+              active={viewMode === 'sandbox'}
             >
-              <LayoutTemplate size={13} />
-              {sandboxLabel}
-            </button>
+              <LayoutTemplate size={16} />
+            </IconButton>
 
             {/* Cluster Progetto */}
             <ActionCluster>
@@ -274,16 +318,14 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
                     <SlidersHorizontal size={16} />
                   </IconButton>
                 )}
-                {currentProjectId && (
-                  <IconButton
-                    onClick={handleSave}
-                    title={saveLabel}
-                    ariaLabel={saveLabel}
-                    disabled={isProcessing}
-                  >
-                    <Save size={16} />
-                  </IconButton>
-                )}
+                <IconButton
+                  onClick={handleSave}
+                  title={saveLabel}
+                  ariaLabel={saveLabel}
+                  disabled={isProcessing}
+                >
+                  <Save size={16} />
+                </IconButton>
               </div>
             </ActionCluster>
 
@@ -320,36 +362,6 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
             </ActionCluster>
           </div>
         </div>
-
-        {/* ── Riga 2: riepilogo + pipeline (solo documento) ── */}
-        {viewMode === 'document' && (
-          <div className="flex flex-col gap-3 border-t border-editorial-border/60 pt-4 xl:flex-row xl:items-center xl:justify-between">
-            <HeaderInfoBar
-              sourceWords={sourceWords}
-              translatedWords={translatedWords}
-              completedCount={completedCount}
-              chunkCount={chunks.length}
-              compositeLabel={compositeLabel}
-              totalTokens={totalTokens}
-              estimatedCostUsd={estimatedCostUsd}
-              hasChunks={chunks.length > 0}
-              onExportTxt={() => handleExport('txt')}
-              onExportMd={() => handleExport('bilingual')}
-              exportTxtLabel={t('files.exportTxt')}
-              exportMdLabel={t('files.exportBilingual')}
-            />
-            {onRunPipeline && onRunAuditOnly && onCancelPipeline && (
-              <div className="flex flex-wrap items-center justify-end">
-                <PipelineActions
-                  onRunPipeline={onRunPipeline}
-                  onRunAuditOnly={onRunAuditOnly}
-                  onCancelPipeline={onCancelPipeline}
-                  variant="compact"
-                />
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       <HelpGuide open={showHelp} onClose={() => setShowHelp(false)} />
@@ -359,6 +371,9 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
           text={pendingImport.text}
           useChunking={pendingImport.useChunking}
           targetChunkCount={pendingImport.targetChunkCount}
+          markdownAware={pendingImport.format === 'markdown'}
+          format={pendingImport.format}
+          experimental={pendingImport.experimental}
           onUseChunkingChange={(value) =>
             setPendingImport((current) =>
               current ? { ...current, useChunking: value } : current,
@@ -373,6 +388,12 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
           onConfirm={handleConfirmImport}
         />
       )}
+      <SaveProjectDialog
+        open={showSaveProjectDialog}
+        onClose={() => setShowSaveProjectDialog(false)}
+        onConfirm={handleFirstSave}
+        saving={isCreatingProjectFromSave}
+      />
     </header>
   );
 }
@@ -438,106 +459,40 @@ function IconButton({
   );
 }
 
-function HeaderInfoBar({
-  sourceWords,
-  translatedWords,
-  completedCount,
-  chunkCount,
-  compositeLabel,
-  totalTokens,
-  estimatedCostUsd,
-  hasChunks,
-  onExportTxt,
-  onExportMd,
-  exportTxtLabel,
-  exportMdLabel,
+function SaveStatusBadge({
+  saveState,
+  currentProjectId,
+  label,
 }: {
-  sourceWords: number;
-  translatedWords: number;
-  completedCount: number;
-  chunkCount: number;
-  compositeLabel: string | null;
-  totalTokens: number;
-  estimatedCostUsd: number;
-  hasChunks: boolean;
-  onExportTxt: () => void;
-  onExportMd: () => void;
-  exportTxtLabel: string;
-  exportMdLabel: string;
+  saveState: string;
+  currentProjectId: string | null;
+  label: string;
 }) {
-  const { t } = useTranslation();
+  let icon: React.ReactNode;
+  let colorClass = 'border-editorial-border/70 bg-editorial-textbox/40 text-editorial-muted';
 
-  const row1: { key: string; label: string; value: string }[] = [
-    { key: 'source', label: t('document.infoSourceWords'), value: sourceWords.toLocaleString() },
-    { key: 'translated', label: t('document.infoTranslatedWords'), value: translatedWords.toLocaleString() },
-    { key: 'chunks', label: t('document.infoChunks'), value: `${completedCount} / ${chunkCount}` },
-  ];
-  if (compositeLabel) {
-    row1.push({ key: 'quality', label: t('document.infoQuality'), value: compositeLabel });
+  if (saveState === 'saving') {
+    icon = <Loader2 size={13} className="animate-spin" />;
+  } else if (saveState === 'error') {
+    icon = <AlertCircle size={13} />;
+    colorClass = 'border-editorial-accent/50 bg-editorial-accent/10 text-editorial-accent';
+  } else if (saveState === 'dirty') {
+    icon = <CircleDot size={13} />;
+    colorClass = 'border-amber-300/60 bg-amber-50/60 text-amber-700';
+  } else if (currentProjectId) {
+    icon = <CircleCheck size={13} />;
+  } else {
+    icon = <FilePen size={13} />;
   }
 
-  const row2: { key: string; label: string; value: string }[] = [
-    { key: 'tokens', label: t('header.tokenCount'), value: totalTokens > 0 ? totalTokens.toLocaleString() : '—' },
-    { key: 'cost', label: t('header.estimatedCost'), value: totalTokens > 0 ? `$${estimatedCostUsd.toFixed(4)}` : '—' },
-  ];
-
   return (
-    <div className="flex flex-wrap items-stretch gap-2">
-      {/* Stats block */}
-      <div className="rounded-lg border border-editorial-border bg-editorial-bg px-3 py-2 shadow-sm space-y-1.5">
-        <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
-          {t('header.summaryLabel')}
-        </div>
-        <dl className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          {row1.map((item) => (
-            <div key={item.key} className="flex items-baseline gap-1">
-              <dt className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">{item.label}</dt>
-              <dd className="font-display text-sm italic text-editorial-ink">{item.value}</dd>
-            </div>
-          ))}
-        </dl>
-        <dl className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          {row2.map((item) => (
-            <div key={item.key} className="flex items-baseline gap-1">
-              <dt className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">{item.label}</dt>
-              <dd className="font-display text-sm italic text-editorial-muted">{item.value}</dd>
-            </div>
-          ))}
-        </dl>
-      </div>
-
-      {/* Export block */}
-      {hasChunks && (
-        <div className="rounded-lg border border-editorial-border bg-editorial-bg px-3 py-2 shadow-sm flex flex-col">
-          <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
-            {t('header.exportLabel')}
-          </div>
-          <div className="flex items-center gap-1 mt-auto pt-1">
-            <button
-              type="button"
-              onClick={onExportTxt}
-              title={exportTxtLabel}
-              aria-label={exportTxtLabel}
-              className="rounded px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted border border-editorial-border/60 transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            >
-              TXT
-            </button>
-            <button
-              type="button"
-              onClick={onExportMd}
-              title={exportMdLabel}
-              aria-label={exportMdLabel}
-              className="rounded px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted border border-editorial-border/60 transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            >
-              MD
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
+    <span
+      title={label}
+      aria-label={label}
+      role="status"
+      className={`inline-flex items-center justify-center rounded-full border p-1.5 transition-colors ${colorClass}`}
+    >
+      {icon}
+    </span>
   );
-}
-
-function countWords(text: string): number {
-  return text.trim().split(/\s+/).filter(Boolean).length;
 }

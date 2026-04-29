@@ -48,6 +48,7 @@ pub struct PipelineConfig {
     pub judge_provider: String,
     pub glossary: Vec<GlossaryEntry>,
     pub use_chunking: Option<bool>,
+    pub markdown_aware: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -955,14 +956,24 @@ fn build_stage_prompts(
         .collect::<Vec<_>>()
         .join("\n");
 
+    let markdown_rules = if config.markdown_aware.unwrap_or(false) {
+        "\n\nMarkdown Preservation Rules:\n\
+         - Preserve every Markdown marker exactly as needed (*, **, _, [], (), headings, lists, block quotes, footnotes)\n\
+         - Do not remove, reformat, or invent Markdown structure\n\
+         - Translate only the human-language content while keeping Markdown syntax valid"
+    } else {
+        ""
+    };
+
     let system_prompt = format!(
         "You are an expert translator and linguist specialized in {} to {} translation.\n\n\
          Core Instructions:\n{}\n\n\
-         Glossary of Terms:\n{}",
+         Glossary of Terms:\n{}{}",
         config.source_language,
         config.target_language,
         stage.prompt,
-        if glossary_str.is_empty() { "No specific glossary entries.".to_string() } else { glossary_str }
+        if glossary_str.is_empty() { "No specific glossary entries.".to_string() } else { glossary_str },
+        markdown_rules,
     );
 
     let user_prompt = match previous_result {
@@ -989,6 +1000,7 @@ fn build_judge_prompts(
          Target ({tgt}): {translation}\n\n\
          Specific Audit Instructions:\n{instructions}\n\n\
          Glossary to adhere to: {glossary_json}\n\n\
+         {markdown_rules}\n\
          You MUST respond with a valid JSON object containing:\n\
          - rating: one of 'critical', 'poor', 'fair', 'good', 'excellent' \
            (semantic translation quality: critical=unusable, poor=weak, fair=usable with revision, \
@@ -998,6 +1010,11 @@ fn build_judge_prompts(
         src = config.source_language,
         tgt = config.target_language,
         instructions = config.judge_prompt,
+        markdown_rules = if config.markdown_aware.unwrap_or(false) {
+            "When Markdown is present, verify that the translation preserves markers, footnotes, inline emphasis, and block structure exactly enough to remain valid Markdown."
+        } else {
+            ""
+        },
     );
 
     let user_prompt = "Perform the audit now and return the JSON report.".to_string();
@@ -1220,6 +1237,7 @@ mod tests {
                 },
             ],
             use_chunking: Some(true),
+            markdown_aware: None,
         }
     }
 
@@ -1345,6 +1363,18 @@ mod tests {
 
         assert!(system.contains("API -> API (tech)"));
         assert!(system.contains("bug -> errore ()"));
+    }
+
+    #[test]
+    fn markdown_aware_stage_prompt_preserves_syntax() {
+        let mut config = make_config();
+        config.markdown_aware = Some(true);
+        let stage = make_stage("gemini");
+        let (system, user) = build_stage_prompts("Text with note[^1].", &stage, &config, &None);
+
+        assert!(system.contains("Markdown"));
+        assert!(system.contains("Preserve every Markdown marker"));
+        assert!(user.contains("Text with note[^1]."));
     }
 
     // ── build_judge_prompts ─────────────────────────────────────────

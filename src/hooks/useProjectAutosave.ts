@@ -7,7 +7,7 @@ import { buildProjectSnapshot } from '../utils/projectSnapshot';
 
 export { buildProjectSnapshot };
 
-export function useProjectSnapshot(): string {
+export function useProjectSnapshot(enabled = true): string {
   const inputText = usePipelineStore((state) => state.inputText);
   const config = usePipelineStore((state) => state.config);
   const chunks = useChunksStore((state) => state.chunks);
@@ -16,6 +16,10 @@ export function useProjectSnapshot(): string {
   const lastStableSnapshotRef = useRef<string | null>(null);
 
   return useMemo(() => {
+    if (!enabled) {
+      lastStableSnapshotRef.current = null;
+      return '';
+    }
     if (isProcessing && lastStableSnapshotRef.current !== null) {
       return lastStableSnapshotRef.current;
     }
@@ -37,7 +41,7 @@ export function useProjectAutosave(delayMs = 1200) {
   const saveState = useProjectStore((state) => state.saveState);
   const trackedSnapshot = useProjectStore((state) => state.trackedSnapshot);
   const isProcessing = useChunksStore((state) => state.isProcessing);
-  const snapshot = useProjectSnapshot();
+  const snapshot = useProjectSnapshot(Boolean(currentProjectId));
   const initializedProjectId = useRef<string | null>(null);
 
   useEffect(() => {

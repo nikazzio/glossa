@@ -107,6 +107,9 @@ describe('projectStore', () => {
       judgeProvider: 'anthropic',
       useChunking: false,
       targetChunkCount: 0,
+      documentFormat: 'markdown',
+      markdownAware: true,
+      experimentalImport: 'docx-markdown',
       glossary: [{ term: 'logos', translation: 'logos', notes: 'retain Greek' }],
     });
 
@@ -136,6 +139,8 @@ describe('projectStore', () => {
 
     expect(useProjectStore.getState().currentProjectId).toBe('proj-1');
     expect(usePipelineStore.getState().config.sourceLanguage).toBe('Latin');
+    expect(usePipelineStore.getState().config.documentFormat).toBe('markdown');
+    expect(usePipelineStore.getState().config.markdownAware).toBe(true);
     expect(useChunksStore.getState().chunks[0].currentDraft).toBe('Translated paragraph');
     expect(useUiStore.getState().viewMode).toBe('document');
     expect(useUiStore.getState().selectedChunkId).toBe('chunk-0');
@@ -153,6 +158,9 @@ describe('projectStore', () => {
       judgeProvider: '',
       useChunking: true,
       targetChunkCount: 0,
+      documentFormat: 'plain',
+      markdownAware: false,
+      experimentalImport: null,
       glossary: [],
     });
     projectServiceMocks.loadTranslations.mockResolvedValue([]);
@@ -191,6 +199,43 @@ describe('projectStore', () => {
     expect(useProjectStore.getState().saveState).toBe('saved');
     expect(useProjectStore.getState().trackedSnapshot).toBe(expectedSnapshot);
     expect(projectServiceMocks.listProjects).toHaveBeenCalledTimes(1);
+  });
+
+  it('creates a new project on first save when a name is provided', async () => {
+    projectServiceMocks.createProject.mockResolvedValue('proj-first-save');
+    usePipelineStore.getState().setInputText('Draft text');
+    useUiStore.getState().setViewMode('sandbox');
+
+    await useProjectStore.getState().saveCurrentProject('My Draft');
+
+    expect(projectServiceMocks.createProject).toHaveBeenCalledWith(
+      'My Draft',
+      'English',
+      'Italian',
+    );
+    expect(projectServiceMocks.saveProjectState).toHaveBeenCalledWith({
+      projectId: 'proj-first-save',
+      inputText: 'Draft text',
+      config: expect.objectContaining({
+        sourceLanguage: 'English',
+        targetLanguage: 'Italian',
+      }),
+      viewMode: 'sandbox',
+      chunks: [],
+    });
+    expect(useProjectStore.getState().currentProjectId).toBe('proj-first-save');
+    expect(useProjectStore.getState().saveState).toBe('saved');
+  });
+
+  it('rejects first save without a project name', async () => {
+    usePipelineStore.getState().setInputText('Draft text');
+
+    await expect(useProjectStore.getState().saveCurrentProject()).rejects.toThrow(
+      'Project name required for first save.',
+    );
+
+    expect(projectServiceMocks.createProject).not.toHaveBeenCalled();
+    expect(projectServiceMocks.saveProjectState).not.toHaveBeenCalled();
   });
 
   it('refuses to save while the pipeline is processing', async () => {

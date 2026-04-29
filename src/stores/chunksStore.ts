@@ -7,7 +7,7 @@ import type {
 } from '../types';
 import { usePipelineStore } from './pipelineStore';
 import { useUiStore } from './uiStore';
-import { chunkText, findBestSplitIndex, generateId, qualityDefault } from '../utils';
+import { chunkText, findBestSplitIndex, generateId, qualityDefault, resolveSplitIndex } from '../utils';
 
 interface ChunksState {
   chunks: TranslationChunk[];
@@ -27,6 +27,7 @@ interface ChunksState {
     options?: {
       useChunking?: boolean;
       targetChunkCount?: number;
+      markdownAware?: boolean;
     },
   ) => void;
   clearChunks: () => void;
@@ -34,6 +35,7 @@ interface ChunksState {
   appendChunkStageContent: (chunkId: string, stageId: string, token: string) => void;
   updateChunkJudge: (chunkId: string, result: JudgeResult) => void;
   updateChunkDraft: (chunkId: string, draft: string) => void;
+  toggleChunkTranslationLock: (chunkId: string) => void;
   updateChunkStatus: (chunkId: string, status: ChunkStatus) => void;
   updateChunkOriginalText: (chunkId: string, text: string) => void;
   splitChunk: (chunkId: string) => void;
@@ -70,6 +72,7 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
     const chunks = buildChunks(inputText, {
       useChunking: config.useChunking,
       targetChunkCount: config.targetChunkCount,
+      markdownAware: config.markdownAware,
     });
 
     useUiStore.getState().setViewMode(chunks.length > 1 ? 'document' : 'sandbox');
@@ -131,7 +134,18 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
   updateChunkDraft: (chunkId, draft) =>
     set((state) => ({
       chunks: state.chunks.map((chunk) =>
-        chunk.id === chunkId ? { ...chunk, currentDraft: draft } : chunk,
+        chunk.id === chunkId && !chunk.translationLocked
+          ? { ...chunk, currentDraft: draft }
+          : chunk,
+      ),
+    })),
+
+  toggleChunkTranslationLock: (chunkId) =>
+    set((state) => ({
+      chunks: state.chunks.map((chunk) =>
+        chunk.id === chunkId
+          ? { ...chunk, translationLocked: !chunk.translationLocked }
+          : chunk,
       ),
     })),
 
@@ -154,7 +168,9 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
   splitChunk: (chunkId) =>
     set((state) => {
       const chunk = state.chunks.find((entry) => entry.id === chunkId);
-      const splitAt = findBestSplitIndex(chunk?.originalText ?? '');
+      const splitAt = findBestSplitIndex(chunk?.originalText ?? '', {
+        markdownAware: usePipelineStore.getState().config.markdownAware,
+      });
       if (!splitAt) return {};
 
       return splitChunkState(state.chunks, chunkId, splitAt) ?? {};
@@ -234,6 +250,7 @@ function resetChunkForSourceEdit<T extends TranslationChunk>(chunk: T): T {
     stageResults: {},
     judgeResult: createEmptyJudgeResult(),
     currentDraft: '',
+    translationLocked: false,
   };
 }
 
@@ -242,6 +259,7 @@ function buildChunks(
   options: {
     useChunking?: boolean;
     targetChunkCount?: number;
+    markdownAware?: boolean;
   },
 ): TranslationChunk[] {
   return chunkText(text, options).map((chunkTextValue, index) => ({
@@ -251,6 +269,7 @@ function buildChunks(
     stageResults: {},
     judgeResult: createEmptyJudgeResult(),
     currentDraft: '',
+    translationLocked: false,
   }));
 }
 
@@ -265,7 +284,10 @@ function splitChunkState(
   const chunk = chunks[index];
   if (chunk.status === 'completed' || chunk.status === 'processing') return null;
 
-  const boundedSplitAt = Math.max(1, Math.min(splitAt, chunk.originalText.length - 1));
+  const boundedSplitAt = resolveSplitIndex(chunk.originalText, splitAt, {
+    markdownAware: usePipelineStore.getState().config.markdownAware,
+  });
+  if (boundedSplitAt === null) return null;
   const firstText = chunk.originalText.slice(0, boundedSplitAt).trim();
   const secondText = chunk.originalText.slice(boundedSplitAt).trim();
   if (!firstText || !secondText) return null;
