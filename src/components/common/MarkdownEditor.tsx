@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { renderMarkdownToHtmlFragment } from '../../services/markdown';
 import {
   applyMarkdownCommand,
+  getActiveMarkdownCommands,
   type MarkdownCommand,
 } from './markdownEditorUtils';
 import { HighlightedText } from './HighlightedText';
@@ -41,18 +42,44 @@ export function MarkdownEditor({
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [mode, setMode] = useState<EditorMode>('write');
   const [textSize, setTextSize] = useState<TextSize>('md');
+  const [selection, setSelection] = useState({ start: 0, end: 0 });
   const previewHtml = useMemo(() => renderMarkdownToHtmlFragment(value), [value]);
-  const sizeClasses: Record<TextSize, string> = {
-    sm: 'text-sm',
-    md: 'text-base',
-    lg: 'text-lg',
+  const textSizeStyles: Record<TextSize, { fontSize: string }> = {
+    sm: { fontSize: '0.95rem' },
+    md: { fontSize: '1rem' },
+    lg: { fontSize: '1.125rem' },
   };
+  const activeCommands = useMemo(
+    () => getActiveMarkdownCommands(value, selection.start, selection.end),
+    [selection.end, selection.start, value],
+  );
+  const commandEditingDisabled = readOnly || disabled || mode === 'preview';
 
   useEffect(() => {
     if (!markdownEnabled && mode === 'split') {
       setMode('write');
     }
   }, [markdownEnabled, mode]);
+
+  useEffect(() => {
+    const element = textareaRef.current;
+    if (!element) return;
+    updateSelection(element.selectionStart, element.selectionEnd);
+  }, [mode]);
+
+  const updateSelection = (start: number, end: number) => {
+    setSelection((current) =>
+      current.start === start && current.end === end
+        ? current
+        : { start, end },
+    );
+  };
+
+  const syncSelection = () => {
+    const element = textareaRef.current;
+    if (!element) return;
+    updateSelection(element.selectionStart, element.selectionEnd);
+  };
 
   const applyCommand = (command: MarkdownCommand) => {
     const element = textareaRef.current;
@@ -67,6 +94,7 @@ export function MarkdownEditor({
     requestAnimationFrame(() => {
       element.focus();
       element.setSelectionRange(result.selectionStart, result.selectionEnd);
+      updateSelection(result.selectionStart, result.selectionEnd);
     });
   };
 
@@ -78,13 +106,18 @@ export function MarkdownEditor({
       readOnly={readOnly}
       disabled={disabled}
       placeholder={placeholder}
-      className={`${minHeightClassName} w-full resize-y bg-transparent outline-none ${sizeClasses[textSize]} ${textClassName} disabled:opacity-70 read-only:cursor-not-allowed`}
+      onClick={syncSelection}
+      onKeyUp={syncSelection}
+      onSelect={syncSelection}
+      className={`${minHeightClassName} w-full resize-y bg-transparent outline-none ${textClassName} disabled:opacity-70 read-only:cursor-not-allowed`}
+      style={textSizeStyles[textSize]}
     />
   );
 
   const preview = (
     <div
-      className={`${minHeightClassName} rounded-2xl border border-editorial-border/70 bg-editorial-bg/55 p-4 ${sizeClasses[textSize]} ${previewClassName}`}
+      className={`${minHeightClassName} rounded-2xl border border-editorial-border/70 bg-editorial-bg/55 p-4 ${previewClassName}`}
+      style={textSizeStyles[textSize]}
     >
       {value.trim() ? (
         <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
@@ -96,163 +129,159 @@ export function MarkdownEditor({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-editorial-border/70 bg-editorial-bg/55 px-3 py-2 shadow-sm">
-        <div className="flex items-center gap-1">
-          <ToolbarButton
-            active={mode === 'write'}
-            onClick={() => setMode('write')}
-            title={t('editor.write')}
-            ariaLabel={t('editor.write')}
-          >
-            <PencilIcon />
-          </ToolbarButton>
-          <ToolbarButton
-            active={mode === 'preview'}
-            onClick={() => setMode('preview')}
-            title={t('editor.preview')}
-            ariaLabel={t('editor.preview')}
-          >
-            <Eye size={15} />
-          </ToolbarButton>
-          {markdownEnabled && (
+      <div className="sticky top-0 z-20 rounded-2xl border border-editorial-border/70 bg-[#fcfaf5]/95 px-3 py-3 shadow-sm backdrop-blur">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-editorial-border/60 pb-3">
+          <div className="flex items-center gap-2">
             <ToolbarButton
-              active={mode === 'split'}
-              onClick={() => setMode('split')}
-              title={t('editor.split')}
-              ariaLabel={t('editor.split')}
+              active={mode === 'write'}
+              onClick={() => setMode('write')}
+              title={t('editor.write')}
+              ariaLabel={t('editor.write')}
             >
-              <Columns2 size={15} />
+              <PencilIcon />
             </ToolbarButton>
-          )}
+            <ToolbarButton
+              active={mode === 'preview'}
+              onClick={() => setMode('preview')}
+              title={t('editor.preview')}
+              ariaLabel={t('editor.preview')}
+            >
+              <Eye size={15} />
+            </ToolbarButton>
+            {markdownEnabled && (
+              <ToolbarButton
+                active={mode === 'split'}
+                onClick={() => setMode('split')}
+                title={t('editor.split')}
+                ariaLabel={t('editor.split')}
+              >
+                <Columns2 size={15} />
+              </ToolbarButton>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-[0.24em] text-editorial-muted">
+              {t('editor.textSize')}
+            </span>
+            <div className="flex items-center gap-1">
+              <ToolbarButton
+                active={textSize === 'sm'}
+                onClick={() => setTextSize('sm')}
+                title={t('editor.textSmall')}
+                ariaLabel={t('editor.textSmall')}
+              >
+                <Minus size={15} />
+              </ToolbarButton>
+              <ToolbarButton
+                active={textSize === 'md'}
+                onClick={() => setTextSize('md')}
+                title={t('editor.textMedium')}
+                ariaLabel={t('editor.textMedium')}
+              >
+                <Type size={15} />
+              </ToolbarButton>
+              <ToolbarButton
+                active={textSize === 'lg'}
+                onClick={() => setTextSize('lg')}
+                title={t('editor.textLarge')}
+                ariaLabel={t('editor.textLarge')}
+              >
+                <Plus size={15} />
+              </ToolbarButton>
+            </div>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-1">
-          <ToolbarButton
-            active={textSize === 'sm'}
-            onClick={() => setTextSize('sm')}
-            title={t('editor.textSmall')}
-            ariaLabel={t('editor.textSmall')}
-          >
-            <Minus size={15} />
-          </ToolbarButton>
-          <ToolbarButton
-            active={textSize === 'md'}
-            onClick={() => setTextSize('md')}
-            title={t('editor.textMedium')}
-            ariaLabel={t('editor.textMedium')}
-          >
-            <Type size={15} />
-          </ToolbarButton>
-          <ToolbarButton
-            active={textSize === 'lg'}
-            onClick={() => setTextSize('lg')}
-            title={t('editor.textLarge')}
-            ariaLabel={t('editor.textLarge')}
-          >
-            <Plus size={15} />
-          </ToolbarButton>
-          {markdownEnabled && (
-            <button
-              type="button"
-              title={t('editor.bold')}
-              aria-label={t('editor.bold')}
+
+        {markdownEnabled ? (
+          <div className="flex flex-wrap items-center gap-2 pt-3">
+            <ToolbarLabel>{t('editor.inlineLabel')}</ToolbarLabel>
+            <CommandButton
+              active={activeCommands.bold}
               onClick={() => applyCommand('bold')}
-              disabled={readOnly || disabled}
-              className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:text-editorial-ink disabled:opacity-35"
+              title={t('editor.bold')}
+              ariaLabel={t('editor.bold')}
+              disabled={commandEditingDisabled}
             >
               <Bold size={15} />
-            </button>
-          )}
-          {markdownEnabled && (
-            <>
-              <button
-                type="button"
-                title={t('editor.italic')}
-                aria-label={t('editor.italic')}
-                onClick={() => applyCommand('italic')}
-                disabled={readOnly || disabled}
-                className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:text-editorial-ink disabled:opacity-35"
-              >
-                <Italic size={15} />
-              </button>
-              <button
-                type="button"
-                title={t('editor.heading1')}
-                aria-label={t('editor.heading1')}
-                onClick={() => applyCommand('heading-1')}
-                disabled={readOnly || disabled}
-                className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:text-editorial-ink disabled:opacity-35"
-              >
-                <Heading1 size={15} />
-              </button>
-              <button
-                type="button"
-                title={t('editor.heading2')}
-                aria-label={t('editor.heading2')}
-                onClick={() => applyCommand('heading-2')}
-                disabled={readOnly || disabled}
-                className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:text-editorial-ink disabled:opacity-35"
-              >
-                <Heading2 size={15} />
-              </button>
-              <button
-                type="button"
-                title={t('editor.heading3')}
-                aria-label={t('editor.heading3')}
-                onClick={() => applyCommand('heading-3')}
-                disabled={readOnly || disabled}
-                className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:text-editorial-ink disabled:opacity-35"
-              >
-                <Heading3 size={15} />
-              </button>
-              <button
-                type="button"
-                title={t('editor.link')}
-                aria-label={t('editor.link')}
-                onClick={() => applyCommand('link')}
-                disabled={readOnly || disabled}
-                className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:text-editorial-ink disabled:opacity-35"
-              >
-                <Link2 size={15} />
-              </button>
-              <button
-                type="button"
-                title={t('editor.footnote')}
-                aria-label={t('editor.footnote')}
-                onClick={() => applyCommand('footnote')}
-                disabled={readOnly || disabled}
-                className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:text-editorial-ink disabled:opacity-35"
-              >
-                <Pilcrow size={15} />
-              </button>
-            </>
-          )}
-          {markdownEnabled && (
-            <>
-              <button
-                type="button"
-                title={t('editor.unorderedList')}
-                aria-label={t('editor.unorderedList')}
-                onClick={() => applyCommand('unordered-list')}
-                disabled={readOnly || disabled}
-                className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:text-editorial-ink disabled:opacity-35"
-              >
-                <ListIcon />
-              </button>
-              <button
-                type="button"
-                title={t('editor.orderedList')}
-                aria-label={t('editor.orderedList')}
-                onClick={() => applyCommand('ordered-list')}
-                disabled={readOnly || disabled}
-                className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:text-editorial-ink disabled:opacity-35"
-              >
-                <ListOrderedIcon />
-              </button>
-            </>
-          )}
-        </div>
-      </div>
+            </CommandButton>
+            <CommandButton
+              active={activeCommands.italic}
+              onClick={() => applyCommand('italic')}
+              title={t('editor.italic')}
+              ariaLabel={t('editor.italic')}
+              disabled={commandEditingDisabled}
+            >
+              <Italic size={15} />
+            </CommandButton>
+            <CommandButton
+              active={activeCommands.link}
+              onClick={() => applyCommand('link')}
+              title={t('editor.link')}
+              ariaLabel={t('editor.link')}
+              disabled={commandEditingDisabled}
+            >
+              <Link2 size={15} />
+            </CommandButton>
+            <CommandButton
+              active={activeCommands.footnote}
+              onClick={() => applyCommand('footnote')}
+              title={t('editor.footnote')}
+              ariaLabel={t('editor.footnote')}
+              disabled={commandEditingDisabled}
+            >
+              <Pilcrow size={15} />
+            </CommandButton>
 
+            <ToolbarSeparator />
+            <ToolbarLabel>{t('editor.structureLabel')}</ToolbarLabel>
+            <CommandButton
+              active={activeCommands['heading-1']}
+              onClick={() => applyCommand('heading-1')}
+              title={t('editor.heading1')}
+              ariaLabel={t('editor.heading1')}
+              disabled={commandEditingDisabled}
+            >
+              <Heading1 size={15} />
+            </CommandButton>
+            <CommandButton
+              active={activeCommands['heading-2']}
+              onClick={() => applyCommand('heading-2')}
+              title={t('editor.heading2')}
+              ariaLabel={t('editor.heading2')}
+              disabled={commandEditingDisabled}
+            >
+              <Heading2 size={15} />
+            </CommandButton>
+            <CommandButton
+              active={activeCommands['heading-3']}
+              onClick={() => applyCommand('heading-3')}
+              title={t('editor.heading3')}
+              ariaLabel={t('editor.heading3')}
+              disabled={commandEditingDisabled}
+            >
+              <Heading3 size={15} />
+            </CommandButton>
+            <CommandButton
+              active={activeCommands['unordered-list']}
+              onClick={() => applyCommand('unordered-list')}
+              title={t('editor.unorderedList')}
+              ariaLabel={t('editor.unorderedList')}
+              disabled={commandEditingDisabled}
+            >
+              <ListIcon />
+            </CommandButton>
+            <CommandButton
+              active={activeCommands['ordered-list']}
+              onClick={() => applyCommand('ordered-list')}
+              title={t('editor.orderedList')}
+              ariaLabel={t('editor.orderedList')}
+              disabled={commandEditingDisabled}
+            >
+              <ListOrderedIcon />
+            </CommandButton>
+          </div>
+        ) : null}
+      </div>
       {mode === 'write' && !readOnly && highlightHtml ? (
         <div className="space-y-2">
           {textarea}
@@ -276,12 +305,14 @@ function ToolbarButton({
   onClick,
   title,
   ariaLabel,
+  disabled = false,
   children,
 }: {
   active: boolean;
   onClick: () => void;
   title: string;
   ariaLabel: string;
+  disabled?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -290,7 +321,8 @@ function ToolbarButton({
       onClick={onClick}
       title={title}
       aria-label={ariaLabel}
-      className={`rounded-full border p-2 transition-colors ${
+      disabled={disabled}
+      className={`rounded-full border p-2 transition-colors disabled:cursor-not-allowed disabled:opacity-35 ${
         active
           ? 'border-editorial-ink bg-editorial-ink text-white'
           : 'border-editorial-border text-editorial-muted hover:text-editorial-ink'
@@ -299,6 +331,53 @@ function ToolbarButton({
       {children}
     </button>
   );
+}
+
+function CommandButton({
+  active,
+  onClick,
+  title,
+  ariaLabel,
+  disabled = false,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  title: string;
+  ariaLabel: string;
+  disabled?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onMouseDown={(event) => event.preventDefault()}
+      onClick={onClick}
+      title={title}
+      aria-label={ariaLabel}
+      aria-pressed={active}
+      disabled={disabled}
+      className={`rounded-full border px-3 py-2 transition-colors disabled:cursor-not-allowed disabled:opacity-35 ${
+        active
+          ? 'border-editorial-accent bg-editorial-accent text-white shadow-sm'
+          : 'border-editorial-border bg-white/80 text-editorial-muted hover:text-editorial-ink'
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function ToolbarLabel({ children }: { children: ReactNode }) {
+  return (
+    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted">
+      {children}
+    </span>
+  );
+}
+
+function ToolbarSeparator() {
+  return <span className="mx-1 h-5 w-px bg-editorial-border/80" aria-hidden="true" />;
 }
 
 function PencilIcon() {

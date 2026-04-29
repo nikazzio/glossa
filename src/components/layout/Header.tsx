@@ -18,6 +18,7 @@ import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useLibraryStore } from '../../stores/libraryStore';
 import { ImportPreviewDialog } from '../document';
+import { SaveProjectDialog } from '../projects';
 import { PipelineActions } from '../pipeline';
 import { calculateCompositeQuality, qualityLabelKey } from '../../utils';
 import { importTextFile, exportTranslation, exportBilingual } from '../../services/fileService';
@@ -61,6 +62,8 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
   const setShowLibraryPanel = useLibraryStore((state) => state.setShowLibraryPanel);
   const { t, i18n } = useTranslation();
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
+  const [showSaveProjectDialog, setShowSaveProjectDialog] = useState(false);
+  const [isCreatingProjectFromSave, setIsCreatingProjectFromSave] = useState(false);
 
   const currentProject = projects.find((project) => project.id === currentProjectId);
 
@@ -120,11 +123,28 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
   };
 
   const handleSave = async () => {
+    if (!currentProjectId) {
+      setShowSaveProjectDialog(true);
+      return;
+    }
     try {
       await saveCurrentProject();
       toast.success(t('projects.saved'));
     } catch (err: any) {
       toast.error(t('projects.saveFailed'), { description: err?.message });
+    }
+  };
+
+  const handleFirstSave = async (name: string) => {
+    try {
+      setIsCreatingProjectFromSave(true);
+      await saveCurrentProject(name);
+      setShowSaveProjectDialog(false);
+      toast.success(t('projects.saved'));
+    } catch (err: any) {
+      toast.error(t('projects.saveFailed'), { description: err?.message });
+    } finally {
+      setIsCreatingProjectFromSave(false);
     }
   };
 
@@ -284,16 +304,14 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
                     <SlidersHorizontal size={16} />
                   </IconButton>
                 )}
-                {currentProjectId && (
-                  <IconButton
-                    onClick={handleSave}
-                    title={saveLabel}
-                    ariaLabel={saveLabel}
-                    disabled={isProcessing}
-                  >
-                    <Save size={16} />
-                  </IconButton>
-                )}
+                <IconButton
+                  onClick={handleSave}
+                  title={saveLabel}
+                  ariaLabel={saveLabel}
+                  disabled={isProcessing}
+                >
+                  <Save size={16} />
+                </IconButton>
               </div>
             </ActionCluster>
 
@@ -393,6 +411,12 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
           onConfirm={handleConfirmImport}
         />
       )}
+      <SaveProjectDialog
+        open={showSaveProjectDialog}
+        onClose={() => setShowSaveProjectDialog(false)}
+        onConfirm={handleFirstSave}
+        saving={isCreatingProjectFromSave}
+      />
     </header>
   );
 }

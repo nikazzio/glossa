@@ -4,6 +4,7 @@ import {
   Columns2,
   Copy,
   Highlighter,
+  Lock,
   Pencil,
   PanelLeft,
   PanelRight,
@@ -282,6 +283,19 @@ export function DocumentView({
               eyebrow={t('document.leftPage')}
               readOnly={currentChunk.status === 'completed'}
               highlighted={focusedChunkId === currentChunk.id}
+              notice={currentChunk.status === 'completed' ? (
+                <div className="mb-4 flex items-start gap-3 rounded-2xl border border-amber-300/80 bg-amber-50 px-4 py-3 text-amber-950">
+                  <Lock size={16} className="mt-0.5 shrink-0" />
+                  <div>
+                    <div className="text-[11px] font-bold uppercase tracking-[0.24em]">
+                      {t('document.sourceLockedTitle')}
+                    </div>
+                    <p className="mt-1 text-sm leading-relaxed text-amber-900">
+                      {t('document.sourceLockedBody')}
+                    </p>
+                  </div>
+                </div>
+              ) : null}
             >
               <MarkdownEditor
                 value={currentChunk.originalText}
@@ -371,6 +385,7 @@ interface DocumentPageProps {
   eyebrow: string;
   readOnly?: boolean;
   highlighted?: boolean;
+  notice?: React.ReactNode;
   actions?: React.ReactNode;
   children: React.ReactNode;
 }
@@ -380,6 +395,7 @@ function DocumentPage({
   eyebrow,
   readOnly = false,
   highlighted = false,
+  notice,
   actions,
   children,
 }: DocumentPageProps) {
@@ -398,7 +414,10 @@ function DocumentPage({
         </div>
         <div className="shrink-0">{actions}</div>
       </div>
-      <div className={`max-h-[min(58vh,820px)] overflow-y-auto pr-2 custom-scrollbar ${readOnly ? 'opacity-90' : ''}`}>{children}</div>
+      <div className={`max-h-[min(58vh,820px)] overflow-y-auto pr-2 custom-scrollbar ${readOnly ? 'opacity-90' : ''}`}>
+        {notice}
+        {children}
+      </div>
     </section>
   );
 }

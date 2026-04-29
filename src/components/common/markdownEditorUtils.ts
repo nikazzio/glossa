@@ -22,6 +22,8 @@ export interface MarkdownCommandResult {
   selectionEnd: number;
 }
 
+export type MarkdownCommandState = Record<MarkdownCommand, boolean>;
+
 export function applyMarkdownCommand(input: MarkdownCommandInput): MarkdownCommandResult {
   const { command, value, selectionStart, selectionEnd } = input;
   const selected = value.slice(selectionStart, selectionEnd);
@@ -66,6 +68,39 @@ export function applyMarkdownCommand(input: MarkdownCommandInput): MarkdownComma
     selectionEnd,
     headingPrefix(command),
   );
+}
+
+export function getActiveMarkdownCommands(
+  value: string,
+  selectionStart: number,
+  selectionEnd: number,
+): MarkdownCommandState {
+  const lineStart = value.lastIndexOf('\n', Math.max(0, selectionStart - 1)) + 1;
+  const nextBreak = value.indexOf('\n', selectionEnd);
+  const lineEnd = nextBreak === -1 ? value.length : nextBreak;
+  const line = value.slice(lineStart, lineEnd);
+  const lineTrimmed = line.trimStart();
+  const baseState: MarkdownCommandState = {
+    bold: false,
+    italic: false,
+    'heading-1': /^#\s+/.test(lineTrimmed),
+    'heading-2': /^##\s+/.test(lineTrimmed),
+    'heading-3': /^###\s+/.test(lineTrimmed),
+    link: false,
+    footnote: false,
+    'unordered-list': /^[-+*]\s+/.test(lineTrimmed),
+    'ordered-list': /^\d+\.\s+/.test(lineTrimmed),
+  };
+
+  return {
+    ...baseState,
+    bold: hasInlineMatch(value, selectionStart, selectionEnd, /\*\*([^*\n]+)\*\*/g),
+    italic: hasInlineMatch(value, selectionStart, selectionEnd, /(^|[^*])\*([^*\n]+)\*(?!\*)/g, 1),
+    link: hasInlineMatch(value, selectionStart, selectionEnd, /\[([^\]]+)\]\([^)]+\)/g),
+    footnote:
+      hasInlineMatch(value, selectionStart, selectionEnd, /\[\^\d+\]/g) ||
+      hasInlineMatch(value, selectionStart, selectionEnd, /^\[\^\d+\]:/gm),
+  };
 }
 
 function toggleInlineWrap(
@@ -198,6 +233,35 @@ function headingPrefix(command: Extract<MarkdownCommand, 'heading-1' | 'heading-
 function findNextFootnoteId(value: string): number {
   const matches = Array.from(value.matchAll(/\[\^(\d+)\]/g)).map((match) => Number(match[1]));
   return matches.length > 0 ? Math.max(...matches) + 1 : 1;
+}
+
+function hasInlineMatch(
+  value: string,
+  selectionStart: number,
+  selectionEnd: number,
+  pattern: RegExp,
+  contentOffset = 0,
+): boolean {
+  const cursor = selectionEnd;
+  for (const match of value.matchAll(pattern)) {
+    const full = match[0];
+    const matchIndex = match.index ?? -1;
+    if (matchIndex < 0) continue;
+
+    const content = match[1 + contentOffset] ?? match[1] ?? full;
+    const contentIndex = full.indexOf(content);
+    const start = matchIndex + Math.max(0, contentIndex);
+    const end = start + content.length;
+
+    if (selectionStart === selectionEnd) {
+      if (cursor > start && cursor < end) return true;
+      continue;
+    }
+
+    if (selectionStart >= start && selectionEnd <= end) return true;
+    if (selectionStart === matchIndex && selectionEnd === matchIndex + full.length) return true;
+  }
+  return false;
 }
 
 function escapeRegExp(value: string): string {

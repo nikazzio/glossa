@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { applyMarkdownCommand, type MarkdownCommand } from './markdownEditorUtils';
+import {
+  applyMarkdownCommand,
+  getActiveMarkdownCommands,
+  type MarkdownCommand,
+} from './markdownEditorUtils';
 
 function apply(
   command: MarkdownCommand,
@@ -65,5 +69,29 @@ describe('markdownEditorUtils', () => {
     expect(result.value).toBe('Text[^1]\n\n[^1]: ');
     expect(result.selectionStart).toBe(result.value.length);
     expect(result.selectionEnd).toBe(result.value.length);
+  });
+
+  it('detects active inline commands at the cursor', () => {
+    const state = getActiveMarkdownCommands('Alpha **beta** and *gamma*', 10, 10);
+
+    expect(state.bold).toBe(true);
+    expect(state.italic).toBe(false);
+  });
+
+  it('detects active line commands from the current line', () => {
+    const state = getActiveMarkdownCommands('## Heading\n1. item', 14, 14);
+
+    expect(state['heading-2']).toBe(false);
+    expect(state['ordered-list']).toBe(true);
+  });
+
+  it('detects active link and heading for a selected range', () => {
+    const value = '# [Glossa](https://example.com)';
+    const start = value.indexOf('Glossa');
+    const end = start + 'Glossa'.length;
+    const state = getActiveMarkdownCommands(value, start, end);
+
+    expect(state['heading-1']).toBe(true);
+    expect(state.link).toBe(true);
   });
 });

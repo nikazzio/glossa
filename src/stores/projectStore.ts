@@ -29,7 +29,7 @@ interface ProjectState {
   createAndOpen: (name: string) => Promise<void>;
   openProject: (id: string) => Promise<void>;
   removeProject: (id: string) => Promise<void>;
-  saveCurrentProject: () => Promise<void>;
+  saveCurrentProject: (name?: string) => Promise<void>;
 }
 
 export const useProjectStore = create<ProjectState>((set, get) => ({
@@ -55,34 +55,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   createAndOpen: async (name: string) => {
-    const pipeline = usePipelineStore.getState();
-    const ui = useUiStore.getState();
-    const id = await createProject(name, pipeline.config.sourceLanguage, pipeline.config.targetLanguage);
-    const chunks = useChunksStore.getState().chunks;
-    const inputText =
-      chunks.length > 0
-        ? chunks.map((chunk) => chunk.originalText).join('\n\n')
-        : pipeline.inputText;
-    const trackedSnapshot = buildProjectSnapshot({
-      inputText,
-      config: pipeline.config,
-      chunks,
-      viewMode: ui.viewMode,
-    });
-    await saveProjectState({
-      projectId: id,
-      inputText,
-      config: pipeline.config,
-      viewMode: ui.viewMode,
-      chunks,
-    });
-    void get().loadProjects().catch(() => {});
-    set({
-      currentProjectId: id,
-      saveState: 'saved',
-      lastSaveError: null,
-      trackedSnapshot,
-    });
+    await persistCurrentState({ set, get, name });
   },
 
   openProject: async (id: string) => {
@@ -143,10 +116,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     await state.loadProjects();
   },
 
-  saveCurrentProject: async () => {
-    const { currentProjectId } = get();
-    if (!currentProjectId) return;
-
+  saveCurrentProject: async (name?: string) => {
     if (saveInFlight) {
       return saveInFlight;
     }
@@ -173,6 +143,20 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       set({ saveState: 'saving', lastSaveError: null });
 
       try {
+        const currentProjectId =
+          get().currentProjectId ??
+          (name?.trim()
+            ? await createProject(
+                name.trim(),
+                pipeline.config.sourceLanguage,
+                pipeline.config.targetLanguage,
+              )
+            : null);
+
+        if (!currentProjectId) {
+          throw new Error('Project name required for first save.');
+        }
+
         await saveProjectState({
           projectId: currentProjectId,
           inputText,
@@ -182,6 +166,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         });
         void get().loadProjects().catch(() => {});
         set({
+          currentProjectId,
           saveState: 'saved',
           lastSaveError: null,
           trackedSnapshot: effectiveSnapshot,
@@ -202,3 +187,46 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     return saveInFlight;
   },
 }));
+
+async function persistCurrentState({
+  set,
+  get,
+  name,
+}: {
+  set: (partial: Partial<ProjectState>) => void;
+  get: () => ProjectState;
+  name: string;
+}) {
+  const pipeline = usePipelineStore.getState();
+  const ui = useUiStore.getState();
+  const chunks = useChunksStore.getState().chunks;
+  const inputText =
+    chunks.length > 0
+      ? chunks.map((chunk) => chunk.originalText).join('\n\n')
+      : pipeline.inputText;
+  const trackedSnapshot = buildProjectSnapshot({
+    inputText,
+    config: pipeline.config,
+    chunks,
+    viewMode: ui.viewMode,
+  });
+  const id = await createProject(
+    name,
+    pipeline.config.sourceLanguage,
+    pipeline.config.targetLanguage,
+  );
+  await saveProjectState({
+    projectId: id,
+    inputText,
+    config: pipeline.config,
+    viewMode: ui.viewMode,
+    chunks,
+  });
+  void get().loadProjects().catch(() => {});
+  set({
+    currentProjectId: id,
+    saveState: 'saved',
+    lastSaveError: null,
+    trackedSnapshot,
+  });
+}
