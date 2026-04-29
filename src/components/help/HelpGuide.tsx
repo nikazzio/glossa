@@ -4,6 +4,7 @@ import {
   FolderOpen, Upload, SlidersHorizontal, Save,
   LibraryBig, Globe, Settings, HelpCircle,
   LayoutTemplate, PanelRight,
+  CheckCheck, PanelTopClose, ScanLine,
   Wand2, BookmarkPlus, BookOpen,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -247,6 +248,15 @@ function FeaturesSection() {
 
       <SubTitle>{t('help.features.exportTitle')}</SubTitle>
       <P>{t('help.features.exportDesc')}</P>
+
+      <SubTitle>{t('help.features.documentToolsTitle')}</SubTitle>
+      <P>{t('help.features.documentToolsDesc')}</P>
+
+      <div className="my-4 space-y-2">
+        <FeatureRow icon={<PanelTopClose size={14} />} text={t('help.shortcuts.toggleEditorTools')} />
+        <FeatureRow icon={<CheckCheck size={14} />} text={t('help.shortcuts.lockTranslation')} />
+        <FeatureRow icon={<ScanLine size={14} />} text={t('help.shortcuts.openStageTrace')} />
+      </div>
     </>
   );
 }
@@ -284,6 +294,7 @@ function AuditSection() {
       </div>
 
       <P>{t('help.audit.reeval')}</P>
+      <Tip title={t('document.insightsAuditIssues')}>{t('help.audit.issuesNav')}</Tip>
     </>
   );
 }
@@ -415,6 +426,9 @@ function ShortcutsSection() {
     { label: t('help.shortcuts.openHelp'),      icon: <HelpCircle size={14} /> },
     { label: t('help.shortcuts.sandbox'),       icon: <LayoutTemplate size={14} /> },
     { label: t('help.shortcuts.openInsights'),  icon: <PanelRight size={14} /> },
+    { label: t('help.shortcuts.toggleEditorTools'), icon: <PanelTopClose size={14} /> },
+    { label: t('help.shortcuts.lockTranslation'), icon: <CheckCheck size={14} /> },
+    { label: t('help.shortcuts.openStageTrace'), icon: <ScanLine size={14} /> },
   ];
 
   const exportItems: { label: string; icon: React.ReactNode }[] = [
@@ -448,5 +462,16 @@ function ShortcutsSection() {
       <SubTitle>{t('help.shortcuts.promptToolsTitle')}</SubTitle>
       <div className="my-4">{promptItems.map(renderRow)}</div>
     </>
+  );
+}
+
+function FeatureRow({ icon, text }: { icon: React.ReactNode; text: string }) {
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-editorial-border bg-editorial-textbox/20 px-4 py-3">
+      <span className="rounded-full border border-editorial-border bg-editorial-bg p-2 text-editorial-accent">
+        {icon}
+      </span>
+      <span className="text-[13px] leading-relaxed text-editorial-ink/80">{text}</span>
+    </div>
   );
 }

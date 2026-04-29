@@ -8,6 +8,9 @@ interface ImportPreviewDialogProps {
   text: string;
   useChunking: boolean;
   targetChunkCount: number;
+  markdownAware?: boolean;
+  format?: 'plain' | 'markdown';
+  experimental?: 'docx-markdown';
   onUseChunkingChange: (value: boolean) => void;
   onTargetChunkCountChange: (value: number) => void;
   onCancel: () => void;
@@ -19,6 +22,9 @@ export function ImportPreviewDialog({
   text,
   useChunking,
   targetChunkCount,
+  markdownAware = false,
+  format,
+  experimental,
   onUseChunkingChange,
   onTargetChunkCountChange,
   onCancel,
@@ -27,8 +33,8 @@ export function ImportPreviewDialog({
   const { t } = useTranslation();
   const trapRef = useFocusTrap(true, onCancel);
   const preview = useMemo(
-    () => buildImportPreview(text, { useChunking, targetChunkCount }),
-    [targetChunkCount, text, useChunking],
+    () => buildImportPreview(text, { useChunking, targetChunkCount, markdownAware, format, experimental }),
+    [experimental, format, markdownAware, targetChunkCount, text, useChunking],
   );
 
   return (
@@ -71,6 +77,23 @@ export function ImportPreviewDialog({
                 <span>{t('document.chunkCounterCompact', { total: preview.chunks.length })}</span>
               </div>
             </div>
+            {preview.experimental && (
+              <div className="rounded-2xl border border-editorial-accent/20 bg-editorial-accent/5 px-4 py-3 text-xs leading-relaxed text-editorial-ink">
+                {t('files.importExperimentalDocxMarkdown')}
+              </div>
+            )}
+            {preview.warnings.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {preview.warnings.map((warning) => (
+                  <span
+                    key={warning}
+                    className="rounded-full border border-editorial-border bg-editorial-bg px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted"
+                  >
+                    {t(`files.importWarning.${warning}`)}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -118,7 +141,7 @@ export function ImportPreviewDialog({
                   {preview.chunks.length} {t('pipeline.unitsReady')}
                 </div>
               </div>
-              <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto pr-1 custom-scrollbar md:grid-cols-2">
+              <div className="grid max-h-[58vh] min-h-0 gap-4 overflow-y-auto pr-1 custom-scrollbar md:grid-cols-2">
                 {preview.chunks.map((chunk) => (
                   <div
                     key={`${chunk.index}-${chunk.characters}`}

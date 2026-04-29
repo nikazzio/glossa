@@ -1,4 +1,4 @@
-import { chunkText, estimateTextStats } from './index';
+import { chunkText, estimateTextStats, resolveSplitIndex } from './index';
 
 export interface ImportPreviewChunk {
   index: number;
@@ -10,12 +10,16 @@ export interface ImportPreviewChunk {
 export interface ImportPreview {
   stats: ReturnType<typeof estimateTextStats>;
   chunks: ImportPreviewChunk[];
+  format?: 'plain' | 'markdown';
+  experimental?: 'docx-markdown';
+  warnings: string[];
 }
 
 export interface SplitPreview {
   beforeText: string;
   afterText: string;
   isValid: boolean;
+  adjustedSplitAt: number | null;
 }
 
 export function buildImportPreview(
@@ -23,6 +27,9 @@ export function buildImportPreview(
   options: {
     useChunking?: boolean;
     targetChunkCount?: number;
+    markdownAware?: boolean;
+    format?: 'plain' | 'markdown';
+    experimental?: 'docx-markdown';
   },
 ): ImportPreview {
   const chunks = chunkText(text, options).map((chunk, index) => ({
@@ -35,14 +42,26 @@ export function buildImportPreview(
   return {
     stats: estimateTextStats(text),
     chunks,
+    format: options.format,
+    experimental: options.experimental,
+    warnings: buildImportWarnings(text, options),
   };
 }
 
-export function buildSplitPreview(text: string, splitAt: number): SplitPreview {
-  const boundedSplitAt = Math.max(
-    1,
-    Math.min(splitAt, Math.max(1, text.length - 1)),
-  );
+export function buildSplitPreview(
+  text: string,
+  splitAt: number,
+  options: { markdownAware?: boolean } = {},
+): SplitPreview {
+  const boundedSplitAt = resolveSplitIndex(text, splitAt, options);
+  if (boundedSplitAt === null) {
+    return {
+      beforeText: '',
+      afterText: '',
+      isValid: false,
+      adjustedSplitAt: null,
+    };
+  }
   const beforeText = text.slice(0, boundedSplitAt).trim();
   const afterText = text.slice(boundedSplitAt).trim();
 
@@ -50,5 +69,27 @@ export function buildSplitPreview(text: string, splitAt: number): SplitPreview {
     beforeText,
     afterText,
     isValid: beforeText.length > 0 && afterText.length > 0,
+    adjustedSplitAt: boundedSplitAt,
   };
+}
+
+function buildImportWarnings(
+  text: string,
+  options: {
+    markdownAware?: boolean;
+    format?: 'plain' | 'markdown';
+    experimental?: 'docx-markdown';
+  },
+): string[] {
+  const warnings: string[] = [];
+  if (options.format === 'markdown') {
+    warnings.push('markdown');
+  }
+  if (options.experimental === 'docx-markdown') {
+    warnings.push('docx-markdown');
+  }
+  if (options.markdownAware && /\[\^[^\]]+\]:/.test(text)) {
+    warnings.push('footnotes');
+  }
+  return warnings;
 }

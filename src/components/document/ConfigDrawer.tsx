@@ -49,13 +49,13 @@ export function ConfigDrawer({
   }, [activeTab, config.assignedGlossaryId]);
 
   const handleDictChange = async (glossaryId: string) => {
-    if (!currentProjectId) return;
     try {
+      if (currentProjectId) {
+        await assignGlossaryToProject(currentProjectId, glossaryId || null);
+      }
       if (glossaryId) {
-        await assignGlossaryToProject(currentProjectId, glossaryId);
         await assignGlossary(glossaryId);
       } else {
-        await assignGlossaryToProject(currentProjectId, null);
         await assignGlossary(null);
       }
     } catch (err: any) {

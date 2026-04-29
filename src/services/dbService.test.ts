@@ -89,6 +89,9 @@ describe('initDatabase migrations', () => {
       expect.stringContaining("ALTER TABLE translations ADD COLUMN judge_rating TEXT DEFAULT 'fair'"),
     );
     expect(dbState.db.execute).toHaveBeenCalledWith(
+      expect.stringContaining('ALTER TABLE translations ADD COLUMN translation_locked INTEGER DEFAULT 0'),
+    );
+    expect(dbState.db.execute).toHaveBeenCalledWith(
       expect.stringContaining('ALTER TABLE translations ADD COLUMN position INTEGER DEFAULT NULL'),
     );
   });

@@ -5,3 +5,4 @@ export { CopyButton } from './CopyButton';
 export { ConfirmDialog } from './ConfirmDialog';
 export { Drawer } from './Drawer';
 export { HighlightedText } from './HighlightedText';
+export { MarkdownEditor } from './MarkdownEditor';

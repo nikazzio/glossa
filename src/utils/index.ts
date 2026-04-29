@@ -82,6 +82,7 @@ export interface TextStats {
 export interface ChunkTextOptions {
   useChunking?: boolean;
   targetChunkCount?: number;
+  markdownAware?: boolean;
 }
 
 export function estimateTextStats(text: string): TextStats {
@@ -111,15 +112,23 @@ export function chunkText(text: string, options: ChunkTextOptions = {}): string[
 
   const target = Math.max(0, Math.floor(options.targetChunkCount ?? 0));
   if (target > 1) {
-    return splitIntoTargetChunks(trimmed, target);
+    return splitIntoTargetChunks(trimmed, target, options);
   }
 
-  return splitParagraphs(trimmed);
+  return splitParagraphs(trimmed, options);
 }
 
-export function findBestSplitIndex(text: string): number | null {
+export function findBestSplitIndex(
+  text: string,
+  options: { markdownAware?: boolean } = {},
+): number | null {
   const trimmed = text.trim();
   if (trimmed.length < 2) return null;
+
+  if (options.markdownAware) {
+    const markdownSplit = findNearestMarkdownBoundary(trimmed, Math.floor(trimmed.length / 2));
+    if (markdownSplit !== null) return markdownSplit;
+  }
 
   const midpoint = Math.floor(trimmed.length / 2);
   const candidates = ['\n\n', '\n', '. ', '; ', ', ', ' '];
@@ -134,13 +143,29 @@ export function findBestSplitIndex(text: string): number | null {
   return midpoint;
 }
 
-function splitParagraphs(text: string): string[] {
+export function resolveSplitIndex(
+  text: string,
+  requestedSplitAt: number,
+  options: { markdownAware?: boolean } = {},
+): number | null {
+  const boundedSplitAt = Math.max(1, Math.min(requestedSplitAt, text.length - 1));
+  if (!options.markdownAware) return boundedSplitAt;
+  return findNearestMarkdownBoundary(text, boundedSplitAt) ?? boundedSplitAt;
+}
+
+function splitParagraphs(text: string, options: ChunkTextOptions = {}): string[] {
+  if (options.markdownAware) {
+    return splitMarkdownBlocks(text);
+  }
   return text.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean);
 }
 
-function splitIntoTargetChunks(text: string, target: number): string[] {
-  const paragraphs = splitParagraphs(text);
+function splitIntoTargetChunks(text: string, target: number, options: ChunkTextOptions = {}): string[] {
+  const paragraphs = splitParagraphs(text, options);
   if (paragraphs.length <= 1) {
+    if (options.markdownAware) {
+      return [text.trim()];
+    }
     return splitWordsIntoTargetChunks(text, target);
   }
 
@@ -158,7 +183,7 @@ function splitIntoTargetChunks(text: string, target: number): string[] {
       current.length > 0 &&
       currentWords + paragraphWords > targetWords &&
       remainingSlots > 1 &&
-      remainingParagraphs >= remainingSlots;
+      (options.markdownAware || remainingParagraphs >= remainingSlots);
 
     if (shouldClose) {
       chunks.push(current.join('\n\n'));
@@ -172,11 +197,41 @@ function splitIntoTargetChunks(text: string, target: number): string[] {
 
   if (current.length > 0) chunks.push(current.join('\n\n'));
 
-  if (chunks.length < target && chunks.length === 1) {
+  if (!options.markdownAware && chunks.length < target && chunks.length === 1) {
     return splitWordsIntoTargetChunks(text, target);
   }
 
   return chunks;
+}
+
+function splitMarkdownBlocks(text: string): string[] {
+  const rawBlocks = text
+    .split(/\n{2,}/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  const mergedBlocks: string[] = [];
+  for (const block of rawBlocks) {
+    if (block.startsWith('[^') && block.includes(']:') && mergedBlocks.length > 0) {
+      mergedBlocks[mergedBlocks.length - 1] = `${mergedBlocks[mergedBlocks.length - 1]}\n\n${block}`;
+      continue;
+    }
+    mergedBlocks.push(block);
+  }
+
+  return mergedBlocks;
+}
+
+function findNearestMarkdownBoundary(text: string, pivot: number): number | null {
+  const candidates = Array.from(text.matchAll(/\n{2,}/g))
+    .map((match) => (match.index ?? 0) + match[0].length)
+    .filter((index) => index > 0 && index < text.length);
+
+  if (candidates.length === 0) return null;
+
+  return candidates.sort(
+    (left, right) => Math.abs(left - pivot) - Math.abs(right - pivot),
+  )[0];
 }
 
 function splitWordsIntoTargetChunks(text: string, target: number): string[] {

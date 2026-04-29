@@ -24,11 +24,15 @@ function serializeWrite<T>(fn: () => Promise<T>): Promise<T> {
 const ALLOWED_MIGRATIONS = new Set([
   'pipeline_configs.target_chunk_count',
   'pipeline_configs.source_text',
+  'pipeline_configs.document_format',
+  'pipeline_configs.markdown_aware',
+  'pipeline_configs.experimental_import',
   'projects.view_mode',
   'translations.position',
   'translations.chunk_status',
   'translations.judge_status',
   'translations.judge_rating',
+  'translations.translation_locked',
   'prompt_templates.context',
 ]);
 
@@ -73,7 +77,10 @@ export async function initDatabase(): Promise<void> {
       judge_provider TEXT DEFAULT 'gemini',
       use_chunking INTEGER DEFAULT 1,
       target_chunk_count INTEGER DEFAULT 0,
-      source_text TEXT DEFAULT ''
+      source_text TEXT DEFAULT '',
+      document_format TEXT DEFAULT 'plain',
+      markdown_aware INTEGER DEFAULT 0,
+      experimental_import TEXT DEFAULT NULL
     )
   `);
 
@@ -137,6 +144,7 @@ export async function initDatabase(): Promise<void> {
       stage_results TEXT DEFAULT '{}',
       judge_status TEXT DEFAULT 'idle',
       judge_rating TEXT DEFAULT 'fair',
+      translation_locked INTEGER DEFAULT 0,
       judge_issues TEXT DEFAULT '[]',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
@@ -144,11 +152,15 @@ export async function initDatabase(): Promise<void> {
 
   await ensureColumn('pipeline_configs', 'target_chunk_count', "INTEGER DEFAULT 0");
   await ensureColumn('pipeline_configs', 'source_text', "TEXT DEFAULT ''");
+  await ensureColumn('pipeline_configs', 'document_format', "TEXT DEFAULT 'plain'");
+  await ensureColumn('pipeline_configs', 'markdown_aware', 'INTEGER DEFAULT 0');
+  await ensureColumn('pipeline_configs', 'experimental_import', 'TEXT DEFAULT NULL');
   await ensureColumn('projects', 'view_mode', 'TEXT DEFAULT NULL');
   await ensureColumn('translations', 'position', 'INTEGER DEFAULT NULL');
   await ensureColumn('translations', 'chunk_status', "TEXT DEFAULT 'ready'");
   await ensureColumn('translations', 'judge_status', "TEXT DEFAULT 'idle'");
   await ensureColumn('translations', 'judge_rating', "TEXT DEFAULT 'fair'");
+  await ensureColumn('translations', 'translation_locked', 'INTEGER DEFAULT 0');
 
   await conn.execute(`
     CREATE TABLE IF NOT EXISTS app_settings (

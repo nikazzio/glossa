@@ -9,7 +9,7 @@ import {
   SlidersHorizontal,
   Upload,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { usePipelineStore } from '../../stores/pipelineStore';
@@ -18,6 +18,7 @@ import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useLibraryStore } from '../../stores/libraryStore';
 import { ImportPreviewDialog } from '../document';
+import { SaveProjectDialog } from '../projects';
 import { PipelineActions } from '../pipeline';
 import { calculateCompositeQuality, qualityLabelKey } from '../../utils';
 import { importTextFile, exportTranslation, exportBilingual } from '../../services/fileService';
@@ -29,6 +30,8 @@ interface PendingImport {
   text: string;
   useChunking: boolean;
   targetChunkCount: number;
+  format?: 'plain' | 'markdown';
+  experimental?: 'docx-markdown';
 }
 
 interface HeaderProps {
@@ -59,6 +62,9 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
   const setShowLibraryPanel = useLibraryStore((state) => state.setShowLibraryPanel);
   const { t, i18n } = useTranslation();
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
+  const [showSaveProjectDialog, setShowSaveProjectDialog] = useState(false);
+  const [isCreatingProjectFromSave, setIsCreatingProjectFromSave] = useState(false);
+  const deferredChunks = useDeferredValue(chunks);
 
   const currentProject = projects.find((project) => project.id === currentProjectId);
 
@@ -75,6 +81,8 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
           text: imported.text,
           useChunking: config.useChunking !== false,
           targetChunkCount: config.targetChunkCount ?? 0,
+          format: imported.format,
+          experimental: imported.experimental,
         });
       }
     } catch (err: any) {
@@ -88,21 +96,27 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
       ...prev,
       useChunking: pendingImport.useChunking,
       targetChunkCount: pendingImport.targetChunkCount,
+      documentFormat: pendingImport.format ?? 'plain',
+      markdownAware: pendingImport.format === 'markdown',
+      experimentalImport: pendingImport.experimental ?? null,
     }));
     loadDocument(pendingImport.text, {
       useChunking: pendingImport.useChunking,
       targetChunkCount: pendingImport.targetChunkCount,
+      markdownAware: pendingImport.format === 'markdown',
     });
     setPendingImport(null);
     toast.success(t('files.imported'));
   };
 
-  const handleExport = async (type: 'txt' | 'md' | 'bilingual') => {
+  const handleExport = async (type: 'txt' | 'md' | 'html' | 'docx' | 'bilingual') => {
     try {
       const ok =
         type === 'bilingual'
           ? await exportBilingual(chunks)
-          : await exportTranslation(chunks, type);
+          : await exportTranslation(chunks, type, {
+              markdownAware: config.markdownAware === true,
+            });
       if (ok) toast.success(t('files.exported'));
     } catch (err: any) {
       toast.error(t('files.exportError'), { description: err.message });
@@ -110,11 +124,28 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
   };
 
   const handleSave = async () => {
+    if (!currentProjectId) {
+      setShowSaveProjectDialog(true);
+      return;
+    }
     try {
       await saveCurrentProject();
       toast.success(t('projects.saved'));
     } catch (err: any) {
       toast.error(t('projects.saveFailed'), { description: err?.message });
+    }
+  };
+
+  const handleFirstSave = async (name: string) => {
+    try {
+      setIsCreatingProjectFromSave(true);
+      await saveCurrentProject(name);
+      setShowSaveProjectDialog(false);
+      toast.success(t('projects.saved'));
+    } catch (err: any) {
+      toast.error(t('projects.saveFailed'), { description: err?.message });
+    } finally {
+      setIsCreatingProjectFromSave(false);
     }
   };
 
@@ -129,20 +160,20 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
   const sandboxLabel = viewMode === 'sandbox' ? t('header.exitSandbox') : t('header.sandbox');
 
   const sourceWords = useMemo(
-    () => chunks.reduce((acc, chunk) => acc + countWords(chunk.originalText), 0),
-    [chunks],
+    () => deferredChunks.reduce((acc, chunk) => acc + countWords(chunk.originalText), 0),
+    [deferredChunks],
   );
   const translatedWords = useMemo(
-    () => chunks.reduce((acc, chunk) => acc + countWords(chunk.currentDraft || ''), 0),
-    [chunks],
+    () => deferredChunks.reduce((acc, chunk) => acc + countWords(chunk.currentDraft || ''), 0),
+    [deferredChunks],
   );
-  const completedCount = chunks.filter((chunk) => chunk.status === 'completed').length;
-  const compositeQuality = useMemo(() => calculateCompositeQuality(chunks), [chunks]);
+  const completedCount = deferredChunks.filter((chunk) => chunk.status === 'completed').length;
+  const compositeQuality = useMemo(() => calculateCompositeQuality(deferredChunks), [deferredChunks]);
   const compositeLabel = compositeQuality ? t(qualityLabelKey(compositeQuality)) : null;
 
   const totalTokens = useMemo(
     () =>
-      chunks.reduce((sum, chunk) => {
+      deferredChunks.reduce((sum, chunk) => {
         const stageSum = Object.values(chunk.stageResults).reduce(
           (s, r) => s + (r.tokenUsage?.inputTokens ?? 0) + (r.tokenUsage?.outputTokens ?? 0),
           0,
@@ -152,12 +183,12 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
           (chunk.judgeResult.tokenUsage?.outputTokens ?? 0);
         return sum + stageSum + judgeSum;
       }, 0),
-    [chunks],
+    [deferredChunks],
   );
 
   const estimatedCostUsd = useMemo(
     () =>
-      chunks.reduce((total, chunk) => {
+      deferredChunks.reduce((total, chunk) => {
         let cost = 0;
         for (const [stageId, result] of Object.entries(chunk.stageResults)) {
           const stage = config.stages.find((s) => s.id === stageId);
@@ -181,7 +212,7 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
         }
         return total + cost;
       }, 0),
-    [chunks, config.stages, config.judgeProvider, config.judgeModel],
+    [deferredChunks, config.stages, config.judgeProvider, config.judgeModel],
   );
 
   const saveStatusLabel =
@@ -274,16 +305,14 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
                     <SlidersHorizontal size={16} />
                   </IconButton>
                 )}
-                {currentProjectId && (
-                  <IconButton
-                    onClick={handleSave}
-                    title={saveLabel}
-                    ariaLabel={saveLabel}
-                    disabled={isProcessing}
-                  >
-                    <Save size={16} />
-                  </IconButton>
-                )}
+                <IconButton
+                  onClick={handleSave}
+                  title={saveLabel}
+                  ariaLabel={saveLabel}
+                  disabled={isProcessing}
+                >
+                  <Save size={16} />
+                </IconButton>
               </div>
             </ActionCluster>
 
@@ -333,10 +362,17 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
               totalTokens={totalTokens}
               estimatedCostUsd={estimatedCostUsd}
               hasChunks={chunks.length > 0}
+              markdownAware={config.markdownAware === true}
               onExportTxt={() => handleExport('txt')}
-              onExportMd={() => handleExport('bilingual')}
+              onExportMd={() => handleExport('md')}
+              onExportHtml={() => handleExport('html')}
+              onExportDocx={() => handleExport('docx')}
+              onExportBilingual={() => handleExport('bilingual')}
               exportTxtLabel={t('files.exportTxt')}
-              exportMdLabel={t('files.exportBilingual')}
+              exportMdLabel={t('files.exportMarkdown')}
+              exportHtmlLabel={t('files.exportHtml')}
+              exportDocxLabel={t('files.exportDocx')}
+              exportBilingualLabel={t('files.exportBilingual')}
             />
             {onRunPipeline && onRunAuditOnly && onCancelPipeline && (
               <div className="flex flex-wrap items-center justify-end">
@@ -359,6 +395,9 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
           text={pendingImport.text}
           useChunking={pendingImport.useChunking}
           targetChunkCount={pendingImport.targetChunkCount}
+          markdownAware={pendingImport.format === 'markdown'}
+          format={pendingImport.format}
+          experimental={pendingImport.experimental}
           onUseChunkingChange={(value) =>
             setPendingImport((current) =>
               current ? { ...current, useChunking: value } : current,
@@ -373,6 +412,12 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
           onConfirm={handleConfirmImport}
         />
       )}
+      <SaveProjectDialog
+        open={showSaveProjectDialog}
+        onClose={() => setShowSaveProjectDialog(false)}
+        onConfirm={handleFirstSave}
+        saving={isCreatingProjectFromSave}
+      />
     </header>
   );
 }
@@ -447,10 +492,17 @@ function HeaderInfoBar({
   totalTokens,
   estimatedCostUsd,
   hasChunks,
+  markdownAware,
   onExportTxt,
   onExportMd,
+  onExportHtml,
+  onExportDocx,
+  onExportBilingual,
   exportTxtLabel,
   exportMdLabel,
+  exportHtmlLabel,
+  exportDocxLabel,
+  exportBilingualLabel,
 }: {
   sourceWords: number;
   translatedWords: number;
@@ -460,10 +512,17 @@ function HeaderInfoBar({
   totalTokens: number;
   estimatedCostUsd: number;
   hasChunks: boolean;
+  markdownAware: boolean;
   onExportTxt: () => void;
   onExportMd: () => void;
+  onExportHtml: () => void;
+  onExportDocx: () => void;
+  onExportBilingual: () => void;
   exportTxtLabel: string;
   exportMdLabel: string;
+  exportHtmlLabel: string;
+  exportDocxLabel: string;
+  exportBilingualLabel: string;
 }) {
   const { t } = useTranslation();
 
@@ -531,6 +590,35 @@ function HeaderInfoBar({
             >
               MD
             </button>
+            <button
+              type="button"
+              onClick={onExportHtml}
+              title={exportHtmlLabel}
+              aria-label={exportHtmlLabel}
+              className="rounded px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted border border-editorial-border/60 transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            >
+              HTML
+            </button>
+            <button
+              type="button"
+              onClick={onExportDocx}
+              title={exportDocxLabel}
+              aria-label={exportDocxLabel}
+              className="rounded px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted border border-editorial-border/60 transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            >
+              DOCX
+            </button>
+            {markdownAware ? (
+              <button
+                type="button"
+                onClick={onExportBilingual}
+                title={exportBilingualLabel}
+                aria-label={exportBilingualLabel}
+                className="rounded px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted border border-editorial-border/60 transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              >
+                BI
+              </button>
+            ) : null}
           </div>
         </div>
       )}
