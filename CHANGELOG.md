@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/nikazzio/glossa/compare/glossa-v0.4.0...glossa-v0.5.0) (2026-04-29)
+
+
+### ✨ Features
+
+* add markdown-first document pipeline ([#69](https://github.com/nikazzio/glossa/issues/69)) ([82d98ee](https://github.com/nikazzio/glossa/commit/82d98eef9b70111fe4903e6d2c1d68e65c8e0b2a))
+
 ## [0.4.0](https://github.com/nikazzio/glossa/compare/glossa-v0.3.1...glossa-v0.4.0) (2026-04-28)
 
 
