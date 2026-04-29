@@ -144,7 +144,8 @@
     "reEvaluate": "Re-Evaluate Drafts",
     "clearStream": "Clear Stream",
     "fix": "FIX",
-    "auditFailed": "Audit failed"
+    "auditFailed": "Audit failed",
+    "openChunk": "Open chunk"
   },
   "settings": {
     "title": "Global Config / Secrets",
@@ -196,6 +197,7 @@
   "common": {
     "confirm": "Confirm",
     "cancel": "Cancel",
+    "close": "Close",
     "delete": "Delete",
     "save": "Save",
     "all": "All"
@@ -265,6 +267,9 @@
     "write": "Write",
     "preview": "Preview",
     "split": "Split",
+    "toolbar": "Tools",
+    "showToolbar": "Show editor tools",
+    "hideToolbar": "Hide editor tools",
     "previewEmpty": "Nothing to preview yet.",
     "textSize": "Size",
     "textSmall": "Smaller text",
@@ -314,6 +319,12 @@
     "leftPage": "Source page",
     "rightPage": "Translation page",
     "stageTrace": "Stage Trace",
+    "noStageTrace": "No output available for this stage.",
+    "lockTranslation": "Lock candidate translation",
+    "unlockTranslation": "Unlock candidate translation",
+    "translationLockedTitle": "Translation validated and locked",
+    "translationLockedBody": "This translation is protected from accidental edits. You can unlock it from the green check button in the chunk toolbar.",
+    "translationLockedBadge": "Validated",
     "configDrawerTitle": "Pipeline configuration",
     "configDrawerHint": "Edit stages, glossary and providers without covering the document text.",
     "insightsDrawerTitle": "Insights panel",
@@ -381,6 +392,8 @@
       "intro": "This section covers the most recent additions to Glossa.",
       "configDrawerTitle": "Configuration Panel (3 tabs)",
       "configDrawerDesc": "The configuration panel opens via the gear icon in the header. It is organised into three tabs: Stages (model, provider and prompt for each translation stage), Audit (AI judge configuration and evaluation templates), Registry (glossary term management). The panel is a side drawer that overlays without obstructing the document text.",
+      "documentToolsTitle": "Refined document reader",
+      "documentToolsDesc": "The source and translation editors now use a collapsible toolbar so the chrome disappears when you just want to read or edit raw text. Candidate translations can be validated and locked with the green check button, while the full output of any stage opens in a dedicated modal when you click its status badge in the chunk row.",
       "templatesTitle": "Prompt Templates",
       "templatesDesc": "Every prompt textarea — in each stage and in the Audit Guard — has save and load template buttons. Click the bookmark (+) to save the current prompt under a name; click the open book to browse and load saved templates (with search). Templates are separated by context: stage templates do not appear in the Audit section and vice versa. Saving a template with an existing name updates it automatically.",
       "refineTitle": "Refine Prompt",
@@ -405,13 +418,14 @@
       "accuracyIssue": "The meaning of the source text is not faithfully rendered in the translation.",
       "fluencyIssue": "The translation reads unnaturally or has awkward phrasing in the target language.",
       "grammarIssue": "Grammatical errors, incorrect conjugations, or syntactic issues in the output.",
-      "reeval": "After manually editing the candidate translation, click 'Re-Evaluate Drafts' to run the judge again on your updated text. This lets you iterate until the quality judgment meets your standards without re-running the entire pipeline."
+      "reeval": "After manually editing the candidate translation, click 'Re-Evaluate Drafts' to run the judge again on your updated text. This lets you iterate until the quality judgment meets your standards without re-running the entire pipeline.",
+      "issuesNav": "Issue cards in the audit open the relevant chunk in the document reader. Jumping to the exact text fragment is still heuristic until the judge returns structured offsets."
     },
     "projects": {
       "title": "Projects & Files",
       "intro": "Glossa saves your work in local SQLite — all data stays on your machine.",
       "createTitle": "Create a project",
-      "createDesc": "Click the folder icon in the header to open the Projects panel. Type a name and click Create. The project stores your pipeline configuration, glossary, and all translation results.",
+      "createDesc": "You can start working immediately in an unsaved draft. When you want to persist it, click Save in the header: on the first save a lightweight dialog asks for the project name. The Projects panel remains useful for opening, explicitly creating, or deleting saved projects.",
       "saveTitle": "Save your work",
       "saveDesc": "Click the save icon at any time to persist the current state. When you reopen a project, the full pipeline config, stages, glossary, and translations are restored exactly as you left them.",
       "importExportTitle": "Import and export",
@@ -474,6 +488,9 @@
       "openHelp": "Open this guide",
       "sandbox": "Toggle Sandbox / Document mode",
       "openInsights": "Open insights panel (Document mode)",
+      "toggleEditorTools": "Show / hide document editor tools",
+      "lockTranslation": "Lock / unlock a validated candidate translation",
+      "openStageTrace": "Open the full output of a stage",
       "exportTitle": "Export (in header summary)",
       "exportTxt": "Export translation as .txt",
       "exportMd": "Export bilingual .md document",

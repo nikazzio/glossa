@@ -39,6 +39,7 @@ export interface TranslationChunk {
   stageResults: Record<string, PipelineResult>; // Key is stage id
   judgeResult: JudgeResult;
   currentDraft?: string;
+  translationLocked?: boolean;
 }
 
 export interface TokenUsage {

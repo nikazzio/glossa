@@ -32,6 +32,7 @@ const ALLOWED_MIGRATIONS = new Set([
   'translations.chunk_status',
   'translations.judge_status',
   'translations.judge_rating',
+  'translations.translation_locked',
   'prompt_templates.context',
 ]);
 
@@ -143,6 +144,7 @@ export async function initDatabase(): Promise<void> {
       stage_results TEXT DEFAULT '{}',
       judge_status TEXT DEFAULT 'idle',
       judge_rating TEXT DEFAULT 'fair',
+      translation_locked INTEGER DEFAULT 0,
       judge_issues TEXT DEFAULT '[]',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
@@ -158,6 +160,7 @@ export async function initDatabase(): Promise<void> {
   await ensureColumn('translations', 'chunk_status', "TEXT DEFAULT 'ready'");
   await ensureColumn('translations', 'judge_status', "TEXT DEFAULT 'idle'");
   await ensureColumn('translations', 'judge_rating', "TEXT DEFAULT 'fair'");
+  await ensureColumn('translations', 'translation_locked', 'INTEGER DEFAULT 0');
 
   await conn.execute(`
     CREATE TABLE IF NOT EXISTS app_settings (

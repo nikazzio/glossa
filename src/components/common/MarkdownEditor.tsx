@@ -1,4 +1,4 @@
-import { Bold, Columns2, Eye, Heading1, Heading2, Heading3, Italic, Link2, List, ListOrdered, Minus, Pencil, Pilcrow, Plus, Type } from 'lucide-react';
+import { Bold, ChevronDown, ChevronUp, Columns2, Eye, Heading1, Heading2, Heading3, Italic, Link2, List, ListOrdered, Minus, PanelTopClose, PanelTopOpen, Pencil, Pilcrow, Plus, Type } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -24,6 +24,9 @@ interface MarkdownEditorProps {
   textClassName?: string;
   previewClassName?: string;
   highlightHtml?: string | null;
+  focusQuery?: string | null;
+  focusRequestId?: number;
+  onFocusQueryHandled?: () => void;
 }
 
 export function MarkdownEditor({
@@ -37,22 +40,41 @@ export function MarkdownEditor({
   textClassName = 'text-sm leading-relaxed',
   previewClassName = 'prose prose-sm max-w-none',
   highlightHtml,
+  focusQuery = null,
+  focusRequestId = 0,
+  onFocusQueryHandled,
 }: MarkdownEditorProps) {
   const { t } = useTranslation();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [mode, setMode] = useState<EditorMode>('write');
   const [textSize, setTextSize] = useState<TextSize>('md');
   const [selection, setSelection] = useState({ start: 0, end: 0 });
-  const previewHtml = useMemo(() => renderMarkdownToHtmlFragment(value), [value]);
+  const [toolbarOpen, setToolbarOpen] = useState(false);
+  const previewHtml = useMemo(() => {
+    if (mode === 'write' && !readOnly) return '';
+    return renderMarkdownToHtmlFragment(value);
+  }, [mode, readOnly, value]);
   const textSizeStyles: Record<TextSize, { fontSize: string }> = {
     sm: { fontSize: '0.95rem' },
     md: { fontSize: '1rem' },
     lg: { fontSize: '1.125rem' },
   };
-  const activeCommands = useMemo(
-    () => getActiveMarkdownCommands(value, selection.start, selection.end),
-    [selection.end, selection.start, value],
-  );
+  const activeCommands = useMemo(() => {
+    if (!markdownEnabled || mode === 'preview') {
+      return {
+        bold: false,
+        italic: false,
+        'heading-1': false,
+        'heading-2': false,
+        'heading-3': false,
+        link: false,
+        footnote: false,
+        'unordered-list': false,
+        'ordered-list': false,
+      };
+    }
+    return getActiveMarkdownCommands(value, selection.start, selection.end);
+  }, [markdownEnabled, mode, selection.end, selection.start, value]);
   const commandEditingDisabled = readOnly || disabled || mode === 'preview';
 
   useEffect(() => {
@@ -66,6 +88,33 @@ export function MarkdownEditor({
     if (!element) return;
     updateSelection(element.selectionStart, element.selectionEnd);
   }, [mode]);
+
+  useEffect(() => {
+    if (readOnly) {
+      setToolbarOpen(false);
+    }
+  }, [readOnly]);
+
+  useEffect(() => {
+    if (!focusQuery) return;
+    const element = textareaRef.current;
+    if (!element) return;
+    const normalizedQuery = focusQuery.trim();
+    if (!normalizedQuery) return;
+    const lowerValue = value.toLowerCase();
+    const lowerQuery = normalizedQuery.toLowerCase();
+    const matchIndex = lowerValue.indexOf(lowerQuery);
+    if (matchIndex === -1) return;
+
+    setMode('write');
+    requestAnimationFrame(() => {
+      element.focus();
+      element.setSelectionRange(matchIndex, matchIndex + normalizedQuery.length);
+      element.scrollTop = Math.max(0, element.scrollHeight * (matchIndex / Math.max(1, value.length)) - 120);
+      updateSelection(matchIndex, matchIndex + normalizedQuery.length);
+      onFocusQueryHandled?.();
+    });
+  }, [focusQuery, focusRequestId, onFocusQueryHandled, value]);
 
   const updateSelection = (start: number, end: number) => {
     setSelection((current) =>
@@ -130,7 +179,33 @@ export function MarkdownEditor({
   return (
     <div className="space-y-3">
       <div className="sticky top-0 z-20 rounded-2xl border border-editorial-border/70 bg-[#fcfaf5]/95 px-3 py-3 shadow-sm backdrop-blur">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-editorial-border/60 pb-3">
+        <div className="flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={() => setToolbarOpen((open) => !open)}
+            title={toolbarOpen ? t('editor.hideToolbar') : t('editor.showToolbar')}
+            aria-label={toolbarOpen ? t('editor.hideToolbar') : t('editor.showToolbar')}
+            className="rounded-full border border-editorial-border bg-white/70 p-2 text-editorial-muted transition-colors hover:text-editorial-ink"
+          >
+            {toolbarOpen ? <PanelTopClose size={15} /> : <PanelTopOpen size={15} />}
+          </button>
+          <div className="flex items-center gap-2 text-editorial-muted">
+            <span className={`rounded-full border p-1.5 ${mode === 'write' ? 'border-editorial-ink bg-editorial-ink text-white' : 'border-editorial-border bg-white/70'}`}>
+              <Pencil size={13} />
+            </span>
+            <span className={`rounded-full border p-1.5 ${mode === 'preview' ? 'border-editorial-ink bg-editorial-ink text-white' : 'border-editorial-border bg-white/70'}`}>
+              <Eye size={13} />
+            </span>
+            {markdownEnabled ? (
+              <span className={`rounded-full border p-1.5 ${mode === 'split' ? 'border-editorial-ink bg-editorial-ink text-white' : 'border-editorial-border bg-white/70'}`}>
+                <Columns2 size={13} />
+              </span>
+            ) : null}
+          </div>
+        </div>
+        {toolbarOpen ? (
+          <>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-b border-editorial-border/60 pb-3">
           <div className="flex items-center gap-2">
             <ToolbarButton
               active={mode === 'write'}
@@ -280,6 +355,8 @@ export function MarkdownEditor({
               <ListOrderedIcon />
             </CommandButton>
           </div>
+        ) : null}
+          </>
         ) : null}
       </div>
       {mode === 'write' && !readOnly && highlightHtml ? (

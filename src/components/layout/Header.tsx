@@ -9,7 +9,7 @@ import {
   SlidersHorizontal,
   Upload,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { usePipelineStore } from '../../stores/pipelineStore';
@@ -64,6 +64,7 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
   const [showSaveProjectDialog, setShowSaveProjectDialog] = useState(false);
   const [isCreatingProjectFromSave, setIsCreatingProjectFromSave] = useState(false);
+  const deferredChunks = useDeferredValue(chunks);
 
   const currentProject = projects.find((project) => project.id === currentProjectId);
 
@@ -159,20 +160,20 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
   const sandboxLabel = viewMode === 'sandbox' ? t('header.exitSandbox') : t('header.sandbox');
 
   const sourceWords = useMemo(
-    () => chunks.reduce((acc, chunk) => acc + countWords(chunk.originalText), 0),
-    [chunks],
+    () => deferredChunks.reduce((acc, chunk) => acc + countWords(chunk.originalText), 0),
+    [deferredChunks],
   );
   const translatedWords = useMemo(
-    () => chunks.reduce((acc, chunk) => acc + countWords(chunk.currentDraft || ''), 0),
-    [chunks],
+    () => deferredChunks.reduce((acc, chunk) => acc + countWords(chunk.currentDraft || ''), 0),
+    [deferredChunks],
   );
-  const completedCount = chunks.filter((chunk) => chunk.status === 'completed').length;
-  const compositeQuality = useMemo(() => calculateCompositeQuality(chunks), [chunks]);
+  const completedCount = deferredChunks.filter((chunk) => chunk.status === 'completed').length;
+  const compositeQuality = useMemo(() => calculateCompositeQuality(deferredChunks), [deferredChunks]);
   const compositeLabel = compositeQuality ? t(qualityLabelKey(compositeQuality)) : null;
 
   const totalTokens = useMemo(
     () =>
-      chunks.reduce((sum, chunk) => {
+      deferredChunks.reduce((sum, chunk) => {
         const stageSum = Object.values(chunk.stageResults).reduce(
           (s, r) => s + (r.tokenUsage?.inputTokens ?? 0) + (r.tokenUsage?.outputTokens ?? 0),
           0,
@@ -182,12 +183,12 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
           (chunk.judgeResult.tokenUsage?.outputTokens ?? 0);
         return sum + stageSum + judgeSum;
       }, 0),
-    [chunks],
+    [deferredChunks],
   );
 
   const estimatedCostUsd = useMemo(
     () =>
-      chunks.reduce((total, chunk) => {
+      deferredChunks.reduce((total, chunk) => {
         let cost = 0;
         for (const [stageId, result] of Object.entries(chunk.stageResults)) {
           const stage = config.stages.find((s) => s.id === stageId);
@@ -211,7 +212,7 @@ export function Header({ onRunPipeline, onRunAuditOnly, onCancelPipeline }: Head
         }
         return total + cost;
       }, 0),
-    [chunks, config.stages, config.judgeProvider, config.judgeModel],
+    [deferredChunks, config.stages, config.judgeProvider, config.judgeModel],
   );
 
   const saveStatusLabel =

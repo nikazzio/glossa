@@ -35,6 +35,7 @@ interface ChunksState {
   appendChunkStageContent: (chunkId: string, stageId: string, token: string) => void;
   updateChunkJudge: (chunkId: string, result: JudgeResult) => void;
   updateChunkDraft: (chunkId: string, draft: string) => void;
+  toggleChunkTranslationLock: (chunkId: string) => void;
   updateChunkStatus: (chunkId: string, status: ChunkStatus) => void;
   updateChunkOriginalText: (chunkId: string, text: string) => void;
   splitChunk: (chunkId: string) => void;
@@ -133,7 +134,18 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
   updateChunkDraft: (chunkId, draft) =>
     set((state) => ({
       chunks: state.chunks.map((chunk) =>
-        chunk.id === chunkId ? { ...chunk, currentDraft: draft } : chunk,
+        chunk.id === chunkId && !chunk.translationLocked
+          ? { ...chunk, currentDraft: draft }
+          : chunk,
+      ),
+    })),
+
+  toggleChunkTranslationLock: (chunkId) =>
+    set((state) => ({
+      chunks: state.chunks.map((chunk) =>
+        chunk.id === chunkId
+          ? { ...chunk, translationLocked: !chunk.translationLocked }
+          : chunk,
       ),
     })),
 
@@ -238,6 +250,7 @@ function resetChunkForSourceEdit<T extends TranslationChunk>(chunk: T): T {
     stageResults: {},
     judgeResult: createEmptyJudgeResult(),
     currentDraft: '',
+    translationLocked: false,
   };
 }
 
@@ -256,6 +269,7 @@ function buildChunks(
     stageResults: {},
     judgeResult: createEmptyJudgeResult(),
     currentDraft: '',
+    translationLocked: false,
   }));
 }
 

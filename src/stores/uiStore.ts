@@ -21,6 +21,8 @@ interface UiState {
   ollamaStatus: OllamaStatus;
   glossaryHighlightEnabled: boolean;
   focusedChunkId: string | null;
+  focusedIssueQuery: string | null;
+  focusedIssueRequestId: number;
 
   setViewMode: (mode: ViewMode) => void;
   setDocumentLayout: (layout: DocumentLayoutPreference) => void;
@@ -34,6 +36,8 @@ interface UiState {
   setOllamaStatus: (status: OllamaStatus) => void;
   setGlossaryHighlightEnabled: (enabled: boolean) => void;
   setFocusedChunkId: (chunkId: string | null) => void;
+  focusIssueInChunk: (chunkId: string, query?: string | null) => void;
+  clearFocusedIssue: () => void;
 }
 
 export const useUiStore = create<UiState>()(
@@ -51,6 +55,8 @@ export const useUiStore = create<UiState>()(
   ollamaStatus: 'unknown',
   glossaryHighlightEnabled: false,
   focusedChunkId: null,
+  focusedIssueQuery: null,
+  focusedIssueRequestId: 0,
 
   setViewMode: (mode) =>
     set({
@@ -110,6 +116,13 @@ export const useUiStore = create<UiState>()(
   setOllamaStatus: (status) => set({ ollamaStatus: status }),
   setGlossaryHighlightEnabled: (enabled) => set({ glossaryHighlightEnabled: enabled }),
   setFocusedChunkId: (chunkId) => set({ focusedChunkId: chunkId }),
+  focusIssueInChunk: (chunkId, query) =>
+    set((state) => ({
+      focusedChunkId: chunkId,
+      focusedIssueQuery: query ?? null,
+      focusedIssueRequestId: state.focusedIssueRequestId + 1,
+    })),
+  clearFocusedIssue: () => set({ focusedIssueQuery: null }),
     }),
     {
       name: 'glossa-ui-prefs',

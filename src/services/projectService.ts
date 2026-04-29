@@ -32,6 +32,7 @@ export interface SavedTranslation {
   stage_results: string; // JSON
   judge_status: JudgeResult['status'];
   judge_rating: JudgeResult['rating'];
+  translation_locked?: number | null;
   judge_issues: string; // JSON
   created_at: string;
 }
@@ -71,6 +72,7 @@ export function restoreTranslations(rows: SavedTranslation[]): TranslationChunk[
       stageResults,
       judgeResult,
       currentDraft: restoredDraft,
+      translationLocked: row.translation_locked === 1,
     };
   });
 }
@@ -361,8 +363,8 @@ async function saveTranslationsInternal(
     await run(
       `INSERT INTO translations (
          id, project_id, original_text, final_translation, position, chunk_status, stage_results,
-         judge_status, judge_rating, judge_issues
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+         judge_status, judge_rating, translation_locked, judge_issues
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        ON CONFLICT(id) DO UPDATE SET
          original_text    = excluded.original_text,
          final_translation = excluded.final_translation,
@@ -371,6 +373,7 @@ async function saveTranslationsInternal(
          stage_results    = excluded.stage_results,
          judge_status     = excluded.judge_status,
          judge_rating     = excluded.judge_rating,
+         translation_locked = excluded.translation_locked,
          judge_issues     = excluded.judge_issues`,
       [
         chunk.id,
@@ -382,6 +385,7 @@ async function saveTranslationsInternal(
         JSON.stringify(chunk.stageResults),
         chunk.judgeResult.status,
         chunk.judgeResult.rating || qualityDefault(),
+        chunk.translationLocked ? 1 : 0,
         JSON.stringify(chunk.judgeResult.issues),
       ],
     );

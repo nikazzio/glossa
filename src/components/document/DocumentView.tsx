@@ -1,4 +1,5 @@
 import {
+  CheckCheck,
   ChevronLeft,
   ChevronRight,
   Columns2,
@@ -12,12 +13,13 @@ import {
   ScanLine,
   Scissors,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useDeferredValue, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
 import { confirm } from '../../stores/confirmStore';
+import type { TranslationChunk } from '../../types';
 import {
   findBestSplitIndex,
   indexPad,
@@ -25,7 +27,7 @@ import {
   qualityTone,
 } from '../../utils';
 import { buildSplitPreview } from '../../utils/documentWorkflow';
-import { CopyButton, MarkdownEditor, StatusIndicator } from '../common';
+import { CopyButton, MarkdownEditor, ProcessingLine, StatusIndicator } from '../common';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useGlossaryHighlight } from '../../hooks/useGlossaryHighlight';
 
@@ -51,6 +53,7 @@ export function DocumentView({
     isProcessing,
     updateChunkDraft,
     updateChunkOriginalText,
+    toggleChunkTranslationLock,
     splitChunkAt,
     mergeChunkWithNext,
     unlockChunkForEdit,
@@ -62,6 +65,9 @@ export function DocumentView({
     glossaryHighlightEnabled,
     setGlossaryHighlightEnabled,
     focusedChunkId,
+    focusedIssueQuery,
+    focusedIssueRequestId,
+    clearFocusedIssue,
   } = useUiStore();
 
   const [viewportWidth, setViewportWidth] = useState(
@@ -69,6 +75,7 @@ export function DocumentView({
   );
   const [splitDraft, setSplitDraft] = useState<{ chunkId: string; splitAt: number } | null>(null);
   const [paneFocus, setPaneFocus] = useState<'both' | 'source' | 'translation'>('both');
+  const [traceStageId, setTraceStageId] = useState<string | null>(null);
 
   useEffect(() => {
     const onResize = () => setViewportWidth(window.innerWidth);
@@ -88,6 +95,8 @@ export function DocumentView({
     chunks.findIndex((chunk) => chunk.id === selectedChunkId),
   );
   const currentChunk = chunks[currentIndex] ?? null;
+  const deferredOriginalText = useDeferredValue(currentChunk?.originalText ?? '');
+  const deferredDraftText = useDeferredValue(currentChunk?.currentDraft ?? '');
   const currentQualityLabel = currentChunk
     ? t(qualityLabelKey(currentChunk.judgeResult.rating))
     : t('audit.ratingNone');
@@ -121,13 +130,13 @@ export function DocumentView({
   const hasGlossary = config.glossary.length > 0;
   const showHighlight = glossaryHighlightEnabled && hasGlossary;
   const sourceHighlight = useGlossaryHighlight(
-    currentChunk?.originalText ?? '',
-    showHighlight ? config.glossary : [],
+    paneFocus !== 'translation' ? deferredOriginalText : '',
+    showHighlight && paneFocus !== 'translation' ? config.glossary : [],
     'source',
   );
   const translationHighlight = useGlossaryHighlight(
-    currentChunk?.currentDraft ?? '',
-    showHighlight ? config.glossary : [],
+    paneFocus !== 'source' ? deferredDraftText : '',
+    showHighlight && paneFocus !== 'source' ? config.glossary : [],
     'translation',
   );
 
@@ -174,11 +183,18 @@ export function DocumentView({
                 {config.stages
                   .filter((stage) => stage.enabled)
                   .map((stage, stageIndex) => (
-                    <StatusIndicator
+                    <button
                       key={stage.id}
-                      status={currentChunk.stageResults[stage.id]?.status || 'idle'}
-                      label={indexPad(stageIndex + 1)}
-                    />
+                      type="button"
+                      onClick={() => setTraceStageId(stage.id)}
+                      className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                      title={stage.name}
+                    >
+                      <StatusIndicator
+                        status={currentChunk.stageResults[stage.id]?.status || 'idle'}
+                        label={indexPad(stageIndex + 1)}
+                      />
+                    </button>
                   ))}
                 <StatusIndicator status={currentChunk.judgeResult.status} label="Audit" />
               </div>
@@ -217,6 +233,19 @@ export function DocumentView({
               aria-label={t('pipeline.chunkActions')}
               className="flex items-center gap-1 shrink-0"
             >
+              <ChunkIconButton
+                onClick={() => toggleChunkTranslationLock(currentChunk.id)}
+                title={
+                  currentChunk.translationLocked
+                    ? t('document.unlockTranslation')
+                    : t('document.lockTranslation')
+                }
+                active={currentChunk.translationLocked === true}
+                ariaPressed={currentChunk.translationLocked === true}
+                disabled={!currentChunk.currentDraft?.trim()}
+              >
+                <CheckCheck size={16} />
+              </ChunkIconButton>
               <ChunkIconButton
                 onClick={() => onRetranslateChunk(currentChunk.id)}
                 title={t('pipeline.retranslateChunk')}
@@ -317,16 +346,33 @@ export function DocumentView({
               eyebrow={t('document.rightPage')}
               actions={<CopyButton text={currentChunk.currentDraft || ''} />}
               highlighted={focusedChunkId === currentChunk.id}
+              notice={currentChunk.translationLocked ? (
+                <div className="mb-4 flex items-start gap-3 rounded-2xl border border-emerald-300/80 bg-emerald-50 px-4 py-3 text-emerald-950">
+                  <CheckCheck size={16} className="mt-0.5 shrink-0" />
+                  <div>
+                    <div className="text-[11px] font-bold uppercase tracking-[0.24em]">
+                      {t('document.translationLockedTitle')}
+                    </div>
+                    <p className="mt-1 text-sm leading-relaxed text-emerald-900">
+                      {t('document.translationLockedBody')}
+                    </p>
+                  </div>
+                </div>
+              ) : null}
             >
               <MarkdownEditor
                 value={currentChunk.currentDraft || ''}
                 onChange={(nextValue) => updateChunkDraft(currentChunk.id, nextValue)}
                 markdownEnabled={config.markdownAware === true}
+                readOnly={currentChunk.translationLocked === true}
                 minHeightClassName="min-h-[420px]"
                 textClassName="text-[15px] leading-8 text-editorial-ink"
                 previewClassName="min-h-[420px] text-[15px] leading-8 text-editorial-ink"
                 placeholder={t('pipeline.candidatePlaceholder')}
                 highlightHtml={showHighlight ? translationHighlight.html : null}
+                focusQuery={focusedChunkId === currentChunk.id ? focusedIssueQuery : null}
+                focusRequestId={focusedChunkId === currentChunk.id ? focusedIssueRequestId : 0}
+                onFocusQueryHandled={clearFocusedIssue}
               />
             </DocumentPage>
           )}
@@ -376,6 +422,13 @@ export function DocumentView({
           }}
         />
       )}
+      {traceStageId ? (
+        <StageTraceDialog
+          chunk={currentChunk}
+          stage={config.stages.find((entry) => entry.id === traceStageId) ?? null}
+          onClose={() => setTraceStageId(null)}
+        />
+      ) : null}
     </section>
   );
 }
@@ -388,6 +441,75 @@ interface DocumentPageProps {
   notice?: React.ReactNode;
   actions?: React.ReactNode;
   children: React.ReactNode;
+}
+
+function StageTraceDialog({
+  chunk,
+  stage,
+  onClose,
+}: {
+  chunk: TranslationChunk;
+  stage: ReturnType<typeof usePipelineStore.getState>['config']['stages'][number] | null;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const trapRef = useFocusTrap(true, onClose);
+  const result = stage ? chunk.stageResults[stage.id] : null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-editorial-ink/35 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="stage-trace-title"
+      ref={trapRef}
+    >
+      <div className="flex max-h-[90vh] w-full max-w-4xl flex-col rounded-[28px] border border-editorial-border bg-editorial-bg shadow-[0_24px_80px_rgba(26,26,26,0.2)]">
+        <div className="shrink-0 border-b border-editorial-border px-6 py-5 md:px-8 md:py-6">
+          <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+            {t('document.stageTrace')}
+          </div>
+          <h3
+            id="stage-trace-title"
+            className="mt-2 font-display text-3xl italic tracking-tight text-editorial-ink"
+          >
+            {stage?.name ?? t('errors.unknownError')}
+          </h3>
+          <p className="mt-2 text-sm leading-relaxed text-editorial-muted">
+            {result?.status ?? 'idle'}
+          </p>
+        </div>
+        <div className="flex-1 overflow-y-auto px-6 py-6 md:px-8 custom-scrollbar">
+          {result?.status === 'processing' ? (
+            <div className="rounded-[22px] border border-editorial-border bg-editorial-textbox/35 p-5">
+              <ProcessingLine />
+            </div>
+          ) : result?.status === 'error' ? (
+            <div className="rounded-[22px] border border-editorial-accent/40 bg-editorial-textbox/40 p-5 text-sm leading-relaxed text-editorial-accent">
+              {result.error || t('errors.unknownError')}
+            </div>
+          ) : result?.content ? (
+            <pre className="whitespace-pre-wrap rounded-[22px] border border-editorial-border bg-editorial-bg p-5 text-sm leading-relaxed text-editorial-ink">
+              {result.content}
+            </pre>
+          ) : (
+            <div className="rounded-[22px] border border-editorial-border bg-editorial-bg p-5 text-sm text-editorial-muted">
+              {t('document.noStageTrace')}
+            </div>
+          )}
+        </div>
+        <div className="flex justify-end border-t border-editorial-border px-6 py-4 md:px-8">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-editorial-border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink"
+          >
+            {t('common.close')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function DocumentPage({

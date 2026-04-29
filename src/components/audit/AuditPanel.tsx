@@ -159,7 +159,7 @@ function ChunkAuditCard({
   chunk, index, isExpanded, onToggle, onReaudit, isProcessing,
 }: ChunkAuditCardProps) {
   const { t } = useTranslation();
-  const { setFocusedChunkId, setSelectedChunkId, setViewMode } = useUiStore();
+  const { focusIssueInChunk, setSelectedChunkId, setViewMode } = useUiStore();
   const { judgeResult } = chunk;
   const isError = judgeResult.status === 'error';
   const issues = judgeResult.issues;
@@ -246,18 +246,18 @@ function ChunkAuditCard({
                       onClick={() => {
                         setViewMode('document');
                         setSelectedChunkId(chunk.id);
-                        setFocusedChunkId(chunk.id);
+                        focusIssueInChunk(chunk.id, extractIssueFocusQuery(issue));
                       }}
                       className="rounded-full border border-editorial-border px-2 py-1 text-[9px] font-bold uppercase tracking-[0.18em] text-editorial-muted transition-colors hover:text-editorial-ink"
                     >
-                      {t('audit.focusIssue')}
+                      {t('audit.openChunk')}
                     </button>
                   </div>
-                  <p className="font-display italic text-sm leading-snug text-editorial-ink">
-                    &quot;{issue.description}&quot;
+                  <p className="text-sm leading-relaxed text-editorial-ink">
+                    {issue.description}
                   </p>
                   {issue.suggestedFix && (
-                    <div className="text-[10px] font-mono text-editorial-muted bg-editorial-bg p-2 rounded-sm border-l-2 border-editorial-accent">
+                    <div className="rounded-xl border border-editorial-border/70 bg-editorial-bg px-3 py-2 text-[11px] leading-relaxed text-editorial-muted">
                       {t('audit.fix')}: {issue.suggestedFix}
                     </div>
                   )}
@@ -269,4 +269,15 @@ function ChunkAuditCard({
       )}
     </div>
   );
+}
+
+function extractIssueFocusQuery(issue: TranslationChunk['judgeResult']['issues'][number]): string | null {
+  const candidates = [
+    ...Array.from(issue.description.matchAll(/"([^"]{3,})"/g)).map((match) => match[1]),
+    ...Array.from(issue.suggestedFix?.matchAll(/"([^"]{3,})"/g) ?? []).map((match) => match[1]),
+  ]
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  return candidates.sort((a, b) => b.length - a.length)[0] ?? null;
 }

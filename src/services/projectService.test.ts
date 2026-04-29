@@ -150,6 +150,7 @@ describe('projectService glossary persistence', () => {
           originalText: 'Beta',
           currentDraft: 'Beta translated',
           status: 'completed',
+          translationLocked: true,
           stageResults: {},
           judgeResult: {
             content: 'Beta translated',
@@ -163,6 +164,7 @@ describe('projectService glossary persistence', () => {
           originalText: 'Alpha',
           currentDraft: 'Alpha translated',
           status: 'completed',
+          translationLocked: false,
           stageResults: {},
           judgeResult: {
             content: 'Alpha translated',
@@ -193,11 +195,11 @@ describe('projectService glossary persistence', () => {
     );
     expect(dbMocks.execute).toHaveBeenCalledWith(
       expect.stringContaining('position'),
-      ['chunk-b', 'proj-1', 'Beta', 'Beta translated', 0, 'completed', '{}', 'completed', 'good', '[]'],
+      ['chunk-b', 'proj-1', 'Beta', 'Beta translated', 0, 'completed', '{}', 'completed', 'good', 1, '[]'],
     );
     expect(dbMocks.execute).toHaveBeenCalledWith(
       expect.stringContaining('position'),
-      ['chunk-a', 'proj-1', 'Alpha', 'Alpha translated', 1, 'completed', '{}', 'completed', 'excellent', '[]'],
+      ['chunk-a', 'proj-1', 'Alpha', 'Alpha translated', 1, 'completed', '{}', 'completed', 'excellent', 0, '[]'],
     );
     expect(
       dbMocks.execute.mock.calls.filter(

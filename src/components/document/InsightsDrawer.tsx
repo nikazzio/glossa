@@ -1,11 +1,9 @@
-import { AlertTriangle, PanelRight, RefreshCcw, X } from 'lucide-react';
+import { AlertTriangle, CheckCheck, PanelRight, RefreshCcw, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { type KeyboardEvent, useRef } from 'react';
-import { ProcessingLine } from '../common';
 import { useUiStore } from '../../stores/uiStore';
 import { useChunksStore } from '../../stores/chunksStore';
-import { usePipelineStore } from '../../stores/pipelineStore';
 import { indexPad, qualityLabelKey, qualityTone } from '../../utils';
 import type { TranslationChunk } from '../../types';
 
@@ -47,10 +45,9 @@ export function InsightsDrawer({ onReauditChunk }: InsightsDrawerProps) {
   const setInsightsDrawerTab = useUiStore((state) => state.setInsightsDrawerTab);
   const selectedChunkId = useUiStore((state) => state.selectedChunkId);
   const setSelectedChunkId = useUiStore((state) => state.setSelectedChunkId);
+  const focusIssueInChunk = useUiStore((state) => state.focusIssueInChunk);
   const chunks = useChunksStore((state) => state.chunks);
   const isProcessing = useChunksStore((state) => state.isProcessing);
-  const stages = usePipelineStore((state) => state.config.stages);
-
   const currentChunk =
     chunks.find((chunk) => chunk.id === selectedChunkId) ?? chunks[0] ?? null;
 
@@ -191,9 +188,10 @@ export function InsightsDrawer({ onReauditChunk }: InsightsDrawerProps) {
                   panelId={TAB_PANEL_IDS.audit}
                   labelledBy={TAB_BUTTON_IDS.audit}
                   currentChunk={currentChunk}
-                  stages={stages}
                   isProcessing={isProcessing}
                   onReauditChunk={onReauditChunk}
+                  onSelectChunk={setSelectedChunkId}
+                  onFocusIssue={focusIssueInChunk}
                 />
               )}
             </div>
@@ -303,6 +301,12 @@ function IndexTab({ panelId, labelledBy, chunks, currentChunkId, onSelect }: Ind
               <div className="mt-2 text-[10px] uppercase tracking-[0.2em] opacity-75">
                 {ratingLabel}
               </div>
+              {chunk.translationLocked ? (
+                <div className="mt-2 flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-200">
+                  <CheckCheck size={12} />
+                  {t('document.translationLockedBadge')}
+                </div>
+              ) : null}
             </button>
           </li>
         );
@@ -315,18 +319,20 @@ interface AuditTabProps {
   panelId: string;
   labelledBy: string;
   currentChunk: TranslationChunk | null;
-  stages: ReturnType<typeof usePipelineStore.getState>['config']['stages'];
   isProcessing: boolean;
   onReauditChunk: (chunkId: string) => void;
+  onSelectChunk: (id: string) => void;
+  onFocusIssue: (chunkId: string, query?: string | null) => void;
 }
 
 function AuditTab({
   panelId,
   labelledBy,
   currentChunk,
-  stages,
   isProcessing,
   onReauditChunk,
+  onSelectChunk,
+  onFocusIssue,
 }: AuditTabProps) {
   const { t } = useTranslation();
 
@@ -348,7 +354,6 @@ function AuditTab({
     currentChunk.judgeResult.status === 'completed'
       ? t(qualityLabelKey(currentChunk.judgeResult.rating))
       : t('audit.ratingNone');
-  const enabledStages = stages.filter((stage) => stage.enabled);
 
   return (
     <div
@@ -403,9 +408,9 @@ function AuditTab({
             {currentChunk.judgeResult.issues.map((issue, index) => (
               <article
                 key={`${issue.type}-${index}`}
-                className="rounded-2xl border border-editorial-border bg-editorial-bg/80 p-4"
+                className="rounded-2xl border border-editorial-border bg-editorial-bg/80 p-4 shadow-sm"
               >
-                <div className="mb-2 flex items-center gap-2">
+                <div className="mb-3 flex items-center justify-between gap-3">
                   <span
                     className={`rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-[0.2em] ${
                       issue.severity === 'high'
@@ -415,13 +420,23 @@ function AuditTab({
                   >
                     {issue.type}
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSelectChunk(currentChunk.id);
+                      onFocusIssue(currentChunk.id, extractIssueFocusQuery(issue));
+                    }}
+                    className="rounded-full border border-editorial-border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-editorial-muted transition-colors hover:text-editorial-ink"
+                  >
+                    {t('audit.openChunk')}
+                  </button>
                 </div>
-                <p className="font-display text-base italic leading-relaxed text-editorial-ink">
+                <p className="text-sm leading-relaxed text-editorial-ink">
                   {issue.description}
                 </p>
                 {issue.suggestedFix && (
-                  <div className="mt-3 border-l-2 border-editorial-accent pl-3 text-sm text-editorial-muted">
-                    <span className="font-bold uppercase tracking-[0.2em] text-[10px]">
+                  <div className="mt-3 rounded-xl border border-editorial-border/70 bg-editorial-bg px-3 py-2 text-sm leading-relaxed text-editorial-muted">
+                    <span className="font-bold uppercase tracking-[0.2em] text-[10px] text-editorial-accent">
                       {t('audit.fix')}
                     </span>
                     : {issue.suggestedFix}
@@ -432,53 +447,6 @@ function AuditTab({
           </div>
         )}
       </section>
-
-      {enabledStages.length > 0 && (
-        <section className="rounded-[20px] border border-editorial-border bg-editorial-bg p-5">
-          <div className="mb-4 text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-            {t('document.stageTrace')}
-          </div>
-          <div className="space-y-3">
-            {enabledStages.map((stage) => {
-              const result = currentChunk.stageResults[stage.id];
-              if (!result || result.status === 'idle') return null;
-              return (
-                <article
-                  key={stage.id}
-                  className={`rounded-2xl border p-4 ${
-                    result.status === 'error'
-                      ? 'border-editorial-accent/40 bg-editorial-textbox/40'
-                      : 'border-editorial-border bg-editorial-bg/80'
-                  }`}
-                >
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <div className="font-display text-base italic text-editorial-accent">
-                      {stage.name}
-                    </div>
-                    <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
-                      {result.status}
-                    </span>
-                  </div>
-                  <div className="text-sm leading-relaxed text-editorial-ink">
-                    {result.status === 'processing' ? (
-                      <ProcessingLine />
-                    ) : result.status === 'error' ? (
-                      <div className="flex items-start gap-2 text-editorial-accent">
-                        <AlertTriangle size={14} className="mt-1 shrink-0" />
-                        <span className="font-mono text-xs">
-                          {result.error || t('errors.unknownError')}
-                        </span>
-                      </div>
-                    ) : (
-                      result.content
-                    )}
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        </section>
-      )}
     </div>
   );
 }
@@ -487,4 +455,15 @@ function truncateChunk(text: string) {
   const normalized = text.replace(/\s+/g, ' ').trim();
   if (normalized.length <= 80) return normalized;
   return `${normalized.slice(0, 77)}...`;
+}
+
+function extractIssueFocusQuery(issue: TranslationChunk['judgeResult']['issues'][number]): string | null {
+  const candidates = [
+    ...Array.from(issue.description.matchAll(/"([^"]{3,})"/g)).map((match) => match[1]),
+    ...Array.from(issue.suggestedFix?.matchAll(/"([^"]{3,})"/g) ?? []).map((match) => match[1]),
+  ]
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  return candidates.sort((a, b) => b.length - a.length)[0] ?? null;
 }
