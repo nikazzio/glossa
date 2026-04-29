@@ -150,7 +150,7 @@ export function resolveSplitIndex(
 ): number | null {
   const boundedSplitAt = Math.max(1, Math.min(requestedSplitAt, text.length - 1));
   if (!options.markdownAware) return boundedSplitAt;
-  return findNearestMarkdownBoundary(text, boundedSplitAt);
+  return findNearestMarkdownBoundary(text, boundedSplitAt) ?? boundedSplitAt;
 }
 
 function splitParagraphs(text: string, options: ChunkTextOptions = {}): string[] {
@@ -163,6 +163,9 @@ function splitParagraphs(text: string, options: ChunkTextOptions = {}): string[]
 function splitIntoTargetChunks(text: string, target: number, options: ChunkTextOptions = {}): string[] {
   const paragraphs = splitParagraphs(text, options);
   if (paragraphs.length <= 1) {
+    if (options.markdownAware) {
+      return [text.trim()];
+    }
     return splitWordsIntoTargetChunks(text, target);
   }
 

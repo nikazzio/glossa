@@ -5,6 +5,7 @@ import {
   estimateTextStats,
   indexPad,
   normalizeQualityRating,
+  resolveSplitIndex,
   recommendChunkCount,
 } from './index';
 import type { TranslationChunk } from '../types';
@@ -108,5 +109,24 @@ describe('document chunking', () => {
     expect(chunks[0]).toContain('[^1]: Footnote line one');
     expect(chunks[0]).toContain('Continues on a second line.');
     expect(chunks[1]).toBe('Closing paragraph.');
+  });
+
+  it('does not word-split single-block markdown-aware content', () => {
+    const text = 'Text with [link](https://example.com) and note[^1]\n[^1]: Footnote body';
+
+    const chunks = chunkText(text, {
+      useChunking: true,
+      targetChunkCount: 3,
+      markdownAware: true,
+    });
+
+    expect(chunks).toEqual([text]);
+  });
+
+  it('allows manual split on markdown content without blank-line boundaries', () => {
+    const text = '- item one\n- item two\n- item three';
+    const splitAt = resolveSplitIndex(text, 10, { markdownAware: true });
+
+    expect(splitAt).toBe(10);
   });
 });

@@ -951,6 +951,7 @@ fn apply_run_style(text: &str, bold: bool, italic: bool) -> String {
     if text.is_empty() {
         return String::new();
     }
+    let text = escape_markdown_text(text);
     if bold && italic {
         return format!("***{text}***");
     }
@@ -961,6 +962,57 @@ fn apply_run_style(text: &str, bold: bool, italic: bool) -> String {
         return format!("*{text}*");
     }
     text.to_string()
+}
+
+fn escape_markdown_text(value: &str) -> String {
+    let mut escaped = String::with_capacity(value.len());
+    for ch in value.chars() {
+        match ch {
+            '\\' | '`' | '*' | '_' | '[' | ']' => {
+                escaped.push('\\');
+                escaped.push(ch);
+            }
+            _ => escaped.push(ch),
+        }
+    }
+
+    let mut lines = Vec::new();
+    for line in escaped.split('\n') {
+        let trimmed = line.trim_start();
+        let indent_len = line.len() - trimmed.len();
+        let indent = &line[..indent_len];
+
+        let escaped_line = if trimmed.starts_with('#')
+            || trimmed.starts_with("- ")
+            || trimmed.starts_with("+ ")
+            || trimmed.starts_with("* ")
+            || trimmed.starts_with("[^")
+            || starts_with_ordered_marker(trimmed)
+        {
+            format!("{indent}\\{trimmed}")
+        } else {
+            line.to_string()
+        };
+
+        lines.push(escaped_line);
+    }
+
+    lines.join("\n")
+}
+
+fn starts_with_ordered_marker(value: &str) -> bool {
+    let mut chars = value.chars().peekable();
+    let mut saw_digit = false;
+    while let Some(ch) = chars.peek().copied() {
+        if ch.is_ascii_digit() {
+            saw_digit = true;
+            chars.next();
+            continue;
+        }
+        break;
+    }
+
+    saw_digit && matches!(chars.next(), Some('.')) && matches!(chars.next(), Some(' '))
 }
 
 #[cfg(test)]
@@ -1072,6 +1124,31 @@ mod tests {
         let extracted = extract_docx_markdown_from_bytes(&buffer).expect("expected markdown");
 
         assert_eq!(extracted, "Alpha *beta* gamma[^2]\n\n[^2]: Footnote text");
+    }
+
+    #[test]
+    fn escapes_literal_markdown_syntax_in_plain_docx_runs() {
+        let xml = r#"<?xml version="1.0"?>
+<w:document xmlns:w="x">
+  <w:body>
+    <w:p>
+      <w:r><w:t># Heading literal</w:t></w:r>
+    </w:p>
+    <w:p>
+      <w:r><w:t xml:space="preserve">List marker * item and [link](url) plus _emphasis_ and [^1]</w:t></w:r>
+    </w:p>
+  </w:body>
+</w:document>"#;
+
+        let buffer = build_docx(xml);
+        let extracted = extract_docx_markdown_from_bytes(&buffer).expect("expected markdown");
+
+        assert_eq!(
+            extracted,
+            r#"\# Heading literal
+
+List marker \* item and \[link\](url) plus \_emphasis\_ and \[^1\]"#
+        );
     }
 
     #[test]
