@@ -20,6 +20,7 @@ interface UiState {
   ollamaModels: string[];
   ollamaStatus: OllamaStatus;
   glossaryHighlightEnabled: boolean;
+  focusedChunkId: string | null;
 
   setViewMode: (mode: ViewMode) => void;
   setDocumentLayout: (layout: DocumentLayoutPreference) => void;
@@ -32,6 +33,7 @@ interface UiState {
   setOllamaModels: (models: string[]) => void;
   setOllamaStatus: (status: OllamaStatus) => void;
   setGlossaryHighlightEnabled: (enabled: boolean) => void;
+  setFocusedChunkId: (chunkId: string | null) => void;
 }
 
 export const useUiStore = create<UiState>()(
@@ -48,6 +50,7 @@ export const useUiStore = create<UiState>()(
   ollamaModels: [],
   ollamaStatus: 'unknown',
   glossaryHighlightEnabled: false,
+  focusedChunkId: null,
 
   setViewMode: (mode) =>
     set({
@@ -106,6 +109,7 @@ export const useUiStore = create<UiState>()(
   setOllamaModels: (models) => set({ ollamaModels: models }),
   setOllamaStatus: (status) => set({ ollamaStatus: status }),
   setGlossaryHighlightEnabled: (enabled) => set({ glossaryHighlightEnabled: enabled }),
+  setFocusedChunkId: (chunkId) => set({ focusedChunkId: chunkId }),
     }),
     {
       name: 'glossa-ui-prefs',

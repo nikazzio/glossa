@@ -2,6 +2,7 @@ import { ChevronDown, ChevronRight, ScanLine, ShieldCheck, RefreshCcw, AlertTria
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useChunksStore } from '../../stores/chunksStore';
+import { useUiStore } from '../../stores/uiStore';
 import { calculateCompositeQuality, indexPad, qualityLabelKey, qualityTone } from '../../utils';
 import { confirm } from '../../stores/confirmStore';
 import type { TranslationChunk } from '../../types';
@@ -158,6 +159,7 @@ function ChunkAuditCard({
   chunk, index, isExpanded, onToggle, onReaudit, isProcessing,
 }: ChunkAuditCardProps) {
   const { t } = useTranslation();
+  const { setFocusedChunkId, setSelectedChunkId, setViewMode } = useUiStore();
   const { judgeResult } = chunk;
   const isError = judgeResult.status === 'error';
   const issues = judgeResult.issues;
@@ -231,7 +233,7 @@ function ChunkAuditCard({
             <ul className="space-y-3">
               {issues.map((issue, i) => (
                 <li key={i} className="space-y-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-between gap-2">
                     <span
                       className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-sm ${
                         issue.severity === 'high' ? 'bg-editorial-accent text-white' : 'bg-editorial-ink text-white'
@@ -239,6 +241,17 @@ function ChunkAuditCard({
                     >
                       {issue.type}
                     </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setViewMode('document');
+                        setSelectedChunkId(chunk.id);
+                        setFocusedChunkId(chunk.id);
+                      }}
+                      className="rounded-full border border-editorial-border px-2 py-1 text-[9px] font-bold uppercase tracking-[0.18em] text-editorial-muted transition-colors hover:text-editorial-ink"
+                    >
+                      {t('audit.focusIssue')}
+                    </button>
                   </div>
                   <p className="font-display italic text-sm leading-snug text-editorial-ink">
                     &quot;{issue.description}&quot;

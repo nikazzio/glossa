@@ -1,9 +1,12 @@
 import {
   ChevronLeft,
   ChevronRight,
+  Columns2,
   Copy,
   Highlighter,
   Pencil,
+  PanelLeft,
+  PanelRight,
   RotateCcw,
   ScanLine,
   Scissors,
@@ -57,12 +60,14 @@ export function DocumentView({
     documentLayout,
     glossaryHighlightEnabled,
     setGlossaryHighlightEnabled,
+    focusedChunkId,
   } = useUiStore();
 
   const [viewportWidth, setViewportWidth] = useState(
     typeof window === 'undefined' ? 0 : window.innerWidth,
   );
   const [splitDraft, setSplitDraft] = useState<{ chunkId: string; splitAt: number } | null>(null);
+  const [paneFocus, setPaneFocus] = useState<'both' | 'source' | 'translation'>('both');
 
   useEffect(() => {
     const onResize = () => setViewportWidth(window.innerWidth);
@@ -178,6 +183,33 @@ export function DocumentView({
               </div>
             </div>
 
+            <div className="flex items-center gap-1">
+              <ChunkIconButton
+                onClick={() => setPaneFocus('both')}
+                title={t('document.focusBoth')}
+                active={paneFocus === 'both'}
+                ariaPressed={paneFocus === 'both'}
+              >
+                <Columns2 size={16} />
+              </ChunkIconButton>
+              <ChunkIconButton
+                onClick={() => setPaneFocus('source')}
+                title={t('document.focusSource')}
+                active={paneFocus === 'source'}
+                ariaPressed={paneFocus === 'source'}
+              >
+                <PanelLeft size={16} />
+              </ChunkIconButton>
+              <ChunkIconButton
+                onClick={() => setPaneFocus('translation')}
+                title={t('document.focusTranslation')}
+                active={paneFocus === 'translation'}
+                ariaPressed={paneFocus === 'translation'}
+              >
+                <PanelRight size={16} />
+              </ChunkIconButton>
+            </div>
+
             {/* Azioni — icone senza testo, stile header */}
             <div
               role="toolbar"
@@ -243,41 +275,47 @@ export function DocumentView({
           </div>
         </div>
 
-        <div className={`grid gap-6 ${isBook ? '2xl:grid-cols-2' : 'grid-cols-1'}`}>
-          <DocumentPage
-            label={t('pipeline.originalSource')}
-            eyebrow={t('document.leftPage')}
-            readOnly={currentChunk.status === 'completed'}
-          >
-            <MarkdownEditor
-              value={currentChunk.originalText}
-              onChange={(nextValue) => updateChunkOriginalText(currentChunk.id, nextValue)}
-              markdownEnabled={config.markdownAware === true}
-              disabled={isProcessing}
+        <div className={`grid gap-6 ${paneFocus === 'both' ? (isBook ? '2xl:grid-cols-2' : 'grid-cols-1') : 'grid-cols-1'}`}>
+          {paneFocus !== 'translation' && (
+            <DocumentPage
+              label={t('pipeline.originalSource')}
+              eyebrow={t('document.leftPage')}
               readOnly={currentChunk.status === 'completed'}
-              minHeightClassName="min-h-[420px]"
-              textClassName="text-[15px] leading-8 text-editorial-ink"
-              previewClassName="min-h-[420px] text-[15px] leading-8 text-editorial-ink"
-              highlightHtml={showHighlight && currentChunk.status !== 'completed' ? sourceHighlight.html : null}
-            />
-          </DocumentPage>
+              highlighted={focusedChunkId === currentChunk.id}
+            >
+              <MarkdownEditor
+                value={currentChunk.originalText}
+                onChange={(nextValue) => updateChunkOriginalText(currentChunk.id, nextValue)}
+                markdownEnabled={config.markdownAware === true}
+                disabled={isProcessing}
+                readOnly={currentChunk.status === 'completed'}
+                minHeightClassName="min-h-[420px]"
+                textClassName="text-[15px] leading-8 text-editorial-ink"
+                previewClassName="min-h-[420px] text-[15px] leading-8 text-editorial-ink"
+                highlightHtml={showHighlight && currentChunk.status !== 'completed' ? sourceHighlight.html : null}
+              />
+            </DocumentPage>
+          )}
 
-          <DocumentPage
-            label={t('pipeline.candidateTranslation')}
-            eyebrow={t('document.rightPage')}
-            actions={<CopyButton text={currentChunk.currentDraft || ''} />}
-          >
-            <MarkdownEditor
-              value={currentChunk.currentDraft || ''}
-              onChange={(nextValue) => updateChunkDraft(currentChunk.id, nextValue)}
-              markdownEnabled={config.markdownAware === true}
-              minHeightClassName="min-h-[420px]"
-              textClassName="text-[15px] leading-8 text-editorial-ink"
-              previewClassName="min-h-[420px] text-[15px] leading-8 text-editorial-ink"
-              placeholder={t('pipeline.candidatePlaceholder')}
-              highlightHtml={showHighlight ? translationHighlight.html : null}
-            />
-          </DocumentPage>
+          {paneFocus !== 'source' && (
+            <DocumentPage
+              label={t('pipeline.candidateTranslation')}
+              eyebrow={t('document.rightPage')}
+              actions={<CopyButton text={currentChunk.currentDraft || ''} />}
+              highlighted={focusedChunkId === currentChunk.id}
+            >
+              <MarkdownEditor
+                value={currentChunk.currentDraft || ''}
+                onChange={(nextValue) => updateChunkDraft(currentChunk.id, nextValue)}
+                markdownEnabled={config.markdownAware === true}
+                minHeightClassName="min-h-[420px]"
+                textClassName="text-[15px] leading-8 text-editorial-ink"
+                previewClassName="min-h-[420px] text-[15px] leading-8 text-editorial-ink"
+                placeholder={t('pipeline.candidatePlaceholder')}
+                highlightHtml={showHighlight ? translationHighlight.html : null}
+              />
+            </DocumentPage>
+          )}
         </div>
 
         <nav
@@ -332,6 +370,7 @@ interface DocumentPageProps {
   label: string;
   eyebrow: string;
   readOnly?: boolean;
+  highlighted?: boolean;
   actions?: React.ReactNode;
   children: React.ReactNode;
 }
@@ -340,11 +379,14 @@ function DocumentPage({
   label,
   eyebrow,
   readOnly = false,
+  highlighted = false,
   actions,
   children,
 }: DocumentPageProps) {
   return (
-    <section className="relative rounded-[28px] border border-[#d8cfbf] bg-[#fffdf9] px-8 py-7 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_18px_45px_rgba(74,50,17,0.08)]">
+    <section className={`relative rounded-[28px] bg-[#fffdf9] px-8 py-7 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_18px_45px_rgba(74,50,17,0.08)] ${
+      highlighted ? 'border border-editorial-accent ring-2 ring-editorial-accent/30' : 'border border-[#d8cfbf]'
+    }`}>
       <div className="mb-5 flex items-center justify-between gap-4 border-b border-[#ede4d6] pb-4">
         <div>
           <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
@@ -356,7 +398,7 @@ function DocumentPage({
         </div>
         <div className="shrink-0">{actions}</div>
       </div>
-      <div className={readOnly ? 'opacity-90' : ''}>{children}</div>
+      <div className={`max-h-[min(58vh,820px)] overflow-y-auto pr-2 custom-scrollbar ${readOnly ? 'opacity-90' : ''}`}>{children}</div>
     </section>
   );
 }

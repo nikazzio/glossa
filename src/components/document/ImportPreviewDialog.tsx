@@ -141,7 +141,7 @@ export function ImportPreviewDialog({
                   {preview.chunks.length} {t('pipeline.unitsReady')}
                 </div>
               </div>
-              <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto pr-1 custom-scrollbar md:grid-cols-2">
+              <div className="grid max-h-[58vh] min-h-0 gap-4 overflow-y-auto pr-1 custom-scrollbar md:grid-cols-2">
                 {preview.chunks.map((chunk) => (
                   <div
                     key={`${chunk.index}-${chunk.characters}`}

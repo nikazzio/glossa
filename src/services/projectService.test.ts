@@ -14,6 +14,7 @@ const {
   saveProjectConfig,
   saveProjectState,
   loadTranslations,
+  restoreTranslations,
 } = await import('./projectService');
 
 describe('projectService glossary persistence', () => {
@@ -261,5 +262,26 @@ describe('projectService glossary persistence', () => {
       'SELECT * FROM translations WHERE project_id = $1 ORDER BY CASE WHEN position IS NULL THEN 1 ELSE 0 END, position ASC, created_at ASC',
       ['proj-1'],
     );
+  });
+
+  it('restores drafts from stage results when the final translation field is empty', async () => {
+    const restored = restoreTranslations([
+      {
+        id: 'chunk-1',
+        project_id: 'proj-1',
+        original_text: 'Source',
+        final_translation: '',
+        chunk_status: 'completed',
+        stage_results: JSON.stringify({
+          'stg-1': { content: 'Recovered translation', status: 'completed' },
+        }),
+        judge_status: 'completed',
+        judge_rating: 'good',
+        judge_issues: '[]',
+        created_at: '2026-04-29T00:00:00Z',
+      },
+    ]);
+
+    expect(restored[0]?.currentDraft).toBe('Recovered translation');
   });
 });

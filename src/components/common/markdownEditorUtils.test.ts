@@ -19,6 +19,14 @@ describe('markdownEditorUtils', () => {
     expect(result.selectionEnd).toBe(12);
   });
 
+  it('unwraps an already bold selection', () => {
+    const result = apply('bold', 'Alpha **beta** gamma', 8, 12);
+
+    expect(result.value).toBe('Alpha beta gamma');
+    expect(result.selectionStart).toBe(6);
+    expect(result.selectionEnd).toBe(10);
+  });
+
   it('inserts a link template when no text is selected', () => {
     const result = apply('link', 'Alpha', 5);
 
@@ -31,6 +39,24 @@ describe('markdownEditorUtils', () => {
     const result = apply('heading-2', 'Title', 0, 5);
 
     expect(result.value).toBe('## Title');
+  });
+
+  it('toggles a heading off when the line is already headed', () => {
+    const result = apply('heading-2', '## Title', 0, 8);
+
+    expect(result.value).toBe('Title');
+  });
+
+  it('toggles a bulleted list on selected lines', () => {
+    const result = apply('unordered-list', 'One\nTwo', 0, 7);
+
+    expect(result.value).toBe('- One\n- Two');
+  });
+
+  it('toggles a bulleted list off when already prefixed', () => {
+    const result = apply('unordered-list', '- One\n- Two', 0, 11);
+
+    expect(result.value).toBe('One\nTwo');
   });
 
   it('adds footnote reference and definition scaffolding', () => {

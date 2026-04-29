@@ -3,6 +3,7 @@ import type {
   GlossaryEntry,
   JudgeResult,
   PipelineConfig,
+  PipelineResult,
   PipelineStageConfig,
   TranslationChunk,
   ViewMode,
@@ -57,13 +58,19 @@ function restoreJudgeResult(row: SavedTranslation): JudgeResult {
 export function restoreTranslations(rows: SavedTranslation[]): TranslationChunk[] {
   return rows.map((row) => {
     const judgeResult = restoreJudgeResult(row);
+    const stageResults = parseJson<Record<string, PipelineResult>>(row.stage_results, {});
+    const restoredDraft =
+      row.final_translation ||
+      judgeResult.content ||
+      lastStageContent(stageResults) ||
+      '';
     return {
       id: row.id,
       originalText: row.original_text,
       status: row.chunk_status || (judgeResult.status === 'completed' ? 'completed' : 'ready'),
-      stageResults: parseJson(row.stage_results, {}),
+      stageResults,
       judgeResult,
-      currentDraft: row.final_translation || '',
+      currentDraft: restoredDraft,
     };
   });
 }
@@ -369,7 +376,7 @@ async function saveTranslationsInternal(
         chunk.id,
         projectId,
         chunk.originalText,
-        chunk.currentDraft || '',
+        chunk.currentDraft || chunk.judgeResult.content || lastStageContent(chunk.stageResults) || '',
         position,
         chunk.status,
         JSON.stringify(chunk.stageResults),
@@ -390,6 +397,15 @@ async function saveTranslationsInternal(
   } else {
     await run('DELETE FROM translations WHERE project_id = $1', [projectId]);
   }
+}
+
+function lastStageContent(stageResults: Record<string, PipelineResult>): string {
+  const entries = Object.values(stageResults);
+  for (let index = entries.length - 1; index >= 0; index -= 1) {
+    const content = entries[index]?.content?.trim();
+    if (content) return content;
+  }
+  return '';
 }
 
 export async function saveProjectState(input: {
