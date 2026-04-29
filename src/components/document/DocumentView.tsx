@@ -13,6 +13,7 @@ import {
   ScanLine,
   Scissors,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useDeferredValue, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
@@ -27,7 +28,7 @@ import {
   qualityTone,
 } from '../../utils';
 import { buildSplitPreview } from '../../utils/documentWorkflow';
-import { CopyButton, MarkdownEditor, ProcessingLine, StatusIndicator } from '../common';
+import { CopyButton, MarkdownEditor, ProcessingLine } from '../common';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useGlossaryHighlight } from '../../hooks/useGlossaryHighlight';
 
@@ -165,19 +166,32 @@ export function DocumentView({
 
   return (
     <section className="w-full bg-[#f7f3ec] overflow-y-auto min-h-0 h-full custom-scrollbar">
-      <div className="mx-auto max-w-[1500px] px-6 py-6 md:px-8 md:py-8 space-y-6">
-        <div className="rounded-[24px] border border-editorial-border bg-editorial-bg/90 px-6 py-4 shadow-[0_16px_50px_rgba(26,26,26,0.05)]">
-          <div className="flex items-center justify-between gap-4">
+      <div className="mx-auto max-w-[1720px] px-5 py-4 md:px-6 md:py-5 space-y-5">
+        <div className="rounded-[22px] border border-editorial-border bg-editorial-bg/90 px-5 py-3 shadow-[0_16px_50px_rgba(26,26,26,0.05)]">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             {/* Info + status indicators — tutto su una riga */}
-            <div className="flex flex-wrap items-center gap-3 min-w-0">
-              <span className="font-display text-xl italic text-editorial-accent shrink-0">
-                {t('pipeline.unit')} {indexPad(currentIndex + 1)}
-              </span>
-              <span className={`font-display italic shrink-0 ${QUALITY_TONE_COLOR[chunkTone]}`}>
-                {currentQualityLabel}
-              </span>
-              <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted shrink-0">
-                {t(`pipeline.chunkStatus.${currentChunk.status}`)}
+            <div className="flex flex-wrap items-center gap-2.5 min-w-0">
+              <div className="flex items-center gap-1.5 rounded-full border border-editorial-border bg-editorial-bg/70 px-2 py-1">
+                <ChunkIconButton
+                  onClick={() => prevChunk && setSelectedChunkId(prevChunk.id)}
+                  title={t('document.previousChunk')}
+                  disabled={!prevChunk}
+                >
+                  <ChevronLeft size={15} />
+                </ChunkIconButton>
+                <span className="font-display text-lg italic text-editorial-accent shrink-0 min-w-[88px] text-center">
+                  {indexPad(currentIndex + 1)}/{indexPad(chunks.length)}
+                </span>
+                <ChunkIconButton
+                  onClick={() => nextChunk && setSelectedChunkId(nextChunk.id)}
+                  title={t('document.nextChunk')}
+                  disabled={!nextChunk}
+                >
+                  <ChevronRight size={15} />
+                </ChunkIconButton>
+              </div>
+              <span className="font-display text-lg italic text-editorial-accent shrink-0">
+                {t('pipeline.unit')}
               </span>
               <div className="flex items-center gap-2">
                 {config.stages
@@ -189,14 +203,43 @@ export function DocumentView({
                       onClick={() => setTraceStageId(stage.id)}
                       className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                       title={stage.name}
+                      aria-label={stage.name}
                     >
-                      <StatusIndicator
+                      <CompactStatusIndicator
                         status={currentChunk.stageResults[stage.id]?.status || 'idle'}
                         label={indexPad(stageIndex + 1)}
                       />
                     </button>
                   ))}
-                <StatusIndicator status={currentChunk.judgeResult.status} label="Audit" />
+                <button
+                  type="button"
+                  className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  title={t('pipeline.audit')}
+                  aria-label={t('pipeline.audit')}
+                >
+                  <CompactStatusIndicator
+                    status={currentChunk.judgeResult.status}
+                    icon={ScanLine}
+                  />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleChunkTranslationLock(currentChunk.id)}
+                  disabled={!currentChunk.currentDraft?.trim()}
+                  title={
+                    currentChunk.translationLocked
+                      ? t('document.unlockTranslation')
+                      : t('document.lockTranslation')
+                  }
+                  aria-pressed={currentChunk.translationLocked === true}
+                  className={`inline-flex h-8 w-8 items-center justify-center rounded-full border focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-35 ${
+                    currentChunk.translationLocked
+                      ? 'border-editorial-success/40 bg-editorial-success/12 text-editorial-success'
+                      : 'border-editorial-border bg-editorial-bg text-editorial-muted'
+                  }`}
+                >
+                  <CheckCheck size={14} />
+                </button>
               </div>
             </div>
 
@@ -233,19 +276,6 @@ export function DocumentView({
               aria-label={t('pipeline.chunkActions')}
               className="flex items-center gap-1 shrink-0"
             >
-              <ChunkIconButton
-                onClick={() => toggleChunkTranslationLock(currentChunk.id)}
-                title={
-                  currentChunk.translationLocked
-                    ? t('document.unlockTranslation')
-                    : t('document.lockTranslation')
-                }
-                active={currentChunk.translationLocked === true}
-                ariaPressed={currentChunk.translationLocked === true}
-                disabled={!currentChunk.currentDraft?.trim()}
-              >
-                <CheckCheck size={16} />
-              </ChunkIconButton>
               <ChunkIconButton
                 onClick={() => onRetranslateChunk(currentChunk.id)}
                 title={t('pipeline.retranslateChunk')}
@@ -305,25 +335,15 @@ export function DocumentView({
           </div>
         </div>
 
-        <div className={`grid gap-6 ${paneFocus === 'both' ? (isBook ? '2xl:grid-cols-2' : 'grid-cols-1') : 'grid-cols-1'}`}>
+        <div className={`grid gap-5 ${paneFocus === 'both' ? (isBook ? '2xl:grid-cols-2' : 'grid-cols-1') : 'grid-cols-1'}`}>
           {paneFocus !== 'translation' && (
             <DocumentPage
               label={t('pipeline.originalSource')}
               eyebrow={t('document.leftPage')}
               readOnly={currentChunk.status === 'completed'}
               highlighted={focusedChunkId === currentChunk.id}
-              notice={currentChunk.status === 'completed' ? (
-                <div className="mb-4 flex items-start gap-3 rounded-2xl border border-amber-300/80 bg-amber-50 px-4 py-3 text-amber-950">
-                  <Lock size={16} className="mt-0.5 shrink-0" />
-                  <div>
-                    <div className="text-[11px] font-bold uppercase tracking-[0.24em]">
-                      {t('document.sourceLockedTitle')}
-                    </div>
-                    <p className="mt-1 text-sm leading-relaxed text-amber-900">
-                      {t('document.sourceLockedBody')}
-                    </p>
-                  </div>
-                </div>
+              statusBadge={currentChunk.status === 'completed' ? (
+                <InlineStatusBadge tone="amber" icon={<Lock size={13} />} label={t('document.sourceLockedTitle')} />
               ) : null}
             >
               <MarkdownEditor
@@ -346,18 +366,13 @@ export function DocumentView({
               eyebrow={t('document.rightPage')}
               actions={<CopyButton text={currentChunk.currentDraft || ''} />}
               highlighted={focusedChunkId === currentChunk.id}
-              notice={currentChunk.translationLocked ? (
-                <div className="mb-4 flex items-start gap-3 rounded-2xl border border-emerald-300/80 bg-emerald-50 px-4 py-3 text-emerald-950">
-                  <CheckCheck size={16} className="mt-0.5 shrink-0" />
-                  <div>
-                    <div className="text-[11px] font-bold uppercase tracking-[0.24em]">
-                      {t('document.translationLockedTitle')}
-                    </div>
-                    <p className="mt-1 text-sm leading-relaxed text-emerald-900">
-                      {t('document.translationLockedBody')}
-                    </p>
-                  </div>
-                </div>
+              titleMeta={currentChunk.judgeResult.status === 'completed' ? (
+                <span className={`font-display text-base italic ${QUALITY_TONE_COLOR[chunkTone]}`}>
+                  {currentQualityLabel}
+                </span>
+              ) : null}
+              statusBadge={currentChunk.translationLocked ? (
+                <InlineStatusBadge tone="emerald" icon={<CheckCheck size={13} />} label={t('document.translationLockedBadge')} />
               ) : null}
             >
               <MarkdownEditor
@@ -378,37 +393,6 @@ export function DocumentView({
           )}
         </div>
 
-        <nav
-          aria-label={t('document.navigation')}
-          className="flex items-center justify-between gap-4 rounded-[24px] border border-editorial-border bg-editorial-bg/90 px-6 py-4 shadow-[0_16px_50px_rgba(26,26,26,0.05)]"
-        >
-          <button
-            type="button"
-            onClick={() => prevChunk && setSelectedChunkId(prevChunk.id)}
-            disabled={!prevChunk}
-            className="flex items-center gap-2 rounded-full border border-editorial-border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink disabled:opacity-30"
-            aria-label={t('document.previousChunk')}
-          >
-            <ChevronLeft size={14} />
-            {t('document.previousChunk')}
-          </button>
-          <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-editorial-muted">
-            {t('document.chunkCounter', {
-              current: currentIndex + 1,
-              total: chunks.length,
-            })}
-          </div>
-          <button
-            type="button"
-            onClick={() => nextChunk && setSelectedChunkId(nextChunk.id)}
-            disabled={!nextChunk}
-            className="flex items-center gap-2 rounded-full border border-editorial-border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink disabled:opacity-30"
-            aria-label={t('document.nextChunk')}
-          >
-            {t('document.nextChunk')}
-            <ChevronRight size={14} />
-          </button>
-        </nav>
       </div>
       {splitDraft && currentChunk.id === splitDraft.chunkId && (
         <SplitChunkDialog
@@ -438,7 +422,8 @@ interface DocumentPageProps {
   eyebrow: string;
   readOnly?: boolean;
   highlighted?: boolean;
-  notice?: React.ReactNode;
+  titleMeta?: React.ReactNode;
+  statusBadge?: React.ReactNode;
   actions?: React.ReactNode;
   children: React.ReactNode;
 }
@@ -517,30 +502,57 @@ function DocumentPage({
   eyebrow,
   readOnly = false,
   highlighted = false,
-  notice,
+  titleMeta,
+  statusBadge,
   actions,
   children,
 }: DocumentPageProps) {
   return (
-    <section className={`relative rounded-[28px] bg-[#fffdf9] px-8 py-7 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_18px_45px_rgba(74,50,17,0.08)] ${
+    <section className={`relative rounded-[24px] bg-[#fffdf9] px-6 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_18px_45px_rgba(74,50,17,0.08)] ${
       highlighted ? 'border border-editorial-accent ring-2 ring-editorial-accent/30' : 'border border-[#d8cfbf]'
     }`}>
-      <div className="mb-5 flex items-center justify-between gap-4 border-b border-[#ede4d6] pb-4">
-        <div>
+      <div className="mb-4 flex items-center justify-between gap-4 border-b border-[#ede4d6] pb-3">
+        <div className="min-w-0">
           <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
             {eyebrow}
           </div>
-          <h3 className="mt-2 font-display text-2xl italic tracking-tight text-editorial-ink">
-            {label}
-          </h3>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            <h3 className="font-display text-[1.7rem] italic tracking-tight text-editorial-ink">
+              {label}
+            </h3>
+            {statusBadge}
+          </div>
         </div>
-        <div className="shrink-0">{actions}</div>
+        <div className="shrink-0 flex items-center gap-2">
+          {titleMeta}
+          {actions}
+        </div>
       </div>
-      <div className={`max-h-[min(58vh,820px)] overflow-y-auto pr-2 custom-scrollbar ${readOnly ? 'opacity-90' : ''}`}>
-        {notice}
+      <div className={`max-h-[min(64vh,980px)] overflow-y-auto pr-1 custom-scrollbar ${readOnly ? 'opacity-90' : ''}`}>
         {children}
       </div>
     </section>
+  );
+}
+
+function InlineStatusBadge({
+  tone,
+  icon,
+  label,
+}: {
+  tone: 'amber' | 'emerald';
+  icon: React.ReactNode;
+  label: string;
+}) {
+  const toneClasses =
+    tone === 'amber'
+      ? 'border-amber-300/80 bg-amber-50 text-amber-900'
+      : 'border-emerald-300/80 bg-emerald-50 text-emerald-900';
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] ${toneClasses}`}>
+      {icon}
+      {label}
+    </span>
   );
 }
 
@@ -575,6 +587,45 @@ function ChunkIconButton({
     >
       {children}
     </button>
+  );
+}
+
+const COMPACT_STATUS_TONE = {
+  completed:
+    'border-editorial-success/40 bg-editorial-success/12 text-editorial-success',
+  processing:
+    'border-editorial-warning/45 bg-editorial-warning/12 text-editorial-warning animate-pulse',
+  error: 'border-editorial-accent/40 bg-editorial-accent/10 text-editorial-accent',
+  idle: 'border-editorial-border bg-editorial-bg text-editorial-muted',
+} as const;
+
+function CompactStatusIndicator({
+  status,
+  label,
+  icon: Icon,
+}: {
+  status: string;
+  label?: string;
+  icon?: LucideIcon;
+}) {
+  const tone =
+    status === 'completed' || status === 'processing' || status === 'error'
+      ? status
+      : 'idle';
+
+  return (
+    <span
+      className={`inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors ${COMPACT_STATUS_TONE[tone]}`}
+      aria-hidden="true"
+    >
+      {Icon ? (
+        <Icon size={14} strokeWidth={1.9} />
+      ) : (
+        <span className="font-display text-[11px] italic tracking-[0.02em]">
+          {label}
+        </span>
+      )}
+    </span>
   );
 }
 

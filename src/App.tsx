@@ -28,7 +28,6 @@ export default function App() {
         <div className="flex-shrink-0">
           <Header
             onRunPipeline={runPipeline}
-            onRunAuditOnly={runAuditOnly}
             onCancelPipeline={cancelPipeline}
           />
         </div>

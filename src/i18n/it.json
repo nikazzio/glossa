@@ -331,6 +331,7 @@
     "insightsDrawerHint": "Indice chunk e valutazione del giudice per il chunk corrente.",
     "insightsTabIndex": "Indice",
     "insightsTabAudit": "Audit",
+    "insightsTabStats": "Riepilogo",
     "insightsAuditEmpty": "Nessuna valutazione disponibile per questo chunk.",
     "insightsAuditIssues": "Problemi rilevati",
     "insightsAuditNoIssues": "Nessun problema segnalato dal giudice.",

@@ -1,10 +1,31 @@
-import { AlertTriangle, CheckCheck, PanelRight, RefreshCcw, X } from 'lucide-react';
+import {
+  AlertCircle,
+  AlertTriangle,
+  BarChart2,
+  BookOpen,
+  CheckCheck,
+  CheckCircle2,
+  Circle,
+  Cpu,
+  ExternalLink,
+  FileText,
+  Gauge,
+  List,
+  Loader2,
+  MessageCircle,
+  PanelRight,
+  RefreshCcw,
+  ShieldCheck,
+  X,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { type KeyboardEvent, useRef } from 'react';
 import { useUiStore } from '../../stores/uiStore';
 import { useChunksStore } from '../../stores/chunksStore';
-import { indexPad, qualityLabelKey, qualityTone } from '../../utils';
+import { usePipelineStore } from '../../stores/pipelineStore';
+import { indexPad, qualityLabelKey, qualityTone, calculateCompositeQuality } from '../../utils';
+import { MODEL_PRICING } from '../../constants';
 import type { TranslationChunk } from '../../types';
 
 interface InsightsDrawerProps {
@@ -13,19 +34,21 @@ interface InsightsDrawerProps {
 
 const PANEL_WIDTH = 480;
 
-type InsightsTab = 'index' | 'audit';
+type InsightsTab = 'index' | 'stats' | 'audit';
 
 const TAB_BUTTON_IDS: Record<InsightsTab, string> = {
   index: 'insights-tab-button-index',
+  stats: 'insights-tab-button-stats',
   audit: 'insights-tab-button-audit',
 };
 
 const TAB_PANEL_IDS: Record<InsightsTab, string> = {
   index: 'insights-tab-panel-index',
+  stats: 'insights-tab-panel-stats',
   audit: 'insights-tab-panel-audit',
 };
 
-const TAB_ORDER: InsightsTab[] = ['index', 'audit'];
+const TAB_ORDER: InsightsTab[] = ['index', 'stats', 'audit'];
 
 const QUALITY_TONE_COLOR: Record<ReturnType<typeof qualityTone>, string> = {
   strong: 'text-editorial-success',
@@ -37,10 +60,11 @@ export function InsightsDrawer({ onReauditChunk }: InsightsDrawerProps) {
   const { t } = useTranslation();
   const tabButtonRefs = useRef<Record<InsightsTab, HTMLButtonElement | null>>({
     index: null,
+    stats: null,
     audit: null,
   });
   const showInsightsDrawer = useUiStore((state) => state.showInsightsDrawer);
-  const insightsDrawerTab = useUiStore((state) => state.insightsDrawerTab);
+  const insightsDrawerTab = useUiStore((state) => state.insightsDrawerTab) as InsightsTab;
   const setShowInsightsDrawer = useUiStore((state) => state.setShowInsightsDrawer);
   const setInsightsDrawerTab = useUiStore((state) => state.setInsightsDrawerTab);
   const selectedChunkId = useUiStore((state) => state.selectedChunkId);
@@ -50,6 +74,8 @@ export function InsightsDrawer({ onReauditChunk }: InsightsDrawerProps) {
   const isProcessing = useChunksStore((state) => state.isProcessing);
   const currentChunk =
     chunks.find((chunk) => chunk.id === selectedChunkId) ?? chunks[0] ?? null;
+
+  const activeTab: InsightsTab = TAB_ORDER.includes(insightsDrawerTab) ? insightsDrawerTab : 'index';
 
   const activateTab = (tab: InsightsTab) => {
     setInsightsDrawerTab(tab);
@@ -125,14 +151,10 @@ export function InsightsDrawer({ onReauditChunk }: InsightsDrawerProps) {
             className="flex h-full flex-col"
             style={{ width: PANEL_WIDTH }}
           >
-            <div className="flex items-start justify-between gap-3 border-b border-editorial-border px-6 py-4">
-              <div className="min-w-0">
-                <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-                  {t('document.insightsDrawerTitle')}
-                </div>
-                <p className="mt-1 text-xs leading-relaxed text-editorial-muted">
-                  {t('document.insightsDrawerHint')}
-                </p>
+            {/* Header: title + close — no hint row */}
+            <div className="flex items-center justify-between gap-3 border-b border-editorial-border px-6 py-4">
+              <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+                {t('document.insightsDrawerTitle')}
               </div>
               <button
                 type="button"
@@ -144,6 +166,7 @@ export function InsightsDrawer({ onReauditChunk }: InsightsDrawerProps) {
               </button>
             </div>
 
+            {/* Tab bar */}
             <div
               role="tablist"
               aria-orientation="horizontal"
@@ -152,21 +175,35 @@ export function InsightsDrawer({ onReauditChunk }: InsightsDrawerProps) {
             >
               <TabButton
                 tab="index"
-                active={insightsDrawerTab === 'index'}
+                active={activeTab === 'index'}
                 onClick={() => activateTab('index')}
                 onKeyDown={(event) => handleTabKeyDown('index', event)}
                 label={t('document.insightsTabIndex')}
+                icon={<List size={12} />}
                 controls={TAB_PANEL_IDS.index}
                 buttonRef={(element) => {
                   tabButtonRefs.current.index = element;
                 }}
               />
               <TabButton
+                tab="stats"
+                active={activeTab === 'stats'}
+                onClick={() => activateTab('stats')}
+                onKeyDown={(event) => handleTabKeyDown('stats', event)}
+                label={t('document.insightsTabStats')}
+                icon={<BarChart2 size={12} />}
+                controls={TAB_PANEL_IDS.stats}
+                buttonRef={(element) => {
+                  tabButtonRefs.current.stats = element;
+                }}
+              />
+              <TabButton
                 tab="audit"
-                active={insightsDrawerTab === 'audit'}
+                active={activeTab === 'audit'}
                 onClick={() => activateTab('audit')}
                 onKeyDown={(event) => handleTabKeyDown('audit', event)}
                 label={t('document.insightsTabAudit')}
+                icon={<ShieldCheck size={12} />}
                 controls={TAB_PANEL_IDS.audit}
                 buttonRef={(element) => {
                   tabButtonRefs.current.audit = element;
@@ -175,13 +212,19 @@ export function InsightsDrawer({ onReauditChunk }: InsightsDrawerProps) {
             </div>
 
             <div className="flex flex-1 flex-col overflow-y-auto bg-editorial-bg/40 custom-scrollbar">
-              {insightsDrawerTab === 'index' ? (
+              {activeTab === 'index' ? (
                 <IndexTab
                   panelId={TAB_PANEL_IDS.index}
                   labelledBy={TAB_BUTTON_IDS.index}
                   chunks={chunks}
                   currentChunkId={currentChunk?.id ?? null}
                   onSelect={(id) => setSelectedChunkId(id)}
+                />
+              ) : activeTab === 'stats' ? (
+                <StatsTab
+                  panelId={TAB_PANEL_IDS.stats}
+                  labelledBy={TAB_BUTTON_IDS.stats}
+                  chunks={chunks}
                 />
               ) : (
                 <AuditTab
@@ -209,6 +252,7 @@ interface TabButtonProps {
   onClick: () => void;
   onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => void;
   label: string;
+  icon: React.ReactNode;
   controls: string;
   buttonRef: (element: HTMLButtonElement | null) => void;
 }
@@ -219,6 +263,7 @@ function TabButton({
   onClick,
   onKeyDown,
   label,
+  icon,
   controls,
   buttonRef,
 }: TabButtonProps) {
@@ -233,16 +278,19 @@ function TabButton({
       onClick={onClick}
       onKeyDown={onKeyDown}
       ref={buttonRef}
-      className={`rounded-full px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+      className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
         active
           ? 'bg-editorial-ink text-white'
           : 'text-editorial-muted hover:text-editorial-ink'
       }`}
     >
+      {icon}
       {label}
     </button>
   );
 }
+
+// ── Index Tab ──────────────────────────────────────────────────────────────
 
 interface IndexTabProps {
   panelId: string;
@@ -277,10 +325,20 @@ function IndexTab({ panelId, labelledBy, chunks, currentChunkId, onSelect }: Ind
     >
       {chunks.map((chunk, index) => {
         const isActive = chunk.id === currentChunkId;
-        const ratingLabel =
-          chunk.judgeResult.status === 'completed'
-            ? t(qualityLabelKey(chunk.judgeResult.rating))
-            : t(`pipeline.chunkStatus.${chunk.status}`);
+        const tone = qualityTone(chunk.judgeResult.status === 'completed' ? chunk.judgeResult.rating : null);
+
+        // Status icon
+        let statusIcon: React.ReactNode;
+        if (chunk.status === 'processing') {
+          statusIcon = <Loader2 size={13} className="animate-spin text-editorial-warning shrink-0" />;
+        } else if (chunk.status === 'completed') {
+          statusIcon = <CheckCircle2 size={13} className="text-editorial-success shrink-0" />;
+        } else if (chunk.status === 'error') {
+          statusIcon = <AlertCircle size={13} className="text-editorial-accent shrink-0" />;
+        } else {
+          statusIcon = <Circle size={13} className="text-editorial-muted/50 shrink-0" />;
+        }
+
         return (
           <li key={chunk.id}>
             <button
@@ -292,21 +350,37 @@ function IndexTab({ panelId, labelledBy, chunks, currentChunkId, onSelect }: Ind
                   : 'border-editorial-border bg-editorial-bg hover:border-editorial-ink/40'
               }`}
             >
-              <div className="text-[10px] font-bold uppercase tracking-[0.25em] opacity-80">
-                {t('pipeline.unit')} {indexPad(index + 1)}
+              <div className="flex items-center gap-2">
+                {statusIcon}
+                <span className={`font-display text-sm italic ${isActive ? 'text-white' : 'text-editorial-ink'}`}>
+                  {indexPad(index + 1)}
+                </span>
+                <span className={`flex-1 truncate text-[11px] leading-snug ${isActive ? 'text-white/80' : 'text-editorial-muted'}`}>
+                  {truncateChunk(chunk.originalText)}
+                </span>
               </div>
-              <div className="mt-1 text-sm leading-snug">
-                {truncateChunk(chunk.originalText)}
-              </div>
-              <div className="mt-2 text-[10px] uppercase tracking-[0.2em] opacity-75">
-                {ratingLabel}
-              </div>
-              {chunk.translationLocked ? (
-                <div className="mt-2 flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-200">
+
+              {/* Quality dot + label */}
+              {chunk.judgeResult.status === 'completed' && (
+                <div className={`mt-2 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.2em] ${
+                  isActive ? 'text-white/70' : QUALITY_TONE_COLOR[tone]
+                }`}>
+                  <span className={`inline-block h-1.5 w-1.5 rounded-full ${
+                    tone === 'strong' ? 'bg-editorial-success' : tone === 'ok' ? 'bg-editorial-warning' : 'bg-editorial-accent'
+                  }`} />
+                  {t(qualityLabelKey(chunk.judgeResult.rating))}
+                </div>
+              )}
+
+              {/* Locked badge */}
+              {chunk.translationLocked && (
+                <div className={`mt-2 flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.18em] ${
+                  isActive ? 'text-emerald-200' : 'text-editorial-success'
+                }`}>
                   <CheckCheck size={12} />
                   {t('document.translationLockedBadge')}
                 </div>
-              ) : null}
+              )}
             </button>
           </li>
         );
@@ -314,6 +388,221 @@ function IndexTab({ panelId, labelledBy, chunks, currentChunkId, onSelect }: Ind
     </ul>
   );
 }
+
+// ── Stats Tab ──────────────────────────────────────────────────────────────
+
+interface StatsTabProps {
+  panelId: string;
+  labelledBy: string;
+  chunks: TranslationChunk[];
+}
+
+function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
+  const { t } = useTranslation();
+  const config = usePipelineStore((state) => state.config);
+
+  // Documento
+  const sourceWords = chunks.reduce((acc, chunk) => acc + countWords(chunk.originalText), 0);
+  const translatedWords = chunks.reduce((acc, chunk) => acc + countWords(chunk.currentDraft || ''), 0);
+  const coverageRatio = sourceWords > 0 ? Math.round((translatedWords / sourceWords) * 100) : 0;
+
+  // Progresso
+  const total = chunks.length;
+  const idleCount = chunks.filter((c) => c.status === 'ready').length;
+  const processingCount = chunks.filter((c) => c.status === 'processing').length;
+  const completedCount = chunks.filter((c) => c.status === 'completed').length;
+  const errorCount = chunks.filter((c) => c.status === 'error').length;
+  const progressPct = total > 0 ? Math.round((completedCount / total) * 100) : 0;
+
+  // Qualità
+  const compositeQuality = calculateCompositeQuality(chunks);
+  const compositeLabel = compositeQuality ? t(qualityLabelKey(compositeQuality)) : null;
+  const compositeTone = qualityTone(compositeQuality);
+
+  // Utilizzo AI
+  let totalInput = 0;
+  let totalOutput = 0;
+  let estimatedCostUsd = 0;
+  const modelNames = new Set<string>();
+
+  for (const chunk of chunks) {
+    for (const [stageId, result] of Object.entries(chunk.stageResults)) {
+      const stage = config.stages.find((s) => s.id === stageId);
+      if (stage) {
+        modelNames.add(`${stage.provider} / ${stage.model}`);
+        if (result.tokenUsage) {
+          totalInput += result.tokenUsage.inputTokens ?? 0;
+          totalOutput += result.tokenUsage.outputTokens ?? 0;
+          const pricing = MODEL_PRICING[`${stage.provider}/${stage.model}`];
+          if (pricing) {
+            estimatedCostUsd +=
+              (result.tokenUsage.inputTokens * pricing.input +
+                result.tokenUsage.outputTokens * pricing.output) /
+              1_000_000;
+          }
+        }
+      }
+    }
+    if (chunk.judgeResult.tokenUsage) {
+      const ju = chunk.judgeResult.tokenUsage;
+      totalInput += ju.inputTokens ?? 0;
+      totalOutput += ju.outputTokens ?? 0;
+      const judgePricing = MODEL_PRICING[`${config.judgeProvider}/${config.judgeModel}`];
+      if (judgePricing) {
+        estimatedCostUsd +=
+          (ju.inputTokens * judgePricing.input + ju.outputTokens * judgePricing.output) /
+          1_000_000;
+      }
+      modelNames.add(`${config.judgeProvider} / ${config.judgeModel}`);
+    }
+  }
+  const totalTokens = totalInput + totalOutput;
+
+  if (chunks.length === 0) {
+    return (
+      <div
+        id={panelId}
+        role="tabpanel"
+        aria-labelledby={labelledBy}
+        className="px-6 py-8 text-sm text-editorial-muted"
+      >
+        {t('document.emptyTitle')}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      id={panelId}
+      role="tabpanel"
+      aria-labelledby={labelledBy}
+      className="space-y-3 px-5 py-5"
+    >
+      {/* Documento */}
+      <section className="rounded-[20px] border border-editorial-border bg-editorial-bg px-4 py-3">
+        <div className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
+          <FileText size={12} />
+          {t('document.infoLabel')}
+        </div>
+        <dl className="space-y-2">
+          <StatRow label={t('document.infoSourceWords')} value={sourceWords.toLocaleString()} />
+          <StatRow
+            label={t('document.infoTranslatedWords')}
+            value={`${translatedWords.toLocaleString()} (${coverageRatio}%)`}
+          />
+          <StatRow
+            label={t('document.infoChunks')}
+            value={`${completedCount} / ${total}`}
+          />
+        </dl>
+      </section>
+
+      {/* Progresso */}
+      <section className="rounded-[20px] border border-editorial-border bg-editorial-bg px-4 py-3">
+        <div className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
+          <BarChart2 size={12} />
+          {t('pipeline.chunkStatus.completed')}
+        </div>
+        {/* Progress bar */}
+        <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-editorial-border/40">
+          <div
+            className="h-full rounded-full bg-editorial-success transition-all"
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+        <div className="flex flex-wrap gap-3">
+          {idleCount > 0 && (
+            <div className="flex items-center gap-1.5 text-[10px] text-editorial-muted">
+              <Circle size={10} className="text-editorial-muted/50" />
+              <span className="font-bold">{idleCount}</span> {t('pipeline.chunkStatus.ready')}
+            </div>
+          )}
+          {processingCount > 0 && (
+            <div className="flex items-center gap-1.5 text-[10px] text-editorial-warning">
+              <Loader2 size={10} className="animate-spin" />
+              <span className="font-bold">{processingCount}</span> {t('pipeline.chunkStatus.processing')}
+            </div>
+          )}
+          {completedCount > 0 && (
+            <div className="flex items-center gap-1.5 text-[10px] text-editorial-success">
+              <CheckCircle2 size={10} />
+              <span className="font-bold">{completedCount}</span> {t('pipeline.chunkStatus.completed')}
+            </div>
+          )}
+          {errorCount > 0 && (
+            <div className="flex items-center gap-1.5 text-[10px] text-editorial-accent">
+              <AlertCircle size={10} />
+              <span className="font-bold">{errorCount}</span> {t('pipeline.chunkStatus.error')}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Qualità */}
+      <section className="rounded-[20px] border border-editorial-border bg-editorial-bg px-4 py-3">
+        <div className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
+          <Gauge size={12} />
+          {t('document.infoQuality')}
+        </div>
+        {compositeLabel ? (
+          <div className={`font-display text-lg italic ${QUALITY_TONE_COLOR[compositeTone]}`}>
+            {compositeLabel}
+          </div>
+        ) : (
+          <div className="font-display text-lg italic text-editorial-muted/40">—</div>
+        )}
+      </section>
+
+      {/* Utilizzo AI */}
+      <section className="rounded-[20px] border border-editorial-border bg-editorial-bg px-4 py-3">
+        <div className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
+          <Cpu size={12} />
+          {t('header.tokenCount')}
+        </div>
+        <dl className="space-y-2">
+          <StatRow
+            label={t('header.tokenCount')}
+            value={totalTokens > 0 ? totalTokens.toLocaleString() : '—'}
+          />
+          {totalTokens > 0 && (
+            <>
+              <div className="flex items-baseline gap-1 pl-3">
+                <dt className="text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted/60">in</dt>
+                <dd className="font-display text-sm italic text-editorial-muted">{totalInput.toLocaleString()}</dd>
+                <dt className="ml-2 text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted/60">out</dt>
+                <dd className="font-display text-sm italic text-editorial-muted">{totalOutput.toLocaleString()}</dd>
+              </div>
+            </>
+          )}
+          <StatRow
+            label={t('header.estimatedCost')}
+            value={totalTokens > 0 ? `$${estimatedCostUsd.toFixed(4)}` : '—'}
+          />
+        </dl>
+        {modelNames.size > 0 && (
+          <div className="mt-3 space-y-1">
+            {Array.from(modelNames).map((name) => (
+              <div key={name} className="text-[10px] text-editorial-muted/70 font-mono truncate">
+                {name}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function StatRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-baseline gap-1">
+      <dt className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">{label}</dt>
+      <dd className="font-display text-sm italic text-editorial-ink">{value}</dd>
+    </div>
+  );
+}
+
+// ── Audit Tab ──────────────────────────────────────────────────────────────
 
 interface AuditTabProps {
   panelId: string;
@@ -372,14 +661,16 @@ function AuditTab({
               {qualityLabel}
             </div>
           </div>
+          {/* Re-audit: icon only */}
           <button
             type="button"
             onClick={() => onReauditChunk(currentChunk.id)}
             disabled={isProcessing || !currentChunk.currentDraft}
-            className="rounded-full border border-editorial-border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink disabled:opacity-30"
+            title={t('pipeline.reauditChunk')}
+            aria-label={t('pipeline.reauditChunk')}
+            className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-30"
           >
-            <RefreshCcw size={12} className="inline mr-1" />
-            {t('pipeline.reauditChunk')}
+            <RefreshCcw size={14} />
           </button>
         </div>
 
@@ -411,24 +702,36 @@ function AuditTab({
                 className="rounded-2xl border border-editorial-border bg-editorial-bg/80 p-4 shadow-sm"
               >
                 <div className="mb-3 flex items-center justify-between gap-3">
-                  <span
-                    className={`rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-[0.2em] ${
+                  <div className="flex items-center gap-2">
+                    {/* Issue type icon */}
+                    <span className={`rounded-full p-1 ${
                       issue.severity === 'high'
                         ? 'bg-editorial-accent text-white'
-                        : 'bg-editorial-ink text-white'
-                    }`}
-                  >
-                    {issue.type}
-                  </span>
+                        : issue.severity === 'medium'
+                          ? 'bg-editorial-warning/80 text-white'
+                          : 'bg-editorial-border text-editorial-muted'
+                    }`}>
+                      {issue.type === 'fluency' ? <MessageCircle size={11} /> :
+                       issue.type === 'accuracy' ? <AlertTriangle size={11} /> :
+                       issue.type === 'grammar' ? <AlertCircle size={11} /> :
+                       <BookOpen size={11} />}
+                    </span>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-ink">
+                      {issue.type}
+                    </span>
+                  </div>
+                  {/* Open chunk: icon only */}
                   <button
                     type="button"
                     onClick={() => {
                       onSelectChunk(currentChunk.id);
                       onFocusIssue(currentChunk.id, extractIssueFocusQuery(issue));
                     }}
-                    className="rounded-full border border-editorial-border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-editorial-muted transition-colors hover:text-editorial-ink"
+                    title={t('audit.openChunk')}
+                    aria-label={t('audit.openChunk')}
+                    className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   >
-                    {t('audit.openChunk')}
+                    <ExternalLink size={13} />
                   </button>
                 </div>
                 <p className="text-sm leading-relaxed text-editorial-ink">
@@ -451,10 +754,16 @@ function AuditTab({
   );
 }
 
+// ── Helpers ────────────────────────────────────────────────────────────────
+
 function truncateChunk(text: string) {
   const normalized = text.replace(/\s+/g, ' ').trim();
-  if (normalized.length <= 80) return normalized;
-  return `${normalized.slice(0, 77)}...`;
+  if (normalized.length <= 60) return normalized;
+  return `${normalized.slice(0, 57)}...`;
+}
+
+function countWords(text: string): number {
+  return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
 function extractIssueFocusQuery(issue: TranslationChunk['judgeResult']['issues'][number]): string | null {

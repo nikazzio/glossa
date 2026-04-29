@@ -32,11 +32,11 @@ export function CopyButton({ text }: CopyButtonProps) {
       onClick={handleCopy}
       disabled={isDisabled}
       title={label}
-      className="text-editorial-muted hover:text-editorial-ink transition-colors flex items-center gap-1.5 text-[9px] uppercase font-bold tracking-widest focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed"
       aria-label={label}
+      aria-live="polite"
+      className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
     >
-      {copied ? <Check size={12} /> : <Copy size={12} />}
-      <span aria-live="polite">{label}</span>
+      {copied ? <Check size={14} /> : <Copy size={14} />}
     </button>
   );
 }
