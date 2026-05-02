@@ -21,7 +21,7 @@ import {
   Square,
   Upload,
 } from 'lucide-react';
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { usePipelineStore } from '../../stores/pipelineStore';
@@ -29,10 +29,17 @@ import { useProjectStore } from '../../stores/projectStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useLibraryStore } from '../../stores/libraryStore';
-import { ImportPreviewDialog } from '../document';
-import { SaveProjectDialog } from '../projects';
 import { importTextFile, exportTranslation, exportBilingual } from '../../services/fileService';
-import { HelpGuide } from '../help';
+
+const ImportPreviewDialog = lazy(() =>
+  import('../document').then((m) => ({ default: m.ImportPreviewDialog })),
+);
+const SaveProjectDialog = lazy(() =>
+  import('../projects').then((m) => ({ default: m.SaveProjectDialog })),
+);
+const HelpGuide = lazy(() =>
+  import('../help').then((m) => ({ default: m.HelpGuide })),
+);
 
 interface PendingImport {
   fileName: string;
@@ -364,36 +371,38 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
         </div>
       </div>
 
-      <HelpGuide open={showHelp} onClose={() => setShowHelp(false)} />
-      {pendingImport && (
-        <ImportPreviewDialog
-          fileName={pendingImport.fileName}
-          text={pendingImport.text}
-          useChunking={pendingImport.useChunking}
-          targetChunkCount={pendingImport.targetChunkCount}
-          markdownAware={pendingImport.format === 'markdown'}
-          format={pendingImport.format}
-          experimental={pendingImport.experimental}
-          onUseChunkingChange={(value) =>
-            setPendingImport((current) =>
-              current ? { ...current, useChunking: value } : current,
-            )
-          }
-          onTargetChunkCountChange={(value) =>
-            setPendingImport((current) =>
-              current ? { ...current, targetChunkCount: value } : current,
-            )
-          }
-          onCancel={() => setPendingImport(null)}
-          onConfirm={handleConfirmImport}
+      <Suspense fallback={null}>
+        <HelpGuide open={showHelp} onClose={() => setShowHelp(false)} />
+        {pendingImport && (
+          <ImportPreviewDialog
+            fileName={pendingImport.fileName}
+            text={pendingImport.text}
+            useChunking={pendingImport.useChunking}
+            targetChunkCount={pendingImport.targetChunkCount}
+            markdownAware={pendingImport.format === 'markdown'}
+            format={pendingImport.format}
+            experimental={pendingImport.experimental}
+            onUseChunkingChange={(value) =>
+              setPendingImport((current) =>
+                current ? { ...current, useChunking: value } : current,
+              )
+            }
+            onTargetChunkCountChange={(value) =>
+              setPendingImport((current) =>
+                current ? { ...current, targetChunkCount: value } : current,
+              )
+            }
+            onCancel={() => setPendingImport(null)}
+            onConfirm={handleConfirmImport}
+          />
+        )}
+        <SaveProjectDialog
+          open={showSaveProjectDialog}
+          onClose={() => setShowSaveProjectDialog(false)}
+          onConfirm={handleFirstSave}
+          saving={isCreatingProjectFromSave}
         />
-      )}
-      <SaveProjectDialog
-        open={showSaveProjectDialog}
-        onClose={() => setShowSaveProjectDialog(false)}
-        onConfirm={handleFirstSave}
-        saving={isCreatingProjectFromSave}
-      />
+      </Suspense>
     </header>
   );
 }
