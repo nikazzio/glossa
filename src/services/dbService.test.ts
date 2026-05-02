@@ -36,6 +36,42 @@ vi.mock('@tauri-apps/plugin-sql', () => ({
   },
 }));
 
+describe('runInTransaction', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.clearAllMocks();
+  });
+
+  it('wraps the callback with BEGIN and COMMIT on success', async () => {
+    const { runInTransaction } = await import('./dbService');
+
+    await runInTransaction(async (run) => {
+      await run('INSERT INTO foo VALUES ($1)', ['bar']);
+    });
+
+    const calls = dbState.db.execute.mock.calls.map(([q]: [string]) => q.trim());
+    expect(calls[0]).toBe('BEGIN');
+    expect(calls[calls.length - 1]).toBe('COMMIT');
+    expect(calls).toContain('INSERT INTO foo VALUES ($1)');
+  });
+
+  it('issues ROLLBACK when the callback throws and re-throws the error', async () => {
+    const { runInTransaction } = await import('./dbService');
+
+    await expect(
+      runInTransaction(async (run) => {
+        await run('INSERT INTO foo VALUES ($1)', ['bar']);
+        throw new Error('simulated failure');
+      }),
+    ).rejects.toThrow('simulated failure');
+
+    const calls = dbState.db.execute.mock.calls.map(([q]: [string]) => q.trim());
+    expect(calls[0]).toBe('BEGIN');
+    expect(calls).toContain('ROLLBACK');
+    expect(calls).not.toContain('COMMIT');
+  });
+});
+
 describe('ensureColumn whitelist', () => {
   afterEach(() => {
     vi.resetModules();
