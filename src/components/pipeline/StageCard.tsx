@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { PipelineStageConfig, ModelProvider } from '../../types';
 import { MODEL_OPTIONS } from '../../constants';
+import { getModelStatus } from '../../models/catalog';
 import { useUiStore } from '../../stores/uiStore';
 import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
 import { confirm } from '../../stores/confirmStore';
@@ -202,7 +203,9 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
                 className="flex-1 bg-editorial-textbox/60 rounded border border-editorial-border/60 px-2 py-1.5 text-[11px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               >
                 {modelOptions.map((m) => (
-                  <option key={m} value={m}>{m}</option>
+                  <option key={m} value={m}>
+                    {m}{getModelStatus(stage.provider, m) === 'preview' ? ' (preview)' : ''}
+                  </option>
                 ))}
               </select>
             ) : stage.provider === 'ollama' ? (
@@ -219,7 +222,9 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
                 className="flex-1 bg-editorial-textbox/60 rounded border border-editorial-border/60 px-2 py-1.5 text-[11px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               >
                 {MODEL_OPTIONS[stage.provider]?.map((m) => (
-                  <option key={m} value={m}>{m}</option>
+                  <option key={m} value={m}>
+                    {m}{getModelStatus(stage.provider, m) === 'preview' ? ' (preview)' : ''}
+                  </option>
                 ))}
               </select>
             )}

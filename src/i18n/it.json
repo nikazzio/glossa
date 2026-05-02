@@ -553,5 +553,17 @@
     "glossaryHighlightToggle": "Evidenzia termini",
     "glossaryMatchBadge": "{{match}}/{{total}} termini",
     "glossaryNoGlossary": "Nessun dizionario assegnato"
+  },
+  "cost": {
+    "free": "Gratuito",
+    "unknown": "—",
+    "breakdown": "Dettaglio costi",
+    "stage": "Fase",
+    "total": "Totale",
+    "disclaimer": "Stima approssimativa. Il costo reale può variare.",
+    "pricingOverrides": "Override prezzi",
+    "overrideHint": "Personalizza i prezzi di default per deployment custom o tariffe aggiornate. Valori in USD per 1M di token.",
+    "resetOverride": "Ripristina",
+    "resetAll": "Ripristina tutti"
   }
 }

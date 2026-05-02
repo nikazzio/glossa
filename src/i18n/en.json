@@ -553,5 +553,17 @@
     "glossaryHighlightToggle": "Highlight terms",
     "glossaryMatchBadge": "{{match}}/{{total}} terms",
     "glossaryNoGlossary": "No dictionary assigned"
+  },
+  "cost": {
+    "free": "Free",
+    "unknown": "—",
+    "breakdown": "Cost breakdown",
+    "stage": "Stage",
+    "total": "Total",
+    "disclaimer": "Rough estimate. Actual cost may vary.",
+    "pricingOverrides": "Pricing overrides",
+    "overrideHint": "Override default pricing for custom deployments or updated rates. Values are USD per 1M tokens.",
+    "resetOverride": "Reset",
+    "resetAll": "Reset all"
   }
 }

@@ -21,7 +21,7 @@ import {
   Square,
   Upload,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { usePipelineStore } from '../../stores/pipelineStore';
@@ -33,6 +33,9 @@ import { ImportPreviewDialog } from '../document';
 import { SaveProjectDialog } from '../projects';
 import { importTextFile, exportTranslation, exportBilingual } from '../../services/fileService';
 import { HelpGuide } from '../help';
+import { CostBadge } from '../pipeline/CostBadge';
+import { estimatePipelineCost } from '../../utils/costEstimate';
+import { usePricingStore } from '../../stores/pricingStore';
 
 interface PendingImport {
   fileName: string;
@@ -68,6 +71,11 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
     saveState,
   } = useProjectStore();
   const setShowLibraryPanel = useLibraryStore((state) => state.setShowLibraryPanel);
+  const pricingOverrides = usePricingStore((s) => s.overrides);
+  const costEstimate = useMemo(
+    () => estimatePipelineCost(chunks, config, pricingOverrides),
+    [chunks, config, pricingOverrides],
+  );
   const { t, i18n } = useTranslation();
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
   const [showSaveProjectDialog, setShowSaveProjectDialog] = useState(false);
@@ -281,6 +289,11 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
                   <Play size={18} fill="currentColor" />
                 </button>
               )
+            )}
+
+            {/* Cost estimate badge – visibile in modalità documento con chunk */}
+            {viewMode === 'document' && chunks.length > 0 && (
+              <CostBadge estimate={costEstimate} />
             )}
 
             {/* Sandbox – solo icona */}
