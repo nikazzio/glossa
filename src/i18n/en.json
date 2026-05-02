@@ -163,7 +163,8 @@
     "keySaved": "{{provider}} key saved to keychain",
     "keySaveFailed": "Failed to save {{provider}} key",
     "keyDeleted": "{{provider}} key removed from keychain",
-    "keyDeleteFailed": "Failed to remove {{provider}} key"
+    "keyDeleteFailed": "Failed to remove {{provider}} key",
+    "keySavedFallback": "{{provider}} key saved to encrypted local file (OS keychain unavailable)"
   },
   "ollama": {
     "title": "Ollama (Local Models)",

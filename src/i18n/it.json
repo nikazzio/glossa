@@ -163,7 +163,8 @@
     "keySaved": "Chiave {{provider}} salvata nel portachiavi",
     "keySaveFailed": "Salvataggio chiave {{provider}} fallito",
     "keyDeleted": "Chiave {{provider}} rimossa dal portachiavi",
-    "keyDeleteFailed": "Rimozione chiave {{provider}} fallita"
+    "keyDeleteFailed": "Rimozione chiave {{provider}} fallita",
+    "keySavedFallback": "Chiave {{provider}} salvata su file locale cifrato (portachiavi OS non disponibile)"
   },
   "ollama": {
     "title": "Ollama (Modelli Locali)",

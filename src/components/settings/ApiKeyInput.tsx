@@ -26,11 +26,15 @@ export function ApiKeyInput({ label, provider }: ApiKeyInputProps) {
     if (!keyValue.trim()) return;
     setSaving(true);
     try {
-      await settingsService.saveApiKey(provider, keyValue.trim());
+      const storage = await settingsService.saveApiKey(provider, keyValue.trim());
       setIsConfigured(true);
       setKeyValue('');
       setEditing(false);
-      toast.success(t('settings.keySaved', { provider: label }));
+      if (storage === 'file') {
+        toast.warning(t('settings.keySavedFallback', { provider: label }));
+      } else {
+        toast.success(t('settings.keySaved', { provider: label }));
+      }
     } catch (err: any) {
       toast.error(t('settings.keySaveFailed', { provider: label }), {
         description: err?.message,

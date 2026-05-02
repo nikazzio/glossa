@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 use reqwest::Client;
 use tauri::{AppHandle, Emitter, Manager, State};
+use aes_gcm::{Aes256Gcm, Key, Nonce};
+use aes_gcm::aead::{Aead, KeyInit};
+use rand::RngCore;
 use tokio::sync::Notify;
 use std::{
     collections::HashMap,
@@ -207,6 +210,150 @@ Rules:\n\
 - Use professional translation-industry QA terminology where appropriate\n\
 - Output ONLY the rewritten prompt text — no preamble, no explanation, no quotes";
 
+fn file_store_key_path(app: &AppHandle) -> Result<PathBuf, String> {
+    let data_dir = app.path().app_data_dir()
+        .map_err(|e| format!("Failed to resolve app data directory: {e}"))?;
+    Ok(data_dir.join("keystore.master"))
+}
+
+fn file_store_data_path(app: &AppHandle) -> Result<PathBuf, String> {
+    let data_dir = app.path().app_data_dir()
+        .map_err(|e| format!("Failed to resolve app data directory: {e}"))?;
+    Ok(data_dir.join("keystore.enc"))
+}
+
+fn to_hex(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| format!("{:02x}", b)).collect()
+}
+
+fn from_hex(s: &str) -> Result<Vec<u8>, String> {
+    if s.len() % 2 != 0 {
+        return Err("Invalid hex string".into());
+    }
+    (0..s.len())
+        .step_by(2)
+        .map(|i| u8::from_str_radix(&s[i..i + 2], 16).map_err(|e| format!("Invalid hex: {e}")))
+        .collect()
+}
+
+/// Get or create the 32-byte master encryption key stored as hex in keystore.master.
+/// The key is random and unique per app installation.
+fn get_or_create_master_key(app: &AppHandle) -> Result<[u8; 32], String> {
+    let key_path = file_store_key_path(app)?;
+
+    if key_path.exists() {
+        let hex = fs::read_to_string(&key_path)
+            .map_err(|e| format!("Failed to read master key: {e}"))?;
+        let bytes = from_hex(hex.trim())?;
+        if bytes.len() != 32 {
+            return Err("Master key file is corrupt".into());
+        }
+        let mut key = [0u8; 32];
+        key.copy_from_slice(&bytes);
+        return Ok(key);
+    }
+
+    let mut key = [0u8; 32];
+    rand::thread_rng().fill_bytes(&mut key);
+
+    if let Some(parent) = key_path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create app data directory: {e}"))?;
+    }
+    fs::write(&key_path, to_hex(&key))
+        .map_err(|e| format!("Failed to write master key: {e}"))?;
+
+    Ok(key)
+}
+
+fn file_store_encrypt(app: &AppHandle, plaintext: &str) -> Result<String, String> {
+    let master_key = get_or_create_master_key(app)?;
+    let aes_key = Key::<Aes256Gcm>::from_slice(&master_key);
+    let cipher = Aes256Gcm::new(aes_key);
+
+    let mut nonce_bytes = [0u8; 12];
+    rand::thread_rng().fill_bytes(&mut nonce_bytes);
+    let nonce = Nonce::from_slice(&nonce_bytes);
+
+    let ciphertext = cipher
+        .encrypt(nonce, plaintext.as_bytes())
+        .map_err(|e| format!("Encryption failed: {e}"))?;
+
+    Ok(format!("{}.{}", to_hex(&nonce_bytes), to_hex(&ciphertext)))
+}
+
+fn file_store_decrypt(app: &AppHandle, stored: &str) -> Result<String, String> {
+    let master_key = get_or_create_master_key(app)?;
+    let aes_key = Key::<Aes256Gcm>::from_slice(&master_key);
+    let cipher = Aes256Gcm::new(aes_key);
+
+    let parts: Vec<&str> = stored.splitn(2, '.').collect();
+    if parts.len() != 2 {
+        return Err("Invalid encrypted key format".into());
+    }
+
+    let nonce_bytes = from_hex(parts[0])?;
+    let ciphertext = from_hex(parts[1])?;
+
+    if nonce_bytes.len() != 12 {
+        return Err("Invalid nonce length".into());
+    }
+
+    let nonce = Nonce::from_slice(&nonce_bytes);
+    let plaintext = cipher
+        .decrypt(nonce, ciphertext.as_slice())
+        .map_err(|_| "Failed to decrypt API key (corrupt or wrong key)".to_string())?;
+
+    String::from_utf8(plaintext).map_err(|e| format!("Invalid UTF-8 in decrypted key: {e}"))
+}
+
+fn file_store_load(app: &AppHandle) -> Result<HashMap<String, String>, String> {
+    let path = file_store_data_path(app)?;
+    if !path.exists() {
+        return Ok(HashMap::new());
+    }
+    let contents = fs::read_to_string(&path)
+        .map_err(|e| format!("Failed to read key store: {e}"))?;
+    serde_json::from_str(&contents).map_err(|e| format!("Failed to parse key store: {e}"))
+}
+
+fn file_store_write(app: &AppHandle, data: &HashMap<String, String>) -> Result<(), String> {
+    let path = file_store_data_path(app)?;
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create app data directory: {e}"))?;
+    }
+    let contents =
+        serde_json::to_string(data).map_err(|e| format!("Failed to serialize key store: {e}"))?;
+    fs::write(&path, contents).map_err(|e| format!("Failed to write key store: {e}"))
+}
+
+fn file_store_get(app: &AppHandle, provider: &str) -> Result<String, String> {
+    let data = file_store_load(app)?;
+    let encrypted = data
+        .get(provider)
+        .ok_or_else(|| format!("Key not found in file store for {provider}"))?;
+    file_store_decrypt(app, encrypted)
+}
+
+fn file_store_set(app: &AppHandle, provider: &str, key: &str) -> Result<(), String> {
+    let mut data = file_store_load(app).unwrap_or_default();
+    let encrypted = file_store_encrypt(app, key)?;
+    data.insert(provider.to_string(), encrypted);
+    file_store_write(app, &data)
+}
+
+fn file_store_remove(app: &AppHandle, provider: &str) {
+    if let Ok(mut data) = file_store_load(app) {
+        data.remove(provider);
+        let _ = file_store_write(app, &data);
+    }
+}
+
+fn file_store_exists(app: &AppHandle, provider: &str) -> bool {
+    file_store_get(app, provider).is_ok()
+}
+
 fn keyring_entry(provider: &str) -> Result<keyring::Entry, String> {
     let username = format!("{}_API_KEY", provider.to_uppercase());
     keyring::Entry::new(KEYRING_SERVICE, &username)
@@ -363,7 +510,17 @@ fn get_api_key(app: &AppHandle, provider: &str) -> Result<String, String> {
         return Ok(key);
     }
 
-    // 3. Fallback to environment variable
+    // 3. Try encrypted file store (used when keychain was unavailable on this machine)
+    if file_store_exists(app, provider) {
+        if let Ok(key) = file_store_get(app, provider) {
+            if let Ok(mut cache) = API_KEY_CACHE.lock() {
+                cache.insert(provider.to_string(), key.clone());
+            }
+            return Ok(key);
+        }
+    }
+
+    // 4. Fallback to environment variable
     let env_key = match provider {
         "gemini" => "GEMINI_API_KEY",
         "openai" => "OPENAI_API_KEY",
@@ -377,15 +534,28 @@ fn get_api_key(app: &AppHandle, provider: &str) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub async fn save_api_key(provider: String, key: String) -> Result<(), String> {
-    let entry = keyring_entry(&provider)?;
-    entry
-        .set_password(&key)
-        .map_err(|e| format!("Failed to save to keychain: {e}"))?;
-    if let Ok(mut cache) = API_KEY_CACHE.lock() {
-        cache.insert(provider, key);
+pub async fn save_api_key(app: AppHandle, provider: String, key: String) -> Result<String, String> {
+    // Try OS keychain first
+    if let Ok(entry) = keyring_entry(&provider) {
+        if entry.set_password(&key).is_ok() {
+            // Remove from file store in case it was previously saved there
+            file_store_remove(&app, &provider);
+            if let Ok(mut cache) = API_KEY_CACHE.lock() {
+                cache.insert(provider, key);
+            }
+            return Ok("keychain".to_string());
+        }
     }
-    Ok(())
+
+    // Keychain unavailable — fall back to encrypted local file
+    file_store_set(&app, &provider, &key)?;
+    if let Ok(mut cache) = API_KEY_CACHE.lock() {
+        cache.insert(provider.clone(), key);
+    }
+    log::warn!(
+        "OS keychain unavailable for provider '{provider}'; key saved to encrypted local file"
+    );
+    Ok("file".to_string())
 }
 
 #[tauri::command]
@@ -394,11 +564,13 @@ pub async fn get_api_key_status(app: AppHandle, provider: String) -> Result<bool
 }
 
 #[tauri::command]
-pub async fn delete_api_key(provider: String) -> Result<(), String> {
-    let entry = keyring_entry(&provider)?;
-    entry
-        .delete_credential()
-        .map_err(|e| format!("Failed to delete from keychain: {e}"))?;
+pub async fn delete_api_key(app: AppHandle, provider: String) -> Result<(), String> {
+    // Best-effort delete from OS keychain
+    if let Ok(entry) = keyring_entry(&provider) {
+        let _ = entry.delete_credential();
+    }
+    // Best-effort delete from encrypted file store
+    file_store_remove(&app, &provider);
     if let Ok(mut cache) = API_KEY_CACHE.lock() {
         cache.remove(&provider);
     }
@@ -1220,6 +1392,14 @@ pub async fn test_provider_connection(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_hex_roundtrip() {
+        let original = b"hello world 12345678901234567";
+        let hex = to_hex(original);
+        let decoded = from_hex(&hex).expect("decode should succeed");
+        assert_eq!(decoded, original);
+    }
 
     fn make_config() -> PipelineConfig {
         PipelineConfig {
