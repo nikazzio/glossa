@@ -57,8 +57,11 @@ export function estimatePipelineCost(
     return { stages: [], judge: null, totalUsd: 0, isFree: false };
   }
 
-  const totalDocText = chunks.map((c) => c.originalText).join(' ');
-  const docTokens = estimateTokens(totalDocText);
+  const totalWords = chunks.reduce(
+    (sum, c) => sum + c.originalText.trim().split(/\s+/).filter(Boolean).length,
+    0,
+  );
+  const docTokens = Math.max(1, Math.ceil(totalWords * 1.35));
 
   const enabledStages = config.stages.filter((s) => s.enabled);
 

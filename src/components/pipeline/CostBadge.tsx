@@ -13,6 +13,8 @@ interface CostBadgeProps {
   estimate: PipelineCostEstimate;
 }
 
+const TOOLTIP_ID = 'cost-badge-tooltip';
+
 export function CostBadge({ estimate }: CostBadgeProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -36,6 +38,7 @@ export function CostBadge({ estimate }: CostBadgeProps) {
         onFocus={() => setOpen(true)}
         onBlur={() => setOpen(false)}
         aria-label={`${t('header.estimatedCost')}: ${label}`}
+        aria-describedby={open ? TOOLTIP_ID : undefined}
         className="inline-flex items-center gap-1 rounded-full border border-editorial-border/70 bg-editorial-textbox/40 px-2.5 py-1 text-[10px] font-mono text-editorial-muted transition-colors hover:border-editorial-ink hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
       >
         {estimate.isFree && <Sparkles size={10} />}
@@ -44,11 +47,16 @@ export function CostBadge({ estimate }: CostBadgeProps) {
 
       {open && allRows.length > 0 && (
         <div
-          className="absolute bottom-full left-0 z-50 mb-2 w-64 rounded border border-editorial-border bg-editorial-bg shadow-lg"
+          className="absolute bottom-full left-0 z-50 w-64 pb-2"
           onMouseEnter={() => setOpen(true)}
           onMouseLeave={() => setOpen(false)}
         >
-          <div className="p-3 space-y-2">
+          <div
+            id={TOOLTIP_ID}
+            role="tooltip"
+            className="rounded border border-editorial-border bg-editorial-bg shadow-lg"
+          >
+            <div className="p-3 space-y-2">
             <p className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted">
               {t('cost.breakdown')}
             </p>
@@ -89,6 +97,7 @@ export function CostBadge({ estimate }: CostBadgeProps) {
               )}
             </table>
             <p className="text-[9px] text-editorial-muted/60 italic">{t('cost.disclaimer')}</p>
+            </div>
           </div>
         </div>
       )}
