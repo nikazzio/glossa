@@ -68,19 +68,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-      - run: npm ci
-      - run: npm audit --audit-level=moderate
+      - run: npm audit --audit-level=moderate --package-lock-only
 
   cargo-audit:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
         with:
-          workspaces: src-tauri -> target
-      - name: Install cargo-audit
-        run: cargo install cargo-audit --locked
+          tool: cargo-audit
       - name: Run cargo audit
         run: cd src-tauri && cargo audit
