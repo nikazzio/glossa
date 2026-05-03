@@ -1,10 +1,8 @@
-use serde::{Deserialize, Serialize};
-use reqwest::Client;
-use tauri::{AppHandle, Emitter, Manager, State};
-use aes_gcm::{Aes256Gcm, Key, Nonce};
 use aes_gcm::aead::{Aead, KeyInit};
+use aes_gcm::{Aes256Gcm, Key, Nonce};
 use rand::RngCore;
-use tokio::sync::Notify;
+use reqwest::Client;
+use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     fs,
@@ -15,9 +13,12 @@ use std::{
     },
     time::Duration,
 };
+use tauri::{AppHandle, Emitter, Manager, State};
+use tokio::sync::Notify;
 
 static API_KEY_CACHE: LazyLock<Mutex<HashMap<String, String>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
+static FILE_STORE_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 
 // ── Types matching frontend ──────────────────────────────────────────
 
@@ -211,15 +212,35 @@ Rules:\n\
 - Output ONLY the rewritten prompt text — no preamble, no explanation, no quotes";
 
 fn file_store_key_path(app: &AppHandle) -> Result<PathBuf, String> {
-    let data_dir = app.path().app_data_dir()
+    let data_dir = app
+        .path()
+        .app_data_dir()
         .map_err(|e| format!("Failed to resolve app data directory: {e}"))?;
     Ok(data_dir.join("keystore.master"))
 }
 
 fn file_store_data_path(app: &AppHandle) -> Result<PathBuf, String> {
-    let data_dir = app.path().app_data_dir()
+    let data_dir = app
+        .path()
+        .app_data_dir()
         .map_err(|e| format!("Failed to resolve app data directory: {e}"))?;
     Ok(data_dir.join("keystore.enc"))
+}
+
+fn set_owner_only_permissions(path: &PathBuf) -> Result<(), String> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        let mut permissions = fs::metadata(path)
+            .map_err(|e| format!("Failed to read file permissions: {e}"))?
+            .permissions();
+        permissions.set_mode(0o600);
+        fs::set_permissions(path, permissions)
+            .map_err(|e| format!("Failed to set restrictive file permissions: {e}"))?;
+    }
+
+    Ok(())
 }
 
 fn to_hex(bytes: &[u8]) -> String {
@@ -242,8 +263,8 @@ fn get_or_create_master_key(app: &AppHandle) -> Result<[u8; 32], String> {
     let key_path = file_store_key_path(app)?;
 
     if key_path.exists() {
-        let hex = fs::read_to_string(&key_path)
-            .map_err(|e| format!("Failed to read master key: {e}"))?;
+        let hex =
+            fs::read_to_string(&key_path).map_err(|e| format!("Failed to read master key: {e}"))?;
         let bytes = from_hex(hex.trim())?;
         if bytes.len() != 32 {
             return Err("Master key file is corrupt".into());
@@ -260,8 +281,8 @@ fn get_or_create_master_key(app: &AppHandle) -> Result<[u8; 32], String> {
         fs::create_dir_all(parent)
             .map_err(|e| format!("Failed to create app data directory: {e}"))?;
     }
-    fs::write(&key_path, to_hex(&key))
-        .map_err(|e| format!("Failed to write master key: {e}"))?;
+    fs::write(&key_path, to_hex(&key)).map_err(|e| format!("Failed to write master key: {e}"))?;
+    set_owner_only_permissions(&key_path)?;
 
     Ok(key)
 }
@@ -312,8 +333,8 @@ fn file_store_load(app: &AppHandle) -> Result<HashMap<String, String>, String> {
     if !path.exists() {
         return Ok(HashMap::new());
     }
-    let contents = fs::read_to_string(&path)
-        .map_err(|e| format!("Failed to read key store: {e}"))?;
+    let contents =
+        fs::read_to_string(&path).map_err(|e| format!("Failed to read key store: {e}"))?;
     serde_json::from_str(&contents).map_err(|e| format!("Failed to parse key store: {e}"))
 }
 
@@ -325,10 +346,19 @@ fn file_store_write(app: &AppHandle, data: &HashMap<String, String>) -> Result<(
     }
     let contents =
         serde_json::to_string(data).map_err(|e| format!("Failed to serialize key store: {e}"))?;
-    fs::write(&path, contents).map_err(|e| format!("Failed to write key store: {e}"))
+    let tmp_path = path.with_extension("enc.tmp");
+    fs::write(&tmp_path, contents).map_err(|e| format!("Failed to write temp key store: {e}"))?;
+    set_owner_only_permissions(&tmp_path)?;
+    fs::rename(&tmp_path, &path)
+        .map_err(|e| format!("Failed to replace key store atomically: {e}"))?;
+    set_owner_only_permissions(&path)?;
+    Ok(())
 }
 
 fn file_store_get(app: &AppHandle, provider: &str) -> Result<String, String> {
+    let _guard = FILE_STORE_LOCK
+        .lock()
+        .map_err(|_| "File store lock poisoned".to_string())?;
     let data = file_store_load(app)?;
     let encrypted = data
         .get(provider)
@@ -337,27 +367,32 @@ fn file_store_get(app: &AppHandle, provider: &str) -> Result<String, String> {
 }
 
 fn file_store_set(app: &AppHandle, provider: &str, key: &str) -> Result<(), String> {
-    let mut data = file_store_load(app).unwrap_or_default();
+    let _guard = FILE_STORE_LOCK
+        .lock()
+        .map_err(|_| "File store lock poisoned".to_string())?;
+    let mut data = file_store_load(app)?;
     let encrypted = file_store_encrypt(app, key)?;
     data.insert(provider.to_string(), encrypted);
     file_store_write(app, &data)
 }
 
 fn file_store_remove(app: &AppHandle, provider: &str) {
+    let Ok(_guard) = FILE_STORE_LOCK.lock() else {
+        return;
+    };
     if let Ok(mut data) = file_store_load(app) {
         data.remove(provider);
         let _ = file_store_write(app, &data);
     }
 }
 
-fn file_store_exists(app: &AppHandle, provider: &str) -> bool {
-    file_store_get(app, provider).is_ok()
+fn should_fallback_to_file_store(error: &keyring::Error) -> bool {
+    matches!(error, keyring::Error::NoStorageAccess(_))
 }
 
 fn keyring_entry(provider: &str) -> Result<keyring::Entry, String> {
     let username = format!("{}_API_KEY", provider.to_uppercase());
-    keyring::Entry::new(KEYRING_SERVICE, &username)
-        .map_err(|e| format!("Keyring error: {e}"))
+    keyring::Entry::new(KEYRING_SERVICE, &username).map_err(|e| format!("Keyring error: {e}"))
 }
 
 fn build_http_client() -> Result<Client, String> {
@@ -437,7 +472,10 @@ fn legacy_store_key(provider: &str) -> String {
     format!("{}_API_KEY", provider.to_uppercase())
 }
 
-fn read_legacy_api_key_from_store_value(value: &serde_json::Value, provider: &str) -> Option<String> {
+fn read_legacy_api_key_from_store_value(
+    value: &serde_json::Value,
+    provider: &str,
+) -> Option<String> {
     let store_key = legacy_store_key(provider);
     value[store_key.as_str()]
         .as_str()
@@ -452,8 +490,8 @@ fn migrate_from_legacy_store(app: &AppHandle, provider: &str) -> Result<String, 
         return Err("Legacy store not found".into());
     }
 
-    let contents = fs::read_to_string(&store_path)
-        .map_err(|e| format!("Failed to read legacy store: {e}"))?;
+    let contents =
+        fs::read_to_string(&store_path).map_err(|e| format!("Failed to read legacy store: {e}"))?;
     let mut parsed: serde_json::Value = serde_json::from_str(&contents)
         .map_err(|e| format!("Failed to parse legacy store: {e}"))?;
 
@@ -511,13 +549,11 @@ fn get_api_key(app: &AppHandle, provider: &str) -> Result<String, String> {
     }
 
     // 3. Try encrypted file store (used when keychain was unavailable on this machine)
-    if file_store_exists(app, provider) {
-        if let Ok(key) = file_store_get(app, provider) {
-            if let Ok(mut cache) = API_KEY_CACHE.lock() {
-                cache.insert(provider.to_string(), key.clone());
-            }
-            return Ok(key);
+    if let Ok(key) = file_store_get(app, provider) {
+        if let Ok(mut cache) = API_KEY_CACHE.lock() {
+            cache.insert(provider.to_string(), key.clone());
         }
+        return Ok(key);
     }
 
     // 4. Fallback to environment variable
@@ -529,15 +565,15 @@ fn get_api_key(app: &AppHandle, provider: &str) -> Result<String, String> {
         _ => return Err(format!("Unknown provider: {provider}")),
     };
 
-    std::env::var(env_key)
-        .map_err(|_| format!("{env_key} is not configured. Set it in Settings."))
+    std::env::var(env_key).map_err(|_| format!("{env_key} is not configured. Set it in Settings."))
 }
 
 #[tauri::command]
 pub async fn save_api_key(app: AppHandle, provider: String, key: String) -> Result<String, String> {
     // Try OS keychain first
-    if let Ok(entry) = keyring_entry(&provider) {
-        if entry.set_password(&key).is_ok() {
+    let entry = keyring_entry(&provider)?;
+    match entry.set_password(&key) {
+        Ok(()) => {
             // Remove from file store in case it was previously saved there
             file_store_remove(&app, &provider);
             if let Ok(mut cache) = API_KEY_CACHE.lock() {
@@ -545,6 +581,10 @@ pub async fn save_api_key(app: AppHandle, provider: String, key: String) -> Resu
             }
             return Ok("keychain".to_string());
         }
+        Err(error) if !should_fallback_to_file_store(&error) => {
+            return Err(format!("Failed to save to keychain: {error}"));
+        }
+        Err(_) => {}
     }
 
     // Keychain unavailable — fall back to encrypted local file
@@ -609,21 +649,25 @@ async fn call_gemini(
         "generationConfig": gen_config
     });
 
-    let resp = client.post(&url)
+    let resp = client
+        .post(&url)
         .json(&body)
         .send()
         .await
         .map_err(|e| format!("Gemini request failed: {e}"))?;
 
     let status = resp.status();
-    let text = resp.text().await.map_err(|e| format!("Failed to read response: {e}"))?;
+    let text = resp
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read response: {e}"))?;
 
     if !status.is_success() {
         return Err(format_api_error("Gemini", status, &text));
     }
 
-    let json: serde_json::Value = serde_json::from_str(&text)
-        .map_err(|e| format!("Failed to parse Gemini response: {e}"))?;
+    let json: serde_json::Value =
+        serde_json::from_str(&text).map_err(|e| format!("Failed to parse Gemini response: {e}"))?;
 
     json["candidates"][0]["content"]["parts"][0]["text"]
         .as_str()
@@ -659,18 +703,27 @@ async fn call_openai_compatible(
         req = req.header("Authorization", format!("Bearer {api_key}"));
     }
 
-    let resp = req.send().await
+    let resp = req
+        .send()
+        .await
         .map_err(|e| format!("API request failed: {e}"))?;
 
     let status = resp.status();
-    let text = resp.text().await.map_err(|e| format!("Failed to read response: {e}"))?;
+    let text = resp
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read response: {e}"))?;
 
     if !status.is_success() {
-        return Err(format_api_error(provider_label_from_url(base_url), status, &text));
+        return Err(format_api_error(
+            provider_label_from_url(base_url),
+            status,
+            &text,
+        ));
     }
 
-    let json: serde_json::Value = serde_json::from_str(&text)
-        .map_err(|e| format!("Failed to parse response: {e}"))?;
+    let json: serde_json::Value =
+        serde_json::from_str(&text).map_err(|e| format!("Failed to parse response: {e}"))?;
 
     json["choices"][0]["message"]["content"]
         .as_str()
@@ -699,7 +752,8 @@ async fn call_anthropic(
         "messages": [{"role": "user", "content": user_prompt}]
     });
 
-    let resp = client.post("https://api.anthropic.com/v1/messages")
+    let resp = client
+        .post("https://api.anthropic.com/v1/messages")
         .header("x-api-key", api_key)
         .header("anthropic-version", "2023-06-01")
         .header("content-type", "application/json")
@@ -709,7 +763,10 @@ async fn call_anthropic(
         .map_err(|e| format!("Anthropic request failed: {e}"))?;
 
     let status = resp.status();
-    let text = resp.text().await.map_err(|e| format!("Failed to read response: {e}"))?;
+    let text = resp
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read response: {e}"))?;
 
     if !status.is_success() {
         return Err(format_api_error("Anthropic", status, &text));
@@ -743,17 +800,25 @@ async fn call_provider_for_judge(
                 "contents": [{ "role": "user", "parts": [{"text": user_prompt}] }],
                 "generationConfig": { "responseMimeType": "application/json" }
             });
-            let resp = client.post(&url).json(&body).send().await
+            let resp = client
+                .post(&url)
+                .json(&body)
+                .send()
+                .await
                 .map_err(|e| format!("Gemini request failed: {e}"))?;
             let status = resp.status();
-            let text = resp.text().await.map_err(|e| format!("Failed to read response: {e}"))?;
+            let text = resp
+                .text()
+                .await
+                .map_err(|e| format!("Failed to read response: {e}"))?;
             if !status.is_success() {
                 return Err(format_api_error("Gemini", status, &text));
             }
             let json: serde_json::Value = serde_json::from_str(&text)
                 .map_err(|e| format!("Failed to parse Gemini response: {e}"))?;
             let content = json["candidates"][0]["content"]["parts"][0]["text"]
-                .as_str().map(|s| s.to_string())
+                .as_str()
+                .map(|s| s.to_string())
                 .ok_or_else(|| "No text in Gemini response".to_string())?;
             let usage = match (
                 json["usageMetadata"]["promptTokenCount"].as_u64(),
@@ -784,16 +849,27 @@ async fn call_provider_for_judge(
             if !api_key.is_empty() {
                 req = req.header("Authorization", format!("Bearer {api_key}"));
             }
-            let resp = req.send().await.map_err(|e| format!("API request failed: {e}"))?;
+            let resp = req
+                .send()
+                .await
+                .map_err(|e| format!("API request failed: {e}"))?;
             let status = resp.status();
-            let text = resp.text().await.map_err(|e| format!("Failed to read response: {e}"))?;
+            let text = resp
+                .text()
+                .await
+                .map_err(|e| format!("Failed to read response: {e}"))?;
             if !status.is_success() {
-                return Err(format_api_error(provider_label_from_url(&base_url), status, &text));
+                return Err(format_api_error(
+                    provider_label_from_url(&base_url),
+                    status,
+                    &text,
+                ));
             }
             let json: serde_json::Value = serde_json::from_str(&text)
                 .map_err(|e| format!("Failed to parse response: {e}"))?;
             let content = json["choices"][0]["message"]["content"]
-                .as_str().map(|s| s.to_string())
+                .as_str()
+                .map(|s| s.to_string())
                 .ok_or_else(|| "No content in response".to_string())?;
             let usage = match (
                 json["usage"]["prompt_tokens"].as_u64(),
@@ -811,22 +887,28 @@ async fn call_provider_for_judge(
                 "system": format!("{system_prompt}\nIMPORTANT: Return ONLY valid JSON, with no markdown formatting, code blocks, or extra text."),
                 "messages": [{"role": "user", "content": user_prompt}]
             });
-            let resp = client.post("https://api.anthropic.com/v1/messages")
+            let resp = client
+                .post("https://api.anthropic.com/v1/messages")
                 .header("x-api-key", api_key)
                 .header("anthropic-version", "2023-06-01")
                 .header("content-type", "application/json")
                 .json(&body)
-                .send().await
+                .send()
+                .await
                 .map_err(|e| format!("Anthropic request failed: {e}"))?;
             let status = resp.status();
-            let text = resp.text().await.map_err(|e| format!("Failed to read response: {e}"))?;
+            let text = resp
+                .text()
+                .await
+                .map_err(|e| format!("Failed to read response: {e}"))?;
             if !status.is_success() {
                 return Err(format_api_error("Anthropic", status, &text));
             }
             let json: serde_json::Value = serde_json::from_str(&text)
                 .map_err(|e| format!("Failed to parse Anthropic response: {e}"))?;
             let content = json["content"][0]["text"]
-                .as_str().map(|s| s.to_string())
+                .as_str()
+                .map(|s| s.to_string())
                 .ok_or_else(|| "No text in Anthropic response".to_string())?;
             let usage = match (
                 json["usage"]["input_tokens"].as_u64(),
@@ -852,11 +934,64 @@ async fn call_provider(
     json_mode: bool,
 ) -> Result<String, String> {
     match provider {
-        "gemini" => call_gemini(client, model, system_prompt, user_prompt, api_key, json_mode).await,
-        "openai" => call_openai_compatible(client, "https://api.openai.com/v1", model, system_prompt, user_prompt, api_key, json_mode).await,
-        "deepseek" => call_openai_compatible(client, "https://api.deepseek.com", model, system_prompt, user_prompt, api_key, json_mode).await,
-        "anthropic" => call_anthropic(client, model, system_prompt, user_prompt, api_key, json_mode).await,
-        "ollama" => call_openai_compatible(client, &format!("{OLLAMA_BASE_URL}/v1"), model, system_prompt, user_prompt, api_key, json_mode).await,
+        "gemini" => {
+            call_gemini(
+                client,
+                model,
+                system_prompt,
+                user_prompt,
+                api_key,
+                json_mode,
+            )
+            .await
+        }
+        "openai" => {
+            call_openai_compatible(
+                client,
+                "https://api.openai.com/v1",
+                model,
+                system_prompt,
+                user_prompt,
+                api_key,
+                json_mode,
+            )
+            .await
+        }
+        "deepseek" => {
+            call_openai_compatible(
+                client,
+                "https://api.deepseek.com",
+                model,
+                system_prompt,
+                user_prompt,
+                api_key,
+                json_mode,
+            )
+            .await
+        }
+        "anthropic" => {
+            call_anthropic(
+                client,
+                model,
+                system_prompt,
+                user_prompt,
+                api_key,
+                json_mode,
+            )
+            .await
+        }
+        "ollama" => {
+            call_openai_compatible(
+                client,
+                &format!("{OLLAMA_BASE_URL}/v1"),
+                model,
+                system_prompt,
+                user_prompt,
+                api_key,
+                json_mode,
+            )
+            .await
+        }
         _ => Err(format!("Unsupported provider: {provider}")),
     }
 }
@@ -868,21 +1003,15 @@ fn extract_streaming_text(provider: &str, data: &str) -> Option<String> {
     let json: serde_json::Value = serde_json::from_str(data).ok()?;
 
     match provider {
-        "gemini" => {
-            json["candidates"][0]["content"]["parts"][0]["text"]
-                .as_str()
-                .map(|s| s.to_string())
-        }
-        "openai" | "deepseek" | "ollama" => {
-            json["choices"][0]["delta"]["content"]
-                .as_str()
-                .map(|s| s.to_string())
-        }
+        "gemini" => json["candidates"][0]["content"]["parts"][0]["text"]
+            .as_str()
+            .map(|s| s.to_string()),
+        "openai" | "deepseek" | "ollama" => json["choices"][0]["delta"]["content"]
+            .as_str()
+            .map(|s| s.to_string()),
         "anthropic" => {
             if json["type"].as_str() == Some("content_block_delta") {
-                json["delta"]["text"]
-                    .as_str()
-                    .map(|s| s.to_string())
+                json["delta"]["text"].as_str().map(|s| s.to_string())
             } else {
                 None
             }
@@ -909,7 +1038,11 @@ async fn build_streaming_request(
                 "systemInstruction": { "parts": [{"text": system_prompt}] },
                 "contents": [{ "role": "user", "parts": [{"text": user_prompt}] }]
             });
-            client.post(&url).json(&body).send().await
+            client
+                .post(&url)
+                .json(&body)
+                .send()
+                .await
                 .map_err(|e| format!("Gemini request failed: {e}"))
         }
         "openai" | "deepseek" | "ollama" => {
@@ -933,7 +1066,9 @@ async fn build_streaming_request(
             if !api_key.is_empty() {
                 req = req.header("Authorization", format!("Bearer {api_key}"));
             }
-            req.send().await.map_err(|e| format!("API request failed: {e}"))
+            req.send()
+                .await
+                .map_err(|e| format!("API request failed: {e}"))
         }
         "anthropic" => {
             let body = serde_json::json!({
@@ -943,12 +1078,14 @@ async fn build_streaming_request(
                 "messages": [{"role": "user", "content": user_prompt}],
                 "stream": true
             });
-            client.post("https://api.anthropic.com/v1/messages")
+            client
+                .post("https://api.anthropic.com/v1/messages")
                 .header("x-api-key", api_key)
                 .header("anthropic-version", "2023-06-01")
                 .header("content-type", "application/json")
                 .json(&body)
-                .send().await
+                .send()
+                .await
                 .map_err(|e| format!("Anthropic request failed: {e}"))
         }
         _ => Err(format!("Unsupported provider for streaming: {provider}")),
@@ -999,17 +1136,22 @@ async fn stream_response(
                     buffer = buffer[pos + 1..].to_string();
 
                     if let Some(data) = line.strip_prefix("data: ") {
-                        if data == "[DONE]" { continue; }
+                        if data == "[DONE]" {
+                            continue;
+                        }
                         if let Some(text) = extract_streaming_text(provider, data) {
                             if !text.is_empty() {
                                 full_text.push_str(&text);
-                                let _ = app.emit("stream-token", StreamToken {
-                                    stream_id: stream_id.to_string(),
-                                    token: text,
-                                    done: false,
-                                    input_tokens: None,
-                                    output_tokens: None,
-                                });
+                                let _ = app.emit(
+                                    "stream-token",
+                                    StreamToken {
+                                        stream_id: stream_id.to_string(),
+                                        token: text,
+                                        done: false,
+                                        input_tokens: None,
+                                        output_tokens: None,
+                                    },
+                                );
                             }
                         }
 
@@ -1035,21 +1177,21 @@ async fn stream_response(
                                         latest_output_tokens = Some(o as u32);
                                     }
                                 }
-                                "anthropic" => {
-                                    match json["type"].as_str() {
-                                        Some("message_start") => {
-                                            anthropic_input_tokens = json["message"]["usage"]["input_tokens"]
-                                                .as_u64().map(|n| n as u32);
-                                        }
-                                        Some("message_delta") => {
-                                            if let Some(out) = json["usage"]["output_tokens"].as_u64() {
-                                                latest_input_tokens = anthropic_input_tokens;
-                                                latest_output_tokens = Some(out as u32);
-                                            }
-                                        }
-                                        _ => {}
+                                "anthropic" => match json["type"].as_str() {
+                                    Some("message_start") => {
+                                        anthropic_input_tokens = json["message"]["usage"]
+                                            ["input_tokens"]
+                                            .as_u64()
+                                            .map(|n| n as u32);
                                     }
-                                }
+                                    Some("message_delta") => {
+                                        if let Some(out) = json["usage"]["output_tokens"].as_u64() {
+                                            latest_input_tokens = anthropic_input_tokens;
+                                            latest_output_tokens = Some(out as u32);
+                                        }
+                                    }
+                                    _ => {}
+                                },
                                 _ => {}
                             }
                         }
@@ -1061,13 +1203,16 @@ async fn stream_response(
         }
     }
 
-    let _ = app.emit("stream-token", StreamToken {
-        stream_id: stream_id.to_string(),
-        token: String::new(),
-        done: true,
-        input_tokens: latest_input_tokens,
-        output_tokens: latest_output_tokens,
-    });
+    let _ = app.emit(
+        "stream-token",
+        StreamToken {
+            stream_id: stream_id.to_string(),
+            token: String::new(),
+            done: true,
+            input_tokens: latest_input_tokens,
+            output_tokens: latest_output_tokens,
+        },
+    );
 
     Ok(full_text)
 }
@@ -1077,7 +1222,8 @@ async fn stream_response(
 #[tauri::command]
 pub async fn list_ollama_models() -> Result<Vec<String>, String> {
     let client = Client::new();
-    let resp = client.get(format!("{OLLAMA_BASE_URL}/api/tags"))
+    let resp = client
+        .get(format!("{OLLAMA_BASE_URL}/api/tags"))
         .timeout(std::time::Duration::from_secs(3))
         .send()
         .await
@@ -1087,7 +1233,9 @@ pub async fn list_ollama_models() -> Result<Vec<String>, String> {
         return Err("Ollama returned an error".into());
     }
 
-    let json: serde_json::Value = resp.json().await
+    let json: serde_json::Value = resp
+        .json()
+        .await
         .map_err(|e| format!("Invalid Ollama response: {e}"))?;
 
     let models = json["models"]
@@ -1105,7 +1253,8 @@ pub async fn list_ollama_models() -> Result<Vec<String>, String> {
 #[tauri::command]
 pub async fn check_ollama_status() -> Result<bool, String> {
     let client = Client::new();
-    match client.get(format!("{OLLAMA_BASE_URL}/"))
+    match client
+        .get(format!("{OLLAMA_BASE_URL}/"))
         .timeout(std::time::Duration::from_secs(3))
         .send()
         .await
@@ -1123,8 +1272,17 @@ fn build_stage_prompts(
     config: &PipelineConfig,
     previous_result: &Option<String>,
 ) -> (String, String) {
-    let glossary_str: String = config.glossary.iter()
-        .map(|g| format!("- {} -> {} ({})", g.term, g.translation, g.notes.as_deref().unwrap_or("")))
+    let glossary_str: String = config
+        .glossary
+        .iter()
+        .map(|g| {
+            format!(
+                "- {} -> {} ({})",
+                g.term,
+                g.translation,
+                g.notes.as_deref().unwrap_or("")
+            )
+        })
         .collect::<Vec<_>>()
         .join("\n");
 
@@ -1144,7 +1302,11 @@ fn build_stage_prompts(
         config.source_language,
         config.target_language,
         stage.prompt,
-        if glossary_str.is_empty() { "No specific glossary entries.".to_string() } else { glossary_str },
+        if glossary_str.is_empty() {
+            "No specific glossary entries.".to_string()
+        } else {
+            glossary_str
+        },
         markdown_rules,
     );
 
@@ -1230,9 +1392,19 @@ pub async fn run_stage(
 ) -> Result<String, String> {
     let api_key = get_api_key(&app, &stage.provider)?;
     let client = build_http_client()?;
-    let (system_prompt, user_prompt) = build_stage_prompts(&text, &stage, &config, &previous_result);
+    let (system_prompt, user_prompt) =
+        build_stage_prompts(&text, &stage, &config, &previous_result);
 
-    call_provider(&client, &stage.provider, &stage.model, &system_prompt, &user_prompt, &api_key, false).await
+    call_provider(
+        &client,
+        &stage.provider,
+        &stage.model,
+        &system_prompt,
+        &user_prompt,
+        &api_key,
+        false,
+    )
+    .await
 }
 
 #[tauri::command]
@@ -1247,7 +1419,8 @@ pub async fn run_stage_stream(
 ) -> Result<String, String> {
     let api_key = get_api_key(&app, &stage.provider)?;
     let client = build_http_client()?;
-    let (system_prompt, user_prompt) = build_stage_prompts(&text, &stage, &config, &previous_result);
+    let (system_prompt, user_prompt) =
+        build_stage_prompts(&text, &stage, &config, &previous_result);
 
     let cancel = registry.register(&stream_id);
     let _guard = StreamGuard {
@@ -1260,14 +1433,23 @@ pub async fn run_stage_stream(
     }
 
     let resp = build_streaming_request(
-        &client, &stage.provider, &stage.model,
-        &system_prompt, &user_prompt, &api_key,
-    ).await?;
+        &client,
+        &stage.provider,
+        &stage.model,
+        &system_prompt,
+        &user_prompt,
+        &api_key,
+    )
+    .await?;
 
     let status = resp.status();
     if !status.is_success() {
         let text = resp.text().await.unwrap_or_default();
-        return Err(format_api_error(provider_label(&stage.provider), status, &text));
+        return Err(format_api_error(
+            provider_label(&stage.provider),
+            status,
+            &text,
+        ));
     }
 
     stream_response(&app, resp, &stage.provider, &stream_id, &cancel).await
@@ -1292,21 +1474,29 @@ pub async fn judge_translation(
     let (system_prompt, user_prompt) = build_judge_prompts(&original_text, &translation, &config);
 
     let (result_text, usage) = call_provider_for_judge(
-        &client, &config.judge_provider, &config.judge_model,
-        &system_prompt, &user_prompt, &api_key,
-    ).await?;
+        &client,
+        &config.judge_provider,
+        &config.judge_model,
+        &system_prompt,
+        &user_prompt,
+        &api_key,
+    )
+    .await?;
 
     let sanitized = sanitize_llm_json_output(&result_text);
-    let parsed: serde_json::Value = serde_json::from_str(sanitized)
-        .map_err(|e| {
-            #[cfg(debug_assertions)]
-            {
-                let preview: String = result_text.chars().take(500).collect();
-                let truncated = if result_text.chars().nth(500).is_some() { "…" } else { "" };
-                eprintln!("Failed to parse judge JSON: {e}. Preview: {preview}{truncated}");
-            }
-            format!("Failed to parse judge JSON: {e}")
-        })?;
+    let parsed: serde_json::Value = serde_json::from_str(sanitized).map_err(|e| {
+        #[cfg(debug_assertions)]
+        {
+            let preview: String = result_text.chars().take(500).collect();
+            let truncated = if result_text.chars().nth(500).is_some() {
+                "…"
+            } else {
+                ""
+            };
+            eprintln!("Failed to parse judge JSON: {e}. Preview: {preview}{truncated}");
+        }
+        format!("Failed to parse judge JSON: {e}")
+    })?;
 
     let rating = parse_judge_rating(&parsed);
     let issues: Vec<JudgeIssue> = parsed["issues"]
@@ -1350,24 +1540,36 @@ pub async fn refine_prompt(
         REFINE_STAGE_SYSTEM_PROMPT
     };
     let user_prompt = format!("Rewrite this prompt professionally:\n\n{prompt}");
-    call_provider(&client, &provider, &model, system_prompt, &user_prompt, &api_key, false).await
+    call_provider(
+        &client,
+        &provider,
+        &model,
+        system_prompt,
+        &user_prompt,
+        &api_key,
+        false,
+    )
+    .await
 }
 
 #[tauri::command]
-pub async fn test_provider_connection(
-    app: AppHandle,
-    provider: String,
-) -> Result<bool, String> {
+pub async fn test_provider_connection(app: AppHandle, provider: String) -> Result<bool, String> {
     if provider == "ollama" {
-        return check_ollama_status().await
-            .and_then(|ok| if ok { Ok(true) } else { Err("Ollama is not running".into()) });
+        return check_ollama_status().await.and_then(|ok| {
+            if ok {
+                Ok(true)
+            } else {
+                Err("Ollama is not running".into())
+            }
+        });
     }
 
     let api_key = get_api_key(&app, &provider)?;
     let client = build_http_client()?;
 
     let result = call_provider(
-        &client, &provider,
+        &client,
+        &provider,
         match provider.as_str() {
             "gemini" => "gemini-3-flash-preview",
             "openai" => "gpt-4o-mini",
@@ -1379,7 +1581,8 @@ pub async fn test_provider_connection(
         "Reply with exactly: OK",
         &api_key,
         false,
-    ).await;
+    )
+    .await;
 
     match result {
         Ok(_) => Ok(true),
@@ -1401,6 +1604,17 @@ mod tests {
         assert_eq!(decoded, original);
     }
 
+    #[test]
+    fn fallback_only_for_missing_storage_access() {
+        let no_storage = keyring::Error::NoStorageAccess(Box::new(std::io::Error::other("locked")));
+        let platform_failure =
+            keyring::Error::PlatformFailure(Box::new(std::io::Error::other("boom")));
+
+        assert!(should_fallback_to_file_store(&no_storage));
+        assert!(!should_fallback_to_file_store(&platform_failure));
+        assert!(!should_fallback_to_file_store(&keyring::Error::NoEntry));
+    }
+
     fn make_config() -> PipelineConfig {
         PipelineConfig {
             source_language: "English".into(),
@@ -1409,13 +1623,11 @@ mod tests {
             judge_prompt: "Evaluate translation quality.".into(),
             judge_model: "gemini-3-flash-preview".into(),
             judge_provider: "gemini".into(),
-            glossary: vec![
-                GlossaryEntry {
-                    term: "API".into(),
-                    translation: "API".into(),
-                    notes: Some("Keep as-is".into()),
-                },
-            ],
+            glossary: vec![GlossaryEntry {
+                term: "API".into(),
+                translation: "API".into(),
+                notes: Some("Keep as-is".into()),
+            }],
             use_chunking: Some(true),
             markdown_aware: None,
         }
@@ -1449,7 +1661,10 @@ mod tests {
     #[test]
     fn extract_deepseek_streaming() {
         let data = r#"{"choices":[{"delta":{"content":"Bonjour"}}]}"#;
-        assert_eq!(extract_streaming_text("deepseek", data), Some("Bonjour".into()));
+        assert_eq!(
+            extract_streaming_text("deepseek", data),
+            Some("Bonjour".into())
+        );
     }
 
     #[test]
@@ -1461,7 +1676,10 @@ mod tests {
     #[test]
     fn extract_anthropic_content_block_delta() {
         let data = r#"{"type":"content_block_delta","delta":{"text":"Guten Tag"}}"#;
-        assert_eq!(extract_streaming_text("anthropic", data), Some("Guten Tag".into()));
+        assert_eq!(
+            extract_streaming_text("anthropic", data),
+            Some("Guten Tag".into())
+        );
     }
 
     #[test]
@@ -1535,8 +1753,16 @@ mod tests {
     fn stage_prompt_multiple_glossary_entries() {
         let mut config = make_config();
         config.glossary = vec![
-            GlossaryEntry { term: "API".into(), translation: "API".into(), notes: Some("tech".into()) },
-            GlossaryEntry { term: "bug".into(), translation: "errore".into(), notes: None },
+            GlossaryEntry {
+                term: "API".into(),
+                translation: "API".into(),
+                notes: Some("tech".into()),
+            },
+            GlossaryEntry {
+                term: "bug".into(),
+                translation: "errore".into(),
+                notes: None,
+            },
         ];
         let stage = make_stage("gemini");
         let (system, _) = build_stage_prompts("text", &stage, &config, &None);
@@ -1741,11 +1967,7 @@ mod tests {
     #[test]
     fn format_api_error_omits_response_body() {
         let secret = "user prompt: Confidential unpublished manuscript text";
-        let msg = format_api_error(
-            "OpenAI",
-            reqwest::StatusCode::UNAUTHORIZED,
-            secret,
-        );
+        let msg = format_api_error("OpenAI", reqwest::StatusCode::UNAUTHORIZED, secret);
         assert!(!msg.contains(secret), "response body must not leak: {msg}");
         assert!(msg.contains("OpenAI"));
         assert!(msg.contains("API key not authorized"));
@@ -1756,7 +1978,10 @@ mod tests {
         let cases = [
             (reqwest::StatusCode::BAD_REQUEST, "bad request"),
             (reqwest::StatusCode::FORBIDDEN, "API key not authorized"),
-            (reqwest::StatusCode::NOT_FOUND, "model or endpoint not found"),
+            (
+                reqwest::StatusCode::NOT_FOUND,
+                "model or endpoint not found",
+            ),
             (reqwest::StatusCode::TOO_MANY_REQUESTS, "rate limited"),
             (reqwest::StatusCode::BAD_GATEWAY, "provider unavailable"),
         ];
@@ -1771,9 +1996,18 @@ mod tests {
 
     #[test]
     fn provider_label_from_url_identifies_known_hosts() {
-        assert_eq!(provider_label_from_url("https://api.openai.com/v1"), "OpenAI");
-        assert_eq!(provider_label_from_url("https://api.deepseek.com"), "DeepSeek");
-        assert_eq!(provider_label_from_url("http://localhost:11434/v1"), "Ollama");
+        assert_eq!(
+            provider_label_from_url("https://api.openai.com/v1"),
+            "OpenAI"
+        );
+        assert_eq!(
+            provider_label_from_url("https://api.deepseek.com"),
+            "DeepSeek"
+        );
+        assert_eq!(
+            provider_label_from_url("http://localhost:11434/v1"),
+            "Ollama"
+        );
         assert_eq!(provider_label_from_url("https://example.com"), "Provider");
     }
 
@@ -1835,7 +2069,7 @@ mod tests {
                 stream_id: "s-1".to_string(),
             };
         } // guard drops here
-        // After drop, cancelling has no effect on the registered handle
+          // After drop, cancelling has no effect on the registered handle
         registry.cancel("s-1");
         assert!(!token.is_cancelled());
     }
@@ -1859,13 +2093,10 @@ mod tests {
 
         token.cancel();
 
-        let observed = tokio::time::timeout(
-            std::time::Duration::from_millis(50),
-            listener,
-        )
-        .await
-        .expect("listener did not wake within 50ms")
-        .expect("listener task panicked");
+        let observed = tokio::time::timeout(std::time::Duration::from_millis(50), listener)
+            .await
+            .expect("listener did not wake within 50ms")
+            .expect("listener task panicked");
 
         assert!(observed, "cancel flag must be set when notify wakes");
     }

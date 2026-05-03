@@ -151,7 +151,7 @@
     "title": "Global Config / Secrets",
     "providerConfig": "Provider Configuration",
     "securityAdvisory": "Security Advisory",
-    "securityMessage": "API keys are stored securely in your operating system's keychain. They never leave your device. Ollama runs entirely on your machine — no data is sent to external servers.",
+    "securityMessage": "API keys are stored in your operating system's keychain when available. If the keychain is unavailable, Glossa falls back to a local encrypted file protected by a machine-local key; this is less secure than the OS keychain. Keys never leave your device. Ollama runs entirely on your machine — no data is sent to external servers.",
     "secretsPanel": "Secrets panel",
     "saveClose": "Save & Close",
     "close": "Close",
@@ -159,12 +159,12 @@
     "pasteApiKey": "Paste API key...",
     "save": "Save",
     "cancel": "Cancel",
-    "removeFromKeychain": "Remove from keychain",
+    "removeFromKeychain": "Remove saved key",
     "keySaved": "{{provider}} key saved to keychain",
     "keySaveFailed": "Failed to save {{provider}} key",
     "keyDeleted": "{{provider}} key removed from keychain",
     "keyDeleteFailed": "Failed to remove {{provider}} key",
-    "keySavedFallback": "{{provider}} key saved to encrypted local file (OS keychain unavailable)"
+    "keySavedFallback": "{{provider}} key saved to local encrypted fallback storage. This is less secure than the OS keychain."
   },
   "ollama": {
     "title": "Ollama (Local Models)",
