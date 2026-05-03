@@ -4,6 +4,8 @@ import { ErrorBoundary, ConfirmDialog } from './components/common';
 import { usePipeline } from './hooks/usePipeline';
 import { useProjectAutosave } from './hooks/useProjectAutosave';
 import { useUiStore } from './stores/uiStore';
+import { useProjectStore } from './stores/projectStore';
+import { useLibraryStore } from './stores/libraryStore';
 import { Toaster } from 'sonner';
 
 const PipelineConfig = lazy(() =>
@@ -44,6 +46,9 @@ export default function App() {
   } = usePipeline();
   useProjectAutosave();
   const viewMode = useUiStore((state) => state.viewMode);
+  const showSettings = useUiStore((state) => state.showSettings);
+  const showProjectPanel = useProjectStore((state) => state.showProjectPanel);
+  const showLibraryPanel = useLibraryStore((state) => state.showLibraryPanel);
 
   return (
     <ErrorBoundary>
@@ -89,11 +94,23 @@ export default function App() {
               onCancelPipeline={cancelPipeline}
             />
           )}
-
-          <SettingsModal />
-          <ProjectPanel />
-          <LibraryPanel />
         </Suspense>
+
+        {showSettings && (
+          <Suspense fallback={null}>
+            <SettingsModal />
+          </Suspense>
+        )}
+        {showProjectPanel && (
+          <Suspense fallback={null}>
+            <ProjectPanel />
+          </Suspense>
+        )}
+        {showLibraryPanel && (
+          <Suspense fallback={null}>
+            <LibraryPanel />
+          </Suspense>
+        )}
 
         <ConfirmDialog />
       </div>

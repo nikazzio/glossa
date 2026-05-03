@@ -372,7 +372,6 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
       </div>
 
       <Suspense fallback={null}>
-        <HelpGuide open={showHelp} onClose={() => setShowHelp(false)} />
         {pendingImport && (
           <ImportPreviewDialog
             fileName={pendingImport.fileName}
@@ -396,13 +395,22 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
             onConfirm={handleConfirmImport}
           />
         )}
-        <SaveProjectDialog
-          open={showSaveProjectDialog}
-          onClose={() => setShowSaveProjectDialog(false)}
-          onConfirm={handleFirstSave}
-          saving={isCreatingProjectFromSave}
-        />
       </Suspense>
+      {showHelp && (
+        <Suspense fallback={null}>
+          <HelpGuide open={showHelp} onClose={() => setShowHelp(false)} />
+        </Suspense>
+      )}
+      {showSaveProjectDialog && (
+        <Suspense fallback={null}>
+          <SaveProjectDialog
+            open={showSaveProjectDialog}
+            onClose={() => setShowSaveProjectDialog(false)}
+            onConfirm={handleFirstSave}
+            saving={isCreatingProjectFromSave}
+          />
+        </Suspense>
+      )}
     </header>
   );
 }

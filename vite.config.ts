@@ -39,7 +39,7 @@ export default defineConfig(() => {
         },
       },
       // Threshold raised from default 500 kB: vendor chunks (react + motion + icons)
-      // each sit around 150-200 kB gzipped and are expected to be large.
+      // each sit around 400-550 kB uncompressed (minified) — roughly 150-200 kB gzipped.
       chunkSizeWarningLimit: 600,
     },
     test: {
