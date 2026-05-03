@@ -75,6 +75,8 @@ export default function App() {
               <DocumentView
                 onRetranslateChunk={runSingleChunk}
                 onReauditChunk={auditSingleChunk}
+                onRunPipeline={runPipeline}
+                onCancelPipeline={cancelPipeline}
               />
               <InsightsDrawer onReauditChunk={auditSingleChunk} />
             </main>

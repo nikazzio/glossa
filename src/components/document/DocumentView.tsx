@@ -5,20 +5,25 @@ import {
   Columns2,
   Copy,
   Highlighter,
+  Info,
+  Loader2,
   Lock,
   Pencil,
   PanelLeft,
   PanelRight,
+  Play,
   RotateCcw,
   ScanLine,
   Scissors,
+  Square,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useDeferredValue, useEffect, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
+import { usePricingStore } from '../../stores/pricingStore';
 import { confirm } from '../../stores/confirmStore';
 import type { TranslationChunk } from '../../types';
 import {
@@ -28,13 +33,17 @@ import {
   qualityTone,
 } from '../../utils';
 import { buildSplitPreview } from '../../utils/documentWorkflow';
+import { estimatePipelineCost } from '../../utils/costEstimate';
 import { CopyButton, MarkdownEditor, ProcessingLine } from '../common';
+import { CostBreakdownPanel } from '../pipeline/CostBadge';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useGlossaryHighlight } from '../../hooks/useGlossaryHighlight';
 
 interface DocumentViewProps {
   onRetranslateChunk: (chunkId: string) => void;
   onReauditChunk: (chunkId: string) => void;
+  onRunPipeline?: () => void;
+  onCancelPipeline?: () => void;
 }
 
 const QUALITY_TONE_COLOR: Record<ReturnType<typeof qualityTone>, string> = {
@@ -46,12 +55,16 @@ const QUALITY_TONE_COLOR: Record<ReturnType<typeof qualityTone>, string> = {
 export function DocumentView({
   onRetranslateChunk,
   onReauditChunk,
+  onRunPipeline,
+  onCancelPipeline,
 }: DocumentViewProps) {
   const { t } = useTranslation();
   const { config } = usePipelineStore();
+  const pricingOverrides = usePricingStore((s) => s.overrides);
   const {
     chunks,
     isProcessing,
+    cancelRequested,
     updateChunkDraft,
     updateChunkOriginalText,
     toggleChunkTranslationLock,
@@ -77,6 +90,12 @@ export function DocumentView({
   const [splitDraft, setSplitDraft] = useState<{ chunkId: string; splitAt: number } | null>(null);
   const [paneFocus, setPaneFocus] = useState<'both' | 'source' | 'translation'>('both');
   const [traceStageId, setTraceStageId] = useState<string | null>(null);
+  const [showCostPanel, setShowCostPanel] = useState(false);
+
+  const costEstimate = useMemo(
+    () => estimatePipelineCost(chunks, config, pricingOverrides),
+    [chunks, config, pricingOverrides],
+  );
 
   useEffect(() => {
     const onResize = () => setViewportWidth(window.innerWidth);
@@ -167,7 +186,77 @@ export function DocumentView({
   return (
     <section className="w-full bg-[#f7f3ec] overflow-y-auto min-h-0 h-full custom-scrollbar">
       <div className="mx-auto max-w-[1720px] px-5 py-4 md:px-6 md:py-5 space-y-5">
-        <div className="rounded-[22px] border border-editorial-border bg-editorial-bg/90 px-5 py-3 shadow-[0_16px_50px_rgba(26,26,26,0.05)]">
+        <div className="flex items-center gap-2">
+          {/* Run button: cerchio con stesso stile della navbar, si fonde con essa */}
+          {onRunPipeline && onCancelPipeline && (
+            <div className="relative flex h-[80px] w-[80px] flex-shrink-0 items-center justify-center rounded-full border border-editorial-border bg-editorial-bg/90 shadow-[0_16px_50px_rgba(26,26,26,0.05)]">
+              {isProcessing ? (
+                cancelRequested ? (
+                  <button
+                    type="button"
+                    disabled
+                    title={t('pipeline.stopping')}
+                    aria-label={t('pipeline.stopping')}
+                    className="flex h-[64px] w-[64px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted opacity-50 focus:outline-none"
+                  >
+                    <Loader2 size={24} className="animate-spin" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={onCancelPipeline}
+                    title={t('pipeline.stopPipeline')}
+                    aria-label={t('pipeline.stopPipeline')}
+                    className="flex h-[64px] w-[64px] items-center justify-center rounded-full border border-editorial-accent bg-editorial-bg text-editorial-accent transition-colors hover:bg-editorial-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  >
+                    <Square size={22} fill="currentColor" />
+                  </button>
+                )
+              ) : (
+                <button
+                  type="button"
+                  onClick={onRunPipeline}
+                  title={t('pipeline.beginPipeline')}
+                  aria-label={t('pipeline.beginPipeline')}
+                  className="flex h-[64px] w-[64px] items-center justify-center rounded-full bg-editorial-ink text-white transition-colors hover:bg-editorial-ink/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                >
+                  <Play size={26} fill="currentColor" />
+                </button>
+              )}
+
+              {/* Cost info dot — più grande, angolo basso-sinistra esterno al cerchio */}
+              {costEstimate.stages.length > 0 && (
+                <div
+                  className="absolute -bottom-1.5 -left-1.5"
+                  onMouseEnter={() => setShowCostPanel(true)}
+                  onMouseLeave={() => setShowCostPanel(false)}
+                >
+                  <button
+                    type="button"
+                    onFocus={() => setShowCostPanel(true)}
+                    onBlur={() => setShowCostPanel(false)}
+                    aria-label={t('cost.breakdown')}
+                    className="flex h-[22px] w-[22px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted transition-colors hover:border-editorial-ink hover:text-editorial-ink focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                  >
+                    <Info size={11} />
+                  </button>
+                </div>
+              )}
+              {/* Popup costi: ancorato al cerchio (top-full = sotto la riga), non all'info dot */}
+              {showCostPanel && costEstimate.stages.length > 0 && (
+                <div
+                  className="absolute left-0 top-full z-50 mt-3 w-64"
+                  onMouseEnter={() => setShowCostPanel(true)}
+                  onMouseLeave={() => setShowCostPanel(false)}
+                >
+                  <CostBreakdownPanel estimate={costEstimate} />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Navigation bar */}
+          <div className="flex-1 rounded-[22px] border border-editorial-border bg-editorial-bg/90 px-5 py-3 shadow-[0_16px_50px_rgba(26,26,26,0.05)]">
           <div className="flex flex-wrap items-center justify-between gap-3">
             {/* Info + status indicators — tutto su una riga */}
             <div className="flex flex-wrap items-center gap-2.5 min-w-0">
@@ -332,6 +421,7 @@ export function DocumentView({
                 </ChunkIconButton>
               )}
             </div>
+          </div>
           </div>
         </div>
 

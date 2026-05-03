@@ -18,7 +18,7 @@ A desktop application that chains multiple LLM passes — draft, refinement, aud
 
 ## How it works
 
-Glossa runs your source text through a **configurable pipeline** of LLM stages, each with its own prompt, model, and provider. An AI judge then audits the final translation against your glossary and instructions, scoring it on accuracy, fluency, glossary adherence, and grammar.
+Glossa runs your source text through a **configurable pipeline** of LLM stages, each with its own prompt, model, and provider. An AI judge then audits the final translation against your glossary and instructions, assigning a semantic quality rating and reporting issues for accuracy, fluency, glossary adherence, and grammar.
 
 ```
 Source text
@@ -29,7 +29,7 @@ Source text
   │     ↓
   ├─► Stage N: (add as many as you need)
   │     ↓
-  └─► AI Judge: audit score + issues + suggested fixes
+  └─► AI Judge: quality rating + issues + suggested fixes
 ```
 
 Translations stream token-by-token in real time. You can edit the candidate translation manually before auditing, re-run only the audit, and iterate until the quality meets your standards.
@@ -41,11 +41,11 @@ Translations stream token-by-token in real time. You can edit the candidate tran
 | **5 LLM providers** | Gemini, OpenAI, Anthropic, DeepSeek, **Ollama** (local models) |
 | **Streaming** | Real-time token display during translation |
 | **Multi-stage pipeline** | Add/remove/reorder stages, each with its own model and prompt |
-| **AI Judge** | LLM-as-a-judge audit with score (0–100), categorized issues, and fixes |
+| **AI Judge** | LLM-as-a-judge audit with semantic quality ratings, categorized issues, and fixes |
 | **Glossary** | Keyword registry enforced across all stages and the audit |
 | **Auto-segmentation** | Splits source text by paragraphs for chunk-by-chunk processing |
 | **Project management** | Save/load projects with full pipeline config and translations |
-| **File I/O** | Import `.txt`/`.md`, export as plain text or bilingual Markdown |
+| **File I/O** | Import `.txt`, `.md`, `.docx`, `.pdf`; export `.txt`, `.md`, `.html`, `.docx`, or bilingual Markdown |
 | **Secure keys** | API keys stored in OS keychain (GNOME Keyring / macOS Keychain / Windows Credential Manager) |
 | **i18n** | English and Italian interface |
 | **Desktop native** | Tauri v2 — lightweight binaries, no browser runtime |
@@ -54,12 +54,37 @@ Translations stream token-by-token in real time. You can edit the candidate tran
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) ≥ 18
-- [Rust](https://rustup.rs/) ≥ 1.77
+- [Node.js](https://nodejs.org/) ≥ 18 (20 LTS recommended)
+- [Rust](https://rust-lang.org/tools/install/) ≥ 1.77.2
 - System libraries for Tauri (Linux only):
   ```bash
-  sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libsecret-1-dev
+  sudo apt update
+  sudo apt install -y libwebkit2gtk-4.1-dev build-essential curl wget file \
+    libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev \
+    libgtk-3-dev libsecret-1-dev
   ```
+
+### Install Rust
+
+Linux, macOS, or WSL:
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source "$HOME/.cargo/env"
+rustc --version
+cargo --version
+```
+
+Windows:
+
+1. Install Microsoft Visual Studio C++ Build Tools with **Desktop development with C++**.
+2. Install Rust with `winget install --id Rustlang.Rustup` or download `rustup-init.exe` from [rust-lang.org/tools/install](https://rust-lang.org/tools/install/).
+3. Use the MSVC toolchain:
+   ```powershell
+   rustup default stable-msvc
+   rustc --version
+   cargo --version
+   ```
 
 ### Install & run
 
@@ -78,6 +103,16 @@ npm run tauri:build
 
 Outputs `.deb`, `.rpm`, and `.AppImage` on Linux; `.dmg` on macOS; `.msi` on Windows.  
 Bundles are in `src-tauri/target/release/bundle/`.
+
+### Development checks
+
+```bash
+npm run lint
+npm test
+npm run build
+cd src-tauri
+cargo test
+```
 
 ### Verify release downloads
 
@@ -143,22 +178,22 @@ In the center panel (**Production Stream**):
 2. Click **"Stage Content to Stream"** to segment the text
 3. Click **"Begin Pipeline"** — tokens stream in real time for each stage
 4. Review the candidate translation, edit it manually if needed
-5. The AI Judge automatically scores the result
+5. The AI Judge automatically rates the result
 
 ### 3. Review the audit
 
 In the right panel (**Audit Logs**):
 
-- **Composite score** (0–100) across all chunks
+- **Composite quality rating** across all completed chunks
 - **Issues** categorized by type (glossary, fluency, accuracy, grammar) and severity
 - **Suggested fixes** for each issue
-- Click **"Re-Evaluate Drafts"** after manual edits to get an updated score
+- Click **"Re-Evaluate Drafts"** after manual edits to get an updated quality rating
 
 ### 4. Projects and files
 
 - **📂 Projects**: Save your entire pipeline config + translations. Reload anytime.
-- **⬆ Import**: Load `.txt` or `.md` files via native OS dialog
-- **⬇ Export**: Save as plain `.txt` (translation only) or bilingual `.md` (source + translation + audit)
+- **⬆ Import**: Load `.txt`, `.md`, `.docx`, or `.pdf` files via native OS dialog
+- **⬇ Export**: Save as `.txt`, `.md`, `.html`, `.docx`, or bilingual `.md` (source + translation + audit)
 - **💾 Save**: Persist the current project state to SQLite
 
 ## Architecture

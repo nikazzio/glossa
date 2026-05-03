@@ -20,12 +20,15 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
-import { type KeyboardEvent, useRef } from 'react';
+import { type KeyboardEvent, useMemo, useRef } from 'react';
 import { useUiStore } from '../../stores/uiStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
+import { usePricingStore } from '../../stores/pricingStore';
 import { indexPad, qualityLabelKey, qualityTone, calculateCompositeQuality } from '../../utils';
 import { MODEL_PRICING } from '../../constants';
+import { estimatePipelineCost } from '../../utils/costEstimate';
+import { formatCost } from '../pipeline/CostBadge';
 import type { TranslationChunk } from '../../types';
 
 interface InsightsDrawerProps {
@@ -400,6 +403,11 @@ interface StatsTabProps {
 function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
   const { t } = useTranslation();
   const config = usePipelineStore((state) => state.config);
+  const pricingOverrides = usePricingStore((s) => s.overrides);
+  const costEstimate = useMemo(
+    () => estimatePipelineCost(chunks, config, pricingOverrides),
+    [chunks, config, pricingOverrides],
+  );
 
   // Documento
   const sourceWords = chunks.reduce((acc, chunk) => acc + countWords(chunk.originalText), 0);
@@ -562,21 +570,31 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
         <dl className="space-y-2">
           <StatRow
             label={t('header.tokenCount')}
-            value={totalTokens > 0 ? totalTokens.toLocaleString() : '—'}
+            value={totalTokens > 0 ? totalTokens.toLocaleString() : (() => {
+              const est = [
+                ...costEstimate.stages,
+                ...(costEstimate.judge ? [costEstimate.judge] : []),
+              ].reduce((s, r) => s + r.inputTokens + r.outputTokens, 0);
+              return est > 0 ? `~${est.toLocaleString()}` : '—';
+            })()}
           />
-          {totalTokens > 0 && (
-            <>
-              <div className="flex items-baseline gap-1 pl-3">
-                <dt className="text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted/60">in</dt>
-                <dd className="font-display text-sm italic text-editorial-muted">{totalInput.toLocaleString()}</dd>
-                <dt className="ml-2 text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted/60">out</dt>
-                <dd className="font-display text-sm italic text-editorial-muted">{totalOutput.toLocaleString()}</dd>
-              </div>
-            </>
-          )}
+          {totalTokens > 0 ? (
+            <div className="flex items-baseline gap-1 pl-3">
+              <dt className="text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted/60">in</dt>
+              <dd className="font-display text-sm italic text-editorial-muted">{totalInput.toLocaleString()}</dd>
+              <dt className="ml-2 text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted/60">out</dt>
+              <dd className="font-display text-sm italic text-editorial-muted">{totalOutput.toLocaleString()}</dd>
+            </div>
+          ) : null}
           <StatRow
             label={t('header.estimatedCost')}
-            value={totalTokens > 0 ? `$${estimatedCostUsd.toFixed(4)}` : '—'}
+            value={totalTokens > 0
+              ? `$${estimatedCostUsd.toFixed(4)}`
+              : costEstimate.isFree
+                ? t('cost.free')
+                : costEstimate.totalUsd === null
+                  ? t('cost.unknown')
+                  : `~${formatCost(costEstimate.totalUsd)}`}
           />
         </dl>
         {modelNames.size > 0 && (

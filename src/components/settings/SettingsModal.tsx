@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { X, AlertCircle, Server, RefreshCw, CheckCircle2, XCircle, HelpCircle, Sparkles, Columns2, BookOpen } from 'lucide-react';
+import { X, AlertCircle, Server, RefreshCw, CheckCircle2, XCircle, HelpCircle, Sparkles, Columns2, BookOpen, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -7,6 +7,9 @@ import { useUiStore } from '../../stores/uiStore';
 import { ApiKeyInput } from './ApiKeyInput';
 import { ollamaService } from '../../services/llmService';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { MODEL_CATALOG } from '../../models/catalog';
+import { MODEL_PRICING } from '../../constants';
+import { usePricingStore } from '../../stores/pricingStore';
 
 export function SettingsModal() {
   const {
@@ -21,7 +24,9 @@ export function SettingsModal() {
   } = useUiStore();
   const { t } = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
+  const [showPricingOverrides, setShowPricingOverrides] = useState(false);
   const trapRef = useFocusTrap(showSettings, () => setShowSettings(false));
+  const { overrides, setOverride, resetOverride, resetAll } = usePricingStore();
 
   const refreshOllama = async () => {
     setRefreshing(true);
@@ -169,6 +174,94 @@ export function SettingsModal() {
                     </p>
                   )}
                 </div>
+              </div>
+
+              {/* Pricing Overrides */}
+              <div className="space-y-4">
+                <button
+                  type="button"
+                  onClick={() => setShowPricingOverrides(!showPricingOverrides)}
+                  className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  aria-expanded={showPricingOverrides}
+                >
+                  {showPricingOverrides ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                  {t('cost.pricingOverrides')}
+                </button>
+                {showPricingOverrides && (
+                  <div className="space-y-3">
+                    <p className="text-[10px] text-editorial-muted italic">{t('cost.overrideHint')}</p>
+                    <div className="border border-editorial-border overflow-x-auto">
+                      <table className="w-full text-[11px] font-mono">
+                        <thead>
+                          <tr className="border-b border-editorial-border bg-editorial-textbox/30">
+                            <th className="text-left px-3 py-2 font-bold uppercase tracking-widest text-editorial-muted">Model</th>
+                            <th className="text-right px-3 py-2 font-bold uppercase tracking-widest text-editorial-muted">Input $/1M</th>
+                            <th className="text-right px-3 py-2 font-bold uppercase tracking-widest text-editorial-muted">Output $/1M</th>
+                            <th className="px-3 py-2" />
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {MODEL_CATALOG.filter((e) => e.pricing).map((entry) => {
+                            const key = `${entry.provider}/${entry.id}`;
+                            const current = overrides[key] ?? MODEL_PRICING[key] ?? entry.pricing!;
+                            const isOverridden = !!overrides[key];
+                            return (
+                              <tr key={key} className="border-t border-editorial-border/40 hover:bg-editorial-textbox/20">
+                                <td className="px-3 py-2">
+                                  <span className={isOverridden ? 'text-editorial-ink font-bold' : 'text-editorial-muted'}>
+                                    {entry.provider}/{entry.id}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-2 text-right">
+                                  <input
+                                    type="number"
+                                    step="0.001"
+                                    min="0"
+                                    value={current.input}
+                                    onChange={(e) => setOverride(key, { ...current, input: parseFloat(e.target.value) || 0 })}
+                                    className="w-20 bg-editorial-textbox/60 border border-editorial-border/60 px-2 py-1 text-right outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                                  />
+                                </td>
+                                <td className="px-3 py-2 text-right">
+                                  <input
+                                    type="number"
+                                    step="0.001"
+                                    min="0"
+                                    value={current.output}
+                                    onChange={(e) => setOverride(key, { ...current, output: parseFloat(e.target.value) || 0 })}
+                                    className="w-20 bg-editorial-textbox/60 border border-editorial-border/60 px-2 py-1 text-right outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                                  />
+                                </td>
+                                <td className="px-3 py-2 text-center">
+                                  {isOverridden && (
+                                    <button
+                                      type="button"
+                                      onClick={() => resetOverride(key)}
+                                      className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none"
+                                    >
+                                      {t('cost.resetOverride')}
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                    {Object.keys(overrides).length > 0 && (
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={resetAll}
+                          className="text-[10px] font-bold uppercase tracking-widest text-editorial-accent hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                        >
+                          {t('cost.resetAll')}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="p-8 border border-editorial-border bg-editorial-textbox/20 flex gap-4 items-start">

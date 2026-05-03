@@ -4,11 +4,15 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { ModelProvider } from '../../types';
 import { MODEL_OPTIONS, LANGUAGES } from '../../constants';
+import { getModelStatus } from '../../models/catalog';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
 import { confirm } from '../../stores/confirmStore';
 import { StageCard } from './StageCard';
+import { CostBadge } from './CostBadge';
+import { estimatePipelineCost } from '../../utils/costEstimate';
+import { usePricingStore } from '../../stores/pricingStore';
 import { llmService } from '../../services/llmService';
 import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
 
@@ -125,6 +129,12 @@ export function PipelineConfig({
 
   const judgeOllamaOffline =
     config.judgeProvider === 'ollama' && ollamaStatus === 'disconnected';
+
+  const pricingOverrides = usePricingStore((s) => s.overrides);
+  const costEstimate = useMemo(
+    () => estimatePipelineCost(chunks, config, pricingOverrides),
+    [chunks, config, pricingOverrides],
+  );
 
   const duplicateTermIds = useMemo(() => {
     const seen = new Map<string, string>();
@@ -306,7 +316,9 @@ export function PipelineConfig({
                     className="flex-1 bg-editorial-textbox/60 rounded border border-editorial-border/60 px-2 py-1.5 text-[11px] font-mono outline-none"
                   >
                     {judgeModels.map((m) => (
-                      <option key={m} value={m}>{m}</option>
+                      <option key={m} value={m}>
+                        {m}{getModelStatus(config.judgeProvider, m) === 'preview' ? ' (preview)' : ''}
+                      </option>
                     ))}
                   </select>
                 ) : config.judgeProvider === 'ollama' ? (
@@ -323,7 +335,9 @@ export function PipelineConfig({
                     className="flex-1 bg-editorial-textbox/60 rounded border border-editorial-border/60 px-2 py-1.5 text-[11px] font-mono outline-none"
                   >
                     {MODEL_OPTIONS[config.judgeProvider]?.map((m) => (
-                      <option key={m} value={m}>{m}</option>
+                      <option key={m} value={m}>
+                        {m}{getModelStatus(config.judgeProvider, m) === 'preview' ? ' (preview)' : ''}
+                      </option>
                     ))}
                   </select>
                 )}
@@ -549,6 +563,7 @@ export function PipelineConfig({
 
       {showActions && (
         <div className="mt-10 flex flex-col gap-3 shrink-0">
+          <CostBadge estimate={costEstimate} />
           <button
             type="button"
             onClick={onRunPipeline}
