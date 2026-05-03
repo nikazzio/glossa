@@ -17,7 +17,7 @@ export function CostBadge({ estimate }: CostBadgeProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
-  if (estimate.stages.length === 0) return null;
+  if (estimate.stages.length === 0 && estimate.judge === null) return null;
 
   const label = estimate.isFree
     ? t('cost.free')

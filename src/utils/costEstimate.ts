@@ -20,7 +20,7 @@ export interface StageCostEstimate {
 export interface PipelineCostEstimate {
   stages: StageCostEstimate[];
   judge: StageCostEstimate | null;
-  totalUsd: number | null; // null if any stage has unknown pricing; number if all known
+  totalUsd: number | null; // null if any stage has unknown pricing; 0 for fully free pipelines
   isFree: boolean; // true if all stages + judge are free (all ollama)
 }
 
@@ -29,13 +29,14 @@ function stageEstimate(
   stageName: string,
   provider: string,
   model: string,
-  docTokens: number,
+  inputDocTokens: number,
   promptTokens: number,
+  outputDocTokens: number,
   outputRatio: number,
   pricingOverrides: Record<string, { input: number; output: number }>,
 ): StageCostEstimate {
-  const inputTokens = docTokens + promptTokens;
-  const outputTokens = Math.ceil(docTokens * outputRatio);
+  const inputTokens = inputDocTokens + promptTokens;
+  const outputTokens = Math.ceil(outputDocTokens * outputRatio);
   const key = `${provider}/${model}`;
   const pricing = pricingOverrides[key] ?? MODEL_PRICING[key];
   const costUsd =
@@ -63,12 +64,32 @@ export function estimatePipelineCost(
 
   const stageEstimates = enabledStages.map((stage) => {
     const promptTokens = estimateTokens(stage.prompt);
-    return stageEstimate(stage.id, stage.name, stage.provider, stage.model, docTokens, promptTokens, 1.1, pricingOverrides);
+    return stageEstimate(
+      stage.id,
+      stage.name,
+      stage.provider,
+      stage.model,
+      docTokens,
+      promptTokens,
+      docTokens,
+      1.1,
+      pricingOverrides,
+    );
   });
 
   const judgeEstimate =
     config.judgeModel && config.judgeProvider
-      ? stageEstimate('judge', 'Audit Guard', config.judgeProvider, config.judgeModel, docTokens * 2, estimateTokens(config.judgePrompt), 0.3, pricingOverrides)
+      ? stageEstimate(
+          'judge',
+          'Audit Guard',
+          config.judgeProvider,
+          config.judgeModel,
+          docTokens * 2,
+          estimateTokens(config.judgePrompt),
+          docTokens,
+          0.3,
+          pricingOverrides,
+        )
       : null;
 
   const allEstimates = judgeEstimate ? [...stageEstimates, judgeEstimate] : stageEstimates;
@@ -78,7 +99,7 @@ export function estimatePipelineCost(
   // If any non-free stage has null cost (unknown pricing), totalUsd is null
   const hasUnknown = allEstimates.some((e) => e.provider !== 'ollama' && e.costUsd === null);
   const totalUsd = isFree
-    ? null
+    ? 0
     : hasUnknown
       ? null
       : allEstimates.reduce((sum, e) => sum + (e.costUsd ?? 0), 0);

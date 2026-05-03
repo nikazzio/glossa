@@ -28,21 +28,23 @@ export const MODEL_CATALOG: ModelEntry[] = [
   { id: 'deepseek-reasoner',             provider: 'deepseek',  status: 'stable',  pricing: { input: 0.55,  output: 2.19  } },
 ];
 
-export function getModelEntry(provider: string, modelId: string): ModelEntry | undefined {
+export function getModelEntry(provider: ModelProvider, modelId: string): ModelEntry | undefined {
   return MODEL_CATALOG.find((e) => e.provider === provider && e.id === modelId);
 }
 
-export function getModelStatus(provider: string, modelId: string): ModelStatus | undefined {
+export function getModelStatus(provider: ModelProvider, modelId: string): ModelStatus | undefined {
   return getModelEntry(provider, modelId)?.status;
 }
 
 /** Returns model IDs that are in MODEL_OPTIONS but lack a pricing entry (excluding ollama). */
-export function getMissingPricingModels(modelOptions: Record<string, string[]>): string[] {
+export function getMissingPricingModels(
+  modelOptions: Partial<Record<ModelProvider, string[]>>,
+): string[] {
   const missing: string[] = [];
   for (const [provider, models] of Object.entries(modelOptions)) {
     if (provider === 'ollama') continue;
-    for (const modelId of models) {
-      const entry = getModelEntry(provider, modelId);
+    for (const modelId of models ?? []) {
+      const entry = getModelEntry(provider as ModelProvider, modelId);
       if (!entry || !entry.pricing) {
         missing.push(`${provider}/${modelId}`);
       }

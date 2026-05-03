@@ -44,7 +44,7 @@ describe('estimatePipelineCost', () => {
     };
     const result = estimatePipelineCost([{ originalText: 'Hello world' }], ollamaConfig);
     expect(result.isFree).toBe(true);
-    expect(result.totalUsd).toBeNull();
+    expect(result.totalUsd).toBe(0);
   });
 
   it('returns null totalUsd if any stage has unknown pricing', () => {
@@ -56,5 +56,14 @@ describe('estimatePipelineCost', () => {
     };
     const result = estimatePipelineCost([{ originalText: 'Hello world' }], unknownConfig);
     expect(result.totalUsd).toBeNull();
+  });
+
+  it('keeps judge output estimate based on the original document size', () => {
+    const chunks = [{ originalText: 'one two three four five six seven eight nine ten' }];
+    const docTokens = estimateTokens(chunks[0].originalText);
+    const result = estimatePipelineCost(chunks, baseConfig);
+
+    expect(result.judge?.inputTokens).toBe(docTokens * 2 + estimateTokens(baseConfig.judgePrompt));
+    expect(result.judge?.outputTokens).toBe(Math.ceil(docTokens * 0.3));
   });
 });
