@@ -151,7 +151,7 @@
     "title": "Configurazione / Chiavi API",
     "providerConfig": "Configurazione Provider",
     "securityAdvisory": "Avviso di Sicurezza",
-    "securityMessage": "Le chiavi API sono conservate in modo sicuro nel portachiavi del sistema operativo. Non lasciano mai il tuo dispositivo. Ollama gira interamente sulla tua macchina — nessun dato viene inviato a server esterni.",
+    "securityMessage": "Le chiavi API vengono salvate nel portachiavi del sistema operativo quando disponibile. Se il portachiavi non è accessibile, Glossa usa un file locale cifrato protetto da una chiave locale alla macchina; è una soluzione meno sicura del portachiavi OS. Le chiavi non lasciano mai il tuo dispositivo. Ollama gira interamente sulla tua macchina — nessun dato viene inviato a server esterni.",
     "secretsPanel": "Pannello segreti",
     "saveClose": "Salva e Chiudi",
     "close": "Chiudi",
@@ -159,11 +159,12 @@
     "pasteApiKey": "Incolla chiave API...",
     "save": "Salva",
     "cancel": "Annulla",
-    "removeFromKeychain": "Rimuovi dal portachiavi",
+    "removeFromKeychain": "Rimuovi chiave salvata",
     "keySaved": "Chiave {{provider}} salvata nel portachiavi",
     "keySaveFailed": "Salvataggio chiave {{provider}} fallito",
     "keyDeleted": "Chiave {{provider}} rimossa dal portachiavi",
-    "keyDeleteFailed": "Rimozione chiave {{provider}} fallita"
+    "keyDeleteFailed": "Rimozione chiave {{provider}} fallita",
+    "keySavedFallback": "Chiave {{provider}} salvata nel fallback locale cifrato. È meno sicuro del portachiavi OS."
   },
   "ollama": {
     "title": "Ollama (Modelli Locali)",

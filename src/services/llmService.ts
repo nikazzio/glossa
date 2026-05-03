@@ -127,12 +127,14 @@ export const ollamaService = {
   },
 };
 
+export type ApiKeyStorage = 'keychain' | 'file';
+
 /**
- * Settings service for API key management via OS Keychain.
+ * Settings service for API key management via OS keychain with local-file fallback.
  */
 export const settingsService = {
-  async saveApiKey(provider: string, key: string): Promise<void> {
-    return invoke('save_api_key', { provider, key });
+  async saveApiKey(provider: string, key: string): Promise<ApiKeyStorage> {
+    return invoke<ApiKeyStorage>('save_api_key', { provider, key });
   },
 
   async deleteApiKey(provider: string): Promise<void> {
