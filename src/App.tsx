@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useRef } from 'react';
 import { Header } from './components/layout';
 import { ErrorBoundary, ConfirmDialog } from './components/common';
 import { usePipeline } from './hooks/usePipeline';
@@ -27,13 +27,13 @@ const InsightsDrawer = lazy(() =>
   import('./components/document').then((m) => ({ default: m.InsightsDrawer })),
 );
 const SettingsModal = lazy(() =>
-  import('./components/settings').then((m) => ({ default: m.SettingsModal })),
+  import('./components/settings/SettingsModal').then((m) => ({ default: m.SettingsModal })),
 );
 const ProjectPanel = lazy(() =>
-  import('./components/projects').then((m) => ({ default: m.ProjectPanel })),
+  import('./components/projects/ProjectPanel').then((m) => ({ default: m.ProjectPanel })),
 );
 const LibraryPanel = lazy(() =>
-  import('./components/library').then((m) => ({ default: m.LibraryPanel })),
+  import('./components/library/LibraryPanel').then((m) => ({ default: m.LibraryPanel })),
 );
 
 export default function App() {
@@ -50,6 +50,14 @@ export default function App() {
   const showSettings = useUiStore((state) => state.showSettings);
   const showProjectPanel = useProjectStore((state) => state.showProjectPanel);
   const showLibraryPanel = useLibraryStore((state) => state.showLibraryPanel);
+
+  // Keep panels mounted once first opened so their AnimatePresence exit animations run
+  const settingsLoaded = useRef(false);
+  const projectPanelLoaded = useRef(false);
+  const libraryPanelLoaded = useRef(false);
+  if (showSettings) settingsLoaded.current = true;
+  if (showProjectPanel) projectPanelLoaded.current = true;
+  if (showLibraryPanel) libraryPanelLoaded.current = true;
 
   return (
     <ErrorBoundary>
@@ -101,17 +109,17 @@ export default function App() {
           </Suspense>
         )}
 
-        {showSettings && (
+        {settingsLoaded.current && (
           <Suspense fallback={null}>
             <SettingsModal />
           </Suspense>
         )}
-        {showProjectPanel && (
+        {projectPanelLoaded.current && (
           <Suspense fallback={null}>
             <ProjectPanel />
           </Suspense>
         )}
-        {showLibraryPanel && (
+        {libraryPanelLoaded.current && (
           <Suspense fallback={null}>
             <LibraryPanel />
           </Suspense>

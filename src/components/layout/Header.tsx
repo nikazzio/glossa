@@ -21,7 +21,7 @@ import {
   Square,
   Upload,
 } from 'lucide-react';
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { usePipelineStore } from '../../stores/pipelineStore';
@@ -32,13 +32,13 @@ import { useLibraryStore } from '../../stores/libraryStore';
 import { importTextFile, exportTranslation, exportBilingual } from '../../services/fileService';
 
 const ImportPreviewDialog = lazy(() =>
-  import('../document').then((m) => ({ default: m.ImportPreviewDialog })),
+  import('../document/ImportPreviewDialog').then((m) => ({ default: m.ImportPreviewDialog })),
 );
 const SaveProjectDialog = lazy(() =>
-  import('../projects').then((m) => ({ default: m.SaveProjectDialog })),
+  import('../projects/SaveProjectDialog').then((m) => ({ default: m.SaveProjectDialog })),
 );
 const HelpGuide = lazy(() =>
-  import('../help').then((m) => ({ default: m.HelpGuide })),
+  import('../help/HelpGuide').then((m) => ({ default: m.HelpGuide })),
 );
 
 interface PendingImport {
@@ -79,6 +79,12 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
   const [showSaveProjectDialog, setShowSaveProjectDialog] = useState(false);
   const [isCreatingProjectFromSave, setIsCreatingProjectFromSave] = useState(false);
+
+  // Keep dialogs mounted after first open so their AnimatePresence exit animations run
+  const helpLoaded = useRef(false);
+  const saveDialogLoaded = useRef(false);
+  if (showHelp) helpLoaded.current = true;
+  if (showSaveProjectDialog) saveDialogLoaded.current = true;
 
   const currentProject = projects.find((project) => project.id === currentProjectId);
 
@@ -396,12 +402,12 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
           />
         )}
       </Suspense>
-      {showHelp && (
+      {helpLoaded.current && (
         <Suspense fallback={null}>
           <HelpGuide open={showHelp} onClose={() => setShowHelp(false)} />
         </Suspense>
       )}
-      {showSaveProjectDialog && (
+      {saveDialogLoaded.current && (
         <Suspense fallback={null}>
           <SaveProjectDialog
             open={showSaveProjectDialog}

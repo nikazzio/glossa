@@ -31,7 +31,7 @@ export default defineConfig(() => {
             ) {
               return 'vendor-react';
             }
-            if (id.includes('motion')) return 'vendor-motion';
+            if (id.includes('/node_modules/motion/')) return 'vendor-motion';
             if (id.includes('lucide-react')) return 'vendor-icons';
             if (id.includes('@tauri-apps')) return 'vendor-tauri';
             return 'vendor';
