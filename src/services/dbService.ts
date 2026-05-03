@@ -217,10 +217,10 @@ export async function select<T>(query: string, params: unknown[] = []): Promise<
   return conn.select<T[]>(query, params);
 }
 
-// Executes fn inside a real SQLite transaction (BEGIN / COMMIT / ROLLBACK).
+// Executes fn inside a best-effort SQLite transaction (BEGIN / COMMIT / ROLLBACK).
 // All statements run inside serializeWrite so no concurrent JS writes can
-// interleave. BEGIN / COMMIT are issued on the same db singleton and are
-// therefore guaranteed to hit the same underlying connection.
+// interleave. This improves atomicity if the plugin routes these statements
+// through the same underlying SQLite connection.
 export async function runInTransaction<T>(
   fn: (executeTx: (query: string, params?: unknown[]) => Promise<void>) => Promise<T>,
 ): Promise<T> {
@@ -234,13 +234,16 @@ export async function runInTransaction<T>(
       const result = await fn(run);
       await conn.execute('COMMIT');
       return result;
-    } catch (err) {
+    } catch (error) {
       try {
         await conn.execute('ROLLBACK');
-      } catch {
-        console.warn('[Glossa] ROLLBACK failed after transaction error');
+      } catch (rollbackError) {
+        console.warn('[Glossa] ROLLBACK failed after transaction error', {
+          error,
+          rollbackError,
+        });
       }
-      throw err;
+      throw error;
     }
   });
 }

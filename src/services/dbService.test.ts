@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi, afterEach } from 'vitest';
 
 const dbState = vi.hoisted(() => {
+  let failRollback = false;
   const columnsByTable = new Map<string, string[]>([
     ['pipeline_configs', ['id', 'project_id', 'stages', 'judge_prompt', 'judge_model', 'judge_provider', 'use_chunking']],
     ['translations', ['id', 'project_id', 'original_text', 'final_translation', 'stage_results', 'judge_issues', 'created_at']],
@@ -8,6 +9,9 @@ const dbState = vi.hoisted(() => {
   ]);
 
   const execute = vi.fn(async (query: string) => {
+    if (query.trim() === 'ROLLBACK' && failRollback) {
+      throw new Error('rollback failed');
+    }
     const alterMatch = query.match(/^ALTER TABLE (\w+) ADD COLUMN (\w+) /);
     if (alterMatch) {
       const [, table, column] = alterMatch;
@@ -25,6 +29,9 @@ const dbState = vi.hoisted(() => {
 
   return {
     columnsByTable,
+    setFailRollback: (value: boolean) => {
+      failRollback = value;
+    },
     db: { execute, select },
     load: vi.fn(async () => ({ execute, select })),
   };
@@ -40,6 +47,7 @@ describe('runInTransaction', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
+    dbState.setFailRollback(false);
   });
 
   it('wraps the callback with BEGIN and COMMIT on success', async () => {
@@ -69,6 +77,27 @@ describe('runInTransaction', () => {
     expect(calls[0]).toBe('BEGIN');
     expect(calls).toContain('ROLLBACK');
     expect(calls).not.toContain('COMMIT');
+  });
+
+  it('logs both errors if the rollback itself fails', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { runInTransaction } = await import('./dbService');
+    dbState.setFailRollback(true);
+
+    await expect(
+      runInTransaction(async (run) => {
+        await run('INSERT INTO foo VALUES ($1)', ['bar']);
+        throw new Error('simulated failure');
+      }),
+    ).rejects.toThrow('simulated failure');
+
+    expect(warn).toHaveBeenCalledWith(
+      '[Glossa] ROLLBACK failed after transaction error',
+      expect.objectContaining({
+        error: expect.any(Error),
+        rollbackError: expect.any(Error),
+      }),
+    );
   });
 });
 
