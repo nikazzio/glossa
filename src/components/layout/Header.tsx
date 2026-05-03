@@ -14,14 +14,12 @@ import {
   LayoutTemplate,
   LibraryBig,
   Loader2,
-  Play,
   Save,
   Settings,
   SlidersHorizontal,
-  Square,
   Upload,
 } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { usePipelineStore } from '../../stores/pipelineStore';
@@ -33,9 +31,6 @@ import { ImportPreviewDialog } from '../document';
 import { SaveProjectDialog } from '../projects';
 import { importTextFile, exportTranslation, exportBilingual } from '../../services/fileService';
 import { HelpGuide } from '../help';
-import { CostBadge } from '../pipeline/CostBadge';
-import { estimatePipelineCost } from '../../utils/costEstimate';
-import { usePricingStore } from '../../stores/pricingStore';
 
 interface PendingImport {
   fileName: string;
@@ -53,7 +48,7 @@ interface HeaderProps {
 
 export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
   const { config, setConfig } = usePipelineStore();
-  const { chunks, isProcessing, cancelRequested, loadDocument } = useChunksStore();
+  const { chunks, isProcessing, loadDocument } = useChunksStore();
   const {
     setShowSettings,
     setShowHelp,
@@ -71,11 +66,6 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
     saveState,
   } = useProjectStore();
   const setShowLibraryPanel = useLibraryStore((state) => state.setShowLibraryPanel);
-  const pricingOverrides = usePricingStore((s) => s.overrides);
-  const costEstimate = useMemo(
-    () => estimatePipelineCost(chunks, config, pricingOverrides),
-    [chunks, config, pricingOverrides],
-  );
   const { t, i18n } = useTranslation();
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
   const [showSaveProjectDialog, setShowSaveProjectDialog] = useState(false);
@@ -190,10 +180,6 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
             ? t('projects.statusSaved')
             : t('projects.statusDraft');
 
-  const runLabel = t('pipeline.beginPipeline');
-  const stopLabel = t('pipeline.stopPipeline');
-  const stoppingLabel = t('pipeline.stopping');
-
   return (
     <header className="border-b border-editorial-border bg-[linear-gradient(180deg,#fffdf8_0%,#f8f3ea_100%)] px-6 py-5 md:px-10">
       <div className="flex flex-col gap-5">
@@ -251,49 +237,6 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
                   )}
                 </div>
               </ActionCluster>
-            )}
-
-            {/* Pulsante Run/Stop pipeline – visibile solo in modalità documento */}
-            {viewMode === 'document' && onRunPipeline && onCancelPipeline && (
-              isProcessing ? (
-                cancelRequested ? (
-                  <button
-                    type="button"
-                    disabled
-                    title={stoppingLabel}
-                    aria-label={stoppingLabel}
-                    className="rounded-full border border-editorial-border p-3 text-editorial-muted opacity-50 focus:outline-none"
-                  >
-                    <Loader2 size={18} className="animate-spin" />
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={onCancelPipeline}
-                    title={stopLabel}
-                    aria-label={stopLabel}
-                    className="rounded-full border border-editorial-accent p-3 text-editorial-accent transition-colors hover:bg-editorial-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  >
-                    <Square size={16} fill="currentColor" />
-                  </button>
-                )
-              ) : (
-                <button
-                  type="button"
-                  onClick={onRunPipeline}
-                  title={runLabel}
-                  aria-label={runLabel}
-                  disabled={chunks.length === 0}
-                  className="rounded-full bg-editorial-ink p-3 text-white transition-colors hover:bg-editorial-ink/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
-                >
-                  <Play size={18} fill="currentColor" />
-                </button>
-              )
-            )}
-
-            {/* Cost estimate badge – visibile in modalità documento con chunk */}
-            {viewMode === 'document' && chunks.length > 0 && (
-              <CostBadge estimate={costEstimate} />
             )}
 
             {/* Sandbox – solo icona */}
