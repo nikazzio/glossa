@@ -1,0 +1,5 @@
+[advisories]
+# rsa 0.9.10 - RUSTSEC-2023-0071 (Marvin Attack timing sidechannel)
+# Transitive dep via tauri-plugin-sql -> sqlx-mysql -> rsa.
+# No fixed version available upstream; ignored until sqlx or tauri-plugin-sql drops rsa.
+ignore = ["RUSTSEC-2023-0071"]
