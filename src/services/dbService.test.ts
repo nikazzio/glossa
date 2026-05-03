@@ -98,6 +98,7 @@ describe('runInTransaction', () => {
         rollbackError: expect.any(Error),
       }),
     );
+    warn.mockRestore();
   });
 });
 
