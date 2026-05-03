@@ -138,7 +138,7 @@ export function usePipeline() {
    */
   const runJudgeForChunk = async (
     chunk: TranslationChunk,
-    textToAudit: string,
+    textToAudit: string | undefined,
   ): Promise<ChunkOutcome> => {
     if (!textToAudit) return 'skipped';
     // We do NOT short-circuit on cancelRequested here — once we have a

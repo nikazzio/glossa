@@ -255,6 +255,66 @@ describe('projectService glossary persistence', () => {
     expect(dbMocks.runInTransaction).toHaveBeenCalledTimes(1);
   });
 
+  it('returns empty stages array when the stored stages column is corrupted JSON', async () => {
+    dbMocks.select
+      .mockResolvedValueOnce([
+        {
+          source_language: 'Latin',
+          target_language: 'English',
+          source_text: '',
+          stages: '{{not valid json}}',
+          judge_prompt: 'Judge',
+          judge_model: 'gemini-3-flash-preview',
+          judge_provider: 'gemini',
+          use_chunking: 1,
+          target_chunk_count: 0,
+          document_format: 'plain',
+          markdown_aware: 0,
+          experimental_import: null,
+          view_mode: null,
+        },
+      ])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+
+    const config = await getProjectConfig('proj-1');
+
+    expect(config).not.toBeNull();
+    expect(config?.stages).toEqual([]);
+  });
+
+  it('propagates the error from saveProjectState when a write fails mid-save', async () => {
+    let callCount = 0;
+    dbMocks.execute.mockImplementation(async (query: string) => {
+      callCount++;
+      // Fail on the second execute call to simulate a partial write
+      if (callCount === 2) throw new Error('disk full');
+    });
+
+    await expect(
+      saveProjectState({
+        projectId: 'proj-1',
+        inputText: 'Hello',
+        config: {
+          sourceLanguage: 'Latin',
+          targetLanguage: 'English',
+          stages: [],
+          judgePrompt: 'Judge',
+          judgeModel: 'gemini-3-flash-preview',
+          judgeProvider: 'gemini',
+          glossary: [],
+          useChunking: true,
+          targetChunkCount: 0,
+          documentFormat: 'plain',
+          markdownAware: false,
+          experimentalImport: null,
+        },
+        viewMode: 'document',
+        chunks: [],
+      }),
+    ).rejects.toThrow('disk full');
+  });
+
   it('loads translations ordered by explicit position before timestamps', async () => {
     dbMocks.select.mockResolvedValueOnce([]);
 

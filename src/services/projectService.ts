@@ -198,7 +198,7 @@ export async function getProjectConfig(projectId: string): Promise<{
     targetLanguage: row.target_language,
     inputText: row.source_text ?? '',
     viewMode: row.view_mode ?? null,
-    stages: JSON.parse(row.stages),
+    stages: parseJson<PipelineStageConfig[]>(row.stages, []),
     judgePrompt: row.judge_prompt,
     judgeModel: row.judge_model,
     judgeProvider: row.judge_provider,
