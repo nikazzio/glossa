@@ -217,20 +217,34 @@ export async function select<T>(query: string, params: unknown[] = []): Promise<
   return conn.select<T[]>(query, params);
 }
 
-// Il plugin @tauri-apps/plugin-sql usa un connection pool interno: BEGIN/COMMIT
-// eseguiti su connessioni diverse del pool non formano una vera transazione e
-// causano lock contention (busy_timeout da 5 s). Si serializzano invece tutte
-// le write tramite la coda JS, garantendo esecuzione ordinata senza lock espliciti,
-// ma non atomicità o rollback tra più statement.
+// Executes fn inside a best-effort SQLite transaction (BEGIN / COMMIT / ROLLBACK).
+// All statements run inside serializeWrite so no concurrent JS writes can
+// interleave. This improves atomicity if the plugin routes these statements
+// through the same underlying SQLite connection.
 export async function runInTransaction<T>(
   fn: (executeTx: (query: string, params?: unknown[]) => Promise<void>) => Promise<T>,
 ): Promise<T> {
   return serializeWrite(async () => {
     const conn = await getDb();
-    const run = async (query: string, params: unknown[] = []) => {
-      await conn.execute(query, params);
-    };
-    return fn(run);
+    await conn.execute('BEGIN');
+    try {
+      const run = async (query: string, params: unknown[] = []) => {
+        await conn.execute(query, params);
+      };
+      const result = await fn(run);
+      await conn.execute('COMMIT');
+      return result;
+    } catch (error) {
+      try {
+        await conn.execute('ROLLBACK');
+      } catch (rollbackError) {
+        console.warn('[Glossa] ROLLBACK failed after transaction error', {
+          error,
+          rollbackError,
+        });
+      }
+      throw error;
+    }
   });
 }
 
