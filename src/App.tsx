@@ -46,6 +46,7 @@ export default function App() {
   } = usePipeline();
   useProjectAutosave();
   const viewMode = useUiStore((state) => state.viewMode);
+  const showConfigDrawer = useUiStore((state) => state.showConfigDrawer);
   const showSettings = useUiStore((state) => state.showSettings);
   const showProjectPanel = useProjectStore((state) => state.showProjectPanel);
   const showLibraryPanel = useLibraryStore((state) => state.showLibraryPanel);
@@ -60,8 +61,8 @@ export default function App() {
           />
         </div>
 
-        <Suspense fallback={null}>
-          {viewMode === 'document' ? (
+        {viewMode === 'document' ? (
+          <Suspense fallback={null}>
             <main className="flex flex-1 min-h-0 overflow-hidden">
               <DocumentView
                 onRetranslateChunk={runSingleChunk}
@@ -69,7 +70,9 @@ export default function App() {
               />
               <InsightsDrawer onReauditChunk={auditSingleChunk} />
             </main>
-          ) : (
+          </Suspense>
+        ) : (
+          <Suspense fallback={null}>
             <main className="grid grid-cols-1 md:grid-cols-12 flex-1 min-h-0">
               <PipelineConfig
                 onRunPipeline={runPipeline}
@@ -85,16 +88,18 @@ export default function App() {
                 onReauditChunk={auditSingleChunk}
               />
             </main>
-          )}
+          </Suspense>
+        )}
 
-          {viewMode === 'document' && (
+        {showConfigDrawer && (
+          <Suspense fallback={null}>
             <ConfigDrawer
               onRunPipeline={runPipeline}
               onRunAuditOnly={runAuditOnly}
               onCancelPipeline={cancelPipeline}
             />
-          )}
-        </Suspense>
+          </Suspense>
+        )}
 
         {showSettings && (
           <Suspense fallback={null}>
