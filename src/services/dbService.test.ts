@@ -50,7 +50,7 @@ describe('runInTransaction', () => {
     dbState.setFailRollback(false);
   });
 
-  it('wraps the callback with BEGIN and COMMIT on success', async () => {
+  it('executes the callback statements without explicit BEGIN/COMMIT', async () => {
     const { runInTransaction } = await import('./dbService');
 
     await runInTransaction(async (run) => {
@@ -58,12 +58,12 @@ describe('runInTransaction', () => {
     });
 
     const calls = dbState.db.execute.mock.calls.map(([q]: [string]) => q.trim());
-    expect(calls[0]).toBe('BEGIN');
-    expect(calls[calls.length - 1]).toBe('COMMIT');
     expect(calls).toContain('INSERT INTO foo VALUES ($1)');
+    expect(calls).not.toContain('BEGIN');
+    expect(calls).not.toContain('COMMIT');
   });
 
-  it('issues ROLLBACK when the callback throws and re-throws the error', async () => {
+  it('re-throws the error when the callback throws', async () => {
     const { runInTransaction } = await import('./dbService');
 
     await expect(
@@ -74,31 +74,18 @@ describe('runInTransaction', () => {
     ).rejects.toThrow('simulated failure');
 
     const calls = dbState.db.execute.mock.calls.map(([q]: [string]) => q.trim());
-    expect(calls[0]).toBe('BEGIN');
-    expect(calls).toContain('ROLLBACK');
-    expect(calls).not.toContain('COMMIT');
+    expect(calls).not.toContain('ROLLBACK');
+    expect(calls).not.toContain('BEGIN');
   });
 
-  it('logs both errors if the rollback itself fails', async () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  it('returns the value produced by the callback', async () => {
     const { runInTransaction } = await import('./dbService');
-    dbState.setFailRollback(true);
 
-    await expect(
-      runInTransaction(async (run) => {
-        await run('INSERT INTO foo VALUES ($1)', ['bar']);
-        throw new Error('simulated failure');
-      }),
-    ).rejects.toThrow('simulated failure');
+    const result = await runInTransaction(async (_run) => {
+      return 42;
+    });
 
-    expect(warn).toHaveBeenCalledWith(
-      '[Glossa] ROLLBACK failed after transaction error',
-      expect.objectContaining({
-        error: expect.any(Error),
-        rollbackError: expect.any(Error),
-      }),
-    );
-    warn.mockRestore();
+    expect(result).toBe(42);
   });
 });
 

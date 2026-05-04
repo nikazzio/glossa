@@ -6,22 +6,27 @@ export const DEFAULT_STAGES: PipelineStageConfig[] = [
     id: 'stg-draft',
     name: 'Initial Pass',
     prompt: 'Perform an initial translation pass. Focus on literal meaning and linguistic accuracy.',
-    model: 'gemini-3-flash-preview',
-    provider: 'gemini',
+    model: 'gpt-4o-mini',
+    provider: 'openai',
     enabled: true,
+    rollingContext: true,
   },
   {
     id: 'stg-style',
     name: 'Refinement',
     prompt: 'Rewrite the translation to sound more natural, fluent, and professional. Match the intended tone.',
-    model: 'gemini-3-flash-preview',
-    provider: 'gemini',
+    model: 'gpt-4o-mini',
+    provider: 'openai',
     enabled: true,
+    rollingContext: true,
   },
 ];
 
 export const DEFAULT_JUDGE_PROMPT =
   'Audit the final translation for technical accuracy, glossary adherence, and natural tone.';
+
+export const DEFAULT_COHERENCE_PROMPT =
+  'Check for terminology consistency, narrative continuity, and glossary adherence across segment boundaries.';
 
 export const MODEL_OPTIONS: Record<ModelProvider, string[]> = {
   gemini: ['gemini-3-flash-preview', 'gemini-3.1-pro-preview', 'gemini-2.5-flash-lite-preview'],

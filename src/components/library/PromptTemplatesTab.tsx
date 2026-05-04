@@ -23,10 +23,12 @@ export function PromptTemplatesTab() {
   const [isRefining, setIsRefining] = useState(false);
 
   const firstActiveStage = config.stages.find((s) => s.enabled);
-  const defaultProvider: ModelProvider = (firstActiveStage?.provider as ModelProvider) ?? 'gemini';
-  const defaultModel = firstActiveStage?.model ?? (MODEL_OPTIONS[defaultProvider]?.[0] ?? '');
-  const [refineProvider, setRefineProvider] = useState<ModelProvider>(defaultProvider);
-  const [refineModel, setRefineModel] = useState<string>(defaultModel);
+  const stageDefaultProvider: ModelProvider = (firstActiveStage?.provider as ModelProvider) ?? 'gemini';
+  const stageDefaultModel = firstActiveStage?.model ?? (MODEL_OPTIONS[stageDefaultProvider]?.[0] ?? '');
+  const auditDefaultProvider: ModelProvider = config.judgeProvider;
+  const auditDefaultModel = config.judgeModel;
+  const [refineProvider, setRefineProvider] = useState<ModelProvider>(stageDefaultProvider);
+  const [refineModel, setRefineModel] = useState<string>(stageDefaultModel);
 
   const modelOptions = refineProvider === 'ollama' ? ollamaModels : (MODEL_OPTIONS[refineProvider] ?? []);
 
@@ -48,6 +50,16 @@ export function PromptTemplatesTab() {
     if (!isLoaded) loadTemplates();
   }, [isLoaded, loadTemplates]);
 
+  useEffect(() => {
+    if (newContext === 'audit') {
+      setRefineProvider(auditDefaultProvider);
+      setRefineModel(auditDefaultModel);
+      return;
+    }
+    setRefineProvider(stageDefaultProvider);
+    setRefineModel(stageDefaultModel);
+  }, [newContext, auditDefaultProvider, auditDefaultModel, stageDefaultProvider, stageDefaultModel]);
+
   const filtered = templates.filter(
     (t) => filterContext === 'all' || t.context === filterContext,
   );
@@ -55,7 +67,7 @@ export function PromptTemplatesTab() {
   const handleSave = async () => {
     if (!newName.trim() || !newPrompt.trim()) return;
     try {
-      await saveTemplate(newName.trim(), newPrompt.trim(), newContext);
+      await saveTemplate(newName.trim(), newPrompt.trim(), newContext, refineModel, refineProvider);
       toast.success(t('pipeline.templates.saved'));
       setNewName('');
       setNewPrompt('');
@@ -127,6 +139,11 @@ export function PromptTemplatesTab() {
               <option value="audit">{t('pipeline.tabAudit')}</option>
             </select>
           </div>
+          <p className="text-[10px] leading-relaxed text-editorial-muted/70">
+            {newContext === 'audit'
+              ? t('library.templateAuditHint')
+              : t('library.templateStageHint')}
+          </p>
           {/* Prompt + refine tools */}
           <div className="space-y-1.5">
             <div className="flex items-center gap-1.5">

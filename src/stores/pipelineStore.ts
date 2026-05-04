@@ -5,7 +5,7 @@ import type {
   ModelProvider,
   GlossaryEntry,
 } from '../types';
-import { DEFAULT_STAGES, DEFAULT_JUDGE_PROMPT } from '../constants';
+import { DEFAULT_STAGES, DEFAULT_JUDGE_PROMPT, DEFAULT_COHERENCE_PROMPT } from '../constants';
 import { generateId } from '../utils';
 import { getGlossaryEntries } from '../services/glossaryService';
 
@@ -33,15 +33,19 @@ export const usePipelineStore = create<PipelineState>((set) => ({
     targetLanguage: 'Italian',
     stages: DEFAULT_STAGES,
     judgePrompt: DEFAULT_JUDGE_PROMPT,
-    judgeModel: 'gemini-3-flash-preview',
-    judgeProvider: 'gemini',
+    judgeModel: 'gpt-4o-mini',
+    judgeProvider: 'openai',
     glossary: [],
     assignedGlossaryId: null,
     useChunking: true,
     targetChunkCount: 0,
+    minWords: 600,
+    maxWords: 1200,
+    headingAware: false,
     documentFormat: 'plain',
     markdownAware: false,
     experimentalImport: null,
+    coherencePrompt: DEFAULT_COHERENCE_PROMPT,
   },
 
   setInputText: (text) => set({ inputText: text }),
@@ -74,9 +78,10 @@ export const usePipelineStore = create<PipelineState>((set) => ({
             id: `stg-${Date.now()}`,
             name: 'New Stage',
             prompt: '',
-            model: 'gemini-3-flash-preview',
-            provider: 'gemini' as ModelProvider,
+            model: 'gpt-4o-mini',
+            provider: 'openai' as ModelProvider,
             enabled: true,
+            rollingContext: true,
           },
         ],
       },

@@ -53,6 +53,7 @@ pub struct PipelineConfig {
     pub glossary: Vec<GlossaryEntry>,
     pub use_chunking: Option<bool>,
     pub markdown_aware: Option<bool>,
+    pub coherence_prompt: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1266,11 +1267,36 @@ pub async fn check_ollama_status() -> Result<bool, String> {
 
 // ── Prompt builders ──────────────────────────────────────────────────
 
+/// Returns a slice of `text` starting from the `(word_count - n)`-th word,
+/// i.e. the trailing `n` words. Returns the full string if it has ≤ n words.
+fn last_n_words(text: &str, n: usize) -> &str {
+    if n == 0 {
+        return "";
+    }
+    let mut word_count = 0;
+    let mut in_word = false;
+    for (i, c) in text.char_indices().rev() {
+        if c.is_whitespace() {
+            if in_word {
+                word_count += 1;
+                if word_count >= n {
+                    return text[i + c.len_utf8()..].trim_start();
+                }
+                in_word = false;
+            }
+        } else {
+            in_word = true;
+        }
+    }
+    text.trim_start()
+}
+
 fn build_stage_prompts(
     text: &str,
     stage: &StageConfig,
     config: &PipelineConfig,
     previous_result: &Option<String>,
+    previous_translation: &Option<String>,
 ) -> (String, String) {
     let glossary_str: String = config
         .glossary
@@ -1310,12 +1336,24 @@ fn build_stage_prompts(
         markdown_rules,
     );
 
+    let context_block = match previous_translation {
+        Some(prev) if !prev.is_empty() => {
+            let tail = last_n_words(prev, 300);
+            format!(
+                "[Context from previous segment — do not translate, use only for stylistic and terminological coherence]\n\
+                 {tail}\n\
+                 [End of context]\n\n"
+            )
+        }
+        _ => String::new(),
+    };
+
     let user_prompt = match previous_result {
         Some(prev) if !prev.is_empty() => format!(
-            "Original: {text}\n\nPrevious Iteration: {prev}\n\n\
+            "{context_block}Original: {text}\n\nPrevious Iteration: {prev}\n\n\
              Refine the above translation according to your instructions. Provide ONLY the final text."
         ),
-        _ => format!("Text to translate: {text}\n\nProvide ONLY the translated text."),
+        _ => format!("{context_block}Text to translate: {text}\n\nProvide ONLY the translated text."),
     };
 
     (system_prompt, user_prompt)
@@ -1356,6 +1394,128 @@ fn build_judge_prompts(
     (system_prompt, user_prompt)
 }
 
+// ── Coherence audit ──────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CoherenceChunkInput {
+    pub original: String,
+    pub translation: String,
+    pub prev_context: Option<String>,
+    pub next_context: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CoherenceResponse {
+    pub issues: Vec<JudgeIssue>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub input_tokens: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub output_tokens: Option<u32>,
+}
+
+fn build_coherence_prompts(input: &CoherenceChunkInput, config: &PipelineConfig) -> (String, String) {
+    let glossary_json = serde_json::to_string(&config.glossary).unwrap_or_default();
+
+    let default_instructions = "Evaluate ONLY:\n\
+         1. Terminology consistency — key terms translated differently than in adjacent segments\n\
+         2. Narrative continuity — abrupt breaks in flow at segment boundaries\n\
+         3. Glossary adherence — glossary terms used inconsistently with context\n\
+         Do NOT re-evaluate standalone translation quality.";
+
+    let instructions = config
+        .coherence_prompt
+        .as_deref()
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or(default_instructions);
+
+    let system_prompt = format!(
+        "You are a translation coherence auditor for {src}→{tgt} translations.\n\
+         Your task: identify cross-segment inconsistencies between a translated segment and its surrounding context.\n\
+         {instructions}\n\
+         Glossary: {glossary}\n\n\
+         Respond with valid JSON only:\n\
+         {{\"issues\": [{{\"type\": \"consistency\"|\"glossary\", \
+         \"severity\": \"low\"|\"medium\"|\"high\", \
+         \"description\": \"string\", \"suggestedFix\": \"string\"}}]}}",
+        src = config.source_language,
+        tgt = config.target_language,
+        glossary = glossary_json,
+    );
+
+    let prev_block = input
+        .prev_context
+        .as_deref()
+        .filter(|s| !s.is_empty())
+        .map(|ctx| format!("[Previous segment — context only]\n{ctx}\n[End of previous context]\n\n"))
+        .unwrap_or_default();
+
+    let next_block = input
+        .next_context
+        .as_deref()
+        .filter(|s| !s.is_empty())
+        .map(|ctx| format!("\n[Next segment — context only]\n{ctx}\n[End of next context]"))
+        .unwrap_or_default();
+
+    let user_prompt = format!(
+        "{prev_block}[Current segment]\nOriginal: {original}\nTranslation: {translation}\n[End of current segment]{next_block}\n\n\
+         Identify cross-segment coherence issues and return the JSON. If no issues, return {{\"issues\": []}}.",
+        original = input.original,
+        translation = input.translation,
+    );
+
+    (system_prompt, user_prompt)
+}
+
+#[tauri::command]
+pub async fn run_coherence_for_chunk(
+    app: AppHandle,
+    input: CoherenceChunkInput,
+    config: PipelineConfig,
+) -> Result<CoherenceResponse, String> {
+    let api_key = get_api_key(&app, &config.judge_provider)?;
+    let client = build_http_client()?;
+    let (system_prompt, user_prompt) = build_coherence_prompts(&input, &config);
+
+    let (result_text, usage) = call_provider_for_judge(
+        &client,
+        &config.judge_provider,
+        &config.judge_model,
+        &system_prompt,
+        &user_prompt,
+        &api_key,
+    )
+    .await?;
+
+    let sanitized = sanitize_llm_json_output(&result_text);
+    let parsed: serde_json::Value = serde_json::from_str(sanitized).map_err(|e| {
+        format!("Failed to parse coherence JSON: {e}")
+    })?;
+
+    let issues: Vec<JudgeIssue> = parsed["issues"]
+        .as_array()
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| {
+                    Some(JudgeIssue {
+                        issue_type: v["type"].as_str()?.to_string(),
+                        severity: v["severity"].as_str()?.to_string(),
+                        description: v["description"].as_str()?.to_string(),
+                        suggested_fix: v["suggestedFix"].as_str().map(|s| s.to_string()),
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    Ok(CoherenceResponse {
+        issues,
+        input_tokens: usage.map(|(i, _)| i),
+        output_tokens: usage.map(|(_, o)| o),
+    })
+}
+
 /// Strips markdown code fences and any preamble text that LLMs sometimes wrap around JSON output.
 fn sanitize_llm_json_output(raw: &str) -> &str {
     let trimmed = raw.trim();
@@ -1389,11 +1549,12 @@ pub async fn run_stage(
     stage: StageConfig,
     config: PipelineConfig,
     previous_result: Option<String>,
+    previous_translation: Option<String>,
 ) -> Result<String, String> {
     let api_key = get_api_key(&app, &stage.provider)?;
     let client = build_http_client()?;
     let (system_prompt, user_prompt) =
-        build_stage_prompts(&text, &stage, &config, &previous_result);
+        build_stage_prompts(&text, &stage, &config, &previous_result, &previous_translation);
 
     call_provider(
         &client,
@@ -1415,12 +1576,13 @@ pub async fn run_stage_stream(
     stage: StageConfig,
     config: PipelineConfig,
     previous_result: Option<String>,
+    previous_translation: Option<String>,
     stream_id: String,
 ) -> Result<String, String> {
     let api_key = get_api_key(&app, &stage.provider)?;
     let client = build_http_client()?;
     let (system_prompt, user_prompt) =
-        build_stage_prompts(&text, &stage, &config, &previous_result);
+        build_stage_prompts(&text, &stage, &config, &previous_result, &previous_translation);
 
     let cancel = registry.register(&stream_id);
     let _guard = StreamGuard {
@@ -1630,6 +1792,7 @@ mod tests {
             }],
             use_chunking: Some(true),
             markdown_aware: None,
+            coherence_prompt: None,
         }
     }
 
@@ -1717,13 +1880,14 @@ mod tests {
     fn stage_prompt_without_previous() {
         let config = make_config();
         let stage = make_stage("gemini");
-        let (system, user) = build_stage_prompts("Hello world", &stage, &config, &None);
+        let (system, user) = build_stage_prompts("Hello world", &stage, &config, &None, &None);
 
         assert!(system.contains("English to Italian"));
         assert!(system.contains("Translate accurately."));
         assert!(system.contains("API -> API"));
         assert!(user.contains("Hello world"));
         assert!(!user.contains("Previous Iteration"));
+        assert!(!user.contains("Previous Chunk Translation Context"));
     }
 
     #[test]
@@ -1731,12 +1895,16 @@ mod tests {
         let config = make_config();
         let stage = make_stage("openai");
         let prev = Some("Ciao mondo".to_string());
-        let (system, user) = build_stage_prompts("Hello world", &stage, &config, &prev);
+        let previous_translation = Some("Traduzione chunk precedente".to_string());
+        let (system, user) =
+            build_stage_prompts("Hello world", &stage, &config, &prev, &previous_translation);
 
         assert!(system.contains("English to Italian"));
         assert!(user.contains("Hello world"));
         assert!(user.contains("Ciao mondo"));
         assert!(user.contains("Previous Iteration"));
+        assert!(user.contains("Context from previous segment"));
+        assert!(user.contains("Traduzione chunk precedente"));
     }
 
     #[test]
@@ -1744,7 +1912,7 @@ mod tests {
         let mut config = make_config();
         config.glossary = vec![];
         let stage = make_stage("gemini");
-        let (system, _) = build_stage_prompts("text", &stage, &config, &None);
+        let (system, _) = build_stage_prompts("text", &stage, &config, &None, &None);
 
         assert!(system.contains("No specific glossary entries"));
     }
@@ -1765,7 +1933,7 @@ mod tests {
             },
         ];
         let stage = make_stage("gemini");
-        let (system, _) = build_stage_prompts("text", &stage, &config, &None);
+        let (system, _) = build_stage_prompts("text", &stage, &config, &None, &None);
 
         assert!(system.contains("API -> API (tech)"));
         assert!(system.contains("bug -> errore ()"));
@@ -1776,7 +1944,8 @@ mod tests {
         let mut config = make_config();
         config.markdown_aware = Some(true);
         let stage = make_stage("gemini");
-        let (system, user) = build_stage_prompts("Text with note[^1].", &stage, &config, &None);
+        let (system, user) =
+            build_stage_prompts("Text with note[^1].", &stage, &config, &None, &None);
 
         assert!(system.contains("Markdown"));
         assert!(system.contains("Preserve every Markdown marker"));

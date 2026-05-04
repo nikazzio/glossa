@@ -10,14 +10,19 @@ import {
   ExternalLink,
   FileText,
   Gauge,
+  Link2,
   List,
   Loader2,
+  Merge,
   MessageCircle,
   PanelRight,
   RefreshCcw,
+  ScanLine,
+  Scissors,
   ShieldCheck,
   X,
 } from 'lucide-react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { type KeyboardEvent, useMemo, useRef } from 'react';
@@ -33,6 +38,7 @@ import type { TranslationChunk } from '../../types';
 
 interface InsightsDrawerProps {
   onReauditChunk: (chunkId: string) => void;
+  onRunCoherenceAudit: () => void;
 }
 
 const PANEL_WIDTH = 480;
@@ -59,7 +65,7 @@ const QUALITY_TONE_COLOR: Record<ReturnType<typeof qualityTone>, string> = {
   weak: 'text-editorial-accent',
 };
 
-export function InsightsDrawer({ onReauditChunk }: InsightsDrawerProps) {
+export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: InsightsDrawerProps) {
   const { t } = useTranslation();
   const tabButtonRefs = useRef<Record<InsightsTab, HTMLButtonElement | null>>({
     index: null,
@@ -75,6 +81,11 @@ export function InsightsDrawer({ onReauditChunk }: InsightsDrawerProps) {
   const focusIssueInChunk = useUiStore((state) => state.focusIssueInChunk);
   const chunks = useChunksStore((state) => state.chunks);
   const isProcessing = useChunksStore((state) => state.isProcessing);
+  const allChunksTranslated = chunks.length > 0 && chunks.every((c) => c.currentDraft?.trim());
+  const allChunksLocked = chunks.length > 0 && chunks.every((c) => c.translationLocked);
+  const unlockedChunksCount = chunks.filter((c) => c.currentDraft?.trim() && !c.translationLocked).length;
+  const splitChunk = useChunksStore((state) => state.splitChunk);
+  const mergeChunkWithNext = useChunksStore((state) => state.mergeChunkWithNext);
   const currentChunk =
     chunks.find((chunk) => chunk.id === selectedChunkId) ?? chunks[0] ?? null;
 
@@ -182,7 +193,7 @@ export function InsightsDrawer({ onReauditChunk }: InsightsDrawerProps) {
                 onClick={() => activateTab('index')}
                 onKeyDown={(event) => handleTabKeyDown('index', event)}
                 label={t('document.insightsTabIndex')}
-                icon={<List size={12} />}
+                icon={<List size={16} />}
                 controls={TAB_PANEL_IDS.index}
                 buttonRef={(element) => {
                   tabButtonRefs.current.index = element;
@@ -194,7 +205,7 @@ export function InsightsDrawer({ onReauditChunk }: InsightsDrawerProps) {
                 onClick={() => activateTab('stats')}
                 onKeyDown={(event) => handleTabKeyDown('stats', event)}
                 label={t('document.insightsTabStats')}
-                icon={<BarChart2 size={12} />}
+                icon={<BarChart2 size={16} />}
                 controls={TAB_PANEL_IDS.stats}
                 buttonRef={(element) => {
                   tabButtonRefs.current.stats = element;
@@ -206,7 +217,7 @@ export function InsightsDrawer({ onReauditChunk }: InsightsDrawerProps) {
                 onClick={() => activateTab('audit')}
                 onKeyDown={(event) => handleTabKeyDown('audit', event)}
                 label={t('document.insightsTabAudit')}
-                icon={<ShieldCheck size={12} />}
+                icon={<ShieldCheck size={16} />}
                 controls={TAB_PANEL_IDS.audit}
                 buttonRef={(element) => {
                   tabButtonRefs.current.audit = element;
@@ -221,7 +232,10 @@ export function InsightsDrawer({ onReauditChunk }: InsightsDrawerProps) {
                   labelledBy={TAB_BUTTON_IDS.index}
                   chunks={chunks}
                   currentChunkId={currentChunk?.id ?? null}
+                  isProcessing={isProcessing}
                   onSelect={(id) => setSelectedChunkId(id)}
+                  onSplit={splitChunk}
+                  onMerge={mergeChunkWithNext}
                 />
               ) : activeTab === 'stats' ? (
                 <StatsTab
@@ -235,9 +249,13 @@ export function InsightsDrawer({ onReauditChunk }: InsightsDrawerProps) {
                   labelledBy={TAB_BUTTON_IDS.audit}
                   currentChunk={currentChunk}
                   isProcessing={isProcessing}
+                  allChunksTranslated={allChunksTranslated}
+                  allChunksLocked={allChunksLocked}
+                  unlockedChunksCount={unlockedChunksCount}
                   onReauditChunk={onReauditChunk}
                   onSelectChunk={setSelectedChunkId}
                   onFocusIssue={focusIssueInChunk}
+                  onRunCoherenceAudit={onRunCoherenceAudit}
                 />
               )}
             </div>
@@ -281,14 +299,15 @@ function TabButton({
       onClick={onClick}
       onKeyDown={onKeyDown}
       ref={buttonRef}
-      className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+      title={label}
+      aria-label={label}
+      className={`rounded-full border p-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
         active
-          ? 'bg-editorial-ink text-white'
-          : 'text-editorial-muted hover:text-editorial-ink'
+          ? 'border-editorial-ink bg-editorial-ink text-white'
+          : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
       }`}
     >
       {icon}
-      {label}
     </button>
   );
 }
@@ -300,11 +319,31 @@ interface IndexTabProps {
   labelledBy: string;
   chunks: TranslationChunk[];
   currentChunkId: string | null;
+  isProcessing: boolean;
   onSelect: (id: string) => void;
+  onSplit: (chunkId: string) => void;
+  onMerge: (chunkId: string) => void;
 }
 
-function IndexTab({ panelId, labelledBy, chunks, currentChunkId, onSelect }: IndexTabProps) {
+function IndexTab({
+  panelId,
+  labelledBy,
+  chunks,
+  currentChunkId,
+  isProcessing,
+  onSelect,
+  onSplit,
+  onMerge,
+}: IndexTabProps) {
   const { t } = useTranslation();
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const virtualizer = useVirtualizer({
+    count: chunks.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => 80,
+    overscan: 5,
+  });
 
   if (chunks.length === 0) {
     return (
@@ -319,76 +358,138 @@ function IndexTab({ panelId, labelledBy, chunks, currentChunkId, onSelect }: Ind
     );
   }
 
+  const canEdit = !isProcessing;
+
   return (
-    <ul
+    <div
       id={panelId}
       role="tabpanel"
       aria-labelledby={labelledBy}
-      className="flex flex-col gap-2 px-4 py-4"
+      ref={scrollRef}
+      className="overflow-y-auto custom-scrollbar px-4 py-4"
     >
-      {chunks.map((chunk, index) => {
-        const isActive = chunk.id === currentChunkId;
-        const tone = qualityTone(chunk.judgeResult.status === 'completed' ? chunk.judgeResult.rating : null);
+      <ul
+        style={{ height: virtualizer.getTotalSize(), position: 'relative' }}
+        className="w-full"
+      >
+        {virtualizer.getVirtualItems().map((virtualRow) => {
+          const chunk = chunks[virtualRow.index];
+          const index = virtualRow.index;
+          const isActive = chunk.id === currentChunkId;
+          const tone = qualityTone(chunk.judgeResult.status === 'completed' ? chunk.judgeResult.rating : null);
+          const wordCount = chunk.originalText.trim()
+            ? chunk.originalText.trim().split(/\s+/).filter(Boolean).length
+            : 0;
+          const isLast = index === chunks.length - 1;
+          const canMutate = canEdit &&
+            chunk.status !== 'completed' &&
+            chunk.status !== 'processing';
 
-        // Status icon
-        let statusIcon: React.ReactNode;
-        if (chunk.status === 'processing') {
-          statusIcon = <Loader2 size={13} className="animate-spin text-editorial-warning shrink-0" />;
-        } else if (chunk.status === 'completed') {
-          statusIcon = <CheckCircle2 size={13} className="text-editorial-success shrink-0" />;
-        } else if (chunk.status === 'error') {
-          statusIcon = <AlertCircle size={13} className="text-editorial-accent shrink-0" />;
-        } else {
-          statusIcon = <Circle size={13} className="text-editorial-muted/50 shrink-0" />;
-        }
+          let statusIcon: React.ReactNode;
+          if (chunk.status === 'processing') {
+            statusIcon = <Loader2 size={13} className="animate-spin text-editorial-warning shrink-0" />;
+          } else if (chunk.status === 'completed') {
+            statusIcon = <CheckCircle2 size={13} className="text-editorial-success shrink-0" />;
+          } else if (chunk.status === 'error') {
+            statusIcon = <AlertCircle size={13} className="text-editorial-accent shrink-0" />;
+          } else {
+            statusIcon = <Circle size={13} className="text-editorial-muted/50 shrink-0" />;
+          }
 
-        return (
-          <li key={chunk.id}>
-            <button
-              type="button"
-              onClick={() => onSelect(chunk.id)}
-              className={`w-full rounded-2xl border px-4 py-3 text-left transition-colors ${
-                isActive
-                  ? 'border-editorial-ink bg-editorial-ink text-white'
-                  : 'border-editorial-border bg-editorial-bg hover:border-editorial-ink/40'
-              }`}
+          return (
+            <li
+              key={chunk.id}
+              data-index={virtualRow.index}
+              ref={virtualizer.measureElement}
+              style={{ position: 'absolute', top: virtualRow.start, left: 0, right: 0 }}
+              className="pb-2"
             >
-              <div className="flex items-center gap-2">
-                {statusIcon}
-                <span className={`font-display text-sm italic ${isActive ? 'text-white' : 'text-editorial-ink'}`}>
-                  {indexPad(index + 1)}
-                </span>
-                <span className={`flex-1 truncate text-[11px] leading-snug ${isActive ? 'text-white/80' : 'text-editorial-muted'}`}>
-                  {truncateChunk(chunk.originalText)}
-                </span>
+              <div
+                className={`rounded-2xl border transition-colors ${
+                  isActive
+                    ? 'border-editorial-ink bg-editorial-ink'
+                    : 'border-editorial-border bg-editorial-bg hover:border-editorial-ink/40'
+                }`}
+              >
+                {/* Main row — clickable */}
+                <button
+                  type="button"
+                  onClick={() => onSelect(chunk.id)}
+                  className="w-full px-4 pt-3 pb-2 text-left"
+                >
+                  <div className="flex items-center gap-2">
+                    {statusIcon}
+                    <span className={`font-display text-sm italic ${isActive ? 'text-white' : 'text-editorial-ink'}`}>
+                      {indexPad(index + 1)}
+                    </span>
+                    <span className={`flex-1 truncate text-[11px] leading-snug ${isActive ? 'text-white/80' : 'text-editorial-muted'}`}>
+                      {truncateChunk(chunk.originalText)}
+                    </span>
+                    <span className={`shrink-0 text-[10px] font-mono ${isActive ? 'text-white/50' : 'text-editorial-muted/60'}`}>
+                      {wordCount}w
+                    </span>
+                  </div>
+
+                  {chunk.judgeResult.status === 'completed' && (
+                    <div className={`mt-1.5 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.2em] ${
+                      isActive ? 'text-white/70' : QUALITY_TONE_COLOR[tone]
+                    }`}>
+                      <span className={`inline-block h-1.5 w-1.5 rounded-full ${
+                        tone === 'strong' ? 'bg-editorial-success' : tone === 'ok' ? 'bg-editorial-warning' : 'bg-editorial-accent'
+                      }`} />
+                      {t(qualityLabelKey(chunk.judgeResult.rating))}
+                    </div>
+                  )}
+
+                  {chunk.translationLocked && (
+                    <div className={`mt-1.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.18em] ${
+                      isActive ? 'text-emerald-200' : 'text-editorial-success'
+                    }`}>
+                      <CheckCheck size={12} />
+                      {t('document.translationLockedBadge')}
+                    </div>
+                  )}
+                </button>
+
+                {/* Inline actions */}
+                {canMutate && (
+                  <div className={`flex gap-1.5 border-t px-3 py-2 ${isActive ? 'border-white/10' : 'border-editorial-border/60'}`}>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); onSplit(chunk.id); }}
+                      title={t('pipeline.splitChunkTooltip')}
+                      aria-label={t('pipeline.splitChunk')}
+                      className={`rounded-full border p-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                        isActive
+                          ? 'border-white/20 text-white/60 hover:bg-white/10 hover:text-white'
+                          : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
+                      }`}
+                    >
+                      <Scissors size={13} />
+                    </button>
+                    {!isLast && (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); onMerge(chunk.id); }}
+                        title={t('pipeline.mergeNextTooltip')}
+                        aria-label={t('pipeline.mergeNext')}
+                        className={`rounded-full border p-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                          isActive
+                            ? 'border-white/20 text-white/60 hover:bg-white/10 hover:text-white'
+                            : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
+                        }`}
+                      >
+                        <Merge size={13} />
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
-
-              {/* Quality dot + label */}
-              {chunk.judgeResult.status === 'completed' && (
-                <div className={`mt-2 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.2em] ${
-                  isActive ? 'text-white/70' : QUALITY_TONE_COLOR[tone]
-                }`}>
-                  <span className={`inline-block h-1.5 w-1.5 rounded-full ${
-                    tone === 'strong' ? 'bg-editorial-success' : tone === 'ok' ? 'bg-editorial-warning' : 'bg-editorial-accent'
-                  }`} />
-                  {t(qualityLabelKey(chunk.judgeResult.rating))}
-                </div>
-              )}
-
-              {/* Locked badge */}
-              {chunk.translationLocked && (
-                <div className={`mt-2 flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.18em] ${
-                  isActive ? 'text-emerald-200' : 'text-editorial-success'
-                }`}>
-                  <CheckCheck size={12} />
-                  {t('document.translationLockedBadge')}
-                </div>
-              )}
-            </button>
-          </li>
-        );
-      })}
-    </ul>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 
@@ -627,9 +728,13 @@ interface AuditTabProps {
   labelledBy: string;
   currentChunk: TranslationChunk | null;
   isProcessing: boolean;
+  allChunksTranslated: boolean;
+  allChunksLocked: boolean;
+  unlockedChunksCount: number;
   onReauditChunk: (chunkId: string) => void;
   onSelectChunk: (id: string) => void;
   onFocusIssue: (chunkId: string, query?: string | null) => void;
+  onRunCoherenceAudit: () => void;
 }
 
 function AuditTab({
@@ -637,9 +742,13 @@ function AuditTab({
   labelledBy,
   currentChunk,
   isProcessing,
+  allChunksTranslated,
+  allChunksLocked,
+  unlockedChunksCount,
   onReauditChunk,
   onSelectChunk,
   onFocusIssue,
+  onRunCoherenceAudit,
 }: AuditTabProps) {
   const { t } = useTranslation();
 
@@ -662,13 +771,80 @@ function AuditTab({
       ? t(qualityLabelKey(currentChunk.judgeResult.rating))
       : t('audit.ratingNone');
 
+  const coherence = currentChunk.coherenceResult;
+
+  const coherenceDisabled = isProcessing || !allChunksTranslated;
+  const coherenceTitle = coherenceDisabled && !isProcessing
+    ? t('coherence.translationsRequired')
+    : coherence?.status === 'completed' || coherence?.status === 'error'
+      ? t('coherence.rerun')
+      : t('coherence.runAudit');
+
   return (
     <div
       id={panelId}
       role="tabpanel"
       aria-labelledby={labelledBy}
-      className="space-y-5 px-5 py-5"
+      className="space-y-3 px-5 py-5"
     >
+      {/* ── Coerenza Documento ──────────────────────── */}
+      <section className="rounded-[20px] border border-editorial-border bg-editorial-bg p-5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+            <Link2 size={12} />
+            {t('coherence.title')}
+          </div>
+          <button
+            type="button"
+            onClick={onRunCoherenceAudit}
+            disabled={coherenceDisabled}
+            title={coherenceTitle}
+            aria-label={t('coherence.runAudit')}
+            className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-30"
+          >
+            {coherence?.status === 'processing'
+              ? <Loader2 size={14} className="animate-spin" />
+              : <ScanLine size={14} />}
+          </button>
+        </div>
+        {allChunksTranslated && !allChunksLocked && (
+          <div className="mt-3 flex items-start gap-2 rounded-2xl border border-editorial-warning/30 bg-editorial-warning/10 p-3 text-sm text-editorial-warning">
+            <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+            <span>{t('coherence.unlockedWarning', { count: unlockedChunksCount })}</span>
+          </div>
+        )}
+
+        {!coherence || coherence.status === 'idle' ? (
+          <p className="mt-3 text-[11px] text-editorial-muted/70 leading-relaxed">
+            {!allChunksTranslated
+              ? t('coherence.translationsRequired')
+              : t('coherence.idle')}
+          </p>
+        ) : coherence.status === 'processing' ? (
+          <div className="mt-3 flex items-center gap-2 text-sm text-editorial-muted">
+            <Loader2 size={13} className="animate-spin shrink-0" />
+            {t('coherence.running')}
+          </div>
+        ) : coherence.status === 'error' ? (
+          <div className="mt-3 rounded-2xl border border-editorial-accent/30 bg-editorial-textbox/40 p-3 text-sm text-editorial-accent">
+            {coherence.error || t('errors.coherenceFailed')}
+          </div>
+        ) : coherence.issues.length === 0 ? (
+          <div className="mt-3 flex items-center gap-2 text-sm text-editorial-success">
+            <CheckCircle2 size={14} />
+            {t('coherence.noIssues')}
+          </div>
+        ) : (
+          <IssueList
+            issues={coherence.issues}
+            chunkId={currentChunk.id}
+            onSelectChunk={onSelectChunk}
+            onFocusIssue={onFocusIssue}
+          />
+        )}
+      </section>
+
+      {/* ── Qualità locale ──────────────────────────── */}
       <section className="rounded-[20px] border border-editorial-border bg-editorial-bg p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -679,7 +855,6 @@ function AuditTab({
               {qualityLabel}
             </div>
           </div>
-          {/* Re-audit: icon only */}
           <button
             type="button"
             onClick={() => onReauditChunk(currentChunk.id)}
@@ -697,77 +872,93 @@ function AuditTab({
             {currentChunk.judgeResult.error || t('audit.auditFailed')}
           </div>
         )}
-
-        {currentChunk.judgeResult.status !== 'error' &&
-        currentChunk.judgeResult.status !== 'completed' ? (
+        {currentChunk.judgeResult.status !== 'error' && currentChunk.judgeResult.status !== 'completed' && (
           <div className="mt-4 rounded-2xl border border-editorial-border bg-editorial-bg/60 p-4 text-sm text-editorial-muted">
             {t('document.insightsAuditEmpty')}
           </div>
-        ) : currentChunk.judgeResult.issues.length === 0 ? (
-          <div className="mt-4 rounded-2xl border border-editorial-border bg-editorial-bg/60 p-4 text-sm text-editorial-muted">
+        )}
+        {currentChunk.judgeResult.status === 'completed' && currentChunk.judgeResult.issues.length === 0 && (
+          <div className="mt-4 flex items-center gap-2 text-sm text-editorial-success">
+            <CheckCircle2 size={14} />
             {t('document.insightsAuditNoIssues')}
           </div>
-        ) : null}
-
+        )}
         {currentChunk.judgeResult.issues.length > 0 && (
-          <div className="mt-4 space-y-3">
-            <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
-              {t('document.insightsAuditIssues')}
-            </div>
-            {currentChunk.judgeResult.issues.map((issue, index) => (
-              <article
-                key={`${issue.type}-${index}`}
-                className="rounded-2xl border border-editorial-border bg-editorial-bg/80 p-4 shadow-sm"
-              >
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    {/* Issue type icon */}
-                    <span className={`rounded-full p-1 ${
-                      issue.severity === 'high'
-                        ? 'bg-editorial-accent text-white'
-                        : issue.severity === 'medium'
-                          ? 'bg-editorial-warning/80 text-white'
-                          : 'bg-editorial-border text-editorial-muted'
-                    }`}>
-                      {issue.type === 'fluency' ? <MessageCircle size={11} /> :
-                       issue.type === 'accuracy' ? <AlertTriangle size={11} /> :
-                       issue.type === 'grammar' ? <AlertCircle size={11} /> :
-                       <BookOpen size={11} />}
-                    </span>
-                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-ink">
-                      {issue.type}
-                    </span>
-                  </div>
-                  {/* Open chunk: icon only */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onSelectChunk(currentChunk.id);
-                      onFocusIssue(currentChunk.id, extractIssueFocusQuery(issue));
-                    }}
-                    title={t('audit.openChunk')}
-                    aria-label={t('audit.openChunk')}
-                    className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  >
-                    <ExternalLink size={13} />
-                  </button>
-                </div>
-                <p className="text-sm leading-relaxed text-editorial-ink">
-                  {issue.description}
-                </p>
-                {issue.suggestedFix && (
-                  <div className="mt-3 rounded-xl border border-editorial-border/70 bg-editorial-bg px-3 py-2 text-sm leading-relaxed text-editorial-muted">
-                    <span className="font-bold uppercase tracking-[0.2em] text-[10px] text-editorial-accent">
-                      {t('audit.fix')}
-                    </span>
-                    : {issue.suggestedFix}
-                  </div>
-                )}
-              </article>
-            ))}
-          </div>
+          <IssueList
+            issues={currentChunk.judgeResult.issues}
+            chunkId={currentChunk.id}
+            onSelectChunk={onSelectChunk}
+            onFocusIssue={onFocusIssue}
+          />
         )}
       </section>
+    </div>
+  );
+}
+
+// ── IssueList ──────────────────────────────────────────────────────────────
+
+interface IssueListProps {
+  issues: TranslationChunk['judgeResult']['issues'];
+  chunkId: string;
+  onSelectChunk: (id: string) => void;
+  onFocusIssue: (chunkId: string, query?: string | null) => void;
+}
+
+function IssueList({ issues, chunkId, onSelectChunk, onFocusIssue }: IssueListProps) {
+  const { t } = useTranslation();
+  return (
+    <div className="mt-4 space-y-3">
+      {issues.map((issue, index) => (
+        <article
+          key={`${issue.type}-${index}`}
+          className="rounded-2xl border border-editorial-border bg-editorial-bg/80 p-4 shadow-sm"
+        >
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className={`rounded-full p-1 ${
+                issue.severity === 'high'
+                  ? 'bg-editorial-accent text-white'
+                  : issue.severity === 'medium'
+                    ? 'bg-editorial-warning/80 text-white'
+                    : 'bg-editorial-border text-editorial-muted'
+              }`}>
+                {issue.type === 'fluency' ? <MessageCircle size={11} /> :
+                 issue.type === 'accuracy' ? <AlertTriangle size={11} /> :
+                 issue.type === 'grammar' ? <AlertCircle size={11} /> :
+                 issue.type === 'consistency' ? <Link2 size={11} /> :
+                 <BookOpen size={11} />}
+              </span>
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-ink">
+                {issue.type}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                onSelectChunk(chunkId);
+                onFocusIssue(chunkId, extractIssueFocusQuery(issue));
+              }}
+              title={t('audit.openChunk')}
+              aria-label={t('audit.openChunk')}
+              className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            >
+              <ExternalLink size={13} />
+            </button>
+          </div>
+          <p className="text-sm leading-relaxed text-editorial-ink">
+            {issue.description}
+          </p>
+          {issue.suggestedFix && (
+            <div className="mt-3 rounded-xl border border-editorial-border/70 bg-editorial-bg px-3 py-2 text-sm leading-relaxed text-editorial-muted">
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-accent">
+                {t('audit.fix')}
+              </span>
+              : {issue.suggestedFix}
+            </div>
+          )}
+        </article>
+      ))}
     </div>
   );
 }

@@ -83,6 +83,9 @@ export interface ChunkTextOptions {
   useChunking?: boolean;
   targetChunkCount?: number;
   markdownAware?: boolean;
+  minWords?: number;
+  maxWords?: number;
+  headingAware?: boolean;
 }
 
 export function estimateTextStats(text: string): TextStats {
@@ -111,11 +114,23 @@ export function chunkText(text: string, options: ChunkTextOptions = {}): string[
   if (options.useChunking === false) return [trimmed];
 
   const target = Math.max(0, Math.floor(options.targetChunkCount ?? 0));
-  if (target > 1) {
-    return splitIntoTargetChunks(trimmed, target, options);
+  let chunks = target > 1
+    ? splitIntoTargetChunks(trimmed, target, options)
+    : splitParagraphs(trimmed, options);
+
+  if (options.headingAware) {
+    chunks = mergeHeadingChunks(chunks);
   }
 
-  return splitParagraphs(trimmed, options);
+  if (options.minWords && options.minWords > 0) {
+    chunks = mergeSmallChunks(chunks, options.minWords);
+  }
+
+  if (options.maxWords && options.maxWords > 0) {
+    chunks = splitLargeChunks(chunks, options.maxWords, options);
+  }
+
+  return chunks;
 }
 
 export function findBestSplitIndex(
@@ -202,6 +217,73 @@ function splitIntoTargetChunks(text: string, target: number, options: ChunkTextO
   }
 
   return chunks;
+}
+
+function isHeadingChunk(text: string): boolean {
+  const trimmed = text.trim();
+  return /^#{1,6}\s+\S/.test(trimmed) && !trimmed.includes('\n');
+}
+
+function mergeHeadingChunks(chunks: string[]): string[] {
+  if (chunks.length <= 1) return chunks;
+  const result: string[] = [];
+  let headingAccumulator = '';
+  for (const chunk of chunks) {
+    if (isHeadingChunk(chunk)) {
+      headingAccumulator = headingAccumulator
+        ? `${headingAccumulator.trim()}\n\n${chunk.trim()}`
+        : chunk.trim();
+    } else {
+      const merged = headingAccumulator
+        ? `${headingAccumulator}\n\n${chunk.trim()}`
+        : chunk;
+      result.push(merged);
+      headingAccumulator = '';
+    }
+  }
+  // If trailing headings remain (no following non-heading chunk), push them as-is
+  if (headingAccumulator) {
+    result.push(headingAccumulator);
+  }
+  return result;
+}
+
+function mergeSmallChunks(chunks: string[], minWords: number): string[] {
+  if (chunks.length <= 1) return chunks;
+  const result: string[] = [];
+  let pending = chunks[0];
+  for (let i = 1; i < chunks.length; i++) {
+    if (countWords(pending) < minWords) {
+      pending = `${pending.trim()}\n\n${chunks[i].trim()}`;
+    } else {
+      result.push(pending);
+      pending = chunks[i];
+    }
+  }
+  result.push(pending);
+  return result;
+}
+
+function splitLargeChunks(
+  chunks: string[],
+  maxWords: number,
+  options: ChunkTextOptions = {},
+): string[] {
+  const result: string[] = [];
+  for (const chunk of chunks) {
+    const words = countWords(chunk);
+    if (words <= maxWords) {
+      result.push(chunk);
+      continue;
+    }
+    if (options.markdownAware) {
+      result.push(chunk);
+      continue;
+    }
+    const parts = Math.ceil(words / maxWords);
+    result.push(...splitWordsIntoTargetChunks(chunk, parts));
+  }
+  return result;
 }
 
 function splitMarkdownBlocks(text: string): string[] {

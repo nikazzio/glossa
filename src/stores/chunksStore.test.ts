@@ -12,6 +12,10 @@ describe('chunksStore', () => {
         ...state.config,
         useChunking: true,
         targetChunkCount: 0,
+        minWords: 0,
+        maxWords: 0,
+        headingAware: false,
+        markdownAware: false,
       },
     }));
 

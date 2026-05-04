@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { Plus, Trash2, Copy, Upload, ChevronDown, ChevronUp, Check, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useLibraryStore } from '../../stores/libraryStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useProjectStore } from '../../stores/projectStore';
-import { getGlossaryEntries, upsertGlossaryEntries, assignGlossaryToProject } from '../../services/glossaryService';
+import { getGlossaryEntries, assignGlossaryToProject } from '../../services/glossaryService';
 import { confirm } from '../../stores/confirmStore';
 import type { GlossaryEntry } from '../../types';
 import { DictionaryEntryEditor } from './DictionaryEntryEditor';
@@ -20,44 +20,41 @@ export function DictionariesTab() {
     deleteGlossary,
     forkGlossary,
     importCsv,
-    reloadGlossaries,
+    entriesMap,
+    dirtyIds,
+    expandedGlossaryId,
+    setGlossaryEntries,
+    loadGlossaryEntries,
+    markDirty,
+    setExpandedGlossaryId,
+    saveGlossaryEntries,
   } = useLibraryStore();
   const { config, assignGlossary } = usePipelineStore();
   const { currentProjectId } = useProjectStore();
 
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [entriesMap, setEntriesMap] = useState<Record<string, GlossaryEntry[]>>({});
-  const [dirtyIds, setDirtyIds] = useState<Set<string>>(new Set());
   const [newName, setNewName] = useState('');
   const [creating, setCreating] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [csvTargetId, setCsvTargetId] = useState<string | null>(null);
 
-  const loadEntries = useCallback(async (id: string) => {
-    if (entriesMap[id]) return;
-    const entries = await getGlossaryEntries(id);
-    setEntriesMap((prev) => ({ ...prev, [id]: entries }));
-  }, [entriesMap]);
-
   const handleToggle = async (id: string) => {
-    if (expandedId === id) {
-      setExpandedId(null);
+    if (expandedGlossaryId === id) {
+      setExpandedGlossaryId(null);
       return;
     }
-    setExpandedId(id);
-    await loadEntries(id);
+    setExpandedGlossaryId(id);
+    await loadGlossaryEntries(id);
   };
 
   const handleEntriesChange = (id: string, entries: GlossaryEntry[]) => {
-    setEntriesMap((prev) => ({ ...prev, [id]: entries }));
-    setDirtyIds((prev) => new Set(prev).add(id));
+    setGlossaryEntries(id, entries);
+    markDirty(id);
   };
 
   const handleSaveEntries = async (id: string) => {
     try {
-      await upsertGlossaryEntries(id, entriesMap[id] ?? []);
-      setDirtyIds((prev) => { const s = new Set(prev); s.delete(id); return s; });
+      await saveGlossaryEntries(id);
       // Ricarica nel pipelineStore se è il dizionario assegnato al progetto corrente
       if (config.assignedGlossaryId === id) {
         await assignGlossary(id);
@@ -89,8 +86,6 @@ export function DictionariesTab() {
     if (!ok) return;
     try {
       await deleteGlossary(id);
-      if (expandedId === id) setExpandedId(null);
-      setEntriesMap((prev) => { const n = { ...prev }; delete n[id]; return n; });
     } catch (err: any) {
       toast.error(t('library.dictionaryDeleteError'), { description: err?.message });
     }
@@ -100,7 +95,7 @@ export function DictionariesTab() {
     try {
       const newId = await forkGlossary(id, `${name} (copia)`);
       const forkedEntries = await getGlossaryEntries(newId);
-      setEntriesMap((prev) => ({ ...prev, [newId]: forkedEntries }));
+      setGlossaryEntries(newId, forkedEntries);
     } catch (err: any) {
       toast.error(t('library.dictionaryForkError'), { description: err?.message });
     }
@@ -131,7 +126,7 @@ export function DictionariesTab() {
   const handleCsvImport = async (glossaryId: string, csvText: string, strategy: 'replace' | 'merge') => {
     const count = await importCsv(glossaryId, csvText, strategy);
     const entries = await getGlossaryEntries(glossaryId);
-    setEntriesMap((prev) => ({ ...prev, [glossaryId]: entries }));
+    setGlossaryEntries(glossaryId, entries);
     if (config.assignedGlossaryId === glossaryId) {
       await assignGlossary(glossaryId);
     }
@@ -178,9 +173,9 @@ export function DictionariesTab() {
 
       <div className="space-y-2">
         {glossaries.map((g) => {
-          const isExpanded = expandedId === g.id;
+          const isExpanded = expandedGlossaryId === g.id;
           const isAssigned = config.assignedGlossaryId === g.id;
-          const isDirty = dirtyIds.has(g.id);
+          const isDirty = dirtyIds.includes(g.id);
 
           return (
             <div

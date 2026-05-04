@@ -252,6 +252,15 @@ function FeaturesSection() {
       <SubTitle>{t('help.features.documentToolsTitle')}</SubTitle>
       <P>{t('help.features.documentToolsDesc')}</P>
 
+      <SubTitle>{t('help.features.segmentationTitle')}</SubTitle>
+      <P>{t('help.features.segmentationDesc')}</P>
+
+      <SubTitle>{t('help.features.chunkActionsTitle')}</SubTitle>
+      <P>{t('help.features.chunkActionsDesc')}</P>
+
+      <SubTitle>{t('help.features.rollingContextTitle')}</SubTitle>
+      <P>{t('help.features.rollingContextDesc')}</P>
+
       <div className="my-4 space-y-2">
         <FeatureRow icon={<PanelTopClose size={14} />} text={t('help.shortcuts.toggleEditorTools')} />
         <FeatureRow icon={<CheckCheck size={14} />} text={t('help.shortcuts.lockTranslation')} />
@@ -434,6 +443,9 @@ function ShortcutsSection() {
   const exportItems: { label: string; icon: React.ReactNode }[] = [
     { label: t('help.shortcuts.exportTxt'), icon: <span className="font-mono text-[10px]">TXT</span> },
     { label: t('help.shortcuts.exportMd'),  icon: <span className="font-mono text-[10px]">MD</span> },
+    { label: t('help.shortcuts.exportHtml'), icon: <span className="font-mono text-[10px]">HTML</span> },
+    { label: t('help.shortcuts.exportDocx'), icon: <span className="font-mono text-[10px]">DOCX</span> },
+    { label: t('help.shortcuts.exportBilingual'), icon: <span className="font-mono text-[10px]">MD+</span> },
   ];
 
   const promptItems: { label: string; icon: React.ReactNode }[] = [
