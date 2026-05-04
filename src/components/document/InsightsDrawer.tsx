@@ -6,6 +6,7 @@ import {
   CheckCheck,
   CheckCircle2,
   Circle,
+  Clock,
   Cpu,
   ExternalLink,
   FileText,
@@ -34,6 +35,7 @@ import { indexPad, qualityLabelKey, qualityTone, calculateCompositeQuality } fro
 import { MODEL_PRICING } from '../../constants';
 import { estimatePipelineCost } from '../../utils/costEstimate';
 import { formatCost } from '../pipeline/CostBadge';
+import { useChunkWatchdog } from '../../hooks/useChunkWatchdog';
 import type { TranslationChunk } from '../../types';
 
 interface InsightsDrawerProps {
@@ -78,18 +80,26 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
   const setInsightsDrawerTab = useUiStore((state) => state.setInsightsDrawerTab);
   const selectedChunkId = useUiStore((state) => state.selectedChunkId);
   const setSelectedChunkId = useUiStore((state) => state.setSelectedChunkId);
+  const setPendingSplitChunkId = useUiStore((state) => state.setPendingSplitChunkId);
   const focusIssueInChunk = useUiStore((state) => state.focusIssueInChunk);
   const chunks = useChunksStore((state) => state.chunks);
   const isProcessing = useChunksStore((state) => state.isProcessing);
   const allChunksTranslated = chunks.length > 0 && chunks.every((c) => c.currentDraft?.trim());
   const allChunksLocked = chunks.length > 0 && chunks.every((c) => c.translationLocked);
   const unlockedChunksCount = chunks.filter((c) => c.currentDraft?.trim() && !c.translationLocked).length;
-  const splitChunk = useChunksStore((state) => state.splitChunk);
   const mergeChunkWithNext = useChunksStore((state) => state.mergeChunkWithNext);
   const currentChunk =
     chunks.find((chunk) => chunk.id === selectedChunkId) ?? chunks[0] ?? null;
 
+  const { stuckChunkIds, cancelStuckChunk } = useChunkWatchdog();
+
   const activeTab: InsightsTab = TAB_ORDER.includes(insightsDrawerTab) ? insightsDrawerTab : 'index';
+
+  const TAB_TITLE: Record<InsightsTab, string> = {
+    index: t('document.insightsTabIndex'),
+    stats: t('document.insightsTabStats'),
+    audit: t('document.insightsTabAudit'),
+  };
 
   const activateTab = (tab: InsightsTab) => {
     setInsightsDrawerTab(tab);
@@ -181,12 +191,13 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
             </div>
 
             {/* Tab bar */}
-            <div
-              role="tablist"
-              aria-orientation="horizontal"
-              aria-label={t('document.insightsDrawerTitle')}
-              className="flex gap-1 border-b border-editorial-border bg-editorial-bg/60 px-4 py-2"
-            >
+            <div className="flex items-center gap-2 border-b border-editorial-border bg-editorial-bg/60 px-4 py-2">
+              <div
+                role="tablist"
+                aria-orientation="horizontal"
+                aria-label={t('document.insightsDrawerTitle')}
+                className="flex gap-1"
+              >
               <TabButton
                 tab="index"
                 active={activeTab === 'index'}
@@ -223,6 +234,9 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
                   tabButtonRefs.current.audit = element;
                 }}
               />
+              </div>
+              <span className="mx-1 h-4 w-px bg-editorial-border/70" aria-hidden="true" />
+              <span className="font-display italic text-sm text-editorial-ink">{TAB_TITLE[activeTab]}</span>
             </div>
 
             <div className="flex flex-1 flex-col overflow-y-auto bg-editorial-bg/40 custom-scrollbar">
@@ -233,9 +247,17 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
                   chunks={chunks}
                   currentChunkId={currentChunk?.id ?? null}
                   isProcessing={isProcessing}
+                  stuckChunkIds={stuckChunkIds}
                   onSelect={(id) => setSelectedChunkId(id)}
-                  onSplit={splitChunk}
-                  onMerge={mergeChunkWithNext}
+                  onSplit={(chunkId) => {
+                    setSelectedChunkId(chunkId);
+                    setPendingSplitChunkId(chunkId);
+                  }}
+                  onMerge={(chunkId) => {
+                    setSelectedChunkId(chunkId);
+                    mergeChunkWithNext(chunkId);
+                  }}
+                  onCancelStuck={cancelStuckChunk}
                 />
               ) : activeTab === 'stats' ? (
                 <StatsTab
@@ -320,9 +342,11 @@ interface IndexTabProps {
   chunks: TranslationChunk[];
   currentChunkId: string | null;
   isProcessing: boolean;
+  stuckChunkIds: Set<string>;
   onSelect: (id: string) => void;
   onSplit: (chunkId: string) => void;
   onMerge: (chunkId: string) => void;
+  onCancelStuck: (chunkId: string) => void;
 }
 
 function IndexTab({
@@ -331,9 +355,11 @@ function IndexTab({
   chunks,
   currentChunkId,
   isProcessing,
+  stuckChunkIds,
   onSelect,
   onSplit,
   onMerge,
+  onCancelStuck,
 }: IndexTabProps) {
   const { t } = useTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -351,9 +377,11 @@ function IndexTab({
         id={panelId}
         role="tabpanel"
         aria-labelledby={labelledBy}
-        className="px-6 py-8 text-sm text-editorial-muted"
+        className="flex flex-col items-center justify-center gap-3 px-6 py-12 text-center"
       >
-        {t('document.emptyTitle')}
+        <List size={28} className="text-editorial-border" />
+        <p className="text-sm font-medium text-editorial-muted">{t('document.indexEmptyTitle')}</p>
+        <p className="text-xs leading-relaxed text-editorial-muted/70">{t('document.indexEmptyBody')}</p>
       </div>
     );
   }
@@ -384,16 +412,19 @@ function IndexTab({
           const canMutate = canEdit &&
             chunk.status !== 'completed' &&
             chunk.status !== 'processing';
+          const isStuck = stuckChunkIds.has(chunk.id);
 
           let statusIcon: React.ReactNode;
           if (chunk.status === 'processing') {
-            statusIcon = <Loader2 size={13} className="animate-spin text-editorial-warning shrink-0" />;
+            statusIcon = isStuck
+              ? <Clock size={13} className="text-editorial-accent shrink-0" />
+              : <Loader2 size={13} className="animate-spin text-editorial-warning shrink-0" />;
           } else if (chunk.status === 'completed') {
             statusIcon = <CheckCircle2 size={13} className="text-editorial-success shrink-0" />;
           } else if (chunk.status === 'error') {
             statusIcon = <AlertCircle size={13} className="text-editorial-accent shrink-0" />;
           } else {
-            statusIcon = <Circle size={13} className="text-editorial-muted/50 shrink-0" />;
+            statusIcon = <Circle size={13} className="text-editorial-border shrink-0" />;
           }
 
           return (
@@ -422,8 +453,8 @@ function IndexTab({
                     <span className={`font-display text-sm italic ${isActive ? 'text-white' : 'text-editorial-accent'}`}>
                       {indexPad(index + 1)}
                     </span>
-                    <span className={`flex-1 truncate text-[11px] leading-snug ${isActive ? 'text-white/80' : 'text-editorial-muted'}`}>
-                      {truncateChunk(chunk.originalText)}
+                    <span className={`flex-1 line-clamp-2 text-[11px] leading-snug ${isActive ? 'text-white/80' : 'text-editorial-muted'}`}>
+                      {chunk.originalText.replace(/\s+/g, ' ').trim()}
                     </span>
                     <span className={`shrink-0 text-[10px] font-mono ${isActive ? 'text-white/50' : 'text-editorial-muted/60'}`}>
                       {wordCount}w
@@ -450,6 +481,28 @@ function IndexTab({
                     </div>
                   )}
                 </button>
+
+                {/* Watchdog: stuck chunk banner */}
+                {isStuck && chunk.status === 'processing' && (
+                  <div className={`flex items-center justify-between gap-2 border-t px-3 py-2 ${isActive ? 'border-white/10' : 'border-editorial-border/60'}`}>
+                    <div className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] ${isActive ? 'text-orange-200' : 'text-editorial-accent'}`}>
+                      <Clock size={11} />
+                      {t('document.watchdogStuck')}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); onCancelStuck(chunk.id); }}
+                      aria-label={t('document.watchdogCancel')}
+                      className={`rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                        isActive
+                          ? 'border-orange-300/40 text-orange-200 hover:bg-white/10'
+                          : 'border-editorial-accent/40 text-editorial-accent hover:bg-editorial-accent/10'
+                      }`}
+                    >
+                      {t('document.watchdogCancel')}
+                    </button>
+                  </div>
+                )}
 
                 {/* Inline actions */}
                 {canMutate && (
@@ -573,9 +626,11 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
         id={panelId}
         role="tabpanel"
         aria-labelledby={labelledBy}
-        className="px-6 py-8 text-sm text-editorial-muted"
+        className="flex flex-col items-center justify-center gap-3 px-6 py-12 text-center"
       >
-        {t('document.emptyTitle')}
+        <BarChart2 size={28} className="text-editorial-border" />
+        <p className="text-sm font-medium text-editorial-muted">{t('document.indexEmptyTitle')}</p>
+        <p className="text-xs leading-relaxed text-editorial-muted/70">{t('document.indexEmptyBody')}</p>
       </div>
     );
   }
@@ -618,6 +673,9 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
             className="h-full rounded-full bg-editorial-success transition-all"
             style={{ width: `${progressPct}%` }}
           />
+        </div>
+        <div className="mb-2 font-display text-lg italic text-editorial-ink">
+          {progressPct}%
         </div>
         <div className="flex flex-wrap gap-3">
           {idleCount > 0 && (

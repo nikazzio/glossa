@@ -27,6 +27,7 @@ interface MarkdownEditorProps {
   focusQuery?: string | null;
   focusRequestId?: number;
   onFocusQueryHandled?: () => void;
+  fillHeight?: boolean;
 }
 
 export function MarkdownEditor({
@@ -43,6 +44,7 @@ export function MarkdownEditor({
   focusQuery = null,
   focusRequestId = 0,
   onFocusQueryHandled,
+  fillHeight = false,
 }: MarkdownEditorProps) {
   const { t } = useTranslation();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -158,7 +160,7 @@ export function MarkdownEditor({
       onClick={syncSelection}
       onKeyUp={syncSelection}
       onSelect={syncSelection}
-      className={`${minHeightClassName} w-full resize-y bg-transparent outline-none ${textClassName} disabled:opacity-70 read-only:cursor-not-allowed`}
+      className={`${fillHeight ? 'flex-1 min-h-[100px] h-0' : minHeightClassName} w-full resize-y bg-transparent outline-none ${textClassName} disabled:opacity-70 read-only:cursor-not-allowed`}
       style={textSizeStyles[textSize]}
     />
   );
@@ -177,8 +179,8 @@ export function MarkdownEditor({
   );
 
   return (
-    <div className="space-y-3">
-      <div className="sticky top-0 z-20 rounded-2xl border border-editorial-border/70 bg-[#fcfaf5]/95 px-3 py-3 shadow-sm backdrop-blur">
+    <div className={fillHeight ? 'flex flex-col flex-1 min-h-0' : 'space-y-3'}>
+      <div className={`sticky top-0 z-20 rounded-2xl border border-editorial-border/70 bg-[#fcfaf5]/95 px-3 py-3 shadow-sm backdrop-blur${fillHeight ? ' shrink-0' : ''}`}>
         <div className="flex items-center justify-between gap-3">
           <button
             type="button"
@@ -360,9 +362,9 @@ export function MarkdownEditor({
         ) : null}
       </div>
       {mode === 'write' && !readOnly && highlightHtml ? (
-        <div className="space-y-2">
+        <div className={fillHeight ? 'flex flex-col flex-1 min-h-0' : 'space-y-2'}>
           {textarea}
-          <HighlightedText html={highlightHtml} className={`${minHeightClassName} ${textClassName}`} />
+          <HighlightedText html={highlightHtml} className={fillHeight ? `flex-1 min-h-0 overflow-y-auto ${textClassName}` : `${minHeightClassName} ${textClassName}`} />
         </div>
       ) : null}
       {mode === 'write' && (!highlightHtml || readOnly) ? textarea : null}
