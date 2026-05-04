@@ -110,6 +110,9 @@
     "retranslateChunk": "Re-translate this chunk",
     "reauditChunk": "Re-audit this chunk",
     "prompt": "Prompt",
+    "coherencePromptLabel": "Coherence Prompt",
+    "coherencePromptHint": "Cross-segment consistency — evaluated when all chunks are locked",
+    "coherencePromptPlaceholder": "Coherence audit instructions...",
     "tabStages": "Stages",
     "tabAudit": "Audit",
     "tabGlossary": "Registry",
@@ -206,7 +209,8 @@
     "auditCompleted": "Coherence audit completed",
     "auditCompletedWithErrors": "Coherence audit completed with {{count}} error(s)",
     "issueTypeConsistency": "Consistency",
-    "issueTypeGlossary": "Glossary"
+    "issueTypeGlossary": "Glossary",
+    "lockedRequired": "Lock all chunks before running the coherence audit"
   },
   "language": {
     "label": "Language",

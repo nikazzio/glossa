@@ -23,6 +23,9 @@ export const DEFAULT_STAGES: PipelineStageConfig[] = [
 export const DEFAULT_JUDGE_PROMPT =
   'Audit the final translation for technical accuracy, glossary adherence, and natural tone.';
 
+export const DEFAULT_COHERENCE_PROMPT =
+  'Check for terminology consistency, narrative continuity, and glossary adherence across segment boundaries.';
+
 export const MODEL_OPTIONS: Record<ModelProvider, string[]> = {
   gemini: ['gemini-3-flash-preview', 'gemini-3.1-pro-preview', 'gemini-2.5-flash-lite-preview'],
   openai: ['gpt-4o', 'gpt-4o-mini', 'o1-preview'],

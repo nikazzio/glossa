@@ -82,6 +82,7 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
   const focusIssueInChunk = useUiStore((state) => state.focusIssueInChunk);
   const chunks = useChunksStore((state) => state.chunks);
   const isProcessing = useChunksStore((state) => state.isProcessing);
+  const allChunksLocked = chunks.length > 0 && chunks.every((c) => c.translationLocked);
   const splitChunk = useChunksStore((state) => state.splitChunk);
   const mergeChunkWithNext = useChunksStore((state) => state.mergeChunkWithNext);
   const currentChunk =
@@ -247,6 +248,7 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
                   labelledBy={TAB_BUTTON_IDS.audit}
                   currentChunk={currentChunk}
                   isProcessing={isProcessing}
+                  allChunksLocked={allChunksLocked}
                   onReauditChunk={onReauditChunk}
                   onSelectChunk={setSelectedChunkId}
                   onFocusIssue={focusIssueInChunk}
@@ -722,6 +724,7 @@ interface AuditTabProps {
   labelledBy: string;
   currentChunk: TranslationChunk | null;
   isProcessing: boolean;
+  allChunksLocked: boolean;
   onReauditChunk: (chunkId: string) => void;
   onSelectChunk: (id: string) => void;
   onFocusIssue: (chunkId: string, query?: string | null) => void;
@@ -733,6 +736,7 @@ function AuditTab({
   labelledBy,
   currentChunk,
   isProcessing,
+  allChunksLocked,
   onReauditChunk,
   onSelectChunk,
   onFocusIssue,
@@ -761,6 +765,13 @@ function AuditTab({
 
   const coherence = currentChunk.coherenceResult;
 
+  const coherenceDisabled = isProcessing || !allChunksLocked;
+  const coherenceTitle = coherenceDisabled && !isProcessing
+    ? t('coherence.lockedRequired')
+    : coherence?.status === 'completed' || coherence?.status === 'error'
+      ? t('coherence.rerun')
+      : t('coherence.runAudit');
+
   return (
     <div
       id={panelId}
@@ -768,6 +779,55 @@ function AuditTab({
       aria-labelledby={labelledBy}
       className="space-y-3 px-5 py-5"
     >
+      {/* ── Coerenza Documento ──────────────────────── */}
+      <section className="rounded-[20px] border border-editorial-border bg-editorial-bg p-5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+            <Link2 size={12} />
+            {t('coherence.title')}
+          </div>
+          <button
+            type="button"
+            onClick={onRunCoherenceAudit}
+            disabled={coherenceDisabled}
+            title={coherenceTitle}
+            aria-label={t('coherence.runAudit')}
+            className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-30"
+          >
+            {coherence?.status === 'processing'
+              ? <Loader2 size={14} className="animate-spin" />
+              : <ScanLine size={14} />}
+          </button>
+        </div>
+
+        {!coherence || coherence.status === 'idle' ? (
+          <p className="mt-3 text-[11px] text-editorial-muted/70 leading-relaxed">
+            {allChunksLocked ? t('coherence.idle') : t('coherence.lockedRequired')}
+          </p>
+        ) : coherence.status === 'processing' ? (
+          <div className="mt-3 flex items-center gap-2 text-sm text-editorial-muted">
+            <Loader2 size={13} className="animate-spin shrink-0" />
+            {t('coherence.running')}
+          </div>
+        ) : coherence.status === 'error' ? (
+          <div className="mt-3 rounded-2xl border border-editorial-accent/30 bg-editorial-textbox/40 p-3 text-sm text-editorial-accent">
+            {coherence.error || t('errors.coherenceFailed')}
+          </div>
+        ) : coherence.issues.length === 0 ? (
+          <div className="mt-3 flex items-center gap-2 text-sm text-editorial-success">
+            <CheckCircle2 size={14} />
+            {t('coherence.noIssues')}
+          </div>
+        ) : (
+          <IssueList
+            issues={coherence.issues}
+            chunkId={currentChunk.id}
+            onSelectChunk={onSelectChunk}
+            onFocusIssue={onFocusIssue}
+          />
+        )}
+      </section>
+
       {/* ── Qualità locale ──────────────────────────── */}
       <section className="rounded-[20px] border border-editorial-border bg-editorial-bg p-5">
         <div className="flex items-start justify-between gap-3">
@@ -810,57 +870,6 @@ function AuditTab({
         {currentChunk.judgeResult.issues.length > 0 && (
           <IssueList
             issues={currentChunk.judgeResult.issues}
-            chunkId={currentChunk.id}
-            onSelectChunk={onSelectChunk}
-            onFocusIssue={onFocusIssue}
-          />
-        )}
-      </section>
-
-      {/* ── Coerenza Documento ──────────────────────── */}
-      <section className="rounded-[20px] border border-editorial-border bg-editorial-bg p-5">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-            <Link2 size={12} />
-            {t('coherence.title')}
-          </div>
-          <button
-            type="button"
-            onClick={onRunCoherenceAudit}
-            disabled={isProcessing}
-            title={coherence?.status === 'completed' || coherence?.status === 'error'
-              ? t('coherence.rerun')
-              : t('coherence.runAudit')}
-            aria-label={t('coherence.runAudit')}
-            className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-30"
-          >
-            {coherence?.status === 'processing'
-              ? <Loader2 size={14} className="animate-spin" />
-              : <ScanLine size={14} />}
-          </button>
-        </div>
-
-        {!coherence || coherence.status === 'idle' ? (
-          <p className="mt-3 text-sm text-editorial-muted/70 leading-relaxed">
-            {t('coherence.idle')}
-          </p>
-        ) : coherence.status === 'processing' ? (
-          <div className="mt-3 flex items-center gap-2 text-sm text-editorial-muted">
-            <Loader2 size={13} className="animate-spin shrink-0" />
-            {t('coherence.running')}
-          </div>
-        ) : coherence.status === 'error' ? (
-          <div className="mt-3 rounded-2xl border border-editorial-accent/30 bg-editorial-textbox/40 p-3 text-sm text-editorial-accent">
-            {coherence.error || t('errors.coherenceFailed')}
-          </div>
-        ) : coherence.issues.length === 0 ? (
-          <div className="mt-3 flex items-center gap-2 text-sm text-editorial-success">
-            <CheckCircle2 size={14} />
-            {t('coherence.noIssues')}
-          </div>
-        ) : (
-          <IssueList
-            issues={coherence.issues}
             chunkId={currentChunk.id}
             onSelectChunk={onSelectChunk}
             onFocusIssue={onFocusIssue}

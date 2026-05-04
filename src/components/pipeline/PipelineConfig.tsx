@@ -281,6 +281,7 @@ export function PipelineConfig({
         )}
 
         {/* ── Audit Guard ── */}
+        {showAudit && showStages && <hr className="border-editorial-border/60" />}
         {showAudit && (
           <div>
             <div className="flex items-center justify-between border-b border-editorial-ink pb-2 mb-6">
@@ -460,6 +461,25 @@ export function PipelineConfig({
                   placeholder={t('pipeline.auditPlaceholder')}
                   rows={5}
                   className="w-full rounded-lg bg-editorial-textbox/40 border border-editorial-border/60 p-3 text-[12px] font-mono outline-none leading-relaxed resize-y focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                />
+              </div>
+
+              {/* Coherence prompt */}
+              <div className="mt-6 space-y-2 border-t border-editorial-border/40 pt-5">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
+                    {t('pipeline.coherencePromptLabel')}
+                  </span>
+                  <p className="mt-0.5 text-[10px] text-editorial-muted/60 leading-relaxed">
+                    {t('pipeline.coherencePromptHint')}
+                  </p>
+                </div>
+                <textarea
+                  value={config.coherencePrompt ?? ''}
+                  onChange={(e) => setConfig((prev) => ({ ...prev, coherencePrompt: e.target.value }))}
+                  placeholder={t('pipeline.coherencePromptPlaceholder')}
+                  rows={3}
+                  className="w-full rounded-lg bg-editorial-textbox/20 border border-editorial-border/40 p-3 text-[12px] font-mono outline-none leading-relaxed resize-y focus-visible:ring-2 focus-visible:ring-editorial-accent text-editorial-muted"
                 />
               </div>
             </div>

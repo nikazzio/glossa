@@ -102,4 +102,5 @@ export interface PipelineConfig {
   documentFormat?: DocumentFormat;
   markdownAware?: boolean;
   experimentalImport?: ExperimentalImportMode | null;
+  coherencePrompt?: string;
 }

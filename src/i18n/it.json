@@ -110,6 +110,9 @@
     "retranslateChunk": "Ri-traduci questo blocco",
     "reauditChunk": "Ri-valuta questo blocco",
     "prompt": "Prompt",
+    "coherencePromptLabel": "Prompt Coerenza",
+    "coherencePromptHint": "Consistenza cross-segmento — eseguito quando tutti i blocchi sono validati",
+    "coherencePromptPlaceholder": "Istruzioni per l'audit di coerenza...",
     "tabStages": "Fasi",
     "tabAudit": "Audit",
     "tabGlossary": "Registro",
@@ -206,7 +209,8 @@
     "auditCompleted": "Audit di coerenza completato",
     "auditCompletedWithErrors": "Audit completato con {{count}} errore/i",
     "issueTypeConsistency": "Consistenza",
-    "issueTypeGlossary": "Glossario"
+    "issueTypeGlossary": "Glossario",
+    "lockedRequired": "Valida tutti i blocchi prima di eseguire l'audit di coerenza"
   },
   "language": {
     "label": "Lingua",

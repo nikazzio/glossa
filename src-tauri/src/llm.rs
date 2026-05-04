@@ -53,6 +53,7 @@ pub struct PipelineConfig {
     pub glossary: Vec<GlossaryEntry>,
     pub use_chunking: Option<bool>,
     pub markdown_aware: Option<bool>,
+    pub coherence_prompt: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1405,14 +1406,22 @@ pub struct CoherenceResponse {
 fn build_coherence_prompts(input: &CoherenceChunkInput, config: &PipelineConfig) -> (String, String) {
     let glossary_json = serde_json::to_string(&config.glossary).unwrap_or_default();
 
-    let system_prompt = format!(
-        "You are a translation coherence auditor for {src}→{tgt} translations.\n\
-         Your task: identify cross-segment inconsistencies between a translated segment and its surrounding context.\n\
-         Evaluate ONLY:\n\
+    let default_instructions = "Evaluate ONLY:\n\
          1. Terminology consistency — key terms translated differently than in adjacent segments\n\
          2. Narrative continuity — abrupt breaks in flow at segment boundaries\n\
          3. Glossary adherence — glossary terms used inconsistently with context\n\
-         Do NOT re-evaluate standalone translation quality.\n\
+         Do NOT re-evaluate standalone translation quality.";
+
+    let instructions = config
+        .coherence_prompt
+        .as_deref()
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or(default_instructions);
+
+    let system_prompt = format!(
+        "You are a translation coherence auditor for {src}→{tgt} translations.\n\
+         Your task: identify cross-segment inconsistencies between a translated segment and its surrounding context.\n\
+         {instructions}\n\
          Glossary: {glossary}\n\n\
          Respond with valid JSON only:\n\
          {{\"issues\": [{{\"type\": \"consistency\"|\"glossary\", \

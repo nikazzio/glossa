@@ -5,7 +5,7 @@ import type {
   ModelProvider,
   GlossaryEntry,
 } from '../types';
-import { DEFAULT_STAGES, DEFAULT_JUDGE_PROMPT } from '../constants';
+import { DEFAULT_STAGES, DEFAULT_JUDGE_PROMPT, DEFAULT_COHERENCE_PROMPT } from '../constants';
 import { generateId } from '../utils';
 import { getGlossaryEntries } from '../services/glossaryService';
 
@@ -46,6 +46,7 @@ export const usePipelineStore = create<PipelineState>((set) => ({
     documentFormat: 'plain',
     markdownAware: false,
     experimentalImport: null,
+    coherencePrompt: DEFAULT_COHERENCE_PROMPT,
   },
 
   setInputText: (text) => set({ inputText: text }),
