@@ -118,7 +118,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   closeProject: () => {
-    useChunksStore.getState().clearChunks();
+    useUiStore.getState().setSelectedChunkId(null);
+    useUiStore.getState().setViewMode('document');
+    useChunksStore.setState({ chunks: [], isProcessing: false, cancelRequested: false, activeStreamId: null });
     set({
       currentProjectId: null,
       saveState: 'idle',
