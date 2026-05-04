@@ -1,5 +1,5 @@
 import { act, renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useChunksStore } from '../stores/chunksStore';
 import { useChunkWatchdog } from './useChunkWatchdog';
 
@@ -15,6 +15,11 @@ vi.mock('../services/llmService', async () => {
   return { ...actual, llmService: llmMocks };
 });
 
+type PartialChunksState = Parameters<typeof useChunksStore.setState>[0];
+
+const setChunksState = (partial: object) =>
+  useChunksStore.setState(partial as unknown as PartialChunksState);
+
 const baseChunk = {
   originalText: 'Hello',
   currentDraft: 'Ciao',
@@ -25,11 +30,7 @@ const baseChunk = {
 beforeEach(() => {
   vi.useFakeTimers();
   llmMocks.cancelStream.mockResolvedValue(undefined);
-  useChunksStore.setState({
-    chunks: [],
-    activeStreamId: null,
-    cancelRequested: false,
-  } as Parameters<typeof useChunksStore.setState>[0]);
+  setChunksState({ chunks: [], activeStreamId: null, cancelRequested: false, isProcessing: false });
 });
 
 afterEach(() => {
@@ -43,10 +44,10 @@ describe('useChunkWatchdog', () => {
   });
 
   it('does not flag processing chunks before 60 s', async () => {
-    useChunksStore.setState({
+    setChunksState({
       chunks: [{ id: 'c1', status: 'processing', ...baseChunk }],
       activeStreamId: 'stream-1',
-    } as Parameters<typeof useChunksStore.setState>[0]);
+    });
 
     const { result } = renderHook(() => useChunkWatchdog());
 
@@ -58,10 +59,10 @@ describe('useChunkWatchdog', () => {
   });
 
   it('flags processing chunks after 60 s when actively streaming', async () => {
-    useChunksStore.setState({
+    setChunksState({
       chunks: [{ id: 'c1', status: 'processing', ...baseChunk }],
       activeStreamId: 'stream-1',
-    } as Parameters<typeof useChunksStore.setState>[0]);
+    });
 
     const { result } = renderHook(() => useChunkWatchdog());
 
@@ -73,10 +74,10 @@ describe('useChunkWatchdog', () => {
   });
 
   it('does not flag chunks when no active stream', async () => {
-    useChunksStore.setState({
+    setChunksState({
       chunks: [{ id: 'c1', status: 'processing', ...baseChunk }],
       activeStreamId: null,
-    } as Parameters<typeof useChunksStore.setState>[0]);
+    });
 
     const { result } = renderHook(() => useChunkWatchdog());
 
@@ -88,10 +89,10 @@ describe('useChunkWatchdog', () => {
   });
 
   it('cancelStuckChunk cancels active stream and resets chunk status', async () => {
-    useChunksStore.setState({
+    setChunksState({
       chunks: [{ id: 'c1', status: 'processing', ...baseChunk }],
       activeStreamId: 'stream-1',
-    } as Parameters<typeof useChunksStore.setState>[0]);
+    });
 
     const { result } = renderHook(() => useChunkWatchdog());
 
@@ -114,10 +115,10 @@ describe('useChunkWatchdog', () => {
   it('cancelStuckChunk does NOT call requestCancel on the store', async () => {
     const requestCancel = vi.spyOn(useChunksStore.getState(), 'requestCancel');
 
-    useChunksStore.setState({
+    setChunksState({
       chunks: [{ id: 'c1', status: 'processing', ...baseChunk }],
       activeStreamId: 'stream-1',
-    } as Parameters<typeof useChunksStore.setState>[0]);
+    });
 
     const { result } = renderHook(() => useChunkWatchdog());
 
