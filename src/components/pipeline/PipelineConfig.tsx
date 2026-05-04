@@ -511,15 +511,6 @@ export function PipelineConfig({
             aria-labelledby="pconfig-tab-stages"
             className="space-y-5"
           >
-            <label className="flex items-start gap-3 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={config.useChunking !== false}
-                onChange={(e) => setConfig((prev) => ({ ...prev, useChunking: e.target.checked }))}
-                className="mt-1 accent-editorial-ink"
-              />
-              <span className="text-sm leading-relaxed text-editorial-ink">{t('pipeline.useChunking')}</span>
-            </label>
             <div className="flex justify-end">
               <button
                 onClick={addStage}

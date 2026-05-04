@@ -136,8 +136,7 @@
     "refinePrompt": "Rifinisci prompt",
     "refining": "Rifinendo...",
     "refined": "Prompt rifinito",
-    "refineFailed": "Rifinizione fallita",
-    "useChunking": "Segmenta automaticamente il testo importato"
+    "refineFailed": "Rifinizione fallita"
   },
   "audit": {
     "title": "Log Audit",

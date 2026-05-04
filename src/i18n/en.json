@@ -136,8 +136,7 @@
     "refinePrompt": "Refine prompt",
     "refining": "Refining...",
     "refined": "Prompt refined",
-    "refineFailed": "Refinement failed",
-    "useChunking": "Auto-segment imported text into chunks"
+    "refineFailed": "Refinement failed"
   },
   "audit": {
     "title": "Audit Logs",
