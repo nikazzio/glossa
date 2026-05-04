@@ -30,6 +30,7 @@ interface ProjectState {
   openProject: (id: string) => Promise<void>;
   removeProject: (id: string) => Promise<void>;
   saveCurrentProject: (name?: string) => Promise<void>;
+  closeProject: () => void;
 }
 
 export const useProjectStore = create<ProjectState>((set, get) => ({
@@ -114,6 +115,19 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       });
     }
     await state.loadProjects();
+  },
+
+  closeProject: () => {
+    useUiStore.getState().setSelectedChunkId(null);
+    useUiStore.getState().setViewMode('document');
+    useChunksStore.setState({ chunks: [], isProcessing: false, cancelRequested: false, activeStreamId: null });
+    usePipelineStore.getState().resetToDefaults();
+    set({
+      currentProjectId: null,
+      saveState: 'idle',
+      lastSaveError: null,
+      trackedSnapshot: null,
+    });
   },
 
   saveCurrentProject: async (name?: string) => {

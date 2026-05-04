@@ -1,7 +1,7 @@
 {
   "app": {
     "title": "Glossa // Pipeline",
-    "subtitle": "Pipeline Multi-LLM v1.0"
+    "subtitle": "Traduzione assistita da AI"
   },
   "header": {
     "settings": "Impostazioni",
@@ -23,7 +23,7 @@
     "estimatedCost": "Costo stimato"
   },
   "pipeline": {
-    "globalSetup": "Configurazione Progetto",
+    "globalSetup": "Progetto",
     "languagePair": "Coppia Linguistica",
     "globalDefault": "default globale",
     "swapLanguages": "Inverti Lingue",
@@ -122,6 +122,8 @@
     "tabStages": "Fasi",
     "tabAudit": "Controllo qualità",
     "tabGlossary": "Registro Termini",
+    "noProjectTitle": "Nessun progetto aperto",
+    "noProjectHint": "Apri o crea un progetto per configurare fasi, modelli, audit e glossario.",
     "glossaryEmpty": "Nessun termine nel registro. Usa + per aggiungerne uno.",
     "glossaryNotes": "Note",
     "templates": {
@@ -239,6 +241,7 @@
     "new": "Nuovo Progetto",
     "create": "Crea",
     "save": "Salva",
+    "close": "Chiudi progetto",
     "saved": "Progetto salvato",
     "saveFailed": "Salvataggio progetto fallito",
     "statusDraft": "Non salvato",
@@ -374,7 +377,7 @@
     "translationLockedBody": "Questa traduzione e protetta da modifiche accidentali. Puoi sbloccarla dal pulsante con spunta verde nella barra del chunk.",
     "translationLockedBadge": "Validata",
     "configDrawerTitle": "Configurazione pipeline",
-    "configDrawerHint": "Modifica fasi, glossario e provider senza coprire il testo del documento.",
+    "configDrawerHint": "Lingua, modelli, fasi di traduzione e glossario del progetto corrente.",
     "insightsDrawerTitle": "Pannello insight",
     "insightsDrawerHint": "Indice chunk e valutazione del giudice per il chunk corrente.",
     "insightsTabIndex": "Indice",
@@ -632,5 +635,17 @@
     "overrideHint": "Personalizza i prezzi di default per deployment custom o tariffe aggiornate. Valori in USD per 1M di token.",
     "resetOverride": "Ripristina",
     "resetAll": "Ripristina tutti"
+  },
+  "languages": {
+    "English": "Inglese",
+    "Italian": "Italiano",
+    "Spanish": "Spagnolo",
+    "French": "Francese",
+    "German": "Tedesco",
+    "Portuguese": "Portoghese",
+    "Japanese": "Giapponese",
+    "Chinese": "Cinese",
+    "Korean": "Coreano",
+    "Russian": "Russo"
   }
 }

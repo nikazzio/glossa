@@ -1,7 +1,7 @@
 {
   "app": {
     "title": "Glossa // Pipeline",
-    "subtitle": "Multi-LLM Pipeline v1.0"
+    "subtitle": "AI-assisted translation"
   },
   "header": {
     "settings": "Settings",
@@ -23,7 +23,7 @@
     "estimatedCost": "Est. cost"
   },
   "pipeline": {
-    "globalSetup": "Project Configuration",
+    "globalSetup": "Project",
     "languagePair": "Language Pair",
     "globalDefault": "global default",
     "swapLanguages": "Swap Languages",
@@ -122,6 +122,8 @@
     "tabStages": "Stages",
     "tabAudit": "Quality Control",
     "tabGlossary": "Term Registry",
+    "noProjectTitle": "No project open",
+    "noProjectHint": "Open or create a project to configure stages, models, audit and glossary.",
     "glossaryEmpty": "No terms in the registry. Use + to add one.",
     "glossaryNotes": "Notes",
     "templates": {
@@ -239,6 +241,7 @@
     "new": "New Project",
     "create": "Create",
     "save": "Save",
+    "close": "Close project",
     "saved": "Project saved",
     "saveFailed": "Failed to save project",
     "statusDraft": "Not saved",
@@ -374,7 +377,7 @@
     "translationLockedBody": "This translation is protected from accidental edits. You can unlock it from the green check button in the chunk toolbar.",
     "translationLockedBadge": "Validated",
     "configDrawerTitle": "Pipeline configuration",
-    "configDrawerHint": "Edit stages, glossary and providers without covering the document text.",
+    "configDrawerHint": "Language, models, translation stages and glossary for the current project.",
     "insightsDrawerTitle": "Insights panel",
     "insightsDrawerHint": "Chunk index and judge findings for the current chunk.",
     "insightsTabIndex": "Index",
@@ -632,5 +635,17 @@
     "overrideHint": "Override default pricing for custom deployments or updated rates. Values are USD per 1M tokens.",
     "resetOverride": "Reset",
     "resetAll": "Reset all"
+  },
+  "languages": {
+    "English": "English",
+    "Italian": "Italian",
+    "Spanish": "Spanish",
+    "French": "French",
+    "German": "German",
+    "Portuguese": "Portuguese",
+    "Japanese": "Japanese",
+    "Chinese": "Chinese",
+    "Korean": "Korean",
+    "Russian": "Russian"
   }
 }

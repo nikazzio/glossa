@@ -107,7 +107,10 @@ export function ProductionStream({
       confirmLabel: t('pipeline.clearStream'),
       danger: true,
     });
-    if (ok) clearChunks();
+    if (ok) {
+      clearChunks();
+      setInputText('');
+    }
   };
 
   const handleUnlockSource = async (chunkId: string) => {

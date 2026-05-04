@@ -24,6 +24,7 @@ interface PipelineConfigProps {
   onCancelPipeline: () => void;
   className?: string;
   showActions?: boolean;
+  showOnlyGlobalDefaults?: boolean;
   visibleSection?: ConfigSection;
   libraryGlossarySection?: ReactNode;
 }
@@ -250,6 +251,7 @@ export function PipelineConfig({
   onCancelPipeline,
   className,
   showActions = true,
+  showOnlyGlobalDefaults = false,
   visibleSection,
   libraryGlossarySection,
 }: PipelineConfigProps) {
@@ -388,25 +390,22 @@ export function PipelineConfig({
     <section className={className ?? DEFAULT_PIPELINE_CONFIG_CLASSNAME}>
 
       {/* ── Defaults globali (coppia linguistica usata in tutte le sezioni) ── */}
-      <div className="shrink-0 border-b border-editorial-border/60 bg-editorial-textbox/20 px-8 py-4">
+      <div className="shrink-0 border-b border-editorial-border bg-editorial-textbox/20 px-8 py-4">
         <div className="flex items-center gap-2 mb-3">
-          <Globe size={11} className="text-editorial-accent/70 shrink-0" />
-          <p className="text-[9px] font-bold uppercase tracking-[0.32em] text-editorial-muted">
+          <Globe size={11} className="text-editorial-accent shrink-0" />
+          <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
             {t('pipeline.languagePair')}
           </p>
-          <span className="ml-auto rounded-full bg-editorial-accent/10 px-2 py-0.5 text-[8px] font-bold uppercase tracking-widest text-editorial-accent/80">
-            {t('pipeline.globalDefault')}
-          </span>
         </div>
         <div className="flex items-center gap-3">
           <select
             value={config.sourceLanguage}
             onChange={(e) => setConfig((prev) => ({ ...prev, sourceLanguage: e.target.value }))}
-            className="w-full rounded-[14px] border border-editorial-border bg-editorial-bg/80 px-3 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
+            className="w-full rounded-[14px] border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
             aria-label={t('pipeline.sourceLanguage')}
           >
             {LANGUAGES.map((lang) => (
-              <option key={lang} value={lang}>{lang}</option>
+              <option key={lang} value={lang}>{t(`languages.${lang}`)}</option>
             ))}
           </select>
           <button
@@ -418,7 +417,7 @@ export function PipelineConfig({
               }))
             }
             title={t('pipeline.swapLanguages')}
-            className="text-editorial-muted hover:text-editorial-ink transition-colors hover:scale-110 shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            className="shrink-0 rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             aria-label={t('pipeline.swapLanguages')}
           >
             <ArrowRightLeft size={13} />
@@ -426,21 +425,39 @@ export function PipelineConfig({
           <select
             value={config.targetLanguage}
             onChange={(e) => setConfig((prev) => ({ ...prev, targetLanguage: e.target.value }))}
-            className="w-full rounded-[14px] border border-editorial-border bg-editorial-bg/80 px-3 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
+            className="w-full rounded-[14px] border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
             aria-label={t('pipeline.targetLanguage')}
           >
             {LANGUAGES.map((lang) => (
-              <option key={lang} value={lang}>{lang}</option>
+              <option key={lang} value={lang}>{t(`languages.${lang}`)}</option>
             ))}
           </select>
         </div>
       </div>
 
-      {/* ── Tab navigation (stile InsightsDrawer: due linee, py-2) ── */}
+      {/* ── Empty state (no project open) ── */}
+      {showOnlyGlobalDefaults && (
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 px-8 py-12 text-center">
+          <div className="rounded-full border border-editorial-border/60 p-4 text-editorial-muted/50">
+            <Layers size={24} />
+          </div>
+          <div className="space-y-1">
+            <p className="font-display italic text-base text-editorial-ink">
+              {t('pipeline.noProjectTitle')}
+            </p>
+            <p className="text-xs leading-relaxed text-editorial-muted max-w-[260px]">
+              {t('pipeline.noProjectHint')}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ── Tab navigation + panels ── */}
+      {!showOnlyGlobalDefaults && <>
       <div
         role="tablist"
         aria-label={t('pipeline.configSections')}
-        className="flex items-center gap-2 shrink-0 border-b border-editorial-border bg-editorial-bg/60 px-6 py-1"
+        className="flex items-center gap-2 shrink-0 border-y border-editorial-border bg-editorial-bg/60 px-6 py-2"
       >
         <button
           type="button"
@@ -511,14 +528,18 @@ export function PipelineConfig({
             aria-labelledby="pconfig-tab-stages"
             className="space-y-5"
           >
-            <div className="flex justify-end">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+                {t('pipeline.tabStages')}
+              </p>
               <button
+                type="button"
                 onClick={addStage}
                 title={t('pipeline.addStage')}
                 aria-label={t('pipeline.addStage')}
-                className="text-editorial-accent hover:text-editorial-accent/70 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="rounded-full border border-editorial-accent/40 p-2 text-editorial-accent transition-colors hover:bg-editorial-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               >
-                <Plus size={18} />
+                <Plus size={14} />
               </button>
             </div>
             <div className="space-y-5">
@@ -543,7 +564,11 @@ export function PipelineConfig({
             aria-labelledby="pconfig-tab-audit"
             className="space-y-6"
           >
-            <div className="flex gap-2">
+            <div className="space-y-3 rounded-[20px] border border-editorial-border bg-editorial-bg/70 px-5 py-4">
+              <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+                {t('pipeline.auditModelLabel')}
+              </p>
+              <div className="flex gap-2">
               <select
                 value={config.judgeProvider}
                 onChange={(e) => handleJudgeProviderChange(e.target.value as ModelProvider)}
@@ -597,6 +622,7 @@ export function PipelineConfig({
                 <span>{t('ollama.selectedButOffline')}</span>
               </div>
             )}
+            </div>
 
             <AuditPromptEditor
               label={t('pipeline.judgePromptLabel')}
@@ -653,90 +679,99 @@ export function PipelineConfig({
             aria-labelledby="pconfig-tab-glossary"
             className="space-y-6"
           >
-            {libraryGlossarySection}
-            <div className="flex justify-end">
-              <button
-                onClick={addGlossaryEntry}
-                title={t('pipeline.addGlossaryEntry')}
-                className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                aria-label={t('pipeline.addGlossaryEntry')}
-              >
-                <Plus size={18} />
-              </button>
-            </div>
-
-            {config.glossary.length === 0 ? (
-              <p className="text-sm text-editorial-muted/60 text-center py-4 border border-dashed border-editorial-border/60 rounded-[16px]">
-                {t('pipeline.glossaryEmpty')}
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+                {t('pipeline.tabGlossary')}
               </p>
-            ) : (
-              <div className="space-y-2">
-                {config.glossary.map((g, i) => {
-                  const rowKey = g.id ?? `gloss-fallback-${i}`;
-                  const isDuplicate = g.id ? duplicateTermIds.has(g.id) : false;
-                  const removeLabel = `${t('pipeline.removeGlossaryEntry')} ${i + 1}`;
-                  return (
-                    <div
-                      key={rowKey}
-                      className={`rounded-[14px] border p-3 space-y-2 ${
-                        isDuplicate
-                          ? 'border-editorial-warning/60 bg-editorial-textbox/20'
-                          : 'border-editorial-border/40 bg-editorial-textbox/20'
-                      }`}
-                    >
-                      <div className="flex gap-2 items-center">
-                        <input
-                          value={g.term}
-                          onChange={(e) =>
-                            g.id ? updateGlossaryEntry(g.id, { term: e.target.value }) : undefined
-                          }
-                          className="w-full rounded-[10px] border border-editorial-border/40 bg-transparent px-2 py-2 text-sm font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent focus:border-editorial-accent/60"
-                          placeholder={t('pipeline.source')}
-                          aria-label={`${t('pipeline.source')} ${i + 1}`}
-                        />
-                        <input
-                          value={g.translation}
-                          onChange={(e) =>
-                            g.id
-                              ? updateGlossaryEntry(g.id, { translation: e.target.value })
-                              : undefined
-                          }
-                          className="w-full rounded-[10px] border border-editorial-border/40 bg-transparent px-2 py-2 text-sm font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent focus:border-editorial-accent/60"
-                          placeholder={t('pipeline.target')}
-                          aria-label={`${t('pipeline.target')} ${i + 1}`}
-                        />
-                        <button
-                          onClick={() => g.id && removeGlossaryEntry(g.id)}
-                          title={removeLabel}
-                          className="ml-auto shrink-0 p-1 text-editorial-muted/60 hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
-                          aria-label={removeLabel}
+              {!libraryGlossarySection && (
+                <button
+                  type="button"
+                  onClick={addGlossaryEntry}
+                  title={t('pipeline.addGlossaryEntry')}
+                  className="rounded-full border border-editorial-accent/40 p-2 text-editorial-accent transition-colors hover:bg-editorial-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  aria-label={t('pipeline.addGlossaryEntry')}
+                >
+                  <Plus size={14} />
+                </button>
+              )}
+            </div>
+            {libraryGlossarySection ?? (
+              <>
+                {config.glossary.length === 0 ? (
+                  <p className="text-sm text-editorial-muted/60 text-center py-4 border border-dashed border-editorial-border/60 rounded-[16px]">
+                    {t('pipeline.glossaryEmpty')}
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {config.glossary.map((g, i) => {
+                      const rowKey = g.id ?? `gloss-fallback-${i}`;
+                      const isDuplicate = g.id ? duplicateTermIds.has(g.id) : false;
+                      const removeLabel = `${t('pipeline.removeGlossaryEntry')} ${i + 1}`;
+                      return (
+                        <div
+                          key={rowKey}
+                          className={`rounded-[14px] border p-3 space-y-2 ${
+                            isDuplicate
+                              ? 'border-editorial-warning/60 bg-editorial-textbox/20'
+                              : 'border-editorial-border/40 bg-editorial-textbox/20'
+                          }`}
                         >
-                          <X size={14} />
-                        </button>
-                      </div>
-                      <input
-                        value={g.notes ?? ''}
-                        onChange={(e) =>
-                          g.id ? updateGlossaryEntry(g.id, { notes: e.target.value }) : undefined
-                        }
-                        className="w-full rounded-[10px] border border-editorial-border/30 bg-transparent px-2 py-1.5 text-sm font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent focus:border-editorial-accent/60 text-editorial-muted placeholder:text-editorial-muted/40"
-                        placeholder={t('pipeline.glossaryNotes')}
-                        aria-label={`${t('pipeline.glossaryNotes')} ${i + 1}`}
-                      />
-                      {isDuplicate && (
-                        <span className="text-xs uppercase tracking-widest text-editorial-warning font-bold pl-1">
-                          {t('pipeline.duplicateTerm')}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                          <div className="flex gap-2 items-center">
+                            <input
+                              value={g.term}
+                              onChange={(e) =>
+                                g.id ? updateGlossaryEntry(g.id, { term: e.target.value }) : undefined
+                              }
+                              className="w-full rounded-[10px] border border-editorial-border/40 bg-transparent px-2 py-2 text-sm font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent focus:border-editorial-accent/60"
+                              placeholder={t('pipeline.source')}
+                              aria-label={`${t('pipeline.source')} ${i + 1}`}
+                            />
+                            <input
+                              value={g.translation}
+                              onChange={(e) =>
+                                g.id
+                                  ? updateGlossaryEntry(g.id, { translation: e.target.value })
+                                  : undefined
+                              }
+                              className="w-full rounded-[10px] border border-editorial-border/40 bg-transparent px-2 py-2 text-sm font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent focus:border-editorial-accent/60"
+                              placeholder={t('pipeline.target')}
+                              aria-label={`${t('pipeline.target')} ${i + 1}`}
+                            />
+                            <button
+                              onClick={() => g.id && removeGlossaryEntry(g.id)}
+                              title={removeLabel}
+                              className="ml-auto shrink-0 p-1 text-editorial-muted/60 hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                              aria-label={removeLabel}
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                          <input
+                            value={g.notes ?? ''}
+                            onChange={(e) =>
+                              g.id ? updateGlossaryEntry(g.id, { notes: e.target.value }) : undefined
+                            }
+                            className="w-full rounded-[10px] border border-editorial-border/30 bg-transparent px-2 py-1.5 text-sm font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent focus:border-editorial-accent/60 text-editorial-muted placeholder:text-editorial-muted/40"
+                            placeholder={t('pipeline.glossaryNotes')}
+                            aria-label={`${t('pipeline.glossaryNotes')} ${i + 1}`}
+                          />
+                          {isDuplicate && (
+                            <span className="text-xs uppercase tracking-widest text-editorial-warning font-bold pl-1">
+                              {t('pipeline.duplicateTerm')}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
 
       </div>
+      </>}
 
       {showActions && (
         <div className="shrink-0 border-t border-editorial-border/60 px-8 py-6 flex flex-col gap-3">

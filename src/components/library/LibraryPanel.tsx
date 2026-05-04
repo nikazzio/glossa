@@ -54,7 +54,7 @@ export function LibraryPanel() {
     <AnimatePresence>
       {showLibraryPanel && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-6 sm:p-12"
+          className="fixed inset-0 z-[70] flex items-center justify-center p-6 sm:p-12"
           role="dialog"
           aria-modal="true"
           aria-labelledby="library-panel-title"

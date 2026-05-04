@@ -5,6 +5,7 @@ import {
   FileOutput,
   FilePen,
   FolderOpen,
+  FolderX,
   Globe,
   HelpCircle,
   LayoutTemplate,
@@ -73,6 +74,7 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
     currentProjectId,
     setShowProjectPanel,
     saveCurrentProject,
+    closeProject,
     projects,
     saveState,
   } = useProjectStore();
@@ -183,6 +185,7 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
   const importLabel = t('files.import');
   const projectsLabel = t('projects.title');
   const saveLabel = t('projects.save');
+  const closeProjectLabel = t('projects.close');
   const langLabel = t('language.label');
   const settingsLabel = t('header.settings');
   const helpLabel = t('help.title');
@@ -216,6 +219,9 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
               <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
                 {t('app.subtitle')}
               </div>
+              <div className="text-[9px] font-mono tracking-[0.2em] text-editorial-muted/50 mt-0.5">
+                v{__APP_VERSION__}
+              </div>
             </div>
             {currentProject && (
               <div className="flex flex-wrap items-center gap-2">
@@ -228,6 +234,16 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
                   {currentProject.name}
                 </button>
                 <SaveStatusBadge saveState={saveState} currentProjectId={currentProjectId} label={saveStatusLabel} />
+                <button
+                  type="button"
+                  onClick={closeProject}
+                  disabled={isProcessing}
+                  title={closeProjectLabel}
+                  aria-label={closeProjectLabel}
+                  className="rounded-full border border-editorial-border/60 p-1.5 text-editorial-muted/60 transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <FolderX size={12} />
+                </button>
               </div>
             )}
             {!currentProject && (
@@ -477,6 +493,7 @@ function SaveStatusBadge({
 
   if (saveState === 'saving') {
     icon = <Loader2 size={13} className="animate-spin" />;
+    colorClass = 'border-amber-400/60 bg-amber-50/60 text-amber-600';
   } else if (saveState === 'error') {
     icon = <AlertCircle size={13} />;
     colorClass = 'border-editorial-accent/50 bg-editorial-accent/10 text-editorial-accent';
@@ -485,6 +502,7 @@ function SaveStatusBadge({
     colorClass = 'border-amber-300/60 bg-amber-50/60 text-amber-700';
   } else if (currentProjectId) {
     icon = <CircleCheck size={13} />;
+    colorClass = 'border-emerald-400/60 bg-emerald-50/60 text-emerald-600';
   } else {
     icon = <FilePen size={13} />;
   }
