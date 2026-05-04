@@ -137,19 +137,19 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
 
   return (
     <div
-      className={`relative rounded-[20px] border border-editorial-border bg-editorial-bg p-6 transition-all ${
+      className={`relative rounded-[20px] border border-editorial-border bg-editorial-bg p-7 transition-all ${
         !stage.enabled ? 'grayscale opacity-40' : 'shadow-sm'
       }`}
     >
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
-          <span className="rounded-full bg-editorial-textbox/60 px-3 py-1 text-sm font-display italic text-editorial-accent">
+          <span className="rounded-full bg-editorial-textbox/60 px-3 py-1 text-base font-display italic text-editorial-accent">
             #{index + 1}
           </span>
           <input
             value={stage.name}
             onChange={(e) => onUpdate({ name: e.target.value })}
-            className="bg-transparent border-none p-0 font-display text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent w-32 border-b border-transparent focus:border-editorial-ink/20"
+            className="bg-transparent border-none p-0 font-display text-base focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent w-36 border-b border-transparent focus:border-editorial-ink/20"
             aria-label={t('pipeline.stageName')}
           />
         </div>
@@ -162,9 +162,9 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
             aria-pressed={stage.enabled}
           >
             {stage.enabled ? (
-              <ShieldCheck size={14} className="text-editorial-ink" />
+              <ShieldCheck size={17} className="text-editorial-ink" />
             ) : (
-              <div className="w-3.5 h-3.5 border-2 border-editorial-muted rounded-sm" />
+              <div className="w-4 h-4 border-2 border-editorial-muted rounded-sm" />
             )}
           </button>
           <button
@@ -174,7 +174,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
             aria-expanded={isExpanded}
             aria-label={isExpanded ? t('pipeline.collapseStage') : t('pipeline.expandStage')}
           >
-            {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            {isExpanded ? <ChevronUp size={19} /> : <ChevronDown size={19} />}
           </button>
           <button
             onClick={handleRemove}
@@ -182,7 +182,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
             className="text-editorial-muted hover:text-editorial-accent overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             aria-label={t('pipeline.removeStage')}
           >
-            <Trash2 size={14} />
+            <Trash2 size={17} />
           </button>
         </div>
       </div>

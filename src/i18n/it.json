@@ -25,6 +25,7 @@
   "pipeline": {
     "globalSetup": "Configurazione Progetto",
     "languagePair": "Coppia Linguistica",
+    "globalDefault": "default globale",
     "swapLanguages": "Inverti Lingue",
     "autoSegment": "Segmentazione Automatica (Paragrafi)",
     "headingAware": "Fondi titoli col chunk successivo",

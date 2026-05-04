@@ -25,6 +25,7 @@
   "pipeline": {
     "globalSetup": "Project Configuration",
     "languagePair": "Language Pair",
+    "globalDefault": "global default",
     "swapLanguages": "Swap Languages",
     "autoSegment": "Auto-Segment (Paragraphs)",
     "headingAware": "Merge headings with next chunk",

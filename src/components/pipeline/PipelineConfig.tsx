@@ -1,4 +1,4 @@
-import { Plus, ArrowRightLeft, Play, Layers, Loader2, X, ShieldCheck, AlertTriangle, RotateCcw, Wand2, BookmarkPlus, BookOpen, Check, Trash2 } from 'lucide-react';
+import { Plus, ArrowRightLeft, Play, Layers, Loader2, X, ShieldCheck, AlertTriangle, RotateCcw, Wand2, BookmarkPlus, BookOpen, Check, Trash2, Globe } from 'lucide-react';
 import { useMemo, useState, useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -389,16 +389,22 @@ export function PipelineConfig({
   return (
     <section className={className ?? DEFAULT_PIPELINE_CONFIG_CLASSNAME}>
 
-      {/* ── Defaults (lingua di base, sempre visibile) ── */}
-      <div className="shrink-0 border-b border-editorial-border/60 px-8 py-5">
-        <p className="mb-3 text-[9px] font-bold uppercase tracking-[0.32em] text-editorial-muted">
-          {t('pipeline.languagePair')}
-        </p>
+      {/* ── Defaults globali (coppia linguistica usata in tutte le sezioni) ── */}
+      <div className="shrink-0 border-b border-editorial-border/60 bg-editorial-textbox/20 px-8 py-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Globe size={11} className="text-editorial-accent/70 shrink-0" />
+          <p className="text-[9px] font-bold uppercase tracking-[0.32em] text-editorial-muted">
+            {t('pipeline.languagePair')}
+          </p>
+          <span className="ml-auto rounded-full bg-editorial-accent/10 px-2 py-0.5 text-[8px] font-bold uppercase tracking-widest text-editorial-accent/80">
+            {t('pipeline.globalDefault')}
+          </span>
+        </div>
         <div className="flex items-center gap-3">
           <select
             value={config.sourceLanguage}
             onChange={(e) => setConfig((prev) => ({ ...prev, sourceLanguage: e.target.value }))}
-            className="w-full rounded-[14px] border border-editorial-border bg-editorial-textbox/50 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
+            className="w-full rounded-[14px] border border-editorial-border bg-editorial-bg/80 px-3 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
             aria-label={t('pipeline.sourceLanguage')}
           >
             {LANGUAGES.map((lang) => (
@@ -417,12 +423,12 @@ export function PipelineConfig({
             className="text-editorial-muted hover:text-editorial-ink transition-colors hover:scale-110 shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             aria-label={t('pipeline.swapLanguages')}
           >
-            <ArrowRightLeft size={14} />
+            <ArrowRightLeft size={13} />
           </button>
           <select
             value={config.targetLanguage}
             onChange={(e) => setConfig((prev) => ({ ...prev, targetLanguage: e.target.value }))}
-            className="w-full rounded-[14px] border border-editorial-border bg-editorial-textbox/50 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
+            className="w-full rounded-[14px] border border-editorial-border bg-editorial-bg/80 px-3 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
             aria-label={t('pipeline.targetLanguage')}
           >
             {LANGUAGES.map((lang) => (
@@ -436,7 +442,7 @@ export function PipelineConfig({
       <div
         role="tablist"
         aria-label={t('pipeline.configSections')}
-        className="flex items-center gap-2 shrink-0 border-b border-editorial-border bg-editorial-bg/60 px-6 py-2"
+        className="flex items-center gap-2 shrink-0 border-b border-editorial-border bg-editorial-bg/60 px-6 py-1"
       >
         <button
           type="button"
