@@ -93,7 +93,7 @@ export function usePipeline() {
               chunk.originalText, stage, config, lastResult || undefined,
               (token) => appendChunkStageContent(chunk.id, stage.id, token),
               (usage) => { capturedUsage = usage; },
-              config.rollingContext ? options.previousTranslation : undefined,
+              stage.rollingContext !== false ? options.previousTranslation : undefined,
             );
           },
           { label: `Stage "${stage.name}"` },

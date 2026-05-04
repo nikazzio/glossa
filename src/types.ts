@@ -30,6 +30,7 @@ export interface PipelineStageConfig {
   model: string;
   provider: ModelProvider;
   enabled: boolean;
+  rollingContext?: boolean;
 }
 
 export interface TranslationChunk {
@@ -98,7 +99,6 @@ export interface PipelineConfig {
   minWords?: number;
   maxWords?: number;
   headingAware?: boolean;
-  rollingContext?: boolean;
   documentFormat?: DocumentFormat;
   markdownAware?: boolean;
   experimentalImport?: ExperimentalImportMode | null;

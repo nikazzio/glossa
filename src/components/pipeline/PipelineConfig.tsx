@@ -1,4 +1,4 @@
-import { Plus, ArrowRightLeft, Play, Loader2, X, AlertTriangle, RotateCcw, Wand2, BookmarkPlus, BookOpen, Check, Trash2 } from 'lucide-react';
+import { Plus, ArrowRightLeft, Play, Layers, Loader2, X, ShieldCheck, AlertTriangle, RotateCcw, Wand2, BookmarkPlus, BookOpen, Check, Trash2 } from 'lucide-react';
 import { useMemo, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -238,8 +238,8 @@ function AuditPromptEditor({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        rows={5}
-        className="w-full rounded-lg bg-editorial-textbox/40 border border-editorial-border/60 p-3 text-[12px] font-mono outline-none leading-relaxed resize-y focus-visible:ring-2 focus-visible:ring-editorial-accent"
+        rows={8}
+        className="w-full rounded-[16px] bg-editorial-textbox/40 border border-editorial-border/60 p-4 text-[12px] font-mono outline-none leading-relaxed resize-y focus-visible:ring-2 focus-visible:ring-editorial-accent"
       />
     </div>
   );
@@ -269,6 +269,7 @@ export function PipelineConfig({
   const judgeModels = useJudgeModelOptions(config.judgeProvider);
   const [isRefiningJudge, setIsRefiningJudge] = useState(false);
   const [isRefiningCoherence, setIsRefiningCoherence] = useState(false);
+  const [activeTab, setActiveTab] = useState<ConfigSection>(visibleSection ?? 'stages');
 
   const { templates, loadTemplates, saveTemplate, deleteTemplate } = usePromptTemplateStore();
 
@@ -276,9 +277,7 @@ export function PipelineConfig({
   const completedCount = chunks.filter((c) => c.status === 'completed').length;
   const canRerunAll = !isProcessing && completedCount > 0;
 
-  const showStages = !visibleSection || visibleSection === 'stages';
-  const showAudit = !visibleSection || visibleSection === 'audit';
-  const showGlossary = !visibleSection || visibleSection === 'glossary';
+  const showAudit = activeTab === 'audit';
 
   useEffect(() => {
     if (showAudit) loadTemplates();
@@ -381,85 +380,128 @@ export function PipelineConfig({
 
   return (
     <section className={className ?? DEFAULT_PIPELINE_CONFIG_CLASSNAME}>
-      <div className="space-y-8">
 
-        {/* ── Fasi: coppia linguistica + stages ── */}
-        {showStages && (
-          <>
-            <div>
-              <h2 className="font-display text-sm uppercase tracking-wider border-b border-editorial-ink pb-2 mb-6 inline-block">
-                {t('pipeline.globalSetup')}
-              </h2>
-              <div className="space-y-4">
-                <label className="block text-[11px] font-bold uppercase tracking-widest text-editorial-muted">
-                  {t('pipeline.languagePair')}
-                </label>
-                <div className="flex items-center gap-3">
-                  <select
-                    value={config.sourceLanguage}
-                    onChange={(e) => setConfig((prev) => ({ ...prev, sourceLanguage: e.target.value }))}
-                    className="w-full bg-editorial-textbox border-none px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
-                    aria-label={t('pipeline.sourceLanguage')}
-                  >
-                    {LANGUAGES.map((lang) => (
-                      <option key={lang} value={lang}>{lang}</option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={() =>
-                      setConfig((prev) => ({
-                        ...prev,
-                        sourceLanguage: prev.targetLanguage,
-                        targetLanguage: prev.sourceLanguage,
-                      }))
-                    }
-                    title={t('pipeline.swapLanguages')}
-                    className="text-editorial-muted hover:text-editorial-ink transition-colors hover:scale-110 shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                    aria-label={t('pipeline.swapLanguages')}
-                  >
-                    <ArrowRightLeft size={14} />
-                  </button>
-                  <select
-                    value={config.targetLanguage}
-                    onChange={(e) => setConfig((prev) => ({ ...prev, targetLanguage: e.target.value }))}
-                    className="w-full bg-editorial-textbox border-none px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
-                    aria-label={t('pipeline.targetLanguage')}
-                  >
-                    {LANGUAGES.map((lang) => (
-                      <option key={lang} value={lang}>{lang}</option>
-                    ))}
-                  </select>
-                </div>
-                <label className="flex items-center gap-2 mt-4 cursor-pointer w-max group">
-                  <input
-                    type="checkbox"
-                    checked={config.useChunking !== false}
-                    onChange={(e) => setConfig((prev) => ({ ...prev, useChunking: e.target.checked }))}
-                    className="accent-editorial-ink w-3 h-3"
-                  />
-                  <span className="text-[11px] uppercase font-bold tracking-widest text-editorial-muted group-hover:text-editorial-ink transition-colors">
-                    {t('pipeline.autoSegment')}
-                  </span>
-                </label>
-                <label className="flex items-center gap-2 mt-4 cursor-pointer w-max group">
-                  <input
-                    type="checkbox"
-                    checked={config.rollingContext === true}
-                    onChange={(e) => setConfig((prev) => ({ ...prev, rollingContext: e.target.checked }))}
-                    className="accent-editorial-ink w-3 h-3"
-                  />
-                  <span className="text-[11px] uppercase font-bold tracking-widest text-editorial-muted group-hover:text-editorial-ink transition-colors">
-                    {t('pipeline.rollingContext')}
-                  </span>
-                </label>
+      {/* ── Tab navigation ── */}
+      <div
+        role="tablist"
+        aria-label={t('pipeline.configSections')}
+        className="flex items-center gap-2 shrink-0 pb-6 border-b border-editorial-border/60"
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'stages'}
+          aria-controls="pconfig-panel-stages"
+          id="pconfig-tab-stages"
+          onClick={() => setActiveTab('stages')}
+          title={t('pipeline.stages')}
+          aria-label={t('pipeline.stages')}
+          className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+            activeTab === 'stages'
+              ? 'border-editorial-ink bg-editorial-ink text-white'
+              : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
+          }`}
+        >
+          <Layers size={15} />
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'audit'}
+          aria-controls="pconfig-panel-audit"
+          id="pconfig-tab-audit"
+          onClick={() => setActiveTab('audit')}
+          title={t('pipeline.auditGuard')}
+          aria-label={t('pipeline.auditGuard')}
+          className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+            activeTab === 'audit'
+              ? 'border-editorial-ink bg-editorial-ink text-white'
+              : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
+          }`}
+        >
+          <ShieldCheck size={15} />
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'glossary'}
+          aria-controls="pconfig-panel-glossary"
+          id="pconfig-tab-glossary"
+          onClick={() => setActiveTab('glossary')}
+          title={t('pipeline.keywordRegistry')}
+          aria-label={t('pipeline.keywordRegistry')}
+          className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+            activeTab === 'glossary'
+              ? 'border-editorial-ink bg-editorial-ink text-white'
+              : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
+          }`}
+        >
+          <BookOpen size={15} />
+        </button>
+      </div>
+
+      {/* ── Tab panels ── */}
+      <div className="flex-1 min-h-0 space-y-8">
+
+        {/* ── FASI ── */}
+        {activeTab === 'stages' && (
+          <div
+            id="pconfig-panel-stages"
+            role="tabpanel"
+            aria-labelledby="pconfig-tab-stages"
+            className="space-y-8"
+          >
+            {/* Coppia linguistica */}
+            <div className="space-y-4">
+              <label className="block text-[10px] font-bold uppercase tracking-[0.3em] text-editorial-muted">
+                {t('pipeline.languagePair')}
+              </label>
+              <div className="flex items-center gap-3">
+                <select
+                  value={config.sourceLanguage}
+                  onChange={(e) => setConfig((prev) => ({ ...prev, sourceLanguage: e.target.value }))}
+                  className="w-full rounded-[14px] border border-editorial-border bg-editorial-textbox/50 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
+                  aria-label={t('pipeline.sourceLanguage')}
+                >
+                  {LANGUAGES.map((lang) => (
+                    <option key={lang} value={lang}>{lang}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={() =>
+                    setConfig((prev) => ({
+                      ...prev,
+                      sourceLanguage: prev.targetLanguage,
+                      targetLanguage: prev.sourceLanguage,
+                    }))
+                  }
+                  title={t('pipeline.swapLanguages')}
+                  className="text-editorial-muted hover:text-editorial-ink transition-colors hover:scale-110 shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  aria-label={t('pipeline.swapLanguages')}
+                >
+                  <ArrowRightLeft size={14} />
+                </button>
+                <select
+                  value={config.targetLanguage}
+                  onChange={(e) => setConfig((prev) => ({ ...prev, targetLanguage: e.target.value }))}
+                  className="w-full rounded-[14px] border border-editorial-border bg-editorial-textbox/50 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
+                  aria-label={t('pipeline.targetLanguage')}
+                >
+                  {LANGUAGES.map((lang) => (
+                    <option key={lang} value={lang}>{lang}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
             <hr className="border-editorial-border/60" />
 
+            {/* Fasi di traduzione */}
             <div>
-              <div className="flex items-center justify-between border-b border-editorial-ink pb-2 mb-6">
-                <h2 className="font-display text-sm uppercase tracking-wider">{t('pipeline.stages')}</h2>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="font-display text-sm uppercase tracking-wider">
+                  {t('pipeline.stages')}
+                </h2>
                 <button
                   onClick={addStage}
                   title={t('pipeline.addStage')}
@@ -469,7 +511,7 @@ export function PipelineConfig({
                   <Plus size={18} />
                 </button>
               </div>
-              <div className="space-y-6">
+              <div className="space-y-5">
                 {config.stages.map((stage, idx) => (
                   <StageCard
                     key={stage.id}
@@ -481,133 +523,137 @@ export function PipelineConfig({
                 ))}
               </div>
             </div>
-          </>
-        )}
-
-        {/* ── Audit Guard ── */}
-        {showAudit && showStages && <hr className="border-editorial-border/60" />}
-        {showAudit && (
-          <div>
-            <div className="flex items-center justify-between border-b border-editorial-ink pb-2 mb-6">
-              <h2 className="font-display text-sm uppercase tracking-wider">
-                {t('pipeline.auditGuard')}
-              </h2>
-            </div>
-            <div className="space-y-4">
-              <div className="rounded-[20px] border border-editorial-border bg-editorial-bg/70 p-4">
-                <div className="mb-3">
-                  <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
-                    {t('pipeline.auditModelLabel')}
-                  </div>
-                  <p className="mt-1 text-[11px] leading-relaxed text-editorial-muted/70">
-                    {t('pipeline.auditModelHint')}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <select
-                    value={config.judgeProvider}
-                    onChange={(e) => handleJudgeProviderChange(e.target.value as ModelProvider)}
-                    className="bg-editorial-textbox/60 rounded border border-editorial-border/60 px-2 py-1.5 text-[11px] font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                    aria-label={t('models.provider')}
-                  >
-                    {Object.keys(MODEL_OPTIONS).map((p) => (
-                      <option key={p} value={p}>{p}</option>
-                    ))}
-                  </select>
-                  {judgeModels.length > 0 ? (
-                    <select
-                      value={config.judgeModel}
-                      onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
-                      className="flex-1 bg-editorial-textbox/60 rounded border border-editorial-border/60 px-2 py-1.5 text-[11px] font-mono outline-none"
-                      aria-label={t('pipeline.auditModelLabel')}
-                    >
-                      {judgeModels.map((m) => (
-                        <option key={m} value={m}>
-                          {m}{getModelStatus(config.judgeProvider, m) === 'preview' ? ' (preview)' : ''}
-                        </option>
-                      ))}
-                    </select>
-                  ) : config.judgeProvider === 'ollama' ? (
-                    <input
-                      value={config.judgeModel}
-                      onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
-                      placeholder={t('ollama.modelPlaceholder')}
-                      className="flex-1 bg-editorial-textbox/60 rounded border border-editorial-border/60 px-2 py-1.5 text-[11px] font-mono outline-none"
-                      aria-label={t('pipeline.auditModelLabel')}
-                    />
-                  ) : (
-                    <select
-                      value={config.judgeModel}
-                      onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
-                      className="flex-1 bg-editorial-textbox/60 rounded border border-editorial-border/60 px-2 py-1.5 text-[11px] font-mono outline-none"
-                      aria-label={t('pipeline.auditModelLabel')}
-                    >
-                      {MODEL_OPTIONS[config.judgeProvider]?.map((m) => (
-                        <option key={m} value={m}>
-                          {m}{getModelStatus(config.judgeProvider, m) === 'preview' ? ' (preview)' : ''}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-              </div>
-              {judgeOllamaOffline && (
-                <div className="flex items-center gap-2 text-[10px] text-editorial-accent">
-                  <AlertTriangle size={12} />
-                  <span>{t('ollama.selectedButOffline')}</span>
-                </div>
-              )}
-              <AuditPromptEditor
-                label={t('pipeline.judgePromptLabel')}
-                hint={t('pipeline.judgePromptHint')}
-                value={config.judgePrompt}
-                placeholder={t('pipeline.auditPlaceholder')}
-                templates={auditTemplates}
-                isRefining={isRefiningJudge}
-                onRefine={handleRefineJudgePrompt}
-                onChange={(value) => setConfig((prev) => ({ ...prev, judgePrompt: value }))}
-                onApplyTemplate={(template) => {
-                  setConfig((prev) => ({
-                    ...prev,
-                    judgePrompt: template.prompt,
-                    judgeModel: template.defaultModel || prev.judgeModel,
-                    judgeProvider: (template.defaultProvider as ModelProvider | undefined) || prev.judgeProvider,
-                  }));
-                }}
-                saveTemplate={saveTemplate}
-                deleteTemplate={deleteTemplate}
-                defaultModel={config.judgeModel}
-                defaultProvider={config.judgeProvider}
-              />
-              <AuditPromptEditor
-                label={t('pipeline.coherencePromptLabel')}
-                hint={t('pipeline.coherencePromptHint')}
-                value={config.coherencePrompt ?? ''}
-                placeholder={t('pipeline.coherencePromptPlaceholder')}
-                templates={auditTemplates}
-                isRefining={isRefiningCoherence}
-                onRefine={handleRefineCoherencePrompt}
-                onChange={(value) => setConfig((prev) => ({ ...prev, coherencePrompt: value }))}
-                onApplyTemplate={(template) => {
-                  setConfig((prev) => ({
-                    ...prev,
-                    coherencePrompt: template.prompt,
-                    judgeModel: template.defaultModel || prev.judgeModel,
-                    judgeProvider: (template.defaultProvider as ModelProvider | undefined) || prev.judgeProvider,
-                  }));
-                }}
-                saveTemplate={saveTemplate}
-                deleteTemplate={deleteTemplate}
-                defaultModel={config.judgeModel}
-                defaultProvider={config.judgeProvider}
-              />
-            </div>
           </div>
         )}
 
-        {/* ── Glossary ── */}
-        {showGlossary && (
-          <div className="space-y-4">
+        {/* ── AUDIT ── */}
+        {activeTab === 'audit' && (
+          <div
+            id="pconfig-panel-audit"
+            role="tabpanel"
+            aria-labelledby="pconfig-tab-audit"
+            className="space-y-5"
+          >
+            <div className="rounded-[20px] border border-editorial-border bg-editorial-bg/70 p-5">
+              <div className="mb-4">
+                <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
+                  {t('pipeline.auditModelLabel')}
+                </div>
+                <p className="mt-1 text-[11px] leading-relaxed text-editorial-muted/70">
+                  {t('pipeline.auditModelHint')}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <select
+                  value={config.judgeProvider}
+                  onChange={(e) => handleJudgeProviderChange(e.target.value as ModelProvider)}
+                  className="rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-1.5 text-[11px] font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  aria-label={t('models.provider')}
+                >
+                  {Object.keys(MODEL_OPTIONS).map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+                {judgeModels.length > 0 ? (
+                  <select
+                    value={config.judgeModel}
+                    onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
+                    className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-1.5 text-[11px] font-mono outline-none"
+                    aria-label={t('pipeline.auditModelLabel')}
+                  >
+                    {judgeModels.map((m) => (
+                      <option key={m} value={m}>
+                        {m}{getModelStatus(config.judgeProvider, m) === 'preview' ? ' (preview)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                ) : config.judgeProvider === 'ollama' ? (
+                  <input
+                    value={config.judgeModel}
+                    onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
+                    placeholder={t('ollama.modelPlaceholder')}
+                    className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-1.5 text-[11px] font-mono outline-none"
+                    aria-label={t('pipeline.auditModelLabel')}
+                  />
+                ) : (
+                  <select
+                    value={config.judgeModel}
+                    onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
+                    className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-1.5 text-[11px] font-mono outline-none"
+                    aria-label={t('pipeline.auditModelLabel')}
+                  >
+                    {MODEL_OPTIONS[config.judgeProvider]?.map((m) => (
+                      <option key={m} value={m}>
+                        {m}{getModelStatus(config.judgeProvider, m) === 'preview' ? ' (preview)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            </div>
+
+            {judgeOllamaOffline && (
+              <div className="flex items-center gap-2 text-[10px] text-editorial-accent">
+                <AlertTriangle size={12} />
+                <span>{t('ollama.selectedButOffline')}</span>
+              </div>
+            )}
+
+            <AuditPromptEditor
+              label={t('pipeline.judgePromptLabel')}
+              hint={t('pipeline.judgePromptHint')}
+              value={config.judgePrompt}
+              placeholder={t('pipeline.auditPlaceholder')}
+              templates={auditTemplates}
+              isRefining={isRefiningJudge}
+              onRefine={handleRefineJudgePrompt}
+              onChange={(value) => setConfig((prev) => ({ ...prev, judgePrompt: value }))}
+              onApplyTemplate={(template) => {
+                setConfig((prev) => ({
+                  ...prev,
+                  judgePrompt: template.prompt,
+                  judgeModel: template.defaultModel || prev.judgeModel,
+                  judgeProvider: (template.defaultProvider as ModelProvider | undefined) || prev.judgeProvider,
+                }));
+              }}
+              saveTemplate={saveTemplate}
+              deleteTemplate={deleteTemplate}
+              defaultModel={config.judgeModel}
+              defaultProvider={config.judgeProvider}
+            />
+            <AuditPromptEditor
+              label={t('pipeline.coherencePromptLabel')}
+              hint={t('pipeline.coherencePromptHint')}
+              value={config.coherencePrompt ?? ''}
+              placeholder={t('pipeline.coherencePromptPlaceholder')}
+              templates={auditTemplates}
+              isRefining={isRefiningCoherence}
+              onRefine={handleRefineCoherencePrompt}
+              onChange={(value) => setConfig((prev) => ({ ...prev, coherencePrompt: value }))}
+              onApplyTemplate={(template) => {
+                setConfig((prev) => ({
+                  ...prev,
+                  coherencePrompt: template.prompt,
+                  judgeModel: template.defaultModel || prev.judgeModel,
+                  judgeProvider: (template.defaultProvider as ModelProvider | undefined) || prev.judgeProvider,
+                }));
+              }}
+              saveTemplate={saveTemplate}
+              deleteTemplate={deleteTemplate}
+              defaultModel={config.judgeModel}
+              defaultProvider={config.judgeProvider}
+            />
+          </div>
+        )}
+
+        {/* ── GLOSSARIO ── */}
+        {activeTab === 'glossary' && (
+          <div
+            id="pconfig-panel-glossary"
+            role="tabpanel"
+            aria-labelledby="pconfig-tab-glossary"
+            className="space-y-4"
+          >
             <div className="flex items-center justify-between">
               <label className="block text-[11px] font-bold uppercase tracking-widest text-editorial-muted">
                 {t('pipeline.keywordRegistry')}
@@ -628,7 +674,7 @@ export function PipelineConfig({
             </div>
 
             {config.glossary.length === 0 ? (
-              <p className="text-[11px] text-editorial-muted/60 text-center py-4 border border-dashed border-editorial-border/60 rounded-lg">
+              <p className="text-[11px] text-editorial-muted/60 text-center py-4 border border-dashed border-editorial-border/60 rounded-[16px]">
                 {t('pipeline.glossaryEmpty')}
               </p>
             ) : (
@@ -640,7 +686,7 @@ export function PipelineConfig({
                   return (
                     <div
                       key={rowKey}
-                      className={`rounded-lg border p-2 space-y-1.5 ${
+                      className={`rounded-[14px] border p-2 space-y-1.5 ${
                         isDuplicate
                           ? 'border-editorial-warning/60 bg-editorial-textbox/20'
                           : 'border-editorial-border/40 bg-editorial-textbox/20'
@@ -652,7 +698,7 @@ export function PipelineConfig({
                           onChange={(e) =>
                             g.id ? updateGlossaryEntry(g.id, { term: e.target.value }) : undefined
                           }
-                          className="w-full bg-transparent rounded py-2 px-2 text-[11px] font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent border border-editorial-border/40 focus:border-editorial-accent/60"
+                          className="w-full rounded-[10px] border border-editorial-border/40 bg-transparent px-2 py-2 text-[11px] font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent focus:border-editorial-accent/60"
                           placeholder={t('pipeline.source')}
                           aria-label={`${t('pipeline.source')} ${i + 1}`}
                         />
@@ -663,14 +709,14 @@ export function PipelineConfig({
                               ? updateGlossaryEntry(g.id, { translation: e.target.value })
                               : undefined
                           }
-                          className="w-full bg-transparent rounded py-2 px-2 text-[11px] font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent border border-editorial-border/40 focus:border-editorial-accent/60"
+                          className="w-full rounded-[10px] border border-editorial-border/40 bg-transparent px-2 py-2 text-[11px] font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent focus:border-editorial-accent/60"
                           placeholder={t('pipeline.target')}
                           aria-label={`${t('pipeline.target')} ${i + 1}`}
                         />
                         <button
                           onClick={() => g.id && removeGlossaryEntry(g.id)}
                           title={removeLabel}
-                          className="ml-auto text-editorial-muted/60 hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent shrink-0 p-1"
+                          className="ml-auto shrink-0 p-1 text-editorial-muted/60 hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
                           aria-label={removeLabel}
                         >
                           <X size={12} />
@@ -681,7 +727,7 @@ export function PipelineConfig({
                         onChange={(e) =>
                           g.id ? updateGlossaryEntry(g.id, { notes: e.target.value }) : undefined
                         }
-                        className="w-full bg-transparent rounded py-1.5 px-2 text-[11px] font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent border border-editorial-border/30 focus:border-editorial-accent/60 text-editorial-muted placeholder:text-editorial-muted/40"
+                        className="w-full rounded-[10px] border border-editorial-border/30 bg-transparent px-2 py-1.5 text-[11px] font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent focus:border-editorial-accent/60 text-editorial-muted placeholder:text-editorial-muted/40"
                         placeholder={t('pipeline.glossaryNotes')}
                         aria-label={`${t('pipeline.glossaryNotes')} ${i + 1}`}
                       />

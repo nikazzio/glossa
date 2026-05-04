@@ -4,6 +4,7 @@ import {
   BookOpen,
   ChevronUp,
   ChevronDown,
+  Link2,
   Loader2,
   Trash2,
   ShieldCheck,
@@ -237,6 +238,28 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
             </div>
           )}
 
+          {/* Rolling context toggle */}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={stage.rollingContext !== false}
+              onClick={() => onUpdate({ rollingContext: stage.rollingContext !== false ? false : true })}
+              title={t('pipeline.rollingContext')}
+              aria-label={t('pipeline.rollingContext')}
+              className={`shrink-0 rounded-full border p-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                stage.rollingContext !== false
+                  ? 'border-editorial-ink bg-editorial-ink text-white'
+                  : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
+              }`}
+            >
+              <Link2 size={13} />
+            </button>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
+              {t('pipeline.rollingContext')}
+            </span>
+          </div>
+
           {/* Prompt textarea with template controls */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -360,8 +383,8 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
               value={stage.prompt}
               onChange={(e) => onUpdate({ prompt: e.target.value })}
               placeholder={t('pipeline.stagePromptPlaceholder')}
-              rows={4}
-              className="w-full rounded-lg bg-editorial-textbox/40 border border-editorial-border/60 p-3 text-[12px] font-mono outline-none leading-relaxed resize-none overflow-hidden focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              rows={8}
+              className="w-full rounded-[16px] bg-editorial-textbox/40 border border-editorial-border/60 p-4 text-[12px] font-mono outline-none leading-relaxed resize-y focus-visible:ring-2 focus-visible:ring-editorial-accent"
             />
           </div>
         </div>
