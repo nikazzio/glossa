@@ -81,8 +81,11 @@ export async function upsertGlossaryEntries(
   glossaryId: string,
   entries: GlossaryEntry[],
 ): Promise<void> {
+  const validEntries = entries.filter(
+    (e) => e.term.trim() && e.translation.trim(),
+  );
   await runInTransaction(async (run) => {
-    for (const entry of entries) {
+    for (const entry of validEntries) {
       const id = entry.id ?? generateId('gle');
       await run(
         `INSERT INTO glossary_entries (id, glossary_id, term, translation, notes)
@@ -94,14 +97,14 @@ export async function upsertGlossaryEntries(
         [id, glossaryId, entry.term, entry.translation, entry.notes ?? ''],
       );
     }
-    const existingIds = entries.filter((e) => e.id).map((e) => e.id as string);
-    if (existingIds.length > 0) {
-      const placeholders = existingIds.map((_, i) => `$${i + 2}`).join(', ');
+    const keptIds = validEntries.filter((e) => e.id).map((e) => e.id as string);
+    if (keptIds.length > 0) {
+      const placeholders = keptIds.map((_, i) => `$${i + 2}`).join(', ');
       await run(
         `DELETE FROM glossary_entries WHERE glossary_id = $1 AND id NOT IN (${placeholders})`,
-        [glossaryId, ...existingIds],
+        [glossaryId, ...keptIds],
       );
-    } else if (entries.length === 0) {
+    } else {
       await run('DELETE FROM glossary_entries WHERE glossary_id = $1', [glossaryId]);
     }
   });

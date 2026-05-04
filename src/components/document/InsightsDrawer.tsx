@@ -28,7 +28,6 @@ import { useTranslation } from 'react-i18next';
 import { type KeyboardEvent, useMemo, useRef } from 'react';
 import { useUiStore } from '../../stores/uiStore';
 import { useChunksStore } from '../../stores/chunksStore';
-import type { CoherenceResult } from '../../types';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { usePricingStore } from '../../stores/pricingStore';
 import { indexPad, qualityLabelKey, qualityTone, calculateCompositeQuality } from '../../utils';

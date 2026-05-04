@@ -136,7 +136,8 @@
     "refinePrompt": "Refine prompt",
     "refining": "Refining...",
     "refined": "Prompt refined",
-    "refineFailed": "Refinement failed"
+    "refineFailed": "Refinement failed",
+    "useChunking": "Auto-segment imported text into chunks"
   },
   "audit": {
     "title": "Audit Logs",
@@ -576,6 +577,10 @@
     "dictionaryForkError": "Fork error",
     "dictionaryAssigned": "Dictionary assigned to current session",
     "dictionaryAssignError": "Assignment error",
+    "unsavedChangesTitle": "Unsaved changes",
+    "unsavedChangesMessage": "You have unsaved changes to dictionaries. Do you want to save them before closing?",
+    "saveAndClose": "Save and close",
+    "closeWithoutSaving": "Close without saving",
     "noTemplates": "No templates. Use + to create one.",
     "newTemplate": "New",
     "templateNamePlaceholder": "Template name...",

@@ -227,16 +227,24 @@ function isHeadingChunk(text: string): boolean {
 function mergeHeadingChunks(chunks: string[]): string[] {
   if (chunks.length <= 1) return chunks;
   const result: string[] = [];
-  let pending = chunks[0];
-  for (let i = 1; i < chunks.length; i++) {
-    if (isHeadingChunk(pending)) {
-      pending = `${pending.trim()}\n\n${chunks[i].trim()}`;
+  let headingAccumulator = '';
+  for (const chunk of chunks) {
+    if (isHeadingChunk(chunk)) {
+      headingAccumulator = headingAccumulator
+        ? `${headingAccumulator.trim()}\n\n${chunk.trim()}`
+        : chunk.trim();
     } else {
-      result.push(pending);
-      pending = chunks[i];
+      const merged = headingAccumulator
+        ? `${headingAccumulator}\n\n${chunk.trim()}`
+        : chunk;
+      result.push(merged);
+      headingAccumulator = '';
     }
   }
-  result.push(pending);
+  // If trailing headings remain (no following non-heading chunk), push them as-is
+  if (headingAccumulator) {
+    result.push(headingAccumulator);
+  }
   return result;
 }
 

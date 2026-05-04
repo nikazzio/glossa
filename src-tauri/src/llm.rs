@@ -1270,13 +1270,25 @@ pub async fn check_ollama_status() -> Result<bool, String> {
 /// Returns a slice of `text` starting from the `(word_count - n)`-th word,
 /// i.e. the trailing `n` words. Returns the full string if it has ≤ n words.
 fn last_n_words(text: &str, n: usize) -> &str {
-    let words: Vec<&str> = text.split_whitespace().collect();
-    if words.len() <= n {
-        return text.trim();
+    if n == 0 {
+        return "";
     }
-    let start = words[words.len() - n];
-    let offset = start.as_ptr() as usize - text.as_ptr() as usize;
-    text[offset..].trim_start()
+    let mut word_count = 0;
+    let mut in_word = false;
+    for (i, c) in text.char_indices().rev() {
+        if c.is_whitespace() {
+            if in_word {
+                word_count += 1;
+                if word_count >= n {
+                    return text[i + c.len_utf8()..].trim_start();
+                }
+                in_word = false;
+            }
+        } else {
+            in_word = true;
+        }
+    }
+    text.trim_start()
 }
 
 fn build_stage_prompts(

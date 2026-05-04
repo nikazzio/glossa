@@ -55,6 +55,11 @@ export async function initDatabase(): Promise<void> {
   await conn.execute('PRAGMA journal_mode=WAL');
   await conn.execute('PRAGMA synchronous=NORMAL');
   await conn.execute('PRAGMA busy_timeout=10000');
+  // Warm up additional pool connections with the same busy_timeout
+  // so write contention doesn't hit connections with the shorter default.
+  for (let i = 0; i < 8; i++) {
+    await execute('PRAGMA busy_timeout=10000');
+  }
 
   await conn.execute(`
     CREATE TABLE IF NOT EXISTS projects (
@@ -217,34 +222,15 @@ export async function select<T>(query: string, params: unknown[] = []): Promise<
   return conn.select<T[]>(query, params);
 }
 
-// Executes fn inside a best-effort SQLite transaction (BEGIN / COMMIT / ROLLBACK).
-// All statements run inside serializeWrite so no concurrent JS writes can
-// interleave. This improves atomicity if the plugin routes these statements
-// through the same underlying SQLite connection.
 export async function runInTransaction<T>(
-  fn: (executeTx: (query: string, params?: unknown[]) => Promise<void>) => Promise<T>,
+  fn: (run: (query: string, params?: unknown[]) => Promise<void>) => Promise<T>,
 ): Promise<T> {
   return serializeWrite(async () => {
     const conn = await getDb();
-    await conn.execute('BEGIN');
-    try {
-      const run = async (query: string, params: unknown[] = []) => {
-        await conn.execute(query, params);
-      };
-      const result = await fn(run);
-      await conn.execute('COMMIT');
-      return result;
-    } catch (error) {
-      try {
-        await conn.execute('ROLLBACK');
-      } catch (rollbackError) {
-        console.warn('[Glossa] ROLLBACK failed after transaction error', {
-          error,
-          rollbackError,
-        });
-      }
-      throw error;
-    }
+    const run = async (query: string, params: unknown[] = []) => {
+      await conn.execute(query, params);
+    };
+    return fn(run);
   });
 }
 

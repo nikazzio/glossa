@@ -112,38 +112,43 @@ function AuditPromptEditor({
 
   return (
     <div className="rounded-[20px] border border-editorial-border bg-editorial-bg/70 p-6 space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <span className="font-display italic text-sm text-editorial-ink">{label}</span>
-        <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={onRefine}
-            disabled={isRefining || !value.trim()}
-            title={t('pipeline.refinePrompt')}
-            aria-label={`${t('pipeline.refinePrompt')}: ${label}`}
-            className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40"
-          >
-            {isRefining ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
-          </button>
-          <button
-            type="button"
-            onClick={() => { setShowSaveName(!showSaveName); setShowTemplateList(false); }}
-            title={t('pipeline.templates.save')}
-            aria-label={`${t('pipeline.templates.save')}: ${label}`}
-            className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
-          >
-            <BookmarkPlus size={16} />
-          </button>
-          <button
-            type="button"
-            onClick={() => { setShowTemplateList(!showTemplateList); setShowSaveName(false); }}
-            title={t('pipeline.templates.load')}
-            aria-label={`${t('pipeline.templates.load')}: ${label}`}
-            className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
-          >
-            <BookOpen size={16} />
-          </button>
+      <div className="space-y-1">
+        <div className="flex items-center justify-between gap-3">
+          <span className="font-display italic text-sm text-editorial-ink">{label}</span>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={onRefine}
+              disabled={isRefining || !value.trim()}
+              title={t('pipeline.refinePrompt')}
+              aria-label={`${t('pipeline.refinePrompt')}: ${label}`}
+              className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40"
+            >
+              {isRefining ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setShowSaveName(!showSaveName); setShowTemplateList(false); }}
+              title={t('pipeline.templates.save')}
+              aria-label={`${t('pipeline.templates.save')}: ${label}`}
+              className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+            >
+              <BookmarkPlus size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={() => { setShowTemplateList(!showTemplateList); setShowSaveName(false); }}
+              title={t('pipeline.templates.load')}
+              aria-label={`${t('pipeline.templates.load')}: ${label}`}
+              className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+            >
+              <BookOpen size={16} />
+            </button>
+          </div>
         </div>
+        {hint && (
+          <p className="text-[10px] leading-relaxed text-editorial-muted/70">{hint}</p>
+        )}
       </div>
 
       {showSaveName && (
@@ -506,6 +511,15 @@ export function PipelineConfig({
             aria-labelledby="pconfig-tab-stages"
             className="space-y-5"
           >
+            <label className="flex items-start gap-3 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={config.useChunking !== false}
+                onChange={(e) => setConfig((prev) => ({ ...prev, useChunking: e.target.checked }))}
+                className="mt-1 accent-editorial-ink"
+              />
+              <span className="text-sm leading-relaxed text-editorial-ink">{t('pipeline.useChunking')}</span>
+            </label>
             <div className="flex justify-end">
               <button
                 onClick={addStage}

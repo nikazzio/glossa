@@ -2,8 +2,10 @@ import { useEffect } from 'react';
 import { BookMarked, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { useLibraryStore, type LibraryTab } from '../../stores/libraryStore';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { confirm } from '../../stores/confirmStore';
 import { DictionariesTab } from './DictionariesTab';
 import { PromptTemplatesTab } from './PromptTemplatesTab';
 
@@ -14,8 +16,35 @@ const TABS: { id: LibraryTab; labelKey: string }[] = [
 
 export function LibraryPanel() {
   const { t } = useTranslation();
-  const { showLibraryPanel, activeTab, setShowLibraryPanel, loadGlossaries } = useLibraryStore();
-  const trapRef = useFocusTrap(showLibraryPanel, () => setShowLibraryPanel(false));
+  const {
+    showLibraryPanel,
+    activeTab,
+    setShowLibraryPanel,
+    loadGlossaries,
+    dirtyIds,
+    saveAllDirty,
+  } = useLibraryStore();
+
+  const handleClose = async () => {
+    if (dirtyIds.length > 0) {
+      const save = await confirm({
+        title: t('library.unsavedChangesTitle'),
+        message: t('library.unsavedChangesMessage'),
+        confirmLabel: t('library.saveAndClose'),
+        cancelLabel: t('library.closeWithoutSaving'),
+      });
+      if (save) {
+        try {
+          await saveAllDirty();
+        } catch {
+          toast.error(t('library.dictionarySaveError'));
+        }
+      }
+    }
+    setShowLibraryPanel(false);
+  };
+
+  const trapRef = useFocusTrap(showLibraryPanel, handleClose);
 
   useEffect(() => {
     if (showLibraryPanel) loadGlossaries();
@@ -36,7 +65,7 @@ export function LibraryPanel() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="absolute inset-0 bg-editorial-ink/60 backdrop-blur-sm"
-            onClick={() => setShowLibraryPanel(false)}
+            onClick={handleClose}
           />
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
@@ -45,7 +74,7 @@ export function LibraryPanel() {
             className="relative bg-editorial-bg w-full max-w-3xl h-[85vh] flex flex-col shadow-2xl border border-editorial-border"
           >
             <button
-              onClick={() => setShowLibraryPanel(false)}
+              onClick={handleClose}
               title={t('settings.close')}
               className="absolute top-5 right-5 text-editorial-muted hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent z-10"
               aria-label={t('settings.close')}

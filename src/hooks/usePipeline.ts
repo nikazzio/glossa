@@ -76,6 +76,7 @@ export function usePipeline() {
     updateChunkDraft(chunk.id, '');
 
     let lastResult = '';
+    let lastEffectiveConfig = config;
     let producedOutput = false;
     updateChunkStatus(chunk.id, 'processing');
 
@@ -88,6 +89,7 @@ export function usePipeline() {
         ...(stage.sourceLanguage ? { sourceLanguage: stage.sourceLanguage } : {}),
         ...(stage.targetLanguage ? { targetLanguage: stage.targetLanguage } : {}),
       } : config;
+      lastEffectiveConfig = effectiveConfig;
 
       updateChunkStage(chunk.id, stage.id, { content: '', status: 'processing' });
       try {
@@ -138,7 +140,7 @@ export function usePipeline() {
     updateChunkDraft(chunk.id, lastResult);
 
     if (lastResult) {
-      const auditOutcome = await runJudgeForChunk(chunk, lastResult);
+      const auditOutcome = await runJudgeForChunk(chunk, lastResult, lastEffectiveConfig);
       if (auditOutcome === 'failed') return 'failed';
       if (auditOutcome === 'cancelled') return 'cancelled';
     }
@@ -158,6 +160,7 @@ export function usePipeline() {
   const runJudgeForChunk = async (
     chunk: TranslationChunk,
     textToAudit: string | undefined,
+    effectiveConfig?: typeof config,
   ): Promise<ChunkOutcome> => {
     if (!textToAudit) return 'skipped';
     // We do NOT short-circuit on cancelRequested here — once we have a
@@ -171,7 +174,7 @@ export function usePipeline() {
     });
     try {
       const judgeData = await withRetry(
-        () => llmService.judgeTranslation(chunk.originalText, textToAudit, config),
+        () => llmService.judgeTranslation(chunk.originalText, textToAudit, effectiveConfig ?? config),
         { label: 'Audit' },
       );
       const judgeTokenUsage =
@@ -375,7 +378,6 @@ export function usePipeline() {
         const msg = friendlyError(error.message ?? String(error));
         updateChunkCoherence(chunk.id, { status: 'error', issues: [], error: msg });
         errorCount++;
-        toast.error(t('errors.coherenceFailed'), { description: msg });
       }
     }
 

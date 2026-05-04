@@ -92,10 +92,14 @@ export function ImportPreviewDialog({
     }
   };
 
+  const effectiveTargetChunkCount = targetChunkCount > 0
+    ? targetChunkCount
+    : recommendChunkCount(text, 700);
+
   const preview = useMemo(
     () => buildImportPreview(text, {
       useChunking,
-      targetChunkCount,
+      targetChunkCount: effectiveTargetChunkCount,
       markdownAware,
       minWords,
       maxWords,
@@ -103,7 +107,7 @@ export function ImportPreviewDialog({
       format,
       experimental,
     }),
-    [experimental, format, markdownAware, targetChunkCount, minWords, maxWords, headingAware, text, useChunking],
+    [experimental, format, markdownAware, effectiveTargetChunkCount, minWords, maxWords, headingAware, text, useChunking],
   );
 
   const totalChunkWords = useMemo(

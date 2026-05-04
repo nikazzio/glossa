@@ -136,7 +136,8 @@
     "refinePrompt": "Rifinisci prompt",
     "refining": "Rifinendo...",
     "refined": "Prompt rifinito",
-    "refineFailed": "Rifinizione fallita"
+    "refineFailed": "Rifinizione fallita",
+    "useChunking": "Segmenta automaticamente il testo importato"
   },
   "audit": {
     "title": "Log Audit",
@@ -576,6 +577,10 @@
     "dictionaryForkError": "Errore nella copia",
     "dictionaryAssigned": "Dizionario assegnato alla sessione corrente",
     "dictionaryAssignError": "Errore nell'assegnazione",
+    "unsavedChangesTitle": "Modifiche non salvate",
+    "unsavedChangesMessage": "Hai modifiche non salvate ai dizionari. Vuoi salvarle prima di chiudere?",
+    "saveAndClose": "Salva e chiudi",
+    "closeWithoutSaving": "Chiudi senza salvare",
     "noTemplates": "Nessun modello. Usa + per crearne uno.",
     "newTemplate": "Nuovo",
     "templateNamePlaceholder": "Nome modello...",
