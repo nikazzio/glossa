@@ -619,5 +619,17 @@
     "overrideHint": "Override default pricing for custom deployments or updated rates. Values are USD per 1M tokens.",
     "resetOverride": "Reset",
     "resetAll": "Reset all"
+  },
+  "languages": {
+    "English": "English",
+    "Italian": "Italian",
+    "Spanish": "Spanish",
+    "French": "French",
+    "German": "German",
+    "Portuguese": "Portuguese",
+    "Japanese": "Japanese",
+    "Chinese": "Chinese",
+    "Korean": "Korean",
+    "Russian": "Russian"
   }
 }

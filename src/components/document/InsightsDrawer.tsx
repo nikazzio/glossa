@@ -419,7 +419,7 @@ function IndexTab({
                 >
                   <div className="flex items-center gap-2">
                     {statusIcon}
-                    <span className={`font-display text-sm italic ${isActive ? 'text-white' : 'text-editorial-ink'}`}>
+                    <span className={`font-display text-sm italic ${isActive ? 'text-white' : 'text-editorial-accent'}`}>
                       {indexPad(index + 1)}
                     </span>
                     <span className={`flex-1 truncate text-[11px] leading-snug ${isActive ? 'text-white/80' : 'text-editorial-muted'}`}>
