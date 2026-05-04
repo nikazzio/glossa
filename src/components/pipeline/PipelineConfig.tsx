@@ -433,6 +433,17 @@ export function PipelineConfig({
                 <label className="flex items-center gap-2 mt-4 cursor-pointer w-max group">
                   <input
                     type="checkbox"
+                    checked={config.useChunking !== false}
+                    onChange={(e) => setConfig((prev) => ({ ...prev, useChunking: e.target.checked }))}
+                    className="accent-editorial-ink w-3 h-3"
+                  />
+                  <span className="text-[11px] uppercase font-bold tracking-widest text-editorial-muted group-hover:text-editorial-ink transition-colors">
+                    {t('pipeline.autoSegment')}
+                  </span>
+                </label>
+                <label className="flex items-center gap-2 mt-4 cursor-pointer w-max group">
+                  <input
+                    type="checkbox"
                     checked={config.rollingContext === true}
                     onChange={(e) => setConfig((prev) => ({ ...prev, rollingContext: e.target.checked }))}
                     className="accent-editorial-ink w-3 h-3"

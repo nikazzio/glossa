@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, CheckCircle2, X } from 'lucide-react';
 import { buildImportPreview, type ImportPreviewChunk } from '../../utils/documentWorkflow';
@@ -53,17 +53,43 @@ export function ImportPreviewDialog({
     return trimmed ? trimmed.split(/\s+/).filter(Boolean).length : 0;
   }, [text]);
 
+  // Fix #1: initialize targetChunkCount on dialog open when 0 (paragraph mode default)
+  useEffect(() => {
+    if (targetChunkCount === 0) {
+      onTargetChunkCountChange(recommendChunkCount(text, 700));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const derivedWordsPerChunk = targetChunkCount > 0
     ? Math.round(totalWords / targetChunkCount)
     : 700;
   const [wordsPerChunkInput, setWordsPerChunkInput] = useState(String(derivedWordsPerChunk));
+  const isUserEditing = useRef(false);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Sync display value only when not actively typing
   useEffect(() => {
-    setWordsPerChunkInput(String(derivedWordsPerChunk));
+    if (!isUserEditing.current) {
+      setWordsPerChunkInput(String(derivedWordsPerChunk));
+    }
   }, [derivedWordsPerChunk]);
 
   const handleWordsPerChunkChange = (value: number) => {
     onTargetChunkCountChange(recommendChunkCount(text, Math.max(50, value)));
+  };
+
+  // Fix #2: debounced real-time preview update while typing
+  const handleWordsPerChunkInputChange = (raw: string) => {
+    isUserEditing.current = true;
+    setWordsPerChunkInput(raw);
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    const parsed = Number(raw);
+    if (parsed >= 50) {
+      debounceTimer.current = setTimeout(() => {
+        handleWordsPerChunkChange(parsed);
+      }, 350);
+    }
   };
 
   const preview = useMemo(
@@ -213,8 +239,10 @@ export function ImportPreviewDialog({
                   min={50}
                   step={50}
                   value={wordsPerChunkInput}
-                  onChange={(e) => setWordsPerChunkInput(e.target.value)}
+                  onChange={(e) => handleWordsPerChunkInputChange(e.target.value)}
                   onBlur={(e) => {
+                    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+                    isUserEditing.current = false;
                     const nextValue = Math.max(50, Number(e.target.value) || 700);
                     setWordsPerChunkInput(String(nextValue));
                     handleWordsPerChunkChange(nextValue);
@@ -299,7 +327,12 @@ export function ImportPreviewDialog({
                       role="button"
                       tabIndex={0}
                       onClick={() => setExpandedChunk(chunk)}
-                      onKeyDown={(e) => e.key === 'Enter' && setExpandedChunk(chunk)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setExpandedChunk(chunk);
+                        }
+                      }}
                       className={`cursor-pointer rounded-[22px] border p-4 md:p-5 transition-colors ${
                         anomaly
                           ? 'border-editorial-warning/60 bg-editorial-warning/5 hover:bg-editorial-warning/10'

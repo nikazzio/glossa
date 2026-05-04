@@ -301,6 +301,7 @@ function TabButton({
       onKeyDown={onKeyDown}
       ref={buttonRef}
       title={label}
+      aria-label={label}
       className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
         active
           ? 'border-editorial-ink bg-editorial-ink text-white'
