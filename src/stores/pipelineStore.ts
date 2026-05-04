@@ -41,6 +41,8 @@ export const usePipelineStore = create<PipelineState>((set) => ({
     targetChunkCount: 0,
     minWords: 0,
     maxWords: 0,
+    headingAware: false,
+    rollingContext: false,
     documentFormat: 'plain',
     markdownAware: false,
     experimentalImport: null,

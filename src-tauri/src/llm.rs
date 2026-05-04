@@ -1271,6 +1271,7 @@ fn build_stage_prompts(
     stage: &StageConfig,
     config: &PipelineConfig,
     previous_result: &Option<String>,
+    previous_translation: &Option<String>,
 ) -> (String, String) {
     let glossary_str: String = config
         .glossary
@@ -1310,12 +1311,21 @@ fn build_stage_prompts(
         markdown_rules,
     );
 
+    let context_block = match previous_translation {
+        Some(prev) if !prev.is_empty() => format!(
+            "[Context from previous segment — do not translate, use only for stylistic and terminological coherence]\n\
+             {prev}\n\
+             [End of context]\n\n"
+        ),
+        _ => String::new(),
+    };
+
     let user_prompt = match previous_result {
         Some(prev) if !prev.is_empty() => format!(
-            "Original: {text}\n\nPrevious Iteration: {prev}\n\n\
+            "{context_block}Original: {text}\n\nPrevious Iteration: {prev}\n\n\
              Refine the above translation according to your instructions. Provide ONLY the final text."
         ),
-        _ => format!("Text to translate: {text}\n\nProvide ONLY the translated text."),
+        _ => format!("{context_block}Text to translate: {text}\n\nProvide ONLY the translated text."),
     };
 
     (system_prompt, user_prompt)
@@ -1389,11 +1399,12 @@ pub async fn run_stage(
     stage: StageConfig,
     config: PipelineConfig,
     previous_result: Option<String>,
+    previous_translation: Option<String>,
 ) -> Result<String, String> {
     let api_key = get_api_key(&app, &stage.provider)?;
     let client = build_http_client()?;
     let (system_prompt, user_prompt) =
-        build_stage_prompts(&text, &stage, &config, &previous_result);
+        build_stage_prompts(&text, &stage, &config, &previous_result, &previous_translation);
 
     call_provider(
         &client,
@@ -1415,12 +1426,13 @@ pub async fn run_stage_stream(
     stage: StageConfig,
     config: PipelineConfig,
     previous_result: Option<String>,
+    previous_translation: Option<String>,
     stream_id: String,
 ) -> Result<String, String> {
     let api_key = get_api_key(&app, &stage.provider)?;
     let client = build_http_client()?;
     let (system_prompt, user_prompt) =
-        build_stage_prompts(&text, &stage, &config, &previous_result);
+        build_stage_prompts(&text, &stage, &config, &previous_result, &previous_translation);
 
     let cancel = registry.register(&stream_id);
     let _guard = StreamGuard {

@@ -85,6 +85,7 @@ export interface ChunkTextOptions {
   markdownAware?: boolean;
   minWords?: number;
   maxWords?: number;
+  headingAware?: boolean;
 }
 
 export function estimateTextStats(text: string): TextStats {
@@ -116,6 +117,10 @@ export function chunkText(text: string, options: ChunkTextOptions = {}): string[
   let chunks = target > 1
     ? splitIntoTargetChunks(trimmed, target, options)
     : splitParagraphs(trimmed, options);
+
+  if (options.headingAware) {
+    chunks = mergeHeadingChunks(chunks);
+  }
 
   if (options.minWords && options.minWords > 0) {
     chunks = mergeSmallChunks(chunks, options.minWords);
@@ -212,6 +217,27 @@ function splitIntoTargetChunks(text: string, target: number, options: ChunkTextO
   }
 
   return chunks;
+}
+
+function isHeadingChunk(text: string): boolean {
+  const trimmed = text.trim();
+  return /^#{1,6}\s+\S/.test(trimmed) && !trimmed.includes('\n');
+}
+
+function mergeHeadingChunks(chunks: string[]): string[] {
+  if (chunks.length <= 1) return chunks;
+  const result: string[] = [];
+  let pending = chunks[0];
+  for (let i = 1; i < chunks.length; i++) {
+    if (isHeadingChunk(pending)) {
+      pending = `${pending.trim()}\n\n${chunks[i].trim()}`;
+    } else {
+      result.push(pending);
+      pending = chunks[i];
+    }
+  }
+  result.push(pending);
+  return result;
 }
 
 function mergeSmallChunks(chunks: string[], minWords: number): string[] {

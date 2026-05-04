@@ -89,6 +89,8 @@ export interface PipelineConfig {
   targetChunkCount?: number;
   minWords?: number;
   maxWords?: number;
+  headingAware?: boolean;
+  rollingContext?: boolean;
   documentFormat?: DocumentFormat;
   markdownAware?: boolean;
   experimentalImport?: ExperimentalImportMode | null;

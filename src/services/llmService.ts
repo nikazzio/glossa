@@ -33,12 +33,14 @@ export const llmService = {
     stage: PipelineStageConfig,
     config: PipelineConfig,
     previousResult?: string,
+    previousTranslation?: string,
   ): Promise<string> {
     return invoke<string>('run_stage', {
       text,
       stage,
       config,
       previousResult: previousResult || null,
+      previousTranslation: previousTranslation || null,
     });
   },
 
@@ -53,6 +55,7 @@ export const llmService = {
     previousResult: string | undefined,
     onToken: (token: string) => void,
     onUsage?: (usage: TokenUsage) => void,
+    previousTranslation?: string,
   ): Promise<string> {
     const streamId = `stream-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
@@ -76,6 +79,7 @@ export const llmService = {
         stage,
         config,
         previousResult: previousResult || null,
+        previousTranslation: previousTranslation || null,
         streamId,
       });
       return result;

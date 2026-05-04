@@ -30,6 +30,7 @@ interface ChunksState {
       markdownAware?: boolean;
       minWords?: number;
       maxWords?: number;
+      headingAware?: boolean;
     },
   ) => void;
   clearChunks: () => void;
@@ -77,6 +78,7 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
       markdownAware: config.markdownAware,
       minWords: config.minWords,
       maxWords: config.maxWords,
+      headingAware: config.headingAware,
     });
 
     useUiStore.getState().setViewMode(chunks.length > 1 ? 'document' : 'sandbox');
@@ -266,6 +268,7 @@ function buildChunks(
     markdownAware?: boolean;
     minWords?: number;
     maxWords?: number;
+    headingAware?: boolean;
   },
 ): TranslationChunk[] {
   return chunkText(text, options).map((chunkTextValue, index) => ({

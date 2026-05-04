@@ -27,6 +27,8 @@
     "languagePair": "Language Pair",
     "swapLanguages": "Swap Languages",
     "autoSegment": "Auto-Segment (Paragraphs)",
+    "headingAware": "Merge headings with next chunk",
+    "rollingContext": "Rolling context (coherence)",
     "stages": "Stages",
     "auditGuard": "Audit Guard",
     "auditPlaceholder": "Audit instructions...",

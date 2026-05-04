@@ -51,7 +51,7 @@ export function usePipeline() {
    */
   const executePipelineForChunk = async (
     chunk: TranslationChunk,
-    options: { skipIfCompleted: boolean },
+    options: { skipIfCompleted: boolean; previousTranslation?: string },
   ): Promise<ChunkOutcome> => {
     if (useChunksStore.getState().cancelRequested) return 'cancelled';
     if (options.skipIfCompleted && chunk.status === 'completed') return 'skipped';
@@ -82,6 +82,7 @@ export function usePipeline() {
               chunk.originalText, stage, config, lastResult || undefined,
               (token) => appendChunkStageContent(chunk.id, stage.id, token),
               (usage) => { capturedUsage = usage; },
+              config.rollingContext ? options.previousTranslation : undefined,
             );
           },
           { label: `Stage "${stage.name}"` },
@@ -197,11 +198,16 @@ export function usePipeline() {
 
     let errorCount = 0;
     let cancelled = false;
+    let previousTranslation: string | undefined;
 
     for (const chunk of liveChunks) {
-      const outcome = await executePipelineForChunk(chunk, { skipIfCompleted: true });
+      const outcome = await executePipelineForChunk(chunk, { skipIfCompleted: true, previousTranslation });
       if (outcome === 'cancelled') { cancelled = true; break; }
       if (outcome === 'failed') errorCount++;
+      if (outcome === 'completed' || outcome === 'skipped') {
+        const fresh = useChunksStore.getState().chunks.find((c) => c.id === chunk.id);
+        previousTranslation = fresh?.currentDraft || undefined;
+      }
     }
 
     setIsProcessing(false);

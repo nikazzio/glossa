@@ -27,6 +27,8 @@
     "languagePair": "Coppia Linguistica",
     "swapLanguages": "Inverti Lingue",
     "autoSegment": "Segmentazione Automatica (Paragrafi)",
+    "headingAware": "Fondi titoli col chunk successivo",
+    "rollingContext": "Contesto progressivo (coerenza)",
     "stages": "Fasi",
     "auditGuard": "Controllo Qualità",
     "auditPlaceholder": "Istruzioni per l'audit...",
