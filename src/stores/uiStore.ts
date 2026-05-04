@@ -23,6 +23,7 @@ interface UiState {
   focusedChunkId: string | null;
   focusedIssueQuery: string | null;
   focusedIssueRequestId: number;
+  pendingSplitChunkId: string | null;
 
   setViewMode: (mode: ViewMode) => void;
   setDocumentLayout: (layout: DocumentLayoutPreference) => void;
@@ -38,6 +39,7 @@ interface UiState {
   setFocusedChunkId: (chunkId: string | null) => void;
   focusIssueInChunk: (chunkId: string, query?: string | null) => void;
   clearFocusedIssue: () => void;
+  setPendingSplitChunkId: (chunkId: string | null) => void;
 }
 
 export const useUiStore = create<UiState>()(
@@ -57,6 +59,7 @@ export const useUiStore = create<UiState>()(
   focusedChunkId: null,
   focusedIssueQuery: null,
   focusedIssueRequestId: 0,
+  pendingSplitChunkId: null,
 
   setViewMode: (mode) =>
     set({
@@ -123,6 +126,7 @@ export const useUiStore = create<UiState>()(
       focusedIssueRequestId: state.focusedIssueRequestId + 1,
     })),
   clearFocusedIssue: () => set({ focusedIssueQuery: null }),
+  setPendingSplitChunkId: (chunkId) => set({ pendingSplitChunkId: chunkId }),
     }),
     {
       name: 'glossa-ui-prefs',

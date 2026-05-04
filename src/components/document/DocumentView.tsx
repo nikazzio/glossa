@@ -3,11 +3,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Columns2,
-  Copy,
   Highlighter,
   Info,
   Loader2,
   Lock,
+  Merge,
   Pencil,
   PanelLeft,
   PanelRight,
@@ -82,6 +82,8 @@ export function DocumentView({
     focusedIssueQuery,
     focusedIssueRequestId,
     clearFocusedIssue,
+    pendingSplitChunkId,
+    setPendingSplitChunkId,
   } = useUiStore();
 
   const [viewportWidth, setViewportWidth] = useState(
@@ -145,6 +147,13 @@ export function DocumentView({
       Math.max(1, Math.floor(text.length / 2));
     setSplitDraft({ chunkId, splitAt: initialSplitAt });
   };
+
+  useEffect(() => {
+    if (!pendingSplitChunkId || !currentChunk || currentChunk.id !== pendingSplitChunkId) return;
+    openSplitDialog(currentChunk.id, currentChunk.originalText);
+    setPendingSplitChunkId(null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingSplitChunkId, currentChunk?.id]);
 
   // Hooks devono essere chiamati prima di qualsiasi return condizionale
   const hasGlossary = config.glossary.length > 0;
@@ -406,7 +415,7 @@ export function DocumentView({
                       chunks[currentIndex + 1]?.status === 'processing'
                     }
                   >
-                    <Copy size={16} />
+                    <Merge size={16} />
                   </ChunkIconButton>
                 </>
               )}
@@ -442,9 +451,9 @@ export function DocumentView({
                 markdownEnabled={config.markdownAware === true}
                 disabled={isProcessing}
                 readOnly={currentChunk.status === 'completed'}
-                minHeightClassName="min-h-[420px]"
+                minHeightClassName="min-h-[280px]"
                 textClassName="text-[15px] leading-8 text-editorial-ink"
-                previewClassName="min-h-[420px] text-[15px] leading-8 text-editorial-ink"
+                previewClassName="min-h-[280px] text-[15px] leading-8 text-editorial-ink"
                 highlightHtml={showHighlight && currentChunk.status !== 'completed' ? sourceHighlight.html : null}
               />
             </DocumentPage>
@@ -470,9 +479,9 @@ export function DocumentView({
                 onChange={(nextValue) => updateChunkDraft(currentChunk.id, nextValue)}
                 markdownEnabled={config.markdownAware === true}
                 readOnly={currentChunk.translationLocked === true}
-                minHeightClassName="min-h-[420px]"
+                minHeightClassName="min-h-[280px]"
                 textClassName="text-[15px] leading-8 text-editorial-ink"
-                previewClassName="min-h-[420px] text-[15px] leading-8 text-editorial-ink"
+                previewClassName="min-h-[280px] text-[15px] leading-8 text-editorial-ink"
                 placeholder={t('pipeline.candidatePlaceholder')}
                 highlightHtml={showHighlight ? translationHighlight.html : null}
                 focusQuery={focusedChunkId === currentChunk.id ? focusedIssueQuery : null}
@@ -618,7 +627,7 @@ function DocumentPage({
           {actions}
         </div>
       </div>
-      <div className={`max-h-[min(64vh,980px)] overflow-y-auto pr-1 custom-scrollbar ${readOnly ? 'opacity-90' : ''}`}>
+      <div className={readOnly ? 'opacity-90' : ''}>
         {children}
       </div>
     </section>

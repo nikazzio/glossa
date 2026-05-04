@@ -109,7 +109,7 @@
     "singleChunkAudited": "Audit del blocco aggiornato",
     "auditSkippedNoDraft": "Nessuna traduzione da valutare — traduci prima questo blocco.",
     "chunkActions": "Azioni blocco",
-    "retranslateChunk": "Ri-traduci questo blocco",
+    "retranslateChunk": "Riesegui la pipeline su questa unità",
     "reauditChunk": "Ri-valuta questo blocco",
     "prompt": "Prompt",
     "auditModelLabel": "Modello Audit",

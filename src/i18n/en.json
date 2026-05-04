@@ -109,7 +109,7 @@
     "singleChunkAudited": "Chunk audit refreshed",
     "auditSkippedNoDraft": "Nothing to audit yet — translate this chunk first.",
     "chunkActions": "Chunk actions",
-    "retranslateChunk": "Re-translate this chunk",
+    "retranslateChunk": "Re-run pipeline on this unit",
     "reauditChunk": "Re-audit this chunk",
     "prompt": "Prompt",
     "auditModelLabel": "Audit Model",
