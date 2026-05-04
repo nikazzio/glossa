@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.6.0](https://github.com/nikazzio/glossa/compare/glossa-v0.5.0...glossa-v0.6.0) (2026-05-04)
+
+
+### ✨ Features
+
+* export dialog, empty states, chunk badge improvements ([#94](https://github.com/nikazzio/glossa/issues/94)) ([a4e9c80](https://github.com/nikazzio/glossa/commit/a4e9c80bf8e47d89fc66821367a5588477dd4f5d))
+* InsightsDrawer UX improvements (issue [#91](https://github.com/nikazzio/glossa/issues/91)) ([#92](https://github.com/nikazzio/glossa/issues/92)) ([f41e24b](https://github.com/nikazzio/glossa/commit/f41e24b29049fc2fc242a17c86cdfb839989017d))
+* model catalog + token cost estimation ([#77](https://github.com/nikazzio/glossa/issues/77)) ([20a67af](https://github.com/nikazzio/glossa/commit/20a67af8d9f4c02e948050f931519eb6fdd2d613))
+* smarter chunking, ImportPreviewDialog refactor, virtual IndexTab ([#90](https://github.com/nikazzio/glossa/issues/90)) ([4bc0215](https://github.com/nikazzio/glossa/commit/4bc0215cbbb35246e207c02b6a6e0c7cf1904efd))
+
+
+### 🐛 Bug Fixes
+
+* encrypted file fallback when OS keychain is unavailable ([#86](https://github.com/nikazzio/glossa/issues/86)) ([49e6c90](https://github.com/nikazzio/glossa/commit/49e6c90a652a4d6b80e411004fabd4064cc11442))
+* frontend watchdog per chunk bloccato in processing ([#95](https://github.com/nikazzio/glossa/issues/95)) ([a84279c](https://github.com/nikazzio/glossa/commit/a84279cb5c9a113dee8addf001710edb89b3d5a8))
+* make project persistence resilient to partial saves and corrupt config JSON ([#79](https://github.com/nikazzio/glossa/issues/79)) ([56c7f7b](https://github.com/nikazzio/glossa/commit/56c7f7b0a01b47eee692e267e7a69f44024097ed))
+* rifiniture UI/UX configurazione progetto ([#96](https://github.com/nikazzio/glossa/issues/96)) ([bb647ed](https://github.com/nikazzio/glossa/commit/bb647ed2bf83a3ff377bc12f2862da4ec4822be0))
+
+
+### ⚡ Performance
+
+* split large frontend bundle into vendor chunks ([#76](https://github.com/nikazzio/glossa/issues/76)) ([597321f](https://github.com/nikazzio/glossa/commit/597321f94d17f71ead6e57a201e06004452b8843))
+
 ## [0.5.0](https://github.com/nikazzio/glossa/compare/glossa-v0.4.0...glossa-v0.5.0) (2026-04-29)
 
 
