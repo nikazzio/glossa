@@ -111,13 +111,13 @@ function AuditPromptEditor({
   };
 
   return (
-    <div className="rounded-[20px] border border-editorial-border bg-editorial-bg/70 p-4 space-y-3">
+    <div className="rounded-[20px] border border-editorial-border bg-editorial-bg/70 p-6 space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
+          <div className="text-xs font-bold uppercase tracking-[0.25em] text-editorial-muted">
             {label}
           </div>
-          <p className="mt-1 text-[11px] leading-relaxed text-editorial-muted/70">
+          <p className="mt-1 text-sm leading-relaxed text-editorial-muted/70">
             {hint}
           </p>
         </div>
@@ -130,7 +130,7 @@ function AuditPromptEditor({
             aria-label={`${t('pipeline.refinePrompt')}: ${label}`}
             className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40"
           >
-            {isRefining ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
+            {isRefining ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
           </button>
           <button
             type="button"
@@ -139,7 +139,7 @@ function AuditPromptEditor({
             aria-label={`${t('pipeline.templates.save')}: ${label}`}
             className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
           >
-            <BookmarkPlus size={14} />
+            <BookmarkPlus size={16} />
           </button>
           <button
             type="button"
@@ -148,7 +148,7 @@ function AuditPromptEditor({
             aria-label={`${t('pipeline.templates.load')}: ${label}`}
             className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
           >
-            <BookOpen size={14} />
+            <BookOpen size={16} />
           </button>
         </div>
       </div>
@@ -164,7 +164,7 @@ function AuditPromptEditor({
             }}
             placeholder={t('pipeline.templates.namePlaceholder')}
             autoFocus
-            className="flex-1 rounded bg-editorial-textbox/60 border border-editorial-border/60 px-2 py-1 text-[11px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            className="flex-1 rounded bg-editorial-textbox/60 border border-editorial-border/60 px-2 py-1 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
           />
           <button
             type="button"
@@ -173,7 +173,7 @@ function AuditPromptEditor({
             className="text-editorial-ink hover:text-editorial-accent transition-colors disabled:opacity-40 focus:outline-none"
             aria-label={t('common.confirm')}
           >
-            <Check size={14} />
+            <Check size={16} />
           </button>
           <button
             type="button"
@@ -181,7 +181,7 @@ function AuditPromptEditor({
             className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none"
             aria-label={t('common.cancel')}
           >
-            <X size={14} />
+            <X size={16} />
           </button>
         </div>
       )}
@@ -194,12 +194,12 @@ function AuditPromptEditor({
               onChange={(e) => setTemplateSearch(e.target.value)}
               placeholder={t('pipeline.templates.searchPlaceholder')}
               autoFocus
-              className="w-full rounded bg-editorial-textbox/60 border border-editorial-border/40 px-2 py-1 text-[11px] font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+              className="w-full rounded bg-editorial-textbox/60 border border-editorial-border/40 px-2 py-1 text-sm font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
             />
           </div>
           <ul className="max-h-48 overflow-y-auto custom-scrollbar">
             {filteredTemplates.length === 0 ? (
-              <li className="px-3 py-4 text-[10px] text-editorial-muted text-center">
+              <li className="px-3 py-4 text-xs text-editorial-muted text-center">
                 {t('pipeline.templates.empty')}
               </li>
             ) : (
@@ -217,8 +217,8 @@ function AuditPromptEditor({
                     }}
                     className="flex-1 text-left min-w-0 focus:outline-none"
                   >
-                    <div className="text-[11px] font-bold text-editorial-ink truncate">{tmpl.name}</div>
-                    <div className="text-[10px] text-editorial-muted truncate mt-0.5 font-mono">{tmpl.prompt}</div>
+                    <div className="text-sm font-bold text-editorial-ink truncate">{tmpl.name}</div>
+                    <div className="text-xs text-editorial-muted truncate mt-0.5 font-mono">{tmpl.prompt}</div>
                   </button>
                   <button
                     type="button"
@@ -226,7 +226,7 @@ function AuditPromptEditor({
                     className="shrink-0 text-editorial-muted/40 hover:text-editorial-accent transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 focus:outline-none mt-0.5"
                     aria-label={t('common.delete')}
                   >
-                    <Trash2 size={12} />
+                    <Trash2 size={14} />
                   </button>
                 </li>
               ))
@@ -240,7 +240,7 @@ function AuditPromptEditor({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={8}
-        className="w-full rounded-[16px] bg-editorial-textbox/40 border border-editorial-border/60 p-4 text-[12px] font-mono outline-none leading-relaxed resize-y focus-visible:ring-2 focus-visible:ring-editorial-accent"
+        className="w-full rounded-[16px] bg-editorial-textbox/40 border border-editorial-border/60 p-4 text-sm font-mono outline-none leading-relaxed resize-y focus-visible:ring-2 focus-visible:ring-editorial-accent"
       />
     </div>
   );
@@ -511,34 +511,29 @@ export function PipelineConfig({
             id="pconfig-panel-stages"
             role="tabpanel"
             aria-labelledby="pconfig-tab-stages"
-            className="space-y-8"
+            className="space-y-5"
           >
-            {/* Fasi di traduzione */}
-            <div>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="font-display text-sm uppercase tracking-wider">
-                  {t('pipeline.stages')}
-                </h2>
-                <button
-                  onClick={addStage}
-                  title={t('pipeline.addStage')}
-                  className="text-editorial-accent hover:scale-110 transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  aria-label={t('pipeline.addStage')}
-                >
-                  <Plus size={18} />
-                </button>
-              </div>
-              <div className="space-y-5">
-                {config.stages.map((stage, idx) => (
-                  <StageCard
-                    key={stage.id}
-                    stage={stage}
-                    index={idx}
-                    onUpdate={(u) => updateStage(stage.id, u)}
-                    onRemove={() => removeStage(stage.id)}
-                  />
-                ))}
-              </div>
+            <div className="flex justify-end">
+              <button
+                onClick={addStage}
+                title={t('pipeline.addStage')}
+                className="flex items-center gap-1.5 rounded-full border border-editorial-border px-3 py-1.5 text-xs font-bold uppercase tracking-[0.2em] text-editorial-muted transition-colors hover:border-editorial-ink hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                aria-label={t('pipeline.addStage')}
+              >
+                <Plus size={13} />
+                {t('pipeline.addStage')}
+              </button>
+            </div>
+            <div className="space-y-5">
+              {config.stages.map((stage, idx) => (
+                <StageCard
+                  key={stage.id}
+                  stage={stage}
+                  index={idx}
+                  onUpdate={(u) => updateStage(stage.id, u)}
+                  onRemove={() => removeStage(stage.id)}
+                />
+              ))}
             </div>
           </div>
         )}
@@ -549,14 +544,14 @@ export function PipelineConfig({
             id="pconfig-panel-audit"
             role="tabpanel"
             aria-labelledby="pconfig-tab-audit"
-            className="space-y-5"
+            className="space-y-6"
           >
-            <div className="rounded-[20px] border border-editorial-border bg-editorial-bg/70 p-5">
+            <div className="rounded-[20px] border border-editorial-border bg-editorial-bg/70 p-6">
               <div className="mb-4">
-                <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
+                <div className="text-xs font-bold uppercase tracking-[0.25em] text-editorial-muted">
                   {t('pipeline.auditModelLabel')}
                 </div>
-                <p className="mt-1 text-[11px] leading-relaxed text-editorial-muted/70">
+                <p className="mt-1 text-sm leading-relaxed text-editorial-muted/70">
                   {t('pipeline.auditModelHint')}
                 </p>
               </div>
@@ -564,7 +559,7 @@ export function PipelineConfig({
                 <select
                   value={config.judgeProvider}
                   onChange={(e) => handleJudgeProviderChange(e.target.value as ModelProvider)}
-                  className="rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-1.5 text-[11px] font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  className="rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-1.5 text-sm font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   aria-label={t('models.provider')}
                 >
                   {Object.keys(MODEL_OPTIONS).map((p) => (
@@ -575,7 +570,7 @@ export function PipelineConfig({
                   <select
                     value={config.judgeModel}
                     onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
-                    className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-1.5 text-[11px] font-mono outline-none"
+                    className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-1.5 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                     aria-label={t('pipeline.auditModelLabel')}
                   >
                     {judgeModels.map((m) => (
@@ -589,14 +584,14 @@ export function PipelineConfig({
                     value={config.judgeModel}
                     onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
                     placeholder={t('ollama.modelPlaceholder')}
-                    className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-1.5 text-[11px] font-mono outline-none"
+                    className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-1.5 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                     aria-label={t('pipeline.auditModelLabel')}
                   />
                 ) : (
                   <select
                     value={config.judgeModel}
                     onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
-                    className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-1.5 text-[11px] font-mono outline-none"
+                    className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-1.5 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                     aria-label={t('pipeline.auditModelLabel')}
                   >
                     {MODEL_OPTIONS[config.judgeProvider]?.map((m) => (
@@ -610,8 +605,8 @@ export function PipelineConfig({
             </div>
 
             {judgeOllamaOffline && (
-              <div className="flex items-center gap-2 text-[10px] text-editorial-accent">
-                <AlertTriangle size={12} />
+              <div className="flex items-center gap-2 text-xs text-editorial-accent">
+                <AlertTriangle size={14} />
                 <span>{t('ollama.selectedButOffline')}</span>
               </div>
             )}
@@ -669,11 +664,11 @@ export function PipelineConfig({
             id="pconfig-panel-glossary"
             role="tabpanel"
             aria-labelledby="pconfig-tab-glossary"
-            className="space-y-4"
+            className="space-y-6"
           >
             {libraryGlossarySection}
             <div className="flex items-center justify-between">
-              <label className="block text-[11px] font-bold uppercase tracking-widest text-editorial-muted">
+              <label className="block text-sm font-bold uppercase tracking-[0.25em] text-editorial-muted">
                 {t('pipeline.keywordRegistry')}
                 {config.glossary.length > 0 && (
                   <span className="ml-2 text-editorial-muted/70 normal-case font-mono tracking-normal">
@@ -687,12 +682,12 @@ export function PipelineConfig({
                 className="text-editorial-accent hover:scale-110 transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 aria-label={t('pipeline.addGlossaryEntry')}
               >
-                <Plus size={14} />
+                <Plus size={16} />
               </button>
             </div>
 
             {config.glossary.length === 0 ? (
-              <p className="text-[11px] text-editorial-muted/60 text-center py-4 border border-dashed border-editorial-border/60 rounded-[16px]">
+              <p className="text-sm text-editorial-muted/60 text-center py-4 border border-dashed border-editorial-border/60 rounded-[16px]">
                 {t('pipeline.glossaryEmpty')}
               </p>
             ) : (
@@ -704,7 +699,7 @@ export function PipelineConfig({
                   return (
                     <div
                       key={rowKey}
-                      className={`rounded-[14px] border p-2 space-y-1.5 ${
+                      className={`rounded-[14px] border p-3 space-y-2 ${
                         isDuplicate
                           ? 'border-editorial-warning/60 bg-editorial-textbox/20'
                           : 'border-editorial-border/40 bg-editorial-textbox/20'
@@ -716,7 +711,7 @@ export function PipelineConfig({
                           onChange={(e) =>
                             g.id ? updateGlossaryEntry(g.id, { term: e.target.value }) : undefined
                           }
-                          className="w-full rounded-[10px] border border-editorial-border/40 bg-transparent px-2 py-2 text-[11px] font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent focus:border-editorial-accent/60"
+                          className="w-full rounded-[10px] border border-editorial-border/40 bg-transparent px-2 py-2 text-sm font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent focus:border-editorial-accent/60"
                           placeholder={t('pipeline.source')}
                           aria-label={`${t('pipeline.source')} ${i + 1}`}
                         />
@@ -727,7 +722,7 @@ export function PipelineConfig({
                               ? updateGlossaryEntry(g.id, { translation: e.target.value })
                               : undefined
                           }
-                          className="w-full rounded-[10px] border border-editorial-border/40 bg-transparent px-2 py-2 text-[11px] font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent focus:border-editorial-accent/60"
+                          className="w-full rounded-[10px] border border-editorial-border/40 bg-transparent px-2 py-2 text-sm font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent focus:border-editorial-accent/60"
                           placeholder={t('pipeline.target')}
                           aria-label={`${t('pipeline.target')} ${i + 1}`}
                         />
@@ -737,7 +732,7 @@ export function PipelineConfig({
                           className="ml-auto shrink-0 p-1 text-editorial-muted/60 hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
                           aria-label={removeLabel}
                         >
-                          <X size={12} />
+                          <X size={14} />
                         </button>
                       </div>
                       <input
@@ -745,12 +740,12 @@ export function PipelineConfig({
                         onChange={(e) =>
                           g.id ? updateGlossaryEntry(g.id, { notes: e.target.value }) : undefined
                         }
-                        className="w-full rounded-[10px] border border-editorial-border/30 bg-transparent px-2 py-1.5 text-[11px] font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent focus:border-editorial-accent/60 text-editorial-muted placeholder:text-editorial-muted/40"
+                        className="w-full rounded-[10px] border border-editorial-border/30 bg-transparent px-2 py-1.5 text-sm font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent focus:border-editorial-accent/60 text-editorial-muted placeholder:text-editorial-muted/40"
                         placeholder={t('pipeline.glossaryNotes')}
                         aria-label={`${t('pipeline.glossaryNotes')} ${i + 1}`}
                       />
                       {isDuplicate && (
-                        <span className="text-[9px] uppercase tracking-widest text-editorial-warning font-bold pl-1">
+                        <span className="text-xs uppercase tracking-widest text-editorial-warning font-bold pl-1">
                           {t('pipeline.duplicateTerm')}
                         </span>
                       )}
@@ -772,7 +767,7 @@ export function PipelineConfig({
             onClick={onRunPipeline}
             disabled={cannotRun}
             title={runReason ?? t('pipeline.beginPipeline')}
-            className="bg-editorial-ink text-white px-6 py-4 text-[11px] font-bold uppercase tracking-[2px] transition-all hover:bg-editorial-ink/90 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
+            className="bg-editorial-ink text-white px-6 py-4 text-sm font-bold uppercase tracking-[2px] transition-all hover:bg-editorial-ink/90 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
           >
             {isProcessing ? (
               <span className="flex items-center justify-center gap-2">
@@ -790,7 +785,7 @@ export function PipelineConfig({
               type="button"
               onClick={handleRerunAll}
               title={t('pipeline.rerunAllHint', { count: completedCount })}
-              className="bg-transparent border border-editorial-accent text-editorial-accent px-6 py-3 text-[11px] font-bold uppercase tracking-[2px] transition-all hover:bg-editorial-accent/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2 flex items-center justify-center gap-2"
+              className="bg-transparent border border-editorial-accent text-editorial-accent px-6 py-3 text-sm font-bold uppercase tracking-[2px] transition-all hover:bg-editorial-accent/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2 flex items-center justify-center gap-2"
             >
               <RotateCcw size={13} /> {t('pipeline.rerunAll')}
             </button>
@@ -800,7 +795,7 @@ export function PipelineConfig({
             onClick={onRunAuditOnly}
             disabled={cannotRun}
             title={runReason ?? t('pipeline.runAuditOnly')}
-            className="bg-transparent border border-editorial-ink text-editorial-ink px-6 py-4 text-[11px] font-bold uppercase tracking-[2px] transition-all hover:bg-editorial-ink/5 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
+            className="bg-transparent border border-editorial-ink text-editorial-ink px-6 py-4 text-sm font-bold uppercase tracking-[2px] transition-all hover:bg-editorial-ink/5 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
           >
             {t('pipeline.runAuditOnly')}
           </button>
@@ -810,7 +805,7 @@ export function PipelineConfig({
               onClick={onCancelPipeline}
               disabled={cancelRequested}
               title={cancelRequested ? t('pipeline.stopping') : t('pipeline.stopPipeline')}
-              className="bg-transparent border border-editorial-accent text-editorial-accent px-6 py-4 text-[11px] font-bold uppercase tracking-[2px] transition-all hover:bg-editorial-accent/5 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
+              className="bg-transparent border border-editorial-accent text-editorial-accent px-6 py-4 text-sm font-bold uppercase tracking-[2px] transition-all hover:bg-editorial-accent/5 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
             >
               {cancelRequested ? t('pipeline.stopping') : t('pipeline.stopPipeline')}
             </button>

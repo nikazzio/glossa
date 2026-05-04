@@ -213,7 +213,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
             <select
               value={stage.provider}
               onChange={(e) => handleProviderChange(e.target.value as ModelProvider)}
-              className="bg-editorial-textbox/60 rounded-[12px] border border-editorial-border/60 px-2 py-1.5 text-[11px] font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="bg-editorial-textbox/60 rounded-[12px] border border-editorial-border/60 px-2 py-1.5 text-sm font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             >
               {Object.keys(MODEL_OPTIONS).map((p) => (
                 <option key={p} value={p}>{p}</option>
@@ -223,7 +223,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
               <select
                 value={stage.model}
                 onChange={(e) => onUpdate({ model: e.target.value })}
-                className="flex-1 bg-editorial-textbox/60 rounded-[12px] border border-editorial-border/60 px-2 py-1.5 text-[11px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="flex-1 bg-editorial-textbox/60 rounded-[12px] border border-editorial-border/60 px-2 py-1.5 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               >
                 {modelOptions.map((m) => (
                   <option key={m} value={m}>
@@ -236,13 +236,13 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
                 value={stage.model}
                 onChange={(e) => onUpdate({ model: e.target.value })}
                 placeholder={t('ollama.modelPlaceholder')}
-                className="flex-1 bg-editorial-textbox/60 rounded-[12px] border border-editorial-border/60 px-2 py-1.5 text-[11px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="flex-1 bg-editorial-textbox/60 rounded-[12px] border border-editorial-border/60 px-2 py-1.5 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               />
             ) : (
               <select
                 value={stage.model}
                 onChange={(e) => onUpdate({ model: e.target.value })}
-                className="flex-1 bg-editorial-textbox/60 rounded-[12px] border border-editorial-border/60 px-2 py-1.5 text-[11px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="flex-1 bg-editorial-textbox/60 rounded-[12px] border border-editorial-border/60 px-2 py-1.5 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               >
                 {MODEL_OPTIONS[stage.provider]?.map((m) => (
                   <option key={m} value={m}>
@@ -254,22 +254,22 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
           </div>
 
           {showOllamaOfflineWarning && (
-            <div className="flex items-center gap-2 text-[10px] text-editorial-accent">
-              <AlertTriangle size={12} />
+            <div className="flex items-center gap-2 text-xs text-editorial-accent">
+              <AlertTriangle size={14} />
               <span>{t('ollama.selectedButOffline')}</span>
             </div>
           )}
 
           {/* Language pair per stage */}
           <div className="space-y-2">
-            <span className="block text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
+            <span className="block text-xs font-bold uppercase tracking-[0.25em] text-editorial-muted">
               {t('pipeline.languagePair')}
             </span>
             <div className="flex items-center gap-2">
               <select
                 value={stage.sourceLanguage ?? ''}
                 onChange={(e) => onUpdate({ sourceLanguage: e.target.value || undefined })}
-                className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-1.5 text-[11px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-1.5 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 aria-label={t('pipeline.sourceLanguage')}
               >
                 <option value="">{t('pipeline.inheritDefault')} ({pipelineConfig.sourceLanguage})</option>
@@ -279,7 +279,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
               <select
                 value={stage.targetLanguage ?? ''}
                 onChange={(e) => onUpdate({ targetLanguage: e.target.value || undefined })}
-                className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-1.5 text-[11px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-1.5 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 aria-label={t('pipeline.targetLanguage')}
               >
                 <option value="">{t('pipeline.inheritDefault')} ({pipelineConfig.targetLanguage})</option>
@@ -291,7 +291,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
           {/* Prompt textarea with template controls */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
+              <span className="text-xs font-bold uppercase tracking-widest text-editorial-muted">
                 {t('pipeline.prompt')}
               </span>
               <div className="flex items-center gap-1.5">
@@ -304,7 +304,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
                   aria-label={t('pipeline.refinePrompt')}
                   className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40"
                 >
-                  {isRefining ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
+                  {isRefining ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={16} />}
                 </button>
                 {/* Save as template */}
                 <button
@@ -314,7 +314,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
                   aria-label={t('pipeline.templates.save')}
                   className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
                 >
-                  <BookmarkPlus size={14} />
+                  <BookmarkPlus size={16} />
                 </button>
                 {/* Load template */}
                 <button
@@ -324,7 +324,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
                   aria-label={t('pipeline.templates.load')}
                   className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
                 >
-                  <BookOpen size={14} />
+                  <BookOpen size={16} />
                 </button>
               </div>
             </div>
@@ -338,7 +338,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
                   onKeyDown={(e) => { if (e.key === 'Enter') handleSaveTemplate(); if (e.key === 'Escape') setShowSaveName(false); }}
                   placeholder={t('pipeline.templates.namePlaceholder')}
                   autoFocus
-                  className="flex-1 rounded bg-editorial-textbox/60 border border-editorial-border/60 px-2 py-1 text-[11px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  className="flex-1 rounded bg-editorial-textbox/60 border border-editorial-border/60 px-2 py-1 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 />
                 <button
                   type="button"
@@ -347,7 +347,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
                   className="text-editorial-ink hover:text-editorial-accent transition-colors disabled:opacity-40 focus:outline-none"
                   aria-label={t('common.confirm')}
                 >
-                  <Check size={14} />
+                  <Check size={16} />
                 </button>
                 <button
                   type="button"
@@ -355,7 +355,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
                   className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none"
                   aria-label={t('common.cancel')}
                 >
-                  <X size={14} />
+                  <X size={16} />
                 </button>
               </div>
             )}
@@ -369,12 +369,12 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
                     onChange={(e) => setTemplateSearch(e.target.value)}
                     placeholder={t('pipeline.templates.searchPlaceholder')}
                     autoFocus
-                    className="w-full rounded bg-editorial-textbox/60 border border-editorial-border/40 px-2 py-1 text-[11px] font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                    className="w-full rounded bg-editorial-textbox/60 border border-editorial-border/40 px-2 py-1 text-sm font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
                   />
                 </div>
                 <ul className="max-h-48 overflow-y-auto custom-scrollbar">
                   {filteredTemplates.length === 0 ? (
-                    <li className="px-3 py-4 text-[10px] text-editorial-muted text-center">
+                    <li className="px-3 py-4 text-xs text-editorial-muted text-center">
                       {t('pipeline.templates.empty')}
                     </li>
                   ) : (
@@ -388,8 +388,8 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
                           onClick={() => { onUpdate({ prompt: tmpl.prompt }); setShowTemplateList(false); setTemplateSearch(''); }}
                           className="flex-1 text-left min-w-0 focus:outline-none"
                         >
-                          <div className="text-[11px] font-bold text-editorial-ink truncate">{tmpl.name}</div>
-                          <div className="text-[10px] text-editorial-muted truncate mt-0.5 font-mono">{tmpl.prompt}</div>
+                          <div className="text-sm font-bold text-editorial-ink truncate">{tmpl.name}</div>
+                          <div className="text-xs text-editorial-muted truncate mt-0.5 font-mono">{tmpl.prompt}</div>
                         </button>
                         <button
                           type="button"
@@ -397,7 +397,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
                           className="shrink-0 text-editorial-muted/40 hover:text-editorial-accent transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 focus:outline-none mt-0.5"
                           aria-label={t('common.delete')}
                         >
-                          <Trash2 size={12} />
+                          <Trash2 size={14} />
                         </button>
                       </li>
                     ))
@@ -412,7 +412,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
               onChange={(e) => onUpdate({ prompt: e.target.value })}
               placeholder={t('pipeline.stagePromptPlaceholder')}
               rows={8}
-              className="w-full rounded-[16px] bg-editorial-textbox/40 border border-editorial-border/60 p-4 text-[12px] font-mono outline-none leading-relaxed resize-y focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="w-full rounded-[16px] bg-editorial-textbox/40 border border-editorial-border/60 p-4 text-sm font-mono outline-none leading-relaxed resize-y focus-visible:ring-2 focus-visible:ring-editorial-accent"
             />
           </div>
         </div>
