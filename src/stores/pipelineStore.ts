@@ -16,6 +16,7 @@ interface PipelineState {
   setInputText: (text: string) => void;
   setConfig: (updater: PipelineConfig | ((prev: PipelineConfig) => PipelineConfig)) => void;
   assignGlossary: (glossaryId: string | null) => Promise<void>;
+  resetToDefaults: () => void;
 
   addStage: () => void;
   removeStage: (id: string) => void;
@@ -26,27 +27,29 @@ interface PipelineState {
   removeGlossaryEntry: (id: string) => void;
 }
 
+const DEFAULT_PIPELINE_CONFIG: PipelineConfig = {
+  sourceLanguage: 'English',
+  targetLanguage: 'Italian',
+  stages: DEFAULT_STAGES,
+  judgePrompt: DEFAULT_JUDGE_PROMPT,
+  judgeModel: 'gpt-4o-mini',
+  judgeProvider: 'openai',
+  glossary: [],
+  assignedGlossaryId: null,
+  useChunking: true,
+  targetChunkCount: 0,
+  minWords: 600,
+  maxWords: 1200,
+  headingAware: false,
+  documentFormat: 'plain',
+  markdownAware: false,
+  experimentalImport: null,
+  coherencePrompt: DEFAULT_COHERENCE_PROMPT,
+};
+
 export const usePipelineStore = create<PipelineState>((set) => ({
   inputText: '',
-  config: {
-    sourceLanguage: 'English',
-    targetLanguage: 'Italian',
-    stages: DEFAULT_STAGES,
-    judgePrompt: DEFAULT_JUDGE_PROMPT,
-    judgeModel: 'gpt-4o-mini',
-    judgeProvider: 'openai',
-    glossary: [],
-    assignedGlossaryId: null,
-    useChunking: true,
-    targetChunkCount: 0,
-    minWords: 600,
-    maxWords: 1200,
-    headingAware: false,
-    documentFormat: 'plain',
-    markdownAware: false,
-    experimentalImport: null,
-    coherencePrompt: DEFAULT_COHERENCE_PROMPT,
-  },
+  config: { ...DEFAULT_PIPELINE_CONFIG, stages: DEFAULT_STAGES },
 
   setInputText: (text) => set({ inputText: text }),
 
@@ -54,6 +57,9 @@ export const usePipelineStore = create<PipelineState>((set) => ({
     set((state) => ({
       config: typeof updater === 'function' ? updater(state.config) : updater,
     })),
+
+  resetToDefaults: () =>
+    set({ inputText: '', config: { ...DEFAULT_PIPELINE_CONFIG, stages: DEFAULT_STAGES } }),
 
   assignGlossary: async (glossaryId) => {
     if (!glossaryId) {

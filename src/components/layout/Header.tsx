@@ -220,7 +220,10 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
                 {t('app.title')}
               </div>
               <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-                {t('app.subtitle')} · v{__APP_VERSION__}
+                {t('app.subtitle')}
+              </div>
+              <div className="text-[9px] font-mono tracking-[0.2em] text-editorial-muted/50 mt-0.5">
+                v{__APP_VERSION__}
               </div>
             </div>
             {currentProject && (
