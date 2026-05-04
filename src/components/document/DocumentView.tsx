@@ -3,11 +3,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Columns2,
-  Copy,
   Highlighter,
   Info,
   Loader2,
   Lock,
+  Merge,
   Pencil,
   PanelLeft,
   PanelRight,
@@ -82,6 +82,8 @@ export function DocumentView({
     focusedIssueQuery,
     focusedIssueRequestId,
     clearFocusedIssue,
+    pendingSplitChunkId,
+    setPendingSplitChunkId,
   } = useUiStore();
 
   const [viewportWidth, setViewportWidth] = useState(
@@ -146,6 +148,13 @@ export function DocumentView({
     setSplitDraft({ chunkId, splitAt: initialSplitAt });
   };
 
+  useEffect(() => {
+    if (!pendingSplitChunkId || !currentChunk || currentChunk.id !== pendingSplitChunkId) return;
+    openSplitDialog(currentChunk.id, currentChunk.originalText);
+    setPendingSplitChunkId(null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingSplitChunkId, currentChunk?.id]);
+
   // Hooks devono essere chiamati prima di qualsiasi return condizionale
   const hasGlossary = config.glossary.length > 0;
   const showHighlight = glossaryHighlightEnabled && hasGlossary;
@@ -184,9 +193,9 @@ export function DocumentView({
   const chunkTone = qualityTone(currentChunk.judgeResult.rating);
 
   return (
-    <section className="w-full bg-[#f7f3ec] overflow-y-auto min-h-0 h-full custom-scrollbar">
-      <div className="mx-auto max-w-[1720px] px-5 py-4 md:px-6 md:py-5 space-y-5">
-        <div className="flex items-center gap-2">
+    <section className="w-full bg-[#f7f3ec] overflow-y-auto min-h-0 h-full custom-scrollbar flex flex-col">
+      <div className="mx-auto w-full max-w-[1720px] px-5 py-4 md:px-6 md:py-5 flex flex-col flex-1 min-h-0 gap-5">
+        <div className="flex items-center gap-2 shrink-0">
           {/* Run button: cerchio con stesso stile della navbar, si fonde con essa */}
           {onRunPipeline && onCancelPipeline && (
             <div className="relative flex h-[80px] w-[80px] flex-shrink-0 items-center justify-center rounded-full border border-editorial-border bg-editorial-bg/90 shadow-[0_16px_50px_rgba(26,26,26,0.05)]">
@@ -406,7 +415,7 @@ export function DocumentView({
                       chunks[currentIndex + 1]?.status === 'processing'
                     }
                   >
-                    <Copy size={16} />
+                    <Merge size={16} />
                   </ChunkIconButton>
                 </>
               )}
@@ -425,7 +434,7 @@ export function DocumentView({
           </div>
         </div>
 
-        <div className={`grid gap-5 ${paneFocus === 'both' ? (isBook ? '2xl:grid-cols-2' : 'grid-cols-1') : 'grid-cols-1'}`}>
+        <div className={`grid gap-5 flex-1 min-h-0 ${paneFocus === 'both' ? (isBook ? '2xl:grid-cols-2' : 'grid-cols-1') : 'grid-cols-1'}`}>
           {paneFocus !== 'translation' && (
             <DocumentPage
               label={t('pipeline.originalSource')}
@@ -442,9 +451,9 @@ export function DocumentView({
                 markdownEnabled={config.markdownAware === true}
                 disabled={isProcessing}
                 readOnly={currentChunk.status === 'completed'}
-                minHeightClassName="min-h-[420px]"
+                fillHeight
                 textClassName="text-[15px] leading-8 text-editorial-ink"
-                previewClassName="min-h-[420px] text-[15px] leading-8 text-editorial-ink"
+                previewClassName="min-h-[280px] text-[15px] leading-8 text-editorial-ink"
                 highlightHtml={showHighlight && currentChunk.status !== 'completed' ? sourceHighlight.html : null}
               />
             </DocumentPage>
@@ -470,9 +479,9 @@ export function DocumentView({
                 onChange={(nextValue) => updateChunkDraft(currentChunk.id, nextValue)}
                 markdownEnabled={config.markdownAware === true}
                 readOnly={currentChunk.translationLocked === true}
-                minHeightClassName="min-h-[420px]"
+                fillHeight
                 textClassName="text-[15px] leading-8 text-editorial-ink"
-                previewClassName="min-h-[420px] text-[15px] leading-8 text-editorial-ink"
+                previewClassName="min-h-[280px] text-[15px] leading-8 text-editorial-ink"
                 placeholder={t('pipeline.candidatePlaceholder')}
                 highlightHtml={showHighlight ? translationHighlight.html : null}
                 focusQuery={focusedChunkId === currentChunk.id ? focusedIssueQuery : null}
@@ -598,10 +607,10 @@ function DocumentPage({
   children,
 }: DocumentPageProps) {
   return (
-    <section className={`relative rounded-[24px] bg-[#fffdf9] px-6 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_18px_45px_rgba(74,50,17,0.08)] ${
+    <section className={`relative rounded-[24px] bg-[#fffdf9] px-6 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_18px_45px_rgba(74,50,17,0.08)] flex flex-col ${
       highlighted ? 'border border-editorial-accent ring-2 ring-editorial-accent/30' : 'border border-[#d8cfbf]'
     }`}>
-      <div className="mb-4 flex items-center justify-between gap-4 border-b border-[#ede4d6] pb-3">
+      <div className="mb-4 shrink-0 flex items-center justify-between gap-4 border-b border-[#ede4d6] pb-3">
         <div className="min-w-0">
           <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
             {eyebrow}
@@ -618,7 +627,7 @@ function DocumentPage({
           {actions}
         </div>
       </div>
-      <div className={`max-h-[min(64vh,980px)] overflow-y-auto pr-1 custom-scrollbar ${readOnly ? 'opacity-90' : ''}`}>
+      <div className={`flex flex-col flex-1 min-h-0 ${readOnly ? 'opacity-90' : ''}`}>
         {children}
       </div>
     </section>

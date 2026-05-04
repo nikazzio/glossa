@@ -78,18 +78,24 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
   const setInsightsDrawerTab = useUiStore((state) => state.setInsightsDrawerTab);
   const selectedChunkId = useUiStore((state) => state.selectedChunkId);
   const setSelectedChunkId = useUiStore((state) => state.setSelectedChunkId);
+  const setPendingSplitChunkId = useUiStore((state) => state.setPendingSplitChunkId);
   const focusIssueInChunk = useUiStore((state) => state.focusIssueInChunk);
   const chunks = useChunksStore((state) => state.chunks);
   const isProcessing = useChunksStore((state) => state.isProcessing);
   const allChunksTranslated = chunks.length > 0 && chunks.every((c) => c.currentDraft?.trim());
   const allChunksLocked = chunks.length > 0 && chunks.every((c) => c.translationLocked);
   const unlockedChunksCount = chunks.filter((c) => c.currentDraft?.trim() && !c.translationLocked).length;
-  const splitChunk = useChunksStore((state) => state.splitChunk);
   const mergeChunkWithNext = useChunksStore((state) => state.mergeChunkWithNext);
   const currentChunk =
     chunks.find((chunk) => chunk.id === selectedChunkId) ?? chunks[0] ?? null;
 
   const activeTab: InsightsTab = TAB_ORDER.includes(insightsDrawerTab) ? insightsDrawerTab : 'index';
+
+  const TAB_TITLE: Record<InsightsTab, string> = {
+    index: t('document.insightsTabIndex'),
+    stats: t('document.insightsTabStats'),
+    audit: t('document.insightsTabAudit'),
+  };
 
   const activateTab = (tab: InsightsTab) => {
     setInsightsDrawerTab(tab);
@@ -181,12 +187,13 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
             </div>
 
             {/* Tab bar */}
-            <div
-              role="tablist"
-              aria-orientation="horizontal"
-              aria-label={t('document.insightsDrawerTitle')}
-              className="flex gap-1 border-b border-editorial-border bg-editorial-bg/60 px-4 py-2"
-            >
+            <div className="flex items-center gap-2 border-b border-editorial-border bg-editorial-bg/60 px-4 py-2">
+              <div
+                role="tablist"
+                aria-orientation="horizontal"
+                aria-label={t('document.insightsDrawerTitle')}
+                className="flex gap-1"
+              >
               <TabButton
                 tab="index"
                 active={activeTab === 'index'}
@@ -223,6 +230,9 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
                   tabButtonRefs.current.audit = element;
                 }}
               />
+              </div>
+              <span className="mx-1 h-4 w-px bg-editorial-border/70" aria-hidden="true" />
+              <span className="font-display italic text-sm text-editorial-ink">{TAB_TITLE[activeTab]}</span>
             </div>
 
             <div className="flex flex-1 flex-col overflow-y-auto bg-editorial-bg/40 custom-scrollbar">
@@ -234,8 +244,14 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
                   currentChunkId={currentChunk?.id ?? null}
                   isProcessing={isProcessing}
                   onSelect={(id) => setSelectedChunkId(id)}
-                  onSplit={splitChunk}
-                  onMerge={mergeChunkWithNext}
+                  onSplit={(chunkId) => {
+                    setSelectedChunkId(chunkId);
+                    setPendingSplitChunkId(chunkId);
+                  }}
+                  onMerge={(chunkId) => {
+                    setSelectedChunkId(chunkId);
+                    mergeChunkWithNext(chunkId);
+                  }}
                 />
               ) : activeTab === 'stats' ? (
                 <StatsTab
@@ -419,11 +435,11 @@ function IndexTab({
                 >
                   <div className="flex items-center gap-2">
                     {statusIcon}
-                    <span className={`font-display text-sm italic ${isActive ? 'text-white' : 'text-editorial-ink'}`}>
+                    <span className={`font-display text-sm italic ${isActive ? 'text-white' : 'text-editorial-accent'}`}>
                       {indexPad(index + 1)}
                     </span>
-                    <span className={`flex-1 truncate text-[11px] leading-snug ${isActive ? 'text-white/80' : 'text-editorial-muted'}`}>
-                      {truncateChunk(chunk.originalText)}
+                    <span className={`flex-1 line-clamp-2 text-[11px] leading-snug ${isActive ? 'text-white/80' : 'text-editorial-muted'}`}>
+                      {chunk.originalText.replace(/\s+/g, ' ').trim()}
                     </span>
                     <span className={`shrink-0 text-[10px] font-mono ${isActive ? 'text-white/50' : 'text-editorial-muted/60'}`}>
                       {wordCount}w
@@ -618,6 +634,9 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
             className="h-full rounded-full bg-editorial-success transition-all"
             style={{ width: `${progressPct}%` }}
           />
+        </div>
+        <div className="mb-2 font-display text-lg italic text-editorial-ink">
+          {progressPct}%
         </div>
         <div className="flex flex-wrap gap-3">
           {idleCount > 0 && (
