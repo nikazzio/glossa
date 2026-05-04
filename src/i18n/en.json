@@ -192,7 +192,21 @@
     "auditFailed": "Audit failed",
     "pipelineCompleted": "Pipeline completed successfully",
     "pipelineCompletedWithErrors": "Pipeline completed with {{count}} error(s)",
-    "reEvalCompleted": "Re-evaluation completed"
+    "reEvalCompleted": "Re-evaluation completed",
+    "coherenceFailed": "Coherence audit failed"
+  },
+  "coherence": {
+    "title": "Document Coherence",
+    "runAudit": "Run coherence audit",
+    "rerun": "Re-run",
+    "running": "Running...",
+    "idle": "Not yet run. Launch the audit on the full translated document.",
+    "noIssues": "No cross-segment issues detected",
+    "noChunksToAudit": "No completed chunks to audit",
+    "auditCompleted": "Coherence audit completed",
+    "auditCompletedWithErrors": "Coherence audit completed with {{count}} error(s)",
+    "issueTypeConsistency": "Consistency",
+    "issueTypeGlossary": "Glossary"
   },
   "language": {
     "label": "Language",

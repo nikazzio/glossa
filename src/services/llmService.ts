@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import type { PipelineConfig, PipelineStageConfig, JudgeResult, TokenUsage } from '../types';
+import type { PipelineConfig, PipelineStageConfig, JudgeResult, Issue, TokenUsage } from '../types';
 import { useChunksStore } from '../stores/chunksStore';
 
 /// Sentinel string returned by the Rust backend when a stream is
@@ -102,6 +102,13 @@ export const llmService = {
       'judge_translation',
       { originalText, translation, config },
     );
+  },
+
+  async runCoherenceForChunk(
+    input: { original: string; translation: string; prevContext?: string; nextContext?: string },
+    config: PipelineConfig,
+  ): Promise<{ issues: Issue[]; inputTokens?: number; outputTokens?: number }> {
+    return invoke('run_coherence_for_chunk', { input, config });
   },
 
   async refinePrompt(

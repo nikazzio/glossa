@@ -192,7 +192,21 @@
     "auditFailed": "Audit fallito",
     "pipelineCompleted": "Pipeline completata con successo",
     "pipelineCompletedWithErrors": "Pipeline completata con {{count}} errore/i",
-    "reEvalCompleted": "Rivalutazione completata"
+    "reEvalCompleted": "Rivalutazione completata",
+    "coherenceFailed": "Audit di coerenza fallito"
+  },
+  "coherence": {
+    "title": "Coerenza Documento",
+    "runAudit": "Avvia audit coerenza",
+    "rerun": "Riesegui",
+    "running": "Analisi in corso...",
+    "idle": "Non ancora eseguito. Avvia l'analisi sull'intero documento tradotto.",
+    "noIssues": "Nessun problema cross-segmento rilevato",
+    "noChunksToAudit": "Nessun chunk completato da analizzare",
+    "auditCompleted": "Audit di coerenza completato",
+    "auditCompletedWithErrors": "Audit completato con {{count}} errore/i",
+    "issueTypeConsistency": "Consistenza",
+    "issueTypeGlossary": "Glossario"
   },
   "language": {
     "label": "Lingua",

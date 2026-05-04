@@ -1381,6 +1381,120 @@ fn build_judge_prompts(
     (system_prompt, user_prompt)
 }
 
+// ── Coherence audit ──────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CoherenceChunkInput {
+    pub original: String,
+    pub translation: String,
+    pub prev_context: Option<String>,
+    pub next_context: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CoherenceResponse {
+    pub issues: Vec<JudgeIssue>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub input_tokens: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub output_tokens: Option<u32>,
+}
+
+fn build_coherence_prompts(input: &CoherenceChunkInput, config: &PipelineConfig) -> (String, String) {
+    let glossary_json = serde_json::to_string(&config.glossary).unwrap_or_default();
+
+    let system_prompt = format!(
+        "You are a translation coherence auditor for {src}→{tgt} translations.\n\
+         Your task: identify cross-segment inconsistencies between a translated segment and its surrounding context.\n\
+         Evaluate ONLY:\n\
+         1. Terminology consistency — key terms translated differently than in adjacent segments\n\
+         2. Narrative continuity — abrupt breaks in flow at segment boundaries\n\
+         3. Glossary adherence — glossary terms used inconsistently with context\n\
+         Do NOT re-evaluate standalone translation quality.\n\
+         Glossary: {glossary}\n\n\
+         Respond with valid JSON only:\n\
+         {{\"issues\": [{{\"type\": \"consistency\"|\"glossary\", \
+         \"severity\": \"low\"|\"medium\"|\"high\", \
+         \"description\": \"string\", \"suggestedFix\": \"string\"}}]}}",
+        src = config.source_language,
+        tgt = config.target_language,
+        glossary = glossary_json,
+    );
+
+    let prev_block = input
+        .prev_context
+        .as_deref()
+        .filter(|s| !s.is_empty())
+        .map(|ctx| format!("[Previous segment — context only]\n{ctx}\n[End of previous context]\n\n"))
+        .unwrap_or_default();
+
+    let next_block = input
+        .next_context
+        .as_deref()
+        .filter(|s| !s.is_empty())
+        .map(|ctx| format!("\n[Next segment — context only]\n{ctx}\n[End of next context]"))
+        .unwrap_or_default();
+
+    let user_prompt = format!(
+        "{prev_block}[Current segment]\nOriginal: {original}\nTranslation: {translation}\n[End of current segment]{next_block}\n\n\
+         Identify cross-segment coherence issues and return the JSON. If no issues, return {{\"issues\": []}}.",
+        original = input.original,
+        translation = input.translation,
+    );
+
+    (system_prompt, user_prompt)
+}
+
+#[tauri::command]
+pub async fn run_coherence_for_chunk(
+    app: AppHandle,
+    input: CoherenceChunkInput,
+    config: PipelineConfig,
+) -> Result<CoherenceResponse, String> {
+    let api_key = get_api_key(&app, &config.judge_provider)?;
+    let client = build_http_client()?;
+    let (system_prompt, user_prompt) = build_coherence_prompts(&input, &config);
+
+    let (result_text, usage) = call_provider_for_judge(
+        &client,
+        &config.judge_provider,
+        &config.judge_model,
+        &system_prompt,
+        &user_prompt,
+        &api_key,
+    )
+    .await?;
+
+    let sanitized = sanitize_llm_json_output(&result_text);
+    let parsed: serde_json::Value = serde_json::from_str(sanitized).map_err(|e| {
+        format!("Failed to parse coherence JSON: {e}")
+    })?;
+
+    let issues: Vec<JudgeIssue> = parsed["issues"]
+        .as_array()
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| {
+                    Some(JudgeIssue {
+                        issue_type: v["type"].as_str()?.to_string(),
+                        severity: v["severity"].as_str()?.to_string(),
+                        description: v["description"].as_str()?.to_string(),
+                        suggested_fix: v["suggestedFix"].as_str().map(|s| s.to_string()),
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    Ok(CoherenceResponse {
+        issues,
+        input_tokens: usage.map(|(i, _)| i),
+        output_tokens: usage.map(|(_, o)| o),
+    })
+}
+
 /// Strips markdown code fences and any preamble text that LLMs sometimes wrap around JSON output.
 fn sanitize_llm_json_output(raw: &str) -> &str {
     let trimmed = raw.trim();

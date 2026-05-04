@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type {
   ChunkStatus,
+  CoherenceResult,
   JudgeResult,
   PipelineResult,
   TranslationChunk,
@@ -41,6 +42,7 @@ interface ChunksState {
   toggleChunkTranslationLock: (chunkId: string) => void;
   updateChunkStatus: (chunkId: string, status: ChunkStatus) => void;
   updateChunkOriginalText: (chunkId: string, text: string) => void;
+  updateChunkCoherence: (chunkId: string, result: CoherenceResult) => void;
   splitChunk: (chunkId: string) => void;
   splitChunkAt: (chunkId: string, splitAt: number) => boolean;
   mergeChunkWithNext: (chunkId: string) => void;
@@ -171,6 +173,13 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
       ),
     })),
 
+  updateChunkCoherence: (chunkId, result) =>
+    set((state) => ({
+      chunks: state.chunks.map((chunk) =>
+        chunk.id === chunkId ? { ...chunk, coherenceResult: result } : chunk,
+      ),
+    })),
+
   splitChunk: (chunkId) =>
     set((state) => {
       const chunk = state.chunks.find((entry) => entry.id === chunkId);
@@ -255,6 +264,7 @@ function resetChunkForSourceEdit<T extends TranslationChunk>(chunk: T): T {
     status: 'ready',
     stageResults: {},
     judgeResult: createEmptyJudgeResult(),
+    coherenceResult: undefined,
     currentDraft: '',
     translationLocked: false,
   };

@@ -42,6 +42,7 @@ export default function App() {
     runAuditOnly,
     runSingleChunk,
     auditSingleChunk,
+    runCoherenceAudit,
     cancelPipeline,
   } = usePipeline();
   useProjectAutosave();
@@ -78,7 +79,7 @@ export default function App() {
                 onRunPipeline={runPipeline}
                 onCancelPipeline={cancelPipeline}
               />
-              <InsightsDrawer onReauditChunk={auditSingleChunk} />
+              <InsightsDrawer onReauditChunk={auditSingleChunk} onRunCoherenceAudit={runCoherenceAudit} />
             </main>
           </Suspense>
         ) : (

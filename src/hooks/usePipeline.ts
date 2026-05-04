@@ -6,7 +6,17 @@ import { useChunksStore } from '../stores/chunksStore';
 import { llmService, isStreamCancelledError } from '../services/llmService';
 import { withRetry, friendlyError } from '../utils/retry';
 import { qualityDefault, qualityFailure } from '../utils';
-import type { JudgeResult, TokenUsage, TranslationChunk } from '../types';
+import type { Issue, JudgeResult, TokenUsage, TranslationChunk } from '../types';
+
+function lastNWords(text: string, n: number): string {
+  const words = text.trim().split(/\s+/);
+  return words.length <= n ? text.trim() : words.slice(-n).join(' ');
+}
+
+function firstNWords(text: string, n: number): string {
+  const words = text.trim().split(/\s+/);
+  return words.length <= n ? text.trim() : words.slice(0, n).join(' ');
+}
 
 type ChunkOutcome = 'completed' | 'failed' | 'cancelled' | 'skipped';
 
@@ -27,6 +37,7 @@ export function usePipeline() {
     updateChunkJudge,
     updateChunkDraft,
     updateChunkStatus,
+    updateChunkCoherence,
     clearChunkStages,
     requestCancel,
     setIsProcessing,
@@ -305,6 +316,70 @@ export function usePipeline() {
     }
   }, [config, t, setIsProcessing, updateChunkJudge, updateChunkStatus]);
 
+  const runCoherenceAudit = useCallback(async () => {
+    if (useChunksStore.getState().isProcessing) return;
+    const liveChunks = useChunksStore.getState().chunks;
+    const auditableChunks = liveChunks.filter((c) => c.currentDraft && c.status === 'completed');
+    if (auditableChunks.length === 0) {
+      toast.message(t('coherence.noChunksToAudit'));
+      return;
+    }
+
+    useChunksStore.getState().clearCancelRequest();
+    setIsProcessing(true);
+
+    let errorCount = 0;
+    let cancelled = false;
+
+    for (let i = 0; i < liveChunks.length; i++) {
+      const chunk = liveChunks[i];
+      if (!chunk.currentDraft || chunk.status !== 'completed') continue;
+      if (useChunksStore.getState().cancelRequested) { cancelled = true; break; }
+
+      const prevChunk = liveChunks[i - 1];
+      const nextChunk = liveChunks[i + 1];
+      const prevContext = prevChunk?.currentDraft ? lastNWords(prevChunk.currentDraft, 300) : undefined;
+      const nextContext = nextChunk?.currentDraft ? firstNWords(nextChunk.currentDraft, 300) : undefined;
+
+      updateChunkCoherence(chunk.id, { status: 'processing', issues: [] });
+
+      try {
+        const result = await withRetry(
+          () => llmService.runCoherenceForChunk(
+            { original: chunk.originalText, translation: chunk.currentDraft!, prevContext, nextContext },
+            config,
+          ),
+          { label: 'Coherence audit' },
+        );
+        const tokenUsage =
+          result.inputTokens !== undefined && result.outputTokens !== undefined
+            ? { inputTokens: result.inputTokens, outputTokens: result.outputTokens }
+            : undefined;
+        updateChunkCoherence(chunk.id, {
+          status: 'completed',
+          issues: result.issues as Issue[],
+          ...(tokenUsage ? { tokenUsage } : {}),
+        });
+      } catch (error: any) {
+        const msg = friendlyError(error.message ?? String(error));
+        updateChunkCoherence(chunk.id, { status: 'error', issues: [], error: msg });
+        errorCount++;
+        toast.error(t('errors.coherenceFailed'), { description: msg });
+      }
+    }
+
+    setIsProcessing(false);
+    useChunksStore.getState().clearCancelRequest();
+
+    if (cancelled) {
+      toast.message(t('pipeline.stopConfirmed'));
+    } else if (errorCount === 0) {
+      toast.success(t('coherence.auditCompleted'));
+    } else {
+      toast.warning(t('coherence.auditCompletedWithErrors', { count: errorCount }));
+    }
+  }, [config, t, setIsProcessing, updateChunkCoherence]);
+
   const cancelPipeline = useCallback(() => {
     requestCancel();
     const streamId = useChunksStore.getState().activeStreamId;
@@ -323,6 +398,7 @@ export function usePipeline() {
     runSingleChunk,
     runAuditOnly,
     auditSingleChunk,
+    runCoherenceAudit,
     cancelPipeline,
     isProcessing,
   };

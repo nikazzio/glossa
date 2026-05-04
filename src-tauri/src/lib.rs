@@ -44,6 +44,7 @@ pub fn run() {
       llm::test_provider_connection,
       llm::list_ollama_models,
       llm::check_ollama_status,
+      llm::run_coherence_for_chunk,
       documents::extract_docx_text,
       documents::extract_docx_markdown,
       documents::export_markdown_docx,

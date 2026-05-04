@@ -36,8 +36,9 @@ export interface TranslationChunk {
   id: string;
   originalText: string;
   status: ChunkStatus;
-  stageResults: Record<string, PipelineResult>; // Key is stage id
+  stageResults: Record<string, PipelineResult>;
   judgeResult: JudgeResult;
+  coherenceResult?: CoherenceResult;
   currentDraft?: string;
   translationLocked?: boolean;
 }
@@ -70,10 +71,17 @@ export interface JudgeResult extends PipelineResult {
 }
 
 export interface Issue {
-  type: 'glossary' | 'fluency' | 'accuracy' | 'grammar';
+  type: 'glossary' | 'fluency' | 'accuracy' | 'grammar' | 'consistency';
   severity: 'low' | 'medium' | 'high';
   description: string;
   suggestedFix?: string;
+}
+
+export interface CoherenceResult {
+  status: 'idle' | 'processing' | 'completed' | 'error';
+  issues: Issue[];
+  error?: string;
+  tokenUsage?: TokenUsage;
 }
 
 export interface PipelineConfig {
