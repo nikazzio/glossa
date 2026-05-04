@@ -44,6 +44,8 @@ interface PendingImport {
   text: string;
   useChunking: boolean;
   targetChunkCount: number;
+  minWords: number;
+  maxWords: number;
   format?: 'plain' | 'markdown';
   experimental?: 'docx-markdown';
 }
@@ -99,6 +101,8 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
           text: imported.text,
           useChunking: config.useChunking !== false,
           targetChunkCount: config.targetChunkCount ?? 0,
+          minWords: config.minWords ?? 0,
+          maxWords: config.maxWords ?? 0,
           format: imported.format,
           experimental: imported.experimental,
         });
@@ -114,6 +118,8 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
       ...prev,
       useChunking: pendingImport.useChunking,
       targetChunkCount: pendingImport.targetChunkCount,
+      minWords: pendingImport.minWords,
+      maxWords: pendingImport.maxWords,
       documentFormat: pendingImport.format ?? 'plain',
       markdownAware: pendingImport.format === 'markdown',
       experimentalImport: pendingImport.experimental ?? null,
@@ -122,6 +128,8 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
       useChunking: pendingImport.useChunking,
       targetChunkCount: pendingImport.targetChunkCount,
       markdownAware: pendingImport.format === 'markdown',
+      minWords: pendingImport.minWords,
+      maxWords: pendingImport.maxWords,
     });
     setPendingImport(null);
     toast.success(t('files.imported'));
@@ -340,6 +348,8 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
             text={pendingImport.text}
             useChunking={pendingImport.useChunking}
             targetChunkCount={pendingImport.targetChunkCount}
+            minWords={pendingImport.minWords}
+            maxWords={pendingImport.maxWords}
             markdownAware={pendingImport.format === 'markdown'}
             format={pendingImport.format}
             experimental={pendingImport.experimental}
@@ -351,6 +361,16 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
             onTargetChunkCountChange={(value) =>
               setPendingImport((current) =>
                 current ? { ...current, targetChunkCount: value } : current,
+              )
+            }
+            onMinWordsChange={(value) =>
+              setPendingImport((current) =>
+                current ? { ...current, minWords: value } : current,
+              )
+            }
+            onMaxWordsChange={(value) =>
+              setPendingImport((current) =>
+                current ? { ...current, maxWords: value } : current,
               )
             }
             onCancel={() => setPendingImport(null)}

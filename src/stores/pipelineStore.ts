@@ -39,6 +39,8 @@ export const usePipelineStore = create<PipelineState>((set) => ({
     assignedGlossaryId: null,
     useChunking: true,
     targetChunkCount: 0,
+    minWords: 0,
+    maxWords: 0,
     documentFormat: 'plain',
     markdownAware: false,
     experimentalImport: null,

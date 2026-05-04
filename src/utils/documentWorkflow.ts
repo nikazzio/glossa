@@ -28,6 +28,8 @@ export function buildImportPreview(
     useChunking?: boolean;
     targetChunkCount?: number;
     markdownAware?: boolean;
+    minWords?: number;
+    maxWords?: number;
     format?: 'plain' | 'markdown';
     experimental?: 'docx-markdown';
   },

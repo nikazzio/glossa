@@ -87,6 +87,8 @@ export interface PipelineConfig {
   assignedGlossaryId?: string | null;
   useChunking?: boolean;
   targetChunkCount?: number;
+  minWords?: number;
+  maxWords?: number;
   documentFormat?: DocumentFormat;
   markdownAware?: boolean;
   experimentalImport?: ExperimentalImportMode | null;

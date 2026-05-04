@@ -12,12 +12,15 @@ import {
   Gauge,
   List,
   Loader2,
+  Merge,
   MessageCircle,
   PanelRight,
   RefreshCcw,
+  Scissors,
   ShieldCheck,
   X,
 } from 'lucide-react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { type KeyboardEvent, useMemo, useRef } from 'react';
@@ -75,6 +78,8 @@ export function InsightsDrawer({ onReauditChunk }: InsightsDrawerProps) {
   const focusIssueInChunk = useUiStore((state) => state.focusIssueInChunk);
   const chunks = useChunksStore((state) => state.chunks);
   const isProcessing = useChunksStore((state) => state.isProcessing);
+  const splitChunk = useChunksStore((state) => state.splitChunk);
+  const mergeChunkWithNext = useChunksStore((state) => state.mergeChunkWithNext);
   const currentChunk =
     chunks.find((chunk) => chunk.id === selectedChunkId) ?? chunks[0] ?? null;
 
@@ -221,7 +226,10 @@ export function InsightsDrawer({ onReauditChunk }: InsightsDrawerProps) {
                   labelledBy={TAB_BUTTON_IDS.index}
                   chunks={chunks}
                   currentChunkId={currentChunk?.id ?? null}
+                  isProcessing={isProcessing}
                   onSelect={(id) => setSelectedChunkId(id)}
+                  onSplit={splitChunk}
+                  onMerge={mergeChunkWithNext}
                 />
               ) : activeTab === 'stats' ? (
                 <StatsTab
@@ -300,11 +308,31 @@ interface IndexTabProps {
   labelledBy: string;
   chunks: TranslationChunk[];
   currentChunkId: string | null;
+  isProcessing: boolean;
   onSelect: (id: string) => void;
+  onSplit: (chunkId: string) => void;
+  onMerge: (chunkId: string) => void;
 }
 
-function IndexTab({ panelId, labelledBy, chunks, currentChunkId, onSelect }: IndexTabProps) {
+function IndexTab({
+  panelId,
+  labelledBy,
+  chunks,
+  currentChunkId,
+  isProcessing,
+  onSelect,
+  onSplit,
+  onMerge,
+}: IndexTabProps) {
   const { t } = useTranslation();
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const virtualizer = useVirtualizer({
+    count: chunks.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => 80,
+    overscan: 5,
+  });
 
   if (chunks.length === 0) {
     return (
@@ -319,76 +347,140 @@ function IndexTab({ panelId, labelledBy, chunks, currentChunkId, onSelect }: Ind
     );
   }
 
+  const canEdit = !isProcessing;
+
   return (
-    <ul
+    <div
       id={panelId}
       role="tabpanel"
       aria-labelledby={labelledBy}
-      className="flex flex-col gap-2 px-4 py-4"
+      ref={scrollRef}
+      className="overflow-y-auto custom-scrollbar px-4 py-4"
     >
-      {chunks.map((chunk, index) => {
-        const isActive = chunk.id === currentChunkId;
-        const tone = qualityTone(chunk.judgeResult.status === 'completed' ? chunk.judgeResult.rating : null);
+      <ul
+        style={{ height: virtualizer.getTotalSize(), position: 'relative' }}
+        className="w-full"
+      >
+        {virtualizer.getVirtualItems().map((virtualRow) => {
+          const chunk = chunks[virtualRow.index];
+          const index = virtualRow.index;
+          const isActive = chunk.id === currentChunkId;
+          const tone = qualityTone(chunk.judgeResult.status === 'completed' ? chunk.judgeResult.rating : null);
+          const wordCount = chunk.originalText.trim()
+            ? chunk.originalText.trim().split(/\s+/).filter(Boolean).length
+            : 0;
+          const isLast = index === chunks.length - 1;
+          const canMutate = canEdit &&
+            chunk.status !== 'completed' &&
+            chunk.status !== 'processing';
 
-        // Status icon
-        let statusIcon: React.ReactNode;
-        if (chunk.status === 'processing') {
-          statusIcon = <Loader2 size={13} className="animate-spin text-editorial-warning shrink-0" />;
-        } else if (chunk.status === 'completed') {
-          statusIcon = <CheckCircle2 size={13} className="text-editorial-success shrink-0" />;
-        } else if (chunk.status === 'error') {
-          statusIcon = <AlertCircle size={13} className="text-editorial-accent shrink-0" />;
-        } else {
-          statusIcon = <Circle size={13} className="text-editorial-muted/50 shrink-0" />;
-        }
+          let statusIcon: React.ReactNode;
+          if (chunk.status === 'processing') {
+            statusIcon = <Loader2 size={13} className="animate-spin text-editorial-warning shrink-0" />;
+          } else if (chunk.status === 'completed') {
+            statusIcon = <CheckCircle2 size={13} className="text-editorial-success shrink-0" />;
+          } else if (chunk.status === 'error') {
+            statusIcon = <AlertCircle size={13} className="text-editorial-accent shrink-0" />;
+          } else {
+            statusIcon = <Circle size={13} className="text-editorial-muted/50 shrink-0" />;
+          }
 
-        return (
-          <li key={chunk.id}>
-            <button
-              type="button"
-              onClick={() => onSelect(chunk.id)}
-              className={`w-full rounded-2xl border px-4 py-3 text-left transition-colors ${
-                isActive
-                  ? 'border-editorial-ink bg-editorial-ink text-white'
-                  : 'border-editorial-border bg-editorial-bg hover:border-editorial-ink/40'
-              }`}
+          return (
+            <li
+              key={chunk.id}
+              data-index={virtualRow.index}
+              ref={virtualizer.measureElement}
+              style={{ position: 'absolute', top: virtualRow.start, left: 0, right: 0 }}
+              className="pb-2"
             >
-              <div className="flex items-center gap-2">
-                {statusIcon}
-                <span className={`font-display text-sm italic ${isActive ? 'text-white' : 'text-editorial-ink'}`}>
-                  {indexPad(index + 1)}
-                </span>
-                <span className={`flex-1 truncate text-[11px] leading-snug ${isActive ? 'text-white/80' : 'text-editorial-muted'}`}>
-                  {truncateChunk(chunk.originalText)}
-                </span>
+              <div
+                className={`rounded-2xl border transition-colors ${
+                  isActive
+                    ? 'border-editorial-ink bg-editorial-ink'
+                    : 'border-editorial-border bg-editorial-bg hover:border-editorial-ink/40'
+                }`}
+              >
+                {/* Main row — clickable */}
+                <button
+                  type="button"
+                  onClick={() => onSelect(chunk.id)}
+                  className="w-full px-4 pt-3 pb-2 text-left"
+                >
+                  <div className="flex items-center gap-2">
+                    {statusIcon}
+                    <span className={`font-display text-sm italic ${isActive ? 'text-white' : 'text-editorial-ink'}`}>
+                      {indexPad(index + 1)}
+                    </span>
+                    <span className={`flex-1 truncate text-[11px] leading-snug ${isActive ? 'text-white/80' : 'text-editorial-muted'}`}>
+                      {truncateChunk(chunk.originalText)}
+                    </span>
+                    <span className={`shrink-0 text-[10px] font-mono ${isActive ? 'text-white/50' : 'text-editorial-muted/60'}`}>
+                      {wordCount}w
+                    </span>
+                  </div>
+
+                  {chunk.judgeResult.status === 'completed' && (
+                    <div className={`mt-1.5 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.2em] ${
+                      isActive ? 'text-white/70' : QUALITY_TONE_COLOR[tone]
+                    }`}>
+                      <span className={`inline-block h-1.5 w-1.5 rounded-full ${
+                        tone === 'strong' ? 'bg-editorial-success' : tone === 'ok' ? 'bg-editorial-warning' : 'bg-editorial-accent'
+                      }`} />
+                      {t(qualityLabelKey(chunk.judgeResult.rating))}
+                    </div>
+                  )}
+
+                  {chunk.translationLocked && (
+                    <div className={`mt-1.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.18em] ${
+                      isActive ? 'text-emerald-200' : 'text-editorial-success'
+                    }`}>
+                      <CheckCheck size={12} />
+                      {t('document.translationLockedBadge')}
+                    </div>
+                  )}
+                </button>
+
+                {/* Inline actions */}
+                {canMutate && (
+                  <div className={`flex gap-1 border-t px-3 py-1.5 ${isActive ? 'border-white/10' : 'border-editorial-border/60'}`}>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); onSplit(chunk.id); }}
+                      title={t('document.splitChunk')}
+                      aria-label={t('document.splitChunk')}
+                      className={`flex items-center gap-1 rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-[0.2em] transition-colors ${
+                        isActive
+                          ? 'text-white/60 hover:text-white'
+                          : 'text-editorial-muted hover:text-editorial-ink'
+                      }`}
+                    >
+                      <Scissors size={10} />
+                      {t('document.splitChunk')}
+                    </button>
+                    {!isLast && (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); onMerge(chunk.id); }}
+                        title={t('document.mergeNext')}
+                        aria-label={t('document.mergeNext')}
+                        className={`flex items-center gap-1 rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-[0.2em] transition-colors ${
+                          isActive
+                            ? 'text-white/60 hover:text-white'
+                            : 'text-editorial-muted hover:text-editorial-ink'
+                        }`}
+                      >
+                        <Merge size={10} />
+                        {t('document.mergeNext')}
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
-
-              {/* Quality dot + label */}
-              {chunk.judgeResult.status === 'completed' && (
-                <div className={`mt-2 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.2em] ${
-                  isActive ? 'text-white/70' : QUALITY_TONE_COLOR[tone]
-                }`}>
-                  <span className={`inline-block h-1.5 w-1.5 rounded-full ${
-                    tone === 'strong' ? 'bg-editorial-success' : tone === 'ok' ? 'bg-editorial-warning' : 'bg-editorial-accent'
-                  }`} />
-                  {t(qualityLabelKey(chunk.judgeResult.rating))}
-                </div>
-              )}
-
-              {/* Locked badge */}
-              {chunk.translationLocked && (
-                <div className={`mt-2 flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.18em] ${
-                  isActive ? 'text-emerald-200' : 'text-editorial-success'
-                }`}>
-                  <CheckCheck size={12} />
-                  {t('document.translationLockedBadge')}
-                </div>
-              )}
-            </button>
-          </li>
-        );
-      })}
-    </ul>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 
