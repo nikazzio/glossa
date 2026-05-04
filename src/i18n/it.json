@@ -394,7 +394,9 @@
     "emptyTitle": "Nessun documento ancora preparato.",
     "emptyBody": "Prepara un testo in più chunk per usare il lettore documento, oppure torna a Sandbox per lavorare rapidamente su un testo singolo.",
     "indexEmptyTitle": "Nessuna unità da mostrare.",
-    "indexEmptyBody": "Importa un testo e preparalo in chunk per iniziare."
+    "indexEmptyBody": "Importa un testo e preparalo in chunk per iniziare.",
+    "watchdogStuck": "Bloccato",
+    "watchdogCancel": "Annulla e riprova"
   },
   "help": {
     "title": "Guida Utente",

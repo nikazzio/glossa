@@ -394,7 +394,9 @@
     "emptyTitle": "No document is staged yet.",
     "emptyBody": "Prepare a text into multiple chunks to use the document reader, or switch back to Sandbox for quick single-text work.",
     "indexEmptyTitle": "No units to display.",
-    "indexEmptyBody": "Import a text and split it into chunks to get started."
+    "indexEmptyBody": "Import a text and split it into chunks to get started.",
+    "watchdogStuck": "Stuck",
+    "watchdogCancel": "Cancel & retry"
   },
   "help": {
     "title": "User Guide",
