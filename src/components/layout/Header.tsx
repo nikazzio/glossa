@@ -189,7 +189,7 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
   const openConfigLabel = t('header.openConfig');
   const libraryLabel = t('library.openLibrary');
   const sandboxLabel = viewMode === 'sandbox' ? t('header.exitSandbox') : t('header.sandbox');
-  const exportLabel = t('files.exportLabel');
+  const exportLabel = t('header.exportLabel');
 
   const saveStatusLabel =
     saveState === 'dirty'

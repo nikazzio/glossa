@@ -303,6 +303,7 @@
     "exportSeparator_hr": "Separatore orizzontale",
     "exportSeparator_asterisk": "Asterischi",
     "exportMissingChunks": "{{count}} unità senza traduzione: verranno esportate con il testo originale.",
+    "exportMissingBilingual": "{{count}} unità senza traduzione: appariranno come «Nessuna traduzione» nel file bilingue.",
     "exportConfirm": "Esporta file",
     "importWarning": {
       "markdown": "Markdown rilevato",

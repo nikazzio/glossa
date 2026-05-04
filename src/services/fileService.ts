@@ -75,7 +75,11 @@ export async function exportTranslation(
   if (!path) return false;
 
   const sep = options.separator ?? '\n\n';
-  const markdown = buildMarkdown(chunks, sep);
+  // For markdown-aware TXT, build markdown without separator then flatten,
+  // then join the resulting plain-text segments with the chosen separator.
+  // Passing the separator through markdown first would corrupt non-markdown
+  // separators like "* * *" (parsed as a thematic break and then stripped).
+  const markdown = buildMarkdown(chunks, '\n\n');
 
   if (format === 'docx') {
     const bytes = await invoke<number[]>('export_markdown_docx', { markdown });
@@ -85,11 +89,11 @@ export async function exportTranslation(
 
   const content =
     format === 'md'
-      ? markdown
+      ? buildMarkdown(chunks, sep)
       : format === 'html'
         ? buildMarkdownHtmlDocument(markdown, 'Translation Export')
         : options.markdownAware
-          ? flattenMarkdownToText(markdown)
+          ? chunks.map((c) => flattenMarkdownToText(c.currentDraft || c.originalText)).join(sep)
           : buildPlainText(chunks, sep);
 
   await writeTextFile(path, content);

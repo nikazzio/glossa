@@ -303,6 +303,7 @@
     "exportSeparator_hr": "Horizontal rule",
     "exportSeparator_asterisk": "Asterisks",
     "exportMissingChunks": "{{count}} unit(s) without translation: they will be exported with the original text.",
+    "exportMissingBilingual": "{{count}} unit(s) without translation: they will appear as \"No translation\" in the bilingual file.",
     "exportConfirm": "Export file",
     "importWarning": {
       "markdown": "Markdown detected",

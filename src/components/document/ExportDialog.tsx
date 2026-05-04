@@ -59,7 +59,7 @@ export function ExportDialog({ chunks, markdownAware, onConfirm, onCancel }: Exp
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-                {t('files.exportLabel')}
+                {t('header.exportLabel')}
               </div>
               <h3
                 id="export-dialog-title"
@@ -86,7 +86,9 @@ export function ExportDialog({ chunks, markdownAware, onConfirm, onCancel }: Exp
             <div className="flex items-start gap-3 rounded-2xl border border-editorial-warning/50 bg-editorial-warning/8 px-4 py-3">
               <AlertTriangle size={15} className="mt-0.5 shrink-0 text-editorial-warning" />
               <p className="text-sm leading-relaxed text-editorial-ink">
-                {t('files.exportMissingChunks', { count: missingCount })}
+                {format === 'bilingual'
+                  ? t('files.exportMissingBilingual', { count: missingCount })
+                  : t('files.exportMissingChunks', { count: missingCount })}
               </p>
             </div>
           )}
