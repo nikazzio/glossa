@@ -119,8 +119,8 @@
     "coherencePromptHint": "Istruzioni per l'audit cross-segmento dell'intero documento tradotto.",
     "coherencePromptPlaceholder": "Istruzioni per l'audit di coerenza...",
     "tabStages": "Fasi",
-    "tabAudit": "Audit",
-    "tabGlossary": "Registro",
+    "tabAudit": "Controllo qualità",
+    "tabGlossary": "Registro Termini",
     "glossaryEmpty": "Nessun termine nel registro. Usa + per aggiungerne uno.",
     "glossaryNotes": "Note",
     "templates": {

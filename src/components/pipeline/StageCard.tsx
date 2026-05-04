@@ -143,7 +143,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <span className="rounded-full bg-editorial-textbox/60 px-2.5 py-1 text-xs font-display italic text-editorial-accent">
+          <span className="rounded-full bg-editorial-textbox/60 px-3 py-1 text-sm font-display italic text-editorial-accent">
             #{index + 1}
           </span>
           <input

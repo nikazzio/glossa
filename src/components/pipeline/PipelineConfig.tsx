@@ -29,7 +29,7 @@ interface PipelineConfigProps {
 }
 
 const DEFAULT_PIPELINE_CONFIG_CLASSNAME =
-  'col-span-1 md:col-span-3 border-r border-editorial-border p-8 flex flex-col gap-8 bg-editorial-bg/50 overflow-y-auto min-h-0 h-full custom-scrollbar';
+  'col-span-1 md:col-span-3 border-r border-editorial-border flex flex-col bg-editorial-bg/50 min-h-0 h-full';
 
 function useJudgeModelOptions(provider: ModelProvider): string[] {
   const ollamaModels = useUiStore((s) => s.ollamaModels);
@@ -380,14 +380,63 @@ export function PipelineConfig({
     }
   };
 
+  const TAB_TITLE: Record<ConfigSection, string> = {
+    stages: t('pipeline.tabStages'),
+    audit: t('pipeline.tabAudit'),
+    glossary: t('pipeline.tabGlossary'),
+  };
+
   return (
     <section className={className ?? DEFAULT_PIPELINE_CONFIG_CLASSNAME}>
 
-      {/* ── Tab navigation ── */}
+      {/* ── Defaults (lingua di base, sempre visibile) ── */}
+      <div className="shrink-0 border-b border-editorial-border/60 px-8 py-5">
+        <p className="mb-3 text-[9px] font-bold uppercase tracking-[0.32em] text-editorial-muted">
+          {t('pipeline.languagePair')}
+        </p>
+        <div className="flex items-center gap-3">
+          <select
+            value={config.sourceLanguage}
+            onChange={(e) => setConfig((prev) => ({ ...prev, sourceLanguage: e.target.value }))}
+            className="w-full rounded-[14px] border border-editorial-border bg-editorial-textbox/50 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
+            aria-label={t('pipeline.sourceLanguage')}
+          >
+            {LANGUAGES.map((lang) => (
+              <option key={lang} value={lang}>{lang}</option>
+            ))}
+          </select>
+          <button
+            onClick={() =>
+              setConfig((prev) => ({
+                ...prev,
+                sourceLanguage: prev.targetLanguage,
+                targetLanguage: prev.sourceLanguage,
+              }))
+            }
+            title={t('pipeline.swapLanguages')}
+            className="text-editorial-muted hover:text-editorial-ink transition-colors hover:scale-110 shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            aria-label={t('pipeline.swapLanguages')}
+          >
+            <ArrowRightLeft size={14} />
+          </button>
+          <select
+            value={config.targetLanguage}
+            onChange={(e) => setConfig((prev) => ({ ...prev, targetLanguage: e.target.value }))}
+            className="w-full rounded-[14px] border border-editorial-border bg-editorial-textbox/50 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
+            aria-label={t('pipeline.targetLanguage')}
+          >
+            {LANGUAGES.map((lang) => (
+              <option key={lang} value={lang}>{lang}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* ── Tab navigation (stile InsightsDrawer: due linee, py-2) ── */}
       <div
         role="tablist"
         aria-label={t('pipeline.configSections')}
-        className="flex items-center gap-2 shrink-0 pb-6 border-b border-editorial-border/60"
+        className="flex items-center gap-2 shrink-0 border-b border-editorial-border bg-editorial-bg/60 px-6 py-2"
       >
         <button
           type="button"
@@ -396,8 +445,8 @@ export function PipelineConfig({
           aria-controls="pconfig-panel-stages"
           id="pconfig-tab-stages"
           onClick={() => setActiveTab('stages')}
-          title={t('pipeline.stages')}
-          aria-label={t('pipeline.stages')}
+          title={t('pipeline.tabStages')}
+          aria-label={t('pipeline.tabStages')}
           className={`rounded-full border p-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
             activeTab === 'stages'
               ? 'border-editorial-ink bg-editorial-ink text-white'
@@ -413,8 +462,8 @@ export function PipelineConfig({
           aria-controls="pconfig-panel-audit"
           id="pconfig-tab-audit"
           onClick={() => setActiveTab('audit')}
-          title={t('pipeline.auditGuard')}
-          aria-label={t('pipeline.auditGuard')}
+          title={t('pipeline.tabAudit')}
+          aria-label={t('pipeline.tabAudit')}
           className={`rounded-full border p-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
             activeTab === 'audit'
               ? 'border-editorial-ink bg-editorial-ink text-white'
@@ -430,8 +479,8 @@ export function PipelineConfig({
           aria-controls="pconfig-panel-glossary"
           id="pconfig-tab-glossary"
           onClick={() => setActiveTab('glossary')}
-          title={t('pipeline.keywordRegistry')}
-          aria-label={t('pipeline.keywordRegistry')}
+          title={t('pipeline.tabGlossary')}
+          aria-label={t('pipeline.tabGlossary')}
           className={`rounded-full border p-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
             activeTab === 'glossary'
               ? 'border-editorial-ink bg-editorial-ink text-white'
@@ -440,10 +489,15 @@ export function PipelineConfig({
         >
           <BookOpen size={16} />
         </button>
+
+        <span className="mx-1 h-4 w-px bg-editorial-border/70" aria-hidden="true" />
+        <span className="font-display italic text-sm text-editorial-ink">
+          {TAB_TITLE[activeTab]}
+        </span>
       </div>
 
       {/* ── Tab panels ── */}
-      <div className="flex-1 min-h-0 space-y-8">
+      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-8 py-8 space-y-8">
 
         {/* ── FASI ── */}
         {activeTab === 'stages' && (
@@ -453,51 +507,6 @@ export function PipelineConfig({
             aria-labelledby="pconfig-tab-stages"
             className="space-y-8"
           >
-            {/* Coppia linguistica */}
-            <div className="space-y-4">
-              <label className="block text-[10px] font-bold uppercase tracking-[0.3em] text-editorial-muted">
-                {t('pipeline.languagePair')}
-              </label>
-              <div className="flex items-center gap-3">
-                <select
-                  value={config.sourceLanguage}
-                  onChange={(e) => setConfig((prev) => ({ ...prev, sourceLanguage: e.target.value }))}
-                  className="w-full rounded-[14px] border border-editorial-border bg-editorial-textbox/50 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
-                  aria-label={t('pipeline.sourceLanguage')}
-                >
-                  {LANGUAGES.map((lang) => (
-                    <option key={lang} value={lang}>{lang}</option>
-                  ))}
-                </select>
-                <button
-                  onClick={() =>
-                    setConfig((prev) => ({
-                      ...prev,
-                      sourceLanguage: prev.targetLanguage,
-                      targetLanguage: prev.sourceLanguage,
-                    }))
-                  }
-                  title={t('pipeline.swapLanguages')}
-                  className="text-editorial-muted hover:text-editorial-ink transition-colors hover:scale-110 shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  aria-label={t('pipeline.swapLanguages')}
-                >
-                  <ArrowRightLeft size={14} />
-                </button>
-                <select
-                  value={config.targetLanguage}
-                  onChange={(e) => setConfig((prev) => ({ ...prev, targetLanguage: e.target.value }))}
-                  className="w-full rounded-[14px] border border-editorial-border bg-editorial-textbox/50 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
-                  aria-label={t('pipeline.targetLanguage')}
-                >
-                  {LANGUAGES.map((lang) => (
-                    <option key={lang} value={lang}>{lang}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <hr className="border-editorial-border/60" />
-
             {/* Fasi di traduzione */}
             <div>
               <div className="flex items-center justify-between mb-6">
@@ -750,7 +759,7 @@ export function PipelineConfig({
       </div>
 
       {showActions && (
-        <div className="mt-10 flex flex-col gap-3 shrink-0">
+        <div className="shrink-0 border-t border-editorial-border/60 px-8 py-6 flex flex-col gap-3">
           <CostBadge estimate={costEstimate} />
           <button
             type="button"
