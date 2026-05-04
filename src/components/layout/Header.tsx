@@ -238,10 +238,12 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
                 </button>
                 <SaveStatusBadge saveState={saveState} currentProjectId={currentProjectId} label={saveStatusLabel} />
                 <button
+                  type="button"
                   onClick={closeProject}
+                  disabled={isProcessing}
                   title={closeProjectLabel}
                   aria-label={closeProjectLabel}
-                  className="rounded-full border border-editorial-border/60 p-1.5 text-editorial-muted/60 transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  className="rounded-full border border-editorial-border/60 p-1.5 text-editorial-muted/60 transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <FolderX size={12} />
                 </button>

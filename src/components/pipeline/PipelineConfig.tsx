@@ -533,6 +533,7 @@ export function PipelineConfig({
                 {t('pipeline.tabStages')}
               </p>
               <button
+                type="button"
                 onClick={addStage}
                 title={t('pipeline.addStage')}
                 aria-label={t('pipeline.addStage')}
@@ -678,22 +679,24 @@ export function PipelineConfig({
             aria-labelledby="pconfig-tab-glossary"
             className="space-y-6"
           >
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+                {t('pipeline.tabGlossary')}
+              </p>
+              {!libraryGlossarySection && (
+                <button
+                  type="button"
+                  onClick={addGlossaryEntry}
+                  title={t('pipeline.addGlossaryEntry')}
+                  className="rounded-full border border-editorial-accent/40 p-2 text-editorial-accent transition-colors hover:bg-editorial-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  aria-label={t('pipeline.addGlossaryEntry')}
+                >
+                  <Plus size={14} />
+                </button>
+              )}
+            </div>
             {libraryGlossarySection ?? (
               <>
-                <div className="flex items-center justify-between">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-                    {t('pipeline.tabGlossary')}
-                  </p>
-                  <button
-                    onClick={addGlossaryEntry}
-                    title={t('pipeline.addGlossaryEntry')}
-                    className="rounded-full border border-editorial-accent/40 p-2 text-editorial-accent transition-colors hover:bg-editorial-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                    aria-label={t('pipeline.addGlossaryEntry')}
-                  >
-                    <Plus size={14} />
-                  </button>
-                </div>
-
                 {config.glossary.length === 0 ? (
                   <p className="text-sm text-editorial-muted/60 text-center py-4 border border-dashed border-editorial-border/60 rounded-[16px]">
                     {t('pipeline.glossaryEmpty')}
