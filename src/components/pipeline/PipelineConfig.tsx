@@ -388,21 +388,18 @@ export function PipelineConfig({
     <section className={className ?? DEFAULT_PIPELINE_CONFIG_CLASSNAME}>
 
       {/* ── Defaults globali (coppia linguistica usata in tutte le sezioni) ── */}
-      <div className="shrink-0 border-b border-editorial-border/60 bg-editorial-textbox/20 px-8 py-4">
+      <div className="shrink-0 border-b border-editorial-border bg-editorial-textbox/20 px-8 py-4">
         <div className="flex items-center gap-2 mb-3">
-          <Globe size={11} className="text-editorial-accent/70 shrink-0" />
-          <p className="text-[9px] font-bold uppercase tracking-[0.32em] text-editorial-muted">
+          <Globe size={11} className="text-editorial-accent shrink-0" />
+          <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
             {t('pipeline.languagePair')}
           </p>
-          <span className="ml-auto rounded-full bg-editorial-accent/10 px-2 py-0.5 text-[8px] font-bold uppercase tracking-widest text-editorial-accent/80">
-            {t('pipeline.globalDefault')}
-          </span>
         </div>
         <div className="flex items-center gap-3">
           <select
             value={config.sourceLanguage}
             onChange={(e) => setConfig((prev) => ({ ...prev, sourceLanguage: e.target.value }))}
-            className="w-full rounded-[14px] border border-editorial-border bg-editorial-bg/80 px-3 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
+            className="w-full rounded-[14px] border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
             aria-label={t('pipeline.sourceLanguage')}
           >
             {LANGUAGES.map((lang) => (
@@ -418,7 +415,7 @@ export function PipelineConfig({
               }))
             }
             title={t('pipeline.swapLanguages')}
-            className="text-editorial-muted hover:text-editorial-ink transition-colors hover:scale-110 shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            className="shrink-0 rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             aria-label={t('pipeline.swapLanguages')}
           >
             <ArrowRightLeft size={13} />
@@ -426,7 +423,7 @@ export function PipelineConfig({
           <select
             value={config.targetLanguage}
             onChange={(e) => setConfig((prev) => ({ ...prev, targetLanguage: e.target.value }))}
-            className="w-full rounded-[14px] border border-editorial-border bg-editorial-bg/80 px-3 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
+            className="w-full rounded-[14px] border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
             aria-label={t('pipeline.targetLanguage')}
           >
             {LANGUAGES.map((lang) => (
@@ -436,11 +433,11 @@ export function PipelineConfig({
         </div>
       </div>
 
-      {/* ── Tab navigation (stile InsightsDrawer: due linee, py-2) ── */}
+      {/* ── Tab navigation ── */}
       <div
         role="tablist"
         aria-label={t('pipeline.configSections')}
-        className="flex items-center gap-2 shrink-0 border-b border-editorial-border bg-editorial-bg/60 px-6 py-1"
+        className="flex items-center gap-2 shrink-0 border-y border-editorial-border bg-editorial-bg/60 px-6 py-2"
       >
         <button
           type="button"
@@ -511,14 +508,17 @@ export function PipelineConfig({
             aria-labelledby="pconfig-tab-stages"
             className="space-y-5"
           >
-            <div className="flex justify-end">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+                {t('pipeline.tabStages')}
+              </p>
               <button
                 onClick={addStage}
                 title={t('pipeline.addStage')}
                 aria-label={t('pipeline.addStage')}
-                className="text-editorial-accent hover:text-editorial-accent/70 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               >
-                <Plus size={18} />
+                <Plus size={14} />
               </button>
             </div>
             <div className="space-y-5">
@@ -543,7 +543,11 @@ export function PipelineConfig({
             aria-labelledby="pconfig-tab-audit"
             className="space-y-6"
           >
-            <div className="flex gap-2">
+            <div className="space-y-3 rounded-[20px] border border-editorial-border bg-editorial-bg/70 px-5 py-4">
+              <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+                {t('pipeline.auditModelLabel')}
+              </p>
+              <div className="flex gap-2">
               <select
                 value={config.judgeProvider}
                 onChange={(e) => handleJudgeProviderChange(e.target.value as ModelProvider)}
@@ -597,6 +601,7 @@ export function PipelineConfig({
                 <span>{t('ollama.selectedButOffline')}</span>
               </div>
             )}
+            </div>
 
             <AuditPromptEditor
               label={t('pipeline.judgePromptLabel')}
@@ -654,14 +659,17 @@ export function PipelineConfig({
             className="space-y-6"
           >
             {libraryGlossarySection}
-            <div className="flex justify-end">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+                {t('pipeline.tabGlossary')}
+              </p>
               <button
                 onClick={addGlossaryEntry}
                 title={t('pipeline.addGlossaryEntry')}
-                className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 aria-label={t('pipeline.addGlossaryEntry')}
               >
-                <Plus size={18} />
+                <Plus size={14} />
               </button>
             </div>
 

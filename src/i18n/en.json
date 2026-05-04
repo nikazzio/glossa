@@ -23,7 +23,7 @@
     "estimatedCost": "Est. cost"
   },
   "pipeline": {
-    "globalSetup": "Project Configuration",
+    "globalSetup": "Project",
     "languagePair": "Language Pair",
     "globalDefault": "global default",
     "swapLanguages": "Swap Languages",
@@ -365,7 +365,7 @@
     "translationLockedBody": "This translation is protected from accidental edits. You can unlock it from the green check button in the chunk toolbar.",
     "translationLockedBadge": "Validated",
     "configDrawerTitle": "Pipeline configuration",
-    "configDrawerHint": "Edit stages, glossary and providers without covering the document text.",
+    "configDrawerHint": "Language, models, translation stages and glossary for the current project.",
     "insightsDrawerTitle": "Insights panel",
     "insightsDrawerHint": "Chunk index and judge findings for the current chunk.",
     "insightsTabIndex": "Index",
