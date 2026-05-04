@@ -70,24 +70,24 @@ export function ConfigDrawer({
   };
 
   const libraryGlossarySection = (
-    <div className="space-y-3 rounded-[16px] border border-editorial-border/40 bg-editorial-textbox/10 px-4 py-3">
+    <div className="space-y-3 rounded-[20px] border border-editorial-border/60 bg-editorial-textbox/20 px-5 py-4">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted">
+        <span className="font-display italic text-sm text-editorial-ink">
           {t('library.assignedDictionary')}
-        </p>
+        </span>
         <button
           onClick={() => setShowLibraryPanel(true, 'dictionaries')}
           title={t('library.openLibrary')}
-          className="shrink-0 flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          aria-label={t('library.openLibrary')}
+          className="shrink-0 text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
         >
-          <LibraryBig size={12} />
-          {t('library.openLibrary')}
+          <LibraryBig size={16} />
         </button>
       </div>
       <select
         value={config.assignedGlossaryId ?? ''}
         onChange={(e) => handleDictChange(e.target.value)}
-        className="w-full rounded-[10px] border border-editorial-border/40 bg-editorial-bg px-2 py-1.5 text-[11px] font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent text-editorial-ink"
+        className="w-full rounded-[12px] border border-editorial-border/60 bg-editorial-bg px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent text-editorial-ink"
       >
         <option value="">{t('library.noDictionaryAssigned')}</option>
         {glossaries.map((g) => (
@@ -108,7 +108,7 @@ export function ConfigDrawer({
           <button
             onClick={handleSaveGlossary}
             disabled={isSavingGlossary}
-            className="flex items-center gap-1.5 rounded-full border border-editorial-ink px-4 py-2 text-[11px] font-bold uppercase tracking-widest text-editorial-ink hover:bg-editorial-ink hover:text-white disabled:opacity-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            className="flex items-center gap-1.5 rounded-full border border-editorial-ink px-4 py-2 text-xs font-bold uppercase tracking-widest text-editorial-ink hover:bg-editorial-ink hover:text-white disabled:opacity-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
           >
             <Save size={13} />
             {t('common.save')}

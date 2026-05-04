@@ -111,16 +111,9 @@ function AuditPromptEditor({
   };
 
   return (
-    <div className="rounded-[20px] border border-editorial-border bg-editorial-bg/70 p-6 space-y-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-xs font-bold uppercase tracking-[0.25em] text-editorial-muted">
-            {label}
-          </div>
-          <p className="mt-1 text-sm leading-relaxed text-editorial-muted/70">
-            {hint}
-          </p>
-        </div>
+    <div className="rounded-[20px] border border-editorial-border bg-editorial-bg/70 p-6 space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <span className="font-display italic text-sm text-editorial-ink">{label}</span>
         <div className="flex items-center gap-1.5">
           <button
             type="button"
@@ -517,11 +510,10 @@ export function PipelineConfig({
               <button
                 onClick={addStage}
                 title={t('pipeline.addStage')}
-                className="flex items-center gap-1.5 rounded-full border border-editorial-border px-3 py-1.5 text-xs font-bold uppercase tracking-[0.2em] text-editorial-muted transition-colors hover:border-editorial-ink hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 aria-label={t('pipeline.addStage')}
+                className="text-editorial-accent hover:text-editorial-accent/70 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               >
-                <Plus size={13} />
-                {t('pipeline.addStage')}
+                <Plus size={18} />
               </button>
             </div>
             <div className="space-y-5">
@@ -546,62 +538,52 @@ export function PipelineConfig({
             aria-labelledby="pconfig-tab-audit"
             className="space-y-6"
           >
-            <div className="rounded-[20px] border border-editorial-border bg-editorial-bg/70 p-6">
-              <div className="mb-4">
-                <div className="text-xs font-bold uppercase tracking-[0.25em] text-editorial-muted">
-                  {t('pipeline.auditModelLabel')}
-                </div>
-                <p className="mt-1 text-sm leading-relaxed text-editorial-muted/70">
-                  {t('pipeline.auditModelHint')}
-                </p>
-              </div>
-              <div className="flex gap-2">
+            <div className="flex gap-2">
+              <select
+                value={config.judgeProvider}
+                onChange={(e) => handleJudgeProviderChange(e.target.value as ModelProvider)}
+                className="rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-2 text-sm font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                aria-label={t('models.provider')}
+              >
+                {Object.keys(MODEL_OPTIONS).map((p) => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+              {judgeModels.length > 0 ? (
                 <select
-                  value={config.judgeProvider}
-                  onChange={(e) => handleJudgeProviderChange(e.target.value as ModelProvider)}
-                  className="rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-1.5 text-sm font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  aria-label={t('models.provider')}
+                  value={config.judgeModel}
+                  onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
+                  className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  aria-label={t('pipeline.auditModelLabel')}
                 >
-                  {Object.keys(MODEL_OPTIONS).map((p) => (
-                    <option key={p} value={p}>{p}</option>
+                  {judgeModels.map((m) => (
+                    <option key={m} value={m}>
+                      {m}{getModelStatus(config.judgeProvider, m) === 'preview' ? ' (preview)' : ''}
+                    </option>
                   ))}
                 </select>
-                {judgeModels.length > 0 ? (
-                  <select
-                    value={config.judgeModel}
-                    onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
-                    className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-1.5 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                    aria-label={t('pipeline.auditModelLabel')}
-                  >
-                    {judgeModels.map((m) => (
-                      <option key={m} value={m}>
-                        {m}{getModelStatus(config.judgeProvider, m) === 'preview' ? ' (preview)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                ) : config.judgeProvider === 'ollama' ? (
-                  <input
-                    value={config.judgeModel}
-                    onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
-                    placeholder={t('ollama.modelPlaceholder')}
-                    className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-1.5 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                    aria-label={t('pipeline.auditModelLabel')}
-                  />
-                ) : (
-                  <select
-                    value={config.judgeModel}
-                    onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
-                    className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-1.5 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                    aria-label={t('pipeline.auditModelLabel')}
-                  >
-                    {MODEL_OPTIONS[config.judgeProvider]?.map((m) => (
-                      <option key={m} value={m}>
-                        {m}{getModelStatus(config.judgeProvider, m) === 'preview' ? ' (preview)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
+              ) : config.judgeProvider === 'ollama' ? (
+                <input
+                  value={config.judgeModel}
+                  onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
+                  placeholder={t('ollama.modelPlaceholder')}
+                  className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  aria-label={t('pipeline.auditModelLabel')}
+                />
+              ) : (
+                <select
+                  value={config.judgeModel}
+                  onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
+                  className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  aria-label={t('pipeline.auditModelLabel')}
+                >
+                  {MODEL_OPTIONS[config.judgeProvider]?.map((m) => (
+                    <option key={m} value={m}>
+                      {m}{getModelStatus(config.judgeProvider, m) === 'preview' ? ' (preview)' : ''}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             {judgeOllamaOffline && (
@@ -667,22 +649,14 @@ export function PipelineConfig({
             className="space-y-6"
           >
             {libraryGlossarySection}
-            <div className="flex items-center justify-between">
-              <label className="block text-sm font-bold uppercase tracking-[0.25em] text-editorial-muted">
-                {t('pipeline.keywordRegistry')}
-                {config.glossary.length > 0 && (
-                  <span className="ml-2 text-editorial-muted/70 normal-case font-mono tracking-normal">
-                    ({config.glossary.length})
-                  </span>
-                )}
-              </label>
+            <div className="flex justify-end">
               <button
                 onClick={addGlossaryEntry}
                 title={t('pipeline.addGlossaryEntry')}
-                className="text-editorial-accent hover:scale-110 transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 aria-label={t('pipeline.addGlossaryEntry')}
               >
-                <Plus size={16} />
+                <Plus size={18} />
               </button>
             </div>
 
