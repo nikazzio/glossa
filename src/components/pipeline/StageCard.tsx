@@ -143,7 +143,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <span className="rounded-full bg-editorial-textbox/60 px-2 py-0.5 text-[10px] font-display italic text-editorial-accent">
+          <span className="rounded-full bg-editorial-textbox/60 px-2.5 py-1 text-xs font-display italic text-editorial-accent">
             #{index + 1}
           </span>
           <input
@@ -213,7 +213,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
             <select
               value={stage.provider}
               onChange={(e) => handleProviderChange(e.target.value as ModelProvider)}
-              className="bg-editorial-textbox/60 rounded border border-editorial-border/60 px-2 py-1.5 text-[11px] font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="bg-editorial-textbox/60 rounded-[12px] border border-editorial-border/60 px-2 py-1.5 text-[11px] font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             >
               {Object.keys(MODEL_OPTIONS).map((p) => (
                 <option key={p} value={p}>{p}</option>
@@ -223,7 +223,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
               <select
                 value={stage.model}
                 onChange={(e) => onUpdate({ model: e.target.value })}
-                className="flex-1 bg-editorial-textbox/60 rounded border border-editorial-border/60 px-2 py-1.5 text-[11px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="flex-1 bg-editorial-textbox/60 rounded-[12px] border border-editorial-border/60 px-2 py-1.5 text-[11px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               >
                 {modelOptions.map((m) => (
                   <option key={m} value={m}>
@@ -236,13 +236,13 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
                 value={stage.model}
                 onChange={(e) => onUpdate({ model: e.target.value })}
                 placeholder={t('ollama.modelPlaceholder')}
-                className="flex-1 bg-editorial-textbox/60 rounded border border-editorial-border/60 px-2 py-1.5 text-[11px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="flex-1 bg-editorial-textbox/60 rounded-[12px] border border-editorial-border/60 px-2 py-1.5 text-[11px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               />
             ) : (
               <select
                 value={stage.model}
                 onChange={(e) => onUpdate({ model: e.target.value })}
-                className="flex-1 bg-editorial-textbox/60 rounded border border-editorial-border/60 px-2 py-1.5 text-[11px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="flex-1 bg-editorial-textbox/60 rounded-[12px] border border-editorial-border/60 px-2 py-1.5 text-[11px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               >
                 {MODEL_OPTIONS[stage.provider]?.map((m) => (
                   <option key={m} value={m}>
