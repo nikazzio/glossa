@@ -62,7 +62,7 @@ async function readImportedText(path: string): Promise<Pick<ImportedTextFile, 't
 export async function exportTranslation(
   chunks: TranslationChunk[],
   format: 'txt' | 'md' | 'html' | 'docx' = 'txt',
-  options: { markdownAware?: boolean } = {},
+  options: { markdownAware?: boolean; separator?: string } = {},
 ): Promise<boolean> {
   const ext = format;
   const path = await save({
@@ -74,7 +74,8 @@ export async function exportTranslation(
   });
   if (!path) return false;
 
-  const markdown = buildMarkdown(chunks);
+  const sep = options.separator ?? '\n\n';
+  const markdown = buildMarkdown(chunks, sep);
 
   if (format === 'docx') {
     const bytes = await invoke<number[]>('export_markdown_docx', { markdown });
@@ -89,7 +90,7 @@ export async function exportTranslation(
         ? buildMarkdownHtmlDocument(markdown, 'Translation Export')
         : options.markdownAware
           ? flattenMarkdownToText(markdown)
-          : buildPlainText(chunks);
+          : buildPlainText(chunks, sep);
 
   await writeTextFile(path, content);
   return true;
@@ -148,17 +149,17 @@ export async function exportMarkdownTranslation(
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
-function buildPlainText(chunks: TranslationChunk[]): string {
+function buildPlainText(chunks: TranslationChunk[], separator = '\n\n'): string {
   return chunks
     .map((c) => c.currentDraft || c.originalText)
-    .join('\n\n');
+    .join(separator);
 }
 
-function buildMarkdown(chunks: TranslationChunk[]): string {
+function buildMarkdown(chunks: TranslationChunk[], separator = '\n\n'): string {
   return chunks
     .map((chunk) => (chunk.currentDraft || chunk.originalText).trim())
     .filter(Boolean)
-    .join('\n\n');
+    .join(separator);
 }
 
 function fileName(path: string): string {

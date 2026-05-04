@@ -367,9 +367,11 @@ function IndexTab({
         id={panelId}
         role="tabpanel"
         aria-labelledby={labelledBy}
-        className="px-6 py-8 text-sm text-editorial-muted"
+        className="flex flex-col items-center justify-center gap-3 px-6 py-12 text-center"
       >
-        {t('document.emptyTitle')}
+        <List size={28} className="text-editorial-border" />
+        <p className="text-sm font-medium text-editorial-muted">{t('document.indexEmptyTitle')}</p>
+        <p className="text-xs leading-relaxed text-editorial-muted/70">{t('document.indexEmptyBody')}</p>
       </div>
     );
   }
@@ -409,7 +411,7 @@ function IndexTab({
           } else if (chunk.status === 'error') {
             statusIcon = <AlertCircle size={13} className="text-editorial-accent shrink-0" />;
           } else {
-            statusIcon = <Circle size={13} className="text-editorial-muted/50 shrink-0" />;
+            statusIcon = <Circle size={13} className="text-editorial-border shrink-0" />;
           }
 
           return (
@@ -589,9 +591,11 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
         id={panelId}
         role="tabpanel"
         aria-labelledby={labelledBy}
-        className="px-6 py-8 text-sm text-editorial-muted"
+        className="flex flex-col items-center justify-center gap-3 px-6 py-12 text-center"
       >
-        {t('document.emptyTitle')}
+        <BarChart2 size={28} className="text-editorial-border" />
+        <p className="text-sm font-medium text-editorial-muted">{t('document.indexEmptyTitle')}</p>
+        <p className="text-xs leading-relaxed text-editorial-muted/70">{t('document.indexEmptyBody')}</p>
       </div>
     );
   }

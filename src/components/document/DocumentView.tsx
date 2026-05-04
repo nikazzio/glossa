@@ -3,6 +3,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Columns2,
+  FileText,
   Highlighter,
   Info,
   Loader2,
@@ -173,6 +174,9 @@ export function DocumentView({
     return (
       <section className="flex w-full items-center justify-center bg-editorial-bg p-10">
         <div className="max-w-xl text-center space-y-4">
+          <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full border border-editorial-border bg-editorial-textbox/40">
+            <FileText size={24} className="text-editorial-muted/60" />
+          </div>
           <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
             {t('document.emptyLabel')}
           </div>
