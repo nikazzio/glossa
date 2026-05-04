@@ -213,7 +213,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
             <select
               value={stage.provider}
               onChange={(e) => handleProviderChange(e.target.value as ModelProvider)}
-              className="bg-editorial-textbox/60 rounded-[12px] border border-editorial-border/60 px-2 py-1.5 text-sm font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="bg-editorial-textbox/60 rounded-[12px] border border-editorial-border/60 px-2 py-1 text-xs font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             >
               {Object.keys(MODEL_OPTIONS).map((p) => (
                 <option key={p} value={p}>{p}</option>
@@ -223,7 +223,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
               <select
                 value={stage.model}
                 onChange={(e) => onUpdate({ model: e.target.value })}
-                className="flex-1 bg-editorial-textbox/60 rounded-[12px] border border-editorial-border/60 px-2 py-1.5 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="flex-1 bg-editorial-textbox/60 rounded-[12px] border border-editorial-border/60 px-2 py-1 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               >
                 {modelOptions.map((m) => (
                   <option key={m} value={m}>
@@ -236,13 +236,13 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
                 value={stage.model}
                 onChange={(e) => onUpdate({ model: e.target.value })}
                 placeholder={t('ollama.modelPlaceholder')}
-                className="flex-1 bg-editorial-textbox/60 rounded-[12px] border border-editorial-border/60 px-2 py-1.5 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="flex-1 bg-editorial-textbox/60 rounded-[12px] border border-editorial-border/60 px-2 py-1 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               />
             ) : (
               <select
                 value={stage.model}
                 onChange={(e) => onUpdate({ model: e.target.value })}
-                className="flex-1 bg-editorial-textbox/60 rounded-[12px] border border-editorial-border/60 px-2 py-1.5 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="flex-1 bg-editorial-textbox/60 rounded-[12px] border border-editorial-border/60 px-2 py-1 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               >
                 {MODEL_OPTIONS[stage.provider]?.map((m) => (
                   <option key={m} value={m}>
@@ -261,28 +261,28 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
           )}
 
           {/* Language pair per stage */}
-          <div className="space-y-2">
-            <span className="block text-xs font-bold uppercase tracking-[0.25em] text-editorial-muted">
-              {t('pipeline.languagePair')}
+          <div className="space-y-1.5">
+            <span className="block text-xs text-editorial-muted italic">
+              {t('pipeline.inheritDefault')}
             </span>
             <div className="flex items-center gap-2">
               <select
                 value={stage.sourceLanguage ?? ''}
                 onChange={(e) => onUpdate({ sourceLanguage: e.target.value || undefined })}
-                className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-1.5 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 aria-label={t('pipeline.sourceLanguage')}
               >
-                <option value="">{t('pipeline.inheritDefault')} ({pipelineConfig.sourceLanguage})</option>
+                <option value="">— {pipelineConfig.sourceLanguage}</option>
                 {LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
               </select>
-              <span className="text-editorial-muted shrink-0">→</span>
+              <span className="text-editorial-muted shrink-0 text-xs">→</span>
               <select
                 value={stage.targetLanguage ?? ''}
                 onChange={(e) => onUpdate({ targetLanguage: e.target.value || undefined })}
-                className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-1.5 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 aria-label={t('pipeline.targetLanguage')}
               >
-                <option value="">{t('pipeline.inheritDefault')} ({pipelineConfig.targetLanguage})</option>
+                <option value="">— {pipelineConfig.targetLanguage}</option>
                 {LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
               </select>
             </div>
