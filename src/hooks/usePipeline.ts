@@ -82,6 +82,13 @@ export function usePipeline() {
     for (const stage of config.stages) {
       if (!stage.enabled) continue;
 
+      // Override global language pair with stage-specific one if set
+      const effectiveConfig = (stage.sourceLanguage || stage.targetLanguage) ? {
+        ...config,
+        ...(stage.sourceLanguage ? { sourceLanguage: stage.sourceLanguage } : {}),
+        ...(stage.targetLanguage ? { targetLanguage: stage.targetLanguage } : {}),
+      } : config;
+
       updateChunkStage(chunk.id, stage.id, { content: '', status: 'processing' });
       try {
         let capturedUsage: TokenUsage | undefined;
@@ -90,7 +97,7 @@ export function usePipeline() {
             capturedUsage = undefined;
             updateChunkStage(chunk.id, stage.id, { content: '', status: 'processing' });
             return llmService.runStageStream(
-              chunk.originalText, stage, config, lastResult || undefined,
+              chunk.originalText, stage, effectiveConfig, lastResult || undefined,
               (token) => appendChunkStageContent(chunk.id, stage.id, token),
               (usage) => { capturedUsage = usage; },
               stage.rollingContext !== false ? options.previousTranslation : undefined,

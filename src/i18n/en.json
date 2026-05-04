@@ -29,6 +29,7 @@
     "autoSegment": "Auto-Segment (Paragraphs)",
     "headingAware": "Merge headings with next chunk",
     "rollingContext": "Rolling context (coherence)",
+    "inheritDefault": "Inherit from project",
     "stages": "Stages",
     "auditGuard": "Audit Guard",
     "auditPlaceholder": "Audit instructions...",

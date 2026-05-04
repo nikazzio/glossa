@@ -16,9 +16,10 @@ import {
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { PipelineStageConfig, ModelProvider } from '../../types';
-import { MODEL_OPTIONS } from '../../constants';
+import { MODEL_OPTIONS, LANGUAGES } from '../../constants';
 import { getModelStatus } from '../../models/catalog';
 import { useUiStore } from '../../stores/uiStore';
+import { usePipelineStore } from '../../stores/pipelineStore';
 import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
 import { confirm } from '../../stores/confirmStore';
 import { llmService } from '../../services/llmService';
@@ -47,6 +48,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
   const { t } = useTranslation();
   const modelOptions = useModelOptions(stage.provider);
   const ollamaStatus = useUiStore((s) => s.ollamaStatus);
+  const { config: pipelineConfig } = usePipelineStore();
   const showOllamaOfflineWarning =
     stage.provider === 'ollama' && ollamaStatus === 'disconnected';
 
@@ -135,7 +137,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
 
   return (
     <div
-      className={`relative rounded-lg border border-editorial-border bg-editorial-bg p-5 pb-6 transition-all ${
+      className={`relative rounded-[20px] border border-editorial-border bg-editorial-bg p-6 transition-all ${
         !stage.enabled ? 'grayscale opacity-40' : 'shadow-sm'
       }`}
     >
@@ -238,8 +240,36 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
             </div>
           )}
 
-          {/* Rolling context toggle */}
-          <div className="flex items-center gap-3">
+          {/* Language pair per stage */}
+          <div className="space-y-2">
+            <span className="block text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
+              {t('pipeline.languagePair')}
+            </span>
+            <div className="flex items-center gap-2">
+              <select
+                value={stage.sourceLanguage ?? ''}
+                onChange={(e) => onUpdate({ sourceLanguage: e.target.value || undefined })}
+                className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-1.5 text-[11px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                aria-label={t('pipeline.sourceLanguage')}
+              >
+                <option value="">{t('pipeline.inheritDefault')} ({pipelineConfig.sourceLanguage})</option>
+                {LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
+              </select>
+              <span className="text-editorial-muted shrink-0">→</span>
+              <select
+                value={stage.targetLanguage ?? ''}
+                onChange={(e) => onUpdate({ targetLanguage: e.target.value || undefined })}
+                className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-1.5 text-[11px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                aria-label={t('pipeline.targetLanguage')}
+              >
+                <option value="">{t('pipeline.inheritDefault')} ({pipelineConfig.targetLanguage})</option>
+                {LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Rolling context toggle — label only in hover */}
+          <div className="flex items-center gap-3 group/rc">
             <button
               type="button"
               role="switch"
@@ -255,7 +285,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
             >
               <Link2 size={13} />
             </button>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted opacity-0 group-hover/rc:opacity-100 transition-opacity">
               {t('pipeline.rollingContext')}
             </span>
           </div>

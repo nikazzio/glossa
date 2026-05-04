@@ -194,7 +194,7 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
                 onClick={() => activateTab('index')}
                 onKeyDown={(event) => handleTabKeyDown('index', event)}
                 label={t('document.insightsTabIndex')}
-                icon={<List size={15} />}
+                icon={<List size={16} />}
                 controls={TAB_PANEL_IDS.index}
                 buttonRef={(element) => {
                   tabButtonRefs.current.index = element;
@@ -206,7 +206,7 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
                 onClick={() => activateTab('stats')}
                 onKeyDown={(event) => handleTabKeyDown('stats', event)}
                 label={t('document.insightsTabStats')}
-                icon={<BarChart2 size={15} />}
+                icon={<BarChart2 size={16} />}
                 controls={TAB_PANEL_IDS.stats}
                 buttonRef={(element) => {
                   tabButtonRefs.current.stats = element;
@@ -218,7 +218,7 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
                 onClick={() => activateTab('audit')}
                 onKeyDown={(event) => handleTabKeyDown('audit', event)}
                 label={t('document.insightsTabAudit')}
-                icon={<ShieldCheck size={15} />}
+                icon={<ShieldCheck size={16} />}
                 controls={TAB_PANEL_IDS.audit}
                 buttonRef={(element) => {
                   tabButtonRefs.current.audit = element;
@@ -302,7 +302,7 @@ function TabButton({
       ref={buttonRef}
       title={label}
       aria-label={label}
-      className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+      className={`rounded-full border p-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
         active
           ? 'border-editorial-ink bg-editorial-ink text-white'
           : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'

@@ -31,6 +31,8 @@ export interface PipelineStageConfig {
   provider: ModelProvider;
   enabled: boolean;
   rollingContext?: boolean;
+  sourceLanguage?: string;
+  targetLanguage?: string;
 }
 
 export interface TranslationChunk {

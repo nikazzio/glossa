@@ -1,5 +1,5 @@
 import { Plus, ArrowRightLeft, Play, Layers, Loader2, X, ShieldCheck, AlertTriangle, RotateCcw, Wand2, BookmarkPlus, BookOpen, Check, Trash2 } from 'lucide-react';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { ModelProvider, PromptTemplate } from '../../types';
@@ -25,6 +25,7 @@ interface PipelineConfigProps {
   className?: string;
   showActions?: boolean;
   visibleSection?: ConfigSection;
+  libraryGlossarySection?: ReactNode;
 }
 
 const DEFAULT_PIPELINE_CONFIG_CLASSNAME =
@@ -252,6 +253,7 @@ export function PipelineConfig({
   className,
   showActions = true,
   visibleSection,
+  libraryGlossarySection,
 }: PipelineConfigProps) {
   const {
     config,
@@ -396,13 +398,13 @@ export function PipelineConfig({
           onClick={() => setActiveTab('stages')}
           title={t('pipeline.stages')}
           aria-label={t('pipeline.stages')}
-          className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+          className={`rounded-full border p-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
             activeTab === 'stages'
               ? 'border-editorial-ink bg-editorial-ink text-white'
               : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
           }`}
         >
-          <Layers size={15} />
+          <Layers size={16} />
         </button>
         <button
           type="button"
@@ -413,13 +415,13 @@ export function PipelineConfig({
           onClick={() => setActiveTab('audit')}
           title={t('pipeline.auditGuard')}
           aria-label={t('pipeline.auditGuard')}
-          className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+          className={`rounded-full border p-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
             activeTab === 'audit'
               ? 'border-editorial-ink bg-editorial-ink text-white'
               : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
           }`}
         >
-          <ShieldCheck size={15} />
+          <ShieldCheck size={16} />
         </button>
         <button
           type="button"
@@ -430,13 +432,13 @@ export function PipelineConfig({
           onClick={() => setActiveTab('glossary')}
           title={t('pipeline.keywordRegistry')}
           aria-label={t('pipeline.keywordRegistry')}
-          className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+          className={`rounded-full border p-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
             activeTab === 'glossary'
               ? 'border-editorial-ink bg-editorial-ink text-white'
               : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
           }`}
         >
-          <BookOpen size={15} />
+          <BookOpen size={16} />
         </button>
       </div>
 
@@ -654,6 +656,7 @@ export function PipelineConfig({
             aria-labelledby="pconfig-tab-glossary"
             className="space-y-4"
           >
+            {libraryGlossarySection}
             <div className="flex items-center justify-between">
               <label className="block text-[11px] font-bold uppercase tracking-widest text-editorial-muted">
                 {t('pipeline.keywordRegistry')}
