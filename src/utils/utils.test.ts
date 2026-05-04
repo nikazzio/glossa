@@ -123,6 +123,80 @@ describe('document chunking', () => {
     expect(chunks).toEqual([text]);
   });
 
+  it('merges heading-only chunks into the following chunk', () => {
+    const text = [
+      '# Heading',
+      'This paragraph should stay with the heading.',
+      'A second paragraph that can remain separate.',
+    ].join('\n\n');
+
+    const chunks = chunkText(text, {
+      useChunking: true,
+      targetChunkCount: 0,
+      headingAware: true,
+    });
+
+    expect(chunks).toEqual([
+      '# Heading\n\nThis paragraph should stay with the heading.',
+      'A second paragraph that can remain separate.',
+    ]);
+  });
+
+  it('merges chunks smaller than the configured minimum forward', () => {
+    const text = [
+      'Tiny intro.',
+      'This is a much longer paragraph with enough words to absorb the intro cleanly.',
+      'Closing section stays on its own.',
+    ].join('\n\n');
+
+    const chunks = chunkText(text, {
+      useChunking: true,
+      targetChunkCount: 0,
+      minWords: 4,
+    });
+
+    expect(chunks).toEqual([
+      'Tiny intro.\n\nThis is a much longer paragraph with enough words to absorb the intro cleanly.',
+      'Closing section stays on its own.',
+    ]);
+  });
+
+  it('splits oversized plain-text chunks using maxWords', () => {
+    const text = Array.from({ length: 12 }, (_, i) => `word${i + 1}`).join(' ');
+
+    const chunks = chunkText(text, {
+      useChunking: true,
+      targetChunkCount: 1,
+      maxWords: 5,
+    });
+
+    expect(chunks).toHaveLength(3);
+    expect(chunks[0]).toBe('word1 word2 word3 word4');
+    expect(chunks[1]).toBe('word5 word6 word7 word8');
+    expect(chunks[2]).toBe('word9 word10 word11 word12');
+  });
+
+  it('does not split oversized markdown-aware chunks by words', () => {
+    const text = [
+      '# Heading',
+      'Paragraph one with several words.',
+      'Paragraph two keeps markdown spacing intact.',
+    ].join('\n\n');
+
+    const chunks = chunkText(text, {
+      useChunking: true,
+      targetChunkCount: 0,
+      markdownAware: true,
+      maxWords: 3,
+    });
+
+    expect(chunks).toEqual([
+      '# Heading',
+      'Paragraph one with several words.',
+      'Paragraph two keeps markdown spacing intact.',
+    ]);
+  });
+
   it('allows manual split on markdown content without blank-line boundaries', () => {
     const text = '- item one\n- item two\n- item three';
     const splitAt = resolveSplitIndex(text, 10, { markdownAware: true });

@@ -127,7 +127,7 @@ export function chunkText(text: string, options: ChunkTextOptions = {}): string[
   }
 
   if (options.maxWords && options.maxWords > 0) {
-    chunks = splitLargeChunks(chunks, options.maxWords);
+    chunks = splitLargeChunks(chunks, options.maxWords, options);
   }
 
   return chunks;
@@ -256,11 +256,19 @@ function mergeSmallChunks(chunks: string[], minWords: number): string[] {
   return result;
 }
 
-function splitLargeChunks(chunks: string[], maxWords: number): string[] {
+function splitLargeChunks(
+  chunks: string[],
+  maxWords: number,
+  options: ChunkTextOptions = {},
+): string[] {
   const result: string[] = [];
   for (const chunk of chunks) {
     const words = countWords(chunk);
     if (words <= maxWords) {
+      result.push(chunk);
+      continue;
+    }
+    if (options.markdownAware) {
       result.push(chunk);
       continue;
     }

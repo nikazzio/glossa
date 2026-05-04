@@ -1780,6 +1780,7 @@ mod tests {
             }],
             use_chunking: Some(true),
             markdown_aware: None,
+            coherence_prompt: None,
         }
     }
 
@@ -1867,13 +1868,14 @@ mod tests {
     fn stage_prompt_without_previous() {
         let config = make_config();
         let stage = make_stage("gemini");
-        let (system, user) = build_stage_prompts("Hello world", &stage, &config, &None);
+        let (system, user) = build_stage_prompts("Hello world", &stage, &config, &None, &None);
 
         assert!(system.contains("English to Italian"));
         assert!(system.contains("Translate accurately."));
         assert!(system.contains("API -> API"));
         assert!(user.contains("Hello world"));
         assert!(!user.contains("Previous Iteration"));
+        assert!(!user.contains("Previous Chunk Translation Context"));
     }
 
     #[test]
@@ -1881,12 +1883,16 @@ mod tests {
         let config = make_config();
         let stage = make_stage("openai");
         let prev = Some("Ciao mondo".to_string());
-        let (system, user) = build_stage_prompts("Hello world", &stage, &config, &prev);
+        let previous_translation = Some("Traduzione chunk precedente".to_string());
+        let (system, user) =
+            build_stage_prompts("Hello world", &stage, &config, &prev, &previous_translation);
 
         assert!(system.contains("English to Italian"));
         assert!(user.contains("Hello world"));
         assert!(user.contains("Ciao mondo"));
         assert!(user.contains("Previous Iteration"));
+        assert!(user.contains("Context from previous segment"));
+        assert!(user.contains("Traduzione chunk precedente"));
     }
 
     #[test]
@@ -1894,7 +1900,7 @@ mod tests {
         let mut config = make_config();
         config.glossary = vec![];
         let stage = make_stage("gemini");
-        let (system, _) = build_stage_prompts("text", &stage, &config, &None);
+        let (system, _) = build_stage_prompts("text", &stage, &config, &None, &None);
 
         assert!(system.contains("No specific glossary entries"));
     }
@@ -1915,7 +1921,7 @@ mod tests {
             },
         ];
         let stage = make_stage("gemini");
-        let (system, _) = build_stage_prompts("text", &stage, &config, &None);
+        let (system, _) = build_stage_prompts("text", &stage, &config, &None, &None);
 
         assert!(system.contains("API -> API (tech)"));
         assert!(system.contains("bug -> errore ()"));
@@ -1926,7 +1932,8 @@ mod tests {
         let mut config = make_config();
         config.markdown_aware = Some(true);
         let stage = make_stage("gemini");
-        let (system, user) = build_stage_prompts("Text with note[^1].", &stage, &config, &None);
+        let (system, user) =
+            build_stage_prompts("Text with note[^1].", &stage, &config, &None, &None);
 
         assert!(system.contains("Markdown"));
         assert!(system.contains("Preserve every Markdown marker"));

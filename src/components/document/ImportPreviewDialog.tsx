@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, CheckCircle2, X } from 'lucide-react';
 import { buildImportPreview, type ImportPreviewChunk } from '../../utils/documentWorkflow';
@@ -53,9 +53,14 @@ export function ImportPreviewDialog({
     return trimmed ? trimmed.split(/\s+/).filter(Boolean).length : 0;
   }, [text]);
 
-  const wordsPerChunk = targetChunkCount > 0
+  const derivedWordsPerChunk = targetChunkCount > 0
     ? Math.round(totalWords / targetChunkCount)
     : 700;
+  const [wordsPerChunkInput, setWordsPerChunkInput] = useState(String(derivedWordsPerChunk));
+
+  useEffect(() => {
+    setWordsPerChunkInput(String(derivedWordsPerChunk));
+  }, [derivedWordsPerChunk]);
 
   const handleWordsPerChunkChange = (value: number) => {
     onTargetChunkCountChange(recommendChunkCount(text, Math.max(50, value)));
@@ -207,8 +212,13 @@ export function ImportPreviewDialog({
                   type="number"
                   min={50}
                   step={50}
-                  value={wordsPerChunk}
-                  onChange={(e) => handleWordsPerChunkChange(Number(e.target.value) || 700)}
+                  value={wordsPerChunkInput}
+                  onChange={(e) => setWordsPerChunkInput(e.target.value)}
+                  onBlur={(e) => {
+                    const nextValue = Math.max(50, Number(e.target.value) || 700);
+                    setWordsPerChunkInput(String(nextValue));
+                    handleWordsPerChunkChange(nextValue);
+                  }}
                   disabled={!useChunking}
                   className="w-full rounded-2xl border border-editorial-border bg-editorial-bg px-4 py-3 text-sm font-mono outline-none disabled:opacity-50"
                 />
