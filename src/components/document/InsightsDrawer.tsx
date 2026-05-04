@@ -6,6 +6,7 @@ import {
   CheckCheck,
   CheckCircle2,
   Circle,
+  Clock,
   Cpu,
   ExternalLink,
   FileText,
@@ -34,6 +35,7 @@ import { indexPad, qualityLabelKey, qualityTone, calculateCompositeQuality } fro
 import { MODEL_PRICING } from '../../constants';
 import { estimatePipelineCost } from '../../utils/costEstimate';
 import { formatCost } from '../pipeline/CostBadge';
+import { useChunkWatchdog } from '../../hooks/useChunkWatchdog';
 import type { TranslationChunk } from '../../types';
 
 interface InsightsDrawerProps {
@@ -88,6 +90,8 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
   const mergeChunkWithNext = useChunksStore((state) => state.mergeChunkWithNext);
   const currentChunk =
     chunks.find((chunk) => chunk.id === selectedChunkId) ?? chunks[0] ?? null;
+
+  const { stuckChunkIds, cancelStuckChunk } = useChunkWatchdog();
 
   const activeTab: InsightsTab = TAB_ORDER.includes(insightsDrawerTab) ? insightsDrawerTab : 'index';
 
@@ -243,6 +247,7 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
                   chunks={chunks}
                   currentChunkId={currentChunk?.id ?? null}
                   isProcessing={isProcessing}
+                  stuckChunkIds={stuckChunkIds}
                   onSelect={(id) => setSelectedChunkId(id)}
                   onSplit={(chunkId) => {
                     setSelectedChunkId(chunkId);
@@ -252,6 +257,7 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
                     setSelectedChunkId(chunkId);
                     mergeChunkWithNext(chunkId);
                   }}
+                  onCancelStuck={cancelStuckChunk}
                 />
               ) : activeTab === 'stats' ? (
                 <StatsTab
@@ -336,9 +342,11 @@ interface IndexTabProps {
   chunks: TranslationChunk[];
   currentChunkId: string | null;
   isProcessing: boolean;
+  stuckChunkIds: Set<string>;
   onSelect: (id: string) => void;
   onSplit: (chunkId: string) => void;
   onMerge: (chunkId: string) => void;
+  onCancelStuck: (chunkId: string) => void;
 }
 
 function IndexTab({
@@ -347,9 +355,11 @@ function IndexTab({
   chunks,
   currentChunkId,
   isProcessing,
+  stuckChunkIds,
   onSelect,
   onSplit,
   onMerge,
+  onCancelStuck,
 }: IndexTabProps) {
   const { t } = useTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -402,10 +412,13 @@ function IndexTab({
           const canMutate = canEdit &&
             chunk.status !== 'completed' &&
             chunk.status !== 'processing';
+          const isStuck = stuckChunkIds.has(chunk.id);
 
           let statusIcon: React.ReactNode;
           if (chunk.status === 'processing') {
-            statusIcon = <Loader2 size={13} className="animate-spin text-editorial-warning shrink-0" />;
+            statusIcon = isStuck
+              ? <Clock size={13} className="text-editorial-accent shrink-0" />
+              : <Loader2 size={13} className="animate-spin text-editorial-warning shrink-0" />;
           } else if (chunk.status === 'completed') {
             statusIcon = <CheckCircle2 size={13} className="text-editorial-success shrink-0" />;
           } else if (chunk.status === 'error') {
@@ -468,6 +481,28 @@ function IndexTab({
                     </div>
                   )}
                 </button>
+
+                {/* Watchdog: stuck chunk banner */}
+                {isStuck && chunk.status === 'processing' && (
+                  <div className={`flex items-center justify-between gap-2 border-t px-3 py-2 ${isActive ? 'border-white/10' : 'border-editorial-border/60'}`}>
+                    <div className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] ${isActive ? 'text-orange-200' : 'text-editorial-accent'}`}>
+                      <Clock size={11} />
+                      {t('document.watchdogStuck')}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); onCancelStuck(chunk.id); }}
+                      aria-label={t('document.watchdogCancel')}
+                      className={`rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                        isActive
+                          ? 'border-orange-300/40 text-orange-200 hover:bg-white/10'
+                          : 'border-editorial-accent/40 text-editorial-accent hover:bg-editorial-accent/10'
+                      }`}
+                    >
+                      {t('document.watchdogCancel')}
+                    </button>
+                  </div>
+                )}
 
                 {/* Inline actions */}
                 {canMutate && (
