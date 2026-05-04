@@ -272,7 +272,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
                 className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 aria-label={t('pipeline.sourceLanguage')}
               >
-                <option value="">— {pipelineConfig.sourceLanguage}</option>
+                <option value="">{pipelineConfig.sourceLanguage}</option>
                 {LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
               </select>
               <span className="text-editorial-muted shrink-0 text-xs">→</span>
@@ -282,7 +282,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
                 className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 aria-label={t('pipeline.targetLanguage')}
               >
-                <option value="">— {pipelineConfig.targetLanguage}</option>
+                <option value="">{pipelineConfig.targetLanguage}</option>
                 {LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
               </select>
             </div>
