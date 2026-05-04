@@ -187,7 +187,7 @@ export function InsightsDrawer({ onReauditChunk }: InsightsDrawerProps) {
                 onClick={() => activateTab('index')}
                 onKeyDown={(event) => handleTabKeyDown('index', event)}
                 label={t('document.insightsTabIndex')}
-                icon={<List size={12} />}
+                icon={<List size={15} />}
                 controls={TAB_PANEL_IDS.index}
                 buttonRef={(element) => {
                   tabButtonRefs.current.index = element;
@@ -199,7 +199,7 @@ export function InsightsDrawer({ onReauditChunk }: InsightsDrawerProps) {
                 onClick={() => activateTab('stats')}
                 onKeyDown={(event) => handleTabKeyDown('stats', event)}
                 label={t('document.insightsTabStats')}
-                icon={<BarChart2 size={12} />}
+                icon={<BarChart2 size={15} />}
                 controls={TAB_PANEL_IDS.stats}
                 buttonRef={(element) => {
                   tabButtonRefs.current.stats = element;
@@ -211,7 +211,7 @@ export function InsightsDrawer({ onReauditChunk }: InsightsDrawerProps) {
                 onClick={() => activateTab('audit')}
                 onKeyDown={(event) => handleTabKeyDown('audit', event)}
                 label={t('document.insightsTabAudit')}
-                icon={<ShieldCheck size={12} />}
+                icon={<ShieldCheck size={15} />}
                 controls={TAB_PANEL_IDS.audit}
                 buttonRef={(element) => {
                   tabButtonRefs.current.audit = element;
@@ -289,14 +289,14 @@ function TabButton({
       onClick={onClick}
       onKeyDown={onKeyDown}
       ref={buttonRef}
-      className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+      title={label}
+      className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
         active
-          ? 'bg-editorial-ink text-white'
-          : 'text-editorial-muted hover:text-editorial-ink'
+          ? 'border-editorial-ink bg-editorial-ink text-white'
+          : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
       }`}
     >
       {icon}
-      {label}
     </button>
   );
 }
@@ -442,35 +442,33 @@ function IndexTab({
 
                 {/* Inline actions */}
                 {canMutate && (
-                  <div className={`flex gap-1 border-t px-3 py-1.5 ${isActive ? 'border-white/10' : 'border-editorial-border/60'}`}>
+                  <div className={`flex gap-1.5 border-t px-3 py-2 ${isActive ? 'border-white/10' : 'border-editorial-border/60'}`}>
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); onSplit(chunk.id); }}
-                      title={t('document.splitChunk')}
-                      aria-label={t('document.splitChunk')}
-                      className={`flex items-center gap-1 rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-[0.2em] transition-colors ${
+                      title={t('pipeline.splitChunkTooltip')}
+                      aria-label={t('pipeline.splitChunk')}
+                      className={`rounded-full border p-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
                         isActive
-                          ? 'text-white/60 hover:text-white'
-                          : 'text-editorial-muted hover:text-editorial-ink'
+                          ? 'border-white/20 text-white/60 hover:bg-white/10 hover:text-white'
+                          : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
                       }`}
                     >
-                      <Scissors size={10} />
-                      {t('document.splitChunk')}
+                      <Scissors size={13} />
                     </button>
                     {!isLast && (
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); onMerge(chunk.id); }}
-                        title={t('document.mergeNext')}
-                        aria-label={t('document.mergeNext')}
-                        className={`flex items-center gap-1 rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-[0.2em] transition-colors ${
+                        title={t('pipeline.mergeNextTooltip')}
+                        aria-label={t('pipeline.mergeNext')}
+                        className={`rounded-full border p-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
                           isActive
-                            ? 'text-white/60 hover:text-white'
-                            : 'text-editorial-muted hover:text-editorial-ink'
+                            ? 'border-white/20 text-white/60 hover:bg-white/10 hover:text-white'
+                            : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
                         }`}
                       >
-                        <Merge size={10} />
-                        {t('document.mergeNext')}
+                        <Merge size={13} />
                       </button>
                     )}
                   </div>

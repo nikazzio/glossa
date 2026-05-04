@@ -1266,6 +1266,18 @@ pub async fn check_ollama_status() -> Result<bool, String> {
 
 // ── Prompt builders ──────────────────────────────────────────────────
 
+/// Returns a slice of `text` starting from the `(word_count - n)`-th word,
+/// i.e. the trailing `n` words. Returns the full string if it has ≤ n words.
+fn last_n_words(text: &str, n: usize) -> &str {
+    let words: Vec<&str> = text.split_whitespace().collect();
+    if words.len() <= n {
+        return text.trim();
+    }
+    let start = words[words.len() - n];
+    let offset = start.as_ptr() as usize - text.as_ptr() as usize;
+    text[offset..].trim_start()
+}
+
 fn build_stage_prompts(
     text: &str,
     stage: &StageConfig,
@@ -1312,11 +1324,14 @@ fn build_stage_prompts(
     );
 
     let context_block = match previous_translation {
-        Some(prev) if !prev.is_empty() => format!(
-            "[Context from previous segment — do not translate, use only for stylistic and terminological coherence]\n\
-             {prev}\n\
-             [End of context]\n\n"
-        ),
+        Some(prev) if !prev.is_empty() => {
+            let tail = last_n_words(prev, 300);
+            format!(
+                "[Context from previous segment — do not translate, use only for stylistic and terminological coherence]\n\
+                 {tail}\n\
+                 [End of context]\n\n"
+            )
+        }
         _ => String::new(),
     };
 

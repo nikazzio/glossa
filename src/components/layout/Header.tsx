@@ -46,6 +46,7 @@ interface PendingImport {
   targetChunkCount: number;
   minWords: number;
   maxWords: number;
+  headingAware: boolean;
   format?: 'plain' | 'markdown';
   experimental?: 'docx-markdown';
 }
@@ -103,6 +104,7 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
           targetChunkCount: config.targetChunkCount ?? 0,
           minWords: config.minWords ?? 0,
           maxWords: config.maxWords ?? 0,
+          headingAware: config.headingAware ?? false,
           format: imported.format,
           experimental: imported.experimental,
         });
@@ -120,6 +122,7 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
       targetChunkCount: pendingImport.targetChunkCount,
       minWords: pendingImport.minWords,
       maxWords: pendingImport.maxWords,
+      headingAware: pendingImport.headingAware,
       documentFormat: pendingImport.format ?? 'plain',
       markdownAware: pendingImport.format === 'markdown',
       experimentalImport: pendingImport.experimental ?? null,
@@ -130,6 +133,7 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
       markdownAware: pendingImport.format === 'markdown',
       minWords: pendingImport.minWords,
       maxWords: pendingImport.maxWords,
+      headingAware: pendingImport.headingAware,
     });
     setPendingImport(null);
     toast.success(t('files.imported'));
@@ -350,6 +354,7 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
             targetChunkCount={pendingImport.targetChunkCount}
             minWords={pendingImport.minWords}
             maxWords={pendingImport.maxWords}
+            headingAware={pendingImport.headingAware}
             markdownAware={pendingImport.format === 'markdown'}
             format={pendingImport.format}
             experimental={pendingImport.experimental}
@@ -371,6 +376,11 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
             onMaxWordsChange={(value) =>
               setPendingImport((current) =>
                 current ? { ...current, maxWords: value } : current,
+              )
+            }
+            onHeadingAwareChange={(value) =>
+              setPendingImport((current) =>
+                current ? { ...current, headingAware: value } : current,
               )
             }
             onCancel={() => setPendingImport(null)}

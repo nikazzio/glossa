@@ -30,6 +30,7 @@ export function buildImportPreview(
     markdownAware?: boolean;
     minWords?: number;
     maxWords?: number;
+    headingAware?: boolean;
     format?: 'plain' | 'markdown';
     experimental?: 'docx-markdown';
   },

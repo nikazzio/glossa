@@ -1,7 +1,7 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle } from 'lucide-react';
-import { buildImportPreview } from '../../utils/documentWorkflow';
+import { AlertTriangle, CheckCircle2, X } from 'lucide-react';
+import { buildImportPreview, type ImportPreviewChunk } from '../../utils/documentWorkflow';
 import { recommendChunkCount } from '../../utils';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 
@@ -12,6 +12,7 @@ interface ImportPreviewDialogProps {
   targetChunkCount: number;
   minWords: number;
   maxWords: number;
+  headingAware: boolean;
   markdownAware?: boolean;
   format?: 'plain' | 'markdown';
   experimental?: 'docx-markdown';
@@ -19,6 +20,7 @@ interface ImportPreviewDialogProps {
   onTargetChunkCountChange: (value: number) => void;
   onMinWordsChange: (value: number) => void;
   onMaxWordsChange: (value: number) => void;
+  onHeadingAwareChange: (value: boolean) => void;
   onCancel: () => void;
   onConfirm: () => void;
 }
@@ -30,6 +32,7 @@ export function ImportPreviewDialog({
   targetChunkCount,
   minWords,
   maxWords,
+  headingAware,
   markdownAware = false,
   format,
   experimental,
@@ -37,11 +40,13 @@ export function ImportPreviewDialog({
   onTargetChunkCountChange,
   onMinWordsChange,
   onMaxWordsChange,
+  onHeadingAwareChange,
   onCancel,
   onConfirm,
 }: ImportPreviewDialogProps) {
   const { t } = useTranslation();
   const trapRef = useFocusTrap(true, onCancel);
+  const [expandedChunk, setExpandedChunk] = useState<ImportPreviewChunk | null>(null);
 
   const totalWords = useMemo(() => {
     const trimmed = text.trim();
@@ -63,11 +68,21 @@ export function ImportPreviewDialog({
       markdownAware,
       minWords,
       maxWords,
+      headingAware,
       format,
       experimental,
     }),
-    [experimental, format, markdownAware, targetChunkCount, minWords, maxWords, text, useChunking],
+    [experimental, format, markdownAware, targetChunkCount, minWords, maxWords, headingAware, text, useChunking],
   );
+
+  const totalChunkWords = useMemo(
+    () => preview.chunks.reduce((sum, c) => sum + c.words, 0),
+    [preview.chunks],
+  );
+  const wordLossPct = preview.stats.words > 0
+    ? Math.round(Math.abs(preview.stats.words - totalChunkWords) / preview.stats.words * 100)
+    : 0;
+  const hasCoherenceIssue = wordLossPct > 2;
 
   return (
     <div
@@ -78,7 +93,45 @@ export function ImportPreviewDialog({
       aria-describedby="import-preview-filename"
       ref={trapRef}
     >
-      <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[28px] border border-editorial-border bg-editorial-bg shadow-[0_24px_80px_rgba(26,26,26,0.2)]">
+      <div className="relative flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[28px] border border-editorial-border bg-editorial-bg shadow-[0_24px_80px_rgba(26,26,26,0.2)]">
+
+        {/* Chunk detail modal */}
+        {expandedChunk && (
+          <div
+            className="absolute inset-0 z-10 flex items-center justify-center bg-editorial-ink/50 p-6 backdrop-blur-sm"
+            onClick={() => setExpandedChunk(null)}
+            onKeyDown={(e) => e.key === 'Escape' && setExpandedChunk(null)}
+          >
+            <div
+              className="flex max-h-[75vh] w-full max-w-2xl flex-col rounded-[22px] border border-editorial-border bg-editorial-bg shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex shrink-0 items-center justify-between border-b border-editorial-border px-6 py-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
+                    {t('pipeline.unit')} {expandedChunk.index + 1}
+                  </span>
+                  <span className="text-[10px] font-mono text-editorial-muted">
+                    {expandedChunk.words}w · {expandedChunk.characters}ch
+                  </span>
+                </div>
+                <button
+                  onClick={() => setExpandedChunk(null)}
+                  className="text-editorial-ink/40 transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  aria-label={t('settings.close')}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto px-6 py-5 custom-scrollbar">
+                <p className="whitespace-pre-wrap text-sm leading-7 text-editorial-ink">
+                  {expandedChunk.text}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="shrink-0 border-b border-editorial-border px-6 py-5 md:px-8 md:py-6">
           <div className="flex flex-col gap-3">
@@ -159,6 +212,9 @@ export function ImportPreviewDialog({
                   disabled={!useChunking}
                   className="w-full rounded-2xl border border-editorial-border bg-editorial-bg px-4 py-3 text-sm font-mono outline-none disabled:opacity-50"
                 />
+                <p className="text-[10px] leading-relaxed text-editorial-muted">
+                  {t('files.wordsPerChunkHint')}
+                </p>
                 <p className="text-[10px] font-mono text-editorial-muted">
                   → {preview.chunks.length} {t('pipeline.unitsReady')}
                 </p>
@@ -171,7 +227,7 @@ export function ImportPreviewDialog({
                 <input
                   type="number"
                   min={0}
-                  step={10}
+                  step={50}
                   value={minWords}
                   onChange={(e) => onMinWordsChange(Math.max(0, Number(e.target.value) || 0))}
                   disabled={!useChunking}
@@ -199,10 +255,21 @@ export function ImportPreviewDialog({
                   {t('files.maxWordsHint')}
                 </p>
               </div>
+
+              <label className="flex items-start gap-3 rounded-2xl border border-editorial-border bg-editorial-bg/70 p-3 text-sm text-editorial-ink">
+                <input
+                  type="checkbox"
+                  checked={headingAware}
+                  onChange={(e) => onHeadingAwareChange(e.target.checked)}
+                  disabled={!useChunking}
+                  className="mt-1 accent-editorial-ink"
+                />
+                <span className="leading-relaxed">{t('pipeline.headingAware')}</span>
+              </label>
             </div>
 
             {/* Chunk preview grid */}
-            <div className="flex min-h-0 flex-col gap-4">
+            <div className="flex min-h-0 flex-col gap-3">
               <div className="flex items-center justify-between">
                 <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-editorial-muted">
                   {t('files.importPreviewChunks')}
@@ -211,7 +278,7 @@ export function ImportPreviewDialog({
                   {preview.chunks.length} {t('pipeline.unitsReady')}
                 </div>
               </div>
-              <div className="grid max-h-[58vh] min-h-0 gap-3 overflow-y-auto pr-1 custom-scrollbar md:grid-cols-2">
+              <div className="grid flex-1 max-h-[54vh] min-h-0 gap-3 overflow-y-auto pr-1 custom-scrollbar md:grid-cols-2">
                 {preview.chunks.map((chunk) => {
                   const tooShort = minWords > 0 && chunk.words < minWords;
                   const tooLong = maxWords > 0 && chunk.words > maxWords;
@@ -219,10 +286,14 @@ export function ImportPreviewDialog({
                   return (
                     <div
                       key={`${chunk.index}-${chunk.characters}`}
-                      className={`rounded-[22px] border p-4 md:p-5 ${
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setExpandedChunk(chunk)}
+                      onKeyDown={(e) => e.key === 'Enter' && setExpandedChunk(chunk)}
+                      className={`cursor-pointer rounded-[22px] border p-4 md:p-5 transition-colors ${
                         anomaly
-                          ? 'border-editorial-warning/60 bg-editorial-warning/5'
-                          : 'border-editorial-border bg-editorial-bg'
+                          ? 'border-editorial-warning/60 bg-editorial-warning/5 hover:bg-editorial-warning/10'
+                          : 'border-editorial-border bg-editorial-bg hover:bg-editorial-textbox/40'
                       }`}
                     >
                       <div className="flex items-center justify-between gap-3">
@@ -245,6 +316,19 @@ export function ImportPreviewDialog({
                   );
                 })}
               </div>
+
+              {/* Coherence check */}
+              {hasCoherenceIssue ? (
+                <div className="flex items-center gap-2 rounded-2xl border border-editorial-warning/50 bg-editorial-warning/5 px-4 py-3 text-xs text-editorial-warning shrink-0">
+                  <AlertTriangle size={12} className="shrink-0" />
+                  {t('files.importCoherenceWarning', { pct: wordLossPct })}
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 text-[10px] text-editorial-muted/60 shrink-0">
+                  <CheckCircle2 size={11} className="shrink-0" />
+                  {t('files.importCoherenceOk')}
+                </div>
+              )}
             </div>
           </div>
         </div>
