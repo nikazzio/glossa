@@ -443,6 +443,9 @@ function ShortcutsSection() {
   const exportItems: { label: string; icon: React.ReactNode }[] = [
     { label: t('help.shortcuts.exportTxt'), icon: <span className="font-mono text-[10px]">TXT</span> },
     { label: t('help.shortcuts.exportMd'),  icon: <span className="font-mono text-[10px]">MD</span> },
+    { label: t('help.shortcuts.exportHtml'), icon: <span className="font-mono text-[10px]">HTML</span> },
+    { label: t('help.shortcuts.exportDocx'), icon: <span className="font-mono text-[10px]">DOCX</span> },
+    { label: t('help.shortcuts.exportBilingual'), icon: <span className="font-mono text-[10px]">MD+</span> },
   ];
 
   const promptItems: { label: string; icon: React.ReactNode }[] = [

@@ -82,7 +82,9 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
   const focusIssueInChunk = useUiStore((state) => state.focusIssueInChunk);
   const chunks = useChunksStore((state) => state.chunks);
   const isProcessing = useChunksStore((state) => state.isProcessing);
+  const allChunksTranslated = chunks.length > 0 && chunks.every((c) => c.currentDraft?.trim());
   const allChunksLocked = chunks.length > 0 && chunks.every((c) => c.translationLocked);
+  const unlockedChunksCount = chunks.filter((c) => c.currentDraft?.trim() && !c.translationLocked).length;
   const splitChunk = useChunksStore((state) => state.splitChunk);
   const mergeChunkWithNext = useChunksStore((state) => state.mergeChunkWithNext);
   const currentChunk =
@@ -248,7 +250,9 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
                   labelledBy={TAB_BUTTON_IDS.audit}
                   currentChunk={currentChunk}
                   isProcessing={isProcessing}
+                  allChunksTranslated={allChunksTranslated}
                   allChunksLocked={allChunksLocked}
+                  unlockedChunksCount={unlockedChunksCount}
                   onReauditChunk={onReauditChunk}
                   onSelectChunk={setSelectedChunkId}
                   onFocusIssue={focusIssueInChunk}
@@ -724,7 +728,9 @@ interface AuditTabProps {
   labelledBy: string;
   currentChunk: TranslationChunk | null;
   isProcessing: boolean;
+  allChunksTranslated: boolean;
   allChunksLocked: boolean;
+  unlockedChunksCount: number;
   onReauditChunk: (chunkId: string) => void;
   onSelectChunk: (id: string) => void;
   onFocusIssue: (chunkId: string, query?: string | null) => void;
@@ -736,7 +742,9 @@ function AuditTab({
   labelledBy,
   currentChunk,
   isProcessing,
+  allChunksTranslated,
   allChunksLocked,
+  unlockedChunksCount,
   onReauditChunk,
   onSelectChunk,
   onFocusIssue,
@@ -765,9 +773,9 @@ function AuditTab({
 
   const coherence = currentChunk.coherenceResult;
 
-  const coherenceDisabled = isProcessing || !allChunksLocked;
+  const coherenceDisabled = isProcessing || !allChunksTranslated;
   const coherenceTitle = coherenceDisabled && !isProcessing
-    ? t('coherence.lockedRequired')
+    ? t('coherence.translationsRequired')
     : coherence?.status === 'completed' || coherence?.status === 'error'
       ? t('coherence.rerun')
       : t('coherence.runAudit');
@@ -799,10 +807,18 @@ function AuditTab({
               : <ScanLine size={14} />}
           </button>
         </div>
+        {allChunksTranslated && !allChunksLocked && (
+          <div className="mt-3 flex items-start gap-2 rounded-2xl border border-editorial-warning/30 bg-editorial-warning/10 p-3 text-sm text-editorial-warning">
+            <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+            <span>{t('coherence.unlockedWarning', { count: unlockedChunksCount })}</span>
+          </div>
+        )}
 
         {!coherence || coherence.status === 'idle' ? (
           <p className="mt-3 text-[11px] text-editorial-muted/70 leading-relaxed">
-            {allChunksLocked ? t('coherence.idle') : t('coherence.lockedRequired')}
+            {!allChunksTranslated
+              ? t('coherence.translationsRequired')
+              : t('coherence.idle')}
           </p>
         ) : coherence.status === 'processing' ? (
           <div className="mt-3 flex items-center gap-2 text-sm text-editorial-muted">

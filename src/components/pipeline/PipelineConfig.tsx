@@ -2,7 +2,7 @@ import { Plus, ArrowRightLeft, Play, Loader2, X, AlertTriangle, RotateCcw, Wand2
 import { useMemo, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import type { ModelProvider } from '../../types';
+import type { ModelProvider, PromptTemplate } from '../../types';
 import { MODEL_OPTIONS, LANGUAGES } from '../../constants';
 import { getModelStatus } from '../../models/catalog';
 import { usePipelineStore } from '../../stores/pipelineStore';
@@ -36,6 +36,215 @@ function useJudgeModelOptions(provider: ModelProvider): string[] {
   return MODEL_OPTIONS[provider] || [];
 }
 
+interface AuditPromptEditorProps {
+  label: string;
+  hint: string;
+  value: string;
+  placeholder: string;
+  templates: PromptTemplate[];
+  isRefining: boolean;
+  onRefine: () => void;
+  onChange: (value: string) => void;
+  onApplyTemplate: (template: PromptTemplate) => void;
+  saveTemplate: (
+    name: string,
+    prompt: string,
+    context: 'stage' | 'audit',
+    defaultModel?: string,
+    defaultProvider?: string,
+  ) => Promise<void>;
+  deleteTemplate: (id: string) => Promise<void>;
+  defaultModel?: string;
+  defaultProvider?: string;
+}
+
+function AuditPromptEditor({
+  label,
+  hint,
+  value,
+  placeholder,
+  templates,
+  isRefining,
+  onRefine,
+  onChange,
+  onApplyTemplate,
+  saveTemplate,
+  deleteTemplate,
+  defaultModel,
+  defaultProvider,
+}: AuditPromptEditorProps) {
+  const { t } = useTranslation();
+  const [showSaveName, setShowSaveName] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [showTemplateList, setShowTemplateList] = useState(false);
+  const [templateSearch, setTemplateSearch] = useState('');
+
+  const filteredTemplates = templates.filter((tmpl) =>
+    tmpl.name.toLowerCase().includes(templateSearch.toLowerCase()),
+  );
+
+  const handleSaveTemplate = async () => {
+    const name = templateName.trim();
+    if (!name) return;
+    try {
+      await saveTemplate(name, value, 'audit', defaultModel, defaultProvider);
+      toast.success(t('pipeline.templates.saved'));
+      setTemplateName('');
+      setShowSaveName(false);
+    } catch (err: unknown) {
+      toast.error(t('errors.somethingWentWrong'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    }
+  };
+
+  const handleDeleteTemplate = async (id: string) => {
+    try {
+      await deleteTemplate(id);
+      toast.success(t('pipeline.templates.deleted'));
+    } catch (err: unknown) {
+      toast.error(t('errors.somethingWentWrong'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    }
+  };
+
+  return (
+    <div className="rounded-[20px] border border-editorial-border bg-editorial-bg/70 p-4 space-y-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
+            {label}
+          </div>
+          <p className="mt-1 text-[11px] leading-relaxed text-editorial-muted/70">
+            {hint}
+          </p>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={onRefine}
+            disabled={isRefining || !value.trim()}
+            title={t('pipeline.refinePrompt')}
+            aria-label={`${t('pipeline.refinePrompt')}: ${label}`}
+            className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40"
+          >
+            {isRefining ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
+          </button>
+          <button
+            type="button"
+            onClick={() => { setShowSaveName(!showSaveName); setShowTemplateList(false); }}
+            title={t('pipeline.templates.save')}
+            aria-label={`${t('pipeline.templates.save')}: ${label}`}
+            className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+          >
+            <BookmarkPlus size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => { setShowTemplateList(!showTemplateList); setShowSaveName(false); }}
+            title={t('pipeline.templates.load')}
+            aria-label={`${t('pipeline.templates.load')}: ${label}`}
+            className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+          >
+            <BookOpen size={14} />
+          </button>
+        </div>
+      </div>
+
+      {showSaveName && (
+        <div className="flex items-center gap-1.5">
+          <input
+            value={templateName}
+            onChange={(e) => setTemplateName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSaveTemplate();
+              if (e.key === 'Escape') setShowSaveName(false);
+            }}
+            placeholder={t('pipeline.templates.namePlaceholder')}
+            autoFocus
+            className="flex-1 rounded bg-editorial-textbox/60 border border-editorial-border/60 px-2 py-1 text-[11px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          />
+          <button
+            type="button"
+            onClick={handleSaveTemplate}
+            disabled={!templateName.trim()}
+            className="text-editorial-ink hover:text-editorial-accent transition-colors disabled:opacity-40 focus:outline-none"
+            aria-label={t('common.confirm')}
+          >
+            <Check size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => { setShowSaveName(false); setTemplateName(''); }}
+            className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none"
+            aria-label={t('common.cancel')}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {showTemplateList && (
+        <div className="rounded-lg border border-editorial-border bg-editorial-bg shadow-lg overflow-hidden">
+          <div className="p-2 border-b border-editorial-border/60">
+            <input
+              value={templateSearch}
+              onChange={(e) => setTemplateSearch(e.target.value)}
+              placeholder={t('pipeline.templates.searchPlaceholder')}
+              autoFocus
+              className="w-full rounded bg-editorial-textbox/60 border border-editorial-border/40 px-2 py-1 text-[11px] font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+            />
+          </div>
+          <ul className="max-h-48 overflow-y-auto custom-scrollbar">
+            {filteredTemplates.length === 0 ? (
+              <li className="px-3 py-4 text-[10px] text-editorial-muted text-center">
+                {t('pipeline.templates.empty')}
+              </li>
+            ) : (
+              filteredTemplates.map((tmpl) => (
+                <li
+                  key={tmpl.id}
+                  className="flex items-start gap-2 px-3 py-2 hover:bg-editorial-textbox/40 group"
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onApplyTemplate(tmpl);
+                      setShowTemplateList(false);
+                      setTemplateSearch('');
+                    }}
+                    className="flex-1 text-left min-w-0 focus:outline-none"
+                  >
+                    <div className="text-[11px] font-bold text-editorial-ink truncate">{tmpl.name}</div>
+                    <div className="text-[10px] text-editorial-muted truncate mt-0.5 font-mono">{tmpl.prompt}</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteTemplate(tmpl.id)}
+                    className="shrink-0 text-editorial-muted/40 hover:text-editorial-accent transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 focus:outline-none mt-0.5"
+                    aria-label={t('common.delete')}
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>
+        </div>
+      )}
+
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        rows={5}
+        className="w-full rounded-lg bg-editorial-textbox/40 border border-editorial-border/60 p-3 text-[12px] font-mono outline-none leading-relaxed resize-y focus-visible:ring-2 focus-visible:ring-editorial-accent"
+      />
+    </div>
+  );
+}
+
 export function PipelineConfig({
   onRunPipeline,
   onRunAuditOnly,
@@ -59,10 +268,7 @@ export function PipelineConfig({
   const { t } = useTranslation();
   const judgeModels = useJudgeModelOptions(config.judgeProvider);
   const [isRefiningJudge, setIsRefiningJudge] = useState(false);
-  const [showJudgeSaveName, setShowJudgeSaveName] = useState(false);
-  const [judgeTemplateName, setJudgeTemplateName] = useState('');
-  const [showJudgeTemplateList, setShowJudgeTemplateList] = useState(false);
-  const [judgeTemplateSearch, setJudgeTemplateSearch] = useState('');
+  const [isRefiningCoherence, setIsRefiningCoherence] = useState(false);
 
   const { templates, loadTemplates, saveTemplate, deleteTemplate } = usePromptTemplateStore();
 
@@ -79,35 +285,6 @@ export function PipelineConfig({
   }, [showAudit]);
 
   const auditTemplates = templates.filter((tmpl) => tmpl.context === 'audit');
-  const filteredJudgeTemplates = auditTemplates.filter((tmpl) =>
-    tmpl.name.toLowerCase().includes(judgeTemplateSearch.toLowerCase()),
-  );
-
-  const handleSaveJudgeTemplate = async () => {
-    const name = judgeTemplateName.trim();
-    if (!name) return;
-    try {
-      await saveTemplate(name, config.judgePrompt, 'audit');
-      toast.success(t('pipeline.templates.saved'));
-      setJudgeTemplateName('');
-      setShowJudgeSaveName(false);
-    } catch (err: unknown) {
-      toast.error(t('errors.somethingWentWrong'), {
-        description: err instanceof Error ? err.message : String(err),
-      });
-    }
-  };
-
-  const handleDeleteJudgeTemplate = async (id: string) => {
-    try {
-      await deleteTemplate(id);
-      toast.success(t('pipeline.templates.deleted'));
-    } catch (err: unknown) {
-      toast.error(t('errors.somethingWentWrong'), {
-        description: err instanceof Error ? err.message : String(err),
-      });
-    }
-  };
 
   const handleRerunAll = async () => {
     const ok = await confirm({
@@ -166,6 +343,22 @@ export function PipelineConfig({
       });
     } finally {
       setIsRefiningJudge(false);
+    }
+  };
+
+  const handleRefineCoherencePrompt = async () => {
+    if (!config.coherencePrompt?.trim()) return;
+    setIsRefiningCoherence(true);
+    try {
+      const refined = await llmService.refinePrompt(config.coherencePrompt, config.judgeProvider, config.judgeModel, 'audit');
+      setConfig((prev) => ({ ...prev, coherencePrompt: refined }));
+      toast.success(t('pipeline.refined'));
+    } catch (err: unknown) {
+      toast.error(t('pipeline.refineFailed'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setIsRefiningCoherence(false);
     }
   };
 
@@ -288,60 +481,64 @@ export function PipelineConfig({
               <h2 className="font-display text-sm uppercase tracking-wider">
                 {t('pipeline.auditGuard')}
               </h2>
-              <button
-                type="button"
-                onClick={handleRefineJudgePrompt}
-                disabled={isRefiningJudge || !config.judgePrompt.trim() || !config.judgeModel.trim()}
-                title={t('pipeline.refinePrompt')}
-                aria-label={t('pipeline.refinePrompt')}
-                className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40"
-              >
-                {isRefiningJudge ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
-              </button>
             </div>
             <div className="space-y-4">
-              <div className="flex gap-2">
-                <select
-                  value={config.judgeProvider}
-                  onChange={(e) => handleJudgeProviderChange(e.target.value as ModelProvider)}
-                  className="bg-editorial-textbox/60 rounded border border-editorial-border/60 px-2 py-1.5 text-[11px] font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                >
-                  {Object.keys(MODEL_OPTIONS).map((p) => (
-                    <option key={p} value={p}>{p}</option>
-                  ))}
-                </select>
-                {judgeModels.length > 0 ? (
+              <div className="rounded-[20px] border border-editorial-border bg-editorial-bg/70 p-4">
+                <div className="mb-3">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
+                    {t('pipeline.auditModelLabel')}
+                  </div>
+                  <p className="mt-1 text-[11px] leading-relaxed text-editorial-muted/70">
+                    {t('pipeline.auditModelHint')}
+                  </p>
+                </div>
+                <div className="flex gap-2">
                   <select
-                    value={config.judgeModel}
-                    onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
-                    className="flex-1 bg-editorial-textbox/60 rounded border border-editorial-border/60 px-2 py-1.5 text-[11px] font-mono outline-none"
+                    value={config.judgeProvider}
+                    onChange={(e) => handleJudgeProviderChange(e.target.value as ModelProvider)}
+                    className="bg-editorial-textbox/60 rounded border border-editorial-border/60 px-2 py-1.5 text-[11px] font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    aria-label={t('models.provider')}
                   >
-                    {judgeModels.map((m) => (
-                      <option key={m} value={m}>
-                        {m}{getModelStatus(config.judgeProvider, m) === 'preview' ? ' (preview)' : ''}
-                      </option>
+                    {Object.keys(MODEL_OPTIONS).map((p) => (
+                      <option key={p} value={p}>{p}</option>
                     ))}
                   </select>
-                ) : config.judgeProvider === 'ollama' ? (
-                  <input
-                    value={config.judgeModel}
-                    onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
-                    placeholder={t('ollama.modelPlaceholder')}
-                    className="flex-1 bg-editorial-textbox/60 rounded border border-editorial-border/60 px-2 py-1.5 text-[11px] font-mono outline-none"
-                  />
-                ) : (
-                  <select
-                    value={config.judgeModel}
-                    onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
-                    className="flex-1 bg-editorial-textbox/60 rounded border border-editorial-border/60 px-2 py-1.5 text-[11px] font-mono outline-none"
-                  >
-                    {MODEL_OPTIONS[config.judgeProvider]?.map((m) => (
-                      <option key={m} value={m}>
-                        {m}{getModelStatus(config.judgeProvider, m) === 'preview' ? ' (preview)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                )}
+                  {judgeModels.length > 0 ? (
+                    <select
+                      value={config.judgeModel}
+                      onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
+                      className="flex-1 bg-editorial-textbox/60 rounded border border-editorial-border/60 px-2 py-1.5 text-[11px] font-mono outline-none"
+                      aria-label={t('pipeline.auditModelLabel')}
+                    >
+                      {judgeModels.map((m) => (
+                        <option key={m} value={m}>
+                          {m}{getModelStatus(config.judgeProvider, m) === 'preview' ? ' (preview)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  ) : config.judgeProvider === 'ollama' ? (
+                    <input
+                      value={config.judgeModel}
+                      onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
+                      placeholder={t('ollama.modelPlaceholder')}
+                      className="flex-1 bg-editorial-textbox/60 rounded border border-editorial-border/60 px-2 py-1.5 text-[11px] font-mono outline-none"
+                      aria-label={t('pipeline.auditModelLabel')}
+                    />
+                  ) : (
+                    <select
+                      value={config.judgeModel}
+                      onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
+                      className="flex-1 bg-editorial-textbox/60 rounded border border-editorial-border/60 px-2 py-1.5 text-[11px] font-mono outline-none"
+                      aria-label={t('pipeline.auditModelLabel')}
+                    >
+                      {MODEL_OPTIONS[config.judgeProvider]?.map((m) => (
+                        <option key={m} value={m}>
+                          {m}{getModelStatus(config.judgeProvider, m) === 'preview' ? ' (preview)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
               </div>
               {judgeOllamaOffline && (
                 <div className="flex items-center gap-2 text-[10px] text-editorial-accent">
@@ -349,139 +546,50 @@ export function PipelineConfig({
                   <span>{t('ollama.selectedButOffline')}</span>
                 </div>
               )}
-
-              {/* Prompt label + template controls */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
-                    {t('pipeline.prompt')}
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => { setShowJudgeSaveName(!showJudgeSaveName); setShowJudgeTemplateList(false); }}
-                      title={t('pipeline.templates.save')}
-                      aria-label={t('pipeline.templates.save')}
-                      className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
-                    >
-                      <BookmarkPlus size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setShowJudgeTemplateList(!showJudgeTemplateList); setShowJudgeSaveName(false); }}
-                      title={t('pipeline.templates.load')}
-                      aria-label={t('pipeline.templates.load')}
-                      className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
-                    >
-                      <BookOpen size={14} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Inline save name input */}
-                {showJudgeSaveName && (
-                  <div className="flex items-center gap-1.5">
-                    <input
-                      value={judgeTemplateName}
-                      onChange={(e) => setJudgeTemplateName(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') handleSaveJudgeTemplate(); if (e.key === 'Escape') setShowJudgeSaveName(false); }}
-                      placeholder={t('pipeline.templates.namePlaceholder')}
-                      autoFocus
-                      className="flex-1 rounded bg-editorial-textbox/60 border border-editorial-border/60 px-2 py-1 text-[11px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleSaveJudgeTemplate}
-                      disabled={!judgeTemplateName.trim()}
-                      className="text-editorial-ink hover:text-editorial-accent transition-colors disabled:opacity-40 focus:outline-none"
-                      aria-label={t('common.confirm')}
-                    >
-                      <Check size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setShowJudgeSaveName(false); setJudgeTemplateName(''); }}
-                      className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none"
-                      aria-label={t('common.cancel')}
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                )}
-
-                {/* Template list popover */}
-                {showJudgeTemplateList && (
-                  <div className="rounded-lg border border-editorial-border bg-editorial-bg shadow-lg overflow-hidden">
-                    <div className="p-2 border-b border-editorial-border/60">
-                      <input
-                        value={judgeTemplateSearch}
-                        onChange={(e) => setJudgeTemplateSearch(e.target.value)}
-                        placeholder={t('pipeline.templates.searchPlaceholder')}
-                        autoFocus
-                        className="w-full rounded bg-editorial-textbox/60 border border-editorial-border/40 px-2 py-1 text-[11px] font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
-                      />
-                    </div>
-                    <ul className="max-h-48 overflow-y-auto custom-scrollbar">
-                      {filteredJudgeTemplates.length === 0 ? (
-                        <li className="px-3 py-4 text-[10px] text-editorial-muted text-center">
-                          {t('pipeline.templates.empty')}
-                        </li>
-                      ) : (
-                        filteredJudgeTemplates.map((tmpl) => (
-                          <li
-                            key={tmpl.id}
-                            className="flex items-start gap-2 px-3 py-2 hover:bg-editorial-textbox/40 group"
-                          >
-                            <button
-                              type="button"
-                              onClick={() => { setConfig((prev) => ({ ...prev, judgePrompt: tmpl.prompt })); setShowJudgeTemplateList(false); setJudgeTemplateSearch(''); }}
-                              className="flex-1 text-left min-w-0 focus:outline-none"
-                            >
-                              <div className="text-[11px] font-bold text-editorial-ink truncate">{tmpl.name}</div>
-                              <div className="text-[10px] text-editorial-muted truncate mt-0.5 font-mono">{tmpl.prompt}</div>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteJudgeTemplate(tmpl.id)}
-                              className="shrink-0 text-editorial-muted/40 hover:text-editorial-accent transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 focus:outline-none mt-0.5"
-                              aria-label={t('common.delete')}
-                            >
-                              <Trash2 size={12} />
-                            </button>
-                          </li>
-                        ))
-                      )}
-                    </ul>
-                  </div>
-                )}
-
-                <textarea
-                  value={config.judgePrompt}
-                  onChange={(e) => setConfig((prev) => ({ ...prev, judgePrompt: e.target.value }))}
-                  placeholder={t('pipeline.auditPlaceholder')}
-                  rows={5}
-                  className="w-full rounded-lg bg-editorial-textbox/40 border border-editorial-border/60 p-3 text-[12px] font-mono outline-none leading-relaxed resize-y focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                />
-              </div>
-
-              {/* Coherence prompt */}
-              <div className="mt-6 space-y-2 border-t border-editorial-border/40 pt-5">
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
-                    {t('pipeline.coherencePromptLabel')}
-                  </span>
-                  <p className="mt-0.5 text-[10px] text-editorial-muted/60 leading-relaxed">
-                    {t('pipeline.coherencePromptHint')}
-                  </p>
-                </div>
-                <textarea
-                  value={config.coherencePrompt ?? ''}
-                  onChange={(e) => setConfig((prev) => ({ ...prev, coherencePrompt: e.target.value }))}
-                  placeholder={t('pipeline.coherencePromptPlaceholder')}
-                  rows={3}
-                  className="w-full rounded-lg bg-editorial-textbox/20 border border-editorial-border/40 p-3 text-[12px] font-mono outline-none leading-relaxed resize-y focus-visible:ring-2 focus-visible:ring-editorial-accent text-editorial-muted"
-                />
-              </div>
+              <AuditPromptEditor
+                label={t('pipeline.judgePromptLabel')}
+                hint={t('pipeline.judgePromptHint')}
+                value={config.judgePrompt}
+                placeholder={t('pipeline.auditPlaceholder')}
+                templates={auditTemplates}
+                isRefining={isRefiningJudge}
+                onRefine={handleRefineJudgePrompt}
+                onChange={(value) => setConfig((prev) => ({ ...prev, judgePrompt: value }))}
+                onApplyTemplate={(template) => {
+                  setConfig((prev) => ({
+                    ...prev,
+                    judgePrompt: template.prompt,
+                    judgeModel: template.defaultModel || prev.judgeModel,
+                    judgeProvider: (template.defaultProvider as ModelProvider | undefined) || prev.judgeProvider,
+                  }));
+                }}
+                saveTemplate={saveTemplate}
+                deleteTemplate={deleteTemplate}
+                defaultModel={config.judgeModel}
+                defaultProvider={config.judgeProvider}
+              />
+              <AuditPromptEditor
+                label={t('pipeline.coherencePromptLabel')}
+                hint={t('pipeline.coherencePromptHint')}
+                value={config.coherencePrompt ?? ''}
+                placeholder={t('pipeline.coherencePromptPlaceholder')}
+                templates={auditTemplates}
+                isRefining={isRefiningCoherence}
+                onRefine={handleRefineCoherencePrompt}
+                onChange={(value) => setConfig((prev) => ({ ...prev, coherencePrompt: value }))}
+                onApplyTemplate={(template) => {
+                  setConfig((prev) => ({
+                    ...prev,
+                    coherencePrompt: template.prompt,
+                    judgeModel: template.defaultModel || prev.judgeModel,
+                    judgeProvider: (template.defaultProvider as ModelProvider | undefined) || prev.judgeProvider,
+                  }));
+                }}
+                saveTemplate={saveTemplate}
+                deleteTemplate={deleteTemplate}
+                defaultModel={config.judgeModel}
+                defaultProvider={config.judgeProvider}
+              />
             </div>
           </div>
         )}
