@@ -122,6 +122,8 @@
     "tabStages": "Stages",
     "tabAudit": "Quality Control",
     "tabGlossary": "Term Registry",
+    "noProjectTitle": "No project open",
+    "noProjectHint": "Open or create a project to configure stages, models, audit and glossary.",
     "glossaryEmpty": "No terms in the registry. Use + to add one.",
     "glossaryNotes": "Notes",
     "templates": {

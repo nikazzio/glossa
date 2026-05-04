@@ -122,6 +122,8 @@
     "tabStages": "Fasi",
     "tabAudit": "Controllo qualità",
     "tabGlossary": "Registro Termini",
+    "noProjectTitle": "Nessun progetto aperto",
+    "noProjectHint": "Apri o crea un progetto per configurare fasi, modelli, audit e glossario.",
     "glossaryEmpty": "Nessun termine nel registro. Usa + per aggiungerne uno.",
     "glossaryNotes": "Note",
     "templates": {

@@ -24,6 +24,7 @@ interface PipelineConfigProps {
   onCancelPipeline: () => void;
   className?: string;
   showActions?: boolean;
+  showOnlyGlobalDefaults?: boolean;
   visibleSection?: ConfigSection;
   libraryGlossarySection?: ReactNode;
 }
@@ -250,6 +251,7 @@ export function PipelineConfig({
   onCancelPipeline,
   className,
   showActions = true,
+  showOnlyGlobalDefaults = false,
   visibleSection,
   libraryGlossarySection,
 }: PipelineConfigProps) {
@@ -433,7 +435,25 @@ export function PipelineConfig({
         </div>
       </div>
 
-      {/* ── Tab navigation ── */}
+      {/* ── Empty state (no project open) ── */}
+      {showOnlyGlobalDefaults && (
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 px-8 py-12 text-center">
+          <div className="rounded-full border border-editorial-border/60 p-4 text-editorial-muted/50">
+            <Layers size={24} />
+          </div>
+          <div className="space-y-1">
+            <p className="font-display italic text-base text-editorial-ink">
+              {t('pipeline.noProjectTitle')}
+            </p>
+            <p className="text-xs leading-relaxed text-editorial-muted max-w-[260px]">
+              {t('pipeline.noProjectHint')}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ── Tab navigation + panels ── */}
+      {!showOnlyGlobalDefaults && <>
       <div
         role="tablist"
         aria-label={t('pipeline.configSections')}
@@ -748,6 +768,7 @@ export function PipelineConfig({
         )}
 
       </div>
+      </>}
 
       {showActions && (
         <div className="shrink-0 border-t border-editorial-border/60 px-8 py-6 flex flex-col gap-3">

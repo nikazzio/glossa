@@ -161,8 +161,9 @@ export function ConfigDrawer({
         onRunAuditOnly={onRunAuditOnly}
         onCancelPipeline={onCancelPipeline}
         showActions={false}
-        libraryGlossarySection={libraryGlossarySection}
-        className="flex flex-1 flex-col gap-6 overflow-y-auto bg-editorial-bg/40 p-6 custom-scrollbar min-h-0"
+        showOnlyGlobalDefaults={!currentProjectId}
+        libraryGlossarySection={currentProjectId ? libraryGlossarySection : undefined}
+        className="flex flex-1 flex-col overflow-y-auto bg-editorial-bg/40 custom-scrollbar min-h-0"
       />
     </Drawer>
   );
