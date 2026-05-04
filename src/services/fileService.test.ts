@@ -125,6 +125,46 @@ describe('exportTranslation', () => {
     expect(writeTextFileMock.mock.calls[0]?.[1]).toContain('Notes');
   });
 
+  it('plain-text export uses blank-line separator by default', async () => {
+    saveMock.mockResolvedValueOnce('/tmp/translation.txt');
+    const simple = [
+      { id: 'a', originalText: 'Source A', currentDraft: 'Traduzione A', status: 'completed' as const, stageResults: {}, judgeResult: { content: '', status: 'idle' as const, rating: 'fair' as const, issues: [] } },
+      { id: 'b', originalText: 'Source B', currentDraft: 'Traduzione B', status: 'completed' as const, stageResults: {}, judgeResult: { content: '', status: 'idle' as const, rating: 'fair' as const, issues: [] } },
+    ];
+
+    await exportTranslation(simple, 'txt');
+
+    const written = writeTextFileMock.mock.calls[0]?.[1] as string;
+    expect(written).toBe('Traduzione A\n\nTraduzione B');
+  });
+
+  it('plain-text export respects hr separator', async () => {
+    saveMock.mockResolvedValueOnce('/tmp/translation.txt');
+    const simple = [
+      { id: 'a', originalText: 'A', currentDraft: 'Trad A', status: 'completed' as const, stageResults: {}, judgeResult: { content: '', status: 'idle' as const, rating: 'fair' as const, issues: [] } },
+      { id: 'b', originalText: 'B', currentDraft: 'Trad B', status: 'completed' as const, stageResults: {}, judgeResult: { content: '', status: 'idle' as const, rating: 'fair' as const, issues: [] } },
+    ];
+
+    await exportTranslation(simple, 'txt', { separator: '\n\n---\n\n' });
+
+    const written = writeTextFileMock.mock.calls[0]?.[1] as string;
+    expect(written).toBe('Trad A\n\n---\n\nTrad B');
+  });
+
+  it('markdown-aware TXT export uses asterisk separator literally without corrupting it', async () => {
+    saveMock.mockResolvedValueOnce('/tmp/translation.txt');
+    const simple = [
+      { id: 'a', originalText: 'Hello', currentDraft: 'Ciao', status: 'completed' as const, stageResults: {}, judgeResult: { content: '', status: 'idle' as const, rating: 'fair' as const, issues: [] } },
+      { id: 'b', originalText: 'World', currentDraft: 'Mondo', status: 'completed' as const, stageResults: {}, judgeResult: { content: '', status: 'idle' as const, rating: 'fair' as const, issues: [] } },
+    ];
+
+    await exportTranslation(simple, 'txt', { markdownAware: true, separator: '\n\n* * *\n\n' });
+
+    const written = writeTextFileMock.mock.calls[0]?.[1] as string;
+    expect(written).toContain('* * *');
+    expect(written).toBe('Ciao\n\n* * *\n\nMondo');
+  });
+
   it('exports standalone html for markdown-aware documents', async () => {
     saveMock.mockResolvedValueOnce('/tmp/translation.html');
 

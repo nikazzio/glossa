@@ -2,11 +2,7 @@ import {
   AlertCircle,
   CircleCheck,
   CircleDot,
-  Code2,
-  Columns2,
-  FileCode,
   FileOutput,
-  FileText,
   FilePen,
   FolderOpen,
   Globe,
@@ -28,6 +24,11 @@ import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useLibraryStore } from '../../stores/libraryStore';
 import { importTextFile, exportTranslation, exportBilingual } from '../../services/fileService';
+import type { ExportFormat } from '../document/ExportDialog';
+
+const ExportDialog = lazy(() =>
+  import('../document/ExportDialog').then((m) => ({ default: m.ExportDialog })),
+);
 
 const ImportPreviewDialog = lazy(() =>
   import('../document/ImportPreviewDialog').then((m) => ({ default: m.ImportPreviewDialog })),
@@ -79,6 +80,7 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
   const { t, i18n } = useTranslation();
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
   const [showSaveProjectDialog, setShowSaveProjectDialog] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
   const [isCreatingProjectFromSave, setIsCreatingProjectFromSave] = useState(false);
 
   // Keep dialogs mounted after first open so their AnimatePresence exit animations run
@@ -139,14 +141,13 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
     toast.success(t('files.imported'));
   };
 
-  const handleExport = async (type: 'txt' | 'md' | 'html' | 'docx' | 'bilingual') => {
+  const handleExport = async (format: ExportFormat, separator: string, markdownAware: boolean) => {
+    setShowExportDialog(false);
     try {
       const ok =
-        type === 'bilingual'
+        format === 'bilingual'
           ? await exportBilingual(chunks)
-          : await exportTranslation(chunks, type, {
-              markdownAware: config.markdownAware === true,
-            });
+          : await exportTranslation(chunks, format, { markdownAware, separator });
       if (ok) toast.success(t('files.exported'));
     } catch (err: any) {
       toast.error(t('files.exportError'), { description: err.message });
@@ -188,11 +189,7 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
   const openConfigLabel = t('header.openConfig');
   const libraryLabel = t('library.openLibrary');
   const sandboxLabel = viewMode === 'sandbox' ? t('header.exitSandbox') : t('header.sandbox');
-  const exportTxtLabel = t('files.exportTxt');
-  const exportMdLabel = t('files.exportMarkdown');
-  const exportHtmlLabel = t('files.exportHtml');
-  const exportDocxLabel = t('files.exportDocx');
-  const exportBilingualLabel = t('files.exportBilingual');
+  const exportLabel = t('header.exportLabel');
 
   const saveStatusLabel =
     saveState === 'dirty'
@@ -242,25 +239,13 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
             {/* Export cluster – visibile solo in modalità documento con chunk */}
             {viewMode === 'document' && chunks.length > 0 && (
               <ActionCluster>
-                <div className="flex flex-wrap items-center gap-1">
-                  <IconButton onClick={() => handleExport('txt')} title={exportTxtLabel} ariaLabel={exportTxtLabel}>
-                    <FileText size={15} />
-                  </IconButton>
-                  <IconButton onClick={() => handleExport('md')} title={exportMdLabel} ariaLabel={exportMdLabel}>
-                    <FileCode size={15} />
-                  </IconButton>
-                  <IconButton onClick={() => handleExport('html')} title={exportHtmlLabel} ariaLabel={exportHtmlLabel}>
-                    <Code2 size={15} />
-                  </IconButton>
-                  <IconButton onClick={() => handleExport('docx')} title={exportDocxLabel} ariaLabel={exportDocxLabel}>
-                    <FileOutput size={15} />
-                  </IconButton>
-                  {config.markdownAware && (
-                    <IconButton onClick={() => handleExport('bilingual')} title={exportBilingualLabel} ariaLabel={exportBilingualLabel}>
-                      <Columns2 size={15} />
-                    </IconButton>
-                  )}
-                </div>
+                <IconButton
+                  onClick={() => setShowExportDialog(true)}
+                  title={exportLabel}
+                  ariaLabel={exportLabel}
+                >
+                  <FileOutput size={15} />
+                </IconButton>
               </ActionCluster>
             )}
 
@@ -400,6 +385,16 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
             onClose={() => setShowSaveProjectDialog(false)}
             onConfirm={handleFirstSave}
             saving={isCreatingProjectFromSave}
+          />
+        </Suspense>
+      )}
+      {showExportDialog && (
+        <Suspense fallback={null}>
+          <ExportDialog
+            chunks={chunks}
+            markdownAware={config.markdownAware === true}
+            onConfirm={handleExport}
+            onCancel={() => setShowExportDialog(false)}
           />
         </Suspense>
       )}
