@@ -1,7 +1,7 @@
 {
   "app": {
     "title": "Glossa // Pipeline",
-    "subtitle": "Pipeline Multi-LLM v1.0"
+    "subtitle": "Traduzione assistita da AI"
   },
   "header": {
     "settings": "Impostazioni",
@@ -241,6 +241,7 @@
     "new": "Nuovo Progetto",
     "create": "Crea",
     "save": "Salva",
+    "close": "Chiudi progetto",
     "saved": "Progetto salvato",
     "saveFailed": "Salvataggio progetto fallito",
     "statusDraft": "Non salvato",

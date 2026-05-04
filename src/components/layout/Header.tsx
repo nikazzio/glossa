@@ -9,6 +9,7 @@ import {
   FileText,
   FilePen,
   FolderOpen,
+  FolderX,
   Globe,
   HelpCircle,
   LayoutTemplate,
@@ -72,6 +73,7 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
     currentProjectId,
     setShowProjectPanel,
     saveCurrentProject,
+    closeProject,
     projects,
     saveState,
   } = useProjectStore();
@@ -182,6 +184,7 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
   const importLabel = t('files.import');
   const projectsLabel = t('projects.title');
   const saveLabel = t('projects.save');
+  const closeProjectLabel = t('projects.close');
   const langLabel = t('language.label');
   const settingsLabel = t('header.settings');
   const helpLabel = t('help.title');
@@ -217,7 +220,7 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
                 {t('app.title')}
               </div>
               <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-                {t('app.subtitle')}
+                {t('app.subtitle')} · v{__APP_VERSION__}
               </div>
             </div>
             {currentProject && (
@@ -231,6 +234,14 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
                   {currentProject.name}
                 </button>
                 <SaveStatusBadge saveState={saveState} currentProjectId={currentProjectId} label={saveStatusLabel} />
+                <button
+                  onClick={closeProject}
+                  title={closeProjectLabel}
+                  aria-label={closeProjectLabel}
+                  className="rounded-full border border-editorial-border/60 p-1.5 text-editorial-muted/60 transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                >
+                  <FolderX size={12} />
+                </button>
               </div>
             )}
             {!currentProject && (

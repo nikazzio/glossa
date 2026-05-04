@@ -30,6 +30,7 @@ interface ProjectState {
   openProject: (id: string) => Promise<void>;
   removeProject: (id: string) => Promise<void>;
   saveCurrentProject: (name?: string) => Promise<void>;
+  closeProject: () => void;
 }
 
 export const useProjectStore = create<ProjectState>((set, get) => ({
@@ -114,6 +115,16 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       });
     }
     await state.loadProjects();
+  },
+
+  closeProject: () => {
+    useChunksStore.getState().clearChunks();
+    set({
+      currentProjectId: null,
+      saveState: 'idle',
+      lastSaveError: null,
+      trackedSnapshot: null,
+    });
   },
 
   saveCurrentProject: async (name?: string) => {
