@@ -364,7 +364,7 @@ export function MarkdownEditor({
       {mode === 'write' && !readOnly && highlightHtml ? (
         <div className={fillHeight ? 'flex flex-col flex-1 min-h-0' : 'space-y-2'}>
           {textarea}
-          <HighlightedText html={highlightHtml} className={`${minHeightClassName} ${textClassName}`} />
+          <HighlightedText html={highlightHtml} className={fillHeight ? `flex-1 min-h-0 overflow-y-auto ${textClassName}` : `${minHeightClassName} ${textClassName}`} />
         </div>
       ) : null}
       {mode === 'write' && (!highlightHtml || readOnly) ? textarea : null}

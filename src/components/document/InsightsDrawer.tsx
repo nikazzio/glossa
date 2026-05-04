@@ -85,7 +85,6 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
   const allChunksTranslated = chunks.length > 0 && chunks.every((c) => c.currentDraft?.trim());
   const allChunksLocked = chunks.length > 0 && chunks.every((c) => c.translationLocked);
   const unlockedChunksCount = chunks.filter((c) => c.currentDraft?.trim() && !c.translationLocked).length;
-  const splitChunk = useChunksStore((state) => state.splitChunk);
   const mergeChunkWithNext = useChunksStore((state) => state.mergeChunkWithNext);
   const currentChunk =
     chunks.find((chunk) => chunk.id === selectedChunkId) ?? chunks[0] ?? null;
@@ -440,7 +439,7 @@ function IndexTab({
                       {indexPad(index + 1)}
                     </span>
                     <span className={`flex-1 line-clamp-2 text-[11px] leading-snug ${isActive ? 'text-white/80' : 'text-editorial-muted'}`}>
-                      {truncateChunk(chunk.originalText)}
+                      {chunk.originalText.replace(/\s+/g, ' ').trim()}
                     </span>
                     <span className={`shrink-0 text-[10px] font-mono ${isActive ? 'text-white/50' : 'text-editorial-muted/60'}`}>
                       {wordCount}w
