@@ -42,9 +42,10 @@ export interface SavedTranslation {
   created_at: string;
 }
 
-function parseJson<T>(value: string | undefined, fallback: T): T {
+function parseJson<T>(value: string | null | undefined, fallback: T): T;
+function parseJson<T>(value: string | null | undefined): T | undefined;
+function parseJson<T>(value: string | null | undefined, fallback?: T): T | undefined {
   if (!value) return fallback;
-
   try {
     return JSON.parse(value) as T;
   } catch {
@@ -70,9 +71,7 @@ export function restoreTranslations(rows: SavedTranslation[]): TranslationChunk[
       judgeResult.content ||
       lastStageContent(stageResults) ||
       '';
-    const coherenceResult = row.coherence_result
-      ? parseJson<CoherenceResult>(row.coherence_result, undefined as unknown as CoherenceResult)
-      : undefined;
+    const coherenceResult = parseJson<CoherenceResult>(row.coherence_result);
     const footnotes = row.footnotes
       ? parseJson<Footnote[]>(row.footnotes, [])
       : undefined;
@@ -382,7 +381,6 @@ async function saveTranslationsInternal(
          judge_status, judge_rating, translation_locked, judge_issues, coherence_result, footnotes
        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        ON CONFLICT(id) DO UPDATE SET
-         project_id       = excluded.project_id,
          original_text    = excluded.original_text,
          final_translation = excluded.final_translation,
          position         = excluded.position,

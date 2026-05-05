@@ -33,8 +33,6 @@
         { "path": "$DOCUMENT/**" },
         { "path": "$DOWNLOAD/**" },
         { "path": "$DESKTOP/**" },
-        { "path": "$APPDATA/**" },
-        { "path": "$APPCONFIG/**" },
         { "path": "$TEMP/**" }
       ]
     },
@@ -44,8 +42,6 @@
         { "path": "$DOCUMENT/**" },
         { "path": "$DOWNLOAD/**" },
         { "path": "$DESKTOP/**" },
-        { "path": "$APPDATA/**" },
-        { "path": "$APPCONFIG/**" },
         { "path": "$TEMP/**" }
       ]
     }

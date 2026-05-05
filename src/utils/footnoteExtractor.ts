@@ -1,7 +1,8 @@
 import type { Footnote } from '../types';
 
 const FOOTNOTE_DEF = /^\[\^([^\]]+)\]:\s*(.*)/;
-const FOOTNOTE_MARKER = /\[\^[^\]]+\]/g;
+// Negative lookbehind skips escaped markers like \[^1\] that appear as literal text.
+const FOOTNOTE_MARKER = /(?<!\\)\[\^[^\]]+\]/g;
 
 // Superscript digits 0–9 (Unicode). Used to render inline footnote positions.
 const SUPERSCRIPT_DIGITS = '⁰¹²³⁴⁵⁶⁷⁸⁹';
@@ -70,7 +71,7 @@ export function assignChunkFootnotes(
   footnoteMap: Map<string, string>,
 ): Footnote[] {
   const footnotes: Footnote[] = [];
-  const markerRe = /\[\^([^\]]+)\]/g;
+  const markerRe = /(?<!\\)\[\^([^\]]+)\]/g;
   let match: RegExpExecArray | null;
   const seen = new Set<string>();
 
@@ -103,7 +104,7 @@ export function replaceMarkersWithSuperscripts(
     const n = parseInt(id, 10);
     return Number.isFinite(n) && n > 0 ? n : ids.indexOf(id) + 1;
   };
-  return text.replace(/\[\^([^\]]+)\]/g, (_, id) =>
+  return text.replace(/(?<!\\)\[\^([^\]]+)\]/g, (_, id) =>
     footnoteMap.has(id) ? `[${toSuperscript(displayNum(id))}]` : '',
   );
 }

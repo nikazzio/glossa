@@ -91,7 +91,7 @@ export function useProjectAutosave(delayMs = 1200) {
     const timer = window.setTimeout(() => {
       if (useProjectStore.getState().saveState === 'saving') return;
       const chunks = useChunksStore.getState().chunks;
-      logger.info('autosave: triggered', {
+      logger.debug('autosave: triggered', {
         projectId: currentProjectId,
         chunksCount: chunks.length,
       });
