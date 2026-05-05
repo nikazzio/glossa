@@ -1,4 +1,4 @@
-import { Bold, ChevronDown, ChevronUp, Columns2, Eye, Heading1, Heading2, Heading3, Italic, Link2, List, ListOrdered, Minus, PanelTopClose, PanelTopOpen, Pencil, Pilcrow, Plus, Type } from 'lucide-react';
+import { Bold, Columns2, Eye, Heading1, Heading2, Heading3, Italic, Link2, List, ListOrdered, Minus, PanelTopClose, PanelTopOpen, Pencil, Pilcrow, Plus, Type } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -367,7 +367,10 @@ export function MarkdownEditor({
           <HighlightedText html={highlightHtml} className={fillHeight ? `flex-1 min-h-0 overflow-y-auto ${textClassName}` : `${minHeightClassName} ${textClassName}`} />
         </div>
       ) : null}
-      {mode === 'write' && (!highlightHtml || readOnly) ? textarea : null}
+      {mode === 'write' && readOnly && highlightHtml ? (
+        <HighlightedText html={highlightHtml} className={fillHeight ? `flex-1 min-h-0 overflow-y-auto ${textClassName}` : `${minHeightClassName} ${textClassName}`} />
+      ) : null}
+      {mode === 'write' && !highlightHtml ? textarea : null}
       {mode === 'preview' ? preview : null}
       {mode === 'split' ? (
         <div className="grid gap-4 xl:grid-cols-2">

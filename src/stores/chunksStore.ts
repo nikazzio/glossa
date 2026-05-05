@@ -9,6 +9,7 @@ import type {
 import { usePipelineStore } from './pipelineStore';
 import { useUiStore } from './uiStore';
 import { chunkText, findBestSplitIndex, generateId, qualityDefault, resolveSplitIndex } from '../utils';
+import { assignChunkFootnotes, extractFootnotes, replaceMarkersWithSuperscripts, stripFootnoteMarkers } from '../utils/footnoteExtractor';
 
 interface ChunksState {
   chunks: TranslationChunk[];
@@ -32,6 +33,7 @@ interface ChunksState {
       minWords?: number;
       maxWords?: number;
       headingAware?: boolean;
+      extractFootnotes?: boolean;
     },
   ) => void;
   clearChunks: () => void;
@@ -74,15 +76,27 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
     const { inputText, config } = usePipelineStore.getState();
     if (!inputText.trim()) return;
 
-    const chunks = buildChunks(inputText, {
+    let bodyText = inputText.trim();
+    let footnoteMap: Map<string, string> | undefined;
+
+    if (config.markdownAware) {
+      const extracted = extractFootnotes(bodyText);
+      bodyText = extracted.cleanText;
+      footnoteMap = extracted.footnoteMap.size > 0 ? extracted.footnoteMap : undefined;
+    }
+
+    const chunks = buildChunks(bodyText, {
       useChunking: config.useChunking,
       targetChunkCount: config.targetChunkCount,
       markdownAware: config.markdownAware,
       minWords: config.minWords,
       maxWords: config.maxWords,
       headingAware: config.headingAware,
-    });
+    }, footnoteMap);
 
+    usePipelineStore.getState().setInputText(
+      footnoteMap ? stripFootnoteMarkers(bodyText) : bodyText,
+    );
     useUiStore.getState().setViewMode(chunks.length > 1 ? 'document' : 'sandbox');
     syncSelectedChunk(chunks);
     set({ chunks });
@@ -92,8 +106,19 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
     const trimmed = text.trim();
     if (!trimmed) return;
 
-    const chunks = buildChunks(trimmed, options);
-    usePipelineStore.getState().setInputText(trimmed);
+    let bodyText = trimmed;
+    let footnoteMap: Map<string, string> | undefined;
+
+    if (options.extractFootnotes || options.markdownAware) {
+      const extracted = extractFootnotes(trimmed);
+      bodyText = extracted.cleanText;
+      footnoteMap = extracted.footnoteMap.size > 0 ? extracted.footnoteMap : undefined;
+    }
+
+    const chunks = buildChunks(bodyText, options, footnoteMap);
+    usePipelineStore.getState().setInputText(
+      footnoteMap ? stripFootnoteMarkers(bodyText) : bodyText,
+    );
     useUiStore.getState().setViewMode('document');
     syncSelectedChunk(chunks);
     set({ chunks });
@@ -280,16 +305,26 @@ function buildChunks(
     maxWords?: number;
     headingAware?: boolean;
   },
+  footnoteMap?: Map<string, string>,
 ): TranslationChunk[] {
-  return chunkText(text, options).map((chunkTextValue, index) => ({
-    id: `chunk-${index}`,
-    originalText: chunkTextValue,
-    status: 'ready' as const,
-    stageResults: {},
-    judgeResult: createEmptyJudgeResult(),
-    currentDraft: '',
-    translationLocked: false,
-  }));
+  return chunkText(text, options).map((chunkTextValue) => {
+    const footnotes = footnoteMap
+      ? assignChunkFootnotes(chunkTextValue, footnoteMap)
+      : undefined;
+    const originalText = footnoteMap
+      ? replaceMarkersWithSuperscripts(chunkTextValue, footnoteMap)
+      : chunkTextValue;
+    return {
+      id: generateId('chunk'),
+      originalText,
+      status: 'ready' as const,
+      stageResults: {},
+      judgeResult: createEmptyJudgeResult(),
+      currentDraft: '',
+      translationLocked: false,
+      ...(footnotes?.length ? { footnotes } : {}),
+    };
+  });
 }
 
 function splitChunkState(

@@ -13,6 +13,7 @@ import { usePipelineStore } from './pipelineStore';
 import { useChunksStore } from './chunksStore';
 import { useUiStore } from './uiStore';
 import { buildProjectSnapshot } from '../utils/projectSnapshot';
+import { logger } from '../utils/logger';
 
 let saveInFlight: Promise<void> | null = null;
 
@@ -60,11 +61,17 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   openProject: async (id: string) => {
+    logger.info('openProject: start', { id });
     const [config, savedTranslations] = await Promise.all([
       getProjectConfig(id),
       loadTranslations(id),
     ]);
-    if (!config) return;
+    if (!config) throw new Error(`Project config not found for id: ${id}`);
+    logger.info('openProject: loaded from db', {
+      id,
+      sourceLen: config.inputText?.length ?? 0,
+      savedTranslationsCount: savedTranslations.length,
+    });
 
     const pipeline = usePipelineStore.getState();
     const chunksStore = useChunksStore.getState();
@@ -132,6 +139,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   saveCurrentProject: async (name?: string) => {
     if (saveInFlight) {
+      logger.debug('saveCurrentProject: skipped, save already in flight');
       return saveInFlight;
     }
 
@@ -154,6 +162,13 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         viewMode: ui.viewMode,
       });
 
+      logger.info('saveCurrentProject: start', {
+        trigger: name ? 'first-save' : 'manual-or-autosave',
+        currentProjectId: get().currentProjectId,
+        chunksCount: chunksStore.chunks.length,
+        inputTextLen: inputText.length,
+        isProcessing: chunksStore.isProcessing,
+      });
       set({ saveState: 'saving', lastSaveError: null });
 
       try {
@@ -178,7 +193,12 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
           viewMode: ui.viewMode,
           chunks: chunksStore.chunks,
         });
-        void get().loadProjects().catch(() => {});
+        logger.info('saveCurrentProject: done', {
+          projectId: currentProjectId,
+          chunksCount: chunksStore.chunks.length,
+          inputTextLen: inputText.length,
+        });
+        await get().loadProjects().catch(() => {});
         set({
           currentProjectId,
           saveState: 'saved',
@@ -186,6 +206,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
           trackedSnapshot: effectiveSnapshot,
         });
       } catch (error: any) {
+        logger.error('saveCurrentProject: failed', { message: error?.message });
         set({
           saveState: 'error',
           lastSaveError: error?.message ?? 'Failed to save project.',

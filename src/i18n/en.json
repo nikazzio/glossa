@@ -271,7 +271,8 @@
     "updatedMonthsAgo_one": "updated {{count}} month ago",
     "updatedMonthsAgo_other": "updated {{count}} months ago",
     "updatedYearsAgo_one": "updated {{count}} year ago",
-    "updatedYearsAgo_other": "updated {{count}} years ago"
+    "updatedYearsAgo_other": "updated {{count}} years ago",
+    "loadFailed": "Failed to load project"
   },
   "files": {
     "import": "Import text file",
@@ -383,6 +384,11 @@
     "insightsTabIndex": "Index",
     "insightsTabAudit": "Audit",
     "insightsTabStats": "Stats",
+    "insightsTabCoherence": "Coherence",
+    "insightsTabNotes": "Notes",
+    "chunkPanelTitle": "Chunk",
+    "openChunkPanel": "Open chunk panel",
+    "insightsNotesEmpty": "No footnotes extracted for this chunk.",
     "insightsAuditEmpty": "No judge result for this chunk yet.",
     "insightsAuditIssues": "Issues found",
     "insightsAuditNoIssues": "No issues raised by the judge.",

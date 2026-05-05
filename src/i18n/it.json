@@ -271,7 +271,8 @@
     "updatedMonthsAgo_one": "aggiornato {{count}} mese fa",
     "updatedMonthsAgo_other": "aggiornato {{count}} mesi fa",
     "updatedYearsAgo_one": "aggiornato {{count}} anno fa",
-    "updatedYearsAgo_other": "aggiornato {{count}} anni fa"
+    "updatedYearsAgo_other": "aggiornato {{count}} anni fa",
+    "loadFailed": "Caricamento progetto fallito"
   },
   "files": {
     "import": "Importa file di testo",
@@ -383,6 +384,11 @@
     "insightsTabIndex": "Indice",
     "insightsTabAudit": "Audit",
     "insightsTabStats": "Riepilogo",
+    "insightsTabCoherence": "Coerenza",
+    "insightsTabNotes": "Note",
+    "chunkPanelTitle": "Chunk",
+    "openChunkPanel": "Apri pannello chunk",
+    "insightsNotesEmpty": "Nessuna nota estratta per questo chunk.",
     "insightsAuditEmpty": "Nessuna valutazione disponibile per questo chunk.",
     "insightsAuditIssues": "Problemi rilevati",
     "insightsAuditNoIssues": "Nessun problema segnalato dal giudice.",

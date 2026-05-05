@@ -43,7 +43,7 @@ describe('chunksStore', () => {
 
     expect(useChunksStore.getState().chunks).toHaveLength(2);
     expect(useUiStore.getState().viewMode).toBe('document');
-    expect(useUiStore.getState().selectedChunkId).toBe('chunk-0');
+    expect(useUiStore.getState().selectedChunkId).toBe(useChunksStore.getState().chunks[0].id);
   });
 
   it('keeps sandbox mode for a single generated chunk', () => {
@@ -67,7 +67,7 @@ describe('chunksStore', () => {
       'Single imported paragraph.',
     );
     expect(useUiStore.getState().viewMode).toBe('document');
-    expect(useUiStore.getState().selectedChunkId).toBe('chunk-0');
+    expect(useUiStore.getState().selectedChunkId).toBe(useChunksStore.getState().chunks[0].id);
   });
 
   it('resets derived data when editing source text', () => {
@@ -84,7 +84,8 @@ describe('chunksStore', () => {
       })),
     );
 
-    useChunksStore.getState().updateChunkOriginalText('chunk-0', 'Edited source');
+    const chunkId = useChunksStore.getState().chunks[0].id;
+    useChunksStore.getState().updateChunkOriginalText(chunkId, 'Edited source');
 
     const chunk = useChunksStore.getState().chunks[0];
     expect(chunk.originalText).toBe('Edited source');
@@ -98,7 +99,7 @@ describe('chunksStore', () => {
     usePipelineStore.getState().setConfig((prev) => ({ ...prev, useChunking: false }));
     useChunksStore.getState().generateChunks();
 
-    useChunksStore.getState().splitChunk('chunk-0');
+    useChunksStore.getState().splitChunk(useChunksStore.getState().chunks[0].id);
     expect(useChunksStore.getState().chunks).toHaveLength(2);
 
     const firstChunkId = useChunksStore.getState().chunks[0].id;
@@ -117,7 +118,7 @@ describe('chunksStore', () => {
       targetChunkCount: 0,
     });
 
-    const didSplit = useChunksStore.getState().splitChunkAt('chunk-0', 11);
+    const didSplit = useChunksStore.getState().splitChunkAt(useChunksStore.getState().chunks[0].id, 11);
 
     expect(didSplit).toBe(true);
     expect(useChunksStore.getState().chunks).toHaveLength(2);

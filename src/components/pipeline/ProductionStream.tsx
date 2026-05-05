@@ -1,3 +1,4 @@
+import { memo, useMemo, useCallback } from 'react';
 import { Trash2, AlertTriangle, Pencil, RotateCcw, ScanLine, Highlighter } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
@@ -6,48 +7,63 @@ import { useUiStore } from '../../stores/uiStore';
 import { StatusIndicator, ProcessingLine, CopyButton, MarkdownEditor } from '../common';
 import { estimateTextStats, indexPad, recommendChunkCount } from '../../utils';
 import { confirm } from '../../stores/confirmStore';
-import { useGlossaryHighlight } from '../../hooks/useGlossaryHighlight';
-import type { GlossaryEntry, TranslationChunk } from '../../types';
+import { escapeHtml, useGlossaryHighlight } from '../../hooks/useGlossaryHighlight';
+import { highlightSuperscriptMarkersHtml } from '../../utils/footnoteExtractor';
+import { logger } from '../../utils/logger';
+import type { GlossaryEntry, PipelineStageConfig, TranslationChunk } from '../../types';
 
-function ChunkSourceText({
+const ChunkSourceText = memo(function ChunkSourceText({
   chunk,
   glossary,
   showHighlight,
   isProcessing,
+  markdownEnabled,
   onUpdate,
 }: {
   chunk: TranslationChunk;
   glossary: GlossaryEntry[];
   showHighlight: boolean;
   isProcessing: boolean;
+  markdownEnabled: boolean;
   onUpdate: (text: string) => void;
 }) {
-  const { html } = useGlossaryHighlight(chunk.originalText, glossary, 'source');
+  const { html: glossaryHtml } = useGlossaryHighlight(chunk.originalText, glossary, 'source');
+  const hasFootnotes = Boolean(chunk.footnotes?.length);
+  const showGlossary = showHighlight && chunk.status !== 'completed';
+
+  const highlightHtml = useMemo(() => {
+    if (!showGlossary && !hasFootnotes) return null;
+    const base = showGlossary ? glossaryHtml : escapeHtml(chunk.originalText);
+    return hasFootnotes ? highlightSuperscriptMarkersHtml(base) : base;
+  }, [showGlossary, hasFootnotes, glossaryHtml, chunk.originalText]);
+
   return (
     <MarkdownEditor
       value={chunk.originalText}
       onChange={onUpdate}
-      markdownEnabled={usePipelineStore.getState().config.markdownAware === true}
+      markdownEnabled={markdownEnabled}
       disabled={isProcessing}
       readOnly={chunk.status === 'completed'}
       minHeightClassName="min-h-[120px]"
       textClassName="border border-editorial-border bg-editorial-textbox/60 p-4 text-xs font-mono leading-relaxed text-editorial-ink"
       previewClassName="min-h-[120px] text-xs leading-relaxed text-editorial-ink"
-      highlightHtml={showHighlight && chunk.status !== 'completed' ? html : null}
+      highlightHtml={highlightHtml}
     />
   );
-}
+});
 
-function ChunkDraftText({
+const ChunkDraftText = memo(function ChunkDraftText({
   chunk,
   glossary,
   showHighlight,
+  markdownEnabled,
   onUpdate,
   placeholder,
 }: {
   chunk: TranslationChunk;
   glossary: GlossaryEntry[];
   showHighlight: boolean;
+  markdownEnabled: boolean;
   onUpdate: (text: string) => void;
   placeholder: string;
 }) {
@@ -56,7 +72,7 @@ function ChunkDraftText({
     <MarkdownEditor
       value={chunk.currentDraft || ''}
       onChange={onUpdate}
-      markdownEnabled={usePipelineStore.getState().config.markdownAware === true}
+      markdownEnabled={markdownEnabled}
       minHeightClassName="min-h-[100px]"
       textClassName="border border-editorial-border bg-editorial-bg/50 p-4 text-sm font-sans leading-relaxed text-editorial-ink"
       previewClassName="min-h-[100px] text-sm leading-relaxed text-editorial-ink"
@@ -64,7 +80,198 @@ function ChunkDraftText({
       highlightHtml={showHighlight ? html : null}
     />
   );
+});
+
+interface ChunkRowProps {
+  chunk: TranslationChunk;
+  idx: number;
+  isLast: boolean;
+  nextChunkStatus?: string;
+  glossary: GlossaryEntry[];
+  showHighlight: boolean;
+  isProcessing: boolean;
+  enabledStages: PipelineStageConfig[];
+  markdownEnabled: boolean;
+  onRetranslate: (id: string) => void;
+  onReaudit: (id: string) => void;
+  onUnlockSource: (id: string) => void;
+  onSplitChunk: (id: string) => void;
+  onMergeChunk: (id: string) => void;
+  onUpdateOriginal: (id: string, text: string) => void;
+  onUpdateDraft: (id: string, text: string) => void;
 }
+
+const ChunkRow = memo(function ChunkRow({
+  chunk,
+  idx,
+  isLast,
+  nextChunkStatus,
+  glossary,
+  showHighlight,
+  isProcessing,
+  enabledStages,
+  markdownEnabled,
+  onRetranslate,
+  onReaudit,
+  onUnlockSource,
+  onSplitChunk,
+  onMergeChunk,
+  onUpdateOriginal,
+  onUpdateDraft,
+}: ChunkRowProps) {
+  const { t } = useTranslation();
+
+  const handleUpdateOriginal = useCallback((text: string) => onUpdateOriginal(chunk.id, text), [chunk.id, onUpdateOriginal]);
+  const handleUpdateDraft = useCallback((text: string) => onUpdateDraft(chunk.id, text), [chunk.id, onUpdateDraft]);
+  const handleRetranslate = useCallback(() => onRetranslate(chunk.id), [chunk.id, onRetranslate]);
+  const handleReaudit = useCallback(() => onReaudit(chunk.id), [chunk.id, onReaudit]);
+  const handleUnlock = useCallback(() => onUnlockSource(chunk.id), [chunk.id, onUnlockSource]);
+  const handleSplit = useCallback(() => onSplitChunk(chunk.id), [chunk.id, onSplitChunk]);
+  const handleMerge = useCallback(() => onMergeChunk(chunk.id), [chunk.id, onMergeChunk]);
+
+  const canMerge = !isLast && nextChunkStatus !== 'completed' && nextChunkStatus !== 'processing';
+
+  return (
+    <div className="space-y-8 border-b border-editorial-border pb-16 last:border-0 last:pb-0 group">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="font-display italic text-2xl text-editorial-accent tracking-tighter">
+            {t('pipeline.unit')} {indexPad(idx + 1)}
+          </span>
+          <span className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted border border-editorial-border px-2 py-1">
+            {t(`pipeline.chunkStatus.${chunk.status}`)}
+          </span>
+        </div>
+        <div className="flex gap-4">
+          {enabledStages.map((s, si) => (
+            <StatusIndicator
+              key={s.id}
+              status={chunk.stageResults[s.id]?.status || 'idle'}
+              label={indexPad(si + 1)}
+            />
+          ))}
+          <StatusIndicator status={chunk.judgeResult.status} label="Audit" />
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
+              {t('pipeline.originalSource')}
+            </label>
+            <div role="toolbar" aria-label={t('pipeline.chunkActions')} className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={handleRetranslate}
+                disabled={isProcessing || chunk.originalText.trim().length === 0}
+                title={t('pipeline.retranslateChunk')}
+                className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent flex items-center gap-1"
+              >
+                <RotateCcw size={11} /> {t('pipeline.retranslateChunk')}
+              </button>
+              <button
+                type="button"
+                onClick={handleReaudit}
+                disabled={isProcessing || !chunk.currentDraft}
+                title={chunk.currentDraft ? t('pipeline.reauditChunk') : t('pipeline.auditSkippedNoDraft')}
+                className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent flex items-center gap-1"
+              >
+                <ScanLine size={11} /> {t('pipeline.reauditChunk')}
+              </button>
+              {chunk.status === 'completed' ? (
+                <button
+                  type="button"
+                  onClick={handleUnlock}
+                  disabled={isProcessing}
+                  className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent flex items-center gap-1"
+                  title={t('pipeline.unlockSourceHint')}
+                >
+                  <Pencil size={11} /> {t('pipeline.unlockSource')}
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleSplit}
+                    disabled={isProcessing || chunk.originalText.trim().length < 2}
+                    className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  >
+                    {t('pipeline.splitChunk')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleMerge}
+                    disabled={isProcessing || !canMerge}
+                    className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  >
+                    {t('pipeline.mergeNext')}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+          <ChunkSourceText
+            chunk={chunk}
+            glossary={glossary}
+            showHighlight={showHighlight}
+            isProcessing={isProcessing}
+            markdownEnabled={markdownEnabled}
+            onUpdate={handleUpdateOriginal}
+          />
+        </div>
+
+        {enabledStages.map((stage) => {
+          const result = chunk.stageResults[stage.id];
+          if (!result || result.status === 'idle') return null;
+          return (
+            <div
+              key={stage.id}
+              className={`relative border p-6 bg-editorial-bg/10 animate-in fade-in slide-in-from-left-2 duration-300 ${
+                result.status === 'error'
+                  ? 'border-editorial-accent/30 bg-editorial-textbox/30'
+                  : 'border-editorial-border'
+              }`}
+            >
+              <span className="absolute -top-3 left-6 bg-editorial-bg border border-editorial-border px-2 font-display italic text-[10px]">
+                {stage.name}
+              </span>
+              <div className="text-sm leading-relaxed overflow-hidden">
+                {result.status === 'processing' ? (
+                  <ProcessingLine />
+                ) : result.status === 'error' ? (
+                  <div className="flex items-start gap-2 text-editorial-accent">
+                    <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+                    <span className="text-xs font-mono">{result.error || t('errors.unknownError')}</span>
+                  </div>
+                ) : (
+                  <div className="text-editorial-ink">{result.content}</div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+
+        <div className="space-y-3 mt-8">
+          <div className="flex items-center justify-between">
+            <label className="block text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
+              {t('pipeline.candidateTranslation')}
+            </label>
+            <CopyButton text={chunk.currentDraft || ''} />
+          </div>
+          <ChunkDraftText
+            chunk={chunk}
+            glossary={glossary}
+            showHighlight={showHighlight}
+            markdownEnabled={markdownEnabled}
+            onUpdate={handleUpdateDraft}
+            placeholder={t('pipeline.candidatePlaceholder')}
+          />
+        </div>
+      </div>
+    </div>
+  );
+});
 
 interface ProductionStreamProps {
   onRetranslateChunk: (chunkId: string) => void;
@@ -75,12 +282,7 @@ export function ProductionStream({
   onRetranslateChunk,
   onReauditChunk,
 }: ProductionStreamProps) {
-  const {
-    inputText,
-    setInputText,
-    config,
-    setConfig,
-  } = usePipelineStore();
+  const { inputText, setInputText, config, setConfig } = usePipelineStore();
   const {
     chunks,
     isProcessing,
@@ -95,33 +297,68 @@ export function ProductionStream({
   } = useChunksStore();
   const { glossaryHighlightEnabled, setGlossaryHighlightEnabled } = useUiStore();
   const { t } = useTranslation();
-  const stats = estimateTextStats(inputText);
-  const recommendedChunks = recommendChunkCount(inputText);
+
+  const stats = useMemo(() => estimateTextStats(inputText), [inputText]);
+  const recommendedChunks = useMemo(() => recommendChunkCount(inputText), [inputText]);
+  const enabledStages = useMemo(() => config.stages.filter((s) => s.enabled), [config.stages]);
   const hasGlossary = config.glossary.length > 0;
   const showHighlight = glossaryHighlightEnabled && hasGlossary;
+  const markdownEnabled = config.markdownAware === true;
 
-  const handleClearStream = async () => {
+  const handleClearStream = useCallback(async () => {
     const ok = await confirm({
       title: t('pipeline.confirmClearTitle'),
       message: t('pipeline.confirmClearMessage'),
       confirmLabel: t('pipeline.clearStream'),
       danger: true,
     });
-    if (ok) {
-      clearChunks();
-      setInputText('');
-    }
-  };
+    if (!ok) return;
+    logger.info('stream.clear');
+    clearChunks();
+    setInputText('');
+  }, [t, clearChunks, setInputText]);
 
-  const handleUnlockSource = async (chunkId: string) => {
+  const handleUnlockSource = useCallback(async (chunkId: string) => {
     const ok = await confirm({
       title: t('pipeline.confirmUnlockTitle'),
       message: t('pipeline.confirmUnlockMessage'),
       confirmLabel: t('pipeline.unlockSource'),
       danger: true,
     });
-    if (ok) unlockChunkForEdit(chunkId);
-  };
+    if (!ok) return;
+    logger.info('chunk.unlock', { chunkId });
+    unlockChunkForEdit(chunkId);
+  }, [t, unlockChunkForEdit]);
+
+  const handleUpdateOriginal = useCallback(
+    (id: string, text: string) => updateChunkOriginalText(id, text),
+    [updateChunkOriginalText],
+  );
+
+  const handleUpdateDraft = useCallback(
+    (id: string, text: string) => updateChunkDraft(id, text),
+    [updateChunkDraft],
+  );
+
+  const handleSplitChunk = useCallback((id: string) => {
+    logger.debug('chunk.split', { chunkId: id });
+    splitChunk(id);
+  }, [splitChunk]);
+
+  const handleMergeChunk = useCallback((id: string) => {
+    logger.debug('chunk.merge', { chunkId: id });
+    mergeChunkWithNext(id);
+  }, [mergeChunkWithNext]);
+
+  const handleRetranslateChunk = useCallback((id: string) => {
+    logger.info('chunk.retranslate', { chunkId: id });
+    onRetranslateChunk(id);
+  }, [onRetranslateChunk]);
+
+  const handleReauditChunk = useCallback((id: string) => {
+    logger.info('chunk.reaudit', { chunkId: id });
+    onReauditChunk(id);
+  }, [onReauditChunk]);
 
   return (
     <section className="col-span-1 md:col-span-6 bg-editorial-bg p-8 overflow-y-auto min-h-0 h-full border-r border-editorial-border custom-scrollbar">
@@ -165,7 +402,7 @@ export function ProductionStream({
               <MarkdownEditor
                 value={inputText}
                 onChange={setInputText}
-                markdownEnabled={config.markdownAware === true}
+                markdownEnabled={markdownEnabled}
                 placeholder={t('pipeline.inputPlaceholder')}
                 minHeightClassName="min-h-[400px]"
                 textClassName="border-none bg-editorial-textbox p-8 text-sm font-mono leading-relaxed text-editorial-ink"
@@ -215,13 +452,7 @@ export function ProductionStream({
             {inputText.trim() && (
               <button
                 type="button"
-                onClick={() =>
-                  loadDocument(inputText, {
-                    useChunking: config.useChunking,
-                    targetChunkCount: config.targetChunkCount,
-                    markdownAware: config.markdownAware,
-                  })
-                }
+                onClick={() => loadDocument(inputText, { useChunking: config.useChunking, targetChunkCount: config.targetChunkCount, markdownAware: config.markdownAware })}
                 className="w-full rounded-full border border-editorial-border px-6 py-4 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink"
               >
                 {t('document.openInReader')}
@@ -245,13 +476,7 @@ export function ProductionStream({
             </div>
             <button
               type="button"
-              onClick={() =>
-                loadDocument(inputText, {
-                  useChunking: config.useChunking,
-                  targetChunkCount: config.targetChunkCount,
-                  markdownAware: config.markdownAware,
-                })
-              }
+              onClick={() => loadDocument(inputText, { useChunking: config.useChunking, targetChunkCount: config.targetChunkCount, markdownAware: config.markdownAware })}
               className="rounded-full border border-editorial-border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink"
             >
               {t('document.openInReader')}
@@ -260,160 +485,25 @@ export function ProductionStream({
         )}
 
         {chunks.map((chunk, idx) => (
-          <div
+          <ChunkRow
             key={chunk.id}
-            className="space-y-8 border-b border-editorial-border pb-16 last:border-0 last:pb-0 group"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="font-display italic text-2xl text-editorial-accent tracking-tighter">
-                  {t('pipeline.unit')} {indexPad(idx + 1)}
-                </span>
-                <span className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted border border-editorial-border px-2 py-1">
-                  {t(`pipeline.chunkStatus.${chunk.status}`)}
-                </span>
-              </div>
-              <div className="flex gap-4">
-                {config.stages
-                  .filter((s) => s.enabled)
-                  .map((s, si) => (
-                    <StatusIndicator
-                      key={s.id}
-                      status={chunk.stageResults[s.id]?.status || 'idle'}
-                      label={indexPad(si + 1)}
-                    />
-                  ))}
-                <StatusIndicator status={chunk.judgeResult.status} label="Audit" />
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
-                    {t('pipeline.originalSource')}
-                  </label>
-                  <div
-                    role="toolbar"
-                    aria-label={t('pipeline.chunkActions')}
-                    className="flex items-center gap-2 flex-wrap"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => onRetranslateChunk(chunk.id)}
-                      disabled={isProcessing || chunk.originalText.trim().length === 0}
-                      title={t('pipeline.retranslateChunk')}
-                      className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent flex items-center gap-1"
-                    >
-                      <RotateCcw size={11} /> {t('pipeline.retranslateChunk')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onReauditChunk(chunk.id)}
-                      disabled={isProcessing || !chunk.currentDraft}
-                      title={chunk.currentDraft ? t('pipeline.reauditChunk') : t('pipeline.auditSkippedNoDraft')}
-                      className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent flex items-center gap-1"
-                    >
-                      <ScanLine size={11} /> {t('pipeline.reauditChunk')}
-                    </button>
-                    {chunk.status === 'completed' ? (
-                      <button
-                        type="button"
-                        onClick={() => handleUnlockSource(chunk.id)}
-                        disabled={isProcessing}
-                        className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent flex items-center gap-1"
-                        title={t('pipeline.unlockSourceHint')}
-                      >
-                        <Pencil size={11} /> {t('pipeline.unlockSource')}
-                      </button>
-                    ) : (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => splitChunk(chunk.id)}
-                          disabled={isProcessing || chunk.originalText.trim().length < 2}
-                          className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                        >
-                          {t('pipeline.splitChunk')}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => mergeChunkWithNext(chunk.id)}
-                          disabled={
-                            isProcessing
-                            || idx === chunks.length - 1
-                            || chunks[idx + 1]?.status === 'completed'
-                            || chunks[idx + 1]?.status === 'processing'
-                          }
-                          className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                        >
-                          {t('pipeline.mergeNext')}
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <ChunkSourceText
-                  chunk={chunk}
-                  glossary={config.glossary}
-                  showHighlight={showHighlight}
-                  isProcessing={isProcessing}
-                  onUpdate={(text) => updateChunkOriginalText(chunk.id, text)}
-                />
-              </div>
-
-              {config.stages
-                .filter((s) => s.enabled)
-                .map((stage) => {
-                  const result = chunk.stageResults[stage.id];
-                  if (!result || result.status === 'idle') return null;
-
-                  return (
-                    <div
-                      key={stage.id}
-                      className={`relative border p-6 bg-editorial-bg/10 animate-in fade-in slide-in-from-left-2 duration-300 ${
-                        result.status === 'error'
-                          ? 'border-editorial-accent/30 bg-editorial-textbox/30'
-                          : 'border-editorial-border'
-                      }`}
-                    >
-                      <span className="absolute -top-3 left-6 bg-editorial-bg border border-editorial-border px-2 font-display italic text-[10px]">
-                        {stage.name}
-                      </span>
-                      <div className="text-sm leading-relaxed overflow-hidden">
-                        {result.status === 'processing' ? (
-                          <ProcessingLine />
-                        ) : result.status === 'error' ? (
-                          <div className="flex items-start gap-2 text-editorial-accent">
-                            <AlertTriangle size={14} className="mt-0.5 shrink-0" />
-                            <span className="text-xs font-mono">{result.error || t('errors.unknownError')}</span>
-                          </div>
-                        ) : (
-                          <div className="text-editorial-ink">{result.content}</div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-
-              {/* Editable Candidate Translation */}
-              <div className="space-y-3 mt-8">
-                <div className="flex items-center justify-between">
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
-                    {t('pipeline.candidateTranslation')}
-                  </label>
-                  <CopyButton text={chunk.currentDraft || ''} />
-                </div>
-                <ChunkDraftText
-                  chunk={chunk}
-                  glossary={config.glossary}
-                  showHighlight={showHighlight}
-                  onUpdate={(text) => updateChunkDraft(chunk.id, text)}
-                  placeholder={t('pipeline.candidatePlaceholder')}
-                />
-              </div>
-            </div>
-          </div>
+            chunk={chunk}
+            idx={idx}
+            isLast={idx === chunks.length - 1}
+            nextChunkStatus={chunks[idx + 1]?.status}
+            glossary={config.glossary}
+            showHighlight={showHighlight}
+            isProcessing={isProcessing}
+            enabledStages={enabledStages}
+            markdownEnabled={markdownEnabled}
+            onRetranslate={handleRetranslateChunk}
+            onReaudit={handleReauditChunk}
+            onUnlockSource={handleUnlockSource}
+            onSplitChunk={handleSplitChunk}
+            onMergeChunk={handleMergeChunk}
+            onUpdateOriginal={handleUpdateOriginal}
+            onUpdateDraft={handleUpdateDraft}
+          />
         ))}
       </div>
     </section>
