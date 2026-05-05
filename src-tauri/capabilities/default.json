@@ -37,6 +37,17 @@
         { "path": "$APPCONFIG/**" },
         { "path": "$TEMP/**" }
       ]
+    },
+    {
+      "identifier": "fs:allow-write-file",
+      "allow": [
+        { "path": "$DOCUMENT/**" },
+        { "path": "$DOWNLOAD/**" },
+        { "path": "$DESKTOP/**" },
+        { "path": "$APPDATA/**" },
+        { "path": "$APPCONFIG/**" },
+        { "path": "$TEMP/**" }
+      ]
     }
   ]
 }

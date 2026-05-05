@@ -497,7 +497,7 @@ fn export_markdown_docx_bytes(markdown: &str) -> Result<Vec<u8>, String> {
             .start_file("[Content_Types].xml", options)
             .map_err(|e| format!("Failed to write content types: {}", e))?;
         writer
-            .write_all(content_types_xml(document.footnotes.is_empty()).as_bytes())
+            .write_all(content_types_xml(!document.footnotes.is_empty()).as_bytes())
             .map_err(|e| format!("Failed to write content types: {}", e))?;
 
         writer
@@ -538,7 +538,7 @@ fn export_markdown_docx_bytes(markdown: &str) -> Result<Vec<u8>, String> {
             .start_file("word/_rels/document.xml.rels", options)
             .map_err(|e| format!("Failed to write document relationships: {}", e))?;
         writer
-            .write_all(document_relationships_xml(document.footnotes.is_empty()).as_bytes())
+            .write_all(document_relationships_xml(!document.footnotes.is_empty()).as_bytes())
             .map_err(|e| format!("Failed to write document relationships: {}", e))?;
 
         if !document.footnotes.is_empty() {

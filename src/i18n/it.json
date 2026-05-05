@@ -271,7 +271,8 @@
     "updatedMonthsAgo_one": "aggiornato {{count}} mese fa",
     "updatedMonthsAgo_other": "aggiornato {{count}} mesi fa",
     "updatedYearsAgo_one": "aggiornato {{count}} anno fa",
-    "updatedYearsAgo_other": "aggiornato {{count}} anni fa"
+    "updatedYearsAgo_other": "aggiornato {{count}} anni fa",
+    "loadFailed": "Caricamento progetto fallito"
   },
   "files": {
     "import": "Importa file di testo",

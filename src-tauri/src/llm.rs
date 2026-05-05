@@ -388,7 +388,10 @@ fn file_store_remove(app: &AppHandle, provider: &str) {
 }
 
 fn should_fallback_to_file_store(error: &keyring::Error) -> bool {
-    matches!(error, keyring::Error::NoStorageAccess(_))
+    matches!(
+        error,
+        keyring::Error::NoStorageAccess(_) | keyring::Error::PlatformFailure(_)
+    )
 }
 
 fn keyring_entry(provider: &str) -> Result<keyring::Entry, String> {
