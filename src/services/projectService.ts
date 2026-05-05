@@ -1,4 +1,5 @@
 import { select, execute, runInTransaction } from './dbService';
+import { logger } from '../utils/logger';
 import type {
   GlossaryEntry,
   JudgeResult,
@@ -357,8 +358,11 @@ async function saveTranslationsInternal(
   chunks: TranslationChunk[],
   run: ExecuteQuery,
 ): Promise<void> {
-  // Upsert ogni chunk — nessun DELETE preventivo, quindi nessuna finestra
-  // in cui i dati sono assenti in caso di errore a metà operazione.
+  logger.info('saveTranslationsInternal', { projectId, chunksCount: chunks.length });
+  if (chunks.length === 0) {
+    logger.info('saveTranslationsInternal: chunks empty, preserving existing translations', { projectId });
+    return;
+  }
   for (const [position, chunk] of chunks.entries()) {
     await run(
       `INSERT INTO translations (
@@ -392,15 +396,11 @@ async function saveTranslationsInternal(
   }
 
   // Rimuovi i chunk che non fanno più parte del progetto.
-  if (chunks.length > 0) {
-    const placeholders = chunks.map((_, i) => `$${i + 2}`).join(', ');
-    await run(
-      `DELETE FROM translations WHERE project_id = $1 AND id NOT IN (${placeholders})`,
-      [projectId, ...chunks.map((c) => c.id)],
-    );
-  } else {
-    await run('DELETE FROM translations WHERE project_id = $1', [projectId]);
-  }
+  const placeholders = chunks.map((_, i) => `$${i + 2}`).join(', ');
+  await run(
+    `DELETE FROM translations WHERE project_id = $1 AND id NOT IN (${placeholders})`,
+    [projectId, ...chunks.map((c) => c.id)],
+  );
 }
 
 function lastStageContent(stageResults: Record<string, PipelineResult>): string {

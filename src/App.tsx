@@ -1,4 +1,5 @@
-import { lazy, Suspense, useRef } from 'react';
+import { lazy, Suspense, useEffect, useRef } from 'react';
+import { initLogger } from './utils/logger';
 import { Header } from './components/layout';
 import { ErrorBoundary, ConfirmDialog } from './components/common';
 import { usePipeline } from './hooks/usePipeline';
@@ -37,6 +38,8 @@ const LibraryPanel = lazy(() =>
 );
 
 export default function App() {
+  useEffect(() => { void initLogger(); }, []);
+
   const {
     runPipeline,
     runAuditOnly,
