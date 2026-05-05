@@ -76,15 +76,27 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
     const { inputText, config } = usePipelineStore.getState();
     if (!inputText.trim()) return;
 
-    const chunks = buildChunks(inputText, {
+    let bodyText = inputText.trim();
+    let footnoteMap: Map<string, string> | undefined;
+
+    if (config.markdownAware) {
+      const extracted = extractFootnotes(bodyText);
+      bodyText = extracted.cleanText;
+      footnoteMap = extracted.footnoteMap.size > 0 ? extracted.footnoteMap : undefined;
+    }
+
+    const chunks = buildChunks(bodyText, {
       useChunking: config.useChunking,
       targetChunkCount: config.targetChunkCount,
       markdownAware: config.markdownAware,
       minWords: config.minWords,
       maxWords: config.maxWords,
       headingAware: config.headingAware,
-    });
+    }, footnoteMap);
 
+    usePipelineStore.getState().setInputText(
+      footnoteMap ? stripFootnoteMarkers(bodyText) : bodyText,
+    );
     useUiStore.getState().setViewMode(chunks.length > 1 ? 'document' : 'sandbox');
     syncSelectedChunk(chunks);
     set({ chunks });
@@ -97,7 +109,7 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
     let bodyText = trimmed;
     let footnoteMap: Map<string, string> | undefined;
 
-    if (options.extractFootnotes) {
+    if (options.extractFootnotes || options.markdownAware) {
       const extracted = extractFootnotes(trimmed);
       bodyText = extracted.cleanText;
       footnoteMap = extracted.footnoteMap.size > 0 ? extracted.footnoteMap : undefined;
