@@ -3,6 +3,18 @@ import type { Footnote } from '../types';
 const FOOTNOTE_DEF = /^\[\^([^\]]+)\]:\s*(.*)/;
 const FOOTNOTE_MARKER = /\[\^[^\]]+\]/g;
 
+// Superscript digits 0–9 (Unicode). Used to render inline footnote positions.
+const SUPERSCRIPT_DIGITS = '⁰¹²³⁴⁵⁶⁷⁸⁹';
+// Matches [¹], [²], [¹²], etc. — bracketed superscript markers in originalText.
+export const BRACKETED_SUPERSCRIPT_RE = /\[[⁰¹²³⁴-⁹]+\]/g;
+
+function toSuperscript(n: number): string {
+  return String(n)
+    .split('')
+    .map((d) => SUPERSCRIPT_DIGITS[Number(d)] ?? d)
+    .join('');
+}
+
 export function extractFootnotes(markdown: string): {
   cleanText: string;
   footnoteMap: Map<string, string>;
@@ -75,4 +87,28 @@ export function assignChunkFootnotes(
 
 export function stripFootnoteMarkers(text: string): string {
   return text.replace(FOOTNOTE_MARKER, '');
+}
+
+/**
+ * Replaces [^id] inline markers with bracketed superscript numbers, e.g. [¹].
+ * The id is parsed as an integer when possible; otherwise a sequential index is used.
+ * Call this instead of stripFootnoteMarkers when you want to keep position info visible.
+ */
+export function replaceMarkersWithSuperscripts(
+  text: string,
+  footnoteMap: Map<string, string>,
+): string {
+  const ids = [...footnoteMap.keys()];
+  const displayNum = (id: string): number => {
+    const n = parseInt(id, 10);
+    return Number.isFinite(n) && n > 0 ? n : ids.indexOf(id) + 1;
+  };
+  return text.replace(/\[\^([^\]]+)\]/g, (_, id) =>
+    footnoteMap.has(id) ? `[${toSuperscript(displayNum(id))}]` : '',
+  );
+}
+
+/** Strips bracketed superscript markers ([¹], [²], …) added by replaceMarkersWithSuperscripts. */
+export function stripSuperscriptMarkers(text: string): string {
+  return text.replace(BRACKETED_SUPERSCRIPT_RE, '');
 }

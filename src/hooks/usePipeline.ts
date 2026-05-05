@@ -6,6 +6,7 @@ import { useChunksStore } from '../stores/chunksStore';
 import { llmService, isStreamCancelledError } from '../services/llmService';
 import { withRetry, friendlyError } from '../utils/retry';
 import { qualityDefault, qualityFailure } from '../utils';
+import { stripSuperscriptMarkers } from '../utils/footnoteExtractor';
 import type { Issue, JudgeResult, TokenUsage, TranslationChunk } from '../types';
 
 function lastNWords(text: string, n: number): string {
@@ -99,7 +100,7 @@ export function usePipeline() {
             capturedUsage = undefined;
             updateChunkStage(chunk.id, stage.id, { content: '', status: 'processing' });
             return llmService.runStageStream(
-              chunk.originalText, stage, effectiveConfig, lastResult || undefined,
+              stripSuperscriptMarkers(chunk.originalText), stage, effectiveConfig, lastResult || undefined,
               (token) => appendChunkStageContent(chunk.id, stage.id, token),
               (usage) => { capturedUsage = usage; },
               stage.rollingContext !== false ? options.previousTranslation : undefined,
@@ -174,7 +175,7 @@ export function usePipeline() {
     });
     try {
       const judgeData = await withRetry(
-        () => llmService.judgeTranslation(chunk.originalText, textToAudit, effectiveConfig ?? config),
+        () => llmService.judgeTranslation(stripSuperscriptMarkers(chunk.originalText), textToAudit, effectiveConfig ?? config),
         { label: 'Audit' },
       );
       const judgeTokenUsage =
@@ -360,7 +361,7 @@ export function usePipeline() {
       try {
         const result = await withRetry(
           () => llmService.runCoherenceForChunk(
-            { original: chunk.originalText, translation: chunk.currentDraft!, prevContext, nextContext },
+            { original: stripSuperscriptMarkers(chunk.originalText), translation: chunk.currentDraft!, prevContext, nextContext },
             config,
           ),
           { label: 'Coherence audit' },

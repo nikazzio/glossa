@@ -9,7 +9,7 @@ import type {
 import { usePipelineStore } from './pipelineStore';
 import { useUiStore } from './uiStore';
 import { chunkText, findBestSplitIndex, generateId, qualityDefault, resolveSplitIndex } from '../utils';
-import { assignChunkFootnotes, extractFootnotes, stripFootnoteMarkers } from '../utils/footnoteExtractor';
+import { assignChunkFootnotes, extractFootnotes, replaceMarkersWithSuperscripts, stripFootnoteMarkers } from '../utils/footnoteExtractor';
 
 interface ChunksState {
   chunks: TranslationChunk[];
@@ -300,7 +300,7 @@ function buildChunks(
       ? assignChunkFootnotes(chunkTextValue, footnoteMap)
       : undefined;
     const originalText = footnoteMap
-      ? stripFootnoteMarkers(chunkTextValue)
+      ? replaceMarkersWithSuperscripts(chunkTextValue, footnoteMap)
       : chunkTextValue;
     return {
       id: generateId('chunk'),

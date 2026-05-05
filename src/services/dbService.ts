@@ -234,7 +234,15 @@ export async function runInTransaction<T>(
     const run = async (query: string, params: unknown[] = []) => {
       await conn.execute(query, params);
     };
-    return fn(run);
+    await conn.execute('BEGIN');
+    try {
+      const result = await fn(run);
+      await conn.execute('COMMIT');
+      return result;
+    } catch (error) {
+      try { await conn.execute('ROLLBACK'); } catch { /* ignore rollback error */ }
+      throw error;
+    }
   });
 }
 

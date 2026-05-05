@@ -73,6 +73,7 @@ export const useUiStore = create<UiState>()(
       viewMode: mode,
       showConfigDrawer: false,
       showDocumentDrawer: mode === 'document',
+      showChunkDrawer: false,
     }),
   setDocumentLayout: (layout) => set({ documentLayout: layout }),
   setSelectedChunkId: (chunkId) => set({ selectedChunkId: chunkId }),
