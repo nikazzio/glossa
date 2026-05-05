@@ -6,7 +6,8 @@ import { useUiStore } from '../../stores/uiStore';
 import { StatusIndicator, ProcessingLine, CopyButton, MarkdownEditor } from '../common';
 import { estimateTextStats, indexPad, recommendChunkCount } from '../../utils';
 import { confirm } from '../../stores/confirmStore';
-import { useGlossaryHighlight } from '../../hooks/useGlossaryHighlight';
+import { escapeHtml, useGlossaryHighlight } from '../../hooks/useGlossaryHighlight';
+import { highlightSuperscriptMarkersHtml } from '../../utils/footnoteExtractor';
 import type { GlossaryEntry, TranslationChunk } from '../../types';
 
 function ChunkSourceText({
@@ -22,7 +23,14 @@ function ChunkSourceText({
   isProcessing: boolean;
   onUpdate: (text: string) => void;
 }) {
-  const { html } = useGlossaryHighlight(chunk.originalText, glossary, 'source');
+  const { html: glossaryHtml } = useGlossaryHighlight(chunk.originalText, glossary, 'source');
+  const hasFootnotes = Boolean(chunk.footnotes?.length);
+  const showGlossary = showHighlight && chunk.status !== 'completed';
+  let highlightHtml: string | null = null;
+  if (showGlossary || hasFootnotes) {
+    const base = showGlossary ? glossaryHtml : escapeHtml(chunk.originalText);
+    highlightHtml = hasFootnotes ? highlightSuperscriptMarkersHtml(base) : base;
+  }
   return (
     <MarkdownEditor
       value={chunk.originalText}
@@ -33,7 +41,7 @@ function ChunkSourceText({
       minHeightClassName="min-h-[120px]"
       textClassName="border border-editorial-border bg-editorial-textbox/60 p-4 text-xs font-mono leading-relaxed text-editorial-ink"
       previewClassName="min-h-[120px] text-xs leading-relaxed text-editorial-ink"
-      highlightHtml={showHighlight && chunk.status !== 'completed' ? html : null}
+      highlightHtml={highlightHtml}
     />
   );
 }

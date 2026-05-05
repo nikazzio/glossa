@@ -367,7 +367,10 @@ export function MarkdownEditor({
           <HighlightedText html={highlightHtml} className={fillHeight ? `flex-1 min-h-0 overflow-y-auto ${textClassName}` : `${minHeightClassName} ${textClassName}`} />
         </div>
       ) : null}
-      {mode === 'write' && (!highlightHtml || readOnly) ? textarea : null}
+      {mode === 'write' && readOnly && highlightHtml ? (
+        <HighlightedText html={highlightHtml} className={fillHeight ? `flex-1 min-h-0 overflow-y-auto ${textClassName}` : `${minHeightClassName} ${textClassName}`} />
+      ) : null}
+      {mode === 'write' && !highlightHtml ? textarea : null}
       {mode === 'preview' ? preview : null}
       {mode === 'split' ? (
         <div className="grid gap-4 xl:grid-cols-2">

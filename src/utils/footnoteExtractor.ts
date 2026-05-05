@@ -113,3 +113,16 @@ export function replaceMarkersWithSuperscripts(
 export function stripSuperscriptMarkers(text: string): string {
   return text.replace(BRACKETED_SUPERSCRIPT_RE, '');
 }
+
+/**
+ * Post-processes an already HTML-escaped string, wrapping bracketed superscript
+ * markers in a styled span so they render in the editorial accent colour.
+ * Safe to call after escapeHtml or buildHtml — the bracket characters are not
+ * HTML special chars and pass through entity-escaping unchanged.
+ */
+export function highlightSuperscriptMarkersHtml(html: string): string {
+  return html.replace(
+    BRACKETED_SUPERSCRIPT_RE,
+    (match) => `<span class="text-editorial-accent font-mono font-semibold">${match}</span>`,
+  );
+}
