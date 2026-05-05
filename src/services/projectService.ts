@@ -1,6 +1,8 @@
 import { select, execute, runInTransaction } from './dbService';
 import { logger } from '../utils/logger';
 import type {
+  CoherenceResult,
+  Footnote,
   GlossaryEntry,
   JudgeResult,
   PipelineConfig,
@@ -35,6 +37,8 @@ export interface SavedTranslation {
   judge_rating: JudgeResult['rating'];
   translation_locked?: number | null;
   judge_issues: string; // JSON
+  coherence_result?: string | null;
+  footnotes?: string | null;
   created_at: string;
 }
 
@@ -66,6 +70,12 @@ export function restoreTranslations(rows: SavedTranslation[]): TranslationChunk[
       judgeResult.content ||
       lastStageContent(stageResults) ||
       '';
+    const coherenceResult = row.coherence_result
+      ? parseJson<CoherenceResult>(row.coherence_result, undefined as unknown as CoherenceResult)
+      : undefined;
+    const footnotes = row.footnotes
+      ? parseJson<Footnote[]>(row.footnotes, [])
+      : undefined;
     return {
       id: row.id,
       originalText: row.original_text,
@@ -74,6 +84,8 @@ export function restoreTranslations(rows: SavedTranslation[]): TranslationChunk[
       judgeResult,
       currentDraft: restoredDraft,
       translationLocked: row.translation_locked === 1,
+      ...(coherenceResult ? { coherenceResult } : {}),
+      ...(footnotes?.length ? { footnotes } : {}),
     };
   });
 }
@@ -367,9 +379,10 @@ async function saveTranslationsInternal(
     await run(
       `INSERT INTO translations (
          id, project_id, original_text, final_translation, position, chunk_status, stage_results,
-         judge_status, judge_rating, translation_locked, judge_issues
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         judge_status, judge_rating, translation_locked, judge_issues, coherence_result, footnotes
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        ON CONFLICT(id) DO UPDATE SET
+         project_id       = excluded.project_id,
          original_text    = excluded.original_text,
          final_translation = excluded.final_translation,
          position         = excluded.position,
@@ -378,7 +391,9 @@ async function saveTranslationsInternal(
          judge_status     = excluded.judge_status,
          judge_rating     = excluded.judge_rating,
          translation_locked = excluded.translation_locked,
-         judge_issues     = excluded.judge_issues`,
+         judge_issues     = excluded.judge_issues,
+         coherence_result = excluded.coherence_result,
+         footnotes        = excluded.footnotes`,
       [
         chunk.id,
         projectId,
@@ -391,6 +406,8 @@ async function saveTranslationsInternal(
         chunk.judgeResult.rating || qualityDefault(),
         chunk.translationLocked ? 1 : 0,
         JSON.stringify(chunk.judgeResult.issues),
+        chunk.coherenceResult ? JSON.stringify(chunk.coherenceResult) : null,
+        chunk.footnotes?.length ? JSON.stringify(chunk.footnotes) : null,
       ],
     );
   }

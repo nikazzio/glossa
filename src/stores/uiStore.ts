@@ -6,7 +6,8 @@ import type {
   ViewMode,
 } from '../types';
 
-export type InsightsDrawerTab = 'index' | 'stats' | 'audit';
+export type InsightsDrawerTab = 'index' | 'stats' | 'coherence';
+export type ChunkDrawerTab = 'audit' | 'notes';
 
 interface UiState {
   viewMode: ViewMode;
@@ -15,8 +16,10 @@ interface UiState {
   showSettings: boolean;
   showHelp: boolean;
   showConfigDrawer: boolean;
-  showInsightsDrawer: boolean;
-  insightsDrawerTab: InsightsDrawerTab;
+  showDocumentDrawer: boolean;
+  documentDrawerTab: InsightsDrawerTab;
+  showChunkDrawer: boolean;
+  chunkDrawerTab: ChunkDrawerTab;
   ollamaModels: string[];
   ollamaStatus: OllamaStatus;
   glossaryHighlightEnabled: boolean;
@@ -31,8 +34,10 @@ interface UiState {
   setShowSettings: (show: boolean) => void;
   setShowHelp: (show: boolean) => void;
   setShowConfigDrawer: (show: boolean) => void;
-  setShowInsightsDrawer: (show: boolean, tab?: InsightsDrawerTab) => void;
-  setInsightsDrawerTab: (tab: InsightsDrawerTab) => void;
+  setShowDocumentDrawer: (show: boolean, tab?: InsightsDrawerTab) => void;
+  setDocumentDrawerTab: (tab: InsightsDrawerTab) => void;
+  setShowChunkDrawer: (show: boolean, tab?: ChunkDrawerTab) => void;
+  setChunkDrawerTab: (tab: ChunkDrawerTab) => void;
   setOllamaModels: (models: string[]) => void;
   setOllamaStatus: (status: OllamaStatus) => void;
   setGlossaryHighlightEnabled: (enabled: boolean) => void;
@@ -51,8 +56,10 @@ export const useUiStore = create<UiState>()(
   showSettings: false,
   showHelp: false,
   showConfigDrawer: false,
-  showInsightsDrawer: true,
-  insightsDrawerTab: 'index',
+  showDocumentDrawer: true,
+  documentDrawerTab: 'index',
+  showChunkDrawer: false,
+  chunkDrawerTab: 'audit',
   ollamaModels: [],
   ollamaStatus: 'unknown',
   glossaryHighlightEnabled: false,
@@ -65,7 +72,7 @@ export const useUiStore = create<UiState>()(
     set({
       viewMode: mode,
       showConfigDrawer: false,
-      showInsightsDrawer: mode === 'document',
+      showDocumentDrawer: mode === 'document',
     }),
   setDocumentLayout: (layout) => set({ documentLayout: layout }),
   setSelectedChunkId: (chunkId) => set({ selectedChunkId: chunkId }),
@@ -76,7 +83,8 @@ export const useUiStore = create<UiState>()(
             showSettings: true,
             showHelp: false,
             showConfigDrawer: false,
-            showInsightsDrawer: false,
+            showDocumentDrawer: false,
+            showChunkDrawer: false,
           }
         : { showSettings: false, showHelp: state.showHelp },
     ),
@@ -87,7 +95,8 @@ export const useUiStore = create<UiState>()(
             showHelp: true,
             showSettings: false,
             showConfigDrawer: false,
-            showInsightsDrawer: false,
+            showDocumentDrawer: false,
+            showChunkDrawer: false,
           }
         : { showHelp: false, showSettings: state.showSettings },
     ),
@@ -96,25 +105,39 @@ export const useUiStore = create<UiState>()(
       show
         ? {
             showConfigDrawer: true,
-            showInsightsDrawer: false,
+            showDocumentDrawer: false,
+            showChunkDrawer: false,
             showSettings: false,
             showHelp: false,
           }
         : { showConfigDrawer: false },
     ),
-  setShowInsightsDrawer: (show, tab) =>
+  setShowDocumentDrawer: (show, tab) =>
     set((state) =>
       show
         ? {
-            showInsightsDrawer: true,
-            insightsDrawerTab: tab ?? state.insightsDrawerTab,
+            showDocumentDrawer: true,
+            documentDrawerTab: tab ?? state.documentDrawerTab,
             showConfigDrawer: false,
             showSettings: false,
             showHelp: false,
           }
-        : { showInsightsDrawer: false },
+        : { showDocumentDrawer: false },
     ),
-  setInsightsDrawerTab: (tab) => set({ insightsDrawerTab: tab }),
+  setDocumentDrawerTab: (tab) => set({ documentDrawerTab: tab }),
+  setShowChunkDrawer: (show, tab) =>
+    set((state) =>
+      show
+        ? {
+            showChunkDrawer: true,
+            chunkDrawerTab: tab ?? state.chunkDrawerTab,
+            showConfigDrawer: false,
+            showSettings: false,
+            showHelp: false,
+          }
+        : { showChunkDrawer: false },
+    ),
+  setChunkDrawerTab: (tab) => set({ chunkDrawerTab: tab }),
   setOllamaModels: (models) => set({ ollamaModels: models }),
   setOllamaStatus: (status) => set({ ollamaStatus: status }),
   setGlossaryHighlightEnabled: (enabled) => set({ glossaryHighlightEnabled: enabled }),

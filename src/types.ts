@@ -35,6 +35,12 @@ export interface PipelineStageConfig {
   targetLanguage?: string;
 }
 
+export interface Footnote {
+  id: string;
+  marker: string;
+  text: string;
+}
+
 export interface TranslationChunk {
   id: string;
   originalText: string;
@@ -44,6 +50,7 @@ export interface TranslationChunk {
   coherenceResult?: CoherenceResult;
   currentDraft?: string;
   translationLocked?: boolean;
+  footnotes?: Footnote[];
 }
 
 export interface TokenUsage {

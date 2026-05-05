@@ -198,7 +198,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
           chunksCount: chunksStore.chunks.length,
           inputTextLen: inputText.length,
         });
-        await get().loadProjects();
+        await get().loadProjects().catch(() => {});
         set({
           currentProjectId,
           saveState: 'saved',
