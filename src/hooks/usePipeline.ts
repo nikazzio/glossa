@@ -117,13 +117,13 @@ export function usePipeline() {
           status: 'completed',
           ...(capturedUsage ? { tokenUsage: capturedUsage } : {}),
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         if (isStreamCancelledError(error)) {
           updateChunkStage(chunk.id, stage.id, { content: '', status: 'idle' });
           updateChunkStatus(chunk.id, 'ready');
           return 'cancelled';
         }
-        const msg = friendlyError(error.message ?? String(error));
+        const msg = friendlyError(error instanceof Error ? error.message : String(error));
         updateChunkStage(chunk.id, stage.id, {
           content: '', status: 'error', error: msg,
         });
@@ -190,8 +190,8 @@ export function usePipeline() {
       } as JudgeResult);
       updateChunkStatus(chunk.id, 'completed');
       return 'completed';
-    } catch (error: any) {
-      const msg = friendlyError(error.message ?? String(error));
+    } catch (error: unknown) {
+      const msg = friendlyError(error instanceof Error ? error.message : String(error));
       updateChunkJudge(chunk.id, {
         content: textToAudit,
         status: 'error',
@@ -375,8 +375,8 @@ export function usePipeline() {
           issues: result.issues as Issue[],
           ...(tokenUsage ? { tokenUsage } : {}),
         });
-      } catch (error: any) {
-        const msg = friendlyError(error.message ?? String(error));
+      } catch (error: unknown) {
+        const msg = friendlyError(error instanceof Error ? error.message : String(error));
         updateChunkCoherence(chunk.id, { status: 'error', issues: [], error: msg });
         errorCount++;
       }

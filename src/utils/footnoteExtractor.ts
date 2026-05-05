@@ -7,7 +7,8 @@ const FOOTNOTE_MARKER = /(?<!\\)\[\^[^\]]+\]/g;
 // Superscript digits 0–9 (Unicode). Used to render inline footnote positions.
 const SUPERSCRIPT_DIGITS = '⁰¹²³⁴⁵⁶⁷⁸⁹';
 // Matches [¹], [²], [¹²], etc. — bracketed superscript markers in originalText.
-export const BRACKETED_SUPERSCRIPT_RE = /\[[⁰¹²³⁴-⁹]+\]/g;
+// ⁰ U+2070, ¹ U+00B9, ² U+00B2, ³ U+00B3 are not contiguous — enumerate explicitly.
+export const BRACKETED_SUPERSCRIPT_RE = /\[[⁰¹²³⁴⁵⁶⁷⁸⁹]+\]/g;
 
 function toSuperscript(n: number): string {
   return String(n)
