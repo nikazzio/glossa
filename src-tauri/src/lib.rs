@@ -23,16 +23,26 @@ pub fn run() {
 
   builder
     .setup(|app| {
+      #[allow(unused_mut)]
+      let mut log_targets: Vec<tauri_plugin_log::Target> = vec![
+        tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::LogDir {
+          file_name: Some("glossa".to_string()),
+        }),
+      ];
+      #[cfg(debug_assertions)]
+      {
+        log_targets.push(tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout));
+        log_targets.push(tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Webview));
+      }
+      let log_level = if cfg!(debug_assertions) {
+        log::LevelFilter::Debug
+      } else {
+        log::LevelFilter::Info
+      };
       app.handle().plugin(
         tauri_plugin_log::Builder::default()
-          .level(log::LevelFilter::Info)
-          .targets([
-            tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::LogDir {
-              file_name: Some("glossa".to_string()),
-            }),
-            tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout),
-            tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Webview),
-          ])
+          .level(log_level)
+          .targets(log_targets)
           .build(),
       )?;
       Ok(())

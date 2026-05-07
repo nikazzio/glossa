@@ -122,8 +122,16 @@ export function stripSuperscriptMarkers(text: string): string {
  * HTML special chars and pass through entity-escaping unchanged.
  */
 export function highlightSuperscriptMarkersHtml(html: string): string {
-  return html.replace(
-    BRACKETED_SUPERSCRIPT_RE,
-    (match) => `<span class="text-editorial-accent font-mono font-semibold">${match}</span>`,
-  );
+  // Split on HTML tags so the replacement only affects text nodes, not attributes.
+  return html
+    .split(/(<[^>]*>)/)
+    .map((segment, i) =>
+      i % 2 === 1
+        ? segment
+        : segment.replace(
+            BRACKETED_SUPERSCRIPT_RE,
+            (match) => `<span class="text-editorial-accent font-mono font-semibold">${match}</span>`,
+          ),
+    )
+    .join('');
 }

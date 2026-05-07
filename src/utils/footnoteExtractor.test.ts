@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   assignChunkFootnotes,
   extractFootnotes,
+  highlightSuperscriptMarkersHtml,
   replaceMarkersWithSuperscripts,
   stripFootnoteMarkers,
   stripSuperscriptMarkers,
@@ -87,5 +88,27 @@ describe('stripSuperscriptMarkers', () => {
 
   it('leaves normal text intact', () => {
     expect(stripSuperscriptMarkers('No markers here.')).toBe('No markers here.');
+  });
+});
+
+describe('highlightSuperscriptMarkersHtml', () => {
+  it('wraps bracketed superscripts in a span', () => {
+    const result = highlightSuperscriptMarkersHtml('Text [¹] end.');
+    expect(result).toContain('<span class="text-editorial-accent font-mono font-semibold">[¹]</span>');
+    expect(result).toContain('Text ');
+    expect(result).toContain(' end.');
+  });
+
+  it('does not inject spans into HTML tag attributes', () => {
+    const html = '<mark title="→ [¹]">word</mark>';
+    const result = highlightSuperscriptMarkersHtml(html);
+    expect(result).toBe('<mark title="→ [¹]">word</mark>');
+  });
+
+  it('wraps superscripts in text nodes adjacent to HTML tags', () => {
+    const html = '<mark title="term">text</mark> [¹]';
+    const result = highlightSuperscriptMarkersHtml(html);
+    expect(result).toContain('<mark title="term">text</mark>');
+    expect(result).toContain('<span class="text-editorial-accent font-mono font-semibold">[¹]</span>');
   });
 });

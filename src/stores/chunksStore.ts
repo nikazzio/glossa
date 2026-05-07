@@ -290,6 +290,7 @@ function resetChunkForSourceEdit<T extends TranslationChunk>(chunk: T): T {
     stageResults: {},
     judgeResult: createEmptyJudgeResult(),
     coherenceResult: undefined,
+    footnotes: undefined,
     currentDraft: '',
     translationLocked: false,
   };
