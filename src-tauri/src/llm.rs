@@ -1306,10 +1306,10 @@ fn build_stage_prompts(
         .iter()
         .map(|g| {
             format!(
-                "- {} -> {} ({})",
+                "- source: {}\n  target: {}\n  notes: {}",
                 g.term,
                 g.translation,
-                g.notes.as_deref().unwrap_or("")
+                g.notes.as_deref().unwrap_or("-")
             )
         })
         .collect::<Vec<_>>()
@@ -1324,18 +1324,32 @@ fn build_stage_prompts(
         ""
     };
 
+    let glossary_rules = if glossary_str.is_empty() {
+        "Glossary Constraints:\n- No glossary entries were provided.".to_string()
+    } else {
+        format!(
+            "Glossary Constraints:\n\
+             - Treat every glossary entry as mandatory terminology, not as a suggestion\n\
+             - When a source glossary term appears, use the required target term exactly unless the notes explicitly justify a variant\n\
+             - Preserve case, product names, abbreviations, and domain terminology consistently across the whole translation\n\
+             - Do not omit glossary terms, paraphrase them away, or replace them with near-synonyms\n\
+             - If a glossary term appears inside Markdown, links, or footnotes, still apply the glossary while preserving the surrounding syntax\n\
+             - Glossary entries:\n{}",
+            glossary_str,
+        )
+    };
+
     let system_prompt = format!(
         "You are an expert translator and linguist specialized in {} to {} translation.\n\n\
          Core Instructions:\n{}\n\n\
-         Glossary of Terms:\n{}{}",
+         Structural Preservation Rules:\n\
+         - Preserve paragraph boundaries and line breaks unless the source is clearly malformed\n\
+         - Do not collapse repeated spaces, tabs, list structure, or footnote placement when they carry formatting meaning\n\n\
+         {}{}",
         config.source_language,
         config.target_language,
         stage.prompt,
-        if glossary_str.is_empty() {
-            "No specific glossary entries.".to_string()
-        } else {
-            glossary_str
-        },
+        glossary_rules,
         markdown_rules,
     );
 
@@ -1889,7 +1903,8 @@ mod tests {
 
         assert!(system.contains("English to Italian"));
         assert!(system.contains("Translate accurately."));
-        assert!(system.contains("API -> API"));
+        assert!(system.contains("source: API"));
+        assert!(system.contains("target: API"));
         assert!(user.contains("Hello world"));
         assert!(!user.contains("Previous Iteration"));
         assert!(!user.contains("Previous Chunk Translation Context"));
@@ -1919,7 +1934,7 @@ mod tests {
         let stage = make_stage("gemini");
         let (system, _) = build_stage_prompts("text", &stage, &config, &None, &None);
 
-        assert!(system.contains("No specific glossary entries"));
+        assert!(system.contains("No glossary entries were provided"));
     }
 
     #[test]
@@ -1940,8 +1955,12 @@ mod tests {
         let stage = make_stage("gemini");
         let (system, _) = build_stage_prompts("text", &stage, &config, &None, &None);
 
-        assert!(system.contains("API -> API (tech)"));
-        assert!(system.contains("bug -> errore ()"));
+        assert!(system.contains("source: API"));
+        assert!(system.contains("target: API"));
+        assert!(system.contains("notes: tech"));
+        assert!(system.contains("source: bug"));
+        assert!(system.contains("target: errore"));
+        assert!(system.contains("Treat every glossary entry as mandatory terminology"));
     }
 
     #[test]
@@ -1954,6 +1973,7 @@ mod tests {
 
         assert!(system.contains("Markdown"));
         assert!(system.contains("Preserve every Markdown marker"));
+        assert!(system.contains("Preserve paragraph boundaries and line breaks"));
         assert!(user.contains("Text with note[^1]."));
     }
 

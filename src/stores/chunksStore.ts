@@ -76,7 +76,7 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
     const { inputText, config } = usePipelineStore.getState();
     if (!inputText.trim()) return;
 
-    let bodyText = inputText.trim();
+    let bodyText = trimOuterBlankLines(inputText);
     let footnoteMap: Map<string, string> | undefined;
 
     if (config.markdownAware) {
@@ -105,7 +105,7 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
   },
 
   loadDocument: (text, options = {}) => {
-    const trimmed = text.trim();
+    const trimmed = trimOuterBlankLines(text);
     if (!trimmed) return;
 
     let bodyText = trimmed;
@@ -246,7 +246,7 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
 
       const merged = resetChunkForSourceEdit({
         ...current,
-        originalText: `${current.originalText.trim()}\n\n${next.originalText.trim()}`,
+        originalText: `${current.originalText}\n\n${next.originalText}`,
       });
 
       const chunks = [
@@ -347,8 +347,8 @@ function splitChunkState(
     markdownAware: usePipelineStore.getState().config.markdownAware,
   });
   if (boundedSplitAt === null) return null;
-  const firstText = chunk.originalText.slice(0, boundedSplitAt).trim();
-  const secondText = chunk.originalText.slice(boundedSplitAt).trim();
+  const firstText = trimSplitFragment(chunk.originalText.slice(0, boundedSplitAt));
+  const secondText = trimSplitFragment(chunk.originalText.slice(boundedSplitAt));
   if (!firstText || !secondText) return null;
 
   const first = resetChunkForSourceEdit({ ...chunk, originalText: firstText });
@@ -376,4 +376,16 @@ function syncSelectedChunk(chunks: TranslationChunk[], preferredId?: string | nu
     return;
   }
   ui.setSelectedChunkId(chunks[0]?.id ?? null);
+}
+
+function trimOuterBlankLines(text: string): string {
+  return text
+    .replace(/^(?:[ \t]*\r?\n)+/, '')
+    .replace(/(?:\r?\n[ \t]*)+$/, '');
+}
+
+function trimSplitFragment(text: string): string {
+  return trimOuterBlankLines(text)
+    .replace(/^[ \t]+/, '')
+    .replace(/[ \t]+$/, '');
 }

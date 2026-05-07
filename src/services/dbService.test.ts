@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi, afterEach } from 'vitest';
+import { invoke } from '@tauri-apps/api/core';
 
 const dbState = vi.hoisted(() => {
   let failRollback = false;
@@ -50,22 +51,22 @@ describe('runInTransaction', () => {
     dbState.setFailRollback(false);
   });
 
-  it('wraps callback statements in BEGIN/COMMIT', async () => {
+  it('executes callback statements through the native transaction command', async () => {
     const { runInTransaction } = await import('./dbService');
 
     await runInTransaction(async (run) => {
       await run('INSERT INTO foo VALUES ($1)', ['bar']);
     });
 
-    const calls = dbState.db.execute.mock.calls.map(([q]: [string]) => q.trim());
-    expect(calls).toContain('INSERT INTO foo VALUES ($1)');
-    expect(calls).toContain('BEGIN');
-    expect(calls).toContain('COMMIT');
-    expect(calls.indexOf('BEGIN')).toBeLessThan(calls.indexOf('INSERT INTO foo VALUES ($1)'));
-    expect(calls.indexOf('INSERT INTO foo VALUES ($1)')).toBeLessThan(calls.indexOf('COMMIT'));
+    expect(invoke).toHaveBeenCalledWith('execute_transaction', {
+      db: 'sqlite:glossa.db',
+      statements: [{ query: 'INSERT INTO foo VALUES ($1)', params: ['bar'] }],
+    });
+    expect(dbState.db.execute).not.toHaveBeenCalledWith('BEGIN');
+    expect(dbState.db.execute).not.toHaveBeenCalledWith('COMMIT');
   });
 
-  it('issues ROLLBACK and re-throws the error when the callback throws', async () => {
+  it('does not execute staged statements when the callback throws', async () => {
     const { runInTransaction } = await import('./dbService');
 
     await expect(
@@ -75,10 +76,10 @@ describe('runInTransaction', () => {
       }),
     ).rejects.toThrow('simulated failure');
 
-    const calls = dbState.db.execute.mock.calls.map(([q]: [string]) => q.trim());
-    expect(calls).toContain('BEGIN');
-    expect(calls).toContain('ROLLBACK');
-    expect(calls).not.toContain('COMMIT');
+    expect(invoke).not.toHaveBeenCalledWith(
+      'execute_transaction',
+      expect.anything(),
+    );
   });
 
   it('returns the value produced by the callback', async () => {

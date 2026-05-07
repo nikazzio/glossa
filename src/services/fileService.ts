@@ -161,8 +161,8 @@ function buildPlainText(chunks: TranslationChunk[], separator = '\n\n'): string 
 
 function buildMarkdown(chunks: TranslationChunk[], separator = '\n\n'): string {
   return chunks
-    .map((chunk) => (chunk.currentDraft || chunk.originalText).trim())
-    .filter(Boolean)
+    .map((chunk) => chunk.currentDraft || chunk.originalText)
+    .filter((chunk) => chunk.trim().length > 0)
     .join(separator);
 }
 

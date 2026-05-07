@@ -65,8 +65,8 @@ export function buildSplitPreview(
       adjustedSplitAt: null,
     };
   }
-  const beforeText = text.slice(0, boundedSplitAt).trim();
-  const afterText = text.slice(boundedSplitAt).trim();
+  const beforeText = trimSplitFragment(text.slice(0, boundedSplitAt));
+  const afterText = trimSplitFragment(text.slice(boundedSplitAt));
 
   return {
     beforeText,
@@ -74,6 +74,18 @@ export function buildSplitPreview(
     isValid: beforeText.length > 0 && afterText.length > 0,
     adjustedSplitAt: boundedSplitAt,
   };
+}
+
+function trimOuterBlankLines(text: string): string {
+  return text
+    .replace(/^(?:[ \t]*\r?\n)+/, '')
+    .replace(/(?:\r?\n[ \t]*)+$/, '');
+}
+
+function trimSplitFragment(text: string): string {
+  return trimOuterBlankLines(text)
+    .replace(/^[ \t]+/, '')
+    .replace(/[ \t]+$/, '');
 }
 
 function buildImportWarnings(

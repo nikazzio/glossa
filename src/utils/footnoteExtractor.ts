@@ -70,6 +70,7 @@ export function assignChunkFootnotes(
   chunkText: string,
   footnoteMap: Map<string, string>,
 ): Footnote[] {
+  const ids = [...footnoteMap.keys()];
   const footnotes: Footnote[] = [];
   const markerRe = /(?<!\\)\[\^([^\]]+)\]/g;
   let match: RegExpExecArray | null;
@@ -79,7 +80,8 @@ export function assignChunkFootnotes(
     const id = match[1];
     if (!seen.has(id) && footnoteMap.has(id)) {
       seen.add(id);
-      footnotes.push({ id, marker: `[^${id}]`, text: footnoteMap.get(id)! });
+      const displayNum = ids.indexOf(id) + 1;
+      footnotes.push({ id, marker: `[${toSuperscript(displayNum)}]`, text: footnoteMap.get(id)! });
     }
   }
 
@@ -100,12 +102,8 @@ export function replaceMarkersWithSuperscripts(
   footnoteMap: Map<string, string>,
 ): string {
   const ids = [...footnoteMap.keys()];
-  const displayNum = (id: string): number => {
-    const n = parseInt(id, 10);
-    return Number.isFinite(n) && n > 0 ? n : ids.indexOf(id) + 1;
-  };
   return text.replace(/(?<!\\)\[\^([^\]]+)\]/g, (_, id) =>
-    footnoteMap.has(id) ? `[${toSuperscript(displayNum(id))}]` : '',
+    footnoteMap.has(id) ? `[${toSuperscript(ids.indexOf(id) + 1)}]` : '',
   );
 }
 

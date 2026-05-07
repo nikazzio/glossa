@@ -202,6 +202,8 @@ fn build_markdown_from_document_xml(
     let mut run_italic = false;
     let mut paragraph_style: Option<String> = None;
     let mut paragraph_is_list = false;
+    let mut footnote_number_by_id: BTreeMap<String, usize> = BTreeMap::new();
+    let mut referenced_footnotes: Vec<String> = Vec::new();
 
     loop {
         match reader.read_event() {
@@ -249,7 +251,17 @@ fn build_markdown_from_document_xml(
                         let value = id
                             .decode_and_unescape_value(reader.decoder())
                             .map_err(|e| format!("Failed to decode footnote id: {}", e))?;
-                        current_paragraph.push_str(&format!("[^{value}]"));
+                        let old_id = value.to_string();
+                        let number = match footnote_number_by_id.get(&old_id) {
+                            Some(existing) => *existing,
+                            None => {
+                                referenced_footnotes.push(old_id.clone());
+                                let next = referenced_footnotes.len();
+                                footnote_number_by_id.insert(old_id, next);
+                                next
+                            }
+                        };
+                        current_paragraph.push_str(&format!("[^{number}]"));
                     }
                 }
             }
@@ -291,10 +303,15 @@ fn build_markdown_from_document_xml(
     }
 
     let mut blocks = paragraphs;
-    if !footnotes.is_empty() {
-        let footnote_block = footnotes
+    if !referenced_footnotes.is_empty() {
+        let footnote_block = referenced_footnotes
             .iter()
-            .map(|(id, text)| format!("[^{id}]: {text}"))
+            .enumerate()
+            .filter_map(|(index, original_id)| {
+                footnotes
+                    .get(original_id)
+                    .map(|text| format!("[^{}]: {text}", index + 1))
+            })
             .collect::<Vec<_>>()
             .join("\n\n");
         if !footnote_block.trim().is_empty() {
@@ -1123,7 +1140,7 @@ mod tests {
 
         let extracted = extract_docx_markdown_from_bytes(&buffer).expect("expected markdown");
 
-        assert_eq!(extracted, "Alpha *beta* gamma[^2]\n\n[^2]: Footnote text");
+        assert_eq!(extracted, "Alpha *beta* gamma[^1]\n\n[^1]: Footnote text");
     }
 
     #[test]

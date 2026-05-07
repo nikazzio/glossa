@@ -1,3 +1,4 @@
+mod db;
 mod documents;
 mod llm;
 
@@ -48,6 +49,7 @@ pub fn run() {
       Ok(())
     })
     .invoke_handler(tauri::generate_handler![
+      db::execute_transaction,
       llm::run_stage,
       llm::run_stage_stream,
       llm::cancel_stream,
