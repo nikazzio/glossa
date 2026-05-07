@@ -118,6 +118,7 @@ export const useUiStore = create<UiState>()(
       show
         ? {
             showDocumentDrawer: true,
+            showChunkDrawer: false,
             documentDrawerTab: tab ?? state.documentDrawerTab,
             showConfigDrawer: false,
             showSettings: false,
@@ -131,6 +132,7 @@ export const useUiStore = create<UiState>()(
       show
         ? {
             showChunkDrawer: true,
+            showDocumentDrawer: false,
             chunkDrawerTab: tab ?? state.chunkDrawerTab,
             showConfigDrawer: false,
             showSettings: false,

@@ -38,7 +38,8 @@ import { estimatePipelineCost } from '../../utils/costEstimate';
 import { CopyButton, MarkdownEditor, ProcessingLine } from '../common';
 import { CostBreakdownPanel } from '../pipeline/CostBadge';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
-import { useGlossaryHighlight } from '../../hooks/useGlossaryHighlight';
+import { escapeHtml, useGlossaryHighlight } from '../../hooks/useGlossaryHighlight';
+import { highlightSuperscriptMarkersHtml } from '../../utils/footnoteExtractor';
 
 interface DocumentViewProps {
   onRetranslateChunk: (chunkId: string) => void;
@@ -169,6 +170,14 @@ export function DocumentView({
     showHighlight && paneFocus !== 'source' ? config.glossary : [],
     'translation',
   );
+
+  const sourceHighlightHtml = useMemo(() => {
+    const hasFootnotes = Boolean(currentChunk?.footnotes?.length);
+    const showGlossary = showHighlight && currentChunk?.status !== 'completed' && paneFocus !== 'translation';
+    if (!showGlossary && !hasFootnotes) return null;
+    const base = showGlossary ? sourceHighlight.html : escapeHtml(deferredOriginalText);
+    return hasFootnotes ? highlightSuperscriptMarkersHtml(base) : base;
+  }, [currentChunk?.footnotes?.length, currentChunk?.status, showHighlight, paneFocus, sourceHighlight.html, deferredOriginalText]);
 
   if (!currentChunk) {
     return (
@@ -458,7 +467,7 @@ export function DocumentView({
                 fillHeight
                 textClassName="text-[15px] leading-8 text-editorial-ink"
                 previewClassName="min-h-[280px] text-[15px] leading-8 text-editorial-ink"
-                highlightHtml={showHighlight && currentChunk.status !== 'completed' ? sourceHighlight.html : null}
+                highlightHtml={sourceHighlightHtml}
               />
             </DocumentPage>
           )}

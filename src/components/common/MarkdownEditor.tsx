@@ -191,16 +191,17 @@ export function MarkdownEditor({
           >
             {toolbarOpen ? <PanelTopClose size={15} /> : <PanelTopOpen size={15} />}
           </button>
-          <div className="flex items-center gap-2 text-editorial-muted">
-            <span className={`rounded-full border p-1.5 ${mode === 'write' ? 'border-editorial-ink bg-editorial-ink text-white' : 'border-editorial-border bg-white/70'}`}>
-              <Pencil size={13} />
+          {/* Mode indicators — non-interactive, show current editor state */}
+          <div className="flex items-center gap-1" aria-hidden="true">
+            <span className={`rounded-full p-1.5 transition-colors ${mode === 'write' ? 'bg-editorial-ink text-white' : 'text-editorial-border'}`}>
+              <Pencil size={11} />
             </span>
-            <span className={`rounded-full border p-1.5 ${mode === 'preview' ? 'border-editorial-ink bg-editorial-ink text-white' : 'border-editorial-border bg-white/70'}`}>
-              <Eye size={13} />
+            <span className={`rounded-full p-1.5 transition-colors ${mode === 'preview' ? 'bg-editorial-ink text-white' : 'text-editorial-border'}`}>
+              <Eye size={11} />
             </span>
             {markdownEnabled ? (
-              <span className={`rounded-full border p-1.5 ${mode === 'split' ? 'border-editorial-ink bg-editorial-ink text-white' : 'border-editorial-border bg-white/70'}`}>
-                <Columns2 size={13} />
+              <span className={`rounded-full p-1.5 transition-colors ${mode === 'split' ? 'bg-editorial-ink text-white' : 'text-editorial-border'}`}>
+                <Columns2 size={11} />
               </span>
             ) : null}
           </div>
@@ -242,10 +243,11 @@ export function MarkdownEditor({
             </span>
             <div className="flex items-center gap-1">
               <ToolbarButton
-                active={textSize === 'sm'}
-                onClick={() => setTextSize('sm')}
+                active={false}
+                onClick={() => setTextSize((s) => s === 'lg' ? 'md' : 'sm')}
                 title={t('editor.textSmall')}
                 ariaLabel={t('editor.textSmall')}
+                disabled={textSize === 'sm'}
               >
                 <Minus size={15} />
               </ToolbarButton>
@@ -258,10 +260,11 @@ export function MarkdownEditor({
                 <Type size={15} />
               </ToolbarButton>
               <ToolbarButton
-                active={textSize === 'lg'}
-                onClick={() => setTextSize('lg')}
+                active={false}
+                onClick={() => setTextSize((s) => s === 'sm' ? 'md' : 'lg')}
                 title={t('editor.textLarge')}
                 ariaLabel={t('editor.textLarge')}
+                disabled={textSize === 'lg'}
               >
                 <Plus size={15} />
               </ToolbarButton>
@@ -400,6 +403,7 @@ function ToolbarButton({
   return (
     <button
       type="button"
+      onMouseDown={(event) => event.preventDefault()}
       onClick={onClick}
       title={title}
       aria-label={ariaLabel}

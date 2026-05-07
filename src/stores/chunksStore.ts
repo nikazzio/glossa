@@ -94,10 +94,12 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
       headingAware: config.headingAware,
     }, footnoteMap);
 
+    const ui = useUiStore.getState();
     usePipelineStore.getState().setInputText(
       footnoteMap ? stripFootnoteMarkers(bodyText) : bodyText,
     );
-    useUiStore.getState().setViewMode(chunks.length > 1 ? 'document' : 'sandbox');
+    ui.setViewMode(chunks.length > 1 ? 'document' : 'sandbox');
+    if (chunks.length > 1) ui.setShowChunkDrawer(true);
     syncSelectedChunk(chunks);
     set({ chunks });
   },
@@ -116,10 +118,12 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
     }
 
     const chunks = buildChunks(bodyText, options, footnoteMap);
+    const ui = useUiStore.getState();
     usePipelineStore.getState().setInputText(
       footnoteMap ? stripFootnoteMarkers(bodyText) : bodyText,
     );
-    useUiStore.getState().setViewMode('document');
+    ui.setViewMode('document');
+    ui.setShowChunkDrawer(true);
     syncSelectedChunk(chunks);
     set({ chunks });
   },
