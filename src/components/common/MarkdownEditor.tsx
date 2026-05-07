@@ -12,7 +12,15 @@ import { HighlightedText } from './HighlightedText';
 
 type EditorMode = 'write' | 'preview' | 'split';
 
-const TEXT_SIZE_STEPS = ['0.75rem', '0.825rem', '0.9rem', '1rem', '1.125rem', '1.25rem', '1.375rem'] as const;
+const TEXT_SIZE_STEPS = [
+  { fontSize: '0.75rem', lineHeight: '1.5rem' },
+  { fontSize: '0.825rem', lineHeight: '1.65rem' },
+  { fontSize: '0.9rem', lineHeight: '1.8rem' },
+  { fontSize: '1rem', lineHeight: '2rem' },
+  { fontSize: '1.125rem', lineHeight: '2.25rem' },
+  { fontSize: '1.25rem', lineHeight: '2.5rem' },
+  { fontSize: '1.375rem', lineHeight: '2.75rem' },
+] as const;
 const DEFAULT_TEXT_SIZE_STEP = 3;
 
 interface MarkdownEditorProps {
@@ -50,6 +58,7 @@ export function MarkdownEditor({
 }: MarkdownEditorProps) {
   const { t } = useTranslation();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const highlightLayerRef = useRef<HTMLDivElement | null>(null);
   const [mode, setMode] = useState<EditorMode>('write');
   const [textSizeStep, setTextSizeStep] = useState(DEFAULT_TEXT_SIZE_STEP);
   const [selection, setSelection] = useState({ start: 0, end: 0 });
@@ -58,7 +67,7 @@ export function MarkdownEditor({
     if (mode === 'write' && !readOnly) return '';
     return renderMarkdownToHtmlFragment(value);
   }, [mode, readOnly, value]);
-  const textSizeStyle = { fontSize: TEXT_SIZE_STEPS[textSizeStep] };
+  const textSizeStyle = TEXT_SIZE_STEPS[textSizeStep];
   const activeCommands = useMemo(() => {
     if (!markdownEnabled || mode === 'preview') {
       return {
@@ -111,10 +120,17 @@ export function MarkdownEditor({
       element.focus();
       element.setSelectionRange(matchIndex, matchIndex + normalizedQuery.length);
       element.scrollTop = Math.max(0, element.scrollHeight * (matchIndex / Math.max(1, value.length)) - 120);
+      syncHighlightLayer();
       updateSelection(matchIndex, matchIndex + normalizedQuery.length);
       onFocusQueryHandled?.();
     });
   }, [focusQuery, focusRequestId, onFocusQueryHandled, value]);
+
+  const syncHighlightLayer = () => {
+    if (highlightLayerRef.current && textareaRef.current) {
+      highlightLayerRef.current.scrollTop = textareaRef.current.scrollTop;
+    }
+  };
 
   const updateSelection = (start: number, end: number) => {
     setSelection((current) =>
@@ -363,13 +379,38 @@ export function MarkdownEditor({
         ) : null}
       </div>
       {mode === 'write' && !readOnly && highlightHtml ? (
-        <div className={fillHeight ? 'flex flex-col flex-1 min-h-0' : 'space-y-2'}>
-          {textarea}
-          <HighlightedText html={highlightHtml} className={fillHeight ? `flex-1 min-h-0 overflow-y-auto ${textClassName}` : `${minHeightClassName} ${textClassName}`} />
-        </div>
+        fillHeight ? (
+          // Overlay: HighlightedText behind transparent textarea — styled text visible while editing
+          <div className={`relative flex-1 min-h-0${disabled ? ' opacity-70' : ''}`}>
+            <HighlightedText
+              ref={highlightLayerRef}
+              html={highlightHtml}
+              style={{ ...textSizeStyle, minHeight: 0 }}
+              className={`pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words select-none ${textClassName}`}
+            />
+            <textarea
+              ref={textareaRef}
+              value={value}
+              onChange={(event) => onChange(event.target.value)}
+              disabled={disabled}
+              placeholder={placeholder}
+              onClick={syncSelection}
+              onKeyUp={syncSelection}
+              onSelect={syncSelection}
+              onScroll={syncHighlightLayer}
+              className="absolute inset-0 h-full w-full resize-none bg-transparent outline-none"
+              style={{ ...textSizeStyle, color: 'transparent', caretColor: 'var(--color-editorial-ink)' }}
+            />
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {textarea}
+            <HighlightedText html={highlightHtml} style={textSizeStyle} className={`${minHeightClassName} ${textClassName}`} />
+          </div>
+        )
       ) : null}
       {mode === 'write' && readOnly && highlightHtml ? (
-        <HighlightedText html={highlightHtml} className={fillHeight ? `flex-1 min-h-0 overflow-y-auto ${textClassName}` : `${minHeightClassName} ${textClassName}`} />
+        <HighlightedText html={highlightHtml} style={textSizeStyle} className={fillHeight ? `flex-1 min-h-0 overflow-y-auto ${textClassName}` : `${minHeightClassName} ${textClassName}`} />
       ) : null}
       {mode === 'write' && !highlightHtml ? textarea : null}
       {mode === 'preview' ? preview : null}
