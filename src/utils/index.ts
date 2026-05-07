@@ -329,10 +329,16 @@ type BlockRange = {
   end: number;
 };
 
-function trimOuterBlankLines(text: string): string {
+export function trimOuterBlankLines(text: string): string {
   return text
     .replace(/^(?:[ \t]*\r?\n)+/, '')
     .replace(/(?:\r?\n[ \t]*)+$/, '');
+}
+
+export function trimSplitFragment(text: string): string {
+  return trimOuterBlankLines(text)
+    .replace(/^[ \t]+/, '')
+    .replace(/[ \t]+$/, '');
 }
 
 function getBlockRanges(text: string): BlockRange[] {

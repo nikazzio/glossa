@@ -8,7 +8,15 @@ import type {
 } from '../types';
 import { usePipelineStore } from './pipelineStore';
 import { useUiStore } from './uiStore';
-import { chunkText, findBestSplitIndex, generateId, qualityDefault, resolveSplitIndex } from '../utils';
+import {
+  chunkText,
+  findBestSplitIndex,
+  generateId,
+  qualityDefault,
+  resolveSplitIndex,
+  trimOuterBlankLines,
+  trimSplitFragment,
+} from '../utils';
 import { assignChunkFootnotes, extractFootnotes, replaceMarkersWithSuperscripts, stripFootnoteMarkers } from '../utils/footnoteExtractor';
 
 interface ChunksState {
@@ -376,16 +384,4 @@ function syncSelectedChunk(chunks: TranslationChunk[], preferredId?: string | nu
     return;
   }
   ui.setSelectedChunkId(chunks[0]?.id ?? null);
-}
-
-function trimOuterBlankLines(text: string): string {
-  return text
-    .replace(/^(?:[ \t]*\r?\n)+/, '')
-    .replace(/(?:\r?\n[ \t]*)+$/, '');
-}
-
-function trimSplitFragment(text: string): string {
-  return trimOuterBlankLines(text)
-    .replace(/^[ \t]+/, '')
-    .replace(/[ \t]+$/, '');
 }

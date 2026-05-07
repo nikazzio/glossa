@@ -1,4 +1,4 @@
-import { chunkText, estimateTextStats, resolveSplitIndex } from './index';
+import { chunkText, estimateTextStats, resolveSplitIndex, trimSplitFragment } from './index';
 
 export interface ImportPreviewChunk {
   index: number;
@@ -75,19 +75,6 @@ export function buildSplitPreview(
     adjustedSplitAt: boundedSplitAt,
   };
 }
-
-function trimOuterBlankLines(text: string): string {
-  return text
-    .replace(/^(?:[ \t]*\r?\n)+/, '')
-    .replace(/(?:\r?\n[ \t]*)+$/, '');
-}
-
-function trimSplitFragment(text: string): string {
-  return trimOuterBlankLines(text)
-    .replace(/^[ \t]+/, '')
-    .replace(/[ \t]+$/, '');
-}
-
 function buildImportWarnings(
   text: string,
   options: {

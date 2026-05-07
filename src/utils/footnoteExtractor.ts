@@ -70,7 +70,7 @@ export function assignChunkFootnotes(
   chunkText: string,
   footnoteMap: Map<string, string>,
 ): Footnote[] {
-  const ids = [...footnoteMap.keys()];
+  const displayNumberById = buildDisplayNumberById(footnoteMap);
   const footnotes: Footnote[] = [];
   const markerRe = /(?<!\\)\[\^([^\]]+)\]/g;
   let match: RegExpExecArray | null;
@@ -80,7 +80,7 @@ export function assignChunkFootnotes(
     const id = match[1];
     if (!seen.has(id) && footnoteMap.has(id)) {
       seen.add(id);
-      const displayNum = ids.indexOf(id) + 1;
+      const displayNum = displayNumberById.get(id)!;
       footnotes.push({ id, marker: `[${toSuperscript(displayNum)}]`, text: footnoteMap.get(id)! });
     }
   }
@@ -94,16 +94,16 @@ export function stripFootnoteMarkers(text: string): string {
 
 /**
  * Replaces [^id] inline markers with bracketed superscript numbers, e.g. [¹].
- * The id is parsed as an integer when possible; otherwise a sequential index is used.
+ * Display numbers are assigned from footnote definition order.
  * Call this instead of stripFootnoteMarkers when you want to keep position info visible.
  */
 export function replaceMarkersWithSuperscripts(
   text: string,
   footnoteMap: Map<string, string>,
 ): string {
-  const ids = [...footnoteMap.keys()];
+  const displayNumberById = buildDisplayNumberById(footnoteMap);
   return text.replace(/(?<!\\)\[\^([^\]]+)\]/g, (_, id) =>
-    footnoteMap.has(id) ? `[${toSuperscript(ids.indexOf(id) + 1)}]` : '',
+    footnoteMap.has(id) ? `[${toSuperscript(displayNumberById.get(id)!)}]` : '',
   );
 }
 
@@ -131,4 +131,8 @@ export function highlightSuperscriptMarkersHtml(html: string): string {
           ),
     )
     .join('');
+}
+
+function buildDisplayNumberById(footnoteMap: Map<string, string>): Map<string, number> {
+  return new Map([...footnoteMap.keys()].map((id, index) => [id, index + 1]));
 }

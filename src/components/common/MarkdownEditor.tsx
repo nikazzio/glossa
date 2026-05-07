@@ -163,6 +163,8 @@ export function MarkdownEditor({
     });
   };
 
+  const textareaClassName = `${fillHeight ? 'flex-1 min-h-[100px] h-0' : minHeightClassName} w-full resize-y bg-transparent outline-none ${textClassName} disabled:opacity-70 read-only:cursor-not-allowed`;
+
   const textarea = (
     <textarea
       ref={textareaRef}
@@ -174,7 +176,7 @@ export function MarkdownEditor({
       onClick={syncSelection}
       onKeyUp={syncSelection}
       onSelect={syncSelection}
-      className={`${fillHeight ? 'flex-1 min-h-[100px] h-0' : minHeightClassName} w-full resize-y bg-transparent outline-none ${textClassName} disabled:opacity-70 read-only:cursor-not-allowed`}
+      className={textareaClassName}
       style={textSizeStyle}
     />
   );
@@ -381,7 +383,7 @@ export function MarkdownEditor({
       {mode === 'write' && !readOnly && highlightHtml ? (
         fillHeight ? (
           // Overlay: HighlightedText behind transparent textarea — styled text visible while editing
-          <div className={`relative flex-1 min-h-0${disabled ? ' opacity-70' : ''}`}>
+          <div className="relative flex-1 min-h-0">
             <HighlightedText
               ref={highlightLayerRef}
               html={highlightHtml}
@@ -398,7 +400,7 @@ export function MarkdownEditor({
               onKeyUp={syncSelection}
               onSelect={syncSelection}
               onScroll={syncHighlightLayer}
-              className="absolute inset-0 h-full w-full resize-none bg-transparent outline-none"
+              className={`${textareaClassName} absolute inset-0 h-full w-full resize-none`}
               style={{ ...textSizeStyle, color: 'transparent', caretColor: 'var(--color-editorial-ink)' }}
             />
           </div>
@@ -504,4 +506,3 @@ function ToolbarLabel({ children }: { children: ReactNode }) {
 function ToolbarSeparator() {
   return <span className="mx-1 h-5 w-px bg-editorial-border/80" aria-hidden="true" />;
 }
-
