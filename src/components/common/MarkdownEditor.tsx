@@ -230,7 +230,7 @@ export function MarkdownEditor({
               title={t('editor.write')}
               ariaLabel={t('editor.write')}
             >
-              <PencilIcon />
+              <Pencil size={15} />
             </ToolbarButton>
             <ToolbarButton
               active={mode === 'preview'}
@@ -362,7 +362,7 @@ export function MarkdownEditor({
               ariaLabel={t('editor.unorderedList')}
               disabled={commandEditingDisabled}
             >
-              <ListIcon />
+              <List size={15} />
             </CommandButton>
             <CommandButton
               active={activeCommands['ordered-list']}
@@ -371,7 +371,7 @@ export function MarkdownEditor({
               ariaLabel={t('editor.orderedList')}
               disabled={commandEditingDisabled}
             >
-              <ListOrderedIcon />
+              <ListOrdered size={15} />
             </CommandButton>
           </div>
         ) : null}
@@ -386,7 +386,7 @@ export function MarkdownEditor({
               ref={highlightLayerRef}
               html={highlightHtml}
               style={{ ...textSizeStyle, minHeight: 0 }}
-              className={`pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words select-none ${textClassName}`}
+              className={`pointer-events-none absolute inset-0 overflow-y-scroll scrollbar-hidden whitespace-pre-wrap break-words select-none ${textClassName}`}
             />
             <textarea
               ref={textareaRef}
@@ -505,14 +505,3 @@ function ToolbarSeparator() {
   return <span className="mx-1 h-5 w-px bg-editorial-border/80" aria-hidden="true" />;
 }
 
-function PencilIcon() {
-  return <Pencil size={15} />;
-}
-
-function ListIcon() {
-  return <List size={15} />;
-}
-
-function ListOrderedIcon() {
-  return <ListOrdered size={15} />;
-}

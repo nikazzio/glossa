@@ -12,7 +12,7 @@ export const HighlightedText = forwardRef<HTMLDivElement, Props>(
     return (
       <div
         ref={ref}
-        className={`min-h-[420px] w-full resize-none text-[15px] leading-8 text-editorial-ink ${className}`}
+        className={`w-full ${className}`}
         style={style}
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: html }}

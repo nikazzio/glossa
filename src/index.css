@@ -62,7 +62,14 @@ mark.hl-mismatch {
 }
 
 .hl-footnote-marker {
-  color: var(--color-editorial-accent) !important;
+  color: var(--color-editorial-accent);
   font-family: var(--font-mono);
   font-weight: 600;
+}
+
+.scrollbar-hidden {
+  scrollbar-width: none;
+}
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
 }

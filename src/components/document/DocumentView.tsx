@@ -172,12 +172,12 @@ export function DocumentView({
   );
 
   const sourceHighlightHtml = useMemo(() => {
-    const hasFootnotes = Boolean(currentChunk?.footnotes?.length);
+    const hasFootnoteMarkers = /\[[⁰¹²³⁴⁵⁶⁷⁸⁹]/.test(deferredOriginalText);
     const showGlossary = showHighlight && currentChunk?.status !== 'completed' && paneFocus !== 'translation';
-    if (!showGlossary && !hasFootnotes) return null;
+    if (!showGlossary && !hasFootnoteMarkers) return null;
     const base = showGlossary ? sourceHighlight.html : escapeHtml(deferredOriginalText);
-    return hasFootnotes ? highlightSuperscriptMarkersHtml(base) : base;
-  }, [currentChunk?.footnotes?.length, currentChunk?.status, showHighlight, paneFocus, sourceHighlight.html, deferredOriginalText]);
+    return hasFootnoteMarkers ? highlightSuperscriptMarkersHtml(base) : base;
+  }, [deferredOriginalText, currentChunk?.status, showHighlight, paneFocus, sourceHighlight.html]);
 
   if (!currentChunk) {
     return (

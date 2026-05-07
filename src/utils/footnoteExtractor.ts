@@ -44,7 +44,7 @@ export function extractFootnotes(markdown: string): {
 function parseFootnoteDefinitions(lines: string[]): Map<string, string> {
   const map = new Map<string, string>();
   let currentId: string | null = null;
-  const currentTextLines: string[] = [];
+  let currentTextLines: string[] = [];
 
   for (const line of lines) {
     const match = line.match(FOOTNOTE_DEF);
@@ -53,8 +53,7 @@ function parseFootnoteDefinitions(lines: string[]): Map<string, string> {
         map.set(currentId, currentTextLines.join('\n').trim());
       }
       currentId = match[1];
-      currentTextLines.length = 0;
-      currentTextLines.push(match[2]);
+      currentTextLines = [match[2]];
     } else if (currentId !== null) {
       currentTextLines.push(line);
     }
