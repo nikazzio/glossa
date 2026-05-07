@@ -60,3 +60,9 @@ mark.hl-mismatch {
   color: inherit;
   cursor: help;
 }
+
+.hl-footnote-marker {
+  color: var(--color-editorial-accent);
+  font-family: var(--font-mono);
+  font-weight: 600;
+}

@@ -94,7 +94,7 @@ describe('stripSuperscriptMarkers', () => {
 describe('highlightSuperscriptMarkersHtml', () => {
   it('wraps bracketed superscripts in a span', () => {
     const result = highlightSuperscriptMarkersHtml('Text [¹] end.');
-    expect(result).toContain('<span class="text-editorial-accent font-mono font-semibold">[¹]</span>');
+    expect(result).toContain('<span class="hl-footnote-marker">[¹]</span>');
     expect(result).toContain('Text ');
     expect(result).toContain(' end.');
   });
@@ -109,6 +109,6 @@ describe('highlightSuperscriptMarkersHtml', () => {
     const html = '<mark title="term">text</mark> [¹]';
     const result = highlightSuperscriptMarkersHtml(html);
     expect(result).toContain('<mark title="term">text</mark>');
-    expect(result).toContain('<span class="text-editorial-accent font-mono font-semibold">[¹]</span>');
+    expect(result).toContain('<span class="hl-footnote-marker">[¹]</span>');
   });
 });

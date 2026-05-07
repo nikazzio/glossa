@@ -130,7 +130,7 @@ export function highlightSuperscriptMarkersHtml(html: string): string {
         ? segment
         : segment.replace(
             BRACKETED_SUPERSCRIPT_RE,
-            (match) => `<span class="text-editorial-accent font-mono font-semibold">${match}</span>`,
+            (match) => `<span class="hl-footnote-marker">${match}</span>`,
           ),
     )
     .join('');

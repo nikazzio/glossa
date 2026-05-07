@@ -11,7 +11,9 @@ import {
 import { HighlightedText } from './HighlightedText';
 
 type EditorMode = 'write' | 'preview' | 'split';
-type TextSize = 'sm' | 'md' | 'lg';
+
+const TEXT_SIZE_STEPS = ['0.75rem', '0.825rem', '0.9rem', '1rem', '1.125rem', '1.25rem', '1.375rem'] as const;
+const DEFAULT_TEXT_SIZE_STEP = 3;
 
 interface MarkdownEditorProps {
   value: string;
@@ -49,18 +51,14 @@ export function MarkdownEditor({
   const { t } = useTranslation();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [mode, setMode] = useState<EditorMode>('write');
-  const [textSize, setTextSize] = useState<TextSize>('md');
+  const [textSizeStep, setTextSizeStep] = useState(DEFAULT_TEXT_SIZE_STEP);
   const [selection, setSelection] = useState({ start: 0, end: 0 });
   const [toolbarOpen, setToolbarOpen] = useState(false);
   const previewHtml = useMemo(() => {
     if (mode === 'write' && !readOnly) return '';
     return renderMarkdownToHtmlFragment(value);
   }, [mode, readOnly, value]);
-  const textSizeStyles: Record<TextSize, { fontSize: string }> = {
-    sm: { fontSize: '0.95rem' },
-    md: { fontSize: '1rem' },
-    lg: { fontSize: '1.125rem' },
-  };
+  const textSizeStyle = { fontSize: TEXT_SIZE_STEPS[textSizeStep] };
   const activeCommands = useMemo(() => {
     if (!markdownEnabled || mode === 'preview') {
       return {
@@ -161,14 +159,14 @@ export function MarkdownEditor({
       onKeyUp={syncSelection}
       onSelect={syncSelection}
       className={`${fillHeight ? 'flex-1 min-h-[100px] h-0' : minHeightClassName} w-full resize-y bg-transparent outline-none ${textClassName} disabled:opacity-70 read-only:cursor-not-allowed`}
-      style={textSizeStyles[textSize]}
+      style={textSizeStyle}
     />
   );
 
   const preview = (
     <div
       className={`${minHeightClassName} rounded-2xl border border-editorial-border/70 bg-editorial-bg/55 p-4 ${previewClassName}`}
-      style={textSizeStyles[textSize]}
+      style={textSizeStyle}
     >
       {value.trim() ? (
         <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
@@ -193,14 +191,14 @@ export function MarkdownEditor({
           </button>
           {/* Mode indicators — non-interactive, show current editor state */}
           <div className="flex items-center gap-1" aria-hidden="true">
-            <span className={`rounded-full p-1.5 transition-colors ${mode === 'write' ? 'bg-editorial-ink text-white' : 'text-editorial-border'}`}>
+            <span className={`rounded-full p-1.5 transition-colors ${mode === 'write' ? 'bg-editorial-accent text-white' : 'text-editorial-border'}`}>
               <Pencil size={11} />
             </span>
-            <span className={`rounded-full p-1.5 transition-colors ${mode === 'preview' ? 'bg-editorial-ink text-white' : 'text-editorial-border'}`}>
+            <span className={`rounded-full p-1.5 transition-colors ${mode === 'preview' ? 'bg-editorial-accent text-white' : 'text-editorial-border'}`}>
               <Eye size={11} />
             </span>
             {markdownEnabled ? (
-              <span className={`rounded-full p-1.5 transition-colors ${mode === 'split' ? 'bg-editorial-ink text-white' : 'text-editorial-border'}`}>
+              <span className={`rounded-full p-1.5 transition-colors ${mode === 'split' ? 'bg-editorial-accent text-white' : 'text-editorial-border'}`}>
                 <Columns2 size={11} />
               </span>
             ) : null}
@@ -244,16 +242,16 @@ export function MarkdownEditor({
             <div className="flex items-center gap-1">
               <ToolbarButton
                 active={false}
-                onClick={() => setTextSize((s) => s === 'lg' ? 'md' : 'sm')}
+                onClick={() => setTextSizeStep((s) => Math.max(0, s - 1))}
                 title={t('editor.textSmall')}
                 ariaLabel={t('editor.textSmall')}
-                disabled={textSize === 'sm'}
+                disabled={textSizeStep === 0}
               >
                 <Minus size={15} />
               </ToolbarButton>
               <ToolbarButton
-                active={textSize === 'md'}
-                onClick={() => setTextSize('md')}
+                active={textSizeStep === DEFAULT_TEXT_SIZE_STEP}
+                onClick={() => setTextSizeStep(DEFAULT_TEXT_SIZE_STEP)}
                 title={t('editor.textMedium')}
                 ariaLabel={t('editor.textMedium')}
               >
@@ -261,10 +259,10 @@ export function MarkdownEditor({
               </ToolbarButton>
               <ToolbarButton
                 active={false}
-                onClick={() => setTextSize((s) => s === 'sm' ? 'md' : 'lg')}
+                onClick={() => setTextSizeStep((s) => Math.min(TEXT_SIZE_STEPS.length - 1, s + 1))}
                 title={t('editor.textLarge')}
                 ariaLabel={t('editor.textLarge')}
-                disabled={textSize === 'lg'}
+                disabled={textSizeStep === TEXT_SIZE_STEPS.length - 1}
               >
                 <Plus size={15} />
               </ToolbarButton>
