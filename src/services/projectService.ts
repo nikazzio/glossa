@@ -1,5 +1,8 @@
 import { select, execute, runInTransaction } from './dbService';
+import { logger } from '../utils/logger';
 import type {
+  CoherenceResult,
+  Footnote,
   GlossaryEntry,
   JudgeResult,
   PipelineConfig,
@@ -34,12 +37,15 @@ export interface SavedTranslation {
   judge_rating: JudgeResult['rating'];
   translation_locked?: number | null;
   judge_issues: string; // JSON
+  coherence_result?: string | null;
+  footnotes?: string | null;
   created_at: string;
 }
 
-function parseJson<T>(value: string | undefined, fallback: T): T {
+function parseJson<T>(value: string | null | undefined, fallback: T): T;
+function parseJson<T>(value: string | null | undefined): T | undefined;
+function parseJson<T>(value: string | null | undefined, fallback?: T): T | undefined {
   if (!value) return fallback;
-
   try {
     return JSON.parse(value) as T;
   } catch {
@@ -65,6 +71,10 @@ export function restoreTranslations(rows: SavedTranslation[]): TranslationChunk[
       judgeResult.content ||
       lastStageContent(stageResults) ||
       '';
+    const coherenceResult = parseJson<CoherenceResult>(row.coherence_result);
+    const footnotes = row.footnotes
+      ? parseJson<Footnote[]>(row.footnotes, [])
+      : undefined;
     return {
       id: row.id,
       originalText: row.original_text,
@@ -73,6 +83,8 @@ export function restoreTranslations(rows: SavedTranslation[]): TranslationChunk[
       judgeResult,
       currentDraft: restoredDraft,
       translationLocked: row.translation_locked === 1,
+      ...(coherenceResult ? { coherenceResult } : {}),
+      ...(footnotes?.length ? { footnotes } : {}),
     };
   });
 }
@@ -357,14 +369,17 @@ async function saveTranslationsInternal(
   chunks: TranslationChunk[],
   run: ExecuteQuery,
 ): Promise<void> {
-  // Upsert ogni chunk — nessun DELETE preventivo, quindi nessuna finestra
-  // in cui i dati sono assenti in caso di errore a metà operazione.
+  logger.info('saveTranslationsInternal', { projectId, chunksCount: chunks.length });
+  if (chunks.length === 0) {
+    logger.info('saveTranslationsInternal: chunks empty, preserving existing translations', { projectId });
+    return;
+  }
   for (const [position, chunk] of chunks.entries()) {
     await run(
       `INSERT INTO translations (
          id, project_id, original_text, final_translation, position, chunk_status, stage_results,
-         judge_status, judge_rating, translation_locked, judge_issues
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         judge_status, judge_rating, translation_locked, judge_issues, coherence_result, footnotes
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        ON CONFLICT(id) DO UPDATE SET
          original_text    = excluded.original_text,
          final_translation = excluded.final_translation,
@@ -374,7 +389,9 @@ async function saveTranslationsInternal(
          judge_status     = excluded.judge_status,
          judge_rating     = excluded.judge_rating,
          translation_locked = excluded.translation_locked,
-         judge_issues     = excluded.judge_issues`,
+         judge_issues     = excluded.judge_issues,
+         coherence_result = excluded.coherence_result,
+         footnotes        = excluded.footnotes`,
       [
         chunk.id,
         projectId,
@@ -387,20 +404,18 @@ async function saveTranslationsInternal(
         chunk.judgeResult.rating || qualityDefault(),
         chunk.translationLocked ? 1 : 0,
         JSON.stringify(chunk.judgeResult.issues),
+        chunk.coherenceResult ? JSON.stringify(chunk.coherenceResult) : null,
+        chunk.footnotes?.length ? JSON.stringify(chunk.footnotes) : null,
       ],
     );
   }
 
   // Rimuovi i chunk che non fanno più parte del progetto.
-  if (chunks.length > 0) {
-    const placeholders = chunks.map((_, i) => `$${i + 2}`).join(', ');
-    await run(
-      `DELETE FROM translations WHERE project_id = $1 AND id NOT IN (${placeholders})`,
-      [projectId, ...chunks.map((c) => c.id)],
-    );
-  } else {
-    await run('DELETE FROM translations WHERE project_id = $1', [projectId]);
-  }
+  const placeholders = chunks.map((_, i) => `$${i + 2}`).join(', ');
+  await run(
+    `DELETE FROM translations WHERE project_id = $1 AND id NOT IN (${placeholders})`,
+    [projectId, ...chunks.map((c) => c.id)],
+  );
 }
 
 function lastStageContent(stageResults: Record<string, PipelineResult>): string {

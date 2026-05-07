@@ -186,8 +186,8 @@ export function ProjectPanel() {
                         ? 'border-editorial-ink bg-editorial-bg'
                         : 'border-editorial-border hover:bg-editorial-textbox/50'
                     }`}
-                    onClick={() => { openProject(project.id); setShowProjectPanel(false); }}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openProject(project.id); setShowProjectPanel(false); } }}
+                    onClick={() => { openProject(project.id).catch((err: any) => toast.error(t('projects.loadFailed'), { description: err?.message })); setShowProjectPanel(false); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openProject(project.id).catch((err: any) => toast.error(t('projects.loadFailed'), { description: err?.message })); setShowProjectPanel(false); } }}
                   >
                     <FolderOpen
                       size={16}

@@ -52,6 +52,13 @@ describe('markdown service', () => {
     expect(text).toContain('[1] Footnote body');
   });
 
+  it('does not infinite-loop on bracketed superscript markers like [¹]', () => {
+    const text = 'Text with note [¹] and another [²] marker.';
+    const html = renderMarkdownToHtmlFragment(text);
+    expect(html).toContain('[¹]');
+    expect(html).toContain('[²]');
+  });
+
   it('wraps the html fragment in a standalone export document', () => {
     const html = buildMarkdownHtmlDocument(sample, 'Sample Export');
 

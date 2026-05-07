@@ -33,6 +33,8 @@ const ALLOWED_MIGRATIONS = new Set([
   'translations.judge_status',
   'translations.judge_rating',
   'translations.translation_locked',
+  'translations.coherence_result',
+  'translations.footnotes',
   'prompt_templates.context',
 ]);
 
@@ -185,6 +187,8 @@ export async function initDatabase(): Promise<void> {
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  await ensureColumn('translations', 'coherence_result', 'TEXT DEFAULT NULL');
+  await ensureColumn('translations', 'footnotes', 'TEXT DEFAULT NULL');
   await ensureColumn('prompt_templates', 'context', "TEXT NOT NULL DEFAULT 'stage'");
   // Migrate unique index from (name) to (name, context) so stage/audit can share names
   await conn.execute('DROP INDEX IF EXISTS idx_prompt_templates_name');
@@ -230,7 +234,15 @@ export async function runInTransaction<T>(
     const run = async (query: string, params: unknown[] = []) => {
       await conn.execute(query, params);
     };
-    return fn(run);
+    await conn.execute('BEGIN');
+    try {
+      const result = await fn(run);
+      await conn.execute('COMMIT');
+      return result;
+    } catch (error) {
+      try { await conn.execute('ROLLBACK'); } catch { /* ignore rollback error */ }
+      throw error;
+    }
   });
 }
 

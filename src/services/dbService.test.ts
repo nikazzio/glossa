@@ -50,7 +50,7 @@ describe('runInTransaction', () => {
     dbState.setFailRollback(false);
   });
 
-  it('executes the callback statements without explicit BEGIN/COMMIT', async () => {
+  it('wraps callback statements in BEGIN/COMMIT', async () => {
     const { runInTransaction } = await import('./dbService');
 
     await runInTransaction(async (run) => {
@@ -59,11 +59,13 @@ describe('runInTransaction', () => {
 
     const calls = dbState.db.execute.mock.calls.map(([q]: [string]) => q.trim());
     expect(calls).toContain('INSERT INTO foo VALUES ($1)');
-    expect(calls).not.toContain('BEGIN');
-    expect(calls).not.toContain('COMMIT');
+    expect(calls).toContain('BEGIN');
+    expect(calls).toContain('COMMIT');
+    expect(calls.indexOf('BEGIN')).toBeLessThan(calls.indexOf('INSERT INTO foo VALUES ($1)'));
+    expect(calls.indexOf('INSERT INTO foo VALUES ($1)')).toBeLessThan(calls.indexOf('COMMIT'));
   });
 
-  it('re-throws the error when the callback throws', async () => {
+  it('issues ROLLBACK and re-throws the error when the callback throws', async () => {
     const { runInTransaction } = await import('./dbService');
 
     await expect(
@@ -74,8 +76,9 @@ describe('runInTransaction', () => {
     ).rejects.toThrow('simulated failure');
 
     const calls = dbState.db.execute.mock.calls.map(([q]: [string]) => q.trim());
-    expect(calls).not.toContain('ROLLBACK');
-    expect(calls).not.toContain('BEGIN');
+    expect(calls).toContain('BEGIN');
+    expect(calls).toContain('ROLLBACK');
+    expect(calls).not.toContain('COMMIT');
   });
 
   it('returns the value produced by the callback', async () => {

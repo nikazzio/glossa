@@ -138,6 +138,7 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
       minWords: pendingImport.minWords,
       maxWords: pendingImport.maxWords,
       headingAware: pendingImport.headingAware,
+      extractFootnotes: pendingImport.experimental === 'docx-markdown',
     });
     setPendingImport(null);
     toast.success(t('files.imported'));

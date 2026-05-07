@@ -4,6 +4,7 @@ import { useChunksStore } from '../stores/chunksStore';
 import { useProjectStore } from '../stores/projectStore';
 import { useUiStore } from '../stores/uiStore';
 import { buildProjectSnapshot } from '../utils/projectSnapshot';
+import { logger } from '../utils/logger';
 
 export { buildProjectSnapshot };
 
@@ -89,6 +90,11 @@ export function useProjectAutosave(delayMs = 1200) {
 
     const timer = window.setTimeout(() => {
       if (useProjectStore.getState().saveState === 'saving') return;
+      const chunks = useChunksStore.getState().chunks;
+      logger.debug('autosave: triggered', {
+        projectId: currentProjectId,
+        chunksCount: chunks.length,
+      });
       void useProjectStore.getState().saveCurrentProject().catch(() => {});
     }, delayMs);
 

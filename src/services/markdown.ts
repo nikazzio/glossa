@@ -281,7 +281,12 @@ function parseInlineMarkdown(text: string): MarkdownInlineNode[] {
     }
 
     const nextSpecial = findNextInlineMarker(remaining);
-    const value = nextSpecial === -1 ? remaining : remaining.slice(0, nextSpecial);
+    // nextSpecial === 0 means a special-looking char at the start matched no pattern
+    // (e.g. [¹] superscript marker). Consume 1 char to avoid an infinite loop.
+    const value =
+      nextSpecial === -1 ? remaining :
+      nextSpecial === 0  ? remaining[0] :
+      remaining.slice(0, nextSpecial);
     nodes.push({ type: 'text', value });
     index += value.length;
   }

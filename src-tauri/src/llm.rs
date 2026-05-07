@@ -388,7 +388,10 @@ fn file_store_remove(app: &AppHandle, provider: &str) {
 }
 
 fn should_fallback_to_file_store(error: &keyring::Error) -> bool {
-    matches!(error, keyring::Error::NoStorageAccess(_))
+    matches!(
+        error,
+        keyring::Error::NoStorageAccess(_) | keyring::Error::PlatformFailure(_)
+    )
 }
 
 fn keyring_entry(provider: &str) -> Result<keyring::Entry, String> {
@@ -1767,13 +1770,15 @@ mod tests {
     }
 
     #[test]
-    fn fallback_only_for_missing_storage_access() {
+    fn fallback_for_storage_unavailable_errors() {
         let no_storage = keyring::Error::NoStorageAccess(Box::new(std::io::Error::other("locked")));
+        // PlatformFailure also triggers fallback — covers WSL2 where the keyring
+        // backend is unavailable and returns this variant instead of NoStorageAccess.
         let platform_failure =
             keyring::Error::PlatformFailure(Box::new(std::io::Error::other("boom")));
 
         assert!(should_fallback_to_file_store(&no_storage));
-        assert!(!should_fallback_to_file_store(&platform_failure));
+        assert!(should_fallback_to_file_store(&platform_failure));
         assert!(!should_fallback_to_file_store(&keyring::Error::NoEntry));
     }
 
