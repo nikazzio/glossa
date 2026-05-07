@@ -11,7 +11,17 @@ import {
 import { HighlightedText } from './HighlightedText';
 
 type EditorMode = 'write' | 'preview' | 'split';
-type TextSize = 'sm' | 'md' | 'lg';
+
+const TEXT_SIZE_STEPS = [
+  { fontSize: '0.75rem', lineHeight: '1.5rem' },
+  { fontSize: '0.825rem', lineHeight: '1.65rem' },
+  { fontSize: '0.9rem', lineHeight: '1.8rem' },
+  { fontSize: '1rem', lineHeight: '2rem' },
+  { fontSize: '1.125rem', lineHeight: '2.25rem' },
+  { fontSize: '1.25rem', lineHeight: '2.5rem' },
+  { fontSize: '1.375rem', lineHeight: '2.75rem' },
+] as const;
+const DEFAULT_TEXT_SIZE_STEP = 3;
 
 interface MarkdownEditorProps {
   value: string;
@@ -48,19 +58,16 @@ export function MarkdownEditor({
 }: MarkdownEditorProps) {
   const { t } = useTranslation();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const highlightLayerRef = useRef<HTMLDivElement | null>(null);
   const [mode, setMode] = useState<EditorMode>('write');
-  const [textSize, setTextSize] = useState<TextSize>('md');
+  const [textSizeStep, setTextSizeStep] = useState(DEFAULT_TEXT_SIZE_STEP);
   const [selection, setSelection] = useState({ start: 0, end: 0 });
   const [toolbarOpen, setToolbarOpen] = useState(false);
   const previewHtml = useMemo(() => {
     if (mode === 'write' && !readOnly) return '';
     return renderMarkdownToHtmlFragment(value);
   }, [mode, readOnly, value]);
-  const textSizeStyles: Record<TextSize, { fontSize: string }> = {
-    sm: { fontSize: '0.95rem' },
-    md: { fontSize: '1rem' },
-    lg: { fontSize: '1.125rem' },
-  };
+  const textSizeStyle = TEXT_SIZE_STEPS[textSizeStep];
   const activeCommands = useMemo(() => {
     if (!markdownEnabled || mode === 'preview') {
       return {
@@ -113,10 +120,17 @@ export function MarkdownEditor({
       element.focus();
       element.setSelectionRange(matchIndex, matchIndex + normalizedQuery.length);
       element.scrollTop = Math.max(0, element.scrollHeight * (matchIndex / Math.max(1, value.length)) - 120);
+      syncHighlightLayer();
       updateSelection(matchIndex, matchIndex + normalizedQuery.length);
       onFocusQueryHandled?.();
     });
   }, [focusQuery, focusRequestId, onFocusQueryHandled, value]);
+
+  const syncHighlightLayer = () => {
+    if (highlightLayerRef.current && textareaRef.current) {
+      highlightLayerRef.current.scrollTop = textareaRef.current.scrollTop;
+    }
+  };
 
   const updateSelection = (start: number, end: number) => {
     setSelection((current) =>
@@ -149,6 +163,8 @@ export function MarkdownEditor({
     });
   };
 
+  const textareaClassName = `${fillHeight ? 'flex-1 min-h-[100px] h-0' : minHeightClassName} w-full resize-y bg-transparent outline-none ${textClassName} disabled:opacity-70 read-only:cursor-not-allowed`;
+
   const textarea = (
     <textarea
       ref={textareaRef}
@@ -160,15 +176,15 @@ export function MarkdownEditor({
       onClick={syncSelection}
       onKeyUp={syncSelection}
       onSelect={syncSelection}
-      className={`${fillHeight ? 'flex-1 min-h-[100px] h-0' : minHeightClassName} w-full resize-y bg-transparent outline-none ${textClassName} disabled:opacity-70 read-only:cursor-not-allowed`}
-      style={textSizeStyles[textSize]}
+      className={textareaClassName}
+      style={textSizeStyle}
     />
   );
 
   const preview = (
     <div
       className={`${minHeightClassName} rounded-2xl border border-editorial-border/70 bg-editorial-bg/55 p-4 ${previewClassName}`}
-      style={textSizeStyles[textSize]}
+      style={textSizeStyle}
     >
       {value.trim() ? (
         <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
@@ -191,16 +207,17 @@ export function MarkdownEditor({
           >
             {toolbarOpen ? <PanelTopClose size={15} /> : <PanelTopOpen size={15} />}
           </button>
-          <div className="flex items-center gap-2 text-editorial-muted">
-            <span className={`rounded-full border p-1.5 ${mode === 'write' ? 'border-editorial-ink bg-editorial-ink text-white' : 'border-editorial-border bg-white/70'}`}>
-              <Pencil size={13} />
+          {/* Mode indicators — non-interactive, show current editor state */}
+          <div className="flex items-center gap-1" aria-hidden="true">
+            <span className={`rounded-full p-1.5 transition-colors ${mode === 'write' ? 'bg-editorial-accent text-white' : 'text-editorial-border'}`}>
+              <Pencil size={11} />
             </span>
-            <span className={`rounded-full border p-1.5 ${mode === 'preview' ? 'border-editorial-ink bg-editorial-ink text-white' : 'border-editorial-border bg-white/70'}`}>
-              <Eye size={13} />
+            <span className={`rounded-full p-1.5 transition-colors ${mode === 'preview' ? 'bg-editorial-accent text-white' : 'text-editorial-border'}`}>
+              <Eye size={11} />
             </span>
             {markdownEnabled ? (
-              <span className={`rounded-full border p-1.5 ${mode === 'split' ? 'border-editorial-ink bg-editorial-ink text-white' : 'border-editorial-border bg-white/70'}`}>
-                <Columns2 size={13} />
+              <span className={`rounded-full p-1.5 transition-colors ${mode === 'split' ? 'bg-editorial-accent text-white' : 'text-editorial-border'}`}>
+                <Columns2 size={11} />
               </span>
             ) : null}
           </div>
@@ -215,7 +232,7 @@ export function MarkdownEditor({
               title={t('editor.write')}
               ariaLabel={t('editor.write')}
             >
-              <PencilIcon />
+              <Pencil size={15} />
             </ToolbarButton>
             <ToolbarButton
               active={mode === 'preview'}
@@ -242,26 +259,28 @@ export function MarkdownEditor({
             </span>
             <div className="flex items-center gap-1">
               <ToolbarButton
-                active={textSize === 'sm'}
-                onClick={() => setTextSize('sm')}
+                active={false}
+                onClick={() => setTextSizeStep((s) => Math.max(0, s - 1))}
                 title={t('editor.textSmall')}
                 ariaLabel={t('editor.textSmall')}
+                disabled={textSizeStep === 0}
               >
                 <Minus size={15} />
               </ToolbarButton>
               <ToolbarButton
-                active={textSize === 'md'}
-                onClick={() => setTextSize('md')}
+                active={textSizeStep === DEFAULT_TEXT_SIZE_STEP}
+                onClick={() => setTextSizeStep(DEFAULT_TEXT_SIZE_STEP)}
                 title={t('editor.textMedium')}
                 ariaLabel={t('editor.textMedium')}
               >
                 <Type size={15} />
               </ToolbarButton>
               <ToolbarButton
-                active={textSize === 'lg'}
-                onClick={() => setTextSize('lg')}
+                active={false}
+                onClick={() => setTextSizeStep((s) => Math.min(TEXT_SIZE_STEPS.length - 1, s + 1))}
                 title={t('editor.textLarge')}
                 ariaLabel={t('editor.textLarge')}
+                disabled={textSizeStep === TEXT_SIZE_STEPS.length - 1}
               >
                 <Plus size={15} />
               </ToolbarButton>
@@ -345,7 +364,7 @@ export function MarkdownEditor({
               ariaLabel={t('editor.unorderedList')}
               disabled={commandEditingDisabled}
             >
-              <ListIcon />
+              <List size={15} />
             </CommandButton>
             <CommandButton
               active={activeCommands['ordered-list']}
@@ -354,7 +373,7 @@ export function MarkdownEditor({
               ariaLabel={t('editor.orderedList')}
               disabled={commandEditingDisabled}
             >
-              <ListOrderedIcon />
+              <ListOrdered size={15} />
             </CommandButton>
           </div>
         ) : null}
@@ -362,13 +381,38 @@ export function MarkdownEditor({
         ) : null}
       </div>
       {mode === 'write' && !readOnly && highlightHtml ? (
-        <div className={fillHeight ? 'flex flex-col flex-1 min-h-0' : 'space-y-2'}>
-          {textarea}
-          <HighlightedText html={highlightHtml} className={fillHeight ? `flex-1 min-h-0 overflow-y-auto ${textClassName}` : `${minHeightClassName} ${textClassName}`} />
-        </div>
+        fillHeight ? (
+          // Overlay: HighlightedText behind transparent textarea — styled text visible while editing
+          <div className="relative flex-1 min-h-0">
+            <HighlightedText
+              ref={highlightLayerRef}
+              html={highlightHtml}
+              style={{ ...textSizeStyle, minHeight: 0 }}
+              className={`pointer-events-none absolute inset-0 overflow-y-scroll scrollbar-hidden whitespace-pre-wrap break-words select-none ${textClassName}`}
+            />
+            <textarea
+              ref={textareaRef}
+              value={value}
+              onChange={(event) => onChange(event.target.value)}
+              disabled={disabled}
+              placeholder={placeholder}
+              onClick={syncSelection}
+              onKeyUp={syncSelection}
+              onSelect={syncSelection}
+              onScroll={syncHighlightLayer}
+              className={`${textareaClassName} absolute inset-0 h-full w-full resize-none`}
+              style={{ ...textSizeStyle, color: 'transparent', caretColor: 'var(--color-editorial-ink)' }}
+            />
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {textarea}
+            <HighlightedText html={highlightHtml} style={textSizeStyle} className={`${minHeightClassName} ${textClassName}`} />
+          </div>
+        )
       ) : null}
       {mode === 'write' && readOnly && highlightHtml ? (
-        <HighlightedText html={highlightHtml} className={fillHeight ? `flex-1 min-h-0 overflow-y-auto ${textClassName}` : `${minHeightClassName} ${textClassName}`} />
+        <HighlightedText html={highlightHtml} style={textSizeStyle} className={fillHeight ? `flex-1 min-h-0 overflow-y-auto ${textClassName}` : `${minHeightClassName} ${textClassName}`} />
       ) : null}
       {mode === 'write' && !highlightHtml ? textarea : null}
       {mode === 'preview' ? preview : null}
@@ -400,6 +444,7 @@ function ToolbarButton({
   return (
     <button
       type="button"
+      onMouseDown={(event) => event.preventDefault()}
       onClick={onClick}
       title={title}
       aria-label={ariaLabel}
@@ -460,16 +505,4 @@ function ToolbarLabel({ children }: { children: ReactNode }) {
 
 function ToolbarSeparator() {
   return <span className="mx-1 h-5 w-px bg-editorial-border/80" aria-hidden="true" />;
-}
-
-function PencilIcon() {
-  return <Pencil size={15} />;
-}
-
-function ListIcon() {
-  return <List size={15} />;
-}
-
-function ListOrderedIcon() {
-  return <ListOrdered size={15} />;
 }

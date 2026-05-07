@@ -8,7 +8,15 @@ import type {
 } from '../types';
 import { usePipelineStore } from './pipelineStore';
 import { useUiStore } from './uiStore';
-import { chunkText, findBestSplitIndex, generateId, qualityDefault, resolveSplitIndex } from '../utils';
+import {
+  chunkText,
+  findBestSplitIndex,
+  generateId,
+  qualityDefault,
+  resolveSplitIndex,
+  trimOuterBlankLines,
+  trimSplitFragment,
+} from '../utils';
 import { assignChunkFootnotes, extractFootnotes, replaceMarkersWithSuperscripts, stripFootnoteMarkers } from '../utils/footnoteExtractor';
 
 interface ChunksState {
@@ -76,7 +84,7 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
     const { inputText, config } = usePipelineStore.getState();
     if (!inputText.trim()) return;
 
-    let bodyText = inputText.trim();
+    let bodyText = trimOuterBlankLines(inputText);
     let footnoteMap: Map<string, string> | undefined;
 
     if (config.markdownAware) {
@@ -94,16 +102,18 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
       headingAware: config.headingAware,
     }, footnoteMap);
 
+    const ui = useUiStore.getState();
     usePipelineStore.getState().setInputText(
       footnoteMap ? stripFootnoteMarkers(bodyText) : bodyText,
     );
-    useUiStore.getState().setViewMode(chunks.length > 1 ? 'document' : 'sandbox');
+    ui.setViewMode(chunks.length > 1 ? 'document' : 'sandbox');
+    if (chunks.length > 1) ui.setShowChunkDrawer(true);
     syncSelectedChunk(chunks);
     set({ chunks });
   },
 
   loadDocument: (text, options = {}) => {
-    const trimmed = text.trim();
+    const trimmed = trimOuterBlankLines(text);
     if (!trimmed) return;
 
     let bodyText = trimmed;
@@ -116,10 +126,12 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
     }
 
     const chunks = buildChunks(bodyText, options, footnoteMap);
+    const ui = useUiStore.getState();
     usePipelineStore.getState().setInputText(
       footnoteMap ? stripFootnoteMarkers(bodyText) : bodyText,
     );
-    useUiStore.getState().setViewMode('document');
+    ui.setViewMode('document');
+    ui.setShowChunkDrawer(true);
     syncSelectedChunk(chunks);
     set({ chunks });
   },
@@ -242,7 +254,7 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
 
       const merged = resetChunkForSourceEdit({
         ...current,
-        originalText: `${current.originalText.trim()}\n\n${next.originalText.trim()}`,
+        originalText: `${current.originalText}\n\n${next.originalText}`,
       });
 
       const chunks = [
@@ -343,8 +355,8 @@ function splitChunkState(
     markdownAware: usePipelineStore.getState().config.markdownAware,
   });
   if (boundedSplitAt === null) return null;
-  const firstText = chunk.originalText.slice(0, boundedSplitAt).trim();
-  const secondText = chunk.originalText.slice(boundedSplitAt).trim();
+  const firstText = trimSplitFragment(chunk.originalText.slice(0, boundedSplitAt));
+  const secondText = trimSplitFragment(chunk.originalText.slice(boundedSplitAt));
   if (!firstText || !secondText) return null;
 
   const first = resetChunkForSourceEdit({ ...chunk, originalText: firstText });

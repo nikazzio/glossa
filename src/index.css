@@ -60,3 +60,16 @@ mark.hl-mismatch {
   color: inherit;
   cursor: help;
 }
+
+.hl-footnote-marker {
+  color: var(--color-editorial-accent);
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.scrollbar-hidden {
+  scrollbar-width: none;
+}
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}

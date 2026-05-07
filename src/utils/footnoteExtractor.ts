@@ -44,7 +44,7 @@ export function extractFootnotes(markdown: string): {
 function parseFootnoteDefinitions(lines: string[]): Map<string, string> {
   const map = new Map<string, string>();
   let currentId: string | null = null;
-  const currentTextLines: string[] = [];
+  let currentTextLines: string[] = [];
 
   for (const line of lines) {
     const match = line.match(FOOTNOTE_DEF);
@@ -53,8 +53,7 @@ function parseFootnoteDefinitions(lines: string[]): Map<string, string> {
         map.set(currentId, currentTextLines.join('\n').trim());
       }
       currentId = match[1];
-      currentTextLines.length = 0;
-      currentTextLines.push(match[2]);
+      currentTextLines = [match[2]];
     } else if (currentId !== null) {
       currentTextLines.push(line);
     }
@@ -71,6 +70,7 @@ export function assignChunkFootnotes(
   chunkText: string,
   footnoteMap: Map<string, string>,
 ): Footnote[] {
+  const displayNumberById = buildDisplayNumberById(footnoteMap);
   const footnotes: Footnote[] = [];
   const markerRe = /(?<!\\)\[\^([^\]]+)\]/g;
   let match: RegExpExecArray | null;
@@ -80,7 +80,8 @@ export function assignChunkFootnotes(
     const id = match[1];
     if (!seen.has(id) && footnoteMap.has(id)) {
       seen.add(id);
-      footnotes.push({ id, marker: `[^${id}]`, text: footnoteMap.get(id)! });
+      const displayNum = displayNumberById.get(id)!;
+      footnotes.push({ id, marker: `[${toSuperscript(displayNum)}]`, text: footnoteMap.get(id)! });
     }
   }
 
@@ -93,20 +94,16 @@ export function stripFootnoteMarkers(text: string): string {
 
 /**
  * Replaces [^id] inline markers with bracketed superscript numbers, e.g. [¹].
- * The id is parsed as an integer when possible; otherwise a sequential index is used.
+ * Display numbers are assigned from footnote definition order.
  * Call this instead of stripFootnoteMarkers when you want to keep position info visible.
  */
 export function replaceMarkersWithSuperscripts(
   text: string,
   footnoteMap: Map<string, string>,
 ): string {
-  const ids = [...footnoteMap.keys()];
-  const displayNum = (id: string): number => {
-    const n = parseInt(id, 10);
-    return Number.isFinite(n) && n > 0 ? n : ids.indexOf(id) + 1;
-  };
+  const displayNumberById = buildDisplayNumberById(footnoteMap);
   return text.replace(/(?<!\\)\[\^([^\]]+)\]/g, (_, id) =>
-    footnoteMap.has(id) ? `[${toSuperscript(displayNum(id))}]` : '',
+    footnoteMap.has(id) ? `[${toSuperscript(displayNumberById.get(id)!)}]` : '',
   );
 }
 
@@ -130,8 +127,12 @@ export function highlightSuperscriptMarkersHtml(html: string): string {
         ? segment
         : segment.replace(
             BRACKETED_SUPERSCRIPT_RE,
-            (match) => `<span class="text-editorial-accent font-mono font-semibold">${match}</span>`,
+            (match) => `<span class="hl-footnote-marker">${match}</span>`,
           ),
     )
     .join('');
+}
+
+function buildDisplayNumberById(footnoteMap: Map<string, string>): Map<string, number> {
+  return new Map([...footnoteMap.keys()].map((id, index) => [id, index + 1]));
 }

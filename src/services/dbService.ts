@@ -1,10 +1,12 @@
 import Database from '@tauri-apps/plugin-sql';
+import { invoke } from '@tauri-apps/api/core';
 
 let db: Database | null = null;
+const DB_URL = 'sqlite:glossa.db';
 
 async function getDb(): Promise<Database> {
   if (!db) {
-    db = await Database.load('sqlite:glossa.db');
+    db = await Database.load(DB_URL);
   }
   return db;
 }
@@ -230,19 +232,23 @@ export async function runInTransaction<T>(
   fn: (run: (query: string, params?: unknown[]) => Promise<void>) => Promise<T>,
 ): Promise<T> {
   return serializeWrite(async () => {
-    const conn = await getDb();
+    await getDb();
+    const statements: Array<{ query: string; params: unknown[] }> = [];
+    // Tauri SQL uses a pool, so BEGIN/COMMIT issued from JS can land on
+    // different SQLite connections and deadlock. Stage writes here; the
+    // native command executes them on one connection inside a real transaction.
     const run = async (query: string, params: unknown[] = []) => {
-      await conn.execute(query, params);
+      statements.push({ query, params });
     };
-    await conn.execute('BEGIN');
-    try {
-      const result = await fn(run);
-      await conn.execute('COMMIT');
-      return result;
-    } catch (error) {
-      try { await conn.execute('ROLLBACK'); } catch { /* ignore rollback error */ }
-      throw error;
+
+    const result = await fn(run);
+    if (statements.length > 0) {
+      await invoke('execute_transaction', {
+        db: DB_URL,
+        statements,
+      });
     }
+    return result;
   });
 }
 

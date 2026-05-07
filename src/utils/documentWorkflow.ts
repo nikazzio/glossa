@@ -1,4 +1,4 @@
-import { chunkText, estimateTextStats, resolveSplitIndex } from './index';
+import { chunkText, estimateTextStats, resolveSplitIndex, trimSplitFragment } from './index';
 
 export interface ImportPreviewChunk {
   index: number;
@@ -65,8 +65,8 @@ export function buildSplitPreview(
       adjustedSplitAt: null,
     };
   }
-  const beforeText = text.slice(0, boundedSplitAt).trim();
-  const afterText = text.slice(boundedSplitAt).trim();
+  const beforeText = trimSplitFragment(text.slice(0, boundedSplitAt));
+  const afterText = trimSplitFragment(text.slice(boundedSplitAt));
 
   return {
     beforeText,
@@ -75,7 +75,6 @@ export function buildSplitPreview(
     adjustedSplitAt: boundedSplitAt,
   };
 }
-
 function buildImportWarnings(
   text: string,
   options: {

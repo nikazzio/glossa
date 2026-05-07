@@ -91,9 +91,7 @@ export interface ChunkTextOptions {
 export function estimateTextStats(text: string): TextStats {
   const trimmed = text.trim();
   const words = trimmed ? trimmed.split(/\s+/).filter(Boolean).length : 0;
-  const paragraphs = trimmed
-    ? trimmed.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean).length
-    : 0;
+  const paragraphs = splitParagraphs(trimOuterBlankLines(text)).length;
 
   return {
     characters: text.length,
@@ -109,14 +107,14 @@ export function recommendChunkCount(text: string, targetWordsPerChunk = 700): nu
 }
 
 export function chunkText(text: string, options: ChunkTextOptions = {}): string[] {
-  const trimmed = text.trim();
-  if (!trimmed) return [];
-  if (options.useChunking === false) return [trimmed];
+  const normalized = trimOuterBlankLines(text);
+  if (!normalized.trim()) return [];
+  if (options.useChunking === false) return [normalized];
 
   const target = Math.max(0, Math.floor(options.targetChunkCount ?? 0));
   let chunks = target > 1
-    ? splitIntoTargetChunks(trimmed, target, options)
-    : splitParagraphs(trimmed, options);
+    ? splitIntoTargetChunks(normalized, target, options)
+    : splitParagraphs(normalized, options);
 
   if (options.headingAware) {
     chunks = mergeHeadingChunks(chunks);
@@ -169,30 +167,34 @@ export function resolveSplitIndex(
 }
 
 function splitParagraphs(text: string, options: ChunkTextOptions = {}): string[] {
-  if (options.markdownAware) {
-    return splitMarkdownBlocks(text);
-  }
-  return text.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean);
+  const blocks = options.markdownAware
+    ? mergeMarkdownFootnoteBlocks(text, getBlockRanges(text))
+    : getBlockRanges(text);
+  return blocks.map(({ start, end }) => text.slice(start, end));
 }
 
 function splitIntoTargetChunks(text: string, target: number, options: ChunkTextOptions = {}): string[] {
-  const paragraphs = splitParagraphs(text, options);
-  if (paragraphs.length <= 1) {
+  const blocks = options.markdownAware
+    ? mergeMarkdownFootnoteBlocks(text, getBlockRanges(text))
+    : getBlockRanges(text);
+
+  if (blocks.length <= 1) {
     if (options.markdownAware) {
-      return [text.trim()];
+      return [text];
     }
     return splitWordsIntoTargetChunks(text, target);
   }
 
-  const totalWords = paragraphs.reduce((acc, paragraph) => acc + countWords(paragraph), 0);
+  const totalWords = blocks.reduce((acc, block) => acc + countWords(text.slice(block.start, block.end)), 0);
   const targetWords = Math.max(1, Math.ceil(totalWords / target));
   const chunks: string[] = [];
-  let current: string[] = [];
+  let current: Array<{ start: number; end: number }> = [];
   let currentWords = 0;
 
-  paragraphs.forEach((paragraph, index) => {
-    const paragraphWords = countWords(paragraph);
-    const remainingParagraphs = paragraphs.length - index;
+  blocks.forEach((block, index) => {
+    const blockText = text.slice(block.start, block.end);
+    const paragraphWords = countWords(blockText);
+    const remainingParagraphs = blocks.length - index;
     const remainingSlots = target - chunks.length;
     const shouldClose =
       current.length > 0 &&
@@ -201,16 +203,18 @@ function splitIntoTargetChunks(text: string, target: number, options: ChunkTextO
       (options.markdownAware || remainingParagraphs >= remainingSlots);
 
     if (shouldClose) {
-      chunks.push(current.join('\n\n'));
+      chunks.push(text.slice(current[0].start, current[current.length - 1].end));
       current = [];
       currentWords = 0;
     }
 
-    current.push(paragraph);
+    current.push(block);
     currentWords += paragraphWords;
   });
 
-  if (current.length > 0) chunks.push(current.join('\n\n'));
+  if (current.length > 0) {
+    chunks.push(text.slice(current[0].start, current[current.length - 1].end));
+  }
 
   if (!options.markdownAware && chunks.length < target && chunks.length === 1) {
     return splitWordsIntoTargetChunks(text, target);
@@ -231,11 +235,11 @@ function mergeHeadingChunks(chunks: string[]): string[] {
   for (const chunk of chunks) {
     if (isHeadingChunk(chunk)) {
       headingAccumulator = headingAccumulator
-        ? `${headingAccumulator.trim()}\n\n${chunk.trim()}`
-        : chunk.trim();
+        ? `${headingAccumulator}\n\n${chunk}`
+        : chunk;
     } else {
       const merged = headingAccumulator
-        ? `${headingAccumulator}\n\n${chunk.trim()}`
+        ? `${headingAccumulator}\n\n${chunk}`
         : chunk;
       result.push(merged);
       headingAccumulator = '';
@@ -254,7 +258,7 @@ function mergeSmallChunks(chunks: string[], minWords: number): string[] {
   let pending = chunks[0];
   for (let i = 1; i < chunks.length; i++) {
     if (countWords(pending) < minWords) {
-      pending = `${pending.trim()}\n\n${chunks[i].trim()}`;
+      pending = `${pending}\n\n${chunks[i]}`;
     } else {
       result.push(pending);
       pending = chunks[i];
@@ -287,21 +291,8 @@ function splitLargeChunks(
 }
 
 function splitMarkdownBlocks(text: string): string[] {
-  const rawBlocks = text
-    .split(/\n{2,}/)
-    .map((part) => part.trim())
-    .filter(Boolean);
-
-  const mergedBlocks: string[] = [];
-  for (const block of rawBlocks) {
-    if (block.startsWith('[^') && block.includes(']:') && mergedBlocks.length > 0) {
-      mergedBlocks[mergedBlocks.length - 1] = `${mergedBlocks[mergedBlocks.length - 1]}\n\n${block}`;
-      continue;
-    }
-    mergedBlocks.push(block);
-  }
-
-  return mergedBlocks;
+  const mergedBlocks = mergeMarkdownFootnoteBlocks(text, getBlockRanges(text));
+  return mergedBlocks.map(({ start, end }) => text.slice(start, end));
 }
 
 function findNearestMarkdownBoundary(text: string, pivot: number): number | null {
@@ -317,17 +308,85 @@ function findNearestMarkdownBoundary(text: string, pivot: number): number | null
 }
 
 function splitWordsIntoTargetChunks(text: string, target: number): string[] {
-  const words = text.trim().split(/\s+/).filter(Boolean);
+  const words = Array.from(text.matchAll(/\S+/g))
+    .map((match) => ({ start: match.index ?? 0, end: (match.index ?? 0) + match[0].length }));
   if (words.length === 0) return [];
 
   const chunkSize = Math.max(1, Math.ceil(words.length / target));
   const chunks: string[] = [];
 
   for (let i = 0; i < words.length; i += chunkSize) {
-    chunks.push(words.slice(i, i + chunkSize).join(' '));
+    const first = words[i];
+    const last = words[Math.min(i + chunkSize - 1, words.length - 1)];
+    chunks.push(text.slice(first.start, last.end));
   }
 
   return chunks;
+}
+
+type BlockRange = {
+  start: number;
+  end: number;
+};
+
+export function trimOuterBlankLines(text: string): string {
+  return text
+    .replace(/^(?:[ \t]*\r?\n)+/, '')
+    .replace(/(?:\r?\n[ \t]*)+$/, '');
+}
+
+export function trimSplitFragment(text: string): string {
+  return trimOuterBlankLines(text)
+    .replace(/^[ \t]+/, '')
+    .replace(/[ \t]+$/, '');
+}
+
+function getBlockRanges(text: string): BlockRange[] {
+  const normalized = trimOuterBlankLines(text);
+  if (!normalized.trim()) return [];
+
+  const blocks: BlockRange[] = [];
+  const separator = /\r?\n(?:[ \t]*\r?\n)+/g;
+  let start = 0;
+
+  for (const match of normalized.matchAll(separator)) {
+    const end = match.index ?? 0;
+    if (normalized.slice(start, end).trim()) {
+      blocks.push({ start, end });
+    }
+    start = end + match[0].length;
+  }
+
+  if (normalized.slice(start).trim()) {
+    blocks.push({ start, end: normalized.length });
+  }
+
+  return blocks;
+}
+
+function mergeMarkdownFootnoteBlocks(text: string, blocks: BlockRange[]): BlockRange[] {
+  if (blocks.length <= 1) return blocks;
+
+  const merged: BlockRange[] = [];
+  for (const block of blocks) {
+    const blockText = text.slice(block.start, block.end);
+    if (merged.length > 0 && isFootnoteDefinitionBlock(blockText)) {
+      merged[merged.length - 1] = {
+        start: merged[merged.length - 1].start,
+        end: block.end,
+      };
+      continue;
+    }
+
+    merged.push(block);
+  }
+
+  return merged;
+}
+
+function isFootnoteDefinitionBlock(text: string): boolean {
+  const trimmed = text.trimStart();
+  return /^\[\^[^\]]+\]:/.test(trimmed);
 }
 
 function countWords(text: string): number {
