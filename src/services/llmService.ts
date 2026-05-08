@@ -22,6 +22,13 @@ interface StreamTokenPayload {
   outputTokens?: number;
 }
 
+export interface OllamaPreflightStatus {
+  reachable: boolean;
+  models: string[];
+  requestedModel?: string | null;
+  modelAvailable: boolean;
+}
+
 /**
  * LLM Service — delegates all AI calls to the Tauri Rust backend.
  * API keys are stored securely in the OS-level store, never in the browser.
@@ -135,6 +142,12 @@ export const ollamaService = {
 
   async checkStatus(): Promise<boolean> {
     return invoke<boolean>('check_ollama_status');
+  },
+
+  async checkPreflight(model?: string): Promise<OllamaPreflightStatus> {
+    return invoke<OllamaPreflightStatus>('check_ollama_preflight', {
+      model: model ?? null,
+    });
   },
 };
 

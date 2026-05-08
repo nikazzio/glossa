@@ -3,7 +3,8 @@ import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../stores/pipelineStore';
 import { useChunksStore } from '../stores/chunksStore';
-import { llmService, isStreamCancelledError } from '../services/llmService';
+import { llmService, ollamaService, isStreamCancelledError } from '../services/llmService';
+import { useUiStore } from '../stores/uiStore';
 import { withRetry, friendlyError } from '../utils/retry';
 import { qualityDefault, qualityFailure } from '../utils';
 import { stripSuperscriptMarkers } from '../utils/footnoteExtractor';
@@ -20,6 +21,7 @@ function firstNWords(text: string, n: number): string {
 }
 
 type ChunkOutcome = 'completed' | 'failed' | 'cancelled' | 'skipped';
+type OllamaRunRequirement = { provider: string; model?: string | null };
 
 /**
  * Hook that encapsulates pipeline execution logic.
@@ -46,6 +48,45 @@ export function usePipeline() {
   const { config } = usePipelineStore();
   const isProcessing = useChunksStore((state) => state.isProcessing);
   const { t } = useTranslation();
+
+  const ensureOllamaReady = useCallback(async (requirements: OllamaRunRequirement[]) => {
+    const ollamaModels = new Set(
+      requirements
+        .filter((item) => item.provider === 'ollama')
+        .map((item) => item.model?.trim())
+        .filter((model): model is string => Boolean(model)),
+    );
+
+    if (ollamaModels.size === 0) return true;
+
+    const requestedModels = [...ollamaModels];
+    const preflight = await ollamaService.checkPreflight(requestedModels[0]);
+    useUiStore.getState().setOllamaStatus(preflight.reachable ? 'connected' : 'disconnected');
+    useUiStore.getState().setOllamaModels(preflight.models);
+
+    if (!preflight.reachable) {
+      toast.error(t('ollama.notRunning'));
+      return false;
+    }
+    if (preflight.models.length === 0) {
+      toast.error(t('ollama.noModels'));
+      return false;
+    }
+
+    const available = new Set(preflight.models);
+    const missing = requestedModels.filter((model) =>
+      !available.has(model) &&
+      !available.has(`${model}:latest`) &&
+      !(model.endsWith(':latest') && available.has(model.slice(0, -7))),
+    );
+
+    if (missing.length > 0) {
+      toast.error(t('ollama.modelMissing', { model: missing[0] }));
+      return false;
+    }
+
+    return true;
+  }, [t]);
 
   // ── Internal helpers ────────────────────────────────────────────────
   // These run the full per-chunk flow. They are plain async functions
@@ -215,6 +256,10 @@ export function usePipeline() {
     // freshest state instead of a stale useCallback closure.
     const liveChunks = useChunksStore.getState().chunks;
     if (liveChunks.length === 0) return;
+    if (!(await ensureOllamaReady([
+      ...config.stages.filter((stage) => stage.enabled).map((stage) => ({ provider: stage.provider, model: stage.model })),
+      { provider: config.judgeProvider, model: config.judgeModel },
+    ]))) return;
     useChunksStore.getState().clearCancelRequest();
     setIsProcessing(true);
 
@@ -242,12 +287,16 @@ export function usePipeline() {
     } else {
       toast.warning(t('errors.pipelineCompletedWithErrors', { count: errorCount }));
     }
-  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages]);
+  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureOllamaReady]);
 
   const runSingleChunk = useCallback(async (chunkId: string) => {
     if (useChunksStore.getState().isProcessing) return;
     const chunk = useChunksStore.getState().chunks.find((c) => c.id === chunkId);
     if (!chunk) return;
+    if (!(await ensureOllamaReady([
+      ...config.stages.filter((stage) => stage.enabled).map((stage) => ({ provider: stage.provider, model: stage.model })),
+      { provider: config.judgeProvider, model: config.judgeModel },
+    ]))) return;
     useChunksStore.getState().clearCancelRequest();
     setIsProcessing(true);
 
@@ -266,12 +315,13 @@ export function usePipeline() {
       // Per-chunk failure already raised a toast inside the helper; no
       // extra summary toast is needed.
     }
-  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages]);
+  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureOllamaReady]);
 
   const runAuditOnly = useCallback(async () => {
     if (useChunksStore.getState().isProcessing) return;
     const liveChunks = useChunksStore.getState().chunks;
     if (liveChunks.length === 0) return;
+    if (!(await ensureOllamaReady([{ provider: config.judgeProvider, model: config.judgeModel }]))) return;
     useChunksStore.getState().clearCancelRequest();
     setIsProcessing(true);
 
@@ -302,7 +352,7 @@ export function usePipeline() {
     } else if (errorCount === 0) {
       toast.success(t('errors.reEvalCompleted'));
     }
-  }, [config, t, setIsProcessing, updateChunkJudge, updateChunkStatus]);
+  }, [config, t, setIsProcessing, updateChunkJudge, updateChunkStatus, ensureOllamaReady]);
 
   const auditSingleChunk = useCallback(async (chunkId: string) => {
     if (useChunksStore.getState().isProcessing) return;
@@ -312,6 +362,7 @@ export function usePipeline() {
       toast.message(t('pipeline.auditSkippedNoDraft'));
       return;
     }
+    if (!(await ensureOllamaReady([{ provider: config.judgeProvider, model: config.judgeModel }]))) return;
     useChunksStore.getState().clearCancelRequest();
     setIsProcessing(true);
 
@@ -325,7 +376,7 @@ export function usePipeline() {
     } else if (outcome === 'completed') {
       toast.success(t('pipeline.singleChunkAudited'));
     }
-  }, [config, t, setIsProcessing, updateChunkJudge, updateChunkStatus]);
+  }, [config, t, setIsProcessing, updateChunkJudge, updateChunkStatus, ensureOllamaReady]);
 
   const runCoherenceAudit = useCallback(async () => {
     if (useChunksStore.getState().isProcessing) return;
@@ -339,6 +390,7 @@ export function usePipeline() {
       toast.message(t('coherence.translationsRequired'));
       return;
     }
+    if (!(await ensureOllamaReady([{ provider: config.judgeProvider, model: config.judgeModel }]))) return;
 
     useChunksStore.getState().clearCancelRequest();
     setIsProcessing(true);
@@ -392,7 +444,7 @@ export function usePipeline() {
     } else {
       toast.warning(t('coherence.auditCompletedWithErrors', { count: errorCount }));
     }
-  }, [config, t, setIsProcessing, updateChunkCoherence]);
+  }, [config, t, setIsProcessing, updateChunkCoherence, ensureOllamaReady]);
 
   const cancelPipeline = useCallback(() => {
     requestCancel();

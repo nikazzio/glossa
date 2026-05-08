@@ -6,6 +6,18 @@ export type DocumentLayoutPreference = 'auto' | 'standard' | 'book';
 export type OllamaStatus = 'unknown' | 'connected' | 'disconnected';
 export type DocumentFormat = 'plain' | 'markdown';
 export type ExperimentalImportMode = 'docx-markdown';
+export type OllamaThinkLevel = boolean | 'low' | 'medium' | 'high';
+
+export interface OllamaConfig {
+  temperature?: number;
+  topP?: number;
+  seed?: number | null;
+  keepAlive?: string | number;
+  think?: OllamaThinkLevel;
+  numCtx?: number | null;
+  numPredict?: number | null;
+  advancedOptions?: Record<string, unknown>;
+}
 
 export interface GlossaryEntry {
   id?: string;
@@ -112,4 +124,5 @@ export interface PipelineConfig {
   markdownAware?: boolean;
   experimentalImport?: ExperimentalImportMode | null;
   coherencePrompt?: string;
+  ollama?: OllamaConfig;
 }

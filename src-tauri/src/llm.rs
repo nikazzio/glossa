@@ -1,8 +1,9 @@
 use aes_gcm::aead::{Aead, KeyInit};
 use aes_gcm::{Aes256Gcm, Key, Nonce};
 use rand::RngCore;
-use reqwest::Client;
+use reqwest::{Client, Error as ReqwestError};
 use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
 use std::{
     collections::HashMap,
     fs,
@@ -43,6 +44,19 @@ pub struct StageConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct OllamaConfig {
+    pub temperature: Option<f32>,
+    pub top_p: Option<f32>,
+    pub seed: Option<i32>,
+    pub keep_alive: Option<serde_json::Value>,
+    pub think: Option<serde_json::Value>,
+    pub num_ctx: Option<u32>,
+    pub num_predict: Option<i32>,
+    pub advanced_options: Option<serde_json::Map<String, serde_json::Value>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PipelineConfig {
     pub source_language: String,
     pub target_language: String,
@@ -54,6 +68,16 @@ pub struct PipelineConfig {
     pub use_chunking: Option<bool>,
     pub markdown_aware: Option<bool>,
     pub coherence_prompt: Option<String>,
+    pub ollama: Option<OllamaConfig>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OllamaPreflightStatus {
+    pub reachable: bool,
+    pub models: Vec<String>,
+    pub requested_model: Option<String>,
+    pub model_available: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -189,6 +213,9 @@ const KEYRING_SERVICE: &str = "io.github.nikazzio.glossa";
 const OLLAMA_BASE_URL: &str = "http://localhost:11434";
 const HTTP_CONNECT_TIMEOUT_SECS: u64 = 10;
 const HTTP_REQUEST_TIMEOUT_SECS: u64 = 120;
+const OLLAMA_HTTP_REQUEST_TIMEOUT_SECS: u64 = 300;
+const HTTP_STREAM_IDLE_TIMEOUT_SECS: u64 = 30;
+const HTTP_STREAM_TOTAL_TIMEOUT_SECS: u64 = 15 * 60;
 
 const REFINE_STAGE_SYSTEM_PROMPT: &str = "\
 You are an expert prompt engineer specializing in multi-stage AI translation pipelines.\n\
@@ -399,12 +426,27 @@ fn keyring_entry(provider: &str) -> Result<keyring::Entry, String> {
     keyring::Entry::new(KEYRING_SERVICE, &username).map_err(|e| format!("Keyring error: {e}"))
 }
 
-fn build_http_client() -> Result<Client, String> {
+fn build_http_client_with_timeout(timeout_secs: u64) -> Result<Client, String> {
     Client::builder()
         .connect_timeout(Duration::from_secs(HTTP_CONNECT_TIMEOUT_SECS))
-        .timeout(Duration::from_secs(HTTP_REQUEST_TIMEOUT_SECS))
+        .timeout(Duration::from_secs(timeout_secs))
         .build()
         .map_err(|e| format!("Failed to build HTTP client: {e}"))
+}
+
+fn build_http_client() -> Result<Client, String> {
+    build_http_client_with_timeout(HTTP_REQUEST_TIMEOUT_SECS)
+}
+
+fn build_ollama_http_client() -> Result<Client, String> {
+    build_http_client_with_timeout(OLLAMA_HTTP_REQUEST_TIMEOUT_SECS)
+}
+
+fn build_streaming_http_client() -> Result<Client, String> {
+    Client::builder()
+        .connect_timeout(Duration::from_secs(HTTP_CONNECT_TIMEOUT_SECS))
+        .build()
+        .map_err(|e| format!("Failed to build streaming HTTP client: {e}"))
 }
 
 /// Map an HTTP status to a short, user-safe explanation.
@@ -462,6 +504,70 @@ fn provider_label(provider: &str) -> &'static str {
         "ollama" => "Ollama",
         _ => "Provider",
     }
+}
+
+fn format_transport_error(provider: &str, operation: &str, error: ReqwestError) -> String {
+    if provider == "ollama" {
+        if error.is_timeout() {
+            return format!(
+                "Ollama timed out during {operation}. The model may be too large for the available VRAM/CPU budget, Ollama may have crashed, or the server may be unreachable."
+            );
+        }
+
+        if error.is_connect() {
+            return "Ollama is not reachable on localhost:11434. Start it with 'ollama serve' and verify the local server is up.".to_string();
+        }
+
+        return format!(
+            "Ollama request failed during {operation}. The local server may be offline, overloaded, or unstable."
+        );
+    }
+
+    if error.is_timeout() {
+        return format!(
+            "{} request timed out during {operation}",
+            provider_label(provider)
+        );
+    }
+
+    format!(
+        "{} request failed during {operation}: {error}",
+        provider_label(provider)
+    )
+}
+
+fn format_ollama_api_error(status: reqwest::StatusCode, body: &str) -> String {
+    log_response_body("Ollama", status, body);
+    match status.as_u16() {
+        404 => "Ollama model or endpoint not found. Verify that the configured model is installed locally.".to_string(),
+        408 => "Ollama timed out while preparing the response. The model may be too large for the available VRAM/CPU budget.".to_string(),
+        503 => "Ollama is overloaded and rejected the request. The server queue may be full or the machine may not have enough free memory.".to_string(),
+        500..=599 => "Ollama failed while loading or running the model. This usually means insufficient VRAM, a model crash, or a local server fault.".to_string(),
+        _ => format!("Ollama API error ({status}): unexpected response"),
+    }
+}
+
+fn format_stream_idle_timeout(provider: &str) -> String {
+    let label = provider_label(provider);
+    if provider == "ollama" {
+        return format!(
+            "{label} stream became idle after {}s without new output. The model may be too large, out of VRAM, crashed, or the local server may be unreachable.",
+            HTTP_STREAM_IDLE_TIMEOUT_SECS
+        );
+    }
+
+    format!(
+        "{label} stream became idle after {}s without new output.",
+        HTTP_STREAM_IDLE_TIMEOUT_SECS
+    )
+}
+
+fn format_stream_total_timeout(provider: &str) -> String {
+    format!(
+        "{} stream exceeded the total timeout of {}s.",
+        provider_label(provider),
+        HTTP_STREAM_TOTAL_TIMEOUT_SECS
+    )
 }
 
 fn legacy_store_path(app: &AppHandle) -> Result<PathBuf, String> {
@@ -785,6 +891,150 @@ async fn call_anthropic(
         .ok_or_else(|| "No text in Anthropic response".to_string())
 }
 
+fn default_ollama_config() -> OllamaConfig {
+    OllamaConfig {
+        temperature: Some(0.1),
+        top_p: Some(1.0),
+        seed: None,
+        keep_alive: Some(Value::String("15m".to_string())),
+        think: Some(Value::Bool(false)),
+        num_ctx: Some(8192),
+        num_predict: None,
+        advanced_options: Some(Map::new()),
+    }
+}
+
+fn minimal_pipeline_config(ollama: Option<OllamaConfig>) -> PipelineConfig {
+    PipelineConfig {
+        source_language: String::new(),
+        target_language: String::new(),
+        stages: vec![],
+        judge_prompt: String::new(),
+        judge_model: String::new(),
+        judge_provider: String::new(),
+        glossary: vec![],
+        use_chunking: None,
+        markdown_aware: None,
+        coherence_prompt: None,
+        ollama,
+    }
+}
+
+fn effective_ollama_config(config: &PipelineConfig) -> OllamaConfig {
+    let defaults = default_ollama_config();
+    let configured = config.ollama.clone().unwrap_or_else(default_ollama_config);
+    OllamaConfig {
+        temperature: configured.temperature.or(defaults.temperature),
+        top_p: configured.top_p.or(defaults.top_p),
+        seed: configured.seed.or(defaults.seed),
+        keep_alive: configured.keep_alive.or(defaults.keep_alive),
+        think: configured.think.or(defaults.think),
+        num_ctx: configured.num_ctx.or(defaults.num_ctx),
+        num_predict: configured.num_predict.or(defaults.num_predict),
+        advanced_options: configured.advanced_options.or(defaults.advanced_options),
+    }
+}
+
+fn build_ollama_options(config: &OllamaConfig) -> Map<String, Value> {
+    let mut options = config.advanced_options.clone().unwrap_or_default();
+    if let Some(temperature) = config.temperature {
+        options.insert("temperature".to_string(), serde_json::json!(temperature));
+    }
+    if let Some(top_p) = config.top_p {
+        options.insert("top_p".to_string(), serde_json::json!(top_p));
+    }
+    if let Some(seed) = config.seed {
+        options.insert("seed".to_string(), serde_json::json!(seed));
+    }
+    if let Some(num_ctx) = config.num_ctx {
+        options.insert("num_ctx".to_string(), serde_json::json!(num_ctx));
+    }
+    if let Some(num_predict) = config.num_predict {
+        options.insert("num_predict".to_string(), serde_json::json!(num_predict));
+    }
+    options
+}
+
+fn build_ollama_chat_body(
+    model: &str,
+    system_prompt: &str,
+    user_prompt: &str,
+    config: &PipelineConfig,
+    stream: bool,
+    json_mode: bool,
+) -> Value {
+    let ollama = effective_ollama_config(config);
+    let options = build_ollama_options(&ollama);
+    let mut body = serde_json::json!({
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ],
+        "stream": stream,
+        "options": options,
+    });
+
+    if let Some(think) = ollama.think {
+        body["think"] = think;
+    }
+    if let Some(keep_alive) = ollama.keep_alive {
+        body["keep_alive"] = keep_alive;
+    }
+    if json_mode {
+        body["format"] = serde_json::json!("json");
+    }
+
+    body
+}
+
+fn parse_ollama_usage(json: &Value) -> Option<(u32, u32)> {
+    match (
+        json["prompt_eval_count"].as_u64(),
+        json["eval_count"].as_u64(),
+    ) {
+        (Some(input), Some(output)) => Some((input as u32, output as u32)),
+        _ => None,
+    }
+}
+
+async fn call_ollama_chat(
+    client: &Client,
+    model: &str,
+    system_prompt: &str,
+    user_prompt: &str,
+    config: &PipelineConfig,
+    json_mode: bool,
+) -> Result<(String, Option<(u32, u32)>), String> {
+    let body = build_ollama_chat_body(model, system_prompt, user_prompt, config, false, json_mode);
+    let resp = client
+        .post(format!("{OLLAMA_BASE_URL}/api/chat"))
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| format_transport_error("ollama", "chat request", e))?;
+
+    let status = resp.status();
+    let text = resp
+        .text()
+        .await
+        .map_err(|e| format_transport_error("ollama", "response read", e))?;
+
+    if !status.is_success() {
+        return Err(format_ollama_api_error(status, &text));
+    }
+
+    let json: Value =
+        serde_json::from_str(&text).map_err(|e| format!("Failed to parse Ollama response: {e}"))?;
+
+    let content = json["message"]["content"]
+        .as_str()
+        .map(|s| s.to_string())
+        .ok_or_else(|| "No content in Ollama response".to_string())?;
+
+    Ok((content, parse_ollama_usage(&json)))
+}
+
 /// Non-streaming call that also returns token usage for judge calls.
 async fn call_provider_for_judge(
     client: &Client,
@@ -793,6 +1043,7 @@ async fn call_provider_for_judge(
     system_prompt: &str,
     user_prompt: &str,
     api_key: &str,
+    config: &PipelineConfig,
 ) -> Result<(String, Option<(u32, u32)>), String> {
     match provider {
         "gemini" => {
@@ -833,11 +1084,10 @@ async fn call_provider_for_judge(
             };
             Ok((content, usage))
         }
-        "openai" | "deepseek" | "ollama" => {
+        "openai" | "deepseek" => {
             let base_url = match provider {
                 "openai" => "https://api.openai.com/v1".to_string(),
                 "deepseek" => "https://api.deepseek.com".to_string(),
-                "ollama" => format!("{OLLAMA_BASE_URL}/v1"),
                 _ => unreachable!(),
             };
             let url = format!("{base_url}/chat/completions");
@@ -884,6 +1134,7 @@ async fn call_provider_for_judge(
             };
             Ok((content, usage))
         }
+        "ollama" => call_ollama_chat(client, model, system_prompt, user_prompt, config, true).await,
         "anthropic" => {
             let body = serde_json::json!({
                 "model": model,
@@ -936,6 +1187,7 @@ async fn call_provider(
     user_prompt: &str,
     api_key: &str,
     json_mode: bool,
+    config: &PipelineConfig,
 ) -> Result<String, String> {
     match provider {
         "gemini" => {
@@ -984,18 +1236,9 @@ async fn call_provider(
             )
             .await
         }
-        "ollama" => {
-            call_openai_compatible(
-                client,
-                &format!("{OLLAMA_BASE_URL}/v1"),
-                model,
-                system_prompt,
-                user_prompt,
-                api_key,
-                json_mode,
-            )
+        "ollama" => call_ollama_chat(client, model, system_prompt, user_prompt, config, json_mode)
             .await
-        }
+            .map(|(content, _)| content),
         _ => Err(format!("Unsupported provider: {provider}")),
     }
 }
@@ -1010,9 +1253,10 @@ fn extract_streaming_text(provider: &str, data: &str) -> Option<String> {
         "gemini" => json["candidates"][0]["content"]["parts"][0]["text"]
             .as_str()
             .map(|s| s.to_string()),
-        "openai" | "deepseek" | "ollama" => json["choices"][0]["delta"]["content"]
+        "openai" | "deepseek" => json["choices"][0]["delta"]["content"]
             .as_str()
             .map(|s| s.to_string()),
+        "ollama" => json["message"]["content"].as_str().map(|s| s.to_string()),
         "anthropic" => {
             if json["type"].as_str() == Some("content_block_delta") {
                 json["delta"]["text"].as_str().map(|s| s.to_string())
@@ -1032,6 +1276,7 @@ async fn build_streaming_request(
     system_prompt: &str,
     user_prompt: &str,
     api_key: &str,
+    config: &PipelineConfig,
 ) -> Result<reqwest::Response, String> {
     match provider {
         "gemini" => {
@@ -1049,11 +1294,10 @@ async fn build_streaming_request(
                 .await
                 .map_err(|e| format!("Gemini request failed: {e}"))
         }
-        "openai" | "deepseek" | "ollama" => {
+        "openai" | "deepseek" => {
             let base_url = match provider {
                 "openai" => "https://api.openai.com/v1".to_string(),
                 "deepseek" => "https://api.deepseek.com".to_string(),
-                "ollama" => format!("{OLLAMA_BASE_URL}/v1"),
                 _ => unreachable!(),
             };
             let url = format!("{base_url}/chat/completions");
@@ -1073,6 +1317,16 @@ async fn build_streaming_request(
             req.send()
                 .await
                 .map_err(|e| format!("API request failed: {e}"))
+        }
+        "ollama" => {
+            let body =
+                build_ollama_chat_body(model, system_prompt, user_prompt, config, true, false);
+            client
+                .post(format!("{OLLAMA_BASE_URL}/api/chat"))
+                .json(&body)
+                .send()
+                .await
+                .map_err(|e| format_transport_error("ollama", "stream request", e))
         }
         "anthropic" => {
             let body = serde_json::json!({
@@ -1116,8 +1370,76 @@ async fn stream_response(
     let mut latest_output_tokens: Option<u32> = None;
     // Anthropic splits usage across two events; track input separately.
     let mut anthropic_input_tokens: Option<u32> = None;
+    let started_at = tokio::time::Instant::now();
+
+    let mut process_json_payload = |data: &str| -> Result<(), String> {
+        if let Some(text) = extract_streaming_text(provider, data) {
+            if !text.is_empty() {
+                full_text.push_str(&text);
+                let _ = app.emit(
+                    "stream-token",
+                    StreamToken {
+                        stream_id: stream_id.to_string(),
+                        token: text,
+                        done: false,
+                        input_tokens: None,
+                        output_tokens: None,
+                    },
+                );
+            }
+        }
+
+        if let Ok(json) = serde_json::from_str::<Value>(data) {
+            match provider {
+                "openai" | "deepseek" => {
+                    if let (Some(i), Some(o)) = (
+                        json["usage"]["prompt_tokens"].as_u64(),
+                        json["usage"]["completion_tokens"].as_u64(),
+                    ) {
+                        latest_input_tokens = Some(i as u32);
+                        latest_output_tokens = Some(o as u32);
+                    }
+                }
+                "ollama" => {
+                    if let Some((i, o)) = parse_ollama_usage(&json) {
+                        latest_input_tokens = Some(i);
+                        latest_output_tokens = Some(o);
+                    }
+                }
+                "gemini" => {
+                    if let (Some(i), Some(o)) = (
+                        json["usageMetadata"]["promptTokenCount"].as_u64(),
+                        json["usageMetadata"]["candidatesTokenCount"].as_u64(),
+                    ) {
+                        latest_input_tokens = Some(i as u32);
+                        latest_output_tokens = Some(o as u32);
+                    }
+                }
+                "anthropic" => match json["type"].as_str() {
+                    Some("message_start") => {
+                        anthropic_input_tokens = json["message"]["usage"]["input_tokens"]
+                            .as_u64()
+                            .map(|n| n as u32);
+                    }
+                    Some("message_delta") => {
+                        if let Some(out) = json["usage"]["output_tokens"].as_u64() {
+                            latest_input_tokens = anthropic_input_tokens;
+                            latest_output_tokens = Some(out as u32);
+                        }
+                    }
+                    _ => {}
+                },
+                _ => {}
+            }
+        }
+        Ok(())
+    };
 
     loop {
+        if started_at.elapsed() >= Duration::from_secs(HTTP_STREAM_TOTAL_TIMEOUT_SECS) {
+            drop(resp);
+            return Err(format_stream_total_timeout(provider));
+        }
         if cancel.is_cancelled() {
             drop(resp);
             return Err(STREAM_CANCELLED_ERROR.to_string());
@@ -1128,82 +1450,69 @@ async fn stream_response(
                 drop(resp);
                 return Err(STREAM_CANCELLED_ERROR.to_string());
             }
-            chunk = resp.chunk() => chunk,
+            chunk = tokio::time::timeout(
+                Duration::from_secs(HTTP_STREAM_IDLE_TIMEOUT_SECS),
+                resp.chunk()
+            ) => chunk,
         };
         match chunk_result {
-            Ok(Some(bytes)) => {
+            Ok(Ok(Some(bytes))) => {
                 buffer.push_str(&String::from_utf8_lossy(&bytes));
 
-                // Process complete SSE lines
                 while let Some(pos) = buffer.find('\n') {
                     let line = buffer[..pos].trim_end().to_string();
                     buffer = buffer[pos + 1..].to_string();
+
+                    if provider == "ollama" {
+                        let trimmed = line.trim();
+                        if trimmed.is_empty() {
+                            continue;
+                        }
+                        process_json_payload(trimmed)?;
+                        continue;
+                    }
 
                     if let Some(data) = line.strip_prefix("data: ") {
                         if data == "[DONE]" {
                             continue;
                         }
-                        if let Some(text) = extract_streaming_text(provider, data) {
-                            if !text.is_empty() {
-                                full_text.push_str(&text);
-                                let _ = app.emit(
-                                    "stream-token",
-                                    StreamToken {
-                                        stream_id: stream_id.to_string(),
-                                        token: text,
-                                        done: false,
-                                        input_tokens: None,
-                                        output_tokens: None,
-                                    },
-                                );
-                            }
-                        }
-
-                        // Extract token usage from this SSE chunk.
-                        if let Ok(json) = serde_json::from_str::<serde_json::Value>(data) {
-                            match provider {
-                                "openai" | "deepseek" | "ollama" => {
-                                    // Final chunk with stream_options.include_usage = true
-                                    if let (Some(i), Some(o)) = (
-                                        json["usage"]["prompt_tokens"].as_u64(),
-                                        json["usage"]["completion_tokens"].as_u64(),
-                                    ) {
-                                        latest_input_tokens = Some(i as u32);
-                                        latest_output_tokens = Some(o as u32);
-                                    }
-                                }
-                                "gemini" => {
-                                    if let (Some(i), Some(o)) = (
-                                        json["usageMetadata"]["promptTokenCount"].as_u64(),
-                                        json["usageMetadata"]["candidatesTokenCount"].as_u64(),
-                                    ) {
-                                        latest_input_tokens = Some(i as u32);
-                                        latest_output_tokens = Some(o as u32);
-                                    }
-                                }
-                                "anthropic" => match json["type"].as_str() {
-                                    Some("message_start") => {
-                                        anthropic_input_tokens = json["message"]["usage"]
-                                            ["input_tokens"]
-                                            .as_u64()
-                                            .map(|n| n as u32);
-                                    }
-                                    Some("message_delta") => {
-                                        if let Some(out) = json["usage"]["output_tokens"].as_u64() {
-                                            latest_input_tokens = anthropic_input_tokens;
-                                            latest_output_tokens = Some(out as u32);
-                                        }
-                                    }
-                                    _ => {}
-                                },
-                                _ => {}
-                            }
-                        }
+                        process_json_payload(data)?;
                     }
                 }
             }
-            Ok(None) => break,
-            Err(e) => return Err(format!("Stream error: {e}")),
+            Ok(Ok(None)) => break,
+            Ok(Err(e)) => return Err(format_transport_error(provider, "stream read", e)),
+            Err(_) => {
+                drop(resp);
+                return Err(format_stream_idle_timeout(provider));
+            }
+        }
+    }
+
+    if provider == "ollama" {
+        let trimmed = buffer.trim();
+        if !trimmed.is_empty() {
+            if let Ok(json) = serde_json::from_str::<Value>(trimmed) {
+                if let Some(text) = json["message"]["content"].as_str() {
+                    if !text.is_empty() && !full_text.ends_with(text) {
+                        full_text.push_str(text);
+                        let _ = app.emit(
+                            "stream-token",
+                            StreamToken {
+                                stream_id: stream_id.to_string(),
+                                token: text.to_string(),
+                                done: false,
+                                input_tokens: None,
+                                output_tokens: None,
+                            },
+                        );
+                    }
+                }
+                if let Some((i, o)) = parse_ollama_usage(&json) {
+                    latest_input_tokens = Some(i);
+                    latest_output_tokens = Some(o);
+                }
+            }
         }
     }
 
@@ -1225,19 +1534,20 @@ async fn stream_response(
 
 #[tauri::command]
 pub async fn list_ollama_models() -> Result<Vec<String>, String> {
-    let client = Client::new();
+    let client = build_http_client_with_timeout(3)?;
     let resp = client
         .get(format!("{OLLAMA_BASE_URL}/api/tags"))
-        .timeout(std::time::Duration::from_secs(3))
         .send()
         .await
-        .map_err(|_| "Cannot connect to Ollama. Is it running?".to_string())?;
+        .map_err(|e| format_transport_error("ollama", "model listing", e))?;
 
     if !resp.status().is_success() {
-        return Err("Ollama returned an error".into());
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        return Err(format_ollama_api_error(status, &body));
     }
 
-    let json: serde_json::Value = resp
+    let json: Value = resp
         .json()
         .await
         .map_err(|e| format!("Invalid Ollama response: {e}"))?;
@@ -1256,16 +1566,76 @@ pub async fn list_ollama_models() -> Result<Vec<String>, String> {
 
 #[tauri::command]
 pub async fn check_ollama_status() -> Result<bool, String> {
-    let client = Client::new();
-    match client
-        .get(format!("{OLLAMA_BASE_URL}/"))
-        .timeout(std::time::Duration::from_secs(3))
-        .send()
-        .await
-    {
+    let client = build_http_client_with_timeout(3)?;
+    match client.get(format!("{OLLAMA_BASE_URL}/")).send().await {
         Ok(resp) => Ok(resp.status().is_success()),
         Err(_) => Ok(false),
     }
+}
+
+fn find_matching_ollama_model<'a>(
+    models: &'a [String],
+    requested_model: &str,
+) -> Option<&'a String> {
+    models.iter().find(|model| {
+        model == &requested_model
+            || model.strip_suffix(":latest") == Some(requested_model)
+            || requested_model.strip_suffix(":latest") == Some(model.as_str())
+    })
+}
+
+async fn ensure_ollama_preflight(model: Option<&str>) -> Result<OllamaPreflightStatus, String> {
+    let reachable = check_ollama_status().await?;
+    if !reachable {
+        return Ok(OllamaPreflightStatus {
+            reachable: false,
+            models: vec![],
+            requested_model: model.map(ToOwned::to_owned),
+            model_available: false,
+        });
+    }
+
+    let models = list_ollama_models().await?;
+    let model_available = match model {
+        Some(requested) => find_matching_ollama_model(&models, requested).is_some(),
+        None => !models.is_empty(),
+    };
+
+    Ok(OllamaPreflightStatus {
+        reachable,
+        models,
+        requested_model: model.map(ToOwned::to_owned),
+        model_available,
+    })
+}
+
+#[tauri::command]
+pub async fn check_ollama_preflight(
+    model: Option<String>,
+) -> Result<OllamaPreflightStatus, String> {
+    ensure_ollama_preflight(model.as_deref()).await
+}
+
+async fn ensure_ollama_model_ready(model: &str) -> Result<(), String> {
+    let status = ensure_ollama_preflight(Some(model)).await?;
+    if !status.reachable {
+        return Err(
+            "Ollama is not reachable on localhost:11434. Start it with 'ollama serve' before running the pipeline."
+                .to_string(),
+        );
+    }
+    if status.models.is_empty() {
+        return Err(
+            "Ollama is reachable but no models are installed. Run 'ollama pull <model>' before starting the pipeline."
+                .to_string(),
+        );
+    }
+    if !status.model_available {
+        return Err(format!(
+            "Ollama model '{model}' is not installed locally. Pull it first or change the configured model."
+        ));
+    }
+    Ok(())
 }
 
 // ── Prompt builders ──────────────────────────────────────────────────
@@ -1432,7 +1802,10 @@ pub struct CoherenceResponse {
     pub output_tokens: Option<u32>,
 }
 
-fn build_coherence_prompts(input: &CoherenceChunkInput, config: &PipelineConfig) -> (String, String) {
+fn build_coherence_prompts(
+    input: &CoherenceChunkInput,
+    config: &PipelineConfig,
+) -> (String, String) {
     let glossary_json = serde_json::to_string(&config.glossary).unwrap_or_default();
 
     let default_instructions = "Evaluate ONLY:\n\
@@ -1465,7 +1838,9 @@ fn build_coherence_prompts(input: &CoherenceChunkInput, config: &PipelineConfig)
         .prev_context
         .as_deref()
         .filter(|s| !s.is_empty())
-        .map(|ctx| format!("[Previous segment — context only]\n{ctx}\n[End of previous context]\n\n"))
+        .map(|ctx| {
+            format!("[Previous segment — context only]\n{ctx}\n[End of previous context]\n\n")
+        })
         .unwrap_or_default();
 
     let next_block = input
@@ -1491,8 +1866,15 @@ pub async fn run_coherence_for_chunk(
     input: CoherenceChunkInput,
     config: PipelineConfig,
 ) -> Result<CoherenceResponse, String> {
+    if config.judge_provider == "ollama" {
+        ensure_ollama_model_ready(&config.judge_model).await?;
+    }
     let api_key = get_api_key(&app, &config.judge_provider)?;
-    let client = build_http_client()?;
+    let client = if config.judge_provider == "ollama" {
+        build_ollama_http_client()?
+    } else {
+        build_http_client()?
+    };
     let (system_prompt, user_prompt) = build_coherence_prompts(&input, &config);
 
     let (result_text, usage) = call_provider_for_judge(
@@ -1502,13 +1884,13 @@ pub async fn run_coherence_for_chunk(
         &system_prompt,
         &user_prompt,
         &api_key,
+        &config,
     )
     .await?;
 
     let sanitized = sanitize_llm_json_output(&result_text);
-    let parsed: serde_json::Value = serde_json::from_str(sanitized).map_err(|e| {
-        format!("Failed to parse coherence JSON: {e}")
-    })?;
+    let parsed: serde_json::Value = serde_json::from_str(sanitized)
+        .map_err(|e| format!("Failed to parse coherence JSON: {e}"))?;
 
     let issues: Vec<JudgeIssue> = parsed["issues"]
         .as_array()
@@ -1568,10 +1950,22 @@ pub async fn run_stage(
     previous_result: Option<String>,
     previous_translation: Option<String>,
 ) -> Result<String, String> {
+    if stage.provider == "ollama" {
+        ensure_ollama_model_ready(&stage.model).await?;
+    }
     let api_key = get_api_key(&app, &stage.provider)?;
-    let client = build_http_client()?;
-    let (system_prompt, user_prompt) =
-        build_stage_prompts(&text, &stage, &config, &previous_result, &previous_translation);
+    let client = if stage.provider == "ollama" {
+        build_ollama_http_client()?
+    } else {
+        build_http_client()?
+    };
+    let (system_prompt, user_prompt) = build_stage_prompts(
+        &text,
+        &stage,
+        &config,
+        &previous_result,
+        &previous_translation,
+    );
 
     call_provider(
         &client,
@@ -1581,6 +1975,7 @@ pub async fn run_stage(
         &user_prompt,
         &api_key,
         false,
+        &config,
     )
     .await
 }
@@ -1596,10 +1991,22 @@ pub async fn run_stage_stream(
     previous_translation: Option<String>,
     stream_id: String,
 ) -> Result<String, String> {
+    if stage.provider == "ollama" {
+        ensure_ollama_model_ready(&stage.model).await?;
+    }
     let api_key = get_api_key(&app, &stage.provider)?;
-    let client = build_http_client()?;
-    let (system_prompt, user_prompt) =
-        build_stage_prompts(&text, &stage, &config, &previous_result, &previous_translation);
+    let client = if stage.provider == "ollama" {
+        build_streaming_http_client()?
+    } else {
+        build_http_client()?
+    };
+    let (system_prompt, user_prompt) = build_stage_prompts(
+        &text,
+        &stage,
+        &config,
+        &previous_result,
+        &previous_translation,
+    );
 
     let cancel = registry.register(&stream_id);
     let _guard = StreamGuard {
@@ -1618,6 +2025,7 @@ pub async fn run_stage_stream(
         &system_prompt,
         &user_prompt,
         &api_key,
+        &config,
     )
     .await?;
 
@@ -1648,8 +2056,15 @@ pub async fn judge_translation(
     translation: String,
     config: PipelineConfig,
 ) -> Result<JudgeResponse, String> {
+    if config.judge_provider == "ollama" {
+        ensure_ollama_model_ready(&config.judge_model).await?;
+    }
     let api_key = get_api_key(&app, &config.judge_provider)?;
-    let client = build_http_client()?;
+    let client = if config.judge_provider == "ollama" {
+        build_ollama_http_client()?
+    } else {
+        build_http_client()?
+    };
     let (system_prompt, user_prompt) = build_judge_prompts(&original_text, &translation, &config);
 
     let (result_text, usage) = call_provider_for_judge(
@@ -1659,6 +2074,7 @@ pub async fn judge_translation(
         &system_prompt,
         &user_prompt,
         &api_key,
+        &config,
     )
     .await?;
 
@@ -1711,8 +2127,15 @@ pub async fn refine_prompt(
     model: String,
     context: String,
 ) -> Result<String, String> {
+    if provider == "ollama" {
+        ensure_ollama_model_ready(&model).await?;
+    }
     let api_key = get_api_key(&app, &provider)?;
-    let client = build_http_client()?;
+    let client = if provider == "ollama" {
+        build_ollama_http_client()?
+    } else {
+        build_http_client()?
+    };
     let system_prompt = if context == "audit" {
         REFINE_AUDIT_SYSTEM_PROMPT
     } else {
@@ -1727,6 +2150,7 @@ pub async fn refine_prompt(
         &user_prompt,
         &api_key,
         false,
+        &minimal_pipeline_config(Some(default_ollama_config())),
     )
     .await
 }
@@ -1734,13 +2158,17 @@ pub async fn refine_prompt(
 #[tauri::command]
 pub async fn test_provider_connection(app: AppHandle, provider: String) -> Result<bool, String> {
     if provider == "ollama" {
-        return check_ollama_status().await.and_then(|ok| {
-            if ok {
-                Ok(true)
-            } else {
-                Err("Ollama is not running".into())
-            }
-        });
+        let status = ensure_ollama_preflight(None).await?;
+        if !status.reachable {
+            return Err("Ollama is not running".into());
+        }
+        if status.models.is_empty() {
+            return Err(
+                "Ollama is running but no models are installed. Pull a model before using local inference."
+                    .into(),
+            );
+        }
+        return Ok(true);
     }
 
     let api_key = get_api_key(&app, &provider)?;
@@ -1760,6 +2188,7 @@ pub async fn test_provider_connection(app: AppHandle, provider: String) -> Resul
         "Reply with exactly: OK",
         &api_key,
         false,
+        &minimal_pipeline_config(None),
     )
     .await;
 
@@ -1812,6 +2241,7 @@ mod tests {
             use_chunking: Some(true),
             markdown_aware: None,
             coherence_prompt: None,
+            ollama: None,
         }
     }
 
@@ -1851,7 +2281,7 @@ mod tests {
 
     #[test]
     fn extract_ollama_streaming() {
-        let data = r#"{"choices":[{"delta":{"content":"Hola"}}]}"#;
+        let data = r#"{"message":{"content":"Hola"}}"#;
         assert_eq!(extract_streaming_text("ollama", data), Some("Hola".into()));
     }
 
@@ -2061,6 +2491,92 @@ mod tests {
     }
 
     #[test]
+    fn builds_ollama_http_client_with_longer_timeout() {
+        let client = build_ollama_http_client();
+        assert!(client.is_ok());
+    }
+
+    #[test]
+    fn builds_streaming_http_client_without_global_request_timeout() {
+        let client = build_streaming_http_client();
+        assert!(client.is_ok());
+    }
+
+    #[test]
+    fn effective_ollama_config_applies_translation_defaults() {
+        let config = make_config();
+        let ollama = effective_ollama_config(&config);
+
+        assert_eq!(ollama.temperature, Some(0.1));
+        assert_eq!(ollama.top_p, Some(1.0));
+        assert_eq!(ollama.num_ctx, Some(8192));
+        assert_eq!(ollama.num_predict, None);
+        assert_eq!(ollama.think, Some(Value::Bool(false)));
+        assert_eq!(ollama.keep_alive, Some(Value::String("15m".into())));
+    }
+
+    #[test]
+    fn effective_ollama_config_merges_user_overrides() {
+        let mut config = make_config();
+        config.ollama = Some(OllamaConfig {
+            temperature: Some(0.2),
+            top_p: Some(0.95),
+            seed: Some(7),
+            keep_alive: Some(Value::String("30m".into())),
+            think: Some(Value::String("low".into())),
+            num_ctx: Some(12288),
+            num_predict: Some(2048),
+            advanced_options: Some(Map::from_iter([(
+                "repeat_penalty".into(),
+                serde_json::json!(1.05),
+            )])),
+        });
+
+        let ollama = effective_ollama_config(&config);
+        let options = build_ollama_options(&ollama);
+
+        assert_eq!(ollama.temperature, Some(0.2));
+        assert_eq!(ollama.top_p, Some(0.95));
+        assert_eq!(ollama.seed, Some(7));
+        assert_eq!(ollama.keep_alive, Some(Value::String("30m".into())));
+        assert_eq!(ollama.think, Some(Value::String("low".into())));
+        assert_eq!(ollama.num_ctx, Some(12288));
+        assert_eq!(ollama.num_predict, Some(2048));
+        assert_eq!(
+            options.get("repeat_penalty"),
+            Some(&serde_json::json!(1.05))
+        );
+    }
+
+    #[test]
+    fn format_stream_idle_timeout_is_specific_for_ollama() {
+        let message = format_stream_idle_timeout("ollama");
+        assert!(message.contains("idle"));
+        assert!(message.contains("VRAM"));
+    }
+
+    #[test]
+    fn format_stream_total_timeout_mentions_provider() {
+        let message = format_stream_total_timeout("ollama");
+        assert!(message.contains("Ollama"));
+        assert!(message.contains(&HTTP_STREAM_TOTAL_TIMEOUT_SECS.to_string()));
+    }
+
+    #[test]
+    fn format_ollama_api_error_maps_overload() {
+        let message = format_ollama_api_error(reqwest::StatusCode::SERVICE_UNAVAILABLE, "busy");
+        assert!(message.contains("overloaded"));
+    }
+
+    #[test]
+    fn find_matching_ollama_model_accepts_latest_alias() {
+        let models = vec!["llama3.2:latest".to_string(), "qwen3:8b".to_string()];
+        assert!(find_matching_ollama_model(&models, "llama3.2").is_some());
+        assert!(find_matching_ollama_model(&models, "llama3.2:latest").is_some());
+        assert!(find_matching_ollama_model(&models, "missing").is_none());
+    }
+
+    #[test]
     fn reads_legacy_api_key_from_store_file_contents() {
         let value = serde_json::json!({
             "OPENAI_API_KEY": "legacy-secret",
@@ -2151,7 +2667,9 @@ mod tests {
     #[tokio::test]
     async fn call_provider_rejects_unknown() {
         let client = Client::new();
-        let result = call_provider(&client, "fake_provider", "m", "s", "u", "k", false).await;
+        let config = make_config();
+        let result =
+            call_provider(&client, "fake_provider", "m", "s", "u", "k", false, &config).await;
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("Unsupported provider"));
     }

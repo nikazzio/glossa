@@ -187,6 +187,7 @@
     "availableModels": "Modelli Disponibili",
     "notRunning": "Ollama non è in esecuzione. Avvialo con 'ollama serve' per usare modelli locali.",
     "noModels": "Ollama è attivo ma non ci sono modelli installati. Esegui 'ollama pull <modello>' per iniziare.",
+    "modelMissing": "Il modello Ollama \"{{model}}\" non è installato localmente. Esegui il pull oppure cambia la configurazione della pipeline.",
     "modelPlaceholder": "Nome del modello...",
     "connected": "Ollama connesso, {{count}} modello(i) disponibile(i)",
     "disconnected": "Ollama non raggiungibile su localhost:11434",

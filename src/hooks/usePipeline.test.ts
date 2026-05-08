@@ -11,6 +11,10 @@ const llmMocks = vi.hoisted(() => ({
   cancelStream: vi.fn(),
 }));
 
+const ollamaMocks = vi.hoisted(() => ({
+  checkPreflight: vi.fn(),
+}));
+
 vi.mock('../services/llmService', async () => {
   const actual =
     await vi.importActual<typeof import('../services/llmService')>(
@@ -19,6 +23,7 @@ vi.mock('../services/llmService', async () => {
   return {
     ...actual,
     llmService: llmMocks,
+    ollamaService: ollamaMocks,
   };
 });
 
@@ -34,6 +39,12 @@ vi.mock('sonner', () => ({
 describe('usePipeline', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    ollamaMocks.checkPreflight.mockResolvedValue({
+      reachable: true,
+      models: ['llama3.2'],
+      requestedModel: 'llama3.2',
+      modelAvailable: true,
+    });
 
     usePipelineStore.setState((state) => ({
       ...state,
@@ -188,5 +199,38 @@ describe('usePipeline', () => {
 
     expect(llmMocks.cancelStream).toHaveBeenCalledWith('stream-xyz');
     expect(useChunksStore.getState().cancelRequested).toBe(true);
+  });
+
+  it('blocks the run when Ollama is offline', async () => {
+    usePipelineStore.setState((state) => ({
+      ...state,
+      config: {
+        ...state.config,
+        stages: [
+          {
+            id: 'stg-1',
+            name: 'Stage 1',
+            prompt: 'Translate',
+            model: 'llama3.2',
+            provider: 'ollama',
+            enabled: true,
+          },
+        ],
+      },
+    }));
+    ollamaMocks.checkPreflight.mockResolvedValueOnce({
+      reachable: false,
+      models: [],
+      requestedModel: 'llama3.2',
+      modelAvailable: false,
+    });
+
+    const { result } = renderHook(() => usePipeline());
+    await act(async () => {
+      await result.current.runPipeline();
+    });
+
+    expect(llmMocks.runStageStream).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalled();
   });
 });
