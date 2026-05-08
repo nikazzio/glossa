@@ -11,6 +11,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { confirm } from '../../stores/confirmStore';
 import { StageCard } from './StageCard';
 import { CostBadge } from './CostBadge';
+import { ProviderRuntimeEditor } from './ProviderRuntimeEditor';
 import { estimatePipelineCost } from '../../utils/costEstimate';
 import { usePricingStore } from '../../stores/pricingStore';
 import { llmService } from '../../services/llmService';
@@ -622,6 +623,14 @@ export function PipelineConfig({
                 <span>{t('ollama.selectedButOffline')}</span>
               </div>
             )}
+
+            <ProviderRuntimeEditor
+              provider={config.judgeProvider}
+              value={config.reviewProviderOptions}
+              onChange={(reviewProviderOptions) => setConfig((prev) => ({ ...prev, reviewProviderOptions }))}
+              title={t('pipeline.providerOptions.reviewTitle')}
+              hint={t('pipeline.providerOptions.reviewHint')}
+            />
             </div>
 
             <AuditPromptEditor

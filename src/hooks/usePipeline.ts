@@ -5,6 +5,7 @@ import { usePipelineStore } from '../stores/pipelineStore';
 import { useChunksStore } from '../stores/chunksStore';
 import { llmService, ollamaService, isStreamCancelledError } from '../services/llmService';
 import { useUiStore } from '../stores/uiStore';
+import { logOperation } from '../stores/operationLogStore';
 import { withRetry, friendlyError } from '../utils/retry';
 import { qualityDefault, qualityFailure } from '../utils';
 import { stripSuperscriptMarkers } from '../utils/footnoteExtractor';
@@ -60,32 +61,74 @@ export function usePipeline() {
     if (ollamaModels.size === 0) return true;
 
     const requestedModels = [...ollamaModels];
-    const preflight = await ollamaService.checkPreflight(requestedModels[0]);
-    useUiStore.getState().setOllamaStatus(preflight.reachable ? 'connected' : 'disconnected');
-    useUiStore.getState().setOllamaModels(preflight.models);
+    logOperation({
+      level: 'info',
+      scope: 'preflight',
+      message: 'Checking whether Ollama is reachable and whether the requested local models are installed',
+      meta: { requestedModels },
+    });
 
-    if (!preflight.reachable) {
-      toast.error(t('ollama.notRunning'));
+    try {
+      const preflight = await ollamaService.checkPreflight(requestedModels[0]);
+      useUiStore.getState().setOllamaStatus(preflight.reachable ? 'connected' : 'disconnected');
+      useUiStore.getState().setOllamaModels(preflight.models);
+
+      if (!preflight.reachable) {
+        logOperation({
+          level: 'error',
+          scope: 'preflight',
+          message: 'Ollama is offline, so the run is blocked before any chunk work starts',
+        });
+        toast.error(t('ollama.notRunning'));
+        return false;
+      }
+      if (preflight.models.length === 0) {
+        logOperation({
+          level: 'warn',
+          scope: 'preflight',
+          message: 'Ollama responded, but there are no installed local models to run',
+        });
+        toast.error(t('ollama.noModels'));
+        return false;
+      }
+
+      const available = new Set(preflight.models);
+      const missing = requestedModels.filter((model) =>
+        !available.has(model) &&
+        !available.has(`${model}:latest`) &&
+        !(model.endsWith(':latest') && available.has(model.slice(0, -7))),
+      );
+
+      if (missing.length > 0) {
+        logOperation({
+          level: 'error',
+          scope: 'preflight',
+          message: `The configured Ollama model "${missing[0]}" is missing locally`,
+        });
+        toast.error(t('ollama.modelMissing', { model: missing[0] }));
+        return false;
+      }
+
+      logOperation({
+        level: 'success',
+        scope: 'preflight',
+        message: 'Ollama preflight passed and the run can proceed',
+        meta: { models: preflight.models.length, availableModels: preflight.models },
+      });
+      return true;
+    } catch (error: unknown) {
+      useUiStore.getState().setOllamaStatus('disconnected');
+      useUiStore.getState().setOllamaModels([]);
+      const msg = friendlyError(error instanceof Error ? error.message : String(error));
+      logOperation({
+        level: 'error',
+        scope: 'preflight',
+        message: 'The preflight request itself failed before the pipeline could start',
+        meta: { error: msg },
+      });
+      toast.error(t('ollama.notRunning'), { description: msg });
       return false;
     }
-    if (preflight.models.length === 0) {
-      toast.error(t('ollama.noModels'));
-      return false;
-    }
-
-    const available = new Set(preflight.models);
-    const missing = requestedModels.filter((model) =>
-      !available.has(model) &&
-      !available.has(`${model}:latest`) &&
-      !(model.endsWith(':latest') && available.has(model.slice(0, -7))),
-    );
-
-    if (missing.length > 0) {
-      toast.error(t('ollama.modelMissing', { model: missing[0] }));
-      return false;
-    }
-
-    return true;
   }, [t]);
 
   // ── Internal helpers ────────────────────────────────────────────────
@@ -112,6 +155,12 @@ export function usePipeline() {
     // Reset only this chunk so we don't carry over a previous run's
     // stage outputs / draft / audit if it cancels or fails early.
     clearChunkStages(chunk.id);
+    logOperation({
+      level: 'info',
+      scope: 'chunk',
+      message: 'Starting pipeline work for this chunk',
+      chunkId: chunk.id,
+    });
     updateChunkJudge(chunk.id, {
       content: '', status: 'idle', rating: qualityDefault(), issues: [],
     });
@@ -134,6 +183,14 @@ export function usePipeline() {
       lastEffectiveConfig = effectiveConfig;
 
       updateChunkStage(chunk.id, stage.id, { content: '', status: 'processing' });
+      logOperation({
+        level: 'info',
+        scope: 'stage',
+        message: `Stage "${stage.name}" started streaming generation`,
+        chunkId: chunk.id,
+        stageId: stage.id,
+        meta: { provider: stage.provider, model: stage.model },
+      });
       try {
         let capturedUsage: TokenUsage | undefined;
         const result = await withRetry(
@@ -158,10 +215,25 @@ export function usePipeline() {
           status: 'completed',
           ...(capturedUsage ? { tokenUsage: capturedUsage } : {}),
         });
+        logOperation({
+          level: 'success',
+          scope: 'stage',
+          message: `Stage "${stage.name}" completed and produced a candidate output`,
+          chunkId: chunk.id,
+          stageId: stage.id,
+          meta: capturedUsage ? { ...capturedUsage } : undefined,
+        });
       } catch (error: unknown) {
         if (isStreamCancelledError(error)) {
           updateChunkStage(chunk.id, stage.id, { content: '', status: 'idle' });
           updateChunkStatus(chunk.id, 'ready');
+          logOperation({
+            level: 'warn',
+            scope: 'stage',
+            message: `Stage "${stage.name}" was cancelled while streaming`,
+            chunkId: chunk.id,
+            stageId: stage.id,
+          });
           return 'cancelled';
         }
         const msg = friendlyError(error instanceof Error ? error.message : String(error));
@@ -169,6 +241,14 @@ export function usePipeline() {
           content: '', status: 'error', error: msg,
         });
         updateChunkStatus(chunk.id, 'error');
+        logOperation({
+          level: 'error',
+          scope: 'stage',
+          message: `Stage "${stage.name}" failed and this chunk stopped here`,
+          chunkId: chunk.id,
+          stageId: stage.id,
+          meta: { error: msg },
+        });
         toast.error(t('errors.stageFailed', { name: stage.name }), { description: msg });
         return 'failed';
       }
@@ -211,6 +291,13 @@ export function usePipeline() {
     // chunk" behaviour. The outer loops still check cancel between chunks.
 
     updateChunkStatus(chunk.id, 'processing');
+    logOperation({
+      level: 'info',
+      scope: 'audit',
+      message: 'Judge started evaluating the final candidate for this chunk',
+      chunkId: chunk.id,
+      meta: { provider: (effectiveConfig ?? config).judgeProvider, model: (effectiveConfig ?? config).judgeModel },
+    });
     updateChunkJudge(chunk.id, {
       content: '', status: 'processing', rating: qualityDefault(), issues: [],
     });
@@ -230,6 +317,13 @@ export function usePipeline() {
         ...(judgeTokenUsage ? { tokenUsage: judgeTokenUsage } : {}),
       } as JudgeResult);
       updateChunkStatus(chunk.id, 'completed');
+      logOperation({
+        level: 'success',
+        scope: 'audit',
+        message: 'Judge completed and stored the audit result',
+        chunkId: chunk.id,
+        meta: judgeTokenUsage ? { ...judgeTokenUsage } : undefined,
+      });
       return 'completed';
     } catch (error: unknown) {
       const msg = friendlyError(error instanceof Error ? error.message : String(error));
@@ -241,6 +335,13 @@ export function usePipeline() {
         error: msg,
       });
       updateChunkStatus(chunk.id, 'error');
+      logOperation({
+        level: 'error',
+        scope: 'audit',
+        message: 'Judge failed while auditing this chunk',
+        chunkId: chunk.id,
+        meta: { error: msg },
+      });
       toast.error(t('errors.auditFailed'), { description: msg });
       return 'failed';
     }
@@ -256,6 +357,12 @@ export function usePipeline() {
     // freshest state instead of a stale useCallback closure.
     const liveChunks = useChunksStore.getState().chunks;
     if (liveChunks.length === 0) return;
+    logOperation({
+      level: 'info',
+      scope: 'pipeline',
+      message: 'Batch pipeline run started',
+      meta: { chunks: liveChunks.length, stages: config.stages.filter((stage) => stage.enabled).length },
+    });
     if (!(await ensureOllamaReady([
       ...config.stages.filter((stage) => stage.enabled).map((stage) => ({ provider: stage.provider, model: stage.model })),
       { provider: config.judgeProvider, model: config.judgeModel },
@@ -281,10 +388,18 @@ export function usePipeline() {
     useChunksStore.getState().clearCancelRequest();
 
     if (cancelled) {
+      logOperation({ level: 'warn', scope: 'pipeline', message: 'Batch pipeline run was cancelled by the user' });
       toast.message(t('pipeline.stopConfirmed'));
     } else if (errorCount === 0) {
+      logOperation({ level: 'success', scope: 'pipeline', message: 'Batch pipeline run completed successfully' });
       toast.success(t('errors.pipelineCompleted'));
     } else {
+      logOperation({
+        level: 'warn',
+        scope: 'pipeline',
+        message: 'Batch pipeline run completed, but some chunks failed',
+        meta: { errorCount },
+      });
       toast.warning(t('errors.pipelineCompletedWithErrors', { count: errorCount }));
     }
   }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureOllamaReady]);
@@ -293,6 +408,7 @@ export function usePipeline() {
     if (useChunksStore.getState().isProcessing) return;
     const chunk = useChunksStore.getState().chunks.find((c) => c.id === chunkId);
     if (!chunk) return;
+    logOperation({ level: 'info', scope: 'pipeline', message: 'Single chunk pipeline run started', chunkId });
     if (!(await ensureOllamaReady([
       ...config.stages.filter((stage) => stage.enabled).map((stage) => ({ provider: stage.provider, model: stage.model })),
       { provider: config.judgeProvider, model: config.judgeModel },
@@ -308,8 +424,10 @@ export function usePipeline() {
     useChunksStore.getState().clearCancelRequest();
 
     if (outcome === 'cancelled') {
+      logOperation({ level: 'warn', scope: 'pipeline', message: 'Single chunk pipeline run was cancelled', chunkId });
       toast.message(t('pipeline.stopConfirmed'));
     } else if (outcome === 'completed') {
+      logOperation({ level: 'success', scope: 'pipeline', message: 'Single chunk pipeline run completed', chunkId });
       toast.success(t('pipeline.singleChunkCompleted'));
     } else if (outcome === 'failed') {
       // Per-chunk failure already raised a toast inside the helper; no
@@ -321,6 +439,7 @@ export function usePipeline() {
     if (useChunksStore.getState().isProcessing) return;
     const liveChunks = useChunksStore.getState().chunks;
     if (liveChunks.length === 0) return;
+    logOperation({ level: 'info', scope: 'audit', message: 'Batch audit run started', meta: { chunks: liveChunks.length } });
     if (!(await ensureOllamaReady([{ provider: config.judgeProvider, model: config.judgeModel }]))) return;
     useChunksStore.getState().clearCancelRequest();
     setIsProcessing(true);
@@ -348,8 +467,10 @@ export function usePipeline() {
     useChunksStore.getState().clearCancelRequest();
 
     if (cancelled) {
+      logOperation({ level: 'warn', scope: 'audit', message: 'Batch audit run was cancelled by the user' });
       toast.message(t('pipeline.stopConfirmed'));
     } else if (errorCount === 0) {
+      logOperation({ level: 'success', scope: 'audit', message: 'Batch audit run completed successfully' });
       toast.success(t('errors.reEvalCompleted'));
     }
   }, [config, t, setIsProcessing, updateChunkJudge, updateChunkStatus, ensureOllamaReady]);
@@ -363,6 +484,7 @@ export function usePipeline() {
       return;
     }
     if (!(await ensureOllamaReady([{ provider: config.judgeProvider, model: config.judgeModel }]))) return;
+    logOperation({ level: 'info', scope: 'audit', message: 'Single chunk audit started', chunkId });
     useChunksStore.getState().clearCancelRequest();
     setIsProcessing(true);
 
@@ -372,8 +494,10 @@ export function usePipeline() {
     useChunksStore.getState().clearCancelRequest();
 
     if (outcome === 'cancelled') {
+      logOperation({ level: 'warn', scope: 'audit', message: 'Single chunk audit was cancelled', chunkId });
       toast.message(t('pipeline.stopConfirmed'));
     } else if (outcome === 'completed') {
+      logOperation({ level: 'success', scope: 'audit', message: 'Single chunk audit completed', chunkId });
       toast.success(t('pipeline.singleChunkAudited'));
     }
   }, [config, t, setIsProcessing, updateChunkJudge, updateChunkStatus, ensureOllamaReady]);
@@ -391,6 +515,7 @@ export function usePipeline() {
       return;
     }
     if (!(await ensureOllamaReady([{ provider: config.judgeProvider, model: config.judgeModel }]))) return;
+    logOperation({ level: 'info', scope: 'coherence', message: 'Cross-chunk coherence audit started', meta: { chunks: liveChunks.length } });
 
     useChunksStore.getState().clearCancelRequest();
     setIsProcessing(true);
@@ -409,6 +534,7 @@ export function usePipeline() {
       const nextContext = nextChunk?.currentDraft ? firstNWords(nextChunk.currentDraft, 300) : undefined;
 
       updateChunkCoherence(chunk.id, { status: 'processing', issues: [] });
+      logOperation({ level: 'info', scope: 'coherence', message: 'Coherence check started for this chunk against its neighbors', chunkId: chunk.id });
 
       try {
         const result = await withRetry(
@@ -427,9 +553,23 @@ export function usePipeline() {
           issues: result.issues as Issue[],
           ...(tokenUsage ? { tokenUsage } : {}),
         });
+        logOperation({
+          level: 'success',
+          scope: 'coherence',
+          message: 'Coherence check completed for this chunk',
+          chunkId: chunk.id,
+          meta: { issues: result.issues.length, ...tokenUsage },
+        });
       } catch (error: unknown) {
         const msg = friendlyError(error instanceof Error ? error.message : String(error));
         updateChunkCoherence(chunk.id, { status: 'error', issues: [], error: msg });
+        logOperation({
+          level: 'error',
+          scope: 'coherence',
+          message: 'Coherence check failed for this chunk',
+          chunkId: chunk.id,
+          meta: { error: msg },
+        });
         errorCount++;
       }
     }
@@ -438,16 +578,25 @@ export function usePipeline() {
     useChunksStore.getState().clearCancelRequest();
 
     if (cancelled) {
+      logOperation({ level: 'warn', scope: 'coherence', message: 'Cross-chunk coherence audit was cancelled' });
       toast.message(t('pipeline.stopConfirmed'));
     } else if (errorCount === 0) {
+      logOperation({ level: 'success', scope: 'coherence', message: 'Cross-chunk coherence audit completed' });
       toast.success(t('coherence.auditCompleted'));
     } else {
+      logOperation({
+        level: 'warn',
+        scope: 'coherence',
+        message: 'Cross-chunk coherence audit completed with errors',
+        meta: { errorCount },
+      });
       toast.warning(t('coherence.auditCompletedWithErrors', { count: errorCount }));
     }
   }, [config, t, setIsProcessing, updateChunkCoherence, ensureOllamaReady]);
 
   const cancelPipeline = useCallback(() => {
     requestCancel();
+    logOperation({ level: 'warn', scope: 'pipeline', message: 'Cancellation requested; the current in-flight work is being asked to stop' });
     const streamId = useChunksStore.getState().activeStreamId;
     if (streamId) {
       // Best-effort: tell the backend to drop the in-flight HTTP request

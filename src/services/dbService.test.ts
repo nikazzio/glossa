@@ -131,7 +131,7 @@ describe('initDatabase migrations', () => {
       expect.stringContaining("ALTER TABLE pipeline_configs ADD COLUMN source_text TEXT DEFAULT ''"),
     );
     expect(dbState.db.execute).toHaveBeenCalledWith(
-      expect.stringContaining('ALTER TABLE pipeline_configs ADD COLUMN ollama_config TEXT DEFAULT NULL'),
+      expect.stringContaining('ALTER TABLE pipeline_configs ADD COLUMN review_provider_options TEXT DEFAULT NULL'),
     );
     expect(dbState.db.execute).toHaveBeenCalledWith(
       expect.stringContaining('DELETE FROM pipeline_configs'),

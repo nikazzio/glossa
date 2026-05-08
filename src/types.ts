@@ -16,7 +16,12 @@ export interface OllamaConfig {
   think?: OllamaThinkLevel;
   numCtx?: number | null;
   numPredict?: number | null;
+  useAdvancedOptions?: boolean;
   advancedOptions?: Record<string, unknown>;
+}
+
+export interface ProviderRuntimeConfig {
+  ollama?: OllamaConfig;
 }
 
 export interface GlossaryEntry {
@@ -45,6 +50,7 @@ export interface PipelineStageConfig {
   rollingContext?: boolean;
   sourceLanguage?: string;
   targetLanguage?: string;
+  providerOptions?: ProviderRuntimeConfig;
 }
 
 export interface Footnote {
@@ -124,5 +130,5 @@ export interface PipelineConfig {
   markdownAware?: boolean;
   experimentalImport?: ExperimentalImportMode | null;
   coherencePrompt?: string;
-  ollama?: OllamaConfig;
+  reviewProviderOptions?: ProviderRuntimeConfig;
 }

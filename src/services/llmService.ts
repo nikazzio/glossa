@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import type { PipelineConfig, PipelineStageConfig, JudgeResult, Issue, TokenUsage } from '../types';
 import { useChunksStore } from '../stores/chunksStore';
+import { logOperation } from '../stores/operationLogStore';
 
 /// Sentinel string returned by the Rust backend when a stream is
 /// cancelled via cancel_stream. Exposed so the pipeline runner can
@@ -42,6 +43,12 @@ export const llmService = {
     previousResult?: string,
     previousTranslation?: string,
   ): Promise<string> {
+    logOperation({
+      level: 'info',
+      scope: 'invoke',
+      message: `Invoking backend stage run for ${stage.provider}/${stage.model}`,
+      stageId: stage.id,
+    });
     return invoke<string>('run_stage', {
       text,
       stage,
@@ -65,6 +72,13 @@ export const llmService = {
     previousTranslation?: string,
   ): Promise<string> {
     const streamId = `stream-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    logOperation({
+      level: 'info',
+      scope: 'invoke',
+      message: `Invoking backend streaming stage run for ${stage.provider}/${stage.model}`,
+      stageId: stage.id,
+      meta: { streamId },
+    });
 
     const unlisten = await listen<StreamTokenPayload>('stream-token', (event) => {
       if (event.payload.streamId !== streamId) return;
@@ -97,6 +111,12 @@ export const llmService = {
   },
 
   async cancelStream(streamId: string): Promise<void> {
+    logOperation({
+      level: 'warn',
+      scope: 'invoke',
+      message: 'Invoking backend stream cancellation',
+      meta: { streamId },
+    });
     return invoke('cancel_stream', { streamId });
   },
 
@@ -105,6 +125,11 @@ export const llmService = {
     translation: string,
     config: PipelineConfig,
   ): Promise<Omit<JudgeResult, 'status'> & { inputTokens?: number; outputTokens?: number }> {
+    logOperation({
+      level: 'info',
+      scope: 'invoke',
+      message: `Invoking backend judge run for ${config.judgeProvider}/${config.judgeModel}`,
+    });
     return invoke<Omit<JudgeResult, 'status'> & { inputTokens?: number; outputTokens?: number }>(
       'judge_translation',
       { originalText, translation, config },
@@ -115,6 +140,11 @@ export const llmService = {
     input: { original: string; translation: string; prevContext?: string; nextContext?: string },
     config: PipelineConfig,
   ): Promise<{ issues: Issue[]; inputTokens?: number; outputTokens?: number }> {
+    logOperation({
+      level: 'info',
+      scope: 'invoke',
+      message: `Invoking backend coherence run for ${config.judgeProvider}/${config.judgeModel}`,
+    });
     return invoke('run_coherence_for_chunk', { input, config });
   },
 
@@ -137,14 +167,22 @@ export const llmService = {
  */
 export const ollamaService = {
   async listModels(): Promise<string[]> {
+    logOperation({ level: 'info', scope: 'invoke', message: 'Invoking backend model listing for Ollama' });
     return invoke<string[]>('list_ollama_models');
   },
 
   async checkStatus(): Promise<boolean> {
+    logOperation({ level: 'info', scope: 'invoke', message: 'Invoking backend reachability check for Ollama' });
     return invoke<boolean>('check_ollama_status');
   },
 
   async checkPreflight(model?: string): Promise<OllamaPreflightStatus> {
+    logOperation({
+      level: 'info',
+      scope: 'invoke',
+      message: 'Invoking backend preflight check for Ollama',
+      meta: model ? { model } : undefined,
+    });
     return invoke<OllamaPreflightStatus>('check_ollama_preflight', {
       model: model ?? null,
     });

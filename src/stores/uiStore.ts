@@ -7,7 +7,7 @@ import type {
 } from '../types';
 
 export type InsightsDrawerTab = 'index' | 'stats' | 'coherence';
-export type ChunkDrawerTab = 'audit' | 'notes';
+export type ChunkDrawerTab = 'audit' | 'notes' | 'operations';
 
 interface UiState {
   viewMode: ViewMode;

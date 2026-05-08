@@ -233,4 +233,98 @@ describe('usePipeline', () => {
     expect(llmMocks.runStageStream).not.toHaveBeenCalled();
     expect(toast.error).toHaveBeenCalled();
   });
+
+  it('blocks the run when Ollama has no installed models', async () => {
+    usePipelineStore.setState((state) => ({
+      ...state,
+      config: {
+        ...state.config,
+        stages: [
+          {
+            id: 'stg-1',
+            name: 'Stage 1',
+            prompt: 'Translate',
+            model: 'llama3.2',
+            provider: 'ollama',
+            enabled: true,
+          },
+        ],
+      },
+    }));
+    ollamaMocks.checkPreflight.mockResolvedValueOnce({
+      reachable: true,
+      models: [],
+      requestedModel: 'llama3.2',
+      modelAvailable: false,
+    });
+
+    const { result } = renderHook(() => usePipeline());
+    await act(async () => {
+      await result.current.runPipeline();
+    });
+
+    expect(llmMocks.runStageStream).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalled();
+  });
+
+  it('blocks the run when the configured Ollama model is missing', async () => {
+    usePipelineStore.setState((state) => ({
+      ...state,
+      config: {
+        ...state.config,
+        stages: [
+          {
+            id: 'stg-1',
+            name: 'Stage 1',
+            prompt: 'Translate',
+            model: 'llama3.2',
+            provider: 'ollama',
+            enabled: true,
+          },
+        ],
+      },
+    }));
+    ollamaMocks.checkPreflight.mockResolvedValueOnce({
+      reachable: true,
+      models: ['mistral:latest'],
+      requestedModel: 'llama3.2',
+      modelAvailable: false,
+    });
+
+    const { result } = renderHook(() => usePipeline());
+    await act(async () => {
+      await result.current.runPipeline();
+    });
+
+    expect(llmMocks.runStageStream).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalled();
+  });
+
+  it('shows a friendly toast when Ollama preflight throws', async () => {
+    usePipelineStore.setState((state) => ({
+      ...state,
+      config: {
+        ...state.config,
+        stages: [
+          {
+            id: 'stg-1',
+            name: 'Stage 1',
+            prompt: 'Translate',
+            model: 'llama3.2',
+            provider: 'ollama',
+            enabled: true,
+          },
+        ],
+      },
+    }));
+    ollamaMocks.checkPreflight.mockRejectedValueOnce(new Error('invoke failed'));
+
+    const { result } = renderHook(() => usePipeline());
+    await act(async () => {
+      await result.current.runPipeline();
+    });
+
+    expect(llmMocks.runStageStream).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalled();
+  });
 });

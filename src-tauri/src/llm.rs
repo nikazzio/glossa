@@ -12,7 +12,7 @@ use std::{
         atomic::{AtomicBool, Ordering},
         Arc, LazyLock, Mutex,
     },
-    time::Duration,
+    time::{Duration, Instant},
 };
 use tauri::{AppHandle, Emitter, Manager, State};
 use tokio::sync::Notify;
@@ -20,6 +20,21 @@ use tokio::sync::Notify;
 static API_KEY_CACHE: LazyLock<Mutex<HashMap<String, String>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 static FILE_STORE_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
+static OLLAMA_PREFLIGHT_CACHE: LazyLock<Mutex<Option<CachedOllamaPreflight>>> =
+    LazyLock::new(|| Mutex::new(None));
+static OLLAMA_HTTP_CLIENT: LazyLock<Client> = LazyLock::new(|| {
+    Client::builder()
+        .connect_timeout(Duration::from_secs(HTTP_CONNECT_TIMEOUT_SECS))
+        .timeout(Duration::from_secs(OLLAMA_HTTP_REQUEST_TIMEOUT_SECS))
+        .build()
+        .expect("failed to build shared Ollama HTTP client")
+});
+static OLLAMA_STREAMING_HTTP_CLIENT: LazyLock<Client> = LazyLock::new(|| {
+    Client::builder()
+        .connect_timeout(Duration::from_secs(HTTP_CONNECT_TIMEOUT_SECS))
+        .build()
+        .expect("failed to build shared Ollama streaming HTTP client")
+});
 
 // ── Types matching frontend ──────────────────────────────────────────
 
@@ -40,6 +55,7 @@ pub struct StageConfig {
     pub model: String,
     pub provider: String,
     pub enabled: bool,
+    pub provider_options: Option<ProviderRuntimeConfig>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -52,7 +68,14 @@ pub struct OllamaConfig {
     pub think: Option<serde_json::Value>,
     pub num_ctx: Option<u32>,
     pub num_predict: Option<i32>,
+    pub use_advanced_options: Option<bool>,
     pub advanced_options: Option<serde_json::Map<String, serde_json::Value>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProviderRuntimeConfig {
+    pub ollama: Option<OllamaConfig>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -68,7 +91,7 @@ pub struct PipelineConfig {
     pub use_chunking: Option<bool>,
     pub markdown_aware: Option<bool>,
     pub coherence_prompt: Option<String>,
-    pub ollama: Option<OllamaConfig>,
+    pub review_provider_options: Option<ProviderRuntimeConfig>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -78,6 +101,13 @@ pub struct OllamaPreflightStatus {
     pub models: Vec<String>,
     pub requested_model: Option<String>,
     pub model_available: bool,
+}
+
+#[derive(Debug, Clone)]
+struct CachedOllamaPreflight {
+    fetched_at: Instant,
+    reachable: bool,
+    models: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -214,8 +244,10 @@ const OLLAMA_BASE_URL: &str = "http://localhost:11434";
 const HTTP_CONNECT_TIMEOUT_SECS: u64 = 10;
 const HTTP_REQUEST_TIMEOUT_SECS: u64 = 120;
 const OLLAMA_HTTP_REQUEST_TIMEOUT_SECS: u64 = 300;
+const HTTP_STREAM_HEADER_TIMEOUT_SECS: u64 = 30;
 const HTTP_STREAM_IDLE_TIMEOUT_SECS: u64 = 30;
 const HTTP_STREAM_TOTAL_TIMEOUT_SECS: u64 = 15 * 60;
+const OLLAMA_PREFLIGHT_CACHE_TTL_SECS: u64 = 5;
 
 const REFINE_STAGE_SYSTEM_PROMPT: &str = "\
 You are an expert prompt engineer specializing in multi-stage AI translation pipelines.\n\
@@ -439,14 +471,11 @@ fn build_http_client() -> Result<Client, String> {
 }
 
 fn build_ollama_http_client() -> Result<Client, String> {
-    build_http_client_with_timeout(OLLAMA_HTTP_REQUEST_TIMEOUT_SECS)
+    Ok(OLLAMA_HTTP_CLIENT.clone())
 }
 
-fn build_streaming_http_client() -> Result<Client, String> {
-    Client::builder()
-        .connect_timeout(Duration::from_secs(HTTP_CONNECT_TIMEOUT_SECS))
-        .build()
-        .map_err(|e| format!("Failed to build streaming HTTP client: {e}"))
+fn build_ollama_streaming_http_client() -> Result<Client, String> {
+    Ok(OLLAMA_STREAMING_HTTP_CLIENT.clone())
 }
 
 /// Map an HTTP status to a short, user-safe explanation.
@@ -559,6 +588,21 @@ fn format_stream_idle_timeout(provider: &str) -> String {
     format!(
         "{label} stream became idle after {}s without new output.",
         HTTP_STREAM_IDLE_TIMEOUT_SECS
+    )
+}
+
+fn format_stream_header_timeout(provider: &str) -> String {
+    let label = provider_label(provider);
+    if provider == "ollama" {
+        return format!(
+            "{label} did not send response headers within {}s. The local server may be hung, overloaded, or still loading the model.",
+            HTTP_STREAM_HEADER_TIMEOUT_SECS
+        );
+    }
+
+    format!(
+        "{label} did not send response headers within {}s.",
+        HTTP_STREAM_HEADER_TIMEOUT_SECS
     )
 }
 
@@ -900,11 +944,12 @@ fn default_ollama_config() -> OllamaConfig {
         think: Some(Value::Bool(false)),
         num_ctx: Some(8192),
         num_predict: None,
+        use_advanced_options: Some(false),
         advanced_options: Some(Map::new()),
     }
 }
 
-fn minimal_pipeline_config(ollama: Option<OllamaConfig>) -> PipelineConfig {
+fn minimal_pipeline_config(review_provider_options: Option<ProviderRuntimeConfig>) -> PipelineConfig {
     PipelineConfig {
         source_language: String::new(),
         target_language: String::new(),
@@ -916,27 +961,75 @@ fn minimal_pipeline_config(ollama: Option<OllamaConfig>) -> PipelineConfig {
         use_chunking: None,
         markdown_aware: None,
         coherence_prompt: None,
-        ollama,
+        review_provider_options,
     }
 }
 
-fn effective_ollama_config(config: &PipelineConfig) -> OllamaConfig {
+fn merge_ollama_config(
+    base: Option<&OllamaConfig>,
+    override_config: Option<&OllamaConfig>,
+) -> OllamaConfig {
     let defaults = default_ollama_config();
-    let configured = config.ollama.clone().unwrap_or_else(default_ollama_config);
+    let base = base.cloned().unwrap_or_else(default_ollama_config);
+    let override_config = override_config.cloned().unwrap_or(OllamaConfig {
+        temperature: None,
+        top_p: None,
+        seed: None,
+        keep_alive: None,
+        think: None,
+        num_ctx: None,
+        num_predict: None,
+        use_advanced_options: None,
+        advanced_options: None,
+    });
     OllamaConfig {
-        temperature: configured.temperature.or(defaults.temperature),
-        top_p: configured.top_p.or(defaults.top_p),
-        seed: configured.seed.or(defaults.seed),
-        keep_alive: configured.keep_alive.or(defaults.keep_alive),
-        think: configured.think.or(defaults.think),
-        num_ctx: configured.num_ctx.or(defaults.num_ctx),
-        num_predict: configured.num_predict.or(defaults.num_predict),
-        advanced_options: configured.advanced_options.or(defaults.advanced_options),
+        temperature: override_config.temperature.or(base.temperature).or(defaults.temperature),
+        top_p: override_config.top_p.or(base.top_p).or(defaults.top_p),
+        seed: override_config.seed.or(base.seed).or(defaults.seed),
+        keep_alive: override_config
+            .keep_alive
+            .or(base.keep_alive)
+            .or(defaults.keep_alive),
+        think: override_config.think.or(base.think).or(defaults.think),
+        num_ctx: override_config.num_ctx.or(base.num_ctx).or(defaults.num_ctx),
+        num_predict: override_config
+            .num_predict
+            .or(base.num_predict)
+            .or(defaults.num_predict),
+        use_advanced_options: override_config
+            .use_advanced_options
+            .or(base.use_advanced_options)
+            .or(defaults.use_advanced_options),
+        advanced_options: Some({
+            let mut merged = base.advanced_options.unwrap_or_default();
+            if let Some(override_options) = override_config.advanced_options {
+                merged.extend(override_options);
+            }
+            if merged.is_empty() {
+                defaults.advanced_options.unwrap_or_default()
+            } else {
+                merged
+            }
+        }),
     }
+}
+
+fn effective_stage_ollama_config(stage: &StageConfig) -> OllamaConfig {
+    merge_ollama_config(None, stage.provider_options.as_ref().and_then(|options| options.ollama.as_ref()))
+}
+
+fn effective_review_ollama_config(config: &PipelineConfig) -> OllamaConfig {
+    merge_ollama_config(
+        None,
+        config
+            .review_provider_options
+            .as_ref()
+            .and_then(|options| options.ollama.as_ref()),
+    )
 }
 
 fn build_ollama_options(config: &OllamaConfig) -> Map<String, Value> {
-    let mut options = config.advanced_options.clone().unwrap_or_default();
+    let mut options = Map::new();
     if let Some(temperature) = config.temperature {
         options.insert("temperature".to_string(), serde_json::json!(temperature));
     }
@@ -952,6 +1045,11 @@ fn build_ollama_options(config: &OllamaConfig) -> Map<String, Value> {
     if let Some(num_predict) = config.num_predict {
         options.insert("num_predict".to_string(), serde_json::json!(num_predict));
     }
+    if config.use_advanced_options == Some(true) {
+        if let Some(advanced) = &config.advanced_options {
+            options.extend(advanced.clone());
+        }
+    }
     options
 }
 
@@ -959,12 +1057,11 @@ fn build_ollama_chat_body(
     model: &str,
     system_prompt: &str,
     user_prompt: &str,
-    config: &PipelineConfig,
+    ollama: &OllamaConfig,
     stream: bool,
     json_mode: bool,
 ) -> Value {
-    let ollama = effective_ollama_config(config);
-    let options = build_ollama_options(&ollama);
+    let options = build_ollama_options(ollama);
     let mut body = serde_json::json!({
         "model": model,
         "messages": [
@@ -975,10 +1072,10 @@ fn build_ollama_chat_body(
         "options": options,
     });
 
-    if let Some(think) = ollama.think {
+    if let Some(think) = ollama.think.clone() {
         body["think"] = think;
     }
-    if let Some(keep_alive) = ollama.keep_alive {
+    if let Some(keep_alive) = ollama.keep_alive.clone() {
         body["keep_alive"] = keep_alive;
     }
     if json_mode {
@@ -1003,10 +1100,10 @@ async fn call_ollama_chat(
     model: &str,
     system_prompt: &str,
     user_prompt: &str,
-    config: &PipelineConfig,
+    ollama: &OllamaConfig,
     json_mode: bool,
 ) -> Result<(String, Option<(u32, u32)>), String> {
-    let body = build_ollama_chat_body(model, system_prompt, user_prompt, config, false, json_mode);
+    let body = build_ollama_chat_body(model, system_prompt, user_prompt, ollama, false, json_mode);
     let resp = client
         .post(format!("{OLLAMA_BASE_URL}/api/chat"))
         .json(&body)
@@ -1043,7 +1140,8 @@ async fn call_provider_for_judge(
     system_prompt: &str,
     user_prompt: &str,
     api_key: &str,
-    config: &PipelineConfig,
+    _config: &PipelineConfig,
+    ollama: Option<&OllamaConfig>,
 ) -> Result<(String, Option<(u32, u32)>), String> {
     match provider {
         "gemini" => {
@@ -1134,7 +1232,18 @@ async fn call_provider_for_judge(
             };
             Ok((content, usage))
         }
-        "ollama" => call_ollama_chat(client, model, system_prompt, user_prompt, config, true).await,
+        "ollama" => {
+            let resolved_ollama = ollama.cloned().unwrap_or_else(default_ollama_config);
+            call_ollama_chat(
+                client,
+                model,
+                system_prompt,
+                user_prompt,
+                &resolved_ollama,
+                true,
+            )
+            .await
+        }
         "anthropic" => {
             let body = serde_json::json!({
                 "model": model,
@@ -1187,7 +1296,8 @@ async fn call_provider(
     user_prompt: &str,
     api_key: &str,
     json_mode: bool,
-    config: &PipelineConfig,
+    _config: &PipelineConfig,
+    ollama: Option<&OllamaConfig>,
 ) -> Result<String, String> {
     match provider {
         "gemini" => {
@@ -1236,9 +1346,19 @@ async fn call_provider(
             )
             .await
         }
-        "ollama" => call_ollama_chat(client, model, system_prompt, user_prompt, config, json_mode)
+        "ollama" => {
+            let resolved_ollama = ollama.cloned().unwrap_or_else(default_ollama_config);
+            call_ollama_chat(
+                client,
+                model,
+                system_prompt,
+                user_prompt,
+                &resolved_ollama,
+                json_mode,
+            )
             .await
-            .map(|(content, _)| content),
+            .map(|(content, _)| content)
+        }
         _ => Err(format!("Unsupported provider: {provider}")),
     }
 }
@@ -1276,7 +1396,8 @@ async fn build_streaming_request(
     system_prompt: &str,
     user_prompt: &str,
     api_key: &str,
-    config: &PipelineConfig,
+    _config: &PipelineConfig,
+    ollama: Option<&OllamaConfig>,
 ) -> Result<reqwest::Response, String> {
     match provider {
         "gemini" => {
@@ -1319,14 +1440,26 @@ async fn build_streaming_request(
                 .map_err(|e| format!("API request failed: {e}"))
         }
         "ollama" => {
+            let resolved_ollama = ollama.cloned().unwrap_or_else(default_ollama_config);
             let body =
-                build_ollama_chat_body(model, system_prompt, user_prompt, config, true, false);
-            client
-                .post(format!("{OLLAMA_BASE_URL}/api/chat"))
-                .json(&body)
-                .send()
-                .await
-                .map_err(|e| format_transport_error("ollama", "stream request", e))
+                build_ollama_chat_body(
+                    model,
+                    system_prompt,
+                    user_prompt,
+                    &resolved_ollama,
+                    true,
+                    false,
+                );
+            tokio::time::timeout(
+                Duration::from_secs(HTTP_STREAM_HEADER_TIMEOUT_SECS),
+                client
+                    .post(format!("{OLLAMA_BASE_URL}/api/chat"))
+                    .json(&body)
+                    .send(),
+            )
+            .await
+            .map_err(|_| format_stream_header_timeout("ollama"))?
+            .map_err(|e| format_transport_error("ollama", "stream request", e))
         }
         "anthropic" => {
             let body = serde_json::json!({
@@ -1585,8 +1718,35 @@ fn find_matching_ollama_model<'a>(
 }
 
 async fn ensure_ollama_preflight(model: Option<&str>) -> Result<OllamaPreflightStatus, String> {
-    let reachable = check_ollama_status().await?;
-    if !reachable {
+    let cached = {
+        let guard = OLLAMA_PREFLIGHT_CACHE.lock().unwrap();
+        guard.as_ref().and_then(|entry| {
+            (entry.fetched_at.elapsed() < Duration::from_secs(OLLAMA_PREFLIGHT_CACHE_TTL_SECS))
+                .then_some(entry.clone())
+        })
+    };
+
+    let base = match cached {
+        Some(entry) => entry,
+        None => {
+            let reachable = check_ollama_status().await?;
+            let models = if reachable {
+                list_ollama_models().await?
+            } else {
+                vec![]
+            };
+            let entry = CachedOllamaPreflight {
+                fetched_at: Instant::now(),
+                reachable,
+                models,
+            };
+            let mut guard = OLLAMA_PREFLIGHT_CACHE.lock().unwrap();
+            *guard = Some(entry.clone());
+            entry
+        }
+    };
+
+    if !base.reachable {
         return Ok(OllamaPreflightStatus {
             reachable: false,
             models: vec![],
@@ -1595,15 +1755,14 @@ async fn ensure_ollama_preflight(model: Option<&str>) -> Result<OllamaPreflightS
         });
     }
 
-    let models = list_ollama_models().await?;
     let model_available = match model {
-        Some(requested) => find_matching_ollama_model(&models, requested).is_some(),
-        None => !models.is_empty(),
+        Some(requested) => find_matching_ollama_model(&base.models, requested).is_some(),
+        None => !base.models.is_empty(),
     };
 
     Ok(OllamaPreflightStatus {
-        reachable,
-        models,
+        reachable: base.reachable,
+        models: base.models,
         requested_model: model.map(ToOwned::to_owned),
         model_available,
     })
@@ -1876,6 +2035,7 @@ pub async fn run_coherence_for_chunk(
         build_http_client()?
     };
     let (system_prompt, user_prompt) = build_coherence_prompts(&input, &config);
+    let review_ollama = (config.judge_provider == "ollama").then(|| effective_review_ollama_config(&config));
 
     let (result_text, usage) = call_provider_for_judge(
         &client,
@@ -1885,6 +2045,7 @@ pub async fn run_coherence_for_chunk(
         &user_prompt,
         &api_key,
         &config,
+        review_ollama.as_ref(),
     )
     .await?;
 
@@ -1966,6 +2127,7 @@ pub async fn run_stage(
         &previous_result,
         &previous_translation,
     );
+    let stage_ollama = (stage.provider == "ollama").then(|| effective_stage_ollama_config(&stage));
 
     call_provider(
         &client,
@@ -1976,6 +2138,7 @@ pub async fn run_stage(
         &api_key,
         false,
         &config,
+        stage_ollama.as_ref(),
     )
     .await
 }
@@ -1996,7 +2159,7 @@ pub async fn run_stage_stream(
     }
     let api_key = get_api_key(&app, &stage.provider)?;
     let client = if stage.provider == "ollama" {
-        build_streaming_http_client()?
+        build_ollama_streaming_http_client()?
     } else {
         build_http_client()?
     };
@@ -2007,6 +2170,7 @@ pub async fn run_stage_stream(
         &previous_result,
         &previous_translation,
     );
+    let stage_ollama = (stage.provider == "ollama").then(|| effective_stage_ollama_config(&stage));
 
     let cancel = registry.register(&stream_id);
     let _guard = StreamGuard {
@@ -2026,6 +2190,7 @@ pub async fn run_stage_stream(
         &user_prompt,
         &api_key,
         &config,
+        stage_ollama.as_ref(),
     )
     .await?;
 
@@ -2066,6 +2231,7 @@ pub async fn judge_translation(
         build_http_client()?
     };
     let (system_prompt, user_prompt) = build_judge_prompts(&original_text, &translation, &config);
+    let review_ollama = (config.judge_provider == "ollama").then(|| effective_review_ollama_config(&config));
 
     let (result_text, usage) = call_provider_for_judge(
         &client,
@@ -2075,6 +2241,7 @@ pub async fn judge_translation(
         &user_prompt,
         &api_key,
         &config,
+        review_ollama.as_ref(),
     )
     .await?;
 
@@ -2142,6 +2309,7 @@ pub async fn refine_prompt(
         REFINE_STAGE_SYSTEM_PROMPT
     };
     let user_prompt = format!("Rewrite this prompt professionally:\n\n{prompt}");
+    let default_ollama = default_ollama_config();
     call_provider(
         &client,
         &provider,
@@ -2150,7 +2318,10 @@ pub async fn refine_prompt(
         &user_prompt,
         &api_key,
         false,
-        &minimal_pipeline_config(Some(default_ollama_config())),
+        &minimal_pipeline_config(Some(ProviderRuntimeConfig {
+            ollama: Some(default_ollama_config()),
+        })),
+        Some(&default_ollama),
     )
     .await
 }
@@ -2189,6 +2360,7 @@ pub async fn test_provider_connection(app: AppHandle, provider: String) -> Resul
         &api_key,
         false,
         &minimal_pipeline_config(None),
+        None,
     )
     .await;
 
@@ -2241,7 +2413,7 @@ mod tests {
             use_chunking: Some(true),
             markdown_aware: None,
             coherence_prompt: None,
-            ollama: None,
+            review_provider_options: None,
         }
     }
 
@@ -2253,6 +2425,7 @@ mod tests {
             model: "test-model".into(),
             provider: provider.into(),
             enabled: true,
+            provider_options: None,
         }
     }
 
@@ -2498,14 +2671,14 @@ mod tests {
 
     #[test]
     fn builds_streaming_http_client_without_global_request_timeout() {
-        let client = build_streaming_http_client();
+        let client = build_ollama_streaming_http_client();
         assert!(client.is_ok());
     }
 
     #[test]
-    fn effective_ollama_config_applies_translation_defaults() {
-        let config = make_config();
-        let ollama = effective_ollama_config(&config);
+    fn effective_stage_ollama_config_applies_defaults() {
+        let stage = make_stage("ollama");
+        let ollama = effective_stage_ollama_config(&stage);
 
         assert_eq!(ollama.temperature, Some(0.1));
         assert_eq!(ollama.top_p, Some(1.0));
@@ -2516,9 +2689,10 @@ mod tests {
     }
 
     #[test]
-    fn effective_ollama_config_merges_user_overrides() {
+    fn effective_review_ollama_config_merges_user_overrides() {
         let mut config = make_config();
-        config.ollama = Some(OllamaConfig {
+        config.review_provider_options = Some(ProviderRuntimeConfig {
+            ollama: Some(OllamaConfig {
             temperature: Some(0.2),
             top_p: Some(0.95),
             seed: Some(7),
@@ -2526,13 +2700,15 @@ mod tests {
             think: Some(Value::String("low".into())),
             num_ctx: Some(12288),
             num_predict: Some(2048),
+            use_advanced_options: Some(true),
             advanced_options: Some(Map::from_iter([(
                 "repeat_penalty".into(),
                 serde_json::json!(1.05),
             )])),
+            }),
         });
 
-        let ollama = effective_ollama_config(&config);
+        let ollama = effective_review_ollama_config(&config);
         let options = build_ollama_options(&ollama);
 
         assert_eq!(ollama.temperature, Some(0.2));
@@ -2668,8 +2844,7 @@ mod tests {
     async fn call_provider_rejects_unknown() {
         let client = Client::new();
         let config = make_config();
-        let result =
-            call_provider(&client, "fake_provider", "m", "s", "u", "k", false, &config).await;
+        let result = call_provider(&client, "fake_provider", "m", "s", "u", "k", false, &config, None).await;
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("Unsupported provider"));
     }

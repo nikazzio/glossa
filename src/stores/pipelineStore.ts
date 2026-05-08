@@ -45,16 +45,7 @@ const DEFAULT_PIPELINE_CONFIG: PipelineConfig = {
   markdownAware: false,
   experimentalImport: null,
   coherencePrompt: DEFAULT_COHERENCE_PROMPT,
-  ollama: {
-    temperature: 0.1,
-    topP: 1,
-    seed: null,
-    keepAlive: '15m',
-    think: false,
-    numCtx: 8192,
-    numPredict: null,
-    advancedOptions: {},
-  },
+  reviewProviderOptions: undefined,
 };
 
 export const usePipelineStore = create<PipelineState>((set) => ({

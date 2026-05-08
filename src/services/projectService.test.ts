@@ -43,7 +43,9 @@ describe('projectService glossary persistence', () => {
       documentFormat: 'markdown',
       markdownAware: true,
       experimentalImport: 'docx-markdown',
-      ollama: { temperature: 0.1, keepAlive: '15m', think: false, numCtx: 8192 },
+      reviewProviderOptions: {
+        ollama: { temperature: 0.1, keepAlive: '15m', think: false, numCtx: 8192 },
+      },
     };
 
     await saveProjectConfig('proj-1', config, 'document');
@@ -94,7 +96,7 @@ describe('projectService glossary persistence', () => {
           document_format: 'markdown',
           markdown_aware: 1,
           experimental_import: 'docx-markdown',
-          ollama_config: '{"temperature":0.1,"keepAlive":"15m","think":false,"numCtx":8192}',
+          review_provider_options: '{"ollama":{"temperature":0.1,"keepAlive":"15m","think":false,"numCtx":8192}}',
         },
       ])
       .mockResolvedValueOnce([{ glossary_id: 'glossary-proj-1' }])
@@ -116,11 +118,13 @@ describe('projectService glossary persistence', () => {
     expect(config?.documentFormat).toBe('markdown');
     expect(config?.markdownAware).toBe(true);
     expect(config?.experimentalImport).toBe('docx-markdown');
-    expect(config?.ollama).toEqual({
-      temperature: 0.1,
-      keepAlive: '15m',
-      think: false,
-      numCtx: 8192,
+    expect(config?.reviewProviderOptions).toEqual({
+      ollama: {
+        temperature: 0.1,
+        keepAlive: '15m',
+        think: false,
+        numCtx: 8192,
+      },
     });
     expect(config?.assignedGlossaryId).toBe('glossary-proj-1');
     expect(config?.glossary).toEqual([
@@ -150,7 +154,9 @@ describe('projectService glossary persistence', () => {
         documentFormat: 'markdown',
         markdownAware: true,
         experimentalImport: 'docx-markdown',
-        ollama: { temperature: 0.1, keepAlive: '15m', think: false, numCtx: 8192 },
+        reviewProviderOptions: {
+          ollama: { temperature: 0.1, keepAlive: '15m', think: false, numCtx: 8192 },
+        },
       },
       viewMode: 'document',
       chunks: [
@@ -200,7 +206,7 @@ describe('projectService glossary persistence', () => {
         'markdown',
         1,
         'docx-markdown',
-        '{"temperature":0.1,"keepAlive":"15m","think":false,"numCtx":8192}',
+        '{"ollama":{"temperature":0.1,"keepAlive":"15m","think":false,"numCtx":8192}}',
       ]),
     );
     expect(dbMocks.execute).toHaveBeenCalledWith(

@@ -29,7 +29,7 @@ const ALLOWED_MIGRATIONS = new Set([
   'pipeline_configs.document_format',
   'pipeline_configs.markdown_aware',
   'pipeline_configs.experimental_import',
-  'pipeline_configs.ollama_config',
+  'pipeline_configs.review_provider_options',
   'projects.view_mode',
   'translations.position',
   'translations.chunk_status',
@@ -91,7 +91,7 @@ export async function initDatabase(): Promise<void> {
       document_format TEXT DEFAULT 'plain',
       markdown_aware INTEGER DEFAULT 0,
       experimental_import TEXT DEFAULT NULL,
-      ollama_config TEXT DEFAULT NULL
+      review_provider_options TEXT DEFAULT NULL
     )
   `);
 
@@ -166,7 +166,7 @@ export async function initDatabase(): Promise<void> {
   await ensureColumn('pipeline_configs', 'document_format', "TEXT DEFAULT 'plain'");
   await ensureColumn('pipeline_configs', 'markdown_aware', 'INTEGER DEFAULT 0');
   await ensureColumn('pipeline_configs', 'experimental_import', 'TEXT DEFAULT NULL');
-  await ensureColumn('pipeline_configs', 'ollama_config', 'TEXT DEFAULT NULL');
+  await ensureColumn('pipeline_configs', 'review_provider_options', 'TEXT DEFAULT NULL');
   await ensureColumn('projects', 'view_mode', 'TEXT DEFAULT NULL');
   await ensureColumn('translations', 'position', 'INTEGER DEFAULT NULL');
   await ensureColumn('translations', 'chunk_status', "TEXT DEFAULT 'ready'");
