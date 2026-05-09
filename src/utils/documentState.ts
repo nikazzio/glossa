@@ -117,5 +117,5 @@ export function composeDocumentDisplayText(
   }
 
   const footnoteLines = footnotes.map((footnote) => `[^${footnote.id}]: ${footnote.text}`);
-  return [trimmed, footnoteLines.join('\n')].filter(Boolean).join('\n\n');
+  return [trimmed, footnoteLines.join('\n\n')].filter(Boolean).join('\n\n');
 }

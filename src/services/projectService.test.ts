@@ -367,16 +367,16 @@ describe('projectService glossary persistence', () => {
     );
   });
 
-  it('restores drafts from stage results when the final translation field is empty', async () => {
+  it('returns empty translation fields when new columns are absent', async () => {
     const restored = restoreTranslations([
       {
         id: 'chunk-1',
         project_id: 'proj-1',
         original_text: 'Source',
-        final_translation: '',
+        final_translation: 'Old translation',
         chunk_status: 'completed',
         stage_results: JSON.stringify({
-          'stg-1': { content: 'Recovered translation', status: 'completed' },
+          'stg-1': { content: 'Stage translation', status: 'completed' },
         }),
         judge_status: 'completed',
         judge_rating: 'good',
@@ -385,7 +385,12 @@ describe('projectService glossary persistence', () => {
       },
     ]);
 
-    expect(restored[0]?.currentDraft).toBe('Recovered translation');
+    // Without new columns, both fields default to '' — no fallback to stage results or final_translation
+    expect(restored[0]?.translationDisplayText).toBe('');
+    expect(restored[0]?.translationProcessingText).toBe('');
+    expect(restored[0]?.currentDraft).toBe('');
+    expect(restored[0]?.sourceDisplayText).toBe('');
+    expect(restored[0]?.sourceProcessingText).toBe('');
   });
 
   it('restoreTranslations maps source_display_text and translation_display_text to the new chunk fields', () => {
@@ -417,76 +422,4 @@ describe('projectService glossary persistence', () => {
     expect(restored[0]?.currentDraft).toBe('Display translation');
   });
 
-  it('restoreTranslations falls back to original_text for source fields when new columns are absent (backward compat)', () => {
-    const restored = restoreTranslations([
-      {
-        id: 'chunk-1',
-        project_id: 'proj-1',
-        original_text: 'Legacy source',
-        final_translation: 'Legacy translation',
-        chunk_status: 'completed',
-        stage_results: '{}',
-        judge_status: 'idle',
-        judge_rating: 'fair',
-        judge_issues: '[]',
-        created_at: '2026-01-01T00:00:00Z',
-      },
-    ]);
-
-    expect(restored[0]?.sourceDisplayText).toBe('Legacy source');
-    expect(restored[0]?.sourceProcessingText).toBe('Legacy source');
-    expect(restored[0]?.originalText).toBe('Legacy source');
-  });
-
-  it('restoreTranslations falls back to final_translation for translation fields when new columns are absent (backward compat)', () => {
-    const restored = restoreTranslations([
-      {
-        id: 'chunk-1',
-        project_id: 'proj-1',
-        original_text: 'Source',
-        final_translation: 'Saved translation',
-        chunk_status: 'completed',
-        stage_results: '{}',
-        judge_status: 'idle',
-        judge_rating: 'fair',
-        judge_issues: '[]',
-        created_at: '2026-01-01T00:00:00Z',
-      },
-    ]);
-
-    expect(restored[0]?.translationDisplayText).toBe('Saved translation');
-    expect(restored[0]?.translationProcessingText).toBe('Saved translation');
-    expect(restored[0]?.currentDraft).toBe('Saved translation');
-  });
-
-  it('getProjectConfig falls back to source_text when source_display_text is absent (backward compat)', async () => {
-    dbMocks.select
-      .mockResolvedValueOnce([
-        {
-          source_language: 'English',
-          target_language: 'Italian',
-          source_text: 'Legacy source text',
-          // source_display_text intentionally absent
-          stages: '[]',
-          judge_prompt: 'Judge',
-          judge_model: 'gemini-3-flash-preview',
-          judge_provider: 'gemini',
-          use_chunking: 0,
-          target_chunk_count: 0,
-          document_format: 'plain',
-          markdown_aware: 0,
-          experimental_import: null,
-          view_mode: null,
-        },
-      ])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([]);
-
-    const config = await getProjectConfig('proj-1');
-
-    expect(config?.inputText).toBe('Legacy source text');
-    expect(config?.inputProcessingText).toBe('Legacy source text');
-    expect(config?.sourceFootnotes).toEqual([]);
-    expect(config?.renderProfile).toBe('plain-text');
-  });
 });

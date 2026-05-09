@@ -72,34 +72,19 @@ export function restoreTranslations(rows: SavedTranslation[]): TranslationChunk[
   return rows.map((row) => {
     const judgeResult = restoreJudgeResult(row);
     const stageResults = parseJson<Record<string, PipelineResult>>(row.stage_results, {});
-    const restoredTranslationDisplay =
-      row.translation_display_text ||
-      row.translation_processing_text ||
-      row.final_translation ||
-      judgeResult.content ||
-      lastStageContent(stageResults) ||
-      '';
-    const restoredTranslationProcessing =
-      row.translation_processing_text ||
-      row.translation_display_text ||
-      row.final_translation ||
-      judgeResult.content ||
-      lastStageContent(stageResults) ||
-      '';
+    const restoredTranslationDisplay = row.translation_display_text ?? '';
+    const restoredTranslationProcessing = row.translation_processing_text ?? '';
     const coherenceResult = parseJson<CoherenceResult>(row.coherence_result);
     const footnotes = row.footnotes
       ? parseJson<Footnote[]>(row.footnotes, [])
       : undefined;
     return {
       id: row.id,
-      sourceDisplayText: row.source_display_text || row.original_text,
-      sourceProcessingText:
-        row.source_processing_text ||
-        row.source_display_text ||
-        row.original_text,
+      sourceDisplayText: row.source_display_text ?? '',
+      sourceProcessingText: row.source_processing_text ?? '',
       translationDisplayText: restoredTranslationDisplay,
       translationProcessingText: restoredTranslationProcessing,
-      originalText: row.source_display_text || row.original_text,
+      originalText: row.source_display_text ?? '',
       status: row.chunk_status || (judgeResult.status === 'completed' ? 'completed' : 'ready'),
       stageResults,
       judgeResult,
@@ -182,7 +167,6 @@ export async function getProjectConfig(projectId: string): Promise<{
   const rows = await select<{
     source_language: string;
     target_language: string;
-    source_text?: string;
     source_display_text?: string;
     source_processing_text?: string;
     source_footnotes?: string | null;
@@ -204,7 +188,6 @@ export async function getProjectConfig(projectId: string): Promise<{
        p.target_language,
        p.view_mode,
        pc.stages,
-       pc.source_text,
         pc.source_display_text,
         pc.source_processing_text,
         pc.source_footnotes,
@@ -244,12 +227,8 @@ export async function getProjectConfig(projectId: string): Promise<{
   return {
     sourceLanguage: row.source_language,
     targetLanguage: row.target_language,
-    inputText: row.source_display_text ?? row.source_text ?? '',
-    inputProcessingText:
-      row.source_processing_text ??
-      row.source_display_text ??
-      row.source_text ??
-      '',
+    inputText: row.source_display_text ?? '',
+    inputProcessingText: row.source_processing_text ?? '',
     sourceFootnotes: parseJson<FootnoteDefinition[]>(row.source_footnotes, []),
     viewMode: row.view_mode ?? null,
     stages: parseJson<PipelineStageConfig[]>(row.stages, []),

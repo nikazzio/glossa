@@ -504,12 +504,12 @@ export function usePipeline() {
   const runCoherenceAudit = useCallback(async () => {
     if (useChunksStore.getState().isProcessing) return;
     const liveChunks = useChunksStore.getState().chunks;
-    const auditableChunks = liveChunks.filter((c) => c.currentDraft?.trim());
+    const auditableChunks = liveChunks.filter((c) => c.translationProcessingText?.trim());
     if (auditableChunks.length === 0) {
       toast.message(t('coherence.noChunksToAudit'));
       return;
     }
-    if (liveChunks.some((c) => !c.currentDraft?.trim())) {
+    if (liveChunks.some((c) => !c.translationProcessingText?.trim())) {
       toast.message(t('coherence.translationsRequired'));
       return;
     }
