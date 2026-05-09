@@ -128,6 +128,7 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
       maxWords: pendingImport.maxWords,
       headingAware: pendingImport.headingAware,
       documentFormat: pendingImport.format ?? 'plain',
+      renderProfile: pendingImport.format === 'markdown' ? 'markdown' : 'plain-text',
       markdownAware: pendingImport.format === 'markdown',
       experimentalImport: pendingImport.experimental ?? null,
     }));

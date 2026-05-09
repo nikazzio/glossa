@@ -77,8 +77,6 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const chunksStore = useChunksStore.getState();
     const ui = useUiStore.getState();
     const restoredChunks = restoreTranslations(savedTranslations);
-    const restoredInputText =
-      config.inputText || restoredChunks.map((chunk) => chunk.originalText).join('\n\n');
     pipeline.setConfig({
       ...pipeline.config,
       sourceLanguage: config.sourceLanguage,
@@ -90,16 +88,22 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       useChunking: config.useChunking,
       targetChunkCount: config.targetChunkCount,
       documentFormat: config.documentFormat ?? 'plain',
+      renderProfile: config.renderProfile ?? 'plain-text',
       markdownAware: config.markdownAware ?? false,
       experimentalImport: config.experimentalImport ?? null,
       reviewProviderOptions: config.reviewProviderOptions ?? pipeline.config.reviewProviderOptions,
       glossary: config.glossary,
       assignedGlossaryId: config.assignedGlossaryId,
     });
+    pipeline.setSourceDocument({
+      displayText: config.inputText,
+      processingText: config.inputProcessingText,
+      sourceFootnotes: config.sourceFootnotes,
+      renderProfile: config.renderProfile,
+    });
     chunksStore.setChunks(restoredChunks);
-    pipeline.setInputText(restoredInputText);
     ui.setViewMode(
-      config.viewMode ?? (restoredChunks.length === 0 && restoredInputText.trim() ? 'sandbox' : 'document'),
+      config.viewMode ?? (restoredChunks.length === 0 && config.inputText.trim() ? 'sandbox' : 'document'),
     );
     ui.setSelectedChunkId(restoredChunks[0]?.id ?? null);
 
@@ -152,12 +156,10 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
       const pipeline = usePipelineStore.getState();
       const ui = useUiStore.getState();
-      const inputText =
-        chunksStore.chunks.length > 0
-          ? chunksStore.chunks.map((chunk) => chunk.originalText).join('\n\n')
-          : pipeline.inputText;
       const effectiveSnapshot = buildProjectSnapshot({
-        inputText,
+        inputText: pipeline.inputText,
+        inputProcessingText: pipeline.inputProcessingText,
+        sourceFootnotes: pipeline.sourceFootnotes,
         config: pipeline.config,
         chunks: chunksStore.chunks,
         viewMode: ui.viewMode,
@@ -167,7 +169,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         trigger: name ? 'first-save' : 'manual-or-autosave',
         currentProjectId: get().currentProjectId,
         chunksCount: chunksStore.chunks.length,
-        inputTextLen: inputText.length,
+        inputTextLen: pipeline.inputText.length,
         isProcessing: chunksStore.isProcessing,
       });
       set({ saveState: 'saving', lastSaveError: null });
@@ -189,7 +191,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
         await saveProjectState({
           projectId: currentProjectId,
-          inputText,
+          inputText: pipeline.inputText,
+          inputProcessingText: pipeline.inputProcessingText,
+          sourceFootnotes: pipeline.sourceFootnotes,
           config: pipeline.config,
           viewMode: ui.viewMode,
           chunks: chunksStore.chunks,
@@ -197,7 +201,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         logger.info('saveCurrentProject: done', {
           projectId: currentProjectId,
           chunksCount: chunksStore.chunks.length,
-          inputTextLen: inputText.length,
+          inputTextLen: pipeline.inputText.length,
         });
         await get().loadProjects().catch(() => {});
         set({
@@ -236,12 +240,10 @@ async function persistCurrentState({
   const pipeline = usePipelineStore.getState();
   const ui = useUiStore.getState();
   const chunks = useChunksStore.getState().chunks;
-  const inputText =
-    chunks.length > 0
-      ? chunks.map((chunk) => chunk.originalText).join('\n\n')
-      : pipeline.inputText;
   const trackedSnapshot = buildProjectSnapshot({
-    inputText,
+    inputText: pipeline.inputText,
+    inputProcessingText: pipeline.inputProcessingText,
+    sourceFootnotes: pipeline.sourceFootnotes,
     config: pipeline.config,
     chunks,
     viewMode: ui.viewMode,
@@ -253,7 +255,9 @@ async function persistCurrentState({
   );
   await saveProjectState({
     projectId: id,
-    inputText,
+    inputText: pipeline.inputText,
+    inputProcessingText: pipeline.inputProcessingText,
+    sourceFootnotes: pipeline.sourceFootnotes,
     config: pipeline.config,
     viewMode: ui.viewMode,
     chunks,

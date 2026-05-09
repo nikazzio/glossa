@@ -5,6 +5,7 @@ export type ViewMode = 'sandbox' | 'document';
 export type DocumentLayoutPreference = 'auto' | 'standard' | 'book';
 export type OllamaStatus = 'unknown' | 'connected' | 'disconnected';
 export type DocumentFormat = 'plain' | 'markdown';
+export type DocumentRenderProfile = 'plain-text' | 'markdown';
 export type ExperimentalImportMode = 'docx-markdown';
 export type OllamaThinkLevel = boolean | 'low' | 'medium' | 'high';
 
@@ -59,8 +60,18 @@ export interface Footnote {
   text: string;
 }
 
+export interface FootnoteDefinition {
+  id: string;
+  text: string;
+}
+
 export interface TranslationChunk {
   id: string;
+  sourceDisplayText: string;
+  sourceProcessingText: string;
+  translationDisplayText: string;
+  translationProcessingText: string;
+  // Legacy mirrors kept temporarily while the UI finishes migrating.
   originalText: string;
   status: ChunkStatus;
   stageResults: Record<string, PipelineResult>;
@@ -127,6 +138,7 @@ export interface PipelineConfig {
   maxWords?: number;
   headingAware?: boolean;
   documentFormat?: DocumentFormat;
+  renderProfile?: DocumentRenderProfile;
   markdownAware?: boolean;
   experimentalImport?: ExperimentalImportMode | null;
   coherencePrompt?: string;

@@ -8,12 +8,22 @@ import type {
 import { DEFAULT_STAGES, DEFAULT_JUDGE_PROMPT, DEFAULT_COHERENCE_PROMPT } from '../constants';
 import { generateId } from '../utils';
 import { getGlossaryEntries } from '../services/glossaryService';
+import type { FootnoteDefinition } from '../types';
+import { deriveSourceDocumentState } from '../utils/documentState';
 
 interface PipelineState {
   inputText: string;
+  inputProcessingText: string;
+  sourceFootnotes: FootnoteDefinition[];
   config: PipelineConfig;
 
   setInputText: (text: string) => void;
+  setSourceDocument: (input: {
+    displayText: string;
+    processingText?: string;
+    sourceFootnotes?: FootnoteDefinition[];
+    renderProfile?: PipelineConfig['renderProfile'];
+  }) => void;
   setConfig: (updater: PipelineConfig | ((prev: PipelineConfig) => PipelineConfig)) => void;
   assignGlossary: (glossaryId: string | null) => Promise<void>;
   resetToDefaults: () => void;
@@ -42,6 +52,7 @@ const DEFAULT_PIPELINE_CONFIG: PipelineConfig = {
   maxWords: 1200,
   headingAware: false,
   documentFormat: 'plain',
+  renderProfile: 'plain-text',
   markdownAware: false,
   experimentalImport: null,
   coherencePrompt: DEFAULT_COHERENCE_PROMPT,
@@ -50,17 +61,53 @@ const DEFAULT_PIPELINE_CONFIG: PipelineConfig = {
 
 export const usePipelineStore = create<PipelineState>((set) => ({
   inputText: '',
+  inputProcessingText: '',
+  sourceFootnotes: [],
   config: { ...DEFAULT_PIPELINE_CONFIG, stages: DEFAULT_STAGES },
 
-  setInputText: (text) => set({ inputText: text }),
+  setInputText: (text) =>
+    set((state) => {
+      const next = deriveSourceDocumentState(text, state.config);
+      return {
+        inputText: next.displayText,
+        inputProcessingText: next.processingText,
+        sourceFootnotes: next.footnotes,
+        config: { ...state.config, renderProfile: next.renderProfile },
+      };
+    }),
 
-  setConfig: (updater) =>
+  setSourceDocument: ({ displayText, processingText, sourceFootnotes, renderProfile }) =>
     set((state) => ({
-      config: typeof updater === 'function' ? updater(state.config) : updater,
+      inputText: displayText,
+      inputProcessingText: processingText ?? displayText,
+      sourceFootnotes: sourceFootnotes ?? [],
+      config: {
+        ...state.config,
+        renderProfile: renderProfile ?? state.config.renderProfile,
+      },
     })),
 
+  setConfig: (updater) =>
+    set((state) => {
+      const nextConfig = typeof updater === 'function' ? updater(state.config) : updater;
+      const nextDocument = deriveSourceDocumentState(state.inputText, nextConfig);
+      return {
+        config: {
+          ...nextConfig,
+          renderProfile: nextConfig.renderProfile ?? nextDocument.renderProfile,
+        },
+        inputProcessingText: nextDocument.processingText,
+        sourceFootnotes: nextDocument.footnotes,
+      };
+    }),
+
   resetToDefaults: () =>
-    set({ inputText: '', config: { ...DEFAULT_PIPELINE_CONFIG, stages: DEFAULT_STAGES } }),
+    set({
+      inputText: '',
+      inputProcessingText: '',
+      sourceFootnotes: [],
+      config: { ...DEFAULT_PIPELINE_CONFIG, stages: DEFAULT_STAGES },
+    }),
 
   assignGlossary: async (glossaryId) => {
     if (!glossaryId) {

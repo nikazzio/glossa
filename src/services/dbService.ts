@@ -26,7 +26,11 @@ function serializeWrite<T>(fn: () => Promise<T>): Promise<T> {
 const ALLOWED_MIGRATIONS = new Set([
   'pipeline_configs.target_chunk_count',
   'pipeline_configs.source_text',
+  'pipeline_configs.source_display_text',
+  'pipeline_configs.source_processing_text',
+  'pipeline_configs.source_footnotes',
   'pipeline_configs.document_format',
+  'pipeline_configs.render_profile',
   'pipeline_configs.markdown_aware',
   'pipeline_configs.experimental_import',
   'pipeline_configs.review_provider_options',
@@ -38,6 +42,10 @@ const ALLOWED_MIGRATIONS = new Set([
   'translations.translation_locked',
   'translations.coherence_result',
   'translations.footnotes',
+  'translations.source_display_text',
+  'translations.source_processing_text',
+  'translations.translation_display_text',
+  'translations.translation_processing_text',
   'prompt_templates.context',
 ]);
 
@@ -88,7 +96,11 @@ export async function initDatabase(): Promise<void> {
       use_chunking INTEGER DEFAULT 1,
       target_chunk_count INTEGER DEFAULT 0,
       source_text TEXT DEFAULT '',
+      source_display_text TEXT DEFAULT '',
+      source_processing_text TEXT DEFAULT '',
+      source_footnotes TEXT DEFAULT '[]',
       document_format TEXT DEFAULT 'plain',
+      render_profile TEXT DEFAULT 'plain-text',
       markdown_aware INTEGER DEFAULT 0,
       experimental_import TEXT DEFAULT NULL,
       review_provider_options TEXT DEFAULT NULL
@@ -150,6 +162,10 @@ export async function initDatabase(): Promise<void> {
       project_id TEXT REFERENCES projects(id) ON DELETE CASCADE,
       original_text TEXT NOT NULL,
       final_translation TEXT DEFAULT '',
+      source_display_text TEXT DEFAULT '',
+      source_processing_text TEXT DEFAULT '',
+      translation_display_text TEXT DEFAULT '',
+      translation_processing_text TEXT DEFAULT '',
       position INTEGER DEFAULT NULL,
       chunk_status TEXT DEFAULT 'ready',
       stage_results TEXT DEFAULT '{}',
@@ -163,7 +179,11 @@ export async function initDatabase(): Promise<void> {
 
   await ensureColumn('pipeline_configs', 'target_chunk_count', "INTEGER DEFAULT 0");
   await ensureColumn('pipeline_configs', 'source_text', "TEXT DEFAULT ''");
+  await ensureColumn('pipeline_configs', 'source_display_text', "TEXT DEFAULT ''");
+  await ensureColumn('pipeline_configs', 'source_processing_text', "TEXT DEFAULT ''");
+  await ensureColumn('pipeline_configs', 'source_footnotes', "TEXT DEFAULT '[]'");
   await ensureColumn('pipeline_configs', 'document_format', "TEXT DEFAULT 'plain'");
+  await ensureColumn('pipeline_configs', 'render_profile', "TEXT DEFAULT 'plain-text'");
   await ensureColumn('pipeline_configs', 'markdown_aware', 'INTEGER DEFAULT 0');
   await ensureColumn('pipeline_configs', 'experimental_import', 'TEXT DEFAULT NULL');
   await ensureColumn('pipeline_configs', 'review_provider_options', 'TEXT DEFAULT NULL');
@@ -173,6 +193,10 @@ export async function initDatabase(): Promise<void> {
   await ensureColumn('translations', 'judge_status', "TEXT DEFAULT 'idle'");
   await ensureColumn('translations', 'judge_rating', "TEXT DEFAULT 'fair'");
   await ensureColumn('translations', 'translation_locked', 'INTEGER DEFAULT 0');
+  await ensureColumn('translations', 'source_display_text', "TEXT DEFAULT ''");
+  await ensureColumn('translations', 'source_processing_text', "TEXT DEFAULT ''");
+  await ensureColumn('translations', 'translation_display_text', "TEXT DEFAULT ''");
+  await ensureColumn('translations', 'translation_processing_text', "TEXT DEFAULT ''");
 
   await conn.execute(`
     CREATE TABLE IF NOT EXISTS app_settings (

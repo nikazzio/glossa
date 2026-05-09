@@ -14,10 +14,17 @@ import {
   generateId,
   qualityDefault,
   resolveSplitIndex,
-  trimOuterBlankLines,
   trimSplitFragment,
 } from '../utils';
-import { assignChunkFootnotes, extractFootnotes, replaceMarkersWithSuperscripts, stripFootnoteMarkers } from '../utils/footnoteExtractor';
+import {
+  buildChunkFootnotes,
+  composeDocumentDisplayText,
+  composeDocumentProcessingText,
+  deriveSourceDocumentState,
+  updateChunkSourceFields,
+  updateChunkTranslationFields,
+  withSyncedChunkFields,
+} from '../utils/documentState';
 
 interface ChunksState {
   chunks: TranslationChunk[];
@@ -81,31 +88,20 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
   setActiveStreamId: (id) => set({ activeStreamId: id }),
 
   generateChunks: () => {
-    const { inputText, config } = usePipelineStore.getState();
-    if (!inputText.trim()) return;
+    const pipeline = usePipelineStore.getState();
+    const { inputProcessingText, sourceFootnotes, config } = pipeline;
+    if (!inputProcessingText.trim()) return;
 
-    let bodyText = trimOuterBlankLines(inputText);
-    let footnoteMap: Map<string, string> | undefined;
-
-    if (config.markdownAware) {
-      const extracted = extractFootnotes(bodyText);
-      bodyText = extracted.cleanText;
-      footnoteMap = extracted.footnoteMap.size > 0 ? extracted.footnoteMap : undefined;
-    }
-
-    const chunks = buildChunks(bodyText, {
+    const chunks = buildChunks(inputProcessingText, {
       useChunking: config.useChunking,
       targetChunkCount: config.targetChunkCount,
       markdownAware: config.markdownAware,
       minWords: config.minWords,
       maxWords: config.maxWords,
       headingAware: config.headingAware,
-    }, footnoteMap);
+    }, sourceFootnotes);
 
     const ui = useUiStore.getState();
-    usePipelineStore.getState().setInputText(
-      footnoteMap ? stripFootnoteMarkers(bodyText) : bodyText,
-    );
     ui.setViewMode(chunks.length > 1 ? 'document' : 'sandbox');
     if (chunks.length > 1) ui.setShowChunkDrawer(true);
     syncSelectedChunk(chunks);
@@ -113,23 +109,17 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
   },
 
   loadDocument: (text, options = {}) => {
-    const trimmed = trimOuterBlankLines(text);
-    if (!trimmed) return;
+    const sourceDocument = deriveSourceDocumentState(text, options);
+    if (!sourceDocument.displayText.trim()) return;
 
-    let bodyText = trimmed;
-    let footnoteMap: Map<string, string> | undefined;
-
-    if (options.extractFootnotes || options.markdownAware) {
-      const extracted = extractFootnotes(trimmed);
-      bodyText = extracted.cleanText;
-      footnoteMap = extracted.footnoteMap.size > 0 ? extracted.footnoteMap : undefined;
-    }
-
-    const chunks = buildChunks(bodyText, options, footnoteMap);
+    const chunks = buildChunks(sourceDocument.processingText, options, sourceDocument.footnotes);
     const ui = useUiStore.getState();
-    usePipelineStore.getState().setInputText(
-      footnoteMap ? stripFootnoteMarkers(bodyText) : bodyText,
-    );
+    usePipelineStore.getState().setSourceDocument({
+      displayText: sourceDocument.displayText,
+      processingText: sourceDocument.processingText,
+      sourceFootnotes: sourceDocument.footnotes,
+      renderProfile: sourceDocument.renderProfile,
+    });
     ui.setViewMode('document');
     ui.setShowChunkDrawer(true);
     syncSelectedChunk(chunks);
@@ -180,7 +170,7 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
     set((state) => ({
       chunks: state.chunks.map((chunk) =>
         chunk.id === chunkId && !chunk.translationLocked
-          ? { ...chunk, currentDraft: draft }
+          ? updateChunkTranslationFields(chunk, draft)
           : chunk,
       ),
     })),
@@ -202,13 +192,22 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
     })),
 
   updateChunkOriginalText: (chunkId, text) =>
-    set((state) => ({
-      chunks: state.chunks.map((chunk) =>
+    set((state) => {
+      const nextChunks = state.chunks.map((chunk) =>
         chunk.id === chunkId
-          ? resetChunkForSourceEdit({ ...chunk, originalText: text })
+          ? resetChunkForSourceEdit(
+              updateChunkSourceFields(
+                chunk,
+                text,
+                text,
+                buildChunkFootnotes(text, usePipelineStore.getState().sourceFootnotes),
+              ),
+            )
           : chunk,
-      ),
-    })),
+      );
+      syncProjectSourceDocument(nextChunks);
+      return { chunks: nextChunks };
+    }),
 
   updateChunkCoherence: (chunkId, result) =>
     set((state) => ({
@@ -220,7 +219,7 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
   splitChunk: (chunkId) =>
     set((state) => {
       const chunk = state.chunks.find((entry) => entry.id === chunkId);
-      const splitAt = findBestSplitIndex(chunk?.originalText ?? '', {
+      const splitAt = findBestSplitIndex(chunk?.sourceProcessingText ?? '', {
         markdownAware: usePipelineStore.getState().config.markdownAware,
       });
       if (!splitAt) return {};
@@ -252,16 +251,24 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
         status === 'completed' || status === 'processing';
       if (isDirty(current.status) || isDirty(next.status)) return {};
 
-      const merged = resetChunkForSourceEdit({
-        ...current,
-        originalText: `${current.originalText}\n\n${next.originalText}`,
-      });
+      const merged = resetChunkForSourceEdit(
+        updateChunkSourceFields(
+          current,
+          `${current.sourceDisplayText}\n\n${next.sourceDisplayText}`,
+          `${current.sourceProcessingText}\n\n${next.sourceProcessingText}`,
+          buildChunkFootnotes(
+            `${current.sourceProcessingText}\n\n${next.sourceProcessingText}`,
+            usePipelineStore.getState().sourceFootnotes,
+          ),
+        ),
+      );
 
       const chunks = [
         ...state.chunks.slice(0, index),
         merged,
         ...state.chunks.slice(index + 2),
       ];
+      syncProjectSourceDocument(chunks);
       syncSelectedChunk(chunks, merged.id);
       return { chunks };
     }),
@@ -296,16 +303,21 @@ function createEmptyJudgeResult(): JudgeResult {
 }
 
 function resetChunkForSourceEdit<T extends TranslationChunk>(chunk: T): T {
-  return {
+  return withSyncedChunkFields({
     ...chunk,
     status: 'ready',
     stageResults: {},
     judgeResult: createEmptyJudgeResult(),
     coherenceResult: undefined,
-    footnotes: undefined,
+    footnotes: buildChunkFootnotes(
+      chunk.sourceProcessingText,
+      usePipelineStore.getState().sourceFootnotes,
+    ),
+    translationDisplayText: '',
+    translationProcessingText: '',
     currentDraft: '',
     translationLocked: false,
-  };
+  }) as T;
 }
 
 function buildChunks(
@@ -318,25 +330,22 @@ function buildChunks(
     maxWords?: number;
     headingAware?: boolean;
   },
-  footnoteMap?: Map<string, string>,
+  sourceFootnotes: ReturnType<typeof usePipelineStore.getState>['sourceFootnotes'],
 ): TranslationChunk[] {
   return chunkText(text, options).map((chunkTextValue) => {
-    const footnotes = footnoteMap
-      ? assignChunkFootnotes(chunkTextValue, footnoteMap)
-      : undefined;
-    const originalText = footnoteMap
-      ? replaceMarkersWithSuperscripts(chunkTextValue, footnoteMap)
-      : chunkTextValue;
-    return {
+    const footnotes = buildChunkFootnotes(chunkTextValue, sourceFootnotes);
+    return withSyncedChunkFields({
       id: generateId('chunk'),
-      originalText,
+      sourceDisplayText: chunkTextValue,
+      sourceProcessingText: chunkTextValue,
+      translationDisplayText: '',
+      translationProcessingText: '',
       status: 'ready' as const,
       stageResults: {},
       judgeResult: createEmptyJudgeResult(),
-      currentDraft: '',
       translationLocked: false,
       ...(footnotes?.length ? { footnotes } : {}),
-    };
+    });
   });
 }
 
@@ -351,19 +360,30 @@ function splitChunkState(
   const chunk = chunks[index];
   if (chunk.status === 'completed' || chunk.status === 'processing') return null;
 
-  const boundedSplitAt = resolveSplitIndex(chunk.originalText, splitAt, {
+  const boundedSplitAt = resolveSplitIndex(chunk.sourceProcessingText, splitAt, {
     markdownAware: usePipelineStore.getState().config.markdownAware,
   });
   if (boundedSplitAt === null) return null;
-  const firstText = trimSplitFragment(chunk.originalText.slice(0, boundedSplitAt));
-  const secondText = trimSplitFragment(chunk.originalText.slice(boundedSplitAt));
+  const firstText = trimSplitFragment(chunk.sourceProcessingText.slice(0, boundedSplitAt));
+  const secondText = trimSplitFragment(chunk.sourceProcessingText.slice(boundedSplitAt));
   if (!firstText || !secondText) return null;
 
-  const first = resetChunkForSourceEdit({ ...chunk, originalText: firstText });
+  const first = resetChunkForSourceEdit(
+    updateChunkSourceFields(
+      chunk,
+      firstText,
+      firstText,
+      buildChunkFootnotes(firstText, usePipelineStore.getState().sourceFootnotes),
+    ),
+  );
   const second = resetChunkForSourceEdit({
-    ...chunk,
+    ...updateChunkSourceFields(
+      chunk,
+      secondText,
+      secondText,
+      buildChunkFootnotes(secondText, usePipelineStore.getState().sourceFootnotes),
+    ),
     id: generateId('chunk'),
-    originalText: secondText,
   });
 
   const nextChunks = [
@@ -372,8 +392,24 @@ function splitChunkState(
     second,
     ...chunks.slice(index + 1),
   ];
+  syncProjectSourceDocument(nextChunks);
   syncSelectedChunk(nextChunks, first.id);
   return { chunks: nextChunks };
+}
+
+function syncProjectSourceDocument(chunks: TranslationChunk[]) {
+  const pipeline = usePipelineStore.getState();
+  const processingText = composeDocumentProcessingText(chunks);
+  pipeline.setSourceDocument({
+    displayText: composeDocumentDisplayText(
+      processingText,
+      pipeline.config.renderProfile ?? 'plain-text',
+      pipeline.sourceFootnotes,
+    ),
+    processingText,
+    sourceFootnotes: pipeline.sourceFootnotes,
+    renderProfile: pipeline.config.renderProfile,
+  });
 }
 
 function syncSelectedChunk(chunks: TranslationChunk[], preferredId?: string | null) {
