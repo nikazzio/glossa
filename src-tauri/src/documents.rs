@@ -1,6 +1,6 @@
+use std::collections::BTreeMap;
 use std::fs;
 use std::io::{Cursor, Read, Seek, Write};
-use std::collections::BTreeMap;
 
 use quick_xml::events::Event;
 use quick_xml::Reader;
@@ -182,7 +182,8 @@ fn read_docx_entry<R: Read + Seek>(
         Err(_) => return Ok(None),
     };
     let mut content = String::new();
-    entry.read_to_string(&mut content)
+    entry
+        .read_to_string(&mut content)
         .map_err(|e| format!("Failed to read {name}: {}", e))?;
     Ok(Some(content))
 }
@@ -243,11 +244,9 @@ fn build_markdown_from_document_xml(
                 } else if local.ends_with(b":pStyle") || local == b"pStyle" {
                     paragraph_style = extract_attr_value(&element, reader.decoder(), b"val")?;
                 } else if local.ends_with(b":footnoteReference") || local == b"footnoteReference" {
-                    if let Some(id) = element
-                        .attributes()
-                        .flatten()
-                        .find(|attr| attr.key.as_ref().ends_with(b":id") || attr.key.as_ref() == b"id")
-                    {
+                    if let Some(id) = element.attributes().flatten().find(|attr| {
+                        attr.key.as_ref().ends_with(b":id") || attr.key.as_ref() == b"id"
+                    }) {
                         let value = id
                             .decode_and_unescape_value(reader.decoder())
                             .map_err(|e| format!("Failed to decode footnote id: {}", e))?;
@@ -270,7 +269,11 @@ fn build_markdown_from_document_xml(
                 if local.ends_with(b":t") || local == b"t" {
                     inside_text = false;
                 } else if local.ends_with(b":r") || local == b"r" {
-                    current_paragraph.push_str(&apply_run_style(&current_run, run_bold, run_italic));
+                    current_paragraph.push_str(&apply_run_style(
+                        &current_run,
+                        run_bold,
+                        run_italic,
+                    ));
                     current_run.clear();
                 } else if local.ends_with(b":p") || local == b"p" {
                     let paragraph = current_paragraph.trim_end();
@@ -395,7 +398,11 @@ fn parse_footnotes_xml(xml: &str) -> Result<BTreeMap<String, String>, String> {
                 if local.ends_with(b":t") || local == b"t" {
                     inside_text = false;
                 } else if local.ends_with(b":r") || local == b"r" {
-                    current_paragraph.push_str(&apply_run_style(&current_run, run_bold, run_italic));
+                    current_paragraph.push_str(&apply_run_style(
+                        &current_run,
+                        run_bold,
+                        run_italic,
+                    ));
                     current_run.clear();
                 } else if local.ends_with(b":p") || local == b"p" {
                     let paragraph = current_paragraph.trim_end();
@@ -451,11 +458,7 @@ fn extract_attr_value(
     Ok(None)
 }
 
-fn apply_paragraph_markdown_style(
-    paragraph: &str,
-    style: Option<&str>,
-    is_list: bool,
-) -> String {
+fn apply_paragraph_markdown_style(paragraph: &str, style: Option<&str>, is_list: bool) -> String {
     if let Some(level) = heading_level_from_style(style) {
         return format!("{} {}", "#".repeat(level as usize), paragraph.trim());
     }
@@ -489,9 +492,17 @@ enum MarkdownInline {
 
 #[derive(Debug, Clone)]
 enum MarkdownBlock {
-    Heading { level: u8, inlines: Vec<MarkdownInline> },
-    Paragraph { inlines: Vec<MarkdownInline> },
-    List { ordered: bool, items: Vec<Vec<MarkdownInline>> },
+    Heading {
+        level: u8,
+        inlines: Vec<MarkdownInline>,
+    },
+    Paragraph {
+        inlines: Vec<MarkdownInline>,
+    },
+    List {
+        ordered: bool,
+        items: Vec<Vec<MarkdownInline>>,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -507,8 +518,8 @@ fn export_markdown_docx_bytes(markdown: &str) -> Result<Vec<u8>, String> {
     {
         let cursor = Cursor::new(&mut buffer);
         let mut writer = zip::ZipWriter::new(cursor);
-        let options =
-            zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+        let options = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
 
         writer
             .start_file("[Content_Types].xml", options)
@@ -567,7 +578,9 @@ fn export_markdown_docx_bytes(markdown: &str) -> Result<Vec<u8>, String> {
                 .map_err(|e| format!("Failed to write footnotes.xml: {}", e))?;
         }
 
-        writer.finish().map_err(|e| format!("Failed to finalize docx: {}", e))?;
+        writer
+            .finish()
+            .map_err(|e| format!("Failed to finalize docx: {}", e))?;
     }
 
     Ok(buffer)
@@ -588,7 +601,10 @@ fn parse_markdown_document(markdown: &str) -> MarkdownDocument {
                 chunks.push(lines[index + 1].trim().to_string());
                 index += 1;
             }
-            footnotes.insert(id.to_string(), parse_markdown_inlines(chunks.join(" ").trim()));
+            footnotes.insert(
+                id.to_string(),
+                parse_markdown_inlines(chunks.join(" ").trim()),
+            );
             index += 1;
             continue;
         }
@@ -1043,8 +1059,8 @@ mod tests {
         {
             let cursor = Cursor::new(&mut buffer);
             let mut writer = zip::ZipWriter::new(cursor);
-            let options = SimpleFileOptions::default()
-                .compression_method(zip::CompressionMethod::Deflated);
+            let options =
+                SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
             writer.start_file("word/document.xml", options).unwrap();
             writer.write_all(document_xml.as_bytes()).unwrap();
             writer.finish().unwrap();
@@ -1129,8 +1145,8 @@ mod tests {
         {
             let cursor = Cursor::new(&mut buffer);
             let mut writer = zip::ZipWriter::new(cursor);
-            let options = SimpleFileOptions::default()
-                .compression_method(zip::CompressionMethod::Deflated);
+            let options =
+                SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
             writer.start_file("word/document.xml", options).unwrap();
             writer.write_all(xml.as_bytes()).unwrap();
             writer.start_file("word/footnotes.xml", options).unwrap();
@@ -1170,8 +1186,9 @@ List marker \* item and \[link\](url) plus \_emphasis\_ and \[^1\]"#
 
     #[test]
     fn exports_docx_with_headings_and_footnotes() {
-        let bytes = export_markdown_docx_bytes("# Title\n\nBody with note[^1].\n\n[^1]: Footnote text")
-            .expect("expected docx bytes");
+        let bytes =
+            export_markdown_docx_bytes("# Title\n\nBody with note[^1].\n\n[^1]: Footnote text")
+                .expect("expected docx bytes");
 
         let cursor = Cursor::new(bytes);
         let mut archive = zip::ZipArchive::new(cursor).expect("expected zip archive");
