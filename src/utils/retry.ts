@@ -63,6 +63,7 @@ export function classifyError(message: string): ErrorCategory {
 
 /** Get a user-friendly error message */
 export function friendlyError(message: string): string {
+  if (/ollama/i.test(message)) return message;
   const cat = classifyError(message);
   switch (cat) {
     case 'config':

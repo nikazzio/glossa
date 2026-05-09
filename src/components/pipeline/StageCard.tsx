@@ -23,6 +23,7 @@ import { usePipelineStore } from '../../stores/pipelineStore';
 import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
 import { confirm } from '../../stores/confirmStore';
 import { llmService } from '../../services/llmService';
+import { ProviderRuntimeEditor } from './ProviderRuntimeEditor';
 
 interface StageCardProps {
   stage: PipelineStageConfig;
@@ -70,7 +71,10 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
       newProvider === 'ollama'
         ? useUiStore.getState().ollamaModels
         : MODEL_OPTIONS[newProvider];
-    onUpdate({ provider: newProvider, model: models[0] || '' });
+    onUpdate({
+      provider: newProvider,
+      model: models[0] || '',
+    });
     if (newProvider === 'ollama' && useUiStore.getState().ollamaStatus === 'unknown') {
       toast.message(t('ollama.uncheckedHint'));
     } else if (newProvider === 'ollama' && useUiStore.getState().ollamaStatus === 'disconnected') {
@@ -287,6 +291,14 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
               </select>
             </div>
           </div>
+
+          <ProviderRuntimeEditor
+            provider={stage.provider}
+            value={stage.providerOptions}
+            onChange={(providerOptions) => onUpdate({ providerOptions })}
+            title={t('pipeline.providerOptions.stageTitle')}
+            hint={t('pipeline.providerOptions.stageHint')}
+          />
 
           {/* Prompt textarea with template controls */}
           <div className="space-y-2">

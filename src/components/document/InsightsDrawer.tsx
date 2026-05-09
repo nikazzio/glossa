@@ -22,6 +22,8 @@ import {
   ScanLine,
   Scissors,
   ShieldCheck,
+  TerminalSquare,
+  Trash2,
   X,
 } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -32,6 +34,7 @@ import { useUiStore, type InsightsDrawerTab, type ChunkDrawerTab } from '../../s
 import { useChunksStore } from '../../stores/chunksStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { usePricingStore } from '../../stores/pricingStore';
+import { useOperationLogStore } from '../../stores/operationLogStore';
 import { indexPad, qualityLabelKey, qualityTone, calculateCompositeQuality } from '../../utils';
 import { MODEL_PRICING } from '../../constants';
 import { estimatePipelineCost } from '../../utils/costEstimate';
@@ -47,7 +50,7 @@ interface InsightsDrawerProps {
 const PANEL_WIDTH = 430;
 
 const DOC_TAB_ORDER: InsightsDrawerTab[] = ['index', 'stats', 'coherence'];
-const CHUNK_TAB_ORDER: ChunkDrawerTab[] = ['audit', 'notes'];
+const CHUNK_TAB_ORDER: ChunkDrawerTab[] = ['audit', 'notes', 'operations'];
 
 const DOC_TAB_BUTTON_IDS: Record<InsightsDrawerTab, string> = {
   index: 'insights-tab-button-index',
@@ -64,11 +67,13 @@ const DOC_TAB_PANEL_IDS: Record<InsightsDrawerTab, string> = {
 const CHUNK_TAB_BUTTON_IDS: Record<ChunkDrawerTab, string> = {
   audit: 'chunk-tab-button-audit',
   notes: 'chunk-tab-button-notes',
+  operations: 'chunk-tab-button-operations',
 };
 
 const CHUNK_TAB_PANEL_IDS: Record<ChunkDrawerTab, string> = {
   audit: 'chunk-tab-panel-audit',
   notes: 'chunk-tab-panel-notes',
+  operations: 'chunk-tab-panel-operations',
 };
 
 const QUALITY_TONE_COLOR: Record<ReturnType<typeof qualityTone>, string> = {
@@ -118,10 +123,12 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
   const CHUNK_TAB_ICON: Record<ChunkDrawerTab, React.ReactNode> = {
     audit: <ShieldCheck size={16} />,
     notes: <NotebookText size={16} />,
+    operations: <TerminalSquare size={16} />,
   };
   const CHUNK_TAB_LABEL: Record<ChunkDrawerTab, string> = {
     audit: t('document.insightsTabAudit'),
     notes: t('document.insightsTabNotes'),
+    operations: t('document.insightsTabOperations'),
   };
 
   const activateDocTab = (tab: InsightsDrawerTab) => {
@@ -244,11 +251,17 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
                     onSelectChunk={setSelectedChunkId}
                     onFocusIssue={focusIssueInChunk}
                   />
-                ) : (
+                ) : chunkDrawerTab === 'notes' ? (
                   <NotesTab
                     panelId={CHUNK_TAB_PANEL_IDS.notes}
                     labelledBy={CHUNK_TAB_BUTTON_IDS.notes}
                     currentChunk={currentChunk}
+                  />
+                ) : (
+                  <OperationsTab
+                    panelId={CHUNK_TAB_PANEL_IDS.operations}
+                    labelledBy={CHUNK_TAB_BUTTON_IDS.operations}
+                    currentChunkId={currentChunk?.id ?? null}
                   />
                 )}
               </div>
@@ -892,6 +905,127 @@ function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
       ))}
     </div>
   );
+}
+
+function OperationsTab({
+  panelId,
+  labelledBy,
+  currentChunkId,
+}: {
+  panelId: string;
+  labelledBy: string;
+  currentChunkId: string | null;
+}) {
+  const { t } = useTranslation();
+  const entries = useOperationLogStore((state) => state.entries);
+  const clear = useOperationLogStore((state) => state.clear);
+
+  return (
+    <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex h-full flex-col">
+      <div className="flex items-center justify-between border-b border-editorial-border px-5 py-4">
+        <div className="space-y-1">
+          <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+            {t('document.operationsShellTitle')}
+          </p>
+          {currentChunkId && (
+            <p className="text-xs text-editorial-muted">
+              {t('document.operationsCurrentChunk')}: <span className="font-mono">{currentChunkId}</span>
+            </p>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={clear}
+          title={t('document.operationsClear')}
+          aria-label={t('document.operationsClear')}
+          className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+        >
+          <Trash2 size={14} />
+        </button>
+      </div>
+
+      {entries.length === 0 ? (
+        <div className="flex flex-1 items-center justify-center px-6 py-12 text-center text-sm text-editorial-muted">
+          {t('document.operationsEmpty')}
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto bg-[#111111] px-4 py-4 font-mono text-xs text-[#d6d6d6] custom-scrollbar">
+          <div className="space-y-2">
+            {entries.map((entry) => {
+              const tone =
+                entry.level === 'error'
+                  ? 'text-[#ff8f8f]'
+                  : entry.level === 'warn'
+                    ? 'text-[#f6d06f]'
+                    : entry.level === 'success'
+                      ? 'text-[#98e2b8]'
+                      : 'text-[#d6d6d6]';
+              const isCurrentChunk = currentChunkId && entry.chunkId === currentChunkId;
+              return (
+                <div
+                  key={entry.id}
+                  className={`rounded-[12px] border px-3 py-2 ${
+                    isCurrentChunk
+                      ? 'border-editorial-accent/60 bg-editorial-accent/10'
+                      : 'border-white/10 bg-white/[0.03]'
+                  }`}
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[#7d7d7d]">$</span>
+                    <span className="text-[#7d7d7d]">{entry.at.slice(11, 19)}</span>
+                    <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.22em] text-[#9eb4ff]">
+                      {entry.scope}
+                    </span>
+                    <span className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-[0.22em] ${
+                      entry.level === 'error'
+                        ? 'border-[#ff8f8f]/30 text-[#ff8f8f]'
+                        : entry.level === 'warn'
+                          ? 'border-[#f6d06f]/30 text-[#f6d06f]'
+                          : entry.level === 'success'
+                            ? 'border-[#98e2b8]/30 text-[#98e2b8]'
+                            : 'border-white/10 text-[#bbbbbb]'
+                    }`}>
+                      {entry.level}
+                    </span>
+                  </div>
+                  <p className={`mt-2 leading-relaxed ${tone}`}>
+                    {entry.message}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2 text-[10px]">
+                    {entry.chunkId && (
+                      <span className="rounded-full border border-white/10 px-2 py-0.5 text-[#c9c9c9]">
+                        chunk {entry.chunkId}
+                      </span>
+                    )}
+                    {entry.stageId && (
+                      <span className="rounded-full border border-white/10 px-2 py-0.5 text-[#c9c9c9]">
+                        stage {entry.stageId}
+                      </span>
+                    )}
+                    {formatOperationMeta(entry.meta).map((item) => (
+                      <span key={item} className="rounded-full border border-white/10 px-2 py-0.5 text-[#8e8e8e]">
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function formatOperationMeta(meta?: Record<string, unknown>): string[] {
+  if (!meta) return [];
+  return Object.entries(meta).flatMap(([key, value]) => {
+    if (value === undefined || value === null || value === '') return [];
+    if (Array.isArray(value)) return [`${key}: ${value.join(', ')}`];
+    if (typeof value === 'object') return [`${key}: ${JSON.stringify(value)}`];
+    return [`${key}: ${String(value)}`];
+  });
 }
 
 // ── IssueList ──────────────────────────────────────────────────────────────

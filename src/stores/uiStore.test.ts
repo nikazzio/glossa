@@ -85,11 +85,11 @@ describe('uiStore drawer mutual exclusion', () => {
   it('opening the chunk drawer closes config drawer and remembers the tab', () => {
     useUiStore.setState({ showConfigDrawer: true, chunkDrawerTab: 'audit' });
 
-    useUiStore.getState().setShowChunkDrawer(true, 'notes');
+    useUiStore.getState().setShowChunkDrawer(true, 'operations');
 
     const state = useUiStore.getState();
     expect(state.showChunkDrawer).toBe(true);
-    expect(state.chunkDrawerTab).toBe('notes');
+    expect(state.chunkDrawerTab).toBe('operations');
     expect(state.showConfigDrawer).toBe(false);
   });
 });

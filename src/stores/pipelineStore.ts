@@ -45,6 +45,7 @@ const DEFAULT_PIPELINE_CONFIG: PipelineConfig = {
   markdownAware: false,
   experimentalImport: null,
   coherencePrompt: DEFAULT_COHERENCE_PROMPT,
+  reviewProviderOptions: undefined,
 };
 
 export const usePipelineStore = create<PipelineState>((set) => ({

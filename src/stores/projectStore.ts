@@ -92,6 +92,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       documentFormat: config.documentFormat ?? 'plain',
       markdownAware: config.markdownAware ?? false,
       experimentalImport: config.experimentalImport ?? null,
+      reviewProviderOptions: config.reviewProviderOptions ?? pipeline.config.reviewProviderOptions,
       glossary: config.glossary,
       assignedGlossaryId: config.assignedGlossaryId,
     });
