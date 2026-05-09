@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.6.1](https://github.com/nikazzio/glossa/compare/glossa-v0.6.0...glossa-v0.6.1) (2026-05-09)
+
+
+### 🐛 Bug Fixes
+
+* add Ollama backend timeout coverage ([#109](https://github.com/nikazzio/glossa/issues/109)) ([b5069db](https://github.com/nikazzio/glossa/commit/b5069db88f8c35464772789cae48e071c8c3e767))
+* bug vari issue [#98](https://github.com/nikazzio/glossa/issues/98) ([#100](https://github.com/nikazzio/glossa/issues/100)) ([883db4c](https://github.com/nikazzio/glossa/commit/883db4c8c0e39a28c8e83783d7cf4bc8dffb3c34))
+* logging, DOCX export, API keys WSL2, bug cancellazione traduzioni ([#97](https://github.com/nikazzio/glossa/issues/97)) ([ef460bb](https://github.com/nikazzio/glossa/commit/ef460bb661a640419a59c9250a154ceb8b1bd3e1))
+
 ## [0.6.0](https://github.com/nikazzio/glossa/compare/glossa-v0.5.0...glossa-v0.6.0) (2026-05-04)
 
 
