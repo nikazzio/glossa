@@ -3,6 +3,7 @@ import { logger } from '../utils/logger';
 import type {
   CoherenceResult,
   Footnote,
+  FootnoteDefinition,
   GlossaryEntry,
   JudgeResult,
   PipelineConfig,
@@ -31,6 +32,10 @@ export interface SavedTranslation {
   project_id: string;
   original_text: string;
   final_translation: string;
+  source_display_text?: string | null;
+  source_processing_text?: string | null;
+  translation_display_text?: string | null;
+  translation_processing_text?: string | null;
   position?: number | null;
   chunk_status: TranslationChunk['status'];
   stage_results: string; // JSON
@@ -67,22 +72,23 @@ export function restoreTranslations(rows: SavedTranslation[]): TranslationChunk[
   return rows.map((row) => {
     const judgeResult = restoreJudgeResult(row);
     const stageResults = parseJson<Record<string, PipelineResult>>(row.stage_results, {});
-    const restoredDraft =
-      row.final_translation ||
-      judgeResult.content ||
-      lastStageContent(stageResults) ||
-      '';
+    const restoredTranslationDisplay = row.translation_display_text ?? '';
+    const restoredTranslationProcessing = row.translation_processing_text ?? '';
     const coherenceResult = parseJson<CoherenceResult>(row.coherence_result);
     const footnotes = row.footnotes
       ? parseJson<Footnote[]>(row.footnotes, [])
       : undefined;
     return {
       id: row.id,
-      originalText: row.original_text,
+      sourceDisplayText: row.source_display_text ?? '',
+      sourceProcessingText: row.source_processing_text ?? '',
+      translationDisplayText: restoredTranslationDisplay,
+      translationProcessingText: restoredTranslationProcessing,
+      originalText: row.source_display_text ?? '',
       status: row.chunk_status || (judgeResult.status === 'completed' ? 'completed' : 'ready'),
       stageResults,
       judgeResult,
-      currentDraft: restoredDraft,
+      currentDraft: restoredTranslationDisplay,
       translationLocked: row.translation_locked === 1,
       ...(coherenceResult ? { coherenceResult } : {}),
       ...(footnotes?.length ? { footnotes } : {}),
@@ -141,6 +147,8 @@ export async function getProjectConfig(projectId: string): Promise<{
   sourceLanguage: string;
   targetLanguage: string;
   inputText: string;
+  inputProcessingText: string;
+  sourceFootnotes: FootnoteDefinition[];
   viewMode: ViewMode | null;
   stages: PipelineStageConfig[];
   judgePrompt: string;
@@ -149,6 +157,7 @@ export async function getProjectConfig(projectId: string): Promise<{
   useChunking: boolean;
   targetChunkCount: number;
   documentFormat: PipelineConfig['documentFormat'];
+  renderProfile: PipelineConfig['renderProfile'];
   markdownAware: boolean;
   experimentalImport: PipelineConfig['experimentalImport'];
   reviewProviderOptions: ProviderRuntimeConfig | undefined;
@@ -158,7 +167,9 @@ export async function getProjectConfig(projectId: string): Promise<{
   const rows = await select<{
     source_language: string;
     target_language: string;
-    source_text?: string;
+    source_display_text?: string;
+    source_processing_text?: string;
+    source_footnotes?: string | null;
     view_mode: ViewMode | null;
     stages: string;
     judge_prompt: string;
@@ -167,6 +178,7 @@ export async function getProjectConfig(projectId: string): Promise<{
     use_chunking: number;
     target_chunk_count?: number;
     document_format?: PipelineConfig['documentFormat'];
+    render_profile?: PipelineConfig['renderProfile'];
     markdown_aware?: number;
     experimental_import?: PipelineConfig['experimentalImport'];
     review_provider_options?: string | null;
@@ -176,13 +188,16 @@ export async function getProjectConfig(projectId: string): Promise<{
        p.target_language,
        p.view_mode,
        pc.stages,
-       pc.source_text,
+        pc.source_display_text,
+        pc.source_processing_text,
+        pc.source_footnotes,
        pc.judge_prompt,
        pc.judge_model,
        pc.judge_provider,
        pc.use_chunking,
        pc.target_chunk_count,
        pc.document_format,
+        pc.render_profile,
        pc.markdown_aware,
        pc.experimental_import,
        pc.review_provider_options
@@ -212,7 +227,9 @@ export async function getProjectConfig(projectId: string): Promise<{
   return {
     sourceLanguage: row.source_language,
     targetLanguage: row.target_language,
-    inputText: row.source_text ?? '',
+    inputText: row.source_display_text ?? '',
+    inputProcessingText: row.source_processing_text ?? '',
+    sourceFootnotes: parseJson<FootnoteDefinition[]>(row.source_footnotes, []),
     viewMode: row.view_mode ?? null,
     stages: parseJson<PipelineStageConfig[]>(row.stages, []),
     judgePrompt: row.judge_prompt,
@@ -221,6 +238,7 @@ export async function getProjectConfig(projectId: string): Promise<{
     useChunking: row.use_chunking === 1,
     targetChunkCount: row.target_chunk_count ?? 0,
     documentFormat: row.document_format ?? 'plain',
+    renderProfile: row.render_profile ?? 'plain-text',
     markdownAware: row.markdown_aware === 1,
     experimentalImport: row.experimental_import ?? null,
     reviewProviderOptions: parseJson<ProviderRuntimeConfig>(row.review_provider_options),
@@ -239,7 +257,7 @@ export async function saveProjectConfig(
   config: PipelineConfig,
   viewMode: ViewMode,
 ): Promise<void> {
-  await saveProjectConfigInternal(projectId, undefined, config, viewMode, execute);
+  await saveProjectConfigInternal(projectId, undefined, undefined, undefined, config, viewMode, execute);
 }
 
 type ExecuteQuery = (query: string, params?: unknown[]) => Promise<void>;
@@ -311,6 +329,8 @@ async function saveProjectGlossary(
 async function saveProjectConfigInternal(
   projectId: string,
   inputText: string | undefined,
+  inputProcessingText: string | undefined,
+  sourceFootnotes: FootnoteDefinition[] | undefined,
   config: PipelineConfig,
   viewMode: ViewMode,
   run: ExecuteQuery,
@@ -318,9 +338,9 @@ async function saveProjectConfigInternal(
   await run(
     `INSERT INTO pipeline_configs (
        id, project_id, stages, judge_prompt, judge_model, judge_provider, use_chunking,
-       target_chunk_count, source_text, document_format, markdown_aware, experimental_import
-       , review_provider_options
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9, ''), $10, $11, $12, $13)
+       target_chunk_count, source_text, source_display_text, source_processing_text, source_footnotes,
+       document_format, render_profile, markdown_aware, experimental_import, review_provider_options
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9, ''), COALESCE($10, ''), COALESCE($11, ''), $12, $13, $14, $15, $16, $17)
      ON CONFLICT(project_id) DO UPDATE SET
        id = excluded.id,
        stages = excluded.stages,
@@ -329,7 +349,20 @@ async function saveProjectConfigInternal(
        judge_provider = excluded.judge_provider,
        use_chunking = excluded.use_chunking,
        target_chunk_count = excluded.target_chunk_count,
+       source_display_text = CASE
+         WHEN $10 IS NULL THEN pipeline_configs.source_display_text
+         ELSE $10
+       END,
+       source_processing_text = CASE
+         WHEN $11 IS NULL THEN pipeline_configs.source_processing_text
+         ELSE $11
+       END,
+       source_footnotes = CASE
+         WHEN $12 IS NULL THEN pipeline_configs.source_footnotes
+         ELSE $12
+       END,
        document_format = excluded.document_format,
+       render_profile = excluded.render_profile,
        markdown_aware = excluded.markdown_aware,
        experimental_import = excluded.experimental_import,
        review_provider_options = excluded.review_provider_options,
@@ -347,7 +380,11 @@ async function saveProjectConfigInternal(
       config.useChunking !== false ? 1 : 0,
       config.targetChunkCount ?? 0,
       inputText ?? null,
+      inputText ?? null,
+      inputProcessingText ?? inputText ?? null,
+      sourceFootnotes !== undefined ? JSON.stringify(sourceFootnotes) : null,
       config.documentFormat ?? 'plain',
+      config.renderProfile ?? 'plain-text',
       config.markdownAware ? 1 : 0,
       config.experimentalImport ?? null,
       config.reviewProviderOptions ? JSON.stringify(config.reviewProviderOptions) : null,
@@ -386,8 +423,9 @@ async function saveTranslationsInternal(
     await run(
       `INSERT INTO translations (
          id, project_id, original_text, final_translation, position, chunk_status, stage_results,
-         judge_status, judge_rating, translation_locked, judge_issues, coherence_result, footnotes
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+         judge_status, judge_rating, translation_locked, judge_issues, coherence_result, footnotes,
+         source_display_text, source_processing_text, translation_display_text, translation_processing_text
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
        ON CONFLICT(id) DO UPDATE SET
          original_text    = excluded.original_text,
          final_translation = excluded.final_translation,
@@ -399,12 +437,16 @@ async function saveTranslationsInternal(
          translation_locked = excluded.translation_locked,
          judge_issues     = excluded.judge_issues,
          coherence_result = excluded.coherence_result,
-         footnotes        = excluded.footnotes`,
+         footnotes        = excluded.footnotes,
+         source_display_text = excluded.source_display_text,
+         source_processing_text = excluded.source_processing_text,
+         translation_display_text = excluded.translation_display_text,
+         translation_processing_text = excluded.translation_processing_text`,
       [
         chunk.id,
         projectId,
-        chunk.originalText,
-        chunk.currentDraft || chunk.judgeResult.content || lastStageContent(chunk.stageResults) || '',
+        chunk.sourceDisplayText,
+        chunk.translationDisplayText || chunk.judgeResult.content || lastStageContent(chunk.stageResults) || '',
         position,
         chunk.status,
         JSON.stringify(chunk.stageResults),
@@ -414,6 +456,10 @@ async function saveTranslationsInternal(
         JSON.stringify(chunk.judgeResult.issues),
         chunk.coherenceResult ? JSON.stringify(chunk.coherenceResult) : null,
         chunk.footnotes?.length ? JSON.stringify(chunk.footnotes) : null,
+        chunk.sourceDisplayText,
+        chunk.sourceProcessingText,
+        chunk.translationDisplayText,
+        chunk.translationProcessingText,
       ],
     );
   }
@@ -438,6 +484,8 @@ function lastStageContent(stageResults: Record<string, PipelineResult>): string 
 export async function saveProjectState(input: {
   projectId: string;
   inputText: string;
+  inputProcessingText: string;
+  sourceFootnotes: FootnoteDefinition[];
   config: PipelineConfig;
   viewMode: ViewMode;
   chunks: TranslationChunk[];
@@ -446,6 +494,8 @@ export async function saveProjectState(input: {
     await saveProjectConfigInternal(
       input.projectId,
       input.inputText,
+      input.inputProcessingText,
+      input.sourceFootnotes,
       input.config,
       input.viewMode,
       run,

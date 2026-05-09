@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { toast } from 'sonner';
 import { usePipelineStore } from '../stores/pipelineStore';
 import { useChunksStore } from '../stores/chunksStore';
+import { makeTranslationChunk } from '../test/chunkFactory';
 import { usePipeline } from './usePipeline';
 
 const llmMocks = vi.hoisted(() => ({
@@ -49,6 +50,8 @@ describe('usePipeline', () => {
     usePipelineStore.setState((state) => ({
       ...state,
       inputText: '',
+      inputProcessingText: '',
+      sourceFootnotes: [],
       config: {
         ...state.config,
         stages: [
@@ -69,22 +72,22 @@ describe('usePipeline', () => {
 
     useChunksStore.setState({
       chunks: [
-        {
+        makeTranslationChunk({
           id: 'chunk-0',
           originalText: 'First',
           status: 'ready',
           stageResults: {},
           judgeResult: { content: '', status: 'idle', rating: 'fair', issues: [] },
           currentDraft: '',
-        },
-        {
+        }),
+        makeTranslationChunk({
           id: 'chunk-1',
           originalText: 'Second',
           status: 'ready',
           stageResults: {},
           judgeResult: { content: '', status: 'idle', rating: 'fair', issues: [] },
           currentDraft: '',
-        },
+        }),
       ],
       isProcessing: false,
       cancelRequested: false,
@@ -155,6 +158,8 @@ describe('usePipeline', () => {
     useChunksStore.getState().setChunks((prev) =>
       prev.map((chunk, index) => ({
         ...chunk,
+        translationDisplayText: `draft-${index}`,
+        translationProcessingText: `draft-${index}`,
         currentDraft: `draft-${index}`,
       })),
     );

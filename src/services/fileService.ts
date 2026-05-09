@@ -93,7 +93,7 @@ export async function exportTranslation(
       : format === 'html'
         ? buildMarkdownHtmlDocument(markdown, 'Translation Export')
         : options.markdownAware
-          ? chunks.map((c) => flattenMarkdownToText(c.currentDraft || c.originalText)).join(sep)
+          ? chunks.map((c) => flattenMarkdownToText(c.translationDisplayText || c.sourceDisplayText)).join(sep)
           : buildPlainText(chunks, sep);
 
   await writeTextFile(path, content);
@@ -113,8 +113,8 @@ export async function exportBilingual(
   const lines: string[] = ['# Bilingual Export — Glossa', ''];
   chunks.forEach((chunk, i) => {
     lines.push(`## Segment ${i + 1}`, '');
-    lines.push('**Original:**', '', chunk.originalText, '');
-    lines.push('**Translation:**', '', chunk.currentDraft || '_No translation_', '');
+    lines.push('**Original:**', '', chunk.sourceDisplayText, '');
+    lines.push('**Translation:**', '', chunk.translationDisplayText || '_No translation_', '');
     if (chunk.judgeResult.status === 'completed') {
       lines.push(`**Quality:** ${qualityExportLabel(chunk.judgeResult.rating)}`, '');
     }
@@ -143,7 +143,7 @@ export async function exportMarkdownTranslation(
   if (!path) return false;
 
   const content = chunks
-    .map((chunk) => chunk.currentDraft || chunk.originalText)
+    .map((chunk) => chunk.translationDisplayText || chunk.sourceDisplayText)
     .join('\n\n');
 
   await writeTextFile(path, content);
@@ -155,13 +155,13 @@ export async function exportMarkdownTranslation(
 
 function buildPlainText(chunks: TranslationChunk[], separator = '\n\n'): string {
   return chunks
-    .map((c) => c.currentDraft || c.originalText)
+    .map((c) => c.translationDisplayText || c.sourceDisplayText)
     .join(separator);
 }
 
 function buildMarkdown(chunks: TranslationChunk[], separator = '\n\n'): string {
   return chunks
-    .map((chunk) => chunk.currentDraft || chunk.originalText)
+    .map((chunk) => chunk.translationDisplayText || chunk.sourceDisplayText)
     .filter((chunk) => chunk.trim().length > 0)
     .join(separator);
 }

@@ -136,4 +136,96 @@ describe('chunksStore', () => {
     expect(useUiStore.getState().viewMode).toBe('sandbox');
     expect(useUiStore.getState().selectedChunkId).toBeNull();
   });
+
+  it('loadDocument with markdown footnotes separates processingText from displayText', () => {
+    useChunksStore.getState().loadDocument('Body [^1].\n\n[^1]: A note.', {
+      useChunking: false,
+      markdownAware: true,
+    });
+
+    const chunk = useChunksStore.getState().chunks[0];
+    // Chunk processing text has markers but no definition lines
+    expect(chunk?.sourceProcessingText).toBe('Body [^1].');
+    // Document-level display text retains the definition lines
+    expect(usePipelineStore.getState().inputText).toContain('[^1]: A note.');
+    // Document-level processing text strips definitions
+    expect(usePipelineStore.getState().inputProcessingText).toBe('Body [^1].');
+    // Footnote metadata is stored separately
+    expect(usePipelineStore.getState().sourceFootnotes).toEqual([{ id: '1', text: 'A note.' }]);
+  });
+
+  it('sourceDisplayText on chunks is never mutated when a chunk transitions to completed', () => {
+    usePipelineStore.getState().setInputText('First paragraph.\n\nSecond paragraph.');
+    useChunksStore.getState().generateChunks();
+
+    const originalDisplayTexts = useChunksStore.getState().chunks.map((c) => c.sourceDisplayText);
+
+    // Simulate the pipeline completing and setting a draft
+    useChunksStore.getState().setChunks((prev) =>
+      prev.map((chunk) => ({
+        ...chunk,
+        status: 'completed' as const,
+        translationDisplayText: 'Tradotto',
+        translationProcessingText: 'Tradotto',
+        currentDraft: 'Tradotto',
+      })),
+    );
+
+    const afterDisplayTexts = useChunksStore.getState().chunks.map((c) => c.sourceDisplayText);
+    expect(afterDisplayTexts).toEqual(originalDisplayTexts);
+  });
+
+  it('split preserves sourceDisplayText and sourceProcessingText on both halves', () => {
+    useChunksStore.getState().loadDocument('Alpha beta gamma delta epsilon.', {
+      useChunking: false,
+    });
+
+    const chunkId = useChunksStore.getState().chunks[0].id;
+    useChunksStore.getState().splitChunkAt(chunkId, 11);
+
+    const [first, second] = useChunksStore.getState().chunks;
+    expect(first?.sourceDisplayText).toBeTruthy();
+    expect(second?.sourceDisplayText).toBeTruthy();
+    // Legacy field must stay in sync
+    expect(first?.originalText).toBe(first?.sourceDisplayText);
+    expect(second?.originalText).toBe(second?.sourceDisplayText);
+    // After split, chunks have no pending translation
+    expect(first?.translationDisplayText).toBe('');
+    expect(second?.translationDisplayText).toBe('');
+    expect(first?.currentDraft).toBe('');
+    expect(second?.currentDraft).toBe('');
+  });
+
+  it('merge preserves combined sourceDisplayText on the resulting chunk', () => {
+    useChunksStore.getState().loadDocument('Alpha.\n\nBeta.', {
+      useChunking: true,
+      targetChunkCount: 2,
+    });
+
+    const [first] = useChunksStore.getState().chunks;
+    useChunksStore.getState().mergeChunkWithNext(first!.id);
+
+    const merged = useChunksStore.getState().chunks[0];
+    expect(merged?.sourceDisplayText).toContain('Alpha.');
+    expect(merged?.sourceDisplayText).toContain('Beta.');
+    // Legacy field must stay in sync
+    expect(merged?.originalText).toBe(merged?.sourceDisplayText);
+    // Merged chunk starts fresh with no translation
+    expect(merged?.translationDisplayText).toBe('');
+    expect(merged?.currentDraft).toBe('');
+    expect(merged?.status).toBe('ready');
+  });
+
+  it('updateChunkOriginalText updates sourceDisplayText and sourceProcessingText', () => {
+    usePipelineStore.getState().setInputText('Original text');
+    useChunksStore.getState().generateChunks();
+
+    const chunkId = useChunksStore.getState().chunks[0].id;
+    useChunksStore.getState().updateChunkOriginalText(chunkId, 'Edited text');
+
+    const chunk = useChunksStore.getState().chunks[0];
+    expect(chunk?.sourceDisplayText).toBe('Edited text');
+    expect(chunk?.sourceProcessingText).toBe('Edited text');
+    expect(chunk?.originalText).toBe('Edited text');
+  });
 });

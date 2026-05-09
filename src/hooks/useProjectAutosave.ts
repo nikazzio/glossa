@@ -10,6 +10,8 @@ export { buildProjectSnapshot };
 
 export function useProjectSnapshot(enabled = true): string {
   const inputText = usePipelineStore((state) => state.inputText);
+  const inputProcessingText = usePipelineStore((state) => state.inputProcessingText);
+  const sourceFootnotes = usePipelineStore((state) => state.sourceFootnotes);
   const config = usePipelineStore((state) => state.config);
   const chunks = useChunksStore((state) => state.chunks);
   const isProcessing = useChunksStore((state) => state.isProcessing);
@@ -24,17 +26,17 @@ export function useProjectSnapshot(enabled = true): string {
     if (isProcessing && lastStableSnapshotRef.current !== null) {
       return lastStableSnapshotRef.current;
     }
-    const effectiveInputText =
-      chunks.length > 0 ? chunks.map((chunk) => chunk.originalText).join('\n\n') : inputText;
     const next = buildProjectSnapshot({
-      inputText: effectiveInputText,
+      inputText,
+      inputProcessingText,
+      sourceFootnotes,
       config,
       chunks,
       viewMode,
     });
     lastStableSnapshotRef.current = next;
     return next;
-  }, [chunks, config, inputText, isProcessing, viewMode]);
+  }, [chunks, config, inputProcessingText, inputText, isProcessing, sourceFootnotes, viewMode]);
 }
 
 export function useProjectAutosave(delayMs = 1200) {

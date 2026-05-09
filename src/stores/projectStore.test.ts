@@ -62,6 +62,8 @@ describe('projectStore', () => {
     usePipelineStore.setState((state) => ({
       ...state,
       inputText: '',
+      inputProcessingText: '',
+      sourceFootnotes: [],
       config: {
         ...state.config,
         sourceLanguage: 'English',
@@ -91,6 +93,8 @@ describe('projectStore', () => {
       sourceLanguage: 'Latin',
       targetLanguage: 'Italian',
       inputText: 'Original paragraph',
+      inputProcessingText: 'Original paragraph',
+      sourceFootnotes: [],
       viewMode: 'document',
       stages: [
         {
@@ -108,6 +112,7 @@ describe('projectStore', () => {
       useChunking: false,
       targetChunkCount: 0,
       documentFormat: 'markdown',
+      renderProfile: 'markdown',
       markdownAware: true,
       experimentalImport: 'docx-markdown',
       glossary: [{ term: 'logos', translation: 'logos', notes: 'retain Greek' }],
@@ -119,6 +124,10 @@ describe('projectStore', () => {
         project_id: 'proj-1',
         original_text: 'Original paragraph',
         final_translation: 'Translated paragraph',
+        source_display_text: 'Original paragraph',
+        source_processing_text: 'Original paragraph',
+        translation_display_text: 'Translated paragraph',
+        translation_processing_text: 'Translated paragraph',
         chunk_status: 'completed',
         stage_results: JSON.stringify({
           'stg-1': {
@@ -151,6 +160,8 @@ describe('projectStore', () => {
       sourceLanguage: 'English',
       targetLanguage: 'Italian',
       inputText: 'Unchunked draft source',
+      inputProcessingText: 'Unchunked draft source',
+      sourceFootnotes: [],
       viewMode: null,
       stages: [],
       judgePrompt: '',
@@ -159,6 +170,7 @@ describe('projectStore', () => {
       useChunking: true,
       targetChunkCount: 0,
       documentFormat: 'plain',
+      renderProfile: 'plain-text',
       markdownAware: false,
       experimentalImport: null,
       glossary: [],
@@ -181,6 +193,8 @@ describe('projectStore', () => {
 
     const expectedSnapshot = buildProjectSnapshot({
       inputText: 'Original source draft',
+      inputProcessingText: 'Original source draft',
+      sourceFootnotes: [],
       config: usePipelineStore.getState().config,
       chunks: [],
       viewMode: 'document',
@@ -189,6 +203,8 @@ describe('projectStore', () => {
     expect(projectServiceMocks.saveProjectState).toHaveBeenCalledWith({
       projectId: 'proj-1',
       inputText: 'Original source draft',
+      inputProcessingText: 'Original source draft',
+      sourceFootnotes: [],
       config: expect.objectContaining({
         sourceLanguage: 'English',
         targetLanguage: 'Italian',
@@ -216,6 +232,8 @@ describe('projectStore', () => {
     expect(projectServiceMocks.saveProjectState).toHaveBeenCalledWith({
       projectId: 'proj-first-save',
       inputText: 'Draft text',
+      inputProcessingText: 'Draft text',
+      sourceFootnotes: [],
       config: expect.objectContaining({
         sourceLanguage: 'English',
         targetLanguage: 'Italian',
@@ -258,6 +276,8 @@ describe('projectStore', () => {
     expect(projectServiceMocks.saveProjectState).toHaveBeenCalledWith({
       projectId: 'proj-new',
       inputText: 'Unchunked text to preserve',
+      inputProcessingText: 'Unchunked text to preserve',
+      sourceFootnotes: [],
       config: expect.objectContaining({
         sourceLanguage: 'English',
         targetLanguage: 'Italian',

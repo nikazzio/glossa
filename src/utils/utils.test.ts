@@ -9,6 +9,7 @@ import {
   recommendChunkCount,
 } from './index';
 import type { TranslationChunk } from '../types';
+import { makeTranslationChunk } from '../test/chunkFactory';
 
 describe('indexPad', () => {
   it('pads single digit numbers', () => {
@@ -26,13 +27,14 @@ describe('calculateCompositeQuality', () => {
   const makeChunk = (
     rating: 'critical' | 'poor' | 'fair' | 'good' | 'excellent',
     status: 'completed' | 'idle' = 'completed',
-  ): TranslationChunk => ({
-    id: `chunk-test`,
-    originalText: 'test',
-    status: status === 'completed' ? 'completed' : 'ready',
-    stageResults: {},
-    judgeResult: { content: '', status, rating, issues: [] },
-  });
+  ): TranslationChunk =>
+    makeTranslationChunk({
+      id: 'chunk-test',
+      originalText: 'test',
+      status: status === 'completed' ? 'completed' : 'ready',
+      stageResults: {},
+      judgeResult: { content: '', status, rating, issues: [] },
+    });
 
   it('returns 0 for empty chunks', () => {
     expect(calculateCompositeQuality([])).toBeNull();

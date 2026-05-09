@@ -8,7 +8,6 @@ import { useUiStore } from '../stores/uiStore';
 import { logOperation } from '../stores/operationLogStore';
 import { withRetry, friendlyError } from '../utils/retry';
 import { qualityDefault, qualityFailure } from '../utils';
-import { stripSuperscriptMarkers } from '../utils/footnoteExtractor';
 import type { Issue, JudgeResult, TokenUsage, TranslationChunk } from '../types';
 
 function lastNWords(text: string, n: number): string {
@@ -198,7 +197,7 @@ export function usePipeline() {
             capturedUsage = undefined;
             updateChunkStage(chunk.id, stage.id, { content: '', status: 'processing' });
             return llmService.runStageStream(
-              stripSuperscriptMarkers(chunk.originalText), stage, effectiveConfig, lastResult || undefined,
+              chunk.sourceProcessingText, stage, effectiveConfig, lastResult || undefined,
               (token) => appendChunkStageContent(chunk.id, stage.id, token),
               (usage) => { capturedUsage = usage; },
               stage.rollingContext !== false ? options.previousTranslation : undefined,
@@ -303,7 +302,7 @@ export function usePipeline() {
     });
     try {
       const judgeData = await withRetry(
-        () => llmService.judgeTranslation(stripSuperscriptMarkers(chunk.originalText), textToAudit, effectiveConfig ?? config),
+        () => llmService.judgeTranslation(chunk.sourceProcessingText, textToAudit, effectiveConfig ?? config),
         { label: 'Audit' },
       );
       const judgeTokenUsage =
@@ -380,7 +379,7 @@ export function usePipeline() {
       if (outcome === 'failed') errorCount++;
       if (outcome === 'completed' || outcome === 'skipped') {
         const fresh = useChunksStore.getState().chunks.find((c) => c.id === chunk.id);
-        previousTranslation = fresh?.currentDraft || undefined;
+        previousTranslation = fresh?.translationProcessingText || undefined;
       }
     }
 
@@ -453,7 +452,7 @@ export function usePipeline() {
         break;
       }
 
-      const outcome = await runJudgeForChunk(chunk, chunk.currentDraft);
+      const outcome = await runJudgeForChunk(chunk, chunk.translationProcessingText);
       if (outcome === 'cancelled') { cancelled = true; break; }
       if (outcome === 'failed') errorCount++;
 
@@ -479,7 +478,7 @@ export function usePipeline() {
     if (useChunksStore.getState().isProcessing) return;
     const chunk = useChunksStore.getState().chunks.find((c) => c.id === chunkId);
     if (!chunk) return;
-    if (!chunk.currentDraft) {
+    if (!chunk.translationProcessingText) {
       toast.message(t('pipeline.auditSkippedNoDraft'));
       return;
     }
@@ -488,7 +487,7 @@ export function usePipeline() {
     useChunksStore.getState().clearCancelRequest();
     setIsProcessing(true);
 
-    const outcome = await runJudgeForChunk(chunk, chunk.currentDraft);
+    const outcome = await runJudgeForChunk(chunk, chunk.translationProcessingText);
 
     setIsProcessing(false);
     useChunksStore.getState().clearCancelRequest();
@@ -505,12 +504,12 @@ export function usePipeline() {
   const runCoherenceAudit = useCallback(async () => {
     if (useChunksStore.getState().isProcessing) return;
     const liveChunks = useChunksStore.getState().chunks;
-    const auditableChunks = liveChunks.filter((c) => c.currentDraft?.trim());
+    const auditableChunks = liveChunks.filter((c) => c.translationProcessingText?.trim());
     if (auditableChunks.length === 0) {
       toast.message(t('coherence.noChunksToAudit'));
       return;
     }
-    if (liveChunks.some((c) => !c.currentDraft?.trim())) {
+    if (liveChunks.some((c) => !c.translationProcessingText?.trim())) {
       toast.message(t('coherence.translationsRequired'));
       return;
     }
@@ -525,13 +524,13 @@ export function usePipeline() {
 
     for (let i = 0; i < liveChunks.length; i++) {
       const chunk = liveChunks[i];
-      if (!chunk.currentDraft?.trim()) continue;
+      if (!chunk.translationProcessingText?.trim()) continue;
       if (useChunksStore.getState().cancelRequested) { cancelled = true; break; }
 
       const prevChunk = liveChunks[i - 1];
       const nextChunk = liveChunks[i + 1];
-      const prevContext = prevChunk?.currentDraft ? lastNWords(prevChunk.currentDraft, 300) : undefined;
-      const nextContext = nextChunk?.currentDraft ? firstNWords(nextChunk.currentDraft, 300) : undefined;
+      const prevContext = prevChunk?.translationProcessingText ? lastNWords(prevChunk.translationProcessingText, 300) : undefined;
+      const nextContext = nextChunk?.translationProcessingText ? firstNWords(nextChunk.translationProcessingText, 300) : undefined;
 
       updateChunkCoherence(chunk.id, { status: 'processing', issues: [] });
       logOperation({ level: 'info', scope: 'coherence', message: 'Coherence check started for this chunk against its neighbors', chunkId: chunk.id });
@@ -539,7 +538,7 @@ export function usePipeline() {
       try {
         const result = await withRetry(
           () => llmService.runCoherenceForChunk(
-            { original: stripSuperscriptMarkers(chunk.originalText), translation: chunk.currentDraft!, prevContext, nextContext },
+            { original: chunk.sourceProcessingText, translation: chunk.translationProcessingText, prevContext, nextContext },
             config,
           ),
           { label: 'Coherence audit' },

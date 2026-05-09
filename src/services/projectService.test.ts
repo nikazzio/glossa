@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PipelineConfig } from '../types';
+import { makeTranslationChunk } from '../test/chunkFactory';
 
 const dbMocks = vi.hoisted(() => ({
   execute: vi.fn(),
@@ -46,6 +47,7 @@ describe('projectService glossary persistence', () => {
       reviewProviderOptions: {
         ollama: { temperature: 0.1, keepAlive: '15m', think: false, numCtx: 8192 },
       },
+      renderProfile: 'markdown',
     };
 
     await saveProjectConfig('proj-1', config, 'document');
@@ -87,6 +89,9 @@ describe('projectService glossary persistence', () => {
           source_language: 'Latin',
           target_language: 'English',
           source_text: 'Arma virumque cano',
+          source_display_text: 'Arma virumque cano',
+          source_processing_text: 'Arma virumque cano',
+          source_footnotes: '[]',
           stages: '[]',
           judge_prompt: 'Judge',
           judge_model: 'gemini-3-flash-preview',
@@ -94,6 +99,7 @@ describe('projectService glossary persistence', () => {
           use_chunking: 1,
           target_chunk_count: 5,
           document_format: 'markdown',
+          render_profile: 'markdown',
           markdown_aware: 1,
           experimental_import: 'docx-markdown',
           review_provider_options: '{"ollama":{"temperature":0.1,"keepAlive":"15m","think":false,"numCtx":8192}}',
@@ -114,8 +120,10 @@ describe('projectService glossary persistence', () => {
     expect(config?.sourceLanguage).toBe('Latin');
     expect(config?.targetLanguage).toBe('English');
     expect(config?.inputText).toBe('Arma virumque cano');
+    expect(config?.inputProcessingText).toBe('Arma virumque cano');
     expect(config?.targetChunkCount).toBe(5);
     expect(config?.documentFormat).toBe('markdown');
+    expect(config?.renderProfile).toBe('markdown');
     expect(config?.markdownAware).toBe(true);
     expect(config?.experimentalImport).toBe('docx-markdown');
     expect(config?.reviewProviderOptions).toEqual({
@@ -141,6 +149,8 @@ describe('projectService glossary persistence', () => {
     await saveProjectState({
       projectId: 'proj-1',
       inputText: 'Alpha\n\nBeta',
+      inputProcessingText: 'Alpha\n\nBeta',
+      sourceFootnotes: [],
       config: {
         sourceLanguage: 'Latin',
         targetLanguage: 'English',
@@ -157,10 +167,11 @@ describe('projectService glossary persistence', () => {
         reviewProviderOptions: {
           ollama: { temperature: 0.1, keepAlive: '15m', think: false, numCtx: 8192 },
         },
+        renderProfile: 'markdown',
       },
       viewMode: 'document',
       chunks: [
-        {
+        makeTranslationChunk({
           id: 'chunk-b',
           originalText: 'Beta',
           currentDraft: 'Beta translated',
@@ -173,8 +184,8 @@ describe('projectService glossary persistence', () => {
             rating: 'good',
             issues: [],
           },
-        },
-        {
+        }),
+        makeTranslationChunk({
           id: 'chunk-a',
           originalText: 'Alpha',
           currentDraft: 'Alpha translated',
@@ -187,7 +198,7 @@ describe('projectService glossary persistence', () => {
             rating: 'excellent',
             issues: [],
           },
-        },
+        }),
       ],
     });
 
@@ -203,6 +214,10 @@ describe('projectService glossary persistence', () => {
         1,
         2,
         'Alpha\n\nBeta',
+        'Alpha\n\nBeta',
+        'Alpha\n\nBeta',
+        '[]',
+        'markdown',
         'markdown',
         1,
         'docx-markdown',
@@ -211,11 +226,11 @@ describe('projectService glossary persistence', () => {
     );
     expect(dbMocks.execute).toHaveBeenCalledWith(
       expect.stringContaining('position'),
-      ['chunk-b', 'proj-1', 'Beta', 'Beta translated', 0, 'completed', '{}', 'completed', 'good', 1, '[]', null, null],
+      ['chunk-b', 'proj-1', 'Beta', 'Beta translated', 0, 'completed', '{}', 'completed', 'good', 1, '[]', null, null, 'Beta', 'Beta', 'Beta translated', 'Beta translated'],
     );
     expect(dbMocks.execute).toHaveBeenCalledWith(
       expect.stringContaining('position'),
-      ['chunk-a', 'proj-1', 'Alpha', 'Alpha translated', 1, 'completed', '{}', 'completed', 'excellent', 0, '[]', null, null],
+      ['chunk-a', 'proj-1', 'Alpha', 'Alpha translated', 1, 'completed', '{}', 'completed', 'excellent', 0, '[]', null, null, 'Alpha', 'Alpha', 'Alpha translated', 'Alpha translated'],
     );
     expect(
       dbMocks.execute.mock.calls.filter(
@@ -235,6 +250,8 @@ describe('projectService glossary persistence', () => {
       saveProjectState({
         projectId: 'proj-1',
         inputText: 'Alpha',
+        inputProcessingText: 'Alpha',
+        sourceFootnotes: [],
         config: {
           sourceLanguage: 'Latin',
           targetLanguage: 'English',
@@ -246,12 +263,13 @@ describe('projectService glossary persistence', () => {
         useChunking: true,
         targetChunkCount: 1,
         documentFormat: 'markdown',
+        renderProfile: 'markdown',
         markdownAware: true,
         experimentalImport: 'docx-markdown',
       },
         viewMode: 'document',
         chunks: [
-          {
+          makeTranslationChunk({
             id: 'chunk-a',
             originalText: 'Alpha',
             currentDraft: 'Alpha translated',
@@ -263,7 +281,7 @@ describe('projectService glossary persistence', () => {
               rating: 'excellent',
               issues: [],
             },
-          },
+          }),
         ],
       }),
     ).rejects.toThrow('disk full');
@@ -278,6 +296,9 @@ describe('projectService glossary persistence', () => {
           source_language: 'Latin',
           target_language: 'English',
           source_text: '',
+          source_display_text: '',
+          source_processing_text: '',
+          source_footnotes: '[]',
           stages: '{{not valid json}}',
           judge_prompt: 'Judge',
           judge_model: 'gemini-3-flash-preview',
@@ -285,6 +306,7 @@ describe('projectService glossary persistence', () => {
           use_chunking: 1,
           target_chunk_count: 0,
           document_format: 'plain',
+          render_profile: 'plain-text',
           markdown_aware: 0,
           experimental_import: null,
           view_mode: null,
@@ -311,6 +333,8 @@ describe('projectService glossary persistence', () => {
       saveProjectState({
         projectId: 'proj-1',
         inputText: 'Hello',
+        inputProcessingText: 'Hello',
+        sourceFootnotes: [],
         config: {
           sourceLanguage: 'Latin',
           targetLanguage: 'English',
@@ -322,6 +346,7 @@ describe('projectService glossary persistence', () => {
           useChunking: true,
           targetChunkCount: 0,
           documentFormat: 'plain',
+          renderProfile: 'plain-text',
           markdownAware: false,
           experimentalImport: null,
         },
@@ -342,16 +367,16 @@ describe('projectService glossary persistence', () => {
     );
   });
 
-  it('restores drafts from stage results when the final translation field is empty', async () => {
+  it('returns empty translation fields when new columns are absent', async () => {
     const restored = restoreTranslations([
       {
         id: 'chunk-1',
         project_id: 'proj-1',
         original_text: 'Source',
-        final_translation: '',
+        final_translation: 'Old translation',
         chunk_status: 'completed',
         stage_results: JSON.stringify({
-          'stg-1': { content: 'Recovered translation', status: 'completed' },
+          'stg-1': { content: 'Stage translation', status: 'completed' },
         }),
         judge_status: 'completed',
         judge_rating: 'good',
@@ -360,6 +385,41 @@ describe('projectService glossary persistence', () => {
       },
     ]);
 
-    expect(restored[0]?.currentDraft).toBe('Recovered translation');
+    // Without new columns, both fields default to '' — no fallback to stage results or final_translation
+    expect(restored[0]?.translationDisplayText).toBe('');
+    expect(restored[0]?.translationProcessingText).toBe('');
+    expect(restored[0]?.currentDraft).toBe('');
+    expect(restored[0]?.sourceDisplayText).toBe('');
+    expect(restored[0]?.sourceProcessingText).toBe('');
   });
+
+  it('restoreTranslations maps source_display_text and translation_display_text to the new chunk fields', () => {
+    const restored = restoreTranslations([
+      {
+        id: 'chunk-1',
+        project_id: 'proj-1',
+        original_text: 'Legacy source',
+        final_translation: 'Legacy translation',
+        source_display_text: 'Display source',
+        source_processing_text: 'Processing source',
+        translation_display_text: 'Display translation',
+        translation_processing_text: 'Processing translation',
+        chunk_status: 'completed',
+        stage_results: '{}',
+        judge_status: 'idle',
+        judge_rating: 'fair',
+        judge_issues: '[]',
+        created_at: '2026-01-01T00:00:00Z',
+      },
+    ]);
+
+    expect(restored[0]?.sourceDisplayText).toBe('Display source');
+    expect(restored[0]?.sourceProcessingText).toBe('Processing source');
+    expect(restored[0]?.translationDisplayText).toBe('Display translation');
+    expect(restored[0]?.translationProcessingText).toBe('Processing translation');
+    // Legacy fields must mirror the display fields
+    expect(restored[0]?.originalText).toBe('Display source');
+    expect(restored[0]?.currentDraft).toBe('Display translation');
+  });
+
 });
