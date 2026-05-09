@@ -7,7 +7,9 @@ use serde_json::{Map, Value};
 use std::{
     collections::HashMap,
     fs,
+    future::Future,
     path::PathBuf,
+    pin::Pin,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc, LazyLock, Mutex,
@@ -614,6 +616,266 @@ fn format_stream_total_timeout(provider: &str) -> String {
     )
 }
 
+#[derive(Clone, Copy)]
+struct StreamTimeouts {
+    header: Duration,
+    idle: Duration,
+    total: Duration,
+}
+
+fn default_stream_timeouts() -> StreamTimeouts {
+    StreamTimeouts {
+        header: Duration::from_secs(HTTP_STREAM_HEADER_TIMEOUT_SECS),
+        idle: Duration::from_secs(HTTP_STREAM_IDLE_TIMEOUT_SECS),
+        total: Duration::from_secs(HTTP_STREAM_TOTAL_TIMEOUT_SECS),
+    }
+}
+
+async fn with_stream_header_timeout<T, E, F, M>(
+    provider: &str,
+    timeout: Duration,
+    future: F,
+    map_error: M,
+) -> Result<T, String>
+where
+    F: Future<Output = Result<T, E>>,
+    M: FnOnce(E) -> String,
+{
+    tokio::time::timeout(timeout, future)
+        .await
+        .map_err(|_| format_stream_header_timeout(provider))?
+        .map_err(map_error)
+}
+
+trait StreamChunkSource {
+    fn next_chunk<'a>(
+        &'a mut self,
+    ) -> Pin<Box<dyn Future<Output = Result<Option<Vec<u8>>, String>> + Send + 'a>>;
+}
+
+struct ReqwestChunkSource<'a> {
+    resp: &'a mut reqwest::Response,
+    provider: &'a str,
+}
+
+impl StreamChunkSource for ReqwestChunkSource<'_> {
+    fn next_chunk<'a>(
+        &'a mut self,
+    ) -> Pin<Box<dyn Future<Output = Result<Option<Vec<u8>>, String>> + Send + 'a>> {
+        Box::pin(async move {
+            self.resp
+                .chunk()
+                .await
+                .map(|chunk| chunk.map(|bytes| bytes.to_vec()))
+                .map_err(|e| format_transport_error(self.provider, "stream read", e))
+        })
+    }
+}
+
+struct StreamAccumulator {
+    full_text: String,
+    buffer: String,
+    latest_input_tokens: Option<u32>,
+    latest_output_tokens: Option<u32>,
+    anthropic_input_tokens: Option<u32>,
+}
+
+impl StreamAccumulator {
+    fn new() -> Self {
+        Self {
+            full_text: String::new(),
+            buffer: String::new(),
+            latest_input_tokens: None,
+            latest_output_tokens: None,
+            anthropic_input_tokens: None,
+        }
+    }
+
+    fn emit_token<E>(&mut self, stream_id: &str, token: String, emit: &mut E)
+    where
+        E: FnMut(StreamToken),
+    {
+        emit(StreamToken {
+            stream_id: stream_id.to_string(),
+            token,
+            done: false,
+            input_tokens: None,
+            output_tokens: None,
+        });
+    }
+
+    fn process_json_payload<E>(
+        &mut self,
+        provider: &str,
+        stream_id: &str,
+        data: &str,
+        emit: &mut E,
+    ) -> Result<(), String>
+    where
+        E: FnMut(StreamToken),
+    {
+        if let Some(text) = extract_streaming_text(provider, data) {
+            if !text.is_empty() {
+                self.full_text.push_str(&text);
+                self.emit_token(stream_id, text, emit);
+            }
+        }
+
+        if let Ok(json) = serde_json::from_str::<Value>(data) {
+            match provider {
+                "openai" | "deepseek" => {
+                    if let (Some(i), Some(o)) = (
+                        json["usage"]["prompt_tokens"].as_u64(),
+                        json["usage"]["completion_tokens"].as_u64(),
+                    ) {
+                        self.latest_input_tokens = Some(i as u32);
+                        self.latest_output_tokens = Some(o as u32);
+                    }
+                }
+                "ollama" => {
+                    if let Some((i, o)) = parse_ollama_usage(&json) {
+                        self.latest_input_tokens = Some(i);
+                        self.latest_output_tokens = Some(o);
+                    }
+                }
+                "gemini" => {
+                    if let (Some(i), Some(o)) = (
+                        json["usageMetadata"]["promptTokenCount"].as_u64(),
+                        json["usageMetadata"]["candidatesTokenCount"].as_u64(),
+                    ) {
+                        self.latest_input_tokens = Some(i as u32);
+                        self.latest_output_tokens = Some(o as u32);
+                    }
+                }
+                "anthropic" => match json["type"].as_str() {
+                    Some("message_start") => {
+                        self.anthropic_input_tokens = json["message"]["usage"]["input_tokens"]
+                            .as_u64()
+                            .map(|n| n as u32);
+                    }
+                    Some("message_delta") => {
+                        if let Some(out) = json["usage"]["output_tokens"].as_u64() {
+                            self.latest_input_tokens = self.anthropic_input_tokens;
+                            self.latest_output_tokens = Some(out as u32);
+                        }
+                    }
+                    _ => {}
+                },
+                _ => {}
+            }
+        }
+        Ok(())
+    }
+
+    fn process_bytes<E>(
+        &mut self,
+        provider: &str,
+        stream_id: &str,
+        bytes: &[u8],
+        emit: &mut E,
+    ) -> Result<(), String>
+    where
+        E: FnMut(StreamToken),
+    {
+        self.buffer.push_str(&String::from_utf8_lossy(bytes));
+
+        while let Some(pos) = self.buffer.find('\n') {
+            let line = self.buffer[..pos].trim_end().to_string();
+            self.buffer = self.buffer[pos + 1..].to_string();
+
+            if provider == "ollama" {
+                let trimmed = line.trim();
+                if trimmed.is_empty() {
+                    continue;
+                }
+                self.process_json_payload(provider, stream_id, trimmed, emit)?;
+                continue;
+            }
+
+            if let Some(data) = line.strip_prefix("data: ") {
+                if data == "[DONE]" {
+                    continue;
+                }
+                self.process_json_payload(provider, stream_id, data, emit)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn finish<E>(&mut self, provider: &str, stream_id: &str, emit: &mut E)
+    where
+        E: FnMut(StreamToken),
+    {
+        if provider == "ollama" {
+            let trimmed = self.buffer.trim();
+            if !trimmed.is_empty() {
+                if let Ok(json) = serde_json::from_str::<Value>(trimmed) {
+                    if let Some(text) = json["message"]["content"].as_str() {
+                        if !text.is_empty() && !self.full_text.ends_with(text) {
+                            self.full_text.push_str(text);
+                            self.emit_token(stream_id, text.to_string(), emit);
+                        }
+                    }
+                    if let Some((i, o)) = parse_ollama_usage(&json) {
+                        self.latest_input_tokens = Some(i);
+                        self.latest_output_tokens = Some(o);
+                    }
+                }
+            }
+        }
+
+        emit(StreamToken {
+            stream_id: stream_id.to_string(),
+            token: String::new(),
+            done: true,
+            input_tokens: self.latest_input_tokens,
+            output_tokens: self.latest_output_tokens,
+        });
+    }
+}
+
+async fn consume_stream<S, E>(
+    provider: &str,
+    stream_id: &str,
+    cancel: &Arc<CancelToken>,
+    timeouts: StreamTimeouts,
+    source: &mut S,
+    mut emit: E,
+) -> Result<String, String>
+where
+    S: StreamChunkSource,
+    E: FnMut(StreamToken),
+{
+    let mut acc = StreamAccumulator::new();
+    let started_at = tokio::time::Instant::now();
+
+    loop {
+        if started_at.elapsed() >= timeouts.total {
+            return Err(format_stream_total_timeout(provider));
+        }
+        if cancel.is_cancelled() {
+            return Err(STREAM_CANCELLED_ERROR.to_string());
+        }
+        let chunk_result = tokio::select! {
+            biased;
+            _ = cancel.notify.notified() => {
+                return Err(STREAM_CANCELLED_ERROR.to_string());
+            }
+            chunk = tokio::time::timeout(timeouts.idle, source.next_chunk()) => chunk,
+        };
+        match chunk_result {
+            Ok(Ok(Some(bytes))) => acc.process_bytes(provider, stream_id, &bytes, &mut emit)?,
+            Ok(Ok(None)) => break,
+            Ok(Err(err)) => return Err(err),
+            Err(_) => return Err(format_stream_idle_timeout(provider)),
+        }
+    }
+
+    acc.finish(provider, stream_id, &mut emit);
+    Ok(acc.full_text)
+}
+
 fn legacy_store_path(app: &AppHandle) -> Result<PathBuf, String> {
     let config_dir = app
         .path()
@@ -949,7 +1211,9 @@ fn default_ollama_config() -> OllamaConfig {
     }
 }
 
-fn minimal_pipeline_config(review_provider_options: Option<ProviderRuntimeConfig>) -> PipelineConfig {
+fn minimal_pipeline_config(
+    review_provider_options: Option<ProviderRuntimeConfig>,
+) -> PipelineConfig {
     PipelineConfig {
         source_language: String::new(),
         target_language: String::new(),
@@ -983,7 +1247,10 @@ fn merge_ollama_config(
         advanced_options: None,
     });
     OllamaConfig {
-        temperature: override_config.temperature.or(base.temperature).or(defaults.temperature),
+        temperature: override_config
+            .temperature
+            .or(base.temperature)
+            .or(defaults.temperature),
         top_p: override_config.top_p.or(base.top_p).or(defaults.top_p),
         seed: override_config.seed.or(base.seed).or(defaults.seed),
         keep_alive: override_config
@@ -991,7 +1258,10 @@ fn merge_ollama_config(
             .or(base.keep_alive)
             .or(defaults.keep_alive),
         think: override_config.think.or(base.think).or(defaults.think),
-        num_ctx: override_config.num_ctx.or(base.num_ctx).or(defaults.num_ctx),
+        num_ctx: override_config
+            .num_ctx
+            .or(base.num_ctx)
+            .or(defaults.num_ctx),
         num_predict: override_config
             .num_predict
             .or(base.num_predict)
@@ -1015,7 +1285,13 @@ fn merge_ollama_config(
 }
 
 fn effective_stage_ollama_config(stage: &StageConfig) -> OllamaConfig {
-    merge_ollama_config(None, stage.provider_options.as_ref().and_then(|options| options.ollama.as_ref()))
+    merge_ollama_config(
+        None,
+        stage
+            .provider_options
+            .as_ref()
+            .and_then(|options| options.ollama.as_ref()),
+    )
 }
 
 fn effective_review_ollama_config(config: &PipelineConfig) -> OllamaConfig {
@@ -1441,25 +1717,24 @@ async fn build_streaming_request(
         }
         "ollama" => {
             let resolved_ollama = ollama.cloned().unwrap_or_else(default_ollama_config);
-            let body =
-                build_ollama_chat_body(
-                    model,
-                    system_prompt,
-                    user_prompt,
-                    &resolved_ollama,
-                    true,
-                    false,
-                );
-            tokio::time::timeout(
-                Duration::from_secs(HTTP_STREAM_HEADER_TIMEOUT_SECS),
+            let body = build_ollama_chat_body(
+                model,
+                system_prompt,
+                user_prompt,
+                &resolved_ollama,
+                true,
+                false,
+            );
+            with_stream_header_timeout(
+                "ollama",
+                default_stream_timeouts().header,
                 client
                     .post(format!("{OLLAMA_BASE_URL}/api/chat"))
                     .json(&body)
                     .send(),
+                |e| format_transport_error("ollama", "stream request", e),
             )
             .await
-            .map_err(|_| format_stream_header_timeout("ollama"))?
-            .map_err(|e| format_transport_error("ollama", "stream request", e))
         }
         "anthropic" => {
             let body = serde_json::json!({
@@ -1497,170 +1772,21 @@ async fn stream_response(
     stream_id: &str,
     cancel: &Arc<CancelToken>,
 ) -> Result<String, String> {
-    let mut full_text = String::new();
-    let mut buffer = String::new();
-    let mut latest_input_tokens: Option<u32> = None;
-    let mut latest_output_tokens: Option<u32> = None;
-    // Anthropic splits usage across two events; track input separately.
-    let mut anthropic_input_tokens: Option<u32> = None;
-    let started_at = tokio::time::Instant::now();
-
-    let mut process_json_payload = |data: &str| -> Result<(), String> {
-        if let Some(text) = extract_streaming_text(provider, data) {
-            if !text.is_empty() {
-                full_text.push_str(&text);
-                let _ = app.emit(
-                    "stream-token",
-                    StreamToken {
-                        stream_id: stream_id.to_string(),
-                        token: text,
-                        done: false,
-                        input_tokens: None,
-                        output_tokens: None,
-                    },
-                );
-            }
-        }
-
-        if let Ok(json) = serde_json::from_str::<Value>(data) {
-            match provider {
-                "openai" | "deepseek" => {
-                    if let (Some(i), Some(o)) = (
-                        json["usage"]["prompt_tokens"].as_u64(),
-                        json["usage"]["completion_tokens"].as_u64(),
-                    ) {
-                        latest_input_tokens = Some(i as u32);
-                        latest_output_tokens = Some(o as u32);
-                    }
-                }
-                "ollama" => {
-                    if let Some((i, o)) = parse_ollama_usage(&json) {
-                        latest_input_tokens = Some(i);
-                        latest_output_tokens = Some(o);
-                    }
-                }
-                "gemini" => {
-                    if let (Some(i), Some(o)) = (
-                        json["usageMetadata"]["promptTokenCount"].as_u64(),
-                        json["usageMetadata"]["candidatesTokenCount"].as_u64(),
-                    ) {
-                        latest_input_tokens = Some(i as u32);
-                        latest_output_tokens = Some(o as u32);
-                    }
-                }
-                "anthropic" => match json["type"].as_str() {
-                    Some("message_start") => {
-                        anthropic_input_tokens = json["message"]["usage"]["input_tokens"]
-                            .as_u64()
-                            .map(|n| n as u32);
-                    }
-                    Some("message_delta") => {
-                        if let Some(out) = json["usage"]["output_tokens"].as_u64() {
-                            latest_input_tokens = anthropic_input_tokens;
-                            latest_output_tokens = Some(out as u32);
-                        }
-                    }
-                    _ => {}
-                },
-                _ => {}
-            }
-        }
-        Ok(())
+    let mut source = ReqwestChunkSource {
+        resp: &mut resp,
+        provider,
     };
-
-    loop {
-        if started_at.elapsed() >= Duration::from_secs(HTTP_STREAM_TOTAL_TIMEOUT_SECS) {
-            drop(resp);
-            return Err(format_stream_total_timeout(provider));
-        }
-        if cancel.is_cancelled() {
-            drop(resp);
-            return Err(STREAM_CANCELLED_ERROR.to_string());
-        }
-        let chunk_result = tokio::select! {
-            biased;
-            _ = cancel.notify.notified() => {
-                drop(resp);
-                return Err(STREAM_CANCELLED_ERROR.to_string());
-            }
-            chunk = tokio::time::timeout(
-                Duration::from_secs(HTTP_STREAM_IDLE_TIMEOUT_SECS),
-                resp.chunk()
-            ) => chunk,
-        };
-        match chunk_result {
-            Ok(Ok(Some(bytes))) => {
-                buffer.push_str(&String::from_utf8_lossy(&bytes));
-
-                while let Some(pos) = buffer.find('\n') {
-                    let line = buffer[..pos].trim_end().to_string();
-                    buffer = buffer[pos + 1..].to_string();
-
-                    if provider == "ollama" {
-                        let trimmed = line.trim();
-                        if trimmed.is_empty() {
-                            continue;
-                        }
-                        process_json_payload(trimmed)?;
-                        continue;
-                    }
-
-                    if let Some(data) = line.strip_prefix("data: ") {
-                        if data == "[DONE]" {
-                            continue;
-                        }
-                        process_json_payload(data)?;
-                    }
-                }
-            }
-            Ok(Ok(None)) => break,
-            Ok(Err(e)) => return Err(format_transport_error(provider, "stream read", e)),
-            Err(_) => {
-                drop(resp);
-                return Err(format_stream_idle_timeout(provider));
-            }
-        }
-    }
-
-    if provider == "ollama" {
-        let trimmed = buffer.trim();
-        if !trimmed.is_empty() {
-            if let Ok(json) = serde_json::from_str::<Value>(trimmed) {
-                if let Some(text) = json["message"]["content"].as_str() {
-                    if !text.is_empty() && !full_text.ends_with(text) {
-                        full_text.push_str(text);
-                        let _ = app.emit(
-                            "stream-token",
-                            StreamToken {
-                                stream_id: stream_id.to_string(),
-                                token: text.to_string(),
-                                done: false,
-                                input_tokens: None,
-                                output_tokens: None,
-                            },
-                        );
-                    }
-                }
-                if let Some((i, o)) = parse_ollama_usage(&json) {
-                    latest_input_tokens = Some(i);
-                    latest_output_tokens = Some(o);
-                }
-            }
-        }
-    }
-
-    let _ = app.emit(
-        "stream-token",
-        StreamToken {
-            stream_id: stream_id.to_string(),
-            token: String::new(),
-            done: true,
-            input_tokens: latest_input_tokens,
-            output_tokens: latest_output_tokens,
+    consume_stream(
+        provider,
+        stream_id,
+        cancel,
+        default_stream_timeouts(),
+        &mut source,
+        |token| {
+            let _ = app.emit("stream-token", token);
         },
-    );
-
-    Ok(full_text)
+    )
+    .await
 }
 
 // ── Ollama-specific commands ─────────────────────────────────────────
@@ -2035,7 +2161,8 @@ pub async fn run_coherence_for_chunk(
         build_http_client()?
     };
     let (system_prompt, user_prompt) = build_coherence_prompts(&input, &config);
-    let review_ollama = (config.judge_provider == "ollama").then(|| effective_review_ollama_config(&config));
+    let review_ollama =
+        (config.judge_provider == "ollama").then(|| effective_review_ollama_config(&config));
 
     let (result_text, usage) = call_provider_for_judge(
         &client,
@@ -2231,7 +2358,8 @@ pub async fn judge_translation(
         build_http_client()?
     };
     let (system_prompt, user_prompt) = build_judge_prompts(&original_text, &translation, &config);
-    let review_ollama = (config.judge_provider == "ollama").then(|| effective_review_ollama_config(&config));
+    let review_ollama =
+        (config.judge_provider == "ollama").then(|| effective_review_ollama_config(&config));
 
     let (result_text, usage) = call_provider_for_judge(
         &client,
@@ -2375,6 +2503,51 @@ pub async fn test_provider_connection(app: AppHandle, provider: String) -> Resul
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::{collections::VecDeque, sync::Mutex as StdMutex};
+    use tokio::time::sleep;
+
+    struct MockChunkSource {
+        chunks: VecDeque<MockChunk>,
+    }
+
+    enum MockChunk {
+        Immediate(Result<Option<&'static [u8]>, &'static str>),
+        Delayed {
+            delay: Duration,
+            result: Result<Option<&'static [u8]>, &'static str>,
+        },
+    }
+
+    impl MockChunkSource {
+        fn new(chunks: Vec<MockChunk>) -> Self {
+            Self {
+                chunks: VecDeque::from(chunks),
+            }
+        }
+    }
+
+    impl StreamChunkSource for MockChunkSource {
+        fn next_chunk<'a>(
+            &'a mut self,
+        ) -> Pin<Box<dyn Future<Output = Result<Option<Vec<u8>>, String>> + Send + 'a>> {
+            Box::pin(async move {
+                let Some(chunk) = self.chunks.pop_front() else {
+                    return Ok(None);
+                };
+                match chunk {
+                    MockChunk::Immediate(result) => result
+                        .map(|maybe| maybe.map(|bytes| bytes.to_vec()))
+                        .map_err(str::to_string),
+                    MockChunk::Delayed { delay, result } => {
+                        sleep(delay).await;
+                        result
+                            .map(|maybe| maybe.map(|bytes| bytes.to_vec()))
+                            .map_err(str::to_string)
+                    }
+                }
+            })
+        }
+    }
 
     #[test]
     fn test_hex_roundtrip() {
@@ -2693,18 +2866,18 @@ mod tests {
         let mut config = make_config();
         config.review_provider_options = Some(ProviderRuntimeConfig {
             ollama: Some(OllamaConfig {
-            temperature: Some(0.2),
-            top_p: Some(0.95),
-            seed: Some(7),
-            keep_alive: Some(Value::String("30m".into())),
-            think: Some(Value::String("low".into())),
-            num_ctx: Some(12288),
-            num_predict: Some(2048),
-            use_advanced_options: Some(true),
-            advanced_options: Some(Map::from_iter([(
-                "repeat_penalty".into(),
-                serde_json::json!(1.05),
-            )])),
+                temperature: Some(0.2),
+                top_p: Some(0.95),
+                seed: Some(7),
+                keep_alive: Some(Value::String("30m".into())),
+                think: Some(Value::String("low".into())),
+                num_ctx: Some(12288),
+                num_predict: Some(2048),
+                use_advanced_options: Some(true),
+                advanced_options: Some(Map::from_iter([(
+                    "repeat_penalty".into(),
+                    serde_json::json!(1.05),
+                )])),
             }),
         });
 
@@ -2742,6 +2915,16 @@ mod tests {
     fn format_ollama_api_error_maps_overload() {
         let message = format_ollama_api_error(reqwest::StatusCode::SERVICE_UNAVAILABLE, "busy");
         assert!(message.contains("overloaded"));
+    }
+
+    #[test]
+    fn format_ollama_api_error_maps_timeout_and_runtime_failures() {
+        let timeout =
+            format_ollama_api_error(reqwest::StatusCode::REQUEST_TIMEOUT, "slow model load");
+        let runtime = format_ollama_api_error(reqwest::StatusCode::BAD_GATEWAY, "gpu oom");
+
+        assert!(timeout.contains("timed out while preparing"));
+        assert!(runtime.contains("failed while loading or running the model"));
     }
 
     #[test]
@@ -2844,7 +3027,18 @@ mod tests {
     async fn call_provider_rejects_unknown() {
         let client = Client::new();
         let config = make_config();
-        let result = call_provider(&client, "fake_provider", "m", "s", "u", "k", false, &config, None).await;
+        let result = call_provider(
+            &client,
+            "fake_provider",
+            "m",
+            "s",
+            "u",
+            "k",
+            false,
+            &config,
+            None,
+        )
+        .await;
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("Unsupported provider"));
     }
@@ -2986,5 +3180,177 @@ mod tests {
             .expect("listener task panicked");
 
         assert!(observed, "cancel flag must be set when notify wakes");
+    }
+
+    #[tokio::test]
+    async fn consume_stream_ollama_times_out_when_idle_between_events() {
+        let cancel = Arc::new(CancelToken::new());
+        let mut source = MockChunkSource::new(vec![MockChunk::Delayed {
+            delay: Duration::from_millis(40),
+            result: Ok(Some(
+                br#"{"message":{"content":"ciao"}}
+"#,
+            )),
+        }]);
+
+        let result = consume_stream(
+            "ollama",
+            "stream-1",
+            &cancel,
+            StreamTimeouts {
+                header: Duration::from_millis(5),
+                idle: Duration::from_millis(10),
+                total: Duration::from_millis(100),
+            },
+            &mut source,
+            |_| {},
+        )
+        .await;
+
+        assert_eq!(result.unwrap_err(), format_stream_idle_timeout("ollama"));
+    }
+
+    #[tokio::test]
+    async fn consume_stream_ollama_respects_total_timeout_even_if_chunks_arrive() {
+        let cancel = Arc::new(CancelToken::new());
+        let mut source = MockChunkSource::new(vec![
+            MockChunk::Delayed {
+                delay: Duration::from_millis(5),
+                result: Ok(Some(
+                    br#"{"message":{"content":"A"}}
+"#,
+                )),
+            },
+            MockChunk::Delayed {
+                delay: Duration::from_millis(5),
+                result: Ok(Some(
+                    br#"{"message":{"content":"B"}}
+"#,
+                )),
+            },
+            MockChunk::Delayed {
+                delay: Duration::from_millis(5),
+                result: Ok(Some(
+                    br#"{"message":{"content":"C"}}
+"#,
+                )),
+            },
+        ]);
+
+        let result = consume_stream(
+            "ollama",
+            "stream-2",
+            &cancel,
+            StreamTimeouts {
+                header: Duration::from_millis(5),
+                idle: Duration::from_millis(20),
+                total: Duration::from_millis(12),
+            },
+            &mut source,
+            |_| {},
+        )
+        .await;
+
+        assert_eq!(result.unwrap_err(), format_stream_total_timeout("ollama"));
+    }
+
+    #[tokio::test]
+    async fn consume_stream_ollama_allows_slow_but_healthy_streams() {
+        let cancel = Arc::new(CancelToken::new());
+        let emitted = StdMutex::new(Vec::new());
+        let mut source = MockChunkSource::new(vec![
+            MockChunk::Delayed {
+                delay: Duration::from_millis(5),
+                result: Ok(Some(
+                    br#"{"message":{"content":"Hel"}}
+"#,
+                )),
+            },
+            MockChunk::Delayed {
+                delay: Duration::from_millis(5),
+                result: Ok(Some(
+                    br#"{"message":{"content":"lo"},"prompt_eval_count":12,"eval_count":7}
+"#,
+                )),
+            },
+        ]);
+
+        let result = consume_stream(
+            "ollama",
+            "stream-3",
+            &cancel,
+            StreamTimeouts {
+                header: Duration::from_millis(5),
+                idle: Duration::from_millis(20),
+                total: Duration::from_millis(50),
+            },
+            &mut source,
+            |token| emitted.lock().expect("poisoned").push(token),
+        )
+        .await
+        .expect("healthy stream should succeed");
+
+        let tokens = emitted.lock().expect("poisoned");
+        assert_eq!(result, "Hello");
+        assert_eq!(tokens.len(), 3);
+        assert_eq!(tokens[0].token, "Hel");
+        assert_eq!(tokens[1].token, "lo");
+        assert!(tokens[2].done);
+        assert_eq!(tokens[2].input_tokens, Some(12));
+        assert_eq!(tokens[2].output_tokens, Some(7));
+    }
+
+    #[tokio::test]
+    async fn consume_stream_propagates_source_errors() {
+        let cancel = Arc::new(CancelToken::new());
+        let mut source = MockChunkSource::new(vec![MockChunk::Immediate(Err("stream broke"))]);
+
+        let result = consume_stream(
+            "ollama",
+            "stream-err",
+            &cancel,
+            StreamTimeouts {
+                header: Duration::from_millis(5),
+                idle: Duration::from_millis(20),
+                total: Duration::from_millis(50),
+            },
+            &mut source,
+            |_| {},
+        )
+        .await;
+
+        assert_eq!(result.unwrap_err(), "stream broke");
+    }
+
+    #[tokio::test]
+    async fn stream_header_timeout_wraps_slow_ollama_startup() {
+        let result = with_stream_header_timeout(
+            "ollama",
+            Duration::from_millis(10),
+            async {
+                sleep(Duration::from_millis(30)).await;
+                Ok::<(), &'static str>(())
+            },
+            |err| err.to_string(),
+        )
+        .await;
+
+        assert_eq!(result.unwrap_err(), format_stream_header_timeout("ollama"));
+    }
+
+    #[tokio::test]
+    async fn stream_header_timeout_allows_fast_ollama_startup() {
+        let result = with_stream_header_timeout(
+            "ollama",
+            Duration::from_millis(20),
+            async {
+                sleep(Duration::from_millis(5)).await;
+                Ok::<_, &'static str>("ready")
+            },
+            |err| err.to_string(),
+        )
+        .await;
+
+        assert_eq!(result.expect("fast header should pass"), "ready");
     }
 }
