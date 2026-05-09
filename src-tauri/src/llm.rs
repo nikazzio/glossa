@@ -1,5 +1,6 @@
 use aes_gcm::aead::{Aead, KeyInit};
 use aes_gcm::{Aes256Gcm, Key, Nonce};
+use bytes::Bytes;
 use rand::RngCore;
 use reqwest::{Client, Error as ReqwestError};
 use serde::{Deserialize, Serialize};
@@ -578,41 +579,49 @@ fn format_ollama_api_error(status: reqwest::StatusCode, body: &str) -> String {
     }
 }
 
-fn format_stream_idle_timeout(provider: &str) -> String {
+fn format_timeout_duration(duration: Duration) -> String {
+    if duration.subsec_nanos() == 0 {
+        return format!("{}s", duration.as_secs());
+    }
+
+    format!("{}ms", duration.as_millis())
+}
+
+fn format_stream_idle_timeout_with_duration(provider: &str, timeout: Duration) -> String {
     let label = provider_label(provider);
     if provider == "ollama" {
         return format!(
-            "{label} stream became idle after {}s without new output. The model may be too large, out of VRAM, crashed, or the local server may be unreachable.",
-            HTTP_STREAM_IDLE_TIMEOUT_SECS
+            "{label} stream became idle after {} without new output. The model may be too large, out of VRAM, crashed, or the local server may be unreachable.",
+            format_timeout_duration(timeout)
         );
     }
 
     format!(
-        "{label} stream became idle after {}s without new output.",
-        HTTP_STREAM_IDLE_TIMEOUT_SECS
+        "{label} stream became idle after {} without new output.",
+        format_timeout_duration(timeout)
     )
 }
 
-fn format_stream_header_timeout(provider: &str) -> String {
+fn format_stream_header_timeout_with_duration(provider: &str, timeout: Duration) -> String {
     let label = provider_label(provider);
     if provider == "ollama" {
         return format!(
-            "{label} did not send response headers within {}s. The local server may be hung, overloaded, or still loading the model.",
-            HTTP_STREAM_HEADER_TIMEOUT_SECS
+            "{label} did not send response headers within {}. The local server may be hung, overloaded, or still loading the model.",
+            format_timeout_duration(timeout)
         );
     }
 
     format!(
-        "{label} did not send response headers within {}s.",
-        HTTP_STREAM_HEADER_TIMEOUT_SECS
+        "{label} did not send response headers within {}.",
+        format_timeout_duration(timeout)
     )
 }
 
-fn format_stream_total_timeout(provider: &str) -> String {
+fn format_stream_total_timeout_with_duration(provider: &str, timeout: Duration) -> String {
     format!(
-        "{} stream exceeded the total timeout of {}s.",
+        "{} stream exceeded the total timeout of {}.",
         provider_label(provider),
-        HTTP_STREAM_TOTAL_TIMEOUT_SECS
+        format_timeout_duration(timeout)
     )
 }
 
@@ -643,14 +652,14 @@ where
 {
     tokio::time::timeout(timeout, future)
         .await
-        .map_err(|_| format_stream_header_timeout(provider))?
+        .map_err(|_| format_stream_header_timeout_with_duration(provider, timeout))?
         .map_err(map_error)
 }
 
 trait StreamChunkSource {
     fn next_chunk<'a>(
         &'a mut self,
-    ) -> Pin<Box<dyn Future<Output = Result<Option<Vec<u8>>, String>> + Send + 'a>>;
+    ) -> Pin<Box<dyn Future<Output = Result<Option<Bytes>, String>> + Send + 'a>>;
 }
 
 struct ReqwestChunkSource<'a> {
@@ -661,12 +670,11 @@ struct ReqwestChunkSource<'a> {
 impl StreamChunkSource for ReqwestChunkSource<'_> {
     fn next_chunk<'a>(
         &'a mut self,
-    ) -> Pin<Box<dyn Future<Output = Result<Option<Vec<u8>>, String>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<Option<Bytes>, String>> + Send + 'a>> {
         Box::pin(async move {
             self.resp
                 .chunk()
                 .await
-                .map(|chunk| chunk.map(|bytes| bytes.to_vec()))
                 .map_err(|e| format_transport_error(self.provider, "stream read", e))
         })
     }
@@ -852,7 +860,10 @@ where
 
     loop {
         if started_at.elapsed() >= timeouts.total {
-            return Err(format_stream_total_timeout(provider));
+            return Err(format_stream_total_timeout_with_duration(
+                provider,
+                timeouts.total,
+            ));
         }
         if cancel.is_cancelled() {
             return Err(STREAM_CANCELLED_ERROR.to_string());
@@ -868,7 +879,12 @@ where
             Ok(Ok(Some(bytes))) => acc.process_bytes(provider, stream_id, &bytes, &mut emit)?,
             Ok(Ok(None)) => break,
             Ok(Err(err)) => return Err(err),
-            Err(_) => return Err(format_stream_idle_timeout(provider)),
+            Err(_) => {
+                return Err(format_stream_idle_timeout_with_duration(
+                    provider,
+                    timeouts.idle,
+                ))
+            }
         }
     }
 
@@ -2504,17 +2520,17 @@ pub async fn test_provider_connection(app: AppHandle, provider: String) -> Resul
 mod tests {
     use super::*;
     use std::{collections::VecDeque, sync::Mutex as StdMutex};
-    use tokio::time::sleep;
+    use tokio::time::{advance, sleep};
 
     struct MockChunkSource {
         chunks: VecDeque<MockChunk>,
     }
 
     enum MockChunk {
-        Immediate(Result<Option<&'static [u8]>, &'static str>),
+        Immediate(Result<Option<Bytes>, &'static str>),
         Delayed {
             delay: Duration,
-            result: Result<Option<&'static [u8]>, &'static str>,
+            result: Result<Option<Bytes>, &'static str>,
         },
     }
 
@@ -2529,20 +2545,16 @@ mod tests {
     impl StreamChunkSource for MockChunkSource {
         fn next_chunk<'a>(
             &'a mut self,
-        ) -> Pin<Box<dyn Future<Output = Result<Option<Vec<u8>>, String>> + Send + 'a>> {
+        ) -> Pin<Box<dyn Future<Output = Result<Option<Bytes>, String>> + Send + 'a>> {
             Box::pin(async move {
                 let Some(chunk) = self.chunks.pop_front() else {
                     return Ok(None);
                 };
                 match chunk {
-                    MockChunk::Immediate(result) => result
-                        .map(|maybe| maybe.map(|bytes| bytes.to_vec()))
-                        .map_err(str::to_string),
+                    MockChunk::Immediate(result) => result.map_err(str::to_string),
                     MockChunk::Delayed { delay, result } => {
                         sleep(delay).await;
-                        result
-                            .map(|maybe| maybe.map(|bytes| bytes.to_vec()))
-                            .map_err(str::to_string)
+                        result.map_err(str::to_string)
                     }
                 }
             })
@@ -2899,14 +2911,20 @@ mod tests {
 
     #[test]
     fn format_stream_idle_timeout_is_specific_for_ollama() {
-        let message = format_stream_idle_timeout("ollama");
+        let message = format_stream_idle_timeout_with_duration(
+            "ollama",
+            Duration::from_secs(HTTP_STREAM_IDLE_TIMEOUT_SECS),
+        );
         assert!(message.contains("idle"));
         assert!(message.contains("VRAM"));
     }
 
     #[test]
     fn format_stream_total_timeout_mentions_provider() {
-        let message = format_stream_total_timeout("ollama");
+        let message = format_stream_total_timeout_with_duration(
+            "ollama",
+            Duration::from_secs(HTTP_STREAM_TOTAL_TIMEOUT_SECS),
+        );
         assert!(message.contains("Ollama"));
         assert!(message.contains(&HTTP_STREAM_TOTAL_TIMEOUT_SECS.to_string()));
     }
@@ -3182,113 +3200,138 @@ mod tests {
         assert!(observed, "cancel flag must be set when notify wakes");
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn consume_stream_ollama_times_out_when_idle_between_events() {
-        let cancel = Arc::new(CancelToken::new());
-        let mut source = MockChunkSource::new(vec![MockChunk::Delayed {
-            delay: Duration::from_millis(40),
-            result: Ok(Some(
-                br#"{"message":{"content":"ciao"}}
+        let task = tokio::spawn(async move {
+            let cancel = Arc::new(CancelToken::new());
+            let mut source = MockChunkSource::new(vec![MockChunk::Delayed {
+                delay: Duration::from_millis(40),
+                result: Ok(Some(Bytes::from_static(
+                    br#"{"message":{"content":"ciao"}}
 "#,
-            )),
-        }]);
+                ))),
+            }]);
 
-        let result = consume_stream(
-            "ollama",
-            "stream-1",
-            &cancel,
-            StreamTimeouts {
-                header: Duration::from_millis(5),
-                idle: Duration::from_millis(10),
-                total: Duration::from_millis(100),
-            },
-            &mut source,
-            |_| {},
-        )
-        .await;
+            consume_stream(
+                "ollama",
+                "stream-1",
+                &cancel,
+                StreamTimeouts {
+                    header: Duration::from_millis(5),
+                    idle: Duration::from_millis(10),
+                    total: Duration::from_millis(100),
+                },
+                &mut source,
+                |_| {},
+            )
+            .await
+        });
 
-        assert_eq!(result.unwrap_err(), format_stream_idle_timeout("ollama"));
+        tokio::task::yield_now().await;
+        advance(Duration::from_millis(10)).await;
+        let result = task.await.expect("task should finish");
+        assert_eq!(
+            result.unwrap_err(),
+            format_stream_idle_timeout_with_duration("ollama", Duration::from_millis(10))
+        );
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn consume_stream_ollama_respects_total_timeout_even_if_chunks_arrive() {
-        let cancel = Arc::new(CancelToken::new());
-        let mut source = MockChunkSource::new(vec![
-            MockChunk::Delayed {
-                delay: Duration::from_millis(5),
-                result: Ok(Some(
-                    br#"{"message":{"content":"A"}}
+        let task = tokio::spawn(async move {
+            let cancel = Arc::new(CancelToken::new());
+            let mut source = MockChunkSource::new(vec![
+                MockChunk::Delayed {
+                    delay: Duration::from_millis(5),
+                    result: Ok(Some(Bytes::from_static(
+                        br#"{"message":{"content":"A"}}
 "#,
-                )),
-            },
-            MockChunk::Delayed {
-                delay: Duration::from_millis(5),
-                result: Ok(Some(
-                    br#"{"message":{"content":"B"}}
+                    ))),
+                },
+                MockChunk::Delayed {
+                    delay: Duration::from_millis(5),
+                    result: Ok(Some(Bytes::from_static(
+                        br#"{"message":{"content":"B"}}
 "#,
-                )),
-            },
-            MockChunk::Delayed {
-                delay: Duration::from_millis(5),
-                result: Ok(Some(
-                    br#"{"message":{"content":"C"}}
+                    ))),
+                },
+                MockChunk::Delayed {
+                    delay: Duration::from_millis(5),
+                    result: Ok(Some(Bytes::from_static(
+                        br#"{"message":{"content":"C"}}
 "#,
-                )),
-            },
-        ]);
+                    ))),
+                },
+            ]);
 
-        let result = consume_stream(
-            "ollama",
-            "stream-2",
-            &cancel,
-            StreamTimeouts {
-                header: Duration::from_millis(5),
-                idle: Duration::from_millis(20),
-                total: Duration::from_millis(12),
-            },
-            &mut source,
-            |_| {},
-        )
-        .await;
+            consume_stream(
+                "ollama",
+                "stream-2",
+                &cancel,
+                StreamTimeouts {
+                    header: Duration::from_millis(5),
+                    idle: Duration::from_millis(20),
+                    total: Duration::from_millis(12),
+                },
+                &mut source,
+                |_| {},
+            )
+            .await
+        });
 
-        assert_eq!(result.unwrap_err(), format_stream_total_timeout("ollama"));
+        tokio::task::yield_now().await;
+        advance(Duration::from_millis(15)).await;
+        let result = task.await.expect("task should finish");
+        assert_eq!(
+            result.unwrap_err(),
+            format_stream_total_timeout_with_duration("ollama", Duration::from_millis(12))
+        );
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn consume_stream_ollama_allows_slow_but_healthy_streams() {
-        let cancel = Arc::new(CancelToken::new());
-        let emitted = StdMutex::new(Vec::new());
-        let mut source = MockChunkSource::new(vec![
-            MockChunk::Delayed {
-                delay: Duration::from_millis(5),
-                result: Ok(Some(
-                    br#"{"message":{"content":"Hel"}}
+        let emitted = Arc::new(StdMutex::new(Vec::new()));
+        let emitted_for_task = Arc::clone(&emitted);
+        let task = tokio::spawn(async move {
+            let cancel = Arc::new(CancelToken::new());
+            let mut source = MockChunkSource::new(vec![
+                MockChunk::Delayed {
+                    delay: Duration::from_millis(5),
+                    result: Ok(Some(Bytes::from_static(
+                        br#"{"message":{"content":"Hel"}}
 "#,
-                )),
-            },
-            MockChunk::Delayed {
-                delay: Duration::from_millis(5),
-                result: Ok(Some(
-                    br#"{"message":{"content":"lo"},"prompt_eval_count":12,"eval_count":7}
+                    ))),
+                },
+                MockChunk::Delayed {
+                    delay: Duration::from_millis(5),
+                    result: Ok(Some(Bytes::from_static(
+                        br#"{"message":{"content":"lo"},"prompt_eval_count":12,"eval_count":7}
 "#,
-                )),
-            },
-        ]);
+                    ))),
+                },
+            ]);
 
-        let result = consume_stream(
-            "ollama",
-            "stream-3",
-            &cancel,
-            StreamTimeouts {
-                header: Duration::from_millis(5),
-                idle: Duration::from_millis(20),
-                total: Duration::from_millis(50),
-            },
-            &mut source,
-            |token| emitted.lock().expect("poisoned").push(token),
-        )
-        .await
-        .expect("healthy stream should succeed");
+            consume_stream(
+                "ollama",
+                "stream-3",
+                &cancel,
+                StreamTimeouts {
+                    header: Duration::from_millis(5),
+                    idle: Duration::from_millis(20),
+                    total: Duration::from_millis(50),
+                },
+                &mut source,
+                |token| emitted_for_task.lock().expect("poisoned").push(token),
+            )
+            .await
+        });
+
+        tokio::task::yield_now().await;
+        advance(Duration::from_millis(10)).await;
+        let result = task
+            .await
+            .expect("task should finish")
+            .expect("healthy stream should succeed");
 
         let tokens = emitted.lock().expect("poisoned");
         assert_eq!(result, "Hello");
@@ -3322,35 +3365,48 @@ mod tests {
         assert_eq!(result.unwrap_err(), "stream broke");
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn stream_header_timeout_wraps_slow_ollama_startup() {
-        let result = with_stream_header_timeout(
-            "ollama",
-            Duration::from_millis(10),
-            async {
-                sleep(Duration::from_millis(30)).await;
-                Ok::<(), &'static str>(())
-            },
-            |err| err.to_string(),
-        )
-        .await;
+        let task = tokio::spawn(async move {
+            with_stream_header_timeout(
+                "ollama",
+                Duration::from_millis(10),
+                async {
+                    sleep(Duration::from_millis(30)).await;
+                    Ok::<(), &'static str>(())
+                },
+                |err| err.to_string(),
+            )
+            .await
+        });
 
-        assert_eq!(result.unwrap_err(), format_stream_header_timeout("ollama"));
+        tokio::task::yield_now().await;
+        advance(Duration::from_millis(10)).await;
+        let result = task.await.expect("task should finish");
+        assert_eq!(
+            result.unwrap_err(),
+            format_stream_header_timeout_with_duration("ollama", Duration::from_millis(10))
+        );
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn stream_header_timeout_allows_fast_ollama_startup() {
-        let result = with_stream_header_timeout(
-            "ollama",
-            Duration::from_millis(20),
-            async {
-                sleep(Duration::from_millis(5)).await;
-                Ok::<_, &'static str>("ready")
-            },
-            |err| err.to_string(),
-        )
-        .await;
+        let task = tokio::spawn(async move {
+            with_stream_header_timeout(
+                "ollama",
+                Duration::from_millis(20),
+                async {
+                    sleep(Duration::from_millis(5)).await;
+                    Ok::<_, &'static str>("ready")
+                },
+                |err| err.to_string(),
+            )
+            .await
+        });
 
+        tokio::task::yield_now().await;
+        advance(Duration::from_millis(5)).await;
+        let result = task.await.expect("task should finish");
         assert_eq!(result.expect("fast header should pass"), "ready");
     }
 }
