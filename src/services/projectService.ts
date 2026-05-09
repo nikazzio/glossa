@@ -361,7 +361,7 @@ async function saveProjectConfigInternal(
        id, project_id, stages, judge_prompt, judge_model, judge_provider, use_chunking,
        target_chunk_count, source_text, source_display_text, source_processing_text, source_footnotes,
        document_format, render_profile, markdown_aware, experimental_import, review_provider_options
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9, ''), COALESCE($10, ''), COALESCE($11, ''), $12, $13, $14, $15, $16)
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9, ''), COALESCE($10, ''), COALESCE($11, ''), $12, $13, $14, $15, $16, $17)
      ON CONFLICT(project_id) DO UPDATE SET
        id = excluded.id,
        stages = excluded.stages,
@@ -370,9 +370,18 @@ async function saveProjectConfigInternal(
        judge_provider = excluded.judge_provider,
        use_chunking = excluded.use_chunking,
        target_chunk_count = excluded.target_chunk_count,
-       source_display_text = excluded.source_display_text,
-       source_processing_text = excluded.source_processing_text,
-       source_footnotes = excluded.source_footnotes,
+       source_display_text = CASE
+         WHEN $10 IS NULL THEN pipeline_configs.source_display_text
+         ELSE $10
+       END,
+       source_processing_text = CASE
+         WHEN $11 IS NULL THEN pipeline_configs.source_processing_text
+         ELSE $11
+       END,
+       source_footnotes = CASE
+         WHEN $10 IS NULL THEN pipeline_configs.source_footnotes
+         ELSE $12
+       END,
        document_format = excluded.document_format,
        render_profile = excluded.render_profile,
        markdown_aware = excluded.markdown_aware,

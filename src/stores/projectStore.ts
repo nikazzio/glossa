@@ -14,6 +14,7 @@ import { useChunksStore } from './chunksStore';
 import { useUiStore } from './uiStore';
 import { buildProjectSnapshot } from '../utils/projectSnapshot';
 import { logger } from '../utils/logger';
+import type { PipelineConfig } from '../types';
 
 let saveInFlight: Promise<void> | null = null;
 
@@ -77,30 +78,29 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const chunksStore = useChunksStore.getState();
     const ui = useUiStore.getState();
     const restoredChunks = restoreTranslations(savedTranslations);
-    pipeline.setConfig({
-      ...pipeline.config,
-      sourceLanguage: config.sourceLanguage,
-      targetLanguage: config.targetLanguage,
-      stages: config.stages.length > 0 ? config.stages : pipeline.config.stages,
-      judgePrompt: config.judgePrompt || pipeline.config.judgePrompt,
-      judgeModel: config.judgeModel || pipeline.config.judgeModel,
-      judgeProvider: (config.judgeProvider as any) || pipeline.config.judgeProvider,
-      useChunking: config.useChunking,
-      targetChunkCount: config.targetChunkCount,
-      documentFormat: config.documentFormat ?? 'plain',
-      renderProfile: config.renderProfile ?? 'plain-text',
-      markdownAware: config.markdownAware ?? false,
-      experimentalImport: config.experimentalImport ?? null,
-      reviewProviderOptions: config.reviewProviderOptions ?? pipeline.config.reviewProviderOptions,
-      glossary: config.glossary,
-      assignedGlossaryId: config.assignedGlossaryId,
-    });
-    pipeline.setSourceDocument({
-      displayText: config.inputText,
-      processingText: config.inputProcessingText,
+    usePipelineStore.setState((state) => ({
+      inputText: config.inputText,
+      inputProcessingText: config.inputProcessingText,
       sourceFootnotes: config.sourceFootnotes,
-      renderProfile: config.renderProfile,
-    });
+      config: {
+        ...state.config,
+        sourceLanguage: config.sourceLanguage,
+        targetLanguage: config.targetLanguage,
+        stages: config.stages.length > 0 ? config.stages : state.config.stages,
+        judgePrompt: config.judgePrompt || state.config.judgePrompt,
+        judgeModel: config.judgeModel || state.config.judgeModel,
+        judgeProvider: (config.judgeProvider as PipelineConfig['judgeProvider']) || state.config.judgeProvider,
+        useChunking: config.useChunking,
+        targetChunkCount: config.targetChunkCount,
+        documentFormat: config.documentFormat ?? 'plain',
+        renderProfile: config.renderProfile ?? 'plain-text',
+        markdownAware: config.markdownAware ?? false,
+        experimentalImport: config.experimentalImport ?? null,
+        reviewProviderOptions: config.reviewProviderOptions ?? state.config.reviewProviderOptions,
+        glossary: config.glossary,
+        assignedGlossaryId: config.assignedGlossaryId,
+      },
+    }));
     chunksStore.setChunks(restoredChunks);
     ui.setViewMode(
       config.viewMode ?? (restoredChunks.length === 0 && config.inputText.trim() ? 'sandbox' : 'document'),
