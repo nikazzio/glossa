@@ -134,7 +134,7 @@
       "keepAlive": "Keep alive",
       "numCtx": "Finestra contesto",
       "numPredict": "Token max",
-      "think": "Modalita think",
+      "think": "Modalità think",
       "thinkDisabled": "Disattivata",
       "thinkEnabled": "Attivata",
       "thinkLow": "Bassa",
@@ -142,7 +142,7 @@
       "thinkHigh": "Alta",
       "advancedJson": "JSON avanzato",
       "advancedHint": "Opzioni raw del provider fuse nella richiesta nativa.",
-      "invalidJson": "Il blocco JSON avanzato non e ancora valido.",
+      "invalidJson": "Il blocco JSON avanzato non è ancora valido.",
       "optional": "Opzionale"
     },
     "tabStages": "Fasi",

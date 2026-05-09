@@ -12,10 +12,15 @@ interface ProviderRuntimeEditorProps {
   hint: string;
 }
 
-function parseOptionalNumber(value: string): number | null | undefined {
-  if (value.trim() === '') return null;
+function parseOptionalNumber(value: string): number | undefined {
+  if (value.trim() === '') return undefined;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function parseNullableNumber(value: string): number | null | undefined {
+  if (value.trim() === '') return null;
+  return parseOptionalNumber(value);
 }
 
 export function ProviderRuntimeEditor({
@@ -28,7 +33,10 @@ export function ProviderRuntimeEditor({
   const { t } = useTranslation();
   const textareaId = useId();
   const overrideEnabled = Boolean(value?.ollama);
-  const ollama = value?.ollama ?? defaultOllamaConfig();
+  const ollama = {
+    ...defaultOllamaConfig(),
+    ...(value?.ollama ?? {}),
+  };
   const advancedEnabled = overrideEnabled && ollama.useAdvancedOptions === true;
   const [advancedJson, setAdvancedJson] = useState(
     JSON.stringify(ollama.advancedOptions ?? {}, null, 2),
@@ -36,7 +44,16 @@ export function ProviderRuntimeEditor({
   const [jsonError, setJsonError] = useState<string | null>(null);
 
   useEffect(() => {
-    setAdvancedJson(JSON.stringify((value?.ollama ?? defaultOllamaConfig()).advancedOptions ?? {}, null, 2));
+    setAdvancedJson(
+      JSON.stringify(
+        ({
+          ...defaultOllamaConfig(),
+          ...(value?.ollama ?? {}),
+        }).advancedOptions ?? {},
+        null,
+        2,
+      ),
+    );
     setJsonError(null);
   }, [value?.ollama]);
 
@@ -88,7 +105,10 @@ export function ProviderRuntimeEditor({
             type="number"
             step="0.05"
             value={ollama.temperature ?? ''}
-            onChange={(e) => patchOllama({ temperature: Number(e.target.value) })}
+            onChange={(e) => {
+              const parsed = parseOptionalNumber(e.target.value);
+              if (parsed !== undefined) patchOllama({ temperature: parsed });
+            }}
             disabled={!overrideEnabled || advancedEnabled}
             className="w-full rounded-[12px] border border-editorial-border/60 bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
           />
@@ -98,7 +118,10 @@ export function ProviderRuntimeEditor({
             type="number"
             step="0.05"
             value={ollama.topP ?? ''}
-            onChange={(e) => patchOllama({ topP: Number(e.target.value) })}
+            onChange={(e) => {
+              const parsed = parseOptionalNumber(e.target.value);
+              if (parsed !== undefined) patchOllama({ topP: parsed });
+            }}
             disabled={!overrideEnabled || advancedEnabled}
             className="w-full rounded-[12px] border border-editorial-border/60 bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
           />
@@ -108,7 +131,7 @@ export function ProviderRuntimeEditor({
             type="number"
             value={ollama.seed ?? ''}
             onChange={(e) => {
-              const parsed = parseOptionalNumber(e.target.value);
+              const parsed = parseNullableNumber(e.target.value);
               if (parsed !== undefined) patchOllama({ seed: parsed as number | null });
             }}
             disabled={!overrideEnabled || advancedEnabled}
@@ -130,7 +153,7 @@ export function ProviderRuntimeEditor({
             type="number"
             value={ollama.numCtx ?? ''}
             onChange={(e) => {
-              const parsed = parseOptionalNumber(e.target.value);
+              const parsed = parseNullableNumber(e.target.value);
               if (parsed !== undefined) patchOllama({ numCtx: parsed as number | null });
             }}
             disabled={!overrideEnabled || advancedEnabled}
@@ -143,7 +166,7 @@ export function ProviderRuntimeEditor({
             type="number"
             value={ollama.numPredict ?? ''}
             onChange={(e) => {
-              const parsed = parseOptionalNumber(e.target.value);
+              const parsed = parseNullableNumber(e.target.value);
               if (parsed !== undefined) patchOllama({ numPredict: parsed as number | null });
             }}
             disabled={!overrideEnabled || advancedEnabled}
