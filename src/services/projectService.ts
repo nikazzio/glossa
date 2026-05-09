@@ -358,7 +358,7 @@ async function saveProjectConfigInternal(
          ELSE $11
        END,
        source_footnotes = CASE
-         WHEN $10 IS NULL THEN pipeline_configs.source_footnotes
+         WHEN $12 IS NULL THEN pipeline_configs.source_footnotes
          ELSE $12
        END,
        document_format = excluded.document_format,
@@ -382,7 +382,7 @@ async function saveProjectConfigInternal(
       inputText ?? null,
       inputText ?? null,
       inputProcessingText ?? inputText ?? null,
-      JSON.stringify(sourceFootnotes ?? []),
+      sourceFootnotes !== undefined ? JSON.stringify(sourceFootnotes) : null,
       config.documentFormat ?? 'plain',
       config.renderProfile ?? 'plain-text',
       config.markdownAware ? 1 : 0,

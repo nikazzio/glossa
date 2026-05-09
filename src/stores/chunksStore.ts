@@ -20,6 +20,7 @@ import {
   buildChunkFootnotes,
   composeDocumentDisplayText,
   composeDocumentProcessingText,
+  deriveChunkDisplayText,
   deriveSourceDocumentState,
   updateChunkSourceFields,
   updateChunkTranslationFields,
@@ -193,14 +194,15 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
 
   updateChunkOriginalText: (chunkId, text) =>
     set((state) => {
+      const sourceFootnotes = usePipelineStore.getState().sourceFootnotes;
       const nextChunks = state.chunks.map((chunk) =>
         chunk.id === chunkId
           ? resetChunkForSourceEdit(
               updateChunkSourceFields(
                 chunk,
+                deriveChunkDisplayText(text, sourceFootnotes),
                 text,
-                text,
-                buildChunkFootnotes(text, usePipelineStore.getState().sourceFootnotes),
+                buildChunkFootnotes(text, sourceFootnotes),
               ),
             )
           : chunk,
@@ -251,15 +253,14 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
         status === 'completed' || status === 'processing';
       if (isDirty(current.status) || isDirty(next.status)) return {};
 
+      const mergedProcessingText = `${current.sourceProcessingText}\n\n${next.sourceProcessingText}`;
+      const sourceFootnotes = usePipelineStore.getState().sourceFootnotes;
       const merged = resetChunkForSourceEdit(
         updateChunkSourceFields(
           current,
-          `${current.sourceDisplayText}\n\n${next.sourceDisplayText}`,
-          `${current.sourceProcessingText}\n\n${next.sourceProcessingText}`,
-          buildChunkFootnotes(
-            `${current.sourceProcessingText}\n\n${next.sourceProcessingText}`,
-            usePipelineStore.getState().sourceFootnotes,
-          ),
+          deriveChunkDisplayText(mergedProcessingText, sourceFootnotes),
+          mergedProcessingText,
+          buildChunkFootnotes(mergedProcessingText, sourceFootnotes),
         ),
       );
 
@@ -336,7 +337,7 @@ function buildChunks(
     const footnotes = buildChunkFootnotes(chunkTextValue, sourceFootnotes);
     return withSyncedChunkFields({
       id: generateId('chunk'),
-      sourceDisplayText: chunkTextValue,
+      sourceDisplayText: deriveChunkDisplayText(chunkTextValue, sourceFootnotes),
       sourceProcessingText: chunkTextValue,
       translationDisplayText: '',
       translationProcessingText: '',
@@ -368,20 +369,21 @@ function splitChunkState(
   const secondText = trimSplitFragment(chunk.sourceProcessingText.slice(boundedSplitAt));
   if (!firstText || !secondText) return null;
 
+  const sourceFootnotes = usePipelineStore.getState().sourceFootnotes;
   const first = resetChunkForSourceEdit(
     updateChunkSourceFields(
       chunk,
+      deriveChunkDisplayText(firstText, sourceFootnotes),
       firstText,
-      firstText,
-      buildChunkFootnotes(firstText, usePipelineStore.getState().sourceFootnotes),
+      buildChunkFootnotes(firstText, sourceFootnotes),
     ),
   );
   const second = resetChunkForSourceEdit({
     ...updateChunkSourceFields(
       chunk,
+      deriveChunkDisplayText(secondText, sourceFootnotes),
       secondText,
-      secondText,
-      buildChunkFootnotes(secondText, usePipelineStore.getState().sourceFootnotes),
+      buildChunkFootnotes(secondText, sourceFootnotes),
     ),
     id: generateId('chunk'),
   });
