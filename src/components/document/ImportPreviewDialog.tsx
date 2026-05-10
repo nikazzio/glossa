@@ -6,6 +6,7 @@ import {
   ChevronDown,
   ChevronUp,
   FileText,
+  Info,
   LayoutGrid,
   Merge,
   RotateCcw,
@@ -83,7 +84,7 @@ function fromFlatModel(paragraphs: string[], boundaries: Set<number>): Paragraph
 
 // ─── Card sub-components ─────────────────────────────────────────────────────
 
-const COLLAPSE_CHAR_THRESHOLD = 400;
+const COLLAPSE_CHAR_THRESHOLD = 200;
 
 interface ChunkCardProps {
   paras: string[];
@@ -116,26 +117,36 @@ function ChunkCard({
   const anomaly = tooShort || tooLong;
   const isLong = text.length > COLLAPSE_CHAR_THRESHOLD;
 
+  const anomalyTitle = tooShort
+    ? `${words}w — sotto il minimo (${minWords}w)`
+    : tooLong
+    ? `${words}w — sopra il massimo (${maxWords}w)`
+    : '';
+
   return (
     <div
-      className={`rounded-[18px] border transition-colors ${
+      className={`overflow-hidden rounded-[18px] border-y border-r transition-colors ${
         anomaly
-          ? 'border-editorial-warning/50 bg-editorial-warning/5'
-          : 'border-editorial-border bg-editorial-bg'
+          ? 'border-editorial-warning/60 bg-editorial-warning/5 border-l-4 border-l-editorial-warning'
+          : 'border-editorial-border bg-editorial-bg border-l-4 border-l-editorial-accent/50'
       }`}
     >
       <div className="flex items-center justify-between gap-3 px-4 py-3">
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-editorial-muted">
+          <span className="text-xs font-bold uppercase tracking-[0.25em] text-editorial-muted">
             {index + 1}
             <span className="font-normal opacity-50"> / {total}</span>
           </span>
-          {anomaly && <AlertTriangle size={10} className="shrink-0 text-editorial-warning" />}
-          <span className={`text-[10px] font-mono tabular-nums ${anomaly ? 'text-editorial-warning' : 'text-editorial-muted'}`}>
+          {anomaly && (
+            <span title={anomalyTitle} className="shrink-0 cursor-help">
+              <AlertTriangle size={12} className="text-editorial-warning" />
+            </span>
+          )}
+          <span className={`text-xs font-mono tabular-nums ${anomaly ? 'text-editorial-warning' : 'text-editorial-muted'}`}>
             {words}w
           </span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           {canSplit && (
             <button
               type="button"
@@ -143,19 +154,18 @@ function ChunkCard({
               title={t('files.boundarySplit')}
               className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             >
-              <Scissors size={11} />
+              <Scissors size={13} />
             </button>
           )}
-          {isLong && (
-            <button
-              type="button"
-              onClick={onToggleExpand}
-              title={isExpanded ? t('files.collapseChunk') : t('files.expandChunk')}
-              className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            >
-              {isExpanded ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={onToggleExpand}
+            disabled={!isLong}
+            title={isExpanded ? t('files.collapseChunk') : t('files.expandChunk')}
+            className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-default disabled:opacity-20"
+          >
+            {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+          </button>
         </div>
       </div>
       <div className="px-4 pb-4 text-base leading-7 text-editorial-ink">
@@ -163,13 +173,13 @@ function ChunkCard({
           <p className="whitespace-pre-wrap">{text}</p>
         ) : (
           <>
-            <p className="whitespace-pre-wrap">{text.slice(0, 200)}</p>
+            <p className="whitespace-pre-wrap">{text.slice(0, 180)}</p>
             <button
               type="button"
               onClick={onToggleExpand}
-              className="my-1.5 block font-mono text-[10px] text-editorial-muted/50 transition-colors hover:text-editorial-muted focus:outline-none"
+              className="my-2 block w-full rounded-lg border border-dashed border-editorial-border py-1 text-center text-xs text-editorial-muted transition-colors hover:border-editorial-ink/40 hover:text-editorial-ink focus:outline-none"
             >
-              ··· {words}w ···
+              ··· {words}w — {t('files.expandChunk').toLowerCase()} ···
             </button>
             <p className="whitespace-pre-wrap">{text.slice(-120)}</p>
           </>
@@ -243,119 +253,137 @@ function SegmentEditor({
   onSplitParagraph,
 }: SegmentEditorProps) {
   const { t } = useTranslation();
-  const { paragraphs, boundaries } = useMemo(() => toFlatModel(chunks), [chunks]);
   const [hoveredGap, setHoveredGap] = useState<number | null>(null);
   const [hoveredPara, setHoveredPara] = useState<number | null>(null);
 
-  // Compute which chunk each paragraph belongs to (for word count badges).
-  const chunkIndexForPara = useMemo(() => {
-    const result: number[] = [];
-    let chunkIdx = 0;
-    for (let i = 0; i < paragraphs.length; i++) {
-      if (i > 0 && boundaries.has(i)) chunkIdx++;
-      result.push(chunkIdx);
+  // Global start index for each chunk (used for event handler indices).
+  const chunkStarts = useMemo(() => {
+    const starts: number[] = [];
+    let idx = 0;
+    for (const chunk of chunks) {
+      starts.push(idx);
+      idx += chunk.length;
     }
-    return result;
-  }, [paragraphs, boundaries]);
+    return starts;
+  }, [chunks]);
 
   return (
-    <div className="space-y-0">
-      {paragraphs.map((para, i) => {
-        const isBoundaryBefore = i > 0 && boundaries.has(i);
-        const chunkIdx = chunkIndexForPara[i];
-        const chunkWords = countWords(chunks[chunkIdx] ?? [para]);
+    <div className="space-y-2 py-1">
+      {chunks.map((paras, chunkIdx) => {
+        const chunkWords = countWords(paras);
         const tooShort = minWords > 0 && chunkWords < minWords;
         const tooLong = maxWords > 0 && chunkWords > maxWords;
         const anomaly = tooShort || tooLong;
-        const isLastInChunk = i === paragraphs.length - 1 || boundaries.has(i + 1);
-        const isFirstInChunk = i === 0 || boundaries.has(i);
+        const chunkStart = chunkStarts[chunkIdx];
+
+        const anomalyTitle = tooShort
+          ? `${chunkWords}w — sotto il minimo (${minWords}w)`
+          : tooLong
+          ? `${chunkWords}w — sopra il massimo (${maxWords}w)`
+          : '';
+
+        const accentLine = anomaly ? 'bg-editorial-warning/70' : 'bg-editorial-accent/60';
+        const accentBorder = anomaly ? 'border-l-editorial-warning/70' : 'border-l-editorial-accent/50';
+        const accentText = anomaly ? 'text-editorial-warning' : 'text-editorial-accent';
+        const accentBadge = anomaly
+          ? 'border-editorial-warning/60 bg-editorial-warning/10'
+          : 'border-editorial-accent/50 bg-editorial-accent/10';
 
         return (
-          <div key={i}>
-            {/* Chunk boundary marker or inter-paragraph gap */}
-            {i > 0 && (
-              isBoundaryBefore ? (
-                /* Active chunk boundary */
-                <div className="group relative flex items-center gap-2 py-2">
-                  <div className={`h-0.5 flex-1 rounded-full ${anomaly ? 'bg-editorial-warning/60' : 'bg-editorial-accent/50'}`} />
-                  <div className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] ${anomaly ? 'border-editorial-warning/60 bg-editorial-warning/10 text-editorial-warning' : 'border-editorial-accent/50 bg-editorial-accent/10 text-editorial-accent'}`}>
-                    {anomaly && <AlertTriangle size={9} />}
-                    {t('pipeline.unit')} {chunkIdx + 1}
-                    {anomaly && <span className="font-normal opacity-70">· {chunkWords}w</span>}
-                  </div>
-                  <div className={`h-0.5 flex-1 rounded-full ${anomaly ? 'bg-editorial-warning/60' : 'bg-editorial-accent/50'}`} />
-                  <button
-                    type="button"
-                    onClick={() => onRemoveBoundary(i)}
-                    title={t('files.boundaryMerge')}
-                    className="absolute -right-2 rounded-full border border-editorial-border bg-editorial-bg p-1 text-editorial-muted opacity-0 transition-all group-hover:opacity-100 hover:border-editorial-warning hover:text-editorial-warning focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  >
-                    <Merge size={11} />
-                  </button>
-                </div>
-              ) : (
-                /* Non-boundary gap — hover to add boundary */
+          <div key={chunkIdx}>
+            {/* Inter-chunk boundary divider (between chunks, not before first) */}
+            {chunkIdx > 0 && (
+              <div className="group relative flex items-center gap-3 py-2">
+                <div className={`h-[2px] flex-1 rounded-full ${accentLine}`} />
                 <div
-                  className="group relative flex cursor-pointer items-center gap-2 py-1"
-                  onMouseEnter={() => setHoveredGap(i)}
-                  onMouseLeave={() => setHoveredGap(null)}
-                  onClick={() => onAddBoundary(i)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => e.key === 'Enter' && onAddBoundary(i)}
-                  title={t('files.boundaryAddHere')}
+                  className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] ${accentBadge} ${accentText}`}
+                  title={anomaly ? anomalyTitle : undefined}
                 >
-                  <div className="h-px flex-1 bg-editorial-border/50 transition-colors group-hover:bg-editorial-border" />
-                  <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-dashed text-xs transition-all ${hoveredGap === i ? 'border-editorial-ink text-editorial-ink' : 'border-editorial-border text-editorial-muted'}`}>
-                    +
-                  </div>
-                  <div className="h-px flex-1 bg-editorial-border/50 transition-colors group-hover:bg-editorial-border" />
+                  {anomaly && <AlertTriangle size={10} />}
+                  {t('pipeline.unit')} {chunkIdx + 1}
+                  {anomaly && <span className="font-normal opacity-70">· {chunkWords}w</span>}
                 </div>
-              )
-            )}
-
-            {/* Paragraph block */}
-            <div
-              className="group relative rounded-xl px-4 py-3 text-base leading-7 text-editorial-ink transition-colors hover:bg-editorial-textbox/25"
-              onMouseEnter={() => setHoveredPara(i)}
-              onMouseLeave={() => setHoveredPara(null)}
-            >
-              <p className="whitespace-pre-wrap pr-8">{para}</p>
-              {/* Split paragraph button — only when meaningful */}
-              {para.length > 200 && (
+                <div className={`h-[2px] flex-1 rounded-full ${accentLine}`} />
                 <button
                   type="button"
-                  onClick={() => onSplitParagraph(i)}
-                  title={t('files.boundarySplit')}
-                  className={`absolute right-2 top-3 rounded-full border border-editorial-border bg-editorial-bg p-1 text-editorial-muted transition-all hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${hoveredPara === i ? 'opacity-100' : 'opacity-0'}`}
+                  onClick={() => onRemoveBoundary(chunkStart)}
+                  title={t('files.boundaryMerge')}
+                  className="absolute -right-2 rounded-full border border-editorial-border bg-editorial-bg p-1 text-editorial-muted opacity-0 transition-all group-hover:opacity-100 hover:border-editorial-warning hover:text-editorial-warning focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 >
-                  <Scissors size={11} />
+                  <Merge size={12} />
                 </button>
-              )}
+              </div>
+            )}
+
+            {/* First chunk badge */}
+            {chunkIdx === 0 && (
+              <div
+                className={`mb-2 flex items-center gap-3`}
+                title={anomaly ? anomalyTitle : undefined}
+              >
+                <div className={`h-[2px] flex-1 rounded-full ${accentLine}`} />
+                <div className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] ${accentBadge} ${accentText}`}>
+                  {anomaly && <AlertTriangle size={10} />}
+                  {t('pipeline.unit')} 1
+                  {anomaly && <span className="font-normal opacity-70">· {chunkWords}w</span>}
+                </div>
+                <div className={`h-[2px] flex-1 rounded-full ${accentLine}`} />
+              </div>
+            )}
+
+            {/* Chunk content with left accent bar */}
+            <div className={`border-l-[3px] pl-4 ${accentBorder}`}>
+              {paras.map((para, localIdx) => {
+                const globalIdx = chunkStart + localIdx;
+                const gapIdx = chunkStart + localIdx + 1;
+
+                return (
+                  <div key={localIdx}>
+                    {/* Paragraph block */}
+                    <div
+                      className="group relative py-2 text-base leading-7 text-editorial-ink"
+                      onMouseEnter={() => setHoveredPara(globalIdx)}
+                      onMouseLeave={() => setHoveredPara(null)}
+                    >
+                      <p className="whitespace-pre-wrap pr-8">{para}</p>
+                      {para.length > 200 && (
+                        <button
+                          type="button"
+                          onClick={() => onSplitParagraph(globalIdx)}
+                          title={t('files.boundarySplit')}
+                          className={`absolute right-0 top-2 rounded-full border border-editorial-border bg-editorial-bg p-1 text-editorial-muted transition-all hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${hoveredPara === globalIdx ? 'opacity-100' : 'opacity-0'}`}
+                        >
+                          <Scissors size={13} />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Intra-chunk gap — click to add a chunk boundary here */}
+                    {localIdx < paras.length - 1 && (
+                      <div
+                        className="group relative flex cursor-pointer items-center gap-2 py-0.5"
+                        onMouseEnter={() => setHoveredGap(gapIdx)}
+                        onMouseLeave={() => setHoveredGap(null)}
+                        onClick={() => onAddBoundary(gapIdx)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => e.key === 'Enter' && onAddBoundary(gapIdx)}
+                        title={t('files.boundaryAddHere')}
+                      >
+                        <div className="h-px flex-1 bg-editorial-border/60 transition-colors group-hover:bg-editorial-border" />
+                        <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-dashed text-xs font-bold transition-all ${hoveredGap === gapIdx ? 'border-editorial-ink text-editorial-ink' : 'border-editorial-border text-editorial-muted'}`}>
+                          +
+                        </div>
+                        <div className="h-px flex-1 bg-editorial-border/60 transition-colors group-hover:bg-editorial-border" />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         );
       })}
-
-      {/* Last chunk badge */}
-      {paragraphs.length > 0 && (() => {
-        const lastChunkIdx = chunks.length - 1;
-        const lastChunkWords = countWords(chunks[lastChunkIdx] ?? []);
-        const tooShort = minWords > 0 && lastChunkWords < minWords;
-        const tooLong = maxWords > 0 && lastChunkWords > maxWords;
-        const anomaly = tooShort || tooLong;
-        return (
-          <div className="flex items-center gap-2 pt-1.5">
-            <div className={`h-0.5 flex-1 rounded-full ${anomaly ? 'bg-editorial-warning/60' : 'bg-editorial-accent/50'}`} />
-            <div className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] ${anomaly ? 'border-editorial-warning/60 bg-editorial-warning/10 text-editorial-warning' : 'border-editorial-accent/50 bg-editorial-accent/10 text-editorial-accent'}`}>
-              {anomaly && <AlertTriangle size={9} />}
-              {t('pipeline.unit')} {lastChunkIdx + 1}
-              {anomaly && <span className="font-normal opacity-70">· {lastChunkWords}w</span>}
-            </div>
-            <div className={`h-0.5 flex-1 rounded-full ${anomaly ? 'bg-editorial-warning/60' : 'bg-editorial-accent/50'}`} />
-          </div>
-        );
-      })()}
     </div>
   );
 }
@@ -619,33 +647,20 @@ export function ImportPreviewDialog({
     >
       <div className="relative flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-[28px] border border-editorial-border bg-editorial-bg shadow-[0_24px_80px_rgba(26,26,26,0.2)]">
 
-        {/* ── Header ─────────────────────────────────────────────────────── */}
-        <div className="shrink-0 border-b border-editorial-border px-6 py-5">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <div className="mb-1 flex items-center gap-2">
-                <FileText size={15} className="shrink-0 text-editorial-muted" />
-                <span className="truncate text-sm font-mono text-editorial-muted">{fileName}</span>
-              </div>
-              <h2
-                id="import-preview-title"
-                className="font-display text-2xl italic tracking-tight text-editorial-ink"
-              >
-                {t('files.importPreviewTitle')}
-              </h2>
-              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs font-mono text-editorial-muted">
-                <span>{preview.stats.words}w</span>
-                <span>·</span>
-                <span>{preview.stats.paragraphs} {t('pipeline.paragraphs').toLowerCase()}</span>
-                <span>·</span>
-                <span className={hasManualEdits ? 'text-editorial-warning/80' : ''}>
-                  {chunkCountLabel}
-                  {hasManualEdits && ` · ${t('files.manualEditsActive')}`}
-                </span>
-              </div>
-            </div>
+        {/* ── Unified header (filename + title + stats + controls) ───────── */}
+        <div className="shrink-0 border-b border-editorial-border px-6 pb-4 pt-5">
 
-            {/* Mode toggle — app-consistent pill style */}
+          {/* Row 1: filename + mode toggle */}
+          <div className="mb-3 flex items-center justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-2">
+              <FileText size={15} className="shrink-0 text-editorial-muted" />
+              <span className="truncate text-sm font-mono text-editorial-muted">{fileName}</span>
+              {preview.experimental && (
+                <span title={t('files.importExperimentalDocxMarkdown')} className="shrink-0 cursor-help">
+                  <Info size={14} className="text-editorial-accent" />
+                </span>
+              )}
+            </div>
             <div className="flex shrink-0 items-center gap-0 rounded-full border border-editorial-border bg-editorial-bg px-1 py-1 shadow-sm">
               <button
                 type="button"
@@ -666,31 +681,38 @@ export function ImportPreviewDialog({
             </div>
           </div>
 
-          {/* Warnings */}
-          {(preview.experimental || preview.warnings.length > 0) && (
-            <div className="mt-3 space-y-2">
-              {preview.experimental && (
-                <div className="rounded-2xl border border-editorial-accent/20 bg-editorial-accent/5 px-4 py-2.5 text-xs leading-relaxed text-editorial-ink">
-                  {t('files.importExperimentalDocxMarkdown')}
-                </div>
-              )}
-              {preview.warnings.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {preview.warnings.map((w) => (
-                    <span key={w} className="rounded-full border border-editorial-border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted">
-                      {t(`files.importWarning.${w}`)}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+          {/* Row 2: title */}
+          <h2
+            id="import-preview-title"
+            className="mb-2 font-display text-2xl italic tracking-tight text-editorial-ink"
+          >
+            {t('files.importPreviewTitle')}
+          </h2>
 
-        {/* ── Settings strip ──────────────────────────────────────────────── */}
-        <div className="shrink-0 border-b border-editorial-border bg-editorial-textbox/20 px-6 py-3.5">
+          {/* Row 3: stats + warning badges */}
+          <div className="mb-4 flex flex-wrap items-center gap-3 text-xs font-mono text-editorial-muted">
+            <span>{preview.stats.words}w</span>
+            <span>·</span>
+            <span>{preview.stats.paragraphs} {t('pipeline.paragraphs').toLowerCase()}</span>
+            <span>·</span>
+            <span className={hasManualEdits ? 'text-editorial-warning' : ''}>{chunkCountLabel}</span>
+            {hasManualEdits && (
+              <span className="rounded-full border border-editorial-warning/60 bg-editorial-warning/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.15em] text-editorial-warning">
+                {t('files.manualEditsActive')}
+              </span>
+            )}
+            {preview.warnings.map((w) => (
+              <span key={w} className="rounded-full border border-editorial-border px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.15em] text-editorial-muted">
+                {t(`files.importWarning.${w}`)}
+              </span>
+            ))}
+          </div>
+
+          {/* Separator */}
+          <div className="mb-4 h-px bg-editorial-border" />
+
+          {/* Row 4: controls */}
           <div className="flex flex-wrap items-center gap-5">
-            {/* Auto-segment */}
             <label className="flex cursor-pointer items-center gap-2.5">
               <input
                 type="checkbox"
@@ -703,7 +725,6 @@ export function ImportPreviewDialog({
               </span>
             </label>
 
-            {/* Heading-aware (only for markdown) */}
             {markdownAware && (
               <label className={`flex cursor-pointer items-center gap-2.5 ${!useChunking ? 'opacity-40' : ''}`}>
                 <input
@@ -719,7 +740,6 @@ export function ImportPreviewDialog({
               </label>
             )}
 
-            {/* Words per chunk */}
             {useChunking && (
               <div className="flex items-center gap-2.5">
                 <label className="whitespace-nowrap text-xs font-bold uppercase tracking-[0.15em] text-editorial-muted">
@@ -743,17 +763,16 @@ export function ImportPreviewDialog({
               </div>
             )}
 
-            {/* Recalculate — shown when manual edits are active */}
-            {hasManualEdits && (
-              <button
-                type="button"
-                onClick={recalculate}
-                title={t('files.recalculateHint')}
-                className="ml-auto rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              >
-                <RotateCcw size={13} />
-              </button>
-            )}
+            {/* Recalculate — always visible, disabled when no manual edits */}
+            <button
+              type="button"
+              onClick={recalculate}
+              disabled={!hasManualEdits}
+              title={t('files.recalculateHint')}
+              className="ml-auto rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-25"
+            >
+              <RotateCcw size={13} />
+            </button>
           </div>
         </div>
 
