@@ -3,10 +3,8 @@ import type {
   PipelineConfig,
   PipelineStageConfig,
   ModelProvider,
-  GlossaryEntry,
 } from '../types';
 import { DEFAULT_STAGES, DEFAULT_JUDGE_PROMPT, DEFAULT_COHERENCE_PROMPT } from '../constants';
-import { generateId } from '../utils';
 import { getGlossaryEntries } from '../services/glossaryService';
 import type { FootnoteDefinition } from '../types';
 import { deriveSourceDocumentState } from '../utils/documentState';
@@ -31,10 +29,6 @@ interface PipelineState {
   addStage: () => void;
   removeStage: (id: string) => void;
   updateStage: (id: string, updates: Partial<PipelineStageConfig>) => void;
-
-  addGlossaryEntry: () => void;
-  updateGlossaryEntry: (id: string, updates: Partial<GlossaryEntry>) => void;
-  removeGlossaryEntry: (id: string) => void;
 }
 
 const DEFAULT_PIPELINE_CONFIG: PipelineConfig = {
@@ -156,35 +150,6 @@ export const usePipelineStore = create<PipelineState>((set) => ({
         stages: state.config.stages.map((stage) =>
           stage.id === id ? { ...stage, ...updates } : stage,
         ),
-      },
-    })),
-
-  addGlossaryEntry: () =>
-    set((state) => ({
-      config: {
-        ...state.config,
-        glossary: [
-          ...state.config.glossary,
-          { id: generateId('gloss'), term: '', translation: '' },
-        ],
-      },
-    })),
-
-  updateGlossaryEntry: (id, updates) =>
-    set((state) => ({
-      config: {
-        ...state.config,
-        glossary: state.config.glossary.map((entry) =>
-          entry.id === id ? { ...entry, ...updates } : entry,
-        ),
-      },
-    })),
-
-  removeGlossaryEntry: (id) =>
-    set((state) => ({
-      config: {
-        ...state.config,
-        glossary: state.config.glossary.filter((entry) => entry.id !== id),
       },
     })),
 }));

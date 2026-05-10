@@ -262,70 +262,6 @@ export async function saveProjectConfig(
 
 type ExecuteQuery = (query: string, params?: unknown[]) => Promise<void>;
 
-async function saveProjectGlossary(
-  projectId: string,
-  config: PipelineConfig,
-  run: ExecuteQuery,
-): Promise<void> {
-  // Se il progetto ha già un dizionario assegnato, usa quello.
-  // Altrimenti crea/aggiorna il dizionario legacy per backward compat.
-  const glossaryId = config.assignedGlossaryId ?? `glossary-${projectId}`;
-
-  if (!config.assignedGlossaryId) {
-    await run(
-      `INSERT INTO glossaries (id, name, source_language, target_language)
-       VALUES ($1, $2, $3, $4)
-       ON CONFLICT(id) DO UPDATE SET
-         name = $2,
-         source_language = $3,
-         target_language = $4`,
-      [
-        glossaryId,
-        `Project glossary ${projectId}`,
-        config.sourceLanguage,
-        config.targetLanguage,
-      ],
-    );
-    await run(
-      'INSERT OR IGNORE INTO project_glossaries (project_id, glossary_id) VALUES ($1, $2)',
-      [projectId, glossaryId],
-    );
-  }
-
-  const entries = config.glossary.filter(
-    (entry) => entry.term.trim() && entry.translation.trim(),
-  );
-
-  // Upsert: aggiorna per ID invece di delete+reinsert (sicuro con dizionari condivisi)
-  const usedIds: string[] = [];
-  for (const [index, entry] of entries.entries()) {
-    const entryId = entry.id || `gloss-entry-${projectId}-${index}`;
-    usedIds.push(entryId);
-    await run(
-      `INSERT INTO glossary_entries (id, glossary_id, term, translation, notes)
-       VALUES ($1, $2, $3, $4, $5)
-       ON CONFLICT(id) DO UPDATE SET
-         term = excluded.term,
-         translation = excluded.translation,
-         notes = excluded.notes`,
-      [entryId, glossaryId, entry.term.trim(), entry.translation.trim(), entry.notes?.trim() || ''],
-    );
-  }
-
-  // Rimuovi le voci che non sono più nel progetto
-  const currentIds = usedIds;
-
-  if (currentIds.length > 0) {
-    const placeholders = currentIds.map((_, i) => `$${i + 2}`).join(', ');
-    await run(
-      `DELETE FROM glossary_entries WHERE glossary_id = $1 AND id NOT IN (${placeholders})`,
-      [glossaryId, ...currentIds],
-    );
-  } else if (entries.length === 0) {
-    await run('DELETE FROM glossary_entries WHERE glossary_id = $1', [glossaryId]);
-  }
-}
-
 async function saveProjectConfigInternal(
   projectId: string,
   inputText: string | undefined,
@@ -399,7 +335,6 @@ async function saveProjectConfigInternal(
      WHERE id = $4`,
     [config.sourceLanguage, config.targetLanguage, viewMode, projectId],
   );
-  await saveProjectGlossary(projectId, config, run);
 }
 
 // ── Translations persistence ─────────────────────────────────────────

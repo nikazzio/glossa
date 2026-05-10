@@ -27,7 +27,7 @@ describe('projectService glossary persistence', () => {
     );
   });
 
-  it('saves the active glossary with the project config', async () => {
+  it('saves pipeline config and project metadata without touching glossary tables', async () => {
     const config: PipelineConfig = {
       sourceLanguage: 'Italian',
       targetLanguage: 'English',
@@ -37,7 +37,6 @@ describe('projectService glossary persistence', () => {
       judgeProvider: 'gemini',
       glossary: [
         { id: 'entry-1', term: 'virtute', translation: 'virtue', notes: 'Keep ethical sense' },
-        { id: 'entry-2', term: '', translation: 'ignored' },
       ],
       useChunking: true,
       targetChunkCount: 8,
@@ -57,28 +56,22 @@ describe('projectService glossary persistence', () => {
       expect.any(Array),
     );
     expect(dbMocks.execute).toHaveBeenCalledWith(
-      expect.stringContaining('ON CONFLICT(project_id) DO UPDATE SET'),
-      expect.any(Array),
-    );
-    expect(dbMocks.execute).toHaveBeenCalledWith(
       expect.stringContaining('view_mode = $3'),
       ['Italian', 'English', 'document', 'proj-1'],
     );
-    expect(dbMocks.execute).toHaveBeenCalledWith(
+    // Glossary tables must NOT be touched — glossaries are managed exclusively
+    // through libraryStore / glossaryService, never during project save.
+    expect(dbMocks.execute).not.toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO glossaries'),
-      expect.arrayContaining(['glossary-proj-1']),
-    );
-    expect(dbMocks.execute).toHaveBeenCalledWith(
-      expect.stringContaining('DELETE FROM glossary_entries WHERE glossary_id = $1 AND id NOT IN'),
-      ['glossary-proj-1', 'entry-1'],
-    );
-    expect(dbMocks.execute).toHaveBeenCalledWith(
-      expect.stringContaining('INSERT INTO glossary_entries'),
-      expect.arrayContaining(['entry-1', 'glossary-proj-1', 'virtute', 'virtue', 'Keep ethical sense']),
+      expect.any(Array),
     );
     expect(dbMocks.execute).not.toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO glossary_entries'),
-      expect.arrayContaining(['entry-2']),
+      expect.any(Array),
+    );
+    expect(dbMocks.execute).not.toHaveBeenCalledWith(
+      expect.stringContaining('DELETE FROM glossary_entries'),
+      expect.any(Array),
     );
   });
 

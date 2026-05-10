@@ -151,6 +151,7 @@
     "noProjectTitle": "Nessun progetto aperto",
     "noProjectHint": "Apri o crea un progetto per configurare fasi, modelli, audit e glossario.",
     "glossaryEmpty": "Nessun termine nel registro. Usa + per aggiungerne uno.",
+    "glossaryOpenProject": "Apri un progetto e assegna un dizionario dalla Libreria per gestire i termini.",
     "glossaryNotes": "Note",
     "templates": {
       "save": "Salva come template",
