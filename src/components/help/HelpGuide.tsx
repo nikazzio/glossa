@@ -255,6 +255,15 @@ function FeaturesSection() {
       <SubTitle>{t('help.features.segmentationTitle')}</SubTitle>
       <P>{t('help.features.segmentationDesc')}</P>
 
+      <SubTitle>{t('help.features.segmentationControlsTitle')}</SubTitle>
+      <P>{t('help.features.segmentationControlsDesc')}</P>
+
+      <SubTitle>{t('help.features.segmentationCardTitle')}</SubTitle>
+      <P>{t('help.features.segmentationCardDesc')}</P>
+
+      <SubTitle>{t('help.features.segmentationEditorTitle')}</SubTitle>
+      <P>{t('help.features.segmentationEditorDesc')}</P>
+
       <SubTitle>{t('help.features.chunkActionsTitle')}</SubTitle>
       <P>{t('help.features.chunkActionsDesc')}</P>
 

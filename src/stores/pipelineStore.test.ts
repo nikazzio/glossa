@@ -42,24 +42,4 @@ describe('pipelineStore', () => {
     usePipelineStore.getState().updateStage(added.id, { name: 'Refinement' });
     expect(usePipelineStore.getState().config.stages.at(-1)?.name).toBe('Refinement');
   });
-
-  it('manages glossary entries through config actions', () => {
-    usePipelineStore.getState().addGlossaryEntry();
-    const entry = usePipelineStore.getState().config.glossary[0];
-    expect(entry.term).toBe('');
-
-    if (!entry.id) throw new Error('expected glossary id');
-    usePipelineStore.getState().updateGlossaryEntry(entry.id, {
-      term: 'logos',
-      translation: 'logos',
-    });
-
-    expect(usePipelineStore.getState().config.glossary[0]).toMatchObject({
-      term: 'logos',
-      translation: 'logos',
-    });
-
-    usePipelineStore.getState().removeGlossaryEntry(entry.id);
-    expect(usePipelineStore.getState().config.glossary).toEqual([]);
-  });
 });

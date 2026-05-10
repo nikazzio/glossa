@@ -66,7 +66,7 @@ export function ApiKeyInput({ label, provider }: ApiKeyInputProps) {
             value={keyValue}
             onChange={(e) => setKeyValue(e.target.value)}
             placeholder={t('settings.pasteApiKey')}
-            className="flex-1 bg-editorial-textbox border-none px-3 py-2 text-[10px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            className="flex-1 bg-editorial-textbox border-none px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleSave();
               if (e.key === 'Escape') { setEditing(false); setKeyValue(''); }
@@ -108,7 +108,7 @@ export function ApiKeyInput({ label, provider }: ApiKeyInputProps) {
           className="flex items-center gap-3 bg-editorial-textbox px-3 py-2 flex-1 text-left hover:bg-editorial-textbox/80 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
         >
           <Key size={14} className={isConfigured ? 'text-editorial-accent' : 'text-editorial-muted opacity-20'} />
-          <span className="flex-1 text-[10px] font-mono truncate">
+          <span className="flex-1 text-xs font-mono truncate">
             {isConfigured ? '••••••••••••••••' : t('settings.clickToConfigure')}
           </span>
           {isConfigured && <CheckCircle2 size={12} className="text-editorial-ink" />}

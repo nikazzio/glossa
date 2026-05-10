@@ -6,7 +6,7 @@ import type {
   ViewMode,
 } from '../types';
 
-export type InsightsDrawerTab = 'index' | 'stats' | 'coherence';
+export type InsightsDrawerTab = 'index' | 'stats' | 'coherence' | 'glossary';
 export type ChunkDrawerTab = 'audit' | 'notes' | 'operations';
 
 interface UiState {
@@ -28,6 +28,10 @@ interface UiState {
   focusedIssueRequestId: number;
   pendingSplitChunkId: string | null;
 
+  // App-level segmentation defaults (persisted)
+  defaultMinWords: number;
+  defaultMaxWords: number;
+
   setViewMode: (mode: ViewMode) => void;
   setDocumentLayout: (layout: DocumentLayoutPreference) => void;
   setSelectedChunkId: (chunkId: string | null) => void;
@@ -45,6 +49,8 @@ interface UiState {
   focusIssueInChunk: (chunkId: string, query?: string | null) => void;
   clearFocusedIssue: () => void;
   setPendingSplitChunkId: (chunkId: string | null) => void;
+  setDefaultMinWords: (value: number) => void;
+  setDefaultMaxWords: (value: number) => void;
 }
 
 export const useUiStore = create<UiState>()(
@@ -67,6 +73,8 @@ export const useUiStore = create<UiState>()(
   focusedIssueQuery: null,
   focusedIssueRequestId: 0,
   pendingSplitChunkId: null,
+  defaultMinWords: 600,
+  defaultMaxWords: 1200,
 
   setViewMode: (mode) =>
     set({
@@ -153,11 +161,17 @@ export const useUiStore = create<UiState>()(
     })),
   clearFocusedIssue: () => set({ focusedIssueQuery: null }),
   setPendingSplitChunkId: (chunkId) => set({ pendingSplitChunkId: chunkId }),
+  setDefaultMinWords: (value) => set({ defaultMinWords: Math.max(0, value) }),
+  setDefaultMaxWords: (value) => set({ defaultMaxWords: Math.max(0, value) }),
     }),
     {
       name: 'glossa-ui-prefs',
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ documentLayout: state.documentLayout }),
+      partialize: (state) => ({
+        documentLayout: state.documentLayout,
+        defaultMinWords: state.defaultMinWords,
+        defaultMaxWords: state.defaultMaxWords,
+      }),
     },
   ),
 );

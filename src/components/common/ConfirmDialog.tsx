@@ -13,7 +13,7 @@ export function ConfirmDialog() {
     <AnimatePresence>
       {open && request && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center p-6"
+          className="fixed inset-0 z-[200] flex items-center justify-center p-6"
           role="dialog"
           aria-modal="true"
           aria-labelledby="confirm-title"

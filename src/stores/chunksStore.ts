@@ -51,6 +51,7 @@ interface ChunksState {
       headingAware?: boolean;
       extractFootnotes?: boolean;
     },
+    precomputedChunks?: string[],
   ) => void;
   clearChunks: () => void;
   updateChunkStage: (chunkId: string, stageId: string, result: PipelineResult) => void;
@@ -109,11 +110,12 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
     set({ chunks });
   },
 
-  loadDocument: (text, options = {}) => {
+  loadDocument: (text, options = {}, precomputedChunks) => {
     const sourceDocument = deriveSourceDocumentState(text, options);
     if (!sourceDocument.displayText.trim()) return;
 
-    const chunks = buildChunks(sourceDocument.processingText, options, sourceDocument.footnotes);
+    const chunkTexts = precomputedChunks ?? chunkText(sourceDocument.processingText, options);
+    const chunks = chunksFromTexts(chunkTexts, sourceDocument.footnotes);
     const ui = useUiStore.getState();
     usePipelineStore.getState().setSourceDocument({
       displayText: sourceDocument.displayText,
@@ -321,19 +323,11 @@ function resetChunkForSourceEdit<T extends TranslationChunk>(chunk: T): T {
   }) as T;
 }
 
-function buildChunks(
-  text: string,
-  options: {
-    useChunking?: boolean;
-    targetChunkCount?: number;
-    markdownAware?: boolean;
-    minWords?: number;
-    maxWords?: number;
-    headingAware?: boolean;
-  },
+function chunksFromTexts(
+  chunkTexts: string[],
   sourceFootnotes: ReturnType<typeof usePipelineStore.getState>['sourceFootnotes'],
 ): TranslationChunk[] {
-  return chunkText(text, options).map((chunkTextValue) => {
+  return chunkTexts.map((chunkTextValue) => {
     const footnotes = buildChunkFootnotes(chunkTextValue, sourceFootnotes);
     return withSyncedChunkFields({
       id: generateId('chunk'),
@@ -348,6 +342,21 @@ function buildChunks(
       ...(footnotes?.length ? { footnotes } : {}),
     });
   });
+}
+
+function buildChunks(
+  text: string,
+  options: {
+    useChunking?: boolean;
+    targetChunkCount?: number;
+    markdownAware?: boolean;
+    minWords?: number;
+    maxWords?: number;
+    headingAware?: boolean;
+  },
+  sourceFootnotes: ReturnType<typeof usePipelineStore.getState>['sourceFootnotes'],
+): TranslationChunk[] {
+  return chunksFromTexts(chunkText(text, options), sourceFootnotes);
 }
 
 function splitChunkState(

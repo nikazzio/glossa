@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   BarChart2,
   BookOpen,
+  BookText,
   CheckCheck,
   CheckCircle2,
   Circle,
@@ -11,6 +12,7 @@ import {
   ExternalLink,
   FileText,
   Gauge,
+  Highlighter,
   Link2,
   List,
   Loader2,
@@ -29,7 +31,7 @@ import {
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
-import { type KeyboardEvent, useMemo, useRef } from 'react';
+import { type KeyboardEvent, useEffect, useMemo, useRef } from 'react';
 import { useUiStore, type InsightsDrawerTab, type ChunkDrawerTab } from '../../stores/uiStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
@@ -49,19 +51,21 @@ interface InsightsDrawerProps {
 
 const PANEL_WIDTH = 430;
 
-const DOC_TAB_ORDER: InsightsDrawerTab[] = ['index', 'stats', 'coherence'];
+const DOC_TAB_ORDER: InsightsDrawerTab[] = ['index', 'stats', 'coherence', 'glossary'];
 const CHUNK_TAB_ORDER: ChunkDrawerTab[] = ['audit', 'notes', 'operations'];
 
 const DOC_TAB_BUTTON_IDS: Record<InsightsDrawerTab, string> = {
   index: 'insights-tab-button-index',
   stats: 'insights-tab-button-stats',
   coherence: 'insights-tab-button-coherence',
+  glossary: 'insights-tab-button-glossary',
 };
 
 const DOC_TAB_PANEL_IDS: Record<InsightsDrawerTab, string> = {
   index: 'insights-tab-panel-index',
   stats: 'insights-tab-panel-stats',
   coherence: 'insights-tab-panel-coherence',
+  glossary: 'insights-tab-panel-glossary',
 };
 
 const CHUNK_TAB_BUTTON_IDS: Record<ChunkDrawerTab, string> = {
@@ -106,6 +110,17 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
   const currentChunkIndex = currentChunk ? chunks.findIndex((c) => c.id === currentChunk.id) : -1;
 
   const { stuckChunkIds, cancelStuckChunk } = useChunkWatchdog();
+  const { config } = usePipelineStore();
+  const glossaryHighlightEnabled = useUiStore((state) => state.glossaryHighlightEnabled);
+  const setGlossaryHighlightEnabled = useUiStore((state) => state.setGlossaryHighlightEnabled);
+  const hasGlossary = !!config.assignedGlossaryId && config.glossary.length > 0;
+
+  // Redirect away from the glossary tab if the glossary is removed.
+  useEffect(() => {
+    if (!hasGlossary && documentDrawerTab === 'glossary') {
+      setDocumentDrawerTab('index');
+    }
+  }, [hasGlossary, documentDrawerTab, setDocumentDrawerTab]);
 
   const docTabButtonRefs = useRef<Partial<Record<InsightsDrawerTab, HTMLButtonElement | null>>>({});
   const chunkTabButtonRefs = useRef<Partial<Record<ChunkDrawerTab, HTMLButtonElement | null>>>({});
@@ -114,11 +129,13 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
     index: <List size={16} />,
     stats: <BarChart2 size={16} />,
     coherence: <Link2 size={16} />,
+    glossary: <BookText size={16} />,
   };
   const DOC_TAB_LABEL: Record<InsightsDrawerTab, string> = {
     index: t('document.insightsTabIndex'),
     stats: t('document.insightsTabStats'),
     coherence: t('document.insightsTabCoherence'),
+    glossary: t('document.insightsTabGlossary'),
   };
   const CHUNK_TAB_ICON: Record<ChunkDrawerTab, React.ReactNode> = {
     audit: <ShieldCheck size={16} />,
@@ -131,6 +148,8 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
     operations: t('document.insightsTabOperations'),
   };
 
+  const enabledDocTabOrder = DOC_TAB_ORDER.filter((tab) => tab !== 'glossary' || hasGlossary);
+
   const activateDocTab = (tab: InsightsDrawerTab) => {
     setDocumentDrawerTab(tab);
     docTabButtonRefs.current[tab]?.focus();
@@ -141,14 +160,14 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
   };
 
   const handleDocTabKeyDown = (tab: InsightsDrawerTab, event: KeyboardEvent<HTMLButtonElement>) => {
-    const idx = DOC_TAB_ORDER.indexOf(tab);
+    const idx = enabledDocTabOrder.indexOf(tab);
     let next: InsightsDrawerTab | null = null;
     if (event.key === 'ArrowLeft' || event.key === 'ArrowUp')
-      next = DOC_TAB_ORDER[(idx - 1 + DOC_TAB_ORDER.length) % DOC_TAB_ORDER.length];
+      next = enabledDocTabOrder[(idx - 1 + enabledDocTabOrder.length) % enabledDocTabOrder.length];
     else if (event.key === 'ArrowRight' || event.key === 'ArrowDown')
-      next = DOC_TAB_ORDER[(idx + 1) % DOC_TAB_ORDER.length];
-    else if (event.key === 'Home') next = DOC_TAB_ORDER[0];
-    else if (event.key === 'End') next = DOC_TAB_ORDER[DOC_TAB_ORDER.length - 1];
+      next = enabledDocTabOrder[(idx + 1) % enabledDocTabOrder.length];
+    else if (event.key === 'Home') next = enabledDocTabOrder[0];
+    else if (event.key === 'End') next = enabledDocTabOrder[enabledDocTabOrder.length - 1];
     if (next) { event.preventDefault(); activateDocTab(next); }
   };
   const handleChunkTabKeyDown = (tab: ChunkDrawerTab, event: KeyboardEvent<HTMLButtonElement>) => {
@@ -327,9 +346,10 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
                       key={tab}
                       buttonId={DOC_TAB_BUTTON_IDS[tab]}
                       active={documentDrawerTab === tab}
+                      disabled={tab === 'glossary' && !hasGlossary}
                       onClick={() => activateDocTab(tab)}
                       onKeyDown={(e) => handleDocTabKeyDown(tab, e)}
-                      label={DOC_TAB_LABEL[tab]}
+                      label={tab === 'glossary' && !hasGlossary ? t('document.insightsGlossaryEmpty') : DOC_TAB_LABEL[tab]}
                       icon={DOC_TAB_ICON[tab]}
                       controls={DOC_TAB_PANEL_IDS[tab]}
                       buttonRef={(el) => { docTabButtonRefs.current[tab] = el; }}
@@ -360,6 +380,14 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
                     labelledBy={DOC_TAB_BUTTON_IDS.stats}
                     chunks={chunks}
                   />
+                ) : documentDrawerTab === 'glossary' ? (
+                  <GlossaryTab
+                    panelId={DOC_TAB_PANEL_IDS.glossary}
+                    labelledBy={DOC_TAB_BUTTON_IDS.glossary}
+                    glossary={config.glossary}
+                    highlightEnabled={glossaryHighlightEnabled}
+                    onToggleHighlight={() => setGlossaryHighlightEnabled(!glossaryHighlightEnabled)}
+                  />
                 ) : (
                   <CoherenceTab
                     panelId={DOC_TAB_PANEL_IDS.coherence}
@@ -389,6 +417,7 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
 interface TabButtonProps {
   buttonId: string;
   active: boolean;
+  disabled?: boolean;
   onClick: () => void;
   onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => void;
   label: string;
@@ -397,7 +426,7 @@ interface TabButtonProps {
   buttonRef: (element: HTMLButtonElement | null) => void;
 }
 
-function TabButton({ buttonId, active, onClick, onKeyDown, label, icon, controls, buttonRef }: TabButtonProps) {
+function TabButton({ buttonId, active, disabled, onClick, onKeyDown, label, icon, controls, buttonRef }: TabButtonProps) {
   return (
     <button
       id={buttonId}
@@ -405,6 +434,8 @@ function TabButton({ buttonId, active, onClick, onKeyDown, label, icon, controls
       role="tab"
       aria-selected={active}
       aria-controls={controls}
+      aria-disabled={disabled}
+      disabled={disabled}
       tabIndex={active ? 0 : -1}
       onClick={onClick}
       onKeyDown={onKeyDown}
@@ -412,7 +443,9 @@ function TabButton({ buttonId, active, onClick, onKeyDown, label, icon, controls
       title={label}
       aria-label={label}
       className={`rounded-full border p-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-        active
+        disabled
+          ? 'cursor-not-allowed border-editorial-border/30 text-editorial-muted/25'
+          : active
           ? 'border-editorial-ink bg-editorial-ink text-white'
           : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
       }`}
@@ -919,6 +952,7 @@ function OperationsTab({
   const { t } = useTranslation();
   const entries = useOperationLogStore((state) => state.entries);
   const clear = useOperationLogStore((state) => state.clear);
+  const isProcessing = useChunksStore((state) => state.isProcessing);
 
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex h-full flex-col">
@@ -944,13 +978,23 @@ function OperationsTab({
         </button>
       </div>
 
-      {entries.length === 0 ? (
+      {entries.length === 0 && !isProcessing ? (
         <div className="flex flex-1 items-center justify-center px-6 py-12 text-center text-sm text-editorial-muted">
           {t('document.operationsEmpty')}
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto bg-[#111111] px-4 py-4 font-mono text-xs text-[#d6d6d6] custom-scrollbar">
           <div className="space-y-2">
+            {isProcessing && (
+              <div className="rounded-[12px] border border-[#9eb4ff]/30 bg-[#9eb4ff]/10 px-3 py-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-[#7d7d7d]">$</span>
+                  <span className="rounded-full border border-[#9eb4ff]/30 px-2 py-0.5 text-[10px] uppercase tracking-[0.22em] text-[#9eb4ff]">pipeline</span>
+                  <span className="text-[#9eb4ff] animate-pulse">{t('document.operationsRunning')}</span>
+                  <span className="inline-block h-2 w-0.5 animate-pulse bg-[#9eb4ff]" aria-hidden="true" />
+                </div>
+              </div>
+            )}
             {entries.map((entry) => {
               const tone =
                 entry.level === 'error'
@@ -1088,4 +1132,59 @@ function extractIssueFocusQuery(issue: TranslationChunk['judgeResult']['issues']
     ...Array.from(issue.suggestedFix?.matchAll(/"([^"]{3,})"/g) ?? []).map((m) => m[1]),
   ].map((v) => v.trim()).filter(Boolean);
   return candidates.sort((a, b) => b.length - a.length)[0] ?? null;
+}
+
+// ── Glossary Tab ────────────────────────────────────────────────────────────
+
+interface GlossaryTabProps {
+  panelId: string;
+  labelledBy: string;
+  glossary: Array<{ id?: string; term: string; translation: string; notes?: string }>;
+  highlightEnabled: boolean;
+  onToggleHighlight: () => void;
+}
+
+function GlossaryTab({ panelId, labelledBy, glossary, highlightEnabled, onToggleHighlight }: GlossaryTabProps) {
+  const { t } = useTranslation();
+  return (
+    <div
+      id={panelId}
+      role="tabpanel"
+      aria-labelledby={labelledBy}
+      className="flex flex-1 flex-col"
+    >
+      {/* Toolbar */}
+      <div className="flex items-center justify-between border-b border-editorial-border px-5 py-3">
+        <span className="text-xs font-mono text-editorial-muted">{glossary.length} {t('document.insightsTabGlossary').toLowerCase()}</span>
+        <button
+          type="button"
+          onClick={onToggleHighlight}
+          title={t('library.glossaryHighlightToggle')}
+          aria-pressed={highlightEnabled}
+          className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+            highlightEnabled
+              ? 'border-editorial-ink bg-editorial-ink text-white'
+              : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
+          }`}
+        >
+          <Highlighter size={13} />
+        </button>
+      </div>
+
+      {/* Entries */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar px-4 py-2">
+        <table className="w-full text-sm">
+          <tbody>
+            {glossary.map((entry, i) => (
+              <tr key={entry.id ?? i} className="border-b border-editorial-border/40 last:border-0">
+                <td className="py-2 pr-3 font-medium text-editorial-ink">{entry.term}</td>
+                <td className="py-2 text-editorial-muted/60">→</td>
+                <td className="py-2 pl-3 text-editorial-ink">{entry.translation}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 }

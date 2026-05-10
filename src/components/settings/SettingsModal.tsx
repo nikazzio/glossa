@@ -21,6 +21,10 @@ export function SettingsModal() {
     setOllamaStatus,
     documentLayout,
     setDocumentLayout,
+    defaultMinWords,
+    defaultMaxWords,
+    setDefaultMinWords,
+    setDefaultMaxWords,
   } = useUiStore();
   const { t } = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
@@ -80,6 +84,50 @@ export function SettingsModal() {
             <h2 id="settings-title" className="font-display text-3xl italic tracking-tight mb-12">{t('settings.title')}</h2>
 
             <div className="space-y-12">
+              {/* Segmentation defaults */}
+              <div className="space-y-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
+                  {t('settings.segmentation')}
+                </p>
+                <p className="text-xs text-editorial-muted leading-relaxed">
+                  {t('settings.segmentationHint')}
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted">
+                      {t('settings.defaultMinWords')}
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      step={50}
+                      value={defaultMinWords}
+                      onChange={(e) => setDefaultMinWords(Number(e.target.value) || 0)}
+                      className="w-full rounded-2xl border border-editorial-border bg-editorial-bg px-4 py-3 text-sm font-mono outline-none focus:border-editorial-ink/40"
+                    />
+                    <p className="text-[10px] leading-relaxed text-editorial-muted">
+                      {t('settings.defaultMinWordsHint')}
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted">
+                      {t('settings.defaultMaxWords')}
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      step={50}
+                      value={defaultMaxWords}
+                      onChange={(e) => setDefaultMaxWords(Number(e.target.value) || 0)}
+                      className="w-full rounded-2xl border border-editorial-border bg-editorial-bg px-4 py-3 text-sm font-mono outline-none focus:border-editorial-ink/40"
+                    />
+                    <p className="text-[10px] leading-relaxed text-editorial-muted">
+                      {t('settings.defaultMaxWordsHint')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               {/* Layout lettura */}
               <div className="space-y-4">
                 <p id="reader-layout-label" className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
@@ -148,7 +196,7 @@ export function SettingsModal() {
                       </span>
                       <div className="flex flex-wrap gap-2">
                         {ollamaModels.map((m) => (
-                          <span key={m} className="px-2 py-1 bg-editorial-bg border border-editorial-border text-[10px] font-mono">
+                          <span key={m} className="px-2 py-1 bg-editorial-bg border border-editorial-border text-xs font-mono">
                             {m}
                           </span>
                         ))}
@@ -191,7 +239,7 @@ export function SettingsModal() {
                   <div className="space-y-3">
                     <p className="text-[10px] text-editorial-muted italic">{t('cost.overrideHint')}</p>
                     <div className="border border-editorial-border overflow-x-auto">
-                      <table className="w-full text-[11px] font-mono">
+                      <table className="w-full text-xs font-mono">
                         <thead>
                           <tr className="border-b border-editorial-border bg-editorial-textbox/30">
                             <th className="text-left px-3 py-2 font-bold uppercase tracking-widest text-editorial-muted">Model</th>

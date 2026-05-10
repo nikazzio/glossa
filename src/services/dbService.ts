@@ -238,6 +238,20 @@ export async function initDatabase(): Promise<void> {
     console.warn('[Glossa] Legacy glossary rename migration failed', error);
   }
 
+  // Migration: rimuovi glossari fantasma auto-creati per progetto (senza voci)
+  // Questi erano creati automaticamente da saveProjectGlossary ad ogni salvataggio.
+  try {
+    await conn.execute(`
+      DELETE FROM glossaries
+      WHERE id GLOB 'glossary-proj-*'
+        AND NOT EXISTS (
+          SELECT 1 FROM glossary_entries WHERE glossary_id = glossaries.id
+        )
+    `);
+  } catch (error) {
+    console.warn('[Glossa] Ghost glossary cleanup migration failed', error);
+  }
+
   console.log('[Glossa] Database initialized');
 }
 

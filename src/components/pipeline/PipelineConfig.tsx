@@ -262,9 +262,6 @@ export function PipelineConfig({
     addStage,
     removeStage,
     updateStage,
-    addGlossaryEntry,
-    updateGlossaryEntry,
-    removeGlossaryEntry,
   } = usePipelineStore();
   const { chunks, isProcessing, cancelRequested, resetCompletedChunks } = useChunksStore();
   const ollamaStatus = useUiStore((state) => state.ollamaStatus);
@@ -314,23 +311,6 @@ export function PipelineConfig({
     () => estimatePipelineCost(chunks, config, pricingOverrides),
     [chunks, config, pricingOverrides],
   );
-
-  const duplicateTermIds = useMemo(() => {
-    const seen = new Map<string, string>();
-    const dupes = new Set<string>();
-    for (const entry of config.glossary) {
-      const key = entry.term.trim().toLowerCase();
-      if (!key) continue;
-      const existing = seen.get(key);
-      if (existing) {
-        dupes.add(existing);
-        if (entry.id) dupes.add(entry.id);
-      } else if (entry.id) {
-        seen.set(key, entry.id);
-      }
-    }
-    return dupes;
-  }, [config.glossary]);
 
   const handleRefineJudgePrompt = async () => {
     if (!config.judgePrompt.trim()) return;
@@ -688,93 +668,13 @@ export function PipelineConfig({
             aria-labelledby="pconfig-tab-glossary"
             className="space-y-6"
           >
-            <div className="flex items-center justify-between">
-              <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-                {t('pipeline.tabGlossary')}
-              </p>
-              {!libraryGlossarySection && (
-                <button
-                  type="button"
-                  onClick={addGlossaryEntry}
-                  title={t('pipeline.addGlossaryEntry')}
-                  className="rounded-full border border-editorial-accent/40 p-2 text-editorial-accent transition-colors hover:bg-editorial-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  aria-label={t('pipeline.addGlossaryEntry')}
-                >
-                  <Plus size={14} />
-                </button>
-              )}
-            </div>
             {libraryGlossarySection ?? (
-              <>
-                {config.glossary.length === 0 ? (
-                  <p className="text-sm text-editorial-muted/60 text-center py-4 border border-dashed border-editorial-border/60 rounded-[16px]">
-                    {t('pipeline.glossaryEmpty')}
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {config.glossary.map((g, i) => {
-                      const rowKey = g.id ?? `gloss-fallback-${i}`;
-                      const isDuplicate = g.id ? duplicateTermIds.has(g.id) : false;
-                      const removeLabel = `${t('pipeline.removeGlossaryEntry')} ${i + 1}`;
-                      return (
-                        <div
-                          key={rowKey}
-                          className={`rounded-[14px] border p-3 space-y-2 ${
-                            isDuplicate
-                              ? 'border-editorial-warning/60 bg-editorial-textbox/20'
-                              : 'border-editorial-border/40 bg-editorial-textbox/20'
-                          }`}
-                        >
-                          <div className="flex gap-2 items-center">
-                            <input
-                              value={g.term}
-                              onChange={(e) =>
-                                g.id ? updateGlossaryEntry(g.id, { term: e.target.value }) : undefined
-                              }
-                              className="w-full rounded-[10px] border border-editorial-border/40 bg-transparent px-2 py-2 text-sm font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent focus:border-editorial-accent/60"
-                              placeholder={t('pipeline.source')}
-                              aria-label={`${t('pipeline.source')} ${i + 1}`}
-                            />
-                            <input
-                              value={g.translation}
-                              onChange={(e) =>
-                                g.id
-                                  ? updateGlossaryEntry(g.id, { translation: e.target.value })
-                                  : undefined
-                              }
-                              className="w-full rounded-[10px] border border-editorial-border/40 bg-transparent px-2 py-2 text-sm font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent focus:border-editorial-accent/60"
-                              placeholder={t('pipeline.target')}
-                              aria-label={`${t('pipeline.target')} ${i + 1}`}
-                            />
-                            <button
-                              onClick={() => g.id && removeGlossaryEntry(g.id)}
-                              title={removeLabel}
-                              className="ml-auto shrink-0 p-1 text-editorial-muted/60 hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
-                              aria-label={removeLabel}
-                            >
-                              <X size={14} />
-                            </button>
-                          </div>
-                          <input
-                            value={g.notes ?? ''}
-                            onChange={(e) =>
-                              g.id ? updateGlossaryEntry(g.id, { notes: e.target.value }) : undefined
-                            }
-                            className="w-full rounded-[10px] border border-editorial-border/30 bg-transparent px-2 py-1.5 text-sm font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent focus:border-editorial-accent/60 text-editorial-muted placeholder:text-editorial-muted/40"
-                            placeholder={t('pipeline.glossaryNotes')}
-                            aria-label={`${t('pipeline.glossaryNotes')} ${i + 1}`}
-                          />
-                          {isDuplicate && (
-                            <span className="text-xs uppercase tracking-widest text-editorial-warning font-bold pl-1">
-                              {t('pipeline.duplicateTerm')}
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </>
+              <div className="flex flex-col items-center gap-3 rounded-[20px] border border-dashed border-editorial-border/60 px-6 py-10 text-center">
+                <BookOpen size={20} className="text-editorial-muted/40" />
+                <p className="text-sm text-editorial-muted/70">
+                  {t('pipeline.glossaryOpenProject')}
+                </p>
+              </div>
             )}
           </div>
         )}
