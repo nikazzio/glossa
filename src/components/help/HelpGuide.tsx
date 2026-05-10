@@ -11,6 +11,7 @@ import {
 import { appLogDir } from '@tauri-apps/api/path';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface HelpGuideProps {
@@ -499,12 +500,17 @@ function TroubleshootingSection() {
     appLogDir().then(setLogPath).catch(() => setLogPath(null));
   }, []);
 
-  const handleCopy = () => {
+  const handleCopy = async () => {
     if (!logPath) return;
-    navigator.clipboard.writeText(logPath).then(() => {
+    try {
+      await navigator.clipboard.writeText(logPath);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    });
+    } catch (err) {
+      toast.error(t('pipeline.copyFailed'), {
+        description: err instanceof Error ? err.message : undefined,
+      });
+    }
   };
 
   return (
@@ -521,6 +527,8 @@ function TroubleshootingSection() {
           onClick={handleCopy}
           disabled={!logPath}
           title={t('common.copy')}
+          aria-label={copied ? t('pipeline.copied') : t('common.copy')}
+          aria-live="polite"
           className="shrink-0 rounded-lg border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-30"
         >
           {copied ? <Check size={13} /> : <Copy size={13} />}
@@ -530,7 +538,7 @@ function TroubleshootingSection() {
       <SubTitle>{t('help.troubleshooting.rustLogTitle')}</SubTitle>
       <P>{t('help.troubleshooting.rustLogDesc')}</P>
       <div className="rounded-xl border border-editorial-border bg-editorial-textbox/20 px-4 py-3 font-mono text-xs text-editorial-ink/80">
-        RUST_LOG=debug ./glossa
+        RUST_LOG=debug
       </div>
     </>
   );

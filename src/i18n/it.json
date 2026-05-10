@@ -641,8 +641,8 @@
     "troubleshooting": {
       "title": "Risoluzione problemi",
       "desc": "Questa sezione contiene informazioni utili per diagnosticare problemi e inviare segnalazioni di bug.",
-      "logFileTitle": "Posizione del file di log",
-      "logFileDesc": "Glossa scrive un log strutturato su disco. Allega il file di log quando segnali un problema.",
+      "logFileTitle": "Directory dei log",
+      "logFileDesc": "Glossa scrive un log strutturato di nome \"glossa\" in questa directory. Allegalo quando segnali un problema.",
       "rustLogTitle": "Log dettagliato",
       "rustLogDesc": "Imposta la variabile d'ambiente RUST_LOG per sovrascrivere il livello di log predefinito a runtime:"
     }

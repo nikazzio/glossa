@@ -2403,9 +2403,14 @@ pub async fn judge_translation(
 
     let sanitized = sanitize_llm_json_output(&result_text);
     let parsed: serde_json::Value = serde_json::from_str(sanitized).map_err(|e| {
-        let preview: String = result_text.chars().take(500).collect();
-        let truncated = if result_text.chars().nth(500).is_some() { "…" } else { "" };
-        log::warn!("Failed to parse judge JSON: {e}. Preview: {preview}{truncated}");
+        #[cfg(debug_assertions)]
+        {
+            let preview: String = result_text.chars().take(500).collect();
+            let truncated = if result_text.chars().nth(500).is_some() { "…" } else { "" };
+            log::warn!("Failed to parse judge JSON: {e}. Preview: {preview}{truncated}");
+        }
+        #[cfg(not(debug_assertions))]
+        log::warn!("Failed to parse judge JSON: {e}");
         format!("Failed to parse judge JSON: {e}")
     })?;
 
