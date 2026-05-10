@@ -481,7 +481,8 @@
       "ollama": "Ollama",
       "glossary": "Glossario",
       "library": "Libreria",
-      "shortcuts": "Interfaccia"
+      "shortcuts": "Interfaccia",
+      "troubleshooting": "Risoluzione problemi"
     },
     "overview": {
       "title": "Cos'è Glossa?",
@@ -636,6 +637,14 @@
       "refineButton": "Bacchetta — rifinisce il prompt con l'IA",
       "saveTemplate": "Segnalibro (+) — salva il prompt come template",
       "loadTemplate": "Libro aperto — carica un template salvato"
+    },
+    "troubleshooting": {
+      "title": "Risoluzione problemi",
+      "desc": "Questa sezione contiene informazioni utili per diagnosticare problemi e inviare segnalazioni di bug.",
+      "logFileTitle": "Posizione del file di log",
+      "logFileDesc": "Glossa scrive un log strutturato su disco. Allega il file di log quando segnali un problema.",
+      "rustLogTitle": "Log dettagliato",
+      "rustLogDesc": "Imposta la variabile d'ambiente RUST_LOG per sovrascrivere il livello di log predefinito a runtime:"
     }
   },
   "library": {
