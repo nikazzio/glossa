@@ -3630,8 +3630,8 @@ mod tests {
         let rating = parse_judge_rating(&parsed);
         let issues: Vec<JudgeIssue> = parsed["issues"]
             .as_array()
-            .unwrap_or(&vec![])
-            .iter()
+            .into_iter()
+            .flatten()
             .filter_map(|v| {
                 Some(JudgeIssue {
                     issue_type: v["type"].as_str()?.to_string(),
