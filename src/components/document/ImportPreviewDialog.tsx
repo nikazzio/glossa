@@ -291,7 +291,7 @@ function SegmentEditor({
           : 'border-editorial-accent/50 bg-editorial-accent/10';
 
         return (
-          <div key={chunkIdx}>
+          <div key={chunkStart}>
             {/* Inter-chunk boundary divider (between chunks, not before first) */}
             {chunkIdx > 0 && (
               <div className="group relative flex items-center gap-3 py-2">
@@ -339,7 +339,7 @@ function SegmentEditor({
                 const gapIdx = chunkStart + localIdx + 1;
 
                 return (
-                  <div key={localIdx}>
+                  <div key={chunkStart + localIdx}>
                     {/* Paragraph block */}
                     <div
                       className="group relative py-2 text-base leading-7 text-editorial-ink"
@@ -803,30 +803,33 @@ export function ImportPreviewDialog({
         <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 custom-scrollbar">
           {editorMode === 'cards' ? (
             <div className="flex flex-col gap-0">
-              {activeParaChunks.map((paras, i) => (
-                <div key={i}>
-                  <ChunkCard
-                    paras={paras}
-                    index={i}
-                    total={activeParaChunks.length}
-                    minWords={minWords}
-                    maxWords={maxWords}
-                    isExpanded={expandedChunks.has(i)}
-                    onToggleExpand={() => toggleExpanded(i)}
-                    onSplit={() => splitChunkAtMid(i)}
-                    canSplit={paras.length >= 2}
-                  />
-                  {i < activeParaChunks.length - 1 && (
-                    <BoundaryDivider
-                      onGive={() => giveLastParagraph(i)}
-                      onTake={() => takeFirstParagraph(i)}
-                      onMerge={() => mergeChunks(i)}
-                      canGive={paras.length >= 2}
-                      canTake={activeParaChunks[i + 1].length >= 2}
+              {activeParaChunks.map((paras, i) => {
+                const chunkStart = activeParaChunks.slice(0, i).reduce((sum, c) => sum + c.length, 0);
+                return (
+                  <div key={chunkStart}>
+                    <ChunkCard
+                      paras={paras}
+                      index={i}
+                      total={activeParaChunks.length}
+                      minWords={minWords}
+                      maxWords={maxWords}
+                      isExpanded={expandedChunks.has(i)}
+                      onToggleExpand={() => toggleExpanded(i)}
+                      onSplit={() => splitChunkAtMid(i)}
+                      canSplit={paras.length >= 2}
                     />
-                  )}
-                </div>
-              ))}
+                    {i < activeParaChunks.length - 1 && (
+                      <BoundaryDivider
+                        onGive={() => giveLastParagraph(i)}
+                        onTake={() => takeFirstParagraph(i)}
+                        onMerge={() => mergeChunks(i)}
+                        canGive={paras.length >= 2}
+                        canTake={activeParaChunks[i + 1].length >= 2}
+                      />
+                    )}
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <SegmentEditor

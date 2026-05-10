@@ -6,7 +6,6 @@ import {
   BookText,
   CheckCheck,
   CheckCircle2,
-  ChevronDown,
   Circle,
   Clock,
   Cpu,
@@ -32,7 +31,7 @@ import {
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
-import { type KeyboardEvent, useMemo, useRef, useState } from 'react';
+import { type KeyboardEvent, useEffect, useMemo, useRef } from 'react';
 import { useUiStore, type InsightsDrawerTab, type ChunkDrawerTab } from '../../stores/uiStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
@@ -115,6 +114,13 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
   const glossaryHighlightEnabled = useUiStore((state) => state.glossaryHighlightEnabled);
   const setGlossaryHighlightEnabled = useUiStore((state) => state.setGlossaryHighlightEnabled);
   const hasGlossary = !!config.assignedGlossaryId && config.glossary.length > 0;
+
+  // Redirect away from the glossary tab if the glossary is removed.
+  useEffect(() => {
+    if (!hasGlossary && documentDrawerTab === 'glossary') {
+      setDocumentDrawerTab('index');
+    }
+  }, [hasGlossary, documentDrawerTab, setDocumentDrawerTab]);
 
   const docTabButtonRefs = useRef<Partial<Record<InsightsDrawerTab, HTMLButtonElement | null>>>({});
   const chunkTabButtonRefs = useRef<Partial<Record<ChunkDrawerTab, HTMLButtonElement | null>>>({});
