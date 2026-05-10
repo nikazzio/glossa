@@ -51,6 +51,7 @@ interface ChunksState {
       headingAware?: boolean;
       extractFootnotes?: boolean;
     },
+    precomputedChunks?: string[],
   ) => void;
   clearChunks: () => void;
   updateChunkStage: (chunkId: string, stageId: string, result: PipelineResult) => void;
@@ -109,11 +110,26 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
     set({ chunks });
   },
 
-  loadDocument: (text, options = {}) => {
+  loadDocument: (text, options = {}, precomputedChunks) => {
     const sourceDocument = deriveSourceDocumentState(text, options);
     if (!sourceDocument.displayText.trim()) return;
 
-    const chunks = buildChunks(sourceDocument.processingText, options, sourceDocument.footnotes);
+    const chunkTexts = precomputedChunks ?? chunkText(sourceDocument.processingText, options);
+    const chunks = chunkTexts.map((chunkTextValue) => {
+      const footnotes = buildChunkFootnotes(chunkTextValue, sourceDocument.footnotes);
+      return withSyncedChunkFields({
+        id: generateId('chunk'),
+        sourceDisplayText: deriveChunkDisplayText(chunkTextValue, sourceDocument.footnotes),
+        sourceProcessingText: chunkTextValue,
+        translationDisplayText: '',
+        translationProcessingText: '',
+        status: 'ready' as const,
+        stageResults: {},
+        judgeResult: createEmptyJudgeResult(),
+        translationLocked: false,
+        ...(footnotes?.length ? { footnotes } : {}),
+      });
+    });
     const ui = useUiStore.getState();
     usePipelineStore.getState().setSourceDocument({
       displayText: sourceDocument.displayText,

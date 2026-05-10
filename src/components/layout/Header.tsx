@@ -118,7 +118,7 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
     }
   };
 
-  const handleConfirmImport = () => {
+  const handleConfirmImport = (manualChunks?: string[]) => {
     if (!pendingImport) return;
     setConfig((prev) => ({
       ...prev,
@@ -132,15 +132,19 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
       markdownAware: pendingImport.format === 'markdown',
       experimentalImport: pendingImport.experimental ?? null,
     }));
-    loadDocument(pendingImport.text, {
-      useChunking: pendingImport.useChunking,
-      targetChunkCount: pendingImport.targetChunkCount,
-      markdownAware: pendingImport.format === 'markdown',
-      minWords: pendingImport.minWords,
-      maxWords: pendingImport.maxWords,
-      headingAware: pendingImport.headingAware,
-      extractFootnotes: pendingImport.experimental === 'docx-markdown',
-    });
+    loadDocument(
+      pendingImport.text,
+      {
+        useChunking: pendingImport.useChunking,
+        targetChunkCount: pendingImport.targetChunkCount,
+        markdownAware: pendingImport.format === 'markdown',
+        minWords: pendingImport.minWords,
+        maxWords: pendingImport.maxWords,
+        headingAware: pendingImport.headingAware,
+        extractFootnotes: pendingImport.experimental === 'docx-markdown',
+      },
+      manualChunks,
+    );
     setPendingImport(null);
     toast.success(t('files.imported'));
   };
