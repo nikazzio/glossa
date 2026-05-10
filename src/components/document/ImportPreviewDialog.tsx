@@ -119,9 +119,9 @@ function ChunkCard({
   const isLong = text.length > COLLAPSE_CHAR_THRESHOLD;
 
   const anomalyTitle = tooShort
-    ? `${words}w — sotto il minimo (${minWords}w)`
+    ? t('files.chunkTooShort', { words, min: minWords })
     : tooLong
-    ? `${words}w — sopra il massimo (${maxWords}w)`
+    ? t('files.chunkTooLong', { words, max: maxWords })
     : '';
 
   return (
@@ -278,9 +278,9 @@ function SegmentEditor({
         const chunkStart = chunkStarts[chunkIdx];
 
         const anomalyTitle = tooShort
-          ? `${chunkWords}w — sotto il minimo (${minWords}w)`
+          ? t('files.chunkTooShort', { words: chunkWords, min: minWords })
           : tooLong
-          ? `${chunkWords}w — sopra il massimo (${maxWords}w)`
+          ? t('files.chunkTooLong', { words: chunkWords, max: maxWords })
           : '';
 
         const accentLine = anomaly ? 'bg-editorial-warning/70' : 'bg-editorial-accent/60';
@@ -361,14 +361,13 @@ function SegmentEditor({
 
                     {/* Intra-chunk gap — click to add a chunk boundary here */}
                     {localIdx < paras.length - 1 && (
-                      <div
-                        className="group relative flex cursor-pointer items-center gap-2 py-0.5"
+                      <button
+                        type="button"
+                        className="group relative flex w-full cursor-pointer items-center gap-2 py-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                         onMouseEnter={() => setHoveredGap(gapIdx)}
                         onMouseLeave={() => setHoveredGap(null)}
                         onClick={() => onAddBoundary(gapIdx)}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(e) => e.key === 'Enter' && onAddBoundary(gapIdx)}
+                        aria-label={t('files.boundaryAddHere')}
                         title={t('files.boundaryAddHere')}
                       >
                         <div className="h-px flex-1 bg-editorial-border/60 transition-colors group-hover:bg-editorial-border" />
@@ -376,7 +375,7 @@ function SegmentEditor({
                           +
                         </div>
                         <div className="h-px flex-1 bg-editorial-border/60 transition-colors group-hover:bg-editorial-border" />
-                      </div>
+                      </button>
                     )}
                   </div>
                 );
@@ -538,7 +537,7 @@ export function ImportPreviewDialog({
     });
   }, [modifyChunks]);
 
-  const splitChunkAtMid = useCallback((i: number, paraChunks: ParagraphChunks) => {
+  const splitChunkAtMid = useCallback((i: number) => {
     modifyChunks((chunks) => {
       const paras = chunks[i];
       if (paras.length < 2) return chunks;
@@ -814,7 +813,7 @@ export function ImportPreviewDialog({
                     maxWords={maxWords}
                     isExpanded={expandedChunks.has(i)}
                     onToggleExpand={() => toggleExpanded(i)}
-                    onSplit={() => splitChunkAtMid(i, activeParaChunks)}
+                    onSplit={() => splitChunkAtMid(i)}
                     canSplit={paras.length >= 2}
                   />
                   {i < activeParaChunks.length - 1 && (

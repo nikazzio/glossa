@@ -333,6 +333,8 @@
     "boundarySplit": "Split at midpoint",
     "recalculate": "Recalculate",
     "recalculateHint": "Recalculate from current settings (discards manual edits)",
+    "chunkTooShort": "{{words}}w — below minimum ({{min}}w)",
+    "chunkTooLong": "{{words}}w — above maximum ({{max}}w)",
     "manualEditsActive": "Manual edits active",
     "expandChunk": "Show full text",
     "collapseChunk": "Collapse",

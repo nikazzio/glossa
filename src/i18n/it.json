@@ -333,6 +333,8 @@
     "boundarySplit": "Spezza al centro",
     "recalculate": "Ricalcola",
     "recalculateHint": "Ricalcola in base alle impostazioni correnti (rimuove le modifiche manuali)",
+    "chunkTooShort": "{{words}}w — sotto il minimo ({{min}}w)",
+    "chunkTooLong": "{{words}}w — sopra il massimo ({{max}}w)",
     "manualEditsActive": "Modifiche manuali attive",
     "expandChunk": "Mostra testo completo",
     "collapseChunk": "Comprimi",
