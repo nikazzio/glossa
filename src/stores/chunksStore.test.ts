@@ -412,5 +412,60 @@ describe('chunksStore', () => {
       flushPendingTokenBatch();
       expect(useChunksStore.getState().chunks[0]).toBe(before);
     });
+
+    it('updateChunkStage drops the pending batch for the same stage to prevent token duplication', () => {
+      usePipelineStore.getState().setInputText('Test paragraph.');
+      useChunksStore.getState().generateChunks();
+
+      const chunkId = useChunksStore.getState().chunks[0]!.id;
+
+      // Simulate tokens arriving during streaming
+      useChunksStore.getState().appendChunkStageContent(chunkId, 'stg-1', 'Hello ');
+      useChunksStore.getState().appendChunkStageContent(chunkId, 'stg-1', 'world');
+
+      // Pipeline writes the final result before the RAF fires
+      useChunksStore.getState().updateChunkStage(chunkId, 'stg-1', { content: 'Hello world', status: 'completed' });
+
+      // RAF flush would have appended buffered tokens — with the fix they are dropped
+      flushPendingTokenBatch();
+
+      const chunk = useChunksStore.getState().chunks[0];
+      expect(chunk?.stageResults['stg-1']?.content).toBe('Hello world');
+      expect(chunk?.stageResults['stg-1']?.status).toBe('completed');
+    });
+
+    it('updateChunkStage for a different stage does not drop the pending batch', () => {
+      usePipelineStore.getState().setInputText('Test paragraph.');
+      useChunksStore.getState().generateChunks();
+
+      const chunkId = useChunksStore.getState().chunks[0]!.id;
+
+      useChunksStore.getState().appendChunkStageContent(chunkId, 'stg-2', 'Pending');
+      // Writing a different stage should not discard stg-2 tokens
+      useChunksStore.getState().updateChunkStage(chunkId, 'stg-1', { content: 'Done', status: 'completed' });
+      flushPendingTokenBatch();
+
+      const chunk = useChunksStore.getState().chunks[0];
+      expect(chunk?.stageResults['stg-1']?.content).toBe('Done');
+      expect(chunk?.stageResults['stg-2']?.content).toBe('Pending');
+    });
+
+    it('clearChunkStages drops the pending batch to prevent re-adding cleared content', () => {
+      usePipelineStore.getState().setInputText('Test paragraph.');
+      useChunksStore.getState().generateChunks();
+
+      const chunkId = useChunksStore.getState().chunks[0]!.id;
+
+      useChunksStore.getState().appendChunkStageContent(chunkId, 'stg-1', 'Stale token');
+
+      // Pipeline resets the chunk before the RAF fires
+      useChunksStore.getState().clearChunkStages(chunkId);
+
+      // RAF flush would have re-added the cleared stage — with the fix it is a no-op
+      flushPendingTokenBatch();
+
+      const chunk = useChunksStore.getState().chunks[0];
+      expect(chunk?.stageResults).toEqual({});
+    });
   });
 });

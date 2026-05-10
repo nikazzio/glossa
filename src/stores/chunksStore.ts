@@ -37,7 +37,8 @@ function rebuildIndex(chunks: TranslationChunk[]): void {
   chunkIndex = new Map(chunks.map((c, i) => [c.id, i]));
 }
 
-// O(1) id lookup + single-slot array copy instead of a full O(n) scan + map.
+// O(1) id lookup. Produces a new array with only the target slot replaced
+// (vs .map() which allocates n new objects regardless of which one matched).
 function updateSingleChunk(
   chunks: TranslationChunk[],
   chunkId: string,
@@ -57,13 +58,36 @@ type TokenBatch = { chunkId: string; stageId: string; content: string };
 let pendingBatch: TokenBatch | null = null;
 let rafHandle: ReturnType<typeof requestAnimationFrame> | null = null;
 
-// Exported so tests can flush synchronously without needing RAF stubs.
-// Also cancels any in-flight RAF handle to prevent double-application after a manual flush.
-export function flushPendingTokenBatch(): void {
+function cancelRaf(): void {
   if (rafHandle !== null) {
     cancelAnimationFrame(rafHandle);
     rafHandle = null;
   }
+}
+
+// Drop buffered tokens for a specific (chunkId, stageId) pair without applying them.
+// Called by updateChunkStage before writing a final result to prevent stale tokens
+// from being appended on the next RAF flush after the stage is already complete.
+function dropPendingBatch(chunkId: string, stageId: string): void {
+  if (pendingBatch?.chunkId === chunkId && pendingBatch?.stageId === stageId) {
+    cancelRaf();
+    pendingBatch = null;
+  }
+}
+
+// Drop any buffered tokens for a chunk, regardless of stage.
+// Called by clearChunkStages to prevent a pending flush from re-adding cleared content.
+function dropPendingBatchForChunk(chunkId: string): void {
+  if (pendingBatch?.chunkId === chunkId) {
+    cancelRaf();
+    pendingBatch = null;
+  }
+}
+
+// Exported so tests can flush synchronously without needing RAF stubs.
+// Also cancels any in-flight RAF handle to prevent double-application after a manual flush.
+export function flushPendingTokenBatch(): void {
+  cancelRaf();
   if (!pendingBatch) return;
   const { chunkId, stageId, content } = pendingBatch;
   pendingBatch = null;
@@ -189,13 +213,17 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
     set({ chunks: [] });
   },
 
-  updateChunkStage: (chunkId, stageId, result) =>
+  updateChunkStage: (chunkId, stageId, result) => {
+    // Drop any buffered tokens for this stage before writing the final result.
+    // Without this, the next RAF flush would append stale tokens onto the completed content.
+    dropPendingBatch(chunkId, stageId);
     set((state) => ({
       chunks: updateSingleChunk(state.chunks, chunkId, (chunk) => ({
         ...chunk,
         stageResults: { ...chunk.stageResults, [stageId]: result },
       })),
-    })),
+    }));
+  },
 
   // Buffers tokens per animation frame instead of committing on every token.
   // If the active (chunkId, stageId) pair changes, the previous batch is flushed immediately.
@@ -339,13 +367,17 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
       ),
     })),
 
-  clearChunkStages: (chunkId) =>
+  clearChunkStages: (chunkId) => {
+    // Drop any pending tokens for this chunk before clearing stages.
+    // Without this, the next RAF flush would re-add stageResults after the clear.
+    dropPendingBatchForChunk(chunkId);
     set((state) => ({
       chunks: updateSingleChunk(state.chunks, chunkId, (chunk) => ({
         ...chunk,
         stageResults: {},
       })),
-    })),
+    }));
+  },
 
 }));
 
@@ -481,10 +513,11 @@ function syncSelectedChunk(chunks: TranslationChunk[], preferredId?: string | nu
   ui.setSelectedChunkId(chunks[0]?.id ?? null);
 }
 
-// Keep chunkIndex in sync with any chunks change — including direct setState calls from tests.
-// Zustand subscribe callbacks fire synchronously after each committed state update,
-// so chunkIndex is always consistent before the next setState setter reads it.
+// Keep chunkIndex in sync with any chunks structural change (add/remove/replace).
+// Fires synchronously after every committed setState, covering both action-dispatched
+// updates and direct setState calls in tests.
+// Per-id slot replacements preserve array length and IDs, so no rebuild is needed for them.
 // This subscription is intentionally never unsubscribed: the store is a module-level singleton.
 useChunksStore.subscribe((state, prev) => {
-  if (state.chunks !== prev.chunks) rebuildIndex(state.chunks);
+  if (state.chunks.length !== prev.chunks.length) rebuildIndex(state.chunks);
 });
