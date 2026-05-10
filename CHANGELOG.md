@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.6.2](https://github.com/nikazzio/glossa/compare/glossa-v0.6.1...glossa-v0.6.2) (2026-05-10)
+
+
+### 🐛 Bug Fixes
+
+* debounce glossary highlight to prevent typing lag (issue [#81](https://github.com/nikazzio/glossa/issues/81)) ([#113](https://github.com/nikazzio/glossa/issues/113)) ([7912035](https://github.com/nikazzio/glossa/commit/79120353b3f563546182ee878fb8461e000cc632))
+* structured file logging with rotation and RUST_LOG override ([#114](https://github.com/nikazzio/glossa/issues/114)) ([26f077c](https://github.com/nikazzio/glossa/commit/26f077c3a4f22239f65e8dc9f30e476b0786c4dd))
+* UI improvements and bug fixes (issue [#111](https://github.com/nikazzio/glossa/issues/111)) ([#112](https://github.com/nikazzio/glossa/issues/112)) ([a8ae940](https://github.com/nikazzio/glossa/commit/a8ae9401ac1b1006156ab150055fb83a9af64eff))
+
+
+### ⚡ Performance
+
+* O(1) chunk index + RAF token batching (issue [#101](https://github.com/nikazzio/glossa/issues/101)) ([#117](https://github.com/nikazzio/glossa/issues/117)) ([e9966b7](https://github.com/nikazzio/glossa/commit/e9966b74eaa59c277f1633e2f07f258e429646cb))
+
 ## [0.6.1](https://github.com/nikazzio/glossa/compare/glossa-v0.6.0...glossa-v0.6.1) (2026-05-09)
 
 
