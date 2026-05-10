@@ -36,7 +36,8 @@ describe('chunksStore', () => {
       ollamaStatus: 'unknown',
     });
 
-    // Flush any pending token batch for a clean slate between tests.
+    // Reset the module-level RAF batch state (pendingBatch + rafHandle).
+    // This must be called explicitly because the Zustand subscribe only resets chunkIndex.
     flushPendingTokenBatch();
   });
 
@@ -344,13 +345,29 @@ describe('chunksStore', () => {
       const chunkId = useChunksStore.getState().chunks[0]!.id;
 
       useChunksStore.getState().appendChunkStageContent(chunkId, 'stg-1', 'Alpha');
-      // Different stageId — triggers immediate flush of stg-1 batch
+      // Different stageId — triggers immediate flush of stg-1 batch before stg-2 starts
       useChunksStore.getState().appendChunkStageContent(chunkId, 'stg-2', 'Beta');
       flushPendingTokenBatch();
 
       const chunk = useChunksStore.getState().chunks[0];
       expect(chunk?.stageResults['stg-1']?.content).toBe('Alpha');
       expect(chunk?.stageResults['stg-2']?.content).toBe('Beta');
+    });
+
+    it('flushes the previous batch immediately when the chunkId changes', () => {
+      usePipelineStore.getState().setInputText('A.\n\nB.');
+      useChunksStore.getState().generateChunks();
+
+      const [chunkA, chunkB] = useChunksStore.getState().chunks;
+
+      useChunksStore.getState().appendChunkStageContent(chunkA!.id, 'stg-1', 'TokenA');
+      // Different chunkId — triggers immediate flush of chunkA's batch before chunkB starts
+      useChunksStore.getState().appendChunkStageContent(chunkB!.id, 'stg-1', 'TokenB');
+      flushPendingTokenBatch();
+
+      const chunks = useChunksStore.getState().chunks;
+      expect(chunks[0]?.stageResults['stg-1']?.content).toBe('TokenA');
+      expect(chunks[1]?.stageResults['stg-1']?.content).toBe('TokenB');
     });
 
     it('appends to existing stage content on subsequent flushes', () => {
@@ -370,6 +387,8 @@ describe('chunksStore', () => {
     });
 
     it('leaves sibling chunks untouched during token streaming', () => {
+      // The immutability guarantee lives in flushPendingTokenBatch (via updateSingleChunk),
+      // so we verify sibling references after an explicit flush.
       usePipelineStore.getState().setInputText('A.\n\nB.\n\nC.');
       useChunksStore.getState().generateChunks();
 

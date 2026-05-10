@@ -46,7 +46,7 @@ function updateSingleChunk(
   const idx = chunkIndex.get(chunkId);
   if (idx === undefined) return chunks;
   const next = [...chunks];
-  next[idx] = updater(next[idx]);
+  next[idx] = updater(next[idx]!); // safe: idx mirrors the live chunks array via subscribe
   return next;
 }
 
@@ -269,8 +269,10 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
 
   splitChunk: (chunkId) =>
     set((state) => {
-      const chunk = state.chunks[chunkIndex.get(chunkId) ?? -1];
-      const splitAt = findBestSplitIndex(chunk?.sourceProcessingText ?? '', {
+      const chunkIdx = chunkIndex.get(chunkId);
+      if (chunkIdx === undefined) return {};
+      const chunk = state.chunks[chunkIdx]!;
+      const splitAt = findBestSplitIndex(chunk.sourceProcessingText, {
         markdownAware: usePipelineStore.getState().config.markdownAware,
       });
       if (!splitAt) return {};
@@ -480,7 +482,9 @@ function syncSelectedChunk(chunks: TranslationChunk[], preferredId?: string | nu
 }
 
 // Keep chunkIndex in sync with any chunks change — including direct setState calls from tests.
-// Zustand subscribe callbacks fire synchronously after each state update.
+// Zustand subscribe callbacks fire synchronously after each committed state update,
+// so chunkIndex is always consistent before the next setState setter reads it.
+// This subscription is intentionally never unsubscribed: the store is a module-level singleton.
 useChunksStore.subscribe((state, prev) => {
   if (state.chunks !== prev.chunks) rebuildIndex(state.chunks);
 });
