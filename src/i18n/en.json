@@ -481,7 +481,8 @@
       "ollama": "Ollama",
       "glossary": "Glossary",
       "library": "Library",
-      "shortcuts": "Interface"
+      "shortcuts": "Interface",
+      "troubleshooting": "Troubleshooting"
     },
     "overview": {
       "title": "What is Glossa?",
@@ -636,6 +637,14 @@
       "refineButton": "Wand — AI-rewrites the prompt",
       "saveTemplate": "Bookmark (+) — save prompt as template",
       "loadTemplate": "Open book — load a saved template"
+    },
+    "troubleshooting": {
+      "title": "Troubleshooting",
+      "desc": "This section provides information useful for diagnosing problems and reporting bugs.",
+      "logFileTitle": "Log directory",
+      "logFileDesc": "Glossa writes a structured log named \"glossa\" in this directory. Attach it when reporting issues.",
+      "rustLogTitle": "Verbose logging",
+      "rustLogDesc": "Set the RUST_LOG environment variable to override the default log level at runtime:"
     }
   },
   "library": {

@@ -37,15 +37,22 @@ pub fn run() {
                     tauri_plugin_log::TargetKind::Webview,
                 ));
             }
-            let log_level = if cfg!(debug_assertions) {
+            let default_level = if cfg!(debug_assertions) {
                 log::LevelFilter::Debug
             } else {
                 log::LevelFilter::Info
             };
+            // Allow RUST_LOG to override the compile-time default at runtime.
+            let log_level = std::env::var("RUST_LOG")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(default_level);
             app.handle().plugin(
                 tauri_plugin_log::Builder::default()
                     .level(log_level)
                     .targets(log_targets)
+                    .max_file_size(5 * 1024 * 1024)
+                    .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepSome(3))
                     .build(),
             )?;
             Ok(())

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   X, ChevronRight,
   FolderOpen, Upload, SlidersHorizontal, Save,
@@ -6,9 +6,12 @@ import {
   LayoutTemplate, PanelRight,
   CheckCheck, PanelTopClose, ScanLine,
   Wand2, BookmarkPlus, BookOpen,
+  Copy, Check,
 } from 'lucide-react';
+import { appLogDir } from '@tauri-apps/api/path';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface HelpGuideProps {
@@ -16,7 +19,7 @@ interface HelpGuideProps {
   onClose: () => void;
 }
 
-type Section = 'overview' | 'pipeline' | 'features' | 'streaming' | 'audit' | 'projects' | 'providers' | 'ollama' | 'glossary' | 'shortcuts';
+type Section = 'overview' | 'pipeline' | 'features' | 'streaming' | 'audit' | 'projects' | 'providers' | 'ollama' | 'glossary' | 'shortcuts' | 'troubleshooting';
 
 export function HelpGuide({ open, onClose }: HelpGuideProps) {
   const [activeSection, setActiveSection] = useState<Section>('overview');
@@ -32,8 +35,9 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
     { id: 'projects',   label: t('help.sections.projects') },
     { id: 'providers',  label: t('help.sections.providers') },
     { id: 'ollama',     label: t('help.sections.ollama') },
-    { id: 'glossary',   label: t('help.sections.library') },
-    { id: 'shortcuts',  label: t('help.sections.shortcuts') },
+    { id: 'glossary',        label: t('help.sections.library') },
+    { id: 'shortcuts',       label: t('help.sections.shortcuts') },
+    { id: 'troubleshooting', label: t('help.sections.troubleshooting') },
   ];
 
   return (
@@ -106,7 +110,8 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
                 {activeSection === 'providers' && <ProvidersSection />}
                 {activeSection === 'ollama'    && <OllamaSection />}
                 {activeSection === 'glossary'  && <GlossarySection />}
-                {activeSection === 'shortcuts' && <ShortcutsSection />}
+                {activeSection === 'shortcuts'       && <ShortcutsSection />}
+                {activeSection === 'troubleshooting' && <TroubleshootingSection />}
               </div>
             </div>
           </motion.div>
@@ -482,6 +487,59 @@ function ShortcutsSection() {
 
       <SubTitle>{t('help.shortcuts.promptToolsTitle')}</SubTitle>
       <div className="my-4">{promptItems.map(renderRow)}</div>
+    </>
+  );
+}
+
+function TroubleshootingSection() {
+  const { t } = useTranslation();
+  const [logPath, setLogPath] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    appLogDir().then(setLogPath).catch(() => setLogPath(null));
+  }, []);
+
+  const handleCopy = async () => {
+    if (!logPath) return;
+    try {
+      await navigator.clipboard.writeText(logPath);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      toast.error(t('pipeline.copyFailed'), {
+        description: err instanceof Error ? err.message : undefined,
+      });
+    }
+  };
+
+  return (
+    <>
+      <SectionTitle>{t('help.troubleshooting.title')}</SectionTitle>
+      <P>{t('help.troubleshooting.desc')}</P>
+
+      <SubTitle>{t('help.troubleshooting.logFileTitle')}</SubTitle>
+      <P>{t('help.troubleshooting.logFileDesc')}</P>
+      <div className="flex items-center gap-2 rounded-xl border border-editorial-border bg-editorial-textbox/20 px-4 py-3 font-mono text-xs text-editorial-ink/80">
+        <span className="flex-1 break-all">{logPath ?? '…'}</span>
+        <button
+          type="button"
+          onClick={handleCopy}
+          disabled={!logPath}
+          title={t('common.copy')}
+          aria-label={copied ? t('pipeline.copied') : t('common.copy')}
+          aria-live="polite"
+          className="shrink-0 rounded-lg border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-30"
+        >
+          {copied ? <Check size={13} /> : <Copy size={13} />}
+        </button>
+      </div>
+
+      <SubTitle>{t('help.troubleshooting.rustLogTitle')}</SubTitle>
+      <P>{t('help.troubleshooting.rustLogDesc')}</P>
+      <div className="rounded-xl border border-editorial-border bg-editorial-textbox/20 px-4 py-3 font-mono text-xs text-editorial-ink/80">
+        RUST_LOG=debug
+      </div>
     </>
   );
 }
