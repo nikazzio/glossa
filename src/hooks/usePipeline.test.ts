@@ -332,4 +332,150 @@ describe('usePipeline', () => {
     expect(llmMocks.runStageStream).not.toHaveBeenCalled();
     expect(toast.error).toHaveBeenCalled();
   });
+
+  it('passes stage 1 output as previousResult to stage 2', async () => {
+    usePipelineStore.setState((state) => ({
+      ...state,
+      config: {
+        ...state.config,
+        stages: [
+          {
+            id: 'stg-1',
+            name: 'Stage 1',
+            prompt: 'Translate',
+            model: 'gemini-3-flash-preview',
+            provider: 'gemini',
+            enabled: true,
+          },
+          {
+            id: 'stg-2',
+            name: 'Stage 2',
+            prompt: 'Refine',
+            model: 'gemini-3-flash-preview',
+            provider: 'gemini',
+            enabled: true,
+          },
+        ],
+      },
+    }));
+
+    llmMocks.runStageStream
+      .mockResolvedValueOnce('Stage 1 output')
+      .mockResolvedValueOnce('Stage 2 output');
+    llmMocks.judgeTranslation.mockResolvedValue({
+      content: '',
+      rating: 'good',
+      issues: [],
+    });
+
+    const { result } = renderHook(() => usePipeline());
+    await act(async () => {
+      await result.current.runSingleChunk('chunk-0');
+    });
+
+    expect(llmMocks.runStageStream).toHaveBeenCalledTimes(2);
+    const stage2Call = llmMocks.runStageStream.mock.calls[1];
+    expect(stage2Call[3]).toBe('Stage 1 output');
+    expect(useChunksStore.getState().chunks[0].currentDraft).toBe('Stage 2 output');
+  });
+
+  it('marks chunk as error and calls toast.error on non-cancellation stage failure', async () => {
+    // Use a config-class error so withRetry gives up immediately (no delay).
+    llmMocks.runStageStream.mockRejectedValueOnce(
+      new Error('API key not configured. Set it in Settings.'),
+    );
+
+    const { result } = renderHook(() => usePipeline());
+    await act(async () => {
+      await result.current.runSingleChunk('chunk-0');
+    });
+
+    expect(useChunksStore.getState().chunks[0].status).toBe('error');
+    expect(toast.error).toHaveBeenCalled();
+  });
+
+  it('calls toast.success when all chunks complete without errors', async () => {
+    llmMocks.runStageStream.mockResolvedValue('translated');
+    llmMocks.judgeTranslation.mockResolvedValue({
+      content: '',
+      rating: 'good',
+      issues: [],
+    });
+
+    const { result } = renderHook(() => usePipeline());
+    await act(async () => {
+      await result.current.runPipeline();
+    });
+
+    expect(toast.success).toHaveBeenCalledWith('errors.pipelineCompleted');
+    expect(useChunksStore.getState().chunks.every((c) => c.status === 'completed')).toBe(true);
+  });
+
+  it('runAuditOnly calls judge for each chunk with a translation draft', async () => {
+    useChunksStore.setState({
+      chunks: [
+        makeTranslationChunk({
+          id: 'chunk-0',
+          originalText: 'First',
+          currentDraft: 'Prima',
+          translationDisplayText: 'Prima',
+          translationProcessingText: 'Prima',
+          status: 'completed',
+          stageResults: {},
+          judgeResult: { content: '', status: 'idle', rating: 'fair', issues: [] },
+        }),
+        makeTranslationChunk({
+          id: 'chunk-1',
+          originalText: 'Second',
+          currentDraft: 'Seconda',
+          translationDisplayText: 'Seconda',
+          translationProcessingText: 'Seconda',
+          status: 'completed',
+          stageResults: {},
+          judgeResult: { content: '', status: 'idle', rating: 'fair', issues: [] },
+        }),
+      ],
+      isProcessing: false,
+      cancelRequested: false,
+      activeStreamId: null,
+    });
+    llmMocks.judgeTranslation.mockResolvedValue({
+      content: '',
+      rating: 'excellent',
+      issues: [],
+    });
+
+    const { result } = renderHook(() => usePipeline());
+    await act(async () => {
+      await result.current.runAuditOnly();
+    });
+
+    expect(llmMocks.judgeTranslation).toHaveBeenCalledTimes(2);
+    expect(toast.success).toHaveBeenCalledWith('errors.reEvalCompleted');
+  });
+
+  it('runAuditOnly skips chunks that have no translation draft', async () => {
+    useChunksStore.setState({
+      chunks: [
+        makeTranslationChunk({
+          id: 'chunk-0',
+          originalText: 'First',
+          currentDraft: '',
+          status: 'ready',
+          stageResults: {},
+          judgeResult: { content: '', status: 'idle', rating: 'fair', issues: [] },
+        }),
+      ],
+      isProcessing: false,
+      cancelRequested: false,
+      activeStreamId: null,
+    });
+
+    const { result } = renderHook(() => usePipeline());
+    await act(async () => {
+      await result.current.runAuditOnly();
+    });
+
+    expect(llmMocks.judgeTranslation).not.toHaveBeenCalled();
+  });
 });

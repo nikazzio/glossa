@@ -2533,6 +2533,8 @@ mod tests {
     use super::*;
     use std::{collections::VecDeque, sync::Mutex as StdMutex};
     use tokio::time::{advance, sleep};
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
 
     struct MockChunkSource {
         chunks: VecDeque<MockChunk>,
@@ -3420,5 +3422,230 @@ mod tests {
         advance(Duration::from_millis(5)).await;
         let result = task.await.expect("task should finish");
         assert_eq!(result.expect("fast header should pass"), "ready");
+    }
+
+    // ── HTTP-level provider tests (wiremock) ─────────────────────────
+
+    #[tokio::test]
+    async fn call_openai_compatible_returns_content_on_success() {
+        let server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .and(path("/chat/completions"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "choices": [{"message": {"content": "Ciao mondo"}}]
+            })))
+            .mount(&server)
+            .await;
+
+        let client = Client::new();
+        let result = call_openai_compatible(
+            &client,
+            &server.uri(),
+            "test-model",
+            "Translate from English to Italian",
+            "Hello world",
+            "test-key",
+            false,
+        )
+        .await;
+
+        assert_eq!(result.unwrap(), "Ciao mondo");
+    }
+
+    #[tokio::test]
+    async fn call_openai_compatible_maps_unauthorized_to_friendly_error() {
+        let server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .and(path("/chat/completions"))
+            .respond_with(ResponseTemplate::new(401).set_body_string("Unauthorized"))
+            .mount(&server)
+            .await;
+
+        let client = Client::new();
+        let result = call_openai_compatible(
+            &client,
+            &server.uri(),
+            "test-model",
+            "system",
+            "user",
+            "bad-key",
+            false,
+        )
+        .await;
+
+        let err = result.unwrap_err();
+        assert!(err.contains("API key not authorized"), "got: {err}");
+    }
+
+    #[tokio::test]
+    async fn call_openai_compatible_maps_rate_limit_to_friendly_error() {
+        let server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .and(path("/chat/completions"))
+            .respond_with(ResponseTemplate::new(429).set_body_string("Rate limited"))
+            .mount(&server)
+            .await;
+
+        let client = Client::new();
+        let result = call_openai_compatible(
+            &client,
+            &server.uri(),
+            "test-model",
+            "system",
+            "user",
+            "key",
+            false,
+        )
+        .await;
+
+        let err = result.unwrap_err();
+        assert!(err.contains("rate limited"), "got: {err}");
+    }
+
+    // ── consume_stream — non-Ollama SSE formats ──────────────────────
+
+    #[tokio::test]
+    async fn consume_stream_openai_sse_multi_token() {
+        let cancel = Arc::new(CancelToken::new());
+        let emitted = Arc::new(StdMutex::new(Vec::new()));
+        let emitted_for_cb = Arc::clone(&emitted);
+        let mut source = MockChunkSource::new(vec![
+            MockChunk::Immediate(Ok(Some(Bytes::from_static(
+                b"data: {\"choices\":[{\"delta\":{\"content\":\"Ciao\"}}]}\n\n",
+            )))),
+            MockChunk::Immediate(Ok(Some(Bytes::from_static(
+                b"data: {\"choices\":[{\"delta\":{\"content\":\" mondo\"}}]}\n\n",
+            )))),
+            MockChunk::Immediate(Ok(Some(Bytes::from_static(b"data: [DONE]\n\n")))),
+            MockChunk::Immediate(Ok(None)),
+        ]);
+
+        let result = consume_stream(
+            "openai",
+            "stream-openai",
+            &cancel,
+            StreamTimeouts {
+                header: Duration::from_millis(100),
+                idle: Duration::from_millis(500),
+                total: Duration::from_millis(5000),
+            },
+            &mut source,
+            |token| emitted_for_cb.lock().expect("poisoned").push(token),
+        )
+        .await;
+
+        assert_eq!(result.unwrap(), "Ciao mondo");
+        let tokens = emitted.lock().expect("poisoned");
+        let content: Vec<&str> = tokens
+            .iter()
+            .filter(|t| !t.done)
+            .map(|t| t.token.as_str())
+            .collect();
+        assert_eq!(content, vec!["Ciao", " mondo"]);
+        assert!(tokens.last().unwrap().done);
+    }
+
+    #[tokio::test]
+    async fn consume_stream_anthropic_sse_multi_block() {
+        let cancel = Arc::new(CancelToken::new());
+        let mut source = MockChunkSource::new(vec![
+            MockChunk::Immediate(Ok(Some(Bytes::from_static(
+                b"data: {\"type\":\"content_block_delta\",\"delta\":{\"type\":\"text_delta\",\"text\":\"Guten\"}}\n\n",
+            )))),
+            MockChunk::Immediate(Ok(Some(Bytes::from_static(
+                b"data: {\"type\":\"content_block_delta\",\"delta\":{\"type\":\"text_delta\",\"text\":\" Tag\"}}\n\n",
+            )))),
+            MockChunk::Immediate(Ok(Some(Bytes::from_static(
+                b"data: {\"type\":\"message_stop\"}\n\n",
+            )))),
+            MockChunk::Immediate(Ok(None)),
+        ]);
+
+        let result = consume_stream(
+            "anthropic",
+            "stream-anthropic",
+            &cancel,
+            StreamTimeouts {
+                header: Duration::from_millis(100),
+                idle: Duration::from_millis(500),
+                total: Duration::from_millis(5000),
+            },
+            &mut source,
+            |_| {},
+        )
+        .await;
+
+        assert_eq!(result.unwrap(), "Guten Tag");
+    }
+
+    #[tokio::test]
+    async fn consume_stream_halts_immediately_when_pre_cancelled() {
+        let cancel = Arc::new(CancelToken::new());
+        cancel.cancel();
+
+        let mut source = MockChunkSource::new(vec![MockChunk::Immediate(Ok(Some(
+            Bytes::from_static(
+                b"data: {\"choices\":[{\"delta\":{\"content\":\"Never\"}}]}\n\n",
+            ),
+        )))]);
+
+        let result = consume_stream(
+            "openai",
+            "stream-precancelled",
+            &cancel,
+            StreamTimeouts {
+                header: Duration::from_millis(100),
+                idle: Duration::from_millis(500),
+                total: Duration::from_millis(5000),
+            },
+            &mut source,
+            |_| {},
+        )
+        .await;
+
+        assert_eq!(result.unwrap_err(), STREAM_CANCELLED_ERROR);
+    }
+
+    // ── judge JSON round-trip ─────────────────────────────────────────
+
+    #[test]
+    fn judge_response_parsed_from_raw_llm_output() {
+        let raw = r#"```json
+{
+  "rating": "ottimo",
+  "issues": [
+    {
+      "type": "fluency",
+      "severity": "low",
+      "description": "Minor phrasing issue",
+      "suggestedFix": "Rephrase slightly"
+    }
+  ]
+}
+```"#;
+
+        let sanitized = sanitize_llm_json_output(raw);
+        let parsed: serde_json::Value =
+            serde_json::from_str(sanitized).expect("should parse after sanitization");
+        let rating = parse_judge_rating(&parsed);
+        let issues: Vec<JudgeIssue> = parsed["issues"]
+            .as_array()
+            .unwrap_or(&vec![])
+            .iter()
+            .filter_map(|v| {
+                Some(JudgeIssue {
+                    issue_type: v["type"].as_str()?.to_string(),
+                    severity: v["severity"].as_str()?.to_string(),
+                    description: v["description"].as_str()?.to_string(),
+                    suggested_fix: v["suggestedFix"].as_str().map(|s| s.to_string()),
+                })
+            })
+            .collect();
+
+        assert_eq!(rating, "excellent");
+        assert_eq!(issues.len(), 1);
+        assert_eq!(issues[0].issue_type, "fluency");
+        assert_eq!(issues[0].severity, "low");
+        assert_eq!(issues[0].suggested_fix.as_deref(), Some("Rephrase slightly"));
     }
 }

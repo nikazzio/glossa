@@ -40,6 +40,7 @@ rand = "0.8"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt", "test-util", "time"] }
+wiremock = "0.6"
 
 [profile.dev]
 debug = 1
