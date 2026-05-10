@@ -711,40 +711,46 @@ export function ImportPreviewDialog({
           {/* Separator */}
           <div className="mb-4 h-px bg-editorial-border" />
 
-          {/* Row 4: controls */}
-          <div className="flex flex-wrap items-center gap-5">
-            <label className="flex cursor-pointer items-center gap-2.5">
-              <input
-                type="checkbox"
-                checked={useChunking}
-                onChange={(e) => onUseChunkingChange(e.target.checked)}
-                className="h-4 w-4 cursor-pointer accent-editorial-ink"
-              />
-              <span className="text-xs font-bold uppercase tracking-[0.15em] text-editorial-ink">
-                {t('pipeline.autoSegment')}
-              </span>
-            </label>
+          {/* Row 4: controls — compact pill toggles */}
+          <div className="flex flex-wrap items-center gap-2">
 
+            {/* Auto-segment toggle pill */}
+            <button
+              type="button"
+              onClick={() => onUseChunkingChange(!useChunking)}
+              title={t('pipeline.autoSegment')}
+              className={`rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-[0.15em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                useChunking
+                  ? 'border-editorial-ink bg-editorial-ink text-white'
+                  : 'border-editorial-border text-editorial-muted hover:border-editorial-ink/50 hover:text-editorial-ink'
+              }`}
+            >
+              {t('pipeline.autoSegment')}
+            </button>
+
+            {/* Heading-aware toggle pill (markdown only) */}
             {markdownAware && (
-              <label className={`flex cursor-pointer items-center gap-2.5 ${!useChunking ? 'opacity-40' : ''}`}>
-                <input
-                  type="checkbox"
-                  checked={headingAware}
-                  onChange={(e) => onHeadingAwareChange(e.target.checked)}
-                  disabled={!useChunking}
-                  className="h-4 w-4 cursor-pointer accent-editorial-ink"
-                />
-                <span className="text-xs font-bold uppercase tracking-[0.15em] text-editorial-ink">
-                  {t('pipeline.headingAware')}
-                </span>
-              </label>
+              <button
+                type="button"
+                onClick={() => useChunking && onHeadingAwareChange(!headingAware)}
+                title={t('pipeline.headingAware')}
+                disabled={!useChunking}
+                className={`rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-[0.15em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-30 ${
+                  headingAware && useChunking
+                    ? 'border-editorial-ink bg-editorial-ink text-white'
+                    : 'border-editorial-border text-editorial-muted hover:border-editorial-ink/50 hover:text-editorial-ink'
+                }`}
+              >
+                {t('pipeline.headingAware')}
+              </button>
             )}
 
+            {/* Separator */}
+            {useChunking && <span className="text-editorial-border">·</span>}
+
+            {/* Words per chunk — compact input, no label */}
             {useChunking && (
-              <div className="flex items-center gap-2.5">
-                <label className="whitespace-nowrap text-xs font-bold uppercase tracking-[0.15em] text-editorial-muted">
-                  {t('files.wordsPerChunk')}
-                </label>
+              <div className="flex items-center gap-1.5">
                 <input
                   type="number"
                   min={50}
@@ -758,9 +764,31 @@ export function ImportPreviewDialog({
                     setWordsPerChunkInput(String(next));
                     handleWordsPerChunkChange(next);
                   }}
-                  className="w-20 rounded-xl border border-editorial-border bg-editorial-bg px-3 py-1.5 text-sm font-mono outline-none focus:border-editorial-ink/40"
+                  title={t('files.wordsPerChunk')}
+                  className="w-16 rounded-lg border border-editorial-border bg-editorial-bg px-2 py-1 text-sm font-mono outline-none focus:border-editorial-ink/40"
                 />
+                <span className="text-xs text-editorial-muted">{t('files.wordsPerChunkUnit')}</span>
               </div>
+            )}
+
+            {/* Min / Max read-only chips */}
+            {useChunking && (
+              <>
+                <span className="text-editorial-border">·</span>
+                <span
+                  className="cursor-help text-xs text-editorial-muted/70"
+                  title={t('files.minMaxFromSettings')}
+                >
+                  min {minWords}
+                </span>
+                <span className="text-xs text-editorial-muted/40">—</span>
+                <span
+                  className="cursor-help text-xs text-editorial-muted/70"
+                  title={t('files.minMaxFromSettings')}
+                >
+                  max {maxWords}
+                </span>
+              </>
             )}
 
             {/* Recalculate — always visible, disabled when no manual edits */}
