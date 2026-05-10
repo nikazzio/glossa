@@ -148,7 +148,7 @@ export function SettingsModal() {
                       </span>
                       <div className="flex flex-wrap gap-2">
                         {ollamaModels.map((m) => (
-                          <span key={m} className="px-2 py-1 bg-editorial-bg border border-editorial-border text-[10px] font-mono">
+                          <span key={m} className="px-2 py-1 bg-editorial-bg border border-editorial-border text-xs font-mono">
                             {m}
                           </span>
                         ))}
@@ -191,7 +191,7 @@ export function SettingsModal() {
                   <div className="space-y-3">
                     <p className="text-[10px] text-editorial-muted italic">{t('cost.overrideHint')}</p>
                     <div className="border border-editorial-border overflow-x-auto">
-                      <table className="w-full text-[11px] font-mono">
+                      <table className="w-full text-xs font-mono">
                         <thead>
                           <tr className="border-b border-editorial-border bg-editorial-textbox/30">
                             <th className="text-left px-3 py-2 font-bold uppercase tracking-widest text-editorial-muted">Model</th>

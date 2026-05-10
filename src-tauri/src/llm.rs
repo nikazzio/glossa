@@ -250,6 +250,10 @@ const OLLAMA_HTTP_REQUEST_TIMEOUT_SECS: u64 = 300;
 const HTTP_STREAM_HEADER_TIMEOUT_SECS: u64 = 30;
 const HTTP_STREAM_IDLE_TIMEOUT_SECS: u64 = 30;
 const HTTP_STREAM_TOTAL_TIMEOUT_SECS: u64 = 15 * 60;
+// Ollama runs locally and can be significantly slower than cloud APIs,
+// especially on first inference or with large models.
+const OLLAMA_STREAM_HEADER_TIMEOUT_SECS: u64 = 4 * 60;
+const OLLAMA_STREAM_IDLE_TIMEOUT_SECS: u64 = 4 * 60;
 const OLLAMA_PREFLIGHT_CACHE_TTL_SECS: u64 = 5;
 
 const REFINE_STAGE_SYSTEM_PROMPT: &str = "\
@@ -636,6 +640,14 @@ fn default_stream_timeouts() -> StreamTimeouts {
     StreamTimeouts {
         header: Duration::from_secs(HTTP_STREAM_HEADER_TIMEOUT_SECS),
         idle: Duration::from_secs(HTTP_STREAM_IDLE_TIMEOUT_SECS),
+        total: Duration::from_secs(HTTP_STREAM_TOTAL_TIMEOUT_SECS),
+    }
+}
+
+fn ollama_stream_timeouts() -> StreamTimeouts {
+    StreamTimeouts {
+        header: Duration::from_secs(OLLAMA_STREAM_HEADER_TIMEOUT_SECS),
+        idle: Duration::from_secs(OLLAMA_STREAM_IDLE_TIMEOUT_SECS),
         total: Duration::from_secs(HTTP_STREAM_TOTAL_TIMEOUT_SECS),
     }
 }
@@ -1743,7 +1755,7 @@ async fn build_streaming_request(
             );
             with_stream_header_timeout(
                 "ollama",
-                default_stream_timeouts().header,
+                ollama_stream_timeouts().header,
                 client
                     .post(format!("{OLLAMA_BASE_URL}/api/chat"))
                     .json(&body)
@@ -1796,7 +1808,7 @@ async fn stream_response(
         provider,
         stream_id,
         cancel,
-        default_stream_timeouts(),
+        if provider == "ollama" { ollama_stream_timeouts() } else { default_stream_timeouts() },
         &mut source,
         |token| {
             let _ = app.emit("stream-token", token);

@@ -3,7 +3,7 @@
 
 @theme {
   --font-display: "Georgia", serif;
-  --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: "Courier New", Courier, monospace;
 
   --color-editorial-bg: #FDFCFB;

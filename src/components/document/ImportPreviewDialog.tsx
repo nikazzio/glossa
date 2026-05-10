@@ -298,16 +298,21 @@ export function ImportPreviewDialog({
                 </p>
               </div>
 
-              <label className="flex items-start gap-3 rounded-2xl border border-editorial-border bg-editorial-bg/70 p-3 text-sm text-editorial-ink">
-                <input
-                  type="checkbox"
-                  checked={headingAware}
-                  onChange={(e) => onHeadingAwareChange(e.target.checked)}
-                  disabled={!useChunking}
-                  className="mt-1 accent-editorial-ink"
-                />
-                <span className="leading-relaxed">{t('pipeline.headingAware')}</span>
-              </label>
+              <div className={`rounded-2xl border p-3 text-sm text-editorial-ink ${!useChunking || !markdownAware ? 'border-editorial-border/40 bg-editorial-bg/40 opacity-60' : 'border-editorial-border bg-editorial-bg/70'}`}>
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={headingAware}
+                    onChange={(e) => onHeadingAwareChange(e.target.checked)}
+                    disabled={!useChunking || !markdownAware}
+                    className="mt-1 accent-editorial-ink"
+                  />
+                  <span className="leading-relaxed">{t('pipeline.headingAware')}</span>
+                </label>
+                <p className="mt-2 pl-6 text-[10px] leading-relaxed text-editorial-muted">
+                  {t('files.headingAwareHint')}
+                </p>
+              </div>
             </div>
 
             {/* Chunk preview grid */}

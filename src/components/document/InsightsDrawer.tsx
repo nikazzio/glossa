@@ -3,14 +3,17 @@ import {
   AlertTriangle,
   BarChart2,
   BookOpen,
+  BookText,
   CheckCheck,
   CheckCircle2,
+  ChevronDown,
   Circle,
   Clock,
   Cpu,
   ExternalLink,
   FileText,
   Gauge,
+  Highlighter,
   Link2,
   List,
   Loader2,
@@ -29,7 +32,7 @@ import {
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
-import { type KeyboardEvent, useMemo, useRef } from 'react';
+import { type KeyboardEvent, useMemo, useRef, useState } from 'react';
 import { useUiStore, type InsightsDrawerTab, type ChunkDrawerTab } from '../../stores/uiStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
@@ -375,6 +378,7 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
                   />
                 )}
               </div>
+              <GlossarySection />
             </div>
           </motion.aside>
         )}
@@ -919,6 +923,7 @@ function OperationsTab({
   const { t } = useTranslation();
   const entries = useOperationLogStore((state) => state.entries);
   const clear = useOperationLogStore((state) => state.clear);
+  const isProcessing = useChunksStore((state) => state.isProcessing);
 
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex h-full flex-col">
@@ -944,13 +949,23 @@ function OperationsTab({
         </button>
       </div>
 
-      {entries.length === 0 ? (
+      {entries.length === 0 && !isProcessing ? (
         <div className="flex flex-1 items-center justify-center px-6 py-12 text-center text-sm text-editorial-muted">
           {t('document.operationsEmpty')}
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto bg-[#111111] px-4 py-4 font-mono text-xs text-[#d6d6d6] custom-scrollbar">
           <div className="space-y-2">
+            {isProcessing && (
+              <div className="rounded-[12px] border border-[#9eb4ff]/30 bg-[#9eb4ff]/10 px-3 py-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-[#7d7d7d]">$</span>
+                  <span className="rounded-full border border-[#9eb4ff]/30 px-2 py-0.5 text-[10px] uppercase tracking-[0.22em] text-[#9eb4ff]">pipeline</span>
+                  <span className="text-[#9eb4ff] animate-pulse">{t('document.operationsRunning')}</span>
+                  <span className="inline-block h-2 w-0.5 animate-pulse bg-[#9eb4ff]" aria-hidden="true" />
+                </div>
+              </div>
+            )}
             {entries.map((entry) => {
               const tone =
                 entry.level === 'error'
@@ -1088,4 +1103,80 @@ function extractIssueFocusQuery(issue: TranslationChunk['judgeResult']['issues']
     ...Array.from(issue.suggestedFix?.matchAll(/"([^"]{3,})"/g) ?? []).map((m) => m[1]),
   ].map((v) => v.trim()).filter(Boolean);
   return candidates.sort((a, b) => b.length - a.length)[0] ?? null;
+}
+
+function GlossarySection() {
+  const { t } = useTranslation();
+  const { config } = usePipelineStore();
+  const glossaryHighlightEnabled = useUiStore((state) => state.glossaryHighlightEnabled);
+  const setGlossaryHighlightEnabled = useUiStore((state) => state.setGlossaryHighlightEnabled);
+  const [expanded, setExpanded] = useState(true);
+
+  if (!config.assignedGlossaryId || config.glossary.length === 0) return null;
+
+  return (
+    <div className="shrink-0 border-t border-editorial-border bg-editorial-bg/60">
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="flex w-full items-center justify-between gap-2 px-5 py-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-editorial-accent"
+        aria-expanded={expanded}
+      >
+        <div className="flex items-center gap-2">
+          <BookText size={13} className="text-editorial-muted" />
+          <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-editorial-muted">
+            {t('document.insightsGlossaryTitle')}
+          </span>
+          <span className="text-[10px] font-mono text-editorial-muted/60">
+            ({config.glossary.length})
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setGlossaryHighlightEnabled(!glossaryHighlightEnabled); }}
+            title={t('library.glossaryHighlightToggle')}
+            aria-pressed={glossaryHighlightEnabled}
+            className={`rounded-full p-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+              glossaryHighlightEnabled
+                ? 'bg-editorial-ink text-white'
+                : 'text-editorial-muted hover:text-editorial-ink'
+            }`}
+          >
+            <Highlighter size={12} />
+          </button>
+          <ChevronDown
+            size={13}
+            className={`text-editorial-muted transition-transform ${expanded ? 'rotate-180' : ''}`}
+          />
+        </div>
+      </button>
+
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ type: 'spring', damping: 30, stiffness: 350 }}
+            className="overflow-hidden"
+          >
+            <div className="max-h-48 overflow-y-auto custom-scrollbar px-4 pb-3">
+              <table className="w-full text-xs">
+                <tbody>
+                  {config.glossary.map((entry, i) => (
+                    <tr key={entry.id ?? i} className="border-b border-editorial-border/40 last:border-0">
+                      <td className="py-1.5 pr-3 font-medium text-editorial-ink">{entry.term}</td>
+                      <td className="py-1.5 text-editorial-muted">→</td>
+                      <td className="py-1.5 pl-3 text-editorial-ink">{entry.translation}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 }
