@@ -27,6 +27,60 @@ import {
   withSyncedChunkFields,
 } from '../utils/documentState';
 
+// --- Internal O(1) chunk index ---
+// Maps chunkId → array index. Kept as a module-level variable; never part of Zustand state.
+// Rebuilt automatically via store subscription whenever `chunks` reference changes —
+// this covers both action-dispatched updates and direct setState calls from tests.
+let chunkIndex = new Map<string, number>();
+
+function rebuildIndex(chunks: TranslationChunk[]): void {
+  chunkIndex = new Map(chunks.map((c, i) => [c.id, i]));
+}
+
+// O(1) id lookup + single-slot array copy instead of a full O(n) scan + map.
+function updateSingleChunk(
+  chunks: TranslationChunk[],
+  chunkId: string,
+  updater: (chunk: TranslationChunk) => TranslationChunk,
+): TranslationChunk[] {
+  const idx = chunkIndex.get(chunkId);
+  if (idx === undefined) return chunks;
+  const next = [...chunks];
+  next[idx] = updater(next[idx]);
+  return next;
+}
+
+// --- RAF token batching ---
+// Accumulates tokens for the active (chunkId, stageId) between animation frames,
+// collapsing N per-token setState calls into a single commit per frame.
+type TokenBatch = { chunkId: string; stageId: string; content: string };
+let pendingBatch: TokenBatch | null = null;
+let rafHandle: ReturnType<typeof requestAnimationFrame> | null = null;
+
+// Exported so tests can flush synchronously without needing RAF stubs.
+// Also cancels any in-flight RAF handle to prevent double-application after a manual flush.
+export function flushPendingTokenBatch(): void {
+  if (rafHandle !== null) {
+    cancelAnimationFrame(rafHandle);
+    rafHandle = null;
+  }
+  if (!pendingBatch) return;
+  const { chunkId, stageId, content } = pendingBatch;
+  pendingBatch = null;
+  useChunksStore.setState((state) => ({
+    chunks: updateSingleChunk(state.chunks, chunkId, (chunk) => ({
+      ...chunk,
+      stageResults: {
+        ...chunk.stageResults,
+        [stageId]: {
+          ...(chunk.stageResults[stageId] ?? { status: 'processing' }),
+          content: (chunk.stageResults[stageId]?.content ?? '') + content,
+        },
+      },
+    })),
+  }));
+}
+
 interface ChunksState {
   chunks: TranslationChunk[];
   isProcessing: boolean;
@@ -137,77 +191,69 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
 
   updateChunkStage: (chunkId, stageId, result) =>
     set((state) => ({
-      chunks: state.chunks.map((chunk) =>
-        chunk.id === chunkId
-          ? { ...chunk, stageResults: { ...chunk.stageResults, [stageId]: result } }
-          : chunk,
-      ),
+      chunks: updateSingleChunk(state.chunks, chunkId, (chunk) => ({
+        ...chunk,
+        stageResults: { ...chunk.stageResults, [stageId]: result },
+      })),
     })),
 
-  appendChunkStageContent: (chunkId, stageId, token) =>
-    set((state) => ({
-      chunks: state.chunks.map((chunk) =>
-        chunk.id === chunkId
-          ? {
-              ...chunk,
-              stageResults: {
-                ...chunk.stageResults,
-                [stageId]: {
-                  ...(chunk.stageResults[stageId] || { status: 'processing' }),
-                  content: (chunk.stageResults[stageId]?.content || '') + token,
-                },
-              },
-            }
-          : chunk,
-      ),
-    })),
+  // Buffers tokens per animation frame instead of committing on every token.
+  // If the active (chunkId, stageId) pair changes, the previous batch is flushed immediately.
+  appendChunkStageContent: (chunkId, stageId, token) => {
+    if (pendingBatch?.chunkId === chunkId && pendingBatch?.stageId === stageId) {
+      pendingBatch = { chunkId, stageId, content: pendingBatch.content + token };
+    } else {
+      flushPendingTokenBatch();
+      pendingBatch = { chunkId, stageId, content: token };
+    }
+    if (rafHandle === null) {
+      rafHandle = requestAnimationFrame(() => flushPendingTokenBatch());
+    }
+  },
 
   updateChunkJudge: (chunkId, result) =>
     set((state) => ({
-      chunks: state.chunks.map((chunk) =>
-        chunk.id === chunkId ? { ...chunk, judgeResult: result } : chunk,
-      ),
+      chunks: updateSingleChunk(state.chunks, chunkId, (chunk) => ({
+        ...chunk,
+        judgeResult: result,
+      })),
     })),
 
   updateChunkDraft: (chunkId, draft) =>
     set((state) => ({
-      chunks: state.chunks.map((chunk) =>
-        chunk.id === chunkId && !chunk.translationLocked
-          ? updateChunkTranslationFields(chunk, draft)
-          : chunk,
+      chunks: updateSingleChunk(state.chunks, chunkId, (chunk) =>
+        chunk.translationLocked ? chunk : updateChunkTranslationFields(chunk, draft),
       ),
     })),
 
   toggleChunkTranslationLock: (chunkId) =>
     set((state) => ({
-      chunks: state.chunks.map((chunk) =>
-        chunk.id === chunkId
-          ? { ...chunk, translationLocked: !chunk.translationLocked }
-          : chunk,
-      ),
+      chunks: updateSingleChunk(state.chunks, chunkId, (chunk) => ({
+        ...chunk,
+        translationLocked: !chunk.translationLocked,
+      })),
     })),
 
   updateChunkStatus: (chunkId, status) =>
     set((state) => ({
-      chunks: state.chunks.map((chunk) =>
-        chunk.id === chunkId ? { ...chunk, status } : chunk,
-      ),
+      chunks: updateSingleChunk(state.chunks, chunkId, (chunk) => ({
+        ...chunk,
+        status,
+      })),
     })),
 
   updateChunkOriginalText: (chunkId, text) =>
     set((state) => {
       const sourceFootnotes = usePipelineStore.getState().sourceFootnotes;
-      const nextChunks = state.chunks.map((chunk) =>
-        chunk.id === chunkId
-          ? resetChunkForSourceEdit(
-              updateChunkSourceFields(
-                chunk,
-                deriveChunkDisplayText(text, sourceFootnotes),
-                text,
-                buildChunkFootnotes(text, sourceFootnotes),
-              ),
-            )
-          : chunk,
+      const nextChunks = updateSingleChunk(state.chunks, chunkId, (chunk) =>
+        resetChunkForSourceEdit(
+          updateChunkSourceFields(
+            chunk,
+            deriveChunkDisplayText(text, sourceFootnotes),
+            text,
+            buildChunkFootnotes(text, sourceFootnotes),
+          ),
+        ),
       );
       syncProjectSourceDocument(nextChunks);
       return { chunks: nextChunks };
@@ -215,14 +261,15 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
 
   updateChunkCoherence: (chunkId, result) =>
     set((state) => ({
-      chunks: state.chunks.map((chunk) =>
-        chunk.id === chunkId ? { ...chunk, coherenceResult: result } : chunk,
-      ),
+      chunks: updateSingleChunk(state.chunks, chunkId, (chunk) => ({
+        ...chunk,
+        coherenceResult: result,
+      })),
     })),
 
   splitChunk: (chunkId) =>
     set((state) => {
-      const chunk = state.chunks.find((entry) => entry.id === chunkId);
+      const chunk = state.chunks[chunkIndex.get(chunkId) ?? -1];
       const splitAt = findBestSplitIndex(chunk?.sourceProcessingText ?? '', {
         markdownAware: usePipelineStore.getState().config.markdownAware,
       });
@@ -246,8 +293,8 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
 
   mergeChunkWithNext: (chunkId) =>
     set((state) => {
-      const index = state.chunks.findIndex((chunk) => chunk.id === chunkId);
-      if (index === -1 || index >= state.chunks.length - 1) return {};
+      const index = chunkIndex.get(chunkId);
+      if (index === undefined || index >= state.chunks.length - 1) return {};
 
       const current = state.chunks[index];
       const next = state.chunks[index + 1];
@@ -285,18 +332,17 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
 
   unlockChunkForEdit: (chunkId) =>
     set((state) => ({
-      chunks: state.chunks.map((chunk) =>
-        chunk.id === chunkId && chunk.status === 'completed'
-          ? resetChunkForSourceEdit(chunk)
-          : chunk,
+      chunks: updateSingleChunk(state.chunks, chunkId, (chunk) =>
+        chunk.status === 'completed' ? resetChunkForSourceEdit(chunk) : chunk,
       ),
     })),
 
   clearChunkStages: (chunkId) =>
     set((state) => ({
-      chunks: state.chunks.map((chunk) =>
-        chunk.id === chunkId ? { ...chunk, stageResults: {} } : chunk,
-      ),
+      chunks: updateSingleChunk(state.chunks, chunkId, (chunk) => ({
+        ...chunk,
+        stageResults: {},
+      })),
     })),
 
 }));
@@ -364,8 +410,8 @@ function splitChunkState(
   chunkId: string,
   splitAt: number,
 ): { chunks: TranslationChunk[] } | null {
-  const index = chunks.findIndex((chunk) => chunk.id === chunkId);
-  if (index === -1) return null;
+  const index = chunkIndex.get(chunkId);
+  if (index === undefined) return null;
 
   const chunk = chunks[index];
   if (chunk.status === 'completed' || chunk.status === 'processing') return null;
@@ -432,3 +478,9 @@ function syncSelectedChunk(chunks: TranslationChunk[], preferredId?: string | nu
   }
   ui.setSelectedChunkId(chunks[0]?.id ?? null);
 }
+
+// Keep chunkIndex in sync with any chunks change — including direct setState calls from tests.
+// Zustand subscribe callbacks fire synchronously after each state update.
+useChunksStore.subscribe((state, prev) => {
+  if (state.chunks !== prev.chunks) rebuildIndex(state.chunks);
+});
