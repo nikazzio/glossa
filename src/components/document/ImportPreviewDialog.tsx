@@ -141,9 +141,9 @@ function ChunkCard({
               type="button"
               onClick={onSplit}
               title={t('files.boundarySplit')}
-              className="flex h-6 w-6 items-center justify-center rounded-full border border-editorial-border text-editorial-muted/60 transition-colors hover:border-editorial-ink/30 hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             >
-              <Scissors size={10} />
+              <Scissors size={11} />
             </button>
           )}
           {isLong && (
@@ -151,14 +151,14 @@ function ChunkCard({
               type="button"
               onClick={onToggleExpand}
               title={isExpanded ? t('files.collapseChunk') : t('files.expandChunk')}
-              className="flex h-6 w-6 items-center justify-center rounded-full border border-editorial-border text-editorial-muted/60 transition-colors hover:border-editorial-ink/30 hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             >
-              {isExpanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+              {isExpanded ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
             </button>
           )}
         </div>
       </div>
-      <div className="px-4 pb-4 text-sm leading-7 text-editorial-ink">
+      <div className="px-4 pb-4 text-base leading-7 text-editorial-ink">
         {!isLong || isExpanded ? (
           <p className="whitespace-pre-wrap">{text}</p>
         ) : (
@@ -191,34 +191,34 @@ function BoundaryDivider({ onGive, onTake, onMerge, canGive, canTake }: Boundary
   const { t } = useTranslation();
   return (
     <div className="flex items-center gap-1.5 px-2 py-1">
-      <div className="h-px flex-1 bg-editorial-border/30" />
+      <div className="h-px flex-1 bg-editorial-border" />
       <button
         type="button"
         onClick={onTake}
         disabled={!canTake}
         title={t('files.boundaryTake')}
-        className="flex h-5 w-5 items-center justify-center rounded-full border border-editorial-border/60 bg-editorial-bg text-editorial-muted/50 transition-colors hover:border-editorial-ink/30 hover:bg-editorial-textbox/60 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-20"
+        className="rounded-full border border-editorial-border bg-editorial-bg p-1 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-30"
       >
-        <ChevronUp size={9} />
+        <ChevronUp size={11} />
       </button>
       <button
         type="button"
         onClick={onMerge}
         title={t('files.boundaryMerge')}
-        className="flex h-5 w-5 items-center justify-center rounded-full border border-editorial-border/60 bg-editorial-bg text-editorial-muted/50 transition-colors hover:border-editorial-ink/30 hover:bg-editorial-textbox/60 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+        className="rounded-full border border-editorial-border bg-editorial-bg p-1 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
       >
-        <Merge size={9} />
+        <Merge size={11} />
       </button>
       <button
         type="button"
         onClick={onGive}
         disabled={!canGive}
         title={t('files.boundaryGive')}
-        className="flex h-5 w-5 items-center justify-center rounded-full border border-editorial-border/60 bg-editorial-bg text-editorial-muted/50 transition-colors hover:border-editorial-ink/30 hover:bg-editorial-textbox/60 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-20"
+        className="rounded-full border border-editorial-border bg-editorial-bg p-1 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-30"
       >
-        <ChevronDown size={9} />
+        <ChevronDown size={11} />
       </button>
-      <div className="h-px flex-1 bg-editorial-border/30" />
+      <div className="h-px flex-1 bg-editorial-border" />
     </div>
   );
 }
@@ -276,22 +276,21 @@ function SegmentEditor({
             {i > 0 && (
               isBoundaryBefore ? (
                 /* Active chunk boundary */
-                <div className="group relative flex items-center gap-2 py-1.5">
-                  <div className={`h-0.5 flex-1 rounded-full ${anomaly ? 'bg-editorial-warning/40' : 'bg-editorial-accent/30'}`} />
-                  <div className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.25em] ${anomaly ? 'border-editorial-warning/40 bg-editorial-warning/10 text-editorial-warning' : 'border-editorial-accent/30 bg-editorial-accent/10 text-editorial-accent'}`}>
-                    {anomaly && <AlertTriangle size={8} />}
+                <div className="group relative flex items-center gap-2 py-2">
+                  <div className={`h-0.5 flex-1 rounded-full ${anomaly ? 'bg-editorial-warning/60' : 'bg-editorial-accent/50'}`} />
+                  <div className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] ${anomaly ? 'border-editorial-warning/60 bg-editorial-warning/10 text-editorial-warning' : 'border-editorial-accent/50 bg-editorial-accent/10 text-editorial-accent'}`}>
+                    {anomaly && <AlertTriangle size={9} />}
                     {t('pipeline.unit')} {chunkIdx + 1}
                     {anomaly && <span className="font-normal opacity-70">· {chunkWords}w</span>}
                   </div>
-                  <div className={`h-0.5 flex-1 rounded-full ${anomaly ? 'bg-editorial-warning/40' : 'bg-editorial-accent/30'}`} />
+                  <div className={`h-0.5 flex-1 rounded-full ${anomaly ? 'bg-editorial-warning/60' : 'bg-editorial-accent/50'}`} />
                   <button
                     type="button"
                     onClick={() => onRemoveBoundary(i)}
                     title={t('files.boundaryMerge')}
-                    className="absolute right-0 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted/50 opacity-0 transition-all group-hover:opacity-100 hover:border-editorial-warning/50 hover:text-editorial-warning focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                    style={{ right: '-8px' }}
+                    className="absolute -right-2 rounded-full border border-editorial-border bg-editorial-bg p-1 text-editorial-muted opacity-0 transition-all group-hover:opacity-100 hover:border-editorial-warning hover:text-editorial-warning focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   >
-                    <Merge size={9} />
+                    <Merge size={11} />
                   </button>
                 </div>
               ) : (
@@ -306,18 +305,18 @@ function SegmentEditor({
                   onKeyDown={(e) => e.key === 'Enter' && onAddBoundary(i)}
                   title={t('files.boundaryAddHere')}
                 >
-                  <div className="h-px flex-1 bg-editorial-border/20 transition-colors group-hover:bg-editorial-border/50" />
-                  <div className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-dashed text-[9px] transition-all ${hoveredGap === i ? 'border-editorial-ink/40 text-editorial-ink/60' : 'border-editorial-border/40 text-editorial-border/40'}`}>
+                  <div className="h-px flex-1 bg-editorial-border/50 transition-colors group-hover:bg-editorial-border" />
+                  <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-dashed text-xs transition-all ${hoveredGap === i ? 'border-editorial-ink text-editorial-ink' : 'border-editorial-border text-editorial-muted'}`}>
                     +
                   </div>
-                  <div className="h-px flex-1 bg-editorial-border/20 transition-colors group-hover:bg-editorial-border/50" />
+                  <div className="h-px flex-1 bg-editorial-border/50 transition-colors group-hover:bg-editorial-border" />
                 </div>
               )
             )}
 
             {/* Paragraph block */}
             <div
-              className="group relative rounded-xl px-4 py-3 text-sm leading-7 text-editorial-ink transition-colors hover:bg-editorial-textbox/25"
+              className="group relative rounded-xl px-4 py-3 text-base leading-7 text-editorial-ink transition-colors hover:bg-editorial-textbox/25"
               onMouseEnter={() => setHoveredPara(i)}
               onMouseLeave={() => setHoveredPara(null)}
             >
@@ -328,9 +327,9 @@ function SegmentEditor({
                   type="button"
                   onClick={() => onSplitParagraph(i)}
                   title={t('files.boundarySplit')}
-                  className={`absolute right-2 top-3 flex h-5 w-5 items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted/50 transition-all hover:border-editorial-ink/30 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${hoveredPara === i ? 'opacity-100' : 'opacity-0'}`}
+                  className={`absolute right-2 top-3 rounded-full border border-editorial-border bg-editorial-bg p-1 text-editorial-muted transition-all hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${hoveredPara === i ? 'opacity-100' : 'opacity-0'}`}
                 >
-                  <Scissors size={9} />
+                  <Scissors size={11} />
                 </button>
               )}
             </div>
@@ -347,13 +346,13 @@ function SegmentEditor({
         const anomaly = tooShort || tooLong;
         return (
           <div className="flex items-center gap-2 pt-1.5">
-            <div className={`h-0.5 flex-1 rounded-full ${anomaly ? 'bg-editorial-warning/40' : 'bg-editorial-accent/30'}`} />
-            <div className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.25em] ${anomaly ? 'border-editorial-warning/40 bg-editorial-warning/10 text-editorial-warning' : 'border-editorial-accent/30 bg-editorial-accent/10 text-editorial-accent'}`}>
-              {anomaly && <AlertTriangle size={8} />}
+            <div className={`h-0.5 flex-1 rounded-full ${anomaly ? 'bg-editorial-warning/60' : 'bg-editorial-accent/50'}`} />
+            <div className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] ${anomaly ? 'border-editorial-warning/60 bg-editorial-warning/10 text-editorial-warning' : 'border-editorial-accent/50 bg-editorial-accent/10 text-editorial-accent'}`}>
+              {anomaly && <AlertTriangle size={9} />}
               {t('pipeline.unit')} {lastChunkIdx + 1}
               {anomaly && <span className="font-normal opacity-70">· {lastChunkWords}w</span>}
             </div>
-            <div className={`h-0.5 flex-1 rounded-full ${anomaly ? 'bg-editorial-warning/40' : 'bg-editorial-accent/30'}`} />
+            <div className={`h-0.5 flex-1 rounded-full ${anomaly ? 'bg-editorial-warning/60' : 'bg-editorial-accent/50'}`} />
           </div>
         );
       })()}
@@ -618,23 +617,23 @@ export function ImportPreviewDialog({
       aria-labelledby="import-preview-title"
       ref={trapRef}
     >
-      <div className="relative flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-[28px] border border-editorial-border bg-editorial-bg shadow-[0_24px_80px_rgba(26,26,26,0.2)]">
+      <div className="relative flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-[28px] border border-editorial-border bg-editorial-bg shadow-[0_24px_80px_rgba(26,26,26,0.2)]">
 
         {/* ── Header ─────────────────────────────────────────────────────── */}
         <div className="shrink-0 border-b border-editorial-border px-6 py-5">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <div className="mb-1 flex items-center gap-2">
-                <FileText size={13} className="shrink-0 text-editorial-muted" />
-                <span className="truncate text-xs font-mono text-editorial-muted">{fileName}</span>
+                <FileText size={15} className="shrink-0 text-editorial-muted" />
+                <span className="truncate text-sm font-mono text-editorial-muted">{fileName}</span>
               </div>
               <h2
                 id="import-preview-title"
-                className="font-display text-xl italic tracking-tight text-editorial-ink"
+                className="font-display text-2xl italic tracking-tight text-editorial-ink"
               >
                 {t('files.importPreviewTitle')}
               </h2>
-              <div className="mt-2 flex flex-wrap items-center gap-3 text-[10px] font-mono text-editorial-muted/70">
+              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs font-mono text-editorial-muted">
                 <span>{preview.stats.words}w</span>
                 <span>·</span>
                 <span>{preview.stats.paragraphs} {t('pipeline.paragraphs').toLowerCase()}</span>
@@ -646,36 +645,24 @@ export function ImportPreviewDialog({
               </div>
             </div>
 
-            {/* Mode toggle + Recalculate */}
-            <div className="flex shrink-0 items-center gap-2">
-              {hasManualEdits && (
-                <button
-                  type="button"
-                  onClick={recalculate}
-                  title={t('files.recalculateHint')}
-                  className="flex h-7 w-7 items-center justify-center rounded-full border border-editorial-warning/50 bg-editorial-warning/10 text-editorial-warning transition-colors hover:bg-editorial-warning/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-warning"
-                >
-                  <RotateCcw size={12} />
-                </button>
-              )}
-              <div className="flex overflow-hidden rounded-full border border-editorial-border bg-editorial-textbox/30">
-                <button
-                  type="button"
-                  onClick={() => setEditorMode('cards')}
-                  title={t('files.viewCards')}
-                  className={`flex h-7 w-7 items-center justify-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${editorMode === 'cards' ? 'bg-editorial-ink text-white' : 'text-editorial-muted hover:text-editorial-ink'}`}
-                >
-                  <LayoutGrid size={12} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEditorMode('segments')}
-                  title={t('files.viewSegments')}
-                  className={`flex h-7 w-7 items-center justify-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${editorMode === 'segments' ? 'bg-editorial-ink text-white' : 'text-editorial-muted hover:text-editorial-ink'}`}
-                >
-                  <SplitSquareVertical size={12} />
-                </button>
-              </div>
+            {/* Mode toggle — app-consistent pill style */}
+            <div className="flex shrink-0 items-center gap-0 rounded-full border border-editorial-border bg-editorial-bg px-1 py-1 shadow-sm">
+              <button
+                type="button"
+                onClick={() => setEditorMode('cards')}
+                title={t('files.viewCards')}
+                className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${editorMode === 'cards' ? 'bg-editorial-ink text-white' : 'text-editorial-muted hover:text-editorial-ink'}`}
+              >
+                <LayoutGrid size={16} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditorMode('segments')}
+                title={t('files.viewSegments')}
+                className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${editorMode === 'segments' ? 'bg-editorial-ink text-white' : 'text-editorial-muted hover:text-editorial-ink'}`}
+              >
+                <SplitSquareVertical size={16} />
+              </button>
             </div>
           </div>
 
@@ -690,7 +677,7 @@ export function ImportPreviewDialog({
               {preview.warnings.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
                   {preview.warnings.map((w) => (
-                    <span key={w} className="rounded-full border border-editorial-border px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.2em] text-editorial-muted">
+                    <span key={w} className="rounded-full border border-editorial-border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted">
                       {t(`files.importWarning.${w}`)}
                     </span>
                   ))}
@@ -701,32 +688,32 @@ export function ImportPreviewDialog({
         </div>
 
         {/* ── Settings strip ──────────────────────────────────────────────── */}
-        <div className="shrink-0 border-b border-editorial-border bg-editorial-textbox/20 px-6 py-3">
-          <div className="flex flex-wrap items-center gap-4">
+        <div className="shrink-0 border-b border-editorial-border bg-editorial-textbox/20 px-6 py-3.5">
+          <div className="flex flex-wrap items-center gap-5">
             {/* Auto-segment */}
-            <label className="flex cursor-pointer items-center gap-2">
+            <label className="flex cursor-pointer items-center gap-2.5">
               <input
                 type="checkbox"
                 checked={useChunking}
                 onChange={(e) => onUseChunkingChange(e.target.checked)}
-                className="accent-editorial-ink"
+                className="h-4 w-4 cursor-pointer accent-editorial-ink"
               />
-              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-ink">
+              <span className="text-xs font-bold uppercase tracking-[0.15em] text-editorial-ink">
                 {t('pipeline.autoSegment')}
               </span>
             </label>
 
             {/* Heading-aware (only for markdown) */}
             {markdownAware && (
-              <label className={`flex cursor-pointer items-center gap-2 ${!useChunking ? 'opacity-40' : ''}`}>
+              <label className={`flex cursor-pointer items-center gap-2.5 ${!useChunking ? 'opacity-40' : ''}`}>
                 <input
                   type="checkbox"
                   checked={headingAware}
                   onChange={(e) => onHeadingAwareChange(e.target.checked)}
                   disabled={!useChunking}
-                  className="accent-editorial-ink"
+                  className="h-4 w-4 cursor-pointer accent-editorial-ink"
                 />
-                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-ink">
+                <span className="text-xs font-bold uppercase tracking-[0.15em] text-editorial-ink">
                   {t('pipeline.headingAware')}
                 </span>
               </label>
@@ -734,8 +721,8 @@ export function ImportPreviewDialog({
 
             {/* Words per chunk */}
             {useChunking && (
-              <div className="flex items-center gap-2">
-                <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted whitespace-nowrap">
+              <div className="flex items-center gap-2.5">
+                <label className="whitespace-nowrap text-xs font-bold uppercase tracking-[0.15em] text-editorial-muted">
                   {t('files.wordsPerChunk')}
                 </label>
                 <input
@@ -751,9 +738,21 @@ export function ImportPreviewDialog({
                     setWordsPerChunkInput(String(next));
                     handleWordsPerChunkChange(next);
                   }}
-                  className="w-20 rounded-xl border border-editorial-border bg-editorial-bg px-3 py-1.5 text-xs font-mono outline-none focus:border-editorial-ink/40"
+                  className="w-20 rounded-xl border border-editorial-border bg-editorial-bg px-3 py-1.5 text-sm font-mono outline-none focus:border-editorial-ink/40"
                 />
               </div>
+            )}
+
+            {/* Recalculate — shown when manual edits are active */}
+            {hasManualEdits && (
+              <button
+                type="button"
+                onClick={recalculate}
+                title={t('files.recalculateHint')}
+                className="ml-auto rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              >
+                <RotateCcw size={13} />
+              </button>
             )}
           </div>
         </div>
@@ -803,13 +802,13 @@ export function ImportPreviewDialog({
         <div className="shrink-0 border-t border-editorial-border px-6 py-4">
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
             {hasCoherenceIssue ? (
-              <div className="flex items-center gap-2 text-xs text-editorial-warning">
-                <AlertTriangle size={11} className="shrink-0" />
+              <div className="flex items-center gap-2 text-sm text-editorial-warning">
+                <AlertTriangle size={13} className="shrink-0" />
                 {t('files.importCoherenceWarning', { pct: wordLossPct })}
               </div>
             ) : (
-              <div className="flex items-center gap-1.5 text-[10px] text-editorial-muted/60">
-                <CheckCircle2 size={11} className="shrink-0" />
+              <div className="flex items-center gap-1.5 text-xs text-editorial-muted">
+                <CheckCircle2 size={13} className="shrink-0" />
                 {t('files.importCoherenceOk')}
               </div>
             )}

@@ -324,7 +324,7 @@
     "minWordsHint": "Chunk più corti di questa soglia vengono fusi col successivo. 0 = disabilitato.",
     "maxWordsHint": "Chunk più lunghi di questo limite vengono divisi. 0 = nessun limite.",
     "headingAwareHint": "I titoli Markdown (# Titolo) che compaiono da soli in un chunk vengono uniti al paragrafo successivo. Richiede la modalità Markdown.",
-    "importCoherenceOk": "Tutto il testo è stato contabilizzato",
+    "importCoherenceOk": "Il testo è integro",
     "importCoherenceWarning": "~{{pct}}% delle parole potrebbe mancare dopo la segmentazione — controlla le impostazioni",
     "importConfirm": "Importa nel documento",
     "boundaryGive": "Cedi ultimo paragrafo al chunk successivo",
