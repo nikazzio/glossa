@@ -44,7 +44,7 @@ const DEFAULT_PIPELINE_CONFIG: PipelineConfig = {
   targetChunkCount: 0,
   minWords: 600,
   maxWords: 1200,
-  headingAware: false,
+  headingAware: true,
   documentFormat: 'plain',
   renderProfile: 'plain-text',
   markdownAware: false,

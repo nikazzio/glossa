@@ -46,8 +46,6 @@ interface PendingImport {
   text: string;
   useChunking: boolean;
   targetChunkCount: number;
-  minWords: number;
-  maxWords: number;
   headingAware: boolean;
   format?: 'plain' | 'markdown';
   experimental?: 'docx-markdown';
@@ -69,6 +67,8 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
     setViewMode,
     showConfigDrawer,
     setShowConfigDrawer,
+    defaultMinWords,
+    defaultMaxWords,
   } = useUiStore();
   const {
     currentProjectId,
@@ -106,9 +106,7 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
           text: imported.text,
           useChunking: config.useChunking !== false,
           targetChunkCount: config.targetChunkCount ?? 0,
-          minWords: config.minWords ?? 0,
-          maxWords: config.maxWords ?? 0,
-          headingAware: config.headingAware ?? false,
+          headingAware: config.headingAware ?? true,
           format: imported.format,
           experimental: imported.experimental,
         });
@@ -124,8 +122,8 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
       ...prev,
       useChunking: pendingImport.useChunking,
       targetChunkCount: pendingImport.targetChunkCount,
-      minWords: pendingImport.minWords,
-      maxWords: pendingImport.maxWords,
+      minWords: defaultMinWords,
+      maxWords: defaultMaxWords,
       headingAware: pendingImport.headingAware,
       documentFormat: pendingImport.format ?? 'plain',
       renderProfile: pendingImport.format === 'markdown' ? 'markdown' : 'plain-text',
@@ -138,8 +136,8 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
         useChunking: pendingImport.useChunking,
         targetChunkCount: pendingImport.targetChunkCount,
         markdownAware: pendingImport.format === 'markdown',
-        minWords: pendingImport.minWords,
-        maxWords: pendingImport.maxWords,
+        minWords: defaultMinWords,
+        maxWords: defaultMaxWords,
         headingAware: pendingImport.headingAware,
         extractFootnotes: pendingImport.experimental === 'docx-markdown',
       },
@@ -359,8 +357,8 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
             text={pendingImport.text}
             useChunking={pendingImport.useChunking}
             targetChunkCount={pendingImport.targetChunkCount}
-            minWords={pendingImport.minWords}
-            maxWords={pendingImport.maxWords}
+            minWords={defaultMinWords}
+            maxWords={defaultMaxWords}
             headingAware={pendingImport.headingAware}
             markdownAware={pendingImport.format === 'markdown'}
             format={pendingImport.format}
@@ -373,16 +371,6 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
             onTargetChunkCountChange={(value) =>
               setPendingImport((current) =>
                 current ? { ...current, targetChunkCount: value } : current,
-              )
-            }
-            onMinWordsChange={(value) =>
-              setPendingImport((current) =>
-                current ? { ...current, minWords: value } : current,
-              )
-            }
-            onMaxWordsChange={(value) =>
-              setPendingImport((current) =>
-                current ? { ...current, maxWords: value } : current,
               )
             }
             onHeadingAwareChange={(value) =>
