@@ -99,6 +99,9 @@ export function useGlossaryHighlight(
   );
 
   return useMemo(() => {
+    if (text !== debouncedText) {
+      return { html: escapeHtml(text), matchCount: 0, totalTerms: validEntries.length };
+    }
     if (!debouncedText || patterns.length === 0) {
       return { html: escapeHtml(debouncedText), matchCount: 0, totalTerms: validEntries.length };
     }
@@ -125,5 +128,5 @@ export function useGlossaryHighlight(
       spans.push(...findSpans(debouncedText, termRe, 'hl-mismatch', tooltip, 1));
     }
     return { html: buildHtml(debouncedText, spans), matchCount, totalTerms: validEntries.length };
-  }, [debouncedText, patterns, mode, validEntries.length]);
+  }, [text, debouncedText, patterns, mode, validEntries.length]);
 }
