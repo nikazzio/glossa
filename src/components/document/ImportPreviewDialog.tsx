@@ -6,6 +6,7 @@ import {
   ChevronDown,
   ChevronUp,
   FileText,
+  Hash,
   Info,
   LayoutGrid,
   Merge,
@@ -689,7 +690,7 @@ export function ImportPreviewDialog({
             {t('files.importPreviewTitle')}
           </h2>
 
-          {/* Row 3: stats + warning badges */}
+          {/* Row 3: stats */}
           <div className="mb-4 flex flex-wrap items-center gap-3 text-xs font-mono text-editorial-muted">
             <span>{preview.stats.words}w</span>
             <span>·</span>
@@ -697,58 +698,56 @@ export function ImportPreviewDialog({
             <span>·</span>
             <span className={hasManualEdits ? 'text-editorial-warning' : ''}>{chunkCountLabel}</span>
             {hasManualEdits && (
-              <span className="rounded-full border border-editorial-warning/60 bg-editorial-warning/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.15em] text-editorial-warning">
-                {t('files.manualEditsActive')}
+              <span className="text-editorial-warning italic">{t('files.manualEditsActive')}</span>
+            )}
+            {preview.warnings.length > 0 && (
+              <span title={preview.warnings.map((w) => t(`files.importWarning.${w}`)).join('\n')}>
+                <Info size={12} className="text-editorial-muted/60 cursor-help" />
               </span>
             )}
-            {preview.warnings.map((w) => (
-              <span key={w} className="rounded-full border border-editorial-border px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.15em] text-editorial-muted">
-                {t(`files.importWarning.${w}`)}
-              </span>
-            ))}
           </div>
 
           {/* Separator */}
           <div className="mb-4 h-px bg-editorial-border" />
 
-          {/* Row 4: controls — compact pill toggles */}
+          {/* Row 4: controls — icon buttons */}
           <div className="flex flex-wrap items-center gap-2">
 
-            {/* Auto-segment toggle pill */}
+            {/* Auto-segment toggle — icon button */}
             <button
               type="button"
               onClick={() => onUseChunkingChange(!useChunking)}
               title={t('pipeline.autoSegment')}
-              className={`rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-[0.15em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+              className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
                 useChunking
                   ? 'border-editorial-ink bg-editorial-ink text-white'
-                  : 'border-editorial-border text-editorial-muted hover:border-editorial-ink/50 hover:text-editorial-ink'
+                  : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
               }`}
             >
-              {t('pipeline.autoSegment')}
+              <Scissors size={14} />
             </button>
 
-            {/* Heading-aware toggle pill (markdown only) */}
+            {/* Heading-aware toggle — icon button (markdown only) */}
             {markdownAware && (
               <button
                 type="button"
                 onClick={() => useChunking && onHeadingAwareChange(!headingAware)}
                 title={t('pipeline.headingAware')}
                 disabled={!useChunking}
-                className={`rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-[0.15em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-30 ${
+                className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-30 ${
                   headingAware && useChunking
                     ? 'border-editorial-ink bg-editorial-ink text-white'
-                    : 'border-editorial-border text-editorial-muted hover:border-editorial-ink/50 hover:text-editorial-ink'
+                    : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
                 }`}
               >
-                {t('pipeline.headingAware')}
+                <Hash size={14} />
               </button>
             )}
 
             {/* Separator */}
-            {useChunking && <span className="text-editorial-border">·</span>}
+            {useChunking && <span className="select-none text-editorial-border">·</span>}
 
-            {/* Words per chunk — compact input, no label */}
+            {/* Words per chunk — compact input */}
             {useChunking && (
               <div className="flex items-center gap-1.5">
                 <input
@@ -767,37 +766,34 @@ export function ImportPreviewDialog({
                   title={t('files.wordsPerChunk')}
                   className="w-16 rounded-lg border border-editorial-border bg-editorial-bg px-2 py-1 text-sm font-mono outline-none focus:border-editorial-ink/40"
                 />
-                <span className="text-xs text-editorial-muted">{t('files.wordsPerChunkUnit')}</span>
+                <span className="text-xs text-editorial-muted">w</span>
               </div>
             )}
 
-            {/* Min / Max read-only chips */}
+            {/* Min / Max read-only from settings */}
             {useChunking && (
               <>
-                <span className="text-editorial-border">·</span>
+                <span className="select-none text-editorial-border">·</span>
                 <span
                   className="cursor-help text-xs text-editorial-muted/70"
                   title={t('files.minMaxFromSettings')}
                 >
-                  min {minWords}
-                </span>
-                <span className="text-xs text-editorial-muted/40">—</span>
-                <span
-                  className="cursor-help text-xs text-editorial-muted/70"
-                  title={t('files.minMaxFromSettings')}
-                >
-                  max {maxWords}
+                  {minWords}–{maxWords} w
                 </span>
               </>
             )}
 
-            {/* Recalculate — always visible, disabled when no manual edits */}
+            {/* Recalculate — visible + contrasted only when there are manual edits */}
             <button
               type="button"
               onClick={recalculate}
               disabled={!hasManualEdits}
               title={t('files.recalculateHint')}
-              className="ml-auto rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-25"
+              className={`ml-auto rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                hasManualEdits
+                  ? 'border-editorial-warning bg-editorial-warning/10 text-editorial-warning hover:bg-editorial-warning/20'
+                  : 'border-editorial-border text-editorial-muted disabled:cursor-not-allowed disabled:opacity-25'
+              }`}
             >
               <RotateCcw size={13} />
             </button>
