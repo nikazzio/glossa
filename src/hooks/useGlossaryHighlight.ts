@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { GlossaryEntry } from '../types';
+import { useDebounce } from './useDebounce';
 
 export interface HighlightResult {
   html: string;
@@ -81,6 +82,7 @@ export function useGlossaryHighlight(
   glossary: GlossaryEntry[],
   mode: 'source' | 'translation',
 ): HighlightResult {
+  const debouncedText = useDebounce(text, 300);
   const validEntries = useMemo(
     () => glossary.filter((e) => e.term.trim() && e.translation.trim()),
     [glossary],
@@ -97,17 +99,20 @@ export function useGlossaryHighlight(
   );
 
   return useMemo(() => {
-    if (!text || patterns.length === 0) {
+    if (text !== debouncedText) {
       return { html: escapeHtml(text), matchCount: 0, totalTerms: validEntries.length };
+    }
+    if (!debouncedText || patterns.length === 0) {
+      return { html: escapeHtml(debouncedText), matchCount: 0, totalTerms: validEntries.length };
     }
 
     if (mode === 'source') {
       const spans: MatchSpan[] = [];
       for (const { entry, termRe } of patterns) {
         const tooltip = `→ ${entry.translation}${entry.notes ? ` | ${entry.notes}` : ''}`;
-        spans.push(...findSpans(text, termRe, 'hl-source-term', tooltip, 0));
+        spans.push(...findSpans(debouncedText, termRe, 'hl-source-term', tooltip, 0));
       }
-      return { html: buildHtml(text, spans), matchCount: 0, totalTerms: validEntries.length };
+      return { html: buildHtml(debouncedText, spans), matchCount: 0, totalTerms: validEntries.length };
     }
 
     // translation mode:
@@ -117,11 +122,11 @@ export function useGlossaryHighlight(
     let matchCount = 0;
     for (const { entry, termRe, transRe } of patterns) {
       const tooltip = `→ ${entry.translation}${entry.notes ? ` | ${entry.notes}` : ''}`;
-      const transSpans = findSpans(text, transRe, 'hl-match', tooltip, 0);
+      const transSpans = findSpans(debouncedText, transRe, 'hl-match', tooltip, 0);
       if (transSpans.length > 0) matchCount++;
       spans.push(...transSpans);
-      spans.push(...findSpans(text, termRe, 'hl-mismatch', tooltip, 1));
+      spans.push(...findSpans(debouncedText, termRe, 'hl-mismatch', tooltip, 1));
     }
-    return { html: buildHtml(text, spans), matchCount, totalTerms: validEntries.length };
-  }, [text, patterns, mode, validEntries.length]);
+    return { html: buildHtml(debouncedText, spans), matchCount, totalTerms: validEntries.length };
+  }, [text, debouncedText, patterns, mode, validEntries.length]);
 }
