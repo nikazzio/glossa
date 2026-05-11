@@ -145,6 +145,7 @@
       "invalidJson": "The advanced JSON block is not valid yet.",
       "optional": "Optional"
     },
+    "tabSettings": "Settings",
     "tabStages": "Stages",
     "tabAudit": "Quality Control",
     "tabGlossary": "Term Registry",
@@ -153,6 +154,7 @@
     "personaCustomBadge": "Custom",
     "personaCustomize": "Customize",
     "personaReset": "Reset to automatic",
+    "languagePairLockedByPersona": "Language pair is locked when a custom persona is active — reset it to edit",
     "noProjectTitle": "No project open",
     "noProjectHint": "Open or create a project to configure stages, models, audit and glossary.",
     "glossaryEmpty": "No terms in the registry. Use + to add one.",

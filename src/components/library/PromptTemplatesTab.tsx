@@ -98,19 +98,26 @@ export function PromptTemplatesTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1">
-          {(['all', 'stage', 'audit', 'persona'] as const).map((ctx) => (
-            <button
-              key={ctx}
-              onClick={() => setFilterContext(ctx)}
-              className={`px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                filterContext === ctx
-                  ? 'bg-editorial-ink text-white'
-                  : 'text-editorial-muted hover:text-editorial-ink border border-editorial-border/60'
-              }`}
-            >
-              {ctx === 'all' ? t('common.all') : t(`pipeline.tab${ctx.charAt(0).toUpperCase()}${ctx.slice(1)}`)}
-            </button>
-          ))}
+          {(['all', 'stage', 'audit', 'persona'] as const).map((ctx) => {
+            const CTX_LABELS: Record<string, string> = {
+              stage: t('pipeline.tabStages'),
+              audit: t('pipeline.tabAudit'),
+              persona: t('pipeline.tabPersona'),
+            };
+            return (
+              <button
+                key={ctx}
+                onClick={() => setFilterContext(ctx)}
+                className={`px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                  filterContext === ctx
+                    ? 'bg-editorial-ink text-white'
+                    : 'text-editorial-muted hover:text-editorial-ink border border-editorial-border/60'
+                }`}
+              >
+                {ctx === 'all' ? t('common.all') : CTX_LABELS[ctx]}
+              </button>
+            );
+          })}
         </div>
         <button
           onClick={() => setCreating(true)}

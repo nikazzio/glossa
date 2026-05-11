@@ -145,6 +145,7 @@
       "invalidJson": "Il blocco JSON avanzato non è ancora valido.",
       "optional": "Opzionale"
     },
+    "tabSettings": "Impostazioni",
     "tabStages": "Fasi",
     "tabAudit": "Controllo qualità",
     "tabGlossary": "Registro Termini",
@@ -153,6 +154,7 @@
     "personaCustomBadge": "Personalizzata",
     "personaCustomize": "Personalizza",
     "personaReset": "Ripristina automatica",
+    "languagePairLockedByPersona": "La coppia linguistica è bloccata quando è attiva una persona personalizzata — resettala per modificarla",
     "noProjectTitle": "Nessun progetto aperto",
     "noProjectHint": "Apri o crea un progetto per configurare fasi, modelli, audit e glossario.",
     "glossaryEmpty": "Nessun termine nel registro. Usa + per aggiungerne uno.",

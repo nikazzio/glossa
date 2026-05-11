@@ -1,4 +1,4 @@
-import { Plus, ArrowRightLeft, Play, Layers, Loader2, X, ShieldCheck, AlertTriangle, RotateCcw, Wand2, BookmarkPlus, BookOpen, Check, Trash2, Globe, Bot } from 'lucide-react';
+import { Plus, ArrowRightLeft, Play, Layers, Loader2, X, ShieldCheck, AlertTriangle, RotateCcw, Wand2, BookmarkPlus, BookOpen, Check, Trash2, Bot, Settings } from 'lucide-react';
 import { useMemo, useState, useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -17,7 +17,7 @@ import { usePricingStore } from '../../stores/pricingStore';
 import { llmService } from '../../services/llmService';
 import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
 
-export type ConfigSection = 'stages' | 'audit' | 'glossary';
+export type ConfigSection = 'settings' | 'stages' | 'audit' | 'glossary';
 
 interface PersonaEditorProps {
   persona: string | undefined;
@@ -107,7 +107,7 @@ function PersonaEditor({
                 onClick={() => { setShowSaveName(!showSaveName); setShowTemplateList(false); }}
                 title={t('pipeline.templates.save')}
                 aria-label={t('pipeline.templates.save')}
-                className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
               >
                 <BookmarkPlus size={14} />
               </button>
@@ -116,7 +116,7 @@ function PersonaEditor({
                 onClick={() => { setShowTemplateList(!showTemplateList); setShowSaveName(false); }}
                 title={t('pipeline.templates.load')}
                 aria-label={t('pipeline.templates.load')}
-                className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
               >
                 <BookOpen size={14} />
               </button>
@@ -329,7 +329,7 @@ function AuditPromptEditor({
     <div className="rounded-[20px] border border-editorial-border bg-editorial-bg/70 p-6 space-y-3">
       <div className="space-y-1">
         <div className="flex items-center justify-between gap-3">
-          <span className="font-display italic text-sm text-editorial-ink">{label}</span>
+          <span className="text-sm font-bold text-editorial-ink">{label}</span>
           <div className="flex items-center gap-1.5">
             <button
               type="button"
@@ -337,7 +337,7 @@ function AuditPromptEditor({
               disabled={isRefining || !value.trim()}
               title={t('pipeline.refinePrompt')}
               aria-label={`${t('pipeline.refinePrompt')}: ${label}`}
-              className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40"
+              className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40"
             >
               {isRefining ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
             </button>
@@ -346,7 +346,7 @@ function AuditPromptEditor({
               onClick={() => { setShowSaveName(!showSaveName); setShowTemplateList(false); }}
               title={t('pipeline.templates.save')}
               aria-label={`${t('pipeline.templates.save')}: ${label}`}
-              className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+              className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
             >
               <BookmarkPlus size={16} />
             </button>
@@ -355,7 +355,7 @@ function AuditPromptEditor({
               onClick={() => { setShowTemplateList(!showTemplateList); setShowSaveName(false); }}
               title={t('pipeline.templates.load')}
               aria-label={`${t('pipeline.templates.load')}: ${label}`}
-              className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+              className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
             >
               <BookOpen size={16} />
             </button>
@@ -490,8 +490,6 @@ export function PipelineConfig({
   const completedCount = chunks.filter((c) => c.status === 'completed').length;
   const canRerunAll = !isProcessing && completedCount > 0;
 
-  const showAudit = activeTab === 'audit';
-
   useEffect(() => {
     loadTemplates();
   }, []);
@@ -576,82 +574,92 @@ export function PipelineConfig({
   };
 
   const TAB_TITLE: Record<ConfigSection, string> = {
+    settings: t('pipeline.tabSettings'),
     stages: t('pipeline.tabStages'),
     audit: t('pipeline.tabAudit'),
     glossary: t('pipeline.tabGlossary'),
   };
 
+  const tabBtnCls = (active: boolean) =>
+    `rounded-full border p-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+      active
+        ? 'border-editorial-accent bg-editorial-accent text-white'
+        : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
+    }`;
+
   return (
     <section className={className ?? DEFAULT_PIPELINE_CONFIG_CLASSNAME}>
 
-      {/* ── Defaults globali (coppia linguistica usata in tutte le sezioni) ── */}
-      <div className="shrink-0 border-b border-editorial-border bg-editorial-textbox/20 px-8 py-4">
-        <div className="flex items-center gap-2 mb-3">
-          <Globe size={11} className="text-editorial-accent shrink-0" />
-          <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-            {t('pipeline.languagePair')}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <select
-            value={config.sourceLanguage}
-            onChange={(e) => setConfig((prev) => ({ ...prev, sourceLanguage: e.target.value }))}
-            className="w-full rounded-[14px] border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
-            aria-label={t('pipeline.sourceLanguage')}
-          >
-            {LANGUAGES.map((lang) => (
-              <option key={lang} value={lang}>{t(`languages.${lang}`)}</option>
-            ))}
-          </select>
-          <button
-            onClick={() =>
-              setConfig((prev) => ({
-                ...prev,
-                sourceLanguage: prev.targetLanguage,
-                targetLanguage: prev.sourceLanguage,
-              }))
-            }
-            title={t('pipeline.swapLanguages')}
-            className="shrink-0 rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            aria-label={t('pipeline.swapLanguages')}
-          >
-            <ArrowRightLeft size={13} />
-          </button>
-          <select
-            value={config.targetLanguage}
-            onChange={(e) => setConfig((prev) => ({ ...prev, targetLanguage: e.target.value }))}
-            className="w-full rounded-[14px] border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
-            aria-label={t('pipeline.targetLanguage')}
-          >
-            {LANGUAGES.map((lang) => (
-              <option key={lang} value={lang}>{t(`languages.${lang}`)}</option>
-            ))}
-          </select>
-        </div>
-        <PersonaEditor
-          persona={config.persona}
-          sourceLanguage={config.sourceLanguage}
-          targetLanguage={config.targetLanguage}
-          templates={personaTemplates}
-          onChange={(value) => setConfig((prev) => ({ ...prev, persona: value }))}
-          onSaveTemplate={(name, prompt) => saveTemplate(name, prompt, 'persona')}
-          deleteTemplate={deleteTemplate}
-        />
-      </div>
-
-      {/* ── Empty state (no project open) ── */}
+      {/* ── Empty state (no project open) — settings content ── */}
       {showOnlyGlobalDefaults && (
-        <div className="flex flex-1 flex-col items-center justify-center gap-4 px-8 py-12 text-center">
-          <div className="rounded-full border border-editorial-border/60 p-4 text-editorial-muted/50">
-            <Layers size={24} />
+        <div className="shrink-0 border-b border-editorial-border px-6 py-5 space-y-5">
+          <div className="space-y-2">
+            <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+              {t('pipeline.languagePair')}
+            </p>
+            <div className={`flex items-center gap-3 transition-opacity ${!!config.persona ? 'opacity-40 pointer-events-none' : ''}`}>
+              <select
+                value={config.sourceLanguage}
+                onChange={(e) => setConfig((prev) => ({ ...prev, sourceLanguage: e.target.value }))}
+                className="w-full rounded-[14px] border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
+                aria-label={t('pipeline.sourceLanguage')}
+                disabled={!!config.persona}
+              >
+                {LANGUAGES.map((lang) => (
+                  <option key={lang} value={lang}>{t(`languages.${lang}`)}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() =>
+                  setConfig((prev) => ({
+                    ...prev,
+                    sourceLanguage: prev.targetLanguage,
+                    targetLanguage: prev.sourceLanguage,
+                  }))
+                }
+                disabled={!!config.persona}
+                title={t('pipeline.swapLanguages')}
+                aria-label={t('pipeline.swapLanguages')}
+                className="shrink-0 rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
+              >
+                <ArrowRightLeft size={13} />
+              </button>
+              <select
+                value={config.targetLanguage}
+                onChange={(e) => setConfig((prev) => ({ ...prev, targetLanguage: e.target.value }))}
+                className="w-full rounded-[14px] border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
+                aria-label={t('pipeline.targetLanguage')}
+                disabled={!!config.persona}
+              >
+                {LANGUAGES.map((lang) => (
+                  <option key={lang} value={lang}>{t(`languages.${lang}`)}</option>
+                ))}
+              </select>
+            </div>
+            {!!config.persona && (
+              <p className="text-[10px] leading-relaxed text-editorial-muted/60">
+                {t('pipeline.languagePairLockedByPersona')}
+              </p>
+            )}
           </div>
-          <div className="space-y-1">
-            <p className="font-display italic text-base text-editorial-ink">
-              {t('pipeline.noProjectTitle')}
-            </p>
-            <p className="text-xs leading-relaxed text-editorial-muted max-w-[260px]">
-              {t('pipeline.noProjectHint')}
-            </p>
+          <PersonaEditor
+            persona={config.persona}
+            sourceLanguage={config.sourceLanguage}
+            targetLanguage={config.targetLanguage}
+            templates={personaTemplates}
+            onChange={(value) => setConfig((prev) => ({ ...prev, persona: value }))}
+            onSaveTemplate={(name, prompt) => saveTemplate(name, prompt, 'persona')}
+            deleteTemplate={deleteTemplate}
+          />
+          <div className="flex flex-col items-center gap-4 py-8 text-center">
+            <div className="rounded-full border border-editorial-border/60 p-4 text-editorial-muted/50">
+              <Layers size={24} />
+            </div>
+            <div className="space-y-1">
+              <p className="text-base font-bold text-editorial-ink">{t('pipeline.noProjectTitle')}</p>
+              <p className="text-xs leading-relaxed text-editorial-muted max-w-[260px]">{t('pipeline.noProjectHint')}</p>
+            </div>
           </div>
         </div>
       )}
@@ -661,8 +669,24 @@ export function PipelineConfig({
       <div
         role="tablist"
         aria-label={t('pipeline.configSections')}
-        className="flex items-center gap-2 shrink-0 border-y border-editorial-border bg-editorial-bg/60 px-6 py-2"
+        className="flex items-center gap-2 shrink-0 border-b border-editorial-border bg-editorial-bg/60 px-5 py-2"
       >
+        {/* Settings */}
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'settings'}
+          aria-controls="pconfig-panel-settings"
+          id="pconfig-tab-settings"
+          onClick={() => setActiveTab('settings')}
+          title={t('pipeline.tabSettings')}
+          aria-label={t('pipeline.tabSettings')}
+          className={tabBtnCls(activeTab === 'settings')}
+        >
+          <Settings size={16} />
+        </button>
+        <span className="h-4 w-px bg-editorial-border/70 mx-1" aria-hidden="true" />
+        {/* Stages */}
         <button
           type="button"
           role="tab"
@@ -672,14 +696,11 @@ export function PipelineConfig({
           onClick={() => setActiveTab('stages')}
           title={t('pipeline.tabStages')}
           aria-label={t('pipeline.tabStages')}
-          className={`rounded-full border p-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-            activeTab === 'stages'
-              ? 'border-editorial-ink bg-editorial-ink text-white'
-              : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
-          }`}
+          className={tabBtnCls(activeTab === 'stages')}
         >
           <Layers size={16} />
         </button>
+        {/* Audit */}
         <button
           type="button"
           role="tab"
@@ -689,14 +710,11 @@ export function PipelineConfig({
           onClick={() => setActiveTab('audit')}
           title={t('pipeline.tabAudit')}
           aria-label={t('pipeline.tabAudit')}
-          className={`rounded-full border p-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-            activeTab === 'audit'
-              ? 'border-editorial-ink bg-editorial-ink text-white'
-              : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
-          }`}
+          className={tabBtnCls(activeTab === 'audit')}
         >
           <ShieldCheck size={16} />
         </button>
+        {/* Glossary */}
         <button
           type="button"
           role="tab"
@@ -706,23 +724,81 @@ export function PipelineConfig({
           onClick={() => setActiveTab('glossary')}
           title={t('pipeline.tabGlossary')}
           aria-label={t('pipeline.tabGlossary')}
-          className={`rounded-full border p-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-            activeTab === 'glossary'
-              ? 'border-editorial-ink bg-editorial-ink text-white'
-              : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
-          }`}
+          className={tabBtnCls(activeTab === 'glossary')}
         >
           <BookOpen size={16} />
         </button>
-
         <span className="mx-1 h-4 w-px bg-editorial-border/70" aria-hidden="true" />
-        <span className="font-display italic text-sm text-editorial-ink">
-          {TAB_TITLE[activeTab]}
-        </span>
+        <span className="text-sm font-bold text-editorial-ink">{TAB_TITLE[activeTab]}</span>
       </div>
 
       {/* ── Tab panels ── */}
-      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-8 py-8 space-y-8">
+      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-6 py-6 space-y-6">
+
+        {/* ── SETTINGS ── */}
+        {activeTab === 'settings' && (
+          <div id="pconfig-panel-settings" role="tabpanel" aria-labelledby="pconfig-tab-settings" className="space-y-6">
+            <div className="space-y-2">
+              <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+                {t('pipeline.languagePair')}
+              </p>
+              <div className={`flex items-center gap-3 transition-opacity ${!!config.persona ? 'opacity-40 pointer-events-none' : ''}`}>
+                <select
+                  value={config.sourceLanguage}
+                  onChange={(e) => setConfig((prev) => ({ ...prev, sourceLanguage: e.target.value }))}
+                  className="w-full rounded-[14px] border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
+                  aria-label={t('pipeline.sourceLanguage')}
+                  disabled={!!config.persona}
+                >
+                  {LANGUAGES.map((lang) => (
+                    <option key={lang} value={lang}>{t(`languages.${lang}`)}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setConfig((prev) => ({
+                      ...prev,
+                      sourceLanguage: prev.targetLanguage,
+                      targetLanguage: prev.sourceLanguage,
+                    }))
+                  }
+                  disabled={!!config.persona}
+                  title={t('pipeline.swapLanguages')}
+                  aria-label={t('pipeline.swapLanguages')}
+                  className="shrink-0 rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
+                >
+                  <ArrowRightLeft size={13} />
+                </button>
+                <select
+                  value={config.targetLanguage}
+                  onChange={(e) => setConfig((prev) => ({ ...prev, targetLanguage: e.target.value }))}
+                  className="w-full rounded-[14px] border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
+                  aria-label={t('pipeline.targetLanguage')}
+                  disabled={!!config.persona}
+                >
+                  {LANGUAGES.map((lang) => (
+                    <option key={lang} value={lang}>{t(`languages.${lang}`)}</option>
+                  ))}
+                </select>
+              </div>
+              {!!config.persona && (
+                <p className="text-[10px] leading-relaxed text-editorial-muted/60">
+                  {t('pipeline.languagePairLockedByPersona')}
+                </p>
+              )}
+            </div>
+            <PersonaEditor
+              persona={config.persona}
+              sourceLanguage={config.sourceLanguage}
+              targetLanguage={config.targetLanguage}
+              templates={personaTemplates}
+              onChange={(value) => setConfig((prev) => ({ ...prev, persona: value }))}
+              onSaveTemplate={(name, prompt) => saveTemplate(name, prompt, 'persona')}
+              deleteTemplate={deleteTemplate}
+            />
+          </div>
+        )}
 
         {/* ── FASI ── */}
         {activeTab === 'stages' && (
