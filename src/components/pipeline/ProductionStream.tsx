@@ -1,5 +1,5 @@
-import { memo, useMemo, useCallback, useState } from 'react';
-import { Trash2, AlertTriangle, Pencil, RotateCcw, ScanLine, Highlighter, Terminal, X } from 'lucide-react';
+import { memo, useMemo, useCallback } from 'react';
+import { Trash2, AlertTriangle, Pencil, RotateCcw, ScanLine, Highlighter } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
@@ -10,7 +10,7 @@ import { confirm } from '../../stores/confirmStore';
 import { escapeHtml, useGlossaryHighlight } from '../../hooks/useGlossaryHighlight';
 import { highlightSuperscriptMarkersHtml } from '../../utils/footnoteExtractor';
 import { logger } from '../../utils/logger';
-import type { GlossaryEntry, PipelineStageConfig, PromptInfo, TranslationChunk } from '../../types';
+import type { GlossaryEntry, PipelineStageConfig, TranslationChunk } from '../../types';
 
 const ChunkSourceText = memo(function ChunkSourceText({
   chunk,
@@ -82,48 +82,6 @@ const ChunkDraftText = memo(function ChunkDraftText({
   );
 });
 
-function PromptViewer({ promptInfo }: { promptInfo: PromptInfo }) {
-  const [open, setOpen] = useState(false);
-
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-      >
-        <Terminal size={10} /> prompt
-      </button>
-    );
-  }
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <span className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted">prompts</span>
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          className="text-editorial-muted hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-        >
-          <X size={10} />
-        </button>
-      </div>
-      <div className="space-y-1">
-        <div className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted">system</div>
-        <pre className="max-h-40 overflow-y-auto rounded bg-black/20 p-2 text-[10px] font-mono whitespace-pre-wrap text-editorial-ink">
-          {promptInfo.systemPrompt}
-        </pre>
-      </div>
-      <div className="space-y-1">
-        <div className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted">user</div>
-        <pre className="max-h-32 overflow-y-auto rounded bg-black/20 p-2 text-[10px] font-mono whitespace-pre-wrap text-editorial-ink">
-          {promptInfo.userPrompt}
-        </pre>
-      </div>
-    </div>
-  );
-}
 
 interface ChunkRowProps {
   chunk: TranslationChunk;
@@ -291,11 +249,6 @@ const ChunkRow = memo(function ChunkRow({
                   <div className="text-editorial-ink">{result.content}</div>
                 )}
               </div>
-              {result.status === 'completed' && result.promptInfo && (
-                <div className="mt-3 border-t border-editorial-border/20 pt-3">
-                  <PromptViewer promptInfo={result.promptInfo} />
-                </div>
-              )}
             </div>
           );
         })}

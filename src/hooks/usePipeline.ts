@@ -202,7 +202,17 @@ export function usePipeline() {
               (token) => appendChunkStageContent(chunk.id, stage.id, token),
               (usage) => { capturedUsage = usage; },
               stage.rollingContext !== false ? options.previousTranslation : undefined,
-              (info: PromptInfo) => setChunkStagePromptInfo(chunk.id, stage.id, info),
+              (info: PromptInfo) => {
+                setChunkStagePromptInfo(chunk.id, stage.id, info);
+                logOperation({
+                  level: 'info',
+                  scope: 'stage',
+                  message: `prompt → ${stage.provider}/${stage.model}`,
+                  chunkId: chunk.id,
+                  stageId: stage.id,
+                  detail: `[system]\n${info.systemPrompt}\n\n[user]\n${info.userPrompt}`,
+                });
+              },
             );
           },
           { label: `Stage "${stage.name}"` },
@@ -315,6 +325,15 @@ export function usePipeline() {
         judgeData.systemPrompt !== undefined && judgeData.userPrompt !== undefined
           ? { systemPrompt: judgeData.systemPrompt, userPrompt: judgeData.userPrompt }
           : undefined;
+      if (judgePromptInfo) {
+        logOperation({
+          level: 'info',
+          scope: 'audit',
+          message: `prompt → ${(effectiveConfig ?? config).judgeProvider}/${(effectiveConfig ?? config).judgeModel}`,
+          chunkId: chunk.id,
+          detail: `[system]\n${judgePromptInfo.systemPrompt}\n\n[user]\n${judgePromptInfo.userPrompt}`,
+        });
+      }
       updateChunkJudge(chunk.id, {
         ...judgeData,
         content: textToAudit,
@@ -558,6 +577,15 @@ export function usePipeline() {
           result.systemPrompt !== undefined && result.userPrompt !== undefined
             ? { systemPrompt: result.systemPrompt, userPrompt: result.userPrompt }
             : undefined;
+        if (coherencePromptInfo) {
+          logOperation({
+            level: 'info',
+            scope: 'coherence',
+            message: `prompt → ${config.judgeProvider}/${config.judgeModel}`,
+            chunkId: chunk.id,
+            detail: `[system]\n${coherencePromptInfo.systemPrompt}\n\n[user]\n${coherencePromptInfo.userPrompt}`,
+          });
+        }
         updateChunkCoherence(chunk.id, {
           status: 'completed',
           issues: result.issues as Issue[],

@@ -24,7 +24,6 @@ import {
   ScanLine,
   Scissors,
   ShieldCheck,
-  Terminal,
   TerminalSquare,
   Trash2,
   X,
@@ -841,48 +840,6 @@ function CoherenceTab({ panelId, labelledBy, currentChunk, isProcessing, allChun
 
 // ── Prompt viewer (inline) ─────────────────────────────────────────────────
 
-function PromptViewerInline({ systemPrompt, userPrompt }: { systemPrompt: string; userPrompt: string }) {
-  const [open, setOpen] = useState(false);
-
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-      >
-        <Terminal size={10} /> prompt
-      </button>
-    );
-  }
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <span className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted">prompts</span>
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          className="text-editorial-muted hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-        >
-          <X size={10} />
-        </button>
-      </div>
-      <div className="space-y-1">
-        <div className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted">system</div>
-        <pre className="max-h-40 overflow-y-auto rounded bg-black/20 p-2 text-[10px] font-mono whitespace-pre-wrap text-editorial-ink">
-          {systemPrompt}
-        </pre>
-      </div>
-      <div className="space-y-1">
-        <div className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted">user</div>
-        <pre className="max-h-32 overflow-y-auto rounded bg-black/20 p-2 text-[10px] font-mono whitespace-pre-wrap text-editorial-ink">
-          {userPrompt}
-        </pre>
-      </div>
-    </div>
-  );
-}
 
 // ── Audit Tab ──────────────────────────────────────────────────────────────
 
@@ -949,14 +906,6 @@ function AuditTab({ panelId, labelledBy, currentChunk, isProcessing, onReauditCh
         )}
         {currentChunk.judgeResult.issues.length > 0 && (
           <IssueList issues={currentChunk.judgeResult.issues} chunkId={currentChunk.id} onSelectChunk={onSelectChunk} onFocusIssue={onFocusIssue} />
-        )}
-        {currentChunk.judgeResult.status === 'completed' && currentChunk.judgeResult.promptInfo && (
-          <div className="mt-4 border-t border-editorial-border/20 pt-4">
-            <PromptViewerInline
-              systemPrompt={currentChunk.judgeResult.promptInfo.systemPrompt}
-              userPrompt={currentChunk.judgeResult.promptInfo.userPrompt}
-            />
-          </div>
         )}
       </section>
     </div>
@@ -1135,6 +1084,16 @@ function OperationsTab({
                       </span>
                     ))}
                   </div>
+                  {entry.detail && (
+                    <details className="mt-2 border-t border-white/10 pt-2">
+                      <summary className="cursor-pointer select-none text-[10px] text-[#7d7d7d] hover:text-[#aaaaaa]">
+                        ▶ show prompt
+                      </summary>
+                      <pre className="mt-2 max-h-52 overflow-y-auto whitespace-pre-wrap text-[10px] leading-relaxed text-[#aaaaaa] custom-scrollbar">
+                        {entry.detail}
+                      </pre>
+                    </details>
+                  )}
                 </div>
               );
             })}
