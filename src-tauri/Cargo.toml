@@ -37,6 +37,7 @@ quick-xml = "0.38"
 pdf-extract = "0.7"
 aes-gcm = "0.10"
 rand = "0.8"
+async-trait = "0.1"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt", "test-util", "time"] }
