@@ -75,6 +75,7 @@
     "copyFailed": "Copia non riuscita",
     "runDisabledNoChunks": "Prepara prima il contenuto da elaborare",
     "runDisabledProcessing": "Pipeline in esecuzione, attendi…",
+    "settingsLockedWhileRunning": "Impostazioni bloccate durante l'esecuzione",
     "words": "Parole",
     "paragraphs": "Paragrafi",
     "recommendedChunks": "Chunk suggeriti",
@@ -739,5 +740,20 @@
     "Chinese": "Cinese",
     "Korean": "Coreano",
     "Russian": "Russo"
+  },
+  "log": {
+    "scopePipeline": "Pipeline",
+    "scopePreflight": "Avvio",
+    "scopeInvoke": "Backend",
+    "scopeStage": "Fase",
+    "scopeAudit": "Audit",
+    "scopeCoherence": "Coerenza",
+    "scopeChunk": "Unità",
+    "levelInfo": "info",
+    "levelSuccess": "ok",
+    "levelWarn": "attenzione",
+    "levelError": "errore",
+    "unitLabel": "Unità",
+    "showPrompt": "mostra prompt"
   }
 }

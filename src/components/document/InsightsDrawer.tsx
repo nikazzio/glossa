@@ -1028,68 +1028,68 @@ function OperationsTab({
         <div ref={scrollRef} className="flex-1 overflow-y-auto bg-[#111111] px-4 py-4 font-mono text-xs text-[#d6d6d6] custom-scrollbar">
           <div className="space-y-2">
             {entries.map((entry) => {
-              const tone =
-                entry.level === 'error'
-                  ? 'text-[#ff8f8f]'
-                  : entry.level === 'warn'
-                    ? 'text-[#f6d06f]'
-                    : entry.level === 'success'
-                      ? 'text-[#98e2b8]'
-                      : 'text-[#d6d6d6]';
+              const levelColor =
+                entry.level === 'error'   ? { text: 'text-[#ff6b6b]', border: 'border-[#ff6b6b]/40' }
+                : entry.level === 'warn'  ? { text: 'text-[#f6c90e]', border: 'border-[#f6c90e]/40' }
+                : entry.level === 'success' ? { text: 'text-[#69db7c]', border: 'border-[#69db7c]/40' }
+                : { text: 'text-[#74c0fc]', border: 'border-[#74c0fc]/30' };
+              const scopeLabel: Record<string, string> = {
+                pipeline:  t('log.scopePipeline'),
+                preflight: t('log.scopePreflight'),
+                invoke:    t('log.scopeInvoke'),
+                stage:     t('log.scopeStage'),
+                audit:     t('log.scopeAudit'),
+                coherence: t('log.scopeCoherence'),
+                chunk:     t('log.scopeChunk'),
+              };
+              const levelLabel: Record<string, string> = {
+                info:    t('log.levelInfo'),
+                success: t('log.levelSuccess'),
+                warn:    t('log.levelWarn'),
+                error:   t('log.levelError'),
+              };
+              const chunkIndex = entry.chunkId ? chunks.findIndex((c) => c.id === entry.chunkId) : -1;
               const isCurrentChunk = currentChunkId && entry.chunkId === currentChunkId;
               return (
                 <div
                   key={entry.id}
                   className={`rounded-[12px] border px-3 py-2 ${
                     isCurrentChunk
-                      ? 'border-editorial-accent/60 bg-editorial-accent/10'
+                      ? 'border-[#74c0fc]/40 bg-[#74c0fc]/5'
                       : 'border-white/10 bg-white/[0.03]'
                   }`}
                 >
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[#7d7d7d]">$</span>
-                    <span className="text-[#7d7d7d]">{entry.at.slice(11, 19)}</span>
-                    <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.22em] text-[#9eb4ff]">
-                      {entry.scope}
+                    <span className="text-[#555]">$</span>
+                    <span className="text-[#666]">{entry.at.slice(11, 19)}</span>
+                    <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.22em] text-[#888]">
+                      {scopeLabel[entry.scope] ?? entry.scope}
                     </span>
-                    <span className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-[0.22em] ${
-                      entry.level === 'error'
-                        ? 'border-[#ff8f8f]/30 text-[#ff8f8f]'
-                        : entry.level === 'warn'
-                          ? 'border-[#f6d06f]/30 text-[#f6d06f]'
-                          : entry.level === 'success'
-                            ? 'border-[#98e2b8]/30 text-[#98e2b8]'
-                            : 'border-white/10 text-[#bbbbbb]'
-                    }`}>
-                      {entry.level}
+                    <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.22em] ${levelColor.border} ${levelColor.text}`}>
+                      {levelLabel[entry.level] ?? entry.level}
                     </span>
                   </div>
-                  <p className={`mt-2 leading-relaxed ${tone}`}>
+                  <p className={`mt-2 leading-relaxed ${levelColor.text}`}>
                     {entry.message}
                   </p>
                   <div className="mt-2 flex flex-wrap gap-2 text-[10px]">
-                    {entry.chunkId && (
-                      <span className="rounded-full border border-white/10 px-2 py-0.5 text-[#c9c9c9]">
-                        chunk {entry.chunkId}
-                      </span>
-                    )}
-                    {entry.stageId && (
-                      <span className="rounded-full border border-white/10 px-2 py-0.5 text-[#c9c9c9]">
-                        stage {entry.stageId}
+                    {chunkIndex >= 0 && (
+                      <span className="rounded-full border border-white/10 px-2 py-0.5 text-[#888]">
+                        {t('log.unitLabel')} {indexPad(chunkIndex + 1)}
                       </span>
                     )}
                     {formatOperationMeta(entry.meta).map((item) => (
-                      <span key={item} className="rounded-full border border-white/10 px-2 py-0.5 text-[#8e8e8e]">
+                      <span key={item} className="rounded-full border border-white/10 px-2 py-0.5 text-[#666]">
                         {item}
                       </span>
                     ))}
                   </div>
                   {entry.detail && (
                     <details className="mt-2 border-t border-white/10 pt-2">
-                      <summary className="cursor-pointer select-none text-[10px] text-[#7d7d7d] hover:text-[#aaaaaa]">
-                        ▶ show prompt
+                      <summary className="cursor-pointer select-none text-[10px] text-[#666] hover:text-[#aaa]">
+                        ▶ {t('log.showPrompt')}
                       </summary>
-                      <pre className="mt-2 max-h-52 overflow-y-auto whitespace-pre-wrap text-[10px] leading-relaxed text-[#aaaaaa] custom-scrollbar">
+                      <pre className="mt-2 max-h-52 overflow-y-auto whitespace-pre-wrap text-[10px] leading-relaxed text-[#aaa] custom-scrollbar">
                         {entry.detail}
                       </pre>
                     </details>

@@ -75,6 +75,7 @@
     "copyFailed": "Copy failed",
     "runDisabledNoChunks": "Stage some content first",
     "runDisabledProcessing": "Pipeline is running, please wait…",
+    "settingsLockedWhileRunning": "Settings locked while running",
     "words": "Words",
     "paragraphs": "Paragraphs",
     "recommendedChunks": "Suggested chunks",
@@ -739,5 +740,20 @@
     "Chinese": "Chinese",
     "Korean": "Korean",
     "Russian": "Russian"
+  },
+  "log": {
+    "scopePipeline": "Pipeline",
+    "scopePreflight": "Setup",
+    "scopeInvoke": "Backend",
+    "scopeStage": "Stage",
+    "scopeAudit": "Audit",
+    "scopeCoherence": "Coherence",
+    "scopeChunk": "Unit",
+    "levelInfo": "info",
+    "levelSuccess": "ok",
+    "levelWarn": "warn",
+    "levelError": "error",
+    "unitLabel": "Unit",
+    "showPrompt": "show prompt"
   }
 }

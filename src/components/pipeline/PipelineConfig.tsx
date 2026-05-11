@@ -736,7 +736,16 @@ export function PipelineConfig({
       </div>
 
       {/* ── Tab panels ── */}
-      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-6 py-6 space-y-6">
+      <div className="relative flex-1 min-h-0">
+        {isProcessing && (
+          <div className="absolute inset-0 z-10 flex items-start justify-center bg-editorial-bg/70 backdrop-blur-[2px]">
+            <div className="mt-10 flex items-center gap-2 rounded-full border border-editorial-border bg-editorial-bg px-4 py-2 text-[11px] font-sans uppercase tracking-widest text-editorial-muted shadow-sm">
+              <Loader2 size={12} className="animate-spin" />
+              {t('pipeline.settingsLockedWhileRunning')}
+            </div>
+          </div>
+        )}
+      <div className="overflow-y-auto custom-scrollbar px-6 py-6 space-y-6 h-full">
 
         {/* ── SETTINGS ── */}
         {activeTab === 'settings' && (
@@ -984,6 +993,7 @@ export function PipelineConfig({
           </div>
         )}
 
+      </div>
       </div>
       </>}
 
