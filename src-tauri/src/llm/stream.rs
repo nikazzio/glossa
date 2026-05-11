@@ -263,26 +263,28 @@ impl StreamAccumulator {
     {
         self.buffer.push_str(&String::from_utf8_lossy(bytes));
 
-        while let Some(pos) = self.buffer.find('\n') {
-            let line = self.buffer[..pos].trim_end().to_string();
-            self.buffer = self.buffer[pos + 1..].to_string();
+        // Process all complete lines without reallocating the buffer tail on each
+        // iteration. Each line is copied once (O(line_length)); the remaining prefix
+        // is drained in a single call at the end instead of reassigning the whole
+        // buffer on every newline (which was O(n²) for n lines).
+        let mut start = 0;
+        while let Some(rel_pos) = self.buffer[start..].find('\n') {
+            let abs_pos = start + rel_pos;
+            let line = self.buffer[start..abs_pos].trim_end().to_string();
 
             if provider.stream_format() == StreamFormat::NewlineJson {
-                let trimmed = line.trim();
-                if trimmed.is_empty() {
-                    continue;
+                if !line.is_empty() {
+                    self.process_json_payload(provider, stream_id, &line, emit)?;
                 }
-                self.process_json_payload(provider, stream_id, trimmed, emit)?;
-                continue;
+            } else if let Some(data) = line.strip_prefix("data: ") {
+                if data != "[DONE]" {
+                    self.process_json_payload(provider, stream_id, data, emit)?;
+                }
             }
 
-            if let Some(data) = line.strip_prefix("data: ") {
-                if data == "[DONE]" {
-                    continue;
-                }
-                self.process_json_payload(provider, stream_id, data, emit)?;
-            }
+            start = abs_pos + 1;
         }
+        self.buffer.drain(..start);
 
         Ok(())
     }

@@ -78,6 +78,10 @@ impl LlmProvider for OllamaProvider {
         }
     }
 
+    fn format_http_error(&self, status: reqwest::StatusCode, body: &str) -> String {
+        format_ollama_api_error(status, body)
+    }
+
     async fn preflight(&self, model: &str) -> Result<(), String> {
         ensure_ollama_model_ready(model).await
     }

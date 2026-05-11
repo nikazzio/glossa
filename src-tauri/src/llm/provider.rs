@@ -1,7 +1,8 @@
 use async_trait::async_trait;
 use reqwest::Client;
+use std::time::Duration;
 
-use crate::llm::stream::StreamTimeouts;
+use crate::llm::stream::{StreamTimeouts, HTTP_CONNECT_TIMEOUT_SECS};
 use crate::llm::types::ProviderRuntimeConfig;
 
 #[derive(Debug, Clone)]
@@ -73,8 +74,24 @@ pub trait LlmProvider: Send + Sync {
 
     fn http_client(&self) -> Result<Client, String>;
 
+    /// Build the HTTP client for streaming requests.
+    ///
+    /// Default omits the global request timeout — streaming sessions are long-lived
+    /// and rely on `StreamTimeouts` (idle + total) instead. Providers that use a
+    /// shared static client (Ollama) override this.
     fn streaming_client(&self) -> Result<Client, String> {
-        self.http_client()
+        Client::builder()
+            .connect_timeout(Duration::from_secs(HTTP_CONNECT_TIMEOUT_SECS))
+            .build()
+            .map_err(|e| format!("Failed to build streaming HTTP client: {e}"))
+    }
+
+    /// Format a non-2xx HTTP response into a user-facing error message.
+    ///
+    /// Default uses the generic status-based mapping. Providers with richer
+    /// status semantics (Ollama) override this to surface more actionable messages.
+    fn format_http_error(&self, status: reqwest::StatusCode, body: &str) -> String {
+        crate::llm::providers::format_api_error(self.display_name(), status, body)
     }
 
     /// Extract the text token from a single SSE/JSON line.

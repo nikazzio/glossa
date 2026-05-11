@@ -91,7 +91,7 @@ pub async fn run_stage_stream(
     let status = resp.status();
     if !status.is_success() {
         let text = resp.text().await.unwrap_or_default();
-        return Err(format_api_error(provider.display_name(), status, &text));
+        return Err(provider.format_http_error(status, &text));
     }
 
     stream_response(&app, resp, provider.as_ref(), &stream_id, &cancel).await
