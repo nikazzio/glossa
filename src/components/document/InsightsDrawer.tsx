@@ -281,6 +281,8 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
                     panelId={CHUNK_TAB_PANEL_IDS.operations}
                     labelledBy={CHUNK_TAB_BUTTON_IDS.operations}
                     currentChunkId={currentChunk?.id ?? null}
+                    chunks={chunks}
+                    onSelectChunk={setSelectedChunkId}
                   />
                 )}
               </div>
@@ -944,38 +946,75 @@ function OperationsTab({
   panelId,
   labelledBy,
   currentChunkId,
+  chunks,
+  onSelectChunk,
 }: {
   panelId: string;
   labelledBy: string;
   currentChunkId: string | null;
+  chunks: TranslationChunk[];
+  onSelectChunk: (id: string) => void;
 }) {
   const { t } = useTranslation();
   const entries = useOperationLogStore((state) => state.entries);
   const clear = useOperationLogStore((state) => state.clear);
   const isProcessing = useChunksStore((state) => state.isProcessing);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const processingChunk = chunks.find((c) => c.status === 'processing') ?? null;
+  const processingChunkIndex = processingChunk
+    ? chunks.findIndex((c) => c.id === processingChunk.id)
+    : -1;
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [entries.length]);
 
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-editorial-border px-5 py-4">
-        <div className="space-y-1">
+      <div className="border-b border-editorial-border px-5 py-4">
+        <div className="flex items-center justify-between">
           <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
             {t('document.operationsShellTitle')}
           </p>
-          {currentChunkId && (
-            <p className="text-xs text-editorial-muted">
-              {t('document.operationsCurrentChunk')}: <span className="font-mono">{currentChunkId}</span>
-            </p>
-          )}
+          <div className="flex items-center gap-1">
+            {isProcessing && processingChunk && (
+              <button
+                type="button"
+                onClick={() => onSelectChunk(processingChunk.id)}
+                title={t('document.operationsGoToChunk')}
+                aria-label={t('document.operationsGoToChunk')}
+                className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              >
+                <ExternalLink size={14} />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={clear}
+              title={t('document.operationsClear')}
+              aria-label={t('document.operationsClear')}
+              className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            >
+              <Trash2 size={14} />
+            </button>
+          </div>
         </div>
-        <button
-          type="button"
-          onClick={clear}
-          title={t('document.operationsClear')}
-          aria-label={t('document.operationsClear')}
-          className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-        >
-          <Trash2 size={14} />
-        </button>
+        {isProcessing && (
+          <div className="mt-2.5 flex items-center gap-2" role="status" aria-live="polite">
+            <Loader2 size={11} className="animate-spin shrink-0 text-[#9eb4ff]" />
+            <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#9eb4ff]">
+              {t('document.operationsRunning')}
+            </span>
+            {processingChunkIndex >= 0 && (
+              <span className="font-display text-xs italic text-[#9eb4ff]/70">
+                {indexPad(processingChunkIndex + 1)}/{indexPad(chunks.length)}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {entries.length === 0 && !isProcessing ? (
@@ -983,18 +1022,8 @@ function OperationsTab({
           {t('document.operationsEmpty')}
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto bg-[#111111] px-4 py-4 font-mono text-xs text-[#d6d6d6] custom-scrollbar">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto bg-[#111111] px-4 py-4 font-mono text-xs text-[#d6d6d6] custom-scrollbar">
           <div className="space-y-2">
-            {isProcessing && (
-              <div className="rounded-[12px] border border-[#9eb4ff]/30 bg-[#9eb4ff]/10 px-3 py-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-[#7d7d7d]">$</span>
-                  <span className="rounded-full border border-[#9eb4ff]/30 px-2 py-0.5 text-[10px] uppercase tracking-[0.22em] text-[#9eb4ff]">pipeline</span>
-                  <span className="text-[#9eb4ff] animate-pulse">{t('document.operationsRunning')}</span>
-                  <span className="inline-block h-2 w-0.5 animate-pulse bg-[#9eb4ff]" aria-hidden="true" />
-                </div>
-              </div>
-            )}
             {entries.map((entry) => {
               const tone =
                 entry.level === 'error'
