@@ -31,6 +31,7 @@
     "headingAware": "Titoli nel chunk successivo (Markdown)",
     "rollingContext": "Contesto progressivo (coerenza)",
     "inheritDefault": "Eredita dal progetto",
+    "personaActive": "System prompt (persona)",
     "stages": "Fasi",
     "auditGuard": "Controllo Qualità",
     "auditPlaceholder": "Istruzioni per l'audit...",

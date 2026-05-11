@@ -264,33 +264,44 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
             </div>
           )}
 
-          {/* Language pair per stage */}
-          <div className="space-y-1.5">
-            <span className="block text-xs text-editorial-muted italic">
-              {t('pipeline.inheritDefault')}
-            </span>
-            <div className="flex items-center gap-2">
-              <select
-                value={stage.sourceLanguage ?? ''}
-                onChange={(e) => onUpdate({ sourceLanguage: e.target.value || undefined })}
-                className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                aria-label={t('pipeline.sourceLanguage')}
-              >
-                <option value="">{t(`languages.${pipelineConfig.sourceLanguage}`)}</option>
-                {LANGUAGES.map((l) => <option key={l} value={l}>{t(`languages.${l}`)}</option>)}
-              </select>
-              <span className="text-editorial-muted shrink-0 text-xs">→</span>
-              <select
-                value={stage.targetLanguage ?? ''}
-                onChange={(e) => onUpdate({ targetLanguage: e.target.value || undefined })}
-                className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                aria-label={t('pipeline.targetLanguage')}
-              >
-                <option value="">{t(`languages.${pipelineConfig.targetLanguage}`)}</option>
-                {LANGUAGES.map((l) => <option key={l} value={l}>{t(`languages.${l}`)}</option>)}
-              </select>
+          {/* Language pair per stage — hidden when persona is active */}
+          {pipelineConfig.persona ? (
+            <div className="space-y-1.5">
+              <span className="block text-xs font-sans uppercase tracking-widest text-editorial-muted">
+                {t('pipeline.personaActive')}
+              </span>
+              <pre className="w-full rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/40 px-3 py-2 text-xs font-mono leading-relaxed text-editorial-ink whitespace-pre-wrap opacity-70 select-none">
+                {pipelineConfig.persona}
+              </pre>
             </div>
-          </div>
+          ) : (
+            <div className="space-y-1.5">
+              <span className="block text-xs text-editorial-muted italic">
+                {t('pipeline.inheritDefault')}
+              </span>
+              <div className="flex items-center gap-2">
+                <select
+                  value={stage.sourceLanguage ?? ''}
+                  onChange={(e) => onUpdate({ sourceLanguage: e.target.value || undefined })}
+                  className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  aria-label={t('pipeline.sourceLanguage')}
+                >
+                  <option value="">{t(`languages.${pipelineConfig.sourceLanguage}`)}</option>
+                  {LANGUAGES.map((l) => <option key={l} value={l}>{t(`languages.${l}`)}</option>)}
+                </select>
+                <span className="text-editorial-muted shrink-0 text-xs">→</span>
+                <select
+                  value={stage.targetLanguage ?? ''}
+                  onChange={(e) => onUpdate({ targetLanguage: e.target.value || undefined })}
+                  className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  aria-label={t('pipeline.targetLanguage')}
+                >
+                  <option value="">{t(`languages.${pipelineConfig.targetLanguage}`)}</option>
+                  {LANGUAGES.map((l) => <option key={l} value={l}>{t(`languages.${l}`)}</option>)}
+                </select>
+              </div>
+            </div>
+          )}
 
           <ProviderRuntimeEditor
             provider={stage.provider}
