@@ -158,7 +158,7 @@ export function usePipeline() {
     logOperation({
       level: 'info',
       scope: 'chunk',
-      message: 'Starting pipeline work for this chunk',
+      message: 'Pipeline started',
       chunkId: chunk.id,
     });
     updateChunkJudge(chunk.id, {
@@ -181,6 +181,16 @@ export function usePipeline() {
         ...(stage.targetLanguage ? { targetLanguage: stage.targetLanguage } : {}),
       } : config;
       lastEffectiveConfig = effectiveConfig;
+
+      if (config.persona && (stage.sourceLanguage || stage.targetLanguage)) {
+        logOperation({
+          level: 'info',
+          scope: 'stage',
+          message: `Stage "${stage.name}" — language override ignored, persona is active`,
+          chunkId: chunk.id,
+          stageId: stage.id,
+        });
+      }
 
       updateChunkStage(chunk.id, stage.id, { content: '', status: 'processing' });
       logOperation({
@@ -246,10 +256,10 @@ export function usePipeline() {
         logOperation({
           level: 'success',
           scope: 'stage',
-          message: `Stage "${stage.name}" completed and produced a candidate output`,
+          message: `Stage "${stage.name}" completed`,
           chunkId: chunk.id,
           stageId: stage.id,
-          meta: capturedUsage ? { ...capturedUsage } : undefined,
+          meta: { provider: stage.provider, model: stage.model, ...(capturedUsage ?? {}) },
         });
       } catch (error: unknown) {
         if (isStreamCancelledError(error)) {
@@ -272,7 +282,7 @@ export function usePipeline() {
         logOperation({
           level: 'error',
           scope: 'stage',
-          message: `Stage "${stage.name}" failed and this chunk stopped here`,
+          message: `Stage "${stage.name}" failed`,
           chunkId: chunk.id,
           stageId: stage.id,
           meta: { error: msg },
@@ -322,7 +332,7 @@ export function usePipeline() {
     logOperation({
       level: 'info',
       scope: 'audit',
-      message: 'Judge started evaluating the final candidate for this chunk',
+      message: 'Audit started',
       chunkId: chunk.id,
       meta: { provider: (effectiveConfig ?? config).judgeProvider, model: (effectiveConfig ?? config).judgeModel },
     });
@@ -376,9 +386,13 @@ export function usePipeline() {
       logOperation({
         level: 'success',
         scope: 'audit',
-        message: 'Judge completed and stored the audit result',
+        message: 'Audit completed',
         chunkId: chunk.id,
-        meta: judgeTokenUsage ? { ...judgeTokenUsage } : undefined,
+        meta: {
+          provider: (effectiveConfig ?? config).judgeProvider,
+          model: (effectiveConfig ?? config).judgeModel,
+          ...(judgeTokenUsage ?? {}),
+        },
       });
       return 'completed';
     } catch (error: unknown) {
@@ -394,7 +408,7 @@ export function usePipeline() {
       logOperation({
         level: 'error',
         scope: 'audit',
-        message: 'Judge failed while auditing this chunk',
+        message: 'Audit failed',
         chunkId: chunk.id,
         meta: { error: msg },
       });
@@ -590,7 +604,7 @@ export function usePipeline() {
       const nextContext = nextChunk?.translationProcessingText ? firstNWords(nextChunk.translationProcessingText, 300) : undefined;
 
       updateChunkCoherence(chunk.id, { status: 'processing', issues: [] });
-      logOperation({ level: 'info', scope: 'coherence', message: 'Coherence check started for this chunk against its neighbors', chunkId: chunk.id, meta: { provider: config.judgeProvider, model: config.judgeModel } });
+      logOperation({ level: 'info', scope: 'coherence', message: 'Coherence check started', chunkId: chunk.id, meta: { provider: config.judgeProvider, model: config.judgeModel } });
 
       try {
         const result = await withRetry(
@@ -636,9 +650,9 @@ export function usePipeline() {
         logOperation({
           level: 'success',
           scope: 'coherence',
-          message: 'Coherence check completed for this chunk',
+          message: 'Coherence check completed',
           chunkId: chunk.id,
-          meta: { issues: result.issues.length, ...tokenUsage },
+          meta: { provider: config.judgeProvider, model: config.judgeModel, issues: result.issues.length, ...(tokenUsage ?? {}) },
         });
       } catch (error: unknown) {
         const msg = friendlyError(error instanceof Error ? error.message : String(error));
@@ -646,7 +660,7 @@ export function usePipeline() {
         logOperation({
           level: 'error',
           scope: 'coherence',
-          message: 'Coherence check failed for this chunk',
+          message: 'Coherence check failed',
           chunkId: chunk.id,
           meta: { error: msg },
         });
