@@ -174,8 +174,8 @@ export function usePipeline() {
     for (const stage of config.stages) {
       if (!stage.enabled) continue;
 
-      // Override global language pair with stage-specific one if set
-      const effectiveConfig = (stage.sourceLanguage || stage.targetLanguage) ? {
+      // Override global language pair with stage-specific one if set, but not when persona is active
+      const effectiveConfig = (!config.persona && (stage.sourceLanguage || stage.targetLanguage)) ? {
         ...config,
         ...(stage.sourceLanguage ? { sourceLanguage: stage.sourceLanguage } : {}),
         ...(stage.targetLanguage ? { targetLanguage: stage.targetLanguage } : {}),
@@ -216,7 +216,7 @@ export function usePipeline() {
               () => logOperation({
                 level: 'info',
                 scope: 'stage',
-                message: 'Ollama ancora attivo — grace check passato, in attesa dei token',
+                message: 'Ollama still alive — idle grace check passed, waiting for more tokens',
                 chunkId: chunk.id,
                 stageId: stage.id,
               }),
@@ -347,7 +347,7 @@ export function usePipeline() {
           () => logOperation({
             level: 'info',
             scope: 'audit',
-            message: 'Ollama ancora attivo — grace check passato, in attesa dei token',
+            message: 'Ollama still alive — idle grace check passed, waiting for more tokens',
             chunkId: chunk.id,
           }),
         ),
@@ -609,7 +609,7 @@ export function usePipeline() {
             () => logOperation({
               level: 'info',
               scope: 'coherence',
-              message: 'Ollama ancora attivo — grace check passato, in attesa dei token',
+              message: 'Ollama still alive — idle grace check passed, waiting for more tokens',
               chunkId: chunk.id,
             }),
           ),

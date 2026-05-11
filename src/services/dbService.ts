@@ -375,6 +375,17 @@ export async function saveOperationLogEntry(projectId: string, entry: PersistedL
       entry.detail ?? null,
     ],
   );
+  await execute(
+    `DELETE FROM operation_logs
+     WHERE project_id = $1
+       AND id NOT IN (
+         SELECT id FROM operation_logs
+         WHERE project_id = $1
+         ORDER BY at DESC
+         LIMIT $2
+       )`,
+    [projectId, MAX_OPERATION_LOG_ENTRIES],
+  );
 }
 
 export async function loadOperationLogs(projectId: string): Promise<PersistedLogEntry[]> {
