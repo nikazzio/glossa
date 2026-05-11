@@ -2078,7 +2078,9 @@ fn build_judge_prompts(
            (semantic translation quality: critical=unusable, poor=weak, fair=usable with revision, \
            good=solid, excellent=publication-ready)\n\
          - issues: array of objects {{ type: 'glossary'|'fluency'|'accuracy'|'grammar', \
-           severity: 'low'|'medium'|'high', description: string, suggestedFix: string }}",
+           severity: 'low'|'medium'|'high', description: string, suggestedFix: string }}\n\
+         Write all description and suggestedFix values in {tgt}. \
+         Keep the rating value as one of the English literals above.",
         src = config.source_language,
         tgt = config.target_language,
         instructions = config.judge_prompt,
@@ -2138,6 +2140,7 @@ fn build_coherence_prompts(
          Your task: identify cross-segment inconsistencies between a translated segment and its surrounding context.\n\
          {instructions}\n\
          Glossary: {glossary}\n\n\
+         Write all description and suggestedFix values in {tgt}.\n\
          Respond with valid JSON only:\n\
          {{\"issues\": [{{\"type\": \"consistency\"|\"glossary\", \
          \"severity\": \"low\"|\"medium\"|\"high\", \
@@ -2813,6 +2816,38 @@ mod tests {
 
         assert!(system.contains("API"));
         assert!(system.contains("Keep as-is"));
+    }
+
+    #[test]
+    fn judge_prompt_requests_response_in_target_language() {
+        let config = make_config(); // target_language = "Italian"
+        let (system, _) = build_judge_prompts("src", "tgt", &config);
+
+        assert!(
+            system.contains("in Italian"),
+            "judge prompt should instruct the model to write descriptions in the target language"
+        );
+        assert!(
+            system.contains("English literals"),
+            "judge prompt should keep rating values as English literals"
+        );
+    }
+
+    #[test]
+    fn coherence_prompt_requests_response_in_target_language() {
+        let config = make_config(); // target_language = "Italian"
+        let input = CoherenceChunkInput {
+            original: "Hello".into(),
+            translation: "Ciao".into(),
+            prev_context: None,
+            next_context: None,
+        };
+        let (system, _) = build_coherence_prompts(&input, &config);
+
+        assert!(
+            system.contains("in Italian"),
+            "coherence prompt should instruct the model to write descriptions in the target language"
+        );
     }
 
     #[test]
