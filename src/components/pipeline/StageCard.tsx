@@ -303,7 +303,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
           {/* Prompt textarea with template controls */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-widest text-editorial-muted">
+              <span className="text-xs font-sans uppercase tracking-widest text-editorial-muted">
                 {t('pipeline.prompt')}
               </span>
               <div className="flex items-center gap-1.5">

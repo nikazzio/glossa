@@ -98,7 +98,7 @@ export function ProviderRuntimeEditor({
         <span className="flex items-center gap-2.5">
           <SlidersHorizontal size={13} className={overrideEnabled ? 'text-editorial-ink' : 'text-editorial-muted'} />
           <span className="space-y-0.5">
-            <span className="block text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+            <span className="block text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
               {title}
             </span>
             {!overrideEnabled && (
@@ -240,7 +240,7 @@ export function ProviderRuntimeEditor({
               />
 
               <div className="space-y-2">
-                <label htmlFor={textareaId} className="block text-[10px] font-bold uppercase tracking-[0.28em] text-editorial-muted">
+                <label htmlFor={textareaId} className="block text-[10px] font-sans uppercase tracking-[0.28em] text-editorial-muted">
                   {t('pipeline.providerOptions.advancedJson')}
                 </label>
                 <textarea
@@ -291,7 +291,7 @@ function LabeledField({
 }) {
   return (
     <label className="space-y-1.5">
-      <span className="block text-[10px] font-bold uppercase tracking-[0.28em] text-editorial-muted">
+      <span className="block text-[10px] font-sans uppercase tracking-[0.28em] text-editorial-muted">
         {label}
       </span>
       {children}
@@ -336,7 +336,7 @@ function ToggleRow({
           <span className="h-3.5 w-3.5 rounded-full bg-white" />
         </span>
         <span className="space-y-1">
-          <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.25em] text-editorial-muted">
+          <span className="flex items-center gap-2 text-xs font-sans uppercase tracking-[0.25em] text-editorial-muted">
             {icon}
             {label}
           </span>

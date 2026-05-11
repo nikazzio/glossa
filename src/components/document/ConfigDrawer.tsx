@@ -130,7 +130,7 @@ export function ConfigDrawer({
       {/* Header */}
       <div className="flex items-start justify-between gap-3 border-b border-editorial-border px-6 pt-4 pb-4">
         <div className="min-w-0">
-          <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+          <div className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
             {t('document.configDrawerTitle')}
           </div>
           <h2
