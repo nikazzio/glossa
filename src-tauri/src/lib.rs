@@ -1,5 +1,6 @@
 mod db;
 mod documents;
+mod keystore;
 mod llm;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -59,19 +60,19 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             db::execute_transaction,
-            llm::run_stage,
-            llm::run_stage_stream,
-            llm::cancel_stream,
-            llm::judge_translation,
-            llm::refine_prompt,
-            llm::save_api_key,
-            llm::get_api_key_status,
-            llm::delete_api_key,
-            llm::test_provider_connection,
-            llm::list_ollama_models,
-            llm::check_ollama_status,
-            llm::check_ollama_preflight,
-            llm::run_coherence_for_chunk,
+            llm::pipeline::run_stage,
+            llm::pipeline::run_stage_stream,
+            llm::pipeline::cancel_stream,
+            llm::pipeline::judge_translation,
+            llm::pipeline::refine_prompt,
+            llm::pipeline::test_provider_connection,
+            llm::pipeline::run_coherence_for_chunk,
+            keystore::save_api_key,
+            keystore::get_api_key_status,
+            keystore::delete_api_key,
+            llm::providers::ollama::list_ollama_models,
+            llm::providers::ollama::check_ollama_status,
+            llm::providers::ollama::check_ollama_preflight,
             documents::extract_docx_text,
             documents::extract_docx_markdown,
             documents::export_markdown_docx,
