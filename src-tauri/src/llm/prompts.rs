@@ -147,7 +147,9 @@ pub(crate) fn build_judge_prompts(
            (semantic translation quality: critical=unusable, poor=weak, fair=usable with revision, \
            good=solid, excellent=publication-ready)\n\
          - issues: array of objects {{ type: 'glossary'|'fluency'|'accuracy'|'grammar', \
-           severity: 'low'|'medium'|'high', description: string, suggestedFix: string }}",
+           severity: 'low'|'medium'|'high', description: string, suggestedFix: string }}\n\
+         Write all description and suggestedFix values in {tgt}. \
+         Keep the rating value as one of the English literals above.",
         src = config.source_language,
         tgt = config.target_language,
         instructions = config.judge_prompt,
@@ -186,6 +188,7 @@ pub(crate) fn build_coherence_prompts(
          Your task: identify cross-segment inconsistencies between a translated segment and its surrounding context.\n\
          {instructions}\n\
          Glossary: {glossary}\n\n\
+         Write all description and suggestedFix values in {tgt}.\n\
          Respond with valid JSON only:\n\
          {{\"issues\": [{{\"type\": \"consistency\"|\"glossary\", \
          \"severity\": \"low\"|\"medium\"|\"high\", \
