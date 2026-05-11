@@ -275,6 +275,12 @@ function FeaturesSection() {
       <SubTitle>{t('help.features.rollingContextTitle')}</SubTitle>
       <P>{t('help.features.rollingContextDesc')}</P>
 
+      <SubTitle>{t('help.features.personaTitle')}</SubTitle>
+      <P>{t('help.features.personaDesc')}</P>
+
+      <SubTitle>{t('help.features.operationsLogTitle')}</SubTitle>
+      <P>{t('help.features.operationsLogDesc')}</P>
+
       <div className="my-4 space-y-2">
         <FeatureRow icon={<PanelTopClose size={14} />} text={t('help.shortcuts.toggleEditorTools')} />
         <FeatureRow icon={<CheckCheck size={14} />} text={t('help.shortcuts.lockTranslation')} />
