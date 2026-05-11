@@ -152,7 +152,7 @@ export const llmService = {
     prompt: string,
     provider: string,
     model: string,
-    context: 'stage' | 'audit',
+    context: 'stage' | 'audit' | 'persona',
   ): Promise<string> {
     return invoke<string>('refine_prompt', { prompt, provider, model, context });
   },

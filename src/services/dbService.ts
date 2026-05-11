@@ -47,6 +47,7 @@ const ALLOWED_MIGRATIONS = new Set([
   'translations.translation_display_text',
   'translations.translation_processing_text',
   'prompt_templates.context',
+  'pipeline_configs.persona',
 ]);
 
 export async function ensureColumn(table: string, column: string, definition: string): Promise<void> {
@@ -187,6 +188,7 @@ export async function initDatabase(): Promise<void> {
   await ensureColumn('pipeline_configs', 'markdown_aware', 'INTEGER DEFAULT 0');
   await ensureColumn('pipeline_configs', 'experimental_import', 'TEXT DEFAULT NULL');
   await ensureColumn('pipeline_configs', 'review_provider_options', 'TEXT DEFAULT NULL');
+  await ensureColumn('pipeline_configs', 'persona', 'TEXT DEFAULT NULL');
   await ensureColumn('projects', 'view_mode', 'TEXT DEFAULT NULL');
   await ensureColumn('translations', 'position', 'INTEGER DEFAULT NULL');
   await ensureColumn('translations', 'chunk_status', "TEXT DEFAULT 'ready'");

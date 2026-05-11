@@ -99,6 +99,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         reviewProviderOptions: config.reviewProviderOptions ?? state.config.reviewProviderOptions,
         glossary: config.glossary,
         assignedGlossaryId: config.assignedGlossaryId,
+        persona: config.persona,
       },
     }));
     chunksStore.setChunks(restoredChunks);

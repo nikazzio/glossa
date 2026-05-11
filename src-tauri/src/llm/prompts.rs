@@ -91,15 +91,24 @@ pub(crate) fn build_stage_prompts(
         )
     };
 
+    let default_opener = format!(
+        "You are an expert translator and linguist specialized in {} to {} translation.",
+        config.source_language, config.target_language,
+    );
+    let opener = config
+        .persona
+        .as_deref()
+        .filter(|p| !p.trim().is_empty())
+        .unwrap_or(&default_opener);
+
     let system_prompt = format!(
-        "You are an expert translator and linguist specialized in {} to {} translation.\n\n\
+        "{}\n\n\
          Core Instructions:\n{}\n\n\
          Structural Preservation Rules:\n\
          - Preserve paragraph boundaries and line breaks unless the source is clearly malformed\n\
          - Do not collapse repeated spaces, tabs, list structure, or footnote placement when they carry formatting meaning\n\n\
          {}{}",
-        config.source_language,
-        config.target_language,
+        opener,
         stage.prompt,
         glossary_rules,
         markdown_rules,
@@ -263,5 +272,6 @@ pub(crate) fn minimal_pipeline_config(
         markdown_aware: None,
         coherence_prompt: None,
         review_provider_options,
+        persona: None,
     }
 }

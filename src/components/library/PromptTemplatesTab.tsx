@@ -17,9 +17,9 @@ export function PromptTemplatesTab() {
   const { config } = usePipelineStore();
   const [newName, setNewName] = useState('');
   const [newPrompt, setNewPrompt] = useState('');
-  const [newContext, setNewContext] = useState<'stage' | 'audit'>('stage');
+  const [newContext, setNewContext] = useState<'stage' | 'audit' | 'persona'>('stage');
   const [creating, setCreating] = useState(false);
-  const [filterContext, setFilterContext] = useState<'all' | 'stage' | 'audit'>('all');
+  const [filterContext, setFilterContext] = useState<'all' | 'stage' | 'audit' | 'persona'>('all');
   const [isRefining, setIsRefining] = useState(false);
 
   const firstActiveStage = config.stages.find((s) => s.enabled);
@@ -56,6 +56,7 @@ export function PromptTemplatesTab() {
       setRefineModel(auditDefaultModel);
       return;
     }
+    // 'stage' and 'persona' both default to the first active stage's model
     setRefineProvider(stageDefaultProvider);
     setRefineModel(stageDefaultModel);
   }, [newContext, auditDefaultProvider, auditDefaultModel, stageDefaultProvider, stageDefaultModel]);
@@ -97,7 +98,7 @@ export function PromptTemplatesTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1">
-          {(['all', 'stage', 'audit'] as const).map((ctx) => (
+          {(['all', 'stage', 'audit', 'persona'] as const).map((ctx) => (
             <button
               key={ctx}
               onClick={() => setFilterContext(ctx)}
@@ -132,17 +133,20 @@ export function PromptTemplatesTab() {
             />
             <select
               value={newContext}
-              onChange={(e) => setNewContext(e.target.value as 'stage' | 'audit')}
+              onChange={(e) => setNewContext(e.target.value as 'stage' | 'audit' | 'persona')}
               className="bg-editorial-bg rounded py-1.5 px-2 text-[11px] font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent border border-editorial-border/40 text-editorial-ink"
             >
               <option value="stage">{t('pipeline.tabStages')}</option>
               <option value="audit">{t('pipeline.tabAudit')}</option>
+              <option value="persona">{t('pipeline.tabPersona')}</option>
             </select>
           </div>
           <p className="text-[10px] leading-relaxed text-editorial-muted/70">
             {newContext === 'audit'
               ? t('library.templateAuditHint')
-              : t('library.templateStageHint')}
+              : newContext === 'persona'
+                ? t('library.templatePersonaHint')
+                : t('library.templateStageHint')}
           </p>
           {/* Prompt + refine tools */}
           <div className="space-y-1.5">
@@ -220,9 +224,15 @@ export function PromptTemplatesTab() {
                 <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest ${
                   tmpl.context === 'audit'
                     ? 'bg-editorial-warning/20 text-editorial-warning'
-                    : 'bg-editorial-accent/20 text-editorial-accent'
+                    : tmpl.context === 'persona'
+                      ? 'bg-purple-500/15 text-purple-400'
+                      : 'bg-editorial-accent/20 text-editorial-accent'
                 }`}>
-                  {tmpl.context === 'audit' ? t('pipeline.tabAudit') : t('pipeline.tabStages')}
+                  {tmpl.context === 'audit'
+                    ? t('pipeline.tabAudit')
+                    : tmpl.context === 'persona'
+                      ? t('pipeline.tabPersona')
+                      : t('pipeline.tabStages')}
                 </span>
               </div>
               <button

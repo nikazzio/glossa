@@ -91,7 +91,7 @@ export interface PromptTemplate {
   id: string;
   name: string;
   prompt: string;
-  context: 'stage' | 'audit';
+  context: 'stage' | 'audit' | 'persona';
   defaultModel?: string;
   defaultProvider?: string;
   createdAt: string;
@@ -143,4 +143,5 @@ export interface PipelineConfig {
   experimentalImport?: ExperimentalImportMode | null;
   coherencePrompt?: string;
   reviewProviderOptions?: ProviderRuntimeConfig;
+  persona?: string;
 }

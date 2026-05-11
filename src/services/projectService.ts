@@ -163,6 +163,7 @@ export async function getProjectConfig(projectId: string): Promise<{
   reviewProviderOptions: ProviderRuntimeConfig | undefined;
   glossary: GlossaryEntry[];
   assignedGlossaryId: string | null;
+  persona: string | undefined;
 } | null> {
   const rows = await select<{
     source_language: string;
@@ -182,6 +183,7 @@ export async function getProjectConfig(projectId: string): Promise<{
     markdown_aware?: number;
     experimental_import?: PipelineConfig['experimentalImport'];
     review_provider_options?: string | null;
+    persona?: string | null;
   }>(
     `SELECT
        p.source_language,
@@ -200,7 +202,8 @@ export async function getProjectConfig(projectId: string): Promise<{
         pc.render_profile,
        pc.markdown_aware,
        pc.experimental_import,
-       pc.review_provider_options
+       pc.review_provider_options,
+       pc.persona
      FROM pipeline_configs pc
      JOIN projects p ON p.id = pc.project_id
      WHERE pc.project_id = $1`,
@@ -242,6 +245,7 @@ export async function getProjectConfig(projectId: string): Promise<{
     markdownAware: row.markdown_aware === 1,
     experimentalImport: row.experimental_import ?? null,
     reviewProviderOptions: parseJson<ProviderRuntimeConfig>(row.review_provider_options),
+    persona: row.persona || undefined,
     assignedGlossaryId,
     glossary: glossaryRows.map((g, i) => ({
       id: g.id || `gloss-loaded-${projectId}-${i}`,
@@ -275,8 +279,8 @@ async function saveProjectConfigInternal(
     `INSERT INTO pipeline_configs (
        id, project_id, stages, judge_prompt, judge_model, judge_provider, use_chunking,
        target_chunk_count, source_text, source_display_text, source_processing_text, source_footnotes,
-       document_format, render_profile, markdown_aware, experimental_import, review_provider_options
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9, ''), COALESCE($10, ''), COALESCE($11, ''), $12, $13, $14, $15, $16, $17)
+       document_format, render_profile, markdown_aware, experimental_import, review_provider_options, persona
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9, ''), COALESCE($10, ''), COALESCE($11, ''), $12, $13, $14, $15, $16, $17, $18)
      ON CONFLICT(project_id) DO UPDATE SET
        id = excluded.id,
        stages = excluded.stages,
@@ -302,6 +306,7 @@ async function saveProjectConfigInternal(
        markdown_aware = excluded.markdown_aware,
        experimental_import = excluded.experimental_import,
        review_provider_options = excluded.review_provider_options,
+       persona = excluded.persona,
        source_text = CASE
          WHEN $9 IS NULL THEN pipeline_configs.source_text
          ELSE $9
@@ -324,6 +329,7 @@ async function saveProjectConfigInternal(
       config.markdownAware ? 1 : 0,
       config.experimentalImport ?? null,
       config.reviewProviderOptions ? JSON.stringify(config.reviewProviderOptions) : null,
+      config.persona || null,
     ],
   );
   await run(

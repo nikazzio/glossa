@@ -1,4 +1,4 @@
-import { Plus, ArrowRightLeft, Play, Layers, Loader2, X, ShieldCheck, AlertTriangle, RotateCcw, Wand2, BookmarkPlus, BookOpen, Check, Trash2, Globe } from 'lucide-react';
+import { Plus, ArrowRightLeft, Play, Layers, Loader2, X, ShieldCheck, AlertTriangle, RotateCcw, Wand2, BookmarkPlus, BookOpen, Check, Trash2, Globe, Bot } from 'lucide-react';
 import { useMemo, useState, useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -18,6 +18,219 @@ import { llmService } from '../../services/llmService';
 import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
 
 export type ConfigSection = 'stages' | 'audit' | 'glossary';
+
+interface PersonaEditorProps {
+  persona: string | undefined;
+  sourceLanguage: string;
+  targetLanguage: string;
+  templates: PromptTemplate[];
+  onChange: (value: string | undefined) => void;
+  onSaveTemplate: (name: string, prompt: string) => Promise<void>;
+  deleteTemplate: (id: string) => Promise<void>;
+}
+
+function PersonaEditor({
+  persona,
+  sourceLanguage,
+  targetLanguage,
+  templates,
+  onChange,
+  onSaveTemplate,
+  deleteTemplate,
+}: PersonaEditorProps) {
+  const { t } = useTranslation();
+  const [showSaveName, setShowSaveName] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [showTemplateList, setShowTemplateList] = useState(false);
+  const [templateSearch, setTemplateSearch] = useState('');
+
+  const isCustom = !!persona;
+  const defaultText = `You are an expert translator and linguist specialized in ${sourceLanguage} to ${targetLanguage} translation.`;
+
+  const filteredTemplates = templates.filter((tmpl) =>
+    tmpl.name.toLowerCase().includes(templateSearch.toLowerCase()),
+  );
+
+  const handleCustomize = () => onChange(defaultText);
+  const handleReset = () => {
+    onChange(undefined);
+    setShowSaveName(false);
+    setShowTemplateList(false);
+    setTemplateName('');
+  };
+
+  const handleSaveTemplate = async () => {
+    const name = templateName.trim();
+    if (!name || !persona) return;
+    try {
+      await onSaveTemplate(name, persona);
+      toast.success(t('pipeline.templates.saved'));
+      setTemplateName('');
+      setShowSaveName(false);
+    } catch (err: unknown) {
+      toast.error(t('errors.somethingWentWrong'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    }
+  };
+
+  const handleDeleteTemplate = async (id: string) => {
+    try {
+      await deleteTemplate(id);
+      toast.success(t('pipeline.templates.deleted'));
+    } catch (err: unknown) {
+      toast.error(t('errors.somethingWentWrong'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    }
+  };
+
+  return (
+    <div className="mt-4 pt-4 border-t border-editorial-border/40 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5">
+          <Bot size={11} className="text-editorial-muted shrink-0" />
+          <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+            {t('pipeline.personaLabel')}
+          </p>
+          {isCustom && (
+            <span className="rounded-full bg-editorial-accent/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-editorial-accent">
+              {t('pipeline.personaCustomBadge')}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1">
+          {isCustom ? (
+            <>
+              <button
+                type="button"
+                onClick={() => { setShowSaveName(!showSaveName); setShowTemplateList(false); }}
+                title={t('pipeline.templates.save')}
+                aria-label={t('pipeline.templates.save')}
+                className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+              >
+                <BookmarkPlus size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowTemplateList(!showTemplateList); setShowSaveName(false); }}
+                title={t('pipeline.templates.load')}
+                aria-label={t('pipeline.templates.load')}
+                className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+              >
+                <BookOpen size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={handleReset}
+                title={t('pipeline.personaReset')}
+                aria-label={t('pipeline.personaReset')}
+                className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+              >
+                <X size={14} />
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={handleCustomize}
+              className="rounded-full border border-editorial-border/60 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:border-editorial-accent hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+            >
+              {t('pipeline.personaCustomize')}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {isCustom && showSaveName && (
+        <div className="flex items-center gap-1.5">
+          <input
+            value={templateName}
+            onChange={(e) => setTemplateName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSaveTemplate();
+              if (e.key === 'Escape') { setShowSaveName(false); setTemplateName(''); }
+            }}
+            placeholder={t('pipeline.templates.namePlaceholder')}
+            autoFocus
+            className="flex-1 rounded bg-editorial-textbox/60 border border-editorial-border/60 px-2 py-1 text-xs font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+          />
+          <button
+            type="button"
+            onClick={handleSaveTemplate}
+            disabled={!templateName.trim()}
+            className="text-editorial-ink hover:text-editorial-accent transition-colors disabled:opacity-40 focus:outline-none"
+            aria-label={t('common.confirm')}
+          >
+            <Check size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => { setShowSaveName(false); setTemplateName(''); }}
+            className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none"
+            aria-label={t('common.cancel')}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {isCustom && showTemplateList && (
+        <div className="rounded-lg border border-editorial-border bg-editorial-bg shadow-lg overflow-hidden">
+          <div className="p-2 border-b border-editorial-border/60">
+            <input
+              value={templateSearch}
+              onChange={(e) => setTemplateSearch(e.target.value)}
+              placeholder={t('pipeline.templates.searchPlaceholder')}
+              autoFocus
+              className="w-full rounded bg-editorial-textbox/60 border border-editorial-border/40 px-2 py-1 text-xs font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+            />
+          </div>
+          <ul className="max-h-40 overflow-y-auto custom-scrollbar">
+            {filteredTemplates.length === 0 ? (
+              <li className="px-3 py-3 text-xs text-editorial-muted text-center">
+                {t('pipeline.templates.empty')}
+              </li>
+            ) : (
+              filteredTemplates.map((tmpl) => (
+                <li key={tmpl.id} className="flex items-start gap-2 px-3 py-2 hover:bg-editorial-textbox/40 group">
+                  <button
+                    type="button"
+                    onClick={() => { onChange(tmpl.prompt); setShowTemplateList(false); setTemplateSearch(''); }}
+                    className="flex-1 text-left min-w-0 focus:outline-none"
+                  >
+                    <div className="text-xs font-bold text-editorial-ink truncate">{tmpl.name}</div>
+                    <div className="text-[10px] text-editorial-muted truncate mt-0.5 font-mono">{tmpl.prompt}</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteTemplate(tmpl.id)}
+                    className="shrink-0 text-editorial-muted/40 hover:text-editorial-accent transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 focus:outline-none mt-0.5"
+                    aria-label={t('common.delete')}
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>
+        </div>
+      )}
+
+      <textarea
+        value={isCustom ? persona : defaultText}
+        disabled={!isCustom}
+        onChange={(e) => onChange(e.target.value)}
+        rows={isCustom ? 4 : 2}
+        className={`w-full rounded-[14px] border px-3 py-2 text-xs font-mono outline-none leading-relaxed resize-y ${
+          isCustom
+            ? 'bg-editorial-textbox/40 border-editorial-border/60 focus-visible:ring-2 focus-visible:ring-editorial-accent'
+            : 'bg-editorial-textbox/10 border-editorial-border/30 text-editorial-muted/60 cursor-default'
+        }`}
+      />
+    </div>
+  );
+}
 
 interface PipelineConfigProps {
   onRunPipeline: () => void;
@@ -280,10 +493,11 @@ export function PipelineConfig({
   const showAudit = activeTab === 'audit';
 
   useEffect(() => {
-    if (showAudit) loadTemplates();
-  }, [showAudit]);
+    loadTemplates();
+  }, []);
 
   const auditTemplates = templates.filter((tmpl) => tmpl.context === 'audit');
+  const personaTemplates = templates.filter((tmpl) => tmpl.context === 'persona');
 
   const handleRerunAll = async () => {
     const ok = await confirm({
@@ -414,6 +628,15 @@ export function PipelineConfig({
             ))}
           </select>
         </div>
+        <PersonaEditor
+          persona={config.persona}
+          sourceLanguage={config.sourceLanguage}
+          targetLanguage={config.targetLanguage}
+          templates={personaTemplates}
+          onChange={(value) => setConfig((prev) => ({ ...prev, persona: value }))}
+          onSaveTemplate={(name, prompt) => saveTemplate(name, prompt, 'persona')}
+          deleteTemplate={deleteTemplate}
+        />
       </div>
 
       {/* ── Empty state (no project open) ── */}

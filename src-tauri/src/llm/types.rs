@@ -54,6 +54,7 @@ pub struct PipelineConfig {
     pub markdown_aware: Option<bool>,
     pub coherence_prompt: Option<String>,
     pub review_provider_options: Option<ProviderRuntimeConfig>,
+    pub persona: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
