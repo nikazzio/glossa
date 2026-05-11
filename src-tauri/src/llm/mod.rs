@@ -174,6 +174,8 @@ mod tests {
             markdown_aware: None,
             coherence_prompt: None,
             review_provider_options: None,
+            persona: None,
+            ui_language: None,
         }
     }
 
