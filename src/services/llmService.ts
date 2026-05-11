@@ -154,11 +154,6 @@ export const llmService = {
     translation: string,
     config: PipelineConfig,
   ): Promise<Omit<JudgeResult, 'status'> & { inputTokens?: number; outputTokens?: number; systemPrompt?: string; userPrompt?: string }> {
-    logOperation({
-      level: 'info',
-      scope: 'invoke',
-      message: `Invoking backend judge run for ${config.judgeProvider}/${config.judgeModel}`,
-    });
     return invoke<Omit<JudgeResult, 'status'> & { inputTokens?: number; outputTokens?: number; systemPrompt?: string; userPrompt?: string }>(
       'judge_translation',
       { originalText, translation, config: withUiLanguage(config) },

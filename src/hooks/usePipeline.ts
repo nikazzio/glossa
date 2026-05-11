@@ -215,7 +215,17 @@ export function usePipeline() {
               },
             );
           },
-          { label: `Stage "${stage.name}"` },
+          {
+            label: `Stage "${stage.name}"`,
+            onRetry: (attempt, total, error, delayMs) => logOperation({
+              level: 'warn',
+              scope: 'stage',
+              message: `Retry ${attempt}/${total} — waiting ${delayMs}ms`,
+              chunkId: chunk.id,
+              stageId: stage.id,
+              meta: { error },
+            }),
+          },
         );
         if (result) {
           lastResult = result;
@@ -315,7 +325,16 @@ export function usePipeline() {
     try {
       const judgeData = await withRetry(
         () => llmService.judgeTranslation(chunk.sourceProcessingText, textToAudit, effectiveConfig ?? config),
-        { label: 'Audit' },
+        {
+          label: 'Audit',
+          onRetry: (attempt, total, error, delayMs) => logOperation({
+            level: 'warn',
+            scope: 'audit',
+            message: `Retry ${attempt}/${total} — waiting ${delayMs}ms`,
+            chunkId: chunk.id,
+            meta: { error },
+          }),
+        },
       );
       const judgeTokenUsage =
         judgeData.inputTokens !== undefined && judgeData.outputTokens !== undefined

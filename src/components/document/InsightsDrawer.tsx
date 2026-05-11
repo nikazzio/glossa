@@ -1049,15 +1049,10 @@ function OperationsTab({
                 error:   t('log.levelError'),
               };
               const chunkIndex = entry.chunkId ? chunks.findIndex((c) => c.id === entry.chunkId) : -1;
-              const isCurrentChunk = currentChunkId && entry.chunkId === currentChunkId;
               return (
                 <div
                   key={entry.id}
-                  className={`rounded-[12px] border px-3 py-2 ${
-                    isCurrentChunk
-                      ? 'border-[#74c0fc]/40 bg-[#74c0fc]/5'
-                      : 'border-white/10 bg-white/[0.03]'
-                  }`}
+                  className="rounded-[12px] border border-white/10 bg-white/[0.03] px-3 py-2"
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-[#555]">$</span>
