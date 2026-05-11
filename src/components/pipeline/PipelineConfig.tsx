@@ -742,9 +742,12 @@ export function PipelineConfig({
         {activeTab === 'settings' && (
           <div id="pconfig-panel-settings" role="tabpanel" aria-labelledby="pconfig-tab-settings" className="space-y-6">
             <div className="space-y-2">
-              <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-                {t('pipeline.languagePair')}
-              </p>
+              <div className="flex items-center gap-1.5">
+                <Globe size={11} className="text-editorial-muted shrink-0" />
+                <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                  {t('pipeline.languagePair')}
+                </p>
+              </div>
               <div className={`flex items-center gap-3 transition-opacity ${!!config.persona ? 'opacity-40 pointer-events-none' : ''}`}>
                 <select
                   value={config.sourceLanguage}
