@@ -93,15 +93,9 @@ export const llmService = {
     onUsage?: (usage: TokenUsage) => void,
     previousTranslation?: string,
     onPrompt?: (info: PromptInfo) => void,
+    onIdleGrace?: () => void,
   ): Promise<string> {
     const streamId = `stream-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    logOperation({
-      level: 'info',
-      scope: 'invoke',
-      message: `Invoking backend streaming stage run for ${stage.provider}/${stage.model}`,
-      stageId: stage.id,
-      meta: { streamId },
-    });
 
     const unlisten = await listen<StreamTokenPayload>('stream-token', (event) => {
       if (event.payload.streamId !== streamId) return;
@@ -115,15 +109,18 @@ export const llmService = {
         onUsage({ inputTokens: event.payload.inputTokens, outputTokens: event.payload.outputTokens });
       }
     });
-
     const unlistenPrompt = await listen<{ streamId: string; systemPrompt: string; userPrompt: string }>('chunk-prompt', (event) => {
       if (event.payload.streamId !== streamId) return;
       onPrompt?.({ systemPrompt: event.payload.systemPrompt, userPrompt: event.payload.userPrompt });
     });
+    const unlistenAlive = await listen<{ streamId: string }>('stream-alive', (event) => {
+      if (event.payload.streamId !== streamId) return;
+      onIdleGrace?.();
+    });
 
     useChunksStore.getState().setActiveStreamId(streamId);
     try {
-      const result = await invoke<string>('run_stage_stream', {
+      return await invoke<string>('run_stage_stream', {
         text,
         stage,
         config,
@@ -131,10 +128,10 @@ export const llmService = {
         previousTranslation: previousTranslation || null,
         streamId,
       });
-      return result;
     } finally {
       unlisten();
       unlistenPrompt();
+      unlistenAlive();
       useChunksStore.getState().setActiveStreamId(null);
     }
   },
@@ -154,6 +151,7 @@ export const llmService = {
     translation: string,
     config: PipelineConfig,
     onPrompt?: (info: PromptInfo) => void,
+    onIdleGrace?: () => void,
   ): Promise<Omit<JudgeResult, 'status'> & { inputTokens?: number; outputTokens?: number }> {
     const streamId = `judge-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
@@ -172,6 +170,10 @@ export const llmService = {
       if (event.payload.streamId !== streamId) return;
       onPrompt?.({ systemPrompt: event.payload.systemPrompt, userPrompt: event.payload.userPrompt });
     });
+    const unlistenAlive = await listen<{ streamId: string }>('stream-alive', (event) => {
+      if (event.payload.streamId !== streamId) return;
+      onIdleGrace?.();
+    });
 
     useChunksStore.getState().setActiveStreamId(streamId);
     try {
@@ -187,6 +189,7 @@ export const llmService = {
     } finally {
       unlisten();
       unlistenPrompt();
+      unlistenAlive();
       useChunksStore.getState().setActiveStreamId(null);
     }
   },
@@ -195,6 +198,7 @@ export const llmService = {
     input: { original: string; translation: string; prevContext?: string; nextContext?: string },
     config: PipelineConfig,
     onPrompt?: (info: PromptInfo) => void,
+    onIdleGrace?: () => void,
   ): Promise<{ issues: Issue[]; inputTokens?: number; outputTokens?: number }> {
     const streamId = `coherence-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
@@ -213,6 +217,10 @@ export const llmService = {
       if (event.payload.streamId !== streamId) return;
       onPrompt?.({ systemPrompt: event.payload.systemPrompt, userPrompt: event.payload.userPrompt });
     });
+    const unlistenAlive = await listen<{ streamId: string }>('stream-alive', (event) => {
+      if (event.payload.streamId !== streamId) return;
+      onIdleGrace?.();
+    });
 
     useChunksStore.getState().setActiveStreamId(streamId);
     try {
@@ -228,6 +236,7 @@ export const llmService = {
     } finally {
       unlisten();
       unlistenPrompt();
+      unlistenAlive();
       useChunksStore.getState().setActiveStreamId(null);
     }
   },

@@ -213,6 +213,13 @@ export function usePipeline() {
                   detail: `[system]\n${info.systemPrompt}\n\n[user]\n${info.userPrompt}`,
                 });
               },
+              () => logOperation({
+                level: 'info',
+                scope: 'stage',
+                message: 'Ollama ancora attivo — grace check passato, in attesa dei token',
+                chunkId: chunk.id,
+                stageId: stage.id,
+              }),
             );
           },
           {
@@ -337,6 +344,12 @@ export function usePipeline() {
               detail: `[system]\n${info.systemPrompt}\n\n[user]\n${info.userPrompt}`,
             });
           },
+          () => logOperation({
+            level: 'info',
+            scope: 'audit',
+            message: 'Ollama ancora attivo — grace check passato, in attesa dei token',
+            chunkId: chunk.id,
+          }),
         ),
         {
           label: 'Audit',
@@ -577,7 +590,7 @@ export function usePipeline() {
       const nextContext = nextChunk?.translationProcessingText ? firstNWords(nextChunk.translationProcessingText, 300) : undefined;
 
       updateChunkCoherence(chunk.id, { status: 'processing', issues: [] });
-      logOperation({ level: 'info', scope: 'coherence', message: 'Coherence check started for this chunk against its neighbors', chunkId: chunk.id });
+      logOperation({ level: 'info', scope: 'coherence', message: 'Coherence check started for this chunk against its neighbors', chunkId: chunk.id, meta: { provider: config.judgeProvider, model: config.judgeModel } });
 
       try {
         const result = await withRetry(
@@ -593,8 +606,23 @@ export function usePipeline() {
                 detail: `[system]\n${info.systemPrompt}\n\n[user]\n${info.userPrompt}`,
               });
             },
+            () => logOperation({
+              level: 'info',
+              scope: 'coherence',
+              message: 'Ollama ancora attivo — grace check passato, in attesa dei token',
+              chunkId: chunk.id,
+            }),
           ),
-          { label: 'Coherence audit' },
+          {
+            label: 'Coherence audit',
+            onRetry: (attempt, total, error, delayMs) => logOperation({
+              level: 'warn',
+              scope: 'coherence',
+              message: `Retry ${attempt}/${total} — waiting ${delayMs}ms`,
+              chunkId: chunk.id,
+              meta: { error },
+            }),
+          },
         );
         const tokenUsage =
           result.inputTokens !== undefined && result.outputTokens !== undefined

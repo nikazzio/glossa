@@ -796,7 +796,7 @@ mod tests {
                 ))),
             }]);
 
-            consume_stream(&provider, "stream-1", &cancel, &mut source, |_| {}, "test-model")
+            consume_stream(&provider, "stream-1", &cancel, &mut source, |_| {}, "test-model", || {})
                 .await
         });
 
@@ -896,6 +896,7 @@ mod tests {
                 &mut source,
                 |token| emitted_for_task.lock().expect("poisoned").push(token),
                 "test-model",
+                || {},
             )
             .await
         });
@@ -1111,6 +1112,7 @@ mod tests {
             &mut source,
             |token| emitted_for_cb.lock().expect("poisoned").push(token),
             "test-model",
+            || {},
         )
         .await;
 

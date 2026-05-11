@@ -321,17 +321,19 @@ impl StreamAccumulator {
 
 // ── Core streaming functions ──────────────────────────────────────────
 
-pub(crate) async fn consume_stream<S, E>(
+pub(crate) async fn consume_stream<S, E, G>(
     provider: &dyn LlmProvider,
     stream_id: &str,
     cancel: &Arc<CancelToken>,
     source: &mut S,
     mut emit: E,
     model: &str,
+    mut on_idle_grace: G,
 ) -> Result<String, String>
 where
     S: StreamChunkSource,
     E: FnMut(StreamToken),
+    G: FnMut(),
 {
     let timeouts = provider.stream_timeouts();
     let mut acc = StreamAccumulator::new();
@@ -362,6 +364,7 @@ where
                 // Before giving up, ask the provider if it is still alive.
                 // Ollama checks /api/ps; cloud providers return false immediately.
                 if provider.on_idle_timeout(model).await {
+                    on_idle_grace();
                     continue;
                 }
                 return Err(format_stream_idle_timeout_with_duration(
@@ -395,9 +398,13 @@ pub(crate) async fn stream_response(
         resp: &mut resp,
         provider_id: provider.id(),
     };
+    let alive_app = app.clone();
+    let alive_sid = stream_id.to_string();
     consume_stream(provider, stream_id, cancel, &mut source, |token| {
         let _ = app.emit("stream-token", token);
-    }, model)
+    }, model, move || {
+        let _ = alive_app.emit("stream-alive", serde_json::json!({ "streamId": alive_sid }));
+    })
     .await
 }
 
