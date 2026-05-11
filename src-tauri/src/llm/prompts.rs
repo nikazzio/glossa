@@ -143,6 +143,11 @@ pub(crate) fn build_judge_prompts(
     config: &PipelineConfig,
 ) -> (String, String) {
     let glossary_json = serde_json::to_string(&config.glossary).unwrap_or_default();
+    let ui_lang = config
+        .ui_language
+        .as_deref()
+        .filter(|s| !s.is_empty())
+        .unwrap_or(&config.source_language);
 
     let system_prompt = format!(
         "As a translation quality judge, evaluate the following translation.\n\
@@ -157,7 +162,7 @@ pub(crate) fn build_judge_prompts(
            good=solid, excellent=publication-ready)\n\
          - issues: array of objects {{ type: 'glossary'|'fluency'|'accuracy'|'grammar', \
            severity: 'low'|'medium'|'high', description: string, suggestedFix: string }}\n\
-         Write all description and suggestedFix values in {src}. \
+         Write all description and suggestedFix values in {ui_lang}. \
          Keep the rating value as one of the English literals above.",
         src = config.source_language,
         tgt = config.target_language,
@@ -179,6 +184,11 @@ pub(crate) fn build_coherence_prompts(
     config: &PipelineConfig,
 ) -> (String, String) {
     let glossary_json = serde_json::to_string(&config.glossary).unwrap_or_default();
+    let ui_lang = config
+        .ui_language
+        .as_deref()
+        .filter(|s| !s.is_empty())
+        .unwrap_or(&config.source_language);
 
     let default_instructions = "Evaluate ONLY:\n\
          1. Terminology consistency — key terms translated differently than in adjacent segments\n\
@@ -197,7 +207,7 @@ pub(crate) fn build_coherence_prompts(
          Your task: identify cross-segment inconsistencies between a translated segment and its surrounding context.\n\
          {instructions}\n\
          Glossary: {glossary}\n\n\
-         Write all description and suggestedFix values in {src}.\n\
+         Write all description and suggestedFix values in {ui_lang}.\n\
          Respond with valid JSON only:\n\
          {{\"issues\": [{{\"type\": \"consistency\"|\"glossary\", \
          \"severity\": \"low\"|\"medium\"|\"high\", \
@@ -273,5 +283,6 @@ pub(crate) fn minimal_pipeline_config(
         coherence_prompt: None,
         review_provider_options,
         persona: None,
+        ui_language: None,
     }
 }

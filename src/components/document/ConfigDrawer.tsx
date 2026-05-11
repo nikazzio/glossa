@@ -72,7 +72,7 @@ export function ConfigDrawer({
   const libraryGlossarySection = (
     <div className="space-y-3 rounded-[20px] border border-editorial-border/60 bg-editorial-textbox/20 px-5 py-4">
       <div className="flex items-center justify-between gap-2">
-        <span className="font-display italic text-sm text-editorial-ink">
+        <span className="text-sm font-sans text-editorial-ink">
           {t('library.assignedDictionary')}
         </span>
         <button

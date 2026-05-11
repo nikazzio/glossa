@@ -1,4 +1,4 @@
-import { Plus, ArrowRightLeft, Play, Layers, Loader2, X, ShieldCheck, AlertTriangle, RotateCcw, Wand2, BookmarkPlus, BookOpen, Check, Trash2, Bot, Settings } from 'lucide-react';
+import { Plus, ArrowRightLeft, Play, Layers, Loader2, X, ShieldCheck, AlertTriangle, RotateCcw, Wand2, BookmarkPlus, BookOpen, Check, Trash2, Bot, Settings, Globe } from 'lucide-react';
 import { useMemo, useState, useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -90,7 +90,7 @@ function PersonaEditor({
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
           <Bot size={11} className="text-editorial-muted shrink-0" />
-          <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+          <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
             {t('pipeline.personaLabel')}
           </p>
           {isCustom && (
@@ -329,7 +329,7 @@ function AuditPromptEditor({
     <div className="rounded-[20px] border border-editorial-border bg-editorial-bg/70 p-6 space-y-3">
       <div className="space-y-1">
         <div className="flex items-center justify-between gap-3">
-          <span className="text-sm font-bold text-editorial-ink">{label}</span>
+          <span className="text-sm font-sans text-editorial-ink">{label}</span>
           <div className="flex items-center gap-1.5">
             <button
               type="button"
@@ -594,9 +594,12 @@ export function PipelineConfig({
       {showOnlyGlobalDefaults && (
         <div className="shrink-0 border-b border-editorial-border px-6 py-5 space-y-5">
           <div className="space-y-2">
-            <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-              {t('pipeline.languagePair')}
-            </p>
+            <div className="flex items-center gap-1.5">
+              <Globe size={11} className="text-editorial-muted shrink-0" />
+              <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                {t('pipeline.languagePair')}
+              </p>
+            </div>
             <div className={`flex items-center gap-3 transition-opacity ${!!config.persona ? 'opacity-40 pointer-events-none' : ''}`}>
               <select
                 value={config.sourceLanguage}
@@ -729,7 +732,7 @@ export function PipelineConfig({
           <BookOpen size={16} />
         </button>
         <span className="mx-1 h-4 w-px bg-editorial-border/70" aria-hidden="true" />
-        <span className="text-sm font-bold text-editorial-ink">{TAB_TITLE[activeTab]}</span>
+        <span className="text-sm font-display italic text-editorial-ink">{TAB_TITLE[activeTab]}</span>
       </div>
 
       {/* ── Tab panels ── */}
@@ -809,7 +812,7 @@ export function PipelineConfig({
             className="space-y-5"
           >
             <div className="flex items-center justify-between">
-              <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+              <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
                 {t('pipeline.tabStages')}
               </p>
               <button
@@ -845,7 +848,7 @@ export function PipelineConfig({
             className="space-y-6"
           >
             <div className="space-y-3 rounded-[20px] border border-editorial-border bg-editorial-bg/70 px-5 py-4">
-              <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+              <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
                 {t('pipeline.auditModelLabel')}
               </p>
               <div className="flex gap-2">

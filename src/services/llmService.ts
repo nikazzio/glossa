@@ -1,8 +1,30 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import i18n from 'i18next';
 import type { PipelineConfig, PipelineStageConfig, JudgeResult, Issue, TokenUsage, PromptInfo } from '../types';
 import { useChunksStore } from '../stores/chunksStore';
 import { logOperation } from '../stores/operationLogStore';
+
+const LOCALE_NAMES: Record<string, string> = {
+  it: 'Italian',
+  en: 'English',
+  fr: 'French',
+  de: 'German',
+  es: 'Spanish',
+  pt: 'Portuguese',
+  nl: 'Dutch',
+  pl: 'Polish',
+  ru: 'Russian',
+  zh: 'Chinese',
+  ja: 'Japanese',
+  ko: 'Korean',
+};
+
+function withUiLanguage(config: PipelineConfig): PipelineConfig {
+  const locale = i18n.language ?? 'en';
+  const lang = LOCALE_NAMES[locale] ?? LOCALE_NAMES[locale.split('-')[0]] ?? 'English';
+  return { ...config, uiLanguage: lang };
+}
 
 /// Sentinel string returned by the Rust backend when a stream is
 /// cancelled via cancel_stream. Exposed so the pipeline runner can
@@ -139,7 +161,7 @@ export const llmService = {
     });
     return invoke<Omit<JudgeResult, 'status'> & { inputTokens?: number; outputTokens?: number; systemPrompt?: string; userPrompt?: string }>(
       'judge_translation',
-      { originalText, translation, config },
+      { originalText, translation, config: withUiLanguage(config) },
     );
   },
 
@@ -152,7 +174,7 @@ export const llmService = {
       scope: 'invoke',
       message: `Invoking backend coherence run for ${config.judgeProvider}/${config.judgeModel}`,
     });
-    return invoke('run_coherence_for_chunk', { input, config });
+    return invoke('run_coherence_for_chunk', { input, config: withUiLanguage(config) });
   },
 
   async refinePrompt(

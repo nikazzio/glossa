@@ -151,4 +151,5 @@ export interface PipelineConfig {
   coherencePrompt?: string;
   reviewProviderOptions?: ProviderRuntimeConfig;
   persona?: string;
+  uiLanguage?: string;
 }
