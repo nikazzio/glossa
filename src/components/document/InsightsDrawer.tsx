@@ -24,6 +24,7 @@ import {
   ScanLine,
   Scissors,
   ShieldCheck,
+  Terminal,
   TerminalSquare,
   Trash2,
   X,
@@ -31,7 +32,7 @@ import {
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
-import { type KeyboardEvent, useEffect, useMemo, useRef } from 'react';
+import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useUiStore, type InsightsDrawerTab, type ChunkDrawerTab } from '../../stores/uiStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
@@ -838,6 +839,51 @@ function CoherenceTab({ panelId, labelledBy, currentChunk, isProcessing, allChun
   );
 }
 
+// ── Prompt viewer (inline) ─────────────────────────────────────────────────
+
+function PromptViewerInline({ systemPrompt, userPrompt }: { systemPrompt: string; userPrompt: string }) {
+  const [open, setOpen] = useState(false);
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+      >
+        <Terminal size={10} /> prompt
+      </button>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted">prompts</span>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="text-editorial-muted hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+        >
+          <X size={10} />
+        </button>
+      </div>
+      <div className="space-y-1">
+        <div className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted">system</div>
+        <pre className="max-h-40 overflow-y-auto rounded bg-black/20 p-2 text-[10px] font-mono whitespace-pre-wrap text-editorial-ink">
+          {systemPrompt}
+        </pre>
+      </div>
+      <div className="space-y-1">
+        <div className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted">user</div>
+        <pre className="max-h-32 overflow-y-auto rounded bg-black/20 p-2 text-[10px] font-mono whitespace-pre-wrap text-editorial-ink">
+          {userPrompt}
+        </pre>
+      </div>
+    </div>
+  );
+}
+
 // ── Audit Tab ──────────────────────────────────────────────────────────────
 
 interface AuditTabProps {
@@ -903,6 +949,14 @@ function AuditTab({ panelId, labelledBy, currentChunk, isProcessing, onReauditCh
         )}
         {currentChunk.judgeResult.issues.length > 0 && (
           <IssueList issues={currentChunk.judgeResult.issues} chunkId={currentChunk.id} onSelectChunk={onSelectChunk} onFocusIssue={onFocusIssue} />
+        )}
+        {currentChunk.judgeResult.status === 'completed' && currentChunk.judgeResult.promptInfo && (
+          <div className="mt-4 border-t border-editorial-border/20 pt-4">
+            <PromptViewerInline
+              systemPrompt={currentChunk.judgeResult.promptInfo.systemPrompt}
+              userPrompt={currentChunk.judgeResult.promptInfo.userPrompt}
+            />
+          </div>
         )}
       </section>
     </div>

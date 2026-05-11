@@ -4,6 +4,7 @@ import type {
   CoherenceResult,
   JudgeResult,
   PipelineResult,
+  PromptInfo,
   TranslationChunk,
 } from '../types';
 import { usePipelineStore } from './pipelineStore';
@@ -134,6 +135,7 @@ interface ChunksState {
   clearChunks: () => void;
   updateChunkStage: (chunkId: string, stageId: string, result: PipelineResult) => void;
   appendChunkStageContent: (chunkId: string, stageId: string, token: string) => void;
+  setChunkStagePromptInfo: (chunkId: string, stageId: string, promptInfo: PromptInfo) => void;
   updateChunkJudge: (chunkId: string, result: JudgeResult) => void;
   updateChunkDraft: (chunkId: string, draft: string) => void;
   toggleChunkTranslationLock: (chunkId: string) => void;
@@ -224,6 +226,20 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
       })),
     }));
   },
+
+  setChunkStagePromptInfo: (chunkId, stageId, promptInfo) =>
+    set((state) => ({
+      chunks: updateSingleChunk(state.chunks, chunkId, (chunk) => ({
+        ...chunk,
+        stageResults: {
+          ...chunk.stageResults,
+          [stageId]: {
+            ...(chunk.stageResults[stageId] ?? { content: '', status: 'processing' as const }),
+            promptInfo,
+          },
+        },
+      })),
+    })),
 
   // Buffers tokens per animation frame instead of committing on every token.
   // If the active (chunkId, stageId) pair changes, the previous batch is flushed immediately.

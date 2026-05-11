@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import type { PipelineConfig, PipelineStageConfig, JudgeResult, Issue, TokenUsage } from '../types';
+import type { PipelineConfig, PipelineStageConfig, JudgeResult, Issue, TokenUsage, PromptInfo } from '../types';
 import { useChunksStore } from '../stores/chunksStore';
 import { logOperation } from '../stores/operationLogStore';
 
@@ -70,6 +70,7 @@ export const llmService = {
     onToken: (token: string) => void,
     onUsage?: (usage: TokenUsage) => void,
     previousTranslation?: string,
+    onPrompt?: (info: PromptInfo) => void,
   ): Promise<string> {
     const streamId = `stream-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     logOperation({
@@ -93,6 +94,11 @@ export const llmService = {
       }
     });
 
+    const unlistenPrompt = await listen<{ streamId: string; systemPrompt: string; userPrompt: string }>('chunk-prompt', (event) => {
+      if (event.payload.streamId !== streamId) return;
+      onPrompt?.({ systemPrompt: event.payload.systemPrompt, userPrompt: event.payload.userPrompt });
+    });
+
     useChunksStore.getState().setActiveStreamId(streamId);
     try {
       const result = await invoke<string>('run_stage_stream', {
@@ -106,6 +112,7 @@ export const llmService = {
       return result;
     } finally {
       unlisten();
+      unlistenPrompt();
       useChunksStore.getState().setActiveStreamId(null);
     }
   },
@@ -124,13 +131,13 @@ export const llmService = {
     originalText: string,
     translation: string,
     config: PipelineConfig,
-  ): Promise<Omit<JudgeResult, 'status'> & { inputTokens?: number; outputTokens?: number }> {
+  ): Promise<Omit<JudgeResult, 'status'> & { inputTokens?: number; outputTokens?: number; systemPrompt?: string; userPrompt?: string }> {
     logOperation({
       level: 'info',
       scope: 'invoke',
       message: `Invoking backend judge run for ${config.judgeProvider}/${config.judgeModel}`,
     });
-    return invoke<Omit<JudgeResult, 'status'> & { inputTokens?: number; outputTokens?: number }>(
+    return invoke<Omit<JudgeResult, 'status'> & { inputTokens?: number; outputTokens?: number; systemPrompt?: string; userPrompt?: string }>(
       'judge_translation',
       { originalText, translation, config },
     );
@@ -139,7 +146,7 @@ export const llmService = {
   async runCoherenceForChunk(
     input: { original: string; translation: string; prevContext?: string; nextContext?: string },
     config: PipelineConfig,
-  ): Promise<{ issues: Issue[]; inputTokens?: number; outputTokens?: number }> {
+  ): Promise<{ issues: Issue[]; inputTokens?: number; outputTokens?: number; systemPrompt?: string; userPrompt?: string }> {
     logOperation({
       level: 'info',
       scope: 'invoke',

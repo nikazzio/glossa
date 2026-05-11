@@ -1,4 +1,4 @@
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Emitter, State};
 
 use crate::keystore::get_api_key;
 use crate::llm::provider::LlmRequest;
@@ -14,6 +14,14 @@ use crate::llm::types::{
     CoherenceChunkInput, CoherenceResponse, JudgeIssue, JudgeResponse, PipelineConfig,
     ProviderRuntimeConfig, StageConfig,
 };
+
+#[derive(serde::Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct PromptEvent {
+    stream_id: String,
+    system_prompt: String,
+    user_prompt: String,
+}
 
 #[tauri::command]
 pub async fn run_stage(
@@ -68,6 +76,11 @@ pub async fn run_stage_stream(
         &previous_result,
         &previous_translation,
     );
+    app.emit("chunk-prompt", PromptEvent {
+        stream_id: stream_id.clone(),
+        system_prompt: system_prompt.clone(),
+        user_prompt: user_prompt.clone(),
+    }).ok();
     let req = LlmRequest {
         model: &stage.model,
         system_prompt: &system_prompt,
@@ -165,6 +178,8 @@ pub async fn judge_translation(
         content: translation,
         input_tokens: usage.as_ref().map(|u| u.input),
         output_tokens: usage.as_ref().map(|u| u.output),
+        system_prompt: Some(system_prompt),
+        user_prompt: Some(user_prompt),
     })
 }
 
@@ -248,6 +263,8 @@ pub async fn run_coherence_for_chunk(
         issues,
         input_tokens: usage.as_ref().map(|u| u.input),
         output_tokens: usage.as_ref().map(|u| u.output),
+        system_prompt: Some(system_prompt),
+        user_prompt: Some(user_prompt),
     })
 }
 

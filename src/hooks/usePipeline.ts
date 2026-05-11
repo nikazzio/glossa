@@ -8,7 +8,7 @@ import { useUiStore } from '../stores/uiStore';
 import { logOperation } from '../stores/operationLogStore';
 import { withRetry, friendlyError } from '../utils/retry';
 import { qualityDefault, qualityFailure } from '../utils';
-import type { Issue, JudgeResult, TokenUsage, TranslationChunk } from '../types';
+import type { Issue, JudgeResult, PromptInfo, TokenUsage, TranslationChunk } from '../types';
 
 function lastNWords(text: string, n: number): string {
   const words = text.trim().split(/\s+/);
@@ -37,6 +37,7 @@ export function usePipeline() {
   const {
     updateChunkStage,
     appendChunkStageContent,
+    setChunkStagePromptInfo,
     updateChunkJudge,
     updateChunkDraft,
     updateChunkStatus,
@@ -201,6 +202,7 @@ export function usePipeline() {
               (token) => appendChunkStageContent(chunk.id, stage.id, token),
               (usage) => { capturedUsage = usage; },
               stage.rollingContext !== false ? options.previousTranslation : undefined,
+              (info: PromptInfo) => setChunkStagePromptInfo(chunk.id, stage.id, info),
             );
           },
           { label: `Stage "${stage.name}"` },
@@ -309,11 +311,16 @@ export function usePipeline() {
         judgeData.inputTokens !== undefined && judgeData.outputTokens !== undefined
           ? { inputTokens: judgeData.inputTokens, outputTokens: judgeData.outputTokens }
           : undefined;
+      const judgePromptInfo =
+        judgeData.systemPrompt !== undefined && judgeData.userPrompt !== undefined
+          ? { systemPrompt: judgeData.systemPrompt, userPrompt: judgeData.userPrompt }
+          : undefined;
       updateChunkJudge(chunk.id, {
         ...judgeData,
         content: textToAudit,
         status: 'completed',
         ...(judgeTokenUsage ? { tokenUsage: judgeTokenUsage } : {}),
+        ...(judgePromptInfo ? { promptInfo: judgePromptInfo } : {}),
       } as JudgeResult);
       updateChunkStatus(chunk.id, 'completed');
       logOperation({
@@ -401,7 +408,7 @@ export function usePipeline() {
       });
       toast.warning(t('errors.pipelineCompletedWithErrors', { count: errorCount }));
     }
-  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureOllamaReady]);
+  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureOllamaReady]);
 
   const runSingleChunk = useCallback(async (chunkId: string) => {
     if (useChunksStore.getState().isProcessing) return;
@@ -432,7 +439,7 @@ export function usePipeline() {
       // Per-chunk failure already raised a toast inside the helper; no
       // extra summary toast is needed.
     }
-  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureOllamaReady]);
+  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureOllamaReady]);
 
   const runAuditOnly = useCallback(async () => {
     if (useChunksStore.getState().isProcessing) return;
@@ -547,10 +554,15 @@ export function usePipeline() {
           result.inputTokens !== undefined && result.outputTokens !== undefined
             ? { inputTokens: result.inputTokens, outputTokens: result.outputTokens }
             : undefined;
+        const coherencePromptInfo =
+          result.systemPrompt !== undefined && result.userPrompt !== undefined
+            ? { systemPrompt: result.systemPrompt, userPrompt: result.userPrompt }
+            : undefined;
         updateChunkCoherence(chunk.id, {
           status: 'completed',
           issues: result.issues as Issue[],
           ...(tokenUsage ? { tokenUsage } : {}),
+          ...(coherencePromptInfo ? { promptInfo: coherencePromptInfo } : {}),
         });
         logOperation({
           level: 'success',

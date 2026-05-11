@@ -87,6 +87,11 @@ export interface TokenUsage {
   outputTokens: number;
 }
 
+export interface PromptInfo {
+  systemPrompt: string;
+  userPrompt: string;
+}
+
 export interface PromptTemplate {
   id: string;
   name: string;
@@ -102,6 +107,7 @@ export interface PipelineResult {
   status: 'idle' | 'processing' | 'completed' | 'error';
   error?: string;
   tokenUsage?: TokenUsage;
+  promptInfo?: PromptInfo;
 }
 
 export interface JudgeResult extends PipelineResult {
@@ -121,6 +127,7 @@ export interface CoherenceResult {
   issues: Issue[];
   error?: string;
   tokenUsage?: TokenUsage;
+  promptInfo?: PromptInfo;
 }
 
 export interface PipelineConfig {
