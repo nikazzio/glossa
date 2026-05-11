@@ -153,23 +153,83 @@ export const llmService = {
     originalText: string,
     translation: string,
     config: PipelineConfig,
-  ): Promise<Omit<JudgeResult, 'status'> & { inputTokens?: number; outputTokens?: number; systemPrompt?: string; userPrompt?: string }> {
-    return invoke<Omit<JudgeResult, 'status'> & { inputTokens?: number; outputTokens?: number; systemPrompt?: string; userPrompt?: string }>(
-      'judge_translation',
-      { originalText, translation, config: withUiLanguage(config) },
-    );
+    onPrompt?: (info: PromptInfo) => void,
+  ): Promise<Omit<JudgeResult, 'status'> & { inputTokens?: number; outputTokens?: number }> {
+    const streamId = `judge-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    let capturedUsage: TokenUsage | undefined;
+    const unlisten = await listen<StreamTokenPayload>('stream-token', (event) => {
+      if (event.payload.streamId !== streamId) return;
+      if (
+        event.payload.done &&
+        event.payload.inputTokens !== undefined &&
+        event.payload.outputTokens !== undefined
+      ) {
+        capturedUsage = { inputTokens: event.payload.inputTokens, outputTokens: event.payload.outputTokens };
+      }
+    });
+    const unlistenPrompt = await listen<{ streamId: string; systemPrompt: string; userPrompt: string }>('chunk-prompt', (event) => {
+      if (event.payload.streamId !== streamId) return;
+      onPrompt?.({ systemPrompt: event.payload.systemPrompt, userPrompt: event.payload.userPrompt });
+    });
+
+    useChunksStore.getState().setActiveStreamId(streamId);
+    try {
+      const result = await invoke<Omit<JudgeResult, 'status'> & { inputTokens?: number; outputTokens?: number }>(
+        'judge_translation',
+        { originalText, translation, config: withUiLanguage(config), streamId },
+      );
+      return {
+        ...result,
+        inputTokens: capturedUsage?.inputTokens,
+        outputTokens: capturedUsage?.outputTokens,
+      };
+    } finally {
+      unlisten();
+      unlistenPrompt();
+      useChunksStore.getState().setActiveStreamId(null);
+    }
   },
 
   async runCoherenceForChunk(
     input: { original: string; translation: string; prevContext?: string; nextContext?: string },
     config: PipelineConfig,
-  ): Promise<{ issues: Issue[]; inputTokens?: number; outputTokens?: number; systemPrompt?: string; userPrompt?: string }> {
-    logOperation({
-      level: 'info',
-      scope: 'invoke',
-      message: `Invoking backend coherence run for ${config.judgeProvider}/${config.judgeModel}`,
+    onPrompt?: (info: PromptInfo) => void,
+  ): Promise<{ issues: Issue[]; inputTokens?: number; outputTokens?: number }> {
+    const streamId = `coherence-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    let capturedUsage: TokenUsage | undefined;
+    const unlisten = await listen<StreamTokenPayload>('stream-token', (event) => {
+      if (event.payload.streamId !== streamId) return;
+      if (
+        event.payload.done &&
+        event.payload.inputTokens !== undefined &&
+        event.payload.outputTokens !== undefined
+      ) {
+        capturedUsage = { inputTokens: event.payload.inputTokens, outputTokens: event.payload.outputTokens };
+      }
     });
-    return invoke('run_coherence_for_chunk', { input, config: withUiLanguage(config) });
+    const unlistenPrompt = await listen<{ streamId: string; systemPrompt: string; userPrompt: string }>('chunk-prompt', (event) => {
+      if (event.payload.streamId !== streamId) return;
+      onPrompt?.({ systemPrompt: event.payload.systemPrompt, userPrompt: event.payload.userPrompt });
+    });
+
+    useChunksStore.getState().setActiveStreamId(streamId);
+    try {
+      const result = await invoke<{ issues: Issue[]; inputTokens?: number; outputTokens?: number }>(
+        'run_coherence_for_chunk',
+        { input, config: withUiLanguage(config), streamId },
+      );
+      return {
+        ...result,
+        inputTokens: capturedUsage?.inputTokens,
+        outputTokens: capturedUsage?.outputTokens,
+      };
+    } finally {
+      unlisten();
+      unlistenPrompt();
+      useChunksStore.getState().setActiveStreamId(null);
+    }
   },
 
   async refinePrompt(

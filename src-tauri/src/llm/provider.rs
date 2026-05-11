@@ -115,6 +115,14 @@ pub trait LlmProvider: Send + Sync {
         Ok(())
     }
 
+    /// Called when the stream idle timeout fires before returning an error.
+    /// Return `true` to reset the idle timer and keep waiting (provider is
+    /// still alive but slow), `false` to abort with a timeout error.
+    /// Default: `false` (cloud providers time out hard).
+    async fn on_idle_timeout(&self, _model: &str) -> bool {
+        false
+    }
+
     /// Flush any remaining content in the stream buffer at EOS (default: none).
     /// Ollama overrides this to handle the final non-terminated JSON line.
     fn finalize_buffer(&self, _buffer: &str) -> Option<String> {

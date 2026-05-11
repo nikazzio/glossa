@@ -324,7 +324,20 @@ export function usePipeline() {
     });
     try {
       const judgeData = await withRetry(
-        () => llmService.judgeTranslation(chunk.sourceProcessingText, textToAudit, effectiveConfig ?? config),
+        () => llmService.judgeTranslation(
+          chunk.sourceProcessingText,
+          textToAudit,
+          effectiveConfig ?? config,
+          (info: PromptInfo) => {
+            logOperation({
+              level: 'info',
+              scope: 'audit',
+              message: `prompt → ${(effectiveConfig ?? config).judgeProvider}/${(effectiveConfig ?? config).judgeModel}`,
+              chunkId: chunk.id,
+              detail: `[system]\n${info.systemPrompt}\n\n[user]\n${info.userPrompt}`,
+            });
+          },
+        ),
         {
           label: 'Audit',
           onRetry: (attempt, total, error, delayMs) => logOperation({
@@ -340,25 +353,11 @@ export function usePipeline() {
         judgeData.inputTokens !== undefined && judgeData.outputTokens !== undefined
           ? { inputTokens: judgeData.inputTokens, outputTokens: judgeData.outputTokens }
           : undefined;
-      const judgePromptInfo =
-        judgeData.systemPrompt !== undefined && judgeData.userPrompt !== undefined
-          ? { systemPrompt: judgeData.systemPrompt, userPrompt: judgeData.userPrompt }
-          : undefined;
-      if (judgePromptInfo) {
-        logOperation({
-          level: 'info',
-          scope: 'audit',
-          message: `prompt → ${(effectiveConfig ?? config).judgeProvider}/${(effectiveConfig ?? config).judgeModel}`,
-          chunkId: chunk.id,
-          detail: `[system]\n${judgePromptInfo.systemPrompt}\n\n[user]\n${judgePromptInfo.userPrompt}`,
-        });
-      }
       updateChunkJudge(chunk.id, {
         ...judgeData,
         content: textToAudit,
         status: 'completed',
         ...(judgeTokenUsage ? { tokenUsage: judgeTokenUsage } : {}),
-        ...(judgePromptInfo ? { promptInfo: judgePromptInfo } : {}),
       } as JudgeResult);
       updateChunkStatus(chunk.id, 'completed');
       logOperation({
@@ -585,6 +584,15 @@ export function usePipeline() {
           () => llmService.runCoherenceForChunk(
             { original: chunk.sourceProcessingText, translation: chunk.translationProcessingText, prevContext, nextContext },
             config,
+            (info: PromptInfo) => {
+              logOperation({
+                level: 'info',
+                scope: 'coherence',
+                message: `prompt → ${config.judgeProvider}/${config.judgeModel}`,
+                chunkId: chunk.id,
+                detail: `[system]\n${info.systemPrompt}\n\n[user]\n${info.userPrompt}`,
+              });
+            },
           ),
           { label: 'Coherence audit' },
         );
@@ -592,24 +600,10 @@ export function usePipeline() {
           result.inputTokens !== undefined && result.outputTokens !== undefined
             ? { inputTokens: result.inputTokens, outputTokens: result.outputTokens }
             : undefined;
-        const coherencePromptInfo =
-          result.systemPrompt !== undefined && result.userPrompt !== undefined
-            ? { systemPrompt: result.systemPrompt, userPrompt: result.userPrompt }
-            : undefined;
-        if (coherencePromptInfo) {
-          logOperation({
-            level: 'info',
-            scope: 'coherence',
-            message: `prompt → ${config.judgeProvider}/${config.judgeModel}`,
-            chunkId: chunk.id,
-            detail: `[system]\n${coherencePromptInfo.systemPrompt}\n\n[user]\n${coherencePromptInfo.userPrompt}`,
-          });
-        }
         updateChunkCoherence(chunk.id, {
           status: 'completed',
           issues: result.issues as Issue[],
           ...(tokenUsage ? { tokenUsage } : {}),
-          ...(coherencePromptInfo ? { promptInfo: coherencePromptInfo } : {}),
         });
         logOperation({
           level: 'success',

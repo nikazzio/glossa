@@ -796,7 +796,7 @@ mod tests {
                 ))),
             }]);
 
-            consume_stream(&provider, "stream-1", &cancel, &mut source, |_| {})
+            consume_stream(&provider, "stream-1", &cancel, &mut source, |_| {}, "test-model")
                 .await
         });
 
@@ -845,7 +845,7 @@ mod tests {
                 },
             ]);
 
-            consume_stream(&provider, "stream-2", &cancel, &mut source, |_| {})
+            consume_stream(&provider, "stream-2", &cancel, &mut source, |_| {}, "test-model")
                 .await
         });
 
@@ -895,6 +895,7 @@ mod tests {
                 &cancel,
                 &mut source,
                 |token| emitted_for_task.lock().expect("poisoned").push(token),
+                "test-model",
             )
             .await
         });
@@ -929,7 +930,7 @@ mod tests {
         );
         let mut source = MockChunkSource::new(vec![MockChunk::Immediate(Err("stream broke"))]);
 
-        let result = consume_stream(&provider, "stream-err", &cancel, &mut source, |_| {})
+        let result = consume_stream(&provider, "stream-err", &cancel, &mut source, |_| {}, "test-model")
             .await;
 
         assert_eq!(result.unwrap_err(), "stream broke");
@@ -1109,6 +1110,7 @@ mod tests {
             &cancel,
             &mut source,
             |token| emitted_for_cb.lock().expect("poisoned").push(token),
+            "test-model",
         )
         .await;
 
@@ -1147,7 +1149,7 @@ mod tests {
             MockChunk::Immediate(Ok(None)),
         ]);
 
-        let result = consume_stream(&provider, "stream-anthropic", &cancel, &mut source, |_| {})
+        let result = consume_stream(&provider, "stream-anthropic", &cancel, &mut source, |_| {}, "test-model")
             .await;
 
         assert_eq!(result.unwrap(), "Guten Tag");
@@ -1172,7 +1174,7 @@ mod tests {
             ),
         )))]);
 
-        let result = consume_stream(&provider, "stream-precancelled", &cancel, &mut source, |_| {})
+        let result = consume_stream(&provider, "stream-precancelled", &cancel, &mut source, |_| {}, "test-model")
             .await;
 
         assert_eq!(result.unwrap_err(), STREAM_CANCELLED_ERROR);

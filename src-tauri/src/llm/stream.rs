@@ -27,7 +27,7 @@ pub(crate) const HTTP_STREAM_TOTAL_TIMEOUT_SECS: u64 = 15 * 60;
 // Ollama runs locally and can be significantly slower than cloud APIs,
 // especially on first inference or with large models.
 pub(crate) const OLLAMA_STREAM_HEADER_TIMEOUT_SECS: u64 = 4 * 60;
-pub(crate) const OLLAMA_STREAM_IDLE_TIMEOUT_SECS: u64 = 4 * 60;
+pub(crate) const OLLAMA_STREAM_IDLE_TIMEOUT_SECS: u64 = 5 * 60;
 
 // ── Stream timeout configuration ─────────────────────────────────────
 
@@ -327,6 +327,7 @@ pub(crate) async fn consume_stream<S, E>(
     cancel: &Arc<CancelToken>,
     source: &mut S,
     mut emit: E,
+    model: &str,
 ) -> Result<String, String>
 where
     S: StreamChunkSource,
@@ -358,10 +359,15 @@ where
             Ok(Ok(None)) => break,
             Ok(Err(err)) => return Err(err),
             Err(_) => {
+                // Before giving up, ask the provider if it is still alive.
+                // Ollama checks /api/ps; cloud providers return false immediately.
+                if provider.on_idle_timeout(model).await {
+                    continue;
+                }
                 return Err(format_stream_idle_timeout_with_duration(
                     provider.id(),
                     timeouts.idle,
-                ))
+                ));
             }
         }
     }
@@ -383,6 +389,7 @@ pub(crate) async fn stream_response(
     provider: &dyn LlmProvider,
     stream_id: &str,
     cancel: &Arc<CancelToken>,
+    model: &str,
 ) -> Result<String, String> {
     let mut source = ReqwestChunkSource {
         resp: &mut resp,
@@ -390,7 +397,7 @@ pub(crate) async fn stream_response(
     };
     consume_stream(provider, stream_id, cancel, &mut source, |token| {
         let _ = app.emit("stream-token", token);
-    })
+    }, model)
     .await
 }
 

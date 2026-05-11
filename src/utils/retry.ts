@@ -21,7 +21,7 @@ export async function withRetry<T>(
     } catch (err: any) {
       const message: string = err?.message ?? String(err);
 
-      if (isConfigError(message) || message.includes(STREAM_CANCELLED_ERROR)) throw err;
+      if (isConfigError(message) || message.includes(STREAM_CANCELLED_ERROR) || isTimeoutError(message)) throw err;
       if (attempt === maxRetries) throw err;
 
       const delay = baseDelayMs * Math.pow(2, attempt) + Math.random() * 500;
@@ -35,6 +35,15 @@ export async function withRetry<T>(
   }
 
   throw new Error(`${label} failed after ${maxRetries + 1} attempts`);
+}
+
+function isTimeoutError(message: string): boolean {
+  const timeoutPatterns = [
+    'timed out',
+    'timeout',
+    'stream exceeded',
+  ];
+  return timeoutPatterns.some((p) => message.toLowerCase().includes(p));
 }
 
 function isConfigError(message: string): boolean {

@@ -86,6 +86,10 @@ impl LlmProvider for OllamaProvider {
         ensure_ollama_model_ready(model).await
     }
 
+    async fn on_idle_timeout(&self, _model: &str) -> bool {
+        check_ollama_alive().await
+    }
+
     fn finalize_buffer(&self, buffer: &str) -> Option<String> {
         let trimmed = buffer.trim();
         if trimmed.is_empty() {
@@ -159,7 +163,7 @@ impl LlmProvider for OllamaProvider {
             req.user_prompt,
             &ollama,
             true,
-            false,
+            req.json_mode,
         );
 
         with_stream_header_timeout(
@@ -410,6 +414,20 @@ async fn ensure_ollama_model_ready(model: &str) -> Result<(), String> {
         ));
     }
     Ok(())
+}
+
+/// Lightweight liveness check for the idle-timeout grace period.
+/// Returns `true` if Ollama responds to `/api/ps` within 3 s.
+async fn check_ollama_alive() -> bool {
+    use crate::llm::stream::build_http_client_with_timeout;
+    let Ok(client) = build_http_client_with_timeout(3) else {
+        return false;
+    };
+    client
+        .get(format!("{OLLAMA_BASE_URL}/api/ps"))
+        .send()
+        .await
+        .is_ok()
 }
 
 // ── Tauri commands (Ollama-specific) ──────────────────────────────────

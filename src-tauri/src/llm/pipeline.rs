@@ -7,7 +7,6 @@ use crate::llm::prompts::{
     parse_judge_rating, sanitize_llm_json_output, REFINE_AUDIT_SYSTEM_PROMPT,
     REFINE_STAGE_SYSTEM_PROMPT,
 };
-use crate::llm::providers::format_api_error;
 use crate::llm::providers::get_provider;
 use crate::llm::stream::{stream_response, StreamGuard, StreamRegistry, STREAM_CANCELLED_ERROR};
 use crate::llm::types::{
@@ -107,7 +106,7 @@ pub async fn run_stage_stream(
         return Err(provider.format_http_error(status, &text));
     }
 
-    stream_response(&app, resp, provider.as_ref(), &stream_id, &cancel).await
+    stream_response(&app, resp, provider.as_ref(), &stream_id, &cancel, &stage.model).await
 }
 
 /// Mark a streaming request as cancelled. Idempotent and safe to call
@@ -120,15 +119,24 @@ pub fn cancel_stream(registry: State<'_, StreamRegistry>, stream_id: String) {
 #[tauri::command]
 pub async fn judge_translation(
     app: AppHandle,
+    registry: State<'_, StreamRegistry>,
     original_text: String,
     translation: String,
     config: PipelineConfig,
+    stream_id: String,
 ) -> Result<JudgeResponse, String> {
     let provider = get_provider(&config.judge_provider)?;
     provider.preflight(&config.judge_model).await?;
     let api_key = get_api_key(&app, &config.judge_provider)?;
-    let client = provider.http_client()?;
+    let client = provider.streaming_client()?;
     let (system_prompt, user_prompt) = build_judge_prompts(&original_text, &translation, &config);
+
+    app.emit("chunk-prompt", PromptEvent {
+        stream_id: stream_id.clone(),
+        system_prompt: system_prompt.clone(),
+        user_prompt: user_prompt.clone(),
+    }).ok();
+
     let req = LlmRequest {
         model: &config.judge_model,
         system_prompt: &system_prompt,
@@ -138,9 +146,24 @@ pub async fn judge_translation(
         provider_options: config.review_provider_options.as_ref(),
     };
 
-    let response = provider.call(&client, &req).await?;
-    let result_text = response.content;
-    let usage = response.usage;
+    let cancel = registry.register(&stream_id);
+    let _guard = StreamGuard {
+        registry: registry.inner(),
+        stream_id: stream_id.clone(),
+    };
+
+    if cancel.is_cancelled() {
+        return Err(STREAM_CANCELLED_ERROR.to_string());
+    }
+
+    let resp = provider.build_streaming_request(&client, &req).await?;
+    let status = resp.status();
+    if !status.is_success() {
+        let text = resp.text().await.unwrap_or_default();
+        return Err(provider.format_http_error(status, &text));
+    }
+
+    let result_text = stream_response(&app, resp, provider.as_ref(), &stream_id, &cancel, &config.judge_model).await?;
 
     let sanitized = sanitize_llm_json_output(&result_text);
     let parsed: serde_json::Value = serde_json::from_str(sanitized).map_err(|e| {
@@ -172,14 +195,16 @@ pub async fn judge_translation(
         })
         .unwrap_or_default();
 
+    // system_prompt and user_prompt are delivered via the chunk-prompt event before streaming.
+    // input_tokens and output_tokens are delivered via the stream-token done event.
     Ok(JudgeResponse {
         rating,
         issues,
         content: translation,
-        input_tokens: usage.as_ref().map(|u| u.input),
-        output_tokens: usage.as_ref().map(|u| u.output),
-        system_prompt: Some(system_prompt),
-        user_prompt: Some(user_prompt),
+        input_tokens: None,
+        output_tokens: None,
+        system_prompt: None,
+        user_prompt: None,
     })
 }
 
@@ -218,14 +243,23 @@ pub async fn refine_prompt(
 #[tauri::command]
 pub async fn run_coherence_for_chunk(
     app: AppHandle,
+    registry: State<'_, StreamRegistry>,
     input: CoherenceChunkInput,
     config: PipelineConfig,
+    stream_id: String,
 ) -> Result<CoherenceResponse, String> {
     let provider = get_provider(&config.judge_provider)?;
     provider.preflight(&config.judge_model).await?;
     let api_key = get_api_key(&app, &config.judge_provider)?;
-    let client = provider.http_client()?;
+    let client = provider.streaming_client()?;
     let (system_prompt, user_prompt) = build_coherence_prompts(&input, &config);
+
+    app.emit("chunk-prompt", PromptEvent {
+        stream_id: stream_id.clone(),
+        system_prompt: system_prompt.clone(),
+        user_prompt: user_prompt.clone(),
+    }).ok();
+
     let req = LlmRequest {
         model: &config.judge_model,
         system_prompt: &system_prompt,
@@ -235,9 +269,24 @@ pub async fn run_coherence_for_chunk(
         provider_options: config.review_provider_options.as_ref(),
     };
 
-    let response = provider.call(&client, &req).await?;
-    let result_text = response.content;
-    let usage = response.usage;
+    let cancel = registry.register(&stream_id);
+    let _guard = StreamGuard {
+        registry: registry.inner(),
+        stream_id: stream_id.clone(),
+    };
+
+    if cancel.is_cancelled() {
+        return Err(STREAM_CANCELLED_ERROR.to_string());
+    }
+
+    let resp = provider.build_streaming_request(&client, &req).await?;
+    let status = resp.status();
+    if !status.is_success() {
+        let text = resp.text().await.unwrap_or_default();
+        return Err(provider.format_http_error(status, &text));
+    }
+
+    let result_text = stream_response(&app, resp, provider.as_ref(), &stream_id, &cancel, &config.judge_model).await?;
 
     let sanitized = sanitize_llm_json_output(&result_text);
     let parsed: serde_json::Value = serde_json::from_str(sanitized)
@@ -259,12 +308,14 @@ pub async fn run_coherence_for_chunk(
         })
         .unwrap_or_default();
 
+    // system_prompt and user_prompt are delivered via the chunk-prompt event before streaming.
+    // input_tokens and output_tokens are delivered via the stream-token done event.
     Ok(CoherenceResponse {
         issues,
-        input_tokens: usage.as_ref().map(|u| u.input),
-        output_tokens: usage.as_ref().map(|u| u.output),
-        system_prompt: Some(system_prompt),
-        user_prompt: Some(user_prompt),
+        input_tokens: None,
+        output_tokens: None,
+        system_prompt: None,
+        user_prompt: None,
     })
 }
 
