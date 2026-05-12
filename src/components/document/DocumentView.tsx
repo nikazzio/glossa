@@ -6,6 +6,7 @@ import {
   FileText,
   Highlighter,
   Info,
+  Languages,
   Loader2,
   Lock,
   Merge,
@@ -318,7 +319,7 @@ export function DocumentView({
                     >
                       <CompactStatusIndicator
                         status={currentChunk.stageResults[stage.id]?.status || 'idle'}
-                        label={indexPad(stageIndex + 1)}
+                        icon={Languages}
                       />
                     </button>
                   ))}
