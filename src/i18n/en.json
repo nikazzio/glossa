@@ -149,6 +149,7 @@
     },
     "tabSettings": "Settings",
     "tabStages": "Translation",
+    "stageModelLabel": "Translation Model",
     "tabAudit": "Quality Control",
     "tabGlossary": "Term Registry",
     "tabPersona": "Persona",

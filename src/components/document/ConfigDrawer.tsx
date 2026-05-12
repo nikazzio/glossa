@@ -72,9 +72,12 @@ export function ConfigDrawer({
   const libraryGlossarySection = (
     <div className="space-y-3 rounded-[20px] border border-editorial-border/60 bg-editorial-textbox/20 px-5 py-4">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-          {t('library.assignedDictionary')}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <LibraryBig size={11} className="text-editorial-accent shrink-0" />
+          <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+            {t('library.assignedDictionary')}
+          </span>
+        </div>
         <button
           onClick={() => setShowLibraryPanel(true, 'dictionaries')}
           title={t('library.openLibrary')}
