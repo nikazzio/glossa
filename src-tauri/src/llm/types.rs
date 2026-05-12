@@ -76,6 +76,10 @@ pub struct PreflightCheckResult {
     pub label: String,
     pub ok: bool,
     pub error: Option<String>,
+    /// Populated only for Ollama checks — the full list of locally-installed
+    /// models returned by Ollama. Used by the frontend to refresh the model
+    /// picker without a separate round-trip.
+    pub available_models: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

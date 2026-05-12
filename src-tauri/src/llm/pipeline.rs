@@ -368,23 +368,30 @@ pub async fn preflight_pipeline(
 ) -> Result<Vec<PreflightCheckResult>, String> {
     let mut results = Vec::new();
     for check in checks {
-        let outcome = if check.provider == "ollama" {
-            run_ollama_preflight_check(&check.model).await
+        let (ok, error, available_models) = if check.provider == "ollama" {
+            match run_ollama_preflight_check(&check.model).await {
+                Ok(models) => (true, None, Some(models)),
+                Err(e) => (false, Some(e), None),
+            }
         } else {
-            run_cloud_preflight_check(&app, &check.provider).await
+            match run_cloud_preflight_check(&app, &check.provider).await {
+                Ok(()) => (true, None, None),
+                Err(e) => (false, Some(e), None),
+            }
         };
         results.push(PreflightCheckResult {
             provider: check.provider,
             model: check.model,
             label: check.label,
-            ok: outcome.is_ok(),
-            error: outcome.err(),
+            ok,
+            error,
+            available_models,
         });
     }
     Ok(results)
 }
 
-async fn run_ollama_preflight_check(model: &str) -> Result<(), String> {
+async fn run_ollama_preflight_check(model: &str) -> Result<Vec<String>, String> {
     let status =
         crate::llm::providers::ollama::check_ollama_preflight(Some(model.to_string())).await?;
     if !status.reachable {
@@ -393,7 +400,7 @@ async fn run_ollama_preflight_check(model: &str) -> Result<(), String> {
     if !status.model_available {
         return Err(format!("Model \"{model}\" is not installed locally"));
     }
-    Ok(())
+    Ok(status.models)
 }
 
 async fn run_cloud_preflight_check(app: &AppHandle, provider: &str) -> Result<(), String> {

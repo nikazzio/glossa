@@ -55,12 +55,6 @@ describe('usePipeline', () => {
     (toast.loading as ReturnType<typeof vi.fn>).mockReturnValue('toast-id');
     llmMocks.preflightPipeline.mockResolvedValue([]);
     preflightMocks.showPreflightDialog.mockResolvedValue(true);
-    ollamaMocks.checkPreflight.mockResolvedValue({
-      reachable: true,
-      models: ['llama3.2'],
-      requestedModel: 'llama3.2',
-      modelAvailable: true,
-    });
 
     usePipelineStore.setState((state) => ({
       ...state,
@@ -240,37 +234,6 @@ describe('usePipeline', () => {
     }));
     llmMocks.preflightPipeline.mockResolvedValueOnce([
       { provider: 'ollama', model: 'llama3.2', label: 'Stage 1 — ollama llama3.2', ok: false, error: 'Ollama is not running' },
-    ]);
-    preflightMocks.showPreflightDialog.mockResolvedValueOnce(false);
-
-    const { result } = renderHook(() => usePipeline());
-    await act(async () => {
-      await result.current.runPipeline();
-    });
-
-    expect(llmMocks.runStageStream).not.toHaveBeenCalled();
-    expect(preflightMocks.showPreflightDialog).toHaveBeenCalled();
-  });
-
-  it('blocks the run when Ollama has no installed models', async () => {
-    usePipelineStore.setState((state) => ({
-      ...state,
-      config: {
-        ...state.config,
-        stages: [
-          {
-            id: 'stg-1',
-            name: 'Stage 1',
-            prompt: 'Translate',
-            model: 'llama3.2',
-            provider: 'ollama',
-            enabled: true,
-          },
-        ],
-      },
-    }));
-    llmMocks.preflightPipeline.mockResolvedValueOnce([
-      { provider: 'ollama', model: 'llama3.2', label: 'Stage 1 — ollama llama3.2', ok: false, error: 'Model "llama3.2" is not installed locally' },
     ]);
     preflightMocks.showPreflightDialog.mockResolvedValueOnce(false);
 
