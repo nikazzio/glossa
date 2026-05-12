@@ -46,6 +46,38 @@ pub(crate) fn last_n_words(text: &str, n: usize) -> &str {
     text.trim_start()
 }
 
+fn format_glossary_table(glossary: &[crate::llm::types::GlossaryEntry]) -> String {
+    if glossary.is_empty() {
+        return String::new();
+    }
+    let mut table = "| Source | Target | Notes |\n|--------|--------|-------|\n".to_string();
+    for entry in glossary {
+        table.push_str(&format!(
+            "| {} | {} | {} |\n",
+            entry.term,
+            entry.translation,
+            entry.notes.as_deref().unwrap_or(""),
+        ));
+    }
+    table
+}
+
+fn effective_source<'a>(config: &'a PipelineConfig) -> &'a str {
+    config
+        .custom_source_language
+        .as_deref()
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or(&config.source_language)
+}
+
+fn effective_target<'a>(config: &'a PipelineConfig) -> &'a str {
+    config
+        .custom_target_language
+        .as_deref()
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or(&config.target_language)
+}
+
 pub(crate) fn build_stage_prompts(
     text: &str,
     stage: &StageConfig,
@@ -53,19 +85,7 @@ pub(crate) fn build_stage_prompts(
     previous_result: &Option<String>,
     previous_translation: &Option<String>,
 ) -> (String, String) {
-    let glossary_str: String = config
-        .glossary
-        .iter()
-        .map(|g| {
-            format!(
-                "- source: {}\n  target: {}\n  notes: {}",
-                g.term,
-                g.translation,
-                g.notes.as_deref().unwrap_or("-")
-            )
-        })
-        .collect::<Vec<_>>()
-        .join("\n");
+    let glossary_table = format_glossary_table(&config.glossary);
 
     let markdown_rules = if config.markdown_aware.unwrap_or(false) {
         "\n\nMarkdown Preservation Rules:\n\
@@ -76,7 +96,7 @@ pub(crate) fn build_stage_prompts(
         ""
     };
 
-    let glossary_rules = if glossary_str.is_empty() {
+    let glossary_rules = if glossary_table.is_empty() {
         "Glossary Constraints:\n- No glossary entries were provided.".to_string()
     } else {
         format!(
@@ -86,20 +106,31 @@ pub(crate) fn build_stage_prompts(
              - Preserve case, product names, abbreviations, and domain terminology consistently across the whole translation\n\
              - Do not omit glossary terms, paraphrase them away, or replace them with near-synonyms\n\
              - If a glossary term appears inside Markdown, links, or footnotes, still apply the glossary while preserving the surrounding syntax\n\
-             - Glossary entries:\n{}",
-            glossary_str,
+             - Glossary:\n{}",
+            glossary_table,
         )
     };
 
+    let src = effective_source(config);
+    let tgt = effective_target(config);
+
+    let default_opener = format!(
+        "You are an expert translator and linguist specialized in {src} to {tgt} translation.",
+    );
+    let opener = config
+        .persona
+        .as_deref()
+        .filter(|p| !p.trim().is_empty())
+        .unwrap_or(&default_opener);
+
     let system_prompt = format!(
-        "You are an expert translator and linguist specialized in {} to {} translation.\n\n\
+        "{}\n\n\
          Core Instructions:\n{}\n\n\
          Structural Preservation Rules:\n\
          - Preserve paragraph boundaries and line breaks unless the source is clearly malformed\n\
          - Do not collapse repeated spaces, tabs, list structure, or footnote placement when they carry formatting meaning\n\n\
          {}{}",
-        config.source_language,
-        config.target_language,
+        opener,
         stage.prompt,
         glossary_rules,
         markdown_rules,
@@ -133,28 +164,39 @@ pub(crate) fn build_judge_prompts(
     translation: &str,
     config: &PipelineConfig,
 ) -> (String, String) {
-    let glossary_json = serde_json::to_string(&config.glossary).unwrap_or_default();
+    let glossary_table = format_glossary_table(&config.glossary);
+    let src = effective_source(config);
+    let tgt = effective_target(config);
+    let ui_lang = config
+        .ui_language
+        .as_deref()
+        .filter(|s| !s.is_empty())
+        .unwrap_or(tgt);
+
+    let glossary_section = if glossary_table.is_empty() {
+        String::new()
+    } else {
+        format!("Glossary to adhere to:\n{glossary_table}\n\n")
+    };
 
     let system_prompt = format!(
         "As a translation quality judge, evaluate the following translation.\n\
          Source ({src}): {original_text}\n\
          Target ({tgt}): {translation}\n\n\
          Specific Audit Instructions:\n{instructions}\n\n\
-         Glossary to adhere to: {glossary_json}\n\n\
-         {markdown_rules}\n\
+         {glossary_section}\
+         {markdown_rules}\
          You MUST respond with a valid JSON object containing:\n\
          - rating: one of 'critical', 'poor', 'fair', 'good', 'excellent' \
            (semantic translation quality: critical=unusable, poor=weak, fair=usable with revision, \
            good=solid, excellent=publication-ready)\n\
          - issues: array of objects {{ type: 'glossary'|'fluency'|'accuracy'|'grammar', \
            severity: 'low'|'medium'|'high', description: string, suggestedFix: string }}\n\
-         Write all description and suggestedFix values in {tgt}. \
+         Write all description and suggestedFix values in {ui_lang}. \
          Keep the rating value as one of the English literals above.",
-        src = config.source_language,
-        tgt = config.target_language,
         instructions = config.judge_prompt,
         markdown_rules = if config.markdown_aware.unwrap_or(false) {
-            "When Markdown is present, verify that the translation preserves markers, footnotes, inline emphasis, and block structure exactly enough to remain valid Markdown."
+            "When Markdown is present, verify that the translation preserves markers, footnotes, inline emphasis, and block structure exactly enough to remain valid Markdown.\n\n"
         } else {
             ""
         },
@@ -169,7 +211,14 @@ pub(crate) fn build_coherence_prompts(
     input: &CoherenceChunkInput,
     config: &PipelineConfig,
 ) -> (String, String) {
-    let glossary_json = serde_json::to_string(&config.glossary).unwrap_or_default();
+    let glossary_table = format_glossary_table(&config.glossary);
+    let src = effective_source(config);
+    let tgt = effective_target(config);
+    let ui_lang = config
+        .ui_language
+        .as_deref()
+        .filter(|s| !s.is_empty())
+        .unwrap_or(tgt);
 
     let default_instructions = "Evaluate ONLY:\n\
          1. Terminology consistency — key terms translated differently than in adjacent segments\n\
@@ -183,19 +232,22 @@ pub(crate) fn build_coherence_prompts(
         .filter(|s| !s.trim().is_empty())
         .unwrap_or(default_instructions);
 
+    let glossary_section = if glossary_table.is_empty() {
+        String::new()
+    } else {
+        format!("Glossary:\n{glossary_table}\n\n")
+    };
+
     let system_prompt = format!(
         "You are a translation coherence auditor for {src}→{tgt} translations.\n\
          Your task: identify cross-segment inconsistencies between a translated segment and its surrounding context.\n\
          {instructions}\n\
-         Glossary: {glossary}\n\n\
-         Write all description and suggestedFix values in {tgt}.\n\
+         {glossary_section}\
+         Write all description and suggestedFix values in {ui_lang}.\n\
          Respond with valid JSON only:\n\
          {{\"issues\": [{{\"type\": \"consistency\"|\"glossary\", \
          \"severity\": \"low\"|\"medium\"|\"high\", \
          \"description\": \"string\", \"suggestedFix\": \"string\"}}]}}",
-        src = config.source_language,
-        tgt = config.target_language,
-        glossary = glossary_json,
     );
 
     let prev_block = input
@@ -263,5 +315,9 @@ pub(crate) fn minimal_pipeline_config(
         markdown_aware: None,
         coherence_prompt: None,
         review_provider_options,
+        persona: None,
+        ui_language: None,
+        custom_source_language: None,
+        custom_target_language: None,
     }
 }

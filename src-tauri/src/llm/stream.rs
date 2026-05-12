@@ -27,7 +27,7 @@ pub(crate) const HTTP_STREAM_TOTAL_TIMEOUT_SECS: u64 = 15 * 60;
 // Ollama runs locally and can be significantly slower than cloud APIs,
 // especially on first inference or with large models.
 pub(crate) const OLLAMA_STREAM_HEADER_TIMEOUT_SECS: u64 = 4 * 60;
-pub(crate) const OLLAMA_STREAM_IDLE_TIMEOUT_SECS: u64 = 4 * 60;
+pub(crate) const OLLAMA_STREAM_IDLE_TIMEOUT_SECS: u64 = 5 * 60;
 
 // ── Stream timeout configuration ─────────────────────────────────────
 
@@ -321,16 +321,19 @@ impl StreamAccumulator {
 
 // ── Core streaming functions ──────────────────────────────────────────
 
-pub(crate) async fn consume_stream<S, E>(
+pub(crate) async fn consume_stream<S, E, G>(
     provider: &dyn LlmProvider,
     stream_id: &str,
     cancel: &Arc<CancelToken>,
     source: &mut S,
     mut emit: E,
+    model: &str,
+    mut on_idle_grace: G,
 ) -> Result<String, String>
 where
     S: StreamChunkSource,
     E: FnMut(StreamToken),
+    G: FnMut(),
 {
     let timeouts = provider.stream_timeouts();
     let mut acc = StreamAccumulator::new();
@@ -358,10 +361,16 @@ where
             Ok(Ok(None)) => break,
             Ok(Err(err)) => return Err(err),
             Err(_) => {
+                // Before giving up, ask the provider if it is still alive.
+                // Ollama checks /api/ps; cloud providers return false immediately.
+                if provider.on_idle_timeout(model).await {
+                    on_idle_grace();
+                    continue;
+                }
                 return Err(format_stream_idle_timeout_with_duration(
                     provider.id(),
                     timeouts.idle,
-                ))
+                ));
             }
         }
     }
@@ -383,13 +392,18 @@ pub(crate) async fn stream_response(
     provider: &dyn LlmProvider,
     stream_id: &str,
     cancel: &Arc<CancelToken>,
+    model: &str,
 ) -> Result<String, String> {
     let mut source = ReqwestChunkSource {
         resp: &mut resp,
         provider_id: provider.id(),
     };
+    let alive_app = app.clone();
+    let alive_sid = stream_id.to_string();
     consume_stream(provider, stream_id, cancel, &mut source, |token| {
         let _ = app.emit("stream-token", token);
+    }, model, move || {
+        let _ = alive_app.emit("stream-alive", serde_json::json!({ "streamId": alive_sid }));
     })
     .await
 }

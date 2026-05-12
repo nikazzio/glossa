@@ -8,7 +8,7 @@ import { useUiStore } from '../stores/uiStore';
 import { logOperation } from '../stores/operationLogStore';
 import { withRetry, friendlyError } from '../utils/retry';
 import { qualityDefault, qualityFailure } from '../utils';
-import type { Issue, JudgeResult, TokenUsage, TranslationChunk } from '../types';
+import type { Issue, JudgeResult, PromptInfo, TokenUsage, TranslationChunk } from '../types';
 
 function lastNWords(text: string, n: number): string {
   const words = text.trim().split(/\s+/);
@@ -37,6 +37,7 @@ export function usePipeline() {
   const {
     updateChunkStage,
     appendChunkStageContent,
+    setChunkStagePromptInfo,
     updateChunkJudge,
     updateChunkDraft,
     updateChunkStatus,
@@ -157,7 +158,7 @@ export function usePipeline() {
     logOperation({
       level: 'info',
       scope: 'chunk',
-      message: 'Starting pipeline work for this chunk',
+      message: 'Pipeline started',
       chunkId: chunk.id,
     });
     updateChunkJudge(chunk.id, {
@@ -173,13 +174,23 @@ export function usePipeline() {
     for (const stage of config.stages) {
       if (!stage.enabled) continue;
 
-      // Override global language pair with stage-specific one if set
-      const effectiveConfig = (stage.sourceLanguage || stage.targetLanguage) ? {
+      // Override global language pair with stage-specific one if set, but not when persona is active
+      const effectiveConfig = (!config.persona && (stage.sourceLanguage || stage.targetLanguage)) ? {
         ...config,
         ...(stage.sourceLanguage ? { sourceLanguage: stage.sourceLanguage } : {}),
         ...(stage.targetLanguage ? { targetLanguage: stage.targetLanguage } : {}),
       } : config;
       lastEffectiveConfig = effectiveConfig;
+
+      if (config.persona && (stage.sourceLanguage || stage.targetLanguage)) {
+        logOperation({
+          level: 'info',
+          scope: 'stage',
+          message: `Stage "${stage.name}" — language override ignored, persona is active`,
+          chunkId: chunk.id,
+          stageId: stage.id,
+        });
+      }
 
       updateChunkStage(chunk.id, stage.id, { content: '', status: 'processing' });
       logOperation({
@@ -201,9 +212,37 @@ export function usePipeline() {
               (token) => appendChunkStageContent(chunk.id, stage.id, token),
               (usage) => { capturedUsage = usage; },
               stage.rollingContext !== false ? options.previousTranslation : undefined,
+              (info: PromptInfo) => {
+                setChunkStagePromptInfo(chunk.id, stage.id, info);
+                logOperation({
+                  level: 'info',
+                  scope: 'stage',
+                  message: `prompt → ${stage.provider}/${stage.model}`,
+                  chunkId: chunk.id,
+                  stageId: stage.id,
+                  detail: `[system]\n${info.systemPrompt}\n\n[user]\n${info.userPrompt}`,
+                });
+              },
+              () => logOperation({
+                level: 'info',
+                scope: 'stage',
+                message: 'Ollama still alive — idle grace check passed, waiting for more tokens',
+                chunkId: chunk.id,
+                stageId: stage.id,
+              }),
             );
           },
-          { label: `Stage "${stage.name}"` },
+          {
+            label: `Stage "${stage.name}"`,
+            onRetry: (attempt, total, error, delayMs) => logOperation({
+              level: 'warn',
+              scope: 'stage',
+              message: `Retry ${attempt}/${total} — waiting ${delayMs}ms`,
+              chunkId: chunk.id,
+              stageId: stage.id,
+              meta: { error },
+            }),
+          },
         );
         if (result) {
           lastResult = result;
@@ -217,10 +256,10 @@ export function usePipeline() {
         logOperation({
           level: 'success',
           scope: 'stage',
-          message: `Stage "${stage.name}" completed and produced a candidate output`,
+          message: `Stage "${stage.name}" completed`,
           chunkId: chunk.id,
           stageId: stage.id,
-          meta: capturedUsage ? { ...capturedUsage } : undefined,
+          meta: { provider: stage.provider, model: stage.model, ...(capturedUsage ?? {}) },
         });
       } catch (error: unknown) {
         if (isStreamCancelledError(error)) {
@@ -243,7 +282,7 @@ export function usePipeline() {
         logOperation({
           level: 'error',
           scope: 'stage',
-          message: `Stage "${stage.name}" failed and this chunk stopped here`,
+          message: `Stage "${stage.name}" failed`,
           chunkId: chunk.id,
           stageId: stage.id,
           meta: { error: msg },
@@ -293,7 +332,7 @@ export function usePipeline() {
     logOperation({
       level: 'info',
       scope: 'audit',
-      message: 'Judge started evaluating the final candidate for this chunk',
+      message: 'Audit started',
       chunkId: chunk.id,
       meta: { provider: (effectiveConfig ?? config).judgeProvider, model: (effectiveConfig ?? config).judgeModel },
     });
@@ -302,8 +341,36 @@ export function usePipeline() {
     });
     try {
       const judgeData = await withRetry(
-        () => llmService.judgeTranslation(chunk.sourceProcessingText, textToAudit, effectiveConfig ?? config),
-        { label: 'Audit' },
+        () => llmService.judgeTranslation(
+          chunk.sourceProcessingText,
+          textToAudit,
+          effectiveConfig ?? config,
+          (info: PromptInfo) => {
+            logOperation({
+              level: 'info',
+              scope: 'audit',
+              message: `prompt → ${(effectiveConfig ?? config).judgeProvider}/${(effectiveConfig ?? config).judgeModel}`,
+              chunkId: chunk.id,
+              detail: `[system]\n${info.systemPrompt}\n\n[user]\n${info.userPrompt}`,
+            });
+          },
+          () => logOperation({
+            level: 'info',
+            scope: 'audit',
+            message: 'Ollama still alive — idle grace check passed, waiting for more tokens',
+            chunkId: chunk.id,
+          }),
+        ),
+        {
+          label: 'Audit',
+          onRetry: (attempt, total, error, delayMs) => logOperation({
+            level: 'warn',
+            scope: 'audit',
+            message: `Retry ${attempt}/${total} — waiting ${delayMs}ms`,
+            chunkId: chunk.id,
+            meta: { error },
+          }),
+        },
       );
       const judgeTokenUsage =
         judgeData.inputTokens !== undefined && judgeData.outputTokens !== undefined
@@ -319,9 +386,13 @@ export function usePipeline() {
       logOperation({
         level: 'success',
         scope: 'audit',
-        message: 'Judge completed and stored the audit result',
+        message: 'Audit completed',
         chunkId: chunk.id,
-        meta: judgeTokenUsage ? { ...judgeTokenUsage } : undefined,
+        meta: {
+          provider: (effectiveConfig ?? config).judgeProvider,
+          model: (effectiveConfig ?? config).judgeModel,
+          ...(judgeTokenUsage ?? {}),
+        },
       });
       return 'completed';
     } catch (error: unknown) {
@@ -337,7 +408,7 @@ export function usePipeline() {
       logOperation({
         level: 'error',
         scope: 'audit',
-        message: 'Judge failed while auditing this chunk',
+        message: 'Audit failed',
         chunkId: chunk.id,
         meta: { error: msg },
       });
@@ -401,7 +472,7 @@ export function usePipeline() {
       });
       toast.warning(t('errors.pipelineCompletedWithErrors', { count: errorCount }));
     }
-  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureOllamaReady]);
+  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureOllamaReady]);
 
   const runSingleChunk = useCallback(async (chunkId: string) => {
     if (useChunksStore.getState().isProcessing) return;
@@ -432,7 +503,7 @@ export function usePipeline() {
       // Per-chunk failure already raised a toast inside the helper; no
       // extra summary toast is needed.
     }
-  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureOllamaReady]);
+  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureOllamaReady]);
 
   const runAuditOnly = useCallback(async () => {
     if (useChunksStore.getState().isProcessing) return;
@@ -533,15 +604,39 @@ export function usePipeline() {
       const nextContext = nextChunk?.translationProcessingText ? firstNWords(nextChunk.translationProcessingText, 300) : undefined;
 
       updateChunkCoherence(chunk.id, { status: 'processing', issues: [] });
-      logOperation({ level: 'info', scope: 'coherence', message: 'Coherence check started for this chunk against its neighbors', chunkId: chunk.id });
+      logOperation({ level: 'info', scope: 'coherence', message: 'Coherence check started', chunkId: chunk.id, meta: { provider: config.judgeProvider, model: config.judgeModel } });
 
       try {
         const result = await withRetry(
           () => llmService.runCoherenceForChunk(
             { original: chunk.sourceProcessingText, translation: chunk.translationProcessingText, prevContext, nextContext },
             config,
+            (info: PromptInfo) => {
+              logOperation({
+                level: 'info',
+                scope: 'coherence',
+                message: `prompt → ${config.judgeProvider}/${config.judgeModel}`,
+                chunkId: chunk.id,
+                detail: `[system]\n${info.systemPrompt}\n\n[user]\n${info.userPrompt}`,
+              });
+            },
+            () => logOperation({
+              level: 'info',
+              scope: 'coherence',
+              message: 'Ollama still alive — idle grace check passed, waiting for more tokens',
+              chunkId: chunk.id,
+            }),
           ),
-          { label: 'Coherence audit' },
+          {
+            label: 'Coherence audit',
+            onRetry: (attempt, total, error, delayMs) => logOperation({
+              level: 'warn',
+              scope: 'coherence',
+              message: `Retry ${attempt}/${total} — waiting ${delayMs}ms`,
+              chunkId: chunk.id,
+              meta: { error },
+            }),
+          },
         );
         const tokenUsage =
           result.inputTokens !== undefined && result.outputTokens !== undefined
@@ -555,9 +650,9 @@ export function usePipeline() {
         logOperation({
           level: 'success',
           scope: 'coherence',
-          message: 'Coherence check completed for this chunk',
+          message: 'Coherence check completed',
           chunkId: chunk.id,
-          meta: { issues: result.issues.length, ...tokenUsage },
+          meta: { provider: config.judgeProvider, model: config.judgeModel, issues: result.issues.length, ...(tokenUsage ?? {}) },
         });
       } catch (error: unknown) {
         const msg = friendlyError(error instanceof Error ? error.message : String(error));
@@ -565,7 +660,7 @@ export function usePipeline() {
         logOperation({
           level: 'error',
           scope: 'coherence',
-          message: 'Coherence check failed for this chunk',
+          message: 'Coherence check failed',
           chunkId: chunk.id,
           meta: { error: msg },
         });

@@ -174,6 +174,10 @@ mod tests {
             markdown_aware: None,
             coherence_prompt: None,
             review_provider_options: None,
+            persona: None,
+            ui_language: None,
+            custom_source_language: None,
+            custom_target_language: None,
         }
     }
 
@@ -271,8 +275,7 @@ mod tests {
 
         assert!(system.contains("English to Italian"));
         assert!(system.contains("Translate accurately."));
-        assert!(system.contains("source: API"));
-        assert!(system.contains("target: API"));
+        assert!(system.contains("| API | API |"));
         assert!(user.contains("Hello world"));
         assert!(!user.contains("Previous Iteration"));
         assert!(!user.contains("Previous Chunk Translation Context"));
@@ -323,11 +326,8 @@ mod tests {
         let stage = make_stage("gemini");
         let (system, _) = build_stage_prompts("text", &stage, &config, &None, &None);
 
-        assert!(system.contains("source: API"));
-        assert!(system.contains("target: API"));
-        assert!(system.contains("notes: tech"));
-        assert!(system.contains("source: bug"));
-        assert!(system.contains("target: errore"));
+        assert!(system.contains("| API | API | tech |"));
+        assert!(system.contains("| bug | errore |"));
         assert!(system.contains("Treat every glossary entry as mandatory terminology"));
     }
 
@@ -794,7 +794,7 @@ mod tests {
                 ))),
             }]);
 
-            consume_stream(&provider, "stream-1", &cancel, &mut source, |_| {})
+            consume_stream(&provider, "stream-1", &cancel, &mut source, |_| {}, "test-model", || {})
                 .await
         });
 
@@ -843,7 +843,7 @@ mod tests {
                 },
             ]);
 
-            consume_stream(&provider, "stream-2", &cancel, &mut source, |_| {})
+            consume_stream(&provider, "stream-2", &cancel, &mut source, |_| {}, "test-model", || {})
                 .await
         });
 
@@ -893,6 +893,8 @@ mod tests {
                 &cancel,
                 &mut source,
                 |token| emitted_for_task.lock().expect("poisoned").push(token),
+                "test-model",
+                || {},
             )
             .await
         });
@@ -927,7 +929,7 @@ mod tests {
         );
         let mut source = MockChunkSource::new(vec![MockChunk::Immediate(Err("stream broke"))]);
 
-        let result = consume_stream(&provider, "stream-err", &cancel, &mut source, |_| {})
+        let result = consume_stream(&provider, "stream-err", &cancel, &mut source, |_| {}, "test-model", || {})
             .await;
 
         assert_eq!(result.unwrap_err(), "stream broke");
@@ -1107,6 +1109,8 @@ mod tests {
             &cancel,
             &mut source,
             |token| emitted_for_cb.lock().expect("poisoned").push(token),
+            "test-model",
+            || {},
         )
         .await;
 
@@ -1145,7 +1149,7 @@ mod tests {
             MockChunk::Immediate(Ok(None)),
         ]);
 
-        let result = consume_stream(&provider, "stream-anthropic", &cancel, &mut source, |_| {})
+        let result = consume_stream(&provider, "stream-anthropic", &cancel, &mut source, |_| {}, "test-model", || {})
             .await;
 
         assert_eq!(result.unwrap(), "Guten Tag");
@@ -1170,7 +1174,7 @@ mod tests {
             ),
         )))]);
 
-        let result = consume_stream(&provider, "stream-precancelled", &cancel, &mut source, |_| {})
+        let result = consume_stream(&provider, "stream-precancelled", &cancel, &mut source, |_| {}, "test-model", || {})
             .await;
 
         assert_eq!(result.unwrap_err(), STREAM_CANCELLED_ERROR);

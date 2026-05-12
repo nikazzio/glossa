@@ -72,9 +72,12 @@ export function ConfigDrawer({
   const libraryGlossarySection = (
     <div className="space-y-3 rounded-[20px] border border-editorial-border/60 bg-editorial-textbox/20 px-5 py-4">
       <div className="flex items-center justify-between gap-2">
-        <span className="font-display italic text-sm text-editorial-ink">
-          {t('library.assignedDictionary')}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <LibraryBig size={11} className="text-editorial-accent shrink-0" />
+          <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+            {t('library.assignedDictionary')}
+          </span>
+        </div>
         <button
           onClick={() => setShowLibraryPanel(true, 'dictionaries')}
           title={t('library.openLibrary')}
@@ -130,7 +133,7 @@ export function ConfigDrawer({
       {/* Header */}
       <div className="flex items-start justify-between gap-3 border-b border-editorial-border px-6 pt-4 pb-4">
         <div className="min-w-0">
-          <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+          <div className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
             {t('document.configDrawerTitle')}
           </div>
           <h2

@@ -153,7 +153,7 @@ function ChunkCard({
               type="button"
               onClick={onSplit}
               title={t('files.boundarySplit')}
-              className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             >
               <Scissors size={13} />
             </button>
@@ -163,7 +163,7 @@ function ChunkCard({
             onClick={onToggleExpand}
             disabled={!isLong}
             title={isExpanded ? t('files.collapseChunk') : t('files.expandChunk')}
-            className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-default disabled:opacity-20"
+            className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-default disabled:opacity-20"
           >
             {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
           </button>
@@ -208,7 +208,7 @@ function BoundaryDivider({ onGive, onTake, onMerge, canGive, canTake }: Boundary
         onClick={onTake}
         disabled={!canTake}
         title={t('files.boundaryTake')}
-        className="rounded-full border border-editorial-border bg-editorial-bg p-1 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-30"
+        className="rounded-full border border-editorial-border bg-editorial-bg p-1 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-30"
       >
         <ChevronUp size={11} />
       </button>
@@ -216,7 +216,7 @@ function BoundaryDivider({ onGive, onTake, onMerge, canGive, canTake }: Boundary
         type="button"
         onClick={onMerge}
         title={t('files.boundaryMerge')}
-        className="rounded-full border border-editorial-border bg-editorial-bg p-1 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+        className="rounded-full border border-editorial-border bg-editorial-bg p-1 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
       >
         <Merge size={11} />
       </button>
@@ -225,7 +225,7 @@ function BoundaryDivider({ onGive, onTake, onMerge, canGive, canTake }: Boundary
         onClick={onGive}
         disabled={!canGive}
         title={t('files.boundaryGive')}
-        className="rounded-full border border-editorial-border bg-editorial-bg p-1 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-30"
+        className="rounded-full border border-editorial-border bg-editorial-bg p-1 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-30"
       >
         <ChevronDown size={11} />
       </button>
@@ -352,7 +352,7 @@ function SegmentEditor({
                           type="button"
                           onClick={() => onSplitParagraph(globalIdx)}
                           title={t('files.boundarySplit')}
-                          className={`absolute right-0 top-2 rounded-full border border-editorial-border bg-editorial-bg p-1 text-editorial-muted transition-all hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${hoveredPara === globalIdx ? 'opacity-100' : 'opacity-0'}`}
+                          className={`absolute right-0 top-2 rounded-full border border-editorial-border bg-editorial-bg p-1 text-editorial-muted transition-all hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${hoveredPara === globalIdx ? 'opacity-100' : 'opacity-0'}`}
                         >
                           <Scissors size={13} />
                         </button>
@@ -666,7 +666,7 @@ export function ImportPreviewDialog({
                 type="button"
                 onClick={() => setEditorMode('cards')}
                 title={t('files.viewCards')}
-                className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${editorMode === 'cards' ? 'bg-editorial-ink text-white' : 'text-editorial-muted hover:text-editorial-ink'}`}
+                className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${editorMode === 'cards' ? 'bg-editorial-accent text-white' : 'text-editorial-muted hover:text-editorial-accent'}`}
               >
                 <LayoutGrid size={16} />
               </button>
@@ -674,7 +674,7 @@ export function ImportPreviewDialog({
                 type="button"
                 onClick={() => setEditorMode('segments')}
                 title={t('files.viewSegments')}
-                className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${editorMode === 'segments' ? 'bg-editorial-ink text-white' : 'text-editorial-muted hover:text-editorial-ink'}`}
+                className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${editorMode === 'segments' ? 'bg-editorial-accent text-white' : 'text-editorial-muted hover:text-editorial-accent'}`}
               >
                 <SplitSquareVertical size={16} />
               </button>
@@ -719,8 +719,8 @@ export function ImportPreviewDialog({
               title={t('pipeline.autoSegment')}
               className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
                 useChunking
-                  ? 'border-editorial-ink bg-editorial-ink text-white'
-                  : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
+                  ? 'border-editorial-accent bg-editorial-accent text-white'
+                  : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
               }`}
             >
               <Scissors size={14} />
@@ -735,8 +735,8 @@ export function ImportPreviewDialog({
                 disabled={!useChunking}
                 className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-30 ${
                   headingAware && useChunking
-                    ? 'border-editorial-ink bg-editorial-ink text-white'
-                    : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
+                    ? 'border-editorial-accent bg-editorial-accent text-white'
+                    : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
                 }`}
               >
                 <Hash size={14} />

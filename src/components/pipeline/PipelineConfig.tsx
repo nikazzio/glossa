@@ -1,4 +1,4 @@
-import { Plus, ArrowRightLeft, Play, Layers, Loader2, X, ShieldCheck, AlertTriangle, RotateCcw, Wand2, BookmarkPlus, BookOpen, Check, Trash2, Globe } from 'lucide-react';
+import { ArrowRightLeft, Play, Layers, Languages, Cpu, FileText, Link2, Pencil, Scale, RefreshCw, Loader2, X, ShieldCheck, AlertTriangle, RotateCcw, Wand2, BookmarkPlus, BookOpen, Check, Trash2, Bot, Settings, Globe } from 'lucide-react';
 import { useMemo, useState, useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -9,7 +9,6 @@ import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
 import { confirm } from '../../stores/confirmStore';
-import { StageCard } from './StageCard';
 import { CostBadge } from './CostBadge';
 import { ProviderRuntimeEditor } from './ProviderRuntimeEditor';
 import { estimatePipelineCost } from '../../utils/costEstimate';
@@ -17,7 +16,236 @@ import { usePricingStore } from '../../stores/pricingStore';
 import { llmService } from '../../services/llmService';
 import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
 
-export type ConfigSection = 'stages' | 'audit' | 'glossary';
+export type ConfigSection = 'settings' | 'stages' | 'audit' | 'glossary';
+
+interface PersonaEditorProps {
+  persona: string | undefined;
+  sourceLanguage: string;
+  targetLanguage: string;
+  templates: PromptTemplate[];
+  isRefining: boolean;
+  onChange: (value: string | undefined) => void;
+  onRefine: () => void;
+  onSaveTemplate: (name: string, prompt: string) => Promise<void>;
+  deleteTemplate: (id: string) => Promise<void>;
+}
+
+function PersonaEditor({
+  persona,
+  sourceLanguage,
+  targetLanguage,
+  templates,
+  isRefining,
+  onChange,
+  onRefine,
+  onSaveTemplate,
+  deleteTemplate,
+}: PersonaEditorProps) {
+  const { t } = useTranslation();
+  const [showSaveName, setShowSaveName] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [showTemplateList, setShowTemplateList] = useState(false);
+  const [templateSearch, setTemplateSearch] = useState('');
+
+  const isCustom = !!persona?.trim();
+  const defaultText = `You are an expert translator and linguist specialized in ${sourceLanguage} to ${targetLanguage} translation.`;
+
+  const filteredTemplates = templates.filter((tmpl) =>
+    tmpl.name.toLowerCase().includes(templateSearch.toLowerCase()),
+  );
+
+  const handleCustomize = () => onChange(defaultText);
+  const handleReset = () => {
+    onChange(undefined);
+    setShowSaveName(false);
+    setShowTemplateList(false);
+    setTemplateName('');
+  };
+
+  const handleSaveTemplate = async () => {
+    const name = templateName.trim();
+    if (!name || !persona) return;
+    try {
+      await onSaveTemplate(name, persona);
+      toast.success(t('pipeline.templates.saved'));
+      setTemplateName('');
+      setShowSaveName(false);
+    } catch (err: unknown) {
+      toast.error(t('errors.somethingWentWrong'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    }
+  };
+
+  const handleDeleteTemplate = async (id: string) => {
+    try {
+      await deleteTemplate(id);
+      toast.success(t('pipeline.templates.deleted'));
+    } catch (err: unknown) {
+      toast.error(t('errors.somethingWentWrong'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    }
+  };
+
+  return (
+    <div className="mt-4 pt-4 border-t border-editorial-border/40 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5">
+          <Bot size={11} className="text-editorial-accent shrink-0" />
+          <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+            {t('pipeline.personaLabel')}
+          </p>
+          {isCustom && (
+            <span className="rounded-full bg-editorial-accent/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-editorial-accent">
+              {t('pipeline.personaCustomBadge')}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1">
+          {isCustom ? (
+            <>
+              <button
+                type="button"
+                onClick={onRefine}
+                disabled={isRefining || !persona?.trim()}
+                title={t('pipeline.refinePrompt')}
+                aria-label={t('pipeline.refinePrompt')}
+                className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40"
+              >
+                {isRefining ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowSaveName(!showSaveName); setShowTemplateList(false); }}
+                title={t('pipeline.templates.save')}
+                aria-label={t('pipeline.templates.save')}
+                className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+              >
+                <BookmarkPlus size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowTemplateList(!showTemplateList); setShowSaveName(false); }}
+                title={t('pipeline.templates.load')}
+                aria-label={t('pipeline.templates.load')}
+                className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+              >
+                <BookOpen size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={handleReset}
+                title={t('pipeline.personaReset')}
+                aria-label={t('pipeline.personaReset')}
+                className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+              >
+                <X size={14} />
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={handleCustomize}
+              title={t('pipeline.personaCustomize')}
+              aria-label={t('pipeline.personaCustomize')}
+              className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+            >
+              <Pencil size={14} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {isCustom && showSaveName && (
+        <div className="flex items-center gap-1.5">
+          <input
+            value={templateName}
+            onChange={(e) => setTemplateName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSaveTemplate();
+              if (e.key === 'Escape') { setShowSaveName(false); setTemplateName(''); }
+            }}
+            placeholder={t('pipeline.templates.namePlaceholder')}
+            autoFocus
+            className="flex-1 rounded bg-editorial-textbox/60 border border-editorial-border/60 px-2 py-1 text-xs font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+          />
+          <button
+            type="button"
+            onClick={handleSaveTemplate}
+            disabled={!templateName.trim()}
+            className="text-editorial-ink hover:text-editorial-accent transition-colors disabled:opacity-40 focus:outline-none"
+            aria-label={t('common.confirm')}
+          >
+            <Check size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => { setShowSaveName(false); setTemplateName(''); }}
+            className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none"
+            aria-label={t('common.cancel')}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {isCustom && showTemplateList && (
+        <div className="rounded-lg border border-editorial-border bg-editorial-bg shadow-lg overflow-hidden">
+          <div className="p-2 border-b border-editorial-border/60">
+            <input
+              value={templateSearch}
+              onChange={(e) => setTemplateSearch(e.target.value)}
+              placeholder={t('pipeline.templates.searchPlaceholder')}
+              autoFocus
+              className="w-full rounded bg-editorial-textbox/60 border border-editorial-border/40 px-2 py-1 text-xs font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+            />
+          </div>
+          <ul className="max-h-40 overflow-y-auto custom-scrollbar">
+            {filteredTemplates.length === 0 ? (
+              <li className="px-3 py-3 text-xs text-editorial-muted text-center">
+                {t('pipeline.templates.empty')}
+              </li>
+            ) : (
+              filteredTemplates.map((tmpl) => (
+                <li key={tmpl.id} className="flex items-start gap-2 px-3 py-2 hover:bg-editorial-textbox/40 group">
+                  <button
+                    type="button"
+                    onClick={() => { onChange(tmpl.prompt); setShowTemplateList(false); setTemplateSearch(''); }}
+                    className="flex-1 text-left min-w-0 focus:outline-none"
+                  >
+                    <div className="text-xs font-bold text-editorial-ink truncate">{tmpl.name}</div>
+                    <div className="text-[10px] text-editorial-muted truncate mt-0.5 font-mono">{tmpl.prompt}</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteTemplate(tmpl.id)}
+                    className="shrink-0 text-editorial-muted/40 hover:text-editorial-accent transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 focus:outline-none mt-0.5"
+                    aria-label={t('common.delete')}
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>
+        </div>
+      )}
+
+      <textarea
+        value={isCustom ? persona : defaultText}
+        disabled={!isCustom}
+        onChange={(e) => onChange(e.target.value.trim() ? e.target.value : undefined)}
+        rows={isCustom ? 4 : 2}
+        className={`w-full rounded-[14px] border px-3 py-2 text-xs font-mono outline-none leading-relaxed resize-y ${
+          isCustom
+            ? 'bg-editorial-textbox/40 border-editorial-border/60 focus-visible:ring-2 focus-visible:ring-editorial-accent'
+            : 'bg-editorial-textbox/10 border-editorial-border/30 text-editorial-muted/60 cursor-default'
+        }`}
+      />
+    </div>
+  );
+}
 
 interface PipelineConfigProps {
   onRunPipeline: () => void;
@@ -59,6 +287,8 @@ interface AuditPromptEditorProps {
   deleteTemplate: (id: string) => Promise<void>;
   defaultModel?: string;
   defaultProvider?: string;
+  icon?: ReactNode;
+  context?: 'stage' | 'audit';
 }
 
 function AuditPromptEditor({
@@ -75,6 +305,8 @@ function AuditPromptEditor({
   deleteTemplate,
   defaultModel,
   defaultProvider,
+  icon,
+  context = 'audit',
 }: AuditPromptEditorProps) {
   const { t } = useTranslation();
   const [showSaveName, setShowSaveName] = useState(false);
@@ -90,7 +322,7 @@ function AuditPromptEditor({
     const name = templateName.trim();
     if (!name) return;
     try {
-      await saveTemplate(name, value, 'audit', defaultModel, defaultProvider);
+      await saveTemplate(name, value, context, defaultModel, defaultProvider);
       toast.success(t('pipeline.templates.saved'));
       setTemplateName('');
       setShowSaveName(false);
@@ -113,10 +345,13 @@ function AuditPromptEditor({
   };
 
   return (
-    <div className="rounded-[20px] border border-editorial-border bg-editorial-bg/70 p-6 space-y-3">
+    <div className="rounded-[20px] border border-editorial-border bg-editorial-bg/70 px-5 py-4 space-y-3">
       <div className="space-y-1">
         <div className="flex items-center justify-between gap-3">
-          <span className="font-display italic text-sm text-editorial-ink">{label}</span>
+          <div className="flex items-center gap-1.5">
+            {icon && <span className="text-editorial-accent shrink-0">{icon}</span>}
+            <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">{label}</span>
+          </div>
           <div className="flex items-center gap-1.5">
             <button
               type="button"
@@ -124,7 +359,7 @@ function AuditPromptEditor({
               disabled={isRefining || !value.trim()}
               title={t('pipeline.refinePrompt')}
               aria-label={`${t('pipeline.refinePrompt')}: ${label}`}
-              className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40"
+              className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40"
             >
               {isRefining ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
             </button>
@@ -133,7 +368,7 @@ function AuditPromptEditor({
               onClick={() => { setShowSaveName(!showSaveName); setShowTemplateList(false); }}
               title={t('pipeline.templates.save')}
               aria-label={`${t('pipeline.templates.save')}: ${label}`}
-              className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+              className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
             >
               <BookmarkPlus size={16} />
             </button>
@@ -142,7 +377,7 @@ function AuditPromptEditor({
               onClick={() => { setShowTemplateList(!showTemplateList); setShowSaveName(false); }}
               title={t('pipeline.templates.load')}
               aria-label={`${t('pipeline.templates.load')}: ${label}`}
-              className="text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+              className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
             >
               <BookOpen size={16} />
             </button>
@@ -259,7 +494,6 @@ export function PipelineConfig({
   const {
     config,
     setConfig,
-    addStage,
     removeStage,
     updateStage,
   } = usePipelineStore();
@@ -267,6 +501,8 @@ export function PipelineConfig({
   const ollamaStatus = useUiStore((state) => state.ollamaStatus);
   const { t } = useTranslation();
   const judgeModels = useJudgeModelOptions(config.judgeProvider);
+  const [isRefiningPersona, setIsRefiningPersona] = useState(false);
+  const [isRefiningStage, setIsRefiningStage] = useState(false);
   const [isRefiningJudge, setIsRefiningJudge] = useState(false);
   const [isRefiningCoherence, setIsRefiningCoherence] = useState(false);
   const [activeTab, setActiveTab] = useState<ConfigSection>(visibleSection ?? 'stages');
@@ -277,13 +513,12 @@ export function PipelineConfig({
   const completedCount = chunks.filter((c) => c.status === 'completed').length;
   const canRerunAll = !isProcessing && completedCount > 0;
 
-  const showAudit = activeTab === 'audit';
-
   useEffect(() => {
-    if (showAudit) loadTemplates();
-  }, [showAudit]);
+    loadTemplates();
+  }, []);
 
   const auditTemplates = templates.filter((tmpl) => tmpl.context === 'audit');
+  const personaTemplates = templates.filter((tmpl) => tmpl.context === 'persona');
 
   const handleRerunAll = async () => {
     const ok = await confirm({
@@ -311,6 +546,53 @@ export function PipelineConfig({
     () => estimatePipelineCost(chunks, config, pricingOverrides),
     [chunks, config, pricingOverrides],
   );
+
+  const stage0 = config.stages[0];
+  const stageModels = useJudgeModelOptions(stage0?.provider ?? 'openai');
+  const stageOllamaOffline = stage0?.provider === 'ollama' && ollamaStatus === 'disconnected';
+
+  const handleStageProviderChange = (newProvider: ModelProvider) => {
+    if (!stage0) return;
+    const models = newProvider === 'ollama' ? useUiStore.getState().ollamaModels : MODEL_OPTIONS[newProvider];
+    updateStage(stage0.id, { provider: newProvider, model: models[0] || '' });
+    if (newProvider === 'ollama' && useUiStore.getState().ollamaStatus === 'unknown') {
+      toast.message(t('ollama.uncheckedHint'));
+    } else if (newProvider === 'ollama' && useUiStore.getState().ollamaStatus === 'disconnected') {
+      toast.warning(t('ollama.selectedButOffline'));
+    }
+  };
+
+  const handleRefineStagePrompt = async () => {
+    if (!stage0?.prompt.trim() || !stage0?.model.trim()) return;
+    setIsRefiningStage(true);
+    try {
+      const refined = await llmService.refinePrompt(stage0.prompt, stage0.provider, stage0.model, 'stage');
+      updateStage(stage0.id, { prompt: refined });
+      toast.success(t('pipeline.refined'));
+    } catch (err: unknown) {
+      toast.error(t('pipeline.refineFailed'), { description: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setIsRefiningStage(false);
+    }
+  };
+
+  const handleRefinePersona = async () => {
+    if (!config.persona?.trim()) return;
+    const stage = config.stages[0];
+    if (!stage) return;
+    setIsRefiningPersona(true);
+    try {
+      const refined = await llmService.refinePrompt(config.persona, stage.provider, stage.model, 'stage');
+      setConfig((prev) => ({ ...prev, persona: refined }));
+      toast.success(t('pipeline.refined'));
+    } catch (err: unknown) {
+      toast.error(t('pipeline.refineFailed'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setIsRefiningPersona(false);
+    }
+  };
 
   const handleRefineJudgePrompt = async () => {
     if (!config.judgePrompt.trim()) return;
@@ -362,73 +644,97 @@ export function PipelineConfig({
   };
 
   const TAB_TITLE: Record<ConfigSection, string> = {
+    settings: t('pipeline.tabSettings'),
     stages: t('pipeline.tabStages'),
     audit: t('pipeline.tabAudit'),
     glossary: t('pipeline.tabGlossary'),
   };
 
+  const tabBtnCls = (active: boolean) =>
+    `rounded-full border p-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+      active
+        ? 'border-editorial-accent bg-editorial-accent text-white'
+        : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
+    }`;
+
   return (
     <section className={className ?? DEFAULT_PIPELINE_CONFIG_CLASSNAME}>
 
-      {/* ── Defaults globali (coppia linguistica usata in tutte le sezioni) ── */}
-      <div className="shrink-0 border-b border-editorial-border bg-editorial-textbox/20 px-8 py-4">
-        <div className="flex items-center gap-2 mb-3">
-          <Globe size={11} className="text-editorial-accent shrink-0" />
-          <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-            {t('pipeline.languagePair')}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <select
-            value={config.sourceLanguage}
-            onChange={(e) => setConfig((prev) => ({ ...prev, sourceLanguage: e.target.value }))}
-            className="w-full rounded-[14px] border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
-            aria-label={t('pipeline.sourceLanguage')}
-          >
-            {LANGUAGES.map((lang) => (
-              <option key={lang} value={lang}>{t(`languages.${lang}`)}</option>
-            ))}
-          </select>
-          <button
-            onClick={() =>
-              setConfig((prev) => ({
-                ...prev,
-                sourceLanguage: prev.targetLanguage,
-                targetLanguage: prev.sourceLanguage,
-              }))
-            }
-            title={t('pipeline.swapLanguages')}
-            className="shrink-0 rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            aria-label={t('pipeline.swapLanguages')}
-          >
-            <ArrowRightLeft size={13} />
-          </button>
-          <select
-            value={config.targetLanguage}
-            onChange={(e) => setConfig((prev) => ({ ...prev, targetLanguage: e.target.value }))}
-            className="w-full rounded-[14px] border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
-            aria-label={t('pipeline.targetLanguage')}
-          >
-            {LANGUAGES.map((lang) => (
-              <option key={lang} value={lang}>{t(`languages.${lang}`)}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* ── Empty state (no project open) ── */}
+      {/* ── Empty state (no project open) — settings content ── */}
       {showOnlyGlobalDefaults && (
-        <div className="flex flex-1 flex-col items-center justify-center gap-4 px-8 py-12 text-center">
-          <div className="rounded-full border border-editorial-border/60 p-4 text-editorial-muted/50">
-            <Layers size={24} />
+        <div className="shrink-0 border-b border-editorial-border px-6 py-5 space-y-5">
+          <div className="space-y-2">
+            <div className="flex items-center gap-1.5">
+              <Globe size={11} className="text-editorial-accent shrink-0" />
+              <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                {t('pipeline.languagePair')}
+              </p>
+            </div>
+            <div className={`flex items-center gap-3 transition-opacity ${!!config.persona ? 'opacity-40 pointer-events-none' : ''}`}>
+              <select
+                value={config.sourceLanguage}
+                onChange={(e) => setConfig((prev) => ({ ...prev, sourceLanguage: e.target.value }))}
+                className="w-full rounded-[14px] border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
+                aria-label={t('pipeline.sourceLanguage')}
+                disabled={!!config.persona}
+              >
+                {LANGUAGES.map((lang) => (
+                  <option key={lang} value={lang}>{t(`languages.${lang}`)}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() =>
+                  setConfig((prev) => ({
+                    ...prev,
+                    sourceLanguage: prev.targetLanguage,
+                    targetLanguage: prev.sourceLanguage,
+                  }))
+                }
+                disabled={!!config.persona}
+                title={t('pipeline.swapLanguages')}
+                aria-label={t('pipeline.swapLanguages')}
+                className="shrink-0 rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
+              >
+                <ArrowRightLeft size={13} />
+              </button>
+              <select
+                value={config.targetLanguage}
+                onChange={(e) => setConfig((prev) => ({ ...prev, targetLanguage: e.target.value }))}
+                className="w-full rounded-[14px] border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
+                aria-label={t('pipeline.targetLanguage')}
+                disabled={!!config.persona}
+              >
+                {LANGUAGES.map((lang) => (
+                  <option key={lang} value={lang}>{t(`languages.${lang}`)}</option>
+                ))}
+              </select>
+            </div>
+            {!!config.persona && (
+              <p className="text-[10px] leading-relaxed text-editorial-muted/60">
+                {t('pipeline.languagePairLockedByPersona')}
+              </p>
+            )}
           </div>
-          <div className="space-y-1">
-            <p className="font-display italic text-base text-editorial-ink">
-              {t('pipeline.noProjectTitle')}
-            </p>
-            <p className="text-xs leading-relaxed text-editorial-muted max-w-[260px]">
-              {t('pipeline.noProjectHint')}
-            </p>
+          <PersonaEditor
+            persona={config.persona}
+            sourceLanguage={config.sourceLanguage}
+            targetLanguage={config.targetLanguage}
+            templates={personaTemplates}
+            isRefining={isRefiningPersona}
+            onChange={(value) => setConfig((prev) => ({ ...prev, persona: value }))}
+            onRefine={handleRefinePersona}
+            onSaveTemplate={(name, prompt) => saveTemplate(name, prompt, 'persona')}
+            deleteTemplate={deleteTemplate}
+          />
+          <div className="flex flex-col items-center gap-4 py-8 text-center">
+            <div className="rounded-full border border-editorial-border/60 p-4 text-editorial-muted/50">
+              <Layers size={24} />
+            </div>
+            <div className="space-y-1">
+              <p className="text-base font-bold text-editorial-ink">{t('pipeline.noProjectTitle')}</p>
+              <p className="text-xs leading-relaxed text-editorial-muted max-w-[260px]">{t('pipeline.noProjectHint')}</p>
+            </div>
           </div>
         </div>
       )}
@@ -438,8 +744,24 @@ export function PipelineConfig({
       <div
         role="tablist"
         aria-label={t('pipeline.configSections')}
-        className="flex items-center gap-2 shrink-0 border-y border-editorial-border bg-editorial-bg/60 px-6 py-2"
+        className="flex items-center gap-2 shrink-0 border-b border-editorial-border bg-editorial-bg/60 px-5 py-2"
       >
+        {/* Settings */}
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'settings'}
+          aria-controls="pconfig-panel-settings"
+          id="pconfig-tab-settings"
+          onClick={() => setActiveTab('settings')}
+          title={t('pipeline.tabSettings')}
+          aria-label={t('pipeline.tabSettings')}
+          className={tabBtnCls(activeTab === 'settings')}
+        >
+          <Settings size={16} />
+        </button>
+        <span className="h-4 w-px bg-editorial-border/70 mx-1" aria-hidden="true" />
+        {/* Translation */}
         <button
           type="button"
           role="tab"
@@ -449,14 +771,11 @@ export function PipelineConfig({
           onClick={() => setActiveTab('stages')}
           title={t('pipeline.tabStages')}
           aria-label={t('pipeline.tabStages')}
-          className={`rounded-full border p-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-            activeTab === 'stages'
-              ? 'border-editorial-ink bg-editorial-ink text-white'
-              : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
-          }`}
+          className={tabBtnCls(activeTab === 'stages')}
         >
-          <Layers size={16} />
+          <Languages size={16} />
         </button>
+        {/* Audit */}
         <button
           type="button"
           role="tab"
@@ -466,14 +785,11 @@ export function PipelineConfig({
           onClick={() => setActiveTab('audit')}
           title={t('pipeline.tabAudit')}
           aria-label={t('pipeline.tabAudit')}
-          className={`rounded-full border p-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-            activeTab === 'audit'
-              ? 'border-editorial-ink bg-editorial-ink text-white'
-              : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
-          }`}
+          className={tabBtnCls(activeTab === 'audit')}
         >
           <ShieldCheck size={16} />
         </button>
+        {/* Glossary */}
         <button
           type="button"
           role="tab"
@@ -483,57 +799,220 @@ export function PipelineConfig({
           onClick={() => setActiveTab('glossary')}
           title={t('pipeline.tabGlossary')}
           aria-label={t('pipeline.tabGlossary')}
-          className={`rounded-full border p-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-            activeTab === 'glossary'
-              ? 'border-editorial-ink bg-editorial-ink text-white'
-              : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
-          }`}
+          className={tabBtnCls(activeTab === 'glossary')}
         >
           <BookOpen size={16} />
         </button>
-
         <span className="mx-1 h-4 w-px bg-editorial-border/70" aria-hidden="true" />
-        <span className="font-display italic text-sm text-editorial-ink">
-          {TAB_TITLE[activeTab]}
-        </span>
+        <span className="text-sm font-display italic text-editorial-ink">{TAB_TITLE[activeTab]}</span>
       </div>
 
       {/* ── Tab panels ── */}
-      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-8 py-8 space-y-8">
+      <div className="relative flex-1 min-h-0">
+        {isProcessing && (
+          <div className="absolute inset-0 z-10 flex items-start justify-center bg-editorial-bg/70 backdrop-blur-[2px]">
+            <div className="mt-10 flex items-center gap-2 rounded-full border border-editorial-border bg-editorial-bg px-4 py-2 text-[11px] font-sans uppercase tracking-widest text-editorial-muted shadow-sm">
+              <Loader2 size={12} className="animate-spin" />
+              {t('pipeline.settingsLockedWhileRunning')}
+            </div>
+          </div>
+        )}
+      <div className="overflow-y-auto custom-scrollbar px-6 py-6 space-y-6 h-full">
 
-        {/* ── FASI ── */}
-        {activeTab === 'stages' && (
+        {/* ── SETTINGS ── */}
+        {activeTab === 'settings' && (
+          <div id="pconfig-panel-settings" role="tabpanel" aria-labelledby="pconfig-tab-settings" className="space-y-6">
+            <div className="space-y-2">
+              <div className="flex items-center gap-1.5">
+                <Globe size={11} className="text-editorial-accent shrink-0" />
+                <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                  {t('pipeline.languagePair')}
+                </p>
+              </div>
+              <div className={`flex items-center gap-3 transition-opacity ${!!config.persona ? 'opacity-40 pointer-events-none' : ''}`}>
+                <select
+                  value={config.sourceLanguage}
+                  onChange={(e) => setConfig((prev) => ({ ...prev, sourceLanguage: e.target.value }))}
+                  className="w-full rounded-[14px] border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
+                  aria-label={t('pipeline.sourceLanguage')}
+                  disabled={!!config.persona}
+                >
+                  {LANGUAGES.map((lang) => (
+                    <option key={lang} value={lang}>{t(`languages.${lang}`)}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setConfig((prev) => ({
+                      ...prev,
+                      sourceLanguage: prev.targetLanguage,
+                      targetLanguage: prev.sourceLanguage,
+                    }))
+                  }
+                  disabled={!!config.persona}
+                  title={t('pipeline.swapLanguages')}
+                  aria-label={t('pipeline.swapLanguages')}
+                  className="shrink-0 rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
+                >
+                  <ArrowRightLeft size={13} />
+                </button>
+                <select
+                  value={config.targetLanguage}
+                  onChange={(e) => setConfig((prev) => ({ ...prev, targetLanguage: e.target.value }))}
+                  className="w-full rounded-[14px] border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
+                  aria-label={t('pipeline.targetLanguage')}
+                  disabled={!!config.persona}
+                >
+                  {LANGUAGES.map((lang) => (
+                    <option key={lang} value={lang}>{t(`languages.${lang}`)}</option>
+                  ))}
+                </select>
+              </div>
+              {!!config.persona && (
+                <p className="text-[10px] leading-relaxed text-editorial-muted/60">
+                  {t('pipeline.languagePairLockedByPersona')}
+                </p>
+              )}
+            </div>
+            <PersonaEditor
+              persona={config.persona}
+              sourceLanguage={config.sourceLanguage}
+              targetLanguage={config.targetLanguage}
+              templates={personaTemplates}
+              isRefining={isRefiningPersona}
+              onChange={(value) => setConfig((prev) => ({ ...prev, persona: value }))}
+              onRefine={handleRefinePersona}
+              onSaveTemplate={(name, prompt) => saveTemplate(name, prompt, 'persona')}
+              deleteTemplate={deleteTemplate}
+            />
+          </div>
+        )}
+
+        {/* ── TRADUZIONE ── */}
+        {activeTab === 'stages' && stage0 && (
           <div
             id="pconfig-panel-stages"
             role="tabpanel"
             aria-labelledby="pconfig-tab-stages"
-            className="space-y-5"
+            className="space-y-6"
           >
-            <div className="flex items-center justify-between">
-              <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-                {t('pipeline.tabStages')}
-              </p>
-              <button
-                type="button"
-                onClick={addStage}
-                title={t('pipeline.addStage')}
-                aria-label={t('pipeline.addStage')}
-                className="rounded-full border border-editorial-accent/40 p-2 text-editorial-accent transition-colors hover:bg-editorial-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              >
-                <Plus size={14} />
-              </button>
+            {/* Model + options card */}
+            <div className="space-y-3 rounded-[20px] border border-editorial-border bg-editorial-bg/70 px-5 py-4">
+              <div className="flex items-center gap-1.5">
+                <Cpu size={11} className="text-editorial-accent shrink-0" />
+                <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                  {t('pipeline.stageModelLabel')}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <select
+                  value={stage0.provider}
+                  onChange={(e) => handleStageProviderChange(e.target.value as ModelProvider)}
+                  className="rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  aria-label={t('models.provider')}
+                >
+                  {Object.keys(MODEL_OPTIONS).map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+                {stageModels.length > 0 ? (
+                  <select
+                    value={stage0.model}
+                    onChange={(e) => updateStage(stage0.id, { model: e.target.value })}
+                    className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    aria-label={t('pipeline.stageModelLabel')}
+                  >
+                    {stageModels.map((m) => (
+                      <option key={m} value={m}>
+                        {m}{getModelStatus(stage0.provider, m) === 'preview' ? ' (preview)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                ) : stage0.provider === 'ollama' ? (
+                  <input
+                    value={stage0.model}
+                    onChange={(e) => updateStage(stage0.id, { model: e.target.value })}
+                    placeholder={t('ollama.modelPlaceholder')}
+                    className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    aria-label={t('pipeline.stageModelLabel')}
+                  />
+                ) : (
+                  <select
+                    value={stage0.model}
+                    onChange={(e) => updateStage(stage0.id, { model: e.target.value })}
+                    className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    aria-label={t('pipeline.stageModelLabel')}
+                  >
+                    {MODEL_OPTIONS[stage0.provider]?.map((m) => (
+                      <option key={m} value={m}>
+                        {m}{getModelStatus(stage0.provider, m) === 'preview' ? ' (preview)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+              {stageOllamaOffline && (
+                <div className="flex items-center gap-2 text-xs text-editorial-accent">
+                  <AlertTriangle size={14} />
+                  <span>{t('ollama.selectedButOffline')}</span>
+                </div>
+              )}
+              {/* Rolling context toggle */}
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
+                  <Link2 size={11} className="text-editorial-accent shrink-0" />
+                  <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                    {t('pipeline.rollingContext')}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={stage0.rollingContext !== false}
+                  onClick={() => updateStage(stage0.id, { rollingContext: stage0.rollingContext !== false ? false : true })}
+                  title={t('pipeline.rollingContext')}
+                  aria-label={t('pipeline.rollingContext')}
+                  className={`ml-auto rounded-full border p-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                    stage0.rollingContext !== false
+                      ? 'border-editorial-ink bg-editorial-ink text-white'
+                      : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
+                  }`}
+                >
+                  <Link2 size={11} />
+                </button>
+              </div>
+              <ProviderRuntimeEditor
+                provider={stage0.provider}
+                value={stage0.providerOptions}
+                onChange={(providerOptions) => updateStage(stage0.id, { providerOptions })}
+                title={t('pipeline.providerOptions.stageTitle')}
+                hint={t('pipeline.providerOptions.stageHint')}
+              />
             </div>
-            <div className="space-y-5">
-              {config.stages.map((stage, idx) => (
-                <StageCard
-                  key={stage.id}
-                  stage={stage}
-                  index={idx}
-                  onUpdate={(u) => updateStage(stage.id, u)}
-                  onRemove={() => removeStage(stage.id)}
-                />
-              ))}
-            </div>
+
+            {/* Translation instructions card */}
+            <AuditPromptEditor
+              label={t('pipeline.prompt')}
+              hint=""
+              value={stage0.prompt}
+              placeholder={t('pipeline.stagePromptPlaceholder')}
+              templates={templates.filter((tmpl) => tmpl.context === 'stage')}
+              isRefining={isRefiningStage}
+              onRefine={handleRefineStagePrompt}
+              onChange={(value) => updateStage(stage0.id, { prompt: value })}
+              onApplyTemplate={(tmpl) => updateStage(stage0.id, {
+                prompt: tmpl.prompt,
+                ...(tmpl.defaultModel ? { model: tmpl.defaultModel } : {}),
+                ...(tmpl.defaultProvider ? { provider: tmpl.defaultProvider as ModelProvider } : {}),
+              })}
+              saveTemplate={saveTemplate}
+              deleteTemplate={deleteTemplate}
+              defaultModel={stage0.model}
+              defaultProvider={stage0.provider}
+              icon={<FileText size={11} />}
+              context="stage"
+            />
           </div>
         )}
 
@@ -546,14 +1025,17 @@ export function PipelineConfig({
             className="space-y-6"
           >
             <div className="space-y-3 rounded-[20px] border border-editorial-border bg-editorial-bg/70 px-5 py-4">
-              <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-                {t('pipeline.auditModelLabel')}
-              </p>
+              <div className="flex items-center gap-1.5">
+                <Cpu size={11} className="text-editorial-accent shrink-0" />
+                <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                  {t('pipeline.auditModelLabel')}
+                </p>
+              </div>
               <div className="flex gap-2">
               <select
                 value={config.judgeProvider}
                 onChange={(e) => handleJudgeProviderChange(e.target.value as ModelProvider)}
-                className="rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-2 text-sm font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 aria-label={t('models.provider')}
               >
                 {Object.keys(MODEL_OPTIONS).map((p) => (
@@ -564,7 +1046,7 @@ export function PipelineConfig({
                 <select
                   value={config.judgeModel}
                   onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
-                  className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   aria-label={t('pipeline.auditModelLabel')}
                 >
                   {judgeModels.map((m) => (
@@ -578,14 +1060,14 @@ export function PipelineConfig({
                   value={config.judgeModel}
                   onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
                   placeholder={t('ollama.modelPlaceholder')}
-                  className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   aria-label={t('pipeline.auditModelLabel')}
                 />
               ) : (
                 <select
                   value={config.judgeModel}
                   onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
-                  className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   aria-label={t('pipeline.auditModelLabel')}
                 >
                   {MODEL_OPTIONS[config.judgeProvider]?.map((m) => (
@@ -634,6 +1116,7 @@ export function PipelineConfig({
               deleteTemplate={deleteTemplate}
               defaultModel={config.judgeModel}
               defaultProvider={config.judgeProvider}
+              icon={<Scale size={11} />}
             />
             <AuditPromptEditor
               label={t('pipeline.coherencePromptLabel')}
@@ -656,6 +1139,7 @@ export function PipelineConfig({
               deleteTemplate={deleteTemplate}
               defaultModel={config.judgeModel}
               defaultProvider={config.judgeProvider}
+              icon={<RefreshCw size={11} />}
             />
           </div>
         )}
@@ -679,6 +1163,7 @@ export function PipelineConfig({
           </div>
         )}
 
+      </div>
       </div>
       </>}
 

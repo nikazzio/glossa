@@ -13,18 +13,19 @@ interface TemplateRow {
 }
 
 function rowToTemplate(row: TemplateRow): PromptTemplate {
+  const ctx = row.context === 'audit' ? 'audit' : row.context === 'persona' ? 'persona' : 'stage';
   return {
     id: row.id,
     name: row.name,
     prompt: row.prompt,
-    context: (row.context === 'audit' ? 'audit' : 'stage') as 'stage' | 'audit',
+    context: ctx,
     defaultModel: row.default_model || undefined,
     defaultProvider: row.default_provider || undefined,
     createdAt: row.created_at,
   };
 }
 
-export async function getPromptTemplates(context?: 'stage' | 'audit'): Promise<PromptTemplate[]> {
+export async function getPromptTemplates(context?: 'stage' | 'audit' | 'persona'): Promise<PromptTemplate[]> {
   const rows = context
     ? await select<TemplateRow>(
         'SELECT id, name, prompt, context, default_model, default_provider, created_at FROM prompt_templates WHERE context = $1 ORDER BY name ASC',

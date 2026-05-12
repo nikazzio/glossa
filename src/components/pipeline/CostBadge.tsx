@@ -24,7 +24,7 @@ export function CostBreakdownPanel({ estimate }: { estimate: PipelineCostEstimat
   return (
     <div className="rounded border border-editorial-border bg-editorial-bg shadow-lg">
       <div className="p-3 space-y-2">
-        <p className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted">
+        <p className="text-[9px] font-sans uppercase tracking-widest text-editorial-muted">
           {t('cost.breakdown')}
         </p>
         <table className="w-full text-[10px] font-mono">

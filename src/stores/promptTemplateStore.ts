@@ -13,7 +13,7 @@ interface PromptTemplateState {
   saveTemplate: (
     name: string,
     prompt: string,
-    context: 'stage' | 'audit',
+    context: 'stage' | 'audit' | 'persona',
     defaultModel?: string,
     defaultProvider?: string,
   ) => Promise<void>;

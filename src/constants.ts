@@ -4,17 +4,8 @@ import { MODEL_CATALOG } from './models/catalog';
 export const DEFAULT_STAGES: PipelineStageConfig[] = [
   {
     id: 'stg-draft',
-    name: 'Initial Pass',
-    prompt: 'Perform an initial translation pass. Focus on literal meaning and linguistic accuracy.',
-    model: 'gpt-4o-mini',
-    provider: 'openai',
-    enabled: true,
-    rollingContext: true,
-  },
-  {
-    id: 'stg-style',
-    name: 'Refinement',
-    prompt: 'Rewrite the translation to sound more natural, fluent, and professional. Match the intended tone.',
+    name: 'Translation',
+    prompt: 'Translate the text accurately. Preserve the original tone, style, and register. Output only the translated text.',
     model: 'gpt-4o-mini',
     provider: 'openai',
     enabled: true,

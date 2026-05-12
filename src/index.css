@@ -3,6 +3,7 @@
 @import "tailwindcss";
 
 @theme {
+  /* ── Fonts — change here to update the whole app ─────────────────────────── */
   --font-display: "Georgia", serif;
   --font-sans: "DM Sans", system-ui, -apple-system, sans-serif;
   --font-mono: "Courier New", Courier, monospace;

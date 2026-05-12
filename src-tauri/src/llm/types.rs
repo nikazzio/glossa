@@ -54,6 +54,10 @@ pub struct PipelineConfig {
     pub markdown_aware: Option<bool>,
     pub coherence_prompt: Option<String>,
     pub review_provider_options: Option<ProviderRuntimeConfig>,
+    pub persona: Option<String>,
+    pub ui_language: Option<String>,
+    pub custom_source_language: Option<String>,
+    pub custom_target_language: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -85,6 +89,10 @@ pub struct JudgeResponse {
     pub input_tokens: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub output_tokens: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub system_prompt: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_prompt: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -104,4 +112,8 @@ pub struct CoherenceResponse {
     pub input_tokens: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub output_tokens: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub system_prompt: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_prompt: Option<String>,
 }

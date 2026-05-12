@@ -12,6 +12,7 @@ import {
 import { usePipelineStore } from './pipelineStore';
 import { useChunksStore } from './chunksStore';
 import { useUiStore } from './uiStore';
+import { useOperationLogStore } from './operationLogStore';
 import { buildProjectSnapshot } from '../utils/projectSnapshot';
 import { logger } from '../utils/logger';
 import type { PipelineConfig } from '../types';
@@ -67,6 +68,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       getProjectConfig(id),
       loadTranslations(id),
     ]);
+    await useOperationLogStore.getState().loadFromDb(id);
     if (!config) throw new Error(`Project config not found for id: ${id}`);
     logger.info('openProject: loaded from db', {
       id,
@@ -99,6 +101,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         reviewProviderOptions: config.reviewProviderOptions ?? state.config.reviewProviderOptions,
         glossary: config.glossary,
         assignedGlossaryId: config.assignedGlossaryId,
+        persona: config.persona,
+        customSourceLanguage: config.customSourceLanguage,
+        customTargetLanguage: config.customTargetLanguage,
       },
     }));
     chunksStore.setChunks(restoredChunks);
@@ -134,6 +139,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     useUiStore.getState().setViewMode('document');
     useChunksStore.setState({ chunks: [], isProcessing: false, cancelRequested: false, activeStreamId: null });
     usePipelineStore.getState().resetToDefaults();
+    useOperationLogStore.setState({ entries: [], currentProjectId: null });
     set({
       currentProjectId: null,
       saveState: 'idle',

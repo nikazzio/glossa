@@ -31,7 +31,7 @@ import {
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
-import { type KeyboardEvent, useEffect, useMemo, useRef } from 'react';
+import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useUiStore, type InsightsDrawerTab, type ChunkDrawerTab } from '../../stores/uiStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
@@ -226,7 +226,7 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
           >
             <div className="flex h-full flex-col" style={{ width: PANEL_WIDTH }}>
               <div className="flex items-center justify-between gap-3 border-b border-editorial-border px-5 py-4">
-                <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+                <div className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
                   {chunkLabel}
                 </div>
                 <button
@@ -328,7 +328,7 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
           >
             <div className="flex h-full flex-col" style={{ width: PANEL_WIDTH }}>
               <div className="flex items-center justify-between gap-3 border-b border-editorial-border px-5 py-4">
-                <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+                <div className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
                   {t('document.insightsDrawerTitle')}
                 </div>
                 <button
@@ -448,8 +448,8 @@ function TabButton({ buttonId, active, disabled, onClick, onKeyDown, label, icon
         disabled
           ? 'cursor-not-allowed border-editorial-border/30 text-editorial-muted/25'
           : active
-          ? 'border-editorial-ink bg-editorial-ink text-white'
-          : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
+          ? 'border-editorial-accent bg-editorial-accent text-white'
+          : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
       }`}
     >
       {icon}
@@ -581,7 +581,7 @@ function IndexTab({ panelId, labelledBy, chunks, currentChunkId, isProcessing, s
                       onClick={(e) => { e.stopPropagation(); onSplit(chunk.id); }}
                       title={t('pipeline.splitChunkTooltip')}
                       aria-label={t('pipeline.splitChunk')}
-                      className={`rounded-full border p-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${isActive ? 'border-white/20 text-white/60 hover:bg-white/10 hover:text-white' : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'}`}
+                      className={`rounded-full border p-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${isActive ? 'border-white/20 text-white/60 hover:bg-white/10 hover:text-white' : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'}`}
                     >
                       <Scissors size={13} />
                     </button>
@@ -591,7 +591,7 @@ function IndexTab({ panelId, labelledBy, chunks, currentChunkId, isProcessing, s
                         onClick={(e) => { e.stopPropagation(); onMerge(chunk.id); }}
                         title={t('pipeline.mergeNextTooltip')}
                         aria-label={t('pipeline.mergeNext')}
-                        className={`rounded-full border p-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${isActive ? 'border-white/20 text-white/60 hover:bg-white/10 hover:text-white' : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'}`}
+                        className={`rounded-full border p-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${isActive ? 'border-white/20 text-white/60 hover:bg-white/10 hover:text-white' : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'}`}
                       >
                         <Merge size={13} />
                       </button>
@@ -678,8 +678,8 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="space-y-3 px-5 py-5">
       <section className="rounded-[20px] border border-editorial-border bg-editorial-bg px-4 py-3">
-        <div className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
-          <FileText size={12} /> {t('document.infoLabel')}
+        <div className="mb-3 flex items-center gap-1.5 text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+          <FileText size={11} className="text-editorial-accent shrink-0" /> {t('document.infoLabel')}
         </div>
         <dl className="space-y-2">
           <StatRow label={t('document.infoSourceWords')} value={sourceWords.toLocaleString()} />
@@ -689,8 +689,8 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
       </section>
 
       <section className="rounded-[20px] border border-editorial-border bg-editorial-bg px-4 py-3">
-        <div className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
-          <BarChart2 size={12} /> {t('pipeline.chunkStatus.completed')}
+        <div className="mb-3 flex items-center gap-1.5 text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+          <BarChart2 size={11} className="text-editorial-accent shrink-0" /> {t('pipeline.chunkStatus.completed')}
         </div>
         <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-editorial-border/40">
           <div className="h-full rounded-full bg-editorial-success transition-all" style={{ width: `${progressPct}%` }} />
@@ -705,8 +705,8 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
       </section>
 
       <section className="rounded-[20px] border border-editorial-border bg-editorial-bg px-4 py-3">
-        <div className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
-          <Gauge size={12} /> {t('document.infoQuality')}
+        <div className="mb-3 flex items-center gap-1.5 text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+          <Gauge size={11} className="text-editorial-accent shrink-0" /> {t('document.infoQuality')}
         </div>
         {compositeLabel
           ? <div className={`font-display text-lg italic ${QUALITY_TONE_COLOR[compositeTone]}`}>{compositeLabel}</div>
@@ -714,8 +714,8 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
       </section>
 
       <section className="rounded-[20px] border border-editorial-border bg-editorial-bg px-4 py-3">
-        <div className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
-          <Cpu size={12} /> {t('header.tokenCount')}
+        <div className="mb-3 flex items-center gap-1.5 text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+          <Cpu size={11} className="text-editorial-accent shrink-0" /> {t('header.tokenCount')}
         </div>
         <dl className="space-y-2">
           <StatRow
@@ -757,7 +757,7 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
 function StatRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline gap-1">
-      <dt className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">{label}</dt>
+      <dt className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">{label}</dt>
       <dd className="font-display text-sm italic text-editorial-ink">{value}</dd>
     </div>
   );
@@ -792,8 +792,8 @@ function CoherenceTab({ panelId, labelledBy, currentChunk, isProcessing, allChun
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="px-5 py-5">
       <section className="rounded-[20px] border border-editorial-border bg-editorial-bg p-5">
         <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-            <Link2 size={12} /> {t('coherence.title')}
+          <div className="flex items-center gap-2 text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+            <Link2 size={11} className="text-editorial-accent shrink-0" /> {t('coherence.title')}
           </div>
           <button
             type="button"
@@ -801,7 +801,7 @@ function CoherenceTab({ panelId, labelledBy, currentChunk, isProcessing, allChun
             disabled={coherenceDisabled}
             title={coherenceTitle}
             aria-label={t('coherence.runAudit')}
-            className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-30"
+            className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-30"
           >
             {coherence?.status === 'processing' ? <Loader2 size={14} className="animate-spin" /> : <ScanLine size={14} />}
           </button>
@@ -838,6 +838,9 @@ function CoherenceTab({ panelId, labelledBy, currentChunk, isProcessing, allChun
   );
 }
 
+// ── Prompt viewer (inline) ─────────────────────────────────────────────────
+
+
 // ── Audit Tab ──────────────────────────────────────────────────────────────
 
 interface AuditTabProps {
@@ -871,7 +874,7 @@ function AuditTab({ panelId, labelledBy, currentChunk, isProcessing, onReauditCh
       <section className="rounded-[20px] border border-editorial-border bg-editorial-bg p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">{t('audit.title')}</div>
+            <div className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">{t('audit.title')}</div>
             <div className={`mt-2 font-display text-xl italic ${QUALITY_TONE_COLOR[tone]}`}>{qualityLabel}</div>
           </div>
           <button
@@ -880,7 +883,7 @@ function AuditTab({ panelId, labelledBy, currentChunk, isProcessing, onReauditCh
             disabled={isProcessing || !currentChunk.currentDraft}
             title={t('pipeline.reauditChunk')}
             aria-label={t('pipeline.reauditChunk')}
-            className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-30"
+            className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-30"
           >
             <RefreshCcw size={14} />
           </button>
@@ -976,7 +979,7 @@ function OperationsTab({
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex h-full flex-col">
       <div className="border-b border-editorial-border px-5 py-4">
         <div className="flex items-center justify-between">
-          <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+          <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
             {t('document.operationsShellTitle')}
           </p>
           <div className="flex items-center gap-1">
@@ -986,7 +989,7 @@ function OperationsTab({
                 onClick={() => onSelectChunk(processingChunk.id)}
                 title={t('document.operationsGoToChunk')}
                 aria-label={t('document.operationsGoToChunk')}
-                className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               >
                 <ExternalLink size={14} />
               </button>
@@ -996,7 +999,7 @@ function OperationsTab({
               onClick={clear}
               title={t('document.operationsClear')}
               aria-label={t('document.operationsClear')}
-              className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             >
               <Trash2 size={14} />
             </button>
@@ -1024,66 +1027,74 @@ function OperationsTab({
       ) : (
         <div ref={scrollRef} className="flex-1 overflow-y-auto bg-[#111111] px-4 py-4 font-mono text-xs text-[#d6d6d6] custom-scrollbar">
           <div className="space-y-2">
-            {entries.map((entry) => {
-              const tone =
-                entry.level === 'error'
-                  ? 'text-[#ff8f8f]'
-                  : entry.level === 'warn'
-                    ? 'text-[#f6d06f]'
-                    : entry.level === 'success'
-                      ? 'text-[#98e2b8]'
-                      : 'text-[#d6d6d6]';
-              const isCurrentChunk = currentChunkId && entry.chunkId === currentChunkId;
+            {(() => {
+              const scopeLabel: Record<string, string> = {
+                pipeline:  t('log.scopePipeline'),
+                preflight: t('log.scopePreflight'),
+                invoke:    t('log.scopeInvoke'),
+                stage:     t('log.scopeStage'),
+                audit:     t('log.scopeAudit'),
+                coherence: t('log.scopeCoherence'),
+                chunk:     t('log.scopeChunk'),
+              };
+              const levelLabel: Record<string, string> = {
+                info:    t('log.levelInfo'),
+                success: t('log.levelSuccess'),
+                warn:    t('log.levelWarn'),
+                error:   t('log.levelError'),
+              };
+              const chunkIndexMap = new Map(chunks.map((c, i) => [c.id, i]));
+              return entries.map((entry) => {
+              const levelColor =
+                entry.level === 'error'   ? { text: 'text-[#ff6b6b]', border: 'border-[#ff6b6b]/40' }
+                : entry.level === 'warn'  ? { text: 'text-[#f6c90e]', border: 'border-[#f6c90e]/40' }
+                : entry.level === 'success' ? { text: 'text-[#69db7c]', border: 'border-[#69db7c]/40' }
+                : { text: 'text-[#74c0fc]', border: 'border-[#74c0fc]/30' };
+              const chunkIndex = entry.chunkId != null ? (chunkIndexMap.get(entry.chunkId) ?? -1) : -1;
               return (
                 <div
                   key={entry.id}
-                  className={`rounded-[12px] border px-3 py-2 ${
-                    isCurrentChunk
-                      ? 'border-editorial-accent/60 bg-editorial-accent/10'
-                      : 'border-white/10 bg-white/[0.03]'
-                  }`}
+                  className="rounded-[12px] border border-white/10 bg-white/[0.03] px-3 py-2"
                 >
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[#7d7d7d]">$</span>
-                    <span className="text-[#7d7d7d]">{entry.at.slice(11, 19)}</span>
-                    <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.22em] text-[#9eb4ff]">
-                      {entry.scope}
+                    <span className="text-[#555]">$</span>
+                    <span className="text-[#666]">{entry.at.slice(11, 19)}</span>
+                    <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.22em] text-[#888]">
+                      {scopeLabel[entry.scope] ?? entry.scope}
                     </span>
-                    <span className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-[0.22em] ${
-                      entry.level === 'error'
-                        ? 'border-[#ff8f8f]/30 text-[#ff8f8f]'
-                        : entry.level === 'warn'
-                          ? 'border-[#f6d06f]/30 text-[#f6d06f]'
-                          : entry.level === 'success'
-                            ? 'border-[#98e2b8]/30 text-[#98e2b8]'
-                            : 'border-white/10 text-[#bbbbbb]'
-                    }`}>
-                      {entry.level}
+                    <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.22em] ${levelColor.border} ${levelColor.text}`}>
+                      {levelLabel[entry.level] ?? entry.level}
                     </span>
                   </div>
-                  <p className={`mt-2 leading-relaxed ${tone}`}>
+                  <p className={`mt-2 leading-relaxed ${levelColor.text}`}>
                     {entry.message}
                   </p>
                   <div className="mt-2 flex flex-wrap gap-2 text-[10px]">
-                    {entry.chunkId && (
-                      <span className="rounded-full border border-white/10 px-2 py-0.5 text-[#c9c9c9]">
-                        chunk {entry.chunkId}
-                      </span>
-                    )}
-                    {entry.stageId && (
-                      <span className="rounded-full border border-white/10 px-2 py-0.5 text-[#c9c9c9]">
-                        stage {entry.stageId}
+                    {chunkIndex >= 0 && (
+                      <span className="rounded-full border border-white/10 px-2 py-0.5 text-[#888]">
+                        {t('log.unitLabel')} {indexPad(chunkIndex + 1)}
                       </span>
                     )}
                     {formatOperationMeta(entry.meta).map((item) => (
-                      <span key={item} className="rounded-full border border-white/10 px-2 py-0.5 text-[#8e8e8e]">
+                      <span key={item} className="rounded-full border border-white/10 px-2 py-0.5 text-[#666]">
                         {item}
                       </span>
                     ))}
                   </div>
+                  {entry.detail && (
+                    <details className="mt-2 border-t border-white/10 pt-2">
+                      <summary className="cursor-pointer select-none text-[10px] text-[#666] hover:text-[#aaa]">
+                        ▶ {t('log.showPrompt')}
+                      </summary>
+                      <pre className="mt-2 max-h-52 overflow-y-auto whitespace-pre-wrap text-[10px] leading-relaxed text-[#aaa] custom-scrollbar">
+                        {entry.detail}
+                      </pre>
+                    </details>
+                  )}
                 </div>
               );
-            })}
+            });
+            })()}
           </div>
         </div>
       )}
@@ -1132,7 +1143,7 @@ function IssueList({ issues, chunkId, onSelectChunk, onFocusIssue }: IssueListPr
               onClick={() => { onSelectChunk(chunkId); onFocusIssue(chunkId, extractIssueFocusQuery(issue)); }}
               title={t('audit.openChunk')}
               aria-label={t('audit.openChunk')}
-              className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             >
               <ExternalLink size={13} />
             </button>
@@ -1192,8 +1203,8 @@ function GlossaryTab({ panelId, labelledBy, glossary, highlightEnabled, onToggle
           aria-pressed={highlightEnabled}
           className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
             highlightEnabled
-              ? 'border-editorial-ink bg-editorial-ink text-white'
-              : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
+              ? 'border-editorial-accent bg-editorial-accent text-white'
+              : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
           }`}
         >
           <Highlighter size={13} />

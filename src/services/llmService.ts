@@ -1,8 +1,30 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import type { PipelineConfig, PipelineStageConfig, JudgeResult, Issue, TokenUsage } from '../types';
+import i18n from 'i18next';
+import type { PipelineConfig, PipelineStageConfig, JudgeResult, Issue, TokenUsage, PromptInfo } from '../types';
 import { useChunksStore } from '../stores/chunksStore';
 import { logOperation } from '../stores/operationLogStore';
+
+const LOCALE_NAMES: Record<string, string> = {
+  it: 'Italian',
+  en: 'English',
+  fr: 'French',
+  de: 'German',
+  es: 'Spanish',
+  pt: 'Portuguese',
+  nl: 'Dutch',
+  pl: 'Polish',
+  ru: 'Russian',
+  zh: 'Chinese',
+  ja: 'Japanese',
+  ko: 'Korean',
+};
+
+function withUiLanguage(config: PipelineConfig): PipelineConfig {
+  const locale = i18n.language ?? 'en';
+  const lang = LOCALE_NAMES[locale] ?? LOCALE_NAMES[locale.split('-')[0]] ?? 'English';
+  return { ...config, uiLanguage: lang };
+}
 
 /// Sentinel string returned by the Rust backend when a stream is
 /// cancelled via cancel_stream. Exposed so the pipeline runner can
@@ -70,15 +92,10 @@ export const llmService = {
     onToken: (token: string) => void,
     onUsage?: (usage: TokenUsage) => void,
     previousTranslation?: string,
+    onPrompt?: (info: PromptInfo) => void,
+    onIdleGrace?: () => void,
   ): Promise<string> {
     const streamId = `stream-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    logOperation({
-      level: 'info',
-      scope: 'invoke',
-      message: `Invoking backend streaming stage run for ${stage.provider}/${stage.model}`,
-      stageId: stage.id,
-      meta: { streamId },
-    });
 
     const unlisten = await listen<StreamTokenPayload>('stream-token', (event) => {
       if (event.payload.streamId !== streamId) return;
@@ -92,10 +109,18 @@ export const llmService = {
         onUsage({ inputTokens: event.payload.inputTokens, outputTokens: event.payload.outputTokens });
       }
     });
+    const unlistenPrompt = await listen<{ streamId: string; systemPrompt: string; userPrompt: string }>('chunk-prompt', (event) => {
+      if (event.payload.streamId !== streamId) return;
+      onPrompt?.({ systemPrompt: event.payload.systemPrompt, userPrompt: event.payload.userPrompt });
+    });
+    const unlistenAlive = await listen<{ streamId: string }>('stream-alive', (event) => {
+      if (event.payload.streamId !== streamId) return;
+      onIdleGrace?.();
+    });
 
     useChunksStore.getState().setActiveStreamId(streamId);
     try {
-      const result = await invoke<string>('run_stage_stream', {
+      return await invoke<string>('run_stage_stream', {
         text,
         stage,
         config,
@@ -103,9 +128,10 @@ export const llmService = {
         previousTranslation: previousTranslation || null,
         streamId,
       });
-      return result;
     } finally {
       unlisten();
+      unlistenPrompt();
+      unlistenAlive();
       useChunksStore.getState().setActiveStreamId(null);
     }
   },
@@ -124,35 +150,102 @@ export const llmService = {
     originalText: string,
     translation: string,
     config: PipelineConfig,
+    onPrompt?: (info: PromptInfo) => void,
+    onIdleGrace?: () => void,
   ): Promise<Omit<JudgeResult, 'status'> & { inputTokens?: number; outputTokens?: number }> {
-    logOperation({
-      level: 'info',
-      scope: 'invoke',
-      message: `Invoking backend judge run for ${config.judgeProvider}/${config.judgeModel}`,
+    const streamId = `judge-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    let capturedUsage: TokenUsage | undefined;
+    const unlisten = await listen<StreamTokenPayload>('stream-token', (event) => {
+      if (event.payload.streamId !== streamId) return;
+      if (
+        event.payload.done &&
+        event.payload.inputTokens !== undefined &&
+        event.payload.outputTokens !== undefined
+      ) {
+        capturedUsage = { inputTokens: event.payload.inputTokens, outputTokens: event.payload.outputTokens };
+      }
     });
-    return invoke<Omit<JudgeResult, 'status'> & { inputTokens?: number; outputTokens?: number }>(
-      'judge_translation',
-      { originalText, translation, config },
-    );
+    const unlistenPrompt = await listen<{ streamId: string; systemPrompt: string; userPrompt: string }>('chunk-prompt', (event) => {
+      if (event.payload.streamId !== streamId) return;
+      onPrompt?.({ systemPrompt: event.payload.systemPrompt, userPrompt: event.payload.userPrompt });
+    });
+    const unlistenAlive = await listen<{ streamId: string }>('stream-alive', (event) => {
+      if (event.payload.streamId !== streamId) return;
+      onIdleGrace?.();
+    });
+
+    useChunksStore.getState().setActiveStreamId(streamId);
+    try {
+      const result = await invoke<Omit<JudgeResult, 'status'> & { inputTokens?: number; outputTokens?: number }>(
+        'judge_translation',
+        { originalText, translation, config: withUiLanguage(config), streamId },
+      );
+      return {
+        ...result,
+        inputTokens: capturedUsage?.inputTokens,
+        outputTokens: capturedUsage?.outputTokens,
+      };
+    } finally {
+      unlisten();
+      unlistenPrompt();
+      unlistenAlive();
+      useChunksStore.getState().setActiveStreamId(null);
+    }
   },
 
   async runCoherenceForChunk(
     input: { original: string; translation: string; prevContext?: string; nextContext?: string },
     config: PipelineConfig,
+    onPrompt?: (info: PromptInfo) => void,
+    onIdleGrace?: () => void,
   ): Promise<{ issues: Issue[]; inputTokens?: number; outputTokens?: number }> {
-    logOperation({
-      level: 'info',
-      scope: 'invoke',
-      message: `Invoking backend coherence run for ${config.judgeProvider}/${config.judgeModel}`,
+    const streamId = `coherence-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    let capturedUsage: TokenUsage | undefined;
+    const unlisten = await listen<StreamTokenPayload>('stream-token', (event) => {
+      if (event.payload.streamId !== streamId) return;
+      if (
+        event.payload.done &&
+        event.payload.inputTokens !== undefined &&
+        event.payload.outputTokens !== undefined
+      ) {
+        capturedUsage = { inputTokens: event.payload.inputTokens, outputTokens: event.payload.outputTokens };
+      }
     });
-    return invoke('run_coherence_for_chunk', { input, config });
+    const unlistenPrompt = await listen<{ streamId: string; systemPrompt: string; userPrompt: string }>('chunk-prompt', (event) => {
+      if (event.payload.streamId !== streamId) return;
+      onPrompt?.({ systemPrompt: event.payload.systemPrompt, userPrompt: event.payload.userPrompt });
+    });
+    const unlistenAlive = await listen<{ streamId: string }>('stream-alive', (event) => {
+      if (event.payload.streamId !== streamId) return;
+      onIdleGrace?.();
+    });
+
+    useChunksStore.getState().setActiveStreamId(streamId);
+    try {
+      const result = await invoke<{ issues: Issue[]; inputTokens?: number; outputTokens?: number }>(
+        'run_coherence_for_chunk',
+        { input, config: withUiLanguage(config), streamId },
+      );
+      return {
+        ...result,
+        inputTokens: capturedUsage?.inputTokens,
+        outputTokens: capturedUsage?.outputTokens,
+      };
+    } finally {
+      unlisten();
+      unlistenPrompt();
+      unlistenAlive();
+      useChunksStore.getState().setActiveStreamId(null);
+    }
   },
 
   async refinePrompt(
     prompt: string,
     provider: string,
     model: string,
-    context: 'stage' | 'audit',
+    context: 'stage' | 'audit' | 'persona',
   ): Promise<string> {
     return invoke<string>('refine_prompt', { prompt, provider, model, context });
   },

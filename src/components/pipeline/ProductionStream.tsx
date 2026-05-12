@@ -82,6 +82,7 @@ const ChunkDraftText = memo(function ChunkDraftText({
   );
 });
 
+
 interface ChunkRowProps {
   chunk: TranslationChunk;
   idx: number;

@@ -47,6 +47,9 @@ const ALLOWED_MIGRATIONS = new Set([
   'translations.translation_display_text',
   'translations.translation_processing_text',
   'prompt_templates.context',
+  'pipeline_configs.persona',
+  'pipeline_configs.custom_source_language',
+  'pipeline_configs.custom_target_language',
 ]);
 
 export async function ensureColumn(table: string, column: string, definition: string): Promise<void> {
@@ -187,6 +190,9 @@ export async function initDatabase(): Promise<void> {
   await ensureColumn('pipeline_configs', 'markdown_aware', 'INTEGER DEFAULT 0');
   await ensureColumn('pipeline_configs', 'experimental_import', 'TEXT DEFAULT NULL');
   await ensureColumn('pipeline_configs', 'review_provider_options', 'TEXT DEFAULT NULL');
+  await ensureColumn('pipeline_configs', 'persona', 'TEXT DEFAULT NULL');
+  await ensureColumn('pipeline_configs', 'custom_source_language', 'TEXT DEFAULT NULL');
+  await ensureColumn('pipeline_configs', 'custom_target_language', 'TEXT DEFAULT NULL');
   await ensureColumn('projects', 'view_mode', 'TEXT DEFAULT NULL');
   await ensureColumn('translations', 'position', 'INTEGER DEFAULT NULL');
   await ensureColumn('translations', 'chunk_status', "TEXT DEFAULT 'ready'");
@@ -215,6 +221,25 @@ export async function initDatabase(): Promise<void> {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
+  `);
+
+  await conn.execute(`
+    CREATE TABLE IF NOT EXISTS operation_logs (
+      id TEXT PRIMARY KEY,
+      project_id TEXT REFERENCES projects(id) ON DELETE CASCADE,
+      at TEXT NOT NULL,
+      level TEXT NOT NULL,
+      scope TEXT NOT NULL,
+      message TEXT NOT NULL,
+      chunk_id TEXT DEFAULT NULL,
+      stage_id TEXT DEFAULT NULL,
+      meta TEXT DEFAULT NULL,
+      detail TEXT DEFAULT NULL
+    )
+  `);
+  await conn.execute(`
+    CREATE INDEX IF NOT EXISTS idx_operation_logs_project_id
+    ON operation_logs(project_id, at)
   `);
   await ensureColumn('translations', 'coherence_result', 'TEXT DEFAULT NULL');
   await ensureColumn('translations', 'footnotes', 'TEXT DEFAULT NULL');
@@ -305,4 +330,97 @@ export async function setSetting(key: string, value: string): Promise<void> {
     'INSERT INTO app_settings (key, value) VALUES ($1, $2) ON CONFLICT(key) DO UPDATE SET value = $2',
     [key, value],
   );
+}
+
+// ── Operation Logs ───────────────────────────────────────────────────
+
+const MAX_OPERATION_LOG_ENTRIES = 400;
+
+interface DbOperationLogRow {
+  id: string;
+  project_id: string;
+  at: string;
+  level: string;
+  scope: string;
+  message: string;
+  chunk_id: string | null;
+  stage_id: string | null;
+  meta: string | null;
+  detail: string | null;
+}
+
+export interface PersistedLogEntry {
+  id: string;
+  at: string;
+  level: string;
+  scope: string;
+  message: string;
+  chunkId?: string;
+  stageId?: string;
+  meta?: Record<string, unknown>;
+  detail?: string;
+}
+
+export async function saveOperationLogEntry(projectId: string, entry: PersistedLogEntry): Promise<void> {
+  await execute(
+    `INSERT OR IGNORE INTO operation_logs
+       (id, project_id, at, level, scope, message, chunk_id, stage_id, meta, detail)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+    [
+      entry.id,
+      projectId,
+      entry.at,
+      entry.level,
+      entry.scope,
+      entry.message,
+      entry.chunkId ?? null,
+      entry.stageId ?? null,
+      entry.meta ? JSON.stringify(entry.meta) : null,
+      entry.detail ?? null,
+    ],
+  );
+  await execute(
+    `DELETE FROM operation_logs
+     WHERE project_id = $1
+       AND id NOT IN (
+         SELECT id FROM operation_logs
+         WHERE project_id = $1
+         ORDER BY at DESC
+         LIMIT $2
+       )`,
+    [projectId, MAX_OPERATION_LOG_ENTRIES],
+  );
+}
+
+export async function loadOperationLogs(projectId: string): Promise<PersistedLogEntry[]> {
+  await execute(
+    `DELETE FROM operation_logs
+     WHERE project_id = $1
+       AND id NOT IN (
+         SELECT id FROM operation_logs
+         WHERE project_id = $1
+         ORDER BY at DESC
+         LIMIT $2
+       )`,
+    [projectId, MAX_OPERATION_LOG_ENTRIES],
+  );
+  const rows = await select<DbOperationLogRow>(
+    `SELECT * FROM operation_logs WHERE project_id = $1 ORDER BY at ASC`,
+    [projectId],
+  );
+  return rows.map((row) => ({
+    id: row.id,
+    at: row.at,
+    level: row.level,
+    scope: row.scope,
+    message: row.message,
+    ...(row.chunk_id ? { chunkId: row.chunk_id } : {}),
+    ...(row.stage_id ? { stageId: row.stage_id } : {}),
+    ...(row.meta ? { meta: JSON.parse(row.meta) as Record<string, unknown> } : {}),
+    ...(row.detail ? { detail: row.detail } : {}),
+  }));
+}
+
+export async function clearOperationLogs(projectId: string): Promise<void> {
+  await execute('DELETE FROM operation_logs WHERE project_id = $1', [projectId]);
 }
