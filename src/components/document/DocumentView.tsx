@@ -693,8 +693,8 @@ function ChunkIconButton({
       disabled={disabled}
       className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40 ${
         active
-          ? 'border-editorial-ink bg-editorial-ink text-white'
-          : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
+          ? 'border-editorial-accent bg-editorial-accent text-white'
+          : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
       }`}
     >
       {children}

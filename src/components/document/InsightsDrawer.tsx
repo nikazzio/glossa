@@ -226,7 +226,7 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
           >
             <div className="flex h-full flex-col" style={{ width: PANEL_WIDTH }}>
               <div className="flex items-center justify-between gap-3 border-b border-editorial-border px-5 py-4">
-                <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+                <div className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
                   {chunkLabel}
                 </div>
                 <button
@@ -328,7 +328,7 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
           >
             <div className="flex h-full flex-col" style={{ width: PANEL_WIDTH }}>
               <div className="flex items-center justify-between gap-3 border-b border-editorial-border px-5 py-4">
-                <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+                <div className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
                   {t('document.insightsDrawerTitle')}
                 </div>
                 <button
@@ -448,8 +448,8 @@ function TabButton({ buttonId, active, disabled, onClick, onKeyDown, label, icon
         disabled
           ? 'cursor-not-allowed border-editorial-border/30 text-editorial-muted/25'
           : active
-          ? 'border-editorial-ink bg-editorial-ink text-white'
-          : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
+          ? 'border-editorial-accent bg-editorial-accent text-white'
+          : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
       }`}
     >
       {icon}
@@ -581,7 +581,7 @@ function IndexTab({ panelId, labelledBy, chunks, currentChunkId, isProcessing, s
                       onClick={(e) => { e.stopPropagation(); onSplit(chunk.id); }}
                       title={t('pipeline.splitChunkTooltip')}
                       aria-label={t('pipeline.splitChunk')}
-                      className={`rounded-full border p-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${isActive ? 'border-white/20 text-white/60 hover:bg-white/10 hover:text-white' : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'}`}
+                      className={`rounded-full border p-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${isActive ? 'border-white/20 text-white/60 hover:bg-white/10 hover:text-white' : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'}`}
                     >
                       <Scissors size={13} />
                     </button>
@@ -591,7 +591,7 @@ function IndexTab({ panelId, labelledBy, chunks, currentChunkId, isProcessing, s
                         onClick={(e) => { e.stopPropagation(); onMerge(chunk.id); }}
                         title={t('pipeline.mergeNextTooltip')}
                         aria-label={t('pipeline.mergeNext')}
-                        className={`rounded-full border p-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${isActive ? 'border-white/20 text-white/60 hover:bg-white/10 hover:text-white' : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'}`}
+                        className={`rounded-full border p-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${isActive ? 'border-white/20 text-white/60 hover:bg-white/10 hover:text-white' : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'}`}
                       >
                         <Merge size={13} />
                       </button>
@@ -678,8 +678,8 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="space-y-3 px-5 py-5">
       <section className="rounded-[20px] border border-editorial-border bg-editorial-bg px-4 py-3">
-        <div className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
-          <FileText size={12} /> {t('document.infoLabel')}
+        <div className="mb-3 flex items-center gap-1.5 text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+          <FileText size={11} className="text-editorial-accent shrink-0" /> {t('document.infoLabel')}
         </div>
         <dl className="space-y-2">
           <StatRow label={t('document.infoSourceWords')} value={sourceWords.toLocaleString()} />
@@ -689,8 +689,8 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
       </section>
 
       <section className="rounded-[20px] border border-editorial-border bg-editorial-bg px-4 py-3">
-        <div className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
-          <BarChart2 size={12} /> {t('pipeline.chunkStatus.completed')}
+        <div className="mb-3 flex items-center gap-1.5 text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+          <BarChart2 size={11} className="text-editorial-accent shrink-0" /> {t('pipeline.chunkStatus.completed')}
         </div>
         <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-editorial-border/40">
           <div className="h-full rounded-full bg-editorial-success transition-all" style={{ width: `${progressPct}%` }} />
@@ -705,8 +705,8 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
       </section>
 
       <section className="rounded-[20px] border border-editorial-border bg-editorial-bg px-4 py-3">
-        <div className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
-          <Gauge size={12} /> {t('document.infoQuality')}
+        <div className="mb-3 flex items-center gap-1.5 text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+          <Gauge size={11} className="text-editorial-accent shrink-0" /> {t('document.infoQuality')}
         </div>
         {compositeLabel
           ? <div className={`font-display text-lg italic ${QUALITY_TONE_COLOR[compositeTone]}`}>{compositeLabel}</div>
@@ -714,8 +714,8 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
       </section>
 
       <section className="rounded-[20px] border border-editorial-border bg-editorial-bg px-4 py-3">
-        <div className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
-          <Cpu size={12} /> {t('header.tokenCount')}
+        <div className="mb-3 flex items-center gap-1.5 text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+          <Cpu size={11} className="text-editorial-accent shrink-0" /> {t('header.tokenCount')}
         </div>
         <dl className="space-y-2">
           <StatRow
@@ -757,7 +757,7 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
 function StatRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline gap-1">
-      <dt className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">{label}</dt>
+      <dt className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">{label}</dt>
       <dd className="font-display text-sm italic text-editorial-ink">{value}</dd>
     </div>
   );
@@ -792,8 +792,8 @@ function CoherenceTab({ panelId, labelledBy, currentChunk, isProcessing, allChun
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="px-5 py-5">
       <section className="rounded-[20px] border border-editorial-border bg-editorial-bg p-5">
         <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-            <Link2 size={12} /> {t('coherence.title')}
+          <div className="flex items-center gap-2 text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+            <Link2 size={11} className="text-editorial-accent shrink-0" /> {t('coherence.title')}
           </div>
           <button
             type="button"
@@ -801,7 +801,7 @@ function CoherenceTab({ panelId, labelledBy, currentChunk, isProcessing, allChun
             disabled={coherenceDisabled}
             title={coherenceTitle}
             aria-label={t('coherence.runAudit')}
-            className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-30"
+            className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-30"
           >
             {coherence?.status === 'processing' ? <Loader2 size={14} className="animate-spin" /> : <ScanLine size={14} />}
           </button>
@@ -874,7 +874,7 @@ function AuditTab({ panelId, labelledBy, currentChunk, isProcessing, onReauditCh
       <section className="rounded-[20px] border border-editorial-border bg-editorial-bg p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">{t('audit.title')}</div>
+            <div className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">{t('audit.title')}</div>
             <div className={`mt-2 font-display text-xl italic ${QUALITY_TONE_COLOR[tone]}`}>{qualityLabel}</div>
           </div>
           <button
@@ -883,7 +883,7 @@ function AuditTab({ panelId, labelledBy, currentChunk, isProcessing, onReauditCh
             disabled={isProcessing || !currentChunk.currentDraft}
             title={t('pipeline.reauditChunk')}
             aria-label={t('pipeline.reauditChunk')}
-            className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-30"
+            className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-30"
           >
             <RefreshCcw size={14} />
           </button>
@@ -979,7 +979,7 @@ function OperationsTab({
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex h-full flex-col">
       <div className="border-b border-editorial-border px-5 py-4">
         <div className="flex items-center justify-between">
-          <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+          <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
             {t('document.operationsShellTitle')}
           </p>
           <div className="flex items-center gap-1">
@@ -989,7 +989,7 @@ function OperationsTab({
                 onClick={() => onSelectChunk(processingChunk.id)}
                 title={t('document.operationsGoToChunk')}
                 aria-label={t('document.operationsGoToChunk')}
-                className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               >
                 <ExternalLink size={14} />
               </button>
@@ -999,7 +999,7 @@ function OperationsTab({
               onClick={clear}
               title={t('document.operationsClear')}
               aria-label={t('document.operationsClear')}
-              className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             >
               <Trash2 size={14} />
             </button>
@@ -1143,7 +1143,7 @@ function IssueList({ issues, chunkId, onSelectChunk, onFocusIssue }: IssueListPr
               onClick={() => { onSelectChunk(chunkId); onFocusIssue(chunkId, extractIssueFocusQuery(issue)); }}
               title={t('audit.openChunk')}
               aria-label={t('audit.openChunk')}
-              className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             >
               <ExternalLink size={13} />
             </button>
@@ -1203,8 +1203,8 @@ function GlossaryTab({ panelId, labelledBy, glossary, highlightEnabled, onToggle
           aria-pressed={highlightEnabled}
           className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
             highlightEnabled
-              ? 'border-editorial-ink bg-editorial-ink text-white'
-              : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
+              ? 'border-editorial-accent bg-editorial-accent text-white'
+              : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
           }`}
         >
           <Highlighter size={13} />
