@@ -56,6 +56,8 @@ pub struct PipelineConfig {
     pub review_provider_options: Option<ProviderRuntimeConfig>,
     pub persona: Option<String>,
     pub ui_language: Option<String>,
+    pub custom_source_language: Option<String>,
+    pub custom_target_language: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

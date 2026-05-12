@@ -164,6 +164,8 @@ export async function getProjectConfig(projectId: string): Promise<{
   glossary: GlossaryEntry[];
   assignedGlossaryId: string | null;
   persona: string | undefined;
+  customSourceLanguage: string | undefined;
+  customTargetLanguage: string | undefined;
 } | null> {
   const rows = await select<{
     source_language: string;
@@ -184,6 +186,8 @@ export async function getProjectConfig(projectId: string): Promise<{
     experimental_import?: PipelineConfig['experimentalImport'];
     review_provider_options?: string | null;
     persona?: string | null;
+    custom_source_language?: string | null;
+    custom_target_language?: string | null;
   }>(
     `SELECT
        p.source_language,
@@ -203,7 +207,9 @@ export async function getProjectConfig(projectId: string): Promise<{
        pc.markdown_aware,
        pc.experimental_import,
        pc.review_provider_options,
-       pc.persona
+       pc.persona,
+       pc.custom_source_language,
+       pc.custom_target_language
      FROM pipeline_configs pc
      JOIN projects p ON p.id = pc.project_id
      WHERE pc.project_id = $1`,
@@ -246,6 +252,8 @@ export async function getProjectConfig(projectId: string): Promise<{
     experimentalImport: row.experimental_import ?? null,
     reviewProviderOptions: parseJson<ProviderRuntimeConfig>(row.review_provider_options),
     persona: row.persona || undefined,
+    customSourceLanguage: row.custom_source_language || undefined,
+    customTargetLanguage: row.custom_target_language || undefined,
     assignedGlossaryId,
     glossary: glossaryRows.map((g, i) => ({
       id: g.id || `gloss-loaded-${projectId}-${i}`,
@@ -279,8 +287,9 @@ async function saveProjectConfigInternal(
     `INSERT INTO pipeline_configs (
        id, project_id, stages, judge_prompt, judge_model, judge_provider, use_chunking,
        target_chunk_count, source_text, source_display_text, source_processing_text, source_footnotes,
-       document_format, render_profile, markdown_aware, experimental_import, review_provider_options, persona
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9, ''), COALESCE($10, ''), COALESCE($11, ''), $12, $13, $14, $15, $16, $17, $18)
+       document_format, render_profile, markdown_aware, experimental_import, review_provider_options,
+       persona, custom_source_language, custom_target_language
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9, ''), COALESCE($10, ''), COALESCE($11, ''), $12, $13, $14, $15, $16, $17, $18, $19, $20)
      ON CONFLICT(project_id) DO UPDATE SET
        id = excluded.id,
        stages = excluded.stages,
@@ -307,6 +316,8 @@ async function saveProjectConfigInternal(
        experimental_import = excluded.experimental_import,
        review_provider_options = excluded.review_provider_options,
        persona = excluded.persona,
+       custom_source_language = excluded.custom_source_language,
+       custom_target_language = excluded.custom_target_language,
        source_text = CASE
          WHEN $9 IS NULL THEN pipeline_configs.source_text
          ELSE $9
@@ -330,6 +341,8 @@ async function saveProjectConfigInternal(
       config.experimentalImport ?? null,
       config.reviewProviderOptions ? JSON.stringify(config.reviewProviderOptions) : null,
       config.persona || null,
+      config.customSourceLanguage || null,
+      config.customTargetLanguage || null,
     ],
   );
   await run(

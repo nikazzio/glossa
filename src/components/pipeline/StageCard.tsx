@@ -267,7 +267,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
           {/* Language pair per stage — hidden when persona is active */}
           {pipelineConfig.persona ? (
             <div className="space-y-1.5">
-              <span className="block text-xs font-sans uppercase tracking-widest text-editorial-muted">
+              <span className="block text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
                 {t('pipeline.personaActive')}
               </span>
               <pre className="w-full rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/40 px-3 py-2 text-xs font-mono leading-relaxed text-editorial-ink whitespace-pre-wrap opacity-70 select-none">
@@ -276,7 +276,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
             </div>
           ) : (
             <div className="space-y-1.5">
-              <span className="block text-xs text-editorial-muted italic">
+              <span className="block text-[10px] text-editorial-muted/70 italic">
                 {t('pipeline.inheritDefault')}
               </span>
               <div className="flex items-center gap-2">
@@ -314,7 +314,7 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
           {/* Prompt textarea with template controls */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-sans uppercase tracking-widest text-editorial-muted">
+              <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
                 {t('pipeline.prompt')}
               </span>
               <div className="flex items-center gap-1.5">

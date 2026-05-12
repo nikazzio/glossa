@@ -176,6 +176,8 @@ mod tests {
             review_provider_options: None,
             persona: None,
             ui_language: None,
+            custom_source_language: None,
+            custom_target_language: None,
         }
     }
 
@@ -273,8 +275,7 @@ mod tests {
 
         assert!(system.contains("English to Italian"));
         assert!(system.contains("Translate accurately."));
-        assert!(system.contains("source: API"));
-        assert!(system.contains("target: API"));
+        assert!(system.contains("| API | API |"));
         assert!(user.contains("Hello world"));
         assert!(!user.contains("Previous Iteration"));
         assert!(!user.contains("Previous Chunk Translation Context"));
@@ -325,11 +326,8 @@ mod tests {
         let stage = make_stage("gemini");
         let (system, _) = build_stage_prompts("text", &stage, &config, &None, &None);
 
-        assert!(system.contains("source: API"));
-        assert!(system.contains("target: API"));
-        assert!(system.contains("notes: tech"));
-        assert!(system.contains("source: bug"));
-        assert!(system.contains("target: errore"));
+        assert!(system.contains("| API | API | tech |"));
+        assert!(system.contains("| bug | errore |"));
         assert!(system.contains("Treat every glossary entry as mandatory terminology"));
     }
 

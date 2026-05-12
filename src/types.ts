@@ -152,4 +152,6 @@ export interface PipelineConfig {
   reviewProviderOptions?: ProviderRuntimeConfig;
   persona?: string;
   uiLanguage?: string;
+  customSourceLanguage?: string;
+  customTargetLanguage?: string;
 }

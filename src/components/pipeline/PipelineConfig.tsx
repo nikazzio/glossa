@@ -1,4 +1,4 @@
-import { Plus, ArrowRightLeft, Play, Layers, Loader2, X, ShieldCheck, AlertTriangle, RotateCcw, Wand2, BookmarkPlus, BookOpen, Check, Trash2, Bot, Settings, Globe } from 'lucide-react';
+import { ArrowRightLeft, Play, Layers, Loader2, X, ShieldCheck, AlertTriangle, RotateCcw, Wand2, BookmarkPlus, BookOpen, Check, Trash2, Bot, Settings, Globe } from 'lucide-react';
 import { useMemo, useState, useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -459,6 +459,68 @@ function AuditPromptEditor({
   );
 }
 
+interface CustomLanguageSectionProps {
+  customSourceLanguage?: string;
+  customTargetLanguage?: string;
+  onChange: (src: string | undefined, tgt: string | undefined) => void;
+}
+
+function CustomLanguageSection({ customSourceLanguage, customTargetLanguage, onChange }: CustomLanguageSectionProps) {
+  const { t } = useTranslation();
+  const isActive = customSourceLanguage !== undefined || customTargetLanguage !== undefined;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => isActive ? onChange(undefined, undefined) : onChange('', '')}
+          className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent ${
+            isActive
+              ? 'border-editorial-accent bg-editorial-accent/10 text-editorial-accent'
+              : 'border-editorial-border/60 text-editorial-muted hover:border-editorial-accent hover:text-editorial-accent'
+          }`}
+        >
+          {isActive ? t('pipeline.customLanguageActive') : t('pipeline.customLanguageToggle')}
+        </button>
+        {isActive && (
+          <button
+            type="button"
+            onClick={() => onChange(undefined, undefined)}
+            className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+            title={t('pipeline.customLanguageReset')}
+            aria-label={t('pipeline.customLanguageReset')}
+          >
+            <X size={12} />
+          </button>
+        )}
+      </div>
+      {isActive && (
+        <div className="space-y-1.5">
+          <p className="text-[10px] leading-relaxed text-editorial-muted/70">
+            {t('pipeline.customLanguageHint')}
+          </p>
+          <div className="flex items-center gap-2">
+            <input
+              value={customSourceLanguage ?? ''}
+              onChange={(e) => onChange(e.target.value || undefined, customTargetLanguage)}
+              placeholder={t('pipeline.customSourceLanguagePlaceholder')}
+              className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/40 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            />
+            <span className="text-editorial-muted shrink-0 text-xs">→</span>
+            <input
+              value={customTargetLanguage ?? ''}
+              onChange={(e) => onChange(customSourceLanguage, e.target.value || undefined)}
+              placeholder={t('pipeline.customTargetLanguagePlaceholder')}
+              className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/40 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function PipelineConfig({
   onRunPipeline,
   onRunAuditOnly,
@@ -472,7 +534,6 @@ export function PipelineConfig({
   const {
     config,
     setConfig,
-    addStage,
     removeStage,
     updateStage,
   } = usePipelineStore();
@@ -646,6 +707,13 @@ export function PipelineConfig({
               </p>
             )}
           </div>
+          {!config.persona && (
+            <CustomLanguageSection
+              customSourceLanguage={config.customSourceLanguage}
+              customTargetLanguage={config.customTargetLanguage}
+              onChange={(src, tgt) => setConfig((prev) => ({ ...prev, customSourceLanguage: src, customTargetLanguage: tgt }))}
+            />
+          )}
           <PersonaEditor
             persona={config.persona}
             sourceLanguage={config.sourceLanguage}
@@ -803,6 +871,13 @@ export function PipelineConfig({
                 </p>
               )}
             </div>
+            {!config.persona && (
+              <CustomLanguageSection
+                customSourceLanguage={config.customSourceLanguage}
+                customTargetLanguage={config.customTargetLanguage}
+                onChange={(src, tgt) => setConfig((prev) => ({ ...prev, customSourceLanguage: src, customTargetLanguage: tgt }))}
+              />
+            )}
             <PersonaEditor
               persona={config.persona}
               sourceLanguage={config.sourceLanguage}
@@ -823,28 +898,14 @@ export function PipelineConfig({
             aria-labelledby="pconfig-tab-stages"
             className="space-y-5"
           >
-            <div className="flex items-center justify-between">
-              <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-                {t('pipeline.tabStages')}
-              </p>
-              <button
-                type="button"
-                onClick={addStage}
-                title={t('pipeline.addStage')}
-                aria-label={t('pipeline.addStage')}
-                className="rounded-full border border-editorial-accent/40 p-2 text-editorial-accent transition-colors hover:bg-editorial-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              >
-                <Plus size={14} />
-              </button>
-            </div>
             <div className="space-y-5">
-              {config.stages.map((stage, idx) => (
+              {config.stages.slice(0, 1).map((stage, idx) => (
                 <StageCard
                   key={stage.id}
                   stage={stage}
                   index={idx}
                   onUpdate={(u) => updateStage(stage.id, u)}
-                  onRemove={() => removeStage(stage.id)}
+                  onRemove={() => {}}
                 />
               ))}
             </div>
@@ -867,7 +928,7 @@ export function PipelineConfig({
               <select
                 value={config.judgeProvider}
                 onChange={(e) => handleJudgeProviderChange(e.target.value as ModelProvider)}
-                className="rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-2 text-sm font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 aria-label={t('models.provider')}
               >
                 {Object.keys(MODEL_OPTIONS).map((p) => (
@@ -878,7 +939,7 @@ export function PipelineConfig({
                 <select
                   value={config.judgeModel}
                   onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
-                  className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   aria-label={t('pipeline.auditModelLabel')}
                 >
                   {judgeModels.map((m) => (
@@ -892,14 +953,14 @@ export function PipelineConfig({
                   value={config.judgeModel}
                   onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
                   placeholder={t('ollama.modelPlaceholder')}
-                  className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   aria-label={t('pipeline.auditModelLabel')}
                 />
               ) : (
                 <select
                   value={config.judgeModel}
                   onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
-                  className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   aria-label={t('pipeline.auditModelLabel')}
                 >
                   {MODEL_OPTIONS[config.judgeProvider]?.map((m) => (

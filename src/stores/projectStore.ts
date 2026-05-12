@@ -102,6 +102,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         glossary: config.glossary,
         assignedGlossaryId: config.assignedGlossaryId,
         persona: config.persona,
+        customSourceLanguage: config.customSourceLanguage,
+        customTargetLanguage: config.customTargetLanguage,
       },
     }));
     chunksStore.setChunks(restoredChunks);
