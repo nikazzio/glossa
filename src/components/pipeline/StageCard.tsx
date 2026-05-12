@@ -16,10 +16,9 @@ import {
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { PipelineStageConfig, ModelProvider } from '../../types';
-import { MODEL_OPTIONS, LANGUAGES } from '../../constants';
+import { MODEL_OPTIONS } from '../../constants';
 import { getModelStatus } from '../../models/catalog';
 import { useUiStore } from '../../stores/uiStore';
-import { usePipelineStore } from '../../stores/pipelineStore';
 import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
 import { confirm } from '../../stores/confirmStore';
 import { llmService } from '../../services/llmService';
@@ -27,6 +26,7 @@ import { ProviderRuntimeEditor } from './ProviderRuntimeEditor';
 
 interface StageCardProps {
   stage: PipelineStageConfig;
+  /** Reserved for future multi-stage UI — not rendered in MVP (single-stage). */
   index: number;
   onUpdate: (updates: Partial<PipelineStageConfig>) => void;
   onRemove: () => void;
@@ -38,7 +38,7 @@ function useModelOptions(provider: ModelProvider): string[] {
   return MODEL_OPTIONS[provider] || [];
 }
 
-export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) {
+export function StageCard({ stage, index: _index, onUpdate, onRemove }: StageCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showSaveName, setShowSaveName] = useState(false);
   const [templateName, setTemplateName] = useState('');
@@ -49,7 +49,6 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
   const { t } = useTranslation();
   const modelOptions = useModelOptions(stage.provider);
   const ollamaStatus = useUiStore((s) => s.ollamaStatus);
-  const { config: pipelineConfig } = usePipelineStore();
   const showOllamaOfflineWarning =
     stage.provider === 'ollama' && ollamaStatus === 'disconnected';
 
@@ -147,9 +146,6 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
     >
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
-          <span className="rounded-full bg-editorial-textbox/60 px-3 py-1 text-base font-display italic text-editorial-accent">
-            #{index + 1}
-          </span>
           <input
             value={stage.name}
             onChange={(e) => onUpdate({ name: e.target.value })}
@@ -261,45 +257,6 @@ export function StageCard({ stage, index, onUpdate, onRemove }: StageCardProps) 
             <div className="flex items-center gap-2 text-xs text-editorial-accent">
               <AlertTriangle size={14} />
               <span>{t('ollama.selectedButOffline')}</span>
-            </div>
-          )}
-
-          {/* Language pair per stage — hidden when persona is active */}
-          {pipelineConfig.persona ? (
-            <div className="space-y-1.5">
-              <span className="block text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-                {t('pipeline.personaActive')}
-              </span>
-              <pre className="w-full rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/40 px-3 py-2 text-xs font-mono leading-relaxed text-editorial-ink whitespace-pre-wrap opacity-70 select-none">
-                {pipelineConfig.persona}
-              </pre>
-            </div>
-          ) : (
-            <div className="space-y-1.5">
-              <span className="block text-[10px] text-editorial-muted/70 italic">
-                {t('pipeline.inheritDefault')}
-              </span>
-              <div className="flex items-center gap-2">
-                <select
-                  value={stage.sourceLanguage ?? ''}
-                  onChange={(e) => onUpdate({ sourceLanguage: e.target.value || undefined })}
-                  className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  aria-label={t('pipeline.sourceLanguage')}
-                >
-                  <option value="">{t(`languages.${pipelineConfig.sourceLanguage}`)}</option>
-                  {LANGUAGES.map((l) => <option key={l} value={l}>{t(`languages.${l}`)}</option>)}
-                </select>
-                <span className="text-editorial-muted shrink-0 text-xs">→</span>
-                <select
-                  value={stage.targetLanguage ?? ''}
-                  onChange={(e) => onUpdate({ targetLanguage: e.target.value || undefined })}
-                  className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  aria-label={t('pipeline.targetLanguage')}
-                >
-                  <option value="">{t(`languages.${pipelineConfig.targetLanguage}`)}</option>
-                  {LANGUAGES.map((l) => <option key={l} value={l}>{t(`languages.${l}`)}</option>)}
-                </select>
-              </div>
             </div>
           )}
 

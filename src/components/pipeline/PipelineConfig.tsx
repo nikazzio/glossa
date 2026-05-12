@@ -1,4 +1,4 @@
-import { ArrowRightLeft, Play, Layers, Loader2, X, ShieldCheck, AlertTriangle, RotateCcw, Wand2, BookmarkPlus, BookOpen, Check, Trash2, Bot, Settings, Globe } from 'lucide-react';
+import { ArrowRightLeft, Play, Layers, Languages, Loader2, X, ShieldCheck, AlertTriangle, RotateCcw, Wand2, BookmarkPlus, BookOpen, Check, Trash2, Bot, Settings, Globe } from 'lucide-react';
 import { useMemo, useState, useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -24,7 +24,9 @@ interface PersonaEditorProps {
   sourceLanguage: string;
   targetLanguage: string;
   templates: PromptTemplate[];
+  isRefining: boolean;
   onChange: (value: string | undefined) => void;
+  onRefine: () => void;
   onSaveTemplate: (name: string, prompt: string) => Promise<void>;
   deleteTemplate: (id: string) => Promise<void>;
 }
@@ -34,7 +36,9 @@ function PersonaEditor({
   sourceLanguage,
   targetLanguage,
   templates,
+  isRefining,
   onChange,
+  onRefine,
   onSaveTemplate,
   deleteTemplate,
 }: PersonaEditorProps) {
@@ -89,7 +93,7 @@ function PersonaEditor({
     <div className="mt-4 pt-4 border-t border-editorial-border/40 space-y-2">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
-          <Bot size={11} className="text-editorial-muted shrink-0" />
+          <Bot size={11} className="text-editorial-accent shrink-0" />
           <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
             {t('pipeline.personaLabel')}
           </p>
@@ -102,6 +106,16 @@ function PersonaEditor({
         <div className="flex items-center gap-1">
           {isCustom ? (
             <>
+              <button
+                type="button"
+                onClick={onRefine}
+                disabled={isRefining || !persona?.trim()}
+                title={t('pipeline.refinePrompt')}
+                aria-label={t('pipeline.refinePrompt')}
+                className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40"
+              >
+                {isRefining ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
+              </button>
               <button
                 type="button"
                 onClick={() => { setShowSaveName(!showSaveName); setShowTemplateList(false); }}
@@ -326,10 +340,10 @@ function AuditPromptEditor({
   };
 
   return (
-    <div className="rounded-[20px] border border-editorial-border bg-editorial-bg/70 p-6 space-y-3">
+    <div className="rounded-[20px] border border-editorial-border bg-editorial-bg/70 px-5 py-4 space-y-3">
       <div className="space-y-1">
         <div className="flex items-center justify-between gap-3">
-          <span className="text-sm font-sans text-editorial-ink">{label}</span>
+          <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">{label}</span>
           <div className="flex items-center gap-1.5">
             <button
               type="button"
@@ -459,68 +473,6 @@ function AuditPromptEditor({
   );
 }
 
-interface CustomLanguageSectionProps {
-  customSourceLanguage?: string;
-  customTargetLanguage?: string;
-  onChange: (src: string | undefined, tgt: string | undefined) => void;
-}
-
-function CustomLanguageSection({ customSourceLanguage, customTargetLanguage, onChange }: CustomLanguageSectionProps) {
-  const { t } = useTranslation();
-  const isActive = customSourceLanguage !== undefined || customTargetLanguage !== undefined;
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => isActive ? onChange(undefined, undefined) : onChange('', '')}
-          className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent ${
-            isActive
-              ? 'border-editorial-accent bg-editorial-accent/10 text-editorial-accent'
-              : 'border-editorial-border/60 text-editorial-muted hover:border-editorial-accent hover:text-editorial-accent'
-          }`}
-        >
-          {isActive ? t('pipeline.customLanguageActive') : t('pipeline.customLanguageToggle')}
-        </button>
-        {isActive && (
-          <button
-            type="button"
-            onClick={() => onChange(undefined, undefined)}
-            className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
-            title={t('pipeline.customLanguageReset')}
-            aria-label={t('pipeline.customLanguageReset')}
-          >
-            <X size={12} />
-          </button>
-        )}
-      </div>
-      {isActive && (
-        <div className="space-y-1.5">
-          <p className="text-[10px] leading-relaxed text-editorial-muted/70">
-            {t('pipeline.customLanguageHint')}
-          </p>
-          <div className="flex items-center gap-2">
-            <input
-              value={customSourceLanguage ?? ''}
-              onChange={(e) => onChange(e.target.value || undefined, customTargetLanguage)}
-              placeholder={t('pipeline.customSourceLanguagePlaceholder')}
-              className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/40 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            />
-            <span className="text-editorial-muted shrink-0 text-xs">→</span>
-            <input
-              value={customTargetLanguage ?? ''}
-              onChange={(e) => onChange(customSourceLanguage, e.target.value || undefined)}
-              placeholder={t('pipeline.customTargetLanguagePlaceholder')}
-              className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/40 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            />
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function PipelineConfig({
   onRunPipeline,
   onRunAuditOnly,
@@ -541,6 +493,7 @@ export function PipelineConfig({
   const ollamaStatus = useUiStore((state) => state.ollamaStatus);
   const { t } = useTranslation();
   const judgeModels = useJudgeModelOptions(config.judgeProvider);
+  const [isRefiningPersona, setIsRefiningPersona] = useState(false);
   const [isRefiningJudge, setIsRefiningJudge] = useState(false);
   const [isRefiningCoherence, setIsRefiningCoherence] = useState(false);
   const [activeTab, setActiveTab] = useState<ConfigSection>(visibleSection ?? 'stages');
@@ -584,6 +537,24 @@ export function PipelineConfig({
     () => estimatePipelineCost(chunks, config, pricingOverrides),
     [chunks, config, pricingOverrides],
   );
+
+  const handleRefinePersona = async () => {
+    if (!config.persona?.trim()) return;
+    const stage = config.stages[0];
+    if (!stage) return;
+    setIsRefiningPersona(true);
+    try {
+      const refined = await llmService.refinePrompt(config.persona, stage.provider, stage.model, 'stage');
+      setConfig((prev) => ({ ...prev, persona: refined }));
+      toast.success(t('pipeline.refined'));
+    } catch (err: unknown) {
+      toast.error(t('pipeline.refineFailed'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setIsRefiningPersona(false);
+    }
+  };
 
   const handleRefineJudgePrompt = async () => {
     if (!config.judgePrompt.trim()) return;
@@ -656,7 +627,7 @@ export function PipelineConfig({
         <div className="shrink-0 border-b border-editorial-border px-6 py-5 space-y-5">
           <div className="space-y-2">
             <div className="flex items-center gap-1.5">
-              <Globe size={11} className="text-editorial-muted shrink-0" />
+              <Globe size={11} className="text-editorial-accent shrink-0" />
               <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
                 {t('pipeline.languagePair')}
               </p>
@@ -707,19 +678,14 @@ export function PipelineConfig({
               </p>
             )}
           </div>
-          {!config.persona && (
-            <CustomLanguageSection
-              customSourceLanguage={config.customSourceLanguage}
-              customTargetLanguage={config.customTargetLanguage}
-              onChange={(src, tgt) => setConfig((prev) => ({ ...prev, customSourceLanguage: src, customTargetLanguage: tgt }))}
-            />
-          )}
           <PersonaEditor
             persona={config.persona}
             sourceLanguage={config.sourceLanguage}
             targetLanguage={config.targetLanguage}
             templates={personaTemplates}
+            isRefining={isRefiningPersona}
             onChange={(value) => setConfig((prev) => ({ ...prev, persona: value }))}
+            onRefine={handleRefinePersona}
             onSaveTemplate={(name, prompt) => saveTemplate(name, prompt, 'persona')}
             deleteTemplate={deleteTemplate}
           />
@@ -757,7 +723,7 @@ export function PipelineConfig({
           <Settings size={16} />
         </button>
         <span className="h-4 w-px bg-editorial-border/70 mx-1" aria-hidden="true" />
-        {/* Stages */}
+        {/* Translation */}
         <button
           type="button"
           role="tab"
@@ -769,7 +735,7 @@ export function PipelineConfig({
           aria-label={t('pipeline.tabStages')}
           className={tabBtnCls(activeTab === 'stages')}
         >
-          <Layers size={16} />
+          <Languages size={16} />
         </button>
         {/* Audit */}
         <button
@@ -820,7 +786,7 @@ export function PipelineConfig({
           <div id="pconfig-panel-settings" role="tabpanel" aria-labelledby="pconfig-tab-settings" className="space-y-6">
             <div className="space-y-2">
               <div className="flex items-center gap-1.5">
-                <Globe size={11} className="text-editorial-muted shrink-0" />
+                <Globe size={11} className="text-editorial-accent shrink-0" />
                 <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
                   {t('pipeline.languagePair')}
                 </p>
@@ -871,19 +837,14 @@ export function PipelineConfig({
                 </p>
               )}
             </div>
-            {!config.persona && (
-              <CustomLanguageSection
-                customSourceLanguage={config.customSourceLanguage}
-                customTargetLanguage={config.customTargetLanguage}
-                onChange={(src, tgt) => setConfig((prev) => ({ ...prev, customSourceLanguage: src, customTargetLanguage: tgt }))}
-              />
-            )}
             <PersonaEditor
               persona={config.persona}
               sourceLanguage={config.sourceLanguage}
               targetLanguage={config.targetLanguage}
               templates={personaTemplates}
+              isRefining={isRefiningPersona}
               onChange={(value) => setConfig((prev) => ({ ...prev, persona: value }))}
+              onRefine={handleRefinePersona}
               onSaveTemplate={(name, prompt) => saveTemplate(name, prompt, 'persona')}
               deleteTemplate={deleteTemplate}
             />
