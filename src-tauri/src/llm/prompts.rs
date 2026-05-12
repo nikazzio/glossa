@@ -171,7 +171,7 @@ pub(crate) fn build_judge_prompts(
         .ui_language
         .as_deref()
         .filter(|s| !s.is_empty())
-        .unwrap_or(src);
+        .unwrap_or(tgt);
 
     let glossary_section = if glossary_table.is_empty() {
         String::new()
@@ -218,7 +218,7 @@ pub(crate) fn build_coherence_prompts(
         .ui_language
         .as_deref()
         .filter(|s| !s.is_empty())
-        .unwrap_or(src);
+        .unwrap_or(tgt);
 
     let default_instructions = "Evaluate ONLY:\n\
          1. Terminology consistency — key terms translated differently than in adjacent segments\n\
