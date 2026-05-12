@@ -9,7 +9,6 @@ import {
   Copy, Check,
 } from 'lucide-react';
 import { appLogDir } from '@tauri-apps/api/path';
-import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
@@ -27,97 +26,91 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
   const trapRef = useFocusTrap(open, onClose);
 
   const sections: { id: Section; label: string }[] = [
-    { id: 'overview',   label: t('help.sections.overview') },
-    { id: 'pipeline',   label: t('help.sections.pipeline') },
-    { id: 'features',   label: t('help.sections.features') },
-    { id: 'streaming',  label: t('help.sections.streaming') },
-    { id: 'audit',      label: t('help.sections.audit') },
-    { id: 'projects',   label: t('help.sections.projects') },
-    { id: 'providers',  label: t('help.sections.providers') },
-    { id: 'ollama',     label: t('help.sections.ollama') },
+    { id: 'overview',        label: t('help.sections.overview') },
+    { id: 'pipeline',        label: t('help.sections.pipeline') },
+    { id: 'features',        label: t('help.sections.features') },
+    { id: 'streaming',       label: t('help.sections.streaming') },
+    { id: 'audit',           label: t('help.sections.audit') },
+    { id: 'projects',        label: t('help.sections.projects') },
+    { id: 'providers',       label: t('help.sections.providers') },
+    { id: 'ollama',          label: t('help.sections.ollama') },
     { id: 'glossary',        label: t('help.sections.library') },
     { id: 'shortcuts',       label: t('help.sections.shortcuts') },
     { id: 'troubleshooting', label: t('help.sections.troubleshooting') },
   ];
 
+  if (!open) return null;
+
   return (
-    <AnimatePresence>
-      {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="help-title"
-          ref={trapRef}
-        >
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-editorial-ink/60 backdrop-blur-sm"
-            onClick={onClose}
-          />
-          {/* Fixed height so the modal never resizes when switching sections */}
-          <motion.div
-            initial={{ scale: 0.96, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.96, opacity: 0 }}
-            className="relative bg-editorial-bg w-full max-w-4xl h-[85vh] shadow-2xl border border-editorial-border flex overflow-hidden"
-          >
-            {/* Sidebar */}
-            <nav className="w-64 shrink-0 border-r border-editorial-border bg-editorial-textbox/30 flex flex-col overflow-hidden">
-              <div className="px-6 pt-6 pb-4 shrink-0 border-b border-editorial-border/60">
-                <h3 id="help-title" className="font-display text-2xl italic tracking-tight text-editorial-ink">
-                  {t('help.title')}
-                </h3>
-              </div>
-              <ul className="space-y-0.5 p-3 overflow-y-auto custom-scrollbar flex-1">
-                {sections.map((s) => (
-                  <li key={s.id}>
-                    <button
-                      onClick={() => setActiveSection(s.id)}
-                      className={`w-full text-left px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent rounded ${
-                        activeSection === s.id
-                          ? 'bg-editorial-ink text-white'
-                          : 'text-editorial-ink/60 hover:text-editorial-ink hover:bg-editorial-textbox/60'
-                      }`}
-                    >
-                      <ChevronRight size={11} className={activeSection === s.id ? 'opacity-100' : 'opacity-0'} />
-                      {s.label}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </nav>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-editorial-ink/35 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="help-title"
+      ref={trapRef}
+    >
+      <div className="relative flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-[28px] border border-editorial-border bg-editorial-bg shadow-[0_24px_80px_rgba(26,26,26,0.2)]">
 
-            {/* Content — fills remaining height and scrolls independently */}
-            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-              <button
-                onClick={onClose}
-                className="absolute top-5 right-5 text-editorial-ink/50 hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                aria-label={t('settings.close')}
-              >
-                <X size={18} />
-              </button>
-
-              <div className="max-w-none pr-4">
-                {activeSection === 'overview'  && <OverviewSection />}
-                {activeSection === 'pipeline'  && <PipelineSection />}
-                {activeSection === 'features'  && <FeaturesSection />}
-                {activeSection === 'streaming' && <StreamingSection />}
-                {activeSection === 'audit'     && <AuditSection />}
-                {activeSection === 'projects'  && <ProjectsSection />}
-                {activeSection === 'providers' && <ProvidersSection />}
-                {activeSection === 'ollama'    && <OllamaSection />}
-                {activeSection === 'glossary'  && <GlossarySection />}
-                {activeSection === 'shortcuts'       && <ShortcutsSection />}
-                {activeSection === 'troubleshooting' && <TroubleshootingSection />}
-              </div>
-            </div>
-          </motion.div>
+        {/* ── Header ── */}
+        <div className="shrink-0 border-b border-editorial-border px-6 pb-4 pt-5">
+          <div className="flex items-center justify-between gap-4">
+            <h3 id="help-title" className="font-display text-2xl italic tracking-tight text-editorial-ink">
+              {t('help.title')}
+            </h3>
+            <button
+              type="button"
+              onClick={onClose}
+              className="shrink-0 rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              aria-label={t('settings.close')}
+            >
+              <X size={16} />
+            </button>
+          </div>
         </div>
-      )}
-    </AnimatePresence>
+
+        {/* ── Body: sidebar nav + content ── */}
+        <div className="flex flex-1 min-h-0 overflow-hidden">
+
+          {/* Sidebar nav */}
+          <nav className="flex w-56 shrink-0 flex-col overflow-hidden border-r border-editorial-border bg-editorial-textbox/30">
+            <ul className="flex-1 space-y-0.5 overflow-y-auto p-3 custom-scrollbar">
+              {sections.map((s) => (
+                <li key={s.id}>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSection(s.id)}
+                    className={`flex w-full items-center gap-2 rounded-full px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                      activeSection === s.id
+                        ? 'bg-editorial-ink text-white'
+                        : 'text-editorial-ink/60 hover:bg-editorial-textbox/60 hover:text-editorial-ink'
+                    }`}
+                  >
+                    <ChevronRight size={11} className={activeSection === s.id ? 'opacity-100' : 'opacity-0'} />
+                    {s.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          {/* Scrollable content */}
+          <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+            {activeSection === 'overview'        && <OverviewSection />}
+            {activeSection === 'pipeline'        && <PipelineSection />}
+            {activeSection === 'features'        && <FeaturesSection />}
+            {activeSection === 'streaming'       && <StreamingSection />}
+            {activeSection === 'audit'           && <AuditSection />}
+            {activeSection === 'projects'        && <ProjectsSection />}
+            {activeSection === 'providers'       && <ProvidersSection />}
+            {activeSection === 'ollama'          && <OllamaSection />}
+            {activeSection === 'glossary'        && <GlossarySection />}
+            {activeSection === 'shortcuts'       && <ShortcutsSection />}
+            {activeSection === 'troubleshooting' && <TroubleshootingSection />}
+          </div>
+
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -281,6 +274,15 @@ function FeaturesSection() {
       <SubTitle>{t('help.features.operationsLogTitle')}</SubTitle>
       <P>{t('help.features.operationsLogDesc')}</P>
 
+      <SubTitle>{t('help.features.insightsTitle')}</SubTitle>
+      <P>{t('help.features.insightsDesc')}</P>
+
+      <SubTitle>{t('help.features.statsTitle')}</SubTitle>
+      <P>{t('help.features.statsDesc')}</P>
+
+      <SubTitle>{t('help.features.watchdogTitle')}</SubTitle>
+      <P>{t('help.features.watchdogDesc')}</P>
+
       <div className="my-4 space-y-2">
         <FeatureRow icon={<PanelTopClose size={14} />} text={t('help.shortcuts.toggleEditorTools')} />
         <FeatureRow icon={<CheckCheck size={14} />} text={t('help.shortcuts.lockTranslation')} />
@@ -310,7 +312,7 @@ function AuditSection() {
       <P>{t('help.audit.intro')}</P>
 
       <div className="space-y-3 my-6">
-        {(['glossary', 'accuracy', 'fluency', 'grammar'] as const).map((type) => (
+        {(['glossary', 'accuracy', 'fluency', 'grammar', 'consistency'] as const).map((type) => (
           <div key={type} className="flex items-start gap-3 p-4 bg-editorial-textbox/20 border border-editorial-border">
             <span className={`text-[10px] font-bold uppercase px-2 py-0.5 shrink-0 tracking-wider ${
               type === 'grammar' ? 'bg-editorial-accent text-white' : 'bg-editorial-ink text-white'
@@ -324,6 +326,9 @@ function AuditSection() {
 
       <P>{t('help.audit.reeval')}</P>
       <Tip title={t('document.insightsAuditIssues')}>{t('help.audit.issuesNav')}</Tip>
+
+      <SubTitle>{t('help.audit.coherenceTitle')}</SubTitle>
+      <P>{t('help.audit.coherenceDesc')}</P>
     </>
   );
 }
@@ -344,6 +349,9 @@ function ProjectsSection() {
       <Step n={3} title={t('help.projects.importExportTitle')}>
         {t('help.projects.importExportDesc')}
       </Step>
+
+      <SubTitle>{t('help.projects.autosaveTitle')}</SubTitle>
+      <P>{t('help.projects.autosaveDesc')}</P>
     </>
   );
 }
@@ -365,10 +373,10 @@ function ProvidersSection() {
             </tr>
           </thead>
           <tbody className="divide-y divide-editorial-border">
-            <tr><td className="py-2.5 pr-4 font-bold text-editorial-ink">Gemini</td><td className="py-2.5 pr-4 font-mono text-xs text-editorial-ink/70">gemini-3-flash, pro, lite</td><td className="py-2.5 text-editorial-ink/70">{t('help.providers.geminiNote')}</td></tr>
-            <tr><td className="py-2.5 pr-4 font-bold text-editorial-ink">OpenAI</td><td className="py-2.5 pr-4 font-mono text-xs text-editorial-ink/70">gpt-4o, gpt-4o-mini, o1</td><td className="py-2.5 text-editorial-ink/70">{t('help.providers.openaiNote')}</td></tr>
-            <tr><td className="py-2.5 pr-4 font-bold text-editorial-ink">Anthropic</td><td className="py-2.5 pr-4 font-mono text-xs text-editorial-ink/70">claude-3.5-sonnet, haiku</td><td className="py-2.5 text-editorial-ink/70">{t('help.providers.anthropicNote')}</td></tr>
-            <tr><td className="py-2.5 pr-4 font-bold text-editorial-ink">DeepSeek</td><td className="py-2.5 pr-4 font-mono text-xs text-editorial-ink/70">deepseek-chat, reasoner</td><td className="py-2.5 text-editorial-ink/70">{t('help.providers.deepseekNote')}</td></tr>
+            <tr><td className="py-2.5 pr-4 font-bold text-editorial-ink">Gemini</td><td className="py-2.5 pr-4 font-mono text-xs text-editorial-ink/70">gemini-3-flash-preview, gemini-3.1-pro-preview, gemini-2.5-flash-lite-preview</td><td className="py-2.5 text-editorial-ink/70">{t('help.providers.geminiNote')}</td></tr>
+            <tr><td className="py-2.5 pr-4 font-bold text-editorial-ink">OpenAI</td><td className="py-2.5 pr-4 font-mono text-xs text-editorial-ink/70">gpt-4o, gpt-4o-mini, o1-preview</td><td className="py-2.5 text-editorial-ink/70">{t('help.providers.openaiNote')}</td></tr>
+            <tr><td className="py-2.5 pr-4 font-bold text-editorial-ink">Anthropic</td><td className="py-2.5 pr-4 font-mono text-xs text-editorial-ink/70">claude-3-5-sonnet-latest, claude-3-haiku-latest</td><td className="py-2.5 text-editorial-ink/70">{t('help.providers.anthropicNote')}</td></tr>
+            <tr><td className="py-2.5 pr-4 font-bold text-editorial-ink">DeepSeek</td><td className="py-2.5 pr-4 font-mono text-xs text-editorial-ink/70">deepseek-chat, deepseek-reasoner</td><td className="py-2.5 text-editorial-ink/70">{t('help.providers.deepseekNote')}</td></tr>
             <tr><td className="py-2.5 pr-4 font-bold text-editorial-ink">Ollama</td><td className="py-2.5 pr-4 font-mono text-xs text-editorial-ink/70">{t('help.providers.ollamaModels')}</td><td className="py-2.5 text-editorial-ink/70">{t('help.providers.ollamaNote')}</td></tr>
           </tbody>
         </table>
@@ -409,6 +417,9 @@ function OllamaSection() {
       </Step>
 
       <Tip title={t('help.ollama.recommendedTitle')}>{t('help.ollama.recommendedDesc')}</Tip>
+
+      <SubTitle>{t('help.ollama.thinkTitle')}</SubTitle>
+      <P>{t('help.ollama.thinkDesc')}</P>
     </>
   );
 }
@@ -461,11 +472,7 @@ function ShortcutsSection() {
   ];
 
   const exportItems: { label: string; icon: React.ReactNode }[] = [
-    { label: t('help.shortcuts.exportTxt'), icon: <span className="font-mono text-[10px]">TXT</span> },
-    { label: t('help.shortcuts.exportMd'),  icon: <span className="font-mono text-[10px]">MD</span> },
-    { label: t('help.shortcuts.exportHtml'), icon: <span className="font-mono text-[10px]">HTML</span> },
-    { label: t('help.shortcuts.exportDocx'), icon: <span className="font-mono text-[10px]">DOCX</span> },
-    { label: t('help.shortcuts.exportBilingual'), icon: <span className="font-mono text-[10px]">MD+</span> },
+    { label: t('help.shortcuts.exportDesc'), icon: <span className="font-mono text-[10px]">↗</span> },
   ];
 
   const promptItems: { label: string; icon: React.ReactNode }[] = [

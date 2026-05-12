@@ -160,34 +160,45 @@ No API key is needed. All data stays on your machine.
 
 ### 1. Set up the pipeline
 
-In the left panel (**Global Setup**):
+In the configuration panel (sidebar in **Sandbox** mode, gear icon in **Document** mode):
 
 - Choose source and target languages
-- Configure pipeline stages:
+- Configure pipeline stages (Translation tab):
   - Each stage has its own **provider**, **model**, and **prompt**
   - Stage 1 typically does a literal draft; Stage 2 refines for fluency
   - Add more stages for specialized tasks (terminology, register, etc.)
-- Set up the **Audit Guard** with a judge model and audit instructions
-- Add terms to the **Keyword Registry** (glossary) to enforce consistent terminology
+- Set up the **Quality Control** tab with a judge model, audit prompt and coherence prompt
+- Add terms to the **Term Registry** tab to enforce consistent terminology
 
 ### 2. Run the pipeline
 
-In the center panel (**Production Stream**):
+**Sandbox mode** — single text, no chunking:
 
-1. Paste or import your source text
-2. Click **"Stage Content to Stream"** to segment the text
+1. Paste your source text in the center panel
+2. Click **"Stage Content"** to prepare it
 3. Click **"Begin Pipeline"** — tokens stream in real time for each stage
-4. Review the candidate translation, edit it manually if needed
-5. The AI Judge automatically rates the result
+4. Review the candidate translation and edit it manually if needed
+
+**Document mode** — long texts split into chunks:
+
+1. Import a file (`.txt`, `.md`, `.docx`, `.pdf`) via the upload icon
+2. Set segmentation options in the preview dialog and confirm
+3. Open the document and click **"Begin Pipeline"**
+4. Navigate chunks via the **Insights** panel (Index tab)
 
 ### 3. Review the audit
 
-In the right panel (**Audit Logs**):
+**Chunk-level** (Insights panel → Audit tab, Document mode / right panel in Sandbox):
 
-- **Composite quality rating** across all completed chunks
-- **Issues** categorized by type (glossary, fluency, accuracy, grammar) and severity
+- **Quality rating** for each chunk
+- **Issues** categorized by type (glossary, fluency, accuracy, grammar, consistency) and severity
 - **Suggested fixes** for each issue
 - Click **"Re-Evaluate Drafts"** after manual edits to get an updated quality rating
+
+**Document-level coherence** (Insights panel → Coherence tab, Document mode):
+
+- Cross-segment consistency check using the Coherence prompt
+- Run after all chunks are complete for a holistic terminology review
 
 ### 4. Projects and files
 
