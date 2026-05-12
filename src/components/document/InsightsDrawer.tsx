@@ -1027,12 +1027,7 @@ function OperationsTab({
       ) : (
         <div ref={scrollRef} className="flex-1 overflow-y-auto bg-[#111111] px-4 py-4 font-mono text-xs text-[#d6d6d6] custom-scrollbar">
           <div className="space-y-2">
-            {entries.map((entry) => {
-              const levelColor =
-                entry.level === 'error'   ? { text: 'text-[#ff6b6b]', border: 'border-[#ff6b6b]/40' }
-                : entry.level === 'warn'  ? { text: 'text-[#f6c90e]', border: 'border-[#f6c90e]/40' }
-                : entry.level === 'success' ? { text: 'text-[#69db7c]', border: 'border-[#69db7c]/40' }
-                : { text: 'text-[#74c0fc]', border: 'border-[#74c0fc]/30' };
+            {(() => {
               const scopeLabel: Record<string, string> = {
                 pipeline:  t('log.scopePipeline'),
                 preflight: t('log.scopePreflight'),
@@ -1048,7 +1043,14 @@ function OperationsTab({
                 warn:    t('log.levelWarn'),
                 error:   t('log.levelError'),
               };
-              const chunkIndex = entry.chunkId ? chunks.findIndex((c) => c.id === entry.chunkId) : -1;
+              const chunkIndexMap = new Map(chunks.map((c, i) => [c.id, i]));
+              return entries.map((entry) => {
+              const levelColor =
+                entry.level === 'error'   ? { text: 'text-[#ff6b6b]', border: 'border-[#ff6b6b]/40' }
+                : entry.level === 'warn'  ? { text: 'text-[#f6c90e]', border: 'border-[#f6c90e]/40' }
+                : entry.level === 'success' ? { text: 'text-[#69db7c]', border: 'border-[#69db7c]/40' }
+                : { text: 'text-[#74c0fc]', border: 'border-[#74c0fc]/30' };
+              const chunkIndex = entry.chunkId != null ? (chunkIndexMap.get(entry.chunkId) ?? -1) : -1;
               return (
                 <div
                   key={entry.id}
@@ -1091,7 +1093,8 @@ function OperationsTab({
                   )}
                 </div>
               );
-            })}
+            });
+            })()}
           </div>
         </div>
       )}

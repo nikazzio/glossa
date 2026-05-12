@@ -67,8 +67,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const [config, savedTranslations] = await Promise.all([
       getProjectConfig(id),
       loadTranslations(id),
-      useOperationLogStore.getState().loadFromDb(id),
     ]);
+    await useOperationLogStore.getState().loadFromDb(id);
     if (!config) throw new Error(`Project config not found for id: ${id}`);
     logger.info('openProject: loaded from db', {
       id,

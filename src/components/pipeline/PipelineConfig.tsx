@@ -47,7 +47,7 @@ function PersonaEditor({
   const [showTemplateList, setShowTemplateList] = useState(false);
   const [templateSearch, setTemplateSearch] = useState('');
 
-  const isCustom = !!persona;
+  const isCustom = !!persona?.trim();
   const defaultText = `You are an expert translator and linguist specialized in ${sourceLanguage} to ${targetLanguage} translation.`;
 
   const filteredTemplates = templates.filter((tmpl) =>
@@ -235,7 +235,7 @@ function PersonaEditor({
       <textarea
         value={isCustom ? persona : defaultText}
         disabled={!isCustom}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => onChange(e.target.value.trim() ? e.target.value : undefined)}
         rows={isCustom ? 4 : 2}
         className={`w-full rounded-[14px] border px-3 py-2 text-xs font-mono outline-none leading-relaxed resize-y ${
           isCustom
