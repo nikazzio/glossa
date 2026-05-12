@@ -49,7 +49,7 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
       aria-labelledby="help-title"
       ref={trapRef}
     >
-      <div className="relative flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-[28px] border border-editorial-border bg-editorial-bg shadow-[0_24px_80px_rgba(26,26,26,0.2)]">
+      <div className="relative flex h-[88vh] w-full max-w-4xl flex-col overflow-hidden rounded-[28px] border border-editorial-border bg-editorial-bg shadow-[0_24px_80px_rgba(26,26,26,0.2)]">
 
         {/* ── Header ── */}
         <div className="shrink-0 border-b border-editorial-border px-6 pb-4 pt-5">
@@ -81,8 +81,8 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
                     onClick={() => setActiveSection(s.id)}
                     className={`flex w-full items-center gap-2 rounded-full px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
                       activeSection === s.id
-                        ? 'bg-editorial-ink text-white'
-                        : 'text-editorial-ink/60 hover:bg-editorial-textbox/60 hover:text-editorial-ink'
+                        ? 'bg-editorial-accent text-white'
+                        : 'text-editorial-ink/60 hover:text-editorial-accent'
                     }`}
                   >
                     <ChevronRight size={11} className={activeSection === s.id ? 'opacity-100' : 'opacity-0'} />

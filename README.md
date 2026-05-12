@@ -18,18 +18,15 @@ A desktop application that chains multiple LLM passes — draft, refinement, aud
 
 ## How it works
 
-Glossa runs your source text through a **configurable pipeline** of LLM stages, each with its own prompt, model, and provider. An AI judge then audits the final translation against your glossary and instructions, assigning a semantic quality rating and reporting issues for accuracy, fluency, glossary adherence, and grammar.
+Glossa runs your source text through a **configurable translation pass** — with its own model, provider, prompt, and optional persona — and an AI judge that audits the result against your glossary and quality criteria, assigning a semantic quality rating and reporting categorized issues with suggested fixes.
 
 ```
 Source text
   │
-  ├─► Stage 1: Initial Pass (Gemini / Ollama / ...)
-  │     ↓
-  ├─► Stage 2: Refinement (OpenAI / Anthropic / ...)
-  │     ↓
-  ├─► Stage N: (add as many as you need)
-  │     ↓
-  └─► AI Judge: quality rating + issues + suggested fixes
+  └─► Translation Pass
+        Model + provider + instructions + optional persona
+        ↓
+      AI Judge: quality rating + issues + suggested fixes
 ```
 
 Translations stream token-by-token in real time. You can edit the candidate translation manually before auditing, re-run only the audit, and iterate until the quality meets your standards.
@@ -40,7 +37,7 @@ Translations stream token-by-token in real time. You can edit the candidate tran
 |----------|---------|
 | **5 LLM providers** | Gemini, OpenAI, Anthropic, DeepSeek, **Ollama** (local models) |
 | **Streaming** | Real-time token display during translation |
-| **Multi-stage pipeline** | Add/remove/reorder stages, each with its own model and prompt |
+| **Configurable translation** | Model, provider, prompt, and optional persona per project |
 | **AI Judge** | LLM-as-a-judge audit with semantic quality ratings, categorized issues, and fixes |
 | **Glossary** | Keyword registry enforced across all stages and the audit |
 | **Auto-segmentation** | Splits source text by paragraphs for chunk-by-chunk processing |
@@ -163,10 +160,10 @@ No API key is needed. All data stays on your machine.
 In the configuration panel (sidebar in **Sandbox** mode, gear icon in **Document** mode):
 
 - Choose source and target languages
-- Configure pipeline stages (Translation tab):
-  - Each stage has its own **provider**, **model**, and **prompt**
-  - Stage 1 typically does a literal draft; Stage 2 refines for fluency
-  - Add more stages for specialized tasks (terminology, register, etc.)
+- Configure the translation pass (Translation tab):
+  - Set the **provider**, **model**, and **translation instructions**
+  - Toggle **Rolling context** to pass the tail of the previous chunk as background context
+- Optionally set a **Persona** (Settings tab) to define the translator's voice and domain — replaces the default opener with your custom system prompt
 - Set up the **Quality Control** tab with a judge model, audit prompt and coherence prompt
 - Add terms to the **Term Registry** tab to enforce consistent terminology
 
