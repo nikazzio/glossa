@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useRef } from 'react';
 import { initLogger } from './utils/logger';
 import { Header } from './components/layout';
-import { ErrorBoundary, ConfirmDialog } from './components/common';
+import { ErrorBoundary, ConfirmDialog, PreflightDialog } from './components/common';
 import { usePipeline } from './hooks/usePipeline';
 import { useProjectAutosave } from './hooks/useProjectAutosave';
 import { useUiStore } from './stores/uiStore';
@@ -132,6 +132,7 @@ export default function App() {
         )}
 
         <ConfirmDialog />
+        <PreflightDialog />
       </div>
       <Toaster
         position="bottom-right"

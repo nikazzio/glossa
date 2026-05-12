@@ -6,6 +6,7 @@ import { useChunksStore } from '../stores/chunksStore';
 import { llmService, ollamaService, isStreamCancelledError } from '../services/llmService';
 import { useUiStore } from '../stores/uiStore';
 import { logOperation } from '../stores/operationLogStore';
+import { showPreflightDialog } from '../stores/preflightStore';
 import { withRetry, friendlyError } from '../utils/retry';
 import { qualityDefault, qualityFailure } from '../utils';
 import type { Issue, JudgeResult, PromptInfo, TokenUsage, TranslationChunk } from '../types';
@@ -129,6 +130,84 @@ export function usePipeline() {
       toast.error(t('ollama.notRunning'), { description: msg });
       return false;
     }
+  }, [t]);
+
+  type ProviderCheck = { provider: string; model: string; label: string };
+
+  /**
+   * Run pre-flight checks for all providers referenced by the given list of
+   * (provider, model, label) entries. Deduplicates by (provider, model).
+   *
+   * - Shows a loading toast while checks are in flight.
+   * - Updates Ollama UI state from the check results.
+   * - Opens the PreflightDialog when any check fails, letting the user decide
+   *   whether to abort (fix config) or proceed anyway.
+   *
+   * Returns true if the pipeline can proceed, false if it should be aborted.
+   */
+  const ensureProvidersReady = useCallback(async (checks: ProviderCheck[]) => {
+    if (checks.length === 0) return true;
+
+    // Deduplicate by (provider, model) — preserves first occurrence's label.
+    const seen = new Set<string>();
+    const dedupedChecks = checks.filter((c) => {
+      const key = `${c.provider}:${c.model}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    logOperation({
+      level: 'info',
+      scope: 'preflight',
+      message: 'Running pre-flight provider checks',
+      meta: { checks: dedupedChecks.map((c) => `${c.provider}/${c.model}`) },
+    });
+
+    const toastId = toast.loading(t('preflight.checking'));
+
+    let results;
+    try {
+      results = await llmService.preflightPipeline(dedupedChecks);
+    } catch (error: unknown) {
+      toast.dismiss(toastId);
+      const msg = friendlyError(error instanceof Error ? error.message : String(error));
+      logOperation({
+        level: 'error',
+        scope: 'preflight',
+        message: 'Pre-flight check itself failed to run',
+        meta: { error: msg },
+      });
+      toast.error(t('preflight.checkFailed'), { description: msg });
+      return false;
+    }
+
+    toast.dismiss(toastId);
+
+    // Keep Ollama status indicator in sync.
+    const ollamaResult = results.find((r) => r.provider === 'ollama');
+    if (ollamaResult) {
+      useUiStore.getState().setOllamaStatus(ollamaResult.ok ? 'connected' : 'disconnected');
+    }
+
+    const hasFailures = results.some((r) => !r.ok);
+
+    if (hasFailures) {
+      logOperation({
+        level: 'warn',
+        scope: 'preflight',
+        message: 'Pre-flight check found provider configuration issues',
+        meta: { failures: results.filter((r) => !r.ok).map((r) => `${r.provider}/${r.model}: ${r.error}`) },
+      });
+      return showPreflightDialog(results);
+    }
+
+    logOperation({
+      level: 'success',
+      scope: 'preflight',
+      message: 'Pre-flight check passed — all providers ready',
+    });
+    return true;
   }, [t]);
 
   // ── Internal helpers ────────────────────────────────────────────────
@@ -433,9 +512,13 @@ export function usePipeline() {
       message: 'Batch pipeline run started',
       meta: { chunks: liveChunks.length, stages: config.stages.filter((stage) => stage.enabled).length },
     });
-    if (!(await ensureOllamaReady([
-      ...config.stages.filter((stage) => stage.enabled).map((stage) => ({ provider: stage.provider, model: stage.model })),
-      { provider: config.judgeProvider, model: config.judgeModel },
+    if (!(await ensureProvidersReady([
+      ...config.stages.filter((stage) => stage.enabled).map((stage, i) => ({
+        provider: stage.provider,
+        model: stage.model,
+        label: `${stage.name || `Stage ${i + 1}`} — ${stage.provider} ${stage.model}`,
+      })),
+      { provider: config.judgeProvider, model: config.judgeModel, label: `Judge — ${config.judgeProvider} ${config.judgeModel}` },
     ]))) return;
     useChunksStore.getState().clearCancelRequest();
     setIsProcessing(true);
@@ -472,16 +555,20 @@ export function usePipeline() {
       });
       toast.warning(t('errors.pipelineCompletedWithErrors', { count: errorCount }));
     }
-  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureOllamaReady]);
+  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureProvidersReady]);
 
   const runSingleChunk = useCallback(async (chunkId: string) => {
     if (useChunksStore.getState().isProcessing) return;
     const chunk = useChunksStore.getState().chunks.find((c) => c.id === chunkId);
     if (!chunk) return;
     logOperation({ level: 'info', scope: 'pipeline', message: 'Single chunk pipeline run started', chunkId });
-    if (!(await ensureOllamaReady([
-      ...config.stages.filter((stage) => stage.enabled).map((stage) => ({ provider: stage.provider, model: stage.model })),
-      { provider: config.judgeProvider, model: config.judgeModel },
+    if (!(await ensureProvidersReady([
+      ...config.stages.filter((stage) => stage.enabled).map((stage, i) => ({
+        provider: stage.provider,
+        model: stage.model,
+        label: `${stage.name || `Stage ${i + 1}`} — ${stage.provider} ${stage.model}`,
+      })),
+      { provider: config.judgeProvider, model: config.judgeModel, label: `Judge — ${config.judgeProvider} ${config.judgeModel}` },
     ]))) return;
     useChunksStore.getState().clearCancelRequest();
     setIsProcessing(true);
@@ -503,14 +590,16 @@ export function usePipeline() {
       // Per-chunk failure already raised a toast inside the helper; no
       // extra summary toast is needed.
     }
-  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureOllamaReady]);
+  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureProvidersReady]);
 
   const runAuditOnly = useCallback(async () => {
     if (useChunksStore.getState().isProcessing) return;
     const liveChunks = useChunksStore.getState().chunks;
     if (liveChunks.length === 0) return;
     logOperation({ level: 'info', scope: 'audit', message: 'Batch audit run started', meta: { chunks: liveChunks.length } });
-    if (!(await ensureOllamaReady([{ provider: config.judgeProvider, model: config.judgeModel }]))) return;
+    if (!(await ensureProvidersReady([
+      { provider: config.judgeProvider, model: config.judgeModel, label: `Judge — ${config.judgeProvider} ${config.judgeModel}` },
+    ]))) return;
     useChunksStore.getState().clearCancelRequest();
     setIsProcessing(true);
 
@@ -543,7 +632,7 @@ export function usePipeline() {
       logOperation({ level: 'success', scope: 'audit', message: 'Batch audit run completed successfully' });
       toast.success(t('errors.reEvalCompleted'));
     }
-  }, [config, t, setIsProcessing, updateChunkJudge, updateChunkStatus, ensureOllamaReady]);
+  }, [config, t, setIsProcessing, updateChunkJudge, updateChunkStatus, ensureProvidersReady]);
 
   const auditSingleChunk = useCallback(async (chunkId: string) => {
     if (useChunksStore.getState().isProcessing) return;
@@ -553,7 +642,9 @@ export function usePipeline() {
       toast.message(t('pipeline.auditSkippedNoDraft'));
       return;
     }
-    if (!(await ensureOllamaReady([{ provider: config.judgeProvider, model: config.judgeModel }]))) return;
+    if (!(await ensureProvidersReady([
+      { provider: config.judgeProvider, model: config.judgeModel, label: `Judge — ${config.judgeProvider} ${config.judgeModel}` },
+    ]))) return;
     logOperation({ level: 'info', scope: 'audit', message: 'Single chunk audit started', chunkId });
     useChunksStore.getState().clearCancelRequest();
     setIsProcessing(true);
@@ -570,7 +661,7 @@ export function usePipeline() {
       logOperation({ level: 'success', scope: 'audit', message: 'Single chunk audit completed', chunkId });
       toast.success(t('pipeline.singleChunkAudited'));
     }
-  }, [config, t, setIsProcessing, updateChunkJudge, updateChunkStatus, ensureOllamaReady]);
+  }, [config, t, setIsProcessing, updateChunkJudge, updateChunkStatus, ensureProvidersReady]);
 
   const runCoherenceAudit = useCallback(async () => {
     if (useChunksStore.getState().isProcessing) return;

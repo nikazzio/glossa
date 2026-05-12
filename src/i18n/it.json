@@ -244,6 +244,15 @@
     "unchecked": "Stato Ollama non verificato",
     "uncheckedHint": "Stato non verificato. Clicca «Aggiorna» per controllare la connessione e caricare i modelli locali."
   },
+  "preflight": {
+    "title": "Controllo pre-avvio",
+    "subtitleFailures": "Uno o più provider hanno problemi di configurazione. Correggi le impostazioni o avvia comunque.",
+    "subtitleOk": "Tutti i provider sono raggiungibili e configurati correttamente.",
+    "checking": "Controllo provider in corso…",
+    "checkFailed": "Controllo pre-avvio non riuscito",
+    "openSettings": "Apri Impostazioni",
+    "proceedAnyway": "Avvia comunque"
+  },
   "errors": {
     "somethingWentWrong": "Qualcosa è andato storto",
     "unexpectedError": "Si è verificato un errore imprevisto.",

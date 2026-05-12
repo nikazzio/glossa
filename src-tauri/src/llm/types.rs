@@ -62,6 +62,24 @@ pub struct PipelineConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct PreflightCheckInput {
+    pub provider: String,
+    pub model: String,
+    pub label: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PreflightCheckResult {
+    pub provider: String,
+    pub model: String,
+    pub label: String,
+    pub ok: bool,
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct OllamaPreflightStatus {
     pub reachable: bool,
     pub models: Vec<String>,

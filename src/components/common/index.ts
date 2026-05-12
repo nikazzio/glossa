@@ -3,6 +3,7 @@ export { StatusIndicator } from './StatusIndicator';
 export { ErrorBoundary } from './ErrorBoundary';
 export { CopyButton } from './CopyButton';
 export { ConfirmDialog } from './ConfirmDialog';
+export { PreflightDialog } from './PreflightDialog';
 export { Drawer } from './Drawer';
 export { HighlightedText } from './HighlightedText';
 export { MarkdownEditor } from './MarkdownEditor';
