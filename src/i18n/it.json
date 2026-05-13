@@ -112,6 +112,7 @@
     "auditSkippedNoDraft": "Nessuna traduzione da valutare — traduci prima questo blocco.",
     "chunkActions": "Azioni blocco",
     "retranslateChunk": "Esegui la pipeline su questa unità",
+    "retrying": "Rate limit — riprovo tra {{seconds}}s ({{attempt}}/{{total}})",
     "reauditChunk": "Ri-valuta questo blocco",
     "prompt": "Prompt",
     "auditModelLabel": "Modello Audit",

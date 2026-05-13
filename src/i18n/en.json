@@ -112,6 +112,7 @@
     "auditSkippedNoDraft": "Nothing to audit yet — translate this chunk first.",
     "chunkActions": "Chunk actions",
     "retranslateChunk": "Run pipeline on this unit",
+    "retrying": "Rate limit — retry in {{seconds}}s ({{attempt}}/{{total}})",
     "reauditChunk": "Re-audit this chunk",
     "prompt": "Prompt",
     "auditModelLabel": "Audit Model",

@@ -18,6 +18,17 @@ use crate::llm::types::{OllamaConfig, OllamaPreflightStatus};
 const OLLAMA_BASE_URL: &str = "http://localhost:11434";
 const OLLAMA_PREFLIGHT_CACHE_TTL_SECS: u64 = 5;
 
+/// Strip userinfo (user:pass@) from a URL before including it in error messages.
+fn sanitize_url_for_display(url: &str) -> &str {
+    if let Some(scheme_end) = url.find("://") {
+        let after_scheme = &url[scheme_end + 3..];
+        if let Some(at_pos) = after_scheme.find('@') {
+            return &url[scheme_end + 3 + at_pos + 1..];
+        }
+    }
+    url
+}
+
 static OLLAMA_PREFLIGHT_CACHE: LazyLock<Mutex<Option<CachedOllamaPreflight>>> =
     LazyLock::new(|| Mutex::new(None));
 
@@ -412,7 +423,7 @@ async fn ensure_ollama_model_ready(model: &str, base_url: &str) -> Result<(), St
     if !status.reachable {
         return Err(format!(
             "Ollama is not reachable at {}. Start it with 'ollama serve' before running the pipeline.",
-            base_url
+            sanitize_url_for_display(base_url)
         ));
     }
     if status.models.is_empty() {

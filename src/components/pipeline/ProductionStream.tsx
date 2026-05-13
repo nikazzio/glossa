@@ -239,7 +239,7 @@ const ChunkRow = memo(function ChunkRow({
                 {stage.name}
               </span>
               <div className="text-sm leading-relaxed overflow-hidden">
-                {result.status === 'processing' ? (
+                {result.status === 'processing' || result.status === 'retrying' ? (
                   <ProcessingLine />
                 ) : result.status === 'error' ? (
                   <div className="flex items-start gap-2 text-editorial-accent">

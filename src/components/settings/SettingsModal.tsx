@@ -31,6 +31,7 @@ export function SettingsModal() {
   const { t } = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
   const [showPricingOverrides, setShowPricingOverrides] = useState(false);
+  const [urlDraft, setUrlDraft] = useState(ollamaBaseUrl);
   const [urlError, setUrlError] = useState<string | null>(null);
   const trapRef = useFocusTrap(showSettings, () => setShowSettings(false));
   const { overrides, setOverride, resetOverride, resetAll } = usePricingStore();
@@ -178,16 +179,18 @@ export function SettingsModal() {
                       <Server size={16} className="text-editorial-muted" />
                       <input
                         type="url"
-                        value={ollamaBaseUrl}
+                        value={urlDraft}
                         onChange={(e) => {
-                          setOllamaBaseUrl(e.target.value);
+                          setUrlDraft(e.target.value);
                           setUrlError(null);
                         }}
                         onBlur={() => {
-                          if (!ollamaBaseUrl.startsWith('http://') && !ollamaBaseUrl.startsWith('https://')) {
+                          const trimmed = urlDraft.trim();
+                          if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
                             setUrlError(t('ollama.urlInvalid'));
                           } else {
                             setUrlError(null);
+                            setOllamaBaseUrl(trimmed);
                             refreshOllama();
                           }
                         }}

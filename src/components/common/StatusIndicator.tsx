@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 interface StatusIndicatorProps {
   status: string;
   label: string;
@@ -37,6 +39,7 @@ function resolveTone(status: string): StatusKey {
 }
 
 export function StatusIndicator({ status, label, retryInfo }: StatusIndicatorProps) {
+  const { t } = useTranslation();
   const tone = STATUS_TONE[resolveTone(status)];
   return (
     <div
@@ -52,7 +55,11 @@ export function StatusIndicator({ status, label, retryInfo }: StatusIndicatorPro
       </span>
       {status === 'retrying' && retryInfo && (
         <span className={`text-[9px] ${tone.label}`}>
-          Rate limit — retry in {Math.round(retryInfo.delayMs / 1000)}s ({retryInfo.attempt}/{retryInfo.total})
+          {t('pipeline.retrying', {
+            seconds: Math.round(retryInfo.delayMs / 1000),
+            attempt: retryInfo.attempt,
+            total: retryInfo.total,
+          })}
         </span>
       )}
     </div>

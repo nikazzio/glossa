@@ -7,7 +7,7 @@ import { llmService, isStreamCancelledError } from '../services/llmService';
 import { useUiStore } from '../stores/uiStore';
 import { logOperation } from '../stores/operationLogStore';
 import { showPreflightDialog } from '../stores/preflightStore';
-import { withRetry, friendlyError } from '../utils/retry';
+import { withRetry, friendlyError, is429Error } from '../utils/retry';
 import { qualityDefault, qualityFailure } from '../utils';
 import type { Issue, JudgeResult, PromptInfo, TokenUsage, TranslationChunk } from '../types';
 import { useProjectStore } from '../stores/projectStore';
@@ -245,7 +245,9 @@ export function usePipeline() {
           {
             label: `Stage "${stage.name}"`,
             onRetry: (attempt, total, error, delayMs) => {
-              updateChunkStage(chunk.id, stage.id, { content: '', status: 'retrying', retryInfo: { attempt, total, delayMs } });
+              if (is429Error(error)) {
+                updateChunkStage(chunk.id, stage.id, { content: '', status: 'retrying', retryInfo: { attempt, total, delayMs } });
+              }
               logOperation({
                 level: 'warn',
                 scope: 'stage',
