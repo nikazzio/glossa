@@ -47,8 +47,8 @@ export function PreflightDialog() {
             </p>
 
             <ul className="space-y-3 mb-8" aria-label={t('preflight.title')}>
-              {results.map((result, i) => (
-                <li key={i} className="flex items-start gap-3">
+              {results.map((result) => (
+                <li key={`${result.provider}:${result.model}`} className="flex items-start gap-3">
                   {result.ok ? (
                     <CheckCircle2
                       size={16}

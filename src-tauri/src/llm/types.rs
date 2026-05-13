@@ -80,6 +80,10 @@ pub struct PreflightCheckResult {
     /// models returned by Ollama. Used by the frontend to refresh the model
     /// picker without a separate round-trip.
     pub available_models: Option<Vec<String>>,
+    /// True if Ollama responded at all (even if the requested model is missing).
+    /// Absent for cloud providers. Lets the frontend distinguish "offline" from
+    /// "model not installed" without parsing the error string.
+    pub reachable: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

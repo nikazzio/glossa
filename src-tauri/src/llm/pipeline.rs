@@ -368,15 +368,15 @@ pub async fn preflight_pipeline(
 ) -> Result<Vec<PreflightCheckResult>, String> {
     let mut results = Vec::new();
     for check in checks {
-        let (ok, error, available_models) = if check.provider == "ollama" {
+        let (ok, error, available_models, reachable) = if check.provider == "ollama" {
             match run_ollama_preflight_check(&check.model).await {
-                Ok(models) => (true, None, Some(models)),
-                Err(e) => (false, Some(e), None),
+                Ok(models) => (true, None, Some(models), Some(true)),
+                Err((is_reachable, e)) => (false, Some(e), None, Some(is_reachable)),
             }
         } else {
-            match run_cloud_preflight_check(&app, &check.provider).await {
-                Ok(()) => (true, None, None),
-                Err(e) => (false, Some(e), None),
+            match run_cloud_preflight_check(&app, &check.provider, &check.model).await {
+                Ok(()) => (true, None, None, None),
+                Err(e) => (false, Some(e), None, None),
             }
         };
         results.push(PreflightCheckResult {
@@ -386,29 +386,33 @@ pub async fn preflight_pipeline(
             ok,
             error,
             available_models,
+            reachable,
         });
     }
     Ok(results)
 }
 
-async fn run_ollama_preflight_check(model: &str) -> Result<Vec<String>, String> {
-    let status =
-        crate::llm::providers::ollama::check_ollama_preflight(Some(model.to_string())).await?;
+// Returns Err((reachable, error_msg)) so callers can distinguish "offline"
+// from "model not installed" without parsing the error string.
+async fn run_ollama_preflight_check(model: &str) -> Result<Vec<String>, (bool, String)> {
+    let status = crate::llm::providers::ollama::check_ollama_preflight(Some(model.to_string()))
+        .await
+        .map_err(|e| (false, e))?;
     if !status.reachable {
-        return Err("Ollama is not running".into());
+        return Err((false, "Ollama is not running".into()));
     }
     if !status.model_available {
-        return Err(format!("Model \"{model}\" is not installed locally"));
+        return Err((true, format!("Model \"{model}\" is not installed locally")));
     }
     Ok(status.models)
 }
 
-async fn run_cloud_preflight_check(app: &AppHandle, provider: &str) -> Result<(), String> {
+async fn run_cloud_preflight_check(app: &AppHandle, provider: &str, model: &str) -> Result<(), String> {
     let api_key = get_api_key(app, provider)?;
     let prov = get_provider(provider)?;
     let client = prov.http_client()?;
     let req = LlmRequest {
-        model: prov.default_test_model(),
+        model,
         system_prompt: "You are a test assistant.",
         user_prompt: "Reply with exactly: OK",
         api_key: &api_key,

@@ -57,9 +57,11 @@ export interface PreflightCheckResult {
   model: string;
   label: string;
   ok: boolean;
-  error?: string;
+  error: string | null;
   /** Populated for Ollama only — the full list of locally-installed models. */
-  availableModels?: string[];
+  availableModels: string[] | null;
+  /** True if Ollama responded (even if the model is missing). Null for cloud. */
+  reachable: boolean | null;
 }
 
 /**

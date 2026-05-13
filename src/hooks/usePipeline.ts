@@ -84,7 +84,7 @@ export function usePipeline() {
 
     const toastId = toast.loading(t('preflight.checking'));
 
-    let results;
+    let results: Awaited<ReturnType<typeof llmService.preflightPipeline>>;
     try {
       results = await llmService.preflightPipeline(dedupedChecks);
     } catch (error: unknown) {
@@ -103,14 +103,17 @@ export function usePipeline() {
     toast.dismiss(toastId);
 
     // Keep Ollama status indicator and model list in sync.
+    // Use `reachable` (not `ok`) so a missing-model failure doesn't incorrectly
+    // mark Ollama as disconnected when it is actually running.
     const ollamaResults = results.filter((r) => r.provider === 'ollama');
     if (ollamaResults.length > 0) {
+      const ollamaReachable = ollamaResults.some((r) => r.reachable === true);
       const allOllamaOk = ollamaResults.every((r) => r.ok);
-      useUiStore.getState().setOllamaStatus(allOllamaOk ? 'connected' : 'disconnected');
+      useUiStore.getState().setOllamaStatus(ollamaReachable || allOllamaOk ? 'connected' : 'disconnected');
       const allModels = [...new Set(ollamaResults.flatMap((r) => r.availableModels ?? []))];
       if (allModels.length > 0) {
         useUiStore.getState().setOllamaModels(allModels);
-      } else if (!allOllamaOk) {
+      } else if (!ollamaReachable) {
         useUiStore.getState().setOllamaModels([]);
       }
     }
