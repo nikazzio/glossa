@@ -14,6 +14,14 @@ describe('classifyError', () => {
     expect(classifyError('quota exceeded')).toBe('rate_limit');
   });
 
+  it('detects context overflow errors', () => {
+    expect(classifyError('context window exceeded')).toBe('context_overflow');
+    expect(classifyError('context_length_exceeded')).toBe('context_overflow');
+    expect(classifyError('maximum context reached')).toBe('context_overflow');
+    expect(classifyError('input too large for model')).toBe('context_overflow');
+    expect(classifyError('HTTP status 413')).toBe('context_overflow');
+  });
+
   it('detects network errors', () => {
     expect(classifyError('network error')).toBe('network');
     expect(classifyError('fetch failed')).toBe('network');
@@ -61,6 +69,15 @@ describe('friendlyError', () => {
     const longMsg = 'x'.repeat(200);
     const result = friendlyError(longMsg);
     expect(result.length).toBeLessThanOrEqual(121);
+  });
+
+  it('returns friendly message for context overflow (413 in message)', () => {
+    expect(friendlyError('context window exceeded, 413')).toContain('Context window exceeded');
+  });
+
+  it('returns Ollama message as-is for context overflow', () => {
+    const msg = 'Ollama context window exceeded — reduce chunk size or increase numCtx in Ollama provider settings.';
+    expect(friendlyError(msg)).toBe(msg);
   });
 });
 

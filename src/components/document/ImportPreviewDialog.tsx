@@ -18,7 +18,7 @@ import { buildImportPreview } from '../../utils/documentWorkflow';
 import { findBestSplitIndex, recommendChunkCount, trimSplitFragment } from '../../utils';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { usePipelineStore } from '../../stores/pipelineStore';
-import { checkContextOverflow } from '../../utils/tokenEstimate';
+import { checkContextOverflow, estimateCharTokens } from '../../utils/tokenEstimate';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -486,19 +486,28 @@ export function ImportPreviewDialog({
   const contextWarning = useMemo(() => {
     if (!useChunking) return null;
     const longestChunk = preview.chunks.reduce(
-      (a, b) => (a.text.length > b.text.length ? a : b),
+      (a, b) => (estimateCharTokens(a.text) >= estimateCharTokens(b.text) ? a : b),
       { text: '' },
     );
     const activeModels = [
       ...config.stages
         .filter((s) => s.enabled)
         .map((s) => ({ provider: s.provider, model: s.model, numCtx: s.providerOptions?.ollama?.numCtx })),
-      { provider: config.judgeProvider, model: config.judgeModel, numCtx: undefined },
+      {
+        provider: config.judgeProvider,
+        model: config.judgeModel,
+        numCtx: config.reviewProviderOptions?.ollama?.numCtx,
+      },
     ];
-    const longestPrompt = config.stages
-      .filter((s) => s.enabled)
-      .reduce((a, b) => (a.prompt.length > b.prompt.length ? a : b), { prompt: '' }).prompt;
-    return checkContextOverflow(longestChunk.text, longestPrompt, activeModels);
+    const allPrompts = [
+      ...config.stages.filter((s) => s.enabled).map((s) => s.prompt),
+      config.judgePrompt,
+      ...(config.coherencePrompt ? [config.coherencePrompt] : []),
+    ];
+    const maxPrompt = allPrompts.reduce((a, b) =>
+      estimateCharTokens(a) >= estimateCharTokens(b) ? a : b, '',
+    );
+    return checkContextOverflow(longestChunk.text, maxPrompt, activeModels);
   }, [preview.chunks, useChunking, config]);
 
   // ── Manual boundary editing state ─────────────────────────────────────────
