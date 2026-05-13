@@ -182,7 +182,8 @@
     "refinePrompt": "Refine prompt",
     "refining": "Refining...",
     "refined": "Prompt refined",
-    "refineFailed": "Refinement failed"
+    "refineFailed": "Refinement failed",
+    "contextOverflowWarning": "The longest chunk (~{{tokens}} tokens) may exceed {{model}}'s context window ({{window}} tokens). Consider reducing chunk size or using a model with a larger context window."
   },
   "audit": {
     "title": "Audit Logs",
@@ -266,7 +267,8 @@
     "pipelineCompleted": "Pipeline completed successfully",
     "pipelineCompletedWithErrors": "Pipeline completed with {{count}} error(s)",
     "reEvalCompleted": "Re-evaluation completed",
-    "coherenceFailed": "Coherence audit failed"
+    "coherenceFailed": "Coherence audit failed",
+    "contextOverflow": "Context window exceeded. Reduce chunk size or use a model with a larger context window."
   },
   "coherence": {
     "title": "Document Coherence",

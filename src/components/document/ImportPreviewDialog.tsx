@@ -17,6 +17,8 @@ import {
 import { buildImportPreview } from '../../utils/documentWorkflow';
 import { findBestSplitIndex, recommendChunkCount, trimSplitFragment } from '../../utils';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { usePipelineStore } from '../../stores/pipelineStore';
+import { checkContextOverflow, estimateCharTokens } from '../../utils/tokenEstimate';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -412,6 +414,7 @@ export function ImportPreviewDialog({
   const { t } = useTranslation();
   const trapRef = useFocusTrap(true, onCancel);
   const [editorMode, setEditorMode] = useState<EditorMode>('cards');
+  const config = usePipelineStore((s) => s.config);
 
   // ── Settings: words-per-chunk ↔ targetChunkCount sync ─────────────────────
   const totalWords = useMemo(() => {
@@ -479,6 +482,33 @@ export function ImportPreviewDialog({
     () => toParagraphChunks(preview.chunks.map((c) => c.text)),
     [preview.chunks],
   );
+
+  const contextWarning = useMemo(() => {
+    if (!useChunking) return null;
+    const longestChunk = preview.chunks.reduce(
+      (a, b) => (estimateCharTokens(a.text) >= estimateCharTokens(b.text) ? a : b),
+      { text: '' },
+    );
+    const activeModels = [
+      ...config.stages
+        .filter((s) => s.enabled)
+        .map((s) => ({ provider: s.provider, model: s.model, numCtx: s.providerOptions?.ollama?.numCtx })),
+      {
+        provider: config.judgeProvider,
+        model: config.judgeModel,
+        numCtx: config.reviewProviderOptions?.ollama?.numCtx,
+      },
+    ];
+    const allPrompts = [
+      ...config.stages.filter((s) => s.enabled).map((s) => s.prompt),
+      config.judgePrompt,
+      ...(config.coherencePrompt ? [config.coherencePrompt] : []),
+    ];
+    const maxPrompt = allPrompts.reduce((a, b) =>
+      estimateCharTokens(a) >= estimateCharTokens(b) ? a : b, '',
+    );
+    return checkContextOverflow(longestChunk.text, maxPrompt, activeModels);
+  }, [preview.chunks, useChunking, config]);
 
   // ── Manual boundary editing state ─────────────────────────────────────────
   const [manualParaChunks, setManualParaChunks] = useState<ParagraphChunks | null>(null);
@@ -798,6 +828,22 @@ export function ImportPreviewDialog({
             </button>
           </div>
         </div>
+
+        {/* ── Context overflow warning ──────────────────────────────────────── */}
+        {contextWarning && (
+          <div className="shrink-0 px-6 pb-2">
+            <div className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-400">
+              <AlertTriangle size={14} className="mt-0.5 shrink-0 text-amber-500" />
+              <span>
+                {t('pipeline.contextOverflowWarning', {
+                  tokens: contextWarning.estimatedTokens.toLocaleString(),
+                  model: contextWarning.modelId,
+                  window: contextWarning.contextWindow.toLocaleString(),
+                })}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* ── Content area ─────────────────────────────────────────────────── */}
         <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 custom-scrollbar">

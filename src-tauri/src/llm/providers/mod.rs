@@ -28,12 +28,20 @@ pub(crate) fn format_api_error(
     body: &str,
 ) -> String {
     log_response_body(provider_label, status, body);
+    let body_lower = body.to_lowercase();
     let user_message = match status.as_u16() {
+        400 if body_lower.contains("context")
+            || body_lower.contains("too long")
+            || body_lower.contains("maximum context")
+            || body_lower.contains("context_length_exceeded") =>
+        {
+            "context window exceeded — reduce chunk size or use a model with a larger context window"
+        }
         400 => "bad request — check the model name or prompt",
         401 | 403 => "API key not authorized",
         404 => "model or endpoint not found",
         408 => "the provider timed out",
-        413 => "input too large for the model",
+        413 => "context window exceeded — reduce chunk size or use a model with a larger context window",
         429 => "rate limited — retry shortly",
         500..=599 => "provider unavailable",
         _ => "unexpected response",
