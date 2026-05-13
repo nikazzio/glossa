@@ -5,12 +5,14 @@ import { useChunksStore } from '../../stores/chunksStore';
 import { usePipeline } from '../../hooks/usePipeline';
 import { buildPipelineFingerprint } from '../../utils/pipelineFingerprint';
 import { usePipelineStore } from '../../stores/pipelineStore';
+import { setRunInProgress } from '../../services/projectService';
 
 export function RunResumeBanner() {
   const { t } = useTranslation();
   const runInterrupted = useProjectStore((s) => s.runInterrupted);
   const lastRunConfig = useProjectStore((s) => s.lastRunConfig);
   const clearResumeState = useProjectStore((s) => s.clearResumeState);
+  const currentProjectId = useProjectStore((s) => s.currentProjectId);
   const chunks = useChunksStore((s) => s.chunks);
   const config = usePipelineStore((s) => s.config);
   const { runPipeline } = usePipeline();
@@ -33,6 +35,13 @@ export function RunResumeBanner() {
     clearResumeState();
     resetAllChunks();
     void runPipeline();
+  };
+
+  const handleDismiss = () => {
+    clearResumeState();
+    if (currentProjectId) {
+      void setRunInProgress(currentProjectId, false).catch(() => {});
+    }
   };
 
   return (
@@ -73,7 +82,7 @@ export function RunResumeBanner() {
             </div>
           </div>
           <button
-            onClick={() => clearResumeState()}
+            onClick={handleDismiss}
             aria-label={t('resume.dismiss')}
             className="shrink-0 text-editorial-muted hover:text-editorial-ink transition-colors"
           >

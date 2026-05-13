@@ -379,7 +379,7 @@ pub async fn preflight_pipeline(
                 ),
             }
         } else {
-            match run_cloud_preflight_check(&app, &check.provider, &check.model).await {
+            match run_cloud_preflight_check(&app, &check.provider).await {
                 Ok(()) => (true, None, None, None),
                 Err(e) => (false, Some(e), None, None),
             }
@@ -413,17 +413,10 @@ async fn run_ollama_preflight_check(model: &str) -> Result<Vec<String>, (bool, S
     Ok(status.models)
 }
 
-async fn run_cloud_preflight_check(app: &AppHandle, provider: &str, model: &str) -> Result<(), String> {
-    let api_key = get_api_key(app, provider)?;
-    let prov = get_provider(provider)?;
-    let client = prov.http_client()?;
-    let req = LlmRequest {
-        model,
-        system_prompt: "You are a test assistant.",
-        user_prompt: "Reply with exactly: OK",
-        api_key: &api_key,
-        json_mode: false,
-        provider_options: None,
-    };
-    prov.call(&client, &req).await.map(|_| ())
+/// For cloud providers only the API key presence is verified — no inference call
+/// is made so the check is free and fast. An invalid or expired key will surface
+/// naturally on the first real translation request.
+async fn run_cloud_preflight_check(app: &AppHandle, provider: &str) -> Result<(), String> {
+    get_api_key(app, provider)?;
+    Ok(())
 }
