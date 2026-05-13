@@ -371,10 +371,15 @@ pub async fn preflight_pipeline(
         let (ok, error, available_models, reachable) = if check.provider == "ollama" {
             match run_ollama_preflight_check(&check.model).await {
                 Ok(models) => (true, None, Some(models), Some(true)),
-                Err((is_reachable, e)) => (false, Some(e), None, Some(is_reachable)),
+                Err((is_reachable, e, models)) => (
+                    false,
+                    Some(e),
+                    if models.is_empty() { None } else { Some(models) },
+                    Some(is_reachable),
+                ),
             }
         } else {
-            match run_cloud_preflight_check(&app, &check.provider, &check.model).await {
+            match run_cloud_preflight_check(&app, &check.provider).await {
                 Ok(()) => (true, None, None, None),
                 Err(e) => (false, Some(e), None, None),
             }
@@ -392,32 +397,26 @@ pub async fn preflight_pipeline(
     Ok(results)
 }
 
-// Returns Err((reachable, error_msg)) so callers can distinguish "offline"
-// from "model not installed" without parsing the error string.
-async fn run_ollama_preflight_check(model: &str) -> Result<Vec<String>, (bool, String)> {
+// Returns Err((reachable, error_msg, models)) so callers can distinguish "offline"
+// from "model not installed" and always get the installed model list when Ollama
+// is reachable (even on failure), so the UI model picker can refresh.
+async fn run_ollama_preflight_check(model: &str) -> Result<Vec<String>, (bool, String, Vec<String>)> {
     let status = crate::llm::providers::ollama::check_ollama_preflight(Some(model.to_string()))
         .await
-        .map_err(|e| (false, e))?;
+        .map_err(|e| (false, e, vec![]))?;
     if !status.reachable {
-        return Err((false, "Ollama is not running".into()));
+        return Err((false, "Ollama is not running".into(), vec![]));
     }
     if !status.model_available {
-        return Err((true, format!("Model \"{model}\" is not installed locally")));
+        return Err((true, format!("Model \"{model}\" is not installed locally"), status.models));
     }
     Ok(status.models)
 }
 
-async fn run_cloud_preflight_check(app: &AppHandle, provider: &str, model: &str) -> Result<(), String> {
-    let api_key = get_api_key(app, provider)?;
-    let prov = get_provider(provider)?;
-    let client = prov.http_client()?;
-    let req = LlmRequest {
-        model,
-        system_prompt: "You are a test assistant.",
-        user_prompt: "Reply with exactly: OK",
-        api_key: &api_key,
-        json_mode: false,
-        provider_options: None,
-    };
-    prov.call(&client, &req).await.map(|_| ())
+/// For cloud providers only the API key presence is verified — no inference call
+/// is made so the check is free and fast. An invalid or expired key will surface
+/// naturally on the first real translation request.
+async fn run_cloud_preflight_check(app: &AppHandle, provider: &str) -> Result<(), String> {
+    get_api_key(app, provider)?;
+    Ok(())
 }

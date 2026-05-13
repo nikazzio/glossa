@@ -7,3 +7,4 @@ export { PreflightDialog } from './PreflightDialog';
 export { Drawer } from './Drawer';
 export { HighlightedText } from './HighlightedText';
 export { MarkdownEditor } from './MarkdownEditor';
+export { RunResumeBanner } from './RunResumeBanner';

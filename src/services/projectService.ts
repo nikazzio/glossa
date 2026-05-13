@@ -166,6 +166,8 @@ export async function getProjectConfig(projectId: string): Promise<{
   persona: string | undefined;
   customSourceLanguage: string | undefined;
   customTargetLanguage: string | undefined;
+  runInProgress: boolean;
+  lastRunConfig: string | null;
 } | null> {
   const rows = await select<{
     source_language: string;
@@ -188,6 +190,8 @@ export async function getProjectConfig(projectId: string): Promise<{
     persona?: string | null;
     custom_source_language?: string | null;
     custom_target_language?: string | null;
+    run_in_progress?: number | null;
+    last_run_config?: string | null;
   }>(
     `SELECT
        p.source_language,
@@ -209,7 +213,9 @@ export async function getProjectConfig(projectId: string): Promise<{
        pc.review_provider_options,
        pc.persona,
        pc.custom_source_language,
-       pc.custom_target_language
+       pc.custom_target_language,
+       pc.run_in_progress,
+       pc.last_run_config
      FROM pipeline_configs pc
      JOIN projects p ON p.id = pc.project_id
      WHERE pc.project_id = $1`,
@@ -261,6 +267,8 @@ export async function getProjectConfig(projectId: string): Promise<{
       translation: g.translation,
       notes: g.notes,
     })),
+    runInProgress: row.run_in_progress === 1,
+    lastRunConfig: row.last_run_config ?? null,
   };
 }
 
@@ -270,6 +278,73 @@ export async function saveProjectConfig(
   viewMode: ViewMode,
 ): Promise<void> {
   await saveProjectConfigInternal(projectId, undefined, undefined, undefined, config, viewMode, execute);
+}
+
+export async function saveChunkCheckpoint(
+  projectId: string,
+  chunk: TranslationChunk,
+  position: number,
+): Promise<void> {
+  await execute(
+    `INSERT INTO translations (
+       id, project_id, original_text, final_translation, position, chunk_status, stage_results,
+       judge_status, judge_rating, translation_locked, judge_issues, coherence_result, footnotes,
+       source_display_text, source_processing_text, translation_display_text, translation_processing_text
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+     ON CONFLICT(id) DO UPDATE SET
+       original_text                = excluded.original_text,
+       final_translation            = excluded.final_translation,
+       position                     = excluded.position,
+       chunk_status                 = excluded.chunk_status,
+       stage_results                = excluded.stage_results,
+       judge_status                 = excluded.judge_status,
+       judge_rating                 = excluded.judge_rating,
+       translation_locked           = excluded.translation_locked,
+       judge_issues                 = excluded.judge_issues,
+       translation_display_text     = excluded.translation_display_text,
+       translation_processing_text  = excluded.translation_processing_text,
+       source_display_text          = excluded.source_display_text,
+       source_processing_text       = excluded.source_processing_text,
+       coherence_result             = excluded.coherence_result,
+       footnotes                    = excluded.footnotes`,
+    [
+      chunk.id,
+      projectId,
+      chunk.sourceDisplayText,
+      chunk.translationDisplayText || chunk.judgeResult.content || lastStageContent(chunk.stageResults) || '',
+      position,
+      chunk.status,
+      JSON.stringify(chunk.stageResults),
+      chunk.judgeResult.status,
+      chunk.judgeResult.rating,
+      chunk.translationLocked ? 1 : 0,
+      JSON.stringify(chunk.judgeResult.issues),
+      chunk.coherenceResult ? JSON.stringify(chunk.coherenceResult) : null,
+      chunk.footnotes?.length ? JSON.stringify(chunk.footnotes) : null,
+      chunk.sourceDisplayText,
+      chunk.sourceProcessingText,
+      chunk.translationDisplayText,
+      chunk.translationProcessingText,
+    ],
+  );
+}
+
+export async function setRunInProgress(
+  projectId: string,
+  inProgress: boolean,
+  configFingerprint?: string,
+): Promise<void> {
+  if (inProgress) {
+    await execute(
+      'UPDATE pipeline_configs SET run_in_progress = 1, last_run_config = $1 WHERE project_id = $2',
+      [configFingerprint ?? null, projectId],
+    );
+  } else {
+    await execute(
+      'UPDATE pipeline_configs SET run_in_progress = 0 WHERE project_id = $1',
+      [projectId],
+    );
+  }
 }
 
 type ExecuteQuery = (query: string, params?: unknown[]) => Promise<void>;
