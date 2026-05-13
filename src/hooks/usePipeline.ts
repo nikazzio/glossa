@@ -244,14 +244,17 @@ export function usePipeline() {
           },
           {
             label: `Stage "${stage.name}"`,
-            onRetry: (attempt, total, error, delayMs) => logOperation({
-              level: 'warn',
-              scope: 'stage',
-              message: `Retry ${attempt}/${total} — waiting ${delayMs}ms`,
-              chunkId: chunk.id,
-              stageId: stage.id,
-              meta: { error },
-            }),
+            onRetry: (attempt, total, error, delayMs) => {
+              updateChunkStage(chunk.id, stage.id, { content: '', status: 'retrying', retryInfo: { attempt, total, delayMs } });
+              logOperation({
+                level: 'warn',
+                scope: 'stage',
+                message: `Retry ${attempt}/${total} — waiting ${delayMs}ms`,
+                chunkId: chunk.id,
+                stageId: stage.id,
+                meta: { error },
+              });
+            },
           },
         );
         if (result) {

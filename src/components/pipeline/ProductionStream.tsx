@@ -149,6 +149,7 @@ const ChunkRow = memo(function ChunkRow({
               key={s.id}
               status={chunk.stageResults[s.id]?.status || 'idle'}
               label={indexPad(si + 1)}
+              retryInfo={chunk.stageResults[s.id]?.retryInfo}
             />
           ))}
           <StatusIndicator status={chunk.judgeResult.status} label="Audit" />

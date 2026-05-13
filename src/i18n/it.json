@@ -239,10 +239,12 @@
     "modelMissing": "Il modello Ollama \"{{model}}\" non è installato localmente. Esegui il pull oppure cambia la configurazione della pipeline.",
     "modelPlaceholder": "Nome del modello...",
     "connected": "Ollama connesso, {{count}} modello(i) disponibile(i)",
-    "disconnected": "Ollama non raggiungibile su localhost:11434",
+    "disconnected": "Ollama non raggiungibile all'indirizzo configurato",
     "selectedButOffline": "Hai selezionato Ollama ma non è connesso — verifica le Impostazioni",
     "unchecked": "Stato Ollama non verificato",
-    "uncheckedHint": "Stato non verificato. Clicca «Aggiorna» per controllare la connessione e caricare i modelli locali."
+    "uncheckedHint": "Stato non verificato. Clicca «Aggiorna» per controllare la connessione e caricare i modelli locali.",
+    "baseUrl": "URL base di Ollama",
+    "urlInvalid": "L'URL deve iniziare con http:// o https://"
   },
   "preflight": {
     "title": "Controllo pre-avvio",

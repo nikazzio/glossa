@@ -32,6 +32,9 @@ interface UiState {
   defaultMinWords: number;
   defaultMaxWords: number;
 
+  // Ollama host (persisted)
+  ollamaBaseUrl: string;
+
   setViewMode: (mode: ViewMode) => void;
   setDocumentLayout: (layout: DocumentLayoutPreference) => void;
   setSelectedChunkId: (chunkId: string | null) => void;
@@ -51,6 +54,7 @@ interface UiState {
   setPendingSplitChunkId: (chunkId: string | null) => void;
   setDefaultMinWords: (value: number) => void;
   setDefaultMaxWords: (value: number) => void;
+  setOllamaBaseUrl: (url: string) => void;
 }
 
 export const useUiStore = create<UiState>()(
@@ -75,6 +79,7 @@ export const useUiStore = create<UiState>()(
   pendingSplitChunkId: null,
   defaultMinWords: 600,
   defaultMaxWords: 1200,
+  ollamaBaseUrl: 'http://localhost:11434',
 
   setViewMode: (mode) =>
     set({
@@ -163,6 +168,7 @@ export const useUiStore = create<UiState>()(
   setPendingSplitChunkId: (chunkId) => set({ pendingSplitChunkId: chunkId }),
   setDefaultMinWords: (value) => set({ defaultMinWords: Math.max(0, value) }),
   setDefaultMaxWords: (value) => set({ defaultMaxWords: Math.max(0, value) }),
+  setOllamaBaseUrl: (url) => set({ ollamaBaseUrl: url }),
     }),
     {
       name: 'glossa-ui-prefs',
@@ -171,6 +177,7 @@ export const useUiStore = create<UiState>()(
         documentLayout: state.documentLayout,
         defaultMinWords: state.defaultMinWords,
         defaultMaxWords: state.defaultMaxWords,
+        ollamaBaseUrl: state.ollamaBaseUrl,
       }),
     },
   ),

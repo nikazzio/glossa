@@ -24,7 +24,8 @@ export async function withRetry<T>(
       if (isConfigError(message) || message.includes(STREAM_CANCELLED_ERROR) || isTimeoutError(message)) throw err;
       if (attempt === maxRetries) throw err;
 
-      const delay = baseDelayMs * Math.pow(2, attempt) + Math.random() * 500;
+      const retryAfterMs = extractRetryAfter(message);
+      const delay = retryAfterMs ?? (baseDelayMs * Math.pow(2, attempt) + Math.random() * 500);
       const delayMs = Math.round(delay);
       console.warn(
         `[Glossa] ${label} failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delayMs}ms: ${message}`,
@@ -35,6 +36,15 @@ export async function withRetry<T>(
   }
 
   throw new Error(`${label} failed after ${maxRetries + 1} attempts`);
+}
+
+export function extractRetryAfter(message: string): number | null {
+  const match = message.match(/Retry-After:\s*(\d+)/i);
+  return match ? parseInt(match[1], 10) * 1000 : null;
+}
+
+export function is429Error(message: string): boolean {
+  return /rate.?limit|429|quota/i.test(message);
 }
 
 function isTimeoutError(message: string): boolean {

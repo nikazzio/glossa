@@ -5,13 +5,13 @@ pub mod openai;
 
 use crate::llm::provider::LlmProvider;
 
-pub fn get_provider(id: &str) -> Result<Box<dyn LlmProvider>, String> {
+pub fn get_provider(id: &str, ollama_base_url: Option<String>) -> Result<Box<dyn LlmProvider>, String> {
     match id {
         "gemini" => Ok(Box::new(gemini::GeminiProvider)),
         "openai" => Ok(Box::new(openai::openai())),
         "deepseek" => Ok(Box::new(openai::deepseek())),
         "anthropic" => Ok(Box::new(anthropic::AnthropicProvider)),
-        "ollama" => Ok(Box::new(ollama::OllamaProvider)),
+        "ollama" => Ok(Box::new(ollama::OllamaProvider::new(ollama_base_url))),
         _ => Err(format!("Unknown provider: {id}")),
     }
 }

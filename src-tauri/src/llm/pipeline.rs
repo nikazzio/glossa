@@ -30,8 +30,9 @@ pub async fn run_stage(
     config: PipelineConfig,
     previous_result: Option<String>,
     previous_translation: Option<String>,
+    ollama_base_url: Option<String>,
 ) -> Result<String, String> {
-    let provider = get_provider(&stage.provider)?;
+    let provider = get_provider(&stage.provider, ollama_base_url)?;
     provider.preflight(&stage.model).await?;
     let api_key = get_api_key(&app, &stage.provider)?;
     let client = provider.http_client()?;
@@ -63,8 +64,9 @@ pub async fn run_stage_stream(
     previous_result: Option<String>,
     previous_translation: Option<String>,
     stream_id: String,
+    ollama_base_url: Option<String>,
 ) -> Result<String, String> {
-    let provider = get_provider(&stage.provider)?;
+    let provider = get_provider(&stage.provider, ollama_base_url)?;
     provider.preflight(&stage.model).await?;
     let api_key = get_api_key(&app, &stage.provider)?;
     let client = provider.streaming_client()?;
@@ -124,8 +126,9 @@ pub async fn judge_translation(
     translation: String,
     config: PipelineConfig,
     stream_id: String,
+    ollama_base_url: Option<String>,
 ) -> Result<JudgeResponse, String> {
-    let provider = get_provider(&config.judge_provider)?;
+    let provider = get_provider(&config.judge_provider, ollama_base_url)?;
     provider.preflight(&config.judge_model).await?;
     let api_key = get_api_key(&app, &config.judge_provider)?;
     let client = provider.streaming_client()?;
@@ -215,8 +218,9 @@ pub async fn refine_prompt(
     provider: String,
     model: String,
     context: String,
+    ollama_base_url: Option<String>,
 ) -> Result<String, String> {
-    let prov = get_provider(&provider)?;
+    let prov = get_provider(&provider, ollama_base_url)?;
     prov.preflight(&model).await?;
     let api_key = get_api_key(&app, &provider)?;
     let client = prov.http_client()?;
@@ -247,8 +251,9 @@ pub async fn run_coherence_for_chunk(
     input: CoherenceChunkInput,
     config: PipelineConfig,
     stream_id: String,
+    ollama_base_url: Option<String>,
 ) -> Result<CoherenceResponse, String> {
-    let provider = get_provider(&config.judge_provider)?;
+    let provider = get_provider(&config.judge_provider, ollama_base_url)?;
     provider.preflight(&config.judge_model).await?;
     let api_key = get_api_key(&app, &config.judge_provider)?;
     let client = provider.streaming_client()?;
@@ -320,9 +325,9 @@ pub async fn run_coherence_for_chunk(
 }
 
 #[tauri::command]
-pub async fn test_provider_connection(app: AppHandle, provider: String) -> Result<bool, String> {
+pub async fn test_provider_connection(app: AppHandle, provider: String, ollama_base_url: Option<String>) -> Result<bool, String> {
     if provider == "ollama" {
-        let status = crate::llm::providers::ollama::check_ollama_preflight(None).await?;
+        let status = crate::llm::providers::ollama::check_ollama_preflight(None, ollama_base_url).await?;
         if !status.reachable {
             return Err("Ollama is not running".into());
         }
@@ -335,7 +340,7 @@ pub async fn test_provider_connection(app: AppHandle, provider: String) -> Resul
         return Ok(true);
     }
 
-    let prov = get_provider(&provider)?;
+    let prov = get_provider(&provider, None)?;
     let api_key = get_api_key(&app, &provider)?;
     let client = prov.http_client()?;
     let req = LlmRequest {
@@ -365,11 +370,12 @@ pub async fn test_provider_connection(app: AppHandle, provider: String) -> Resul
 pub async fn preflight_pipeline(
     app: AppHandle,
     checks: Vec<PreflightCheckInput>,
+    ollama_base_url: Option<String>,
 ) -> Result<Vec<PreflightCheckResult>, String> {
     let mut results = Vec::new();
     for check in checks {
         let (ok, error, available_models, reachable) = if check.provider == "ollama" {
-            match run_ollama_preflight_check(&check.model).await {
+            match run_ollama_preflight_check(&check.model, ollama_base_url.clone()).await {
                 Ok(models) => (true, None, Some(models), Some(true)),
                 Err((is_reachable, e, models)) => (
                     false,
@@ -400,8 +406,8 @@ pub async fn preflight_pipeline(
 // Returns Err((reachable, error_msg, models)) so callers can distinguish "offline"
 // from "model not installed" and always get the installed model list when Ollama
 // is reachable (even on failure), so the UI model picker can refresh.
-async fn run_ollama_preflight_check(model: &str) -> Result<Vec<String>, (bool, String, Vec<String>)> {
-    let status = crate::llm::providers::ollama::check_ollama_preflight(Some(model.to_string()))
+async fn run_ollama_preflight_check(model: &str, ollama_base_url: Option<String>) -> Result<Vec<String>, (bool, String, Vec<String>)> {
+    let status = crate::llm::providers::ollama::check_ollama_preflight(Some(model.to_string()), ollama_base_url)
         .await
         .map_err(|e| (false, e, vec![]))?;
     if !status.reachable {

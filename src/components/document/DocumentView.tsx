@@ -709,6 +709,7 @@ const COMPACT_STATUS_TONE = {
   processing:
     'border-editorial-warning/45 bg-editorial-warning/12 text-editorial-warning animate-pulse',
   error: 'border-editorial-accent/40 bg-editorial-accent/10 text-editorial-accent',
+  retrying: 'border-amber-500/45 bg-amber-500/12 text-amber-600 animate-pulse',
   idle: 'border-editorial-border bg-editorial-bg text-editorial-muted',
 } as const;
 
@@ -722,7 +723,7 @@ function CompactStatusIndicator({
   icon?: LucideIcon;
 }) {
   const tone =
-    status === 'completed' || status === 'processing' || status === 'error'
+    status === 'completed' || status === 'processing' || status === 'error' || status === 'retrying'
       ? status
       : 'idle';
 

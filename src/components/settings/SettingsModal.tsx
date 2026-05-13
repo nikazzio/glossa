@@ -25,10 +25,13 @@ export function SettingsModal() {
     defaultMaxWords,
     setDefaultMinWords,
     setDefaultMaxWords,
+    ollamaBaseUrl,
+    setOllamaBaseUrl,
   } = useUiStore();
   const { t } = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
   const [showPricingOverrides, setShowPricingOverrides] = useState(false);
+  const [urlError, setUrlError] = useState<string | null>(null);
   const trapRef = useFocusTrap(showSettings, () => setShowSettings(false));
   const { overrides, setOverride, resetOverride, resetAll } = usePricingStore();
 
@@ -166,7 +169,26 @@ export function SettingsModal() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Server size={16} className="text-editorial-muted" />
-                      <span className="text-xs font-mono">localhost:11434</span>
+                      <input
+                        type="url"
+                        value={ollamaBaseUrl}
+                        onChange={(e) => {
+                          setOllamaBaseUrl(e.target.value);
+                          setUrlError(null);
+                        }}
+                        onBlur={() => {
+                          if (!ollamaBaseUrl.startsWith('http://') && !ollamaBaseUrl.startsWith('https://')) {
+                            setUrlError(t('ollama.urlInvalid'));
+                          } else {
+                            setUrlError(null);
+                            refreshOllama();
+                          }
+                        }}
+                        className="text-xs font-mono bg-transparent border-b border-editorial-border focus:border-editorial-ink outline-none px-1 w-56"
+                        placeholder="http://localhost:11434"
+                        aria-label={t('ollama.baseUrl')}
+                      />
+                      {urlError && <span className="text-xs text-editorial-accent">{urlError}</span>}
                       {ollamaStatus === 'connected' && (
                         <CheckCircle2 size={12} className="text-editorial-ink" aria-label={t('ollama.connected', { count: ollamaModels.length })} />
                       )}

@@ -3,6 +3,7 @@ import { listen } from '@tauri-apps/api/event';
 import i18n from 'i18next';
 import type { PipelineConfig, PipelineStageConfig, JudgeResult, Issue, TokenUsage, PromptInfo } from '../types';
 import { useChunksStore } from '../stores/chunksStore';
+import { useUiStore } from '../stores/uiStore';
 import { logOperation } from '../stores/operationLogStore';
 
 const LOCALE_NAMES: Record<string, string> = {
@@ -89,6 +90,7 @@ export const llmService = {
       config,
       previousResult: previousResult || null,
       previousTranslation: previousTranslation || null,
+      ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl,
     });
   },
 
@@ -139,6 +141,7 @@ export const llmService = {
         previousResult: previousResult || null,
         previousTranslation: previousTranslation || null,
         streamId,
+        ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl,
       });
     } finally {
       unlisten();
@@ -191,7 +194,7 @@ export const llmService = {
     try {
       const result = await invoke<Omit<JudgeResult, 'status'> & { inputTokens?: number; outputTokens?: number }>(
         'judge_translation',
-        { originalText, translation, config: withUiLanguage(config), streamId },
+        { originalText, translation, config: withUiLanguage(config), streamId, ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl },
       );
       return {
         ...result,
@@ -238,7 +241,7 @@ export const llmService = {
     try {
       const result = await invoke<{ issues: Issue[]; inputTokens?: number; outputTokens?: number }>(
         'run_coherence_for_chunk',
-        { input, config: withUiLanguage(config), streamId },
+        { input, config: withUiLanguage(config), streamId, ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl },
       );
       return {
         ...result,
@@ -259,18 +262,18 @@ export const llmService = {
     model: string,
     context: 'stage' | 'audit' | 'persona',
   ): Promise<string> {
-    return invoke<string>('refine_prompt', { prompt, provider, model, context });
+    return invoke<string>('refine_prompt', { prompt, provider, model, context, ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl });
   },
 
   async testConnection(provider: string): Promise<boolean> {
-    return invoke<boolean>('test_provider_connection', { provider });
+    return invoke<boolean>('test_provider_connection', { provider, ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl });
   },
 
   /** Run pre-flight checks for the given (provider, model, label) entries. */
   async preflightPipeline(
     checks: Array<{ provider: string; model: string; label: string }>,
   ): Promise<PreflightCheckResult[]> {
-    return invoke<PreflightCheckResult[]>('preflight_pipeline', { checks });
+    return invoke<PreflightCheckResult[]>('preflight_pipeline', { checks, ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl });
   },
 };
 
@@ -280,12 +283,12 @@ export const llmService = {
 export const ollamaService = {
   async listModels(): Promise<string[]> {
     logOperation({ level: 'info', scope: 'invoke', message: 'Invoking backend model listing for Ollama' });
-    return invoke<string[]>('list_ollama_models');
+    return invoke<string[]>('list_ollama_models', { ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl });
   },
 
   async checkStatus(): Promise<boolean> {
     logOperation({ level: 'info', scope: 'invoke', message: 'Invoking backend reachability check for Ollama' });
-    return invoke<boolean>('check_ollama_status');
+    return invoke<boolean>('check_ollama_status', { ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl });
   },
 
   async checkPreflight(model?: string): Promise<OllamaPreflightStatus> {
@@ -297,6 +300,7 @@ export const ollamaService = {
     });
     return invoke<OllamaPreflightStatus>('check_ollama_preflight', {
       model: model ?? null,
+      ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl,
     });
   },
 };

@@ -26,9 +26,20 @@ struct CachedOllamaPreflight {
     fetched_at: Instant,
     reachable: bool,
     models: Vec<String>,
+    base_url: String,
 }
 
-pub struct OllamaProvider;
+pub struct OllamaProvider {
+    pub base_url: String,
+}
+
+impl OllamaProvider {
+    pub fn new(base_url: Option<String>) -> Self {
+        OllamaProvider {
+            base_url: base_url.unwrap_or_else(|| OLLAMA_BASE_URL.to_string()),
+        }
+    }
+}
 
 #[async_trait]
 impl LlmProvider for OllamaProvider {
@@ -83,11 +94,11 @@ impl LlmProvider for OllamaProvider {
     }
 
     async fn preflight(&self, model: &str) -> Result<(), String> {
-        ensure_ollama_model_ready(model).await
+        ensure_ollama_model_ready(model, &self.base_url).await
     }
 
     async fn on_idle_timeout(&self, _model: &str) -> bool {
-        check_ollama_alive().await
+        check_ollama_alive(&self.base_url).await
     }
 
     fn finalize_buffer(&self, buffer: &str) -> Option<String> {
@@ -117,7 +128,7 @@ impl LlmProvider for OllamaProvider {
         );
 
         let resp = client
-            .post(format!("{OLLAMA_BASE_URL}/api/chat"))
+            .post(format!("{}/api/chat", self.base_url))
             .json(&body)
             .send()
             .await
@@ -170,7 +181,7 @@ impl LlmProvider for OllamaProvider {
             "ollama",
             ollama_stream_timeouts().header,
             client
-                .post(format!("{OLLAMA_BASE_URL}/api/chat"))
+                .post(format!("{}/api/chat", self.base_url))
                 .json(&body)
                 .send(),
             |e| format_transport_error("ollama", "stream request", e),
@@ -343,11 +354,12 @@ fn find_matching_ollama_model<'a>(
     })
 }
 
-async fn ensure_ollama_preflight(model: Option<&str>) -> Result<OllamaPreflightStatus, String> {
+async fn ensure_ollama_preflight(model: Option<&str>, base_url: &str) -> Result<OllamaPreflightStatus, String> {
     let cached = {
         let guard = OLLAMA_PREFLIGHT_CACHE.lock().unwrap();
         guard.as_ref().and_then(|entry| {
-            (entry.fetched_at.elapsed() < Duration::from_secs(OLLAMA_PREFLIGHT_CACHE_TTL_SECS))
+            (entry.fetched_at.elapsed() < Duration::from_secs(OLLAMA_PREFLIGHT_CACHE_TTL_SECS)
+                && entry.base_url == base_url)
                 .then_some(entry.clone())
         })
     };
@@ -355,9 +367,9 @@ async fn ensure_ollama_preflight(model: Option<&str>) -> Result<OllamaPreflightS
     let base = match cached {
         Some(entry) => entry,
         None => {
-            let reachable = check_ollama_status().await?;
+            let reachable = fetch_ollama_status(base_url).await?;
             let models = if reachable {
-                list_ollama_models().await?
+                fetch_ollama_models(base_url).await?
             } else {
                 vec![]
             };
@@ -365,6 +377,7 @@ async fn ensure_ollama_preflight(model: Option<&str>) -> Result<OllamaPreflightS
                 fetched_at: Instant::now(),
                 reachable,
                 models,
+                base_url: base_url.to_string(),
             };
             let mut guard = OLLAMA_PREFLIGHT_CACHE.lock().unwrap();
             *guard = Some(entry.clone());
@@ -394,13 +407,13 @@ async fn ensure_ollama_preflight(model: Option<&str>) -> Result<OllamaPreflightS
     })
 }
 
-async fn ensure_ollama_model_ready(model: &str) -> Result<(), String> {
-    let status = ensure_ollama_preflight(Some(model)).await?;
+async fn ensure_ollama_model_ready(model: &str, base_url: &str) -> Result<(), String> {
+    let status = ensure_ollama_preflight(Some(model), base_url).await?;
     if !status.reachable {
-        return Err(
-            "Ollama is not reachable on localhost:11434. Start it with 'ollama serve' before running the pipeline."
-                .to_string(),
-        );
+        return Err(format!(
+            "Ollama is not reachable at {}. Start it with 'ollama serve' before running the pipeline.",
+            base_url
+        ));
     }
     if status.models.is_empty() {
         return Err(
@@ -418,26 +431,32 @@ async fn ensure_ollama_model_ready(model: &str) -> Result<(), String> {
 
 /// Lightweight liveness check for the idle-timeout grace period.
 /// Returns `true` if Ollama responds to `/api/ps` within 3 s.
-async fn check_ollama_alive() -> bool {
+async fn check_ollama_alive(base_url: &str) -> bool {
     use crate::llm::stream::build_http_client_with_timeout;
     let Ok(client) = build_http_client_with_timeout(3) else {
         return false;
     };
     client
-        .get(format!("{OLLAMA_BASE_URL}/api/ps"))
+        .get(format!("{base_url}/api/ps"))
         .send()
         .await
         .is_ok()
 }
 
-// ── Tauri commands (Ollama-specific) ──────────────────────────────────
+async fn fetch_ollama_status(base_url: &str) -> Result<bool, String> {
+    use crate::llm::stream::build_http_client_with_timeout;
+    let client = build_http_client_with_timeout(3)?;
+    match client.get(format!("{base_url}/")).send().await {
+        Ok(resp) => Ok(resp.status().is_success()),
+        Err(_) => Ok(false),
+    }
+}
 
-#[tauri::command]
-pub async fn list_ollama_models() -> Result<Vec<String>, String> {
+async fn fetch_ollama_models(base_url: &str) -> Result<Vec<String>, String> {
     use crate::llm::stream::build_http_client_with_timeout;
     let client = build_http_client_with_timeout(3)?;
     let resp = client
-        .get(format!("{OLLAMA_BASE_URL}/api/tags"))
+        .get(format!("{base_url}/api/tags"))
         .send()
         .await
         .map_err(|e| format_transport_error("ollama", "model listing", e))?;
@@ -448,7 +467,7 @@ pub async fn list_ollama_models() -> Result<Vec<String>, String> {
         return Err(format_ollama_api_error(status, &body));
     }
 
-    let json: Value = resp
+    let json: serde_json::Value = resp
         .json()
         .await
         .map_err(|e| format!("Invalid Ollama response: {e}"))?;
@@ -465,19 +484,25 @@ pub async fn list_ollama_models() -> Result<Vec<String>, String> {
     Ok(models)
 }
 
+// ── Tauri commands (Ollama-specific) ──────────────────────────────────
+
 #[tauri::command]
-pub async fn check_ollama_status() -> Result<bool, String> {
-    use crate::llm::stream::build_http_client_with_timeout;
-    let client = build_http_client_with_timeout(3)?;
-    match client.get(format!("{OLLAMA_BASE_URL}/")).send().await {
-        Ok(resp) => Ok(resp.status().is_success()),
-        Err(_) => Ok(false),
-    }
+pub async fn list_ollama_models(ollama_base_url: Option<String>) -> Result<Vec<String>, String> {
+    let base_url = ollama_base_url.as_deref().unwrap_or(OLLAMA_BASE_URL);
+    fetch_ollama_models(base_url).await
+}
+
+#[tauri::command]
+pub async fn check_ollama_status(ollama_base_url: Option<String>) -> Result<bool, String> {
+    let base_url = ollama_base_url.as_deref().unwrap_or(OLLAMA_BASE_URL);
+    fetch_ollama_status(base_url).await
 }
 
 #[tauri::command]
 pub async fn check_ollama_preflight(
     model: Option<String>,
+    ollama_base_url: Option<String>,
 ) -> Result<OllamaPreflightStatus, String> {
-    ensure_ollama_preflight(model.as_deref()).await
+    let base_url = ollama_base_url.as_deref().unwrap_or(OLLAMA_BASE_URL);
+    ensure_ollama_preflight(model.as_deref(), base_url).await
 }
