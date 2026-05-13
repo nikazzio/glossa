@@ -3,9 +3,10 @@ import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../stores/pipelineStore';
 import { useChunksStore } from '../stores/chunksStore';
-import { llmService, ollamaService, isStreamCancelledError } from '../services/llmService';
+import { llmService, isStreamCancelledError } from '../services/llmService';
 import { useUiStore } from '../stores/uiStore';
 import { logOperation } from '../stores/operationLogStore';
+import { showPreflightDialog } from '../stores/preflightStore';
 import { withRetry, friendlyError } from '../utils/retry';
 import { qualityDefault, qualityFailure } from '../utils';
 import type { Issue, JudgeResult, PromptInfo, TokenUsage, TranslationChunk } from '../types';
@@ -21,7 +22,6 @@ function firstNWords(text: string, n: number): string {
 }
 
 type ChunkOutcome = 'completed' | 'failed' | 'cancelled' | 'skipped';
-type OllamaRunRequirement = { provider: string; model?: string | null };
 
 /**
  * Hook that encapsulates pipeline execution logic.
@@ -50,85 +50,92 @@ export function usePipeline() {
   const isProcessing = useChunksStore((state) => state.isProcessing);
   const { t } = useTranslation();
 
-  const ensureOllamaReady = useCallback(async (requirements: OllamaRunRequirement[]) => {
-    const ollamaModels = new Set(
-      requirements
-        .filter((item) => item.provider === 'ollama')
-        .map((item) => item.model?.trim())
-        .filter((model): model is string => Boolean(model)),
-    );
+  type ProviderCheck = { provider: string; model: string; label: string };
 
-    if (ollamaModels.size === 0) return true;
+  /**
+   * Run pre-flight checks for all providers referenced by the given list of
+   * (provider, model, label) entries. Deduplicates by (provider, model).
+   *
+   * - Shows a loading toast while checks are in flight.
+   * - Updates Ollama UI state from the check results.
+   * - Opens the PreflightDialog when any check fails, letting the user decide
+   *   whether to abort (fix config) or proceed anyway.
+   *
+   * Returns true if the pipeline can proceed, false if it should be aborted.
+   */
+  const ensureProvidersReady = useCallback(async (checks: ProviderCheck[]) => {
+    if (checks.length === 0) return true;
 
-    const requestedModels = [...ollamaModels];
+    // Deduplicate by (provider, model) — preserves first occurrence's label.
+    const seen = new Set<string>();
+    const dedupedChecks = checks.filter((c) => {
+      const key = `${c.provider}:${c.model}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
     logOperation({
       level: 'info',
       scope: 'preflight',
-      message: 'Checking whether Ollama is reachable and whether the requested local models are installed',
-      meta: { requestedModels },
+      message: 'Running pre-flight provider checks',
+      meta: { checks: dedupedChecks.map((c) => `${c.provider}/${c.model}`) },
     });
 
+    const toastId = toast.loading(t('preflight.checking'));
+
+    let results: Awaited<ReturnType<typeof llmService.preflightPipeline>>;
     try {
-      const preflight = await ollamaService.checkPreflight(requestedModels[0]);
-      useUiStore.getState().setOllamaStatus(preflight.reachable ? 'connected' : 'disconnected');
-      useUiStore.getState().setOllamaModels(preflight.models);
-
-      if (!preflight.reachable) {
-        logOperation({
-          level: 'error',
-          scope: 'preflight',
-          message: 'Ollama is offline, so the run is blocked before any chunk work starts',
-        });
-        toast.error(t('ollama.notRunning'));
-        return false;
-      }
-      if (preflight.models.length === 0) {
-        logOperation({
-          level: 'warn',
-          scope: 'preflight',
-          message: 'Ollama responded, but there are no installed local models to run',
-        });
-        toast.error(t('ollama.noModels'));
-        return false;
-      }
-
-      const available = new Set(preflight.models);
-      const missing = requestedModels.filter((model) =>
-        !available.has(model) &&
-        !available.has(`${model}:latest`) &&
-        !(model.endsWith(':latest') && available.has(model.slice(0, -7))),
-      );
-
-      if (missing.length > 0) {
-        logOperation({
-          level: 'error',
-          scope: 'preflight',
-          message: `The configured Ollama model "${missing[0]}" is missing locally`,
-        });
-        toast.error(t('ollama.modelMissing', { model: missing[0] }));
-        return false;
-      }
-
-      logOperation({
-        level: 'success',
-        scope: 'preflight',
-        message: 'Ollama preflight passed and the run can proceed',
-        meta: { models: preflight.models.length, availableModels: preflight.models },
-      });
-      return true;
+      results = await llmService.preflightPipeline(dedupedChecks);
     } catch (error: unknown) {
-      useUiStore.getState().setOllamaStatus('disconnected');
-      useUiStore.getState().setOllamaModels([]);
+      toast.dismiss(toastId);
       const msg = friendlyError(error instanceof Error ? error.message : String(error));
       logOperation({
         level: 'error',
         scope: 'preflight',
-        message: 'The preflight request itself failed before the pipeline could start',
+        message: 'Pre-flight check itself failed to run',
         meta: { error: msg },
       });
-      toast.error(t('ollama.notRunning'), { description: msg });
+      toast.error(t('preflight.checkFailed'), { description: msg });
       return false;
     }
+
+    toast.dismiss(toastId);
+
+    // Keep Ollama status indicator and model list in sync.
+    // Use `reachable` (not `ok`) so a missing-model failure doesn't incorrectly
+    // mark Ollama as disconnected when it is actually running.
+    const ollamaResults = results.filter((r) => r.provider === 'ollama');
+    if (ollamaResults.length > 0) {
+      const ollamaReachable = ollamaResults.some((r) => r.reachable === true);
+      const allOllamaOk = ollamaResults.every((r) => r.ok);
+      useUiStore.getState().setOllamaStatus(ollamaReachable || allOllamaOk ? 'connected' : 'disconnected');
+      const allModels = [...new Set(ollamaResults.flatMap((r) => r.availableModels ?? []))];
+      if (allModels.length > 0) {
+        useUiStore.getState().setOllamaModels(allModels);
+      } else if (!ollamaReachable) {
+        useUiStore.getState().setOllamaModels([]);
+      }
+    }
+
+    const hasFailures = results.some((r) => !r.ok);
+
+    if (hasFailures) {
+      logOperation({
+        level: 'warn',
+        scope: 'preflight',
+        message: 'Pre-flight check found provider configuration issues',
+        meta: { failures: results.filter((r) => !r.ok).map((r) => `${r.provider}/${r.model}: ${r.error}`) },
+      });
+      return showPreflightDialog(results);
+    }
+
+    logOperation({
+      level: 'success',
+      scope: 'preflight',
+      message: 'Pre-flight check passed — all providers ready',
+    });
+    return true;
   }, [t]);
 
   // ── Internal helpers ────────────────────────────────────────────────
@@ -433,9 +440,13 @@ export function usePipeline() {
       message: 'Batch pipeline run started',
       meta: { chunks: liveChunks.length, stages: config.stages.filter((stage) => stage.enabled).length },
     });
-    if (!(await ensureOllamaReady([
-      ...config.stages.filter((stage) => stage.enabled).map((stage) => ({ provider: stage.provider, model: stage.model })),
-      { provider: config.judgeProvider, model: config.judgeModel },
+    if (!(await ensureProvidersReady([
+      ...config.stages.filter((stage) => stage.enabled).map((stage, i) => ({
+        provider: stage.provider,
+        model: stage.model,
+        label: `${stage.name || `Stage ${i + 1}`} — ${stage.provider} ${stage.model}`,
+      })),
+      { provider: config.judgeProvider, model: config.judgeModel, label: `Judge — ${config.judgeProvider} ${config.judgeModel}` },
     ]))) return;
     useChunksStore.getState().clearCancelRequest();
     setIsProcessing(true);
@@ -472,16 +483,20 @@ export function usePipeline() {
       });
       toast.warning(t('errors.pipelineCompletedWithErrors', { count: errorCount }));
     }
-  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureOllamaReady]);
+  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureProvidersReady]);
 
   const runSingleChunk = useCallback(async (chunkId: string) => {
     if (useChunksStore.getState().isProcessing) return;
     const chunk = useChunksStore.getState().chunks.find((c) => c.id === chunkId);
     if (!chunk) return;
     logOperation({ level: 'info', scope: 'pipeline', message: 'Single chunk pipeline run started', chunkId });
-    if (!(await ensureOllamaReady([
-      ...config.stages.filter((stage) => stage.enabled).map((stage) => ({ provider: stage.provider, model: stage.model })),
-      { provider: config.judgeProvider, model: config.judgeModel },
+    if (!(await ensureProvidersReady([
+      ...config.stages.filter((stage) => stage.enabled).map((stage, i) => ({
+        provider: stage.provider,
+        model: stage.model,
+        label: `${stage.name || `Stage ${i + 1}`} — ${stage.provider} ${stage.model}`,
+      })),
+      { provider: config.judgeProvider, model: config.judgeModel, label: `Judge — ${config.judgeProvider} ${config.judgeModel}` },
     ]))) return;
     useChunksStore.getState().clearCancelRequest();
     setIsProcessing(true);
@@ -503,14 +518,16 @@ export function usePipeline() {
       // Per-chunk failure already raised a toast inside the helper; no
       // extra summary toast is needed.
     }
-  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureOllamaReady]);
+  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureProvidersReady]);
 
   const runAuditOnly = useCallback(async () => {
     if (useChunksStore.getState().isProcessing) return;
     const liveChunks = useChunksStore.getState().chunks;
     if (liveChunks.length === 0) return;
     logOperation({ level: 'info', scope: 'audit', message: 'Batch audit run started', meta: { chunks: liveChunks.length } });
-    if (!(await ensureOllamaReady([{ provider: config.judgeProvider, model: config.judgeModel }]))) return;
+    if (!(await ensureProvidersReady([
+      { provider: config.judgeProvider, model: config.judgeModel, label: `Judge — ${config.judgeProvider} ${config.judgeModel}` },
+    ]))) return;
     useChunksStore.getState().clearCancelRequest();
     setIsProcessing(true);
 
@@ -543,7 +560,7 @@ export function usePipeline() {
       logOperation({ level: 'success', scope: 'audit', message: 'Batch audit run completed successfully' });
       toast.success(t('errors.reEvalCompleted'));
     }
-  }, [config, t, setIsProcessing, updateChunkJudge, updateChunkStatus, ensureOllamaReady]);
+  }, [config, t, setIsProcessing, updateChunkJudge, updateChunkStatus, ensureProvidersReady]);
 
   const auditSingleChunk = useCallback(async (chunkId: string) => {
     if (useChunksStore.getState().isProcessing) return;
@@ -553,7 +570,9 @@ export function usePipeline() {
       toast.message(t('pipeline.auditSkippedNoDraft'));
       return;
     }
-    if (!(await ensureOllamaReady([{ provider: config.judgeProvider, model: config.judgeModel }]))) return;
+    if (!(await ensureProvidersReady([
+      { provider: config.judgeProvider, model: config.judgeModel, label: `Judge — ${config.judgeProvider} ${config.judgeModel}` },
+    ]))) return;
     logOperation({ level: 'info', scope: 'audit', message: 'Single chunk audit started', chunkId });
     useChunksStore.getState().clearCancelRequest();
     setIsProcessing(true);
@@ -570,7 +589,7 @@ export function usePipeline() {
       logOperation({ level: 'success', scope: 'audit', message: 'Single chunk audit completed', chunkId });
       toast.success(t('pipeline.singleChunkAudited'));
     }
-  }, [config, t, setIsProcessing, updateChunkJudge, updateChunkStatus, ensureOllamaReady]);
+  }, [config, t, setIsProcessing, updateChunkJudge, updateChunkStatus, ensureProvidersReady]);
 
   const runCoherenceAudit = useCallback(async () => {
     if (useChunksStore.getState().isProcessing) return;
@@ -584,7 +603,7 @@ export function usePipeline() {
       toast.message(t('coherence.translationsRequired'));
       return;
     }
-    if (!(await ensureOllamaReady([{ provider: config.judgeProvider, model: config.judgeModel }]))) return;
+    if (!(await ensureProvidersReady([{ provider: config.judgeProvider, model: config.judgeModel, label: `Judge — ${config.judgeProvider} ${config.judgeModel}` }]))) return;
     logOperation({ level: 'info', scope: 'coherence', message: 'Cross-chunk coherence audit started', meta: { chunks: liveChunks.length } });
 
     useChunksStore.getState().clearCancelRequest();
@@ -686,7 +705,7 @@ export function usePipeline() {
       });
       toast.warning(t('coherence.auditCompletedWithErrors', { count: errorCount }));
     }
-  }, [config, t, setIsProcessing, updateChunkCoherence, ensureOllamaReady]);
+  }, [config, t, setIsProcessing, updateChunkCoherence, ensureProvidersReady]);
 
   const cancelPipeline = useCallback(() => {
     requestCancel();

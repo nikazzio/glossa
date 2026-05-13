@@ -52,6 +52,18 @@ export interface OllamaPreflightStatus {
   modelAvailable: boolean;
 }
 
+export interface PreflightCheckResult {
+  provider: string;
+  model: string;
+  label: string;
+  ok: boolean;
+  error: string | null;
+  /** Populated for Ollama only — the full list of locally-installed models. */
+  availableModels: string[] | null;
+  /** True if Ollama responded (even if the model is missing). Null for cloud. */
+  reachable: boolean | null;
+}
+
 /**
  * LLM Service — delegates all AI calls to the Tauri Rust backend.
  * API keys are stored securely in the OS-level store, never in the browser.
@@ -252,6 +264,13 @@ export const llmService = {
 
   async testConnection(provider: string): Promise<boolean> {
     return invoke<boolean>('test_provider_connection', { provider });
+  },
+
+  /** Run pre-flight checks for the given (provider, model, label) entries. */
+  async preflightPipeline(
+    checks: Array<{ provider: string; model: string; label: string }>,
+  ): Promise<PreflightCheckResult[]> {
+    return invoke<PreflightCheckResult[]>('preflight_pipeline', { checks });
   },
 };
 

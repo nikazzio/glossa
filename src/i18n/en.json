@@ -244,6 +244,15 @@
     "unchecked": "Ollama status not checked",
     "uncheckedHint": "Status unchecked. Click \"Refresh\" to verify the connection and load local models."
   },
+  "preflight": {
+    "title": "Pre-flight check",
+    "subtitleFailures": "One or more providers have configuration issues. Fix the settings or proceed anyway.",
+    "subtitleOk": "All providers are reachable and correctly configured.",
+    "checking": "Checking providers…",
+    "checkFailed": "Pre-flight check failed",
+    "openSettings": "Open Settings",
+    "proceedAnyway": "Proceed anyway"
+  },
   "errors": {
     "somethingWentWrong": "Something went wrong",
     "unexpectedError": "An unexpected error occurred.",

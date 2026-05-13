@@ -10,10 +10,15 @@ const llmMocks = vi.hoisted(() => ({
   runStageStream: vi.fn(),
   judgeTranslation: vi.fn(),
   cancelStream: vi.fn(),
+  preflightPipeline: vi.fn(),
 }));
 
 const ollamaMocks = vi.hoisted(() => ({
   checkPreflight: vi.fn(),
+}));
+
+const preflightMocks = vi.hoisted(() => ({
+  showPreflightDialog: vi.fn(),
 }));
 
 vi.mock('../services/llmService', async () => {
@@ -28,24 +33,28 @@ vi.mock('../services/llmService', async () => {
   };
 });
 
+vi.mock('../stores/preflightStore', () => ({
+  showPreflightDialog: preflightMocks.showPreflightDialog,
+  usePreflightStore: vi.fn(),
+}));
+
 vi.mock('sonner', () => ({
   toast: {
     success: vi.fn(),
     warning: vi.fn(),
     error: vi.fn(),
     message: vi.fn(),
+    loading: vi.fn().mockReturnValue('toast-id'),
+    dismiss: vi.fn(),
   },
 }));
 
 describe('usePipeline', () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    ollamaMocks.checkPreflight.mockResolvedValue({
-      reachable: true,
-      models: ['llama3.2'],
-      requestedModel: 'llama3.2',
-      modelAvailable: true,
-    });
+    (toast.loading as ReturnType<typeof vi.fn>).mockReturnValue('toast-id');
+    llmMocks.preflightPipeline.mockResolvedValue([]);
+    preflightMocks.showPreflightDialog.mockResolvedValue(true);
 
     usePipelineStore.setState((state) => ({
       ...state,
@@ -223,12 +232,10 @@ describe('usePipeline', () => {
         ],
       },
     }));
-    ollamaMocks.checkPreflight.mockResolvedValueOnce({
-      reachable: false,
-      models: [],
-      requestedModel: 'llama3.2',
-      modelAvailable: false,
-    });
+    llmMocks.preflightPipeline.mockResolvedValueOnce([
+      { provider: 'ollama', model: 'llama3.2', label: 'Stage 1 — ollama llama3.2', ok: false, error: 'Ollama is not running' },
+    ]);
+    preflightMocks.showPreflightDialog.mockResolvedValueOnce(false);
 
     const { result } = renderHook(() => usePipeline());
     await act(async () => {
@@ -236,40 +243,7 @@ describe('usePipeline', () => {
     });
 
     expect(llmMocks.runStageStream).not.toHaveBeenCalled();
-    expect(toast.error).toHaveBeenCalled();
-  });
-
-  it('blocks the run when Ollama has no installed models', async () => {
-    usePipelineStore.setState((state) => ({
-      ...state,
-      config: {
-        ...state.config,
-        stages: [
-          {
-            id: 'stg-1',
-            name: 'Stage 1',
-            prompt: 'Translate',
-            model: 'llama3.2',
-            provider: 'ollama',
-            enabled: true,
-          },
-        ],
-      },
-    }));
-    ollamaMocks.checkPreflight.mockResolvedValueOnce({
-      reachable: true,
-      models: [],
-      requestedModel: 'llama3.2',
-      modelAvailable: false,
-    });
-
-    const { result } = renderHook(() => usePipeline());
-    await act(async () => {
-      await result.current.runPipeline();
-    });
-
-    expect(llmMocks.runStageStream).not.toHaveBeenCalled();
-    expect(toast.error).toHaveBeenCalled();
+    expect(preflightMocks.showPreflightDialog).toHaveBeenCalled();
   });
 
   it('blocks the run when the configured Ollama model is missing', async () => {
@@ -289,12 +263,10 @@ describe('usePipeline', () => {
         ],
       },
     }));
-    ollamaMocks.checkPreflight.mockResolvedValueOnce({
-      reachable: true,
-      models: ['mistral:latest'],
-      requestedModel: 'llama3.2',
-      modelAvailable: false,
-    });
+    llmMocks.preflightPipeline.mockResolvedValueOnce([
+      { provider: 'ollama', model: 'llama3.2', label: 'Stage 1 — ollama llama3.2', ok: false, error: 'Model "llama3.2" is not installed locally' },
+    ]);
+    preflightMocks.showPreflightDialog.mockResolvedValueOnce(false);
 
     const { result } = renderHook(() => usePipeline());
     await act(async () => {
@@ -302,10 +274,10 @@ describe('usePipeline', () => {
     });
 
     expect(llmMocks.runStageStream).not.toHaveBeenCalled();
-    expect(toast.error).toHaveBeenCalled();
+    expect(preflightMocks.showPreflightDialog).toHaveBeenCalled();
   });
 
-  it('shows a friendly toast when Ollama preflight throws', async () => {
+  it('shows a friendly toast when preflight pipeline call throws', async () => {
     usePipelineStore.setState((state) => ({
       ...state,
       config: {
@@ -322,7 +294,7 @@ describe('usePipeline', () => {
         ],
       },
     }));
-    ollamaMocks.checkPreflight.mockRejectedValueOnce(new Error('invoke failed'));
+    llmMocks.preflightPipeline.mockRejectedValueOnce(new Error('invoke failed'));
 
     const { result } = renderHook(() => usePipeline());
     await act(async () => {

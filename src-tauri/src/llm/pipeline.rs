@@ -11,7 +11,7 @@ use crate::llm::providers::get_provider;
 use crate::llm::stream::{stream_response, StreamGuard, StreamRegistry, STREAM_CANCELLED_ERROR};
 use crate::llm::types::{
     CoherenceChunkInput, CoherenceResponse, JudgeIssue, JudgeResponse, PipelineConfig,
-    ProviderRuntimeConfig, StageConfig,
+    PreflightCheckInput, PreflightCheckResult, ProviderRuntimeConfig, StageConfig,
 };
 
 #[derive(serde::Serialize, Clone)]
@@ -351,4 +351,73 @@ pub async fn test_provider_connection(app: AppHandle, provider: String) -> Resul
         Ok(_) => Ok(true),
         Err(e) => Err(e),
     }
+}
+
+/// Run pre-flight connectivity checks for a set of (provider, model) pairs before
+/// starting a pipeline run. Each entry is checked independently:
+/// - Ollama: verifies reachability and that the specific model is installed.
+/// - Cloud providers: verifies the API key is configured and makes a lightweight
+///   test call to confirm the key is valid and the provider is reachable.
+///
+/// Returns one result per input entry (order preserved). The caller is responsible
+/// for deduplicating entries before calling this command.
+#[tauri::command]
+pub async fn preflight_pipeline(
+    app: AppHandle,
+    checks: Vec<PreflightCheckInput>,
+) -> Result<Vec<PreflightCheckResult>, String> {
+    let mut results = Vec::new();
+    for check in checks {
+        let (ok, error, available_models, reachable) = if check.provider == "ollama" {
+            match run_ollama_preflight_check(&check.model).await {
+                Ok(models) => (true, None, Some(models), Some(true)),
+                Err((is_reachable, e)) => (false, Some(e), None, Some(is_reachable)),
+            }
+        } else {
+            match run_cloud_preflight_check(&app, &check.provider, &check.model).await {
+                Ok(()) => (true, None, None, None),
+                Err(e) => (false, Some(e), None, None),
+            }
+        };
+        results.push(PreflightCheckResult {
+            provider: check.provider,
+            model: check.model,
+            label: check.label,
+            ok,
+            error,
+            available_models,
+            reachable,
+        });
+    }
+    Ok(results)
+}
+
+// Returns Err((reachable, error_msg)) so callers can distinguish "offline"
+// from "model not installed" without parsing the error string.
+async fn run_ollama_preflight_check(model: &str) -> Result<Vec<String>, (bool, String)> {
+    let status = crate::llm::providers::ollama::check_ollama_preflight(Some(model.to_string()))
+        .await
+        .map_err(|e| (false, e))?;
+    if !status.reachable {
+        return Err((false, "Ollama is not running".into()));
+    }
+    if !status.model_available {
+        return Err((true, format!("Model \"{model}\" is not installed locally")));
+    }
+    Ok(status.models)
+}
+
+async fn run_cloud_preflight_check(app: &AppHandle, provider: &str, model: &str) -> Result<(), String> {
+    let api_key = get_api_key(app, provider)?;
+    let prov = get_provider(provider)?;
+    let client = prov.http_client()?;
+    let req = LlmRequest {
+        model,
+        system_prompt: "You are a test assistant.",
+        user_prompt: "Reply with exactly: OK",
+        api_key: &api_key,
+        json_mode: false,
+        provider_options: None,
+    };
+    prov.call(&client, &req).await.map(|_| ())
 }

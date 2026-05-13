@@ -66,6 +66,7 @@ pub fn run() {
             llm::pipeline::judge_translation,
             llm::pipeline::refine_prompt,
             llm::pipeline::test_provider_connection,
+            llm::pipeline::preflight_pipeline,
             llm::pipeline::run_coherence_for_chunk,
             keystore::save_api_key,
             keystore::get_api_key_status,
