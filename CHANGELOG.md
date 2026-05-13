@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.7.0](https://github.com/nikazzio/glossa/compare/glossa-v0.6.2...glossa-v0.7.0) (2026-05-13)
+
+
+### ✨ Features
+
+* checkpoint & resume interrupted translations ([#134](https://github.com/nikazzio/glossa/issues/134)) ([e9ef24a](https://github.com/nikazzio/glossa/commit/e9ef24ada5d7eee59575294d643ef1fe79eed70a))
+* configurable Ollama host + retry UI feedback ([#125](https://github.com/nikazzio/glossa/issues/125), [#122](https://github.com/nikazzio/glossa/issues/122)) ([#135](https://github.com/nikazzio/glossa/issues/135)) ([ff03bf5](https://github.com/nikazzio/glossa/commit/ff03bf5eb9ed88c8c69611d099c2d137a5c6b18b))
+* per-project configurable persona ([#131](https://github.com/nikazzio/glossa/issues/131)) ([93cb88c](https://github.com/nikazzio/glossa/commit/93cb88cb0e8c8dc687c1ffe975bc3baa7a6b67b4))
+* pre-flight validation of all pipeline providers before run ([#133](https://github.com/nikazzio/glossa/issues/133)) ([8cc23bf](https://github.com/nikazzio/glossa/commit/8cc23bfec5bb3059e41dc0b04b73c559392a63b9))
+* token context overflow detection ([#121](https://github.com/nikazzio/glossa/issues/121)) ([#136](https://github.com/nikazzio/glossa/issues/136)) ([40489df](https://github.com/nikazzio/glossa/commit/40489dfdac1c04d560ef505022d5807a0acbdf8f))
+
+
+### ♻️ Refactoring
+
+* LlmProvider trait — elimina match provider duplicati (issue [#61](https://github.com/nikazzio/glossa/issues/61)) ([#118](https://github.com/nikazzio/glossa/issues/118)) ([34c8289](https://github.com/nikazzio/glossa/commit/34c828947ee5051e7cb17bd934a7469c12c75660))
+
 ## [0.6.2](https://github.com/nikazzio/glossa/compare/glossa-v0.6.1...glossa-v0.6.2) (2026-05-10)
 
 
