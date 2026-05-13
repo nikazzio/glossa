@@ -578,7 +578,7 @@ function StageTraceDialog({
           </p>
         </div>
         <div className="flex-1 overflow-y-auto px-6 py-6 md:px-8 custom-scrollbar">
-          {result?.status === 'processing' ? (
+          {result?.status === 'processing' || result?.status === 'retrying' ? (
             <div className="rounded-[22px] border border-editorial-border bg-editorial-textbox/35 p-5">
               <ProcessingLine />
             </div>
@@ -709,6 +709,7 @@ const COMPACT_STATUS_TONE = {
   processing:
     'border-editorial-warning/45 bg-editorial-warning/12 text-editorial-warning animate-pulse',
   error: 'border-editorial-accent/40 bg-editorial-accent/10 text-editorial-accent',
+  retrying: 'border-amber-500/45 bg-amber-500/12 text-amber-600 animate-pulse',
   idle: 'border-editorial-border bg-editorial-bg text-editorial-muted',
 } as const;
 
@@ -722,7 +723,7 @@ function CompactStatusIndicator({
   icon?: LucideIcon;
 }) {
   const tone =
-    status === 'completed' || status === 'processing' || status === 'error'
+    status === 'completed' || status === 'processing' || status === 'error' || status === 'retrying'
       ? status
       : 'idle';
 

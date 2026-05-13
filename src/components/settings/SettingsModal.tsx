@@ -25,10 +25,14 @@ export function SettingsModal() {
     defaultMaxWords,
     setDefaultMinWords,
     setDefaultMaxWords,
+    ollamaBaseUrl,
+    setOllamaBaseUrl,
   } = useUiStore();
   const { t } = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
   const [showPricingOverrides, setShowPricingOverrides] = useState(false);
+  const [urlDraft, setUrlDraft] = useState(ollamaBaseUrl);
+  const [urlError, setUrlError] = useState<string | null>(null);
   const trapRef = useFocusTrap(showSettings, () => setShowSettings(false));
   const { overrides, setOverride, resetOverride, resetAll } = usePricingStore();
 
@@ -54,7 +58,7 @@ export function SettingsModal() {
     <AnimatePresence>
       {showSettings && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-6 sm:p-12"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="settings-title"
@@ -64,25 +68,32 @@ export function SettingsModal() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-editorial-ink/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-editorial-ink/35 backdrop-blur-sm"
             onClick={() => setShowSettings(false)}
           />
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
-            className="relative bg-editorial-bg w-full max-w-2xl max-h-[80vh] overflow-y-auto p-12 custom-scrollbar shadow-2xl border border-editorial-border"
+            className="relative flex flex-col bg-editorial-bg w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-[28px] border border-editorial-border shadow-[0_24px_80px_rgba(26,26,26,0.2)]"
           >
-            <button
-              onClick={() => setShowSettings(false)}
-              title={t('settings.close')}
-              className="absolute top-8 right-8 text-editorial-muted hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              aria-label={t('settings.close')}
-            >
-              <X size={24} />
-            </button>
-            <h2 id="settings-title" className="font-display text-3xl italic tracking-tight mb-12">{t('settings.title')}</h2>
+            {/* ── Header ── */}
+            <div className="shrink-0 border-b border-editorial-border px-8 pb-5 pt-6 flex items-center justify-between gap-4">
+              <h2 id="settings-title" className="font-display text-2xl italic tracking-tight text-editorial-ink">
+                {t('settings.title')}
+              </h2>
+              <button
+                onClick={() => setShowSettings(false)}
+                title={t('settings.close')}
+                className="text-editorial-muted hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                aria-label={t('settings.close')}
+              >
+                <X size={20} />
+              </button>
+            </div>
 
+            {/* ── Scrollable body ── */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar px-8 py-8">
             <div className="space-y-12">
               {/* Segmentation defaults */}
               <div className="space-y-4">
@@ -166,7 +177,28 @@ export function SettingsModal() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Server size={16} className="text-editorial-muted" />
-                      <span className="text-xs font-mono">localhost:11434</span>
+                      <input
+                        type="url"
+                        value={urlDraft}
+                        onChange={(e) => {
+                          setUrlDraft(e.target.value);
+                          setUrlError(null);
+                        }}
+                        onBlur={() => {
+                          const trimmed = urlDraft.trim();
+                          if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+                            setUrlError(t('ollama.urlInvalid'));
+                          } else {
+                            setUrlError(null);
+                            setOllamaBaseUrl(trimmed);
+                            refreshOllama();
+                          }
+                        }}
+                        className="text-xs font-mono bg-transparent border-b border-editorial-border focus:border-editorial-ink outline-none px-1 w-56"
+                        placeholder="http://localhost:11434"
+                        aria-label={t('ollama.baseUrl')}
+                      />
+                      {urlError && <span className="text-xs text-editorial-accent">{urlError}</span>}
                       {ollamaStatus === 'connected' && (
                         <CheckCircle2 size={12} className="text-editorial-ink" aria-label={t('ollama.connected', { count: ollamaModels.length })} />
                       )}
@@ -322,13 +354,6 @@ export function SettingsModal() {
                 </div>
               </div>
 
-              <div className="pt-8 border-t border-editorial-border flex justify-end">
-                <button
-                  onClick={() => setShowSettings(false)}
-                  className="bg-editorial-ink text-white px-8 py-4 text-[11px] font-bold uppercase tracking-widest transition-all hover:opacity-90 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
-                >
-                  {t('settings.close')}
-                </button>
               </div>
             </div>
           </motion.div>

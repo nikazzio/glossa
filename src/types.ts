@@ -104,10 +104,11 @@ export interface PromptTemplate {
 
 export interface PipelineResult {
   content: string;
-  status: 'idle' | 'processing' | 'completed' | 'error';
+  status: 'idle' | 'processing' | 'completed' | 'error' | 'retrying';
   error?: string;
   tokenUsage?: TokenUsage;
   promptInfo?: PromptInfo;
+  retryInfo?: { attempt: number; total: number; delayMs: number };
 }
 
 export interface JudgeResult extends PipelineResult {

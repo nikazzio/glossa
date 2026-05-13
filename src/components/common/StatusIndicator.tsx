@@ -1,6 +1,9 @@
+import { useTranslation } from 'react-i18next';
+
 interface StatusIndicatorProps {
   status: string;
   label: string;
+  retryInfo?: { attempt: number; total: number; delayMs: number };
 }
 
 const STATUS_TONE = {
@@ -16,6 +19,10 @@ const STATUS_TONE = {
     dot: 'bg-editorial-accent ring-editorial-accent/30',
     label: 'text-editorial-accent',
   },
+  retrying: {
+    dot: 'bg-amber-500 ring-amber-500/30 animate-pulse',
+    label: 'text-amber-600',
+  },
   idle: {
     dot: 'bg-editorial-border ring-editorial-border/0',
     label: 'text-editorial-muted/60',
@@ -25,13 +32,14 @@ const STATUS_TONE = {
 type StatusKey = keyof typeof STATUS_TONE;
 
 function resolveTone(status: string): StatusKey {
-  if (status === 'completed' || status === 'processing' || status === 'error') {
+  if (status === 'completed' || status === 'processing' || status === 'error' || status === 'retrying') {
     return status;
   }
   return 'idle';
 }
 
-export function StatusIndicator({ status, label }: StatusIndicatorProps) {
+export function StatusIndicator({ status, label, retryInfo }: StatusIndicatorProps) {
+  const { t } = useTranslation();
   const tone = STATUS_TONE[resolveTone(status)];
   return (
     <div
@@ -45,6 +53,15 @@ export function StatusIndicator({ status, label }: StatusIndicatorProps) {
       >
         {label}
       </span>
+      {status === 'retrying' && retryInfo && (
+        <span className={`text-[9px] ${tone.label}`}>
+          {t('pipeline.retrying', {
+            seconds: Math.round(retryInfo.delayMs / 1000),
+            attempt: retryInfo.attempt,
+            total: retryInfo.total,
+          })}
+        </span>
+      )}
     </div>
   );
 }

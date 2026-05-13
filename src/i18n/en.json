@@ -112,6 +112,7 @@
     "auditSkippedNoDraft": "Nothing to audit yet — translate this chunk first.",
     "chunkActions": "Chunk actions",
     "retranslateChunk": "Run pipeline on this unit",
+    "retrying": "Rate limit — retry in {{seconds}}s ({{attempt}}/{{total}})",
     "reauditChunk": "Re-audit this chunk",
     "prompt": "Prompt",
     "auditModelLabel": "Audit Model",
@@ -239,10 +240,12 @@
     "modelMissing": "The Ollama model \"{{model}}\" is not installed locally. Pull it first or change the pipeline configuration.",
     "modelPlaceholder": "Type model name...",
     "connected": "Ollama connected, {{count}} model(s) available",
-    "disconnected": "Ollama not reachable on localhost:11434",
+    "disconnected": "Ollama not reachable at configured address",
     "selectedButOffline": "You picked Ollama but it isn't connected — check Settings",
     "unchecked": "Ollama status not checked",
-    "uncheckedHint": "Status unchecked. Click \"Refresh\" to verify the connection and load local models."
+    "uncheckedHint": "Status unchecked. Click \"Refresh\" to verify the connection and load local models.",
+    "baseUrl": "Ollama base URL",
+    "urlInvalid": "URL must start with http:// or https://"
   },
   "preflight": {
     "title": "Pre-flight check",

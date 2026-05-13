@@ -37,6 +37,10 @@ export async function withRetry<T>(
   throw new Error(`${label} failed after ${maxRetries + 1} attempts`);
 }
 
+export function is429Error(message: string): boolean {
+  return /rate.?limit|429|quota/i.test(message);
+}
+
 function isTimeoutError(message: string): boolean {
   const timeoutPatterns = [
     'timed out',

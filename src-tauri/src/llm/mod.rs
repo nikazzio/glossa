@@ -50,14 +50,14 @@ mod tests {
     impl DelegatingTestProvider {
         fn new(id: &str) -> Self {
             Self {
-                inner: get_provider(id).expect("test provider must exist"),
+                inner: get_provider(id, None).expect("test provider must exist"),
                 timeouts: None,
             }
         }
 
         fn with_timeouts(id: &str, timeouts: StreamTimeouts) -> Self {
             Self {
-                inner: get_provider(id).expect("test provider must exist"),
+                inner: get_provider(id, None).expect("test provider must exist"),
                 timeouts: Some(timeouts),
             }
         }
@@ -242,7 +242,7 @@ mod tests {
 
     #[test]
     fn extract_unknown_provider_returns_none() {
-        assert!(get_provider("unknown").is_err());
+        assert!(get_provider("unknown", None).is_err());
     }
 
     #[test]
@@ -629,7 +629,7 @@ mod tests {
 
     #[test]
     fn call_provider_rejects_unknown() {
-        match get_provider("fake_provider") {
+        match get_provider("fake_provider", None) {
             Err(e) => assert!(e.contains("Unknown provider"), "unexpected error: {e}"),
             Ok(_) => panic!("expected get_provider to fail for unknown id"),
         }
