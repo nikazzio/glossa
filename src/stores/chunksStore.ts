@@ -146,6 +146,7 @@ interface ChunksState {
   splitChunkAt: (chunkId: string, splitAt: number) => boolean;
   mergeChunkWithNext: (chunkId: string) => void;
   resetCompletedChunks: () => void;
+  resetAllChunks: () => void;
   unlockChunkForEdit: (chunkId: string) => void;
   clearChunkStages: (chunkId: string) => void;
 }
@@ -373,6 +374,13 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
     set((state) => ({
       chunks: state.chunks.map((chunk) =>
         chunk.status === 'completed' ? resetChunkForSourceEdit(chunk) : chunk,
+      ),
+    })),
+
+  resetAllChunks: () =>
+    set((state) => ({
+      chunks: state.chunks.map((chunk) =>
+        chunk.status !== 'ready' ? resetChunkForSourceEdit(chunk) : chunk,
       ),
     })),
 

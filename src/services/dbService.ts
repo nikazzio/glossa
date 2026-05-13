@@ -50,6 +50,8 @@ const ALLOWED_MIGRATIONS = new Set([
   'pipeline_configs.persona',
   'pipeline_configs.custom_source_language',
   'pipeline_configs.custom_target_language',
+  'pipeline_configs.run_in_progress',
+  'pipeline_configs.last_run_config',
 ]);
 
 export async function ensureColumn(table: string, column: string, definition: string): Promise<void> {
@@ -244,6 +246,8 @@ export async function initDatabase(): Promise<void> {
   await ensureColumn('translations', 'coherence_result', 'TEXT DEFAULT NULL');
   await ensureColumn('translations', 'footnotes', 'TEXT DEFAULT NULL');
   await ensureColumn('prompt_templates', 'context', "TEXT NOT NULL DEFAULT 'stage'");
+  await ensureColumn('pipeline_configs', 'run_in_progress', 'INTEGER DEFAULT 0');
+  await ensureColumn('pipeline_configs', 'last_run_config', 'TEXT DEFAULT NULL');
   // Migrate unique index from (name) to (name, context) so stage/audit can share names
   await conn.execute('DROP INDEX IF EXISTS idx_prompt_templates_name');
   await conn.execute(`

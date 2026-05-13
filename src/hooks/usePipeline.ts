@@ -10,6 +10,9 @@ import { showPreflightDialog } from '../stores/preflightStore';
 import { withRetry, friendlyError } from '../utils/retry';
 import { qualityDefault, qualityFailure } from '../utils';
 import type { Issue, JudgeResult, PromptInfo, TokenUsage, TranslationChunk } from '../types';
+import { useProjectStore } from '../stores/projectStore';
+import { saveChunkCheckpoint, setRunInProgress } from '../services/projectService';
+import { buildPipelineFingerprint } from '../utils/pipelineFingerprint';
 
 function lastNWords(text: string, n: number): string {
   const words = text.trim().split(/\s+/);
@@ -451,6 +454,11 @@ export function usePipeline() {
     useChunksStore.getState().clearCancelRequest();
     setIsProcessing(true);
 
+    const projectId = useProjectStore.getState().currentProjectId;
+    if (projectId) {
+      void setRunInProgress(projectId, true, buildPipelineFingerprint(config)).catch(() => {});
+    }
+
     let errorCount = 0;
     let cancelled = false;
     let previousTranslation: string | undefined;
@@ -459,6 +467,13 @@ export function usePipeline() {
       const outcome = await executePipelineForChunk(chunk, { skipIfCompleted: true, previousTranslation });
       if (outcome === 'cancelled') { cancelled = true; break; }
       if (outcome === 'failed') errorCount++;
+      if ((outcome === 'completed' || outcome === 'failed') && projectId) {
+        const fresh = useChunksStore.getState().chunks.find((c) => c.id === chunk.id);
+        const position = liveChunks.indexOf(chunk);
+        if (fresh) {
+          void saveChunkCheckpoint(projectId, fresh, position).catch(() => {});
+        }
+      }
       if (outcome === 'completed' || outcome === 'skipped') {
         const fresh = useChunksStore.getState().chunks.find((c) => c.id === chunk.id);
         previousTranslation = fresh?.translationProcessingText || undefined;
@@ -467,6 +482,10 @@ export function usePipeline() {
 
     setIsProcessing(false);
     useChunksStore.getState().clearCancelRequest();
+
+    if (projectId) {
+      void setRunInProgress(projectId, false).catch(() => {});
+    }
 
     if (cancelled) {
       logOperation({ level: 'warn', scope: 'pipeline', message: 'Batch pipeline run was cancelled by the user' });

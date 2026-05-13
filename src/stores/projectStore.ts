@@ -26,6 +26,8 @@ interface ProjectState {
   saveState: 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
   lastSaveError: string | null;
   trackedSnapshot: string | null;
+  runInterrupted: boolean;
+  lastRunConfig: string | null;
 
   setShowProjectPanel: (show: boolean) => void;
   loadProjects: () => Promise<void>;
@@ -34,6 +36,7 @@ interface ProjectState {
   removeProject: (id: string) => Promise<void>;
   saveCurrentProject: (name?: string) => Promise<void>;
   closeProject: () => void;
+  clearResumeState: () => void;
 }
 
 export const useProjectStore = create<ProjectState>((set, get) => ({
@@ -43,6 +46,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   saveState: 'idle',
   lastSaveError: null,
   trackedSnapshot: null,
+  runInterrupted: false,
+  lastRunConfig: null,
 
   setShowProjectPanel: (show) => {
     set({ showProjectPanel: show });
@@ -117,6 +122,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       saveState: 'saved',
       lastSaveError: null,
       trackedSnapshot: null,
+      runInterrupted: config.runInProgress,
+      lastRunConfig: config.lastRunConfig,
     });
   },
 
@@ -145,8 +152,12 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       saveState: 'idle',
       lastSaveError: null,
       trackedSnapshot: null,
+      runInterrupted: false,
+      lastRunConfig: null,
     });
   },
+
+  clearResumeState: () => set({ runInterrupted: false, lastRunConfig: null }),
 
   saveCurrentProject: async (name?: string) => {
     if (saveInFlight) {

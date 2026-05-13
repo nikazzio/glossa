@@ -784,5 +784,13 @@
     "levelError": "error",
     "unitLabel": "Unit",
     "showPrompt": "show prompt"
+  },
+  "resume": {
+    "title": "Translation interrupted",
+    "progress": "{{completed}}/{{total}} chunks completed — resume from where it left off?",
+    "configChanged": "Warning: the pipeline configuration has changed since the last run.",
+    "resumeButton": "Resume",
+    "restartButton": "Restart from scratch",
+    "dismiss": "Dismiss"
   }
 }
