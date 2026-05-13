@@ -342,12 +342,19 @@ pub(crate) fn parse_ollama_usage(json: &Value) -> Option<(u32, u32)> {
 fn format_ollama_api_error(status: reqwest::StatusCode, body: &str) -> String {
     #[cfg(debug_assertions)]
     log::debug!("Ollama API error body ({status}): {body}");
-    #[cfg(not(debug_assertions))]
-    let _ = body;
 
+    let body_lower = body.to_lowercase();
     match status.as_u16() {
+        400 if body_lower.contains("context")
+            || body_lower.contains("too long")
+            || body_lower.contains("maximum context")
+            || body_lower.contains("context_length_exceeded") =>
+        {
+            "Ollama context window exceeded — reduce chunk size or lower numCtx in Settings.".to_string()
+        }
         404 => "Ollama model or endpoint not found. Verify that the configured model is installed locally.".to_string(),
         408 => "Ollama timed out while preparing the response. The model may be too large for the available VRAM/CPU budget.".to_string(),
+        413 => "Ollama context window exceeded — reduce chunk size or lower numCtx in Settings.".to_string(),
         503 => "Ollama is overloaded and rejected the request. The server queue may be full or the machine may not have enough free memory.".to_string(),
         500..=599 => "Ollama failed while loading or running the model. This usually means insufficient VRAM, a model crash, or a local server fault.".to_string(),
         _ => format!("Ollama API error ({status}): unexpected response"),

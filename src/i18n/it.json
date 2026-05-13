@@ -182,7 +182,8 @@
     "refinePrompt": "Rifinisci prompt",
     "refining": "Rifinendo...",
     "refined": "Prompt rifinito",
-    "refineFailed": "Rifinizione fallita"
+    "refineFailed": "Rifinizione fallita",
+    "contextOverflowWarning": "Il chunk più lungo (~{{tokens}} token) potrebbe superare la finestra di contesto di {{model}} ({{window}} token). Riduci la dimensione dei chunk o usa un modello con contesto più grande."
   },
   "audit": {
     "title": "Log Audit",
@@ -266,7 +267,8 @@
     "pipelineCompleted": "Pipeline completata con successo",
     "pipelineCompletedWithErrors": "Pipeline completata con {{count}} errore/i",
     "reEvalCompleted": "Rivalutazione completata",
-    "coherenceFailed": "Audit di coerenza fallito"
+    "coherenceFailed": "Audit di coerenza fallito",
+    "contextOverflow": "Finestra di contesto superata. Riduci la dimensione dei chunk o usa un modello con una finestra di contesto più grande."
   },
   "coherence": {
     "title": "Coerenza Documento",

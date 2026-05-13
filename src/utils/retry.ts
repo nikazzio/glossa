@@ -66,11 +66,12 @@ function sleep(ms: number): Promise<void> {
 }
 
 /** Classify an error string into a user-friendly category */
-export type ErrorCategory = 'config' | 'network' | 'rate_limit' | 'api' | 'parse' | 'unknown';
+export type ErrorCategory = 'config' | 'network' | 'rate_limit' | 'context_overflow' | 'api' | 'parse' | 'unknown';
 
 export function classifyError(message: string): ErrorCategory {
   if (isConfigError(message)) return 'config';
   if (/rate.?limit|429|quota/i.test(message)) return 'rate_limit';
+  if (/context.window.exceeded|context_length_exceeded|maximum context|input too large|413/i.test(message)) return 'context_overflow';
   if (/network|fetch|timeout|ECONNREFUSED|ENOTFOUND/i.test(message)) return 'network';
   if (/parse|JSON|unexpected token/i.test(message)) return 'parse';
   if (/API error|request failed|status/i.test(message)) return 'api';
@@ -86,6 +87,8 @@ export function friendlyError(message: string): string {
       return message; // Already user-friendly from backend
     case 'rate_limit':
       return 'Rate limit reached. The request will be retried automatically.';
+    case 'context_overflow':
+      return 'Context window exceeded. Reduce the chunk size in Settings or switch to a model with a larger context window.';
     case 'network':
       return 'Network error. Please check your internet connection.';
     case 'parse':
