@@ -292,11 +292,14 @@ export async function saveChunkCheckpoint(
        source_display_text, source_processing_text, translation_display_text, translation_processing_text
      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
      ON CONFLICT(id) DO UPDATE SET
+       original_text                = excluded.original_text,
+       final_translation            = excluded.final_translation,
+       position                     = excluded.position,
        chunk_status                 = excluded.chunk_status,
        stage_results                = excluded.stage_results,
-       final_translation            = excluded.final_translation,
        judge_status                 = excluded.judge_status,
        judge_rating                 = excluded.judge_rating,
+       translation_locked           = excluded.translation_locked,
        judge_issues                 = excluded.judge_issues,
        translation_display_text     = excluded.translation_display_text,
        translation_processing_text  = excluded.translation_processing_text,
@@ -308,7 +311,7 @@ export async function saveChunkCheckpoint(
       chunk.id,
       projectId,
       chunk.sourceDisplayText,
-      chunk.translationDisplayText || chunk.judgeResult.content || '',
+      chunk.translationDisplayText || chunk.judgeResult.content || lastStageContent(chunk.stageResults) || '',
       position,
       chunk.status,
       JSON.stringify(chunk.stageResults),

@@ -463,28 +463,29 @@ export function usePipeline() {
     let cancelled = false;
     let previousTranslation: string | undefined;
 
-    for (const chunk of liveChunks) {
-      const outcome = await executePipelineForChunk(chunk, { skipIfCompleted: true, previousTranslation });
-      if (outcome === 'cancelled') { cancelled = true; break; }
-      if (outcome === 'failed') errorCount++;
-      if ((outcome === 'completed' || outcome === 'failed') && projectId) {
-        const fresh = useChunksStore.getState().chunks.find((c) => c.id === chunk.id);
-        const position = liveChunks.indexOf(chunk);
-        if (fresh) {
-          void saveChunkCheckpoint(projectId, fresh, position).catch(() => {});
+    try {
+      for (const chunk of liveChunks) {
+        const outcome = await executePipelineForChunk(chunk, { skipIfCompleted: true, previousTranslation });
+        if (outcome === 'cancelled') { cancelled = true; break; }
+        if (outcome === 'failed') errorCount++;
+        if ((outcome === 'completed' || outcome === 'failed') && projectId) {
+          const fresh = useChunksStore.getState().chunks.find((c) => c.id === chunk.id);
+          const position = liveChunks.indexOf(chunk);
+          if (fresh) {
+            void saveChunkCheckpoint(projectId, fresh, position).catch(() => {});
+          }
+        }
+        if (outcome === 'completed' || outcome === 'skipped') {
+          const fresh = useChunksStore.getState().chunks.find((c) => c.id === chunk.id);
+          previousTranslation = fresh?.translationProcessingText || undefined;
         }
       }
-      if (outcome === 'completed' || outcome === 'skipped') {
-        const fresh = useChunksStore.getState().chunks.find((c) => c.id === chunk.id);
-        previousTranslation = fresh?.translationProcessingText || undefined;
+    } finally {
+      setIsProcessing(false);
+      useChunksStore.getState().clearCancelRequest();
+      if (projectId) {
+        void setRunInProgress(projectId, false).catch(() => {});
       }
-    }
-
-    setIsProcessing(false);
-    useChunksStore.getState().clearCancelRequest();
-
-    if (projectId) {
-      void setRunInProgress(projectId, false).catch(() => {});
     }
 
     if (cancelled) {
