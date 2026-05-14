@@ -1,4 +1,4 @@
-import type { ModelProvider } from '../types';
+import type { ModelProvider, PipelineStageConfig } from '../types';
 
 export type ModelStatus = 'stable' | 'preview' | 'deprecated';
 
@@ -35,6 +35,30 @@ export function getModelEntry(provider: ModelProvider, modelId: string): ModelEn
 
 export function getModelStatus(provider: ModelProvider, modelId: string): ModelStatus | undefined {
   return getModelEntry(provider, modelId)?.status;
+}
+
+const OLLAMA_BLOB_FALLBACK = 4_096;
+const BLOB_CONTEXT_RATIO = 0.5;
+const BLOB_CONTEXT_MAX = 32_000;
+
+/**
+ * Derives the blob token budget from the first enabled stage's model.
+ * Returns the budget and the model ID used as the basis.
+ * Caps at BLOB_CONTEXT_MAX to keep prompts practical even on 1M-token models.
+ */
+export function calculateBlobBudget(stages: PipelineStageConfig[]): { budget: number; modelId: string } {
+  const firstEnabled = stages.find((s) => s.enabled);
+  if (!firstEnabled || firstEnabled.provider === 'ollama') {
+    return { budget: OLLAMA_BLOB_FALLBACK, modelId: firstEnabled?.model ?? '' };
+  }
+  const entry = getModelEntry(firstEnabled.provider, firstEnabled.model);
+  if (!entry) {
+    return { budget: OLLAMA_BLOB_FALLBACK, modelId: firstEnabled.model };
+  }
+  return {
+    budget: Math.min(Math.floor(entry.contextWindow * BLOB_CONTEXT_RATIO), BLOB_CONTEXT_MAX),
+    modelId: firstEnabled.model,
+  };
 }
 
 /** Returns model IDs that are in MODEL_OPTIONS but lack a pricing entry (excluding ollama). */

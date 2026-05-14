@@ -13,6 +13,7 @@ import type { Issue, JudgeResult, PromptInfo, TokenUsage, TranslationChunk } fro
 import { useProjectStore } from '../stores/projectStore';
 import { saveChunkCheckpoint, setRunInProgress } from '../services/projectService';
 import { buildPipelineFingerprint } from '../utils/pipelineFingerprint';
+import { calculateBlobBudget } from '../models/catalog';
 
 function assembleBlobContext(chunks: TranslationChunk[], chunkId: string): string | undefined {
   const current = chunks.find((c) => c.id === chunkId);
@@ -464,22 +465,23 @@ export function usePipeline() {
       void setRunInProgress(projectId, true, buildPipelineFingerprint(config)).catch(() => {});
     }
 
-    if ((config.blobBudgetTokens ?? 0) > 0) {
-      try {
-        const assignments = await llmService.computeBlobs(
-          liveChunks.map((c) => ({ id: c.id, text: c.sourceProcessingText })),
-          config.blobBudgetTokens!,
-          config.blobOverlap ?? 1,
-        );
-        setBlobAssignments(assignments);
-      } catch (error: unknown) {
-        logOperation({
-          level: 'warn',
-          scope: 'pipeline',
-          message: 'Blob computation failed, continuing without blob context',
-          meta: { error: error instanceof Error ? error.message : String(error) },
-        });
-      }
+    try {
+      const budget = (config.blobBudgetTokens ?? 0) > 0
+        ? config.blobBudgetTokens!
+        : calculateBlobBudget(config.stages).budget;
+      const assignments = await llmService.computeBlobs(
+        liveChunks.map((c) => ({ id: c.id, text: c.sourceProcessingText })),
+        budget,
+        config.blobOverlap ?? 1,
+      );
+      setBlobAssignments(assignments);
+    } catch (error: unknown) {
+      logOperation({
+        level: 'warn',
+        scope: 'pipeline',
+        message: 'Blob computation failed, continuing without blob context',
+        meta: { error: error instanceof Error ? error.message : String(error) },
+      });
     }
 
     let errorCount = 0;
@@ -539,18 +541,19 @@ export function usePipeline() {
     useChunksStore.getState().clearCancelRequest();
     setIsProcessing(true);
 
-    if ((config.blobBudgetTokens ?? 0) > 0) {
+    try {
       const allChunks = useChunksStore.getState().chunks;
-      try {
-        const assignments = await llmService.computeBlobs(
-          allChunks.map((c) => ({ id: c.id, text: c.sourceProcessingText })),
-          config.blobBudgetTokens!,
-          config.blobOverlap ?? 1,
-        );
-        setBlobAssignments(assignments);
-      } catch {
-        // Continue without blob context on failure
-      }
+      const budget = (config.blobBudgetTokens ?? 0) > 0
+        ? config.blobBudgetTokens!
+        : calculateBlobBudget(config.stages).budget;
+      const assignments = await llmService.computeBlobs(
+        allChunks.map((c) => ({ id: c.id, text: c.sourceProcessingText })),
+        budget,
+        config.blobOverlap ?? 1,
+      );
+      setBlobAssignments(assignments);
+    } catch {
+      // Continue without blob context on failure
     }
 
     // Force a redo even if this chunk was already completed — the user
