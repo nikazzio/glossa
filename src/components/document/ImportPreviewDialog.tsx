@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  AlignCenter,
+  AlignJustify,
+  AlignLeft,
   AlertTriangle,
+  ArrowLeftRight,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
@@ -34,8 +38,6 @@ interface ImportPreviewDialogProps {
   text: string;
   useChunking: boolean;
   targetChunkCount: number;
-  minWords: number;
-  maxWords: number;
   headingAware: boolean;
   markdownAware?: boolean;
   format?: 'plain' | 'markdown';
@@ -402,8 +404,6 @@ export function ImportPreviewDialog({
   text,
   useChunking,
   targetChunkCount,
-  minWords,
-  maxWords,
   headingAware,
   markdownAware = false,
   format,
@@ -447,6 +447,14 @@ export function ImportPreviewDialog({
     setConfig((prev) => ({ ...prev, targetLanguage: lang }));
   };
 
+  const handleSwapLanguages = () => {
+    setConfig((prev) => ({
+      ...prev,
+      sourceLanguage: prev.targetLanguage,
+      targetLanguage: prev.sourceLanguage,
+    }));
+  };
+
   // ── Settings: words-per-chunk ↔ targetChunkCount sync ─────────────────────
   const totalWords = useMemo(() => {
     const trimmed = text.trim();
@@ -473,9 +481,9 @@ export function ImportPreviewDialog({
   };
 
   const CHUNK_PRESETS = [
-    { words: 400, labelKey: 'files.chunkShort' },
-    { words: 700, labelKey: 'files.chunkMedium' },
-    { words: 1000, labelKey: 'files.chunkLong' },
+    { words: 400, labelKey: 'files.chunkShort', titleKey: 'files.chunkShortTitle', Icon: AlignLeft },
+    { words: 700, labelKey: 'files.chunkMedium', titleKey: 'files.chunkMediumTitle', Icon: AlignCenter },
+    { words: 1000, labelKey: 'files.chunkLong', titleKey: 'files.chunkLongTitle', Icon: AlignJustify },
   ] as const;
 
   const activePresetWords = CHUNK_PRESETS.reduce<number>((nearest, p) =>
@@ -485,19 +493,22 @@ export function ImportPreviewDialog({
     CHUNK_PRESETS[0].words,
   );
 
+  const effectiveMinWords = Math.round(activePresetWords * 0.5);
+  const effectiveMaxWords = Math.round(activePresetWords * 1.5);
+
   // ── Algorithmic chunk computation ──────────────────────────────────────────
   const preview = useMemo(
     () => buildImportPreview(text, {
       useChunking,
       targetChunkCount: effectiveTargetChunkCount,
       markdownAware,
-      minWords,
-      maxWords,
+      minWords: effectiveMinWords,
+      maxWords: effectiveMaxWords,
       headingAware,
       format,
       experimental,
     }),
-    [useChunking, effectiveTargetChunkCount, markdownAware, minWords, maxWords, headingAware, format, experimental, text],
+    [useChunking, effectiveTargetChunkCount, markdownAware, activePresetWords, headingAware, format, experimental, text],
   );
 
   const algorithmicParaChunks = useMemo(
@@ -799,19 +810,20 @@ export function ImportPreviewDialog({
             {useChunking && <span className="select-none text-editorial-border">·</span>}
 
             {/* Chunk size presets */}
-            {useChunking && CHUNK_PRESETS.map((preset) => (
+            {useChunking && CHUNK_PRESETS.map(({ words, labelKey, titleKey, Icon }) => (
               <button
-                key={preset.words}
+                key={words}
                 type="button"
-                onClick={() => handleWordsPerChunkChange(preset.words)}
-                title={`~${preset.words}w`}
-                className={`rounded-full border px-3 py-1 text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                  activePresetWords === preset.words
+                onClick={() => handleWordsPerChunkChange(words)}
+                title={t(titleKey)}
+                className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                  activePresetWords === words
                     ? 'border-editorial-ink bg-editorial-ink text-white'
                     : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
                 }`}
               >
-                {t(preset.labelKey)}
+                <Icon size={12} />
+                {t(labelKey)}
               </button>
             ))}
 
@@ -832,62 +844,72 @@ export function ImportPreviewDialog({
           </div>
 
           {/* Row 5: pipeline setup — language pair + model */}
-          <div className="mt-3 space-y-2 pt-3 border-t border-editorial-border/60">
-            {/* Language pair */}
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="w-14 shrink-0 text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+          <div className="mt-3 pt-3 border-t border-editorial-border/60">
+            <div className="grid grid-cols-[4rem_1fr] gap-y-2.5 gap-x-3 items-center">
+              {/* Language pair */}
+              <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted leading-tight">
                 {t('pipeline.languagePair')}
               </span>
-              <select
-                value={config.sourceLanguage}
-                onChange={(e) => handleSourceLanguageChange(e.target.value)}
-                className="rounded-lg border border-editorial-border bg-editorial-bg px-2 py-1 text-xs font-mono outline-none focus:border-editorial-ink/40 appearance-none"
-                aria-label={t('pipeline.sourceLanguage')}
-              >
-                {LANGUAGES.map((lang) => (
-                  <option key={lang} value={lang}>{t(`languages.${lang}`)}</option>
-                ))}
-              </select>
-              <span className="text-editorial-muted/60 text-xs select-none">→</span>
-              <select
-                value={config.targetLanguage}
-                onChange={(e) => handleTargetLanguageChange(e.target.value)}
-                className="rounded-lg border border-editorial-border bg-editorial-bg px-2 py-1 text-xs font-mono outline-none focus:border-editorial-ink/40 appearance-none"
-                aria-label={t('pipeline.targetLanguage')}
-              >
-                {LANGUAGES.map((lang) => (
-                  <option key={lang} value={lang}>{t(`languages.${lang}`)}</option>
-                ))}
-              </select>
-            </div>
-            {/* Model */}
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="w-14 shrink-0 text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+              <div className="flex items-center gap-1.5">
+                <select
+                  value={config.sourceLanguage}
+                  onChange={(e) => handleSourceLanguageChange(e.target.value)}
+                  className="w-32 rounded-[10px] border border-editorial-border bg-editorial-bg px-2 py-1.5 text-xs font-mono outline-none focus:border-editorial-ink/40 appearance-none"
+                  aria-label={t('pipeline.sourceLanguage')}
+                >
+                  {LANGUAGES.map((lang) => (
+                    <option key={lang} value={lang}>{t(`languages.${lang}`)}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={handleSwapLanguages}
+                  title={t('pipeline.swapLanguages')}
+                  aria-label={t('pipeline.swapLanguages')}
+                  className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                >
+                  <ArrowLeftRight size={12} />
+                </button>
+                <select
+                  value={config.targetLanguage}
+                  onChange={(e) => handleTargetLanguageChange(e.target.value)}
+                  className="w-32 rounded-[10px] border border-editorial-border bg-editorial-bg px-2 py-1.5 text-xs font-mono outline-none focus:border-editorial-ink/40 appearance-none"
+                  aria-label={t('pipeline.targetLanguage')}
+                >
+                  {LANGUAGES.map((lang) => (
+                    <option key={lang} value={lang}>{t(`languages.${lang}`)}</option>
+                  ))}
+                </select>
+              </div>
+              {/* Model */}
+              <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted leading-tight">
                 {t('files.importModelLabel')}
               </span>
-              <select
-                value={selectedProvider}
-                onChange={(e) => handleProviderChange(e.target.value as ModelProvider)}
-                className="rounded-lg border border-editorial-border bg-editorial-bg px-2 py-1 text-xs font-mono outline-none focus:border-editorial-ink/40 appearance-none"
-                aria-label={t('pipeline.source')}
-              >
-                {(Object.keys(MODEL_OPTIONS) as ModelProvider[]).map((p) => (
-                  <option key={p} value={p}>{p}</option>
-                ))}
-              </select>
-              <select
-                value={selectedModel}
-                onChange={(e) => handleModelChange(e.target.value)}
-                disabled={availableModels.length === 0}
-                className="rounded-lg border border-editorial-border bg-editorial-bg px-2 py-1 text-xs font-mono outline-none focus:border-editorial-ink/40 appearance-none disabled:opacity-40"
-                aria-label={t('pipeline.stageModelLabel')}
-              >
-                {availableModels.length === 0 ? (
-                  <option value="">{t('ollama.noModels')}</option>
-                ) : (
-                  availableModels.map((m) => <option key={m} value={m}>{m}</option>)
-                )}
-              </select>
+              <div className="flex items-center gap-1.5">
+                <select
+                  value={selectedProvider}
+                  onChange={(e) => handleProviderChange(e.target.value as ModelProvider)}
+                  className="w-24 rounded-[10px] border border-editorial-border bg-editorial-bg px-2 py-1.5 text-xs font-bold uppercase outline-none focus:border-editorial-ink/40 appearance-none"
+                  aria-label={t('pipeline.source')}
+                >
+                  {(Object.keys(MODEL_OPTIONS) as ModelProvider[]).map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+                <select
+                  value={selectedModel}
+                  onChange={(e) => handleModelChange(e.target.value)}
+                  disabled={availableModels.length === 0}
+                  className="flex-1 min-w-0 rounded-[10px] border border-editorial-border bg-editorial-bg px-2 py-1.5 text-xs font-mono outline-none focus:border-editorial-ink/40 appearance-none disabled:opacity-40"
+                  aria-label={t('pipeline.stageModelLabel')}
+                >
+                  {availableModels.length === 0 ? (
+                    <option value="">{t('ollama.noModels')}</option>
+                  ) : (
+                    availableModels.map((m) => <option key={m} value={m}>{m}</option>)
+                  )}
+                </select>
+              </div>
             </div>
           </div>
         </div>
@@ -920,8 +942,8 @@ export function ImportPreviewDialog({
                       paras={paras}
                       index={i}
                       total={activeParaChunks.length}
-                      minWords={minWords}
-                      maxWords={maxWords}
+                      minWords={effectiveMinWords}
+                      maxWords={effectiveMaxWords}
                       isExpanded={expandedChunks.has(i)}
                       onToggleExpand={() => toggleExpanded(i)}
                       onSplit={() => splitChunkAtMid(i)}
@@ -943,8 +965,8 @@ export function ImportPreviewDialog({
           ) : (
             <SegmentEditor
               chunks={activeParaChunks}
-              minWords={minWords}
-              maxWords={maxWords}
+              minWords={effectiveMinWords}
+              maxWords={effectiveMaxWords}
               onAddBoundary={addBoundaryAt}
               onRemoveBoundary={removeBoundaryAt}
               onSplitParagraph={splitParagraphAt}

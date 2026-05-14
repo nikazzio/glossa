@@ -1,4 +1,4 @@
-import { ArrowRightLeft, Play, Languages, Cpu, FileText, Pencil, Scale, RefreshCw, Loader2, X, ShieldCheck, AlertTriangle, RotateCcw, Wand2, BookmarkPlus, BookOpen, Check, Trash2, Bot, Settings, Globe } from 'lucide-react';
+import { ArrowRightLeft, Play, Languages, Cpu, FileText, Pencil, Scale, RefreshCw, Loader2, X, ShieldCheck, AlertTriangle, RotateCcw, Wand2, BookmarkPlus, BookOpen, Check, Trash2, Bot, Settings, Globe, WifiOff } from 'lucide-react';
 import { useMemo, useState, useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -13,7 +13,7 @@ import { CostBadge } from './CostBadge';
 import { ProviderRuntimeEditor } from './ProviderRuntimeEditor';
 import { estimatePipelineCost } from '../../utils/costEstimate';
 import { usePricingStore } from '../../stores/pricingStore';
-import { llmService } from '../../services/llmService';
+import { llmService, ollamaService } from '../../services/llmService';
 import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
 
 export type ConfigSection = 'settings' | 'translation' | 'audit' | 'glossary';
@@ -498,9 +498,14 @@ export function PipelineConfig({
     updateStage,
   } = usePipelineStore();
   const { chunks, isProcessing, cancelRequested, resetCompletedChunks } = useChunksStore();
-  const ollamaStatus = useUiStore((state) => state.ollamaStatus);
+  const { ollamaStatus, setOllamaModels, setOllamaStatus } = useUiStore((state) => ({
+    ollamaStatus: state.ollamaStatus,
+    setOllamaModels: state.setOllamaModels,
+    setOllamaStatus: state.setOllamaStatus,
+  }));
   const { t } = useTranslation();
   const judgeModels = useJudgeModelOptions(config.judgeProvider);
+  const [isRefreshingOllama, setIsRefreshingOllama] = useState(false);
   const [isRefiningPersona, setIsRefiningPersona] = useState(false);
   const [isRefiningStage, setIsRefiningStage] = useState(false);
   const [isRefiningJudge, setIsRefiningJudge] = useState(false);
@@ -570,6 +575,22 @@ export function PipelineConfig({
       toast.message(t('ollama.uncheckedHint'));
     } else if (newProvider === 'ollama' && useUiStore.getState().ollamaStatus === 'disconnected') {
       toast.warning(t('ollama.selectedButOffline'));
+    }
+  };
+
+  const handleRefreshOllama = async () => {
+    setIsRefreshingOllama(true);
+    try {
+      const models = await ollamaService.listModels();
+      setOllamaModels(models);
+      setOllamaStatus('connected');
+      toast.success(t('ollama.connected', { count: models.length }));
+    } catch (err: unknown) {
+      setOllamaModels([]);
+      setOllamaStatus('disconnected');
+      toast.error(t('ollama.disconnected'), { description: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setIsRefreshingOllama(false);
     }
   };
 
@@ -971,9 +992,20 @@ export function PipelineConfig({
                 </div>
               )}
               {stageOllamaOffline && !translationsExist && (
-                <div className="flex items-center gap-2 text-xs text-editorial-accent">
-                  <AlertTriangle size={14} />
-                  <span>{t('ollama.selectedButOffline')}</span>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-xs text-editorial-accent">
+                    <WifiOff size={13} />
+                    <span>{t('ollama.selectedButOffline')}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRefreshOllama}
+                    disabled={isRefreshingOllama}
+                    className="flex items-center gap-1.5 rounded-full border border-editorial-accent/60 px-3 py-1 text-xs text-editorial-accent transition-colors hover:bg-editorial-accent hover:text-white disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  >
+                    {isRefreshingOllama ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                    {t('ollama.loadModels')}
+                  </button>
                 </div>
               )}
               <ProviderRuntimeEditor
@@ -984,29 +1016,6 @@ export function PipelineConfig({
                 hint={t('pipeline.providerOptions.stageHint')}
               />
             </div>
-
-            {/* Translation instructions card */}
-            <AuditPromptEditor
-              label={t('pipeline.prompt')}
-              hint=""
-              value={stage0.prompt}
-              placeholder={t('pipeline.stagePromptPlaceholder')}
-              templates={templates.filter((tmpl) => tmpl.context === 'stage')}
-              isRefining={isRefiningStage}
-              onRefine={handleRefineStagePrompt}
-              onChange={(value) => updateStage(stage0.id, { prompt: value })}
-              onApplyTemplate={(tmpl) => updateStage(stage0.id, {
-                prompt: tmpl.prompt,
-                ...(tmpl.defaultModel ? { model: tmpl.defaultModel } : {}),
-                ...(tmpl.defaultProvider ? { provider: tmpl.defaultProvider as ModelProvider } : {}),
-              })}
-              saveTemplate={saveTemplate}
-              deleteTemplate={deleteTemplate}
-              defaultModel={stage0.model}
-              defaultProvider={stage0.provider}
-              icon={<FileText size={11} />}
-              context="stage"
-            />
 
             {/* Context memory card */}
             {(() => {
@@ -1102,6 +1111,29 @@ export function PipelineConfig({
                 </div>
               );
             })()}
+
+            {/* Translation instructions card */}
+            <AuditPromptEditor
+              label={t('pipeline.prompt')}
+              hint=""
+              value={stage0.prompt}
+              placeholder={t('pipeline.stagePromptPlaceholder')}
+              templates={templates.filter((tmpl) => tmpl.context === 'stage')}
+              isRefining={isRefiningStage}
+              onRefine={handleRefineStagePrompt}
+              onChange={(value) => updateStage(stage0.id, { prompt: value })}
+              onApplyTemplate={(tmpl) => updateStage(stage0.id, {
+                prompt: tmpl.prompt,
+                ...(tmpl.defaultModel ? { model: tmpl.defaultModel } : {}),
+                ...(tmpl.defaultProvider ? { provider: tmpl.defaultProvider as ModelProvider } : {}),
+              })}
+              saveTemplate={saveTemplate}
+              deleteTemplate={deleteTemplate}
+              defaultModel={stage0.model}
+              defaultProvider={stage0.provider}
+              icon={<FileText size={11} />}
+              context="stage"
+            />
           </div>
         )}
 

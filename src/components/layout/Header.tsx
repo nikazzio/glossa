@@ -363,8 +363,6 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
             text={pendingImport.text}
             useChunking={pendingImport.useChunking}
             targetChunkCount={pendingImport.targetChunkCount}
-            minWords={defaultMinWords}
-            maxWords={defaultMaxWords}
             headingAware={pendingImport.headingAware}
             markdownAware={pendingImport.format === 'markdown'}
             format={pendingImport.format}
