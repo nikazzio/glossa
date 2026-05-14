@@ -7,6 +7,7 @@ import { makeTranslationChunk } from '../test/chunkFactory';
 import { usePipeline } from './usePipeline';
 
 const llmMocks = vi.hoisted(() => ({
+  runStage: vi.fn(),
   runStageStream: vi.fn(),
   judgeTranslation: vi.fn(),
   cancelStream: vi.fn(),
@@ -126,7 +127,7 @@ describe('usePipeline', () => {
       ),
     );
 
-    llmMocks.runStageStream.mockResolvedValue('Second translated');
+    llmMocks.runStage.mockResolvedValue({ content: 'Second translated' });
     llmMocks.judgeTranslation.mockResolvedValue({
       content: '',
       rating: 'good',
@@ -138,13 +139,13 @@ describe('usePipeline', () => {
       await result.current.runPipeline();
     });
 
-    expect(llmMocks.runStageStream).toHaveBeenCalledTimes(1);
+    expect(llmMocks.runStage).toHaveBeenCalledTimes(1);
     expect(useChunksStore.getState().chunks[0].currentDraft).toBe('Already translated');
     expect(useChunksStore.getState().chunks[1].currentDraft).toBe('Second translated');
   });
 
   it('retranslates only the requested chunk', async () => {
-    llmMocks.runStageStream.mockResolvedValue('Translated only chunk-1');
+    llmMocks.runStage.mockResolvedValue({ content: 'Translated only chunk-1' });
     llmMocks.judgeTranslation.mockResolvedValue({
       content: '',
       rating: 'excellent',
@@ -156,7 +157,7 @@ describe('usePipeline', () => {
       await result.current.runSingleChunk('chunk-1');
     });
 
-    expect(llmMocks.runStageStream).toHaveBeenCalledTimes(1);
+    expect(llmMocks.runStage).toHaveBeenCalledTimes(1);
     expect(useChunksStore.getState().chunks[0].currentDraft).toBe('');
     expect(useChunksStore.getState().chunks[1].currentDraft).toBe(
       'Translated only chunk-1',
@@ -184,12 +185,19 @@ describe('usePipeline', () => {
       await result.current.auditSingleChunk('chunk-1');
     });
 
-    expect(llmMocks.runStageStream).not.toHaveBeenCalled();
+    expect(llmMocks.runStage).not.toHaveBeenCalled();
     expect(llmMocks.judgeTranslation).toHaveBeenCalledTimes(1);
     expect(useChunksStore.getState().chunks[1].judgeResult.rating).toBe('excellent');
   });
 
   it('treats stream cancellation as cancellation, not failure', async () => {
+    usePipelineStore.setState((state) => ({
+      ...state,
+      config: {
+        ...state.config,
+        stages: [{ id: 'stg-1', name: 'Stage 1', prompt: 'Translate', model: 'llama3.2', provider: 'ollama', enabled: true }],
+      },
+    }));
     llmMocks.runStageStream.mockRejectedValueOnce(new Error('Stream cancelled'));
 
     const { result } = renderHook(() => usePipeline());
@@ -331,9 +339,9 @@ describe('usePipeline', () => {
       },
     }));
 
-    llmMocks.runStageStream
-      .mockResolvedValueOnce('Stage 1 output')
-      .mockResolvedValueOnce('Stage 2 output');
+    llmMocks.runStage
+      .mockResolvedValueOnce({ content: 'Stage 1 output' })
+      .mockResolvedValueOnce({ content: 'Stage 2 output' });
     llmMocks.judgeTranslation.mockResolvedValue({
       content: '',
       rating: 'good',
@@ -345,15 +353,15 @@ describe('usePipeline', () => {
       await result.current.runSingleChunk('chunk-0');
     });
 
-    expect(llmMocks.runStageStream).toHaveBeenCalledTimes(2);
-    const stage2Call = llmMocks.runStageStream.mock.calls[1];
+    expect(llmMocks.runStage).toHaveBeenCalledTimes(2);
+    const stage2Call = llmMocks.runStage.mock.calls[1];
     expect(stage2Call[3]).toBe('Stage 1 output');
     expect(useChunksStore.getState().chunks[0].currentDraft).toBe('Stage 2 output');
   });
 
   it('marks chunk as error and calls toast.error on non-cancellation stage failure', async () => {
     // Use a config-class error so withRetry gives up immediately (no delay).
-    llmMocks.runStageStream.mockRejectedValueOnce(
+    llmMocks.runStage.mockRejectedValueOnce(
       new Error('API key not configured. Set it in Settings.'),
     );
 
@@ -367,7 +375,7 @@ describe('usePipeline', () => {
   });
 
   it('calls toast.success when all chunks complete without errors', async () => {
-    llmMocks.runStageStream.mockResolvedValue('translated');
+    llmMocks.runStage.mockResolvedValue({ content: 'translated' });
     llmMocks.judgeTranslation.mockResolvedValue({
       content: '',
       rating: 'good',

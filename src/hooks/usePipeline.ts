@@ -46,7 +46,6 @@ type ChunkOutcome = 'completed' | 'failed' | 'cancelled' | 'skipped';
 export function usePipeline() {
   const {
     updateChunkStage,
-    appendChunkStageContent,
     setChunkStagePromptInfo,
     updateChunkJudge,
     updateChunkDraft,
@@ -208,39 +207,51 @@ export function usePipeline() {
       logOperation({
         level: 'info',
         scope: 'stage',
-        message: `Stage "${stage.name}" started streaming generation`,
+        message: `Stage "${stage.name}" started`,
         chunkId: chunk.id,
         stageId: stage.id,
         meta: { provider: stage.provider, model: stage.model },
       });
+
+      const onPrompt = (info: PromptInfo) => {
+        setChunkStagePromptInfo(chunk.id, stage.id, info);
+        logOperation({
+          level: 'info',
+          scope: 'stage',
+          message: `prompt → ${stage.provider}/${stage.model}`,
+          chunkId: chunk.id,
+          stageId: stage.id,
+          detail: `[system]\n${info.systemPrompt}\n\n[user]\n${info.userPrompt}`,
+        });
+      };
+      const onIdleGrace = () => logOperation({
+        level: 'info',
+        scope: 'stage',
+        message: 'Ollama still alive — idle grace check passed, waiting for more tokens',
+        chunkId: chunk.id,
+        stageId: stage.id,
+      });
+
       try {
         let capturedUsage: TokenUsage | undefined;
-        const result = await withRetry(
+        const stageResult = await withRetry(
           async () => {
             capturedUsage = undefined;
             updateChunkStage(chunk.id, stage.id, { content: '', status: 'processing' });
-            return llmService.runStageStream(
+            if (stage.provider === 'ollama') {
+              const text = await llmService.runStageStream(
+                chunk.sourceProcessingText, stage, effectiveConfig, lastResult || undefined,
+                () => {},
+                (usage) => { capturedUsage = usage; },
+                onPrompt,
+                onIdleGrace,
+              );
+              return { content: text };
+            }
+            return llmService.runStage(
               chunk.sourceProcessingText, stage, effectiveConfig, lastResult || undefined,
-              (token) => appendChunkStageContent(chunk.id, stage.id, token),
-              (usage) => { capturedUsage = usage; },
-              (info: PromptInfo) => {
-                setChunkStagePromptInfo(chunk.id, stage.id, info);
-                logOperation({
-                  level: 'info',
-                  scope: 'stage',
-                  message: `prompt → ${stage.provider}/${stage.model}`,
-                  chunkId: chunk.id,
-                  stageId: stage.id,
-                  detail: `[system]\n${info.systemPrompt}\n\n[user]\n${info.userPrompt}`,
-                });
-              },
-              () => logOperation({
-                level: 'info',
-                scope: 'stage',
-                message: 'Ollama still alive — idle grace check passed, waiting for more tokens',
-                chunkId: chunk.id,
-                stageId: stage.id,
-              }),
+              onPrompt,
+              onIdleGrace,
             );
           },
           {
@@ -260,6 +271,10 @@ export function usePipeline() {
             },
           },
         );
+        const result = stageResult.content;
+        if (!capturedUsage && (stageResult.inputTokens ?? stageResult.outputTokens)) {
+          capturedUsage = { inputTokens: stageResult.inputTokens!, outputTokens: stageResult.outputTokens! };
+        }
         if (result) {
           lastResult = result;
           producedOutput = true;
@@ -524,7 +539,7 @@ export function usePipeline() {
       });
       toast.warning(t('errors.pipelineCompletedWithErrors', { count: errorCount }));
     }
-  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureProvidersReady, setBlobAssignments]);
+  }, [config, t, setIsProcessing, updateChunkStage, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureProvidersReady, setBlobAssignments]);
 
   const runSingleChunk = useCallback(async (chunkId: string) => {
     if (useChunksStore.getState().isProcessing) return;
@@ -575,7 +590,7 @@ export function usePipeline() {
       // Per-chunk failure already raised a toast inside the helper; no
       // extra summary toast is needed.
     }
-  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureProvidersReady, setBlobAssignments]);
+  }, [config, t, setIsProcessing, updateChunkStage, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureProvidersReady, setBlobAssignments]);
 
   const runAuditOnly = useCallback(async () => {
     if (useChunksStore.getState().isProcessing) return;

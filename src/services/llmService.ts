@@ -70,26 +70,40 @@ export interface PreflightCheckResult {
  * API keys are stored securely in the OS-level store, never in the browser.
  */
 export const llmService = {
-  /** Non-streaming stage execution (fallback) */
   async runStage(
     text: string,
     stage: PipelineStageConfig,
     config: PipelineConfig,
-    previousResult?: string,
-  ): Promise<string> {
-    logOperation({
-      level: 'info',
-      scope: 'invoke',
-      message: `Invoking backend stage run for ${stage.provider}/${stage.model}`,
-      stageId: stage.id,
+    previousResult: string | undefined,
+    onPrompt?: (info: PromptInfo) => void,
+    onIdleGrace?: () => void,
+  ): Promise<{ content: string; inputTokens?: number; outputTokens?: number }> {
+    const streamId = `stage-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    const unlistenPrompt = await listen<{ streamId: string; systemPrompt: string; userPrompt: string }>('chunk-prompt', (event) => {
+      if (event.payload.streamId !== streamId) return;
+      onPrompt?.({ systemPrompt: event.payload.systemPrompt, userPrompt: event.payload.userPrompt });
     });
-    return invoke<string>('run_stage', {
-      text,
-      stage,
-      config,
-      previousResult: previousResult || null,
-      ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl,
+    const unlistenAlive = await listen<{ streamId: string }>('stream-alive', (event) => {
+      if (event.payload.streamId !== streamId) return;
+      onIdleGrace?.();
     });
+
+    useChunksStore.getState().setActiveStreamId(streamId);
+    try {
+      return await invoke<{ content: string; inputTokens?: number; outputTokens?: number }>('run_stage', {
+        text,
+        stage,
+        config,
+        previousResult: previousResult || null,
+        streamId,
+        ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl,
+      });
+    } finally {
+      unlistenPrompt();
+      unlistenAlive();
+      useChunksStore.getState().setActiveStreamId(null);
+    }
   },
 
   /**

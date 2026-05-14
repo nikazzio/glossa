@@ -23,6 +23,14 @@ struct PromptEvent {
     user_prompt: String,
 }
 
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StageResult {
+    pub content: String,
+    pub input_tokens: Option<u32>,
+    pub output_tokens: Option<u32>,
+}
+
 #[tauri::command]
 pub async fn run_stage(
     app: AppHandle,
@@ -30,13 +38,19 @@ pub async fn run_stage(
     stage: StageConfig,
     config: PipelineConfig,
     previous_result: Option<String>,
+    stream_id: String,
     ollama_base_url: Option<String>,
-) -> Result<String, String> {
+) -> Result<StageResult, String> {
     let provider = get_provider(&stage.provider, ollama_base_url)?;
     provider.preflight(&stage.model).await?;
     let api_key = get_api_key(&app, &stage.provider)?;
     let client = provider.http_client()?;
     let structured = build_stage_prompts(&text, &stage, &config, &previous_result);
+    app.emit("chunk-prompt", PromptEvent {
+        stream_id,
+        system_prompt: structured.flatten_system(),
+        user_prompt: structured.user.clone(),
+    }).ok();
     let req = LlmRequest {
         model: &stage.model,
         structured: &structured,
@@ -44,7 +58,12 @@ pub async fn run_stage(
         json_mode: false,
         provider_options: stage.provider_options.as_ref(),
     };
-    provider.call(&client, &req).await.map(|r| r.content)
+    let response = provider.call(&client, &req).await?;
+    Ok(StageResult {
+        content: response.content,
+        input_tokens: response.usage.as_ref().map(|u| u.input),
+        output_tokens: response.usage.as_ref().map(|u| u.output),
+    })
 }
 
 #[tauri::command]
