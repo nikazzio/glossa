@@ -108,17 +108,15 @@ pub(crate) fn build_stage_prompts(
          {glossary_rules}{markdown_rules}",
     );
 
-    // Block 2: stage-specific instructions. Constant within a stage run but varies
-    // across stages, so we don't mark it cacheable (its position shifts with stage.prompt length).
-    let stage_block = format!("Core Instructions:\n{}", stage.prompt);
-
     let mut system = vec![
         PromptBlock { text: static_block, cacheable: true },
-        PromptBlock { text: stage_block, cacheable: false },
     ];
 
-    // Block 3 (cacheable): blob context — full text of all chunks in the same blob.
-    // Constant for every chunk call within a blob, enabling cache reuse across the blob.
+    // Blob context (cacheable) comes BEFORE stage instructions so all stable content
+    // forms a contiguous prefix: [static + blob]. This lets every provider cache the
+    // longest common prefix — Anthropic via a single breakpoint here, OpenAI/DeepSeek/
+    // Gemini via automatic prefix caching — giving cache hits across all stages within
+    // the same blob, not only within a single stage.
     if let Some(blob) = config.blob_context.as_deref().filter(|s| !s.is_empty()) {
         system.push(PromptBlock {
             text: format!(
@@ -129,6 +127,10 @@ pub(crate) fn build_stage_prompts(
             cacheable: true,
         });
     }
+
+    // Stage-specific instructions come last: they vary per stage but are smaller than
+    // the static+blob prefix, so non-caching them costs less than before.
+    system.push(PromptBlock { text: format!("Core Instructions:\n{}", stage.prompt), cacheable: false });
 
     let user = match previous_result {
         Some(prev) if !prev.is_empty() => format!(
