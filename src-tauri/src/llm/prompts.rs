@@ -22,30 +22,6 @@ Rules:\n\
 - Use professional translation-industry QA terminology where appropriate\n\
 - Output ONLY the rewritten prompt text — no preamble, no explanation, no quotes";
 
-/// Returns a slice of `text` starting from the `(word_count - n)`-th word,
-/// i.e. the trailing `n` words. Returns the full string if it has ≤ n words.
-pub(crate) fn last_n_words(text: &str, n: usize) -> &str {
-    if n == 0 {
-        return "";
-    }
-    let mut word_count = 0;
-    let mut in_word = false;
-    for (i, c) in text.char_indices().rev() {
-        if c.is_whitespace() {
-            if in_word {
-                word_count += 1;
-                if word_count >= n {
-                    return text[i + c.len_utf8()..].trim_start();
-                }
-                in_word = false;
-            }
-        } else {
-            in_word = true;
-        }
-    }
-    text.trim_start()
-}
-
 fn format_glossary_table(glossary: &[crate::llm::types::GlossaryEntry]) -> String {
     if glossary.is_empty() {
         return String::new();
@@ -83,7 +59,6 @@ pub(crate) fn build_stage_prompts(
     stage: &StageConfig,
     config: &PipelineConfig,
     previous_result: &Option<String>,
-    previous_translation: &Option<String>,
 ) -> (String, String) {
     let glossary_table = format_glossary_table(&config.glossary);
 
@@ -136,16 +111,13 @@ pub(crate) fn build_stage_prompts(
         markdown_rules,
     );
 
-    let context_block = match previous_translation {
-        Some(prev) if !prev.is_empty() => {
-            let tail = last_n_words(prev, 300);
-            format!(
-                "[Context from previous segment — do not translate, use only for stylistic and terminological coherence]\n\
-                 {tail}\n\
-                 [End of context]\n\n"
-            )
-        }
-        _ => String::new(),
+    let context_block = match config.blob_context.as_deref().filter(|s| !s.is_empty()) {
+        Some(blob) => format!(
+            "[Reference document context — do not translate, use for terminology and narrative coherence]\n\
+             {blob}\n\
+             [End of reference context]\n\n"
+        ),
+        None => String::new(),
     };
 
     let user_prompt = match previous_result {
@@ -250,24 +222,19 @@ pub(crate) fn build_coherence_prompts(
          \"description\": \"string\", \"suggestedFix\": \"string\"}}]}}",
     );
 
-    let prev_block = input
-        .prev_context
+    let context_block = input
+        .blob_context
         .as_deref()
         .filter(|s| !s.is_empty())
-        .map(|ctx| {
-            format!("[Previous segment — context only]\n{ctx}\n[End of previous context]\n\n")
-        })
-        .unwrap_or_default();
-
-    let next_block = input
-        .next_context
-        .as_deref()
-        .filter(|s| !s.is_empty())
-        .map(|ctx| format!("\n[Next segment — context only]\n{ctx}\n[End of next context]"))
+        .map(|ctx| format!(
+            "[Surrounding translated segments from the same document block — context only]\n{ctx}\n\
+             [End of surrounding context]\n\n"
+        ))
         .unwrap_or_default();
 
     let user_prompt = format!(
-        "{prev_block}[Current segment]\nOriginal: {original}\nTranslation: {translation}\n[End of current segment]{next_block}\n\n\
+        "{context_block}[Current segment]\nOriginal: {original}\nTranslation: {translation}\n\
+         [End of current segment]\n\n\
          Identify cross-segment coherence issues and return the JSON. If no issues, return {{\"issues\": []}}.",
         original = input.original,
         translation = input.translation,
@@ -319,5 +286,6 @@ pub(crate) fn minimal_pipeline_config(
         ui_language: None,
         custom_source_language: None,
         custom_target_language: None,
+        blob_context: None,
     }
 }

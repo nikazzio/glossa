@@ -265,9 +265,6 @@ function FeaturesSection() {
       <SubTitle>{t('help.features.chunkActionsTitle')}</SubTitle>
       <P>{t('help.features.chunkActionsDesc')}</P>
 
-      <SubTitle>{t('help.features.rollingContextTitle')}</SubTitle>
-      <P>{t('help.features.rollingContextDesc')}</P>
-
       <SubTitle>{t('help.features.personaTitle')}</SubTitle>
       <P>{t('help.features.personaDesc')}</P>
 

@@ -9,7 +9,6 @@ export const DEFAULT_STAGES: PipelineStageConfig[] = [
     model: 'gpt-4o-mini',
     provider: 'openai',
     enabled: true,
-    rollingContext: true,
   },
 ];
 

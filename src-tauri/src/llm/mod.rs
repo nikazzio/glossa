@@ -1,3 +1,4 @@
+pub mod blobs;
 pub mod pipeline;
 pub mod prompts;
 pub mod provider;
@@ -178,6 +179,7 @@ mod tests {
             ui_language: None,
             custom_source_language: None,
             custom_target_language: None,
+            blob_context: None,
         }
     }
 
@@ -271,31 +273,30 @@ mod tests {
     fn stage_prompt_without_previous() {
         let config = make_config();
         let stage = make_stage("gemini");
-        let (system, user) = build_stage_prompts("Hello world", &stage, &config, &None, &None);
+        let (system, user) = build_stage_prompts("Hello world", &stage, &config, &None);
 
         assert!(system.contains("English to Italian"));
         assert!(system.contains("Translate accurately."));
         assert!(system.contains("| API | API |"));
         assert!(user.contains("Hello world"));
         assert!(!user.contains("Previous Iteration"));
-        assert!(!user.contains("Previous Chunk Translation Context"));
+        assert!(!user.contains("Reference document context"));
     }
 
     #[test]
-    fn stage_prompt_with_previous() {
-        let config = make_config();
+    fn stage_prompt_with_blob_context() {
+        let mut config = make_config();
+        config.blob_context = Some("Surrounding document text for context.".into());
         let stage = make_stage("openai");
         let prev = Some("Ciao mondo".to_string());
-        let previous_translation = Some("Traduzione chunk precedente".to_string());
-        let (system, user) =
-            build_stage_prompts("Hello world", &stage, &config, &prev, &previous_translation);
+        let (system, user) = build_stage_prompts("Hello world", &stage, &config, &prev);
 
         assert!(system.contains("English to Italian"));
         assert!(user.contains("Hello world"));
         assert!(user.contains("Ciao mondo"));
         assert!(user.contains("Previous Iteration"));
-        assert!(user.contains("Context from previous segment"));
-        assert!(user.contains("Traduzione chunk precedente"));
+        assert!(user.contains("Reference document context"));
+        assert!(user.contains("Surrounding document text for context."));
     }
 
     #[test]
@@ -303,7 +304,7 @@ mod tests {
         let mut config = make_config();
         config.glossary = vec![];
         let stage = make_stage("gemini");
-        let (system, _) = build_stage_prompts("text", &stage, &config, &None, &None);
+        let (system, _) = build_stage_prompts("text", &stage, &config, &None);
 
         assert!(system.contains("No glossary entries were provided"));
     }
@@ -324,7 +325,7 @@ mod tests {
             },
         ];
         let stage = make_stage("gemini");
-        let (system, _) = build_stage_prompts("text", &stage, &config, &None, &None);
+        let (system, _) = build_stage_prompts("text", &stage, &config, &None);
 
         assert!(system.contains("| API | API | tech |"));
         assert!(system.contains("| bug | errore |"));
@@ -337,7 +338,7 @@ mod tests {
         config.markdown_aware = Some(true);
         let stage = make_stage("gemini");
         let (system, user) =
-            build_stage_prompts("Text with note[^1].", &stage, &config, &None, &None);
+            build_stage_prompts("Text with note[^1].", &stage, &config, &None);
 
         assert!(system.contains("Markdown"));
         assert!(system.contains("Preserve every Markdown marker"));

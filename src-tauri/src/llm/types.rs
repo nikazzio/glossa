@@ -58,6 +58,9 @@ pub struct PipelineConfig {
     pub ui_language: Option<String>,
     pub custom_source_language: Option<String>,
     pub custom_target_language: Option<String>,
+    /// Original text of all other chunks in the same blob, injected at call time for context.
+    /// Not persisted — computed from blob assignments before each LLM invocation.
+    pub blob_context: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -126,8 +129,8 @@ pub struct JudgeResponse {
 pub struct CoherenceChunkInput {
     pub original: String,
     pub translation: String,
-    pub prev_context: Option<String>,
-    pub next_context: Option<String>,
+    /// Translated text of surrounding chunks in the same blob, for cross-segment consistency checks.
+    pub blob_context: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

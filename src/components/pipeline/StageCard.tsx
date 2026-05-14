@@ -4,7 +4,6 @@ import {
   BookOpen,
   ChevronUp,
   ChevronDown,
-  Link2,
   Loader2,
   Trash2,
   ShieldCheck,
@@ -189,25 +188,6 @@ export function StageCard({ stage, index: _index, onUpdate, onRemove }: StageCar
 
       {isExpanded && (
         <div className="space-y-4 animate-in slide-in-from-top-1 duration-200">
-
-          {/* ── Mini options bar ── */}
-          <div className="flex items-center gap-0 rounded-full border border-editorial-border bg-editorial-bg px-1 py-1 w-fit shadow-sm">
-            <button
-              type="button"
-              role="switch"
-              aria-checked={stage.rollingContext !== false}
-              onClick={() => onUpdate({ rollingContext: stage.rollingContext !== false ? false : true })}
-              title={t('pipeline.rollingContext')}
-              aria-label={t('pipeline.rollingContext')}
-              className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                stage.rollingContext !== false
-                  ? 'border-editorial-ink bg-editorial-ink text-white'
-                  : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
-              }`}
-            >
-              <Link2 size={13} />
-            </button>
-          </div>
 
           <div className="flex gap-2">
             <select

@@ -13,15 +13,22 @@ import type { Issue, JudgeResult, PromptInfo, TokenUsage, TranslationChunk } fro
 import { useProjectStore } from '../stores/projectStore';
 import { saveChunkCheckpoint, setRunInProgress } from '../services/projectService';
 import { buildPipelineFingerprint } from '../utils/pipelineFingerprint';
+import { calculateBlobBudget } from '../models/catalog';
 
-function lastNWords(text: string, n: number): string {
-  const words = text.trim().split(/\s+/);
-  return words.length <= n ? text.trim() : words.slice(-n).join(' ');
+function assembleBlobContext(chunks: TranslationChunk[], chunkId: string): string | undefined {
+  const current = chunks.find((c) => c.id === chunkId);
+  if (!current?.blobId) return undefined;
+  const siblings = chunks.filter((c) => c.blobId === current.blobId && c.id !== chunkId);
+  if (siblings.length === 0) return undefined;
+  return siblings.map((c) => c.sourceProcessingText).filter(Boolean).join('\n\n') || undefined;
 }
 
-function firstNWords(text: string, n: number): string {
-  const words = text.trim().split(/\s+/);
-  return words.length <= n ? text.trim() : words.slice(0, n).join(' ');
+function assembleTranslationBlobContext(chunks: TranslationChunk[], chunkId: string): string | undefined {
+  const current = chunks.find((c) => c.id === chunkId);
+  if (!current?.blobId) return undefined;
+  const siblings = chunks.filter((c) => c.blobId === current.blobId && c.id !== chunkId && c.translationProcessingText?.trim());
+  if (siblings.length === 0) return undefined;
+  return siblings.map((c) => c.translationProcessingText).filter(Boolean).join('\n\n') || undefined;
 }
 
 type ChunkOutcome = 'completed' | 'failed' | 'cancelled' | 'skipped';
@@ -48,6 +55,7 @@ export function usePipeline() {
     clearChunkStages,
     requestCancel,
     setIsProcessing,
+    setBlobAssignments,
   } = useChunksStore();
   const { config } = usePipelineStore();
   const isProcessing = useChunksStore((state) => state.isProcessing);
@@ -157,7 +165,7 @@ export function usePipeline() {
    */
   const executePipelineForChunk = async (
     chunk: TranslationChunk,
-    options: { skipIfCompleted: boolean; previousTranslation?: string },
+    options: { skipIfCompleted: boolean },
   ): Promise<ChunkOutcome> => {
     if (useChunksStore.getState().cancelRequested) return 'cancelled';
     if (options.skipIfCompleted && chunk.status === 'completed') return 'skipped';
@@ -184,23 +192,17 @@ export function usePipeline() {
     for (const stage of config.stages) {
       if (!stage.enabled) continue;
 
-      // Override global language pair with stage-specific one if set, but not when persona is active
-      const effectiveConfig = (!config.persona && (stage.sourceLanguage || stage.targetLanguage)) ? {
+      // Override global language pair with stage-specific one if set, but not when persona is active.
+      // Also inject blob context (original texts of sibling chunks in the same blob).
+      const liveChunks = useChunksStore.getState().chunks;
+      const blobContext = assembleBlobContext(liveChunks, chunk.id);
+      const effectiveConfig = {
         ...config,
-        ...(stage.sourceLanguage ? { sourceLanguage: stage.sourceLanguage } : {}),
-        ...(stage.targetLanguage ? { targetLanguage: stage.targetLanguage } : {}),
-      } : config;
+        ...(!config.persona && stage.sourceLanguage ? { sourceLanguage: stage.sourceLanguage } : {}),
+        ...(!config.persona && stage.targetLanguage ? { targetLanguage: stage.targetLanguage } : {}),
+        ...(blobContext ? { blobContext } : {}),
+      };
       lastEffectiveConfig = effectiveConfig;
-
-      if (config.persona && (stage.sourceLanguage || stage.targetLanguage)) {
-        logOperation({
-          level: 'info',
-          scope: 'stage',
-          message: `Stage "${stage.name}" — language override ignored, persona is active`,
-          chunkId: chunk.id,
-          stageId: stage.id,
-        });
-      }
 
       updateChunkStage(chunk.id, stage.id, { content: '', status: 'processing' });
       logOperation({
@@ -221,7 +223,6 @@ export function usePipeline() {
               chunk.sourceProcessingText, stage, effectiveConfig, lastResult || undefined,
               (token) => appendChunkStageContent(chunk.id, stage.id, token),
               (usage) => { capturedUsage = usage; },
-              stage.rollingContext !== false ? options.previousTranslation : undefined,
               (info: PromptInfo) => {
                 setChunkStagePromptInfo(chunk.id, stage.id, info);
                 logOperation({
@@ -464,13 +465,32 @@ export function usePipeline() {
       void setRunInProgress(projectId, true, buildPipelineFingerprint(config)).catch(() => {});
     }
 
+    try {
+      const budget = (config.blobBudgetTokens ?? 0) > 0
+        ? config.blobBudgetTokens!
+        : calculateBlobBudget(config.stages).budget;
+      const assignments = await llmService.computeBlobs(
+        liveChunks.map((c) => ({ id: c.id, text: c.sourceProcessingText })),
+        budget,
+        config.blobOverlap ?? 1,
+      );
+      setBlobAssignments(assignments);
+    } catch (error: unknown) {
+      setBlobAssignments([]);
+      logOperation({
+        level: 'warn',
+        scope: 'pipeline',
+        message: 'Blob computation failed, continuing without blob context',
+        meta: { error: error instanceof Error ? error.message : String(error) },
+      });
+    }
+
     let errorCount = 0;
     let cancelled = false;
-    let previousTranslation: string | undefined;
 
     try {
       for (const chunk of liveChunks) {
-        const outcome = await executePipelineForChunk(chunk, { skipIfCompleted: true, previousTranslation });
+        const outcome = await executePipelineForChunk(chunk, { skipIfCompleted: true });
         if (outcome === 'cancelled') { cancelled = true; break; }
         if (outcome === 'failed') errorCount++;
         if ((outcome === 'completed' || outcome === 'failed') && projectId) {
@@ -479,10 +499,6 @@ export function usePipeline() {
           if (fresh) {
             void saveChunkCheckpoint(projectId, fresh, position).catch(() => {});
           }
-        }
-        if (outcome === 'completed' || outcome === 'skipped') {
-          const fresh = useChunksStore.getState().chunks.find((c) => c.id === chunk.id);
-          previousTranslation = fresh?.translationProcessingText || undefined;
         }
       }
     } finally {
@@ -508,7 +524,7 @@ export function usePipeline() {
       });
       toast.warning(t('errors.pipelineCompletedWithErrors', { count: errorCount }));
     }
-  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureProvidersReady]);
+  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureProvidersReady, setBlobAssignments]);
 
   const runSingleChunk = useCallback(async (chunkId: string) => {
     if (useChunksStore.getState().isProcessing) return;
@@ -526,9 +542,25 @@ export function usePipeline() {
     useChunksStore.getState().clearCancelRequest();
     setIsProcessing(true);
 
+    try {
+      const allChunks = useChunksStore.getState().chunks;
+      const budget = (config.blobBudgetTokens ?? 0) > 0
+        ? config.blobBudgetTokens!
+        : calculateBlobBudget(config.stages).budget;
+      const assignments = await llmService.computeBlobs(
+        allChunks.map((c) => ({ id: c.id, text: c.sourceProcessingText })),
+        budget,
+        config.blobOverlap ?? 1,
+      );
+      setBlobAssignments(assignments);
+    } catch {
+      setBlobAssignments([]);
+    }
+
     // Force a redo even if this chunk was already completed — the user
     // explicitly asked for it via the per-chunk action menu.
-    const outcome = await executePipelineForChunk(chunk, { skipIfCompleted: false });
+    const freshChunk = useChunksStore.getState().chunks.find((c) => c.id === chunkId) ?? chunk;
+    const outcome = await executePipelineForChunk(freshChunk, { skipIfCompleted: false });
 
     setIsProcessing(false);
     useChunksStore.getState().clearCancelRequest();
@@ -543,7 +575,7 @@ export function usePipeline() {
       // Per-chunk failure already raised a toast inside the helper; no
       // extra summary toast is needed.
     }
-  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureProvidersReady]);
+  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureProvidersReady, setBlobAssignments]);
 
   const runAuditOnly = useCallback(async () => {
     if (useChunksStore.getState().isProcessing) return;
@@ -642,10 +674,7 @@ export function usePipeline() {
       if (!chunk.translationProcessingText?.trim()) continue;
       if (useChunksStore.getState().cancelRequested) { cancelled = true; break; }
 
-      const prevChunk = liveChunks[i - 1];
-      const nextChunk = liveChunks[i + 1];
-      const prevContext = prevChunk?.translationProcessingText ? lastNWords(prevChunk.translationProcessingText, 300) : undefined;
-      const nextContext = nextChunk?.translationProcessingText ? firstNWords(nextChunk.translationProcessingText, 300) : undefined;
+      const blobContext = assembleTranslationBlobContext(liveChunks, chunk.id);
 
       updateChunkCoherence(chunk.id, { status: 'processing', issues: [] });
       logOperation({ level: 'info', scope: 'coherence', message: 'Coherence check started', chunkId: chunk.id, meta: { provider: config.judgeProvider, model: config.judgeModel } });
@@ -653,7 +682,7 @@ export function usePipeline() {
       try {
         const result = await withRetry(
           () => llmService.runCoherenceForChunk(
-            { original: chunk.sourceProcessingText, translation: chunk.translationProcessingText, prevContext, nextContext },
+            { original: chunk.sourceProcessingText, translation: chunk.translationProcessingText, blobContext },
             config,
             (info: PromptInfo) => {
               logOperation({

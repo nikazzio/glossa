@@ -60,6 +60,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             db::execute_transaction,
+            llm::pipeline::compute_blobs,
             llm::pipeline::run_stage,
             llm::pipeline::run_stage_stream,
             llm::pipeline::cancel_stream,

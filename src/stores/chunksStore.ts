@@ -149,6 +149,7 @@ interface ChunksState {
   resetAllChunks: () => void;
   unlockChunkForEdit: (chunkId: string) => void;
   clearChunkStages: (chunkId: string) => void;
+  setBlobAssignments: (assignments: Array<{ chunkId: string; blobId: string; position: number }>) => void;
 }
 
 export const useChunksStore = create<ChunksState>((set, get) => ({
@@ -400,6 +401,17 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
         ...chunk,
         stageResults: {},
       })),
+    }));
+  },
+
+  setBlobAssignments: (assignments) => {
+    const map = new Map(assignments.map((a) => [a.chunkId, { blobId: a.blobId, blobOrder: a.position }]));
+    set((state) => ({
+      chunks: state.chunks.map((chunk) => {
+        const assignment = map.get(chunk.id);
+        if (!assignment) return chunk;
+        return { ...chunk, blobId: assignment.blobId, blobOrder: assignment.blobOrder };
+      }),
     }));
   },
 

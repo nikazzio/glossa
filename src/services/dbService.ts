@@ -52,6 +52,10 @@ const ALLOWED_MIGRATIONS = new Set([
   'pipeline_configs.custom_target_language',
   'pipeline_configs.run_in_progress',
   'pipeline_configs.last_run_config',
+  'pipeline_configs.blob_budget_tokens',
+  'pipeline_configs.blob_overlap',
+  'translations.blob_id',
+  'translations.blob_order',
 ]);
 
 export async function ensureColumn(table: string, column: string, definition: string): Promise<void> {
@@ -245,6 +249,20 @@ export async function initDatabase(): Promise<void> {
   `);
   await ensureColumn('translations', 'coherence_result', 'TEXT DEFAULT NULL');
   await ensureColumn('translations', 'footnotes', 'TEXT DEFAULT NULL');
+  await ensureColumn('translations', 'blob_id', 'TEXT DEFAULT NULL');
+  await ensureColumn('translations', 'blob_order', 'INTEGER DEFAULT 0');
+  await ensureColumn('pipeline_configs', 'blob_budget_tokens', 'INTEGER DEFAULT 0');
+  await ensureColumn('pipeline_configs', 'blob_overlap', 'INTEGER DEFAULT 1');
+
+  await conn.execute(`
+    CREATE TABLE IF NOT EXISTS macro_blocks (
+      id TEXT PRIMARY KEY,
+      project_id TEXT REFERENCES projects(id) ON DELETE CASCADE,
+      blob_index INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   await ensureColumn('prompt_templates', 'context', "TEXT NOT NULL DEFAULT 'stage'");
   await ensureColumn('pipeline_configs', 'run_in_progress', 'INTEGER DEFAULT 0');
   await ensureColumn('pipeline_configs', 'last_run_config', 'TEXT DEFAULT NULL');

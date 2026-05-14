@@ -1,11 +1,17 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  AlignCenter,
+  AlignJustify,
+  AlignLeft,
   AlertTriangle,
+  ArrowLeftRight,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
+  Cpu,
   FileText,
+  Globe,
   Hash,
   Info,
   LayoutGrid,
@@ -19,6 +25,9 @@ import { findBestSplitIndex, recommendChunkCount, trimSplitFragment } from '../.
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { checkContextOverflow, estimateCharTokens } from '../../utils/tokenEstimate';
+import { MODEL_OPTIONS, LANGUAGES } from '../../constants';
+import { useUiStore } from '../../stores/uiStore';
+import type { ModelProvider } from '../../types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -31,8 +40,6 @@ interface ImportPreviewDialogProps {
   text: string;
   useChunking: boolean;
   targetChunkCount: number;
-  minWords: number;
-  maxWords: number;
   headingAware: boolean;
   markdownAware?: boolean;
   format?: 'plain' | 'markdown';
@@ -399,8 +406,6 @@ export function ImportPreviewDialog({
   text,
   useChunking,
   targetChunkCount,
-  minWords,
-  maxWords,
   headingAware,
   markdownAware = false,
   format,
@@ -414,7 +419,43 @@ export function ImportPreviewDialog({
   const { t } = useTranslation();
   const trapRef = useFocusTrap(true, onCancel);
   const [editorMode, setEditorMode] = useState<EditorMode>('cards');
-  const config = usePipelineStore((s) => s.config);
+  const { config, updateStage, setConfig } = usePipelineStore();
+  const ollamaModels = useUiStore((s) => s.ollamaModels);
+
+  const stage0 = config.stages[0];
+  const [selectedProvider, setSelectedProvider] = useState<ModelProvider>(stage0?.provider ?? 'openai');
+  const [selectedModel, setSelectedModel] = useState<string>(stage0?.model ?? '');
+
+  const availableModels = selectedProvider === 'ollama' ? ollamaModels : MODEL_OPTIONS[selectedProvider] ?? [];
+
+  const handleProviderChange = (provider: ModelProvider) => {
+    setSelectedProvider(provider);
+    const models = provider === 'ollama' ? ollamaModels : MODEL_OPTIONS[provider] ?? [];
+    const model = models[0] ?? '';
+    setSelectedModel(model);
+    if (stage0) updateStage(stage0.id, { provider, model });
+  };
+
+  const handleModelChange = (model: string) => {
+    setSelectedModel(model);
+    if (stage0) updateStage(stage0.id, { model });
+  };
+
+  const handleSourceLanguageChange = (lang: string) => {
+    setConfig((prev) => ({ ...prev, sourceLanguage: lang }));
+  };
+
+  const handleTargetLanguageChange = (lang: string) => {
+    setConfig((prev) => ({ ...prev, targetLanguage: lang }));
+  };
+
+  const handleSwapLanguages = () => {
+    setConfig((prev) => ({
+      ...prev,
+      sourceLanguage: prev.targetLanguage,
+      targetLanguage: prev.sourceLanguage,
+    }));
+  };
 
   // ── Settings: words-per-chunk ↔ targetChunkCount sync ─────────────────────
   const totalWords = useMemo(() => {
@@ -437,31 +478,25 @@ export function ImportPreviewDialog({
     ? Math.round(totalWords / effectiveTargetChunkCount)
     : 700;
 
-  const [wordsPerChunkInput, setWordsPerChunkInput] = useState(String(derivedWordsPerChunk));
-  const isUserEditing = useRef(false);
-  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (!isUserEditing.current) {
-      setWordsPerChunkInput(String(derivedWordsPerChunk));
-    }
-  }, [derivedWordsPerChunk]);
-
   const handleWordsPerChunkChange = (value: number) => {
     onTargetChunkCountChange(recommendChunkCount(text, Math.max(50, value)));
   };
 
-  const handleWordsPerChunkInputChange = (raw: string) => {
-    isUserEditing.current = true;
-    setWordsPerChunkInput(raw);
-    if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    const parsed = Number(raw);
-    if (parsed >= 50) {
-      debounceTimer.current = setTimeout(() => {
-        handleWordsPerChunkChange(parsed);
-      }, 350);
-    }
-  };
+  const CHUNK_PRESETS = [
+    { words: 400, titleKey: 'files.chunkShortTitle', Icon: AlignLeft },
+    { words: 700, titleKey: 'files.chunkMediumTitle', Icon: AlignCenter },
+    { words: 1000, titleKey: 'files.chunkLongTitle', Icon: AlignJustify },
+  ] as const;
+
+  const activePresetWords = CHUNK_PRESETS.reduce<number>((nearest, p) =>
+    Math.abs(derivedWordsPerChunk - p.words) < Math.abs(derivedWordsPerChunk - nearest)
+      ? p.words
+      : nearest,
+    CHUNK_PRESETS[0].words,
+  );
+
+  const effectiveMinWords = Math.round(activePresetWords * 0.5);
+  const effectiveMaxWords = Math.round(activePresetWords * 1.5);
 
   // ── Algorithmic chunk computation ──────────────────────────────────────────
   const preview = useMemo(
@@ -469,13 +504,13 @@ export function ImportPreviewDialog({
       useChunking,
       targetChunkCount: effectiveTargetChunkCount,
       markdownAware,
-      minWords,
-      maxWords,
+      minWords: effectiveMinWords,
+      maxWords: effectiveMaxWords,
       headingAware,
       format,
       experimental,
     }),
-    [useChunking, effectiveTargetChunkCount, markdownAware, minWords, maxWords, headingAware, format, experimental, text],
+    [useChunking, effectiveTargetChunkCount, markdownAware, activePresetWords, headingAware, format, experimental, text],
   );
 
   const algorithmicParaChunks = useMemo(
@@ -665,7 +700,6 @@ export function ImportPreviewDialog({
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
-  const chunkCountLabel = `${activeParaChunks.length} ${t('pipeline.unitsReady')}`;
 
   return (
     <div
@@ -720,21 +754,23 @@ export function ImportPreviewDialog({
           </h2>
 
           {/* Row 3: stats */}
-          <div className="mb-4 flex flex-wrap items-center gap-3 text-xs font-mono text-editorial-muted">
-            <span>{preview.stats.words}w</span>
-            <span>·</span>
-            <span>{preview.stats.paragraphs} {t('pipeline.paragraphs').toLowerCase()}</span>
-            <span>·</span>
-            <span className={hasManualEdits ? 'text-editorial-warning' : ''}>{chunkCountLabel}</span>
+          <p className="mb-4 text-xs font-mono text-editorial-muted whitespace-nowrap">
+            {preview.stats.words.toLocaleString()} {t('pipeline.words').toLowerCase()}
+            {' · '}
+            {preview.stats.paragraphs} {t('pipeline.paragraphs').toLowerCase()}
+            {' · '}
+            <span className={hasManualEdits ? 'text-editorial-warning' : ''}>
+              {activeParaChunks.length} {t('pipeline.statsSegmentsUnit')}
+            </span>
             {hasManualEdits && (
-              <span className="text-editorial-warning italic">{t('files.manualEditsActive')}</span>
+              <span className="ml-2 italic text-editorial-warning">{t('files.manualEditsActive')}</span>
             )}
             {preview.warnings.length > 0 && (
-              <span title={preview.warnings.map((w) => t(`files.importWarning.${w}`)).join('\n')}>
-                <Info size={12} className="text-editorial-muted/60 cursor-help" />
+              <span className="ml-1" title={preview.warnings.map((w) => t(`files.importWarning.${w}`)).join('\n')}>
+                <Info size={12} className="inline align-middle text-editorial-muted/60 cursor-help" />
               </span>
             )}
-          </div>
+          </p>
 
           {/* Separator */}
           <div className="mb-4 h-px bg-editorial-border" />
@@ -776,41 +812,22 @@ export function ImportPreviewDialog({
             {/* Separator */}
             {useChunking && <span className="select-none text-editorial-border">·</span>}
 
-            {/* Words per chunk — compact input */}
-            {useChunking && (
-              <div className="flex items-center gap-1.5">
-                <input
-                  type="number"
-                  min={50}
-                  step={50}
-                  value={wordsPerChunkInput}
-                  onChange={(e) => handleWordsPerChunkInputChange(e.target.value)}
-                  onBlur={(e) => {
-                    if (debounceTimer.current) clearTimeout(debounceTimer.current);
-                    isUserEditing.current = false;
-                    const next = Math.max(50, Number(e.target.value) || 700);
-                    setWordsPerChunkInput(String(next));
-                    handleWordsPerChunkChange(next);
-                  }}
-                  title={t('files.wordsPerChunk')}
-                  className="w-16 rounded-lg border border-editorial-border bg-editorial-bg px-2 py-1 text-sm font-mono outline-none focus:border-editorial-ink/40"
-                />
-                <span className="text-xs text-editorial-muted">w</span>
-              </div>
-            )}
-
-            {/* Min / Max read-only from settings */}
-            {useChunking && (
-              <>
-                <span className="select-none text-editorial-border">·</span>
-                <span
-                  className="cursor-help text-xs text-editorial-muted/70"
-                  title={t('files.minMaxFromSettings')}
-                >
-                  {minWords}–{maxWords} w
-                </span>
-              </>
-            )}
+            {/* Chunk size presets */}
+            {useChunking && CHUNK_PRESETS.map(({ words, titleKey, Icon }) => (
+              <button
+                key={words}
+                type="button"
+                onClick={() => handleWordsPerChunkChange(words)}
+                title={t(titleKey)}
+                className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                  activePresetWords === words
+                    ? 'border-editorial-accent bg-editorial-accent text-white'
+                    : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
+                }`}
+              >
+                <Icon size={14} />
+              </button>
+            ))}
 
             {/* Recalculate — visible + contrasted only when there are manual edits */}
             <button
@@ -826,6 +843,72 @@ export function ImportPreviewDialog({
             >
               <RotateCcw size={13} />
             </button>
+          </div>
+
+          {/* Row 5: pipeline setup — language pair + model */}
+          <div className="mt-3 pt-3 border-t border-editorial-border/60">
+            <div className="grid grid-cols-[1.25rem_1fr] gap-y-2.5 gap-x-2 items-center">
+              {/* Language pair */}
+              <Globe size={11} className="text-editorial-accent shrink-0" />
+              <div className="flex items-center gap-1.5">
+                <select
+                  value={config.sourceLanguage}
+                  onChange={(e) => handleSourceLanguageChange(e.target.value)}
+                  className="w-32 rounded-[10px] border border-editorial-border bg-editorial-bg px-2 py-1.5 text-xs font-mono outline-none focus:border-editorial-ink/40 appearance-none"
+                  aria-label={t('pipeline.sourceLanguage')}
+                >
+                  {LANGUAGES.map((lang) => (
+                    <option key={lang} value={lang}>{t(`languages.${lang}`)}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={handleSwapLanguages}
+                  title={t('pipeline.swapLanguages')}
+                  aria-label={t('pipeline.swapLanguages')}
+                  className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                >
+                  <ArrowLeftRight size={12} />
+                </button>
+                <select
+                  value={config.targetLanguage}
+                  onChange={(e) => handleTargetLanguageChange(e.target.value)}
+                  className="w-32 rounded-[10px] border border-editorial-border bg-editorial-bg px-2 py-1.5 text-xs font-mono outline-none focus:border-editorial-ink/40 appearance-none"
+                  aria-label={t('pipeline.targetLanguage')}
+                >
+                  {LANGUAGES.map((lang) => (
+                    <option key={lang} value={lang}>{t(`languages.${lang}`)}</option>
+                  ))}
+                </select>
+              </div>
+              {/* Model */}
+              <Cpu size={11} className="text-editorial-accent shrink-0" />
+              <div className="flex items-center gap-1.5">
+                <select
+                  value={selectedProvider}
+                  onChange={(e) => handleProviderChange(e.target.value as ModelProvider)}
+                  className="w-24 rounded-[10px] border border-editorial-border bg-editorial-bg px-2 py-1.5 text-xs font-bold uppercase outline-none focus:border-editorial-ink/40 appearance-none"
+                  aria-label={t('pipeline.source')}
+                >
+                  {(Object.keys(MODEL_OPTIONS) as ModelProvider[]).map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+                <select
+                  value={selectedModel}
+                  onChange={(e) => handleModelChange(e.target.value)}
+                  disabled={availableModels.length === 0}
+                  className="flex-1 min-w-0 rounded-[10px] border border-editorial-border bg-editorial-bg px-2 py-1.5 text-xs font-mono outline-none focus:border-editorial-ink/40 appearance-none disabled:opacity-40"
+                  aria-label={t('pipeline.stageModelLabel')}
+                >
+                  {availableModels.length === 0 ? (
+                    <option value="">{t('ollama.noModels')}</option>
+                  ) : (
+                    availableModels.map((m) => <option key={m} value={m}>{m}</option>)
+                  )}
+                </select>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -857,8 +940,8 @@ export function ImportPreviewDialog({
                       paras={paras}
                       index={i}
                       total={activeParaChunks.length}
-                      minWords={minWords}
-                      maxWords={maxWords}
+                      minWords={effectiveMinWords}
+                      maxWords={effectiveMaxWords}
                       isExpanded={expandedChunks.has(i)}
                       onToggleExpand={() => toggleExpanded(i)}
                       onSplit={() => splitChunkAtMid(i)}
@@ -880,8 +963,8 @@ export function ImportPreviewDialog({
           ) : (
             <SegmentEditor
               chunks={activeParaChunks}
-              minWords={minWords}
-              maxWords={maxWords}
+              minWords={effectiveMinWords}
+              maxWords={effectiveMaxWords}
               onAddBoundary={addBoundaryAt}
               onRemoveBoundary={removeBoundaryAt}
               onSplitParagraph={splitParagraphAt}

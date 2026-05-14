@@ -1,10 +1,10 @@
-import { ArrowRightLeft, Play, Layers, Languages, Cpu, FileText, Link2, Pencil, Scale, RefreshCw, Loader2, X, ShieldCheck, AlertTriangle, RotateCcw, Wand2, BookmarkPlus, BookOpen, Check, Trash2, Bot, Settings, Globe } from 'lucide-react';
+import { ArrowRightLeft, Play, Languages, Cpu, FileText, Pencil, Scale, RefreshCw, Loader2, X, ShieldCheck, AlertTriangle, RotateCcw, Wand2, BookmarkPlus, BookOpen, Check, Trash2, Bot, Settings, Globe, WifiOff } from 'lucide-react';
 import { useMemo, useState, useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { ModelProvider, PromptTemplate } from '../../types';
 import { MODEL_OPTIONS, LANGUAGES } from '../../constants';
-import { getModelStatus } from '../../models/catalog';
+import { getModelStatus, calculateBlobBudget, getContextWindow } from '../../models/catalog';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
@@ -13,10 +13,10 @@ import { CostBadge } from './CostBadge';
 import { ProviderRuntimeEditor } from './ProviderRuntimeEditor';
 import { estimatePipelineCost } from '../../utils/costEstimate';
 import { usePricingStore } from '../../stores/pricingStore';
-import { llmService } from '../../services/llmService';
+import { llmService, ollamaService } from '../../services/llmService';
 import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
 
-export type ConfigSection = 'settings' | 'stages' | 'audit' | 'glossary';
+export type ConfigSection = 'settings' | 'translation' | 'audit' | 'glossary';
 
 interface PersonaEditorProps {
   persona: string | undefined;
@@ -498,20 +498,22 @@ export function PipelineConfig({
     updateStage,
   } = usePipelineStore();
   const { chunks, isProcessing, cancelRequested, resetCompletedChunks } = useChunksStore();
-  const ollamaStatus = useUiStore((state) => state.ollamaStatus);
+  const ollamaStatus = useUiStore((s) => s.ollamaStatus);
   const { t } = useTranslation();
   const judgeModels = useJudgeModelOptions(config.judgeProvider);
+  const [isRefreshingOllama, setIsRefreshingOllama] = useState(false);
   const [isRefiningPersona, setIsRefiningPersona] = useState(false);
   const [isRefiningStage, setIsRefiningStage] = useState(false);
   const [isRefiningJudge, setIsRefiningJudge] = useState(false);
   const [isRefiningCoherence, setIsRefiningCoherence] = useState(false);
-  const [activeTab, setActiveTab] = useState<ConfigSection>(visibleSection ?? 'stages');
+  const [activeTab, setActiveTab] = useState<ConfigSection>(visibleSection ?? 'translation');
 
   const { templates, loadTemplates, saveTemplate, deleteTemplate } = usePromptTemplateStore();
 
   const cannotRun = isProcessing || chunks.length === 0;
   const completedCount = chunks.filter((c) => c.status === 'completed').length;
   const canRerunAll = !isProcessing && completedCount > 0;
+  const translationsExist = completedCount > 0;
 
   useEffect(() => {
     loadTemplates();
@@ -551,6 +553,16 @@ export function PipelineConfig({
   const stageModels = useJudgeModelOptions(stage0?.provider ?? 'openai');
   const stageOllamaOffline = stage0?.provider === 'ollama' && ollamaStatus === 'disconnected';
 
+  const currentContextWindow = stage0
+    ? getContextWindow(stage0.provider, stage0.model)
+    : undefined;
+  const contextWindowChanged =
+    !translationsExist &&
+    chunks.length > 0 &&
+    config.chunkedWithContextWindow !== undefined &&
+    currentContextWindow !== undefined &&
+    currentContextWindow !== config.chunkedWithContextWindow;
+
   const handleStageProviderChange = (newProvider: ModelProvider) => {
     if (!stage0) return;
     const models = newProvider === 'ollama' ? useUiStore.getState().ollamaModels : MODEL_OPTIONS[newProvider];
@@ -559,6 +571,22 @@ export function PipelineConfig({
       toast.message(t('ollama.uncheckedHint'));
     } else if (newProvider === 'ollama' && useUiStore.getState().ollamaStatus === 'disconnected') {
       toast.warning(t('ollama.selectedButOffline'));
+    }
+  };
+
+  const handleRefreshOllama = async () => {
+    setIsRefreshingOllama(true);
+    try {
+      const models = await ollamaService.listModels();
+      useUiStore.getState().setOllamaModels(models);
+      useUiStore.getState().setOllamaStatus('connected');
+      toast.success(t('ollama.connected', { count: models.length }));
+    } catch (err: unknown) {
+      useUiStore.getState().setOllamaModels([]);
+      useUiStore.getState().setOllamaStatus('disconnected');
+      toast.error(t('ollama.disconnected'), { description: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setIsRefreshingOllama(false);
     }
   };
 
@@ -645,7 +673,7 @@ export function PipelineConfig({
 
   const TAB_TITLE: Record<ConfigSection, string> = {
     settings: t('pipeline.tabSettings'),
-    stages: t('pipeline.tabStages'),
+    translation: t('pipeline.tabTranslation'),
     audit: t('pipeline.tabAudit'),
     glossary: t('pipeline.tabGlossary'),
   };
@@ -727,15 +755,6 @@ export function PipelineConfig({
             onSaveTemplate={(name, prompt) => saveTemplate(name, prompt, 'persona')}
             deleteTemplate={deleteTemplate}
           />
-          <div className="flex flex-col items-center gap-4 py-8 text-center">
-            <div className="rounded-full border border-editorial-border/60 p-4 text-editorial-muted/50">
-              <Layers size={24} />
-            </div>
-            <div className="space-y-1">
-              <p className="text-base font-bold text-editorial-ink">{t('pipeline.noProjectTitle')}</p>
-              <p className="text-xs leading-relaxed text-editorial-muted max-w-[260px]">{t('pipeline.noProjectHint')}</p>
-            </div>
-          </div>
         </div>
       )}
 
@@ -765,13 +784,13 @@ export function PipelineConfig({
         <button
           type="button"
           role="tab"
-          aria-selected={activeTab === 'stages'}
-          aria-controls="pconfig-panel-stages"
-          id="pconfig-tab-stages"
-          onClick={() => setActiveTab('stages')}
-          title={t('pipeline.tabStages')}
-          aria-label={t('pipeline.tabStages')}
-          className={tabBtnCls(activeTab === 'stages')}
+          aria-selected={activeTab === 'translation'}
+          aria-controls="pconfig-panel-translation"
+          id="pconfig-tab-translation"
+          onClick={() => setActiveTab('translation')}
+          title={t('pipeline.tabTranslation')}
+          aria-label={t('pipeline.tabTranslation')}
+          className={tabBtnCls(activeTab === 'translation')}
         >
           <Languages size={16} />
         </button>
@@ -890,11 +909,11 @@ export function PipelineConfig({
         )}
 
         {/* ── TRADUZIONE ── */}
-        {activeTab === 'stages' && stage0 && (
+        {activeTab === 'translation' && stage0 && (
           <div
-            id="pconfig-panel-stages"
+            id="pconfig-panel-translation"
             role="tabpanel"
-            aria-labelledby="pconfig-tab-stages"
+            aria-labelledby="pconfig-tab-translation"
             className="space-y-6"
           >
             {/* Model + options card */}
@@ -909,7 +928,8 @@ export function PipelineConfig({
                 <select
                   value={stage0.provider}
                   onChange={(e) => handleStageProviderChange(e.target.value as ModelProvider)}
-                  className="rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  disabled={translationsExist || isProcessing}
+                  className="rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
                   aria-label={t('models.provider')}
                 >
                   {Object.keys(MODEL_OPTIONS).map((p) => (
@@ -920,7 +940,8 @@ export function PipelineConfig({
                   <select
                     value={stage0.model}
                     onChange={(e) => updateStage(stage0.id, { model: e.target.value })}
-                    className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    disabled={translationsExist || isProcessing}
+                    className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
                     aria-label={t('pipeline.stageModelLabel')}
                   >
                     {stageModels.map((m) => (
@@ -933,15 +954,17 @@ export function PipelineConfig({
                   <input
                     value={stage0.model}
                     onChange={(e) => updateStage(stage0.id, { model: e.target.value })}
+                    disabled={translationsExist || isProcessing}
                     placeholder={t('ollama.modelPlaceholder')}
-                    className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
                     aria-label={t('pipeline.stageModelLabel')}
                   />
                 ) : (
                   <select
                     value={stage0.model}
                     onChange={(e) => updateStage(stage0.id, { model: e.target.value })}
-                    className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    disabled={translationsExist || isProcessing}
+                    className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
                     aria-label={t('pipeline.stageModelLabel')}
                   >
                     {MODEL_OPTIONS[stage0.provider]?.map((m) => (
@@ -952,36 +975,35 @@ export function PipelineConfig({
                   </select>
                 )}
               </div>
-              {stageOllamaOffline && (
-                <div className="flex items-center gap-2 text-xs text-editorial-accent">
-                  <AlertTriangle size={14} />
-                  <span>{t('ollama.selectedButOffline')}</span>
+              {translationsExist && (
+                <div className="flex items-center gap-2 text-xs text-editorial-muted">
+                  <AlertTriangle size={12} className="shrink-0" />
+                  <span>{t('pipeline.modelLockedHint')}</span>
                 </div>
               )}
-              {/* Rolling context toggle */}
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1.5">
-                  <Link2 size={11} className="text-editorial-accent shrink-0" />
-                  <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-                    {t('pipeline.rollingContext')}
-                  </p>
+              {contextWindowChanged && (
+                <div className="flex items-center gap-2 text-xs text-editorial-warning">
+                  <AlertTriangle size={12} className="shrink-0 text-editorial-warning" />
+                  <span>{t('pipeline.modelContextWindowChangedHint')}</span>
                 </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={stage0.rollingContext !== false}
-                  onClick={() => updateStage(stage0.id, { rollingContext: stage0.rollingContext !== false ? false : true })}
-                  title={t('pipeline.rollingContext')}
-                  aria-label={t('pipeline.rollingContext')}
-                  className={`ml-auto rounded-full border p-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                    stage0.rollingContext !== false
-                      ? 'border-editorial-ink bg-editorial-ink text-white'
-                      : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
-                  }`}
-                >
-                  <Link2 size={11} />
-                </button>
-              </div>
+              )}
+              {stageOllamaOffline && !translationsExist && (
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-xs text-editorial-accent">
+                    <WifiOff size={13} />
+                    <span>{t('ollama.selectedButOffline')}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRefreshOllama}
+                    disabled={isRefreshingOllama}
+                    className="flex items-center gap-1.5 rounded-full border border-editorial-accent/60 px-3 py-1 text-xs text-editorial-accent transition-colors hover:bg-editorial-accent hover:text-white disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  >
+                    {isRefreshingOllama ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                    {t('ollama.loadModels')}
+                  </button>
+                </div>
+              )}
               <ProviderRuntimeEditor
                 provider={stage0.provider}
                 value={stage0.providerOptions}
@@ -990,6 +1012,101 @@ export function PipelineConfig({
                 hint={t('pipeline.providerOptions.stageHint')}
               />
             </div>
+
+            {/* Context memory card */}
+            {(() => {
+              const isOverride = (config.blobBudgetTokens ?? 0) > 0;
+              const auto = calculateBlobBudget(config.stages);
+              return (
+                <div className="space-y-3 rounded-[20px] border border-editorial-border bg-editorial-bg/70 px-5 py-4">
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={isOverride}
+                    onClick={() => setConfig((prev) => ({
+                      ...prev,
+                      blobBudgetTokens: isOverride ? 0 : auto.budget,
+                    }))}
+                    className={`flex w-full items-center justify-between text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                      isOverride ? '' : 'opacity-80 hover:opacity-100'
+                    }`}
+                  >
+                    <span className="space-y-0.5">
+                      <span className="flex items-center gap-1.5">
+                        <Cpu size={11} className="text-editorial-accent shrink-0" />
+                        <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                          {t('pipeline.blobContext')}
+                        </span>
+                      </span>
+                      {!isOverride && (
+                        <span className="block pl-4 text-xs text-editorial-muted/70">
+                          {t('pipeline.blobContextAutoDesc', { tokens: auto.budget.toLocaleString(), model: auto.modelId || 'ollama' })}
+                        </span>
+                      )}
+                    </span>
+                    <span
+                      className={`flex h-5 w-9 items-center rounded-full border px-0.5 transition-colors shrink-0 ${
+                        isOverride
+                          ? 'border-editorial-ink bg-editorial-ink justify-end'
+                          : 'border-editorial-border bg-editorial-textbox/60 justify-start'
+                      }`}
+                      aria-hidden="true"
+                    >
+                      <span className="h-3.5 w-3.5 rounded-full bg-white" />
+                    </span>
+                  </button>
+
+                  {isOverride && (
+                    <div className="space-y-3 pt-1">
+                      <div className="flex flex-wrap gap-4 items-center">
+                        <div className="flex items-center gap-2">
+                          <label className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                            {t('pipeline.blobBudgetTokens')}
+                          </label>
+                          <input
+                            type="number"
+                            min={1}
+                            value={config.blobBudgetTokens ?? auto.budget}
+                            onChange={(e) => setConfig((prev) => ({
+                              ...prev,
+                              blobBudgetTokens: Math.max(1, Number(e.target.value) || 1),
+                            }))}
+                            className="w-24 rounded-[10px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                            aria-label={t('pipeline.blobBudgetTokens')}
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <label className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                            {t('pipeline.blobOverlap')}
+                          </label>
+                          <input
+                            type="number"
+                            min={0}
+                            value={config.blobOverlap ?? 1}
+                            onChange={(e) => setConfig((prev) => ({
+                              ...prev,
+                              blobOverlap: Math.max(0, Number(e.target.value) || 0),
+                            }))}
+                            className="w-16 rounded-[10px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                            aria-label={t('pipeline.blobOverlap')}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setConfig((prev) => ({ ...prev, blobBudgetTokens: 0 }))}
+                          title={t('pipeline.blobContextReset')}
+                          aria-label={t('pipeline.blobContextReset')}
+                          className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                        >
+                          <RotateCcw size={12} />
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-editorial-muted/70">{t('pipeline.blobOverlapHint')}</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Translation instructions card */}
             <AuditPromptEditor

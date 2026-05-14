@@ -48,7 +48,6 @@ export interface PipelineStageConfig {
   model: string;
   provider: ModelProvider;
   enabled: boolean;
-  rollingContext?: boolean;
   sourceLanguage?: string;
   targetLanguage?: string;
   providerOptions?: ProviderRuntimeConfig;
@@ -80,6 +79,8 @@ export interface TranslationChunk {
   currentDraft?: string;
   translationLocked?: boolean;
   footnotes?: Footnote[];
+  blobId?: string;
+  blobOrder?: number;
 }
 
 export interface TokenUsage {
@@ -155,4 +156,7 @@ export interface PipelineConfig {
   uiLanguage?: string;
   customSourceLanguage?: string;
   customTargetLanguage?: string;
+  blobBudgetTokens?: number;
+  blobOverlap?: number;
+  chunkedWithContextWindow?: number;
 }

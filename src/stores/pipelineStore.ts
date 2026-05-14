@@ -129,7 +129,6 @@ export const usePipelineStore = create<PipelineState>((set) => ({
             model: 'gpt-4o-mini',
             provider: 'openai' as ModelProvider,
             enabled: true,
-            rollingContext: true,
           },
         ],
       },
