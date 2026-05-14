@@ -1,5 +1,34 @@
 use serde::{Deserialize, Serialize};
 
+/// A single section of a system prompt. `cacheable: true` tells the provider
+/// to insert a cache breakpoint after this block (Anthropic `cache_control`).
+/// Providers that don't support structured caching flatten all blocks to a string.
+#[derive(Debug, Clone)]
+pub struct PromptBlock {
+    pub text: String,
+    pub cacheable: bool,
+}
+
+/// Structured prompt ready for dispatch. System blocks are ordered; the last
+/// cacheable block marks the furthest stable cache boundary for the call.
+#[derive(Debug, Clone)]
+pub struct StructuredPrompt {
+    pub system: Vec<PromptBlock>,
+    pub user: String,
+}
+
+impl StructuredPrompt {
+    /// Flatten all system blocks into a single string for providers that don't
+    /// support structured caching.
+    pub fn flatten_system(&self) -> String {
+        self.system
+            .iter()
+            .map(|b| b.text.as_str())
+            .collect::<Vec<_>>()
+            .join("\n\n")
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GlossaryEntry {

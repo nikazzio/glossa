@@ -3,7 +3,7 @@ use reqwest::Client;
 use std::time::Duration;
 
 use crate::llm::stream::{StreamTimeouts, HTTP_CONNECT_TIMEOUT_SECS};
-use crate::llm::types::ProviderRuntimeConfig;
+use crate::llm::types::{ProviderRuntimeConfig, StructuredPrompt};
 
 #[derive(Debug, Clone)]
 pub struct TokenUsage {
@@ -13,8 +13,7 @@ pub struct TokenUsage {
 
 pub struct LlmRequest<'a> {
     pub model: &'a str,
-    pub system_prompt: &'a str,
-    pub user_prompt: &'a str,
+    pub structured: &'a StructuredPrompt,
     pub api_key: &'a str,
     pub json_mode: bool,
     pub provider_options: Option<&'a ProviderRuntimeConfig>,

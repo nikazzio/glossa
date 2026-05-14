@@ -129,10 +129,11 @@ impl LlmProvider for OllamaProvider {
             .map(|c| merge_ollama_config(None, Some(c)))
             .unwrap_or_else(default_ollama_config);
 
+        let system = req.structured.flatten_system();
         let body = build_ollama_chat_body(
             req.model,
-            req.system_prompt,
-            req.user_prompt,
+            &system,
+            &req.structured.user,
             &ollama,
             false,
             req.json_mode,
@@ -179,10 +180,11 @@ impl LlmProvider for OllamaProvider {
             .map(|c| merge_ollama_config(None, Some(c)))
             .unwrap_or_else(default_ollama_config);
 
+        let system = req.structured.flatten_system();
         let body = build_ollama_chat_body(
             req.model,
-            req.system_prompt,
-            req.user_prompt,
+            &system,
+            &req.structured.user,
             &ollama,
             true,
             req.json_mode,

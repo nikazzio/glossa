@@ -36,16 +36,10 @@ pub async fn run_stage(
     provider.preflight(&stage.model).await?;
     let api_key = get_api_key(&app, &stage.provider)?;
     let client = provider.http_client()?;
-    let (system_prompt, user_prompt) = build_stage_prompts(
-        &text,
-        &stage,
-        &config,
-        &previous_result,
-    );
+    let structured = build_stage_prompts(&text, &stage, &config, &previous_result);
     let req = LlmRequest {
         model: &stage.model,
-        system_prompt: &system_prompt,
-        user_prompt: &user_prompt,
+        structured: &structured,
         api_key: &api_key,
         json_mode: false,
         provider_options: stage.provider_options.as_ref(),
@@ -68,21 +62,15 @@ pub async fn run_stage_stream(
     provider.preflight(&stage.model).await?;
     let api_key = get_api_key(&app, &stage.provider)?;
     let client = provider.streaming_client()?;
-    let (system_prompt, user_prompt) = build_stage_prompts(
-        &text,
-        &stage,
-        &config,
-        &previous_result,
-    );
+    let structured = build_stage_prompts(&text, &stage, &config, &previous_result);
     app.emit("chunk-prompt", PromptEvent {
         stream_id: stream_id.clone(),
-        system_prompt: system_prompt.clone(),
-        user_prompt: user_prompt.clone(),
+        system_prompt: structured.flatten_system(),
+        user_prompt: structured.user.clone(),
     }).ok();
     let req = LlmRequest {
         model: &stage.model,
-        system_prompt: &system_prompt,
-        user_prompt: &user_prompt,
+        structured: &structured,
         api_key: &api_key,
         json_mode: false,
         provider_options: stage.provider_options.as_ref(),
@@ -129,18 +117,15 @@ pub async fn judge_translation(
     provider.preflight(&config.judge_model).await?;
     let api_key = get_api_key(&app, &config.judge_provider)?;
     let client = provider.streaming_client()?;
-    let (system_prompt, user_prompt) = build_judge_prompts(&original_text, &translation, &config);
-
+    let structured = build_judge_prompts(&original_text, &translation, &config);
     app.emit("chunk-prompt", PromptEvent {
         stream_id: stream_id.clone(),
-        system_prompt: system_prompt.clone(),
-        user_prompt: user_prompt.clone(),
+        system_prompt: structured.flatten_system(),
+        user_prompt: structured.user.clone(),
     }).ok();
-
     let req = LlmRequest {
         model: &config.judge_model,
-        system_prompt: &system_prompt,
-        user_prompt: &user_prompt,
+        structured: &structured,
         api_key: &api_key,
         json_mode: true,
         provider_options: config.review_provider_options.as_ref(),
@@ -221,19 +206,24 @@ pub async fn refine_prompt(
     prov.preflight(&model).await?;
     let api_key = get_api_key(&app, &provider)?;
     let client = prov.http_client()?;
-    let system_prompt = if context == "audit" {
+    let system_text = if context == "audit" {
         REFINE_AUDIT_SYSTEM_PROMPT
     } else {
         REFINE_STAGE_SYSTEM_PROMPT
     };
-    let user_prompt = format!("Rewrite this prompt professionally:\n\n{prompt}");
     let refine_config = minimal_pipeline_config(Some(ProviderRuntimeConfig {
         ollama: Some(crate::llm::providers::ollama::default_ollama_config()),
     }));
+    let structured = crate::llm::types::StructuredPrompt {
+        system: vec![crate::llm::types::PromptBlock {
+            text: system_text.to_string(),
+            cacheable: true,
+        }],
+        user: format!("Rewrite this prompt professionally:\n\n{prompt}"),
+    };
     let req = LlmRequest {
         model: &model,
-        system_prompt,
-        user_prompt: &user_prompt,
+        structured: &structured,
         api_key: &api_key,
         json_mode: false,
         provider_options: refine_config.review_provider_options.as_ref(),
@@ -254,18 +244,15 @@ pub async fn run_coherence_for_chunk(
     provider.preflight(&config.judge_model).await?;
     let api_key = get_api_key(&app, &config.judge_provider)?;
     let client = provider.streaming_client()?;
-    let (system_prompt, user_prompt) = build_coherence_prompts(&input, &config);
-
+    let structured = build_coherence_prompts(&input, &config);
     app.emit("chunk-prompt", PromptEvent {
         stream_id: stream_id.clone(),
-        system_prompt: system_prompt.clone(),
-        user_prompt: user_prompt.clone(),
+        system_prompt: structured.flatten_system(),
+        user_prompt: structured.user.clone(),
     }).ok();
-
     let req = LlmRequest {
         model: &config.judge_model,
-        system_prompt: &system_prompt,
-        user_prompt: &user_prompt,
+        structured: &structured,
         api_key: &api_key,
         json_mode: true,
         provider_options: config.review_provider_options.as_ref(),
@@ -340,10 +327,16 @@ pub async fn test_provider_connection(app: AppHandle, provider: String, ollama_b
     let prov = get_provider(&provider, None)?;
     let api_key = get_api_key(&app, &provider)?;
     let client = prov.http_client()?;
+    let structured = crate::llm::types::StructuredPrompt {
+        system: vec![crate::llm::types::PromptBlock {
+            text: "You are a test assistant.".to_string(),
+            cacheable: false,
+        }],
+        user: "Reply with exactly: OK".to_string(),
+    };
     let req = LlmRequest {
         model: prov.default_test_model(),
-        system_prompt: "You are a test assistant.",
-        user_prompt: "Reply with exactly: OK",
+        structured: &structured,
         api_key: &api_key,
         json_mode: false,
         provider_options: None,

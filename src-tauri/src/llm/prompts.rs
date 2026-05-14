@@ -1,4 +1,4 @@
-use crate::llm::types::{CoherenceChunkInput, PipelineConfig, ProviderRuntimeConfig, StageConfig};
+use crate::llm::types::{CoherenceChunkInput, PipelineConfig, PromptBlock, ProviderRuntimeConfig, StageConfig, StructuredPrompt};
 
 pub(crate) const REFINE_STAGE_SYSTEM_PROMPT: &str = "\
 You are an expert prompt engineer specializing in multi-stage AI translation pipelines.\n\
@@ -59,7 +59,7 @@ pub(crate) fn build_stage_prompts(
     stage: &StageConfig,
     config: &PipelineConfig,
     previous_result: &Option<String>,
-) -> (String, String) {
+) -> StructuredPrompt {
     let glossary_table = format_glossary_table(&config.glossary);
 
     let markdown_rules = if config.markdown_aware.unwrap_or(false) {
@@ -98,44 +98,54 @@ pub(crate) fn build_stage_prompts(
         .filter(|p| !p.trim().is_empty())
         .unwrap_or(&default_opener);
 
-    let system_prompt = format!(
-        "{}\n\n\
-         Core Instructions:\n{}\n\n\
+    // Block 1 (cacheable): static project-level context — persona, constraints, glossary.
+    // Identical for every chunk in the run, so caches across the whole document.
+    let static_block = format!(
+        "{opener}\n\n\
          Structural Preservation Rules:\n\
          - Preserve paragraph boundaries and line breaks unless the source is clearly malformed\n\
          - Do not collapse repeated spaces, tabs, list structure, or footnote placement when they carry formatting meaning\n\n\
-         {}{}",
-        opener,
-        stage.prompt,
-        glossary_rules,
-        markdown_rules,
+         {glossary_rules}{markdown_rules}",
     );
 
-    let context_block = match config.blob_context.as_deref().filter(|s| !s.is_empty()) {
-        Some(blob) => format!(
-            "[Reference document context — do not translate, use for terminology and narrative coherence]\n\
-             {blob}\n\
-             [End of reference context]\n\n"
-        ),
-        None => String::new(),
-    };
+    // Block 2: stage-specific instructions. Constant within a stage run but varies
+    // across stages, so we don't mark it cacheable (its position shifts with stage.prompt length).
+    let stage_block = format!("Core Instructions:\n{}", stage.prompt);
 
-    let user_prompt = match previous_result {
+    let mut system = vec![
+        PromptBlock { text: static_block, cacheable: true },
+        PromptBlock { text: stage_block, cacheable: false },
+    ];
+
+    // Block 3 (cacheable): blob context — full text of all chunks in the same blob.
+    // Constant for every chunk call within a blob, enabling cache reuse across the blob.
+    if let Some(blob) = config.blob_context.as_deref().filter(|s| !s.is_empty()) {
+        system.push(PromptBlock {
+            text: format!(
+                "[Reference document context — do not translate, use for terminology and narrative coherence]\n\
+                 {blob}\n\
+                 [End of reference context]"
+            ),
+            cacheable: true,
+        });
+    }
+
+    let user = match previous_result {
         Some(prev) if !prev.is_empty() => format!(
-            "{context_block}Original: {text}\n\nPrevious Iteration: {prev}\n\n\
+            "Original: {text}\n\nPrevious Iteration: {prev}\n\n\
              Refine the above translation according to your instructions. Provide ONLY the final text."
         ),
-        _ => format!("{context_block}Text to translate: {text}\n\nProvide ONLY the translated text."),
+        _ => format!("Text to translate: {text}\n\nProvide ONLY the translated text."),
     };
 
-    (system_prompt, user_prompt)
+    StructuredPrompt { system, user }
 }
 
 pub(crate) fn build_judge_prompts(
     original_text: &str,
     translation: &str,
     config: &PipelineConfig,
-) -> (String, String) {
+) -> StructuredPrompt {
     let glossary_table = format_glossary_table(&config.glossary);
     let src = effective_source(config);
     let tgt = effective_target(config);
@@ -151,10 +161,18 @@ pub(crate) fn build_judge_prompts(
         format!("Glossary to adhere to:\n{glossary_table}\n\n")
     };
 
-    let system_prompt = format!(
-        "As a translation quality judge, evaluate the following translation.\n\
-         Source ({src}): {original_text}\n\
-         Target ({tgt}): {translation}\n\n\
+    let markdown_rules = if config.markdown_aware.unwrap_or(false) {
+        "When Markdown is present, verify that the translation preserves markers, footnotes, \
+         inline emphasis, and block structure exactly enough to remain valid Markdown.\n\n"
+    } else {
+        ""
+    };
+
+    // Block 1 (cacheable): static judge context — role, instructions, glossary, format spec.
+    // original_text and translation are in the user turn so this block is constant for the
+    // whole project run, enabling near-100% cache hit rate across all chunk judge calls.
+    let system_block = format!(
+        "You are a translation quality judge for {src}→{tgt} translations.\n\n\
          Specific Audit Instructions:\n{instructions}\n\n\
          {glossary_section}\
          {markdown_rules}\
@@ -167,22 +185,24 @@ pub(crate) fn build_judge_prompts(
          Write all description and suggestedFix values in {ui_lang}. \
          Keep the rating value as one of the English literals above.",
         instructions = config.judge_prompt,
-        markdown_rules = if config.markdown_aware.unwrap_or(false) {
-            "When Markdown is present, verify that the translation preserves markers, footnotes, inline emphasis, and block structure exactly enough to remain valid Markdown.\n\n"
-        } else {
-            ""
-        },
     );
 
-    let user_prompt = "Perform the audit now and return the JSON report.".to_string();
+    let user = format!(
+        "Source ({src}): {original_text}\n\
+         Target ({tgt}): {translation}\n\n\
+         Perform the audit now and return the JSON report."
+    );
 
-    (system_prompt, user_prompt)
+    StructuredPrompt {
+        system: vec![PromptBlock { text: system_block, cacheable: true }],
+        user,
+    }
 }
 
 pub(crate) fn build_coherence_prompts(
     input: &CoherenceChunkInput,
     config: &PipelineConfig,
-) -> (String, String) {
+) -> StructuredPrompt {
     let glossary_table = format_glossary_table(&config.glossary);
     let src = effective_source(config);
     let tgt = effective_target(config);
@@ -210,7 +230,10 @@ pub(crate) fn build_coherence_prompts(
         format!("Glossary:\n{glossary_table}\n\n")
     };
 
-    let system_prompt = format!(
+    // Block 1 (cacheable): static coherence context — role, instructions, glossary, format spec.
+    // Constant for the whole project run; blob_context (translated neighbors) stays in user turn
+    // since it changes per chunk and cannot be cached.
+    let system_block = format!(
         "You are a translation coherence auditor for {src}→{tgt} translations.\n\
          Your task: identify cross-segment inconsistencies between a translated segment and its surrounding context.\n\
          {instructions}\n\
@@ -232,7 +255,7 @@ pub(crate) fn build_coherence_prompts(
         ))
         .unwrap_or_default();
 
-    let user_prompt = format!(
+    let user = format!(
         "{context_block}[Current segment]\nOriginal: {original}\nTranslation: {translation}\n\
          [End of current segment]\n\n\
          Identify cross-segment coherence issues and return the JSON. If no issues, return {{\"issues\": []}}.",
@@ -240,7 +263,10 @@ pub(crate) fn build_coherence_prompts(
         translation = input.translation,
     );
 
-    (system_prompt, user_prompt)
+    StructuredPrompt {
+        system: vec![PromptBlock { text: system_block, cacheable: true }],
+        user,
+    }
 }
 
 /// Strips markdown code fences and any preamble text that LLMs sometimes wrap around JSON output.

@@ -114,8 +114,8 @@ impl LlmProvider for OpenAiCompatibleProvider {
         let mut body = serde_json::json!({
             "model": req.model,
             "messages": [
-                {"role": "system", "content": req.system_prompt},
-                {"role": "user", "content": req.user_prompt}
+                {"role": "system", "content": req.structured.flatten_system()},
+                {"role": "user", "content": req.structured.user}
             ]
         });
 
@@ -179,8 +179,8 @@ impl LlmProvider for OpenAiCompatibleProvider {
         let body = serde_json::json!({
             "model": req.model,
             "messages": [
-                {"role": "system", "content": req.system_prompt},
-                {"role": "user", "content": req.user_prompt}
+                {"role": "system", "content": req.structured.flatten_system()},
+                {"role": "user", "content": req.structured.user}
             ],
             "stream": true,
             "stream_options": {"include_usage": true}

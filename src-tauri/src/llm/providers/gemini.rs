@@ -72,8 +72,8 @@ impl LlmProvider for GeminiProvider {
         };
 
         let body = serde_json::json!({
-            "systemInstruction": { "parts": [{"text": req.system_prompt}] },
-            "contents": [{ "role": "user", "parts": [{"text": req.user_prompt}] }],
+            "systemInstruction": { "parts": [{"text": req.structured.flatten_system()}] },
+            "contents": [{ "role": "user", "parts": [{"text": req.structured.user}] }],
             "generationConfig": gen_config
         });
 
@@ -127,8 +127,8 @@ impl LlmProvider for GeminiProvider {
         );
 
         let body = serde_json::json!({
-            "systemInstruction": { "parts": [{"text": req.system_prompt}] },
-            "contents": [{ "role": "user", "parts": [{"text": req.user_prompt}] }]
+            "systemInstruction": { "parts": [{"text": req.structured.flatten_system()}] },
+            "contents": [{ "role": "user", "parts": [{"text": req.structured.user}] }]
         });
 
         client
