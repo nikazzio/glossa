@@ -1,4 +1,4 @@
-import { ArrowRightLeft, Play, Layers, Languages, Cpu, FileText, Link2, Pencil, Scale, RefreshCw, Loader2, X, ShieldCheck, AlertTriangle, RotateCcw, Wand2, BookmarkPlus, BookOpen, Check, Trash2, Bot, Settings, Globe } from 'lucide-react';
+import { ArrowRightLeft, Play, Layers, Languages, Cpu, FileText, Pencil, Scale, RefreshCw, Loader2, X, ShieldCheck, AlertTriangle, RotateCcw, Wand2, BookmarkPlus, BookOpen, Check, Trash2, Bot, Settings, Globe } from 'lucide-react';
 import { useMemo, useState, useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -958,30 +958,6 @@ export function PipelineConfig({
                   <span>{t('ollama.selectedButOffline')}</span>
                 </div>
               )}
-              {/* Rolling context toggle */}
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1.5">
-                  <Link2 size={11} className="text-editorial-accent shrink-0" />
-                  <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-                    {t('pipeline.rollingContext')}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={stage0.rollingContext !== false}
-                  onClick={() => updateStage(stage0.id, { rollingContext: stage0.rollingContext !== false ? false : true })}
-                  title={t('pipeline.rollingContext')}
-                  aria-label={t('pipeline.rollingContext')}
-                  className={`ml-auto rounded-full border p-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                    stage0.rollingContext !== false
-                      ? 'border-editorial-ink bg-editorial-ink text-white'
-                      : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
-                  }`}
-                >
-                  <Link2 size={11} />
-                </button>
-              </div>
               <ProviderRuntimeEditor
                 provider={stage0.provider}
                 value={stage0.providerOptions}

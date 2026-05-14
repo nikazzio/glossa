@@ -2,6 +2,7 @@ use tauri::{AppHandle, Emitter, State};
 
 use crate::keystore::get_api_key;
 use crate::llm::provider::LlmRequest;
+use crate::llm::blobs::{compute_blob_assignments, BlobAssignment, ChunkForBlob};
 use crate::llm::prompts::{
     build_coherence_prompts, build_judge_prompts, build_stage_prompts, minimal_pipeline_config,
     parse_judge_rating, sanitize_llm_json_output, REFINE_AUDIT_SYSTEM_PROMPT,
@@ -29,7 +30,6 @@ pub async fn run_stage(
     stage: StageConfig,
     config: PipelineConfig,
     previous_result: Option<String>,
-    previous_translation: Option<String>,
     ollama_base_url: Option<String>,
 ) -> Result<String, String> {
     let provider = get_provider(&stage.provider, ollama_base_url)?;
@@ -41,7 +41,6 @@ pub async fn run_stage(
         &stage,
         &config,
         &previous_result,
-        &previous_translation,
     );
     let req = LlmRequest {
         model: &stage.model,
@@ -62,7 +61,6 @@ pub async fn run_stage_stream(
     stage: StageConfig,
     config: PipelineConfig,
     previous_result: Option<String>,
-    previous_translation: Option<String>,
     stream_id: String,
     ollama_base_url: Option<String>,
 ) -> Result<String, String> {
@@ -75,7 +73,6 @@ pub async fn run_stage_stream(
         &stage,
         &config,
         &previous_result,
-        &previous_translation,
     );
     app.emit("chunk-prompt", PromptEvent {
         stream_id: stream_id.clone(),
@@ -425,4 +422,16 @@ async fn run_ollama_preflight_check(model: &str, ollama_base_url: Option<String>
 async fn run_cloud_preflight_check(app: &AppHandle, provider: &str) -> Result<(), String> {
     get_api_key(app, provider)?;
     Ok(())
+}
+
+/// Pure computation: assigns each chunk to a blob based on token budget.
+/// Called by the frontend before starting a pipeline run when blob assignments
+/// are missing or stale. Returns one assignment per chunk.
+#[tauri::command]
+pub fn compute_blobs(
+    chunks: Vec<ChunkForBlob>,
+    budget_tokens: usize,
+    overlap: usize,
+) -> Vec<BlobAssignment> {
+    compute_blob_assignments(&chunks, budget_tokens, overlap)
 }

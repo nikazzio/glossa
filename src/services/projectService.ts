@@ -45,6 +45,8 @@ export interface SavedTranslation {
   judge_issues: string; // JSON
   coherence_result?: string | null;
   footnotes?: string | null;
+  blob_id?: string | null;
+  blob_order?: number | null;
   created_at: string;
 }
 
@@ -92,6 +94,7 @@ export function restoreTranslations(rows: SavedTranslation[]): TranslationChunk[
       translationLocked: row.translation_locked === 1,
       ...(coherenceResult ? { coherenceResult } : {}),
       ...(footnotes?.length ? { footnotes } : {}),
+      ...(row.blob_id ? { blobId: row.blob_id, blobOrder: row.blob_order ?? 0 } : {}),
     };
   });
 }
@@ -289,8 +292,9 @@ export async function saveChunkCheckpoint(
     `INSERT INTO translations (
        id, project_id, original_text, final_translation, position, chunk_status, stage_results,
        judge_status, judge_rating, translation_locked, judge_issues, coherence_result, footnotes,
-       source_display_text, source_processing_text, translation_display_text, translation_processing_text
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+       source_display_text, source_processing_text, translation_display_text, translation_processing_text,
+       blob_id, blob_order
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
      ON CONFLICT(id) DO UPDATE SET
        original_text                = excluded.original_text,
        final_translation            = excluded.final_translation,
@@ -306,7 +310,9 @@ export async function saveChunkCheckpoint(
        source_display_text          = excluded.source_display_text,
        source_processing_text       = excluded.source_processing_text,
        coherence_result             = excluded.coherence_result,
-       footnotes                    = excluded.footnotes`,
+       footnotes                    = excluded.footnotes,
+       blob_id                      = excluded.blob_id,
+       blob_order                   = excluded.blob_order`,
     [
       chunk.id,
       projectId,
@@ -325,6 +331,8 @@ export async function saveChunkCheckpoint(
       chunk.sourceProcessingText,
       chunk.translationDisplayText,
       chunk.translationProcessingText,
+      chunk.blobId ?? null,
+      chunk.blobOrder ?? 0,
     ],
   );
 }
@@ -453,8 +461,9 @@ async function saveTranslationsInternal(
       `INSERT INTO translations (
          id, project_id, original_text, final_translation, position, chunk_status, stage_results,
          judge_status, judge_rating, translation_locked, judge_issues, coherence_result, footnotes,
-         source_display_text, source_processing_text, translation_display_text, translation_processing_text
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+         source_display_text, source_processing_text, translation_display_text, translation_processing_text,
+         blob_id, blob_order
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
        ON CONFLICT(id) DO UPDATE SET
          original_text    = excluded.original_text,
          final_translation = excluded.final_translation,
@@ -470,7 +479,9 @@ async function saveTranslationsInternal(
          source_display_text = excluded.source_display_text,
          source_processing_text = excluded.source_processing_text,
          translation_display_text = excluded.translation_display_text,
-         translation_processing_text = excluded.translation_processing_text`,
+         translation_processing_text = excluded.translation_processing_text,
+         blob_id          = excluded.blob_id,
+         blob_order       = excluded.blob_order`,
       [
         chunk.id,
         projectId,
@@ -489,6 +500,8 @@ async function saveTranslationsInternal(
         chunk.sourceProcessingText,
         chunk.translationDisplayText,
         chunk.translationProcessingText,
+        chunk.blobId ?? null,
+        chunk.blobOrder ?? 0,
       ],
     );
   }

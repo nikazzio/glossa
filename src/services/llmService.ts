@@ -76,7 +76,6 @@ export const llmService = {
     stage: PipelineStageConfig,
     config: PipelineConfig,
     previousResult?: string,
-    previousTranslation?: string,
   ): Promise<string> {
     logOperation({
       level: 'info',
@@ -89,7 +88,6 @@ export const llmService = {
       stage,
       config,
       previousResult: previousResult || null,
-      previousTranslation: previousTranslation || null,
       ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl,
     });
   },
@@ -105,7 +103,6 @@ export const llmService = {
     previousResult: string | undefined,
     onToken: (token: string) => void,
     onUsage?: (usage: TokenUsage) => void,
-    previousTranslation?: string,
     onPrompt?: (info: PromptInfo) => void,
     onIdleGrace?: () => void,
   ): Promise<string> {
@@ -139,7 +136,6 @@ export const llmService = {
         stage,
         config,
         previousResult: previousResult || null,
-        previousTranslation: previousTranslation || null,
         streamId,
         ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl,
       });
@@ -210,7 +206,7 @@ export const llmService = {
   },
 
   async runCoherenceForChunk(
-    input: { original: string; translation: string; prevContext?: string; nextContext?: string },
+    input: { original: string; translation: string; blobContext?: string },
     config: PipelineConfig,
     onPrompt?: (info: PromptInfo) => void,
     onIdleGrace?: () => void,
@@ -267,6 +263,18 @@ export const llmService = {
 
   async testConnection(provider: string): Promise<boolean> {
     return invoke<boolean>('test_provider_connection', { provider, ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl });
+  },
+
+  async computeBlobs(
+    chunks: Array<{ id: string; text: string }>,
+    budgetTokens: number,
+    overlap: number,
+  ): Promise<Array<{ chunkId: string; blobId: string; position: number }>> {
+    return invoke<Array<{ chunkId: string; blobId: string; position: number }>>('compute_blobs', {
+      chunks,
+      budgetTokens,
+      overlap,
+    });
   },
 
   /** Run pre-flight checks for the given (provider, model, label) entries. */

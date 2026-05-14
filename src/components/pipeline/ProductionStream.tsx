@@ -444,6 +444,45 @@ export function ProductionStream({
                   </span>
                 </div>
               )}
+              {config.useChunking !== false && (
+                <div className="flex flex-col sm:flex-row gap-3 sm:items-center bg-editorial-textbox/50 border border-editorial-border p-4">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
+                    {t('pipeline.blobBudgetTokens')}
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={config.blobBudgetTokens ?? 0}
+                    onChange={(e) => setConfig((prev) => ({
+                      ...prev,
+                      blobBudgetTokens: Math.max(0, Number(e.target.value) || 0),
+                    }))}
+                    className="w-24 bg-editorial-bg border border-editorial-border px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    aria-label={t('pipeline.blobBudgetTokens')}
+                  />
+                  {(config.blobBudgetTokens ?? 0) > 0 && (
+                    <>
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
+                        {t('pipeline.blobOverlap')}
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={config.blobOverlap ?? 1}
+                        onChange={(e) => setConfig((prev) => ({
+                          ...prev,
+                          blobOverlap: Math.max(0, Number(e.target.value) || 0),
+                        }))}
+                        className="w-16 bg-editorial-bg border border-editorial-border px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                        aria-label={t('pipeline.blobOverlap')}
+                      />
+                    </>
+                  )}
+                  <span className="text-[10px] text-editorial-muted">
+                    {(config.blobBudgetTokens ?? 0) === 0 ? t('pipeline.blobBudgetHint') : t('pipeline.blobOverlapHint')}
+                  </span>
+                </div>
+              )}
             </div>
             <button
               onClick={generateChunks}
