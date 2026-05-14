@@ -68,8 +68,9 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
     setViewMode,
     showConfigDrawer,
     setShowConfigDrawer,
-    defaultMinWords,
-    defaultMaxWords,
+    chunkPresetShort,
+    chunkPresetMedium,
+    chunkPresetLong,
   } = useUiStore();
   const {
     currentProjectId,
@@ -123,12 +124,23 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
     const contextWindow = stage0
       ? getContextWindow(stage0.provider, stage0.model)
       : undefined;
+    const totalWords = pendingImport.text.trim().split(/\s+/).filter(Boolean).length;
+    const derivedWordsPerChunk = pendingImport.targetChunkCount > 0
+      ? Math.round(totalWords / pendingImport.targetChunkCount)
+      : chunkPresetMedium;
+    const presets = [chunkPresetShort, chunkPresetMedium, chunkPresetLong];
+    const activePreset = presets.reduce((nearest, p) =>
+      Math.abs(derivedWordsPerChunk - p) < Math.abs(derivedWordsPerChunk - nearest) ? p : nearest,
+      presets[0],
+    );
+    const minWords = Math.round(activePreset * 0.5);
+    const maxWords = Math.round(activePreset * 1.5);
     setConfig((prev) => ({
       ...prev,
       useChunking: pendingImport.useChunking,
       targetChunkCount: pendingImport.targetChunkCount,
-      minWords: defaultMinWords,
-      maxWords: defaultMaxWords,
+      minWords,
+      maxWords,
       headingAware: pendingImport.headingAware,
       documentFormat: pendingImport.format ?? 'plain',
       renderProfile: pendingImport.format === 'markdown' ? 'markdown' : 'plain-text',
@@ -142,8 +154,8 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
         useChunking: pendingImport.useChunking,
         targetChunkCount: pendingImport.targetChunkCount,
         markdownAware: pendingImport.format === 'markdown',
-        minWords: defaultMinWords,
-        maxWords: defaultMaxWords,
+        minWords,
+        maxWords,
         headingAware: pendingImport.headingAware,
         extractFootnotes: pendingImport.experimental === 'docx-markdown',
       },

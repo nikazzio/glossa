@@ -19,6 +19,8 @@ import {
   RotateCcw,
   Scissors,
   SplitSquareVertical,
+  X,
+  type LucideIcon,
 } from 'lucide-react';
 import { buildImportPreview } from '../../utils/documentWorkflow';
 import { findBestSplitIndex, recommendChunkCount, trimSplitFragment } from '../../utils';
@@ -421,6 +423,9 @@ export function ImportPreviewDialog({
   const [editorMode, setEditorMode] = useState<EditorMode>('cards');
   const { config, updateStage, setConfig } = usePipelineStore();
   const ollamaModels = useUiStore((s) => s.ollamaModels);
+  const chunkPresetShort = useUiStore((s) => s.chunkPresetShort);
+  const chunkPresetMedium = useUiStore((s) => s.chunkPresetMedium);
+  const chunkPresetLong = useUiStore((s) => s.chunkPresetLong);
 
   const stage0 = config.stages[0];
   const [selectedProvider, setSelectedProvider] = useState<ModelProvider>(stage0?.provider ?? 'openai');
@@ -465,28 +470,28 @@ export function ImportPreviewDialog({
 
   useEffect(() => {
     if (targetChunkCount === 0) {
-      onTargetChunkCountChange(recommendChunkCount(text, 700));
+      onTargetChunkCountChange(recommendChunkCount(text, chunkPresetMedium));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const effectiveTargetChunkCount = targetChunkCount > 0
     ? targetChunkCount
-    : recommendChunkCount(text, 700);
+    : recommendChunkCount(text, chunkPresetMedium);
 
   const derivedWordsPerChunk = effectiveTargetChunkCount > 0
     ? Math.round(totalWords / effectiveTargetChunkCount)
-    : 700;
+    : chunkPresetMedium;
 
   const handleWordsPerChunkChange = (value: number) => {
     onTargetChunkCountChange(recommendChunkCount(text, Math.max(50, value)));
   };
 
-  const CHUNK_PRESETS = [
-    { words: 400, titleKey: 'files.chunkShortTitle', Icon: AlignLeft },
-    { words: 700, titleKey: 'files.chunkMediumTitle', Icon: AlignCenter },
-    { words: 1000, titleKey: 'files.chunkLongTitle', Icon: AlignJustify },
-  ] as const;
+  const CHUNK_PRESETS: { words: number; titleKey: string; Icon: LucideIcon }[] = [
+    { words: chunkPresetShort, titleKey: 'files.chunkShortTitle', Icon: AlignLeft },
+    { words: chunkPresetMedium, titleKey: 'files.chunkMediumTitle', Icon: AlignCenter },
+    { words: chunkPresetLong, titleKey: 'files.chunkLongTitle', Icon: AlignJustify },
+  ];
 
   const activePresetWords = CHUNK_PRESETS.reduce<number>((nearest, p) =>
     Math.abs(derivedWordsPerChunk - p.words) < Math.abs(derivedWordsPerChunk - nearest)
@@ -710,6 +715,17 @@ export function ImportPreviewDialog({
       ref={trapRef}
     >
       <div className="relative flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-[28px] border border-editorial-border bg-editorial-bg shadow-[0_24px_80px_rgba(26,26,26,0.2)]">
+
+        {/* X close button */}
+        <button
+          type="button"
+          onClick={onCancel}
+          title={t('common.close')}
+          aria-label={t('common.close')}
+          className="absolute right-5 top-5 z-10 text-editorial-muted hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+        >
+          <X size={18} />
+        </button>
 
         {/* ── Unified header (filename + title + stats + controls) ───────── */}
         <div className="shrink-0 border-b border-editorial-border px-6 pb-4 pt-5">

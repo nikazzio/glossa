@@ -28,9 +28,10 @@ interface UiState {
   focusedIssueRequestId: number;
   pendingSplitChunkId: string | null;
 
-  // App-level segmentation defaults (persisted)
-  defaultMinWords: number;
-  defaultMaxWords: number;
+  // App-level chunk preset word targets (persisted)
+  chunkPresetShort: number;
+  chunkPresetMedium: number;
+  chunkPresetLong: number;
 
   // Ollama host (persisted)
   ollamaBaseUrl: string;
@@ -52,8 +53,9 @@ interface UiState {
   focusIssueInChunk: (chunkId: string, query?: string | null) => void;
   clearFocusedIssue: () => void;
   setPendingSplitChunkId: (chunkId: string | null) => void;
-  setDefaultMinWords: (value: number) => void;
-  setDefaultMaxWords: (value: number) => void;
+  setChunkPresetShort: (value: number) => void;
+  setChunkPresetMedium: (value: number) => void;
+  setChunkPresetLong: (value: number) => void;
   setOllamaBaseUrl: (url: string) => void;
 }
 
@@ -77,8 +79,9 @@ export const useUiStore = create<UiState>()(
   focusedIssueQuery: null,
   focusedIssueRequestId: 0,
   pendingSplitChunkId: null,
-  defaultMinWords: 600,
-  defaultMaxWords: 1200,
+  chunkPresetShort: 400,
+  chunkPresetMedium: 700,
+  chunkPresetLong: 1000,
   ollamaBaseUrl: 'http://localhost:11434',
 
   setViewMode: (mode) =>
@@ -166,8 +169,9 @@ export const useUiStore = create<UiState>()(
     })),
   clearFocusedIssue: () => set({ focusedIssueQuery: null }),
   setPendingSplitChunkId: (chunkId) => set({ pendingSplitChunkId: chunkId }),
-  setDefaultMinWords: (value) => set({ defaultMinWords: Math.max(0, value) }),
-  setDefaultMaxWords: (value) => set({ defaultMaxWords: Math.max(0, value) }),
+  setChunkPresetShort: (value) => set({ chunkPresetShort: Math.max(50, value) }),
+  setChunkPresetMedium: (value) => set({ chunkPresetMedium: Math.max(50, value) }),
+  setChunkPresetLong: (value) => set({ chunkPresetLong: Math.max(50, value) }),
   setOllamaBaseUrl: (url) => set({ ollamaBaseUrl: url }),
     }),
     {
@@ -175,8 +179,9 @@ export const useUiStore = create<UiState>()(
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         documentLayout: state.documentLayout,
-        defaultMinWords: state.defaultMinWords,
-        defaultMaxWords: state.defaultMaxWords,
+        chunkPresetShort: state.chunkPresetShort,
+        chunkPresetMedium: state.chunkPresetMedium,
+        chunkPresetLong: state.chunkPresetLong,
         ollamaBaseUrl: state.ollamaBaseUrl,
       }),
     },

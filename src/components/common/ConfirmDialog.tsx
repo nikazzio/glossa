@@ -1,4 +1,4 @@
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { useConfirmStore } from '../../stores/confirmStore';
@@ -33,6 +33,15 @@ export function ConfirmDialog() {
             exit={{ scale: 0.96, opacity: 0 }}
             className="relative bg-editorial-bg w-full max-w-md p-8 shadow-2xl border border-editorial-border"
           >
+            <button
+              type="button"
+              onClick={() => resolve(false)}
+              title={t('common.close')}
+              aria-label={t('common.close')}
+              className="absolute right-4 top-4 text-editorial-muted hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            >
+              <X size={18} />
+            </button>
             <div className="flex items-start gap-4">
               {request.danger && (
                 <AlertTriangle

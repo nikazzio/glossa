@@ -21,10 +21,12 @@ export function SettingsModal() {
     setOllamaStatus,
     documentLayout,
     setDocumentLayout,
-    defaultMinWords,
-    defaultMaxWords,
-    setDefaultMinWords,
-    setDefaultMaxWords,
+    chunkPresetShort,
+    chunkPresetMedium,
+    chunkPresetLong,
+    setChunkPresetShort,
+    setChunkPresetMedium,
+    setChunkPresetLong,
     ollamaBaseUrl,
     setOllamaBaseUrl,
   } = useUiStore();
@@ -103,37 +105,55 @@ export function SettingsModal() {
                 <p className="text-xs text-editorial-muted leading-relaxed">
                   {t('settings.segmentationHint')}
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-1.5">
                     <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted">
-                      {t('settings.defaultMinWords')}
+                      {t('settings.chunkPresetShort')}
                     </label>
                     <input
                       type="number"
-                      min={0}
+                      min={50}
+                      max={chunkPresetMedium - 50}
                       step={50}
-                      value={defaultMinWords}
-                      onChange={(e) => setDefaultMinWords(Number(e.target.value) || 0)}
+                      value={chunkPresetShort}
+                      onChange={(e) => setChunkPresetShort(Number(e.target.value) || 50)}
                       className="w-full rounded-2xl border border-editorial-border bg-editorial-bg px-4 py-3 text-sm font-mono outline-none focus:border-editorial-ink/40"
                     />
                     <p className="text-[10px] leading-relaxed text-editorial-muted">
-                      {t('settings.defaultMinWordsHint')}
+                      {t('settings.chunkPresetShortHint')}
                     </p>
                   </div>
                   <div className="space-y-1.5">
                     <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted">
-                      {t('settings.defaultMaxWords')}
+                      {t('settings.chunkPresetMedium')}
                     </label>
                     <input
                       type="number"
-                      min={0}
+                      min={chunkPresetShort + 50}
+                      max={chunkPresetLong - 50}
                       step={50}
-                      value={defaultMaxWords}
-                      onChange={(e) => setDefaultMaxWords(Number(e.target.value) || 0)}
+                      value={chunkPresetMedium}
+                      onChange={(e) => setChunkPresetMedium(Number(e.target.value) || 50)}
                       className="w-full rounded-2xl border border-editorial-border bg-editorial-bg px-4 py-3 text-sm font-mono outline-none focus:border-editorial-ink/40"
                     />
                     <p className="text-[10px] leading-relaxed text-editorial-muted">
-                      {t('settings.defaultMaxWordsHint')}
+                      {t('settings.chunkPresetMediumHint')}
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted">
+                      {t('settings.chunkPresetLong')}
+                    </label>
+                    <input
+                      type="number"
+                      min={chunkPresetMedium + 50}
+                      step={50}
+                      value={chunkPresetLong}
+                      onChange={(e) => setChunkPresetLong(Number(e.target.value) || 50)}
+                      className="w-full rounded-2xl border border-editorial-border bg-editorial-bg px-4 py-3 text-sm font-mono outline-none focus:border-editorial-ink/40"
+                    />
+                    <p className="text-[10px] leading-relaxed text-editorial-muted">
+                      {t('settings.chunkPresetLongHint')}
                     </p>
                   </div>
                 </div>

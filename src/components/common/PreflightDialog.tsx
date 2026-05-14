@@ -1,4 +1,4 @@
-import { CheckCircle2, XCircle, Settings } from 'lucide-react';
+import { CheckCircle2, X, XCircle, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { usePreflightStore } from '../../stores/preflightStore';
@@ -36,6 +36,15 @@ export function PreflightDialog() {
             exit={{ scale: 0.96, opacity: 0 }}
             className="relative bg-editorial-bg w-full max-w-md p-8 shadow-2xl border border-editorial-border"
           >
+            <button
+              type="button"
+              onClick={() => resolve(false)}
+              title={t('common.close')}
+              aria-label={t('common.close')}
+              className="absolute right-4 top-4 text-editorial-muted hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            >
+              <X size={18} />
+            </button>
             <h3
               id="preflight-title"
               className="font-display text-lg italic tracking-tight text-editorial-ink mb-1"
