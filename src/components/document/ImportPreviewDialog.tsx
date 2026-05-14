@@ -483,9 +483,9 @@ export function ImportPreviewDialog({
   };
 
   const CHUNK_PRESETS = [
-    { words: 400, labelKey: 'files.chunkShort', titleKey: 'files.chunkShortTitle', Icon: AlignLeft },
-    { words: 700, labelKey: 'files.chunkMedium', titleKey: 'files.chunkMediumTitle', Icon: AlignCenter },
-    { words: 1000, labelKey: 'files.chunkLong', titleKey: 'files.chunkLongTitle', Icon: AlignJustify },
+    { words: 400, titleKey: 'files.chunkShortTitle', Icon: AlignLeft },
+    { words: 700, titleKey: 'files.chunkMediumTitle', Icon: AlignCenter },
+    { words: 1000, titleKey: 'files.chunkLongTitle', Icon: AlignJustify },
   ] as const;
 
   const activePresetWords = CHUNK_PRESETS.reduce<number>((nearest, p) =>
@@ -754,21 +754,23 @@ export function ImportPreviewDialog({
           </h2>
 
           {/* Row 3: stats */}
-          <div className="mb-4 flex flex-wrap items-center gap-3 text-xs font-mono text-editorial-muted">
-            <span>{preview.stats.words.toLocaleString()} w</span>
-            <span>·</span>
-            <span>{preview.stats.paragraphs} {t('pipeline.statsParUnit')}</span>
-            <span>·</span>
-            <span className={hasManualEdits ? 'text-editorial-warning' : ''}>{activeParaChunks.length} {t('pipeline.statsChunkUnit')}</span>
+          <p className="mb-4 text-xs font-mono text-editorial-muted whitespace-nowrap">
+            {preview.stats.words.toLocaleString()} {t('pipeline.words').toLowerCase()}
+            {' · '}
+            {preview.stats.paragraphs} {t('pipeline.paragraphs').toLowerCase()}
+            {' · '}
+            <span className={hasManualEdits ? 'text-editorial-warning' : ''}>
+              {activeParaChunks.length} {t('pipeline.statsSegmentsUnit')}
+            </span>
             {hasManualEdits && (
-              <span className="text-editorial-warning italic">{t('files.manualEditsActive')}</span>
+              <span className="ml-2 italic text-editorial-warning">{t('files.manualEditsActive')}</span>
             )}
             {preview.warnings.length > 0 && (
-              <span title={preview.warnings.map((w) => t(`files.importWarning.${w}`)).join('\n')}>
-                <Info size={12} className="text-editorial-muted/60 cursor-help" />
+              <span className="ml-1" title={preview.warnings.map((w) => t(`files.importWarning.${w}`)).join('\n')}>
+                <Info size={12} className="inline align-middle text-editorial-muted/60 cursor-help" />
               </span>
             )}
-          </div>
+          </p>
 
           {/* Separator */}
           <div className="mb-4 h-px bg-editorial-border" />
@@ -811,20 +813,19 @@ export function ImportPreviewDialog({
             {useChunking && <span className="select-none text-editorial-border">·</span>}
 
             {/* Chunk size presets */}
-            {useChunking && CHUNK_PRESETS.map(({ words, labelKey, titleKey, Icon }) => (
+            {useChunking && CHUNK_PRESETS.map(({ words, titleKey, Icon }) => (
               <button
                 key={words}
                 type="button"
                 onClick={() => handleWordsPerChunkChange(words)}
                 title={t(titleKey)}
-                className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
                   activePresetWords === words
                     ? 'border-editorial-accent bg-editorial-accent text-white'
                     : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
                 }`}
               >
-                <Icon size={12} />
-                {t(labelKey)}
+                <Icon size={14} />
               </button>
             ))}
 
@@ -846,7 +847,7 @@ export function ImportPreviewDialog({
 
           {/* Row 5: pipeline setup — language pair + model */}
           <div className="mt-3 pt-3 border-t border-editorial-border/60">
-            <div className="grid grid-cols-[4rem_1fr] gap-y-2.5 gap-x-3 items-center">
+            <div className="grid grid-cols-[1.25rem_1fr] gap-y-2.5 gap-x-2 items-center">
               {/* Language pair */}
               <Globe size={11} className="text-editorial-accent shrink-0" />
               <div className="flex items-center gap-1.5">
