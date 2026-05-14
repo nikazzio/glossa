@@ -169,6 +169,8 @@ export async function getProjectConfig(projectId: string): Promise<{
   persona: string | undefined;
   customSourceLanguage: string | undefined;
   customTargetLanguage: string | undefined;
+  blobBudgetTokens: number | undefined;
+  blobOverlap: number | undefined;
   runInProgress: boolean;
   lastRunConfig: string | null;
 } | null> {
@@ -193,6 +195,8 @@ export async function getProjectConfig(projectId: string): Promise<{
     persona?: string | null;
     custom_source_language?: string | null;
     custom_target_language?: string | null;
+    blob_budget_tokens?: number | null;
+    blob_overlap?: number | null;
     run_in_progress?: number | null;
     last_run_config?: string | null;
   }>(
@@ -217,6 +221,8 @@ export async function getProjectConfig(projectId: string): Promise<{
        pc.persona,
        pc.custom_source_language,
        pc.custom_target_language,
+       pc.blob_budget_tokens,
+       pc.blob_overlap,
        pc.run_in_progress,
        pc.last_run_config
      FROM pipeline_configs pc
@@ -263,6 +269,8 @@ export async function getProjectConfig(projectId: string): Promise<{
     persona: row.persona?.trim() || undefined,
     customSourceLanguage: row.custom_source_language || undefined,
     customTargetLanguage: row.custom_target_language || undefined,
+    blobBudgetTokens: row.blob_budget_tokens ?? undefined,
+    blobOverlap: row.blob_overlap ?? undefined,
     assignedGlossaryId,
     glossary: glossaryRows.map((g, i) => ({
       id: g.id || `gloss-loaded-${projectId}-${i}`,
@@ -371,8 +379,8 @@ async function saveProjectConfigInternal(
        id, project_id, stages, judge_prompt, judge_model, judge_provider, use_chunking,
        target_chunk_count, source_text, source_display_text, source_processing_text, source_footnotes,
        document_format, render_profile, markdown_aware, experimental_import, review_provider_options,
-       persona, custom_source_language, custom_target_language
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9, ''), COALESCE($10, ''), COALESCE($11, ''), $12, $13, $14, $15, $16, $17, $18, $19, $20)
+       persona, custom_source_language, custom_target_language, blob_budget_tokens, blob_overlap
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9, ''), COALESCE($10, ''), COALESCE($11, ''), $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
      ON CONFLICT(project_id) DO UPDATE SET
        id = excluded.id,
        stages = excluded.stages,
@@ -401,6 +409,8 @@ async function saveProjectConfigInternal(
        persona = excluded.persona,
        custom_source_language = excluded.custom_source_language,
        custom_target_language = excluded.custom_target_language,
+       blob_budget_tokens = excluded.blob_budget_tokens,
+       blob_overlap = excluded.blob_overlap,
        source_text = CASE
          WHEN $9 IS NULL THEN pipeline_configs.source_text
          ELSE $9
@@ -426,6 +436,8 @@ async function saveProjectConfigInternal(
       config.persona?.trim() || null,
       config.customSourceLanguage || null,
       config.customTargetLanguage || null,
+      config.blobBudgetTokens ?? 0,
+      config.blobOverlap ?? 1,
     ],
   );
   await run(

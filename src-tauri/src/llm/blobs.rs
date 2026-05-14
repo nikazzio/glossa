@@ -62,12 +62,8 @@ pub fn compute_blob_assignments(
             });
         }
 
-        let next_start = blob_end;
-        blob_start = if overlap > 0 && next_start < chunks.len() {
-            next_start.saturating_sub(overlap)
-        } else {
-            next_start
-        };
+        let _ = overlap; // overlap handled at context-assembly time, not at assignment
+        blob_start = blob_end;
     }
 
     assignments

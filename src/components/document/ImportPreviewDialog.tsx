@@ -9,7 +9,9 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
+  Cpu,
   FileText,
+  Globe,
   Hash,
   Info,
   LayoutGrid,
@@ -698,7 +700,6 @@ export function ImportPreviewDialog({
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
-  const chunkCountLabel = `${activeParaChunks.length} ${t('pipeline.unitsReady')}`;
 
   return (
     <div
@@ -754,11 +755,11 @@ export function ImportPreviewDialog({
 
           {/* Row 3: stats */}
           <div className="mb-4 flex flex-wrap items-center gap-3 text-xs font-mono text-editorial-muted">
-            <span>{preview.stats.words}w</span>
+            <span>{preview.stats.words.toLocaleString()} w</span>
             <span>·</span>
-            <span>{preview.stats.paragraphs} {t('pipeline.paragraphs').toLowerCase()}</span>
+            <span>{preview.stats.paragraphs} {t('pipeline.statsParUnit')}</span>
             <span>·</span>
-            <span className={hasManualEdits ? 'text-editorial-warning' : ''}>{chunkCountLabel}</span>
+            <span className={hasManualEdits ? 'text-editorial-warning' : ''}>{activeParaChunks.length} {t('pipeline.statsChunkUnit')}</span>
             {hasManualEdits && (
               <span className="text-editorial-warning italic">{t('files.manualEditsActive')}</span>
             )}
@@ -818,7 +819,7 @@ export function ImportPreviewDialog({
                 title={t(titleKey)}
                 className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
                   activePresetWords === words
-                    ? 'border-editorial-ink bg-editorial-ink text-white'
+                    ? 'border-editorial-accent bg-editorial-accent text-white'
                     : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
                 }`}
               >
@@ -847,9 +848,7 @@ export function ImportPreviewDialog({
           <div className="mt-3 pt-3 border-t border-editorial-border/60">
             <div className="grid grid-cols-[4rem_1fr] gap-y-2.5 gap-x-3 items-center">
               {/* Language pair */}
-              <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted leading-tight">
-                {t('pipeline.languagePair')}
-              </span>
+              <Globe size={11} className="text-editorial-accent shrink-0" />
               <div className="flex items-center gap-1.5">
                 <select
                   value={config.sourceLanguage}
@@ -882,9 +881,7 @@ export function ImportPreviewDialog({
                 </select>
               </div>
               {/* Model */}
-              <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted leading-tight">
-                {t('files.importModelLabel')}
-              </span>
+              <Cpu size={11} className="text-editorial-accent shrink-0" />
               <div className="flex items-center gap-1.5">
                 <select
                   value={selectedProvider}

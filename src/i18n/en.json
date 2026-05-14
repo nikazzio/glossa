@@ -89,6 +89,8 @@
     "zeroMeansAuto": "0 keeps paragraph-based auto segmentation.",
     "chunkPreview": "Chunk Preview",
     "unitsReady": "units ready",
+    "statsParUnit": "par.",
+    "statsChunkUnit": "seg.",
     "chunkPreviewHint": "Review source chunks before running the pipeline. You can edit, split, or merge chunks while the pipeline is idle.",
     "splitChunk": "Split",
     "splitChunkTooltip": "Split this chunk in two at the midpoint. Both halves remain unprocessed and can be translated independently.",

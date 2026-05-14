@@ -219,11 +219,11 @@ describe('projectService glossary persistence', () => {
     );
     expect(dbMocks.execute).toHaveBeenCalledWith(
       expect.stringContaining('position'),
-      ['chunk-b', 'proj-1', 'Beta', 'Beta translated', 0, 'completed', '{}', 'completed', 'good', 1, '[]', null, null, 'Beta', 'Beta', 'Beta translated', 'Beta translated'],
+      ['chunk-b', 'proj-1', 'Beta', 'Beta translated', 0, 'completed', '{}', 'completed', 'good', 1, '[]', null, null, 'Beta', 'Beta', 'Beta translated', 'Beta translated', null, 0],
     );
     expect(dbMocks.execute).toHaveBeenCalledWith(
       expect.stringContaining('position'),
-      ['chunk-a', 'proj-1', 'Alpha', 'Alpha translated', 1, 'completed', '{}', 'completed', 'excellent', 0, '[]', null, null, 'Alpha', 'Alpha', 'Alpha translated', 'Alpha translated'],
+      ['chunk-a', 'proj-1', 'Alpha', 'Alpha translated', 1, 'completed', '{}', 'completed', 'excellent', 0, '[]', null, null, 'Alpha', 'Alpha', 'Alpha translated', 'Alpha translated', null, 0],
     );
     expect(
       dbMocks.execute.mock.calls.filter(

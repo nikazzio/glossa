@@ -498,11 +498,7 @@ export function PipelineConfig({
     updateStage,
   } = usePipelineStore();
   const { chunks, isProcessing, cancelRequested, resetCompletedChunks } = useChunksStore();
-  const { ollamaStatus, setOllamaModels, setOllamaStatus } = useUiStore((state) => ({
-    ollamaStatus: state.ollamaStatus,
-    setOllamaModels: state.setOllamaModels,
-    setOllamaStatus: state.setOllamaStatus,
-  }));
+  const ollamaStatus = useUiStore((s) => s.ollamaStatus);
   const { t } = useTranslation();
   const judgeModels = useJudgeModelOptions(config.judgeProvider);
   const [isRefreshingOllama, setIsRefreshingOllama] = useState(false);
@@ -582,12 +578,12 @@ export function PipelineConfig({
     setIsRefreshingOllama(true);
     try {
       const models = await ollamaService.listModels();
-      setOllamaModels(models);
-      setOllamaStatus('connected');
+      useUiStore.getState().setOllamaModels(models);
+      useUiStore.getState().setOllamaStatus('connected');
       toast.success(t('ollama.connected', { count: models.length }));
     } catch (err: unknown) {
-      setOllamaModels([]);
-      setOllamaStatus('disconnected');
+      useUiStore.getState().setOllamaModels([]);
+      useUiStore.getState().setOllamaStatus('disconnected');
       toast.error(t('ollama.disconnected'), { description: err instanceof Error ? err.message : String(err) });
     } finally {
       setIsRefreshingOllama(false);

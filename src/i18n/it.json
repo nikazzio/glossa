@@ -89,6 +89,8 @@
     "zeroMeansAuto": "0 mantiene la segmentazione automatica per paragrafi.",
     "chunkPreview": "Anteprima Chunk",
     "unitsReady": "unità pronte",
+    "statsParUnit": "par.",
+    "statsChunkUnit": "un.",
     "chunkPreviewHint": "Controlla i chunk sorgente prima di avviare la pipeline. Puoi modificarli, dividerli o unirli quando la pipeline è ferma.",
     "splitChunk": "Dividi",
     "splitChunkTooltip": "Divide questo chunk in due a metà. Entrambe le metà restano non elaborate e possono essere tradotte indipendentemente.",

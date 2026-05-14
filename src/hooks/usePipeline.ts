@@ -476,6 +476,7 @@ export function usePipeline() {
       );
       setBlobAssignments(assignments);
     } catch (error: unknown) {
+      setBlobAssignments([]);
       logOperation({
         level: 'warn',
         scope: 'pipeline',
@@ -553,7 +554,7 @@ export function usePipeline() {
       );
       setBlobAssignments(assignments);
     } catch {
-      // Continue without blob context on failure
+      setBlobAssignments([]);
     }
 
     // Force a redo even if this chunk was already completed — the user

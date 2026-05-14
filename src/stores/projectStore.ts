@@ -109,6 +109,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         persona: config.persona,
         customSourceLanguage: config.customSourceLanguage,
         customTargetLanguage: config.customTargetLanguage,
+        blobBudgetTokens: config.blobBudgetTokens,
+        blobOverlap: config.blobOverlap,
       },
     }));
     chunksStore.setChunks(restoredChunks);
