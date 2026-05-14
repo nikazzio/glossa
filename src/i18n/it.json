@@ -20,7 +20,10 @@
     "enterSandbox": "Passa a Sandbox",
     "exitSandbox": "Esci da Sandbox",
     "tokenCount": "Token",
-    "estimatedCost": "Costo stimato"
+    "estimatedCost": "Costo stimato",
+    "cachedInput": "Input in cache",
+    "cacheMissInput": "Input fuori cache",
+    "cacheHitRate": "Percentuale cache hit"
   },
   "pipeline": {
     "globalSetup": "Progetto",

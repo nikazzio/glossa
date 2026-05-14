@@ -144,6 +144,8 @@ impl LlmProvider for AnthropicProvider {
             (Some(i), Some(o)) => Some(TokenUsage {
                 input: i as u32,
                 output: o as u32,
+                cached_input: None,
+                cache_miss_input: None,
             }),
             _ => None,
         };

@@ -639,6 +639,8 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
 
   let totalInput = 0;
   let totalOutput = 0;
+  let totalCachedInput = 0;
+  let totalCacheMissInput = 0;
   let estimatedCostUsd = 0;
   const modelNames = new Set<string>();
   for (const chunk of chunks) {
@@ -649,6 +651,8 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
         if (result.tokenUsage) {
           totalInput += result.tokenUsage.inputTokens ?? 0;
           totalOutput += result.tokenUsage.outputTokens ?? 0;
+          totalCachedInput += result.tokenUsage.cachedInputTokens ?? 0;
+          totalCacheMissInput += result.tokenUsage.cacheMissInputTokens ?? 0;
           const pricing = MODEL_PRICING[`${stage.provider}/${stage.model}`];
           if (pricing) estimatedCostUsd += (result.tokenUsage.inputTokens * pricing.input + result.tokenUsage.outputTokens * pricing.output) / 1_000_000;
         }
@@ -658,12 +662,15 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
       const ju = chunk.judgeResult.tokenUsage;
       totalInput += ju.inputTokens ?? 0;
       totalOutput += ju.outputTokens ?? 0;
+      totalCachedInput += ju.cachedInputTokens ?? 0;
+      totalCacheMissInput += ju.cacheMissInputTokens ?? 0;
       const judgePricing = MODEL_PRICING[`${config.judgeProvider}/${config.judgeModel}`];
       if (judgePricing) estimatedCostUsd += (ju.inputTokens * judgePricing.input + ju.outputTokens * judgePricing.output) / 1_000_000;
       modelNames.add(`${config.judgeProvider} / ${config.judgeModel}`);
     }
   }
   const totalTokens = totalInput + totalOutput;
+  const cacheHitPct = totalInput > 0 ? Math.round((totalCachedInput / totalInput) * 100) : 0;
 
   if (chunks.length === 0) {
     return (
@@ -732,6 +739,15 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
               <dt className="ml-2 text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted/60">out</dt>
               <dd className="font-display text-sm italic text-editorial-muted">{totalOutput.toLocaleString()}</dd>
             </div>
+          )}
+          {totalCachedInput > 0 && (
+            <>
+              <StatRow label={t('header.cachedInput')} value={totalCachedInput.toLocaleString()} />
+              <StatRow label={t('header.cacheHitRate')} value={`${cacheHitPct}%`} />
+              {totalCacheMissInput > 0 && (
+                <StatRow label={t('header.cacheMissInput')} value={totalCacheMissInput.toLocaleString()} />
+              )}
+            </>
           )}
           <StatRow
             label={t('header.estimatedCost')}

@@ -149,7 +149,9 @@ interface ChunksState {
   resetAllChunks: () => void;
   unlockChunkForEdit: (chunkId: string) => void;
   clearChunkStages: (chunkId: string) => void;
-  setBlobAssignments: (assignments: Array<{ chunkId: string; blobId: string; position: number }>) => void;
+  setBlobAssignments: (
+    assignments: Array<{ chunkId: string; blobId: string; position: number; referenceChunkIds: string[] }>
+  ) => void;
 }
 
 export const useChunksStore = create<ChunksState>((set, get) => ({
@@ -405,12 +407,24 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
   },
 
   setBlobAssignments: (assignments) => {
-    const map = new Map(assignments.map((a) => [a.chunkId, { blobId: a.blobId, blobOrder: a.position }]));
+    const map = new Map(assignments.map((a) => [
+      a.chunkId,
+      {
+        blobId: a.blobId,
+        blobOrder: a.position,
+        blobReferenceChunkIds: a.referenceChunkIds,
+      },
+    ]));
     set((state) => ({
       chunks: state.chunks.map((chunk) => {
         const assignment = map.get(chunk.id);
         if (!assignment) return chunk;
-        return { ...chunk, blobId: assignment.blobId, blobOrder: assignment.blobOrder };
+        return {
+          ...chunk,
+          blobId: assignment.blobId,
+          blobOrder: assignment.blobOrder,
+          blobReferenceChunkIds: assignment.blobReferenceChunkIds,
+        };
       }),
     }));
   },

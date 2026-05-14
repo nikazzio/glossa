@@ -165,7 +165,7 @@ export function ConfigDrawer({
         onCancelPipeline={onCancelPipeline}
         showActions={false}
         showOnlyGlobalDefaults={false}
-        libraryGlossarySection={currentProjectId ? libraryGlossarySection : undefined}
+        libraryGlossarySection={libraryGlossarySection}
         className="flex flex-1 flex-col overflow-y-auto bg-editorial-bg/40 custom-scrollbar min-h-0"
       />
     </Drawer>

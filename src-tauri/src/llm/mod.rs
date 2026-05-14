@@ -483,6 +483,9 @@ mod tests {
                     serde_json::json!(1.05),
                 )])),
             }),
+            openai: None,
+            deepseek: None,
+            gemini: None,
         });
 
         let ollama = merge_ollama_config(
@@ -598,6 +601,8 @@ mod tests {
             done: false,
             input_tokens: None,
             output_tokens: None,
+            cached_input_tokens: None,
+            cache_miss_input_tokens: None,
         };
         let json = serde_json::to_string(&token).unwrap();
         assert!(json.contains("streamId"));
@@ -615,6 +620,8 @@ mod tests {
             done: true,
             input_tokens: Some(100),
             output_tokens: Some(50),
+            cached_input_tokens: Some(60),
+            cache_miss_input_tokens: Some(40),
         };
         let json = serde_json::to_string(&token).unwrap();
         assert!(json.contains("inputTokens"));

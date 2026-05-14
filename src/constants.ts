@@ -5,7 +5,7 @@ export const DEFAULT_STAGES: PipelineStageConfig[] = [
   {
     id: 'stg-draft',
     name: 'Translation',
-    prompt: 'Translate the text accurately. Preserve the original tone, style, and register. Output only the translated text.',
+    prompt: 'Translate the text accurately.',
     model: 'gpt-4o-mini',
     provider: 'openai',
     enabled: true,
@@ -13,7 +13,7 @@ export const DEFAULT_STAGES: PipelineStageConfig[] = [
 ];
 
 export const DEFAULT_JUDGE_PROMPT =
-  'Audit the final translation for technical accuracy, glossary adherence, and natural tone.';
+  'Audit the final translation for accuracy, glossary adherence, and concrete issues.';
 
 export const DEFAULT_COHERENCE_PROMPT =
   'Check for terminology consistency, narrative continuity, and glossary adherence across segment boundaries.';
@@ -32,6 +32,10 @@ export const MODEL_PRICING: Record<string, { input: number; output: number }> = 
     .filter((e) => e.pricing)
     .map((e) => [`${e.provider}/${e.id}`, e.pricing!]),
 );
+
+export function defaultPersonaText(source: string, target: string): string {
+  return `You are an expert translator and linguist specialized in ${source} to ${target} translation.`;
+}
 
 export const LANGUAGES = [
   'English',

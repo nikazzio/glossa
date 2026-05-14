@@ -29,6 +29,8 @@ pub struct StageResult {
     pub content: String,
     pub input_tokens: Option<u32>,
     pub output_tokens: Option<u32>,
+    pub cached_input_tokens: Option<u32>,
+    pub cache_miss_input_tokens: Option<u32>,
 }
 
 #[tauri::command]
@@ -59,10 +61,23 @@ pub async fn run_stage(
         provider_options: stage.provider_options.as_ref(),
     };
     let response = provider.call(&client, &req).await?;
+    if let Some(usage) = response.usage.as_ref() {
+        log::info!(
+            "LLM call completed provider={} model={} input_tokens={} output_tokens={} cached_input_tokens={} cache_miss_input_tokens={}",
+            stage.provider,
+            stage.model,
+            usage.input,
+            usage.output,
+            usage.cached_input.unwrap_or(0),
+            usage.cache_miss_input.unwrap_or(0),
+        );
+    }
     Ok(StageResult {
         content: response.content,
         input_tokens: response.usage.as_ref().map(|u| u.input),
         output_tokens: response.usage.as_ref().map(|u| u.output),
+        cached_input_tokens: response.usage.as_ref().and_then(|u| u.cached_input),
+        cache_miss_input_tokens: response.usage.as_ref().and_then(|u| u.cache_miss_input),
     })
 }
 
@@ -207,6 +222,8 @@ pub async fn judge_translation(
         content: translation,
         input_tokens: None,
         output_tokens: None,
+        cached_input_tokens: None,
+        cache_miss_input_tokens: None,
         system_prompt: None,
         user_prompt: None,
     })
@@ -232,6 +249,9 @@ pub async fn refine_prompt(
     };
     let refine_config = minimal_pipeline_config(Some(ProviderRuntimeConfig {
         ollama: Some(crate::llm::providers::ollama::default_ollama_config()),
+        openai: None,
+        deepseek: None,
+        gemini: None,
     }));
     let structured = crate::llm::types::StructuredPrompt {
         system: vec![crate::llm::types::PromptBlock {
@@ -322,6 +342,8 @@ pub async fn run_coherence_for_chunk(
         issues,
         input_tokens: None,
         output_tokens: None,
+        cached_input_tokens: None,
+        cache_miss_input_tokens: None,
         system_prompt: None,
         user_prompt: None,
     })

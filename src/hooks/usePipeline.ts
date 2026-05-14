@@ -17,18 +17,24 @@ import { calculateBlobBudget } from '../models/catalog';
 
 function assembleBlobContext(chunks: TranslationChunk[], chunkId: string): string | undefined {
   const current = chunks.find((c) => c.id === chunkId);
-  if (!current?.blobId) return undefined;
-  const siblings = chunks.filter((c) => c.blobId === current.blobId && c.id !== chunkId);
-  if (siblings.length === 0) return undefined;
-  return siblings.map((c) => c.sourceProcessingText).filter(Boolean).join('\n\n') || undefined;
+  if (!current?.blobReferenceChunkIds?.length) return undefined;
+  const byId = new Map(chunks.map((chunk) => [chunk.id, chunk]));
+  const referenceChunks = current.blobReferenceChunkIds
+    .map((id) => byId.get(id))
+    .filter((chunk): chunk is TranslationChunk => !!chunk && !!chunk.sourceProcessingText);
+  if (referenceChunks.length === 0) return undefined;
+  return referenceChunks.map((chunk) => chunk.sourceProcessingText).join('\n\n') || undefined;
 }
 
 function assembleTranslationBlobContext(chunks: TranslationChunk[], chunkId: string): string | undefined {
   const current = chunks.find((c) => c.id === chunkId);
-  if (!current?.blobId) return undefined;
-  const siblings = chunks.filter((c) => c.blobId === current.blobId && c.id !== chunkId && c.translationProcessingText?.trim());
-  if (siblings.length === 0) return undefined;
-  return siblings.map((c) => c.translationProcessingText).filter(Boolean).join('\n\n') || undefined;
+  if (!current?.blobReferenceChunkIds?.length) return undefined;
+  const byId = new Map(chunks.map((chunk) => [chunk.id, chunk]));
+  const referenceChunks = current.blobReferenceChunkIds
+    .map((id) => byId.get(id))
+    .filter((chunk): chunk is TranslationChunk => !!chunk?.translationProcessingText?.trim());
+  if (referenceChunks.length === 0) return undefined;
+  return referenceChunks.map((chunk) => chunk.translationProcessingText).join('\n\n') || undefined;
 }
 
 type ChunkOutcome = 'completed' | 'failed' | 'cancelled' | 'skipped';
@@ -273,7 +279,12 @@ export function usePipeline() {
         );
         const result = stageResult.content;
         if (!capturedUsage && (stageResult.inputTokens ?? stageResult.outputTokens)) {
-          capturedUsage = { inputTokens: stageResult.inputTokens!, outputTokens: stageResult.outputTokens! };
+          capturedUsage = {
+            inputTokens: stageResult.inputTokens!,
+            outputTokens: stageResult.outputTokens!,
+            cachedInputTokens: stageResult.cachedInputTokens,
+            cacheMissInputTokens: stageResult.cacheMissInputTokens,
+          };
         }
         if (result) {
           lastResult = result;
@@ -405,7 +416,12 @@ export function usePipeline() {
       );
       const judgeTokenUsage =
         judgeData.inputTokens !== undefined && judgeData.outputTokens !== undefined
-          ? { inputTokens: judgeData.inputTokens, outputTokens: judgeData.outputTokens }
+          ? {
+              inputTokens: judgeData.inputTokens,
+              outputTokens: judgeData.outputTokens,
+              cachedInputTokens: judgeData.cachedInputTokens,
+              cacheMissInputTokens: judgeData.cacheMissInputTokens,
+            }
           : undefined;
       updateChunkJudge(chunk.id, {
         ...judgeData,
@@ -728,7 +744,12 @@ export function usePipeline() {
         );
         const tokenUsage =
           result.inputTokens !== undefined && result.outputTokens !== undefined
-            ? { inputTokens: result.inputTokens, outputTokens: result.outputTokens }
+            ? {
+                inputTokens: result.inputTokens,
+                outputTokens: result.outputTokens,
+                cachedInputTokens: result.cachedInputTokens,
+                cacheMissInputTokens: result.cacheMissInputTokens,
+              }
             : undefined;
         updateChunkCoherence(chunk.id, {
           status: 'completed',

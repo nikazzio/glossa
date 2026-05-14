@@ -130,14 +130,14 @@ pub(crate) fn build_stage_prompts(
 
     // Stage-specific instructions come last: they vary per stage but are smaller than
     // the static+blob prefix, so non-caching them costs less than before.
-    system.push(PromptBlock { text: format!("Core Instructions:\n{}", stage.prompt), cacheable: false });
+    system.push(PromptBlock { text: format!("Core Instructions:\n{}\n\nOutput only the translated text.", stage.prompt), cacheable: false });
 
     let user = match previous_result {
         Some(prev) if !prev.is_empty() => format!(
             "Original: {text}\n\nPrevious Iteration: {prev}\n\n\
-             Refine the above translation according to your instructions. Provide ONLY the final text."
+             Refine the above translation according to your instructions."
         ),
-        _ => format!("Text to translate: {text}\n\nProvide ONLY the translated text."),
+        _ => format!("Text to translate: {text}"),
     };
 
     StructuredPrompt { system, user }

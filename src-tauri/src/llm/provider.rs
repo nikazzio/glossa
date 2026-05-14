@@ -9,6 +9,8 @@ use crate::llm::types::{ProviderRuntimeConfig, StructuredPrompt};
 pub struct TokenUsage {
     pub input: u32,
     pub output: u32,
+    pub cached_input: Option<u32>,
+    pub cache_miss_input: Option<u32>,
 }
 
 pub struct LlmRequest<'a> {
@@ -40,12 +42,19 @@ pub struct UsageAccumulator {
     pub latest_input: Option<u32>,
     pub latest_output: Option<u32>,
     pub pending_input: Option<u32>,
+    pub latest_cached_input: Option<u32>,
+    pub latest_cache_miss_input: Option<u32>,
 }
 
 impl UsageAccumulator {
     pub fn final_usage(&self) -> Option<TokenUsage> {
         match (self.latest_input, self.latest_output) {
-            (Some(i), Some(o)) => Some(TokenUsage { input: i, output: o }),
+            (Some(i), Some(o)) => Some(TokenUsage {
+                input: i,
+                output: o,
+                cached_input: self.latest_cached_input,
+                cache_miss_input: self.latest_cache_miss_input,
+            }),
             _ => None,
         }
     }

@@ -1,11 +1,14 @@
 use async_trait::async_trait;
 use reqwest::Client;
 use serde_json::Value;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 
 use crate::llm::provider::{
     LlmProvider, LlmRequest, LlmResponse, StreamFormat, TokenUsage, UsageAccumulator,
 };
 use crate::llm::stream::{build_default_http_client, default_stream_timeouts, StreamTimeouts};
+use crate::llm::types::OpenAiCacheConfig;
 use super::{format_api_error, provider_label_from_url};
 
 /// OpenAI-compatible provider. Used for both OpenAI and DeepSeek which share the same API shape.
@@ -57,6 +60,73 @@ impl OpenAiCompatibleProvider {
             test_model,
         }
     }
+
+    fn derive_prompt_cache_key(&self, req: &LlmRequest<'_>) -> String {
+        let mut hasher = DefaultHasher::new();
+        self.id.hash(&mut hasher);
+        req.model.hash(&mut hasher);
+        req.structured.flatten_system().hash(&mut hasher);
+        format!("glossa:{:016x}", hasher.finish())
+    }
+
+    fn openai_cache_config<'a>(&self, req: &'a LlmRequest<'_>) -> Option<&'a OpenAiCacheConfig> {
+        if self.id == "openai" {
+            req.provider_options.as_ref()?.openai.as_ref()
+        } else if self.id == "deepseek" {
+            req.provider_options.as_ref()?.deepseek.as_ref()
+        } else {
+            None
+        }
+    }
+
+    fn apply_cache_fields(&self, req: &LlmRequest<'_>, body: &mut Value) {
+        if self.id != "openai" {
+            return;
+        }
+
+        let cfg = self.openai_cache_config(req);
+        let cache_key = cfg
+            .and_then(|value| value.prompt_cache_key.as_ref())
+            .filter(|value| !value.trim().is_empty())
+            .cloned()
+            .unwrap_or_else(|| self.derive_prompt_cache_key(req));
+        body["prompt_cache_key"] = Value::String(cache_key);
+
+        if let Some(retention) = cfg
+            .and_then(|value| value.prompt_cache_retention.as_ref())
+            .filter(|value| matches!(value.as_str(), "in_memory" | "24h"))
+        {
+            body["prompt_cache_retention"] = Value::String(retention.clone());
+        }
+    }
+
+    fn parse_usage(&self, json: &Value) -> Option<TokenUsage> {
+        let input = json["usage"]["prompt_tokens"].as_u64()?;
+        let output = json["usage"]["completion_tokens"].as_u64()?;
+        let cached_input = if self.id == "deepseek" {
+            json["usage"]["prompt_cache_hit_tokens"]
+                .as_u64()
+                .map(|value| value as u32)
+        } else {
+            json["usage"]["prompt_tokens_details"]["cached_tokens"]
+                .as_u64()
+                .map(|value| value as u32)
+        };
+        let cache_miss_input = if self.id == "deepseek" {
+            json["usage"]["prompt_cache_miss_tokens"]
+                .as_u64()
+                .map(|value| value as u32)
+        } else {
+            cached_input.map(|cached| input as u32 - cached)
+        };
+
+        Some(TokenUsage {
+            input: input as u32,
+            output: output as u32,
+            cached_input,
+            cache_miss_input,
+        })
+    }
 }
 
 #[async_trait]
@@ -104,6 +174,22 @@ impl LlmProvider for OpenAiCompatibleProvider {
             ) {
                 state.latest_input = Some(i as u32);
                 state.latest_output = Some(o as u32);
+                state.latest_cached_input = if self.id == "deepseek" {
+                    json["usage"]["prompt_cache_hit_tokens"]
+                        .as_u64()
+                        .map(|value| value as u32)
+                } else {
+                    json["usage"]["prompt_tokens_details"]["cached_tokens"]
+                        .as_u64()
+                        .map(|value| value as u32)
+                };
+                state.latest_cache_miss_input = if self.id == "deepseek" {
+                    json["usage"]["prompt_cache_miss_tokens"]
+                        .as_u64()
+                        .map(|value| value as u32)
+                } else {
+                    state.latest_cached_input.map(|cached| i as u32 - cached)
+                };
             }
         }
     }
@@ -122,6 +208,7 @@ impl LlmProvider for OpenAiCompatibleProvider {
         if req.json_mode {
             body["response_format"] = serde_json::json!({"type": "json_object"});
         }
+        self.apply_cache_fields(req, &mut body);
 
         let mut request = client.post(&url).json(&body);
         if !req.api_key.is_empty() {
@@ -155,16 +242,7 @@ impl LlmProvider for OpenAiCompatibleProvider {
             .map(String::from)
             .ok_or_else(|| "No content in response".to_string())?;
 
-        let usage = match (
-            json["usage"]["prompt_tokens"].as_u64(),
-            json["usage"]["completion_tokens"].as_u64(),
-        ) {
-            (Some(i), Some(o)) => Some(TokenUsage {
-                input: i as u32,
-                output: o as u32,
-            }),
-            _ => None,
-        };
+        let usage = self.parse_usage(&json);
 
         Ok(LlmResponse { content, usage })
     }
@@ -185,6 +263,8 @@ impl LlmProvider for OpenAiCompatibleProvider {
             "stream": true,
             "stream_options": {"include_usage": true}
         });
+        let mut body = body;
+        self.apply_cache_fields(req, &mut body);
 
         let mut request = client.post(&url).json(&body);
         if !req.api_key.is_empty() {

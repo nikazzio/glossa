@@ -53,8 +53,25 @@ pub struct OllamaConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct OpenAiCacheConfig {
+    pub prompt_cache_key: Option<String>,
+    pub prompt_cache_retention: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GeminiCacheConfig {
+    pub explicit_caching: Option<bool>,
+    pub cache_ttl_seconds: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProviderRuntimeConfig {
     pub ollama: Option<OllamaConfig>,
+    pub openai: Option<OpenAiCacheConfig>,
+    pub deepseek: Option<OpenAiCacheConfig>,
+    pub gemini: Option<GeminiCacheConfig>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -148,6 +165,10 @@ pub struct JudgeResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub output_tokens: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub cached_input_tokens: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cache_miss_input_tokens: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub system_prompt: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub user_prompt: Option<String>,
@@ -170,6 +191,10 @@ pub struct CoherenceResponse {
     pub input_tokens: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub output_tokens: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cached_input_tokens: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cache_miss_input_tokens: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub system_prompt: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]

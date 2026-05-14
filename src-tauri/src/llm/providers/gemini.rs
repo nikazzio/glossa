@@ -1,14 +1,36 @@
 use async_trait::async_trait;
 use reqwest::Client;
+use serde_json::json;
 use serde_json::Value;
+use std::collections::HashMap;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
+use std::sync::{LazyLock, Mutex};
 
 use crate::llm::provider::{
     LlmProvider, LlmRequest, LlmResponse, StreamFormat, TokenUsage, UsageAccumulator,
 };
 use crate::llm::stream::{build_default_http_client, default_stream_timeouts, StreamTimeouts};
+use crate::llm::types::GeminiCacheConfig;
 use super::format_api_error;
 
 pub struct GeminiProvider;
+
+static GEMINI_CACHE_NAMES: LazyLock<Mutex<HashMap<String, String>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+fn estimate_tokens(text: &str) -> usize {
+    let words = text.split_whitespace().count();
+    words + words / 3
+}
+
+fn min_explicit_cache_tokens(model: &str) -> usize {
+    if model.to_ascii_lowercase().contains("pro") {
+        4096
+    } else {
+        1024
+    }
+}
 
 #[async_trait]
 impl LlmProvider for GeminiProvider {
@@ -55,6 +77,11 @@ impl LlmProvider for GeminiProvider {
             ) {
                 state.latest_input = Some(i as u32);
                 state.latest_output = Some(o as u32);
+                state.latest_cached_input = json["usageMetadata"]["cachedContentTokenCount"]
+                    .as_u64()
+                    .map(|value| value as u32);
+                state.latest_cache_miss_input =
+                    state.latest_cached_input.map(|cached| i as u32 - cached);
             }
         }
     }
@@ -71,11 +98,17 @@ impl LlmProvider for GeminiProvider {
             serde_json::json!({})
         };
 
-        let body = serde_json::json!({
-            "systemInstruction": { "parts": [{"text": req.structured.flatten_system()}] },
+        let mut body = serde_json::json!({
             "contents": [{ "role": "user", "parts": [{"text": req.structured.user}] }],
             "generationConfig": gen_config
         });
+
+        if let Some(cache_name) = ensure_gemini_cached_content(client, req).await? {
+            body["cachedContent"] = Value::String(cache_name);
+        } else {
+            body["systemInstruction"] =
+                serde_json::json!({ "parts": [{"text": req.structured.flatten_system()}] });
+        }
 
         let resp = client
             .post(&url)
@@ -106,10 +139,17 @@ impl LlmProvider for GeminiProvider {
             json["usageMetadata"]["promptTokenCount"].as_u64(),
             json["usageMetadata"]["candidatesTokenCount"].as_u64(),
         ) {
-            (Some(i), Some(o)) => Some(TokenUsage {
-                input: i as u32,
-                output: o as u32,
-            }),
+            (Some(i), Some(o)) => {
+                let cached_input = json["usageMetadata"]["cachedContentTokenCount"]
+                    .as_u64()
+                    .map(|value| value as u32);
+                Some(TokenUsage {
+                    input: i as u32,
+                    output: o as u32,
+                    cached_input,
+                    cache_miss_input: cached_input.map(|cached| i as u32 - cached),
+                })
+            }
             _ => None,
         };
 
@@ -126,10 +166,16 @@ impl LlmProvider for GeminiProvider {
             req.model, req.api_key
         );
 
-        let body = serde_json::json!({
-            "systemInstruction": { "parts": [{"text": req.structured.flatten_system()}] },
+        let mut body = serde_json::json!({
             "contents": [{ "role": "user", "parts": [{"text": req.structured.user}] }]
         });
+
+        if let Some(cache_name) = ensure_gemini_cached_content(client, req).await? {
+            body["cachedContent"] = Value::String(cache_name);
+        } else {
+            body["systemInstruction"] =
+                serde_json::json!({ "parts": [{"text": req.structured.flatten_system()}] });
+        }
 
         client
             .post(&url)
@@ -138,4 +184,96 @@ impl LlmProvider for GeminiProvider {
             .await
             .map_err(|e| format!("Gemini request failed: {e}"))
     }
+}
+
+fn gemini_cache_config<'a>(req: &'a LlmRequest<'_>) -> Option<&'a GeminiCacheConfig> {
+    req.provider_options.as_ref()?.gemini.as_ref()
+}
+
+fn gemini_explicit_caching_enabled(req: &LlmRequest<'_>) -> bool {
+    gemini_cache_config(req)
+        .and_then(|config| config.explicit_caching)
+        .unwrap_or(true)
+}
+
+fn gemini_cache_ttl_seconds(req: &LlmRequest<'_>) -> u32 {
+    gemini_cache_config(req)
+        .and_then(|config| config.cache_ttl_seconds)
+        .filter(|value| *value > 0)
+        .unwrap_or(3600)
+}
+
+fn gemini_cache_lookup_key(req: &LlmRequest<'_>) -> String {
+    let mut hasher = DefaultHasher::new();
+    req.model.hash(&mut hasher);
+    req.structured.flatten_system().hash(&mut hasher);
+    format!("gemini:{:016x}", hasher.finish())
+}
+
+async fn ensure_gemini_cached_content(
+    client: &Client,
+    req: &LlmRequest<'_>,
+) -> Result<Option<String>, String> {
+    if !gemini_explicit_caching_enabled(req) {
+        return Ok(None);
+    }
+
+    let system_prompt = req.structured.flatten_system();
+    if estimate_tokens(&system_prompt) < min_explicit_cache_tokens(req.model) {
+        return Ok(None);
+    }
+
+    let cache_key = gemini_cache_lookup_key(req);
+    if let Ok(guard) = GEMINI_CACHE_NAMES.lock() {
+        if let Some(name) = guard.get(&cache_key) {
+            log::debug!("Gemini explicit cache hit model={} cache_name={}", req.model, name);
+            return Ok(Some(name.clone()));
+        }
+    }
+
+    let body = json!({
+        "model": format!("models/{}", req.model),
+        "systemInstruction": { "parts": [{ "text": system_prompt }] },
+        "ttl": format!("{}s", gemini_cache_ttl_seconds(req)),
+    });
+
+    let resp = client
+        .post(format!(
+            "https://generativelanguage.googleapis.com/v1beta/cachedContents?key={}",
+            req.api_key
+        ))
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| format!("Gemini cache creation failed: {e}"))?;
+
+    let status = resp.status();
+    let text = resp
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read Gemini cache response: {e}"))?;
+
+    if !status.is_success() {
+        return Ok(None);
+    }
+
+    let json: Value = serde_json::from_str(&text)
+        .map_err(|e| format!("Failed to parse Gemini cache response: {e}"))?;
+    let cache_name = json["name"]
+        .as_str()
+        .map(String::from)
+        .ok_or_else(|| "Gemini cache creation did not return a cache name".to_string())?;
+
+    log::info!(
+        "Gemini explicit cache created model={} cache_name={} ttl_seconds={}",
+        req.model,
+        cache_name,
+        gemini_cache_ttl_seconds(req),
+    );
+
+    if let Ok(mut guard) = GEMINI_CACHE_NAMES.lock() {
+        guard.insert(cache_key, cache_name.clone());
+    }
+
+    Ok(Some(cache_name))
 }

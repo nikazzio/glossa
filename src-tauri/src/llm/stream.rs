@@ -173,6 +173,10 @@ pub(crate) struct StreamToken {
     pub(crate) input_tokens: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) output_tokens: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) cached_input_tokens: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) cache_miss_input_tokens: Option<u32>,
 }
 
 // ── Stream chunk abstraction ──────────────────────────────────────────
@@ -228,6 +232,8 @@ impl StreamAccumulator {
             done: false,
             input_tokens: None,
             output_tokens: None,
+            cached_input_tokens: None,
+            cache_miss_input_tokens: None,
         });
     }
 
@@ -309,12 +315,25 @@ impl StreamAccumulator {
         }
 
         let final_usage = self.usage.final_usage();
+        if let Some(usage) = final_usage.as_ref() {
+            log::info!(
+                "LLM stream completed provider={} stream_id={} input_tokens={} output_tokens={} cached_input_tokens={} cache_miss_input_tokens={}",
+                provider.id(),
+                stream_id,
+                usage.input,
+                usage.output,
+                usage.cached_input.unwrap_or(0),
+                usage.cache_miss_input.unwrap_or(0),
+            );
+        }
         emit(StreamToken {
             stream_id: stream_id.to_string(),
             token: String::new(),
             done: true,
             input_tokens: final_usage.as_ref().map(|u| u.input),
             output_tokens: final_usage.as_ref().map(|u| u.output),
+            cached_input_tokens: final_usage.as_ref().and_then(|u| u.cached_input),
+            cache_miss_input_tokens: final_usage.as_ref().and_then(|u| u.cache_miss_input),
         });
     }
 }
