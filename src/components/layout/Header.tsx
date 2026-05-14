@@ -25,6 +25,7 @@ import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useLibraryStore } from '../../stores/libraryStore';
 import { importTextFile, exportTranslation, exportBilingual } from '../../services/fileService';
+import { getContextWindow } from '../../models/catalog';
 import type { ExportFormat } from '../document/ExportDialog';
 
 const ExportDialog = lazy(() =>
@@ -118,6 +119,10 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
 
   const handleConfirmImport = (manualChunks?: string[]) => {
     if (!pendingImport) return;
+    const stage0 = config.stages[0];
+    const contextWindow = stage0
+      ? getContextWindow(stage0.provider, stage0.model)
+      : undefined;
     setConfig((prev) => ({
       ...prev,
       useChunking: pendingImport.useChunking,
@@ -129,6 +134,7 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
       renderProfile: pendingImport.format === 'markdown' ? 'markdown' : 'plain-text',
       markdownAware: pendingImport.format === 'markdown',
       experimentalImport: pendingImport.experimental ?? null,
+      chunkedWithContextWindow: contextWindow,
     }));
     loadDocument(
       pendingImport.text,

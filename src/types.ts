@@ -158,4 +158,5 @@ export interface PipelineConfig {
   customTargetLanguage?: string;
   blobBudgetTokens?: number;
   blobOverlap?: number;
+  chunkedWithContextWindow?: number;
 }

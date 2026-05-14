@@ -11,7 +11,6 @@ import { escapeHtml, useGlossaryHighlight } from '../../hooks/useGlossaryHighlig
 import { highlightSuperscriptMarkersHtml } from '../../utils/footnoteExtractor';
 import { logger } from '../../utils/logger';
 import type { GlossaryEntry, PipelineStageConfig, TranslationChunk } from '../../types';
-import { calculateBlobBudget } from '../../models/catalog';
 
 const ChunkSourceText = memo(function ChunkSourceText({
   chunk,
@@ -281,108 +280,6 @@ interface ProductionStreamProps {
   onReauditChunk: (chunkId: string) => void;
 }
 
-function BlobContextSettings({
-  config,
-  setConfig,
-  t,
-}: {
-  config: ReturnType<typeof usePipelineStore.getState>['config'];
-  setConfig: (updater: (prev: typeof config) => typeof config) => void;
-  t: ReturnType<typeof useTranslation>['t'];
-}) {
-  const isOverride = (config.blobBudgetTokens ?? 0) > 0;
-  const auto = calculateBlobBudget(config.stages);
-
-  return (
-    <div className="rounded-[18px] border border-editorial-border/70 bg-editorial-textbox/20 overflow-hidden">
-      <button
-        type="button"
-        role="switch"
-        aria-checked={isOverride}
-        onClick={() => setConfig((prev) => ({
-          ...prev,
-          blobBudgetTokens: isOverride ? 0 : auto.budget,
-        }))}
-        className={`flex w-full items-center justify-between px-4 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-editorial-accent ${
-          isOverride
-            ? 'bg-editorial-ink/5 border-b border-editorial-border/50'
-            : 'hover:bg-editorial-textbox/30'
-        }`}
-      >
-        <span className="flex items-center gap-2.5">
-          <span className="space-y-0.5">
-            <span className="block text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-              {t('pipeline.blobContext')}
-            </span>
-            {!isOverride && (
-              <span className="block text-xs text-editorial-muted/70">
-                {t('pipeline.blobContextAutoDesc', { tokens: auto.budget.toLocaleString(), model: auto.modelId || 'ollama' })}
-              </span>
-            )}
-          </span>
-        </span>
-        <span
-          className={`flex h-5 w-9 items-center rounded-full border px-0.5 transition-colors shrink-0 ${
-            isOverride
-              ? 'border-editorial-ink bg-editorial-ink justify-end'
-              : 'border-editorial-border bg-editorial-textbox/60 justify-start'
-          }`}
-          aria-hidden="true"
-        >
-          <span className="h-3.5 w-3.5 rounded-full bg-white" />
-        </span>
-      </button>
-
-      {isOverride && (
-        <div className="px-4 py-3 space-y-3">
-          <div className="flex flex-wrap gap-4 items-center">
-            <div className="flex items-center gap-2">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
-                {t('pipeline.blobBudgetTokens')}
-              </label>
-              <input
-                type="number"
-                min={1}
-                value={config.blobBudgetTokens ?? auto.budget}
-                onChange={(e) => setConfig((prev) => ({
-                  ...prev,
-                  blobBudgetTokens: Math.max(1, Number(e.target.value) || 1),
-                }))}
-                className="w-24 bg-editorial-bg border border-editorial-border px-3 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                aria-label={t('pipeline.blobBudgetTokens')}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
-                {t('pipeline.blobOverlap')}
-              </label>
-              <input
-                type="number"
-                min={0}
-                value={config.blobOverlap ?? 1}
-                onChange={(e) => setConfig((prev) => ({
-                  ...prev,
-                  blobOverlap: Math.max(0, Number(e.target.value) || 0),
-                }))}
-                className="w-16 bg-editorial-bg border border-editorial-border px-3 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                aria-label={t('pipeline.blobOverlap')}
-              />
-            </div>
-            <button
-              type="button"
-              onClick={() => setConfig((prev) => ({ ...prev, blobBudgetTokens: 0 }))}
-              className="text-[10px] font-bold uppercase tracking-widest text-editorial-accent"
-            >
-              {t('pipeline.blobContextReset')}
-            </button>
-          </div>
-          <p className="text-[10px] text-editorial-muted">{t('pipeline.blobOverlapHint')}</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function ProductionStream({
   onRetranslateChunk,
   onReauditChunk,
@@ -546,9 +443,6 @@ export function ProductionStream({
                     {t('pipeline.zeroMeansAuto')}
                   </span>
                 </div>
-              )}
-              {config.useChunking !== false && (
-                <BlobContextSettings config={config} setConfig={setConfig} t={t} />
               )}
             </div>
             <button
