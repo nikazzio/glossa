@@ -530,39 +530,36 @@ export function DocumentView({
               <DocumentPage
                 label={t('pipeline.candidateTranslation')}
                 eyebrow={t('document.rightPage')}
+                subtitle={isEditorialMode ? t(`pipeline.stageRole.${enabledStages.find(s => s.id === selectedStageId)?.role ?? 'translation'}`) : undefined}
                 actions={stageActions}
                 highlighted={focusedChunkId === currentChunk.id}
                 statusBadge={currentChunk.translationLocked ? (
                   <InlineStatusBadge tone="emerald" icon={<CheckCheck size={13} />} label={t('document.translationLockedBadge')} />
                 ) : null}
               >
-                <div className="flex flex-col flex-1 min-h-0">
-                  <div className="flex-1 min-h-0">
-                    <MarkdownEditor
-                      value={stageContent}
-                      onChange={isLastSelected ? (nextValue) => updateChunkDraft(currentChunk.id, nextValue) : () => {}}
-                      markdownEnabled={config.markdownAware === true}
-                      readOnly={stageReadOnly}
-                      fillHeight
-                      textClassName="text-[15px] leading-8 text-editorial-ink"
-                      previewClassName="min-h-[280px] text-[15px] leading-8 text-editorial-ink"
-                      placeholder={isLastSelected ? t('pipeline.candidatePlaceholder') : ''}
-                      highlightHtml={isLastSelected && showHighlight ? translationHighlight.html : null}
-                      focusQuery={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueQuery : null}
-                      focusRequestId={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueRequestId : 0}
-                      onFocusQueryHandled={isLastSelected ? clearFocusedIssue : undefined}
-                    />
+                <MarkdownEditor
+                  value={stageContent}
+                  onChange={isLastSelected ? (nextValue) => updateChunkDraft(currentChunk.id, nextValue) : () => {}}
+                  markdownEnabled={config.markdownAware === true}
+                  readOnly={stageReadOnly}
+                  fillHeight
+                  textClassName="text-[15px] leading-8 text-editorial-ink"
+                  previewClassName="min-h-[280px] text-[15px] leading-8 text-editorial-ink"
+                  placeholder={isLastSelected ? t('pipeline.candidatePlaceholder') : ''}
+                  highlightHtml={isLastSelected && showHighlight ? translationHighlight.html : null}
+                  focusQuery={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueQuery : null}
+                  focusRequestId={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueRequestId : 0}
+                  onFocusQueryHandled={isLastSelected ? clearFocusedIssue : undefined}
+                />
+                <div className="mt-3 pt-3 border-t border-[#ede4d6] flex items-center justify-between shrink-0">
+                  <div>
+                    {currentChunk.judgeResult.status === 'completed' && (
+                      <span className={`font-display text-base italic ${QUALITY_TONE_COLOR[chunkTone]}`}>
+                        {currentQualityLabel}
+                      </span>
+                    )}
                   </div>
-                  <div className="mt-3 pt-3 border-t border-[#ede4d6] flex items-center justify-between shrink-0">
-                    <div>
-                      {currentChunk.judgeResult.status === 'completed' && (
-                        <span className={`font-display text-base italic ${QUALITY_TONE_COLOR[chunkTone]}`}>
-                          {currentQualityLabel}
-                        </span>
-                      )}
-                    </div>
-                    <CopyButton text={stageContent} />
-                  </div>
+                  <CopyButton text={stageContent} />
                 </div>
               </DocumentPage>
             );
@@ -596,6 +593,7 @@ export function DocumentView({
 interface DocumentPageProps {
   label: string;
   eyebrow: string;
+  subtitle?: string;
   readOnly?: boolean;
   highlighted?: boolean;
   titleMeta?: React.ReactNode;
@@ -676,6 +674,7 @@ function StageTraceDialog({
 function DocumentPage({
   label,
   eyebrow,
+  subtitle,
   readOnly = false,
   highlighted = false,
   titleMeta,
@@ -698,6 +697,11 @@ function DocumentPage({
             </h3>
             {statusBadge}
           </div>
+          {subtitle && (
+            <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-accent">
+              {subtitle}
+            </p>
+          )}
         </div>
         <div className="shrink-0 flex items-center gap-2">
           {titleMeta}
