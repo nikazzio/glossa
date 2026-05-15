@@ -418,7 +418,14 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
     set((state) => ({
       chunks: state.chunks.map((chunk) => {
         const assignment = map.get(chunk.id);
-        if (!assignment) return chunk;
+        if (!assignment) {
+          return {
+            ...chunk,
+            blobId: undefined,
+            blobOrder: undefined,
+            blobReferenceChunkIds: undefined,
+          };
+        }
         return {
           ...chunk,
           blobId: assignment.blobId,

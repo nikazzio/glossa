@@ -21,7 +21,9 @@ function assembleBlobContext(chunks: TranslationChunk[], chunkId: string): strin
   const byId = new Map(chunks.map((chunk) => [chunk.id, chunk]));
   const referenceChunks = current.blobReferenceChunkIds
     .map((id) => byId.get(id))
-    .filter((chunk): chunk is TranslationChunk => !!chunk && !!chunk.sourceProcessingText);
+    .filter((chunk): chunk is TranslationChunk =>
+      !!chunk && chunk.id !== chunkId && !!chunk.sourceProcessingText,
+    );
   if (referenceChunks.length === 0) return undefined;
   return referenceChunks.map((chunk) => chunk.sourceProcessingText).join('\n\n') || undefined;
 }
@@ -32,7 +34,9 @@ function assembleTranslationBlobContext(chunks: TranslationChunk[], chunkId: str
   const byId = new Map(chunks.map((chunk) => [chunk.id, chunk]));
   const referenceChunks = current.blobReferenceChunkIds
     .map((id) => byId.get(id))
-    .filter((chunk): chunk is TranslationChunk => !!chunk?.translationProcessingText?.trim());
+    .filter((chunk): chunk is TranslationChunk =>
+      !!chunk && chunk.id !== chunkId && !!chunk.translationProcessingText?.trim(),
+    );
   if (referenceChunks.length === 0) return undefined;
   return referenceChunks.map((chunk) => chunk.translationProcessingText).join('\n\n') || undefined;
 }

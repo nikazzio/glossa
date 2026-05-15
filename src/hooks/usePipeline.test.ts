@@ -10,6 +10,8 @@ const llmMocks = vi.hoisted(() => ({
   runStage: vi.fn(),
   runStageStream: vi.fn(),
   judgeTranslation: vi.fn(),
+  runCoherenceForChunk: vi.fn(),
+  computeBlobs: vi.fn(),
   cancelStream: vi.fn(),
   preflightPipeline: vi.fn(),
 }));
@@ -55,6 +57,8 @@ describe('usePipeline', () => {
     vi.resetAllMocks();
     (toast.loading as ReturnType<typeof vi.fn>).mockReturnValue('toast-id');
     llmMocks.preflightPipeline.mockResolvedValue([]);
+    llmMocks.computeBlobs.mockResolvedValue([]);
+    llmMocks.runCoherenceForChunk.mockResolvedValue({ issues: [] });
     preflightMocks.showPreflightDialog.mockResolvedValue(true);
 
     usePipelineStore.setState((state) => ({
@@ -357,6 +361,71 @@ describe('usePipeline', () => {
     const stage2Call = llmMocks.runStage.mock.calls[1];
     expect(stage2Call[3]).toBe('Stage 1 output');
     expect(useChunksStore.getState().chunks[0].currentDraft).toBe('Stage 2 output');
+  });
+
+  it('excludes the current chunk from the stage blob context', async () => {
+    llmMocks.computeBlobs.mockResolvedValueOnce([
+      { chunkId: 'chunk-0', blobId: 'blob-1', position: 0, referenceChunkIds: ['chunk-0', 'chunk-1'] },
+      { chunkId: 'chunk-1', blobId: 'blob-1', position: 1, referenceChunkIds: ['chunk-0', 'chunk-1'] },
+    ]);
+    llmMocks.runStage.mockResolvedValue({ content: 'First translated' });
+    llmMocks.judgeTranslation.mockResolvedValue({
+      content: '',
+      rating: 'good',
+      issues: [],
+    });
+
+    const { result } = renderHook(() => usePipeline());
+    await act(async () => {
+      await result.current.runSingleChunk('chunk-0');
+    });
+
+    const stageCall = llmMocks.runStage.mock.calls[0];
+    expect(stageCall[2].blobContext).toBe('Second');
+    expect(stageCall[2].blobContext).not.toContain('First');
+  });
+
+  it('excludes the current chunk from the coherence blob context', async () => {
+    useChunksStore.setState({
+      chunks: [
+        makeTranslationChunk({
+          id: 'chunk-0',
+          originalText: 'First',
+          sourceProcessingText: 'First',
+          translationDisplayText: 'Prima',
+          translationProcessingText: 'Prima',
+          currentDraft: 'Prima',
+          status: 'completed',
+          blobId: 'blob-1',
+          blobOrder: 0,
+          blobReferenceChunkIds: ['chunk-0', 'chunk-1'],
+        }),
+        makeTranslationChunk({
+          id: 'chunk-1',
+          originalText: 'Second',
+          sourceProcessingText: 'Second',
+          translationDisplayText: 'Seconda',
+          translationProcessingText: 'Seconda',
+          currentDraft: 'Seconda',
+          status: 'completed',
+          blobId: 'blob-1',
+          blobOrder: 1,
+          blobReferenceChunkIds: ['chunk-0', 'chunk-1'],
+        }),
+      ],
+      isProcessing: false,
+      cancelRequested: false,
+      activeStreamId: null,
+    });
+
+    const { result } = renderHook(() => usePipeline());
+    await act(async () => {
+      await result.current.runCoherenceAudit();
+    });
+
+    const coherenceCall = llmMocks.runCoherenceForChunk.mock.calls[0];
+    expect(coherenceCall[0].blobContext).toBe('Seconda');
+    expect(coherenceCall[0].blobContext).not.toContain('Prima');
   });
 
   it('marks chunk as error and calls toast.error on non-cancellation stage failure', async () => {

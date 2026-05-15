@@ -154,6 +154,9 @@ describe('initDatabase migrations', () => {
     expect(dbState.db.execute).toHaveBeenCalledWith(
       expect.stringContaining('ALTER TABLE translations ADD COLUMN position INTEGER DEFAULT NULL'),
     );
+    expect(dbState.db.execute).toHaveBeenCalledWith(
+      expect.stringContaining('ALTER TABLE translations ADD COLUMN blob_reference_chunk_ids TEXT DEFAULT NULL'),
+    );
   });
 
   it('creates the prompt_templates table and unique index on name', async () => {
