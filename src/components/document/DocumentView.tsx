@@ -18,6 +18,7 @@ import {
   ScanLine,
   Scissors,
   Square,
+  Wand2,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
@@ -96,6 +97,7 @@ export function DocumentView({
   const [paneFocus, setPaneFocus] = useState<'both' | 'source' | 'translation'>('both');
   const [traceStageId, setTraceStageId] = useState<string | null>(null);
   const [showCostPanel, setShowCostPanel] = useState(false);
+  const [selectedStageId, setSelectedStageId] = useState<string>('');
 
   const costEstimate = useMemo(
     () => estimatePipelineCost(chunks, config, pricingOverrides),
@@ -133,6 +135,15 @@ export function DocumentView({
       setSelectedChunkId(chunks[0].id);
     }
   }, [chunks, selectedChunkId, setSelectedChunkId]);
+
+  const enabledStages = config.stages.filter((s) => s.enabled);
+  const lastStageId = enabledStages[enabledStages.length - 1]?.id ?? '';
+  const isEditorialMode = enabledStages.length > 1;
+
+  // Reset to last stage whenever the chunk changes
+  useEffect(() => {
+    setSelectedStageId(lastStageId);
+  }, [currentChunk?.id, lastStageId]);
 
   const handleUnlockSource = async (chunkId: string) => {
     const ok = await confirm({
@@ -479,37 +490,83 @@ export function DocumentView({
             </DocumentPage>
           )}
 
-          {paneFocus !== 'source' && (
-            <DocumentPage
-              label={t('pipeline.candidateTranslation')}
-              eyebrow={t('document.rightPage')}
-              actions={<CopyButton text={currentChunk.currentDraft || ''} />}
-              highlighted={focusedChunkId === currentChunk.id}
-              titleMeta={currentChunk.judgeResult.status === 'completed' ? (
-                <span className={`font-display text-base italic ${QUALITY_TONE_COLOR[chunkTone]}`}>
-                  {currentQualityLabel}
-                </span>
-              ) : null}
-              statusBadge={currentChunk.translationLocked ? (
-                <InlineStatusBadge tone="emerald" icon={<CheckCheck size={13} />} label={t('document.translationLockedBadge')} />
-              ) : null}
-            >
-              <MarkdownEditor
-                value={currentChunk.currentDraft || ''}
-                onChange={(nextValue) => updateChunkDraft(currentChunk.id, nextValue)}
-                markdownEnabled={config.markdownAware === true}
-                readOnly={currentChunk.translationLocked === true}
-                fillHeight
-                textClassName="text-[15px] leading-8 text-editorial-ink"
-                previewClassName="min-h-[280px] text-[15px] leading-8 text-editorial-ink"
-                placeholder={t('pipeline.candidatePlaceholder')}
-                highlightHtml={showHighlight ? translationHighlight.html : null}
-                focusQuery={focusedChunkId === currentChunk.id ? focusedIssueQuery : null}
-                focusRequestId={focusedChunkId === currentChunk.id ? focusedIssueRequestId : 0}
-                onFocusQueryHandled={clearFocusedIssue}
-              />
-            </DocumentPage>
-          )}
+          {paneFocus !== 'source' && (() => {
+            const isLastSelected = selectedStageId === lastStageId;
+            const stageContent = isLastSelected
+              ? (currentChunk.currentDraft || '')
+              : (currentChunk.stageResults[selectedStageId]?.content || '');
+            const stageReadOnly = !isLastSelected || currentChunk.translationLocked === true;
+            const stageActions = isEditorialMode ? (
+              <div className="flex items-center gap-1">
+                {enabledStages.map((s) => {
+                  const Icon = s.role === 'refine' ? Wand2 : s.role === 'format' ? FileText : Languages;
+                  const isActive = selectedStageId === s.id;
+                  const hasContent = s.id === lastStageId
+                    ? true
+                    : !!(currentChunk.stageResults[s.id]?.content);
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setSelectedStageId(s.id)}
+                      title={t('document.viewStageResult', { stage: t(`pipeline.stageRole.${s.role ?? 'translation'}`) })}
+                      aria-label={t('document.viewStageResult', { stage: t(`pipeline.stageRole.${s.role ?? 'translation'}`) })}
+                      aria-pressed={isActive}
+                      disabled={!hasContent}
+                      className={`inline-flex h-7 w-7 items-center justify-center rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-30 ${
+                        isActive
+                          ? 'border-editorial-accent bg-editorial-accent text-white'
+                          : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent'
+                      }`}
+                    >
+                      <Icon size={13} />
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null;
+
+            return (
+              <DocumentPage
+                label={t('pipeline.candidateTranslation')}
+                eyebrow={t('document.rightPage')}
+                actions={stageActions}
+                highlighted={focusedChunkId === currentChunk.id}
+                statusBadge={currentChunk.translationLocked ? (
+                  <InlineStatusBadge tone="emerald" icon={<CheckCheck size={13} />} label={t('document.translationLockedBadge')} />
+                ) : null}
+              >
+                <div className="flex flex-col flex-1 min-h-0">
+                  <div className="flex-1 min-h-0">
+                    <MarkdownEditor
+                      value={stageContent}
+                      onChange={isLastSelected ? (nextValue) => updateChunkDraft(currentChunk.id, nextValue) : () => {}}
+                      markdownEnabled={config.markdownAware === true}
+                      readOnly={stageReadOnly}
+                      fillHeight
+                      textClassName="text-[15px] leading-8 text-editorial-ink"
+                      previewClassName="min-h-[280px] text-[15px] leading-8 text-editorial-ink"
+                      placeholder={isLastSelected ? t('pipeline.candidatePlaceholder') : ''}
+                      highlightHtml={isLastSelected && showHighlight ? translationHighlight.html : null}
+                      focusQuery={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueQuery : null}
+                      focusRequestId={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueRequestId : 0}
+                      onFocusQueryHandled={isLastSelected ? clearFocusedIssue : undefined}
+                    />
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-[#ede4d6] flex items-center justify-between shrink-0">
+                    <div>
+                      {currentChunk.judgeResult.status === 'completed' && (
+                        <span className={`font-display text-base italic ${QUALITY_TONE_COLOR[chunkTone]}`}>
+                          {currentQualityLabel}
+                        </span>
+                      )}
+                    </div>
+                    <CopyButton text={stageContent} />
+                  </div>
+                </div>
+              </DocumentPage>
+            );
+          })()}
         </div>
 
       </div>

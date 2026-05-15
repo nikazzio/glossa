@@ -128,6 +128,10 @@ Disporre dall'alto verso il basso per importanza percepita dall'utente:
 2. Coppia linguistica
 3. Persona
 
+## Comunicazione con l'utente
+
+Quando descrivi il funzionamento del codice o l'analisi di una feature, ragiona a livello **logico-funzionale**: spiega cosa fa il sistema, cosa manca, quale comportamento cambia — senza citare nomi di variabili, funzioni, tipi o file specifici. L'utente non ha il codice in testa e quei nomi non gli dicono nulla; ciò che serve è capire il comportamento, non la struttura interna.
+
 ## Contributing
 
 1. Apri un issue prima di iniziare lavori grandi

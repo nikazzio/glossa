@@ -497,6 +497,7 @@
     "rightPage": "Pagina traduzione",
     "stageTrace": "Traccia delle fasi",
     "noStageTrace": "Nessun output disponibile per questa fase.",
+    "viewStageResult": "Visualizza output: {{stage}}",
     "lockTranslation": "Blocca traduzione candidata",
     "unlockTranslation": "Sblocca traduzione candidata",
     "translationLockedTitle": "Traduzione validata e bloccata",

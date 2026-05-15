@@ -497,6 +497,7 @@
     "rightPage": "Translation page",
     "stageTrace": "Stage Trace",
     "noStageTrace": "No output available for this stage.",
+    "viewStageResult": "View output: {{stage}}",
     "lockTranslation": "Lock candidate translation",
     "unlockTranslation": "Unlock candidate translation",
     "translationLockedTitle": "Translation validated and locked",
