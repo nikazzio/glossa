@@ -26,7 +26,7 @@ const STAGE_TEMPLATES: Record<StageRole, StageTemplate> = {
     role: 'format',
     name: 'Format',
     defaultPrompt:
-      'Correct only obvious formatting issues in the translation: broken markdown, inconsistent spacing, or structural artifacts. Do not alter meaning, wording, or content. Output only the corrected text.',
+      'Correct only obvious formatting issues in the translation: broken markdown, misaligned footnotes, or inconsistent spacing. Do not add, remove, or change any bold, italic, or other emphasis markers. Do not alter meaning, wording, or content. Output only the corrected text.',
   },
 };
 

@@ -144,6 +144,61 @@ describe('document chunking', () => {
     ]);
   });
 
+  it('moves a plain-text title from the bottom of a chunk to the top of the next', () => {
+    // With 5 blocks and target=3, the splitter closes a chunk when the next block
+    // would exceed the word-count limit AND enough blocks remain. shortPara+title land
+    // in chunk 1 because longPara triggers the close, leaving title stranded at the end.
+    // headingAware detects the trailing title-like line and moves it to chunk 2.
+    const shortPara = 'Short intro paragraph with nine words total here.';
+    const title = 'Titolo Sezione Due';
+    const longPara = Array.from({ length: 25 }, (_, i) => `word${i + 1}`).join(' ');
+    const extraPara = Array.from({ length: 5 }, (_, i) => `extra${i + 1}`).join(' ');
+    const lastPara = 'Final short paragraph.';
+
+    const chunks = chunkText([shortPara, title, longPara, extraPara, lastPara].join('\n\n'), {
+      useChunking: true,
+      targetChunkCount: 3,
+      headingAware: true,
+    });
+
+    expect(chunks[0]).toBe(shortPara);
+    expect(chunks[1]).toMatch(new RegExp(`^${title}`));
+  });
+
+  it('does not move a trailing line that ends with sentence punctuation', () => {
+    const shortPara = 'Short intro paragraph with nine words total here.';
+    const notATitle = 'This ends with a period.';
+    const longPara = Array.from({ length: 25 }, (_, i) => `word${i + 1}`).join(' ');
+    const extraPara = Array.from({ length: 5 }, (_, i) => `extra${i + 1}`).join(' ');
+    const lastPara = 'Final short paragraph.';
+
+    const chunks = chunkText([shortPara, notATitle, longPara, extraPara, lastPara].join('\n\n'), {
+      useChunking: true,
+      targetChunkCount: 3,
+      headingAware: true,
+    });
+
+    // notATitle ends with '.' so it stays with shortPara, NOT moved to the next chunk
+    expect(chunks[0]).toBe(`${shortPara}\n\n${notATitle}`);
+  });
+
+  it('moves a markdown heading embedded at the bottom of a content chunk to the next chunk', () => {
+    const shortPara = 'Short intro paragraph with nine words total here.';
+    const heading = '## Section Two';
+    const longPara = Array.from({ length: 25 }, (_, i) => `word${i + 1}`).join(' ');
+    const extraPara = Array.from({ length: 5 }, (_, i) => `extra${i + 1}`).join(' ');
+    const lastPara = 'Final short paragraph.';
+
+    const chunks = chunkText([shortPara, heading, longPara, extraPara, lastPara].join('\n\n'), {
+      useChunking: true,
+      targetChunkCount: 3,
+      headingAware: true,
+    });
+
+    expect(chunks[0]).toBe(shortPara);
+    expect(chunks[1]).toMatch(new RegExp(`^${heading.replace('##', '##')}`));
+  });
+
   it('merges chunks smaller than the configured minimum forward', () => {
     const text = [
       'Tiny intro.',

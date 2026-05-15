@@ -228,6 +228,22 @@ function isHeadingChunk(text: string): boolean {
   return /^#{1,6}\s+\S/.test(trimmed) && !trimmed.includes('\n');
 }
 
+// Detects a heading-like trailing line: short, no sentence-ending punctuation,
+// preceded by a blank line within the chunk. Works for both Markdown and plain text.
+function extractTrailingHeading(text: string): { main: string; heading: string } | null {
+  const trimmed = text.trim();
+  const sep = trimmed.lastIndexOf('\n\n');
+  if (sep === -1) return null;
+  const main = trimmed.slice(0, sep).trim();
+  const trailing = trimmed.slice(sep + 2).trim();
+  if (!main || !trailing) return null;
+  if (trailing.includes('\n')) return null;
+  if (trailing.length > 80) return null;
+  if (/[.!?;,:]$/.test(trailing)) return null;
+  if (!/^[A-Z#\d"«]/.test(trailing)) return null;
+  return { main, heading: trailing };
+}
+
 function mergeHeadingChunks(chunks: string[]): string[] {
   if (chunks.length <= 1) return chunks;
   const result: string[] = [];
@@ -238,11 +254,21 @@ function mergeHeadingChunks(chunks: string[]): string[] {
         ? `${headingAccumulator}\n\n${chunk}`
         : chunk;
     } else {
-      const merged = headingAccumulator
-        ? `${headingAccumulator}\n\n${chunk}`
-        : chunk;
-      result.push(merged);
-      headingAccumulator = '';
+      const extracted = extractTrailingHeading(chunk);
+      if (extracted) {
+        // Push the body of this chunk (with any pending headings), carry the trailing heading forward
+        const merged = headingAccumulator
+          ? `${headingAccumulator}\n\n${extracted.main}`
+          : extracted.main;
+        result.push(merged);
+        headingAccumulator = extracted.heading;
+      } else {
+        const merged = headingAccumulator
+          ? `${headingAccumulator}\n\n${chunk}`
+          : chunk;
+        result.push(merged);
+        headingAccumulator = '';
+      }
     }
   }
   // If trailing headings remain (no following non-heading chunk), push them as-is

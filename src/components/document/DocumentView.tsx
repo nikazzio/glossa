@@ -122,12 +122,18 @@ export function DocumentView({
     chunks.findIndex((chunk) => chunk.id === selectedChunkId),
   );
   const currentChunk = chunks[currentIndex] ?? null;
+  const enabledStages = config.stages.filter((s) => s.enabled);
+  const lastStageId = enabledStages[enabledStages.length - 1]?.id ?? '';
+  const isEditorialMode = enabledStages.length > 1;
   const deferredOriginalText = useDeferredValue(currentChunk?.originalText ?? '');
-  const deferredDraftText = useDeferredValue(currentChunk?.currentDraft ?? '');
+  const isLastSelected = !selectedStageId || selectedStageId === lastStageId;
+  const rawStageContent = isLastSelected
+    ? (currentChunk?.currentDraft ?? '')
+    : (currentChunk?.stageResults[selectedStageId]?.content ?? '');
+  const deferredStageContent = useDeferredValue(rawStageContent);
   const currentQualityLabel = currentChunk
     ? t(qualityLabelKey(currentChunk.judgeResult.rating))
     : t('audit.ratingNone');
-
 
   useEffect(() => {
     if (!chunks.length) return;
@@ -135,10 +141,6 @@ export function DocumentView({
       setSelectedChunkId(chunks[0].id);
     }
   }, [chunks, selectedChunkId, setSelectedChunkId]);
-
-  const enabledStages = config.stages.filter((s) => s.enabled);
-  const lastStageId = enabledStages[enabledStages.length - 1]?.id ?? '';
-  const isEditorialMode = enabledStages.length > 1;
 
   // Reset to last stage whenever the chunk changes
   useEffect(() => {
@@ -178,7 +180,7 @@ export function DocumentView({
     'source',
   );
   const translationHighlight = useGlossaryHighlight(
-    paneFocus !== 'source' ? deferredDraftText : '',
+    paneFocus !== 'source' ? deferredStageContent : '',
     showHighlight && paneFocus !== 'source' ? config.glossary : [],
     'translation',
   );
@@ -465,7 +467,7 @@ export function DocumentView({
           </div>
         </div>
 
-        <div className={`grid gap-5 flex-1 min-h-0 ${paneFocus === 'both' ? (isBook ? '2xl:grid-cols-2' : 'grid-cols-1') : 'grid-cols-1'}`}>
+        <div className={`grid gap-5 flex-1 min-h-0 auto-rows-fr ${paneFocus === 'both' ? (isBook ? '2xl:grid-cols-2' : 'grid-cols-1') : 'grid-cols-1'}`}>
           {paneFocus !== 'translation' && (
             <DocumentPage
               label={t('pipeline.originalSource')}
@@ -491,10 +493,6 @@ export function DocumentView({
           )}
 
           {paneFocus !== 'source' && (() => {
-            const isLastSelected = selectedStageId === lastStageId;
-            const stageContent = isLastSelected
-              ? (currentChunk.currentDraft || '')
-              : (currentChunk.stageResults[selectedStageId]?.content || '');
             const stageReadOnly = !isLastSelected || currentChunk.translationLocked === true;
             const stageActions = isEditorialMode ? (
               <div className="flex items-center gap-1">
@@ -538,7 +536,7 @@ export function DocumentView({
                 ) : null}
               >
                 <MarkdownEditor
-                  value={stageContent}
+                  value={rawStageContent}
                   onChange={isLastSelected ? (nextValue) => updateChunkDraft(currentChunk.id, nextValue) : () => {}}
                   markdownEnabled={config.markdownAware === true}
                   readOnly={stageReadOnly}
@@ -546,7 +544,7 @@ export function DocumentView({
                   textClassName="text-[15px] leading-8 text-editorial-ink"
                   previewClassName="min-h-[280px] text-[15px] leading-8 text-editorial-ink"
                   placeholder={isLastSelected ? t('pipeline.candidatePlaceholder') : ''}
-                  highlightHtml={isLastSelected && showHighlight ? translationHighlight.html : null}
+                  highlightHtml={showHighlight ? translationHighlight.html : null}
                   focusQuery={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueQuery : null}
                   focusRequestId={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueRequestId : 0}
                   onFocusQueryHandled={isLastSelected ? clearFocusedIssue : undefined}
@@ -559,7 +557,7 @@ export function DocumentView({
                       </span>
                     )}
                   </div>
-                  <CopyButton text={stageContent} />
+                  <CopyButton text={rawStageContent} />
                 </div>
               </DocumentPage>
             );
@@ -683,7 +681,7 @@ function DocumentPage({
   children,
 }: DocumentPageProps) {
   return (
-    <section className={`relative rounded-[24px] bg-[#fffdf9] px-6 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_18px_45px_rgba(74,50,17,0.08)] flex flex-col ${
+    <section className={`relative rounded-[24px] bg-[#fffdf9] px-6 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_18px_45px_rgba(74,50,17,0.08)] flex flex-col min-h-0 ${
       highlighted ? 'border border-editorial-accent ring-2 ring-editorial-accent/30' : 'border border-[#d8cfbf]'
     }`}>
       <div className="mb-4 shrink-0 flex items-center justify-between gap-4 border-b border-[#ede4d6] pb-3">
