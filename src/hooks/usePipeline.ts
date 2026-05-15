@@ -303,7 +303,17 @@ export function usePipeline() {
             },
           },
         );
-        const result = stageResult.content;
+        const rawResult = stageResult.content;
+        const result = isFormatStage && !rawResult.trim() ? stageText : rawResult;
+        if (isFormatStage && !rawResult.trim() && stageText.trim()) {
+          logOperation({
+            level: 'warn',
+            scope: 'stage',
+            message: 'Format stage returned empty output; using previous stage output',
+            chunkId: chunk.id,
+            stageId: stage.id,
+          });
+        }
         if (!capturedUsage && stageResult.inputTokens !== undefined && stageResult.outputTokens !== undefined) {
           capturedUsage = {
             inputTokens: stageResult.inputTokens,

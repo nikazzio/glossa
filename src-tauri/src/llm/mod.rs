@@ -275,7 +275,7 @@ mod tests {
     fn stage_prompt_without_previous() {
         let config = make_config();
         let stage = make_stage("gemini");
-        let prompt = build_stage_prompts("Hello world", &stage, &config, &None);
+        let prompt = build_stage_prompts("Hello world", &stage, &config, None);
         let system = prompt.flatten_system();
 
         assert!(system.contains("English to Italian"));
@@ -293,7 +293,7 @@ mod tests {
         config.blob_current_chunk_id = Some("chunk-1".into());
         let stage = make_stage("openai");
         let prev = Some("Ciao mondo".to_string());
-        let prompt = build_stage_prompts("Hello world", &stage, &config, &prev);
+        let prompt = build_stage_prompts("Hello world", &stage, &config, prev.as_deref());
         let system = prompt.flatten_system();
 
         assert!(system.contains("English to Italian"));
@@ -310,7 +310,7 @@ mod tests {
         let mut config = make_config();
         config.glossary = vec![];
         let stage = make_stage("gemini");
-        let system = build_stage_prompts("text", &stage, &config, &None).flatten_system();
+        let system = build_stage_prompts("text", &stage, &config, None).flatten_system();
 
         assert!(system.contains("No glossary entries were provided"));
     }
@@ -331,11 +331,40 @@ mod tests {
             },
         ];
         let stage = make_stage("gemini");
-        let system = build_stage_prompts("text", &stage, &config, &None).flatten_system();
+        let system = build_stage_prompts("text", &stage, &config, None).flatten_system();
 
         assert!(system.contains("| API | API | tech |"));
         assert!(system.contains("| bug | errore |"));
         assert!(system.contains("Treat every glossary entry as mandatory terminology"));
+        assert!(system.contains("Glossary Reminder"));
+        assert!(system.contains("Apply the glossary entries specified above"));
+    }
+
+    #[test]
+    fn format_stage_prompt_omits_glossary_persona_and_source_context() {
+        let mut config = make_config();
+        config.blob_context = Some("<chunk id=\"chunk-1\">\nHello world\n</chunk>".into());
+        config.blob_current_chunk_id = Some("chunk-1".into());
+        let mut stage = make_stage("gemini");
+        stage.role = Some("format".into());
+        stage.prompt = "Fix formatting only.".into();
+        let prev = Some("Previous should not appear".to_string());
+        let prompt = build_stage_prompts("Ciao **mondo", &stage, &config, prev.as_deref());
+        let system = prompt.flatten_system();
+
+        assert!(system.contains("deterministic text post-processor"));
+        assert!(system.contains("Fix formatting only."));
+        assert!(system.contains("Output only the formatted text"));
+        assert!(!system.contains("Glossary Constraints"));
+        assert!(!system.contains("| API | API |"));
+        assert!(!system.contains("English to Italian"));
+        assert!(!system.contains("Reference document block"));
+        assert!(!system.contains("Output only the translated text"));
+        assert!(prompt.user.contains("Text to format"));
+        assert!(prompt.user.contains("Ciao **mondo"));
+        assert!(!prompt.user.contains("Original text"));
+        assert!(!prompt.user.contains("Previous Iteration"));
+        assert!(!prompt.user.contains("Previous should not appear"));
     }
 
     #[test]
@@ -343,7 +372,7 @@ mod tests {
         let mut config = make_config();
         config.markdown_aware = Some(true);
         let stage = make_stage("gemini");
-        let prompt = build_stage_prompts("Text with note[^1].", &stage, &config, &None);
+        let prompt = build_stage_prompts("Text with note[^1].", &stage, &config, None);
         let system = prompt.flatten_system();
 
         assert!(system.contains("Markdown"));
@@ -591,6 +620,7 @@ mod tests {
             severity: "low".into(),
             description: "Minor".into(),
             suggested_fix: None,
+            phrase: None,
         };
         let json = serde_json::to_string(&issue).unwrap();
         assert!(json.contains(r#""type":"fluency"#));
@@ -1242,6 +1272,7 @@ mod tests {
                     severity: v["severity"].as_str()?.to_string(),
                     description: v["description"].as_str()?.to_string(),
                     suggested_fix: v["suggestedFix"].as_str().map(|s| s.to_string()),
+                    phrase: v["phrase"].as_str().map(|s| s.to_string()),
                 })
             })
             .collect();

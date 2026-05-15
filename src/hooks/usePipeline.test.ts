@@ -363,6 +363,124 @@ describe('usePipeline', () => {
     expect(useChunksStore.getState().chunks[0].currentDraft).toBe('Stage 2 output');
   });
 
+  it('passes refine output as format input without previousResult', async () => {
+    usePipelineStore.setState((state) => ({
+      ...state,
+      config: {
+        ...state.config,
+        stages: [
+          {
+            id: 'stg-translation',
+            name: 'Translation',
+            role: 'translation',
+            prompt: 'Translate',
+            model: 'gemini-3-flash-preview',
+            provider: 'gemini',
+            enabled: true,
+          },
+          {
+            id: 'stg-refine',
+            name: 'Refine',
+            role: 'refine',
+            prompt: 'Refine',
+            model: 'gemini-3-flash-preview',
+            provider: 'gemini',
+            enabled: true,
+          },
+          {
+            id: 'stg-format',
+            name: 'Format',
+            role: 'format',
+            prompt: 'Fix formatting only',
+            model: 'gemini-3-flash-preview',
+            provider: 'gemini',
+            enabled: true,
+          },
+        ],
+      },
+    }));
+
+    llmMocks.runStage
+      .mockResolvedValueOnce({ content: 'Translation output' })
+      .mockResolvedValueOnce({ content: 'Refined output' })
+      .mockResolvedValueOnce({ content: 'Formatted output' });
+    llmMocks.judgeTranslation.mockResolvedValue({
+      content: '',
+      rating: 'good',
+      issues: [],
+    });
+
+    const { result } = renderHook(() => usePipeline());
+    await act(async () => {
+      await result.current.runSingleChunk('chunk-0');
+    });
+
+    expect(llmMocks.runStage).toHaveBeenCalledTimes(3);
+    const formatCall = llmMocks.runStage.mock.calls[2];
+    expect(formatCall[0]).toBe('Refined output');
+    expect(formatCall[3]).toBeUndefined();
+    expect(useChunksStore.getState().chunks[0].currentDraft).toBe('Formatted output');
+    expect(llmMocks.judgeTranslation.mock.calls[0][1]).toBe('Formatted output');
+  });
+
+  it('uses the previous stage output when format returns empty content', async () => {
+    usePipelineStore.setState((state) => ({
+      ...state,
+      config: {
+        ...state.config,
+        stages: [
+          {
+            id: 'stg-translation',
+            name: 'Translation',
+            role: 'translation',
+            prompt: 'Translate',
+            model: 'gemini-3-flash-preview',
+            provider: 'gemini',
+            enabled: true,
+          },
+          {
+            id: 'stg-refine',
+            name: 'Refine',
+            role: 'refine',
+            prompt: 'Refine',
+            model: 'gemini-3-flash-preview',
+            provider: 'gemini',
+            enabled: true,
+          },
+          {
+            id: 'stg-format',
+            name: 'Format',
+            role: 'format',
+            prompt: 'Fix formatting only',
+            model: 'gemini-3-flash-preview',
+            provider: 'gemini',
+            enabled: true,
+          },
+        ],
+      },
+    }));
+
+    llmMocks.runStage
+      .mockResolvedValueOnce({ content: 'Translation output' })
+      .mockResolvedValueOnce({ content: 'Refined output' })
+      .mockResolvedValueOnce({ content: ' \n ' });
+    llmMocks.judgeTranslation.mockResolvedValue({
+      content: '',
+      rating: 'good',
+      issues: [],
+    });
+
+    const { result } = renderHook(() => usePipeline());
+    await act(async () => {
+      await result.current.runSingleChunk('chunk-0');
+    });
+
+    const chunk = useChunksStore.getState().chunks[0];
+    expect(chunk.currentDraft).toBe('Refined output');
+    expect(chunk.stageResults['stg-format']?.content).toBe('Refined output');
+    expect(llmMocks.judgeTranslation.mock.calls[0][1]).toBe('Refined output');
+  });
+
   it('keeps the stage blob context stable and selects the current chunk separately', async () => {
     const assignments = [
       { chunkId: 'chunk-0', blobId: 'blob-1', position: 0, referenceChunkIds: ['chunk-0', 'chunk-1'] },

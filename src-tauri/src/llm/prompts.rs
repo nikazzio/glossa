@@ -60,6 +60,10 @@ pub(crate) fn build_stage_prompts(
     config: &PipelineConfig,
     previous_result: Option<&str>,
 ) -> StructuredPrompt {
+    if stage.role.as_deref() == Some("format") {
+        return build_format_stage_prompts(text, stage);
+    }
+
     let glossary_table = format_glossary_table(&config.glossary);
 
     let markdown_rules = if config.markdown_aware.unwrap_or(false) {
@@ -132,7 +136,20 @@ pub(crate) fn build_stage_prompts(
 
     // Stage-specific instructions come last: they vary per stage but are smaller than
     // the static+blob prefix, so non-caching them costs less than before.
-    system.push(PromptBlock { text: format!("Core Instructions:\n{}\n\nOutput only the translated text.", stage.prompt), cacheable: false });
+    let glossary_reminder = if config.glossary.is_empty() {
+        ""
+    } else {
+        "\n\nGlossary Reminder:\n- Apply the glossary entries specified above when they appear in the source text."
+    };
+    let output_contract = if previous_result.filter(|prev| !prev.is_empty()).is_some() {
+        "Output only the refined translation."
+    } else {
+        "Output only the translated text."
+    };
+    system.push(PromptBlock {
+        text: format!("Core Instructions:\n{}{}\n\n{}", stage.prompt, glossary_reminder, output_contract),
+        cacheable: false,
+    });
 
     let current_chunk_line = config
         .blob_current_chunk_id
@@ -141,25 +158,44 @@ pub(crate) fn build_stage_prompts(
         .map(|id| format!("Current chunk id: {id}\n\n"))
         .unwrap_or_default();
 
-    let is_format = stage.role.as_deref() == Some("format");
-    let user = if is_format {
-        format!(
-            "{current_chunk_line}Text to format from the current chunk:\n{text}\n\n\
-             Apply your formatting instructions to the current chunk. Output only the formatted text."
-        )
-    } else {
-        match previous_result {
-            Some(prev) if !prev.is_empty() => format!(
-                "{current_chunk_line}Original text for the current chunk:\n{text}\n\n\
-                 Previous Iteration for the current chunk:\n{prev}\n\n\
-                 Refine only the current chunk according to your instructions. Output only the refined translation."
-            ),
-            _ => format!(
-                "{current_chunk_line}Text to translate from the current chunk:\n{text}\n\n\
-                 Translate only the current chunk. Output only its translation."
-            ),
-        }
+    let user = match previous_result {
+        Some(prev) if !prev.is_empty() => format!(
+            "{current_chunk_line}Original text for the current chunk:\n{text}\n\n\
+             Previous Iteration for the current chunk:\n{prev}\n\n\
+             Refine only the current chunk according to your instructions. Output only the refined translation."
+        ),
+        _ => format!(
+            "{current_chunk_line}Text to translate from the current chunk:\n{text}\n\n\
+             Translate only the current chunk. Output only its translation."
+        ),
     };
+
+    StructuredPrompt { system, user }
+}
+
+fn build_format_stage_prompts(text: &str, stage: &StageConfig) -> StructuredPrompt {
+    let system = vec![
+        PromptBlock {
+            text: "\
+You are a deterministic text post-processor for already translated text.\n\
+The input is already translated. Do not translate, retranslate, paraphrase, improve style, correct meaning, expand, shorten, or alter wording except where a minimal formatting repair requires it.\n\
+Allowed changes: repair broken Markdown or footnote syntax, and restore clearly corrupted spacing or line breaks.\n\
+Do not add new emphasis, code, link, heading, list, quote, table, or other markup. Change existing Markdown markers only when necessary to restore valid syntax.\n\
+Return the complete text. If no change is needed, return the input exactly.\n\
+Do not return explanations, comments, JSON, diffs, or 'no changes'."
+                .to_string(),
+            cacheable: true,
+        },
+        PromptBlock {
+            text: format!("Core Formatting Instructions:\n{}\n\nOutput only the formatted text.", stage.prompt),
+            cacheable: false,
+        },
+    ];
+
+    let user = format!(
+        "Text to format from the current chunk:\n{text}\n\n\
+         Apply only the formatting instructions. Output only the complete formatted text."
+    );
 
     StructuredPrompt { system, user }
 }
