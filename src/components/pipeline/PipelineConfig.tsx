@@ -1,11 +1,12 @@
-import { ArrowRightLeft, Play, Languages, Cpu, FileText, Pencil, Scale, RefreshCw, Loader2, X, ShieldCheck, AlertTriangle, RotateCcw, Wand2, BookmarkPlus, BookOpen, Check, Trash2, Bot, Settings, Globe, WifiOff } from 'lucide-react';
+import { ArrowRightLeft, Play, Languages, FileText, Pencil, Scale, RefreshCw, Loader2, X, RotateCcw, Wand2, BookmarkPlus, BookOpen, Check, Trash2, Bot, Settings, Globe, ShieldCheck, Cpu, AlertTriangle } from 'lucide-react';
 import { useMemo, useState, useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import type { ModelProvider, PromptTemplate } from '../../types';
+import type { ModelProvider, PipelineMode, PromptTemplate } from '../../types';
 import { MODEL_OPTIONS, LANGUAGES, defaultPersonaText } from '../../constants';
 import { getModelStatus, calculateBlobBudget, getContextWindow } from '../../models/catalog';
 import { usePipelineStore } from '../../stores/pipelineStore';
+import { StageCard } from './StageCard';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
 import { confirm } from '../../stores/confirmStore';
@@ -494,16 +495,17 @@ export function PipelineConfig({
   const {
     config,
     setConfig,
-    removeStage,
+    setMode,
     updateStage,
   } = usePipelineStore();
   const { chunks, isProcessing, cancelRequested, resetCompletedChunks } = useChunksStore();
   const ollamaStatus = useUiStore((s) => s.ollamaStatus);
+  const ollamaModels = useUiStore((s) => s.ollamaModels);
   const { t } = useTranslation();
   const judgeModels = useJudgeModelOptions(config.judgeProvider);
   const [isRefreshingOllama, setIsRefreshingOllama] = useState(false);
   const [isRefiningPersona, setIsRefiningPersona] = useState(false);
-  const [isRefiningStage, setIsRefiningStage] = useState(false);
+  const [refiningStageId, setRefiningStageId] = useState<string | null>(null);
   const [isRefiningJudge, setIsRefiningJudge] = useState(false);
   const [isRefiningCoherence, setIsRefiningCoherence] = useState(false);
   const [activeTab, setActiveTab] = useState<ConfigSection>(visibleSection ?? 'translation');
@@ -550,8 +552,6 @@ export function PipelineConfig({
   );
 
   const stage0 = config.stages[0];
-  const stageModels = useJudgeModelOptions(stage0?.provider ?? 'openai');
-  const stageOllamaOffline = stage0?.provider === 'ollama' && ollamaStatus === 'disconnected';
 
   const currentContextWindow = stage0
     ? getContextWindow(stage0.provider, stage0.model)
@@ -562,17 +562,6 @@ export function PipelineConfig({
     config.chunkedWithContextWindow !== undefined &&
     currentContextWindow !== undefined &&
     currentContextWindow !== config.chunkedWithContextWindow;
-
-  const handleStageProviderChange = (newProvider: ModelProvider) => {
-    if (!stage0) return;
-    const models = newProvider === 'ollama' ? useUiStore.getState().ollamaModels : MODEL_OPTIONS[newProvider];
-    updateStage(stage0.id, { provider: newProvider, model: models[0] || '' });
-    if (newProvider === 'ollama' && useUiStore.getState().ollamaStatus === 'unknown') {
-      toast.message(t('ollama.uncheckedHint'));
-    } else if (newProvider === 'ollama' && useUiStore.getState().ollamaStatus === 'disconnected') {
-      toast.warning(t('ollama.selectedButOffline'));
-    }
-  };
 
   const handleRefreshOllama = async () => {
     setIsRefreshingOllama(true);
@@ -590,17 +579,18 @@ export function PipelineConfig({
     }
   };
 
-  const handleRefineStagePrompt = async () => {
-    if (!stage0?.prompt.trim() || !stage0?.model.trim()) return;
-    setIsRefiningStage(true);
+  const handleRefineStagePrompt = async (stageId: string) => {
+    const stage = config.stages.find((s) => s.id === stageId);
+    if (!stage?.prompt.trim() || !stage?.model.trim()) return;
+    setRefiningStageId(stageId);
     try {
-      const refined = await llmService.refinePrompt(stage0.prompt, stage0.provider, stage0.model, 'stage');
-      updateStage(stage0.id, { prompt: refined });
+      const refined = await llmService.refinePrompt(stage.prompt, stage.provider, stage.model, 'stage');
+      updateStage(stageId, { prompt: refined });
       toast.success(t('pipeline.refined'));
     } catch (err: unknown) {
       toast.error(t('pipeline.refineFailed'), { description: err instanceof Error ? err.message : String(err) });
     } finally {
-      setIsRefiningStage(false);
+      setRefiningStageId(null);
     }
   };
 
@@ -909,109 +899,80 @@ export function PipelineConfig({
         )}
 
         {/* ── TRADUZIONE ── */}
-        {activeTab === 'translation' && stage0 && (
+        {activeTab === 'translation' && (
           <div
             id="pconfig-panel-translation"
             role="tabpanel"
             aria-labelledby="pconfig-tab-translation"
             className="space-y-6"
           >
-            {/* Model + options card */}
-            <div className="space-y-3 rounded-[20px] border border-editorial-border bg-editorial-bg/70 px-5 py-4">
-              <div className="flex items-center gap-1.5">
-                <Cpu size={11} className="text-editorial-accent shrink-0" />
-                <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-                  {t('pipeline.stageModelLabel')}
-                </p>
-              </div>
+            {/* Mode selector */}
+            <div className="space-y-2">
+              <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                {t('pipeline.modeLabel')}
+              </p>
               <div className="flex gap-2">
-                <select
-                  value={stage0.provider}
-                  onChange={(e) => handleStageProviderChange(e.target.value as ModelProvider)}
-                  disabled={translationsExist || isProcessing}
-                  className="rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
-                  aria-label={t('models.provider')}
-                >
-                  {Object.keys(MODEL_OPTIONS).map((p) => (
-                    <option key={p} value={p}>{p}</option>
-                  ))}
-                </select>
-                {stageModels.length > 0 ? (
-                  <select
-                    value={stage0.model}
-                    onChange={(e) => updateStage(stage0.id, { model: e.target.value })}
-                    disabled={translationsExist || isProcessing}
-                    className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
-                    aria-label={t('pipeline.stageModelLabel')}
-                  >
-                    {stageModels.map((m) => (
-                      <option key={m} value={m}>
-                        {m}{getModelStatus(stage0.provider, m) === 'preview' ? ' (preview)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                ) : stage0.provider === 'ollama' ? (
-                  <input
-                    value={stage0.model}
-                    onChange={(e) => updateStage(stage0.id, { model: e.target.value })}
-                    disabled={translationsExist || isProcessing}
-                    placeholder={t('ollama.modelPlaceholder')}
-                    className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
-                    aria-label={t('pipeline.stageModelLabel')}
-                  />
-                ) : (
-                  <select
-                    value={stage0.model}
-                    onChange={(e) => updateStage(stage0.id, { model: e.target.value })}
-                    disabled={translationsExist || isProcessing}
-                    className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
-                    aria-label={t('pipeline.stageModelLabel')}
-                  >
-                    {MODEL_OPTIONS[stage0.provider]?.map((m) => (
-                      <option key={m} value={m}>
-                        {m}{getModelStatus(stage0.provider, m) === 'preview' ? ' (preview)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-              {translationsExist && (
-                <div className="flex items-center gap-2 text-xs text-editorial-muted">
-                  <AlertTriangle size={12} className="shrink-0" />
-                  <span>{t('pipeline.modelLockedHint')}</span>
-                </div>
-              )}
-              {contextWindowChanged && (
-                <div className="flex items-center gap-2 text-xs text-editorial-warning">
-                  <AlertTriangle size={12} className="shrink-0 text-editorial-warning" />
-                  <span>{t('pipeline.modelContextWindowChangedHint')}</span>
-                </div>
-              )}
-              {stageOllamaOffline && !translationsExist && (
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 text-xs text-editorial-accent">
-                    <WifiOff size={13} />
-                    <span>{t('ollama.selectedButOffline')}</span>
-                  </div>
+                {(['standard', 'editorial'] as PipelineMode[]).map((m) => (
                   <button
+                    key={m}
                     type="button"
-                    onClick={handleRefreshOllama}
-                    disabled={isRefreshingOllama}
-                    className="flex items-center gap-1.5 rounded-full border border-editorial-accent/60 px-3 py-1 text-xs text-editorial-accent transition-colors hover:bg-editorial-accent hover:text-white disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    onClick={() => setMode(m)}
+                    disabled={translationsExist || isProcessing}
+                    className={`rounded-full border px-4 py-1.5 text-xs font-bold uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40 ${
+                      (config.mode ?? 'standard') === m
+                        ? 'border-editorial-ink bg-editorial-ink text-white'
+                        : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent'
+                    }`}
                   >
-                    {isRefreshingOllama ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-                    {t('ollama.loadModels')}
+                    {t(`pipeline.mode.${m}`)}
                   </button>
-                </div>
-              )}
-              <ProviderRuntimeEditor
-                provider={stage0.provider}
-                value={stage0.providerOptions}
-                onChange={(providerOptions) => updateStage(stage0.id, { providerOptions })}
-                title={t('pipeline.providerOptions.stageTitle')}
-                hint={t('pipeline.providerOptions.stageHint')}
-              />
+                ))}
+              </div>
+              <p className="text-[10px] text-editorial-muted/70">
+                {t(`pipeline.modeDesc.${config.mode ?? 'standard'}`)}
+              </p>
             </div>
+
+            {/* Context window warning */}
+            {contextWindowChanged && (
+              <div className="flex items-center gap-2 text-xs text-editorial-warning">
+                <ShieldCheck size={12} className="shrink-0 text-editorial-warning" />
+                <span>{t('pipeline.modelContextWindowChangedHint')}</span>
+              </div>
+            )}
+
+            {/* Stage cards — one per stage in the current mode */}
+            {config.stages.map((stage) => {
+              const stageModelOptions =
+                stage.provider === 'ollama'
+                  ? ollamaModels
+                  : (MODEL_OPTIONS[stage.provider] ?? []);
+              return (
+                <div key={stage.id} className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-ink font-bold">
+                      {t(`pipeline.stageRole.${stage.role ?? 'translation'}`)}
+                    </span>
+                    <span className="h-px flex-1 bg-editorial-border/60" aria-hidden="true" />
+                  </div>
+                  <StageCard
+                    stage={stage}
+                    templates={templates.filter((tmpl) => tmpl.context === 'stage')}
+                    isRefining={refiningStageId === stage.id}
+                    translationsExist={translationsExist}
+                    isProcessing={isProcessing}
+                    ollamaStatus={ollamaStatus}
+                    isRefreshingOllama={isRefreshingOllama}
+                    modelOptions={stageModelOptions}
+                    onUpdate={(updates) => updateStage(stage.id, updates)}
+                    onRefinePrompt={() => handleRefineStagePrompt(stage.id)}
+                    onRefreshOllama={handleRefreshOllama}
+                    saveTemplate={saveTemplate}
+                    deleteTemplate={deleteTemplate}
+                  />
+                </div>
+              );
+            })}
 
             {/* Context memory card */}
             {(() => {
@@ -1033,7 +994,7 @@ export function PipelineConfig({
                   >
                     <span className="space-y-0.5">
                       <span className="flex items-center gap-1.5">
-                        <Cpu size={11} className="text-editorial-accent shrink-0" />
+                        <FileText size={11} className="text-editorial-accent shrink-0" />
                         <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
                           {t('pipeline.blobContext')}
                         </span>
@@ -1107,29 +1068,6 @@ export function PipelineConfig({
                 </div>
               );
             })()}
-
-            {/* Translation instructions card */}
-            <AuditPromptEditor
-              label={t('pipeline.prompt')}
-              hint=""
-              value={stage0.prompt}
-              placeholder={t('pipeline.stagePromptPlaceholder')}
-              templates={templates.filter((tmpl) => tmpl.context === 'stage')}
-              isRefining={isRefiningStage}
-              onRefine={handleRefineStagePrompt}
-              onChange={(value) => updateStage(stage0.id, { prompt: value })}
-              onApplyTemplate={(tmpl) => updateStage(stage0.id, {
-                prompt: tmpl.prompt,
-                ...(tmpl.defaultModel ? { model: tmpl.defaultModel } : {}),
-                ...(tmpl.defaultProvider ? { provider: tmpl.defaultProvider as ModelProvider } : {}),
-              })}
-              saveTemplate={saveTemplate}
-              deleteTemplate={deleteTemplate}
-              defaultModel={stage0.model}
-              defaultProvider={stage0.provider}
-              icon={<FileText size={11} />}
-              context="stage"
-            />
           </div>
         )}
 

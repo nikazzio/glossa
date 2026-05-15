@@ -34,6 +34,24 @@
     "swapLanguages": "Inverti Lingue",
     "autoSegment": "Auto-segmentazione",
     "headingAware": "Titoli nel chunk successivo (Markdown)",
+    "modeLabel": "Modalità di traduzione",
+    "mode": {
+      "standard": "Standard",
+      "editorial": "Editoriale"
+    },
+    "modeDesc": {
+      "standard": "Uno stage di traduzione + audit qualità.",
+      "editorial": "Tre stage: traduzione → refine → format, poi audit qualità."
+    },
+    "stageRole": {
+      "translation": "Traduzione",
+      "refine": "Refine",
+      "format": "Format"
+    },
+    "stageRoleHint": {
+      "refine": "Rivede e migliora la traduzione confrontandola con il testo originale.",
+      "format": "Applica correzioni di formattazione senza vedere il testo sorgente (stage cieco). Non può ritradurre."
+    },
     "blobContext": "Memoria di contesto",
     "blobContextAutoDesc": "Automatica — ~{{tokens}} token basati su {{model}}",
     "blobBudgetTokens": "Budget token",

@@ -8,6 +8,8 @@ export type DocumentFormat = 'plain' | 'markdown';
 export type DocumentRenderProfile = 'plain-text' | 'markdown';
 export type ExperimentalImportMode = 'docx-markdown';
 export type OllamaThinkLevel = boolean | 'low' | 'medium' | 'high';
+export type StageRole = 'translation' | 'refine' | 'format';
+export type PipelineMode = 'standard' | 'editorial';
 
 export interface OllamaConfig {
   temperature?: number;
@@ -57,6 +59,7 @@ export interface Glossary {
 export interface PipelineStageConfig {
   id: string;
   name: string;
+  role?: StageRole;
   prompt: string;
   model: string;
   provider: ModelProvider;
@@ -151,6 +154,7 @@ export interface CoherenceResult {
 export interface PipelineConfig {
   sourceLanguage: string;
   targetLanguage: string;
+  mode?: PipelineMode;
   stages: PipelineStageConfig[];
   judgePrompt: string;
   judgeModel: string;

@@ -141,16 +141,24 @@ pub(crate) fn build_stage_prompts(
         .map(|id| format!("Current chunk id: {id}\n\n"))
         .unwrap_or_default();
 
-    let user = match previous_result {
-        Some(prev) if !prev.is_empty() => format!(
-            "{current_chunk_line}Original text for the current chunk:\n{text}\n\n\
-             Previous Iteration for the current chunk:\n{prev}\n\n\
-             Refine only the current chunk according to your instructions. Output only the refined translation."
-        ),
-        _ => format!(
-            "{current_chunk_line}Text to translate from the current chunk:\n{text}\n\n\
-             Translate only the current chunk. Output only its translation."
-        ),
+    let is_format = stage.role.as_deref() == Some("format");
+    let user = if is_format {
+        format!(
+            "{current_chunk_line}Text to format from the current chunk:\n{text}\n\n\
+             Apply your formatting instructions to the current chunk. Output only the formatted text."
+        )
+    } else {
+        match previous_result {
+            Some(prev) if !prev.is_empty() => format!(
+                "{current_chunk_line}Original text for the current chunk:\n{text}\n\n\
+                 Previous Iteration for the current chunk:\n{prev}\n\n\
+                 Refine only the current chunk according to your instructions. Output only the refined translation."
+            ),
+            _ => format!(
+                "{current_chunk_line}Text to translate from the current chunk:\n{text}\n\n\
+                 Translate only the current chunk. Output only its translation."
+            ),
+        }
     };
 
     StructuredPrompt { system, user }

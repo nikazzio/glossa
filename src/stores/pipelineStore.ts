@@ -1,10 +1,12 @@
 import { create } from 'zustand';
 import type {
   PipelineConfig,
+  PipelineMode,
   PipelineStageConfig,
   ModelProvider,
 } from '../types';
 import { DEFAULT_STAGES, DEFAULT_JUDGE_PROMPT, DEFAULT_COHERENCE_PROMPT } from '../constants';
+import { buildStagesForMode } from '../pipeline/pipelineModes';
 import { getGlossaryEntries } from '../services/glossaryService';
 import type { FootnoteDefinition } from '../types';
 import { deriveSourceDocumentState } from '../utils/documentState';
@@ -23,6 +25,7 @@ interface PipelineState {
     renderProfile?: PipelineConfig['renderProfile'];
   }) => void;
   setConfig: (updater: PipelineConfig | ((prev: PipelineConfig) => PipelineConfig)) => void;
+  setMode: (mode: PipelineMode) => void;
   assignGlossary: (glossaryId: string | null) => Promise<void>;
   resetToDefaults: () => void;
 
@@ -34,6 +37,7 @@ interface PipelineState {
 const DEFAULT_PIPELINE_CONFIG: PipelineConfig = {
   sourceLanguage: 'English',
   targetLanguage: 'Italian',
+  mode: 'standard',
   stages: DEFAULT_STAGES,
   judgePrompt: DEFAULT_JUDGE_PROMPT,
   judgeModel: 'gpt-4o-mini',
@@ -95,6 +99,15 @@ export const usePipelineStore = create<PipelineState>((set) => ({
       };
     }),
 
+  setMode: (mode) =>
+    set((state) => ({
+      config: {
+        ...state.config,
+        mode,
+        stages: buildStagesForMode(mode, state.config.stages),
+      },
+    })),
+
   resetToDefaults: () =>
     set({
       inputText: '',
@@ -125,6 +138,7 @@ export const usePipelineStore = create<PipelineState>((set) => ({
           {
             id: `stg-${Date.now()}`,
             name: 'New Stage',
+            role: 'translation' as const,
             prompt: '',
             model: 'gpt-4o-mini',
             provider: 'openai' as ModelProvider,
