@@ -157,6 +157,8 @@ pub struct JudgeIssue {
     pub severity: String,
     pub description: String,
     pub suggested_fix: Option<String>,
+    /// Exact verbatim substring copied from the target translation that contains the issue.
+    pub phrase: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

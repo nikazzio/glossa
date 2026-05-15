@@ -474,7 +474,6 @@ export function DocumentView({
               label={t('pipeline.originalSource')}
               eyebrow={t('document.leftPage')}
               readOnly={currentChunk.status === 'completed'}
-              highlighted={focusedChunkId === currentChunk.id}
               statusBadge={currentChunk.status === 'completed' ? (
                 <InlineStatusBadge tone="amber" icon={<Lock size={13} />} label={t('document.sourceLockedTitle')} />
               ) : null}
@@ -531,7 +530,6 @@ export function DocumentView({
                 eyebrow={t('document.rightPage')}
                 subtitle={isEditorialMode ? t(`pipeline.stageRole.${enabledStages.find(s => s.id === selectedStageId)?.role ?? 'translation'}`) : undefined}
                 actions={stageActions}
-                highlighted={focusedChunkId === currentChunk.id}
                 statusBadge={currentChunk.translationStale ? (
                   <InlineStatusBadge tone="amber" icon={<AlertTriangle size={13} />} label={t('document.translationStaleBadge')} />
                 ) : currentChunk.translationLocked ? (

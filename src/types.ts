@@ -142,6 +142,7 @@ export interface Issue {
   severity: 'low' | 'medium' | 'high';
   description: string;
   suggestedFix?: string;
+  phrase?: string;
 }
 
 export interface CoherenceResult {

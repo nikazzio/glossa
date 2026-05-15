@@ -203,10 +203,16 @@ pub(crate) fn build_judge_prompts(
          - rating: one of 'critical', 'poor', 'fair', 'good', 'excellent' \
            (semantic translation quality: critical=unusable, poor=weak, fair=usable with revision, \
            good=solid, excellent=publication-ready)\n\
-         - issues: array of objects {{ type: 'glossary'|'fluency'|'accuracy'|'grammar', \
-           severity: 'low'|'medium'|'high', description: string, suggestedFix: string }}\n\
-         Write all description and suggestedFix values in {ui_lang}. \
-         Keep the rating value as one of the English literals above.",
+         - issues: array of objects with these fields:\n\
+           - type: 'glossary'|'fluency'|'accuracy'|'grammar'\n\
+           - severity: 'low'|'medium'|'high'\n\
+           - description: string — explanation of the issue in {ui_lang}\n\
+           - suggestedFix: string — how to correct it in {ui_lang}\n\
+           - phrase: string — the exact verbatim substring copied character-for-character \
+             from the target translation that contains the issue; \
+             must appear literally in the target text as provided\n\
+         Write description and suggestedFix in {ui_lang}. \
+         Keep rating and type values as the English literals above.",
         instructions = config.judge_prompt,
     );
 
@@ -262,11 +268,13 @@ pub(crate) fn build_coherence_prompts(
          Your task: identify cross-segment inconsistencies between a translated segment and its surrounding context.\n\
          {instructions}\n\
          {glossary_section}\
-         Write all description and suggestedFix values in {ui_lang}.\n\
+         Write description and suggestedFix values in {ui_lang}.\n\
          Respond with valid JSON only:\n\
          {{\"issues\": [{{\"type\": \"consistency\"|\"glossary\", \
          \"severity\": \"low\"|\"medium\"|\"high\", \
-         \"description\": \"string\", \"suggestedFix\": \"string\"}}]}}",
+         \"description\": \"string\", \
+         \"suggestedFix\": \"string\", \
+         \"phrase\": \"exact verbatim substring from the current segment translation that contains the issue\"}}]}}",
     );
 
     let context_block = input

@@ -238,7 +238,9 @@
     "clearStream": "Pulisci Flusso",
     "fix": "CORREZIONE",
     "auditFailed": "Audit fallito",
-    "openChunk": "Apri unità"
+    "openChunk": "Apri unità",
+    "locateInText": "Evidenzia",
+    "locateInTextTooltip": "Evidenzia la frase nel testo tradotto"
   },
   "settings": {
     "title": "Configurazione / Chiavi API",

@@ -238,7 +238,9 @@
     "clearStream": "Clear Stream",
     "fix": "FIX",
     "auditFailed": "Audit failed",
-    "openChunk": "Open chunk"
+    "openChunk": "Open chunk",
+    "locateInText": "Highlight",
+    "locateInTextTooltip": "Highlight phrase in translated text"
   },
   "settings": {
     "title": "Global Config / Secrets",

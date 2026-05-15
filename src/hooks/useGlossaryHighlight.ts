@@ -22,12 +22,34 @@ function escapeRegex(str: string): string {
 }
 
 function buildPattern(term: string): RegExp {
-  const escaped = escapeRegex(term);
+  const trimmed = term.trimEnd();
+  const lastChar = trimmed.slice(-1).toLowerCase();
+
+  // Italian invariable nouns end in accented vowels (città, università)
+  const isInvariable = /[àèìòùáéíóú]$/.test(trimmed);
+
+  let corePattern: string;
+  if (isInvariable) {
+    corePattern = escapeRegex(trimmed);
+  } else if (lastChar === 'o') {
+    // libro → libri (IT), photo → photos (EN)
+    corePattern = escapeRegex(trimmed.slice(0, -1)) + '(?:o|os|i)';
+  } else if (lastChar === 'a') {
+    // casa → case (IT), area → areas (EN)
+    corePattern = escapeRegex(trimmed.slice(0, -1)) + '(?:a|as|e)';
+  } else if (lastChar === 'e') {
+    // cane → cani (IT), interface → interfaces (EN)
+    corePattern = escapeRegex(trimmed.slice(0, -1)) + '(?:e|es|i)';
+  } else {
+    // consonant ending: cat → cats, box → boxes
+    corePattern = escapeRegex(trimmed) + '(?:s|es)?';
+  }
+
   // Word boundaries work for ASCII; for non-ASCII (Greek etc.) use lookaround
-  const hasNonWord = /[^\w\s]/.test(term);
+  const hasNonWord = /[^\w\s]/.test(trimmed);
   const pattern = hasNonWord
-    ? `(?<![\\w\\u0370-\\u03FF\\u1F00-\\u1FFF])${escaped}(?![\\w\\u0370-\\u03FF\\u1F00-\\u1FFF])`
-    : `\\b${escaped}\\b`;
+    ? `(?<![\\w\\u0370-\\u03FF\\u1F00-\\u1FFF])${corePattern}(?![\\w\\u0370-\\u03FF\\u1F00-\\u1FFF])`
+    : `\\b${corePattern}\\b`;
   return new RegExp(pattern, 'gi');
 }
 
