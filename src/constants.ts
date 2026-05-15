@@ -3,8 +3,9 @@ import { MODEL_CATALOG } from './models/catalog';
 
 export const DEFAULT_STAGES: PipelineStageConfig[] = [
   {
-    id: 'stg-draft',
+    id: 'stg-translation',
     name: 'Translation',
+    role: 'translation',
     prompt: 'Translate the text accurately.',
     model: 'gpt-4o-mini',
     provider: 'openai',

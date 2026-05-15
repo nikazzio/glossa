@@ -79,6 +79,8 @@ pub struct ProviderRuntimeConfig {
 pub struct StageConfig {
     pub id: String,
     pub name: String,
+    #[serde(default)]
+    pub role: Option<String>,
     pub prompt: String,
     pub model: String,
     pub provider: String,

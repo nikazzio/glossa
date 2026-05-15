@@ -34,6 +34,24 @@
     "swapLanguages": "Swap Languages",
     "autoSegment": "Auto-segment",
     "headingAware": "Heading-aware (Markdown)",
+    "modeLabel": "Translation mode",
+    "mode": {
+      "standard": "Standard",
+      "editorial": "Editorial"
+    },
+    "modeDesc": {
+      "standard": "One translation stage + quality audit.",
+      "editorial": "Three stages: translation → refine → format, then quality audit."
+    },
+    "stageRole": {
+      "translation": "Translation",
+      "refine": "Refine",
+      "format": "Format"
+    },
+    "stageRoleHint": {
+      "refine": "Reviews and improves the translation by comparing it against the original source.",
+      "format": "Applies formatting corrections without seeing the source text (blind stage). Cannot retranslate."
+    },
     "blobContext": "Context memory",
     "blobContextAutoDesc": "Automatic — ~{{tokens}} tokens based on {{model}}",
     "blobBudgetTokens": "Token budget",
@@ -193,6 +211,7 @@
       "saved": "Template saved",
       "deleted": "Template deleted"
     },
+    "editPrompt": "Edit prompt",
     "refinePrompt": "Refine prompt",
     "refining": "Refining...",
     "refined": "Prompt refined",

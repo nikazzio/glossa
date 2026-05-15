@@ -215,9 +215,12 @@ export function usePipeline() {
       if (!stage.enabled) continue;
 
       // Override global language pair with stage-specific one if set, but not when persona is active.
-      // Also inject blob context (original texts of sibling chunks in the same blob).
+      // Format stage is blind: no source blob context (it must not see the original text).
+      // Other stages use source blob context for translation continuity.
       const liveChunks = useChunksStore.getState().chunks;
-      const blobContext = assembleBlobContext(liveChunks, chunk.id);
+      const stageRole = stage.role ?? 'translation';
+      const isFormatStage = stageRole === 'format';
+      const blobContext = isFormatStage ? undefined : assembleBlobContext(liveChunks, chunk.id);
       const effectiveConfig = {
         ...config,
         ...(!config.persona && stage.sourceLanguage ? { sourceLanguage: stage.sourceLanguage } : {}),
@@ -255,6 +258,12 @@ export function usePipeline() {
         stageId: stage.id,
       });
 
+      // Format stage is blind: receives the previous stage output as primary text,
+      // with no access to the source. Translation and refine stages receive the source
+      // text plus the previous stage output for comparison.
+      const stageText = isFormatStage ? lastResult : chunk.sourceProcessingText;
+      const stagePrevious = isFormatStage ? undefined : (lastResult || undefined);
+
       try {
         let capturedUsage: TokenUsage | undefined;
         const stageResult = await withRetry(
@@ -263,7 +272,7 @@ export function usePipeline() {
             updateChunkStage(chunk.id, stage.id, { content: '', status: 'processing' });
             if (stage.provider === 'ollama') {
               const text = await llmService.runStageStream(
-                chunk.sourceProcessingText, stage, effectiveConfig, lastResult || undefined,
+                stageText, stage, effectiveConfig, stagePrevious,
                 (token) => appendChunkStageContent(chunk.id, stage.id, token),
                 (usage) => { capturedUsage = usage; },
                 onPrompt,
@@ -272,7 +281,7 @@ export function usePipeline() {
               return { content: text };
             }
             return llmService.runStage(
-              chunk.sourceProcessingText, stage, effectiveConfig, lastResult || undefined,
+              stageText, stage, effectiveConfig, stagePrevious,
               onPrompt,
               onIdleGrace,
             );

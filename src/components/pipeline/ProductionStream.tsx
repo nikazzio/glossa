@@ -144,15 +144,15 @@ const ChunkRow = memo(function ChunkRow({
           </span>
         </div>
         <div className="flex gap-4">
-          {enabledStages.map((s, si) => (
+          {enabledStages.map((s) => (
             <StatusIndicator
               key={s.id}
               status={chunk.stageResults[s.id]?.status || 'idle'}
-              label={indexPad(si + 1)}
+              label={t(`pipeline.stageRole.${s.role ?? 'translation'}`)}
               retryInfo={chunk.stageResults[s.id]?.retryInfo}
             />
           ))}
-          <StatusIndicator status={chunk.judgeResult.status} label="Audit" />
+          <StatusIndicator status={chunk.judgeResult.status} label={t('pipeline.tabAudit')} />
         </div>
       </div>
 
