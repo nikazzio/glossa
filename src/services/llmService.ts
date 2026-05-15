@@ -261,7 +261,7 @@ export const llmService = {
   },
 
   async runCoherenceForChunk(
-    input: { original: string; translation: string; blobContext?: string },
+    input: { original: string; translation: string; blobContext?: string; currentChunkId?: string },
     config: PipelineConfig,
     onPrompt?: (info: PromptInfo) => void,
     onIdleGrace?: () => void,

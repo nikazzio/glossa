@@ -175,4 +175,7 @@ export interface PipelineConfig {
   blobBudgetTokens?: number;
   blobOverlap?: number;
   chunkedWithContextWindow?: number;
+  // Runtime-only prompt context. Computed per invocation, never persisted.
+  blobContext?: string;
+  blobCurrentChunkId?: string;
 }

@@ -120,9 +120,11 @@ pub(crate) fn build_stage_prompts(
     if let Some(blob) = config.blob_context.as_deref().filter(|s| !s.is_empty()) {
         system.push(PromptBlock {
             text: format!(
-                "[Reference document context — do not translate, use for terminology and narrative coherence]\n\
+                "[Reference document block - context only]\n\
+                 This block may include the current chunk. Use it for terminology, continuity, names, pronouns, formatting, and narrative context.\n\
+                 Do not translate this block as a whole. Translate only the current chunk identified in the user message.\n\
                  {blob}\n\
-                 [End of reference context]"
+                 [End reference document block]"
             ),
             cacheable: true,
         });
@@ -132,12 +134,23 @@ pub(crate) fn build_stage_prompts(
     // the static+blob prefix, so non-caching them costs less than before.
     system.push(PromptBlock { text: format!("Core Instructions:\n{}\n\nOutput only the translated text.", stage.prompt), cacheable: false });
 
+    let current_chunk_line = config
+        .blob_current_chunk_id
+        .as_deref()
+        .filter(|s| !s.is_empty())
+        .map(|id| format!("Current chunk id: {id}\n\n"))
+        .unwrap_or_default();
+
     let user = match previous_result {
         Some(prev) if !prev.is_empty() => format!(
-            "Original: {text}\n\nPrevious Iteration: {prev}\n\n\
-             Refine the above translation according to your instructions."
+            "{current_chunk_line}Original text for the current chunk:\n{text}\n\n\
+             Previous Iteration for the current chunk:\n{prev}\n\n\
+             Refine only the current chunk according to your instructions. Output only the refined translation."
         ),
-        _ => format!("Text to translate: {text}"),
+        _ => format!(
+            "{current_chunk_line}Text to translate from the current chunk:\n{text}\n\n\
+             Translate only the current chunk. Output only its translation."
+        ),
     };
 
     StructuredPrompt { system, user }
@@ -233,8 +246,9 @@ pub(crate) fn build_coherence_prompts(
     };
 
     // Block 1 (cacheable): static coherence context — role, instructions, glossary, format spec.
-    // Constant for the whole project run; blob_context (translated neighbors) stays in user turn
-    // since it changes per chunk and cannot be cached.
+    // Constant for the whole project run. blob_context stays in the user turn, but is
+    // placed before the current segment so provider prefix caches can reuse the stable
+    // reference block for every chunk in the same blob.
     let system_block = format!(
         "You are a translation coherence auditor for {src}→{tgt} translations.\n\
          Your task: identify cross-segment inconsistencies between a translated segment and its surrounding context.\n\
@@ -252,13 +266,23 @@ pub(crate) fn build_coherence_prompts(
         .as_deref()
         .filter(|s| !s.is_empty())
         .map(|ctx| format!(
-            "[Surrounding translated segments from the same document block — context only]\n{ctx}\n\
-             [End of surrounding context]\n\n"
+            "[Reference translated document block - context only]\n\
+             This block may include the current chunk. Use it to compare terminology and continuity across the document block.\n\
+             The current chunk to audit is identified below.\n\
+             {ctx}\n\
+             [End reference translated document block]\n\n"
         ))
         .unwrap_or_default();
 
+    let current_chunk_line = input
+        .current_chunk_id
+        .as_deref()
+        .filter(|s| !s.is_empty())
+        .map(|id| format!("Current chunk id: {id}\n\n"))
+        .unwrap_or_default();
+
     let user = format!(
-        "{context_block}[Current segment]\nOriginal: {original}\nTranslation: {translation}\n\
+        "{context_block}{current_chunk_line}[Current segment]\nOriginal: {original}\nTranslation: {translation}\n\
          [End of current segment]\n\n\
          Identify cross-segment coherence issues and return the JSON. If no issues, return {{\"issues\": []}}.",
         original = input.original,
@@ -315,5 +339,6 @@ pub(crate) fn minimal_pipeline_config(
         custom_source_language: None,
         custom_target_language: None,
         blob_context: None,
+        blob_current_chunk_id: None,
     }
 }

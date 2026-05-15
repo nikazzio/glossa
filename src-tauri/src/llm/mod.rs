@@ -180,6 +180,7 @@ mod tests {
             custom_source_language: None,
             custom_target_language: None,
             blob_context: None,
+            blob_current_chunk_id: None,
         }
     }
 
@@ -287,7 +288,8 @@ mod tests {
     #[test]
     fn stage_prompt_with_blob_context() {
         let mut config = make_config();
-        config.blob_context = Some("Surrounding document text for context.".into());
+        config.blob_context = Some("<chunk id=\"chunk-1\">\nHello world\n</chunk>".into());
+        config.blob_current_chunk_id = Some("chunk-1".into());
         let stage = make_stage("openai");
         let prev = Some("Ciao mondo".to_string());
         let prompt = build_stage_prompts("Hello world", &stage, &config, &prev);
@@ -297,8 +299,9 @@ mod tests {
         assert!(prompt.user.contains("Hello world"));
         assert!(prompt.user.contains("Ciao mondo"));
         assert!(prompt.user.contains("Previous Iteration"));
-        assert!(system.contains("Reference document context"));
-        assert!(system.contains("Surrounding document text for context."));
+        assert!(prompt.user.contains("Current chunk id: chunk-1"));
+        assert!(system.contains("Reference document block"));
+        assert!(system.contains("<chunk id=\"chunk-1\">"));
     }
 
     #[test]

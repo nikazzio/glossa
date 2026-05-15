@@ -15,17 +15,29 @@ import { saveChunkCheckpoint, setRunInProgress } from '../services/projectServic
 import { buildPipelineFingerprint } from '../utils/pipelineFingerprint';
 import { calculateBlobBudget } from '../models/catalog';
 
+function escapeChunkId(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function formatReferenceChunk(chunkId: string, text: string): string {
+  return `<chunk id="${escapeChunkId(chunkId)}">\n${text}\n</chunk>`;
+}
+
 function assembleBlobContext(chunks: TranslationChunk[], chunkId: string): string | undefined {
   const current = chunks.find((c) => c.id === chunkId);
   if (!current?.blobReferenceChunkIds?.length) return undefined;
   const byId = new Map(chunks.map((chunk) => [chunk.id, chunk]));
   const referenceChunks = current.blobReferenceChunkIds
     .map((id) => byId.get(id))
-    .filter((chunk): chunk is TranslationChunk =>
-      !!chunk && chunk.id !== chunkId && !!chunk.sourceProcessingText,
-    );
+    .filter((chunk): chunk is TranslationChunk => !!chunk && !!chunk.sourceProcessingText);
   if (referenceChunks.length === 0) return undefined;
-  return referenceChunks.map((chunk) => chunk.sourceProcessingText).join('\n\n') || undefined;
+  return referenceChunks
+    .map((chunk) => formatReferenceChunk(chunk.id, chunk.sourceProcessingText))
+    .join('\n\n') || undefined;
 }
 
 function assembleTranslationBlobContext(chunks: TranslationChunk[], chunkId: string): string | undefined {
@@ -34,11 +46,11 @@ function assembleTranslationBlobContext(chunks: TranslationChunk[], chunkId: str
   const byId = new Map(chunks.map((chunk) => [chunk.id, chunk]));
   const referenceChunks = current.blobReferenceChunkIds
     .map((id) => byId.get(id))
-    .filter((chunk): chunk is TranslationChunk =>
-      !!chunk && chunk.id !== chunkId && !!chunk.translationProcessingText?.trim(),
-    );
+    .filter((chunk): chunk is TranslationChunk => !!chunk?.translationProcessingText?.trim());
   if (referenceChunks.length === 0) return undefined;
-  return referenceChunks.map((chunk) => chunk.translationProcessingText).join('\n\n') || undefined;
+  return referenceChunks
+    .map((chunk) => formatReferenceChunk(chunk.id, chunk.translationProcessingText))
+    .join('\n\n') || undefined;
 }
 
 type ChunkOutcome = 'completed' | 'failed' | 'cancelled' | 'skipped';
@@ -210,7 +222,7 @@ export function usePipeline() {
         ...config,
         ...(!config.persona && stage.sourceLanguage ? { sourceLanguage: stage.sourceLanguage } : {}),
         ...(!config.persona && stage.targetLanguage ? { targetLanguage: stage.targetLanguage } : {}),
-        ...(blobContext ? { blobContext } : {}),
+        ...(blobContext ? { blobContext, blobCurrentChunkId: chunk.id } : {}),
       };
       lastEffectiveConfig = effectiveConfig;
 
@@ -718,7 +730,7 @@ export function usePipeline() {
       try {
         const result = await withRetry(
           () => llmService.runCoherenceForChunk(
-            { original: chunk.sourceProcessingText, translation: chunk.translationProcessingText, blobContext },
+            { original: chunk.sourceProcessingText, translation: chunk.translationProcessingText, blobContext, currentChunkId: chunk.id },
             config,
             (info: PromptInfo) => {
               logOperation({
