@@ -21,8 +21,21 @@ export interface OllamaConfig {
   advancedOptions?: Record<string, unknown>;
 }
 
+export interface OpenAICacheConfig {
+  promptCacheKey?: string;
+  promptCacheRetention?: 'in_memory' | '24h';
+}
+
+export interface GeminiCacheConfig {
+  explicitCaching?: boolean;
+  cacheTtlSeconds?: number;
+}
+
 export interface ProviderRuntimeConfig {
   ollama?: OllamaConfig;
+  openai?: OpenAICacheConfig;
+  deepseek?: OpenAICacheConfig;
+  gemini?: GeminiCacheConfig;
 }
 
 export interface GlossaryEntry {
@@ -81,11 +94,14 @@ export interface TranslationChunk {
   footnotes?: Footnote[];
   blobId?: string;
   blobOrder?: number;
+  blobReferenceChunkIds?: string[];
 }
 
 export interface TokenUsage {
   inputTokens: number;
   outputTokens: number;
+  cachedInputTokens?: number;
+  cacheMissInputTokens?: number;
 }
 
 export interface PromptInfo {
@@ -159,4 +175,7 @@ export interface PipelineConfig {
   blobBudgetTokens?: number;
   blobOverlap?: number;
   chunkedWithContextWindow?: number;
+  // Runtime-only prompt context. Computed per invocation, never persisted.
+  blobContext?: string;
+  blobCurrentChunkId?: string;
 }

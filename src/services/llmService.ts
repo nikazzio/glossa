@@ -44,6 +44,25 @@ interface StreamTokenPayload {
   done: boolean;
   inputTokens?: number;
   outputTokens?: number;
+  cachedInputTokens?: number;
+  cacheMissInputTokens?: number;
+}
+
+interface UsageResult {
+  inputTokens?: number;
+  outputTokens?: number;
+  cachedInputTokens?: number;
+  cacheMissInputTokens?: number;
+}
+
+function usageFromPayload(payload: StreamTokenPayload): TokenUsage | undefined {
+  if (payload.inputTokens === undefined || payload.outputTokens === undefined) return undefined;
+  return {
+    inputTokens: payload.inputTokens,
+    outputTokens: payload.outputTokens,
+    cachedInputTokens: payload.cachedInputTokens,
+    cacheMissInputTokens: payload.cacheMissInputTokens,
+  };
 }
 
 export interface OllamaPreflightStatus {
@@ -70,26 +89,47 @@ export interface PreflightCheckResult {
  * API keys are stored securely in the OS-level store, never in the browser.
  */
 export const llmService = {
-  /** Non-streaming stage execution (fallback) */
   async runStage(
     text: string,
     stage: PipelineStageConfig,
     config: PipelineConfig,
-    previousResult?: string,
-  ): Promise<string> {
-    logOperation({
-      level: 'info',
-      scope: 'invoke',
-      message: `Invoking backend stage run for ${stage.provider}/${stage.model}`,
-      stageId: stage.id,
+    previousResult: string | undefined,
+    onPrompt?: (info: PromptInfo) => void,
+    onIdleGrace?: () => void,
+  ): Promise<UsageResult & { content: string }> {
+    const streamId = `stage-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    const unlistenPrompt = await listen<{ streamId: string; systemPrompt: string; userPrompt: string }>('chunk-prompt', (event) => {
+      if (event.payload.streamId !== streamId) return;
+      onPrompt?.({ systemPrompt: event.payload.systemPrompt, userPrompt: event.payload.userPrompt });
     });
-    return invoke<string>('run_stage', {
-      text,
-      stage,
-      config,
-      previousResult: previousResult || null,
-      ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl,
+    const unlistenAlive = await listen<{ streamId: string }>('stream-alive', (event) => {
+      if (event.payload.streamId !== streamId) return;
+      onIdleGrace?.();
     });
+
+    useChunksStore.getState().setActiveStreamId(streamId);
+    try {
+      const result = await invoke<UsageResult & { content: string }>('run_stage', {
+        text,
+        stage,
+        config,
+        previousResult: previousResult || null,
+        streamId,
+        ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl,
+      });
+      logOperation({
+        level: 'info',
+        scope: 'invoke',
+        message: 'Stage request completed',
+        meta: { provider: stage.provider, model: stage.model, ...result },
+      });
+      return result;
+    } finally {
+      unlistenPrompt();
+      unlistenAlive();
+      useChunksStore.getState().setActiveStreamId(null);
+    }
   },
 
   /**
@@ -112,12 +152,17 @@ export const llmService = {
       if (event.payload.streamId !== streamId) return;
       if (!event.payload.done) {
         onToken(event.payload.token);
-      } else if (
-        onUsage &&
-        event.payload.inputTokens !== undefined &&
-        event.payload.outputTokens !== undefined
-      ) {
-        onUsage({ inputTokens: event.payload.inputTokens, outputTokens: event.payload.outputTokens });
+      } else {
+        const usage = usageFromPayload(event.payload);
+        if (onUsage && usage) onUsage(usage);
+        if (usage) {
+          logOperation({
+            level: 'info',
+            scope: 'invoke',
+            message: 'Streaming stage completed',
+            meta: { provider: stage.provider, model: stage.model, ...usage },
+          });
+        }
       }
     });
     const unlistenPrompt = await listen<{ streamId: string; systemPrompt: string; userPrompt: string }>('chunk-prompt', (event) => {
@@ -163,7 +208,7 @@ export const llmService = {
     config: PipelineConfig,
     onPrompt?: (info: PromptInfo) => void,
     onIdleGrace?: () => void,
-  ): Promise<Omit<JudgeResult, 'status'> & { inputTokens?: number; outputTokens?: number }> {
+  ): Promise<Omit<JudgeResult, 'status'> & UsageResult> {
     const streamId = `judge-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
     let capturedUsage: TokenUsage | undefined;
@@ -174,7 +219,15 @@ export const llmService = {
         event.payload.inputTokens !== undefined &&
         event.payload.outputTokens !== undefined
       ) {
-        capturedUsage = { inputTokens: event.payload.inputTokens, outputTokens: event.payload.outputTokens };
+        capturedUsage = usageFromPayload(event.payload);
+        if (capturedUsage) {
+          logOperation({
+            level: 'info',
+            scope: 'invoke',
+            message: 'Audit stream completed',
+            meta: { provider: config.judgeProvider, model: config.judgeModel, ...capturedUsage },
+          });
+        }
       }
     });
     const unlistenPrompt = await listen<{ streamId: string; systemPrompt: string; userPrompt: string }>('chunk-prompt', (event) => {
@@ -188,7 +241,7 @@ export const llmService = {
 
     useChunksStore.getState().setActiveStreamId(streamId);
     try {
-      const result = await invoke<Omit<JudgeResult, 'status'> & { inputTokens?: number; outputTokens?: number }>(
+      const result = await invoke<Omit<JudgeResult, 'status'> & UsageResult>(
         'judge_translation',
         { originalText, translation, config: withUiLanguage(config), streamId, ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl },
       );
@@ -196,6 +249,8 @@ export const llmService = {
         ...result,
         inputTokens: capturedUsage?.inputTokens,
         outputTokens: capturedUsage?.outputTokens,
+        cachedInputTokens: capturedUsage?.cachedInputTokens,
+        cacheMissInputTokens: capturedUsage?.cacheMissInputTokens,
       };
     } finally {
       unlisten();
@@ -206,11 +261,11 @@ export const llmService = {
   },
 
   async runCoherenceForChunk(
-    input: { original: string; translation: string; blobContext?: string },
+    input: { original: string; translation: string; blobContext?: string; currentChunkId?: string },
     config: PipelineConfig,
     onPrompt?: (info: PromptInfo) => void,
     onIdleGrace?: () => void,
-  ): Promise<{ issues: Issue[]; inputTokens?: number; outputTokens?: number }> {
+  ): Promise<{ issues: Issue[] } & UsageResult> {
     const streamId = `coherence-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
     let capturedUsage: TokenUsage | undefined;
@@ -221,7 +276,15 @@ export const llmService = {
         event.payload.inputTokens !== undefined &&
         event.payload.outputTokens !== undefined
       ) {
-        capturedUsage = { inputTokens: event.payload.inputTokens, outputTokens: event.payload.outputTokens };
+        capturedUsage = usageFromPayload(event.payload);
+        if (capturedUsage) {
+          logOperation({
+            level: 'info',
+            scope: 'invoke',
+            message: 'Coherence stream completed',
+            meta: { provider: config.judgeProvider, model: config.judgeModel, ...capturedUsage },
+          });
+        }
       }
     });
     const unlistenPrompt = await listen<{ streamId: string; systemPrompt: string; userPrompt: string }>('chunk-prompt', (event) => {
@@ -235,7 +298,7 @@ export const llmService = {
 
     useChunksStore.getState().setActiveStreamId(streamId);
     try {
-      const result = await invoke<{ issues: Issue[]; inputTokens?: number; outputTokens?: number }>(
+      const result = await invoke<{ issues: Issue[] } & UsageResult>(
         'run_coherence_for_chunk',
         { input, config: withUiLanguage(config), streamId, ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl },
       );
@@ -243,6 +306,8 @@ export const llmService = {
         ...result,
         inputTokens: capturedUsage?.inputTokens,
         outputTokens: capturedUsage?.outputTokens,
+        cachedInputTokens: capturedUsage?.cachedInputTokens,
+        cacheMissInputTokens: capturedUsage?.cacheMissInputTokens,
       };
     } finally {
       unlisten();
@@ -269,8 +334,8 @@ export const llmService = {
     chunks: Array<{ id: string; text: string }>,
     budgetTokens: number,
     overlap: number,
-  ): Promise<Array<{ chunkId: string; blobId: string; position: number }>> {
-    return invoke<Array<{ chunkId: string; blobId: string; position: number }>>('compute_blobs', {
+  ): Promise<Array<{ chunkId: string; blobId: string; position: number; referenceChunkIds: string[] }>> {
+    return invoke<Array<{ chunkId: string; blobId: string; position: number; referenceChunkIds: string[] }>>('compute_blobs', {
       chunks,
       budgetTokens,
       overlap,

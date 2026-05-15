@@ -15,20 +15,42 @@ import { saveChunkCheckpoint, setRunInProgress } from '../services/projectServic
 import { buildPipelineFingerprint } from '../utils/pipelineFingerprint';
 import { calculateBlobBudget } from '../models/catalog';
 
+function escapeChunkId(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function formatReferenceChunk(chunkId: string, text: string): string {
+  return `<chunk id="${escapeChunkId(chunkId)}">\n${text}\n</chunk>`;
+}
+
 function assembleBlobContext(chunks: TranslationChunk[], chunkId: string): string | undefined {
   const current = chunks.find((c) => c.id === chunkId);
-  if (!current?.blobId) return undefined;
-  const siblings = chunks.filter((c) => c.blobId === current.blobId && c.id !== chunkId);
-  if (siblings.length === 0) return undefined;
-  return siblings.map((c) => c.sourceProcessingText).filter(Boolean).join('\n\n') || undefined;
+  if (!current?.blobReferenceChunkIds?.length) return undefined;
+  const byId = new Map(chunks.map((chunk) => [chunk.id, chunk]));
+  const referenceChunks = current.blobReferenceChunkIds
+    .map((id) => byId.get(id))
+    .filter((chunk): chunk is TranslationChunk => !!chunk && !!chunk.sourceProcessingText);
+  if (referenceChunks.length === 0) return undefined;
+  return referenceChunks
+    .map((chunk) => formatReferenceChunk(chunk.id, chunk.sourceProcessingText))
+    .join('\n\n') || undefined;
 }
 
 function assembleTranslationBlobContext(chunks: TranslationChunk[], chunkId: string): string | undefined {
   const current = chunks.find((c) => c.id === chunkId);
-  if (!current?.blobId) return undefined;
-  const siblings = chunks.filter((c) => c.blobId === current.blobId && c.id !== chunkId && c.translationProcessingText?.trim());
-  if (siblings.length === 0) return undefined;
-  return siblings.map((c) => c.translationProcessingText).filter(Boolean).join('\n\n') || undefined;
+  if (!current?.blobReferenceChunkIds?.length) return undefined;
+  const byId = new Map(chunks.map((chunk) => [chunk.id, chunk]));
+  const referenceChunks = current.blobReferenceChunkIds
+    .map((id) => byId.get(id))
+    .filter((chunk): chunk is TranslationChunk => !!chunk?.translationProcessingText?.trim());
+  if (referenceChunks.length === 0) return undefined;
+  return referenceChunks
+    .map((chunk) => formatReferenceChunk(chunk.id, chunk.translationProcessingText))
+    .join('\n\n') || undefined;
 }
 
 type ChunkOutcome = 'completed' | 'failed' | 'cancelled' | 'skipped';
@@ -200,7 +222,7 @@ export function usePipeline() {
         ...config,
         ...(!config.persona && stage.sourceLanguage ? { sourceLanguage: stage.sourceLanguage } : {}),
         ...(!config.persona && stage.targetLanguage ? { targetLanguage: stage.targetLanguage } : {}),
-        ...(blobContext ? { blobContext } : {}),
+        ...(blobContext ? { blobContext, blobCurrentChunkId: chunk.id } : {}),
       };
       lastEffectiveConfig = effectiveConfig;
 
@@ -208,39 +230,51 @@ export function usePipeline() {
       logOperation({
         level: 'info',
         scope: 'stage',
-        message: `Stage "${stage.name}" started streaming generation`,
+        message: `Stage "${stage.name}" started`,
         chunkId: chunk.id,
         stageId: stage.id,
         meta: { provider: stage.provider, model: stage.model },
       });
+
+      const onPrompt = (info: PromptInfo) => {
+        setChunkStagePromptInfo(chunk.id, stage.id, info);
+        logOperation({
+          level: 'info',
+          scope: 'stage',
+          message: `prompt → ${stage.provider}/${stage.model}`,
+          chunkId: chunk.id,
+          stageId: stage.id,
+          detail: `[system]\n${info.systemPrompt}\n\n[user]\n${info.userPrompt}`,
+        });
+      };
+      const onIdleGrace = () => logOperation({
+        level: 'info',
+        scope: 'stage',
+        message: 'Ollama still alive — idle grace check passed, waiting for more tokens',
+        chunkId: chunk.id,
+        stageId: stage.id,
+      });
+
       try {
         let capturedUsage: TokenUsage | undefined;
-        const result = await withRetry(
+        const stageResult = await withRetry(
           async () => {
             capturedUsage = undefined;
             updateChunkStage(chunk.id, stage.id, { content: '', status: 'processing' });
-            return llmService.runStageStream(
+            if (stage.provider === 'ollama') {
+              const text = await llmService.runStageStream(
+                chunk.sourceProcessingText, stage, effectiveConfig, lastResult || undefined,
+                (token) => appendChunkStageContent(chunk.id, stage.id, token),
+                (usage) => { capturedUsage = usage; },
+                onPrompt,
+                onIdleGrace,
+              );
+              return { content: text };
+            }
+            return llmService.runStage(
               chunk.sourceProcessingText, stage, effectiveConfig, lastResult || undefined,
-              (token) => appendChunkStageContent(chunk.id, stage.id, token),
-              (usage) => { capturedUsage = usage; },
-              (info: PromptInfo) => {
-                setChunkStagePromptInfo(chunk.id, stage.id, info);
-                logOperation({
-                  level: 'info',
-                  scope: 'stage',
-                  message: `prompt → ${stage.provider}/${stage.model}`,
-                  chunkId: chunk.id,
-                  stageId: stage.id,
-                  detail: `[system]\n${info.systemPrompt}\n\n[user]\n${info.userPrompt}`,
-                });
-              },
-              () => logOperation({
-                level: 'info',
-                scope: 'stage',
-                message: 'Ollama still alive — idle grace check passed, waiting for more tokens',
-                chunkId: chunk.id,
-                stageId: stage.id,
-              }),
+              onPrompt,
+              onIdleGrace,
             );
           },
           {
@@ -260,6 +294,15 @@ export function usePipeline() {
             },
           },
         );
+        const result = stageResult.content;
+        if (!capturedUsage && stageResult.inputTokens !== undefined && stageResult.outputTokens !== undefined) {
+          capturedUsage = {
+            inputTokens: stageResult.inputTokens,
+            outputTokens: stageResult.outputTokens,
+            cachedInputTokens: stageResult.cachedInputTokens,
+            cacheMissInputTokens: stageResult.cacheMissInputTokens,
+          };
+        }
         if (result) {
           lastResult = result;
           producedOutput = true;
@@ -390,7 +433,12 @@ export function usePipeline() {
       );
       const judgeTokenUsage =
         judgeData.inputTokens !== undefined && judgeData.outputTokens !== undefined
-          ? { inputTokens: judgeData.inputTokens, outputTokens: judgeData.outputTokens }
+          ? {
+              inputTokens: judgeData.inputTokens,
+              outputTokens: judgeData.outputTokens,
+              cachedInputTokens: judgeData.cachedInputTokens,
+              cacheMissInputTokens: judgeData.cacheMissInputTokens,
+            }
           : undefined;
       updateChunkJudge(chunk.id, {
         ...judgeData,
@@ -682,7 +730,7 @@ export function usePipeline() {
       try {
         const result = await withRetry(
           () => llmService.runCoherenceForChunk(
-            { original: chunk.sourceProcessingText, translation: chunk.translationProcessingText, blobContext },
+            { original: chunk.sourceProcessingText, translation: chunk.translationProcessingText, blobContext, currentChunkId: chunk.id },
             config,
             (info: PromptInfo) => {
               logOperation({
@@ -713,7 +761,12 @@ export function usePipeline() {
         );
         const tokenUsage =
           result.inputTokens !== undefined && result.outputTokens !== undefined
-            ? { inputTokens: result.inputTokens, outputTokens: result.outputTokens }
+            ? {
+                inputTokens: result.inputTokens,
+                outputTokens: result.outputTokens,
+                cachedInputTokens: result.cachedInputTokens,
+                cacheMissInputTokens: result.cacheMissInputTokens,
+              }
             : undefined;
         updateChunkCoherence(chunk.id, {
           status: 'completed',

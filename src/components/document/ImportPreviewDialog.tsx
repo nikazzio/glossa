@@ -716,21 +716,10 @@ export function ImportPreviewDialog({
     >
       <div className="relative flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-[28px] border border-editorial-border bg-editorial-bg shadow-[0_24px_80px_rgba(26,26,26,0.2)]">
 
-        {/* X close button */}
-        <button
-          type="button"
-          onClick={onCancel}
-          title={t('common.close')}
-          aria-label={t('common.close')}
-          className="absolute right-5 top-5 z-10 text-editorial-muted hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-        >
-          <X size={18} />
-        </button>
-
         {/* ── Unified header (filename + title + stats + controls) ───────── */}
         <div className="shrink-0 border-b border-editorial-border px-6 pb-4 pt-5">
 
-          {/* Row 1: filename + mode toggle */}
+          {/* Row 1: filename + mode toggle + close */}
           <div className="mb-3 flex items-center justify-between gap-4">
             <div className="flex min-w-0 items-center gap-2">
               <FileText size={15} className="shrink-0 text-editorial-muted" />
@@ -741,22 +730,33 @@ export function ImportPreviewDialog({
                 </span>
               )}
             </div>
-            <div className="flex shrink-0 items-center gap-0 rounded-full border border-editorial-border bg-editorial-bg px-1 py-1 shadow-sm">
+            <div className="flex shrink-0 items-center gap-3">
+              <div className="flex items-center gap-0 rounded-full border border-editorial-border bg-editorial-bg px-1 py-1 shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => setEditorMode('cards')}
+                  title={t('files.viewCards')}
+                  className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${editorMode === 'cards' ? 'bg-editorial-accent text-white' : 'text-editorial-muted hover:text-editorial-accent'}`}
+                >
+                  <LayoutGrid size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditorMode('segments')}
+                  title={t('files.viewSegments')}
+                  className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${editorMode === 'segments' ? 'bg-editorial-accent text-white' : 'text-editorial-muted hover:text-editorial-accent'}`}
+                >
+                  <SplitSquareVertical size={16} />
+                </button>
+              </div>
               <button
                 type="button"
-                onClick={() => setEditorMode('cards')}
-                title={t('files.viewCards')}
-                className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${editorMode === 'cards' ? 'bg-editorial-accent text-white' : 'text-editorial-muted hover:text-editorial-accent'}`}
+                onClick={onCancel}
+                title={t('common.close')}
+                aria-label={t('common.close')}
+                className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
               >
-                <LayoutGrid size={16} />
-              </button>
-              <button
-                type="button"
-                onClick={() => setEditorMode('segments')}
-                title={t('files.viewSegments')}
-                className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${editorMode === 'segments' ? 'bg-editorial-accent text-white' : 'text-editorial-muted hover:text-editorial-accent'}`}
-              >
-                <SplitSquareVertical size={16} />
+                <X size={16} />
               </button>
             </div>
           </div>

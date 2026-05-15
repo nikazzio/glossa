@@ -20,7 +20,12 @@
     "enterSandbox": "Passa a Sandbox",
     "exitSandbox": "Esci da Sandbox",
     "tokenCount": "Token",
-    "estimatedCost": "Costo stimato"
+    "estimatedCost": "Costo stimato",
+    "cachedInput": "Input in cache",
+    "cacheMissInput": "Input fuori cache",
+    "cacheHitRate": "Percentuale cache hit",
+    "translationCacheLabel": "Cache traduzione",
+    "auditCacheLabel": "Cache audit"
   },
   "pipeline": {
     "globalSetup": "Progetto",
@@ -504,6 +509,8 @@
     "insightsAuditIssues": "Problemi rilevati",
     "insightsAuditNoIssues": "Nessun problema segnalato dal giudice.",
     "insightsAuditCorrections": "Correzioni suggerite",
+    "translationCacheLabel": "Cache traduzione",
+    "auditCacheLabel": "Cache audit",
     "sourceLockedTitle": "Sorgente bloccata dopo la traduzione",
     "sourceLockedBody": "Questo testo non e piu modificabile finche non usi \"Modifica sorgente\" nella barra in alto. Sbloccandolo verranno scartati traduzione, stage e audit di questo chunk.",
     "focusIssue": "Mostra problema",

@@ -56,6 +56,7 @@ const ALLOWED_MIGRATIONS = new Set([
   'pipeline_configs.blob_overlap',
   'translations.blob_id',
   'translations.blob_order',
+  'translations.blob_reference_chunk_ids',
 ]);
 
 export async function ensureColumn(table: string, column: string, definition: string): Promise<void> {
@@ -251,6 +252,7 @@ export async function initDatabase(): Promise<void> {
   await ensureColumn('translations', 'footnotes', 'TEXT DEFAULT NULL');
   await ensureColumn('translations', 'blob_id', 'TEXT DEFAULT NULL');
   await ensureColumn('translations', 'blob_order', 'INTEGER DEFAULT 0');
+  await ensureColumn('translations', 'blob_reference_chunk_ids', 'TEXT DEFAULT NULL');
   await ensureColumn('pipeline_configs', 'blob_budget_tokens', 'INTEGER DEFAULT 0');
   await ensureColumn('pipeline_configs', 'blob_overlap', 'INTEGER DEFAULT 1');
 

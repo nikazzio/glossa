@@ -180,6 +180,7 @@ mod tests {
             custom_source_language: None,
             custom_target_language: None,
             blob_context: None,
+            blob_current_chunk_id: None,
         }
     }
 
@@ -273,30 +274,34 @@ mod tests {
     fn stage_prompt_without_previous() {
         let config = make_config();
         let stage = make_stage("gemini");
-        let (system, user) = build_stage_prompts("Hello world", &stage, &config, &None);
+        let prompt = build_stage_prompts("Hello world", &stage, &config, &None);
+        let system = prompt.flatten_system();
 
         assert!(system.contains("English to Italian"));
         assert!(system.contains("Translate accurately."));
         assert!(system.contains("| API | API |"));
-        assert!(user.contains("Hello world"));
-        assert!(!user.contains("Previous Iteration"));
-        assert!(!user.contains("Reference document context"));
+        assert!(prompt.user.contains("Hello world"));
+        assert!(!prompt.user.contains("Previous Iteration"));
+        assert!(!system.contains("Reference document context"));
     }
 
     #[test]
     fn stage_prompt_with_blob_context() {
         let mut config = make_config();
-        config.blob_context = Some("Surrounding document text for context.".into());
+        config.blob_context = Some("<chunk id=\"chunk-1\">\nHello world\n</chunk>".into());
+        config.blob_current_chunk_id = Some("chunk-1".into());
         let stage = make_stage("openai");
         let prev = Some("Ciao mondo".to_string());
-        let (system, user) = build_stage_prompts("Hello world", &stage, &config, &prev);
+        let prompt = build_stage_prompts("Hello world", &stage, &config, &prev);
+        let system = prompt.flatten_system();
 
         assert!(system.contains("English to Italian"));
-        assert!(user.contains("Hello world"));
-        assert!(user.contains("Ciao mondo"));
-        assert!(user.contains("Previous Iteration"));
-        assert!(user.contains("Reference document context"));
-        assert!(user.contains("Surrounding document text for context."));
+        assert!(prompt.user.contains("Hello world"));
+        assert!(prompt.user.contains("Ciao mondo"));
+        assert!(prompt.user.contains("Previous Iteration"));
+        assert!(prompt.user.contains("Current chunk id: chunk-1"));
+        assert!(system.contains("Reference document block"));
+        assert!(system.contains("<chunk id=\"chunk-1\">"));
     }
 
     #[test]
@@ -304,7 +309,7 @@ mod tests {
         let mut config = make_config();
         config.glossary = vec![];
         let stage = make_stage("gemini");
-        let (system, _) = build_stage_prompts("text", &stage, &config, &None);
+        let system = build_stage_prompts("text", &stage, &config, &None).flatten_system();
 
         assert!(system.contains("No glossary entries were provided"));
     }
@@ -325,7 +330,7 @@ mod tests {
             },
         ];
         let stage = make_stage("gemini");
-        let (system, _) = build_stage_prompts("text", &stage, &config, &None);
+        let system = build_stage_prompts("text", &stage, &config, &None).flatten_system();
 
         assert!(system.contains("| API | API | tech |"));
         assert!(system.contains("| bug | errore |"));
@@ -337,13 +342,13 @@ mod tests {
         let mut config = make_config();
         config.markdown_aware = Some(true);
         let stage = make_stage("gemini");
-        let (system, user) =
-            build_stage_prompts("Text with note[^1].", &stage, &config, &None);
+        let prompt = build_stage_prompts("Text with note[^1].", &stage, &config, &None);
+        let system = prompt.flatten_system();
 
         assert!(system.contains("Markdown"));
         assert!(system.contains("Preserve every Markdown marker"));
         assert!(system.contains("Preserve paragraph boundaries and line breaks"));
-        assert!(user.contains("Text with note[^1]."));
+        assert!(prompt.user.contains("Text with note[^1]."));
     }
 
     // ── build_judge_prompts ──────────────────────────────────────────
@@ -351,12 +356,16 @@ mod tests {
     #[test]
     fn judge_prompt_includes_source_and_target() {
         let config = make_config();
-        let (system, user) = build_judge_prompts("Hello", "Ciao", &config);
+        let prompt = build_judge_prompts("Hello", "Ciao", &config);
+        let system = prompt.flatten_system();
 
+        // Source/target text now live in the user turn for cacheability
         assert!(system.contains("English"));
         assert!(system.contains("Italian"));
-        assert!(system.contains("Hello"));
-        assert!(system.contains("Ciao"));
+        assert!(!system.contains("Hello"));
+        assert!(!system.contains("Ciao"));
+        assert!(prompt.user.contains("Hello"));
+        assert!(prompt.user.contains("Ciao"));
         assert!(system.contains("rating"));
         assert!(system.contains("critical"));
         assert!(system.contains("poor"));
@@ -364,13 +373,13 @@ mod tests {
         assert!(system.contains("good"));
         assert!(system.contains("excellent"));
         assert!(system.contains("issues"));
-        assert!(user.contains("audit"));
+        assert!(prompt.user.contains("audit"));
     }
 
     #[test]
     fn judge_prompt_includes_instructions() {
         let config = make_config();
-        let (system, _) = build_judge_prompts("src", "tgt", &config);
+        let system = build_judge_prompts("src", "tgt", &config).flatten_system();
 
         assert!(system.contains("Evaluate translation quality."));
     }
@@ -378,7 +387,7 @@ mod tests {
     #[test]
     fn judge_prompt_includes_glossary_json() {
         let config = make_config();
-        let (system, _) = build_judge_prompts("src", "tgt", &config);
+        let system = build_judge_prompts("src", "tgt", &config).flatten_system();
 
         assert!(system.contains("API"));
         assert!(system.contains("Keep as-is"));
@@ -477,6 +486,9 @@ mod tests {
                     serde_json::json!(1.05),
                 )])),
             }),
+            openai: None,
+            deepseek: None,
+            gemini: None,
         });
 
         let ollama = merge_ollama_config(
@@ -592,6 +604,8 @@ mod tests {
             done: false,
             input_tokens: None,
             output_tokens: None,
+            cached_input_tokens: None,
+            cache_miss_input_tokens: None,
         };
         let json = serde_json::to_string(&token).unwrap();
         assert!(json.contains("streamId"));
@@ -609,6 +623,8 @@ mod tests {
             done: true,
             input_tokens: Some(100),
             output_tokens: Some(50),
+            cached_input_tokens: Some(60),
+            cache_miss_input_tokens: Some(40),
         };
         let json = serde_json::to_string(&token).unwrap();
         assert!(json.contains("inputTokens"));
@@ -996,6 +1012,7 @@ mod tests {
 
         // Use an OpenAI-compatible provider pointed at the mock server
         use crate::llm::provider::LlmRequest;
+        use crate::llm::types::{PromptBlock, StructuredPrompt};
         let prov = crate::llm::providers::openai::OpenAiCompatibleProvider::new_with_base_url(
             "openai",
             "OpenAI",
@@ -1004,10 +1021,13 @@ mod tests {
             "gpt-4o-mini",
         );
         let client = Client::new();
+        let structured = StructuredPrompt {
+            system: vec![PromptBlock { text: "Translate from English to Italian".into(), cacheable: false }],
+            user: "Hello world".into(),
+        };
         let req = LlmRequest {
             model: "test-model",
-            system_prompt: "Translate from English to Italian",
-            user_prompt: "Hello world",
+            structured: &structured,
             api_key: "test-key",
             json_mode: false,
             provider_options: None,
@@ -1026,6 +1046,7 @@ mod tests {
             .await;
 
         use crate::llm::provider::LlmRequest;
+        use crate::llm::types::{PromptBlock, StructuredPrompt};
         let prov = crate::llm::providers::openai::OpenAiCompatibleProvider::new_with_base_url(
             "openai",
             "OpenAI",
@@ -1034,10 +1055,13 @@ mod tests {
             "gpt-4o-mini",
         );
         let client = Client::new();
+        let structured = StructuredPrompt {
+            system: vec![PromptBlock { text: "system".into(), cacheable: false }],
+            user: "user".into(),
+        };
         let req = LlmRequest {
             model: "test-model",
-            system_prompt: "system",
-            user_prompt: "user",
+            structured: &structured,
             api_key: "bad-key",
             json_mode: false,
             provider_options: None,
@@ -1057,6 +1081,7 @@ mod tests {
             .await;
 
         use crate::llm::provider::LlmRequest;
+        use crate::llm::types::{PromptBlock, StructuredPrompt};
         let prov = crate::llm::providers::openai::OpenAiCompatibleProvider::new_with_base_url(
             "openai",
             "OpenAI",
@@ -1065,10 +1090,13 @@ mod tests {
             "gpt-4o-mini",
         );
         let client = Client::new();
+        let structured = StructuredPrompt {
+            system: vec![PromptBlock { text: "system".into(), cacheable: false }],
+            user: "user".into(),
+        };
         let req = LlmRequest {
             model: "test-model",
-            system_prompt: "system",
-            user_prompt: "user",
+            structured: &structured,
             api_key: "key",
             json_mode: false,
             provider_options: None,

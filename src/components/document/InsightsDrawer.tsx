@@ -639,6 +639,16 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
 
   let totalInput = 0;
   let totalOutput = 0;
+  let totalCachedInput = 0;
+  let totalCacheMissInput = 0;
+  let translationInput = 0;
+  let translationOutput = 0;
+  let translationCachedInput = 0;
+  let translationCacheMissInput = 0;
+  let auditInput = 0;
+  let auditOutput = 0;
+  let auditCachedInput = 0;
+  let auditCacheMissInput = 0;
   let estimatedCostUsd = 0;
   const modelNames = new Set<string>();
   for (const chunk of chunks) {
@@ -649,6 +659,12 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
         if (result.tokenUsage) {
           totalInput += result.tokenUsage.inputTokens ?? 0;
           totalOutput += result.tokenUsage.outputTokens ?? 0;
+          totalCachedInput += result.tokenUsage.cachedInputTokens ?? 0;
+          totalCacheMissInput += result.tokenUsage.cacheMissInputTokens ?? 0;
+          translationInput += result.tokenUsage.inputTokens ?? 0;
+          translationOutput += result.tokenUsage.outputTokens ?? 0;
+          translationCachedInput += result.tokenUsage.cachedInputTokens ?? 0;
+          translationCacheMissInput += result.tokenUsage.cacheMissInputTokens ?? 0;
           const pricing = MODEL_PRICING[`${stage.provider}/${stage.model}`];
           if (pricing) estimatedCostUsd += (result.tokenUsage.inputTokens * pricing.input + result.tokenUsage.outputTokens * pricing.output) / 1_000_000;
         }
@@ -658,12 +674,32 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
       const ju = chunk.judgeResult.tokenUsage;
       totalInput += ju.inputTokens ?? 0;
       totalOutput += ju.outputTokens ?? 0;
+      totalCachedInput += ju.cachedInputTokens ?? 0;
+      totalCacheMissInput += ju.cacheMissInputTokens ?? 0;
+      auditInput += ju.inputTokens ?? 0;
+      auditOutput += ju.outputTokens ?? 0;
+      auditCachedInput += ju.cachedInputTokens ?? 0;
+      auditCacheMissInput += ju.cacheMissInputTokens ?? 0;
       const judgePricing = MODEL_PRICING[`${config.judgeProvider}/${config.judgeModel}`];
       if (judgePricing) estimatedCostUsd += (ju.inputTokens * judgePricing.input + ju.outputTokens * judgePricing.output) / 1_000_000;
       modelNames.add(`${config.judgeProvider} / ${config.judgeModel}`);
     }
+    if (chunk.coherenceResult?.tokenUsage) {
+      const cu = chunk.coherenceResult.tokenUsage;
+      totalInput += cu.inputTokens ?? 0;
+      totalOutput += cu.outputTokens ?? 0;
+      totalCachedInput += cu.cachedInputTokens ?? 0;
+      totalCacheMissInput += cu.cacheMissInputTokens ?? 0;
+      auditInput += cu.inputTokens ?? 0;
+      auditOutput += cu.outputTokens ?? 0;
+      auditCachedInput += cu.cachedInputTokens ?? 0;
+      auditCacheMissInput += cu.cacheMissInputTokens ?? 0;
+    }
   }
   const totalTokens = totalInput + totalOutput;
+  const cacheHitPct = totalInput > 0 ? Math.round((totalCachedInput / totalInput) * 100) : 0;
+  const translationCacheHitPct = translationInput > 0 ? Math.round((translationCachedInput / translationInput) * 100) : 0;
+  const auditCacheHitPct = auditInput > 0 ? Math.round((auditCachedInput / auditInput) * 100) : 0;
 
   if (chunks.length === 0) {
     return (
@@ -733,6 +769,15 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
               <dd className="font-display text-sm italic text-editorial-muted">{totalOutput.toLocaleString()}</dd>
             </div>
           )}
+          {totalCachedInput > 0 && (
+            <>
+              <StatRow label={t('header.cachedInput')} value={totalCachedInput.toLocaleString()} />
+              <StatRow label={t('header.cacheHitRate')} value={`${cacheHitPct}%`} />
+              {totalCacheMissInput > 0 && (
+                <StatRow label={t('header.cacheMissInput')} value={totalCacheMissInput.toLocaleString()} />
+              )}
+            </>
+          )}
           <StatRow
             label={t('header.estimatedCost')}
             value={totalTokens > 0
@@ -749,6 +794,30 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
             ))}
           </div>
         )}
+      </section>
+
+      <section className="rounded-[20px] border border-editorial-border bg-editorial-bg px-4 py-3">
+        <div className="mb-3 flex items-center gap-1.5 text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+          <Cpu size={11} className="text-editorial-accent shrink-0" /> {t('document.translationCacheLabel')}
+        </div>
+        <dl className="space-y-2">
+          <StatRow label={t('header.tokenCount')} value={(translationInput + translationOutput).toLocaleString()} />
+          <StatRow label={t('header.cachedInput')} value={translationCachedInput.toLocaleString()} />
+          <StatRow label={t('header.cacheHitRate')} value={`${translationCacheHitPct}%`} />
+          <StatRow label={t('header.cacheMissInput')} value={translationCacheMissInput.toLocaleString()} />
+        </dl>
+      </section>
+
+      <section className="rounded-[20px] border border-editorial-border bg-editorial-bg px-4 py-3">
+        <div className="mb-3 flex items-center gap-1.5 text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+          <Cpu size={11} className="text-editorial-accent shrink-0" /> {t('document.auditCacheLabel')}
+        </div>
+        <dl className="space-y-2">
+          <StatRow label={t('header.tokenCount')} value={(auditInput + auditOutput).toLocaleString()} />
+          <StatRow label={t('header.cachedInput')} value={auditCachedInput.toLocaleString()} />
+          <StatRow label={t('header.cacheHitRate')} value={`${auditCacheHitPct}%`} />
+          <StatRow label={t('header.cacheMissInput')} value={auditCacheMissInput.toLocaleString()} />
+        </dl>
       </section>
     </div>
   );
@@ -964,6 +1033,9 @@ function OperationsTab({
   const isProcessing = useChunksStore((state) => state.isProcessing);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const visibleEntries = currentChunkId
+    ? entries.filter((entry) => entry.chunkId === currentChunkId)
+    : entries;
   const processingChunk = chunks.find((c) => c.status === 'processing') ?? null;
   const processingChunkIndex = processingChunk
     ? chunks.findIndex((c) => c.id === processingChunk.id)
@@ -973,7 +1045,7 @@ function OperationsTab({
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [entries.length]);
+  }, [visibleEntries.length]);
 
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex h-full flex-col">
@@ -1020,7 +1092,7 @@ function OperationsTab({
         )}
       </div>
 
-      {entries.length === 0 && !isProcessing ? (
+      {visibleEntries.length === 0 && !isProcessing ? (
         <div className="flex flex-1 items-center justify-center px-6 py-12 text-center text-sm text-editorial-muted">
           {t('document.operationsEmpty')}
         </div>
@@ -1044,7 +1116,7 @@ function OperationsTab({
                 error:   t('log.levelError'),
               };
               const chunkIndexMap = new Map(chunks.map((c, i) => [c.id, i]));
-              return entries.map((entry) => {
+              return visibleEntries.map((entry) => {
               const levelColor =
                 entry.level === 'error'   ? { text: 'text-[#ff6b6b]', border: 'border-[#ff6b6b]/40' }
                 : entry.level === 'warn'  ? { text: 'text-[#f6c90e]', border: 'border-[#f6c90e]/40' }

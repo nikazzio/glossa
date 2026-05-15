@@ -141,6 +141,31 @@ describe('chunksStore', () => {
     expect(useUiStore.getState().selectedChunkId).toBeNull();
   });
 
+  it('clears stale blob assignments when a chunk is missing from recomputation results', () => {
+    useChunksStore.getState().loadDocument('Alpha.\n\nBeta.', {
+      useChunking: true,
+      targetChunkCount: 2,
+    });
+
+    const [first, second] = useChunksStore.getState().chunks;
+    expect(first).toBeDefined();
+    expect(second).toBeDefined();
+
+    useChunksStore.getState().setBlobAssignments([
+      { chunkId: first!.id, blobId: 'blob-old', position: 0, referenceChunkIds: [first!.id, second!.id] },
+      { chunkId: second!.id, blobId: 'blob-old', position: 1, referenceChunkIds: [first!.id, second!.id] },
+    ]);
+    useChunksStore.getState().setBlobAssignments([
+      { chunkId: first!.id, blobId: 'blob-new', position: 0, referenceChunkIds: [first!.id] },
+    ]);
+
+    const [updatedFirst, updatedSecond] = useChunksStore.getState().chunks;
+    expect(updatedFirst?.blobId).toBe('blob-new');
+    expect(updatedSecond?.blobId).toBeUndefined();
+    expect(updatedSecond?.blobOrder).toBeUndefined();
+    expect(updatedSecond?.blobReferenceChunkIds).toBeUndefined();
+  });
+
   it('loadDocument with markdown footnotes separates processingText from displayText', () => {
     useChunksStore.getState().loadDocument('Body [^1].\n\n[^1]: A note.', {
       useChunking: false,

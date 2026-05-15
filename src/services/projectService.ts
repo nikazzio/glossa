@@ -47,6 +47,7 @@ export interface SavedTranslation {
   footnotes?: string | null;
   blob_id?: string | null;
   blob_order?: number | null;
+  blob_reference_chunk_ids?: string | null;
   created_at: string;
 }
 
@@ -59,6 +60,17 @@ function parseJson<T>(value: string | null | undefined, fallback?: T): T | undef
   } catch {
     return fallback;
   }
+}
+
+function parseStringArray(value: string | null | undefined): string[] {
+  const parsed = parseJson<unknown>(value, []);
+  return Array.isArray(parsed)
+    ? parsed.filter((item): item is string => typeof item === 'string')
+    : [];
+}
+
+function serializeBlobReferenceChunkIds(chunk: TranslationChunk): string | null {
+  return chunk.blobId ? JSON.stringify(chunk.blobReferenceChunkIds ?? []) : null;
 }
 
 function restoreJudgeResult(row: SavedTranslation): JudgeResult {
@@ -94,7 +106,11 @@ export function restoreTranslations(rows: SavedTranslation[]): TranslationChunk[
       translationLocked: row.translation_locked === 1,
       ...(coherenceResult ? { coherenceResult } : {}),
       ...(footnotes?.length ? { footnotes } : {}),
-      ...(row.blob_id ? { blobId: row.blob_id, blobOrder: row.blob_order ?? 0 } : {}),
+      ...(row.blob_id ? {
+        blobId: row.blob_id,
+        blobOrder: row.blob_order ?? 0,
+        blobReferenceChunkIds: parseStringArray(row.blob_reference_chunk_ids),
+      } : {}),
     };
   });
 }
@@ -301,8 +317,8 @@ export async function saveChunkCheckpoint(
        id, project_id, original_text, final_translation, position, chunk_status, stage_results,
        judge_status, judge_rating, translation_locked, judge_issues, coherence_result, footnotes,
        source_display_text, source_processing_text, translation_display_text, translation_processing_text,
-       blob_id, blob_order
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+       blob_id, blob_order, blob_reference_chunk_ids
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
      ON CONFLICT(id) DO UPDATE SET
        original_text                = excluded.original_text,
        final_translation            = excluded.final_translation,
@@ -320,7 +336,8 @@ export async function saveChunkCheckpoint(
        coherence_result             = excluded.coherence_result,
        footnotes                    = excluded.footnotes,
        blob_id                      = excluded.blob_id,
-       blob_order                   = excluded.blob_order`,
+       blob_order                   = excluded.blob_order,
+       blob_reference_chunk_ids     = excluded.blob_reference_chunk_ids`,
     [
       chunk.id,
       projectId,
@@ -341,6 +358,7 @@ export async function saveChunkCheckpoint(
       chunk.translationProcessingText,
       chunk.blobId ?? null,
       chunk.blobOrder ?? 0,
+      serializeBlobReferenceChunkIds(chunk),
     ],
   );
 }
@@ -474,8 +492,8 @@ async function saveTranslationsInternal(
          id, project_id, original_text, final_translation, position, chunk_status, stage_results,
          judge_status, judge_rating, translation_locked, judge_issues, coherence_result, footnotes,
          source_display_text, source_processing_text, translation_display_text, translation_processing_text,
-         blob_id, blob_order
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+         blob_id, blob_order, blob_reference_chunk_ids
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
        ON CONFLICT(id) DO UPDATE SET
          original_text    = excluded.original_text,
          final_translation = excluded.final_translation,
@@ -493,7 +511,8 @@ async function saveTranslationsInternal(
          translation_display_text = excluded.translation_display_text,
          translation_processing_text = excluded.translation_processing_text,
          blob_id          = excluded.blob_id,
-         blob_order       = excluded.blob_order`,
+         blob_order       = excluded.blob_order,
+         blob_reference_chunk_ids = excluded.blob_reference_chunk_ids`,
       [
         chunk.id,
         projectId,
@@ -514,6 +533,7 @@ async function saveTranslationsInternal(
         chunk.translationProcessingText,
         chunk.blobId ?? null,
         chunk.blobOrder ?? 0,
+        serializeBlobReferenceChunkIds(chunk),
       ],
     );
   }

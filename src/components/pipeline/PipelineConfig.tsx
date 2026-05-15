@@ -3,7 +3,7 @@ import { useMemo, useState, useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { ModelProvider, PromptTemplate } from '../../types';
-import { MODEL_OPTIONS, LANGUAGES } from '../../constants';
+import { MODEL_OPTIONS, LANGUAGES, defaultPersonaText } from '../../constants';
 import { getModelStatus, calculateBlobBudget, getContextWindow } from '../../models/catalog';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
@@ -48,7 +48,7 @@ function PersonaEditor({
   const [templateSearch, setTemplateSearch] = useState('');
 
   const isCustom = !!persona?.trim();
-  const defaultText = `You are an expert translator and linguist specialized in ${sourceLanguage} to ${targetLanguage} translation.`;
+  const defaultText = defaultPersonaText(sourceLanguage, targetLanguage);
 
   const filteredTemplates = templates.filter((tmpl) =>
     tmpl.name.toLowerCase().includes(templateSearch.toLowerCase()),
