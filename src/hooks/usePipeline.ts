@@ -245,14 +245,21 @@ export function usePipeline() {
           async () => {
             capturedUsage = undefined;
             updateChunkStage(chunk.id, stage.id, { content: '', status: 'processing' });
-            const text = await llmService.runStageStream(
+            if (stage.provider === 'ollama') {
+              const text = await llmService.runStageStream(
+                chunk.sourceProcessingText, stage, effectiveConfig, lastResult || undefined,
+                (token) => appendChunkStageContent(chunk.id, stage.id, token),
+                (usage) => { capturedUsage = usage; },
+                onPrompt,
+                onIdleGrace,
+              );
+              return { content: text };
+            }
+            return llmService.runStage(
               chunk.sourceProcessingText, stage, effectiveConfig, lastResult || undefined,
-              (token) => appendChunkStageContent(chunk.id, stage.id, token),
-              (usage) => { capturedUsage = usage; },
               onPrompt,
               onIdleGrace,
             );
-            return { content: text };
           },
           {
             label: `Stage "${stage.name}"`,
