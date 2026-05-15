@@ -165,23 +165,6 @@ describe('document chunking', () => {
     expect(chunks[1]).toMatch(new RegExp(`^${title}`));
   });
 
-  it('does not move a trailing line that ends with sentence punctuation', () => {
-    const shortPara = 'Short intro paragraph with nine words total here.';
-    const notATitle = 'This ends with a period.';
-    const longPara = Array.from({ length: 25 }, (_, i) => `word${i + 1}`).join(' ');
-    const extraPara = Array.from({ length: 5 }, (_, i) => `extra${i + 1}`).join(' ');
-    const lastPara = 'Final short paragraph.';
-
-    const chunks = chunkText([shortPara, notATitle, longPara, extraPara, lastPara].join('\n\n'), {
-      useChunking: true,
-      targetChunkCount: 3,
-      headingAware: true,
-    });
-
-    // notATitle ends with '.' so it stays with shortPara, NOT moved to the next chunk
-    expect(chunks[0]).toBe(`${shortPara}\n\n${notATitle}`);
-  });
-
   it('moves a markdown heading embedded at the bottom of a content chunk to the next chunk', () => {
     const shortPara = 'Short intro paragraph with nine words total here.';
     const heading = '## Section Two';

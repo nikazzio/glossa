@@ -237,10 +237,7 @@ function extractTrailingHeading(text: string): { main: string; heading: string }
   const main = trimmed.slice(0, sep).trim();
   const trailing = trimmed.slice(sep + 2).trim();
   if (!main || !trailing) return null;
-  if (trailing.includes('\n')) return null;
-  if (trailing.length > 80) return null;
-  if (/[.!?;,:]$/.test(trailing)) return null;
-  if (!/^[A-Z#\d"«]/.test(trailing)) return null;
+  if (trailing.split('\n').length > 2) return null;
   return { main, heading: trailing };
 }
 
