@@ -1033,6 +1033,9 @@ function OperationsTab({
   const isProcessing = useChunksStore((state) => state.isProcessing);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const visibleEntries = currentChunkId
+    ? entries.filter((entry) => entry.chunkId === currentChunkId)
+    : entries;
   const processingChunk = chunks.find((c) => c.status === 'processing') ?? null;
   const processingChunkIndex = processingChunk
     ? chunks.findIndex((c) => c.id === processingChunk.id)
@@ -1042,7 +1045,7 @@ function OperationsTab({
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [entries.length]);
+  }, [visibleEntries.length]);
 
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex h-full flex-col">
@@ -1089,7 +1092,7 @@ function OperationsTab({
         )}
       </div>
 
-      {entries.length === 0 && !isProcessing ? (
+      {visibleEntries.length === 0 && !isProcessing ? (
         <div className="flex flex-1 items-center justify-center px-6 py-12 text-center text-sm text-editorial-muted">
           {t('document.operationsEmpty')}
         </div>
@@ -1113,7 +1116,7 @@ function OperationsTab({
                 error:   t('log.levelError'),
               };
               const chunkIndexMap = new Map(chunks.map((c, i) => [c.id, i]));
-              return entries.map((entry) => {
+              return visibleEntries.map((entry) => {
               const levelColor =
                 entry.level === 'error'   ? { text: 'text-[#ff6b6b]', border: 'border-[#ff6b6b]/40' }
                 : entry.level === 'warn'  ? { text: 'text-[#f6c90e]', border: 'border-[#f6c90e]/40' }

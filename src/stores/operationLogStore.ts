@@ -37,7 +37,7 @@ interface OperationLogState {
   clear: () => void;
 }
 
-const MAX_ENTRIES = 400;
+const MAX_ENTRIES = 2000;
 
 export const useOperationLogStore = create<OperationLogState>((set, get) => ({
   entries: [],
