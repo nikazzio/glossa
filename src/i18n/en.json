@@ -23,7 +23,9 @@
     "estimatedCost": "Est. cost",
     "cachedInput": "Cached input",
     "cacheMissInput": "Cache miss input",
-    "cacheHitRate": "Cache hit rate"
+    "cacheHitRate": "Cache hit rate",
+    "translationCacheLabel": "Translation cache",
+    "auditCacheLabel": "Audit cache"
   },
   "pipeline": {
     "globalSetup": "Project",
@@ -507,6 +509,8 @@
     "insightsAuditIssues": "Issues found",
     "insightsAuditNoIssues": "No issues raised by the judge.",
     "insightsAuditCorrections": "Suggested corrections",
+    "translationCacheLabel": "Translation cache",
+    "auditCacheLabel": "Audit cache",
     "sourceLockedTitle": "Source locked after translation",
     "sourceLockedBody": "This text is no longer editable until you use \"Edit source\" in the top toolbar. Unlocking it will discard the translation, stage outputs, and audit for this chunk.",
     "focusIssue": "Focus issue",

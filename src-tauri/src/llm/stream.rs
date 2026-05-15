@@ -161,6 +161,27 @@ impl Drop for StreamGuard<'_> {
 /// flows; the frontend checks for this prefix to suppress the toast.
 pub const STREAM_CANCELLED_ERROR: &str = "Stream cancelled";
 
+#[derive(Clone, Debug)]
+pub(crate) struct StreamResult {
+    pub(crate) content: String,
+    pub(crate) input_tokens: Option<u32>,
+    pub(crate) output_tokens: Option<u32>,
+    pub(crate) cached_input_tokens: Option<u32>,
+    pub(crate) cache_miss_input_tokens: Option<u32>,
+}
+
+impl PartialEq<&str> for StreamResult {
+    fn eq(&self, other: &&str) -> bool {
+        self.content == *other
+    }
+}
+
+impl PartialEq<StreamResult> for &str {
+    fn eq(&self, other: &StreamResult) -> bool {
+        *self == other.content
+    }
+}
+
 // ── Internal stream token type ────────────────────────────────────────
 
 #[derive(Clone, Serialize)]
@@ -348,7 +369,7 @@ pub(crate) async fn consume_stream<S, E, G>(
     mut emit: E,
     model: &str,
     mut on_idle_grace: G,
-) -> Result<String, String>
+) -> Result<StreamResult, String>
 where
     S: StreamChunkSource,
     E: FnMut(StreamToken),
@@ -394,8 +415,15 @@ where
         }
     }
 
+    let final_usage = acc.usage.final_usage();
     acc.finish(provider, stream_id, &mut emit);
-    Ok(acc.full_text)
+    Ok(StreamResult {
+        content: acc.full_text,
+        input_tokens: final_usage.as_ref().map(|u| u.input),
+        output_tokens: final_usage.as_ref().map(|u| u.output),
+        cached_input_tokens: final_usage.as_ref().and_then(|u| u.cached_input),
+        cache_miss_input_tokens: final_usage.as_ref().and_then(|u| u.cache_miss_input),
+    })
 }
 
 /// Read an SSE stream, emit tokens via Tauri events, return the full text.
@@ -412,7 +440,7 @@ pub(crate) async fn stream_response(
     stream_id: &str,
     cancel: &Arc<CancelToken>,
     model: &str,
-) -> Result<String, String> {
+) -> Result<StreamResult, String> {
     let mut source = ReqwestChunkSource {
         resp: &mut resp,
         provider_id: provider.id(),

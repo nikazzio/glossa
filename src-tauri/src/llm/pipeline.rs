@@ -127,7 +127,8 @@ pub async fn run_stage_stream(
         return Err(provider.format_http_error(status, &text));
     }
 
-    stream_response(&app, resp, provider.as_ref(), &stream_id, &cancel, &stage.model).await
+    let result = stream_response(&app, resp, provider.as_ref(), &stream_id, &cancel, &stage.model).await?;
+    Ok(result.content)
 }
 
 /// Mark a streaming request as cancelled. Idempotent and safe to call
@@ -182,7 +183,8 @@ pub async fn judge_translation(
         return Err(provider.format_http_error(status, &text));
     }
 
-    let result_text = stream_response(&app, resp, provider.as_ref(), &stream_id, &cancel, &config.judge_model).await?;
+    let result = stream_response(&app, resp, provider.as_ref(), &stream_id, &cancel, &config.judge_model).await?;
+    let result_text = result.content;
 
     let sanitized = sanitize_llm_json_output(&result_text);
     let parsed: serde_json::Value = serde_json::from_str(sanitized).map_err(|e| {
@@ -220,10 +222,10 @@ pub async fn judge_translation(
         rating,
         issues,
         content: translation,
-        input_tokens: None,
-        output_tokens: None,
-        cached_input_tokens: None,
-        cache_miss_input_tokens: None,
+        input_tokens: result.input_tokens,
+        output_tokens: result.output_tokens,
+        cached_input_tokens: result.cached_input_tokens,
+        cache_miss_input_tokens: result.cache_miss_input_tokens,
         system_prompt: None,
         user_prompt: None,
     })
@@ -314,7 +316,8 @@ pub async fn run_coherence_for_chunk(
         return Err(provider.format_http_error(status, &text));
     }
 
-    let result_text = stream_response(&app, resp, provider.as_ref(), &stream_id, &cancel, &config.judge_model).await?;
+    let result = stream_response(&app, resp, provider.as_ref(), &stream_id, &cancel, &config.judge_model).await?;
+    let result_text = result.content;
 
     let sanitized = sanitize_llm_json_output(&result_text);
     let parsed: serde_json::Value = serde_json::from_str(sanitized)
@@ -340,10 +343,10 @@ pub async fn run_coherence_for_chunk(
     // input_tokens and output_tokens are delivered via the stream-token done event.
     Ok(CoherenceResponse {
         issues,
-        input_tokens: None,
-        output_tokens: None,
-        cached_input_tokens: None,
-        cache_miss_input_tokens: None,
+        input_tokens: result.input_tokens,
+        output_tokens: result.output_tokens,
+        cached_input_tokens: result.cached_input_tokens,
+        cache_miss_input_tokens: result.cache_miss_input_tokens,
         system_prompt: None,
         user_prompt: None,
     })
