@@ -188,6 +188,7 @@ mod tests {
         StageConfig {
             id: "stg-1".into(),
             name: "Translation".into(),
+            role: None,
             prompt: "Translate accurately.".into(),
             model: "test-model".into(),
             provider: provider.into(),

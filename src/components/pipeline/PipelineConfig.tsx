@@ -1,4 +1,4 @@
-import { ArrowRightLeft, Play, Languages, FileText, Pencil, Scale, RefreshCw, Loader2, X, RotateCcw, Wand2, BookmarkPlus, BookOpen, Check, Trash2, Bot, Settings, Globe, ShieldCheck, Cpu, AlertTriangle } from 'lucide-react';
+import { ArrowRightLeft, Play, Languages, FileText, Layers, Pencil, Scale, RefreshCw, Loader2, X, RotateCcw, Wand2, BookmarkPlus, BookOpen, Check, Trash2, Bot, Settings, Globe, ShieldCheck, Cpu, AlertTriangle } from 'lucide-react';
 import { useMemo, useState, useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -237,7 +237,7 @@ function PersonaEditor({
         value={isCustom ? persona : defaultText}
         disabled={!isCustom}
         onChange={(e) => onChange(e.target.value.trim() ? e.target.value : undefined)}
-        rows={isCustom ? 4 : 2}
+        rows={isCustom ? 8 : 2}
         className={`w-full rounded-[14px] border px-3 py-2 text-xs font-mono outline-none leading-relaxed resize-y ${
           isCustom
             ? 'bg-editorial-textbox/40 border-editorial-border/60 focus-visible:ring-2 focus-visible:ring-editorial-accent'
@@ -553,15 +553,20 @@ export function PipelineConfig({
 
   const stage0 = config.stages[0];
 
-  const currentContextWindow = stage0
-    ? getContextWindow(stage0.provider, stage0.model)
-    : undefined;
+  // Min context window across all source-aware stages (translation + refine receive source text)
+  const minSourceAwareContextWindow = config.stages
+    .filter((s) => s.enabled && s.role !== 'format')
+    .reduce<number | undefined>((min, s) => {
+      const cw = getContextWindow(s.provider, s.model);
+      if (cw === undefined) return min;
+      return min === undefined ? cw : Math.min(min, cw);
+    }, undefined);
   const contextWindowChanged =
     !translationsExist &&
     chunks.length > 0 &&
     config.chunkedWithContextWindow !== undefined &&
-    currentContextWindow !== undefined &&
-    currentContextWindow !== config.chunkedWithContextWindow;
+    minSourceAwareContextWindow !== undefined &&
+    minSourceAwareContextWindow !== config.chunkedWithContextWindow;
 
   const handleRefreshOllama = async () => {
     setIsRefreshingOllama(true);
@@ -831,6 +836,85 @@ export function PipelineConfig({
         {/* ── SETTINGS ── */}
         {activeTab === 'settings' && (
           <div id="pconfig-panel-settings" role="tabpanel" aria-labelledby="pconfig-tab-settings" className="space-y-6">
+            {/* Mode selector */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-1.5">
+                <Layers size={11} className="text-editorial-accent shrink-0" />
+                <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                  {t('pipeline.modeLabel')}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                {([
+                  { mode: 'standard' as PipelineMode, Icon: Languages },
+                  { mode: 'editorial' as PipelineMode, Icon: Layers },
+                ]).map(({ mode: m, Icon }) => {
+                  const isActive = (config.mode ?? 'standard') === m;
+                  return (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setMode(m)}
+                      disabled={translationsExist || isProcessing}
+                      title={t(`pipeline.mode.${m}`)}
+                      aria-label={t(`pipeline.mode.${m}`)}
+                      aria-pressed={isActive}
+                      className={`rounded-full border p-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40 ${
+                        isActive
+                          ? 'border-editorial-accent bg-editorial-accent text-white'
+                          : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
+                      }`}
+                    >
+                      <Icon size={16} />
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="rounded-[14px] border border-editorial-border/40 bg-editorial-textbox/20 px-3 py-3 space-y-2.5">
+                {([
+                  {
+                    mode: 'standard' as PipelineMode,
+                    stages: [
+                      { role: 'translation', Icon: Languages, labelKey: 'pipeline.stageRole.translation' },
+                      { role: 'audit', Icon: ShieldCheck, labelKey: 'pipeline.tabAudit' },
+                    ],
+                  },
+                  {
+                    mode: 'editorial' as PipelineMode,
+                    stages: [
+                      { role: 'translation', Icon: Languages, labelKey: 'pipeline.stageRole.translation' },
+                      { role: 'refine', Icon: Wand2, labelKey: 'pipeline.stageRole.refine' },
+                      { role: 'format', Icon: FileText, labelKey: 'pipeline.stageRole.format' },
+                      { role: 'audit', Icon: ShieldCheck, labelKey: 'pipeline.tabAudit' },
+                    ],
+                  },
+                ]).map(({ mode: m, stages }) => {
+                  const isActive = (config.mode ?? 'standard') === m;
+                  return (
+                    <div key={m} className={`flex items-center gap-2.5 transition-opacity ${isActive ? '' : 'opacity-25'}`}>
+                      <span className={`shrink-0 w-[68px] text-[10px] font-bold uppercase tracking-widest ${isActive ? 'text-editorial-accent' : 'text-editorial-muted'}`}>
+                        {t(`pipeline.mode.${m}`)}
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        {stages.map(({ role, Icon, labelKey }, i) => (
+                          <span key={role} className="flex items-center gap-1.5">
+                            {i > 0 && <span className="text-editorial-muted/40 text-xs">›</span>}
+                            <span
+                              title={t(labelKey)}
+                              aria-label={t(labelKey)}
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors border-editorial-border bg-editorial-bg text-editorial-muted"
+                            >
+                              <Icon size={14} strokeWidth={1.9} />
+                            </span>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="space-y-2">
               <div className="flex items-center gap-1.5">
                 <Globe size={11} className="text-editorial-accent shrink-0" />
@@ -895,6 +979,7 @@ export function PipelineConfig({
               onSaveTemplate={(name, prompt) => saveTemplate(name, prompt, 'persona')}
               deleteTemplate={deleteTemplate}
             />
+
           </div>
         )}
 
@@ -906,74 +991,6 @@ export function PipelineConfig({
             aria-labelledby="pconfig-tab-translation"
             className="space-y-6"
           >
-            {/* Mode selector */}
-            <div className="space-y-2">
-              <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-                {t('pipeline.modeLabel')}
-              </p>
-              <div className="flex gap-2">
-                {(['standard', 'editorial'] as PipelineMode[]).map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => setMode(m)}
-                    disabled={translationsExist || isProcessing}
-                    className={`rounded-full border px-4 py-1.5 text-xs font-bold uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40 ${
-                      (config.mode ?? 'standard') === m
-                        ? 'border-editorial-ink bg-editorial-ink text-white'
-                        : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent'
-                    }`}
-                  >
-                    {t(`pipeline.mode.${m}`)}
-                  </button>
-                ))}
-              </div>
-              <p className="text-[10px] text-editorial-muted/70">
-                {t(`pipeline.modeDesc.${config.mode ?? 'standard'}`)}
-              </p>
-            </div>
-
-            {/* Context window warning */}
-            {contextWindowChanged && (
-              <div className="flex items-center gap-2 text-xs text-editorial-warning">
-                <ShieldCheck size={12} className="shrink-0 text-editorial-warning" />
-                <span>{t('pipeline.modelContextWindowChangedHint')}</span>
-              </div>
-            )}
-
-            {/* Stage cards — one per stage in the current mode */}
-            {config.stages.map((stage) => {
-              const stageModelOptions =
-                stage.provider === 'ollama'
-                  ? ollamaModels
-                  : (MODEL_OPTIONS[stage.provider] ?? []);
-              return (
-                <div key={stage.id} className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-ink font-bold">
-                      {t(`pipeline.stageRole.${stage.role ?? 'translation'}`)}
-                    </span>
-                    <span className="h-px flex-1 bg-editorial-border/60" aria-hidden="true" />
-                  </div>
-                  <StageCard
-                    stage={stage}
-                    templates={templates.filter((tmpl) => tmpl.context === 'stage')}
-                    isRefining={refiningStageId === stage.id}
-                    translationsExist={translationsExist}
-                    isProcessing={isProcessing}
-                    ollamaStatus={ollamaStatus}
-                    isRefreshingOllama={isRefreshingOllama}
-                    modelOptions={stageModelOptions}
-                    onUpdate={(updates) => updateStage(stage.id, updates)}
-                    onRefinePrompt={() => handleRefineStagePrompt(stage.id)}
-                    onRefreshOllama={handleRefreshOllama}
-                    saveTemplate={saveTemplate}
-                    deleteTemplate={deleteTemplate}
-                  />
-                </div>
-              );
-            })}
-
             {/* Context memory card */}
             {(() => {
               const isOverride = (config.blobBudgetTokens ?? 0) > 0;
@@ -984,11 +1001,12 @@ export function PipelineConfig({
                     type="button"
                     role="switch"
                     aria-checked={isOverride}
+                    disabled={translationsExist}
                     onClick={() => setConfig((prev) => ({
                       ...prev,
                       blobBudgetTokens: isOverride ? 0 : auto.budget,
                     }))}
-                    className={`flex w-full items-center justify-between text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                    className={`flex w-full items-center justify-between text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed ${
                       isOverride ? '' : 'opacity-80 hover:opacity-100'
                     }`}
                   >
@@ -1068,6 +1086,47 @@ export function PipelineConfig({
                 </div>
               );
             })()}
+
+            {/* Context window warning */}
+            {contextWindowChanged && (
+              <div className="flex items-center gap-2 text-xs text-editorial-warning">
+                <ShieldCheck size={12} className="shrink-0 text-editorial-warning" />
+                <span>{t('pipeline.modelContextWindowChangedHint')}</span>
+              </div>
+            )}
+
+            {/* Stage cards — one per stage in the current mode */}
+            {config.stages.map((stage) => {
+              const stageModelOptions =
+                stage.provider === 'ollama'
+                  ? ollamaModels
+                  : (MODEL_OPTIONS[stage.provider] ?? []);
+              return (
+                <div key={stage.id} className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-ink font-bold">
+                      {t(`pipeline.stageRole.${stage.role ?? 'translation'}`)}
+                    </span>
+                    <span className="h-px flex-1 bg-editorial-border/60" aria-hidden="true" />
+                  </div>
+                  <StageCard
+                    stage={stage}
+                    templates={templates.filter((tmpl) => tmpl.context === 'stage')}
+                    isRefining={refiningStageId === stage.id}
+                    translationsExist={translationsExist}
+                    isProcessing={isProcessing}
+                    ollamaStatus={ollamaStatus}
+                    isRefreshingOllama={isRefreshingOllama}
+                    modelOptions={stageModelOptions}
+                    onUpdate={(updates) => updateStage(stage.id, updates)}
+                    onRefinePrompt={() => handleRefineStagePrompt(stage.id)}
+                    onRefreshOllama={handleRefreshOllama}
+                    saveTemplate={saveTemplate}
+                    deleteTemplate={deleteTemplate}
+                  />
+                </div>
+              );
+            })}
           </div>
         )}
 

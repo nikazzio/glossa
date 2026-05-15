@@ -211,6 +211,7 @@
       "saved": "Template saved",
       "deleted": "Template deleted"
     },
+    "editPrompt": "Edit prompt",
     "refinePrompt": "Refine prompt",
     "refining": "Refining...",
     "refined": "Prompt refined",

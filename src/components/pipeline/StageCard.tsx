@@ -5,6 +5,7 @@ import {
   Check,
   Cpu,
   Loader2,
+  Pencil,
   RefreshCw,
   Trash2,
   Wand2,
@@ -57,10 +58,13 @@ export function StageCard({
   deleteTemplate,
 }: StageCardProps) {
   const { t } = useTranslation();
+  const [isEditingPrompt, setIsEditingPrompt] = useState(false);
   const [showSaveName, setShowSaveName] = useState(false);
   const [templateName, setTemplateName] = useState('');
   const [showTemplateList, setShowTemplateList] = useState(false);
   const [templateSearch, setTemplateSearch] = useState('');
+
+  const promptEditable = isEditingPrompt && !translationsExist && !isProcessing;
 
   const ollamaOffline = stage.provider === 'ollama' && ollamaStatus === 'disconnected';
 
@@ -70,7 +74,7 @@ export function StageCard({
 
   const handleProviderChange = (newProvider: ModelProvider) => {
     const models =
-      newProvider === 'ollama' ? [] : (MODEL_OPTIONS[newProvider] ?? []);
+      newProvider === 'ollama' ? modelOptions : (MODEL_OPTIONS[newProvider] ?? []);
     onUpdate({ provider: newProvider, model: models[0] || '' });
   };
 
@@ -193,38 +197,62 @@ export function StageCard({
             {t('pipeline.prompt')}
           </span>
           <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={onRefinePrompt}
-              disabled={isRefining || !stage.prompt.trim()}
-              title={t('pipeline.refinePrompt')}
-              aria-label={t('pipeline.refinePrompt')}
-              className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40"
-            >
-              {isRefining ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
-            </button>
-            <button
-              type="button"
-              onClick={() => { setShowSaveName(!showSaveName); setShowTemplateList(false); }}
-              title={t('pipeline.templates.save')}
-              aria-label={t('pipeline.templates.save')}
-              className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
-            >
-              <BookmarkPlus size={16} />
-            </button>
-            <button
-              type="button"
-              onClick={() => { setShowTemplateList(!showTemplateList); setShowSaveName(false); }}
-              title={t('pipeline.templates.load')}
-              aria-label={t('pipeline.templates.load')}
-              className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
-            >
-              <BookOpen size={16} />
-            </button>
+            {isEditingPrompt ? (
+              <>
+                <button
+                  type="button"
+                  onClick={onRefinePrompt}
+                  disabled={isRefining || !stage.prompt.trim()}
+                  title={t('pipeline.refinePrompt')}
+                  aria-label={t('pipeline.refinePrompt')}
+                  className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40"
+                >
+                  {isRefining ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowSaveName(!showSaveName); setShowTemplateList(false); }}
+                  title={t('pipeline.templates.save')}
+                  aria-label={t('pipeline.templates.save')}
+                  className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                >
+                  <BookmarkPlus size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowTemplateList(!showTemplateList); setShowSaveName(false); }}
+                  title={t('pipeline.templates.load')}
+                  aria-label={t('pipeline.templates.load')}
+                  className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                >
+                  <BookOpen size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setIsEditingPrompt(false); setShowSaveName(false); setShowTemplateList(false); }}
+                  title={t('common.close')}
+                  aria-label={t('common.close')}
+                  className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                >
+                  <X size={16} />
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsEditingPrompt(true)}
+                disabled={translationsExist || isProcessing}
+                title={t('pipeline.editPrompt')}
+                aria-label={t('pipeline.editPrompt')}
+                className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Pencil size={16} />
+              </button>
+            )}
           </div>
         </div>
 
-        {showSaveName && (
+        {isEditingPrompt && showSaveName && (
           <div className="flex items-center gap-1.5">
             <input
               value={templateName}
@@ -257,7 +285,7 @@ export function StageCard({
           </div>
         )}
 
-        {showTemplateList && (
+        {isEditingPrompt && showTemplateList && (
           <div className="rounded-lg border border-editorial-border bg-editorial-bg shadow-lg overflow-hidden">
             <div className="p-2 border-b border-editorial-border/60">
               <input
@@ -278,7 +306,15 @@ export function StageCard({
                   <li key={tmpl.id} className="flex items-start gap-2 px-3 py-2 hover:bg-editorial-textbox/40 group">
                     <button
                       type="button"
-                      onClick={() => { onUpdate({ prompt: tmpl.prompt }); setShowTemplateList(false); setTemplateSearch(''); }}
+                      onClick={() => {
+                          onUpdate({
+                            prompt: tmpl.prompt,
+                            ...(tmpl.defaultModel ? { model: tmpl.defaultModel } : {}),
+                            ...(tmpl.defaultProvider ? { provider: tmpl.defaultProvider as ModelProvider } : {}),
+                          });
+                          setShowTemplateList(false);
+                          setTemplateSearch('');
+                        }}
                       className="flex-1 text-left min-w-0 focus:outline-none"
                     >
                       <div className="text-sm font-bold text-editorial-ink truncate">{tmpl.name}</div>
@@ -303,8 +339,13 @@ export function StageCard({
           value={stage.prompt}
           onChange={(e) => onUpdate({ prompt: e.target.value })}
           placeholder={t('pipeline.stagePromptPlaceholder')}
+          disabled={!promptEditable}
           rows={8}
-          className="w-full rounded-[16px] bg-editorial-textbox/40 border border-editorial-border/60 p-4 text-sm font-mono outline-none leading-relaxed resize-y focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          className={`w-full rounded-[16px] border p-4 text-sm font-mono outline-none leading-relaxed resize-y ${
+            promptEditable
+              ? 'bg-editorial-textbox/40 border-editorial-border/60 focus-visible:ring-2 focus-visible:ring-editorial-accent'
+              : 'bg-editorial-textbox/10 border-editorial-border/30 text-editorial-muted/60 cursor-default'
+          }`}
         />
       </div>
     </div>

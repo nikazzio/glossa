@@ -43,7 +43,7 @@ function buildStage(template: StageTemplate, existing?: PipelineStageConfig): Pi
     prompt: existing?.prompt ?? template.defaultPrompt,
     model: existing?.model ?? 'gpt-4o-mini',
     provider: existing?.provider ?? 'openai',
-    enabled: existing?.enabled ?? true,
+    enabled: true,
     providerOptions: existing?.providerOptions,
   };
 }
@@ -56,6 +56,10 @@ export function buildStagesForMode(
   mode: PipelineMode,
   currentStages: PipelineStageConfig[],
 ): PipelineStageConfig[] {
-  const byRole = new Map(currentStages.map((s) => [s.role ?? 'translation', s]));
+  const byRole = new Map<string, PipelineStageConfig>();
+  for (const s of currentStages) {
+    const role = s.role ?? 'translation';
+    if (!byRole.has(role)) byRole.set(role, s);
+  }
   return MODE_SEQUENCES[mode].map((role) => buildStage(STAGE_TEMPLATES[role], byRole.get(role)));
 }

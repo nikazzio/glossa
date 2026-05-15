@@ -308,21 +308,27 @@ export function DocumentView({
               <div className="flex items-center gap-2">
                 {config.stages
                   .filter((stage) => stage.enabled)
-                  .map((stage, stageIndex) => (
-                    <button
-                      key={stage.id}
-                      type="button"
-                      onClick={() => setTraceStageId(stage.id)}
-                      className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                      title={stage.name}
-                      aria-label={stage.name}
-                    >
-                      <CompactStatusIndicator
-                        status={currentChunk.stageResults[stage.id]?.status || 'idle'}
-                        icon={Languages}
-                      />
-                    </button>
-                  ))}
+                  .map((stage) => {
+                    const stageIcon: LucideIcon =
+                      stage.role === 'refine' ? Pencil
+                      : stage.role === 'format' ? FileText
+                      : Languages;
+                    return (
+                      <button
+                        key={stage.id}
+                        type="button"
+                        onClick={() => setTraceStageId(stage.id)}
+                        className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                        title={stage.name}
+                        aria-label={stage.name}
+                      >
+                        <CompactStatusIndicator
+                          status={currentChunk.stageResults[stage.id]?.status || 'idle'}
+                          icon={stageIcon}
+                        />
+                      </button>
+                    );
+                  })}
                 <button
                   type="button"
                   className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"

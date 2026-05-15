@@ -89,6 +89,45 @@ Prima di ogni commit verifica:
 - [ ] Le query SQL usano parametri bind (mai concatenazione di stringhe)
 - [ ] I path sui file sono sanitizzati
 
+## UI — Stile dei componenti
+
+Queste regole si applicano a tutti i componenti del pannello di configurazione e in generale all'intera UI.
+
+### Label di sezione
+
+Ogni sezione ha un'intestazione icona + etichetta:
+
+```tsx
+<div className="flex items-center gap-1.5">
+  <IconName size={11} className="text-editorial-accent shrink-0" />
+  <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+    {t('chiave.etichetta')}
+  </p>
+</div>
+```
+
+### Pulsanti pill (selezione tra opzioni)
+
+```tsx
+className={`rounded-full border px-4 py-1.5 text-xs font-bold uppercase tracking-widest transition-colors
+  focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent
+  disabled:cursor-not-allowed disabled:opacity-40 ${
+    isActive
+      ? 'border-editorial-accent bg-editorial-accent text-white'
+      : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent'
+  }`}
+```
+
+Non usare `editorial-ink` per i pulsanti di selezione: usare sempre `editorial-accent` (rosso).
+
+### Ordine degli elementi nel tab Impostazioni
+
+Disporre dall'alto verso il basso per importanza percepita dall'utente:
+
+1. Modalità di traduzione (scelta che cambia la struttura della pipeline)
+2. Coppia linguistica
+3. Persona
+
 ## Contributing
 
 1. Apri un issue prima di iniziare lavori grandi
