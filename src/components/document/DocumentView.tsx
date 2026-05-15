@@ -1,4 +1,5 @@
 import {
+  AlertTriangle,
   CheckCheck,
   ChevronLeft,
   ChevronRight,
@@ -187,11 +188,11 @@ export function DocumentView({
 
   const sourceHighlightHtml = useMemo(() => {
     const hasFootnoteMarkers = /\[[⁰¹²³⁴⁵⁶⁷⁸⁹]/.test(deferredOriginalText);
-    const showGlossary = showHighlight && currentChunk?.status !== 'completed' && paneFocus !== 'translation';
+    const showGlossary = showHighlight && paneFocus !== 'translation';
     if (!showGlossary && !hasFootnoteMarkers) return null;
     const base = showGlossary ? sourceHighlight.html : escapeHtml(deferredOriginalText);
     return hasFootnoteMarkers ? highlightSuperscriptMarkersHtml(base) : base;
-  }, [deferredOriginalText, currentChunk?.status, showHighlight, paneFocus, sourceHighlight.html]);
+  }, [deferredOriginalText, showHighlight, paneFocus, sourceHighlight.html]);
 
   if (!currentChunk) {
     return (
@@ -531,9 +532,23 @@ export function DocumentView({
                 subtitle={isEditorialMode ? t(`pipeline.stageRole.${enabledStages.find(s => s.id === selectedStageId)?.role ?? 'translation'}`) : undefined}
                 actions={stageActions}
                 highlighted={focusedChunkId === currentChunk.id}
-                statusBadge={currentChunk.translationLocked ? (
+                statusBadge={currentChunk.translationStale ? (
+                  <InlineStatusBadge tone="amber" icon={<AlertTriangle size={13} />} label={t('document.translationStaleBadge')} />
+                ) : currentChunk.translationLocked ? (
                   <InlineStatusBadge tone="emerald" icon={<CheckCheck size={13} />} label={t('document.translationLockedBadge')} />
                 ) : null}
+                footer={
+                  <div className="flex items-center justify-between">
+                    <div>
+                      {currentChunk.judgeResult.status === 'completed' && (
+                        <span className={`font-display text-base italic ${QUALITY_TONE_COLOR[chunkTone]}`}>
+                          {currentQualityLabel}
+                        </span>
+                      )}
+                    </div>
+                    <CopyButton text={rawStageContent} />
+                  </div>
+                }
               >
                 <MarkdownEditor
                   value={rawStageContent}
@@ -549,16 +564,6 @@ export function DocumentView({
                   focusRequestId={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueRequestId : 0}
                   onFocusQueryHandled={isLastSelected ? clearFocusedIssue : undefined}
                 />
-                <div className="mt-3 pt-3 border-t border-[#ede4d6] flex items-center justify-between shrink-0">
-                  <div>
-                    {currentChunk.judgeResult.status === 'completed' && (
-                      <span className={`font-display text-base italic ${QUALITY_TONE_COLOR[chunkTone]}`}>
-                        {currentQualityLabel}
-                      </span>
-                    )}
-                  </div>
-                  <CopyButton text={rawStageContent} />
-                </div>
               </DocumentPage>
             );
           })()}
@@ -597,6 +602,7 @@ interface DocumentPageProps {
   titleMeta?: React.ReactNode;
   statusBadge?: React.ReactNode;
   actions?: React.ReactNode;
+  footer?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -678,6 +684,7 @@ function DocumentPage({
   titleMeta,
   statusBadge,
   actions,
+  footer,
   children,
 }: DocumentPageProps) {
   return (
@@ -709,6 +716,11 @@ function DocumentPage({
       <div className={`flex flex-col flex-1 min-h-0 ${readOnly ? 'opacity-90' : ''}`}>
         {children}
       </div>
+      {footer && (
+        <div className="mt-3 pt-3 border-t border-[#ede4d6] shrink-0">
+          {footer}
+        </div>
+      )}
     </section>
   );
 }

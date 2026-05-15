@@ -503,6 +503,7 @@
     "translationLockedTitle": "Traduzione validata e bloccata",
     "translationLockedBody": "Questa traduzione e protetta da modifiche accidentali. Puoi sbloccarla dal pulsante con spunta verde nella barra del chunk.",
     "translationLockedBadge": "Validata",
+    "translationStaleBadge": "Sorgente modificato",
     "configDrawerTitle": "Configurazione pipeline",
     "configDrawerHint": "Lingua, modelli, fasi di traduzione e glossario del progetto corrente.",
     "insightsDrawerTitle": "Pannello insight",

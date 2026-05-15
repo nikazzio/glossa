@@ -94,6 +94,7 @@ export interface TranslationChunk {
   coherenceResult?: CoherenceResult;
   currentDraft?: string;
   translationLocked?: boolean;
+  translationStale?: boolean;
   footnotes?: Footnote[];
   blobId?: string;
   blobOrder?: number;

@@ -287,22 +287,24 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
       chunks: updateSingleChunk(state.chunks, chunkId, (chunk) => ({
         ...chunk,
         status,
+        ...(status === 'processing' ? { translationStale: false } : {}),
       })),
     })),
 
   updateChunkOriginalText: (chunkId, text) =>
     set((state) => {
       const sourceFootnotes = usePipelineStore.getState().sourceFootnotes;
-      const nextChunks = updateSingleChunk(state.chunks, chunkId, (chunk) =>
-        resetChunkForSourceEdit(
-          updateChunkSourceFields(
-            chunk,
-            deriveChunkDisplayText(text, sourceFootnotes),
-            text,
-            buildChunkFootnotes(text, sourceFootnotes),
-          ),
-        ),
-      );
+      const nextChunks = updateSingleChunk(state.chunks, chunkId, (chunk) => {
+        if (chunk.originalText === text) return chunk;
+        const hasTranslation = !!(chunk.currentDraft || Object.keys(chunk.stageResults).length > 0);
+        const updated = updateChunkSourceFields(
+          chunk,
+          deriveChunkDisplayText(text, sourceFootnotes),
+          text,
+          buildChunkFootnotes(text, sourceFootnotes),
+        );
+        return hasTranslation ? { ...updated, translationStale: true } : updated;
+      });
       syncProjectSourceDocument(nextChunks);
       return { chunks: nextChunks };
     }),
@@ -457,6 +459,7 @@ function resetChunkForSourceEdit<T extends TranslationChunk>(chunk: T): T {
     translationProcessingText: '',
     currentDraft: '',
     translationLocked: false,
+    translationStale: false,
   }) as T;
 }
 

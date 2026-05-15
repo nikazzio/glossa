@@ -503,6 +503,7 @@
     "translationLockedTitle": "Translation validated and locked",
     "translationLockedBody": "This translation is protected from accidental edits. You can unlock it from the green check button in the chunk toolbar.",
     "translationLockedBadge": "Validated",
+    "translationStaleBadge": "Source changed",
     "configDrawerTitle": "Pipeline configuration",
     "configDrawerHint": "Language, models, translation stages and glossary for the current project.",
     "insightsDrawerTitle": "Insights panel",
