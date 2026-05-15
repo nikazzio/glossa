@@ -52,6 +52,7 @@ type ChunkOutcome = 'completed' | 'failed' | 'cancelled' | 'skipped';
 export function usePipeline() {
   const {
     updateChunkStage,
+    appendChunkStageContent,
     setChunkStagePromptInfo,
     updateChunkJudge,
     updateChunkDraft,
@@ -244,21 +245,14 @@ export function usePipeline() {
           async () => {
             capturedUsage = undefined;
             updateChunkStage(chunk.id, stage.id, { content: '', status: 'processing' });
-            if (stage.provider === 'ollama') {
-              const text = await llmService.runStageStream(
-                chunk.sourceProcessingText, stage, effectiveConfig, lastResult || undefined,
-                () => {},
-                (usage) => { capturedUsage = usage; },
-                onPrompt,
-                onIdleGrace,
-              );
-              return { content: text };
-            }
-            return llmService.runStage(
+            const text = await llmService.runStageStream(
               chunk.sourceProcessingText, stage, effectiveConfig, lastResult || undefined,
+              (token) => appendChunkStageContent(chunk.id, stage.id, token),
+              (usage) => { capturedUsage = usage; },
               onPrompt,
               onIdleGrace,
             );
+            return { content: text };
           },
           {
             label: `Stage "${stage.name}"`,
@@ -278,10 +272,10 @@ export function usePipeline() {
           },
         );
         const result = stageResult.content;
-        if (!capturedUsage && (stageResult.inputTokens ?? stageResult.outputTokens)) {
+        if (!capturedUsage && stageResult.inputTokens !== undefined && stageResult.outputTokens !== undefined) {
           capturedUsage = {
-            inputTokens: stageResult.inputTokens!,
-            outputTokens: stageResult.outputTokens!,
+            inputTokens: stageResult.inputTokens,
+            outputTokens: stageResult.outputTokens,
             cachedInputTokens: stageResult.cachedInputTokens,
             cacheMissInputTokens: stageResult.cacheMissInputTokens,
           };
@@ -555,7 +549,7 @@ export function usePipeline() {
       });
       toast.warning(t('errors.pipelineCompletedWithErrors', { count: errorCount }));
     }
-  }, [config, t, setIsProcessing, updateChunkStage, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureProvidersReady, setBlobAssignments]);
+  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureProvidersReady, setBlobAssignments]);
 
   const runSingleChunk = useCallback(async (chunkId: string) => {
     if (useChunksStore.getState().isProcessing) return;
@@ -606,7 +600,7 @@ export function usePipeline() {
       // Per-chunk failure already raised a toast inside the helper; no
       // extra summary toast is needed.
     }
-  }, [config, t, setIsProcessing, updateChunkStage, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureProvidersReady, setBlobAssignments]);
+  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureProvidersReady, setBlobAssignments]);
 
   const runAuditOnly = useCallback(async () => {
     if (useChunksStore.getState().isProcessing) return;

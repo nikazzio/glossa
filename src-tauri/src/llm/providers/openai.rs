@@ -80,7 +80,7 @@ impl OpenAiCompatibleProvider {
     }
 
     fn apply_cache_fields(&self, req: &LlmRequest<'_>, body: &mut Value) {
-        if self.id != "openai" {
+        if self.id != "openai" && self.id != "deepseek" {
             return;
         }
 
@@ -92,11 +92,13 @@ impl OpenAiCompatibleProvider {
             .unwrap_or_else(|| self.derive_prompt_cache_key(req));
         body["prompt_cache_key"] = Value::String(cache_key);
 
-        if let Some(retention) = cfg
+        if self.id == "openai" {
+            if let Some(retention) = cfg
             .and_then(|value| value.prompt_cache_retention.as_ref())
             .filter(|value| matches!(value.as_str(), "in_memory" | "24h"))
-        {
-            body["prompt_cache_retention"] = Value::String(retention.clone());
+            {
+                body["prompt_cache_retention"] = Value::String(retention.clone());
+            }
         }
     }
 
@@ -117,7 +119,7 @@ impl OpenAiCompatibleProvider {
                 .as_u64()
                 .map(|value| value as u32)
         } else {
-            cached_input.map(|cached| input as u32 - cached)
+            cached_input.map(|cached| (input as u32).saturating_sub(cached))
         };
 
         Some(TokenUsage {
@@ -188,7 +190,7 @@ impl LlmProvider for OpenAiCompatibleProvider {
                         .as_u64()
                         .map(|value| value as u32)
                 } else {
-                    state.latest_cached_input.map(|cached| i as u32 - cached)
+                    state.latest_cached_input.map(|cached| (i as u32).saturating_sub(cached))
                 };
             }
         }

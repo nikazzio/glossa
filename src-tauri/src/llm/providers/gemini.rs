@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::sync::{LazyLock, Mutex};
+use std::time::{Duration, Instant};
 
 use crate::llm::provider::{
     LlmProvider, LlmRequest, LlmResponse, StreamFormat, TokenUsage, UsageAccumulator,
@@ -16,7 +17,12 @@ use super::format_api_error;
 
 pub struct GeminiProvider;
 
-static GEMINI_CACHE_NAMES: LazyLock<Mutex<HashMap<String, String>>> =
+struct GeminiCacheEntry {
+    name: String,
+    created_at: Instant,
+}
+
+static GEMINI_CACHE_NAMES: LazyLock<Mutex<HashMap<String, GeminiCacheEntry>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
 fn estimate_tokens(text: &str) -> usize {
@@ -26,9 +32,9 @@ fn estimate_tokens(text: &str) -> usize {
 
 fn min_explicit_cache_tokens(model: &str) -> usize {
     if model.to_ascii_lowercase().contains("pro") {
-        4096
+        8192
     } else {
-        1024
+        2048
     }
 }
 
@@ -81,7 +87,7 @@ impl LlmProvider for GeminiProvider {
                     .as_u64()
                     .map(|value| value as u32);
                 state.latest_cache_miss_input =
-                    state.latest_cached_input.map(|cached| i as u32 - cached);
+                    state.latest_cached_input.map(|cached| (i as u32).saturating_sub(cached));
             }
         }
     }
@@ -124,6 +130,9 @@ impl LlmProvider for GeminiProvider {
             .map_err(|e| format!("Failed to read response: {e}"))?;
 
         if !status.is_success() {
+            if text.to_ascii_lowercase().contains("cachedcontent") || text.to_ascii_lowercase().contains("cached content") {
+                invalidate_gemini_cache(req);
+            }
             return Err(format_api_error("Gemini", status, &text));
         }
 
@@ -147,7 +156,7 @@ impl LlmProvider for GeminiProvider {
                     input: i as u32,
                     output: o as u32,
                     cached_input,
-                    cache_miss_input: cached_input.map(|cached| i as u32 - cached),
+                    cache_miss_input: cached_input.map(|cached| (i as u32).saturating_sub(cached)),
                 })
             }
             _ => None,
@@ -205,9 +214,23 @@ fn gemini_cache_ttl_seconds(req: &LlmRequest<'_>) -> u32 {
 
 fn gemini_cache_lookup_key(req: &LlmRequest<'_>) -> String {
     let mut hasher = DefaultHasher::new();
+    req.api_key.hash(&mut hasher);
     req.model.hash(&mut hasher);
     req.structured.flatten_system().hash(&mut hasher);
     format!("gemini:{:016x}", hasher.finish())
+}
+
+fn gemini_cache_safety_window(req: &LlmRequest<'_>) -> Duration {
+    let ttl = gemini_cache_ttl_seconds(req);
+    let safety = ttl.saturating_div(10).max(60);
+    Duration::from_secs(ttl.saturating_sub(safety) as u64)
+}
+
+fn invalidate_gemini_cache(req: &LlmRequest<'_>) {
+    let key = gemini_cache_lookup_key(req);
+    if let Ok(mut guard) = GEMINI_CACHE_NAMES.lock() {
+        guard.remove(&key);
+    }
 }
 
 async fn ensure_gemini_cached_content(
@@ -225,9 +248,11 @@ async fn ensure_gemini_cached_content(
 
     let cache_key = gemini_cache_lookup_key(req);
     if let Ok(guard) = GEMINI_CACHE_NAMES.lock() {
-        if let Some(name) = guard.get(&cache_key) {
-            log::debug!("Gemini explicit cache hit model={} cache_name={}", req.model, name);
-            return Ok(Some(name.clone()));
+        if let Some(entry) = guard.get(&cache_key) {
+            if entry.created_at.elapsed() < gemini_cache_safety_window(req) {
+                log::debug!("Gemini explicit cache hit model={} cache_name={}", req.model, entry.name);
+                return Ok(Some(entry.name.clone()));
+            }
         }
     }
 
@@ -254,6 +279,7 @@ async fn ensure_gemini_cached_content(
         .map_err(|e| format!("Failed to read Gemini cache response: {e}"))?;
 
     if !status.is_success() {
+        log::debug!("Gemini cache creation skipped status={} body={}", status, text);
         return Ok(None);
     }
 
@@ -272,7 +298,10 @@ async fn ensure_gemini_cached_content(
     );
 
     if let Ok(mut guard) = GEMINI_CACHE_NAMES.lock() {
-        guard.insert(cache_key, cache_name.clone());
+        guard.insert(cache_key, GeminiCacheEntry {
+            name: cache_name.clone(),
+            created_at: Instant::now(),
+        });
     }
 
     Ok(Some(cache_name))

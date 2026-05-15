@@ -87,6 +87,14 @@ impl LlmProvider for AnthropicProvider {
                     state.pending_input = json["message"]["usage"]["input_tokens"]
                         .as_u64()
                         .map(|n| n as u32);
+                    state.latest_cached_input = json["message"]["usage"]["cache_read_input_tokens"]
+                        .as_u64()
+                        .map(|n| n as u32);
+                    state.latest_cache_miss_input = state.pending_input.map(|input| {
+                        input.saturating_sub(
+                            state.latest_cached_input.unwrap_or(0),
+                        )
+                    });
                 }
                 Some("message_delta") => {
                     if let Some(out) = json["usage"]["output_tokens"].as_u64() {
@@ -144,8 +152,12 @@ impl LlmProvider for AnthropicProvider {
             (Some(i), Some(o)) => Some(TokenUsage {
                 input: i as u32,
                 output: o as u32,
-                cached_input: None,
-                cache_miss_input: None,
+                cached_input: json["usage"]["cache_read_input_tokens"]
+                    .as_u64()
+                    .map(|n| n as u32),
+                cache_miss_input: json["usage"]["cache_read_input_tokens"]
+                    .as_u64()
+                    .map(|cached| (i as u32).saturating_sub(cached as u32)),
             }),
             _ => None,
         };
