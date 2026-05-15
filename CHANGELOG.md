@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/nikazzio/glossa/compare/glossa-v0.7.0...glossa-v0.8.0) (2026-05-15)
+
+
+### ✨ Features
+
+* normalizeImportedText — cleanup testo grezzo prima del chunking ([#158](https://github.com/nikazzio/glossa/issues/158)) ([0f03840](https://github.com/nikazzio/glossa/commit/0f0384017d494a0ba0bb50f5577971e15f034f0d))
+
 ## [0.7.0](https://github.com/nikazzio/glossa/compare/glossa-v0.6.2...glossa-v0.7.0) (2026-05-13)
 
 
