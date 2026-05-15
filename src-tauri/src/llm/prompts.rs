@@ -208,9 +208,10 @@ pub(crate) fn build_judge_prompts(
            - severity: 'low'|'medium'|'high'\n\
            - description: string — explanation of the issue in {ui_lang}\n\
            - suggestedFix: string — how to correct it in {ui_lang}\n\
-           - phrase: string — the exact verbatim substring copied character-for-character \
-             from the target translation that contains the issue; \
-             must appear literally in the target text as provided\n\
+           - phrase: string — the exact verbatim substring of the WRONG or problematic text \
+             as it actually appears in the target translation (not the source term, not the \
+             suggested correction); copy it character-for-character from the target text; \
+             if the issue recurs in multiple places, copy only the first occurrence\n\
          Write description and suggestedFix in {ui_lang}. \
          Keep rating and type values as the English literals above.",
         instructions = config.judge_prompt,
@@ -274,7 +275,7 @@ pub(crate) fn build_coherence_prompts(
          \"severity\": \"low\"|\"medium\"|\"high\", \
          \"description\": \"string\", \
          \"suggestedFix\": \"string\", \
-         \"phrase\": \"exact verbatim substring from the current segment translation that contains the issue\"}}]}}",
+         \"phrase\": \"exact verbatim substring of the WRONG text as it appears in the target translation, not the source term nor the correction; first occurrence only\"}}]}}",
     );
 
     let context_block = input
