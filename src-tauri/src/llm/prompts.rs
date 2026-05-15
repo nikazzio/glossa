@@ -58,7 +58,7 @@ pub(crate) fn build_stage_prompts(
     text: &str,
     stage: &StageConfig,
     config: &PipelineConfig,
-    previous_result: &Option<String>,
+    previous_result: Option<&str>,
 ) -> StructuredPrompt {
     let glossary_table = format_glossary_table(&config.glossary);
 
@@ -322,23 +322,5 @@ pub(crate) fn parse_judge_rating(parsed: &serde_json::Value) -> String {
 pub(crate) fn minimal_pipeline_config(
     review_provider_options: Option<ProviderRuntimeConfig>,
 ) -> PipelineConfig {
-    PipelineConfig {
-        source_language: String::new(),
-        target_language: String::new(),
-        stages: vec![],
-        judge_prompt: String::new(),
-        judge_model: String::new(),
-        judge_provider: String::new(),
-        glossary: vec![],
-        use_chunking: None,
-        markdown_aware: None,
-        coherence_prompt: None,
-        review_provider_options,
-        persona: None,
-        ui_language: None,
-        custom_source_language: None,
-        custom_target_language: None,
-        blob_context: None,
-        blob_current_chunk_id: None,
-    }
+    PipelineConfig { review_provider_options, ..Default::default() }
 }

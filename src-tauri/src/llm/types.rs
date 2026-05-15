@@ -86,7 +86,7 @@ pub struct StageConfig {
     pub provider_options: Option<ProviderRuntimeConfig>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PipelineConfig {
     pub source_language: String,

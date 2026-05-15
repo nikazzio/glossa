@@ -47,7 +47,7 @@ pub async fn run_stage(
     provider.preflight(&stage.model).await?;
     let api_key = get_api_key(&app, &stage.provider)?;
     let client = provider.http_client()?;
-    let structured = build_stage_prompts(&text, &stage, &config, &previous_result);
+    let structured = build_stage_prompts(&text, &stage, &config, previous_result.as_deref());
     app.emit("chunk-prompt", PromptEvent {
         stream_id,
         system_prompt: structured.flatten_system(),
@@ -96,7 +96,7 @@ pub async fn run_stage_stream(
     provider.preflight(&stage.model).await?;
     let api_key = get_api_key(&app, &stage.provider)?;
     let client = provider.streaming_client()?;
-    let structured = build_stage_prompts(&text, &stage, &config, &previous_result);
+    let structured = build_stage_prompts(&text, &stage, &config, previous_result.as_deref());
     app.emit("chunk-prompt", PromptEvent {
         stream_id: stream_id.clone(),
         system_prompt: structured.flatten_system(),
