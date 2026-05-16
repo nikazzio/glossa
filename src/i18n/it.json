@@ -186,6 +186,56 @@
     "stageModelLabel": "Modello di traduzione",
     "tabAudit": "Controllo qualità",
     "tabGlossary": "Registro Termini",
+    "tabPreview": "Anteprima Prompt",
+    "promptPreviewTitle": "Anteprima Prompt",
+    "promptPreviewHint": "Vista frontend-only della struttura del prompt costruita dalla configurazione corrente. I placeholder mostrano dove vengono inseriti testo del chunk e contesto blob.",
+    "promptPreviewEmpty": "Non ci sono ancora fasi di traduzione abilitate.",
+    "promptPreviewStatic": "Statico",
+    "promptPreviewRuntime": "Runtime",
+    "promptPreviewBlocks": {
+      "system-opener": {
+        "title": "Apertura di sistema"
+      },
+      "structural-rules": {
+        "title": "Regole strutturali"
+      },
+      "glossary-constraints": {
+        "title": "Vincoli glossario"
+      },
+      "markdown-rules": {
+        "title": "Regole Markdown"
+      },
+      "stage-instructions": {
+        "title": "Istruzioni di fase"
+      },
+      "blob-context": {
+        "title": "Contesto blob opzionale",
+        "hint": "Blocco documento di riferimento riusato tra i chunk dello stesso blob. E solo contesto e appartiene al prefisso cacheabile."
+      },
+      "current-chunk-id": {
+        "title": "ID chunk opzionale",
+        "hint": "Identificatore runtime del chunk inserito solo quando e disponibile il tracciamento del blob. Delimita la richiesta al chunk corrente."
+      },
+      "source-chunk-text": {
+        "title": "Testo sorgente runtime",
+        "hint": "Payload del chunk corrente inserito a esecuzione. Nel refine resta il chunk sorgente originale, non la traduzione precedente."
+      },
+      "previous-stage-result": {
+        "title": "Risultato fase precedente",
+        "hint": "Testo runtime prodotto dalla fase precedente. Il refine lo riceve insieme al chunk sorgente originale."
+      },
+      "runtime-task": {
+        "title": "Istruzione task runtime",
+        "hint": "Istruzione valida solo a esecuzione che dice al modello di tradurre, rifinire o formattare solo il chunk corrente."
+      },
+      "output-contract": {
+        "title": "Contratto output runtime",
+        "hint": "Vincolo finale dell'output valido solo a runtime. Limita la risposta al risultato completo specifico della fase."
+      },
+      "system-post-processor": {
+        "title": "Post-processore di sistema"
+      }
+    },
     "tabPersona": "Persona",
     "personaLabel": "Persona",
     "personaCustomBadge": "Personalizzata",
