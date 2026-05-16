@@ -39,7 +39,7 @@ describe('getContextWindow', () => {
   });
 
   it('returns context window from catalog for known models', () => {
-    const result = getContextWindow('anthropic', 'claude-3-5-sonnet-latest');
+    const result = getContextWindow('anthropic', 'claude-sonnet-4-0');
     expect(typeof result).toBe('number');
     expect(result).toBeGreaterThan(0);
   });
