@@ -10,6 +10,7 @@ import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { MODEL_CATALOG } from '../../models/catalog';
 import { MODEL_PRICING } from '../../constants';
 import { usePricingStore } from '../../stores/pricingStore';
+import { EditorialModalShell } from '../common';
 
 export function SettingsModal() {
   const {
@@ -33,6 +34,7 @@ export function SettingsModal() {
   const { t } = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
   const [showPricingOverrides, setShowPricingOverrides] = useState(false);
+  const [showSecurityAdvisory, setShowSecurityAdvisory] = useState(false);
   const [urlDraft, setUrlDraft] = useState(ollamaBaseUrl);
   const [urlError, setUrlError] = useState<string | null>(null);
   const trapRef = useFocusTrap(showSettings, () => setShowSettings(false));
@@ -77,25 +79,27 @@ export function SettingsModal() {
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
-            className="relative flex flex-col bg-editorial-bg w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-[28px] border border-editorial-border shadow-[0_24px_80px_rgba(26,26,26,0.2)]"
+            className="relative w-full max-w-3xl"
           >
-            {/* ── Header ── */}
-            <div className="shrink-0 border-b border-editorial-border px-8 pb-5 pt-6 flex items-center justify-between gap-4">
-              <h2 id="settings-title" className="font-display text-2xl italic tracking-tight text-editorial-ink">
-                {t('settings.title')}
-              </h2>
-              <button
-                onClick={() => setShowSettings(false)}
-                title={t('settings.close')}
-                className="text-editorial-muted hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                aria-label={t('settings.close')}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* ── Scrollable body ── */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar px-8 py-8">
+            <EditorialModalShell
+              titleId="settings-title"
+              title={t('settings.title')}
+              closeLabel={t('settings.close')}
+              onClose={() => setShowSettings(false)}
+              widthClassName="max-w-3xl"
+              bodyClassName="px-6 py-6 md:px-8"
+              footer={
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setShowSettings(false)}
+                    className="rounded-full border border-editorial-border px-5 py-3 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  >
+                    {t('common.close')}
+                  </button>
+                </div>
+              }
+            >
             <div className="space-y-12">
               {/* Segmentation defaults */}
               <div className="space-y-4">
@@ -105,7 +109,7 @@ export function SettingsModal() {
                 <p className="text-xs text-editorial-muted leading-relaxed">
                   {t('settings.segmentationHint')}
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                   <div className="space-y-1.5">
                     <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted">
                       {t('settings.chunkPresetShort')}
@@ -117,7 +121,7 @@ export function SettingsModal() {
                       step={50}
                       value={chunkPresetShort}
                       onChange={(e) => setChunkPresetShort(Number(e.target.value) || 50)}
-                      className="w-full rounded-2xl border border-editorial-border bg-editorial-bg px-4 py-3 text-sm font-mono outline-none focus:border-editorial-ink/40"
+                      className="w-full rounded-[18px] border border-editorial-border bg-editorial-bg px-4 py-3 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                     />
                     <p className="text-[10px] leading-relaxed text-editorial-muted">
                       {t('settings.chunkPresetShortHint')}
@@ -134,7 +138,7 @@ export function SettingsModal() {
                       step={50}
                       value={chunkPresetMedium}
                       onChange={(e) => setChunkPresetMedium(Number(e.target.value) || 50)}
-                      className="w-full rounded-2xl border border-editorial-border bg-editorial-bg px-4 py-3 text-sm font-mono outline-none focus:border-editorial-ink/40"
+                      className="w-full rounded-[18px] border border-editorial-border bg-editorial-bg px-4 py-3 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                     />
                     <p className="text-[10px] leading-relaxed text-editorial-muted">
                       {t('settings.chunkPresetMediumHint')}
@@ -150,7 +154,7 @@ export function SettingsModal() {
                       step={50}
                       value={chunkPresetLong}
                       onChange={(e) => setChunkPresetLong(Number(e.target.value) || 50)}
-                      className="w-full rounded-2xl border border-editorial-border bg-editorial-bg px-4 py-3 text-sm font-mono outline-none focus:border-editorial-ink/40"
+                      className="w-full rounded-[18px] border border-editorial-border bg-editorial-bg px-4 py-3 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                     />
                     <p className="text-[10px] leading-relaxed text-editorial-muted">
                       {t('settings.chunkPresetLongHint')}
@@ -180,11 +184,13 @@ export function SettingsModal() {
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
                   {t('settings.providerConfig')}
                 </label>
+                <div className="rounded-[20px] border border-editorial-border bg-editorial-textbox/15 px-5 py-5">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <ApiKeyInput label="Gemini (Native)" provider="gemini" />
                   <ApiKeyInput label="OpenAI" provider="openai" />
                   <ApiKeyInput label="Anthropic" provider="anthropic" />
                   <ApiKeyInput label="DeepSeek" provider="deepseek" />
+                </div>
                 </div>
               </div>
 
@@ -193,8 +199,8 @@ export function SettingsModal() {
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
                   {t('ollama.title')}
                 </label>
-                <div className="p-6 border border-editorial-border bg-editorial-textbox/20 space-y-4">
-                  <div className="flex items-center justify-between">
+                <div className="rounded-[20px] border border-editorial-border bg-editorial-textbox/20 p-6 space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <Server size={16} className="text-editorial-muted" />
                       <input
@@ -288,7 +294,7 @@ export function SettingsModal() {
                   {t('cost.pricingOverrides')}
                 </button>
                 {showPricingOverrides && (
-                  <div className="space-y-3">
+                  <div className="space-y-3 rounded-[20px] border border-editorial-border bg-editorial-textbox/15 px-5 py-5">
                     <p className="text-[10px] text-editorial-muted italic">{t('cost.overrideHint')}</p>
                     <div className="border border-editorial-border overflow-x-auto">
                       <table className="w-full text-xs font-mono">
@@ -364,18 +370,34 @@ export function SettingsModal() {
                 )}
               </div>
 
-              <div className="p-8 border border-editorial-border bg-editorial-textbox/20 flex gap-4 items-start">
-                <AlertCircle size={20} className="text-editorial-accent shrink-0" />
-                <div className="space-y-2">
-                  <h4 className="text-[11px] font-bold uppercase tracking-widest">{t('settings.securityAdvisory')}</h4>
-                  <p className="text-xs text-editorial-muted leading-relaxed">
-                    {t('settings.securityMessage')}
-                  </p>
-                </div>
+              <div className="rounded-[20px] border border-editorial-border bg-editorial-textbox/20">
+                <button
+                  type="button"
+                  onClick={() => setShowSecurityAdvisory((current) => !current)}
+                  className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
+                  aria-expanded={showSecurityAdvisory}
+                >
+                  <div className="flex items-center gap-3">
+                    <AlertCircle size={18} className="text-editorial-accent shrink-0" />
+                    <div>
+                      <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
+                        {t('settings.securityAdvisory')}
+                      </div>
+                    </div>
+                  </div>
+                  {showSecurityAdvisory ? <ChevronUp size={14} className="text-editorial-muted" /> : <ChevronDown size={14} className="text-editorial-muted" />}
+                </button>
+                {showSecurityAdvisory ? (
+                  <div className="border-t border-editorial-border px-5 py-4">
+                    <p className="text-sm leading-relaxed text-editorial-muted">
+                      {t('settings.securityMessage')}
+                    </p>
+                  </div>
+                ) : null}
               </div>
 
               </div>
-            </div>
+            </EditorialModalShell>
           </motion.div>
         </div>
       )}

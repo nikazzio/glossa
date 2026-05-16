@@ -55,7 +55,6 @@ export function DictionariesTab() {
   const handleSaveEntries = async (id: string) => {
     try {
       await saveGlossaryEntries(id);
-      // Ricarica nel pipelineStore se è il dizionario assegnato al progetto corrente
       if (config.assignedGlossaryId === id) {
         await assignGlossary(id);
       }
@@ -134,44 +133,57 @@ export function DictionariesTab() {
   };
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <p className="text-[11px] text-editorial-muted">{t('library.dictionariesDesc')}</p>
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-[11px] leading-relaxed text-editorial-muted">{t('library.dictionariesDesc')}</p>
         <button
           onClick={() => setCreating(true)}
           title={t('library.newDictionary')}
-          className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-widest text-editorial-accent hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          className="flex items-center gap-2 rounded-full border border-editorial-border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
         >
           <Plus size={13} /> {t('library.newDictionary')}
         </button>
       </div>
 
       {creating && (
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-3 rounded-[20px] border border-editorial-border bg-editorial-textbox/15 p-4 sm:flex-row sm:items-center">
           <input
             autoFocus
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') setCreating(false); }}
             placeholder={t('library.dictionaryNamePlaceholder')}
-            className="flex-1 bg-transparent rounded py-2 px-3 text-[11px] font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent border border-editorial-border/60 focus:border-editorial-accent/60"
+            className="flex-1 rounded-[16px] border border-editorial-border bg-editorial-bg/80 px-4 py-2.5 text-sm font-display italic text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
           />
-          <button onClick={handleCreate} className="text-editorial-accent hover:text-editorial-ink focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent p-1">
-            <Check size={14} />
-          </button>
-          <button onClick={() => setCreating(false)} className="text-editorial-muted hover:text-editorial-ink focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent p-1">
-            <X size={14} />
-          </button>
+          <div className="flex items-center justify-end gap-2">
+            <button
+              onClick={() => setCreating(false)}
+              title={t('common.cancel')}
+              aria-label={t('common.cancel')}
+              className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            >
+              <X size={14} />
+            </button>
+            <button
+              onClick={handleCreate}
+              disabled={!newName.trim()}
+              title={t('common.save')}
+              aria-label={t('common.save')}
+              className="rounded-full bg-editorial-accent p-2 text-white transition-colors hover:bg-editorial-accent/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Check size={14} />
+            </button>
+          </div>
         </div>
       )}
 
-      {glossaries.length === 0 && !creating && (
-        <p className="text-[11px] text-editorial-muted/60 text-center py-6 border border-dashed border-editorial-border/60 rounded-lg">
+      {glossaries.length === 0 && !creating ? (
+        <p className="rounded-[20px] border border-dashed border-editorial-border/60 px-4 py-8 text-center text-sm italic text-editorial-muted/70">
           {t('library.noDictionaries')}
         </p>
-      )}
+      ) : null}
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         {glossaries.map((g) => {
           const isExpanded = expandedGlossaryId === g.id;
           const isAssigned = config.assignedGlossaryId === g.id;
@@ -180,14 +192,20 @@ export function DictionariesTab() {
           return (
             <div
               key={g.id}
-              className={`rounded-lg border ${isAssigned ? 'border-editorial-accent/40 bg-editorial-accent/5' : 'border-editorial-border/40 bg-editorial-textbox/10'}`}
+              className={`rounded-[20px] border transition-colors ${
+                isAssigned
+                  ? 'border-editorial-accent/50 bg-editorial-accent/8'
+                  : 'border-editorial-border bg-editorial-textbox/12 hover:border-editorial-accent/30'
+              }`}
             >
-              <div className="flex items-center gap-2 px-3 py-2.5">
+              <div className="flex flex-wrap items-center gap-3 px-4 py-3">
                 <button
                   onClick={() => handleToggle(g.id)}
-                  className="flex-1 flex items-center gap-2 text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                  className="flex flex-1 items-center gap-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 >
-                  {isExpanded ? <ChevronUp size={13} className="text-editorial-muted shrink-0" /> : <ChevronDown size={13} className="text-editorial-muted shrink-0" />}
+                  {isExpanded
+                    ? <ChevronUp size={14} className="shrink-0 text-editorial-muted" />
+                    : <ChevronDown size={14} className="shrink-0 text-editorial-muted" />}
                   {renamingId === g.id ? (
                     <input
                       autoFocus
@@ -196,11 +214,11 @@ export function DictionariesTab() {
                       onKeyDown={(e) => { if (e.key === 'Enter') handleRenameSubmit(g.id); if (e.key === 'Escape') setRenamingId(null); }}
                       onBlur={() => handleRenameSubmit(g.id)}
                       onClick={(e) => e.stopPropagation()}
-                      className="flex-1 bg-transparent text-[12px] font-mono outline-none border-b border-editorial-accent/60"
+                      className="flex-1 border-b border-editorial-accent/60 bg-transparent text-sm font-display italic outline-none"
                     />
                   ) : (
                     <span
-                      className="text-[12px] font-mono text-editorial-ink truncate"
+                      className="truncate font-display text-base italic text-editorial-ink"
                       onDoubleClick={(e) => { e.stopPropagation(); setRenamingId(g.id); setRenameValue(g.name); }}
                       title={t('library.doubleClickRename')}
                     >
@@ -208,18 +226,18 @@ export function DictionariesTab() {
                     </span>
                   )}
                   {isAssigned && (
-                    <span className="ml-1 shrink-0 rounded-full bg-editorial-accent/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-editorial-accent">
+                    <span className="shrink-0 rounded-full bg-editorial-accent/20 px-3 py-0.5 text-[9px] font-bold uppercase tracking-[0.25em] text-editorial-accent">
                       {t('library.assignedBadge')}
                     </span>
                   )}
                 </button>
 
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex shrink-0 items-center gap-1.5">
                   {!isAssigned && (
                     <button
                       onClick={() => handleAssign(g.id)}
                       title={t('library.assignToProject')}
-                      className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent px-2 py-1 border border-editorial-border/40 rounded"
+                      className="rounded-full border border-editorial-border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                     >
                       {t('library.assign')}
                     </button>
@@ -227,41 +245,41 @@ export function DictionariesTab() {
                   <button
                     onClick={() => { setCsvTargetId(g.id); }}
                     title={t('library.importCsv')}
-                    className="p-1 text-editorial-muted/60 hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
                     aria-label={t('library.importCsv')}
+                    className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   >
-                    <Upload size={12} />
+                    <Upload size={13} />
                   </button>
                   <button
                     onClick={() => handleFork(g.id, g.name)}
                     title={t('library.forkDictionary')}
-                    className="p-1 text-editorial-muted/60 hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
                     aria-label={t('library.forkDictionary')}
+                    className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   >
-                    <Copy size={12} />
+                    <Copy size={13} />
                   </button>
                   <button
                     onClick={() => handleDelete(g.id, g.name)}
                     title={t('common.delete')}
-                    className="p-1 text-editorial-muted/60 hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
-                    aria-label={t('common.delete')}
+                    aria-label={`${t('common.delete')}: ${g.name}`}
+                    className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   >
-                    <Trash2 size={12} />
+                    <Trash2 size={13} />
                   </button>
                 </div>
               </div>
 
               {isExpanded && (
-                <div className="px-3 pb-3 border-t border-editorial-border/30 pt-3">
+                <div className="border-t border-editorial-border/40 px-4 pb-4 pt-4">
                   <DictionaryEntryEditor
                     entries={entriesMap[g.id] ?? []}
                     onChange={(entries) => handleEntriesChange(g.id, entries)}
                   />
                   {isDirty && (
-                    <div className="mt-3 flex justify-end">
+                    <div className="mt-4 flex justify-end">
                       <button
                         onClick={() => handleSaveEntries(g.id)}
-                        className="flex items-center gap-1.5 px-4 py-2 text-[11px] font-bold uppercase tracking-widest bg-editorial-ink text-white hover:bg-editorial-ink/80 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                        className="flex items-center gap-2 rounded-full bg-editorial-accent px-5 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-white transition-colors hover:bg-editorial-accent/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                       >
                         <Check size={13} />
                         {t('common.save')}

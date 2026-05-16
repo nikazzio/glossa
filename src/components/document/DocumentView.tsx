@@ -10,14 +10,12 @@ import {
   Languages,
   Loader2,
   Lock,
-  Merge,
   Pencil,
   PanelLeft,
   PanelRight,
   Play,
   RotateCcw,
   ScanLine,
-  Scissors,
   Square,
   Wand2,
 } from 'lucide-react';
@@ -30,12 +28,10 @@ import { useUiStore } from '../../stores/uiStore';
 import { usePricingStore } from '../../stores/pricingStore';
 import type { TranslationChunk } from '../../types';
 import {
-  findBestSplitIndex,
   indexPad,
   qualityLabelKey,
   qualityTone,
 } from '../../utils';
-import { buildSplitPreview } from '../../utils/documentWorkflow';
 import { estimatePipelineCost } from '../../utils/costEstimate';
 import { CopyButton, MarkdownEditor, ProcessingLine } from '../common';
 import { CostBreakdownPanel } from '../pipeline/CostBadge';
@@ -73,8 +69,6 @@ export function DocumentView({
     updateChunkOriginalText,
     toggleChunkTranslationLock,
     toggleChunkSourceEditing,
-    splitChunkAt,
-    mergeChunkWithNext,
   } = useChunksStore();
   const {
     selectedChunkId,
@@ -86,14 +80,11 @@ export function DocumentView({
     focusedIssueQuery,
     focusedIssueRequestId,
     clearFocusedIssue,
-    pendingSplitChunkId,
-    setPendingSplitChunkId,
   } = useUiStore();
 
   const [viewportWidth, setViewportWidth] = useState(
     typeof window === 'undefined' ? 0 : window.innerWidth,
   );
-  const [splitDraft, setSplitDraft] = useState<{ chunkId: string; splitAt: number } | null>(null);
   const [paneFocus, setPaneFocus] = useState<'both' | 'source' | 'translation'>('both');
   const [traceStageId, setTraceStageId] = useState<string | null>(null);
   const [showCostPanel, setShowCostPanel] = useState(false);
@@ -147,20 +138,6 @@ export function DocumentView({
   useEffect(() => {
     setSelectedStageId(lastStageId);
   }, [currentChunk?.id, lastStageId]);
-
-  const openSplitDialog = (chunkId: string, text: string) => {
-    const initialSplitAt =
-      findBestSplitIndex(text, { markdownAware: config.markdownAware }) ??
-      Math.max(1, Math.floor(text.length / 2));
-    setSplitDraft({ chunkId, splitAt: initialSplitAt });
-  };
-
-  useEffect(() => {
-    if (!pendingSplitChunkId || !currentChunk || currentChunk.id !== pendingSplitChunkId) return;
-    openSplitDialog(currentChunk.id, currentChunk.originalText);
-    setPendingSplitChunkId(null);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingSplitChunkId, currentChunk?.id]);
 
   // Hooks devono essere chiamati prima di qualsiasi return condizionale
   const hasGlossary = config.glossary.length > 0;
@@ -426,29 +403,7 @@ export function DocumentView({
                 >
                   <Pencil size={16} />
                 </ChunkIconButton>
-              ) : (
-                <>
-                  <ChunkIconButton
-                    onClick={() => openSplitDialog(currentChunk.id, currentChunk.originalText)}
-                    title={t('pipeline.splitChunk')}
-                    disabled={isProcessing || currentChunk.originalText.trim().length < 2}
-                  >
-                    <Scissors size={16} />
-                  </ChunkIconButton>
-                  <ChunkIconButton
-                    onClick={() => mergeChunkWithNext(currentChunk.id)}
-                    title={t('pipeline.mergeNext')}
-                    disabled={
-                      isProcessing ||
-                      currentIndex === chunks.length - 1 ||
-                      chunks[currentIndex + 1]?.status === 'completed' ||
-                      chunks[currentIndex + 1]?.status === 'processing'
-                    }
-                  >
-                    <Merge size={16} />
-                  </ChunkIconButton>
-                </>
-              )}
+              ) : null}
               {hasGlossary && (
                 <ChunkIconButton
                   onClick={() => setGlossaryHighlightEnabled(!glossaryHighlightEnabled)}
@@ -564,18 +519,6 @@ export function DocumentView({
         </div>
 
       </div>
-      {splitDraft && currentChunk.id === splitDraft.chunkId && (
-        <SplitChunkDialog
-          text={currentChunk.originalText}
-          splitAt={splitDraft.splitAt}
-          onSplitAtChange={(splitAt) => setSplitDraft((current) => (current ? { ...current, splitAt } : current))}
-          onCancel={() => setSplitDraft(null)}
-          onConfirm={() => {
-            const didSplit = splitChunkAt(currentChunk.id, splitDraft.splitAt);
-            if (didSplit) setSplitDraft(null);
-          }}
-        />
-      )}
       {traceStageId ? (
         <StageTraceDialog
           chunk={currentChunk}
@@ -811,112 +754,6 @@ function CompactStatusIndicator({
         </span>
       )}
     </span>
-  );
-}
-
-function SplitChunkDialog({
-  text,
-  splitAt,
-  onSplitAtChange,
-  onCancel,
-  onConfirm,
-}: {
-  text: string;
-  splitAt: number;
-  onSplitAtChange: (splitAt: number) => void;
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  const { t } = useTranslation();
-  const trapRef = useFocusTrap(true, onCancel);
-  const adjustedPreview = buildSplitPreview(text, splitAt, {
-    markdownAware: usePipelineStore.getState().config.markdownAware,
-  });
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-editorial-ink/35 p-4 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="manual-split-title"
-      aria-describedby="manual-split-hint"
-      ref={trapRef}
-    >
-      <div className="flex max-h-[90vh] w-full max-w-5xl flex-col rounded-[28px] border border-editorial-border bg-editorial-bg shadow-[0_24px_80px_rgba(26,26,26,0.2)]">
-        <div className="shrink-0 border-b border-editorial-border px-6 py-5 md:px-8 md:py-6">
-          <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-            {t('document.manualSplitLabel')}
-          </div>
-          <h3
-            id="manual-split-title"
-            className="mt-2 font-display text-3xl italic tracking-tight text-editorial-ink"
-          >
-            {t('document.manualSplitTitle')}
-          </h3>
-          <p
-            id="manual-split-hint"
-            className="mt-2 text-sm leading-relaxed text-editorial-muted"
-          >
-            {t('document.manualSplitHint')}
-          </p>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-6 py-6 md:px-8 custom-scrollbar">
-          <div className="grid gap-6 xl:grid-cols-2">
-            <div className="rounded-[22px] border border-editorial-border bg-editorial-textbox/35 p-5">
-              <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
-                {t('pipeline.originalSource')}
-              </div>
-              <textarea
-                value={text}
-                readOnly
-                onClick={(event) => onSplitAtChange(event.currentTarget.selectionStart)}
-                onKeyUp={(event) => onSplitAtChange(event.currentTarget.selectionStart)}
-                onSelect={(event) => onSplitAtChange(event.currentTarget.selectionStart)}
-                className="min-h-[260px] w-full resize-none bg-transparent text-sm leading-7 text-editorial-ink outline-none"
-              />
-            </div>
-
-            <div className="space-y-4">
-              <div className="rounded-[22px] border border-editorial-border bg-editorial-bg p-5">
-                <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
-                  {t('document.splitPreviewFirst')}
-                </div>
-                <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-editorial-ink">
-                  {adjustedPreview.beforeText || '—'}
-                </p>
-              </div>
-              <div className="rounded-[22px] border border-editorial-border bg-editorial-bg p-5">
-                <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
-                  {t('document.splitPreviewSecond')}
-                </div>
-                <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-editorial-ink">
-                  {adjustedPreview.afterText || '—'}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="shrink-0 flex flex-col-reverse gap-3 border-t border-editorial-border px-6 py-4 md:px-8 sm:flex-row sm:justify-end">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="rounded-full border border-editorial-border px-5 py-3 text-[11px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink"
-          >
-            {t('common.cancel')}
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={!adjustedPreview.isValid}
-            className="rounded-full bg-editorial-ink px-5 py-3 text-[11px] font-bold uppercase tracking-[0.25em] text-white transition-colors hover:bg-editorial-accent disabled:opacity-40"
-          >
-            {t('document.manualSplitConfirm')}
-          </button>
-        </div>
-      </div>
-    </div>
   );
 }
 

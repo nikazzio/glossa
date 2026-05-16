@@ -26,7 +26,6 @@ interface UiState {
   focusedChunkId: string | null;
   focusedIssueQuery: string | null;
   focusedIssueRequestId: number;
-  pendingSplitChunkId: string | null;
 
   // App-level chunk preset word targets (persisted)
   chunkPresetShort: number;
@@ -52,7 +51,6 @@ interface UiState {
   setFocusedChunkId: (chunkId: string | null) => void;
   focusIssueInChunk: (chunkId: string, query?: string | null) => void;
   clearFocusedIssue: () => void;
-  setPendingSplitChunkId: (chunkId: string | null) => void;
   setChunkPresetShort: (value: number) => void;
   setChunkPresetMedium: (value: number) => void;
   setChunkPresetLong: (value: number) => void;
@@ -78,7 +76,6 @@ export const useUiStore = create<UiState>()(
   focusedChunkId: null,
   focusedIssueQuery: null,
   focusedIssueRequestId: 0,
-  pendingSplitChunkId: null,
   chunkPresetShort: 400,
   chunkPresetMedium: 700,
   chunkPresetLong: 1000,
@@ -168,7 +165,6 @@ export const useUiStore = create<UiState>()(
       focusedIssueRequestId: state.focusedIssueRequestId + 1,
     })),
   clearFocusedIssue: () => set({ focusedIssueQuery: null }),
-  setPendingSplitChunkId: (chunkId) => set({ pendingSplitChunkId: chunkId }),
   setChunkPresetShort: (value) => set({ chunkPresetShort: Math.max(50, value) }),
   setChunkPresetMedium: (value) => set({ chunkPresetMedium: Math.max(50, value) }),
   setChunkPresetLong: (value) => set({ chunkPresetLong: Math.max(50, value) }),

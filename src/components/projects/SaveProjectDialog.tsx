@@ -1,8 +1,9 @@
-import { Save, X } from 'lucide-react';
+import { Save } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { EditorialModalShell } from '../common';
 
 interface SaveProjectDialogProps {
   open: boolean;
@@ -54,40 +55,43 @@ export function SaveProjectDialog({
             initial={{ scale: 0.96, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.96, opacity: 0 }}
-            className="relative w-full max-w-md border border-editorial-border bg-editorial-bg p-8 shadow-2xl"
+            className="relative w-full max-w-md"
           >
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={saving}
-              title={t('common.cancel')}
-              aria-label={t('common.cancel')}
-              className="absolute right-5 top-5 text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-35"
-            >
-              <X size={18} />
-            </button>
-
-            <div className="flex items-start gap-4">
-              <div className="mt-1 rounded-full border border-editorial-border bg-editorial-textbox/45 p-2 text-editorial-accent">
-                <Save size={18} />
-              </div>
-              <div className="flex-1 space-y-3">
-                <h3
-                  id="save-project-title"
-                  className="font-display text-lg italic tracking-tight text-editorial-ink"
-                >
-                  {t('projects.firstSaveTitle')}
-                </h3>
-                <p
-                  id="save-project-description"
-                  className="text-xs leading-relaxed text-editorial-muted"
-                >
+            <EditorialModalShell
+              titleId="save-project-title"
+              title={t('projects.firstSaveTitle')}
+              closeLabel={t('common.cancel')}
+              onClose={onClose}
+              closeDisabled={saving}
+              icon={<Save size={20} />}
+              description={
+                <p id="save-project-description">
                   {t('projects.firstSaveDescription')}
                 </p>
-              </div>
-            </div>
-
-            <div className="mt-6">
+              }
+              widthClassName="max-w-md"
+              bodyClassName="px-6 py-6 md:px-8"
+              footer={
+                <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    disabled={saving}
+                    className="rounded-full border border-editorial-border px-5 py-3 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-35"
+                  >
+                    {t('common.cancel')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleConfirm()}
+                    disabled={!name.trim() || saving}
+                    className="rounded-full bg-editorial-ink px-5 py-3 text-[10px] font-bold uppercase tracking-[0.25em] text-white transition-colors hover:bg-editorial-ink/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-35"
+                  >
+                    {saving ? t('projects.statusSaving') : t('projects.createAndSave')}
+                  </button>
+                </div>
+              }
+            >
               <input
                 autoFocus
                 value={name}
@@ -103,28 +107,9 @@ export function SaveProjectDialog({
                   }
                 }}
                 placeholder={t('projects.namePlaceholder')}
-                className="w-full border border-editorial-border bg-editorial-textbox/30 px-4 py-3 text-sm text-editorial-ink outline-none transition-colors focus:border-editorial-accent focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="w-full rounded-[18px] border border-editorial-border bg-editorial-textbox/30 px-4 py-3 text-sm text-editorial-ink outline-none transition-colors focus:border-editorial-accent focus-visible:ring-2 focus-visible:ring-editorial-accent"
               />
-            </div>
-
-            <div className="mt-8 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={saving}
-                className="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-35"
-              >
-                {t('common.cancel')}
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleConfirm()}
-                disabled={!name.trim() || saving}
-                className="bg-editorial-ink px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white transition-colors hover:bg-editorial-ink/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-35"
-              >
-                {saving ? t('projects.statusSaving') : t('projects.createAndSave')}
-              </button>
-            </div>
+            </EditorialModalShell>
           </motion.div>
         </div>
       ) : null}

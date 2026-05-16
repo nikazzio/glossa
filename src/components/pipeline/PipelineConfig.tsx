@@ -1,4 +1,4 @@
-import { ArrowRightLeft, Play, Languages, FileText, Layers, Pencil, Scale, RefreshCw, Loader2, X, RotateCcw, Wand2, BookmarkPlus, BookOpen, Check, Trash2, Bot, Settings, Globe, ShieldCheck, Cpu, AlertTriangle, Eye } from 'lucide-react';
+import { ArrowRightLeft, Play, Languages, FileText, Layers, Pencil, Scale, RefreshCw, Loader2, X, RotateCcw, Wand2, BookmarkPlus, BookOpen, Check, Trash2, Bot, Settings, Globe, ShieldCheck, Cpu, AlertTriangle, Eye, KeyRound } from 'lucide-react';
 import { useMemo, useState, useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -17,6 +17,7 @@ import { usePricingStore } from '../../stores/pricingStore';
 import { llmService, ollamaService } from '../../services/llmService';
 import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
 import { PromptPreviewTab } from './PromptPreviewTab';
+import { canRefineWithProvider, formatProviderModelLabel, useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
 
 export type ConfigSection = 'settings' | 'translation' | 'audit' | 'glossary' | 'preview';
 
@@ -26,6 +27,8 @@ interface PersonaEditorProps {
   targetLanguage: string;
   templates: PromptTemplate[];
   isRefining: boolean;
+  canRefine: boolean;
+  refineLabel: string;
   onChange: (value: string | undefined) => void;
   onRefine: () => void;
   onSaveTemplate: (name: string, prompt: string) => Promise<void>;
@@ -38,6 +41,8 @@ function PersonaEditor({
   targetLanguage,
   templates,
   isRefining,
+  canRefine,
+  refineLabel,
   onChange,
   onRefine,
   onSaveTemplate,
@@ -91,7 +96,7 @@ function PersonaEditor({
   };
 
   return (
-    <div className="mt-4 pt-4 border-t border-editorial-border/40 space-y-2">
+    <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
           <Bot size={11} className="text-editorial-accent shrink-0" />
@@ -110,13 +115,16 @@ function PersonaEditor({
               <button
                 type="button"
                 onClick={onRefine}
-                disabled={isRefining || !persona?.trim()}
-                title={t('pipeline.refinePrompt')}
-                aria-label={t('pipeline.refinePrompt')}
+                disabled={isRefining || !persona?.trim() || !canRefine}
+                title={t('pipeline.refinePromptWithModel', { model: refineLabel })}
+                aria-label={t('pipeline.refinePromptWithModel', { model: refineLabel })}
                 className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40"
               >
                 {isRefining ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
               </button>
+              <span className="rounded-full border border-editorial-border/60 px-2 py-1 text-[9px] font-mono text-editorial-muted">
+                {refineLabel}
+              </span>
               <button
                 type="button"
                 onClick={() => { setShowSaveName(!showSaveName); setShowTemplateList(false); }}
@@ -276,6 +284,8 @@ interface AuditPromptEditorProps {
   placeholder: string;
   templates: PromptTemplate[];
   isRefining: boolean;
+  canRefine: boolean;
+  refineLabel: string;
   onRefine: () => void;
   onChange: (value: string) => void;
   onApplyTemplate: (template: PromptTemplate) => void;
@@ -300,6 +310,8 @@ function AuditPromptEditor({
   placeholder,
   templates,
   isRefining,
+  canRefine,
+  refineLabel,
   onRefine,
   onChange,
   onApplyTemplate,
@@ -358,13 +370,16 @@ function AuditPromptEditor({
             <button
               type="button"
               onClick={onRefine}
-              disabled={isRefining || !value.trim()}
-              title={t('pipeline.refinePrompt')}
-              aria-label={`${t('pipeline.refinePrompt')}: ${label}`}
+              disabled={isRefining || !value.trim() || !canRefine}
+              title={t('pipeline.refinePromptWithModel', { model: refineLabel })}
+              aria-label={`${t('pipeline.refinePromptWithModel', { model: refineLabel })}: ${label}`}
               className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40"
             >
               {isRefining ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
             </button>
+            <span className="rounded-full border border-editorial-border/60 px-2 py-1 text-[9px] font-mono text-editorial-muted">
+              {refineLabel}
+            </span>
             <button
               type="button"
               onClick={() => { setShowSaveName(!showSaveName); setShowTemplateList(false); }}
@@ -502,6 +517,7 @@ export function PipelineConfig({
   const { chunks, isProcessing, cancelRequested, resetCompletedChunks } = useChunksStore();
   const ollamaStatus = useUiStore((s) => s.ollamaStatus);
   const ollamaModels = useUiStore((s) => s.ollamaModels);
+  const keyStatuses = useProviderKeyStatus();
   const { t } = useTranslation();
   const judgeModels = useJudgeModelOptions(config.judgeProvider);
   const [isRefreshingOllama, setIsRefreshingOllama] = useState(false);
@@ -553,6 +569,13 @@ export function PipelineConfig({
   );
 
   const stage0 = config.stages[0];
+  const personaRefineLabel = formatProviderModelLabel(stage0?.provider ?? 'gemini', stage0?.model ?? '');
+  const canRefinePersona = stage0 ? canRefineWithProvider(stage0.provider, keyStatuses) : false;
+  const judgeRefineLabel = formatProviderModelLabel(config.judgeProvider, config.judgeModel);
+  const canRefineJudge = canRefineWithProvider(config.judgeProvider, keyStatuses);
+  const missingRefineProviders = (Object.entries(keyStatuses) as Array<[string, boolean | undefined]>)
+    .filter(([, configured]) => configured === false)
+    .map(([provider]) => provider);
 
   // Min context window across all source-aware stages (translation + refine receive source text)
   const minSourceAwareContextWindow = config.stages
@@ -747,6 +770,8 @@ export function PipelineConfig({
             targetLanguage={config.targetLanguage}
             templates={personaTemplates}
             isRefining={isRefiningPersona}
+            canRefine={canRefinePersona}
+            refineLabel={personaRefineLabel}
             onChange={(value) => setConfig((prev) => ({ ...prev, persona: value }))}
             onRefine={handleRefinePersona}
             onSaveTemplate={(name, prompt) => saveTemplate(name, prompt, 'persona')}
@@ -983,18 +1008,34 @@ export function PipelineConfig({
                 </p>
               )}
             </div>
+
             <PersonaEditor
               persona={config.persona}
               sourceLanguage={config.sourceLanguage}
               targetLanguage={config.targetLanguage}
               templates={personaTemplates}
               isRefining={isRefiningPersona}
+              canRefine={canRefinePersona}
+              refineLabel={personaRefineLabel}
               onChange={(value) => setConfig((prev) => ({ ...prev, persona: value }))}
               onRefine={handleRefinePersona}
               onSaveTemplate={(name, prompt) => saveTemplate(name, prompt, 'persona')}
               deleteTemplate={deleteTemplate}
             />
 
+            <div className="space-y-2">
+              <div className="flex items-center gap-1.5">
+                <KeyRound size={11} className="text-editorial-accent shrink-0" />
+                <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                  {t('pipeline.refineKeyLabel')}
+                </p>
+              </div>
+              <p className="text-[11px] leading-relaxed text-editorial-muted">
+                {missingRefineProviders.length > 0
+                  ? t('pipeline.refineKeyMissingHint', { providers: missingRefineProviders.join(', ') })
+                  : t('pipeline.refineKeyReadyHint')}
+              </p>
+            </div>
           </div>
         )}
 
@@ -1133,6 +1174,7 @@ export function PipelineConfig({
                     ollamaStatus={ollamaStatus}
                     isRefreshingOllama={isRefreshingOllama}
                     modelOptions={stageModelOptions}
+                    keyStatuses={keyStatuses}
                     onUpdate={(updates) => updateStage(stage.id, updates)}
                     onRefinePrompt={() => handleRefineStagePrompt(stage.id)}
                     onRefreshOllama={handleRefreshOllama}
@@ -1231,6 +1273,8 @@ export function PipelineConfig({
               placeholder={t('pipeline.auditPlaceholder')}
               templates={auditTemplates}
               isRefining={isRefiningJudge}
+              canRefine={canRefineJudge}
+              refineLabel={judgeRefineLabel}
               onRefine={handleRefineJudgePrompt}
               onChange={(value) => setConfig((prev) => ({ ...prev, judgePrompt: value }))}
               onApplyTemplate={(template) => {
@@ -1254,6 +1298,8 @@ export function PipelineConfig({
               placeholder={t('pipeline.coherencePromptPlaceholder')}
               templates={auditTemplates}
               isRefining={isRefiningCoherence}
+              canRefine={canRefineJudge}
+              refineLabel={judgeRefineLabel}
               onRefine={handleRefineCoherencePrompt}
               onChange={(value) => setConfig((prev) => ({ ...prev, coherencePrompt: value }))}
               onApplyTemplate={(template) => {
