@@ -71,9 +71,19 @@ describe('normalizeImportedText', () => {
       expect(normalizeImportedText(input, 'markdown')).toBe('- item one\n- item two');
     });
 
-    it('collapses excess blank lines between sections', () => {
-      const input = '# Title\n\n\n\nParagraph.';
-      expect(normalizeImportedText(input, 'markdown')).toBe('# Title\n\nParagraph.');
+    it('preserves markdown hard line breaks', () => {
+      const input = 'First line with hard break.  \nSecond line.';
+      expect(normalizeImportedText(input, 'markdown')).toBe(input);
+    });
+
+    it('preserves leading indentation for indented blocks', () => {
+      const input = '    const x = 1;\n\nParagraph.';
+      expect(normalizeImportedText(input, 'markdown')).toBe(input);
+    });
+
+    it('preserves runs of blank lines inside fenced blocks', () => {
+      const input = '```text\nline 1\n\n\nline 2\n```\n\nParagraph.';
+      expect(normalizeImportedText(input, 'markdown')).toBe(input);
     });
   });
 
@@ -84,9 +94,9 @@ describe('normalizeImportedText', () => {
       expect(normalizeImportedText(input, 'plain')).toBe(expected);
     });
 
-    it('normalizes a DOCX markdown with redundant blank lines', () => {
-      const input = '# Chapter\n\n\n\nFirst paragraph.\n\n\nSecond paragraph.';
-      const expected = '# Chapter\n\nFirst paragraph.\n\nSecond paragraph.';
+    it('normalizes DOCX markdown line endings without rewriting markdown whitespace', () => {
+      const input = '# Chapter\r\n\r\n\r\n\r\nFirst paragraph.  \r\n\r\n    code block';
+      const expected = '# Chapter\n\n\n\nFirst paragraph.  \n\n    code block';
       expect(normalizeImportedText(input, 'markdown')).toBe(expected);
     });
   });
