@@ -1,4 +1,4 @@
-import { ArrowRightLeft, Play, Languages, FileText, Layers, Pencil, Scale, RefreshCw, Loader2, X, RotateCcw, Wand2, BookmarkPlus, BookOpen, Check, Trash2, Bot, Settings, Globe, ShieldCheck, Cpu, AlertTriangle } from 'lucide-react';
+import { ArrowRightLeft, Play, Languages, FileText, Layers, Pencil, Scale, RefreshCw, Loader2, X, RotateCcw, Wand2, BookmarkPlus, BookOpen, Check, Trash2, Bot, Settings, Globe, ShieldCheck, Cpu, AlertTriangle, Eye } from 'lucide-react';
 import { useMemo, useState, useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -16,8 +16,9 @@ import { estimatePipelineCost } from '../../utils/costEstimate';
 import { usePricingStore } from '../../stores/pricingStore';
 import { llmService, ollamaService } from '../../services/llmService';
 import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
+import { PromptPreviewTab } from './PromptPreviewTab';
 
-export type ConfigSection = 'settings' | 'translation' | 'audit' | 'glossary';
+export type ConfigSection = 'settings' | 'translation' | 'audit' | 'glossary' | 'preview';
 
 interface PersonaEditorProps {
   persona: string | undefined;
@@ -671,6 +672,7 @@ export function PipelineConfig({
     translation: t('pipeline.tabTranslation'),
     audit: t('pipeline.tabAudit'),
     glossary: t('pipeline.tabGlossary'),
+    preview: t('pipeline.tabPreview'),
   };
 
   const tabBtnCls = (active: boolean) =>
@@ -816,6 +818,19 @@ export function PipelineConfig({
           className={tabBtnCls(activeTab === 'glossary')}
         >
           <BookOpen size={16} />
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'preview'}
+          aria-controls="pconfig-panel-preview"
+          id="pconfig-tab-preview"
+          onClick={() => setActiveTab('preview')}
+          title={t('pipeline.tabPreview')}
+          aria-label={t('pipeline.tabPreview')}
+          className={tabBtnCls(activeTab === 'preview')}
+        >
+          <Eye size={16} />
         </button>
         <span className="mx-1 h-4 w-px bg-editorial-border/70" aria-hidden="true" />
         <span className="text-sm font-display italic text-editorial-ink">{TAB_TITLE[activeTab]}</span>
@@ -1275,6 +1290,11 @@ export function PipelineConfig({
               </div>
             )}
           </div>
+        )}
+
+        {/* ── PREVIEW ── */}
+        {activeTab === 'preview' && (
+          <PromptPreviewTab config={config} />
         )}
 
       </div>
