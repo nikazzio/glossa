@@ -86,6 +86,7 @@ export interface ChunkTextOptions {
   minWords?: number;
   maxWords?: number;
   headingAware?: boolean;
+  carryTrailingShortBlocks?: boolean;
 }
 
 export function estimateTextStats(text: string): TextStats {
@@ -118,6 +119,10 @@ export function chunkText(text: string, options: ChunkTextOptions = {}): string[
 
   if (options.headingAware) {
     chunks = mergeHeadingChunks(chunks);
+  }
+
+  if (options.carryTrailingShortBlocks) {
+    chunks = mergeTrailingShortBlocks(chunks);
   }
 
   if (options.minWords && options.minWords > 0) {
@@ -287,6 +292,55 @@ function mergeHeadingChunks(chunks: string[]): string[] {
   if (headingAccumulator) {
     result.push(headingAccumulator);
   }
+  return result;
+}
+
+function extractTrailingShortBlock(text: string): { main: string; trailing: string } | null {
+  const trimmed = text.trim();
+  const sep = trimmed.lastIndexOf('\n\n');
+  if (sep === -1) return null;
+  const main = trimmed.slice(0, sep).trim();
+  const trailing = trimmed.slice(sep + 2).trim();
+  if (!main || !trailing) return null;
+  if (trailing.split('\n').filter(Boolean).length > 2) return null;
+  return { main, trailing };
+}
+
+function mergeTrailingShortBlocks(chunks: string[]): string[] {
+  if (chunks.length <= 1) return chunks;
+  const result: string[] = [];
+  let carried = '';
+
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i]!;
+    const hadCarried = carried.length > 0;
+    const withCarried = hadCarried ? `${carried}\n\n${chunk}` : chunk;
+    carried = '';
+
+    if (i === chunks.length - 1) {
+      result.push(withCarried);
+      continue;
+    }
+
+    if (hadCarried) {
+      result.push(withCarried);
+      continue;
+    }
+
+    const extracted = extractTrailingShortBlock(withCarried);
+    if (!extracted) {
+      result.push(withCarried);
+      continue;
+    }
+
+    result.push(extracted.main);
+    carried = extracted.trailing;
+  }
+
+  if (carried) {
+    result.push(carried);
+  }
+
   return result;
 }
 

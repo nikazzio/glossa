@@ -34,6 +34,7 @@
     "swapLanguages": "Inverti Lingue",
     "autoSegment": "Auto-segmentazione",
     "headingAware": "Titoli nel chunk successivo (Markdown)",
+    "trailingShortBlocks": "Blocchi finali brevi nel chunk successivo",
     "modeLabel": "Modalità di traduzione",
     "mode": {
       "standard": "Standard",
@@ -392,6 +393,7 @@
     "minWordsHint": "Chunk più corti di questa soglia vengono fusi col successivo. 0 = disabilitato.",
     "maxWordsHint": "Chunk più lunghi di questo limite vengono divisi. 0 = nessun limite.",
     "headingAwareHint": "I titoli Markdown (# Titolo) che compaiono da soli in un chunk vengono uniti al paragrafo successivo. Richiede la modalità Markdown.",
+    "trailingShortBlocksHint": "Quando un chunk termina con un blocco breve separato da righe vuote, sposta quel blocco nel chunk successivo. Utile per aperture di sezione in plain text.",
     "importCoherenceOk": "Il testo è integro",
     "importCoherenceWarning": "~{{pct}}% delle parole potrebbe mancare dopo la segmentazione — controlla le impostazioni",
     "importModelLabel": "Modello",

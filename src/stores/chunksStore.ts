@@ -128,6 +128,7 @@ interface ChunksState {
       minWords?: number;
       maxWords?: number;
       headingAware?: boolean;
+      carryTrailingShortBlocks?: boolean;
       extractFootnotes?: boolean;
     },
     precomputedChunks?: string[],
@@ -185,6 +186,7 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
       minWords: config.minWords,
       maxWords: config.maxWords,
       headingAware: config.headingAware,
+      carryTrailingShortBlocks: config.carryTrailingShortBlocks,
     }, sourceFootnotes);
 
     const ui = useUiStore.getState();
@@ -493,6 +495,7 @@ function buildChunks(
     minWords?: number;
     maxWords?: number;
     headingAware?: boolean;
+    carryTrailingShortBlocks?: boolean;
   },
   sourceFootnotes: ReturnType<typeof usePipelineStore.getState>['sourceFootnotes'],
 ): TranslationChunk[] {

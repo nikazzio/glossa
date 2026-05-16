@@ -168,6 +168,7 @@ export interface PipelineConfig {
   minWords?: number;
   maxWords?: number;
   headingAware?: boolean;
+  carryTrailingShortBlocks?: boolean;
   documentFormat?: DocumentFormat;
   renderProfile?: DocumentRenderProfile;
   markdownAware?: boolean;

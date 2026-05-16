@@ -48,6 +48,7 @@ interface PendingImport {
   useChunking: boolean;
   targetChunkCount: number;
   headingAware: boolean;
+  carryTrailingShortBlocks: boolean;
   format?: 'plain' | 'markdown';
   experimental?: 'docx-markdown';
 }
@@ -109,6 +110,7 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
           useChunking: config.useChunking !== false,
           targetChunkCount: config.targetChunkCount ?? 0,
           headingAware: config.headingAware ?? true,
+          carryTrailingShortBlocks: config.carryTrailingShortBlocks ?? true,
           format: imported.format,
           experimental: imported.experimental,
         });
@@ -142,6 +144,7 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
       minWords,
       maxWords,
       headingAware: pendingImport.headingAware,
+      carryTrailingShortBlocks: pendingImport.carryTrailingShortBlocks,
       documentFormat: pendingImport.format ?? 'plain',
       renderProfile: pendingImport.format === 'markdown' ? 'markdown' : 'plain-text',
       markdownAware: pendingImport.format === 'markdown',
@@ -157,6 +160,7 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
         minWords,
         maxWords,
         headingAware: pendingImport.headingAware,
+        carryTrailingShortBlocks: pendingImport.carryTrailingShortBlocks,
         extractFootnotes: pendingImport.experimental === 'docx-markdown',
       },
       manualChunks,
@@ -376,6 +380,7 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
             useChunking={pendingImport.useChunking}
             targetChunkCount={pendingImport.targetChunkCount}
             headingAware={pendingImport.headingAware}
+            carryTrailingShortBlocks={pendingImport.carryTrailingShortBlocks}
             markdownAware={pendingImport.format === 'markdown'}
             format={pendingImport.format}
             experimental={pendingImport.experimental}
@@ -392,6 +397,11 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
             onHeadingAwareChange={(value) =>
               setPendingImport((current) =>
                 current ? { ...current, headingAware: value } : current,
+              )
+            }
+            onCarryTrailingShortBlocksChange={(value) =>
+              setPendingImport((current) =>
+                current ? { ...current, carryTrailingShortBlocks: value } : current,
               )
             }
             onCancel={() => setPendingImport(null)}

@@ -136,6 +136,7 @@ describe('document chunking', () => {
       useChunking: true,
       targetChunkCount: 0,
       headingAware: true,
+      carryTrailingShortBlocks: false,
     });
 
     expect(chunks).toEqual([
@@ -145,10 +146,6 @@ describe('document chunking', () => {
   });
 
   it('moves a plain-text title from the bottom of a chunk to the top of the next', () => {
-    // With 5 blocks and target=3, the splitter closes a chunk when the next block
-    // would exceed the word-count limit AND enough blocks remain. shortPara+title land
-    // in chunk 1 because longPara triggers the close, leaving title stranded at the end.
-    // headingAware detects the trailing title-like line and moves it to chunk 2.
     const shortPara = 'Short intro paragraph with nine words total here.';
     const title = 'Titolo Sezione Due';
     const longPara = Array.from({ length: 25 }, (_, i) => `word${i + 1}`).join(' ');
@@ -159,6 +156,7 @@ describe('document chunking', () => {
       useChunking: true,
       targetChunkCount: 3,
       headingAware: true,
+      carryTrailingShortBlocks: false,
     });
 
     expect(chunks).toEqual([
@@ -179,6 +177,7 @@ describe('document chunking', () => {
       useChunking: true,
       targetChunkCount: 3,
       headingAware: true,
+      carryTrailingShortBlocks: false,
     });
 
     expect(chunks).toEqual([
@@ -188,7 +187,7 @@ describe('document chunking', () => {
     ]);
   });
 
-  it('keeps non-heading trailing paragraphs in their original chunk', () => {
+  it('keeps non-heading trailing paragraphs in their original chunk when carry is disabled', () => {
     const shortPara = 'Short intro paragraph with nine words total here.';
     const trailingPara = 'This is a normal trailing paragraph.';
     const longPara = Array.from({ length: 25 }, (_, i) => `word${i + 1}`).join(' ');
@@ -199,11 +198,33 @@ describe('document chunking', () => {
       useChunking: true,
       targetChunkCount: 3,
       headingAware: true,
+      carryTrailingShortBlocks: false,
     });
 
     expect(chunks).toEqual([
       `${shortPara}\n\n${trailingPara}`,
       longPara,
+      `${extraPara}\n\n${lastPara}`,
+    ]);
+  });
+
+  it('carries a short trailing block into the next chunk when enabled', () => {
+    const shortPara = 'Short intro paragraph with nine words total here.';
+    const trailingPara = 'This is a normal trailing paragraph.';
+    const longPara = Array.from({ length: 25 }, (_, i) => `word${i + 1}`).join(' ');
+    const extraPara = Array.from({ length: 5 }, (_, i) => `extra${i + 1}`).join(' ');
+    const lastPara = 'Final short paragraph.';
+
+    const chunks = chunkText([shortPara, trailingPara, longPara, extraPara, lastPara].join('\n\n'), {
+      useChunking: true,
+      targetChunkCount: 3,
+      headingAware: false,
+      carryTrailingShortBlocks: true,
+    });
+
+    expect(chunks).toEqual([
+      shortPara,
+      `${trailingPara}\n\n${longPara}`,
       `${extraPara}\n\n${lastPara}`,
     ]);
   });

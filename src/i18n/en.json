@@ -34,6 +34,7 @@
     "swapLanguages": "Swap Languages",
     "autoSegment": "Auto-segment",
     "headingAware": "Heading-aware (Markdown)",
+    "trailingShortBlocks": "Carry short trailing blocks",
     "modeLabel": "Translation mode",
     "mode": {
       "standard": "Standard",
@@ -392,6 +393,7 @@
     "minWordsHint": "Chunks shorter than this are merged with the next. 0 = disabled.",
     "maxWordsHint": "Chunks longer than this are split. 0 = no limit.",
     "headingAwareHint": "Markdown headings (# Title) that appear alone in a chunk are joined to the paragraph that follows. Requires Markdown mode.",
+    "trailingShortBlocksHint": "When a chunk ends with a short trailing block separated by blank lines, move that block to the next chunk. Useful for plain-text section openers.",
     "importCoherenceOk": "All text accounted for",
     "importCoherenceWarning": "~{{pct}}% of words may be missing after chunking — check the settings",
     "importModelLabel": "Model",
