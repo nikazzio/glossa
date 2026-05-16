@@ -1,7 +1,16 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import i18n from 'i18next';
-import type { PipelineConfig, PipelineStageConfig, JudgeResult, Issue, TokenUsage, PromptInfo, ResponseInfo } from '../types';
+import type {
+  DiscoveredProviderModel,
+  PipelineConfig,
+  PipelineStageConfig,
+  JudgeResult,
+  Issue,
+  TokenUsage,
+  PromptInfo,
+  ResponseInfo,
+} from '../types';
 import { useChunksStore } from '../stores/chunksStore';
 import { useUiStore } from '../stores/uiStore';
 import { logOperation } from '../stores/operationLogStore';
@@ -406,5 +415,12 @@ export const settingsService = {
 
   async isKeyConfigured(provider: string): Promise<boolean> {
     return invoke<boolean>('get_api_key_status', { provider });
+  },
+
+  async discoverProviderModels(provider: string): Promise<DiscoveredProviderModel[]> {
+    return invoke<DiscoveredProviderModel[]>('discover_provider_models', {
+      provider,
+      ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl,
+    });
   },
 };

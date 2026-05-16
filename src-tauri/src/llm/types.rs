@@ -142,6 +142,17 @@ pub struct PreflightCheckResult {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct DiscoveredModel {
+    pub id: String,
+    pub display_name: Option<String>,
+    pub status: Option<String>,
+    pub reasoning: Option<String>,
+    pub context_window: Option<u32>,
+    pub max_output_tokens: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct OllamaPreflightStatus {
     pub reachable: bool,
     pub models: Vec<String>,

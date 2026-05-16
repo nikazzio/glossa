@@ -1,4 +1,5 @@
 pub mod blobs;
+pub mod discovery;
 pub mod pipeline;
 pub mod prompts;
 pub mod provider;

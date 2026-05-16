@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { getKnownModelIds, getMissingPricingModels, getSelectableModelIds, MODEL_PROVIDER_ORDER } from './catalog';
+import {
+  getKnownModelIds,
+  getMissingPricingModels,
+  getResolvedModelReasoning,
+  getSelectableModelIds,
+  MODEL_PROVIDER_ORDER,
+} from './catalog';
 import type { ModelProvider } from '../types';
 
 describe('MODEL_CATALOG', () => {
@@ -31,5 +37,18 @@ describe('MODEL_CATALOG', () => {
         availableModelIds: getKnownModelIds('openai'),
       }),
     ).toEqual([]);
+  });
+
+  it('resolves reasoning from discovered models when the catalog does not know the id', () => {
+    expect(
+      getResolvedModelReasoning('openai', 'gpt-5-nano-custom', [
+        { id: 'gpt-5-nano-custom', reasoning: 'optional' },
+      ]),
+    ).toBe('optional');
+  });
+
+  it('falls back to provider-specific inference for unknown ids', () => {
+    expect(getResolvedModelReasoning('deepseek', 'deepseek-v4-flash')).toBe('optional');
+    expect(getResolvedModelReasoning('anthropic', 'claude-sonnet-4-20250514')).toBe('reasoning');
   });
 });

@@ -9,7 +9,7 @@ use crate::llm::provider::{
     LlmProvider, LlmRequest, LlmResponse, StreamFormat, TokenUsage, UsageAccumulator,
 };
 use crate::llm::stream::{build_default_http_client, default_stream_timeouts, StreamTimeouts};
-use crate::llm::types::OpenAiCacheConfig;
+use crate::llm::types::{DiscoveredModel, OpenAiCacheConfig};
 
 /// OpenAI-compatible provider. Used for both OpenAI and DeepSeek which share the same API shape.
 pub struct OpenAiCompatibleProvider {
@@ -128,6 +128,45 @@ impl OpenAiCompatibleProvider {
             cached_input,
             cache_miss_input,
         })
+    }
+
+    fn classify_discovered_model(&self, model_id: &str) -> DiscoveredModel {
+        let normalized = model_id.to_ascii_lowercase();
+        let status = if normalized.contains("deprecated") {
+            Some("deprecated".to_string())
+        } else if normalized.contains("preview") {
+            Some("preview".to_string())
+        } else {
+            Some("stable".to_string())
+        };
+        let reasoning = if self.id == "openai" {
+            if normalized.starts_with('o') {
+                Some("reasoning".to_string())
+            } else if normalized.starts_with("gpt-5") {
+                Some("optional".to_string())
+            } else if normalized.starts_with("gpt-4.1") || normalized.starts_with("gpt-4o") {
+                Some("non_reasoning".to_string())
+            } else {
+                None
+            }
+        } else if normalized.contains("reasoner") {
+            Some("reasoning".to_string())
+        } else if normalized.contains("chat") {
+            Some("non_reasoning".to_string())
+        } else if normalized.contains("v4-flash") || normalized.contains("v4-pro") {
+            Some("optional".to_string())
+        } else {
+            None
+        };
+
+        DiscoveredModel {
+            id: model_id.to_string(),
+            display_name: None,
+            status,
+            reasoning,
+            context_window: None,
+            max_output_tokens: None,
+        }
     }
 }
 
@@ -279,5 +318,43 @@ impl LlmProvider for OpenAiCompatibleProvider {
             .send()
             .await
             .map_err(|e| format!("API request failed: {e}"))
+    }
+
+    async fn discover_models(
+        &self,
+        client: &Client,
+        api_key: &str,
+    ) -> Result<Vec<DiscoveredModel>, String> {
+        let url = format!("{}/models", self.base_url);
+        let resp = client
+            .get(&url)
+            .header("Authorization", format!("Bearer {}", api_key))
+            .send()
+            .await
+            .map_err(|e| format!("{} model discovery failed: {e}", self.display_name()))?;
+
+        let status = resp.status();
+        let text = resp
+            .text()
+            .await
+            .map_err(|e| format!("Failed to read {} discovery response: {e}", self.display_name()))?;
+
+        if !status.is_success() {
+            return Err(self.format_http_error(status, &text));
+        }
+
+        let json: Value = serde_json::from_str(&text)
+            .map_err(|e| format!("Failed to parse {} models response: {e}", self.display_name()))?;
+        let Some(data) = json["data"].as_array() else {
+            return Err(format!("{} models response was missing the data array", self.display_name()));
+        };
+
+        let mut models: Vec<DiscoveredModel> = data
+            .iter()
+            .filter_map(|entry| entry["id"].as_str())
+            .map(|model_id| self.classify_discovered_model(model_id))
+            .collect();
+        models.sort_by(|a, b| a.id.cmp(&b.id));
+        Ok(models)
     }
 }

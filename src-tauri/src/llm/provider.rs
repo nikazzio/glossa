@@ -3,7 +3,7 @@ use reqwest::Client;
 use std::time::Duration;
 
 use crate::llm::stream::{StreamTimeouts, HTTP_CONNECT_TIMEOUT_SECS};
-use crate::llm::types::{ProviderRuntimeConfig, StructuredPrompt};
+use crate::llm::types::{DiscoveredModel, ProviderRuntimeConfig, StructuredPrompt};
 
 #[derive(Debug, Clone)]
 pub struct TokenUsage {
@@ -121,6 +121,18 @@ pub trait LlmProvider: Send + Sync {
     /// Provider-specific readiness check (default: no-op). Ollama overrides this.
     async fn preflight(&self, _model: &str) -> Result<(), String> {
         Ok(())
+    }
+
+    /// Return the models available to the current account/runtime.
+    async fn discover_models(
+        &self,
+        _client: &Client,
+        _api_key: &str,
+    ) -> Result<Vec<DiscoveredModel>, String> {
+        Err(format!(
+            "{} model discovery is not supported",
+            self.display_name()
+        ))
     }
 
     /// Called when the stream idle timeout fires before returning an error.

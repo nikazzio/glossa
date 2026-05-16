@@ -62,6 +62,7 @@ export function StageCard({
   deleteTemplate,
 }: StageCardProps) {
   const { t } = useTranslation();
+  const providerModels = useUiStore((s) => s.providerModels);
   const enabledProviderModels = useUiStore((s) => s.enabledProviderModels);
   const [isEditingPrompt, setIsEditingPrompt] = useState(false);
   const [showSaveName, setShowSaveName] = useState(false);
@@ -82,7 +83,10 @@ export function StageCard({
   const handleProviderChange = (newProvider: ModelProvider) => {
     const models = getSelectableModelIds(newProvider, {
       enabledModelIds: enabledProviderModels[newProvider],
-      availableModelIds: newProvider === 'ollama' ? modelOptions : getKnownModelIds(newProvider),
+      availableModelIds:
+        newProvider === 'ollama'
+          ? modelOptions
+          : providerModels[newProvider]?.map((model) => model.id) ?? getKnownModelIds(newProvider),
     });
     onUpdate({ provider: newProvider, model: models[0] || '' });
   };

@@ -428,6 +428,7 @@ export function ImportPreviewDialog({
   const [editorMode, setEditorMode] = useState<EditorMode>('cards');
   const { config, updateStage, setConfig } = usePipelineStore();
   const ollamaModels = useUiStore((s) => s.ollamaModels);
+  const providerModels = useUiStore((s) => s.providerModels);
   const enabledProviderModels = useUiStore((s) => s.enabledProviderModels);
   const chunkPresetShort = useUiStore((s) => s.chunkPresetShort);
   const chunkPresetMedium = useUiStore((s) => s.chunkPresetMedium);
@@ -439,9 +440,12 @@ export function ImportPreviewDialog({
   const getProviderModels = useCallback(
     (provider: ModelProvider) => getSelectableModelIds(provider, {
       enabledModelIds: enabledProviderModels[provider],
-      availableModelIds: provider === 'ollama' ? ollamaModels : getKnownModelIds(provider),
+      availableModelIds:
+        provider === 'ollama'
+          ? ollamaModels
+          : providerModels[provider]?.map((model) => model.id) ?? getKnownModelIds(provider),
     }),
-    [enabledProviderModels, ollamaModels],
+    [enabledProviderModels, ollamaModels, providerModels],
   );
 
   const availableModels = getProviderModels(selectedProvider);

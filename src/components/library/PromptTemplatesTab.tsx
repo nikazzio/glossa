@@ -17,7 +17,7 @@ type FilterValue = (typeof FILTER_OPTIONS)[number];
 export function PromptTemplatesTab() {
   const { t } = useTranslation();
   const { templates, isLoaded, loadTemplates, saveTemplate, deleteTemplate } = usePromptTemplateStore();
-  const { ollamaModels, enabledProviderModels } = useUiStore();
+  const { ollamaModels, providerModels, enabledProviderModels } = useUiStore();
   const { config } = usePipelineStore();
   const [newName, setNewName] = useState('');
   const [newPrompt, setNewPrompt] = useState('');
@@ -29,7 +29,10 @@ export function PromptTemplatesTab() {
   const getProviderModels = (provider: ModelProvider) =>
     getSelectableModelIds(provider, {
       enabledModelIds: enabledProviderModels[provider],
-      availableModelIds: provider === 'ollama' ? ollamaModels : getKnownModelIds(provider),
+      availableModelIds:
+        provider === 'ollama'
+          ? ollamaModels
+          : providerModels[provider]?.map((model) => model.id) ?? getKnownModelIds(provider),
     });
 
   const firstActiveStage = config.stages.find((s) => s.enabled);

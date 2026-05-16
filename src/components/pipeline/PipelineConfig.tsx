@@ -274,10 +274,14 @@ const DEFAULT_PIPELINE_CONFIG_CLASSNAME =
 
 function useJudgeModelOptions(provider: ModelProvider): string[] {
   const ollamaModels = useUiStore((s) => s.ollamaModels);
+  const providerModels = useUiStore((s) => s.providerModels);
   const enabledProviderModels = useUiStore((s) => s.enabledProviderModels);
   return getSelectableModelIds(provider, {
     enabledModelIds: enabledProviderModels[provider],
-    availableModelIds: provider === 'ollama' ? ollamaModels : getKnownModelIds(provider),
+    availableModelIds:
+      provider === 'ollama'
+        ? ollamaModels
+        : providerModels[provider]?.map((model) => model.id) ?? getKnownModelIds(provider),
   });
 }
 
@@ -521,6 +525,7 @@ export function PipelineConfig({
   const { chunks, isProcessing, cancelRequested, resetCompletedChunks } = useChunksStore();
   const ollamaStatus = useUiStore((s) => s.ollamaStatus);
   const ollamaModels = useUiStore((s) => s.ollamaModels);
+  const providerModels = useUiStore((s) => s.providerModels);
   const enabledProviderModels = useUiStore((s) => s.enabledProviderModels);
   const { statuses: keyStatuses, isLoading: keyStatusLoading } = useProviderKeyStatus();
   const { t } = useTranslation();
@@ -684,7 +689,7 @@ export function PipelineConfig({
       availableModelIds:
         newProvider === 'ollama'
           ? useUiStore.getState().ollamaModels
-          : getKnownModelIds(newProvider),
+          : providerModels[newProvider]?.map((model) => model.id) ?? getKnownModelIds(newProvider),
     });
     setConfig((prev) => ({
       ...prev,
@@ -1168,7 +1173,7 @@ export function PipelineConfig({
                 availableModelIds:
                   stage.provider === 'ollama'
                     ? ollamaModels
-                    : getKnownModelIds(stage.provider),
+                    : providerModels[stage.provider]?.map((model) => model.id) ?? getKnownModelIds(stage.provider),
               });
               return (
                 <div key={stage.id} className="space-y-3">

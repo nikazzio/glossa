@@ -1,18 +1,19 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertCircle, Server, RefreshCw, CheckCircle2, XCircle, HelpCircle, Sparkles, Columns2, BookOpen, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useUiStore } from '../../stores/uiStore';
 import { ApiKeyInput } from './ApiKeyInput';
-import { ollamaService } from '../../services/llmService';
+import { ollamaService, settingsService } from '../../services/llmService';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
-import { getModelReasoning, getSelectableModelIds, MODEL_CATALOG, MODEL_PROVIDER_ORDER } from '../../models/catalog';
+import { getSelectableModelIds, MODEL_CATALOG, MODEL_PROVIDER_ORDER } from '../../models/catalog';
 import { MODEL_PRICING } from '../../constants';
 import { usePricingStore } from '../../stores/pricingStore';
 import { EditorialModalShell } from '../common';
 import type { ModelProvider } from '../../types';
 import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
+import { useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
 
 const PROVIDER_LABELS: Record<ModelProvider, string> = {
   gemini: 'Gemini',
@@ -30,6 +31,8 @@ export function SettingsModal() {
     ollamaModels,
     setOllamaModels,
     setOllamaStatus,
+    providerModels,
+    setProviderModels,
     enabledProviderModels,
     setEnabledProviderModels,
     documentLayout,
@@ -48,22 +51,23 @@ export function SettingsModal() {
   const [showPricingOverrides, setShowPricingOverrides] = useState(false);
   const [showSecurityAdvisory, setShowSecurityAdvisory] = useState(false);
   const [activeProviderTab, setActiveProviderTab] = useState<ModelProvider>('openai');
+  const [refreshErrors, setRefreshErrors] = useState<Partial<Record<ModelProvider, string>>>({});
   const [urlDraft, setUrlDraft] = useState(ollamaBaseUrl);
   const [urlError, setUrlError] = useState<string | null>(null);
   const trapRef = useFocusTrap(showSettings, () => setShowSettings(false));
   const { overrides, setOverride, resetOverride, resetAll } = usePricingStore();
+  const { statuses: keyStatuses } = useProviderKeyStatus();
   const availableProviderModels = useMemo(
     () => Object.fromEntries(
       MODEL_PROVIDER_ORDER.map((provider) => [
         provider,
         provider === 'ollama'
           ? ollamaModels
-          : MODEL_CATALOG
-              .filter((entry) => entry.provider === provider)
-              .map((entry) => entry.id),
+          : providerModels[provider]?.map((entry) => entry.id)
+            ?? MODEL_CATALOG.filter((entry) => entry.provider === provider).map((entry) => entry.id),
       ]),
     ) as Record<ModelProvider, string[]>,
-    [ollamaModels],
+    [ollamaModels, providerModels],
   );
   const activeProviderModels = availableProviderModels[activeProviderTab] ?? [];
   const activeEnabledModels = getSelectableModelIds(activeProviderTab, {
@@ -76,13 +80,42 @@ export function SettingsModal() {
     try {
       const models = await ollamaService.listModels();
       setOllamaModels(models);
+      setProviderModels('ollama', models.map((id) => ({ id })));
       setOllamaStatus('connected');
+      setRefreshErrors((prev) => ({ ...prev, ollama: undefined }));
       toast.success(t('ollama.connected', { count: models.length }));
     } catch (err: any) {
       setOllamaModels([]);
+      setProviderModels('ollama', []);
       setOllamaStatus('disconnected');
+      setRefreshErrors((prev) => ({ ...prev, ollama: err?.message ?? t('ollama.disconnected') }));
       toast.error(t('ollama.disconnected'), {
         description: err?.message,
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const refreshProviderModels = async (provider: ModelProvider) => {
+    if (provider === 'ollama') {
+      await refreshOllama();
+      return;
+    }
+    setRefreshing(true);
+    try {
+      const models = await settingsService.discoverProviderModels(provider);
+      setProviderModels(provider, models);
+      setRefreshErrors((prev) => ({ ...prev, [provider]: undefined }));
+      toast.success(t('settings.modelsRefreshed', {
+        provider: PROVIDER_LABELS[provider],
+        count: models.length,
+      }));
+    } catch (err: any) {
+      const message = err?.message ?? String(err);
+      setRefreshErrors((prev) => ({ ...prev, [provider]: message }));
+      toast.error(t('settings.modelsRefreshFailed', { provider: PROVIDER_LABELS[provider] }), {
+        description: message,
       });
     } finally {
       setRefreshing(false);
@@ -102,6 +135,13 @@ export function SettingsModal() {
     }
     setEnabledProviderModels(provider, availableProviderModels[provider].filter((id) => set.has(id)));
   };
+
+  useEffect(() => {
+    if (!showSettings || activeProviderTab === 'ollama') return;
+    if (!keyStatuses[activeProviderTab]) return;
+    if (providerModels[activeProviderTab] !== undefined) return;
+    void refreshProviderModels(activeProviderTab);
+  }, [activeProviderTab, keyStatuses, providerModels, showSettings]);
 
   return (
     <AnimatePresence>
@@ -261,9 +301,20 @@ export function SettingsModal() {
                             {t('settings.enabledModelsHint')}
                           </p>
                         </div>
-                        <span className="rounded-full border border-editorial-border px-3 py-1 text-[10px] font-mono text-editorial-muted">
-                          {activeEnabledModels.length}/{activeProviderModels.length}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="rounded-full border border-editorial-border px-3 py-1 text-[10px] font-mono text-editorial-muted">
+                            {activeEnabledModels.length}/{activeProviderModels.length}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => void refreshProviderModels(activeProviderTab)}
+                            disabled={refreshing || (activeProviderTab !== 'ollama' && !keyStatuses[activeProviderTab])}
+                            className="flex items-center gap-1.5 rounded-full border border-editorial-border px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                          >
+                            <RefreshCw size={11} className={refreshing ? 'animate-spin' : ''} />
+                            {t('settings.refreshModels')}
+                          </button>
+                        </div>
                       </div>
 
                       {activeProviderTab === 'ollama' ? (
@@ -341,6 +392,17 @@ export function SettingsModal() {
                           />
                         </div>
                       )}
+
+                      {activeProviderTab !== 'ollama' && !keyStatuses[activeProviderTab] && (
+                        <p className="text-xs text-editorial-muted italic">
+                          {t('settings.configureKeyToDiscover')}
+                        </p>
+                      )}
+                      {refreshErrors[activeProviderTab] && (
+                        <p className="text-xs text-editorial-warning">
+                          {refreshErrors[activeProviderTab]}
+                        </p>
+                      )}
                     </div>
 
                     {activeProviderModels.length === 0 ? (
@@ -352,10 +414,10 @@ export function SettingsModal() {
                     ) : (
                       <div className="space-y-2">
                         {activeProviderModels.map((modelId) => {
+                          const discoveredModel = providerModels[activeProviderTab]?.find((model) => model.id === modelId);
                           const checked = enabledProviderModels[activeProviderTab] === undefined
                             ? true
                             : enabledProviderModels[activeProviderTab]?.includes(modelId) ?? false;
-                          const reasoning = getModelReasoning(activeProviderTab, modelId);
                           return (
                             <label
                               key={modelId}
@@ -370,9 +432,16 @@ export function SettingsModal() {
                               <div className="min-w-0 flex-1 space-y-2">
                                 <div className="flex flex-wrap items-center gap-2">
                                   <span className="text-sm font-mono text-editorial-ink">{modelId}</span>
-                                  {reasoning && (
-                                    <span className="rounded-full border border-editorial-border px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
-                                      {t(`pipeline.modelReasoning.${reasoning}`)}
+                                  {discoveredModel?.displayName && discoveredModel.displayName !== modelId && (
+                                    <span className="text-xs italic text-editorial-muted">
+                                      {discoveredModel.displayName}
+                                    </span>
+                                  )}
+                                  {discoveredModel?.contextWindow && (
+                                    <span className="rounded-full border border-editorial-border px-2 py-0.5 text-[10px] font-mono text-editorial-muted">
+                                      {t('settings.contextWindowBadge', {
+                                        count: discoveredModel.contextWindow.toLocaleString(),
+                                      })}
                                     </span>
                                   )}
                                 </div>

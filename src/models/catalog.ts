@@ -1,7 +1,12 @@
-import type { ModelProvider, PipelineStageConfig, StageRole } from '../types';
+import type {
+  DiscoveredProviderModel,
+  ModelProvider,
+  PipelineStageConfig,
+  StageRole,
+} from '../types';
 
-export type ModelStatus = 'stable' | 'preview' | 'deprecated';
-export type ModelReasoningClass = 'reasoning' | 'non_reasoning' | 'optional';
+export type { ModelReasoningClass, ModelStatus } from '../types';
+import type { ModelReasoningClass, ModelStatus } from '../types';
 export type ModelUseCase = StageRole | 'judge' | 'coherence';
 export type ModelUseCaseFit = 'preferred' | 'discouraged' | 'neutral';
 
@@ -65,6 +70,25 @@ export function getModelReasoning(provider: ModelProvider, modelId: string): Mod
   return getModelEntry(provider, modelId)?.reasoning;
 }
 
+export function getDiscoveredModelEntry(
+  models: DiscoveredProviderModel[] | undefined,
+  modelId: string,
+): DiscoveredProviderModel | undefined {
+  return models?.find((entry) => entry.id === modelId);
+}
+
+export function getResolvedModelReasoning(
+  provider: ModelProvider,
+  modelId: string,
+  discoveredModels?: DiscoveredProviderModel[],
+): ModelReasoningClass | undefined {
+  return (
+    getModelReasoning(provider, modelId)
+    ?? getDiscoveredModelEntry(discoveredModels, modelId)?.reasoning
+    ?? inferReasoningFromModelId(provider, modelId)
+  );
+}
+
 export function getModelUseCaseFit(
   provider: ModelProvider,
   modelId: string,
@@ -93,6 +117,32 @@ export function getSelectableModelIds(
 
   const enabled = new Set(enabledModelIds);
   return availableModelIds.filter((modelId) => enabled.has(modelId));
+}
+
+export function inferReasoningFromModelId(
+  provider: ModelProvider,
+  modelId: string,
+): ModelReasoningClass | undefined {
+  const normalized = modelId.toLowerCase();
+  if (provider === 'openai') {
+    if (normalized.startsWith('o')) return 'reasoning';
+    if (normalized.startsWith('gpt-5')) return 'optional';
+    if (normalized.startsWith('gpt-4.1') || normalized.startsWith('gpt-4o')) return 'non_reasoning';
+  }
+  if (provider === 'anthropic') {
+    if (normalized.includes('haiku')) return 'non_reasoning';
+    if (normalized.includes('sonnet') || normalized.includes('opus')) return 'reasoning';
+  }
+  if (provider === 'gemini') {
+    if (normalized.includes('flash-lite') || normalized.includes('2.0-flash-lite')) return 'non_reasoning';
+    if (normalized.includes('flash') || normalized.includes('pro')) return 'optional';
+  }
+  if (provider === 'deepseek') {
+    if (normalized.includes('reasoner')) return 'reasoning';
+    if (normalized.includes('chat')) return 'non_reasoning';
+    if (normalized.includes('v4-flash') || normalized.includes('v4-pro')) return 'optional';
+  }
+  return undefined;
 }
 
 const OLLAMA_BLOB_FALLBACK = 4_096;
