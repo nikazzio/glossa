@@ -15,11 +15,17 @@ const STAGE_ICON: Record<StageRole, typeof Languages> = {
 };
 
 function PromptBlockCard({ block }: { block: PromptPreviewBlock }) {
+  const { t } = useTranslation();
+  const title = t(`pipeline.promptPreviewBlocks.${block.id}.title`);
+  const hint = block.kind === 'runtime'
+    ? t(`pipeline.promptPreviewBlocks.${block.id}.hint`)
+    : '';
+
   return (
     <section className="rounded-[18px] border border-editorial-border bg-editorial-bg/75 px-4 py-3 space-y-2">
       <div className="flex items-center justify-between gap-3">
         <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-          {block.title}
+          {title}
         </span>
         <span
           className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest ${
@@ -28,12 +34,17 @@ function PromptBlockCard({ block }: { block: PromptPreviewBlock }) {
               : 'bg-editorial-accent/10 text-editorial-accent'
           }`}
         >
-          {block.kind === 'static' ? 'Static' : 'Runtime'}
+          {block.kind === 'static' ? t('pipeline.promptPreviewStatic') : t('pipeline.promptPreviewRuntime')}
         </span>
       </div>
       <pre className="whitespace-pre-wrap break-words text-xs leading-relaxed font-mono text-editorial-ink">
         {block.body}
       </pre>
+      {hint ? (
+        <p className="text-[11px] leading-relaxed text-editorial-muted">
+          {hint}
+        </p>
+      ) : null}
     </section>
   );
 }
@@ -126,7 +137,7 @@ export function PromptPreviewTab({ config }: PromptPreviewTabProps) {
           </div>
           <div className="space-y-3">
             {activeStage.blocks.map((block) => (
-              <PromptBlockCard key={`${activeStage.id}-${block.title}`} block={block} />
+              <PromptBlockCard key={`${activeStage.id}-${block.id}`} block={block} />
             ))}
           </div>
         </div>

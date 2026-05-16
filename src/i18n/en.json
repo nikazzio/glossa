@@ -190,6 +190,52 @@
     "promptPreviewTitle": "Prompt Preview",
     "promptPreviewHint": "Frontend-only view of the prompt structure built from the current configuration. Runtime placeholders show where chunk text and blob context are injected.",
     "promptPreviewEmpty": "No translation stages are enabled yet.",
+    "promptPreviewStatic": "Static",
+    "promptPreviewRuntime": "Runtime",
+    "promptPreviewBlocks": {
+      "system-opener": {
+        "title": "System opener"
+      },
+      "structural-rules": {
+        "title": "Structural preservation rules"
+      },
+      "glossary-constraints": {
+        "title": "Glossary constraints"
+      },
+      "markdown-rules": {
+        "title": "Markdown preservation rules"
+      },
+      "stage-instructions": {
+        "title": "Stage instructions"
+      },
+      "blob-context": {
+        "title": "Optional blob context",
+        "hint": "Reference document block reused across chunks in the same blob. It is context-only and belongs in the cacheable prefix."
+      },
+      "current-chunk-id": {
+        "title": "Optional chunk id",
+        "hint": "Runtime chunk identifier injected only when blob chunk tracking is available. It scopes the request to the current chunk."
+      },
+      "source-chunk-text": {
+        "title": "Runtime source text",
+        "hint": "Current chunk payload injected at execution time. For refine, this remains the original source chunk, not the previous translation."
+      },
+      "previous-stage-result": {
+        "title": "Previous stage result",
+        "hint": "Runtime text produced by the previous stage. Refine receives this alongside the original source chunk."
+      },
+      "runtime-task": {
+        "title": "Runtime task instruction",
+        "hint": "Execution-only instruction that tells the model to translate, refine, or format only the current chunk."
+      },
+      "output-contract": {
+        "title": "Runtime output contract",
+        "hint": "Final execution-only output requirement. It constrains the reply to the stage-specific full-text result."
+      },
+      "system-post-processor": {
+        "title": "System post-processor"
+      }
+    },
     "tabPersona": "Persona",
     "personaLabel": "Persona",
     "personaCustomBadge": "Custom",
