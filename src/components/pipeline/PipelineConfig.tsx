@@ -517,7 +517,7 @@ export function PipelineConfig({
   const { chunks, isProcessing, cancelRequested, resetCompletedChunks } = useChunksStore();
   const ollamaStatus = useUiStore((s) => s.ollamaStatus);
   const ollamaModels = useUiStore((s) => s.ollamaModels);
-  const keyStatuses = useProviderKeyStatus();
+  const { statuses: keyStatuses, isLoading: keyStatusLoading } = useProviderKeyStatus();
   const { t } = useTranslation();
   const judgeModels = useJudgeModelOptions(config.judgeProvider);
   const [isRefreshingOllama, setIsRefreshingOllama] = useState(false);
@@ -1030,11 +1030,13 @@ export function PipelineConfig({
                   {t('pipeline.refineKeyLabel')}
                 </p>
               </div>
-              <p className="text-[11px] leading-relaxed text-editorial-muted">
-                {missingRefineProviders.length > 0
-                  ? t('pipeline.refineKeyMissingHint', { providers: missingRefineProviders.join(', ') })
-                  : t('pipeline.refineKeyReadyHint')}
-              </p>
+              {!keyStatusLoading && (
+                <p className="text-[11px] leading-relaxed text-editorial-muted">
+                  {missingRefineProviders.length > 0
+                    ? t('pipeline.refineKeyMissingHint', { providers: missingRefineProviders.join(', ') })
+                    : t('pipeline.refineKeyReadyHint')}
+                </p>
+              )}
             </div>
           </div>
         )}

@@ -20,8 +20,9 @@ export function formatProviderModelLabel(provider: string, model: string): strin
   return `${provider} · ${model || '—'}`;
 }
 
-export function useProviderKeyStatus(): ProviderKeyStatusMap {
+export function useProviderKeyStatus(): { statuses: ProviderKeyStatusMap; isLoading: boolean } {
   const [statuses, setStatuses] = useState<ProviderKeyStatusMap>({});
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -35,9 +36,13 @@ export function useProviderKeyStatus(): ProviderKeyStatusMap {
       .then((entries) => {
         if (cancelled) return;
         setStatuses(Object.fromEntries(entries) as ProviderKeyStatusMap);
+        setIsLoading(false);
       })
       .catch(() => {
-        if (!cancelled) setStatuses({});
+        if (!cancelled) {
+          setStatuses({});
+          setIsLoading(false);
+        }
       });
 
     return () => {
@@ -45,5 +50,5 @@ export function useProviderKeyStatus(): ProviderKeyStatusMap {
     };
   }, []);
 
-  return statuses;
+  return { statuses, isLoading };
 }

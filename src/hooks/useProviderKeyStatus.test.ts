@@ -72,6 +72,13 @@ describe('useProviderKeyStatus', () => {
     settingsMocks.isKeyConfigured.mockReset();
   });
 
+  it('starts in a loading state before the lookup resolves', () => {
+    settingsMocks.isKeyConfigured.mockResolvedValue(true);
+    const { result } = renderHook(() => useProviderKeyStatus());
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.statuses).toEqual({});
+  });
+
   it('returns the configured status for every remote provider', async () => {
     settingsMocks.isKeyConfigured.mockImplementation(async (provider: string) => {
       return provider === 'gemini' || provider === 'anthropic';
@@ -80,12 +87,13 @@ describe('useProviderKeyStatus', () => {
     const { result } = renderHook(() => useProviderKeyStatus());
 
     await waitFor(() => {
-      expect(result.current).toEqual({
-        gemini: true,
-        openai: false,
-        anthropic: true,
-        deepseek: false,
-      });
+      expect(result.current.isLoading).toBe(false);
+    });
+    expect(result.current.statuses).toEqual({
+      gemini: true,
+      openai: false,
+      anthropic: true,
+      deepseek: false,
     });
 
     expect(settingsMocks.isKeyConfigured).toHaveBeenCalledWith('gemini');
@@ -100,9 +108,9 @@ describe('useProviderKeyStatus', () => {
     const { result } = renderHook(() => useProviderKeyStatus());
 
     await waitFor(() => {
-      expect(settingsMocks.isKeyConfigured).toHaveBeenCalled();
+      expect(result.current.isLoading).toBe(false);
     });
-    expect(result.current).toEqual({});
+    expect(result.current.statuses).toEqual({});
   });
 
   it('combines with canRefineWithProvider so ollama stays usable with no remote keys', async () => {
@@ -111,10 +119,10 @@ describe('useProviderKeyStatus', () => {
     const { result } = renderHook(() => useProviderKeyStatus());
 
     await waitFor(() => {
-      expect(result.current.openai).toBe(false);
+      expect(result.current.statuses.openai).toBe(false);
     });
-    expect(canRefineWithProvider('ollama', result.current)).toBe(true);
-    expect(canRefineWithProvider('openai', result.current)).toBe(false);
-    expect(canRefineWithProvider('gemini', result.current)).toBe(false);
+    expect(canRefineWithProvider('ollama', result.current.statuses)).toBe(true);
+    expect(canRefineWithProvider('openai', result.current.statuses)).toBe(false);
+    expect(canRefineWithProvider('gemini', result.current.statuses)).toBe(false);
   });
 });

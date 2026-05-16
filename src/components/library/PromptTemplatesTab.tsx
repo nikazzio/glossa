@@ -25,7 +25,7 @@ export function PromptTemplatesTab() {
   const [creating, setCreating] = useState(false);
   const [filterContext, setFilterContext] = useState<FilterValue>('all');
   const [isRefining, setIsRefining] = useState(false);
-  const keyStatuses = useProviderKeyStatus();
+  const { statuses: keyStatuses } = useProviderKeyStatus();
 
   const firstActiveStage = config.stages.find((s) => s.enabled);
   const stageDefaultProvider: ModelProvider = (firstActiveStage?.provider as ModelProvider) ?? 'gemini';
