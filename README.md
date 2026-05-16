@@ -37,12 +37,14 @@ Translations stream token-by-token in real time. You can edit the candidate tran
 |----------|---------|
 | **5 LLM providers** | Gemini, OpenAI, Anthropic, DeepSeek, **Ollama** (local models) |
 | **Streaming** | Real-time token display during translation |
+| **Responsive stop** | Stop requests cancel in-flight Ollama and cloud-provider stage calls, then halt after the current unit |
 | **Configurable translation** | Model, provider, prompt, and optional persona per project |
 | **AI Judge** | LLM-as-a-judge audit with semantic quality ratings, categorized issues, and fixes |
 | **Glossary** | Keyword registry enforced across all stages and the audit |
-| **Auto-segmentation** | Splits source text by paragraphs for chunk-by-chunk processing |
+| **Import-aware segmentation** | Splits source text by paragraphs, keeps Markdown headings attached to following content, and can carry only genuinely short plain-text trailing blocks forward |
 | **Project management** | Save/load projects with full pipeline config and translations |
 | **File I/O** | Import `.txt`, `.md`, `.docx`, `.pdf`; export `.txt`, `.md`, `.html`, `.docx`, or bilingual Markdown |
+| **Markdown-safe import** | Markdown imports preserve significant whitespace such as hard line breaks, indentation, and fenced-block spacing |
 | **Secure keys** | API keys stored in OS keychain (GNOME Keyring / macOS Keychain / Windows Credential Manager) |
 | **i18n** | English and Italian interface |
 | **Desktop native** | Tauri v2 — lightweight binaries, no browser runtime |
@@ -180,8 +182,13 @@ In the configuration panel (sidebar in **Sandbox** mode, gear icon in **Document
 
 1. Import a file (`.txt`, `.md`, `.docx`, `.pdf`) via the upload icon
 2. Set segmentation options in the preview dialog and confirm
+   - In Markdown mode, isolated `#` headings stay attached to the paragraph that follows
+   - Plain-text trailing-block carry only moves genuinely short section openers, not full prose paragraphs rendered on one line
+   - Markdown imports preserve significant whitespace before chunking
 3. Open the document and click **"Begin Pipeline"**
 4. Navigate chunks via the **Insights** panel (Index tab)
+
+If a batch is interrupted, the next run resumes and skips chunks already completed in that interrupted run. If a full batch already finished, running it again starts a new round and reprocesses every chunk that is not explicitly locked.
 
 ### 3. Review the audit
 
@@ -191,6 +198,7 @@ In the configuration panel (sidebar in **Sandbox** mode, gear icon in **Document
 - **Issues** categorized by type (glossary, fluency, accuracy, grammar, consistency) and severity
 - **Suggested fixes** for each issue
 - Click **"Re-Evaluate Drafts"** after manual edits to get an updated quality rating
+- Lock a translation when you want to keep it out of later full-document reruns
 
 **Document-level coherence** (Insights panel → Coherence tab, Document mode):
 
@@ -203,6 +211,12 @@ In the configuration panel (sidebar in **Sandbox** mode, gear icon in **Document
 - **⬆ Import**: Load `.txt`, `.md`, `.docx`, or `.pdf` files via native OS dialog
 - **⬇ Export**: Save as `.txt`, `.md`, `.html`, `.docx`, or bilingual `.md` (source + translation + audit)
 - **💾 Save**: Persist the current project state to SQLite
+
+### 5. Stop, resume, and rerun
+
+- **Stop** is best-effort immediate cancellation for the in-flight provider request; Glossa then stops cleanly without continuing to later stages or chunks.
+- **Resume** appears after an interrupted batch and continues from the unfinished chunks.
+- **Run again after completion** starts a new batch round and preserves only chunks you have explicitly locked.
 
 ## Architecture
 
