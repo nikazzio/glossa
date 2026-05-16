@@ -209,7 +209,7 @@ export const pipelineLog = {
       level: 'warn',
       scope: 'stage',
       phase: 'end',
-      message: `Stage "${stageName}" was cancelled while streaming`,
+      message: `Stage "${stageName}" was cancelled`,
       chunkId,
       stageId,
       ...(durationMs !== undefined ? { durationMs } : {}),

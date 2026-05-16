@@ -118,11 +118,12 @@ export const llmService = {
         streamId,
         ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl,
       });
+      const { content: _usageContent, ...usageMeta } = result;
       logOperation({
         level: 'info',
         scope: 'invoke',
         message: 'Stage request completed',
-        meta: { provider: stage.provider, model: stage.model, ...result },
+        meta: { provider: stage.provider, model: stage.model, ...usageMeta },
       });
       return result;
     } finally {

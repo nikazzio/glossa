@@ -37,7 +37,7 @@ const MODE_SEQUENCES: Record<PipelineMode, StageRole[]> = {
 
 function buildStage(template: StageTemplate, existing?: PipelineStageConfig): PipelineStageConfig {
   return {
-    id: template.id,
+    id: existing?.id ?? template.id,
     name: template.name,
     role: template.role,
     prompt: existing?.prompt ?? template.defaultPrompt,

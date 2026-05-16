@@ -145,7 +145,7 @@ pub(crate) fn build_stage_prompts(
     } else {
         "\n\nGlossary Reminder:\n- Apply the glossary entries specified above when they appear in the source text."
     };
-    let output_contract = if previous_result.filter(|prev| !prev.is_empty()).is_some() {
+    let output_contract = if stage.role.as_deref() == Some("refine") {
         "Output only the refined translation."
     } else {
         "Output only the translated text."
@@ -165,16 +165,18 @@ pub(crate) fn build_stage_prompts(
         .map(|id| format!("Current chunk id: {id}\n\n"))
         .unwrap_or_default();
 
-    let user = match previous_result {
-        Some(prev) if !prev.is_empty() => format!(
+    let user = if stage.role.as_deref() == Some("refine") {
+        format!(
             "{current_chunk_line}Original text for the current chunk:\n{text}\n\n\
-             Previous Iteration for the current chunk:\n{prev}\n\n\
-             Refine only the current chunk according to your instructions. Output only the refined translation."
-        ),
-        _ => format!(
+             Previous Iteration for the current chunk:\n{}\n\n\
+             Refine only the current chunk according to your instructions. Output only the refined translation.",
+            previous_result.unwrap_or_default()
+        )
+    } else {
+        format!(
             "{current_chunk_line}Text to translate from the current chunk:\n{text}\n\n\
              Translate only the current chunk. Output only its translation."
-        ),
+        )
     };
 
     StructuredPrompt { system, user }
