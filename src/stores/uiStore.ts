@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type {
   DocumentLayoutPreference,
+  ModelProvider,
   OllamaStatus,
   ViewMode,
 } from '../types';
@@ -22,6 +23,7 @@ interface UiState {
   chunkDrawerTab: ChunkDrawerTab;
   ollamaModels: string[];
   ollamaStatus: OllamaStatus;
+  enabledProviderModels: Partial<Record<ModelProvider, string[]>>;
   glossaryHighlightEnabled: boolean;
   focusedChunkId: string | null;
   focusedIssueQuery: string | null;
@@ -47,6 +49,7 @@ interface UiState {
   setChunkDrawerTab: (tab: ChunkDrawerTab) => void;
   setOllamaModels: (models: string[]) => void;
   setOllamaStatus: (status: OllamaStatus) => void;
+  setEnabledProviderModels: (provider: ModelProvider, models: string[]) => void;
   setGlossaryHighlightEnabled: (enabled: boolean) => void;
   setFocusedChunkId: (chunkId: string | null) => void;
   focusIssueInChunk: (chunkId: string, query?: string | null) => void;
@@ -72,6 +75,7 @@ export const useUiStore = create<UiState>()(
   chunkDrawerTab: 'audit',
   ollamaModels: [],
   ollamaStatus: 'unknown',
+  enabledProviderModels: {},
   glossaryHighlightEnabled: false,
   focusedChunkId: null,
   focusedIssueQuery: null,
@@ -156,6 +160,13 @@ export const useUiStore = create<UiState>()(
   setChunkDrawerTab: (tab) => set({ chunkDrawerTab: tab }),
   setOllamaModels: (models) => set({ ollamaModels: models }),
   setOllamaStatus: (status) => set({ ollamaStatus: status }),
+  setEnabledProviderModels: (provider, models) =>
+    set((state) => ({
+      enabledProviderModels: {
+        ...state.enabledProviderModels,
+        [provider]: models,
+      },
+    })),
   setGlossaryHighlightEnabled: (enabled) => set({ glossaryHighlightEnabled: enabled }),
   setFocusedChunkId: (chunkId) => set({ focusedChunkId: chunkId }),
   focusIssueInChunk: (chunkId, query) =>
@@ -179,6 +190,7 @@ export const useUiStore = create<UiState>()(
         chunkPresetMedium: state.chunkPresetMedium,
         chunkPresetLong: state.chunkPresetLong,
         ollamaBaseUrl: state.ollamaBaseUrl,
+        enabledProviderModels: state.enabledProviderModels,
       }),
     },
   ),

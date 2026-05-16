@@ -27,7 +27,8 @@ import { findBestSplitIndex, recommendChunkCount, trimSplitFragment } from '../.
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { checkContextOverflow, estimateCharTokens } from '../../utils/tokenEstimate';
-import { MODEL_OPTIONS, LANGUAGES } from '../../constants';
+import { LANGUAGES } from '../../constants';
+import { getKnownModelIds, getSelectableModelIds, MODEL_PROVIDER_ORDER } from '../../models/catalog';
 import { useUiStore } from '../../stores/uiStore';
 import type { ModelProvider } from '../../types';
 
@@ -427,6 +428,7 @@ export function ImportPreviewDialog({
   const [editorMode, setEditorMode] = useState<EditorMode>('cards');
   const { config, updateStage, setConfig } = usePipelineStore();
   const ollamaModels = useUiStore((s) => s.ollamaModels);
+  const enabledProviderModels = useUiStore((s) => s.enabledProviderModels);
   const chunkPresetShort = useUiStore((s) => s.chunkPresetShort);
   const chunkPresetMedium = useUiStore((s) => s.chunkPresetMedium);
   const chunkPresetLong = useUiStore((s) => s.chunkPresetLong);
@@ -434,12 +436,19 @@ export function ImportPreviewDialog({
   const stage0 = config.stages[0];
   const [selectedProvider, setSelectedProvider] = useState<ModelProvider>(stage0?.provider ?? 'openai');
   const [selectedModel, setSelectedModel] = useState<string>(stage0?.model ?? '');
+  const getProviderModels = useCallback(
+    (provider: ModelProvider) => getSelectableModelIds(provider, {
+      enabledModelIds: enabledProviderModels[provider],
+      availableModelIds: provider === 'ollama' ? ollamaModels : getKnownModelIds(provider),
+    }),
+    [enabledProviderModels, ollamaModels],
+  );
 
-  const availableModels = selectedProvider === 'ollama' ? ollamaModels : MODEL_OPTIONS[selectedProvider] ?? [];
+  const availableModels = getProviderModels(selectedProvider);
 
   const handleProviderChange = (provider: ModelProvider) => {
     setSelectedProvider(provider);
-    const models = provider === 'ollama' ? ollamaModels : MODEL_OPTIONS[provider] ?? [];
+    const models = getProviderModels(provider);
     const model = models[0] ?? '';
     setSelectedModel(model);
     if (stage0) updateStage(stage0.id, { provider, model });
@@ -925,7 +934,7 @@ export function ImportPreviewDialog({
                   className="w-24 rounded-[10px] border border-editorial-border bg-editorial-bg px-2 py-1.5 text-xs font-bold uppercase outline-none focus:border-editorial-ink/40 appearance-none"
                   aria-label={t('pipeline.source')}
                 >
-                  {(Object.keys(MODEL_OPTIONS) as ModelProvider[]).map((p) => (
+                  {MODEL_PROVIDER_ORDER.map((p) => (
                     <option key={p} value={p}>{p}</option>
                   ))}
                 </select>

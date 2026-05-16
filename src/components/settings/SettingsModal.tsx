@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { AlertCircle, Server, RefreshCw, CheckCircle2, XCircle, HelpCircle, Sparkles, Columns2, BookOpen, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
@@ -7,10 +7,20 @@ import { useUiStore } from '../../stores/uiStore';
 import { ApiKeyInput } from './ApiKeyInput';
 import { ollamaService } from '../../services/llmService';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
-import { MODEL_CATALOG } from '../../models/catalog';
+import { getModelReasoning, getSelectableModelIds, MODEL_CATALOG, MODEL_PROVIDER_ORDER } from '../../models/catalog';
 import { MODEL_PRICING } from '../../constants';
 import { usePricingStore } from '../../stores/pricingStore';
 import { EditorialModalShell } from '../common';
+import type { ModelProvider } from '../../types';
+import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
+
+const PROVIDER_LABELS: Record<ModelProvider, string> = {
+  gemini: 'Gemini',
+  openai: 'OpenAI',
+  anthropic: 'Anthropic',
+  deepseek: 'DeepSeek',
+  ollama: 'Ollama',
+};
 
 export function SettingsModal() {
   const {
@@ -20,6 +30,8 @@ export function SettingsModal() {
     ollamaModels,
     setOllamaModels,
     setOllamaStatus,
+    enabledProviderModels,
+    setEnabledProviderModels,
     documentLayout,
     setDocumentLayout,
     chunkPresetShort,
@@ -35,10 +47,29 @@ export function SettingsModal() {
   const [refreshing, setRefreshing] = useState(false);
   const [showPricingOverrides, setShowPricingOverrides] = useState(false);
   const [showSecurityAdvisory, setShowSecurityAdvisory] = useState(false);
+  const [activeProviderTab, setActiveProviderTab] = useState<ModelProvider>('openai');
   const [urlDraft, setUrlDraft] = useState(ollamaBaseUrl);
   const [urlError, setUrlError] = useState<string | null>(null);
   const trapRef = useFocusTrap(showSettings, () => setShowSettings(false));
   const { overrides, setOverride, resetOverride, resetAll } = usePricingStore();
+  const availableProviderModels = useMemo(
+    () => Object.fromEntries(
+      MODEL_PROVIDER_ORDER.map((provider) => [
+        provider,
+        provider === 'ollama'
+          ? ollamaModels
+          : MODEL_CATALOG
+              .filter((entry) => entry.provider === provider)
+              .map((entry) => entry.id),
+      ]),
+    ) as Record<ModelProvider, string[]>,
+    [ollamaModels],
+  );
+  const activeProviderModels = availableProviderModels[activeProviderTab] ?? [];
+  const activeEnabledModels = getSelectableModelIds(activeProviderTab, {
+    enabledModelIds: enabledProviderModels[activeProviderTab],
+    availableModelIds: activeProviderModels,
+  });
 
   const refreshOllama = async () => {
     setRefreshing(true);
@@ -56,6 +87,20 @@ export function SettingsModal() {
     } finally {
       setRefreshing(false);
     }
+  };
+
+  const toggleProviderModel = (provider: ModelProvider, modelId: string) => {
+    const current = enabledProviderModels[provider];
+    const next = current === undefined
+      ? [...availableProviderModels[provider]]
+      : [...current];
+    const set = new Set(next);
+    if (set.has(modelId)) {
+      set.delete(modelId);
+    } else {
+      set.add(modelId);
+    }
+    setEnabledProviderModels(provider, availableProviderModels[provider].filter((id) => set.has(id)));
   };
 
   return (
@@ -179,106 +224,177 @@ export function SettingsModal() {
                 />
               </div>
 
-              {/* Cloud Providers */}
+              {/* Provider workspace */}
               <div className="space-y-4">
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
                   {t('settings.providerConfig')}
                 </label>
-                <div className="rounded-[20px] border border-editorial-border bg-editorial-textbox/15 px-5 py-5">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <ApiKeyInput label="Gemini (Native)" provider="gemini" />
-                  <ApiKeyInput label="OpenAI" provider="openai" />
-                  <ApiKeyInput label="Anthropic" provider="anthropic" />
-                  <ApiKeyInput label="DeepSeek" provider="deepseek" />
-                </div>
-                </div>
-              </div>
-
-              {/* Ollama Section */}
-              <div className="space-y-4">
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
-                  {t('ollama.title')}
-                </label>
                 <div className="rounded-[20px] border border-editorial-border bg-editorial-textbox/20 p-6 space-y-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <Server size={16} className="text-editorial-muted" />
-                      <input
-                        type="url"
-                        value={urlDraft}
-                        onChange={(e) => {
-                          setUrlDraft(e.target.value);
-                          setUrlError(null);
-                        }}
-                        onBlur={() => {
-                          const trimmed = urlDraft.trim();
-                          if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
-                            setUrlError(t('ollama.urlInvalid'));
-                          } else {
-                            setUrlError(null);
-                            setOllamaBaseUrl(trimmed);
-                            refreshOllama();
-                          }
-                        }}
-                        className="text-xs font-mono bg-transparent border-b border-editorial-border focus:border-editorial-ink outline-none px-1 w-56"
-                        placeholder="http://localhost:11434"
-                        aria-label={t('ollama.baseUrl')}
-                      />
-                      {urlError && <span className="text-xs text-editorial-accent">{urlError}</span>}
-                      {ollamaStatus === 'connected' && (
-                        <CheckCircle2 size={12} className="text-editorial-ink" aria-label={t('ollama.connected', { count: ollamaModels.length })} />
-                      )}
-                      {ollamaStatus === 'disconnected' && (
-                        <XCircle size={12} className="text-editorial-accent" aria-label={t('ollama.disconnected')} />
-                      )}
-                      {ollamaStatus === 'unknown' && (
-                        <HelpCircle size={12} className="text-editorial-muted" aria-label={t('ollama.unchecked')} />
-                      )}
-                    </div>
-                    <button
-                      onClick={() => refreshOllama()}
-                      disabled={refreshing}
-                      title={t('ollama.refresh')}
-                      className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-ink transition-colors disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                      aria-label={t('ollama.refresh')}
-                    >
-                      <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
-                      {t('ollama.refresh')}
-                    </button>
+                  <div className="flex flex-wrap gap-2">
+                    {MODEL_PROVIDER_ORDER.map((provider) => {
+                      const active = provider === activeProviderTab;
+                      return (
+                        <button
+                          key={provider}
+                          type="button"
+                          onClick={() => setActiveProviderTab(provider)}
+                          className={`rounded-full border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                            active
+                              ? 'border-editorial-accent bg-editorial-accent text-white'
+                              : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent'
+                          }`}
+                        >
+                          {PROVIDER_LABELS[provider]}
+                        </button>
+                      );
+                    })}
                   </div>
 
-                  {ollamaStatus === 'connected' && ollamaModels.length > 0 && (
-                    <div className="space-y-2">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
-                        {t('ollama.availableModels')} ({ollamaModels.length})
-                      </span>
-                      <div className="flex flex-wrap gap-2">
-                        {ollamaModels.map((m) => (
-                          <span key={m} className="px-2 py-1 bg-editorial-bg border border-editorial-border text-xs font-mono">
-                            {m}
-                          </span>
-                        ))}
+                  <div className="space-y-5 border-t border-editorial-border pt-5">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
+                            {PROVIDER_LABELS[activeProviderTab]}
+                          </div>
+                          <p className="mt-1 text-xs leading-relaxed text-editorial-muted">
+                            {t('settings.enabledModelsHint')}
+                          </p>
+                        </div>
+                        <span className="rounded-full border border-editorial-border px-3 py-1 text-[10px] font-mono text-editorial-muted">
+                          {activeEnabledModels.length}/{activeProviderModels.length}
+                        </span>
                       </div>
+
+                      {activeProviderTab === 'ollama' ? (
+                        <div className="space-y-4 rounded-[18px] border border-editorial-border bg-editorial-bg/60 p-4">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <Server size={16} className="text-editorial-muted" />
+                              <input
+                                type="url"
+                                value={urlDraft}
+                                onChange={(e) => {
+                                  setUrlDraft(e.target.value);
+                                  setUrlError(null);
+                                }}
+                                onBlur={() => {
+                                  const trimmed = urlDraft.trim();
+                                  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+                                    setUrlError(t('ollama.urlInvalid'));
+                                  } else {
+                                    setUrlError(null);
+                                    setOllamaBaseUrl(trimmed);
+                                    refreshOllama();
+                                  }
+                                }}
+                                className="text-xs font-mono bg-transparent border-b border-editorial-border focus:border-editorial-ink outline-none px-1 w-56"
+                                placeholder="http://localhost:11434"
+                                aria-label={t('ollama.baseUrl')}
+                              />
+                              {urlError && <span className="text-xs text-editorial-accent">{urlError}</span>}
+                              {ollamaStatus === 'connected' && (
+                                <CheckCircle2 size={12} className="text-editorial-ink" aria-label={t('ollama.connected', { count: ollamaModels.length })} />
+                              )}
+                              {ollamaStatus === 'disconnected' && (
+                                <XCircle size={12} className="text-editorial-accent" aria-label={t('ollama.disconnected')} />
+                              )}
+                              {ollamaStatus === 'unknown' && (
+                                <HelpCircle size={12} className="text-editorial-muted" aria-label={t('ollama.unchecked')} />
+                              )}
+                            </div>
+                            <button
+                              onClick={() => refreshOllama()}
+                              disabled={refreshing}
+                              title={t('ollama.refresh')}
+                              className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-ink transition-colors disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                              aria-label={t('ollama.refresh')}
+                            >
+                              <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
+                              {t('ollama.refresh')}
+                            </button>
+                          </div>
+
+                          {ollamaStatus === 'disconnected' && (
+                            <p className="text-xs text-editorial-muted italic">
+                              {t('ollama.notRunning')}
+                            </p>
+                          )}
+
+                          {ollamaStatus === 'unknown' && (
+                            <p className="text-xs text-editorial-muted italic">
+                              {t('ollama.uncheckedHint')}
+                            </p>
+                          )}
+
+                          {ollamaStatus === 'connected' && ollamaModels.length === 0 && (
+                            <p className="text-xs text-editorial-muted italic">
+                              {t('ollama.noModels')}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="rounded-[18px] border border-editorial-border bg-editorial-bg/60 p-4">
+                          <ApiKeyInput
+                            label={PROVIDER_LABELS[activeProviderTab]}
+                            provider={activeProviderTab}
+                          />
+                        </div>
+                      )}
                     </div>
-                  )}
 
-                  {ollamaStatus === 'disconnected' && (
-                    <p className="text-xs text-editorial-muted italic">
-                      {t('ollama.notRunning')}
-                    </p>
-                  )}
+                    {activeProviderModels.length === 0 ? (
+                      <p className="rounded-[18px] border border-dashed border-editorial-border px-4 py-5 text-sm italic text-editorial-muted">
+                        {activeProviderTab === 'ollama'
+                          ? t('ollama.noModels')
+                          : t('settings.noKnownModels')}
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {activeProviderModels.map((modelId) => {
+                          const checked = enabledProviderModels[activeProviderTab] === undefined
+                            ? true
+                            : enabledProviderModels[activeProviderTab]?.includes(modelId) ?? false;
+                          const reasoning = getModelReasoning(activeProviderTab, modelId);
+                          return (
+                            <label
+                              key={modelId}
+                              className="flex items-start gap-3 rounded-[16px] border border-editorial-border bg-editorial-bg/60 px-4 py-3 transition-colors hover:border-editorial-accent/40"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleProviderModel(activeProviderTab, modelId)}
+                                className="mt-0.5 h-4 w-4 rounded border-editorial-border text-editorial-accent focus:ring-editorial-accent"
+                              />
+                              <div className="min-w-0 flex-1 space-y-2">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="text-sm font-mono text-editorial-ink">{modelId}</span>
+                                  {reasoning && (
+                                    <span className="rounded-full border border-editorial-border px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
+                                      {t(`pipeline.modelReasoning.${reasoning}`)}
+                                    </span>
+                                  )}
+                                </div>
+                                <ModelCapabilityHint
+                                  provider={activeProviderTab}
+                                  model={modelId}
+                                  useCase="translation"
+                                  useCaseLabel={t('pipeline.tabTranslation')}
+                                />
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
 
-                  {ollamaStatus === 'unknown' && (
-                    <p className="text-xs text-editorial-muted italic">
-                      {t('ollama.uncheckedHint')}
-                    </p>
-                  )}
-
-                  {ollamaStatus === 'connected' && ollamaModels.length === 0 && (
-                    <p className="text-xs text-editorial-muted italic">
-                      {t('ollama.noModels')}
-                    </p>
-                  )}
+                    {enabledProviderModels[activeProviderTab] !== undefined && activeEnabledModels.length === 0 && (
+                      <p className="text-xs text-editorial-warning">
+                        {t('settings.noEnabledModelsWarning')}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
 

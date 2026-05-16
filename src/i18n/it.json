@@ -180,6 +180,16 @@
     "modelLockedHint": "Modello bloccato — esistono traduzioni che devono essere preservate. Crea un nuovo progetto per cambiare modello.",
     "modelContextWindowChangedHint": "La context window è cambiata dall'importazione — la dimensione dei chunk potrebbe non essere più ottimale. Considera di re-importare il documento.",
     "stageModelLabel": "Modello di traduzione",
+    "modelReasoning": {
+      "reasoning": "Reasoning",
+      "non_reasoning": "Diretto",
+      "optional": "Adattivo"
+    },
+    "modelFit": {
+      "preferred": "Buona scelta per {{target}}",
+      "discouraged": "Di solito da evitare per {{target}}",
+      "neutral": "Usabile per {{target}}"
+    },
     "tabAudit": "Controllo qualità",
     "tabGlossary": "Registro Termini",
     "tabPreview": "Anteprima Prompt",
@@ -318,7 +328,10 @@
     "keySaveFailed": "Salvataggio chiave {{provider}} fallito",
     "keyDeleted": "Chiave {{provider}} rimossa dal portachiavi",
     "keyDeleteFailed": "Rimozione chiave {{provider}} fallita",
-    "keySavedFallback": "Chiave {{provider}} salvata nel fallback locale cifrato. È meno sicuro del portachiavi OS."
+    "keySavedFallback": "Chiave {{provider}} salvata nel fallback locale cifrato. È meno sicuro del portachiavi OS.",
+    "enabledModelsHint": "Scegli quali modelli di questo provider devono comparire nell'app.",
+    "noKnownModels": "Non ci sono ancora modelli registrati internamente per questo provider.",
+    "noEnabledModelsWarning": "Nessun modello è abilitato per questo provider. Sparirà dai selettori degli stage finché non ne riabiliti almeno uno."
   },
   "ollama": {
     "title": "Ollama (Modelli Locali)",

@@ -16,10 +16,11 @@ import {
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { ModelProvider, OllamaStatus, PipelineStageConfig, PromptTemplate } from '../../types';
-import { MODEL_OPTIONS } from '../../constants';
-import { getModelStatus } from '../../models/catalog';
+import { getKnownModelIds, getModelStatus, getSelectableModelIds, MODEL_PROVIDER_ORDER } from '../../models/catalog';
+import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
 import { ProviderRuntimeEditor } from './ProviderRuntimeEditor';
 import { canRefineWithProvider, formatProviderModelLabel, type ProviderKeyStatusMap } from '../../hooks/useProviderKeyStatus';
+import { useUiStore } from '../../stores/uiStore';
 
 interface StageCardProps {
   stage: PipelineStageConfig;
@@ -61,6 +62,7 @@ export function StageCard({
   deleteTemplate,
 }: StageCardProps) {
   const { t } = useTranslation();
+  const enabledProviderModels = useUiStore((s) => s.enabledProviderModels);
   const [isEditingPrompt, setIsEditingPrompt] = useState(false);
   const [showSaveName, setShowSaveName] = useState(false);
   const [templateName, setTemplateName] = useState('');
@@ -78,8 +80,10 @@ export function StageCard({
   );
 
   const handleProviderChange = (newProvider: ModelProvider) => {
-    const models =
-      newProvider === 'ollama' ? modelOptions : (MODEL_OPTIONS[newProvider] ?? []);
+    const models = getSelectableModelIds(newProvider, {
+      enabledModelIds: enabledProviderModels[newProvider],
+      availableModelIds: newProvider === 'ollama' ? modelOptions : getKnownModelIds(newProvider),
+    });
     onUpdate({ provider: newProvider, model: models[0] || '' });
   };
 
@@ -134,7 +138,7 @@ export function StageCard({
             className="rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
             aria-label={t('models.provider')}
           >
-            {Object.keys(MODEL_OPTIONS).map((p) => (
+            {MODEL_PROVIDER_ORDER.map((p) => (
               <option key={p} value={p}>{p}</option>
             ))}
           </select>
@@ -169,6 +173,12 @@ export function StageCard({
             <span>{t('pipeline.modelLockedHint')}</span>
           </div>
         )}
+        <ModelCapabilityHint
+          provider={stage.provider}
+          model={stage.model}
+          useCase={stage.role ?? 'translation'}
+          useCaseLabel={t(`pipeline.stageRole.${stage.role ?? 'translation'}`)}
+        />
         {ollamaOffline && !translationsExist && (
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 text-xs text-editorial-accent">

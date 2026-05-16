@@ -3,8 +3,8 @@ import { useMemo, useState, useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { ModelProvider, PipelineMode, PromptTemplate } from '../../types';
-import { MODEL_OPTIONS, LANGUAGES, defaultPersonaText } from '../../constants';
-import { getModelStatus, calculateBlobBudget, getContextWindow } from '../../models/catalog';
+import { LANGUAGES, defaultPersonaText } from '../../constants';
+import { calculateBlobBudget, getContextWindow, getKnownModelIds, getModelStatus, getSelectableModelIds, MODEL_PROVIDER_ORDER } from '../../models/catalog';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { StageCard } from './StageCard';
 import { useChunksStore } from '../../stores/chunksStore';
@@ -16,6 +16,7 @@ import { estimatePipelineCost } from '../../utils/costEstimate';
 import { usePricingStore } from '../../stores/pricingStore';
 import { llmService, ollamaService } from '../../services/llmService';
 import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
+import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
 import { PromptPreviewTab } from './PromptPreviewTab';
 import { canRefineWithProvider, formatProviderModelLabel, useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
 
@@ -273,8 +274,11 @@ const DEFAULT_PIPELINE_CONFIG_CLASSNAME =
 
 function useJudgeModelOptions(provider: ModelProvider): string[] {
   const ollamaModels = useUiStore((s) => s.ollamaModels);
-  if (provider === 'ollama') return ollamaModels;
-  return MODEL_OPTIONS[provider] || [];
+  const enabledProviderModels = useUiStore((s) => s.enabledProviderModels);
+  return getSelectableModelIds(provider, {
+    enabledModelIds: enabledProviderModels[provider],
+    availableModelIds: provider === 'ollama' ? ollamaModels : getKnownModelIds(provider),
+  });
 }
 
 interface AuditPromptEditorProps {
@@ -517,6 +521,7 @@ export function PipelineConfig({
   const { chunks, isProcessing, cancelRequested, resetCompletedChunks } = useChunksStore();
   const ollamaStatus = useUiStore((s) => s.ollamaStatus);
   const ollamaModels = useUiStore((s) => s.ollamaModels);
+  const enabledProviderModels = useUiStore((s) => s.enabledProviderModels);
   const { statuses: keyStatuses, isLoading: keyStatusLoading } = useProviderKeyStatus();
   const { t } = useTranslation();
   const judgeModels = useJudgeModelOptions(config.judgeProvider);
@@ -674,10 +679,13 @@ export function PipelineConfig({
   };
 
   const handleJudgeProviderChange = (newProvider: ModelProvider) => {
-    const models =
-      newProvider === 'ollama'
-        ? useUiStore.getState().ollamaModels
-        : MODEL_OPTIONS[newProvider];
+    const models = getSelectableModelIds(newProvider, {
+      enabledModelIds: enabledProviderModels[newProvider],
+      availableModelIds:
+        newProvider === 'ollama'
+          ? useUiStore.getState().ollamaModels
+          : getKnownModelIds(newProvider),
+    });
     setConfig((prev) => ({
       ...prev,
       judgeProvider: newProvider,
@@ -1155,10 +1163,13 @@ export function PipelineConfig({
 
             {/* Stage cards — one per stage in the current mode */}
             {config.stages.map((stage) => {
-              const stageModelOptions =
-                stage.provider === 'ollama'
-                  ? ollamaModels
-                  : (MODEL_OPTIONS[stage.provider] ?? []);
+              const stageModelOptions = getSelectableModelIds(stage.provider, {
+                enabledModelIds: enabledProviderModels[stage.provider],
+                availableModelIds:
+                  stage.provider === 'ollama'
+                    ? ollamaModels
+                    : getKnownModelIds(stage.provider),
+              });
               return (
                 <div key={stage.id} className="space-y-3">
                   <div className="flex items-center gap-2">
@@ -1211,7 +1222,7 @@ export function PipelineConfig({
                 className="rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 aria-label={t('models.provider')}
               >
-                {Object.keys(MODEL_OPTIONS).map((p) => (
+                {MODEL_PROVIDER_ORDER.map((p) => (
                   <option key={p} value={p}>{p}</option>
                 ))}
               </select>
@@ -1243,7 +1254,7 @@ export function PipelineConfig({
                   className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   aria-label={t('pipeline.auditModelLabel')}
                 >
-                  {MODEL_OPTIONS[config.judgeProvider]?.map((m) => (
+                  {getKnownModelIds(config.judgeProvider).map((m) => (
                     <option key={m} value={m}>
                       {m}{getModelStatus(config.judgeProvider, m) === 'preview' ? ' (preview)' : ''}
                     </option>
@@ -1251,6 +1262,12 @@ export function PipelineConfig({
                 </select>
               )}
             </div>
+            <ModelCapabilityHint
+              provider={config.judgeProvider}
+              model={config.judgeModel}
+              useCase="judge"
+              useCaseLabel={t('pipeline.tabAudit')}
+            />
 
             {judgeOllamaOffline && (
               <div className="flex items-center gap-2 text-xs text-editorial-accent">
