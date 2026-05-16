@@ -241,21 +241,21 @@ function ChunkAuditCard({
                     >
                       {issue.type}
                     </span>
-                    {issue.phrase && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setViewMode('document');
-                          setSelectedChunkId(chunk.id);
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setViewMode('document');
+                        setSelectedChunkId(chunk.id);
+                        if (issue.phrase) {
                           focusIssueInChunk(chunk.id, issue.phrase);
-                        }}
-                        title={t('audit.locateInTextTooltip')}
-                        className="flex items-center gap-1 rounded-full border border-editorial-border px-2 py-1 text-[9px] font-bold uppercase tracking-[0.18em] text-editorial-muted transition-colors hover:text-editorial-ink"
-                      >
-                        <Crosshair size={10} />
-                        {t('audit.locateInText')}
-                      </button>
-                    )}
+                        }
+                      }}
+                      title={issue.phrase ? t('audit.locateInTextTooltip') : t('audit.openChunk')}
+                      className="flex items-center gap-1 rounded-full border border-editorial-border px-2 py-1 text-[9px] font-bold uppercase tracking-[0.18em] text-editorial-muted transition-colors hover:text-editorial-ink"
+                    >
+                      <Crosshair size={10} />
+                      {issue.phrase ? t('audit.locateInText') : t('audit.openChunk')}
+                    </button>
                   </div>
                   <p className="text-sm leading-relaxed text-editorial-ink">
                     {issue.description}
@@ -274,4 +274,3 @@ function ChunkAuditCard({
     </div>
   );
 }
-

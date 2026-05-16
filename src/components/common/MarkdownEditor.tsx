@@ -183,7 +183,7 @@ export function MarkdownEditor({
 
   const preview = (
     <div
-      className={`${fillHeight ? 'flex-1 min-h-0 overflow-y-auto' : minHeightClassName} ${previewClassName}`}
+      className={`${fillHeight ? 'flex-1 min-h-0 overflow-y-auto' : minHeightClassName} rounded-2xl border border-editorial-border bg-editorial-textbox/60 p-4 ${previewClassName}`}
       style={textSizeStyle}
     >
       {value.trim() ? (

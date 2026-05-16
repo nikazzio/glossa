@@ -295,12 +295,16 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
 
   updateChunkOriginalText: (chunkId, text) =>
     set((state) => {
+      const chunkIdx = chunkIndex.get(chunkId);
+      if (chunkIdx === undefined) return {};
+      const chunk = state.chunks[chunkIdx];
+      if (!chunk || chunk.originalText === text) return {};
+
       const sourceFootnotes = usePipelineStore.getState().sourceFootnotes;
-      const nextChunks = updateSingleChunk(state.chunks, chunkId, (chunk) => {
-        if (chunk.originalText === text) return chunk;
-        const hasTranslation = !!(chunk.currentDraft || Object.keys(chunk.stageResults).length > 0);
+      const nextChunks = updateSingleChunk(state.chunks, chunkId, (current) => {
+        const hasTranslation = !!(current.currentDraft || Object.keys(current.stageResults).length > 0);
         const updated = updateChunkSourceFields(
-          chunk,
+          current,
           deriveChunkDisplayText(text, sourceFootnotes),
           text,
           buildChunkFootnotes(text, sourceFootnotes),

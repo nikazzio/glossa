@@ -263,6 +263,18 @@ describe('chunksStore', () => {
     expect(chunk?.originalText).toBe('Edited text');
   });
 
+  it('updateChunkOriginalText is a no-op when the source text is unchanged', () => {
+    usePipelineStore.getState().setInputText('Original text');
+    useChunksStore.getState().generateChunks();
+
+    const before = useChunksStore.getState().chunks;
+    const chunkId = before[0].id;
+
+    useChunksStore.getState().updateChunkOriginalText(chunkId, 'Original text');
+
+    expect(useChunksStore.getState().chunks).toBe(before);
+  });
+
   describe('O(1) index — per-id updates only touch the target chunk', () => {
     it('updateChunkStatus leaves sibling chunk references unchanged', () => {
       usePipelineStore.getState().setInputText('A.\n\nB.\n\nC.');

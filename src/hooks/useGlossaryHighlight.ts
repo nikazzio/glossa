@@ -22,7 +22,7 @@ function escapeRegex(str: string): string {
 }
 
 function buildPattern(term: string): RegExp {
-  const trimmed = term.trimEnd();
+  const trimmed = term.trim();
   const lastChar = trimmed.slice(-1).toLowerCase();
 
   // Italian invariable nouns end in accented vowels (città, università)
