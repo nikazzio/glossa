@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import i18n from 'i18next';
-import type { PipelineConfig, PipelineStageConfig, JudgeResult, Issue, TokenUsage, PromptInfo } from '../types';
+import type { PipelineConfig, PipelineStageConfig, JudgeResult, Issue, TokenUsage, PromptInfo, ResponseInfo } from '../types';
 import { useChunksStore } from '../stores/chunksStore';
 import { useUiStore } from '../stores/uiStore';
 import { logOperation } from '../stores/operationLogStore';
@@ -208,6 +208,7 @@ export const llmService = {
     config: PipelineConfig,
     onPrompt?: (info: PromptInfo) => void,
     onIdleGrace?: () => void,
+    onResponse?: (info: ResponseInfo) => void,
   ): Promise<Omit<JudgeResult, 'status'> & UsageResult> {
     const streamId = `judge-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
@@ -234,6 +235,10 @@ export const llmService = {
       if (event.payload.streamId !== streamId) return;
       onPrompt?.({ systemPrompt: event.payload.systemPrompt, userPrompt: event.payload.userPrompt });
     });
+    const unlistenResponse = await listen<{ streamId: string; kind: ResponseInfo['kind']; rawJson: string; parseError?: string }>('chunk-response', (event) => {
+      if (event.payload.streamId !== streamId) return;
+      onResponse?.({ kind: event.payload.kind, rawJson: event.payload.rawJson, parseError: event.payload.parseError });
+    });
     const unlistenAlive = await listen<{ streamId: string }>('stream-alive', (event) => {
       if (event.payload.streamId !== streamId) return;
       onIdleGrace?.();
@@ -255,6 +260,7 @@ export const llmService = {
     } finally {
       unlisten();
       unlistenPrompt();
+      unlistenResponse();
       unlistenAlive();
       useChunksStore.getState().setActiveStreamId(null);
     }
@@ -265,6 +271,7 @@ export const llmService = {
     config: PipelineConfig,
     onPrompt?: (info: PromptInfo) => void,
     onIdleGrace?: () => void,
+    onResponse?: (info: ResponseInfo) => void,
   ): Promise<{ issues: Issue[] } & UsageResult> {
     const streamId = `coherence-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
@@ -291,6 +298,10 @@ export const llmService = {
       if (event.payload.streamId !== streamId) return;
       onPrompt?.({ systemPrompt: event.payload.systemPrompt, userPrompt: event.payload.userPrompt });
     });
+    const unlistenResponse = await listen<{ streamId: string; kind: ResponseInfo['kind']; rawJson: string; parseError?: string }>('chunk-response', (event) => {
+      if (event.payload.streamId !== streamId) return;
+      onResponse?.({ kind: event.payload.kind, rawJson: event.payload.rawJson, parseError: event.payload.parseError });
+    });
     const unlistenAlive = await listen<{ streamId: string }>('stream-alive', (event) => {
       if (event.payload.streamId !== streamId) return;
       onIdleGrace?.();
@@ -312,6 +323,7 @@ export const llmService = {
     } finally {
       unlisten();
       unlistenPrompt();
+      unlistenResponse();
       unlistenAlive();
       useChunksStore.getState().setActiveStreamId(null);
     }

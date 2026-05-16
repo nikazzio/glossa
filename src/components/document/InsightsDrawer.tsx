@@ -10,7 +10,6 @@ import {
   Clock,
   Crosshair,
   Cpu,
-  ExternalLink,
   FileText,
   Gauge,
   Highlighter,
@@ -26,7 +25,6 @@ import {
   Scissors,
   ShieldCheck,
   TerminalSquare,
-  Trash2,
   X,
 } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -37,12 +35,14 @@ import { useUiStore, type InsightsDrawerTab, type ChunkDrawerTab } from '../../s
 import { useChunksStore } from '../../stores/chunksStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { usePricingStore } from '../../stores/pricingStore';
-import { useOperationLogStore } from '../../stores/operationLogStore';
 import { indexPad, qualityLabelKey, qualityTone, calculateCompositeQuality } from '../../utils';
 import { MODEL_PRICING } from '../../constants';
 import { estimatePipelineCost } from '../../utils/costEstimate';
+import { aggregateEntries, formatDurationMs } from '../../utils/operationLogStats';
+import { useOperationLogStore } from '../../stores/operationLogStore';
 import { formatCost } from '../pipeline/CostBadge';
 import { useChunkWatchdog } from '../../hooks/useChunkWatchdog';
+import { OperationsTab } from './OperationsTab';
 import type { TranslationChunk } from '../../types';
 
 interface InsightsDrawerProps {
@@ -620,9 +620,14 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
   const { t } = useTranslation();
   const config = usePipelineStore((state) => state.config);
   const pricingOverrides = usePricingStore((s) => s.overrides);
+  const logEntries = useOperationLogStore((s) => s.entries);
   const costEstimate = useMemo(
     () => estimatePipelineCost(chunks, config, pricingOverrides),
     [chunks, config, pricingOverrides],
+  );
+  const logStats = useMemo(
+    () => aggregateEntries(logEntries, pricingOverrides),
+    [logEntries, pricingOverrides],
   );
 
   const sourceWords = chunks.reduce((acc, c) => acc + countWords(c.originalText), 0);
@@ -787,6 +792,9 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
               : costEstimate.totalUsd === null ? t('cost.unknown')
               : `~${formatCost(costEstimate.totalUsd)}`}
           />
+          {logStats.totalDurationMs > 0 && (
+            <StatRow label={t('log.totalDuration')} value={formatDurationMs(logStats.totalDurationMs)} />
+          )}
         </dl>
         {modelNames.size > 0 && (
           <div className="mt-3 space-y-1">
@@ -1013,176 +1021,6 @@ function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
       ))}
     </div>
   );
-}
-
-function OperationsTab({
-  panelId,
-  labelledBy,
-  currentChunkId,
-  chunks,
-  onSelectChunk,
-}: {
-  panelId: string;
-  labelledBy: string;
-  currentChunkId: string | null;
-  chunks: TranslationChunk[];
-  onSelectChunk: (id: string) => void;
-}) {
-  const { t } = useTranslation();
-  const entries = useOperationLogStore((state) => state.entries);
-  const clear = useOperationLogStore((state) => state.clear);
-  const isProcessing = useChunksStore((state) => state.isProcessing);
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  const visibleEntries = currentChunkId
-    ? entries.filter((entry) => entry.chunkId === currentChunkId)
-    : entries;
-  const processingChunk = chunks.find((c) => c.status === 'processing') ?? null;
-  const processingChunkIndex = processingChunk
-    ? chunks.findIndex((c) => c.id === processingChunk.id)
-    : -1;
-
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [visibleEntries.length]);
-
-  return (
-    <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex h-full flex-col">
-      <div className="border-b border-editorial-border px-5 py-4">
-        <div className="flex items-center justify-between">
-          <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-            {t('document.operationsShellTitle')}
-          </p>
-          <div className="flex items-center gap-1">
-            {isProcessing && processingChunk && (
-              <button
-                type="button"
-                onClick={() => onSelectChunk(processingChunk.id)}
-                title={t('document.operationsGoToChunk')}
-                aria-label={t('document.operationsGoToChunk')}
-                className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              >
-                <ExternalLink size={14} />
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={clear}
-              title={t('document.operationsClear')}
-              aria-label={t('document.operationsClear')}
-              className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            >
-              <Trash2 size={14} />
-            </button>
-          </div>
-        </div>
-        {isProcessing && (
-          <div className="mt-2.5 flex items-center gap-2" role="status" aria-live="polite">
-            <Loader2 size={11} className="animate-spin shrink-0 text-[#9eb4ff]" />
-            <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#9eb4ff]">
-              {t('document.operationsRunning')}
-            </span>
-            {processingChunkIndex >= 0 && (
-              <span className="font-display text-xs italic text-[#9eb4ff]/70">
-                {indexPad(processingChunkIndex + 1)}/{indexPad(chunks.length)}
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-
-      {visibleEntries.length === 0 && !isProcessing ? (
-        <div className="flex flex-1 items-center justify-center px-6 py-12 text-center text-sm text-editorial-muted">
-          {t('document.operationsEmpty')}
-        </div>
-      ) : (
-        <div ref={scrollRef} className="flex-1 overflow-y-auto bg-[#111111] px-4 py-4 font-mono text-xs text-[#d6d6d6] custom-scrollbar">
-          <div className="space-y-2">
-            {(() => {
-              const scopeLabel: Record<string, string> = {
-                pipeline:  t('log.scopePipeline'),
-                preflight: t('log.scopePreflight'),
-                invoke:    t('log.scopeInvoke'),
-                stage:     t('log.scopeStage'),
-                audit:     t('log.scopeAudit'),
-                coherence: t('log.scopeCoherence'),
-                chunk:     t('log.scopeChunk'),
-              };
-              const levelLabel: Record<string, string> = {
-                info:    t('log.levelInfo'),
-                success: t('log.levelSuccess'),
-                warn:    t('log.levelWarn'),
-                error:   t('log.levelError'),
-              };
-              const chunkIndexMap = new Map(chunks.map((c, i) => [c.id, i]));
-              return visibleEntries.map((entry) => {
-              const levelColor =
-                entry.level === 'error'   ? { text: 'text-[#ff6b6b]', border: 'border-[#ff6b6b]/40' }
-                : entry.level === 'warn'  ? { text: 'text-[#f6c90e]', border: 'border-[#f6c90e]/40' }
-                : entry.level === 'success' ? { text: 'text-[#69db7c]', border: 'border-[#69db7c]/40' }
-                : { text: 'text-[#74c0fc]', border: 'border-[#74c0fc]/30' };
-              const chunkIndex = entry.chunkId != null ? (chunkIndexMap.get(entry.chunkId) ?? -1) : -1;
-              return (
-                <div
-                  key={entry.id}
-                  className="rounded-[12px] border border-white/10 bg-white/[0.03] px-3 py-2"
-                >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[#555]">$</span>
-                    <span className="text-[#666]">{entry.at.slice(11, 19)}</span>
-                    <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.22em] text-[#888]">
-                      {scopeLabel[entry.scope] ?? entry.scope}
-                    </span>
-                    <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.22em] ${levelColor.border} ${levelColor.text}`}>
-                      {levelLabel[entry.level] ?? entry.level}
-                    </span>
-                  </div>
-                  <p className={`mt-2 leading-relaxed ${levelColor.text}`}>
-                    {entry.message}
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-2 text-[10px]">
-                    {chunkIndex >= 0 && (
-                      <span className="rounded-full border border-white/10 px-2 py-0.5 text-[#888]">
-                        {t('log.unitLabel')} {indexPad(chunkIndex + 1)}
-                      </span>
-                    )}
-                    {formatOperationMeta(entry.meta).map((item) => (
-                      <span key={item} className="rounded-full border border-white/10 px-2 py-0.5 text-[#666]">
-                        {item}
-                      </span>
-                    ))}
-                  </div>
-                  {entry.detail && (
-                    <details className="mt-2 border-t border-white/10 pt-2">
-                      <summary className="cursor-pointer select-none text-[10px] text-[#666] hover:text-[#aaa]">
-                        ▶ {t('log.showPrompt')}
-                      </summary>
-                      <pre className="mt-2 max-h-52 overflow-y-auto whitespace-pre-wrap text-[10px] leading-relaxed text-[#aaa] custom-scrollbar">
-                        {entry.detail}
-                      </pre>
-                    </details>
-                  )}
-                </div>
-              );
-            });
-            })()}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function formatOperationMeta(meta?: Record<string, unknown>): string[] {
-  if (!meta) return [];
-  return Object.entries(meta).flatMap(([key, value]) => {
-    if (value === undefined || value === null || value === '') return [];
-    if (Array.isArray(value)) return [`${key}: ${value.join(', ')}`];
-    if (typeof value === 'object') return [`${key}: ${JSON.stringify(value)}`];
-    return [`${key}: ${String(value)}`];
-  });
 }
 
 // ── IssueList ──────────────────────────────────────────────────────────────

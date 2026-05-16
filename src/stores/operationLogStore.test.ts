@@ -26,4 +26,22 @@ describe('operationLogStore', () => {
     expect(entries[0].message).toBe('entry-100');
     expect(entries.at(-1)?.message).toBe('entry-2099');
   });
+
+  it('preserves phase, durationMs and detailKind on appended entries', () => {
+    logOperation({
+      level: 'success',
+      scope: 'stage',
+      message: 'stage completed',
+      phase: 'end',
+      durationMs: 1234,
+      detailKind: 'json',
+      detail: '{"foo":"bar"}',
+    });
+
+    const [entry] = useOperationLogStore.getState().entries;
+    expect(entry.phase).toBe('end');
+    expect(entry.durationMs).toBe(1234);
+    expect(entry.detailKind).toBe('json');
+    expect(entry.detail).toBe('{"foo":"bar"}');
+  });
 });
