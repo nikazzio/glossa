@@ -26,7 +26,6 @@ interface MutableStats {
 
 export interface OperationLogStatsBuckets extends OperationLogStats {
   byChunk: Map<string, OperationLogStats>;
-  byStage: Map<string, OperationLogStats>;
 }
 
 type Pricing = Record<string, { input: number; output: number }>;
@@ -130,7 +129,6 @@ export function aggregateEntries(
 ): OperationLogStatsBuckets {
   const total = emptyStats();
   const byChunk = new Map<string, MutableStats>();
-  const byStage = new Map<string, MutableStats>();
 
   for (const entry of entries) {
     const usage = readUsage(entry);
@@ -141,22 +139,14 @@ export function aggregateEntries(
       accumulate(bucket, entry, usage, pricingOverrides);
       byChunk.set(entry.chunkId, bucket);
     }
-    if (entry.stageId) {
-      const bucket = byStage.get(entry.stageId) ?? emptyStats();
-      accumulate(bucket, entry, usage, pricingOverrides);
-      byStage.set(entry.stageId, bucket);
-    }
   }
 
   const finalizedByChunk = new Map<string, OperationLogStats>();
   for (const [k, v] of byChunk) finalizedByChunk.set(k, finalize(v));
-  const finalizedByStage = new Map<string, OperationLogStats>();
-  for (const [k, v] of byStage) finalizedByStage.set(k, finalize(v));
 
   return {
     ...finalize(total),
     byChunk: finalizedByChunk,
-    byStage: finalizedByStage,
   };
 }
 

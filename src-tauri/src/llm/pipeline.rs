@@ -29,7 +29,6 @@ struct ResponseEvent {
     stream_id: String,
     kind: String,
     raw_json: String,
-    parse_error: Option<String>,
 }
 
 fn pretty_json(value: &serde_json::Value, fallback: &str) -> String {
@@ -236,23 +235,12 @@ pub async fn judge_translation(
                     stream_id: stream_id.clone(),
                     kind: "judge".to_string(),
                     raw_json: pretty_json(&v, sanitized),
-                    parse_error: None,
                 },
             )
             .ok();
             v
         }
         Err(e) => {
-            app.emit(
-                "chunk-response",
-                ResponseEvent {
-                    stream_id: stream_id.clone(),
-                    kind: "judge".to_string(),
-                    raw_json: result_text.clone(),
-                    parse_error: Some(e.to_string()),
-                },
-            )
-            .ok();
             #[cfg(debug_assertions)]
             {
                 let preview: String = result_text.chars().take(500).collect();
@@ -411,23 +399,12 @@ pub async fn run_coherence_for_chunk(
                     stream_id: stream_id.clone(),
                     kind: "coherence".to_string(),
                     raw_json: pretty_json(&v, sanitized),
-                    parse_error: None,
                 },
             )
             .ok();
             v
         }
         Err(e) => {
-            app.emit(
-                "chunk-response",
-                ResponseEvent {
-                    stream_id: stream_id.clone(),
-                    kind: "coherence".to_string(),
-                    raw_json: result_text.clone(),
-                    parse_error: Some(e.to_string()),
-                },
-            )
-            .ok();
             return Err(format!("Failed to parse coherence JSON: {e}"));
         }
     };

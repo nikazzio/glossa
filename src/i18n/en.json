@@ -845,7 +845,6 @@
     "noteLabel": "show note",
     "summaryInput": "input",
     "summaryOutput": "output",
-    "summaryCached": "cache",
     "cacheHitRate": "cache hit",
     "totalDuration": "duration",
     "totalCost": "cost",
@@ -855,8 +854,7 @@
     "groupBy": "Group",
     "copy": "Copy",
     "copied": "Copied",
-    "copyFailed": "Copy failed",
-    "actualsTitle": "Actuals (post-run)"
+    "copyFailed": "Copy failed"
   },
   "resume": {
     "title": "Translation interrupted",

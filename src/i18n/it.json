@@ -845,7 +845,6 @@
     "noteLabel": "mostra nota",
     "summaryInput": "input",
     "summaryOutput": "output",
-    "summaryCached": "cache",
     "cacheHitRate": "cache hit",
     "totalDuration": "durata",
     "totalCost": "costo",
@@ -855,8 +854,7 @@
     "groupBy": "Raggruppa",
     "copy": "Copia",
     "copied": "Copiato",
-    "copyFailed": "Copia fallita",
-    "actualsTitle": "Effettivi (post-run)"
+    "copyFailed": "Copia fallita"
   },
   "resume": {
     "title": "Traduzione interrotta",

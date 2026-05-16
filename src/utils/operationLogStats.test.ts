@@ -23,7 +23,6 @@ describe('aggregateEntries', () => {
     expect(stats.totalDurationMs).toBe(0);
     expect(stats.totalUsd).toBe(0);
     expect(stats.byChunk.size).toBe(0);
-    expect(stats.byStage.size).toBe(0);
   });
 
   it('sums tokens across entries with usage metadata', () => {
@@ -77,15 +76,6 @@ describe('aggregateEntries', () => {
     expect(stats.byChunk.get('a')?.totalInput).toBe(300);
     expect(stats.byChunk.get('a')?.totalOutput).toBe(150);
     expect(stats.byChunk.get('b')?.totalInput).toBe(50);
-  });
-
-  it('groups stats by stageId', () => {
-    const stats = aggregateEntries([
-      entry({ stageId: 's1', meta: { inputTokens: 100, outputTokens: 50 } }),
-      entry({ stageId: 's2', meta: { inputTokens: 200, outputTokens: 100 } }),
-    ]);
-    expect(stats.byStage.get('s1')?.totalInput).toBe(100);
-    expect(stats.byStage.get('s2')?.totalInput).toBe(200);
   });
 
   it('reports cost as 0 when all usage comes from ollama', () => {

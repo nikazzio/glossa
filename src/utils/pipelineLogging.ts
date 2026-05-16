@@ -148,7 +148,7 @@ export const pipelineLog = {
       message: `Stage "${stageName}" started`,
       chunkId,
       stageId,
-      meta: { provider: ref.provider, model: ref.model },
+      meta: { stageName, provider: ref.provider, model: ref.model },
     });
   },
 
@@ -274,14 +274,14 @@ export const pipelineLog = {
     });
   },
 
-  auditResponse(chunkId: string, rawJson: string, parseError?: string): void {
+  auditResponse(chunkId: string, rawJson: string): void {
     logOperation({
-      level: parseError ? 'warn' : 'info',
+      level: 'info',
       scope: 'audit',
-      message: parseError ? `Audit response could not be parsed: ${parseError}` : 'Audit response received',
+      message: 'Audit response received',
       chunkId,
       detail: rawJson,
-      detailKind: parseError ? 'error' : 'json',
+      detailKind: 'json',
     });
   },
 
@@ -374,14 +374,14 @@ export const pipelineLog = {
     });
   },
 
-  coherenceResponse(chunkId: string, rawJson: string, parseError?: string): void {
+  coherenceResponse(chunkId: string, rawJson: string): void {
     logOperation({
-      level: parseError ? 'warn' : 'info',
+      level: 'info',
       scope: 'coherence',
-      message: parseError ? `Coherence response could not be parsed: ${parseError}` : 'Coherence response received',
+      message: 'Coherence response received',
       chunkId,
       detail: rawJson,
-      detailKind: parseError ? 'error' : 'json',
+      detailKind: 'json',
     });
   },
 

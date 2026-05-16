@@ -365,6 +365,10 @@ export async function setSetting(key: string, value: string): Promise<void> {
 // ── Operation Logs ───────────────────────────────────────────────────
 
 const MAX_OPERATION_LOG_ENTRIES = 2000;
+const MAX_DETAIL_LENGTH = 10_000;
+
+const VALID_PHASES = new Set(['start', 'end', 'retry', 'cache']);
+const VALID_DETAIL_KINDS = new Set(['prompt', 'json', 'error', 'note']);
 
 interface DbOperationLogRow {
   id: string;
@@ -412,7 +416,7 @@ export async function saveOperationLogEntry(projectId: string, entry: PersistedL
       entry.chunkId ?? null,
       entry.stageId ?? null,
       entry.meta ? JSON.stringify(entry.meta) : null,
-      entry.detail ?? null,
+      entry.detail ? entry.detail.slice(0, MAX_DETAIL_LENGTH) : null,
       entry.phase ?? null,
       entry.durationMs ?? null,
       entry.detailKind ?? null,
@@ -457,9 +461,9 @@ export async function loadOperationLogs(projectId: string): Promise<PersistedLog
     ...(row.stage_id ? { stageId: row.stage_id } : {}),
     ...(row.meta ? { meta: JSON.parse(row.meta) as Record<string, unknown> } : {}),
     ...(row.detail ? { detail: row.detail } : {}),
-    ...(row.phase ? { phase: row.phase } : {}),
+    ...(row.phase && VALID_PHASES.has(row.phase) ? { phase: row.phase } : {}),
     ...(row.duration_ms != null ? { durationMs: row.duration_ms } : {}),
-    ...(row.detail_kind ? { detailKind: row.detail_kind } : {}),
+    ...(row.detail_kind && VALID_DETAIL_KINDS.has(row.detail_kind) ? { detailKind: row.detail_kind } : {}),
   }));
 }
 

@@ -1,4 +1,26 @@
-import { Copy, Loader2, Search, ExternalLink, Trash2 } from 'lucide-react';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Copy,
+  ExternalLink,
+  FileText,
+  Filter,
+  Info,
+  Layers,
+  Link2,
+  Loader2,
+  Rows3,
+  ScanLine,
+  Search,
+  ShieldCheck,
+  SlidersHorizontal,
+  TerminalSquare,
+  Trash2,
+  Workflow,
+  XCircle,
+  Zap,
+} from 'lucide-react';
+import type { ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -26,6 +48,23 @@ interface OperationsTabProps {
   chunks: TranslationChunk[];
   onSelectChunk: (id: string) => void;
 }
+
+const SCOPE_ICONS: Record<OperationLogScope, ReactNode> = {
+  pipeline: <Workflow size={11} />,
+  preflight: <ShieldCheck size={11} />,
+  invoke: <Zap size={11} />,
+  stage: <Layers size={11} />,
+  audit: <ScanLine size={11} />,
+  coherence: <Link2 size={11} />,
+  chunk: <FileText size={11} />,
+};
+
+const LEVEL_ICONS: Record<OperationLogLevel, ReactNode> = {
+  info: <Info size={11} />,
+  success: <CheckCircle2 size={11} />,
+  warn: <AlertTriangle size={11} />,
+  error: <XCircle size={11} />,
+};
 
 const ALL_SCOPES: OperationLogScope[] = [
   'pipeline',
@@ -81,8 +120,8 @@ export function OperationsTab({
   }, [chunkScopedEntries, scopeFilter, levelFilter, search]);
 
   const stats = useMemo(
-    () => aggregateEntries(filteredEntries, pricingOverrides),
-    [filteredEntries, pricingOverrides],
+    () => aggregateEntries(chunkScopedEntries, pricingOverrides),
+    [chunkScopedEntries, pricingOverrides],
   );
 
   const processingChunk = chunks.find((c) => c.status === 'processing') ?? null;
@@ -190,9 +229,12 @@ function Header({
   return (
     <div className="border-b border-editorial-border px-5 py-4">
       <div className="flex items-center justify-between">
-        <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-          {t('document.operationsShellTitle')}
-        </p>
+        <div className="flex items-center gap-1.5">
+          <TerminalSquare size={11} className="text-editorial-accent shrink-0" />
+          <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+            {t('document.operationsShellTitle')}
+          </p>
+        </div>
         <div className="flex items-center gap-1">
           {isProcessing && processingChunk && (
             <button
@@ -294,28 +336,36 @@ function FilterBar({
   return (
     <div className="border-b border-editorial-border px-5 py-3 space-y-2">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[9px] font-sans uppercase tracking-[0.22em] text-editorial-muted">
-          {t('log.filterScope')}
-        </span>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <SlidersHorizontal size={11} className="text-editorial-accent shrink-0" />
+          <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+            {t('log.filterScope')}
+          </span>
+        </div>
         {ALL_SCOPES.map((scope) => (
-          <Chip
+          <IconChip
             key={scope}
             active={scopeFilter.has(scope)}
             onClick={() => onToggleScope(scope)}
-            label={scopeLabel[scope]}
+            icon={SCOPE_ICONS[scope]}
+            title={scopeLabel[scope]}
           />
         ))}
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[9px] font-sans uppercase tracking-[0.22em] text-editorial-muted">
-          {t('log.filterLevel')}
-        </span>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <Filter size={11} className="text-editorial-accent shrink-0" />
+          <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+            {t('log.filterLevel')}
+          </span>
+        </div>
         {ALL_LEVELS.map((level) => (
-          <Chip
+          <IconChip
             key={level}
             active={levelFilter.has(level)}
             onClick={() => onToggleLevel(level)}
-            label={levelLabel[level]}
+            icon={LEVEL_ICONS[level]}
+            title={levelLabel[level]}
           />
         ))}
       </div>
@@ -330,25 +380,37 @@ function FilterBar({
             className="w-full bg-transparent text-xs text-editorial-ink placeholder:text-editorial-muted/70 outline-none"
           />
         </div>
-        <Chip active={grouped} onClick={onToggleGrouped} label={t('log.groupBy')} />
+        <IconChip active={grouped} onClick={onToggleGrouped} icon={<Rows3 size={11} />} title={t('log.groupBy')} />
       </div>
     </div>
   );
 }
 
-function Chip({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
+function IconChip({
+  active,
+  onClick,
+  icon,
+  title,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: ReactNode;
+  title: string;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.22em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+      title={title}
+      aria-label={title}
+      className={`rounded-full border p-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
         active
           ? 'border-editorial-accent bg-editorial-accent text-white'
           : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent'
       }`}
     >
-      {label}
+      {icon}
     </button>
   );
 }
@@ -501,8 +563,7 @@ function labelForStageGroup(
   if (stageKey === '__audit__') title = t('log.scopeAudit');
   else if (stageKey === '__coherence__') title = t('log.scopeCoherence');
   else {
-    const m = start?.message?.match(/"([^"]+)"/);
-    title = m ? m[1] : t('log.scopeStage');
+    title = (start?.meta?.stageName as string | undefined) ?? t('log.scopeStage');
   }
 
   const parts: string[] = [];

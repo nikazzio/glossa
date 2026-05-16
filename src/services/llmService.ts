@@ -235,9 +235,9 @@ export const llmService = {
       if (event.payload.streamId !== streamId) return;
       onPrompt?.({ systemPrompt: event.payload.systemPrompt, userPrompt: event.payload.userPrompt });
     });
-    const unlistenResponse = await listen<{ streamId: string; kind: ResponseInfo['kind']; rawJson: string; parseError?: string }>('chunk-response', (event) => {
+    const unlistenResponse = await listen<{ streamId: string; kind: ResponseInfo['kind']; rawJson: string }>('chunk-response', (event) => {
       if (event.payload.streamId !== streamId) return;
-      onResponse?.({ kind: event.payload.kind, rawJson: event.payload.rawJson, parseError: event.payload.parseError });
+      onResponse?.({ kind: event.payload.kind, rawJson: event.payload.rawJson });
     });
     const unlistenAlive = await listen<{ streamId: string }>('stream-alive', (event) => {
       if (event.payload.streamId !== streamId) return;
@@ -298,9 +298,9 @@ export const llmService = {
       if (event.payload.streamId !== streamId) return;
       onPrompt?.({ systemPrompt: event.payload.systemPrompt, userPrompt: event.payload.userPrompt });
     });
-    const unlistenResponse = await listen<{ streamId: string; kind: ResponseInfo['kind']; rawJson: string; parseError?: string }>('chunk-response', (event) => {
+    const unlistenResponse = await listen<{ streamId: string; kind: ResponseInfo['kind']; rawJson: string }>('chunk-response', (event) => {
       if (event.payload.streamId !== streamId) return;
-      onResponse?.({ kind: event.payload.kind, rawJson: event.payload.rawJson, parseError: event.payload.parseError });
+      onResponse?.({ kind: event.payload.kind, rawJson: event.payload.rawJson });
     });
     const unlistenAlive = await listen<{ streamId: string }>('stream-alive', (event) => {
       if (event.payload.streamId !== streamId) return;
