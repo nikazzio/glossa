@@ -161,8 +161,11 @@ describe('document chunking', () => {
       headingAware: true,
     });
 
-    expect(chunks[0]).toBe(shortPara);
-    expect(chunks[1]).toMatch(new RegExp(`^${title}`));
+    expect(chunks).toEqual([
+      shortPara,
+      `${title}\n\n${longPara}`,
+      `${extraPara}\n\n${lastPara}`,
+    ]);
   });
 
   it('moves a markdown heading embedded at the bottom of a content chunk to the next chunk', () => {
@@ -178,8 +181,31 @@ describe('document chunking', () => {
       headingAware: true,
     });
 
-    expect(chunks[0]).toBe(shortPara);
-    expect(chunks[1]).toMatch(new RegExp(`^${heading.replace('##', '##')}`));
+    expect(chunks).toEqual([
+      shortPara,
+      `${heading}\n\n${longPara}`,
+      `${extraPara}\n\n${lastPara}`,
+    ]);
+  });
+
+  it('keeps non-heading trailing paragraphs in their original chunk', () => {
+    const shortPara = 'Short intro paragraph with nine words total here.';
+    const trailingPara = 'This is a normal trailing paragraph.';
+    const longPara = Array.from({ length: 25 }, (_, i) => `word${i + 1}`).join(' ');
+    const extraPara = Array.from({ length: 5 }, (_, i) => `extra${i + 1}`).join(' ');
+    const lastPara = 'Final short paragraph.';
+
+    const chunks = chunkText([shortPara, trailingPara, longPara, extraPara, lastPara].join('\n\n'), {
+      useChunking: true,
+      targetChunkCount: 3,
+      headingAware: true,
+    });
+
+    expect(chunks).toEqual([
+      `${shortPara}\n\n${trailingPara}`,
+      longPara,
+      `${extraPara}\n\n${lastPara}`,
+    ]);
   });
 
   it('merges chunks smaller than the configured minimum forward', () => {

@@ -228,8 +228,21 @@ function isHeadingChunk(text: string): boolean {
   return /^#{1,6}\s+\S/.test(trimmed) && !trimmed.includes('\n');
 }
 
-// Detects a heading-like trailing line: short, no sentence-ending punctuation,
-// preceded by a blank line within the chunk. Works for both Markdown and plain text.
+function isPlainTextHeadingLike(text: string): boolean {
+  const lines = text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (lines.length === 0 || lines.length > 2) return false;
+  if (countWords(text) > 12 || text.length > 80) return false;
+  return lines.every((line) =>
+    /^[A-Z0-9À-ÖØ-Þ]/.test(line) &&
+    !/[.!?…]$/.test(line) &&
+    !/^[-*+]\s+/.test(line),
+  );
+}
+
+// Detects a strict heading-like trailing block preceded by a blank line.
 function extractTrailingHeading(text: string): { main: string; heading: string } | null {
   const trimmed = text.trim();
   const sep = trimmed.lastIndexOf('\n\n');
@@ -237,7 +250,7 @@ function extractTrailingHeading(text: string): { main: string; heading: string }
   const main = trimmed.slice(0, sep).trim();
   const trailing = trimmed.slice(sep + 2).trim();
   if (!main || !trailing) return null;
-  if (trailing.split('\n').length > 2) return null;
+  if (!isHeadingChunk(trailing) && !isPlainTextHeadingLike(trailing)) return null;
   return { main, heading: trailing };
 }
 
@@ -245,13 +258,15 @@ function mergeHeadingChunks(chunks: string[]): string[] {
   if (chunks.length <= 1) return chunks;
   const result: string[] = [];
   let headingAccumulator = '';
-  for (const chunk of chunks) {
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i]!;
     if (isHeadingChunk(chunk)) {
       headingAccumulator = headingAccumulator
         ? `${headingAccumulator}\n\n${chunk}`
         : chunk;
     } else {
-      const extracted = extractTrailingHeading(chunk);
+      const hasFollowingBody = chunks.slice(i + 1).some((next) => !isHeadingChunk(next));
+      const extracted = hasFollowingBody ? extractTrailingHeading(chunk) : null;
       if (extracted) {
         // Push the body of this chunk (with any pending headings), carry the trailing heading forward
         const merged = headingAccumulator

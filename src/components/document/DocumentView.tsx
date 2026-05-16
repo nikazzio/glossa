@@ -127,10 +127,11 @@ export function DocumentView({
   const lastStageId = enabledStages[enabledStages.length - 1]?.id ?? '';
   const isEditorialMode = enabledStages.length > 1;
   const deferredOriginalText = useDeferredValue(currentChunk?.originalText ?? '');
-  const isLastSelected = !selectedStageId || selectedStageId === lastStageId;
+  const effectiveSelectedStageId = selectedStageId || lastStageId;
+  const isLastSelected = effectiveSelectedStageId === lastStageId;
   const rawStageContent = isLastSelected
     ? (currentChunk?.currentDraft ?? '')
-    : (currentChunk?.stageResults[selectedStageId]?.content ?? '');
+    : (currentChunk?.stageResults[effectiveSelectedStageId]?.content ?? '');
   const deferredStageContent = useDeferredValue(rawStageContent);
   const currentQualityLabel = currentChunk
     ? t(qualityLabelKey(currentChunk.judgeResult.rating))
@@ -498,7 +499,7 @@ export function DocumentView({
               <div className="flex items-center gap-1">
                 {enabledStages.map((s) => {
                   const Icon = s.role === 'refine' ? Wand2 : s.role === 'format' ? FileText : Languages;
-                  const isActive = selectedStageId === s.id;
+                  const isActive = effectiveSelectedStageId === s.id;
                   const hasContent = s.id === lastStageId
                     ? true
                     : !!(currentChunk.stageResults[s.id]?.content);
@@ -528,7 +529,7 @@ export function DocumentView({
               <DocumentPage
                 label={t('pipeline.candidateTranslation')}
                 eyebrow={t('document.rightPage')}
-                subtitle={isEditorialMode ? t(`pipeline.stageRole.${enabledStages.find(s => s.id === selectedStageId)?.role ?? 'translation'}`) : undefined}
+                subtitle={isEditorialMode ? t(`pipeline.stageRole.${enabledStages.find(s => s.id === effectiveSelectedStageId)?.role ?? 'translation'}`) : undefined}
                 actions={stageActions}
                 statusBadge={currentChunk.translationStale ? (
                   <InlineStatusBadge tone="amber" icon={<AlertTriangle size={13} />} label={t('document.translationStaleBadge')} />
