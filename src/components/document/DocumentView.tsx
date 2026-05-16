@@ -28,7 +28,6 @@ import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
 import { usePricingStore } from '../../stores/pricingStore';
-import { confirm } from '../../stores/confirmStore';
 import type { TranslationChunk } from '../../types';
 import {
   findBestSplitIndex,
@@ -73,9 +72,9 @@ export function DocumentView({
     updateChunkDraft,
     updateChunkOriginalText,
     toggleChunkTranslationLock,
+    toggleChunkSourceEditing,
     splitChunkAt,
     mergeChunkWithNext,
-    unlockChunkForEdit,
   } = useChunksStore();
   const {
     selectedChunkId,
@@ -149,16 +148,6 @@ export function DocumentView({
     setSelectedStageId(lastStageId);
   }, [currentChunk?.id, lastStageId]);
 
-  const handleUnlockSource = async (chunkId: string) => {
-    const ok = await confirm({
-      title: t('pipeline.confirmUnlockTitle'),
-      message: t('pipeline.confirmUnlockMessage'),
-      confirmLabel: t('pipeline.unlockSource'),
-      danger: true,
-    });
-    if (ok) unlockChunkForEdit(chunkId);
-  };
-
   const openSplitDialog = (chunkId: string, text: string) => {
     const initialSplitAt =
       findBestSplitIndex(text, { markdownAware: config.markdownAware }) ??
@@ -219,6 +208,10 @@ export function DocumentView({
   const isBook = resolvedLayout === 'book';
   const prevChunk = chunks[currentIndex - 1];
   const nextChunk = chunks[currentIndex + 1];
+  const sourceReadOnly =
+    currentChunk.status === 'processing' ||
+    (currentChunk.status === 'completed' && currentChunk.sourceEditable !== true);
+  const sourceEditDisabled = currentChunk.status === 'processing';
   const chunkTone = qualityTone(currentChunk.judgeResult.rating);
 
   return (
@@ -425,9 +418,11 @@ export function DocumentView({
               </ChunkIconButton>
               {currentChunk.status === 'completed' ? (
                 <ChunkIconButton
-                  onClick={() => handleUnlockSource(currentChunk.id)}
-                  title={t('pipeline.unlockSource')}
-                  disabled={isProcessing}
+                  onClick={() => toggleChunkSourceEditing(currentChunk.id)}
+                  title={currentChunk.sourceEditable ? t('document.disableSourceEditing') : t('document.enableSourceEditing')}
+                  disabled={sourceEditDisabled}
+                  active={currentChunk.sourceEditable === true}
+                  ariaPressed={currentChunk.sourceEditable === true}
                 >
                   <Pencil size={16} />
                 </ChunkIconButton>
@@ -474,8 +469,8 @@ export function DocumentView({
             <DocumentPage
               label={t('pipeline.originalSource')}
               eyebrow={t('document.leftPage')}
-              readOnly={currentChunk.status === 'completed'}
-              statusBadge={currentChunk.status === 'completed' ? (
+              readOnly={sourceReadOnly}
+              statusBadge={currentChunk.status === 'completed' && currentChunk.sourceEditable !== true ? (
                 <InlineStatusBadge tone="amber" icon={<Lock size={13} />} label={t('document.sourceLockedTitle')} />
               ) : null}
             >
@@ -483,8 +478,8 @@ export function DocumentView({
                 value={currentChunk.originalText}
                 onChange={(nextValue) => updateChunkOriginalText(currentChunk.id, nextValue)}
                 markdownEnabled={config.markdownAware === true}
-                disabled={isProcessing}
-                readOnly={currentChunk.status === 'completed'}
+                disabled={currentChunk.status === 'processing'}
+                readOnly={sourceReadOnly}
                 fillHeight
                 textClassName="text-[15px] leading-8 text-editorial-ink"
                 previewClassName="min-h-[280px] text-[15px] leading-8 text-editorial-ink"

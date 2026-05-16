@@ -142,6 +142,7 @@ interface ChunksState {
   toggleChunkTranslationLock: (chunkId: string) => void;
   updateChunkStatus: (chunkId: string, status: ChunkStatus) => void;
   updateChunkOriginalText: (chunkId: string, text: string) => void;
+  toggleChunkSourceEditing: (chunkId: string) => void;
   updateChunkCoherence: (chunkId: string, result: CoherenceResult) => void;
   splitChunk: (chunkId: string) => void;
   splitChunkAt: (chunkId: string, splitAt: number) => boolean;
@@ -289,7 +290,11 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
       chunks: updateSingleChunk(state.chunks, chunkId, (chunk) => ({
         ...chunk,
         status,
-        ...(status === 'processing' ? { translationStale: false } : {}),
+        ...(status === 'processing'
+          ? { translationStale: false, sourceEditable: false }
+          : status === 'completed'
+            ? { sourceEditable: false }
+            : {}),
       })),
     })),
 
@@ -314,6 +319,14 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
       syncProjectSourceDocument(nextChunks);
       return { chunks: nextChunks };
     }),
+
+  toggleChunkSourceEditing: (chunkId) =>
+    set((state) => ({
+      chunks: updateSingleChunk(state.chunks, chunkId, (chunk) => ({
+        ...chunk,
+        sourceEditable: !chunk.sourceEditable,
+      })),
+    })),
 
   updateChunkCoherence: (chunkId, result) =>
     set((state) => ({
@@ -466,6 +479,7 @@ function resetChunkForSourceEdit<T extends TranslationChunk>(chunk: T): T {
     currentDraft: '',
     translationLocked: false,
     translationStale: false,
+    sourceEditable: false,
   }) as T;
 }
 
@@ -485,6 +499,7 @@ function chunksFromTexts(
       stageResults: {},
       judgeResult: createEmptyJudgeResult(),
       translationLocked: false,
+      sourceEditable: false,
       ...(footnotes?.length ? { footnotes } : {}),
     });
   });

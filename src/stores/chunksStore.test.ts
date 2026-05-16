@@ -103,6 +103,38 @@ describe('chunksStore', () => {
     expect(chunk.translationStale).toBe(true);
   });
 
+  it('toggles source editing for completed chunks without discarding translation', () => {
+    usePipelineStore.getState().setInputText('Original');
+    useChunksStore.getState().generateChunks();
+    useChunksStore.getState().setChunks((prev) =>
+      prev.map((chunk) => ({
+        ...chunk,
+        status: 'completed',
+        currentDraft: 'Translated',
+        translationDisplayText: 'Translated',
+        translationProcessingText: 'Translated',
+        stageResults: {
+          'stg-1': { content: 'Translated', status: 'completed' },
+        },
+      })),
+    );
+
+    const chunkId = useChunksStore.getState().chunks[0].id;
+
+    useChunksStore.getState().toggleChunkSourceEditing(chunkId);
+    let chunk = useChunksStore.getState().chunks[0];
+    expect(chunk.sourceEditable).toBe(true);
+    expect(chunk.currentDraft).toBe('Translated');
+    expect(chunk.stageResults).toEqual({
+      'stg-1': { content: 'Translated', status: 'completed' },
+    });
+
+    useChunksStore.getState().toggleChunkSourceEditing(chunkId);
+    chunk = useChunksStore.getState().chunks[0];
+    expect(chunk.sourceEditable).toBe(false);
+    expect(chunk.currentDraft).toBe('Translated');
+  });
+
   it('splits and merges editable chunks while preserving selection', () => {
     usePipelineStore.getState().setInputText('First sentence. Second sentence.');
     usePipelineStore.getState().setConfig((prev) => ({ ...prev, useChunking: false }));

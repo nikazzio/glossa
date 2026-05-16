@@ -4,6 +4,8 @@
 
 Siamo in sviluppo attivo (pre-1.0). I breaking changes sono accettati e benvenuti quando migliorano la struttura. Non esistono API pubbliche da preservare: la priorità è tenere il codice sano.
 
+Per il lavoro corrente su questo ramo, la UI sandbox non deve guidare le decisioni di implementazione. La priorità è la modalità documento/editoriale; la sandbox si tocca solo in caso di regressioni bloccanti.
+
 ## Stack
 
 - **Frontend**: React 19, TypeScript, Tailwind CSS v4, Zustand, Vite

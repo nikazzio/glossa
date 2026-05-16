@@ -95,6 +95,7 @@ export interface TranslationChunk {
   currentDraft?: string;
   translationLocked?: boolean;
   translationStale?: boolean;
+  sourceEditable?: boolean;
   footnotes?: Footnote[];
   blobId?: string;
   blobOrder?: number;
