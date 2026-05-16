@@ -4,6 +4,8 @@
 
 Siamo in sviluppo attivo (pre-1.0). I breaking changes sono accettati e benvenuti quando migliorano la struttura. Non esistono API pubbliche da preservare: la priorità è tenere il codice sano.
 
+Per il lavoro corrente su questo ramo, la UI sandbox non deve guidare le decisioni di implementazione. La priorità è la modalità documento/editoriale; la sandbox si tocca solo in caso di regressioni bloccanti.
+
 ## Stack
 
 - **Frontend**: React 19, TypeScript, Tailwind CSS v4, Zustand, Vite
@@ -127,6 +129,10 @@ Disporre dall'alto verso il basso per importanza percepita dall'utente:
 1. Modalità di traduzione (scelta che cambia la struttura della pipeline)
 2. Coppia linguistica
 3. Persona
+
+## Comunicazione con l'utente
+
+Quando descrivi il funzionamento del codice o l'analisi di una feature, ragiona a livello **logico-funzionale**: spiega cosa fa il sistema, cosa manca, quale comportamento cambia — senza citare nomi di variabili, funzioni, tipi o file specifici. L'utente non ha il codice in testa e quei nomi non gli dicono nulla; ciò che serve è capire il comportamento, non la struttura interna.
 
 ## Contributing
 

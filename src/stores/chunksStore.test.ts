@@ -74,7 +74,7 @@ describe('chunksStore', () => {
     expect(useUiStore.getState().selectedChunkId).toBe(useChunksStore.getState().chunks[0].id);
   });
 
-  it('resets derived data when editing source text', () => {
+  it('marks existing translation stale when editing source text', () => {
     usePipelineStore.getState().setInputText('Original');
     useChunksStore.getState().generateChunks();
     useChunksStore.getState().setChunks((prev) =>
@@ -82,6 +82,8 @@ describe('chunksStore', () => {
         ...chunk,
         status: 'completed',
         currentDraft: 'Translated',
+        translationDisplayText: 'Translated',
+        translationProcessingText: 'Translated',
         stageResults: {
           'stg-1': { content: 'Translated', status: 'completed' },
         },
@@ -93,9 +95,44 @@ describe('chunksStore', () => {
 
     const chunk = useChunksStore.getState().chunks[0];
     expect(chunk.originalText).toBe('Edited source');
-    expect(chunk.status).toBe('ready');
-    expect(chunk.currentDraft).toBe('');
-    expect(chunk.stageResults).toEqual({});
+    expect(chunk.status).toBe('completed');
+    expect(chunk.currentDraft).toBe('Translated');
+    expect(chunk.stageResults).toEqual({
+      'stg-1': { content: 'Translated', status: 'completed' },
+    });
+    expect(chunk.translationStale).toBe(true);
+  });
+
+  it('toggles source editing for completed chunks without discarding translation', () => {
+    usePipelineStore.getState().setInputText('Original');
+    useChunksStore.getState().generateChunks();
+    useChunksStore.getState().setChunks((prev) =>
+      prev.map((chunk) => ({
+        ...chunk,
+        status: 'completed',
+        currentDraft: 'Translated',
+        translationDisplayText: 'Translated',
+        translationProcessingText: 'Translated',
+        stageResults: {
+          'stg-1': { content: 'Translated', status: 'completed' },
+        },
+      })),
+    );
+
+    const chunkId = useChunksStore.getState().chunks[0].id;
+
+    useChunksStore.getState().toggleChunkSourceEditing(chunkId);
+    let chunk = useChunksStore.getState().chunks[0];
+    expect(chunk.sourceEditable).toBe(true);
+    expect(chunk.currentDraft).toBe('Translated');
+    expect(chunk.stageResults).toEqual({
+      'stg-1': { content: 'Translated', status: 'completed' },
+    });
+
+    useChunksStore.getState().toggleChunkSourceEditing(chunkId);
+    chunk = useChunksStore.getState().chunks[0];
+    expect(chunk.sourceEditable).toBe(false);
+    expect(chunk.currentDraft).toBe('Translated');
   });
 
   it('splits and merges editable chunks while preserving selection', () => {
@@ -256,6 +293,18 @@ describe('chunksStore', () => {
     expect(chunk?.sourceDisplayText).toBe('Edited text');
     expect(chunk?.sourceProcessingText).toBe('Edited text');
     expect(chunk?.originalText).toBe('Edited text');
+  });
+
+  it('updateChunkOriginalText is a no-op when the source text is unchanged', () => {
+    usePipelineStore.getState().setInputText('Original text');
+    useChunksStore.getState().generateChunks();
+
+    const before = useChunksStore.getState().chunks;
+    const chunkId = before[0].id;
+
+    useChunksStore.getState().updateChunkOriginalText(chunkId, 'Original text');
+
+    expect(useChunksStore.getState().chunks).toBe(before);
   });
 
   describe('O(1) index — per-id updates only touch the target chunk', () => {

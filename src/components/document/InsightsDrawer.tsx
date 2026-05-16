@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Circle,
   Clock,
+  Crosshair,
   Cpu,
   ExternalLink,
   FileText,
@@ -1210,15 +1211,17 @@ function IssueList({ issues, chunkId, onSelectChunk, onFocusIssue }: IssueListPr
               </span>
               <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-ink">{issue.type}</span>
             </div>
-            <button
-              type="button"
-              onClick={() => { onSelectChunk(chunkId); onFocusIssue(chunkId, extractIssueFocusQuery(issue)); }}
-              title={t('audit.openChunk')}
-              aria-label={t('audit.openChunk')}
-              className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            >
-              <ExternalLink size={13} />
-            </button>
+            {issue.phrase && (
+              <button
+                type="button"
+                onClick={() => { onSelectChunk(chunkId); onFocusIssue(chunkId, issue.phrase); }}
+                title={t('audit.locateInTextTooltip')}
+                aria-label={t('audit.locateInTextTooltip')}
+                className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              >
+                <Crosshair size={13} />
+              </button>
+            )}
           </div>
           <p className="text-sm leading-relaxed text-editorial-ink">{issue.description}</p>
           {issue.suggestedFix && (
@@ -1238,13 +1241,6 @@ function countWords(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
-function extractIssueFocusQuery(issue: TranslationChunk['judgeResult']['issues'][number]): string | null {
-  const candidates = [
-    ...Array.from(issue.description.matchAll(/"([^"]{3,})"/g)).map((m) => m[1]),
-    ...Array.from(issue.suggestedFix?.matchAll(/"([^"]{3,})"/g) ?? []).map((m) => m[1]),
-  ].map((v) => v.trim()).filter(Boolean);
-  return candidates.sort((a, b) => b.length - a.length)[0] ?? null;
-}
 
 // ── Glossary Tab ────────────────────────────────────────────────────────────
 

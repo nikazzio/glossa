@@ -49,6 +49,7 @@ const DEFAULT_PIPELINE_CONFIG: PipelineConfig = {
   minWords: 600,
   maxWords: 1200,
   headingAware: true,
+  carryTrailingShortBlocks: true,
   documentFormat: 'plain',
   renderProfile: 'plain-text',
   markdownAware: false,

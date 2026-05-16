@@ -210,6 +210,7 @@ pub async fn judge_translation(
                         severity: v["severity"].as_str()?.to_string(),
                         description: v["description"].as_str()?.to_string(),
                         suggested_fix: v["suggestedFix"].as_str().map(|s| s.to_string()),
+                        phrase: v["phrase"].as_str().map(|s| s.to_string()),
                     })
                 })
                 .collect()
@@ -333,6 +334,7 @@ pub async fn run_coherence_for_chunk(
                         severity: v["severity"].as_str()?.to_string(),
                         description: v["description"].as_str()?.to_string(),
                         suggested_fix: v["suggestedFix"].as_str().map(|s| s.to_string()),
+                        phrase: v["phrase"].as_str().map(|s| s.to_string()),
                     })
                 })
                 .collect()

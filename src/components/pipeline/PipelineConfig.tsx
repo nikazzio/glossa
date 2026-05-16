@@ -902,7 +902,7 @@ export function PipelineConfig({
                             <span
                               title={t(labelKey)}
                               aria-label={t(labelKey)}
-                              className="inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors border-editorial-border bg-editorial-bg text-editorial-muted"
+                              className={`inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors ${isActive ? 'border-editorial-success/40 bg-editorial-success/12 text-editorial-success' : 'border-editorial-border bg-editorial-bg text-editorial-muted'}`}
                             >
                               <Icon size={14} strokeWidth={1.9} />
                             </span>

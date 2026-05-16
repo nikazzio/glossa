@@ -43,12 +43,14 @@ interface ImportPreviewDialogProps {
   useChunking: boolean;
   targetChunkCount: number;
   headingAware: boolean;
+  carryTrailingShortBlocks: boolean;
   markdownAware?: boolean;
   format?: 'plain' | 'markdown';
   experimental?: 'docx-markdown';
   onUseChunkingChange: (value: boolean) => void;
   onTargetChunkCountChange: (value: number) => void;
   onHeadingAwareChange: (value: boolean) => void;
+  onCarryTrailingShortBlocksChange: (value: boolean) => void;
   onCancel: () => void;
   onConfirm: (manualChunks?: string[]) => void;
 }
@@ -409,12 +411,14 @@ export function ImportPreviewDialog({
   useChunking,
   targetChunkCount,
   headingAware,
+  carryTrailingShortBlocks,
   markdownAware = false,
   format,
   experimental,
   onUseChunkingChange,
   onTargetChunkCountChange,
   onHeadingAwareChange,
+  onCarryTrailingShortBlocksChange,
   onCancel,
   onConfirm,
 }: ImportPreviewDialogProps) {
@@ -512,10 +516,11 @@ export function ImportPreviewDialog({
       minWords: effectiveMinWords,
       maxWords: effectiveMaxWords,
       headingAware,
+      carryTrailingShortBlocks,
       format,
       experimental,
     }),
-    [useChunking, effectiveTargetChunkCount, markdownAware, activePresetWords, headingAware, format, experimental, text],
+    [useChunking, effectiveTargetChunkCount, markdownAware, activePresetWords, headingAware, carryTrailingShortBlocks, format, experimental, text],
   );
 
   const algorithmicParaChunks = useMemo(
@@ -824,6 +829,20 @@ export function ImportPreviewDialog({
                 <Hash size={14} />
               </button>
             )}
+
+            <button
+              type="button"
+              onClick={() => useChunking && onCarryTrailingShortBlocksChange(!carryTrailingShortBlocks)}
+              title={t('pipeline.trailingShortBlocks')}
+              disabled={!useChunking}
+              className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-30 ${
+                carryTrailingShortBlocks && useChunking
+                  ? 'border-editorial-accent bg-editorial-accent text-white'
+                  : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
+              }`}
+            >
+              <ArrowLeftRight size={14} />
+            </button>
 
             {/* Separator */}
             {useChunking && <span className="select-none text-editorial-border">·</span>}

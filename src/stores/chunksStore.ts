@@ -128,6 +128,7 @@ interface ChunksState {
       minWords?: number;
       maxWords?: number;
       headingAware?: boolean;
+      carryTrailingShortBlocks?: boolean;
       extractFootnotes?: boolean;
     },
     precomputedChunks?: string[],
@@ -141,6 +142,7 @@ interface ChunksState {
   toggleChunkTranslationLock: (chunkId: string) => void;
   updateChunkStatus: (chunkId: string, status: ChunkStatus) => void;
   updateChunkOriginalText: (chunkId: string, text: string) => void;
+  toggleChunkSourceEditing: (chunkId: string) => void;
   updateChunkCoherence: (chunkId: string, result: CoherenceResult) => void;
   splitChunk: (chunkId: string) => void;
   splitChunkAt: (chunkId: string, splitAt: number) => boolean;
@@ -185,6 +187,7 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
       minWords: config.minWords,
       maxWords: config.maxWords,
       headingAware: config.headingAware,
+      carryTrailingShortBlocks: config.carryTrailingShortBlocks,
     }, sourceFootnotes);
 
     const ui = useUiStore.getState();
@@ -287,25 +290,43 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
       chunks: updateSingleChunk(state.chunks, chunkId, (chunk) => ({
         ...chunk,
         status,
+        ...(status === 'processing'
+          ? { translationStale: false, sourceEditable: false }
+          : status === 'completed'
+            ? { sourceEditable: false }
+            : {}),
       })),
     })),
 
   updateChunkOriginalText: (chunkId, text) =>
     set((state) => {
+      const chunkIdx = chunkIndex.get(chunkId);
+      if (chunkIdx === undefined) return {};
+      const chunk = state.chunks[chunkIdx];
+      if (!chunk || chunk.originalText === text) return {};
+
       const sourceFootnotes = usePipelineStore.getState().sourceFootnotes;
-      const nextChunks = updateSingleChunk(state.chunks, chunkId, (chunk) =>
-        resetChunkForSourceEdit(
-          updateChunkSourceFields(
-            chunk,
-            deriveChunkDisplayText(text, sourceFootnotes),
-            text,
-            buildChunkFootnotes(text, sourceFootnotes),
-          ),
-        ),
-      );
+      const nextChunks = updateSingleChunk(state.chunks, chunkId, (current) => {
+        const hasTranslation = !!(current.currentDraft || Object.keys(current.stageResults).length > 0);
+        const updated = updateChunkSourceFields(
+          current,
+          deriveChunkDisplayText(text, sourceFootnotes),
+          text,
+          buildChunkFootnotes(text, sourceFootnotes),
+        );
+        return hasTranslation ? { ...updated, translationStale: true } : updated;
+      });
       syncProjectSourceDocument(nextChunks);
       return { chunks: nextChunks };
     }),
+
+  toggleChunkSourceEditing: (chunkId) =>
+    set((state) => ({
+      chunks: updateSingleChunk(state.chunks, chunkId, (chunk) => ({
+        ...chunk,
+        sourceEditable: !chunk.sourceEditable,
+      })),
+    })),
 
   updateChunkCoherence: (chunkId, result) =>
     set((state) => ({
@@ -457,6 +478,8 @@ function resetChunkForSourceEdit<T extends TranslationChunk>(chunk: T): T {
     translationProcessingText: '',
     currentDraft: '',
     translationLocked: false,
+    translationStale: false,
+    sourceEditable: false,
   }) as T;
 }
 
@@ -476,6 +499,7 @@ function chunksFromTexts(
       stageResults: {},
       judgeResult: createEmptyJudgeResult(),
       translationLocked: false,
+      sourceEditable: false,
       ...(footnotes?.length ? { footnotes } : {}),
     });
   });
@@ -490,6 +514,7 @@ function buildChunks(
     minWords?: number;
     maxWords?: number;
     headingAware?: boolean;
+    carryTrailingShortBlocks?: boolean;
   },
   sourceFootnotes: ReturnType<typeof usePipelineStore.getState>['sourceFootnotes'],
 ): TranslationChunk[] {

@@ -94,6 +94,8 @@ export interface TranslationChunk {
   coherenceResult?: CoherenceResult;
   currentDraft?: string;
   translationLocked?: boolean;
+  translationStale?: boolean;
+  sourceEditable?: boolean;
   footnotes?: Footnote[];
   blobId?: string;
   blobOrder?: number;
@@ -141,6 +143,7 @@ export interface Issue {
   severity: 'low' | 'medium' | 'high';
   description: string;
   suggestedFix?: string;
+  phrase?: string;
 }
 
 export interface CoherenceResult {
@@ -166,6 +169,7 @@ export interface PipelineConfig {
   minWords?: number;
   maxWords?: number;
   headingAware?: boolean;
+  carryTrailingShortBlocks?: boolean;
   documentFormat?: DocumentFormat;
   renderProfile?: DocumentRenderProfile;
   markdownAware?: boolean;
