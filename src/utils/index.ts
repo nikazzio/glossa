@@ -249,12 +249,22 @@ function isPlainTextHeadingLike(text: string): boolean {
 
 // Detects a strict heading-like trailing block preceded by a blank line.
 function extractTrailingHeading(text: string): { main: string; heading: string } | null {
-  const trimmed = text.trim();
-  const sep = trimmed.lastIndexOf('\n\n');
-  if (sep === -1) return null;
-  const main = trimmed.slice(0, sep).trim();
-  const trailing = trimmed.slice(sep + 2).trim();
-  if (!main || !trailing) return null;
+  const blankLinePattern = /\r?\n\r?\n/g;
+  let lastMatch: RegExpExecArray | null = null;
+  let match: RegExpExecArray | null;
+
+  while ((match = blankLinePattern.exec(text)) !== null) {
+    lastMatch = match;
+  }
+
+  if (!lastMatch) return null;
+
+  const sepStart = lastMatch.index;
+  const sepEnd = sepStart + lastMatch[0].length;
+  const main = text.slice(0, sepStart);
+  const trailing = text.slice(sepEnd);
+
+  if (!main.trim() || !trailing.trim()) return null;
   if (!isHeadingChunk(trailing) && !isPlainTextHeadingLike(trailing)) return null;
   return { main, heading: trailing };
 }
