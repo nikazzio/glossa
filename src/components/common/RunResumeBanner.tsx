@@ -5,7 +5,7 @@ import { useChunksStore } from '../../stores/chunksStore';
 import { usePipeline } from '../../hooks/usePipeline';
 import { buildPipelineFingerprint } from '../../utils/pipelineFingerprint';
 import { usePipelineStore } from '../../stores/pipelineStore';
-import { setRunInProgress } from '../../services/projectService';
+import { setPipelineRunState } from '../../services/projectService';
 
 export function RunResumeBanner() {
   const { t } = useTranslation();
@@ -15,6 +15,8 @@ export function RunResumeBanner() {
   const currentProjectId = useProjectStore((s) => s.currentProjectId);
   const chunks = useChunksStore((s) => s.chunks);
   const config = usePipelineStore((s) => s.config);
+  const activePipelineId = usePipelineStore((s) => s.activePipelineId);
+  const setActivePipelineMeta = usePipelineStore((s) => s.setActivePipelineMeta);
   const { runPipeline } = usePipeline();
   const resetAllChunks = useChunksStore((s) => s.resetAllChunks);
 
@@ -39,8 +41,13 @@ export function RunResumeBanner() {
 
   const handleDismiss = () => {
     clearResumeState();
+    setActivePipelineMeta({
+      pipelineId: activePipelineId,
+      runStatus: 'idle',
+      lastRunConfig,
+    });
     if (currentProjectId) {
-      void setRunInProgress(currentProjectId, false).catch(() => {});
+      void setPipelineRunState(currentProjectId, 'idle').catch(() => {});
     }
   };
 

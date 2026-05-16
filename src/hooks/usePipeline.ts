@@ -11,7 +11,7 @@ import { qualityDefault, qualityFailure } from '../utils';
 import { pipelineLog } from '../utils/pipelineLogging';
 import type { Issue, JudgeResult, PromptInfo, ResponseInfo, TokenUsage, TranslationChunk } from '../types';
 import { useProjectStore } from '../stores/projectStore';
-import { saveChunkCheckpoint, setRunInProgress } from '../services/projectService';
+import { saveChunkCheckpoint, setPipelineRunState } from '../services/projectService';
 import { buildPipelineFingerprint } from '../utils/pipelineFingerprint';
 import { calculateBlobBudget } from '../models/catalog';
 
@@ -54,6 +54,7 @@ function assembleTranslationBlobContext(chunks: TranslationChunk[], chunkId: str
 }
 
 type ChunkOutcome = 'completed' | 'failed' | 'cancelled' | 'skipped';
+type BatchRunMode = 'resume' | 'rerun-unlocked';
 
 /**
  * Hook that encapsulates pipeline execution logic.
@@ -164,16 +165,20 @@ export function usePipeline() {
    * Run all enabled translation stages and the audit for a single chunk.
    * Returns an outcome so the caller can aggregate batch counters.
    *
-   * `skipIfCompleted` is true for the full-pipeline batch run (preserve
-   * already-translated chunks) and false for an explicit per-chunk
-   * re-run (the user asked for it, redo everything).
+   * Batch mode is chosen from the pipeline run state:
+   * - resume: continue an interrupted batch and skip chunks already completed in that run
+   * - rerun-unlocked: start a new round and re-run every chunk except those explicitly locked
+   *
+   * This separation keeps room for future multi-pipeline support where each
+   * pipeline tracks its own run lifecycle independently for the same document.
    */
   const executePipelineForChunk = async (
     chunk: TranslationChunk,
-    options: { skipIfCompleted: boolean },
+    options: { batchMode?: BatchRunMode },
   ): Promise<ChunkOutcome> => {
     if (useChunksStore.getState().cancelRequested) return 'cancelled';
-    if (options.skipIfCompleted && chunk.status === 'completed') return 'skipped';
+    if (options.batchMode === 'resume' && chunk.status === 'completed') return 'skipped';
+    if (options.batchMode === 'rerun-unlocked' && chunk.translationLocked) return 'skipped';
 
     // Reset only this chunk so we don't carry over a previous run's
     // stage outputs / draft / audit if it cancels or fails early.
@@ -415,9 +420,18 @@ export function usePipeline() {
     useChunksStore.getState().clearCancelRequest();
     setIsProcessing(true);
 
+    const pipelineState = usePipelineStore.getState();
+    const batchMode: BatchRunMode = pipelineState.runStatus === 'completed'
+      ? 'rerun-unlocked'
+      : 'resume';
     const projectId = useProjectStore.getState().currentProjectId;
+    usePipelineStore.getState().setActivePipelineMeta({
+      pipelineId: pipelineState.activePipelineId,
+      runStatus: 'running',
+      lastRunConfig: buildPipelineFingerprint(config),
+    });
     if (projectId) {
-      void setRunInProgress(projectId, true, buildPipelineFingerprint(config)).catch(() => {});
+      void setPipelineRunState(projectId, 'running', buildPipelineFingerprint(config)).catch(() => {});
     }
 
     try {
@@ -440,7 +454,7 @@ export function usePipeline() {
 
     try {
       for (const chunk of liveChunks) {
-        const outcome = await executePipelineForChunk(chunk, { skipIfCompleted: true });
+        const outcome = await executePipelineForChunk(chunk, { batchMode });
         if (outcome === 'cancelled') { cancelled = true; break; }
         if (outcome === 'failed') errorCount++;
         if ((outcome === 'completed' || outcome === 'failed') && projectId) {
@@ -454,8 +468,14 @@ export function usePipeline() {
     } finally {
       setIsProcessing(false);
       useChunksStore.getState().clearCancelRequest();
+      usePipelineStore.getState().setActivePipelineMeta({
+        pipelineId: pipelineState.activePipelineId,
+        runStatus: cancelled || errorCount > 0 ? 'interrupted' : 'completed',
+        lastRunConfig: buildPipelineFingerprint(config),
+      });
       if (projectId) {
-        void setRunInProgress(projectId, false).catch(() => {});
+        const finalStatus = cancelled || errorCount > 0 ? 'interrupted' : 'completed';
+        void setPipelineRunState(projectId, finalStatus).catch(() => {});
       }
     }
 
@@ -505,7 +525,7 @@ export function usePipeline() {
     // Force a redo even if this chunk was already completed — the user
     // explicitly asked for it via the per-chunk action menu.
     const freshChunk = useChunksStore.getState().chunks.find((c) => c.id === chunkId) ?? chunk;
-    const outcome = await executePipelineForChunk(freshChunk, { skipIfCompleted: false });
+    const outcome = await executePipelineForChunk(freshChunk, {});
 
     setIsProcessing(false);
     useChunksStore.getState().clearCancelRequest();

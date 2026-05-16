@@ -4,12 +4,12 @@ use serde_json::Value;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
+use super::{format_api_error, provider_label_from_url};
 use crate::llm::provider::{
     LlmProvider, LlmRequest, LlmResponse, StreamFormat, TokenUsage, UsageAccumulator,
 };
 use crate::llm::stream::{build_default_http_client, default_stream_timeouts, StreamTimeouts};
 use crate::llm::types::OpenAiCacheConfig;
-use super::{format_api_error, provider_label_from_url};
 
 /// OpenAI-compatible provider. Used for both OpenAI and DeepSeek which share the same API shape.
 pub struct OpenAiCompatibleProvider {
@@ -94,8 +94,8 @@ impl OpenAiCompatibleProvider {
 
         if self.id == "openai" {
             if let Some(retention) = cfg
-            .and_then(|value| value.prompt_cache_retention.as_ref())
-            .filter(|value| matches!(value.as_str(), "in_memory" | "24h"))
+                .and_then(|value| value.prompt_cache_retention.as_ref())
+                .filter(|value| matches!(value.as_str(), "in_memory" | "24h"))
             {
                 body["prompt_cache_retention"] = Value::String(retention.clone());
             }
@@ -190,7 +190,9 @@ impl LlmProvider for OpenAiCompatibleProvider {
                         .as_u64()
                         .map(|value| value as u32)
                 } else {
-                    state.latest_cached_input.map(|cached| (i as u32).saturating_sub(cached))
+                    state
+                        .latest_cached_input
+                        .map(|cached| (i as u32).saturating_sub(cached))
                 };
             }
         }
@@ -236,8 +238,8 @@ impl LlmProvider for OpenAiCompatibleProvider {
             ));
         }
 
-        let json: Value = serde_json::from_str(&text)
-            .map_err(|e| format!("Failed to parse response: {e}"))?;
+        let json: Value =
+            serde_json::from_str(&text).map_err(|e| format!("Failed to parse response: {e}"))?;
 
         let content = json["choices"][0]["message"]["content"]
             .as_str()

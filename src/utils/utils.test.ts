@@ -229,6 +229,56 @@ describe('document chunking', () => {
     ]);
   });
 
+  it('does not carry a long single-line paragraph into the next chunk', () => {
+    const intro = 'Short intro paragraph with nine words total here.';
+    const longSingleLine = [
+      'This is a long paragraph that still happens to be rendered on one physical line,',
+      'so the carry heuristic must not treat it like a short trailing note and move the',
+      'whole paragraph into the following chunk during import.',
+    ].join(' ');
+    const body = Array.from({ length: 28 }, (_, i) => `word${i + 1}`).join(' ');
+    const ending = 'Final short paragraph.';
+
+    const text = [intro, longSingleLine, body, ending].join('\n\n');
+    const withoutCarry = chunkText(text, {
+      useChunking: true,
+      targetChunkCount: 3,
+      headingAware: false,
+      carryTrailingShortBlocks: false,
+    });
+    const withCarry = chunkText(text, {
+      useChunking: true,
+      targetChunkCount: 3,
+      headingAware: false,
+      carryTrailingShortBlocks: true,
+    });
+
+    expect(withCarry).toEqual(withoutCarry);
+  });
+
+  it('does not treat a short sentence ending with a period as a plain-text heading', () => {
+    const intro = 'Short intro paragraph with nine words total here.';
+    const trailingSentence = 'Breve introduzione alla sezione successiva.';
+    const body = Array.from({ length: 25 }, (_, i) => `word${i + 1}`).join(' ');
+    const ending = 'Final short paragraph.';
+
+    const text = [intro, trailingSentence, body, ending].join('\n\n');
+    const withoutHeadingAware = chunkText(text, {
+      useChunking: true,
+      targetChunkCount: 3,
+      headingAware: false,
+      carryTrailingShortBlocks: false,
+    });
+    const withHeadingAware = chunkText(text, {
+      useChunking: true,
+      targetChunkCount: 3,
+      headingAware: true,
+      carryTrailingShortBlocks: false,
+    });
+
+    expect(withHeadingAware).toEqual(withoutHeadingAware);
+  });
+
   it('merges chunks smaller than the configured minimum forward', () => {
     const text = [
       'Tiny intro.',
