@@ -2,9 +2,9 @@ import { ArrowRightLeft, Play, Languages, FileText, Layers, Pencil, Scale, Refre
 import { useMemo, useState, useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import type { ModelProvider, PipelineMode, PromptTemplate } from '../../types';
+import type { ModelProvider, PipelineMode, PromptTemplate, ReasoningEffortLevel } from '../../types';
 import { LANGUAGES, defaultPersonaText } from '../../constants';
-import { calculateBlobBudget, getContextWindow, getKnownModelIds, getModelStatus, getSelectableModelIds, MODEL_PROVIDER_ORDER } from '../../models/catalog';
+import { calculateBlobBudget, getContextWindow, getKnownModelIds, getModelStatus, getResolvedModelReasoning, getSelectableModelIds, isShowableModel, MODEL_PROVIDER_ORDER } from '../../models/catalog';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { StageCard } from './StageCard';
 import { useChunksStore } from '../../stores/chunksStore';
@@ -281,7 +281,10 @@ function useJudgeModelOptions(provider: ModelProvider): string[] {
     availableModelIds:
       provider === 'ollama'
         ? ollamaModels
-        : providerModels[provider]?.map((model) => model.id) ?? getKnownModelIds(provider),
+        : providerModels[provider]
+            ?.map((model) => model.id)
+            .filter((id) => isShowableModel(provider, id))
+          ?? getKnownModelIds(provider),
   });
 }
 
@@ -571,6 +574,33 @@ export function PipelineConfig({
 
   const judgeOllamaOffline =
     config.judgeProvider === 'ollama' && ollamaStatus === 'disconnected';
+
+  const judgeResolvedReasoning = getResolvedModelReasoning(
+    config.judgeProvider,
+    config.judgeModel,
+    providerModels[config.judgeProvider],
+  );
+  const currentJudgeReasoningEffort: ReasoningEffortLevel = (() => {
+    if (config.judgeProvider === 'openai') return config.reviewProviderOptions?.openai?.reasoningEffort ?? 'auto';
+    if (config.judgeProvider === 'deepseek') return config.reviewProviderOptions?.deepseek?.reasoningEffort ?? 'auto';
+    if (config.judgeProvider === 'gemini') {
+      const budget = config.reviewProviderOptions?.gemini?.thinkingBudget;
+      if (budget === 0) return 'none';
+      if (budget != null) return 'low';
+    }
+    return 'auto';
+  })();
+  const handleJudgeReasoningChange = (effort: ReasoningEffortLevel) => {
+    const opts = config.reviewProviderOptions ?? {};
+    if (config.judgeProvider === 'openai') {
+      setConfig((prev) => ({ ...prev, reviewProviderOptions: { ...opts, openai: { ...opts.openai, reasoningEffort: effort } } }));
+    } else if (config.judgeProvider === 'deepseek') {
+      setConfig((prev) => ({ ...prev, reviewProviderOptions: { ...opts, deepseek: { ...opts.deepseek, reasoningEffort: effort } } }));
+    } else if (config.judgeProvider === 'gemini') {
+      const budget = effort === 'none' ? 0 : effort === 'auto' ? null : undefined;
+      setConfig((prev) => ({ ...prev, reviewProviderOptions: { ...opts, gemini: { ...opts.gemini, thinkingBudget: budget } } }));
+    }
+  };
 
   const pricingOverrides = usePricingStore((s) => s.overrides);
   const costEstimate = useMemo(
@@ -1173,7 +1203,10 @@ export function PipelineConfig({
                 availableModelIds:
                   stage.provider === 'ollama'
                     ? ollamaModels
-                    : providerModels[stage.provider]?.map((model) => model.id) ?? getKnownModelIds(stage.provider),
+                    : providerModels[stage.provider]
+                        ?.map((model) => model.id)
+                        .filter((id) => isShowableModel(stage.provider, id))
+                      ?? getKnownModelIds(stage.provider),
               });
               return (
                 <div key={stage.id} className="space-y-3">
@@ -1273,6 +1306,28 @@ export function PipelineConfig({
               useCase="judge"
               useCaseLabel={t('pipeline.tabAudit')}
             />
+            {judgeResolvedReasoning !== undefined && judgeResolvedReasoning !== 'non_reasoning' && config.judgeProvider !== 'ollama' && (
+              <div className="flex items-center gap-2">
+                <Wand2 size={11} className="text-editorial-warning shrink-0" />
+                <span className="text-[10px] font-sans uppercase tracking-[0.3em] text-editorial-muted">
+                  {t('pipeline.reasoningEffort')}
+                </span>
+                <select
+                  value={currentJudgeReasoningEffort}
+                  onChange={(e) => handleJudgeReasoningChange(e.target.value as ReasoningEffortLevel)}
+                  className="rounded-[10px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  aria-label={t('pipeline.reasoningEffort')}
+                >
+                  <option value="auto">{t('pipeline.reasoningEffortAuto')}</option>
+                  {judgeResolvedReasoning === 'optional' && (
+                    <option value="none">{t('pipeline.reasoningEffortNone')}</option>
+                  )}
+                  <option value="low">{t('pipeline.reasoningEffortLow')}</option>
+                  <option value="medium">{t('pipeline.reasoningEffortMedium')}</option>
+                  <option value="high">{t('pipeline.reasoningEffortHigh')}</option>
+                </select>
+              </div>
+            )}
 
             {judgeOllamaOffline && (
               <div className="flex items-center gap-2 text-xs text-editorial-accent">

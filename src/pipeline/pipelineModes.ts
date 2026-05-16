@@ -41,7 +41,7 @@ function buildStage(template: StageTemplate, existing?: PipelineStageConfig): Pi
     name: template.name,
     role: template.role,
     prompt: existing?.prompt ?? template.defaultPrompt,
-    model: existing?.model ?? 'gpt-4.1-mini',
+    model: existing?.model ?? 'gpt-5-nano',
     provider: existing?.provider ?? 'openai',
     enabled: true,
     providerOptions: existing?.providerOptions,

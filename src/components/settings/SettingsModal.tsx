@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertCircle, Server, RefreshCw, CheckCircle2, XCircle, HelpCircle, Sparkles, Columns2, BookOpen, ChevronDown, ChevronUp } from 'lucide-react';
+import { AlertCircle, Server, RefreshCw, CheckCircle2, XCircle, HelpCircle, Sparkles, Columns2, BookOpen, ChevronDown, ChevronUp, Brain, Bot, Wand2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -7,7 +7,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { ApiKeyInput } from './ApiKeyInput';
 import { ollamaService, settingsService } from '../../services/llmService';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
-import { getSelectableModelIds, MODEL_CATALOG, MODEL_PROVIDER_ORDER } from '../../models/catalog';
+import { getSelectableModelIds, isShowableModel, MODEL_CATALOG, MODEL_PROVIDER_ORDER } from '../../models/catalog';
 import { MODEL_PRICING } from '../../constants';
 import { usePricingStore } from '../../stores/pricingStore';
 import { EditorialModalShell } from '../common';
@@ -22,6 +22,53 @@ const PROVIDER_LABELS: Record<ModelProvider, string> = {
   deepseek: 'DeepSeek',
   ollama: 'Ollama',
 };
+
+const PROVIDER_ABBREV: Record<ModelProvider, string> = {
+  gemini: 'Gm',
+  openai: 'Oa',
+  anthropic: 'An',
+  deepseek: 'Ds',
+  ollama: 'Ol',
+};
+
+
+function getModelGroupLabel(provider: ModelProvider, modelId: string): string {
+  switch (provider) {
+    case 'openai':
+      if (modelId.startsWith('gpt-5.4')) return 'GPT-5.4';
+      if (modelId.startsWith('gpt-5')) return 'GPT-5';
+      if (modelId.startsWith('gpt-4.1')) return 'GPT-4.1';
+      if (modelId.startsWith('gpt-4o') || modelId.startsWith('chatgpt-4o')) return 'GPT-4o';
+      if (modelId.startsWith('gpt-4')) return 'GPT-4';
+      if (modelId.startsWith('gpt-3')) return 'GPT-3.5';
+      if (/^o\d/.test(modelId)) return 'o-series';
+      return 'Other';
+    case 'anthropic':
+      if (modelId.includes('-4-') || modelId.includes('-4.')) return 'Claude 4';
+      if (modelId.includes('3-5')) return 'Claude 3.5';
+      if (modelId.includes('-3-')) return 'Claude 3';
+      return 'Other';
+    case 'gemini':
+      if (modelId.startsWith('gemini-2.5')) return 'Gemini 2.5';
+      if (modelId.startsWith('gemini-2.0')) return 'Gemini 2.0';
+      return 'Gemini';
+    case 'deepseek':
+      if (modelId.startsWith('deepseek-v4')) return 'DeepSeek V4';
+      return 'DeepSeek';
+    default:
+      return '';
+  }
+}
+
+function groupModelIds(provider: ModelProvider, modelIds: string[]): Array<{ label: string; ids: string[] }> {
+  const map = new Map<string, string[]>();
+  for (const id of modelIds) {
+    const label = getModelGroupLabel(provider, id);
+    if (!map.has(label)) map.set(label, []);
+    map.get(label)!.push(id);
+  }
+  return [...map.entries()].map(([label, ids]) => ({ label, ids }));
+}
 
 export function SettingsModal() {
   const {
@@ -54,6 +101,7 @@ export function SettingsModal() {
   const [refreshErrors, setRefreshErrors] = useState<Partial<Record<ModelProvider, string>>>({});
   const [urlDraft, setUrlDraft] = useState(ollamaBaseUrl);
   const [urlError, setUrlError] = useState<string | null>(null);
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const trapRef = useFocusTrap(showSettings, () => setShowSettings(false));
   const { overrides, setOverride, resetOverride, resetAll } = usePricingStore();
   const { statuses: keyStatuses } = useProviderKeyStatus();
@@ -63,7 +111,9 @@ export function SettingsModal() {
         provider,
         provider === 'ollama'
           ? ollamaModels
-          : providerModels[provider]?.map((entry) => entry.id)
+          : providerModels[provider]
+              ?.map((entry) => entry.id)
+              .filter((id) => isShowableModel(provider, id))
             ?? MODEL_CATALOG.filter((entry) => entry.provider === provider).map((entry) => entry.id),
       ]),
     ) as Record<ModelProvider, string[]>,
@@ -106,6 +156,17 @@ export function SettingsModal() {
     try {
       const models = await settingsService.discoverProviderModels(provider);
       setProviderModels(provider, models);
+      if (enabledProviderModels[provider] === undefined) {
+        const catalogIds = new Set(
+          MODEL_CATALOG.filter((e) => e.provider === provider).map((e) => e.id),
+        );
+        const initialEnabled = models
+          .map((m) => m.id)
+          .filter((id) => isShowableModel(provider, id) && catalogIds.has(id));
+        if (initialEnabled.length > 0) {
+          setEnabledProviderModels(provider, initialEnabled);
+        }
+      }
       setRefreshErrors((prev) => ({ ...prev, [provider]: undefined }));
       toast.success(t('settings.modelsRefreshed', {
         provider: PROVIDER_LABELS[provider],
@@ -123,15 +184,32 @@ export function SettingsModal() {
   };
 
   const toggleProviderModel = (provider: ModelProvider, modelId: string) => {
+    const hasKey = provider === 'ollama' || !!keyStatuses[provider];
     const current = enabledProviderModels[provider];
-    const next = current === undefined
-      ? [...availableProviderModels[provider]]
+    const base = current === undefined
+      ? (hasKey ? [...availableProviderModels[provider]] : [])
       : [...current];
-    const set = new Set(next);
+    const set = new Set(base);
     if (set.has(modelId)) {
       set.delete(modelId);
     } else {
       set.add(modelId);
+    }
+    setEnabledProviderModels(provider, availableProviderModels[provider].filter((id) => set.has(id)));
+  };
+
+  const toggleProviderModelGroup = (provider: ModelProvider, groupIds: string[]) => {
+    const hasKey = provider === 'ollama' || !!keyStatuses[provider];
+    const current = enabledProviderModels[provider];
+    const base = current === undefined
+      ? (hasKey ? [...availableProviderModels[provider]] : [])
+      : [...current];
+    const allEnabled = groupIds.every((id) => base.includes(id));
+    const set = new Set(base);
+    if (allEnabled) {
+      groupIds.forEach((id) => set.delete(id));
+    } else {
+      groupIds.forEach((id) => set.add(id));
     }
     setEnabledProviderModels(provider, availableProviderModels[provider].filter((id) => set.has(id)));
   };
@@ -278,13 +356,14 @@ export function SettingsModal() {
                           key={provider}
                           type="button"
                           onClick={() => setActiveProviderTab(provider)}
-                          className={`rounded-full border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                          title={PROVIDER_LABELS[provider]}
+                          className={`flex h-9 w-9 items-center justify-center rounded-full border text-[11px] font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
                             active
                               ? 'border-editorial-accent bg-editorial-accent text-white'
-                              : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent'
+                              : 'border-editorial-border bg-editorial-textbox/30 text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent'
                           }`}
                         >
-                          {PROVIDER_LABELS[provider]}
+                          {PROVIDER_ABBREV[provider]}
                         </button>
                       );
                     })}
@@ -412,49 +491,113 @@ export function SettingsModal() {
                           : t('settings.noKnownModels')}
                       </p>
                     ) : (
-                      <div className="space-y-2">
-                        {activeProviderModels.map((modelId) => {
-                          const discoveredModel = providerModels[activeProviderTab]?.find((model) => model.id === modelId);
-                          const checked = enabledProviderModels[activeProviderTab] === undefined
-                            ? true
-                            : enabledProviderModels[activeProviderTab]?.includes(modelId) ?? false;
+                      <div className="space-y-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xs font-bold uppercase tracking-wider text-editorial-muted">
+                            {t('settings.modelTypesLegend')}
+                          </span>
+                          <span className="inline-flex items-center gap-1 rounded-full border border-editorial-success/30 bg-editorial-success/10 px-2 py-0.5 text-xs font-mono text-editorial-success">
+                            <Bot size={11} />{t('pipeline.modelReasoning.non_reasoning')}
+                          </span>
+                          <span className="inline-flex items-center gap-1 rounded-full border border-editorial-accent/30 bg-editorial-accent/10 px-2 py-0.5 text-xs font-mono text-editorial-accent">
+                            <Brain size={11} />{t('pipeline.modelReasoning.reasoning')}
+                          </span>
+                          <span className="inline-flex items-center gap-1 rounded-full border border-editorial-warning/30 bg-editorial-warning/10 px-2 py-0.5 text-xs font-mono text-editorial-warning">
+                            <Wand2 size={11} />{t('pipeline.modelReasoning.optional')}
+                          </span>
+                        </div>
+
+                        {(() => {
+                          const hasKey = activeProviderTab === 'ollama' || !!keyStatuses[activeProviderTab];
+                          const explicitEnabled = enabledProviderModels[activeProviderTab];
+                          const groups = activeProviderTab === 'ollama'
+                            ? [{ label: '', ids: activeProviderModels }]
+                            : groupModelIds(activeProviderTab, activeProviderModels);
+                          const showGroupHeaders = groups.length > 1;
+
                           return (
-                            <label
-                              key={modelId}
-                              className="flex items-start gap-3 rounded-[16px] border border-editorial-border bg-editorial-bg/60 px-4 py-3 transition-colors hover:border-editorial-accent/40"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                onChange={() => toggleProviderModel(activeProviderTab, modelId)}
-                                className="mt-0.5 h-4 w-4 rounded border-editorial-border text-editorial-accent focus:ring-editorial-accent"
-                              />
-                              <div className="min-w-0 flex-1 space-y-2">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <span className="text-sm font-mono text-editorial-ink">{modelId}</span>
-                                  {discoveredModel?.displayName && discoveredModel.displayName !== modelId && (
-                                    <span className="text-xs italic text-editorial-muted">
-                                      {discoveredModel.displayName}
-                                    </span>
-                                  )}
-                                  {discoveredModel?.contextWindow && (
-                                    <span className="rounded-full border border-editorial-border px-2 py-0.5 text-[10px] font-mono text-editorial-muted">
-                                      {t('settings.contextWindowBadge', {
-                                        count: discoveredModel.contextWindow.toLocaleString(),
-                                      })}
-                                    </span>
-                                  )}
-                                </div>
-                                <ModelCapabilityHint
-                                  provider={activeProviderTab}
-                                  model={modelId}
-                                  useCase="translation"
-                                  useCaseLabel={t('pipeline.tabTranslation')}
-                                />
-                              </div>
-                            </label>
+                            <div className="max-h-72 overflow-y-auto space-y-3 pr-1">
+                              {groups.map(({ label, ids }) => {
+                                const isCollapsed = collapsedGroups.has(label);
+                                const enabledInGroup = hasKey
+                                  ? ids.filter((id) => explicitEnabled === undefined || explicitEnabled.includes(id))
+                                  : [];
+                                const allGroupChecked = ids.length > 0 && enabledInGroup.length === ids.length;
+                                const someGroupChecked = enabledInGroup.length > 0;
+                                return (
+                                  <div key={label || '_all'} className="space-y-1.5">
+                                    {showGroupHeaders && label && (
+                                      <div className="flex items-center gap-2">
+                                        <input
+                                          type="checkbox"
+                                          ref={(el) => {
+                                            if (el) el.indeterminate = !allGroupChecked && someGroupChecked;
+                                          }}
+                                          checked={allGroupChecked}
+                                          onChange={() => toggleProviderModelGroup(activeProviderTab, ids)}
+                                          disabled={!hasKey}
+                                          className="h-3.5 w-3.5 cursor-pointer rounded border-editorial-border accent-editorial-accent focus:ring-editorial-accent disabled:opacity-40"
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => setCollapsedGroups((prev) => {
+                                            const next = new Set(prev);
+                                            if (next.has(label)) next.delete(label);
+                                            else next.add(label);
+                                            return next;
+                                          })}
+                                          className="flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none"
+                                        >
+                                          {isCollapsed ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
+                                          {label}
+                                        </button>
+                                      </div>
+                                    )}
+                                    {!isCollapsed && ids.map((modelId) => {
+                                      const discoveredModel = providerModels[activeProviderTab]?.find((m) => m.id === modelId);
+                                      const checked = hasKey && (explicitEnabled === undefined || explicitEnabled.includes(modelId));
+                                      return (
+                                        <label
+                                          key={modelId}
+                                          className="flex items-center gap-3 rounded-[16px] border border-editorial-border bg-editorial-bg/60 px-4 py-2.5 transition-colors hover:border-editorial-accent/40"
+                                        >
+                                          <input
+                                            type="checkbox"
+                                            checked={checked}
+                                            onChange={() => toggleProviderModel(activeProviderTab, modelId)}
+                                            className="h-4 w-4 rounded border-editorial-border accent-editorial-accent focus:ring-editorial-accent"
+                                          />
+                                          <div className="min-w-0 flex-1">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                              <span className="text-sm font-mono text-editorial-ink">{modelId}</span>
+                                              <ModelCapabilityHint
+                                                provider={activeProviderTab}
+                                                model={modelId}
+                                                iconOnly
+                                              />
+                                              {discoveredModel?.displayName && discoveredModel.displayName !== modelId && (
+                                                <span className="text-xs italic text-editorial-muted">
+                                                  {discoveredModel.displayName}
+                                                </span>
+                                              )}
+                                              {discoveredModel?.contextWindow && (
+                                                <span className="rounded-full border border-editorial-border px-2 py-0.5 text-[10px] font-mono text-editorial-muted">
+                                                  {t('settings.contextWindowBadge', {
+                                                    count: discoveredModel.contextWindow.toLocaleString(),
+                                                  })}
+                                                </span>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </label>
+                                      );
+                                    })}
+                                  </div>
+                                );
+                              })}
+                            </div>
                           );
-                        })}
+                        })()}
                       </div>
                     )}
 

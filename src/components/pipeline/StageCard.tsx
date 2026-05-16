@@ -16,7 +16,8 @@ import {
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { ModelProvider, OllamaStatus, PipelineStageConfig, PromptTemplate } from '../../types';
-import { getKnownModelIds, getModelStatus, getSelectableModelIds, MODEL_PROVIDER_ORDER } from '../../models/catalog';
+import { getKnownModelIds, getModelStatus, getResolvedModelReasoning, getSelectableModelIds, MODEL_PROVIDER_ORDER } from '../../models/catalog';
+import type { ReasoningEffortLevel } from '../../types';
 import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
 import { ProviderRuntimeEditor } from './ProviderRuntimeEditor';
 import { canRefineWithProvider, formatProviderModelLabel, type ProviderKeyStatusMap } from '../../hooks/useProviderKeyStatus';
@@ -73,8 +74,37 @@ export function StageCard({
   const promptEditable = isEditingPrompt && !translationsExist && !isProcessing;
   const canRefine = canRefineWithProvider(stage.provider, keyStatuses);
   const refineLabel = formatProviderModelLabel(stage.provider, stage.model);
-
   const ollamaOffline = stage.provider === 'ollama' && ollamaStatus === 'disconnected';
+
+  const resolvedReasoning = getResolvedModelReasoning(
+    stage.provider,
+    stage.model,
+    providerModels[stage.provider],
+  );
+  const defaultEffort: ReasoningEffortLevel = resolvedReasoning === 'optional' ? 'none' : 'auto';
+  const currentReasoningEffort: ReasoningEffortLevel = (() => {
+    if (stage.provider === 'openai') return stage.providerOptions?.openai?.reasoningEffort ?? defaultEffort;
+    if (stage.provider === 'deepseek') return stage.providerOptions?.deepseek?.reasoningEffort ?? defaultEffort;
+    if (stage.provider === 'gemini') {
+      const budget = stage.providerOptions?.gemini?.thinkingBudget;
+      if (budget === 0) return 'none';
+      if (budget != null) return 'low';
+      return defaultEffort;
+    }
+    return defaultEffort;
+  })();
+
+  const handleReasoningChange = (effort: ReasoningEffortLevel) => {
+    const opts = stage.providerOptions ?? {};
+    if (stage.provider === 'openai') {
+      onUpdate({ providerOptions: { ...opts, openai: { ...opts.openai, reasoningEffort: effort } } });
+    } else if (stage.provider === 'deepseek') {
+      onUpdate({ providerOptions: { ...opts, deepseek: { ...opts.deepseek, reasoningEffort: effort } } });
+    } else if (stage.provider === 'gemini') {
+      const budget = effort === 'none' ? 0 : effort === 'auto' ? null : undefined;
+      onUpdate({ providerOptions: { ...opts, gemini: { ...opts.gemini, thinkingBudget: budget } } });
+    }
+  };
 
   const filteredTemplates = templates.filter((tmpl) =>
     tmpl.name.toLowerCase().includes(templateSearch.toLowerCase()),
@@ -147,19 +177,22 @@ export function StageCard({
             ))}
           </select>
           {modelOptions.length > 0 ? (
-            <select
-              value={stage.model}
-              onChange={(e) => onUpdate({ model: e.target.value })}
-              disabled={translationsExist || isProcessing}
-              className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
-              aria-label={t('pipeline.stageModelLabel')}
-            >
-              {modelOptions.map((m) => (
-                <option key={m} value={m}>
-                  {m}{getModelStatus(stage.provider, m) === 'preview' ? ' (preview)' : ''}
-                </option>
-              ))}
-            </select>
+            <div className="flex flex-1 items-center gap-1.5">
+              <select
+                value={stage.model}
+                onChange={(e) => onUpdate({ model: e.target.value })}
+                disabled={translationsExist || isProcessing}
+                className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
+                aria-label={t('pipeline.stageModelLabel')}
+              >
+                {modelOptions.map((m) => (
+                  <option key={m} value={m}>
+                    {m}{getModelStatus(stage.provider, m) === 'preview' ? ' (preview)' : ''}
+                  </option>
+                ))}
+              </select>
+              <ModelCapabilityHint provider={stage.provider} model={stage.model} iconOnly />
+            </div>
           ) : (
             <input
               value={stage.model}
@@ -183,6 +216,29 @@ export function StageCard({
           useCase={stage.role ?? 'translation'}
           useCaseLabel={t(`pipeline.stageRole.${stage.role ?? 'translation'}`)}
         />
+        {resolvedReasoning !== undefined && resolvedReasoning !== 'non_reasoning' && stage.provider !== 'ollama' && (
+          <div className="flex items-center gap-2">
+            <Wand2 size={11} className="text-editorial-warning shrink-0" />
+            <span className="text-[10px] font-sans uppercase tracking-[0.3em] text-editorial-muted">
+              {t('pipeline.reasoningEffort')}
+            </span>
+            <select
+              value={currentReasoningEffort}
+              onChange={(e) => handleReasoningChange(e.target.value as ReasoningEffortLevel)}
+              disabled={translationsExist || isProcessing}
+              className="rounded-[10px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
+              aria-label={t('pipeline.reasoningEffort')}
+            >
+              <option value="auto">{t('pipeline.reasoningEffortAuto')}</option>
+              {resolvedReasoning === 'optional' && (
+                <option value="none">{t('pipeline.reasoningEffortNone')}</option>
+              )}
+              <option value="low">{t('pipeline.reasoningEffortLow')}</option>
+              <option value="medium">{t('pipeline.reasoningEffortMedium')}</option>
+              <option value="high">{t('pipeline.reasoningEffortHigh')}</option>
+            </select>
+          </div>
+        )}
         {ollamaOffline && !translationsExist && (
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 text-xs text-editorial-accent">

@@ -9,6 +9,7 @@ interface ModelCapabilityHintProps {
   model: string;
   useCase?: ModelUseCase;
   useCaseLabel?: string;
+  iconOnly?: boolean;
 }
 
 export function ModelCapabilityHint({
@@ -16,6 +17,7 @@ export function ModelCapabilityHint({
   model,
   useCase,
   useCaseLabel,
+  iconOnly,
 }: ModelCapabilityHintProps) {
   const { t } = useTranslation();
   const providerModels = useUiStore((s) => s.providerModels);
@@ -45,6 +47,17 @@ export function ModelCapabilityHint({
       : fit === 'discouraged'
         ? 'text-editorial-warning'
         : 'text-editorial-muted/70';
+
+  if (iconOnly) {
+    return (
+      <span
+        className={`inline-flex items-center justify-center rounded-full border p-1 ${reasoningMeta.className}`}
+        title={t(`pipeline.modelReasoning.${reasoning}`)}
+      >
+        <reasoningMeta.Icon size={10} />
+      </span>
+    );
+  }
 
   return (
     <div className="flex flex-wrap items-center gap-2 text-[10px]">

@@ -37,10 +37,18 @@ export const MODEL_CATALOG: ModelEntry[] = [
   { id: 'gemini-2.5-flash-lite', provider: 'gemini', status: 'stable', reasoning: 'optional', contextWindow: 1_048_576, pricing: { input: 0.10, output: 0.40 }, preferredFor: ['translation', 'format'] },
   { id: 'gemini-2.5-flash',      provider: 'gemini', status: 'stable', reasoning: 'optional', contextWindow: 1_048_576, pricing: { input: 0.30, output: 2.50 }, preferredFor: ['translation', 'refine', 'judge'] },
   { id: 'gemini-2.5-pro',        provider: 'gemini', status: 'stable', reasoning: 'reasoning', contextWindow: 1_048_576, pricing: { input: 1.25, output: 10.00 }, preferredFor: ['refine', 'judge', 'coherence'], discouragedFor: ['format'] },
-  // OpenAI
-  { id: 'gpt-4.1-mini', provider: 'openai', status: 'stable', reasoning: 'non_reasoning', contextWindow: 1_047_576, pricing: { input: 0.40, output: 1.60 }, preferredFor: ['translation', 'format'] },
-  { id: 'gpt-4.1',      provider: 'openai', status: 'stable', reasoning: 'non_reasoning', contextWindow: 1_047_576, pricing: { input: 2.00, output: 8.00 }, preferredFor: ['translation', 'refine', 'judge'] },
-  { id: 'o4-mini',      provider: 'openai', status: 'stable', reasoning: 'reasoning', contextWindow: 200_000, pricing: { input: 1.10, output: 4.40 }, preferredFor: ['refine', 'judge', 'coherence'], discouragedFor: ['format'] },
+  // OpenAI — GPT-4.1 line (non-reasoning, large context)
+  { id: 'gpt-4.1-mini', provider: 'openai', status: 'stable', reasoning: 'non_reasoning', contextWindow: 1_047_576, pricing: { input: 0.40,  output: 1.60  }, preferredFor: ['translation', 'format'] },
+  { id: 'gpt-4.1',      provider: 'openai', status: 'stable', reasoning: 'non_reasoning', contextWindow: 1_047_576, pricing: { input: 2.00,  output: 8.00  }, preferredFor: ['translation', 'refine', 'judge'] },
+  { id: 'o4-mini',      provider: 'openai', status: 'stable', reasoning: 'reasoning',     contextWindow: 200_000,   pricing: { input: 1.10,  output: 4.40  }, preferredFor: ['refine', 'judge', 'coherence'], discouragedFor: ['format'] },
+  // OpenAI — GPT-5 line (optional reasoning, 2025-08)
+  { id: 'gpt-5-nano',   provider: 'openai', status: 'stable', reasoning: 'optional',      contextWindow: 128_000,   pricing: { input: 0.05,  output: 0.40  }, preferredFor: ['translation', 'format'] },
+  { id: 'gpt-5-mini',   provider: 'openai', status: 'stable', reasoning: 'optional',      contextWindow: 400_000,   pricing: { input: 0.25,  output: 2.00  }, preferredFor: ['translation', 'refine'] },
+  { id: 'gpt-5',        provider: 'openai', status: 'stable', reasoning: 'optional',      contextWindow: 400_000,   pricing: { input: 1.25,  output: 10.00 }, preferredFor: ['translation', 'refine', 'judge'] },
+  // OpenAI — GPT-5.4 line (optional reasoning, 2026-03)
+  { id: 'gpt-5.4-nano', provider: 'openai', status: 'stable', reasoning: 'optional',      contextWindow: 400_000,   pricing: { input: 0.20,  output: 1.25  }, preferredFor: ['translation', 'format'] },
+  { id: 'gpt-5.4-mini', provider: 'openai', status: 'stable', reasoning: 'optional',      contextWindow: 400_000,   pricing: { input: 0.75,  output: 4.50  }, preferredFor: ['translation', 'refine', 'judge'] },
+  { id: 'gpt-5.4',      provider: 'openai', status: 'stable', reasoning: 'optional',      contextWindow: 1_000_000, pricing: { input: 2.50,  output: 15.00 }, preferredFor: ['judge', 'coherence', 'refine'], discouragedFor: ['format'] },
   // Anthropic
   { id: 'claude-3-5-haiku-latest', provider: 'anthropic', status: 'stable', reasoning: 'non_reasoning', contextWindow: 200_000, pricing: { input: 0.80, output: 4.00 }, preferredFor: ['translation', 'format'] },
   { id: 'claude-sonnet-4-0',      provider: 'anthropic', status: 'stable', reasoning: 'reasoning', contextWindow: 200_000, pricing: { input: 3.00, output: 15.00 }, preferredFor: ['translation', 'refine', 'judge', 'coherence'] },
@@ -61,6 +69,38 @@ export function getProviderCatalogEntries(provider: ModelProvider): ModelEntry[]
 
 export function getKnownModelIds(provider: ModelProvider): string[] {
   return getProviderCatalogEntries(provider).map((entry) => entry.id);
+}
+
+export function isShowableModel(provider: ModelProvider, modelId: string): boolean {
+  const id = modelId.toLowerCase();
+
+  if (provider === 'openai') {
+    if (id.includes('embedding') || id.includes('moderation') || id.includes('transcribe')) return false;
+    if (id.startsWith('tts-') || id.startsWith('whisper-') || id.startsWith('sora')) return false;
+    if (id.startsWith('dall-e') || id.startsWith('dall_e')) return false;
+    if (id.startsWith('babbage-') || id.startsWith('davinci-') || id.startsWith('curie-') || id.startsWith('ada-')) return false;
+    if (id.startsWith('text-') || id.startsWith('code-')) return false;
+    if (!id.startsWith('gpt-') && !/^o\d/.test(id) && !id.startsWith('chatgpt-')) return false;
+    if (/\d{4}-\d{2}(-\d{2})?$/.test(id)) return false;
+    if (id.endsWith('-preview') || id.endsWith('-instruct')) return false;
+    if (id === 'gpt-4' || id === 'gpt-4-32k' || id === 'gpt-4-turbo' || id.startsWith('gpt-3')) return false;
+    return true;
+  }
+
+  if (provider === 'anthropic') {
+    if (!id.startsWith('claude-')) return false;
+    if (/\d{8}$/.test(id)) return false;
+    return true;
+  }
+
+  if (provider === 'gemini') {
+    const clean = id.replace(/^models\//, '');
+    if (!clean.startsWith('gemini-')) return false;
+    if (clean.startsWith('gemini-1.0')) return false;
+    return true;
+  }
+
+  return true;
 }
 
 export function getModelStatus(provider: ModelProvider, modelId: string): ModelStatus | undefined {

@@ -185,6 +185,12 @@
       "non_reasoning": "Direct",
       "optional": "Adaptive"
     },
+    "reasoningEffort": "Reasoning",
+    "reasoningEffortAuto": "Auto",
+    "reasoningEffortNone": "Off",
+    "reasoningEffortLow": "Low",
+    "reasoningEffortMedium": "Medium",
+    "reasoningEffortHigh": "High",
     "modelFit": {
       "preferred": "Good fit for {{target}}",
       "discouraged": "Usually avoid for {{target}}",
@@ -336,7 +342,8 @@
     "modelsRefreshFailed": "Failed to refresh {{provider}} models",
     "contextWindowBadge": "{{count}} ctx",
     "noKnownModels": "No product-known models are registered for this provider yet.",
-    "noEnabledModelsWarning": "No model is enabled for this provider. It will disappear from stage pickers until you re-enable one."
+    "noEnabledModelsWarning": "No model is enabled for this provider. It will disappear from stage pickers until you re-enable one.",
+    "modelTypesLegend": "Types"
   },
   "ollama": {
     "title": "Ollama (Local Models)",

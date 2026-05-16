@@ -7,7 +7,7 @@ export const DEFAULT_STAGES: PipelineStageConfig[] = [
     name: 'Translation',
     role: 'translation',
     prompt: 'Translate the text accurately.',
-    model: 'gpt-4.1-mini',
+    model: 'gpt-5-nano',
     provider: 'openai',
     enabled: true,
   },

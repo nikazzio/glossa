@@ -185,6 +185,12 @@
       "non_reasoning": "Diretto",
       "optional": "Adattivo"
     },
+    "reasoningEffort": "Ragionamento",
+    "reasoningEffortAuto": "Auto",
+    "reasoningEffortNone": "Off",
+    "reasoningEffortLow": "Basso",
+    "reasoningEffortMedium": "Medio",
+    "reasoningEffortHigh": "Alto",
     "modelFit": {
       "preferred": "Buona scelta per {{target}}",
       "discouraged": "Di solito da evitare per {{target}}",
@@ -336,7 +342,8 @@
     "modelsRefreshFailed": "Aggiornamento modelli {{provider}} fallito",
     "contextWindowBadge": "{{count}} ctx",
     "noKnownModels": "Non ci sono ancora modelli registrati internamente per questo provider.",
-    "noEnabledModelsWarning": "Nessun modello è abilitato per questo provider. Sparirà dai selettori degli stage finché non ne riabiliti almeno uno."
+    "noEnabledModelsWarning": "Nessun modello è abilitato per questo provider. Sparirà dai selettori degli stage finché non ne riabiliti almeno uno.",
+    "modelTypesLegend": "Tipi"
   },
   "ollama": {
     "title": "Ollama (Modelli Locali)",
