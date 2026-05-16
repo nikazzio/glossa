@@ -1,4 +1,7 @@
-use crate::llm::types::{CoherenceChunkInput, PipelineConfig, PromptBlock, ProviderRuntimeConfig, StageConfig, StructuredPrompt};
+use crate::llm::types::{
+    CoherenceChunkInput, PipelineConfig, PromptBlock, ProviderRuntimeConfig, StageConfig,
+    StructuredPrompt,
+};
 
 pub(crate) const REFINE_STAGE_SYSTEM_PROMPT: &str = "\
 You are an expert prompt engineer specializing in multi-stage AI translation pipelines.\n\
@@ -112,9 +115,10 @@ pub(crate) fn build_stage_prompts(
          {glossary_rules}{markdown_rules}",
     );
 
-    let mut system = vec![
-        PromptBlock { text: static_block, cacheable: true },
-    ];
+    let mut system = vec![PromptBlock {
+        text: static_block,
+        cacheable: true,
+    }];
 
     // Blob context (cacheable) comes BEFORE stage instructions so all stable content
     // forms a contiguous prefix: [static + blob]. This lets every provider cache the
@@ -147,7 +151,10 @@ pub(crate) fn build_stage_prompts(
         "Output only the translated text."
     };
     system.push(PromptBlock {
-        text: format!("Core Instructions:\n{}{}\n\n{}", stage.prompt, glossary_reminder, output_contract),
+        text: format!(
+            "Core Instructions:\n{}{}\n\n{}",
+            stage.prompt, glossary_reminder, output_contract
+        ),
         cacheable: false,
     });
 
@@ -260,7 +267,10 @@ pub(crate) fn build_judge_prompts(
     );
 
     StructuredPrompt {
-        system: vec![PromptBlock { text: system_block, cacheable: true }],
+        system: vec![PromptBlock {
+            text: system_block,
+            cacheable: true,
+        }],
         user,
     }
 }
@@ -343,7 +353,10 @@ pub(crate) fn build_coherence_prompts(
     );
 
     StructuredPrompt {
-        system: vec![PromptBlock { text: system_block, cacheable: true }],
+        system: vec![PromptBlock {
+            text: system_block,
+            cacheable: true,
+        }],
         user,
     }
 }
@@ -375,5 +388,8 @@ pub(crate) fn parse_judge_rating(parsed: &serde_json::Value) -> String {
 pub(crate) fn minimal_pipeline_config(
     review_provider_options: Option<ProviderRuntimeConfig>,
 ) -> PipelineConfig {
-    PipelineConfig { review_provider_options, ..Default::default() }
+    PipelineConfig {
+        review_provider_options,
+        ..Default::default()
+    }
 }

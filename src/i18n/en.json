@@ -839,7 +839,22 @@
     "levelWarn": "warn",
     "levelError": "error",
     "unitLabel": "Unit",
-    "showPrompt": "show prompt"
+    "showPrompt": "show prompt",
+    "responseLabel": "show response",
+    "errorLabel": "show error",
+    "noteLabel": "show note",
+    "summaryInput": "input",
+    "summaryOutput": "output",
+    "cacheHitRate": "cache hit",
+    "totalDuration": "duration",
+    "totalCost": "cost",
+    "filterScope": "Scope",
+    "filterLevel": "Level",
+    "search": "Search logs",
+    "groupBy": "Group",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyFailed": "Copy failed"
   },
   "resume": {
     "title": "Translation interrupted",

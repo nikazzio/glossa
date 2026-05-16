@@ -114,6 +114,11 @@ export interface PromptInfo {
   userPrompt: string;
 }
 
+export interface ResponseInfo {
+  kind: 'judge' | 'coherence';
+  rawJson: string;
+}
+
 export interface PromptTemplate {
   id: string;
   name: string;

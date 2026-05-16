@@ -1,13 +1,13 @@
 use tauri::{AppHandle, Emitter, State};
 
 use crate::keystore::get_api_key;
-use crate::llm::provider::LlmRequest;
 use crate::llm::blobs::{compute_blob_assignments, BlobAssignment, ChunkForBlob};
 use crate::llm::prompts::{
     build_coherence_prompts, build_judge_prompts, build_stage_prompts, minimal_pipeline_config,
     parse_judge_rating, sanitize_llm_json_output, REFINE_AUDIT_SYSTEM_PROMPT,
     REFINE_STAGE_SYSTEM_PROMPT,
 };
+use crate::llm::provider::LlmRequest;
 use crate::llm::providers::get_provider;
 use crate::llm::stream::{stream_response, StreamGuard, StreamRegistry, STREAM_CANCELLED_ERROR};
 use crate::llm::types::{
@@ -21,6 +21,18 @@ struct PromptEvent {
     stream_id: String,
     system_prompt: String,
     user_prompt: String,
+}
+
+#[derive(serde::Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct ResponseEvent {
+    stream_id: String,
+    kind: String,
+    raw_json: String,
+}
+
+fn pretty_json(value: &serde_json::Value, fallback: &str) -> String {
+    serde_json::to_string_pretty(value).unwrap_or_else(|_| fallback.to_string())
 }
 
 #[derive(serde::Serialize)]
@@ -48,11 +60,15 @@ pub async fn run_stage(
     let api_key = get_api_key(&app, &stage.provider)?;
     let client = provider.http_client()?;
     let structured = build_stage_prompts(&text, &stage, &config, previous_result.as_deref());
-    app.emit("chunk-prompt", PromptEvent {
-        stream_id,
-        system_prompt: structured.flatten_system(),
-        user_prompt: structured.user.clone(),
-    }).ok();
+    app.emit(
+        "chunk-prompt",
+        PromptEvent {
+            stream_id,
+            system_prompt: structured.flatten_system(),
+            user_prompt: structured.user.clone(),
+        },
+    )
+    .ok();
     let req = LlmRequest {
         model: &stage.model,
         structured: &structured,
@@ -97,11 +113,15 @@ pub async fn run_stage_stream(
     let api_key = get_api_key(&app, &stage.provider)?;
     let client = provider.streaming_client()?;
     let structured = build_stage_prompts(&text, &stage, &config, previous_result.as_deref());
-    app.emit("chunk-prompt", PromptEvent {
-        stream_id: stream_id.clone(),
-        system_prompt: structured.flatten_system(),
-        user_prompt: structured.user.clone(),
-    }).ok();
+    app.emit(
+        "chunk-prompt",
+        PromptEvent {
+            stream_id: stream_id.clone(),
+            system_prompt: structured.flatten_system(),
+            user_prompt: structured.user.clone(),
+        },
+    )
+    .ok();
     let req = LlmRequest {
         model: &stage.model,
         structured: &structured,
@@ -127,7 +147,15 @@ pub async fn run_stage_stream(
         return Err(provider.format_http_error(status, &text));
     }
 
-    let result = stream_response(&app, resp, provider.as_ref(), &stream_id, &cancel, &stage.model).await?;
+    let result = stream_response(
+        &app,
+        resp,
+        provider.as_ref(),
+        &stream_id,
+        &cancel,
+        &stage.model,
+    )
+    .await?;
     Ok(result.content)
 }
 
@@ -153,11 +181,15 @@ pub async fn judge_translation(
     let api_key = get_api_key(&app, &config.judge_provider)?;
     let client = provider.streaming_client()?;
     let structured = build_judge_prompts(&original_text, &translation, &config);
-    app.emit("chunk-prompt", PromptEvent {
-        stream_id: stream_id.clone(),
-        system_prompt: structured.flatten_system(),
-        user_prompt: structured.user.clone(),
-    }).ok();
+    app.emit(
+        "chunk-prompt",
+        PromptEvent {
+            stream_id: stream_id.clone(),
+            system_prompt: structured.flatten_system(),
+            user_prompt: structured.user.clone(),
+        },
+    )
+    .ok();
     let req = LlmRequest {
         model: &config.judge_model,
         structured: &structured,
@@ -183,21 +215,47 @@ pub async fn judge_translation(
         return Err(provider.format_http_error(status, &text));
     }
 
-    let result = stream_response(&app, resp, provider.as_ref(), &stream_id, &cancel, &config.judge_model).await?;
+    let result = stream_response(
+        &app,
+        resp,
+        provider.as_ref(),
+        &stream_id,
+        &cancel,
+        &config.judge_model,
+    )
+    .await?;
     let result_text = result.content;
 
     let sanitized = sanitize_llm_json_output(&result_text);
-    let parsed: serde_json::Value = serde_json::from_str(sanitized).map_err(|e| {
-        #[cfg(debug_assertions)]
-        {
-            let preview: String = result_text.chars().take(500).collect();
-            let truncated = if result_text.chars().nth(500).is_some() { "…" } else { "" };
-            log::warn!("Failed to parse judge JSON: {e}. Preview: {preview}{truncated}");
+    let parsed: serde_json::Value = match serde_json::from_str(sanitized) {
+        Ok(v) => {
+            app.emit(
+                "chunk-response",
+                ResponseEvent {
+                    stream_id: stream_id.clone(),
+                    kind: "judge".to_string(),
+                    raw_json: pretty_json(&v, sanitized),
+                },
+            )
+            .ok();
+            v
         }
-        #[cfg(not(debug_assertions))]
-        log::warn!("Failed to parse judge JSON: {e}");
-        format!("Failed to parse judge JSON: {e}")
-    })?;
+        Err(e) => {
+            #[cfg(debug_assertions)]
+            {
+                let preview: String = result_text.chars().take(500).collect();
+                let truncated = if result_text.chars().nth(500).is_some() {
+                    "…"
+                } else {
+                    ""
+                };
+                log::warn!("Failed to parse judge JSON: {e}. Preview: {preview}{truncated}");
+            }
+            #[cfg(not(debug_assertions))]
+            log::warn!("Failed to parse judge JSON: {e}");
+            return Err(format!("Failed to parse judge JSON: {e}"));
+        }
+    };
 
     let rating = parse_judge_rating(&parsed);
     let issues: Vec<JudgeIssue> = parsed["issues"]
@@ -287,11 +345,15 @@ pub async fn run_coherence_for_chunk(
     let api_key = get_api_key(&app, &config.judge_provider)?;
     let client = provider.streaming_client()?;
     let structured = build_coherence_prompts(&input, &config);
-    app.emit("chunk-prompt", PromptEvent {
-        stream_id: stream_id.clone(),
-        system_prompt: structured.flatten_system(),
-        user_prompt: structured.user.clone(),
-    }).ok();
+    app.emit(
+        "chunk-prompt",
+        PromptEvent {
+            stream_id: stream_id.clone(),
+            system_prompt: structured.flatten_system(),
+            user_prompt: structured.user.clone(),
+        },
+    )
+    .ok();
     let req = LlmRequest {
         model: &config.judge_model,
         structured: &structured,
@@ -317,12 +379,35 @@ pub async fn run_coherence_for_chunk(
         return Err(provider.format_http_error(status, &text));
     }
 
-    let result = stream_response(&app, resp, provider.as_ref(), &stream_id, &cancel, &config.judge_model).await?;
+    let result = stream_response(
+        &app,
+        resp,
+        provider.as_ref(),
+        &stream_id,
+        &cancel,
+        &config.judge_model,
+    )
+    .await?;
     let result_text = result.content;
 
     let sanitized = sanitize_llm_json_output(&result_text);
-    let parsed: serde_json::Value = serde_json::from_str(sanitized)
-        .map_err(|e| format!("Failed to parse coherence JSON: {e}"))?;
+    let parsed: serde_json::Value = match serde_json::from_str(sanitized) {
+        Ok(v) => {
+            app.emit(
+                "chunk-response",
+                ResponseEvent {
+                    stream_id: stream_id.clone(),
+                    kind: "coherence".to_string(),
+                    raw_json: pretty_json(&v, sanitized),
+                },
+            )
+            .ok();
+            v
+        }
+        Err(e) => {
+            return Err(format!("Failed to parse coherence JSON: {e}"));
+        }
+    };
 
     let issues: Vec<JudgeIssue> = parsed["issues"]
         .as_array()
@@ -355,9 +440,14 @@ pub async fn run_coherence_for_chunk(
 }
 
 #[tauri::command]
-pub async fn test_provider_connection(app: AppHandle, provider: String, ollama_base_url: Option<String>) -> Result<bool, String> {
+pub async fn test_provider_connection(
+    app: AppHandle,
+    provider: String,
+    ollama_base_url: Option<String>,
+) -> Result<bool, String> {
     if provider == "ollama" {
-        let status = crate::llm::providers::ollama::check_ollama_preflight(None, ollama_base_url).await?;
+        let status =
+            crate::llm::providers::ollama::check_ollama_preflight(None, ollama_base_url).await?;
         if !status.reachable {
             return Err("Ollama is not running".into());
         }
@@ -416,7 +506,11 @@ pub async fn preflight_pipeline(
                 Err((is_reachable, e, models)) => (
                     false,
                     Some(e),
-                    if models.is_empty() { None } else { Some(models) },
+                    if models.is_empty() {
+                        None
+                    } else {
+                        Some(models)
+                    },
                     Some(is_reachable),
                 ),
             }
@@ -442,15 +536,25 @@ pub async fn preflight_pipeline(
 // Returns Err((reachable, error_msg, models)) so callers can distinguish "offline"
 // from "model not installed" and always get the installed model list when Ollama
 // is reachable (even on failure), so the UI model picker can refresh.
-async fn run_ollama_preflight_check(model: &str, ollama_base_url: Option<String>) -> Result<Vec<String>, (bool, String, Vec<String>)> {
-    let status = crate::llm::providers::ollama::check_ollama_preflight(Some(model.to_string()), ollama_base_url)
-        .await
-        .map_err(|e| (false, e, vec![]))?;
+async fn run_ollama_preflight_check(
+    model: &str,
+    ollama_base_url: Option<String>,
+) -> Result<Vec<String>, (bool, String, Vec<String>)> {
+    let status = crate::llm::providers::ollama::check_ollama_preflight(
+        Some(model.to_string()),
+        ollama_base_url,
+    )
+    .await
+    .map_err(|e| (false, e, vec![]))?;
     if !status.reachable {
         return Err((false, "Ollama is not running".into(), vec![]));
     }
     if !status.model_available {
-        return Err((true, format!("Model \"{model}\" is not installed locally"), status.models));
+        return Err((
+            true,
+            format!("Model \"{model}\" is not installed locally"),
+            status.models,
+        ));
     }
     Ok(status.models)
 }
