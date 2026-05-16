@@ -63,6 +63,9 @@ describe('usePipeline', () => {
 
     usePipelineStore.setState((state) => ({
       ...state,
+      activePipelineId: 'cfg-proj-test',
+      runStatus: 'idle',
+      lastRunConfig: null,
       inputText: '',
       inputProcessingText: '',
       sourceFootnotes: [],
@@ -148,6 +151,63 @@ describe('usePipeline', () => {
     expect(useChunksStore.getState().chunks[1].currentDraft).toBe('Second translated');
   });
 
+  it('re-runs completed chunks on a new batch round unless they are locked', async () => {
+    usePipelineStore.setState((state) => ({
+      ...state,
+      runStatus: 'completed',
+    }));
+    useChunksStore.setState({
+      chunks: [
+        makeTranslationChunk({
+          id: 'chunk-0',
+          originalText: 'First',
+          status: 'completed',
+          currentDraft: 'Keep me',
+          translationDisplayText: 'Keep me',
+          translationProcessingText: 'Keep me',
+          translationLocked: true,
+          stageResults: {
+            'stg-1': { content: 'Keep me', status: 'completed' },
+          },
+          judgeResult: { content: 'Keep me', status: 'completed', rating: 'good', issues: [] },
+        }),
+        makeTranslationChunk({
+          id: 'chunk-1',
+          originalText: 'Second',
+          status: 'completed',
+          currentDraft: 'Old translation',
+          translationDisplayText: 'Old translation',
+          translationProcessingText: 'Old translation',
+          translationLocked: false,
+          stageResults: {
+            'stg-1': { content: 'Old translation', status: 'completed' },
+          },
+          judgeResult: { content: 'Old translation', status: 'completed', rating: 'good', issues: [] },
+        }),
+      ],
+      isProcessing: false,
+      cancelRequested: false,
+      activeStreamId: null,
+    });
+
+    llmMocks.runStage.mockResolvedValue({ content: 'Second retranslated' });
+    llmMocks.judgeTranslation.mockResolvedValue({
+      content: '',
+      rating: 'excellent',
+      issues: [],
+    });
+
+    const { result } = renderHook(() => usePipeline());
+    await act(async () => {
+      await result.current.runPipeline();
+    });
+
+    expect(llmMocks.runStage).toHaveBeenCalledTimes(1);
+    expect(useChunksStore.getState().chunks[0].currentDraft).toBe('Keep me');
+    expect(useChunksStore.getState().chunks[1].currentDraft).toBe('Second retranslated');
+    expect(usePipelineStore.getState().runStatus).toBe('completed');
+  });
+
   it('retranslates only the requested chunk', async () => {
     llmMocks.runStage.mockResolvedValue({ content: 'Translated only chunk-1' });
     llmMocks.judgeTranslation.mockResolvedValue({
@@ -225,6 +285,48 @@ describe('usePipeline', () => {
 
     expect(llmMocks.cancelStream).toHaveBeenCalledWith('stream-xyz');
     expect(useChunksStore.getState().cancelRequested).toBe(true);
+  });
+
+  it('stops a non-streaming provider request without continuing to later stages or audit', async () => {
+    let rejectStage: ((error: Error) => void) | null = null;
+    llmMocks.runStage.mockImplementationOnce(() => {
+      useChunksStore.getState().setActiveStreamId('stream-non-streaming');
+      return new Promise((_resolve, reject) => {
+        rejectStage = (error) => {
+          useChunksStore.getState().setActiveStreamId(null);
+          reject(error);
+        };
+      });
+    });
+    llmMocks.cancelStream.mockImplementationOnce(async () => {
+      rejectStage?.(new Error('Stream cancelled'));
+    });
+
+    const { result } = renderHook(() => usePipeline());
+    let runPromise!: Promise<void>;
+    await act(async () => {
+      runPromise = result.current.runPipeline();
+      await Promise.resolve();
+    });
+
+    await vi.waitFor(() => {
+      expect(useChunksStore.getState().activeStreamId).toBeTruthy();
+    });
+
+    act(() => {
+      result.current.cancelPipeline();
+    });
+
+    await act(async () => {
+      await runPromise;
+    });
+
+    expect(llmMocks.cancelStream).toHaveBeenCalledTimes(1);
+    expect(llmMocks.runStage).toHaveBeenCalledTimes(1);
+    expect(llmMocks.judgeTranslation).not.toHaveBeenCalled();
+    expect(useChunksStore.getState().chunks[0].status).toBe('ready');
+    expect(useChunksStore.getState().chunks[1].status).toBe('ready');
+    expect(toast.message).toHaveBeenCalledWith('pipeline.stopConfirmed');
   });
 
   it('blocks the run when Ollama is offline', async () => {

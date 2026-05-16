@@ -48,6 +48,7 @@ pub struct StageResult {
 #[tauri::command]
 pub async fn run_stage(
     app: AppHandle,
+    registry: State<'_, StreamRegistry>,
     text: String,
     stage: StageConfig,
     config: PipelineConfig,
@@ -63,7 +64,7 @@ pub async fn run_stage(
     app.emit(
         "chunk-prompt",
         PromptEvent {
-            stream_id,
+            stream_id: stream_id.clone(),
             system_prompt: structured.flatten_system(),
             user_prompt: structured.user.clone(),
         },
@@ -76,7 +77,25 @@ pub async fn run_stage(
         json_mode: false,
         provider_options: stage.provider_options.as_ref(),
     };
-    let response = provider.call(&client, &req).await?;
+    let cancel = registry.register(&stream_id);
+    let _guard = StreamGuard {
+        registry: registry.inner(),
+        stream_id: stream_id.clone(),
+    };
+
+    if cancel.is_cancelled() {
+        return Err(STREAM_CANCELLED_ERROR.to_string());
+    }
+
+    // Non-streaming providers still run over HTTP. Race the request against
+    // the shared cancel token so "Stop" drops the in-flight request here too.
+    let response = tokio::select! {
+        biased;
+        _ = cancel.notify.notified() => {
+            return Err(STREAM_CANCELLED_ERROR.to_string());
+        }
+        result = provider.call(&client, &req) => result?,
+    };
     if let Some(usage) = response.usage.as_ref() {
         log::info!(
             "LLM call completed provider={} model={} input_tokens={} output_tokens={} cached_input_tokens={} cache_miss_input_tokens={}",

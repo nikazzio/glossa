@@ -86,6 +86,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const ui = useUiStore.getState();
     const restoredChunks = restoreTranslations(savedTranslations);
     usePipelineStore.setState((state) => ({
+      activePipelineId: config.pipelineId,
+      runStatus: config.runStatus,
+      lastRunConfig: config.lastRunConfig,
       inputText: config.inputText,
       inputProcessingText: config.inputProcessingText,
       sourceFootnotes: config.sourceFootnotes,
@@ -124,7 +127,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       saveState: 'saved',
       lastSaveError: null,
       trackedSnapshot: null,
-      runInterrupted: config.runInProgress,
+      runInterrupted: config.runStatus === 'running' || config.runStatus === 'interrupted',
       lastRunConfig: config.lastRunConfig,
     });
   },

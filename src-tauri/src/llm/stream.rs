@@ -447,11 +447,19 @@ pub(crate) async fn stream_response(
     };
     let alive_app = app.clone();
     let alive_sid = stream_id.to_string();
-    consume_stream(provider, stream_id, cancel, &mut source, |token| {
-        let _ = app.emit("stream-token", token);
-    }, model, move || {
-        let _ = alive_app.emit("stream-alive", serde_json::json!({ "streamId": alive_sid }));
-    })
+    consume_stream(
+        provider,
+        stream_id,
+        cancel,
+        &mut source,
+        |token| {
+            let _ = app.emit("stream-token", token);
+        },
+        model,
+        move || {
+            let _ = alive_app.emit("stream-alive", serde_json::json!({ "streamId": alive_sid }));
+        },
+    )
     .await
 }
 

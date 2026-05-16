@@ -51,6 +51,7 @@ const ALLOWED_MIGRATIONS = new Set([
   'pipeline_configs.custom_source_language',
   'pipeline_configs.custom_target_language',
   'pipeline_configs.run_in_progress',
+  'pipeline_configs.run_status',
   'pipeline_configs.last_run_config',
   'pipeline_configs.blob_budget_tokens',
   'pipeline_configs.blob_overlap',
@@ -116,7 +117,8 @@ export async function initDatabase(): Promise<void> {
       render_profile TEXT DEFAULT 'plain-text',
       markdown_aware INTEGER DEFAULT 0,
       experimental_import TEXT DEFAULT NULL,
-      review_provider_options TEXT DEFAULT NULL
+      review_provider_options TEXT DEFAULT NULL,
+      run_status TEXT DEFAULT 'idle'
     )
   `);
 
@@ -273,6 +275,7 @@ export async function initDatabase(): Promise<void> {
 
   await ensureColumn('prompt_templates', 'context', "TEXT NOT NULL DEFAULT 'stage'");
   await ensureColumn('pipeline_configs', 'run_in_progress', 'INTEGER DEFAULT 0');
+  await ensureColumn('pipeline_configs', 'run_status', "TEXT DEFAULT 'idle'");
   await ensureColumn('pipeline_configs', 'last_run_config', 'TEXT DEFAULT NULL');
   // Migrate unique index from (name) to (name, context) so stage/audit can share names
   await conn.execute('DROP INDEX IF EXISTS idx_prompt_templates_name');

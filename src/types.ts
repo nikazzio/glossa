@@ -10,6 +10,7 @@ export type ExperimentalImportMode = 'docx-markdown';
 export type OllamaThinkLevel = boolean | 'low' | 'medium' | 'high';
 export type StageRole = 'translation' | 'refine' | 'format';
 export type PipelineMode = 'standard' | 'editorial';
+export type PipelineRunStatus = 'idle' | 'running' | 'completed' | 'interrupted';
 
 export interface OllamaConfig {
   temperature?: number;

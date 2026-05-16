@@ -19,6 +19,7 @@ import type { ModelProvider, OllamaStatus, PipelineStageConfig, PromptTemplate }
 import { MODEL_OPTIONS } from '../../constants';
 import { getModelStatus } from '../../models/catalog';
 import { ProviderRuntimeEditor } from './ProviderRuntimeEditor';
+import { canRefineWithProvider, formatProviderModelLabel, type ProviderKeyStatusMap } from '../../hooks/useProviderKeyStatus';
 
 interface StageCardProps {
   stage: PipelineStageConfig;
@@ -29,6 +30,7 @@ interface StageCardProps {
   ollamaStatus: OllamaStatus;
   isRefreshingOllama: boolean;
   modelOptions: string[];
+  keyStatuses: ProviderKeyStatusMap;
   onUpdate: (updates: Partial<PipelineStageConfig>) => void;
   onRefinePrompt: () => void;
   onRefreshOllama: () => void;
@@ -51,6 +53,7 @@ export function StageCard({
   ollamaStatus,
   isRefreshingOllama,
   modelOptions,
+  keyStatuses,
   onUpdate,
   onRefinePrompt,
   onRefreshOllama,
@@ -65,6 +68,8 @@ export function StageCard({
   const [templateSearch, setTemplateSearch] = useState('');
 
   const promptEditable = isEditingPrompt && !translationsExist && !isProcessing;
+  const canRefine = canRefineWithProvider(stage.provider, keyStatuses);
+  const refineLabel = formatProviderModelLabel(stage.provider, stage.model);
 
   const ollamaOffline = stage.provider === 'ollama' && ollamaStatus === 'disconnected';
 
@@ -202,13 +207,16 @@ export function StageCard({
                 <button
                   type="button"
                   onClick={onRefinePrompt}
-                  disabled={isRefining || !stage.prompt.trim()}
-                  title={t('pipeline.refinePrompt')}
-                  aria-label={t('pipeline.refinePrompt')}
+                  disabled={isRefining || !stage.prompt.trim() || !canRefine}
+                  title={t('pipeline.refinePromptWithModel', { model: refineLabel })}
+                  aria-label={t('pipeline.refinePromptWithModel', { model: refineLabel })}
                   className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40"
                 >
                   {isRefining ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
                 </button>
+                <span className="rounded-full border border-editorial-border/60 px-2 py-1 text-[9px] font-mono text-editorial-muted">
+                  {refineLabel}
+                </span>
                 <button
                   type="button"
                   onClick={() => { setShowSaveName(!showSaveName); setShowTemplateList(false); }}

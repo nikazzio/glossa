@@ -90,6 +90,7 @@ describe('projectStore', () => {
 
   it('opens a project and restores chunks plus document mode', async () => {
     projectServiceMocks.getProjectConfig.mockResolvedValue({
+      pipelineId: 'cfg-proj-1',
       sourceLanguage: 'Latin',
       targetLanguage: 'Italian',
       inputText: 'Original paragraph',
@@ -115,6 +116,8 @@ describe('projectStore', () => {
       renderProfile: 'markdown',
       markdownAware: true,
       experimentalImport: 'docx-markdown',
+      runStatus: 'idle',
+      lastRunConfig: null,
       glossary: [{ term: 'logos', translation: 'logos', notes: 'retain Greek' }],
     });
 
@@ -157,6 +160,7 @@ describe('projectStore', () => {
 
   it('derives sandbox mode when no explicit view mode is saved and there are no chunks', async () => {
     projectServiceMocks.getProjectConfig.mockResolvedValue({
+      pipelineId: 'cfg-proj-empty',
       sourceLanguage: 'English',
       targetLanguage: 'Italian',
       inputText: 'Unchunked draft source',
@@ -173,6 +177,8 @@ describe('projectStore', () => {
       renderProfile: 'plain-text',
       markdownAware: false,
       experimentalImport: null,
+      runStatus: 'idle',
+      lastRunConfig: null,
       glossary: [],
     });
     projectServiceMocks.loadTranslations.mockResolvedValue([]);

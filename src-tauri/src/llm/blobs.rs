@@ -40,7 +40,10 @@ pub fn compute_blob_assignments(
     }
 
     let effective_budget = budget_tokens.max(1);
-    let chunk_tokens: Vec<usize> = chunks.iter().map(|chunk| estimate_tokens(&chunk.text)).collect();
+    let chunk_tokens: Vec<usize> = chunks
+        .iter()
+        .map(|chunk| estimate_tokens(&chunk.text))
+        .collect();
     let total_tokens: usize = chunk_tokens.iter().sum();
 
     // If the full document sits comfortably within the context budget, a single
@@ -51,7 +54,10 @@ pub fn compute_blob_assignments(
             rand::thread_rng().gen::<u64>(),
             rand::thread_rng().gen::<u64>()
         );
-        let reference_chunk_ids = chunks.iter().map(|chunk| chunk.id.clone()).collect::<Vec<_>>();
+        let reference_chunk_ids = chunks
+            .iter()
+            .map(|chunk| chunk.id.clone())
+            .collect::<Vec<_>>();
         return chunks
             .iter()
             .enumerate()
@@ -129,7 +135,10 @@ mod tests {
     use super::*;
 
     fn chunk(id: &str, text: &str) -> ChunkForBlob {
-        ChunkForBlob { id: id.into(), text: text.into() }
+        ChunkForBlob {
+            id: id.into(),
+            text: text.into(),
+        }
     }
 
     fn words(n: usize) -> String {
@@ -187,13 +196,18 @@ mod tests {
 
     #[test]
     fn small_document_uses_single_shared_blob() {
-        let chunks = vec![chunk("c1", &words(80)), chunk("c2", &words(80)), chunk("c3", &words(80))];
+        let chunks = vec![
+            chunk("c1", &words(80)),
+            chunk("c2", &words(80)),
+            chunk("c3", &words(80)),
+        ];
         let result = compute_blob_assignments(&chunks, 1000, 2);
         assert_eq!(result.len(), 3);
-        assert!(result.iter().all(|entry| entry.blob_id == result[0].blob_id));
         assert!(result
             .iter()
-            .all(|entry| entry.reference_chunk_ids == vec!["c1".to_string(), "c2".to_string(), "c3".to_string()]));
+            .all(|entry| entry.blob_id == result[0].blob_id));
+        assert!(result.iter().all(|entry| entry.reference_chunk_ids
+            == vec!["c1".to_string(), "c2".to_string(), "c3".to_string()]));
     }
 
     #[test]
@@ -213,7 +227,10 @@ mod tests {
         assert_ne!(result[1].blob_id, result[2].blob_id);
         assert_ne!(result[1].reference_chunk_ids, result[2].reference_chunk_ids);
         assert!(result[2].reference_chunk_ids.contains(&"c3".to_string()));
-        assert!(result[2].reference_chunk_ids.contains(&"c1".to_string()) || result[2].reference_chunk_ids.contains(&"c2".to_string()));
+        assert!(
+            result[2].reference_chunk_ids.contains(&"c1".to_string())
+                || result[2].reference_chunk_ids.contains(&"c2".to_string())
+        );
     }
 
     #[test]

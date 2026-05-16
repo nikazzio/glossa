@@ -233,18 +233,33 @@ function isHeadingChunk(text: string): boolean {
   return /^#{1,6}\s+\S/.test(trimmed) && !trimmed.includes('\n');
 }
 
-function isPlainTextHeadingLike(text: string): boolean {
-  const lines = text
+function getNonEmptyTrimmedLines(text: string): string[] {
+  return text
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean);
+}
+
+function isListLikeLine(line: string): boolean {
+  return /^[-*+]\s+/.test(line) || /^\d+[.)]\s+/.test(line);
+}
+
+function isPlainTextHeadingLike(text: string): boolean {
+  const lines = getNonEmptyTrimmedLines(text);
   if (lines.length === 0 || lines.length > 2) return false;
-  if (countWords(text) > 12 || text.length > 80) return false;
+  if (countWords(text) > 12 || text.trim().length > 90) return false;
   return lines.every((line) =>
     /^[A-Z0-9À-ÖØ-Þ]/.test(line) &&
     !/[.!?…]$/.test(line) &&
-    !/^[-*+]\s+/.test(line),
+    !isListLikeLine(line),
   );
+}
+
+function isCarryableTrailingShortBlock(text: string): boolean {
+  const lines = getNonEmptyTrimmedLines(text);
+  if (lines.length === 0 || lines.length > 2) return false;
+  if (countWords(text) > 20 || text.trim().length > 140) return false;
+  return lines.every((line) => !isListLikeLine(line));
 }
 
 // Detects a strict heading-like trailing block preceded by a blank line.
@@ -310,13 +325,23 @@ function mergeHeadingChunks(chunks: string[]): string[] {
 }
 
 function extractTrailingShortBlock(text: string): { main: string; trailing: string } | null {
-  const trimmed = text.trim();
-  const sep = trimmed.lastIndexOf('\n\n');
-  if (sep === -1) return null;
-  const main = trimmed.slice(0, sep).trim();
-  const trailing = trimmed.slice(sep + 2).trim();
-  if (!main || !trailing) return null;
-  if (trailing.split('\n').filter(Boolean).length > 2) return null;
+  const blankLinePattern = /\r?\n\r?\n/g;
+  let lastMatch: RegExpExecArray | null = null;
+  let match: RegExpExecArray | null;
+
+  while ((match = blankLinePattern.exec(text)) !== null) {
+    lastMatch = match;
+  }
+
+  if (!lastMatch) return null;
+
+  const sepStart = lastMatch.index;
+  const sepEnd = sepStart + lastMatch[0].length;
+  const main = text.slice(0, sepStart);
+  const trailing = text.slice(sepEnd);
+
+  if (!main.trim() || !trailing.trim()) return null;
+  if (!isCarryableTrailingShortBlock(trailing)) return null;
   return { main, trailing };
 }
 

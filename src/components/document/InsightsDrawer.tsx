@@ -16,13 +16,11 @@ import {
   Link2,
   List,
   Loader2,
-  Merge,
   MessageCircle,
   NotebookText,
   PanelRight,
   RefreshCcw,
   ScanLine,
-  Scissors,
   ShieldCheck,
   TerminalSquare,
   X,
@@ -99,14 +97,12 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
   const setChunkDrawerTab = useUiStore((state) => state.setChunkDrawerTab);
   const selectedChunkId = useUiStore((state) => state.selectedChunkId);
   const setSelectedChunkId = useUiStore((state) => state.setSelectedChunkId);
-  const setPendingSplitChunkId = useUiStore((state) => state.setPendingSplitChunkId);
   const focusIssueInChunk = useUiStore((state) => state.focusIssueInChunk);
   const chunks = useChunksStore((state) => state.chunks);
   const isProcessing = useChunksStore((state) => state.isProcessing);
   const allChunksTranslated = chunks.length > 0 && chunks.every((c) => c.currentDraft?.trim());
   const allChunksLocked = chunks.length > 0 && chunks.every((c) => c.translationLocked);
   const unlockedChunksCount = chunks.filter((c) => c.currentDraft?.trim() && !c.translationLocked).length;
-  const mergeChunkWithNext = useChunksStore((state) => state.mergeChunkWithNext);
   const currentChunk = chunks.find((c) => c.id === selectedChunkId) ?? chunks[0] ?? null;
   const currentChunkIndex = currentChunk ? chunks.findIndex((c) => c.id === currentChunk.id) : -1;
 
@@ -373,8 +369,6 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
                     isProcessing={isProcessing}
                     stuckChunkIds={stuckChunkIds}
                     onSelect={(id) => setSelectedChunkId(id)}
-                    onSplit={(chunkId) => { setSelectedChunkId(chunkId); setPendingSplitChunkId(chunkId); }}
-                    onMerge={(chunkId) => { setSelectedChunkId(chunkId); mergeChunkWithNext(chunkId); }}
                     onCancelStuck={cancelStuckChunk}
                   />
                 ) : documentDrawerTab === 'stats' ? (
@@ -468,12 +462,10 @@ interface IndexTabProps {
   isProcessing: boolean;
   stuckChunkIds: Set<string>;
   onSelect: (id: string) => void;
-  onSplit: (chunkId: string) => void;
-  onMerge: (chunkId: string) => void;
   onCancelStuck: (chunkId: string) => void;
 }
 
-function IndexTab({ panelId, labelledBy, chunks, currentChunkId, isProcessing, stuckChunkIds, onSelect, onSplit, onMerge, onCancelStuck }: IndexTabProps) {
+function IndexTab({ panelId, labelledBy, chunks, currentChunkId, isProcessing, stuckChunkIds, onSelect, onCancelStuck }: IndexTabProps) {
   const { t } = useTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -494,8 +486,6 @@ function IndexTab({ panelId, labelledBy, chunks, currentChunkId, isProcessing, s
     );
   }
 
-  const canEdit = !isProcessing;
-
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} ref={scrollRef} className="overflow-y-auto custom-scrollbar px-4 py-4">
       <ul style={{ height: virtualizer.getTotalSize(), position: 'relative' }} className="w-full">
@@ -505,8 +495,6 @@ function IndexTab({ panelId, labelledBy, chunks, currentChunkId, isProcessing, s
           const isActive = chunk.id === currentChunkId;
           const tone = qualityTone(chunk.judgeResult.status === 'completed' ? chunk.judgeResult.rating : null);
           const wordCount = chunk.originalText.trim() ? chunk.originalText.trim().split(/\s+/).filter(Boolean).length : 0;
-          const isLast = index === chunks.length - 1;
-          const canMutate = canEdit && chunk.status !== 'completed' && chunk.status !== 'processing';
           const isStuck = stuckChunkIds.has(chunk.id);
 
           let statusIcon: React.ReactNode;
@@ -572,31 +560,6 @@ function IndexTab({ panelId, labelledBy, chunks, currentChunkId, isProcessing, s
                     >
                       {t('document.watchdogCancel')}
                     </button>
-                  </div>
-                )}
-
-                {canMutate && (
-                  <div className={`flex gap-1.5 border-t px-3 py-2 ${isActive ? 'border-white/10' : 'border-editorial-border/60'}`}>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); onSplit(chunk.id); }}
-                      title={t('pipeline.splitChunkTooltip')}
-                      aria-label={t('pipeline.splitChunk')}
-                      className={`rounded-full border p-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${isActive ? 'border-white/20 text-white/60 hover:bg-white/10 hover:text-white' : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'}`}
-                    >
-                      <Scissors size={13} />
-                    </button>
-                    {!isLast && (
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); onMerge(chunk.id); }}
-                        title={t('pipeline.mergeNextTooltip')}
-                        aria-label={t('pipeline.mergeNext')}
-                        className={`rounded-full border p-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${isActive ? 'border-white/20 text-white/60 hover:bg-white/10 hover:text-white' : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'}`}
-                      >
-                        <Merge size={13} />
-                      </button>
-                    )}
                   </div>
                 )}
               </div>

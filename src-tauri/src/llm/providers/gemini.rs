@@ -2,18 +2,18 @@ use async_trait::async_trait;
 use reqwest::Client;
 use serde_json::json;
 use serde_json::Value;
-use std::collections::HashMap;
 use std::collections::hash_map::DefaultHasher;
+use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::sync::{LazyLock, Mutex};
 use std::time::{Duration, Instant};
 
+use super::format_api_error;
 use crate::llm::provider::{
     LlmProvider, LlmRequest, LlmResponse, StreamFormat, TokenUsage, UsageAccumulator,
 };
 use crate::llm::stream::{build_default_http_client, default_stream_timeouts, StreamTimeouts};
 use crate::llm::types::GeminiCacheConfig;
-use super::format_api_error;
 
 pub struct GeminiProvider;
 
@@ -86,8 +86,9 @@ impl LlmProvider for GeminiProvider {
                 state.latest_cached_input = json["usageMetadata"]["cachedContentTokenCount"]
                     .as_u64()
                     .map(|value| value as u32);
-                state.latest_cache_miss_input =
-                    state.latest_cached_input.map(|cached| (i as u32).saturating_sub(cached));
+                state.latest_cache_miss_input = state
+                    .latest_cached_input
+                    .map(|cached| (i as u32).saturating_sub(cached));
             }
         }
     }
@@ -130,7 +131,9 @@ impl LlmProvider for GeminiProvider {
             .map_err(|e| format!("Failed to read response: {e}"))?;
 
         if !status.is_success() {
-            if text.to_ascii_lowercase().contains("cachedcontent") || text.to_ascii_lowercase().contains("cached content") {
+            if text.to_ascii_lowercase().contains("cachedcontent")
+                || text.to_ascii_lowercase().contains("cached content")
+            {
                 invalidate_gemini_cache(req);
             }
             return Err(format_api_error("Gemini", status, &text));
@@ -250,7 +253,11 @@ async fn ensure_gemini_cached_content(
     if let Ok(guard) = GEMINI_CACHE_NAMES.lock() {
         if let Some(entry) = guard.get(&cache_key) {
             if entry.created_at.elapsed() < gemini_cache_safety_window(req) {
-                log::debug!("Gemini explicit cache hit model={} cache_name={}", req.model, entry.name);
+                log::debug!(
+                    "Gemini explicit cache hit model={} cache_name={}",
+                    req.model,
+                    entry.name
+                );
                 return Ok(Some(entry.name.clone()));
             }
         }
@@ -279,7 +286,11 @@ async fn ensure_gemini_cached_content(
         .map_err(|e| format!("Failed to read Gemini cache response: {e}"))?;
 
     if !status.is_success() {
-        log::debug!("Gemini cache creation skipped status={} body={}", status, text);
+        log::debug!(
+            "Gemini cache creation skipped status={} body={}",
+            status,
+            text
+        );
         return Ok(None);
     }
 
@@ -298,10 +309,13 @@ async fn ensure_gemini_cached_content(
     );
 
     if let Ok(mut guard) = GEMINI_CACHE_NAMES.lock() {
-        guard.insert(cache_key, GeminiCacheEntry {
-            name: cache_name.clone(),
-            created_at: Instant::now(),
-        });
+        guard.insert(
+            cache_key,
+            GeminiCacheEntry {
+                name: cache_name.clone(),
+                created_at: Instant::now(),
+            },
+        );
     }
 
     Ok(Some(cache_name))

@@ -1,21 +1,20 @@
 /**
  * Normalizes imported text to a consistent internal format before chunking.
  *
- * Both 'plain' and 'markdown' receive the same mechanical cleanup:
- * - Normalize line endings to \n
- * - Strip trailing whitespace from each line
- * - Collapse 3+ consecutive blank lines to 2
- * - Trim leading/trailing whitespace from the document
- *
- * The format parameter is preserved for future divergence (e.g. plain-specific
- * heuristics) without changing call sites.
+ * Plain text can tolerate mechanical cleanup before chunking.
+ * Markdown cannot: line breaks, indentation, trailing spaces, and runs of
+ * blank lines may all be semantically significant.
  */
 export function normalizeImportedText(text: string, format: 'plain' | 'markdown'): string {
-  void format;
-
-  return text
+  const normalizedLineEndings = text
     .replace(/\r\n/g, '\n')
-    .replace(/\r/g, '\n')
+    .replace(/\r/g, '\n');
+
+  if (format === 'markdown') {
+    return normalizedLineEndings;
+  }
+
+  return normalizedLineEndings
     .split('\n')
     .map((line) => line.trimEnd())
     .join('\n')

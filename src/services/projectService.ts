@@ -7,6 +7,7 @@ import type {
   GlossaryEntry,
   JudgeResult,
   PipelineConfig,
+  PipelineRunStatus,
   PipelineResult,
   PipelineStageConfig,
   ProviderRuntimeConfig,
@@ -163,6 +164,7 @@ export async function deleteProject(id: string): Promise<void> {
 // ── Pipeline Config persistence ──────────────────────────────────────
 
 export async function getProjectConfig(projectId: string): Promise<{
+  pipelineId: string;
   sourceLanguage: string;
   targetLanguage: string;
   inputText: string;
@@ -187,10 +189,11 @@ export async function getProjectConfig(projectId: string): Promise<{
   customTargetLanguage: string | undefined;
   blobBudgetTokens: number | undefined;
   blobOverlap: number | undefined;
-  runInProgress: boolean;
+  runStatus: PipelineRunStatus;
   lastRunConfig: string | null;
 } | null> {
   const rows = await select<{
+    id: string;
     source_language: string;
     target_language: string;
     source_display_text?: string;
@@ -214,9 +217,11 @@ export async function getProjectConfig(projectId: string): Promise<{
     blob_budget_tokens?: number | null;
     blob_overlap?: number | null;
     run_in_progress?: number | null;
+    run_status?: string | null;
     last_run_config?: string | null;
   }>(
     `SELECT
+       pc.id,
        p.source_language,
        p.target_language,
        p.view_mode,
@@ -240,6 +245,7 @@ export async function getProjectConfig(projectId: string): Promise<{
        pc.blob_budget_tokens,
        pc.blob_overlap,
        pc.run_in_progress,
+       pc.run_status,
        pc.last_run_config
      FROM pipeline_configs pc
      JOIN projects p ON p.id = pc.project_id
@@ -249,6 +255,13 @@ export async function getProjectConfig(projectId: string): Promise<{
 
   if (rows.length === 0) return null;
   const row = rows[0];
+  const runStatus: PipelineRunStatus =
+    row.run_status === 'running'
+    || row.run_status === 'completed'
+    || row.run_status === 'interrupted'
+    || row.run_status === 'idle'
+      ? row.run_status
+      : (row.run_in_progress === 1 ? 'interrupted' : 'idle');
 
   // Glossario: prima trova l'ID assegnato, poi carica le voci
   const pgRows = await select<{ glossary_id: string }>(
@@ -265,6 +278,7 @@ export async function getProjectConfig(projectId: string): Promise<{
   );
 
   return {
+    pipelineId: row.id,
     sourceLanguage: row.source_language,
     targetLanguage: row.target_language,
     inputText: row.source_display_text ?? '',
@@ -294,7 +308,7 @@ export async function getProjectConfig(projectId: string): Promise<{
       translation: g.translation,
       notes: g.notes,
     })),
-    runInProgress: row.run_in_progress === 1,
+    runStatus,
     lastRunConfig: row.last_run_config ?? null,
   };
 }
@@ -363,22 +377,22 @@ export async function saveChunkCheckpoint(
   );
 }
 
-export async function setRunInProgress(
+export async function setPipelineRunState(
   projectId: string,
-  inProgress: boolean,
+  runStatus: PipelineRunStatus,
   configFingerprint?: string,
 ): Promise<void> {
-  if (inProgress) {
-    await execute(
-      'UPDATE pipeline_configs SET run_in_progress = 1, last_run_config = $1 WHERE project_id = $2',
-      [configFingerprint ?? null, projectId],
-    );
-  } else {
-    await execute(
-      'UPDATE pipeline_configs SET run_in_progress = 0 WHERE project_id = $1',
-      [projectId],
-    );
-  }
+  await execute(
+    `UPDATE pipeline_configs
+     SET run_in_progress = $1,
+         run_status = $2,
+         last_run_config = CASE
+           WHEN $3 IS NULL THEN last_run_config
+           ELSE $3
+         END
+     WHERE project_id = $4`,
+    [runStatus === 'running' ? 1 : 0, runStatus, configFingerprint ?? null, projectId],
+  );
 }
 
 type ExecuteQuery = (query: string, params?: unknown[]) => Promise<void>;

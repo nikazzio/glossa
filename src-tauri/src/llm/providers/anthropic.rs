@@ -2,11 +2,11 @@ use async_trait::async_trait;
 use reqwest::Client;
 use serde_json::{json, Value};
 
+use super::format_api_error;
 use crate::llm::provider::{
     LlmProvider, LlmRequest, LlmResponse, StreamFormat, TokenUsage, UsageAccumulator,
 };
 use crate::llm::stream::{build_default_http_client, default_stream_timeouts, StreamTimeouts};
-use super::format_api_error;
 
 /// Build the `system` field for Anthropic requests. Each block in the structured
 /// prompt becomes a `{ type: "text", text: "..." }` object. Blocks marked cacheable
@@ -90,11 +90,9 @@ impl LlmProvider for AnthropicProvider {
                     state.latest_cached_input = json["message"]["usage"]["cache_read_input_tokens"]
                         .as_u64()
                         .map(|n| n as u32);
-                    state.latest_cache_miss_input = state.pending_input.map(|input| {
-                        input.saturating_sub(
-                            state.latest_cached_input.unwrap_or(0),
-                        )
-                    });
+                    state.latest_cache_miss_input = state
+                        .pending_input
+                        .map(|input| input.saturating_sub(state.latest_cached_input.unwrap_or(0)));
                 }
                 Some("message_delta") => {
                     if let Some(out) = json["usage"]["output_tokens"].as_u64() {

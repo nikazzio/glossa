@@ -10,21 +10,20 @@ pub use stream::StreamRegistry;
 
 #[cfg(test)]
 mod tests {
-    use crate::llm::provider::{LlmProvider, LlmRequest, LlmResponse, StreamFormat, UsageAccumulator};
+    use crate::llm::prompts::{
+        build_judge_prompts, build_stage_prompts, parse_judge_rating, sanitize_llm_json_output,
+    };
+    use crate::llm::provider::{
+        LlmProvider, LlmRequest, LlmResponse, StreamFormat, UsageAccumulator,
+    };
+    use crate::llm::providers::ollama::{build_ollama_options, merge_ollama_config};
     use crate::llm::providers::{format_api_error, get_provider, provider_label_from_url};
     use crate::llm::stream::{
-        consume_stream, format_stream_idle_timeout_with_duration,
-        format_stream_header_timeout_with_duration, format_stream_total_timeout_with_duration,
+        consume_stream, format_stream_header_timeout_with_duration,
+        format_stream_idle_timeout_with_duration, format_stream_total_timeout_with_duration,
         provider_label, with_stream_header_timeout, CancelToken, StreamChunkSource, StreamGuard,
-        StreamRegistry, StreamTimeouts, StreamToken, STREAM_CANCELLED_ERROR,
-        HTTP_STREAM_IDLE_TIMEOUT_SECS, HTTP_STREAM_TOTAL_TIMEOUT_SECS,
-    };
-    use crate::llm::prompts::{
-        build_judge_prompts, build_stage_prompts,
-        parse_judge_rating, sanitize_llm_json_output,
-    };
-    use crate::llm::providers::ollama::{
-        build_ollama_options, merge_ollama_config,
+        StreamRegistry, StreamTimeouts, StreamToken, HTTP_STREAM_IDLE_TIMEOUT_SECS,
+        HTTP_STREAM_TOTAL_TIMEOUT_SECS, STREAM_CANCELLED_ERROR,
     };
     use crate::llm::types::{
         GlossaryEntry, JudgeIssue, OllamaConfig, PipelineConfig, ProviderRuntimeConfig, StageConfig,
@@ -33,7 +32,13 @@ mod tests {
     use bytes::Bytes;
     use reqwest::Client;
     use serde_json::{Map, Value};
-    use std::{collections::VecDeque, future::Future, pin::Pin, sync::{Arc, Mutex as StdMutex}, time::Duration};
+    use std::{
+        collections::VecDeque,
+        future::Future,
+        pin::Pin,
+        sync::{Arc, Mutex as StdMutex},
+        time::Duration,
+    };
     use tokio::time::{advance, sleep};
     use wiremock::matchers::{method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};
@@ -87,7 +92,8 @@ mod tests {
         }
 
         fn stream_timeouts(&self) -> StreamTimeouts {
-            self.timeouts.unwrap_or_else(|| self.inner.stream_timeouts())
+            self.timeouts
+                .unwrap_or_else(|| self.inner.stream_timeouts())
         }
 
         fn http_client(&self) -> Result<Client, String> {
@@ -217,7 +223,10 @@ mod tests {
     fn extract_deepseek_streaming() {
         let provider = DelegatingTestProvider::new("deepseek");
         let data = r#"{"choices":[{"delta":{"content":"Bonjour"}}]}"#;
-        assert_eq!(provider.extract_streaming_token(data), Some("Bonjour".into()));
+        assert_eq!(
+            provider.extract_streaming_token(data),
+            Some("Bonjour".into())
+        );
     }
 
     #[test]
@@ -488,7 +497,13 @@ mod tests {
     fn effective_stage_ollama_config_applies_defaults() {
         let stage = make_stage("ollama");
         // A stage with no provider_options falls back to defaults.
-        let ollama = merge_ollama_config(None, stage.provider_options.as_ref().and_then(|o| o.ollama.as_ref()));
+        let ollama = merge_ollama_config(
+            None,
+            stage
+                .provider_options
+                .as_ref()
+                .and_then(|o| o.ollama.as_ref()),
+        );
 
         assert_eq!(ollama.temperature, Some(0.1));
         assert_eq!(ollama.top_p, Some(1.0));
@@ -579,7 +594,11 @@ mod tests {
 
     #[test]
     fn format_ollama_api_error_maps_timeout_and_runtime_failures() {
-        let timeout = format_api_error("Ollama", reqwest::StatusCode::REQUEST_TIMEOUT, "slow model load");
+        let timeout = format_api_error(
+            "Ollama",
+            reqwest::StatusCode::REQUEST_TIMEOUT,
+            "slow model load",
+        );
         let runtime = format_api_error("Ollama", reqwest::StatusCode::BAD_GATEWAY, "gpu oom");
 
         assert!(timeout.contains("timed out") || timeout.contains("408"));
@@ -842,8 +861,16 @@ mod tests {
                 ))),
             }]);
 
-            consume_stream(&provider, "stream-1", &cancel, &mut source, |_| {}, "test-model", || {})
-                .await
+            consume_stream(
+                &provider,
+                "stream-1",
+                &cancel,
+                &mut source,
+                |_| {},
+                "test-model",
+                || {},
+            )
+            .await
         });
 
         tokio::task::yield_now().await;
@@ -891,8 +918,16 @@ mod tests {
                 },
             ]);
 
-            consume_stream(&provider, "stream-2", &cancel, &mut source, |_| {}, "test-model", || {})
-                .await
+            consume_stream(
+                &provider,
+                "stream-2",
+                &cancel,
+                &mut source,
+                |_| {},
+                "test-model",
+                || {},
+            )
+            .await
         });
 
         tokio::task::yield_now().await;
@@ -977,8 +1012,16 @@ mod tests {
         );
         let mut source = MockChunkSource::new(vec![MockChunk::Immediate(Err("stream broke"))]);
 
-        let result = consume_stream(&provider, "stream-err", &cancel, &mut source, |_| {}, "test-model", || {})
-            .await;
+        let result = consume_stream(
+            &provider,
+            "stream-err",
+            &cancel,
+            &mut source,
+            |_| {},
+            "test-model",
+            || {},
+        )
+        .await;
 
         assert_eq!(result.unwrap_err(), "stream broke");
     }
@@ -1053,7 +1096,10 @@ mod tests {
         );
         let client = Client::new();
         let structured = StructuredPrompt {
-            system: vec![PromptBlock { text: "Translate from English to Italian".into(), cacheable: false }],
+            system: vec![PromptBlock {
+                text: "Translate from English to Italian".into(),
+                cacheable: false,
+            }],
             user: "Hello world".into(),
         };
         let req = LlmRequest {
@@ -1087,7 +1133,10 @@ mod tests {
         );
         let client = Client::new();
         let structured = StructuredPrompt {
-            system: vec![PromptBlock { text: "system".into(), cacheable: false }],
+            system: vec![PromptBlock {
+                text: "system".into(),
+                cacheable: false,
+            }],
             user: "user".into(),
         };
         let req = LlmRequest {
@@ -1122,7 +1171,10 @@ mod tests {
         );
         let client = Client::new();
         let structured = StructuredPrompt {
-            system: vec![PromptBlock { text: "system".into(), cacheable: false }],
+            system: vec![PromptBlock {
+                text: "system".into(),
+                cacheable: false,
+            }],
             user: "user".into(),
         };
         let req = LlmRequest {
@@ -1209,8 +1261,16 @@ mod tests {
             MockChunk::Immediate(Ok(None)),
         ]);
 
-        let result = consume_stream(&provider, "stream-anthropic", &cancel, &mut source, |_| {}, "test-model", || {})
-            .await;
+        let result = consume_stream(
+            &provider,
+            "stream-anthropic",
+            &cancel,
+            &mut source,
+            |_| {},
+            "test-model",
+            || {},
+        )
+        .await;
 
         assert_eq!(result.unwrap(), "Guten Tag");
     }
@@ -1229,13 +1289,19 @@ mod tests {
             },
         );
         let mut source = MockChunkSource::new(vec![MockChunk::Immediate(Ok(Some(
-            Bytes::from_static(
-                b"data: {\"choices\":[{\"delta\":{\"content\":\"Never\"}}]}\n\n",
-            ),
+            Bytes::from_static(b"data: {\"choices\":[{\"delta\":{\"content\":\"Never\"}}]}\n\n"),
         )))]);
 
-        let result = consume_stream(&provider, "stream-precancelled", &cancel, &mut source, |_| {}, "test-model", || {})
-            .await;
+        let result = consume_stream(
+            &provider,
+            "stream-precancelled",
+            &cancel,
+            &mut source,
+            |_| {},
+            "test-model",
+            || {},
+        )
+        .await;
 
         assert_eq!(result.unwrap_err(), STREAM_CANCELLED_ERROR);
     }
@@ -1281,6 +1347,9 @@ mod tests {
         assert_eq!(issues.len(), 1);
         assert_eq!(issues[0].issue_type, "fluency");
         assert_eq!(issues[0].severity, "low");
-        assert_eq!(issues[0].suggested_fix.as_deref(), Some("Rephrase slightly"));
+        assert_eq!(
+            issues[0].suggested_fix.as_deref(),
+            Some("Rephrase slightly")
+        );
     }
 }

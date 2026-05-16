@@ -379,7 +379,10 @@ fn find_matching_ollama_model<'a>(
     })
 }
 
-async fn ensure_ollama_preflight(model: Option<&str>, base_url: &str) -> Result<OllamaPreflightStatus, String> {
+async fn ensure_ollama_preflight(
+    model: Option<&str>,
+    base_url: &str,
+) -> Result<OllamaPreflightStatus, String> {
     let cached = {
         let guard = OLLAMA_PREFLIGHT_CACHE.lock().unwrap();
         guard.as_ref().and_then(|entry| {

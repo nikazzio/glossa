@@ -30,7 +30,6 @@ describe('AuditPanel', () => {
       focusedChunkId: null,
       focusedIssueQuery: null,
       focusedIssueRequestId: 0,
-      pendingSplitChunkId: null,
       chunkPresetShort: 400,
       chunkPresetMedium: 700,
       chunkPresetLong: 1000,
