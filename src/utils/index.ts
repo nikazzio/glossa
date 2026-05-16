@@ -273,6 +273,11 @@ function mergeHeadingChunks(chunks: string[]): string[] {
   if (chunks.length <= 1) return chunks;
   const result: string[] = [];
   let headingAccumulator = '';
+  // Precompute for each index whether any body chunk follows it (O(n) reverse pass)
+  const hasBodyAfter = new Array<boolean>(chunks.length).fill(false);
+  for (let j = chunks.length - 2; j >= 0; j--) {
+    hasBodyAfter[j] = !isHeadingChunk(chunks[j + 1]!) || (hasBodyAfter[j + 1] ?? false);
+  }
   for (let i = 0; i < chunks.length; i++) {
     const chunk = chunks[i]!;
     if (isHeadingChunk(chunk)) {
@@ -280,8 +285,7 @@ function mergeHeadingChunks(chunks: string[]): string[] {
         ? `${headingAccumulator}\n\n${chunk}`
         : chunk;
     } else {
-      const hasFollowingBody = chunks.slice(i + 1).some((next) => !isHeadingChunk(next));
-      const extracted = hasFollowingBody ? extractTrailingHeading(chunk) : null;
+      const extracted = hasBodyAfter[i] ? extractTrailingHeading(chunk) : null;
       if (extracted) {
         // Push the body of this chunk (with any pending headings), carry the trailing heading forward
         const merged = headingAccumulator
