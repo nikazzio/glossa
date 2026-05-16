@@ -11,7 +11,11 @@ use crate::llm::provider::{
 use crate::llm::stream::{build_default_http_client, default_stream_timeouts, StreamTimeouts};
 use crate::llm::types::{DiscoveredModel, OpenAiCacheConfig};
 
-/// OpenAI-compatible provider. Used for both OpenAI and DeepSeek which share the same API shape.
+/// OpenAI-compatible provider.
+///
+/// `use_responses_api = true`  → OpenAI Responses API  (`/v1/responses`)
+/// `use_responses_api = false` → Chat Completions API  (`/v1/chat/completions`)
+///                               Used for OpenAI-compatible providers such as DeepSeek.
 pub struct OpenAiCompatibleProvider {
     id: &'static str,
     display_name: &'static str,
@@ -19,6 +23,7 @@ pub struct OpenAiCompatibleProvider {
     base_url: String,
     env_var: &'static str,
     test_model: &'static str,
+    use_responses_api: bool,
 }
 
 pub fn openai() -> OpenAiCompatibleProvider {
@@ -27,7 +32,8 @@ pub fn openai() -> OpenAiCompatibleProvider {
         display_name: "OpenAI",
         base_url: "https://api.openai.com/v1".to_string(),
         env_var: "OPENAI_API_KEY",
-        test_model: "gpt-4o-mini",
+        test_model: "gpt-4.1-mini",
+        use_responses_api: true,
     }
 }
 
@@ -37,7 +43,8 @@ pub fn deepseek() -> OpenAiCompatibleProvider {
         display_name: "DeepSeek",
         base_url: "https://api.deepseek.com".to_string(),
         env_var: "DEEPSEEK_API_KEY",
-        test_model: "deepseek-chat",
+        test_model: "deepseek-v4-flash",
+        use_responses_api: false,
     }
 }
 
@@ -51,6 +58,7 @@ impl OpenAiCompatibleProvider {
         base_url: &str,
         env_var: &'static str,
         test_model: &'static str,
+        use_responses_api: bool,
     ) -> Self {
         Self {
             id,
@@ -58,8 +66,11 @@ impl OpenAiCompatibleProvider {
             base_url: base_url.to_string(),
             env_var,
             test_model,
+            use_responses_api,
         }
     }
+
+    // ── Chat Completions helpers ──────────────────────────────────────────────
 
     fn derive_prompt_cache_key(&self, req: &LlmRequest<'_>) -> String {
         let mut hasher = DefaultHasher::new();
@@ -79,11 +90,9 @@ impl OpenAiCompatibleProvider {
         }
     }
 
+    /// Attaches prompt_cache_key (and optionally prompt_cache_retention) to a
+    /// Chat Completions request body. No-op for the Responses API path.
     fn apply_cache_fields(&self, req: &LlmRequest<'_>, body: &mut Value) {
-        if self.id != "openai" && self.id != "deepseek" {
-            return;
-        }
-
         let cfg = self.openai_cache_config(req);
         let cache_key = cfg
             .and_then(|value| value.prompt_cache_key.as_ref())
@@ -102,7 +111,7 @@ impl OpenAiCompatibleProvider {
         }
     }
 
-    fn parse_usage(&self, json: &Value) -> Option<TokenUsage> {
+    fn parse_chat_completions_usage(&self, json: &Value) -> Option<TokenUsage> {
         let input = json["usage"]["prompt_tokens"].as_u64()?;
         let output = json["usage"]["completion_tokens"].as_u64()?;
         let cached_input = if self.id == "deepseek" {
@@ -130,6 +139,96 @@ impl OpenAiCompatibleProvider {
         })
     }
 
+    // ── Responses API helpers ─────────────────────────────────────────────────
+
+    fn parse_responses_api_usage(&self, json: &Value) -> Option<TokenUsage> {
+        let input = json["usage"]["input_tokens"].as_u64()?;
+        let output = json["usage"]["output_tokens"].as_u64()?;
+        let cached_input = json["usage"]["input_tokens_details"]["cached_tokens"]
+            .as_u64()
+            .map(|value| value as u32);
+        let cache_miss_input =
+            cached_input.map(|cached| (input as u32).saturating_sub(cached));
+        Some(TokenUsage {
+            input: input as u32,
+            output: output as u32,
+            cached_input,
+            cache_miss_input,
+        })
+    }
+
+    async fn call_responses(
+        &self,
+        client: &Client,
+        req: &LlmRequest<'_>,
+    ) -> Result<LlmResponse, String> {
+        let url = format!("{}/responses", self.base_url);
+
+        let mut body = serde_json::json!({
+            "model": req.model,
+            "instructions": req.structured.flatten_system(),
+            "input": req.structured.user,
+        });
+
+        if req.json_mode {
+            body["text"] = serde_json::json!({"format": {"type": "json_object"}});
+        }
+
+        let resp = client
+            .post(&url)
+            .header("Authorization", format!("Bearer {}", req.api_key))
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| format!("API request failed: {e}"))?;
+
+        let status = resp.status();
+        let text = resp
+            .text()
+            .await
+            .map_err(|e| format!("Failed to read response: {e}"))?;
+
+        if !status.is_success() {
+            return Err(format_api_error("OpenAI", status, &text));
+        }
+
+        let json: Value =
+            serde_json::from_str(&text).map_err(|e| format!("Failed to parse response: {e}"))?;
+
+        let content = json["output"][0]["content"][0]["text"]
+            .as_str()
+            .map(String::from)
+            .ok_or_else(|| "No text in Responses API output".to_string())?;
+
+        let usage = self.parse_responses_api_usage(&json);
+        Ok(LlmResponse { content, usage })
+    }
+
+    async fn build_responses_streaming_request(
+        &self,
+        client: &Client,
+        req: &LlmRequest<'_>,
+    ) -> Result<reqwest::Response, String> {
+        let url = format!("{}/responses", self.base_url);
+
+        let body = serde_json::json!({
+            "model": req.model,
+            "instructions": req.structured.flatten_system(),
+            "input": req.structured.user,
+            "stream": true,
+        });
+
+        client
+            .post(&url)
+            .header("Authorization", format!("Bearer {}", req.api_key))
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| format!("API request failed: {e}"))
+    }
+
+    // ── Model discovery (shared) ──────────────────────────────────────────────
+
     fn classify_discovered_model(&self, model_id: &str) -> DiscoveredModel {
         let normalized = model_id.to_ascii_lowercase();
         let status = if normalized.contains("deprecated") {
@@ -149,14 +248,17 @@ impl OpenAiCompatibleProvider {
             } else {
                 None
             }
-        } else if normalized.contains("reasoner") {
-            Some("reasoning".to_string())
-        } else if normalized.contains("chat") {
-            Some("non_reasoning".to_string())
-        } else if normalized.contains("v4-flash") || normalized.contains("v4-pro") {
-            Some("optional".to_string())
         } else {
-            None
+            // DeepSeek v4 line: both flash and pro support configurable reasoning effort
+            if normalized.contains("v4-flash") || normalized.contains("v4-pro") {
+                Some("optional".to_string())
+            } else if normalized.contains("reasoner") {
+                Some("reasoning".to_string())
+            } else if normalized.contains("chat") {
+                Some("non_reasoning".to_string())
+            } else {
+                None
+            }
         };
 
         DiscoveredModel {
@@ -202,42 +304,77 @@ impl LlmProvider for OpenAiCompatibleProvider {
 
     fn extract_streaming_token(&self, data: &str) -> Option<String> {
         let json: Value = serde_json::from_str(data).ok()?;
+        if self.use_responses_api {
+            if json["type"].as_str() != Some("response.output_text.delta") {
+                return None;
+            }
+            return json["delta"].as_str().map(String::from);
+        }
         json["choices"][0]["delta"]["content"]
             .as_str()
             .map(String::from)
     }
 
     fn update_streaming_usage(&self, data: &str, state: &mut UsageAccumulator) {
-        if let Ok(json) = serde_json::from_str::<Value>(data) {
+        let Ok(json) = serde_json::from_str::<Value>(data) else {
+            return;
+        };
+
+        if self.use_responses_api {
+            if json["type"].as_str() != Some("response.completed") {
+                return;
+            }
+            let usage = &json["response"]["usage"];
             if let (Some(i), Some(o)) = (
-                json["usage"]["prompt_tokens"].as_u64(),
-                json["usage"]["completion_tokens"].as_u64(),
+                usage["input_tokens"].as_u64(),
+                usage["output_tokens"].as_u64(),
             ) {
                 state.latest_input = Some(i as u32);
                 state.latest_output = Some(o as u32);
-                state.latest_cached_input = if self.id == "deepseek" {
-                    json["usage"]["prompt_cache_hit_tokens"]
-                        .as_u64()
-                        .map(|value| value as u32)
-                } else {
-                    json["usage"]["prompt_tokens_details"]["cached_tokens"]
-                        .as_u64()
-                        .map(|value| value as u32)
-                };
-                state.latest_cache_miss_input = if self.id == "deepseek" {
-                    json["usage"]["prompt_cache_miss_tokens"]
-                        .as_u64()
-                        .map(|value| value as u32)
-                } else {
-                    state
-                        .latest_cached_input
-                        .map(|cached| (i as u32).saturating_sub(cached))
-                };
+                state.latest_cached_input = usage["input_tokens_details"]["cached_tokens"]
+                    .as_u64()
+                    .map(|value| value as u32);
+                state.latest_cache_miss_input = state
+                    .latest_cached_input
+                    .map(|cached| (i as u32).saturating_sub(cached));
             }
+            return;
+        }
+
+        // Chat Completions path (DeepSeek)
+        if let (Some(i), Some(o)) = (
+            json["usage"]["prompt_tokens"].as_u64(),
+            json["usage"]["completion_tokens"].as_u64(),
+        ) {
+            state.latest_input = Some(i as u32);
+            state.latest_output = Some(o as u32);
+            state.latest_cached_input = if self.id == "deepseek" {
+                json["usage"]["prompt_cache_hit_tokens"]
+                    .as_u64()
+                    .map(|value| value as u32)
+            } else {
+                json["usage"]["prompt_tokens_details"]["cached_tokens"]
+                    .as_u64()
+                    .map(|value| value as u32)
+            };
+            state.latest_cache_miss_input = if self.id == "deepseek" {
+                json["usage"]["prompt_cache_miss_tokens"]
+                    .as_u64()
+                    .map(|value| value as u32)
+            } else {
+                state
+                    .latest_cached_input
+                    .map(|cached| (i as u32).saturating_sub(cached))
+            };
         }
     }
 
     async fn call(&self, client: &Client, req: &LlmRequest<'_>) -> Result<LlmResponse, String> {
+        if self.use_responses_api {
+            return self.call_responses(client, req).await;
+        }
+
+        // Chat Completions path
         let url = format!("{}/chat/completions", self.base_url);
 
         let mut body = serde_json::json!({
@@ -285,8 +422,7 @@ impl LlmProvider for OpenAiCompatibleProvider {
             .map(String::from)
             .ok_or_else(|| "No content in response".to_string())?;
 
-        let usage = self.parse_usage(&json);
-
+        let usage = self.parse_chat_completions_usage(&json);
         Ok(LlmResponse { content, usage })
     }
 
@@ -295,9 +431,14 @@ impl LlmProvider for OpenAiCompatibleProvider {
         client: &Client,
         req: &LlmRequest<'_>,
     ) -> Result<reqwest::Response, String> {
+        if self.use_responses_api {
+            return self.build_responses_streaming_request(client, req).await;
+        }
+
+        // Chat Completions path
         let url = format!("{}/chat/completions", self.base_url);
 
-        let body = serde_json::json!({
+        let mut body = serde_json::json!({
             "model": req.model,
             "messages": [
                 {"role": "system", "content": req.structured.flatten_system()},
@@ -306,7 +447,6 @@ impl LlmProvider for OpenAiCompatibleProvider {
             "stream": true,
             "stream_options": {"include_usage": true}
         });
-        let mut body = body;
         self.apply_cache_fields(req, &mut body);
 
         let mut request = client.post(&url).json(&body);

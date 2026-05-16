@@ -45,9 +45,10 @@ export const MODEL_CATALOG: ModelEntry[] = [
   { id: 'claude-3-5-haiku-latest', provider: 'anthropic', status: 'stable', reasoning: 'non_reasoning', contextWindow: 200_000, pricing: { input: 0.80, output: 4.00 }, preferredFor: ['translation', 'format'] },
   { id: 'claude-sonnet-4-0',      provider: 'anthropic', status: 'stable', reasoning: 'reasoning', contextWindow: 200_000, pricing: { input: 3.00, output: 15.00 }, preferredFor: ['translation', 'refine', 'judge', 'coherence'] },
   { id: 'claude-opus-4-0',        provider: 'anthropic', status: 'stable', reasoning: 'reasoning', contextWindow: 200_000, pricing: { input: 15.00, output: 75.00 }, preferredFor: ['refine', 'judge', 'coherence'], discouragedFor: ['format'] },
-  // DeepSeek
-  { id: 'deepseek-chat',     provider: 'deepseek', status: 'deprecated', reasoning: 'non_reasoning', contextWindow: 64_000, pricing: { input: 0.27, output: 1.10 }, preferredFor: ['translation', 'format'] },
-  { id: 'deepseek-reasoner', provider: 'deepseek', status: 'deprecated', reasoning: 'reasoning', contextWindow: 64_000, pricing: { input: 0.55, output: 2.19 }, preferredFor: ['refine', 'judge', 'coherence'], discouragedFor: ['format'] },
+  // DeepSeek (v4 line — 1M context, optional reasoning effort)
+  // deepseek-chat / deepseek-reasoner retired 2026-07-24
+  { id: 'deepseek-v4-flash', provider: 'deepseek', status: 'stable', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 0.14, output: 0.28 }, preferredFor: ['translation', 'format'] },
+  { id: 'deepseek-v4-pro',   provider: 'deepseek', status: 'stable', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 1.74, output: 3.48 }, preferredFor: ['refine', 'judge', 'coherence'], discouragedFor: ['format'] },
 ];
 
 export function getModelEntry(provider: ModelProvider, modelId: string): ModelEntry | undefined {

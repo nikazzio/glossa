@@ -216,8 +216,15 @@ mod tests {
     #[test]
     fn extract_openai_streaming() {
         let provider = DelegatingTestProvider::new("openai");
-        let data = r#"{"choices":[{"delta":{"content":"Hello"}}]}"#;
+        let data = r#"{"type":"response.output_text.delta","delta":"Hello"}"#;
         assert_eq!(provider.extract_streaming_token(data), Some("Hello".into()));
+    }
+
+    #[test]
+    fn extract_openai_streaming_non_text_event_returns_none() {
+        let provider = DelegatingTestProvider::new("openai");
+        let data = r#"{"type":"response.created","response":{"id":"resp_123"}}"#;
+        assert_eq!(provider.extract_streaming_token(data), None);
     }
 
     #[test]
@@ -268,7 +275,7 @@ mod tests {
     #[test]
     fn extract_empty_content_returns_empty_string() {
         let provider = DelegatingTestProvider::new("openai");
-        let data = r#"{"choices":[{"delta":{"content":""}}]}"#;
+        let data = r#"{"type":"response.output_text.delta","delta":""}"#;
         assert_eq!(provider.extract_streaming_token(data), Some("".into()));
     }
 
@@ -1085,7 +1092,7 @@ mod tests {
             .mount(&server)
             .await;
 
-        // Use an OpenAI-compatible provider pointed at the mock server
+        // Use an OpenAI-compatible provider (Chat Completions path) pointed at the mock server
         use crate::llm::provider::LlmRequest;
         use crate::llm::types::{PromptBlock, StructuredPrompt};
         let prov = crate::llm::providers::openai::OpenAiCompatibleProvider::new_with_base_url(
@@ -1093,7 +1100,8 @@ mod tests {
             "OpenAI",
             &format!("{}", server.uri()),
             "OPENAI_API_KEY",
-            "gpt-4o-mini",
+            "gpt-4.1-mini",
+            false,
         );
         let client = Client::new();
         let structured = StructuredPrompt {
@@ -1130,7 +1138,8 @@ mod tests {
             "OpenAI",
             &format!("{}", server.uri()),
             "OPENAI_API_KEY",
-            "gpt-4o-mini",
+            "gpt-4.1-mini",
+            false,
         );
         let client = Client::new();
         let structured = StructuredPrompt {
@@ -1168,7 +1177,8 @@ mod tests {
             "OpenAI",
             &format!("{}", server.uri()),
             "OPENAI_API_KEY",
-            "gpt-4o-mini",
+            "gpt-4.1-mini",
+            false,
         );
         let client = Client::new();
         let structured = StructuredPrompt {
@@ -1205,12 +1215,13 @@ mod tests {
                 total: Duration::from_millis(5000),
             },
         );
+        // OpenAI now uses the Responses API streaming format
         let mut source = MockChunkSource::new(vec![
             MockChunk::Immediate(Ok(Some(Bytes::from_static(
-                b"data: {\"choices\":[{\"delta\":{\"content\":\"Ciao\"}}]}\n\n",
+                b"data: {\"type\":\"response.output_text.delta\",\"delta\":\"Ciao\"}\n\n",
             )))),
             MockChunk::Immediate(Ok(Some(Bytes::from_static(
-                b"data: {\"choices\":[{\"delta\":{\"content\":\" mondo\"}}]}\n\n",
+                b"data: {\"type\":\"response.output_text.delta\",\"delta\":\" mondo\"}\n\n",
             )))),
             MockChunk::Immediate(Ok(Some(Bytes::from_static(b"data: [DONE]\n\n")))),
             MockChunk::Immediate(Ok(None)),
