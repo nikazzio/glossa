@@ -337,10 +337,6 @@ function mergeTrailingShortBlocks(chunks: string[]): string[] {
     carried = extracted.trailing;
   }
 
-  if (carried) {
-    result.push(carried);
-  }
-
   return result;
 }
 
