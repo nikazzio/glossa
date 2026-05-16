@@ -11,7 +11,8 @@ use crate::llm::provider::{
 };
 use crate::llm::stream::{
     format_transport_error, ollama_stream_timeouts, with_stream_header_timeout, StreamTimeouts,
-    OLLAMA_HTTP_CLIENT, OLLAMA_STREAMING_HTTP_CLIENT,
+    HTTP_CONNECT_TIMEOUT_SECS, OLLAMA_HTTP_CLIENT, OLLAMA_HTTP_REQUEST_TIMEOUT_SECS,
+    OLLAMA_STREAMING_HTTP_CLIENT,
 };
 use crate::llm::types::{OllamaConfig, OllamaPreflightStatus};
 
@@ -79,11 +80,26 @@ impl LlmProvider for OllamaProvider {
     }
 
     fn http_client(&self) -> Result<Client, String> {
-        Ok(OLLAMA_HTTP_CLIENT.clone())
+        OLLAMA_HTTP_CLIENT
+            .get_or_init(|| {
+                Client::builder()
+                    .connect_timeout(Duration::from_secs(HTTP_CONNECT_TIMEOUT_SECS))
+                    .timeout(Duration::from_secs(OLLAMA_HTTP_REQUEST_TIMEOUT_SECS))
+                    .build()
+                    .map_err(|e| format!("Failed to build Ollama HTTP client: {e}"))
+            })
+            .clone()
     }
 
     fn streaming_client(&self) -> Result<Client, String> {
-        Ok(OLLAMA_STREAMING_HTTP_CLIENT.clone())
+        OLLAMA_STREAMING_HTTP_CLIENT
+            .get_or_init(|| {
+                Client::builder()
+                    .connect_timeout(Duration::from_secs(HTTP_CONNECT_TIMEOUT_SECS))
+                    .build()
+                    .map_err(|e| format!("Failed to build Ollama streaming HTTP client: {e}"))
+            })
+            .clone()
     }
 
     fn extract_streaming_token(&self, data: &str) -> Option<String> {
@@ -384,7 +400,7 @@ async fn ensure_ollama_preflight(
     base_url: &str,
 ) -> Result<OllamaPreflightStatus, String> {
     let cached = {
-        let guard = OLLAMA_PREFLIGHT_CACHE.lock().unwrap();
+        let guard = OLLAMA_PREFLIGHT_CACHE.lock().unwrap_or_else(|p| p.into_inner());
         guard.as_ref().and_then(|entry| {
             (entry.fetched_at.elapsed() < Duration::from_secs(OLLAMA_PREFLIGHT_CACHE_TTL_SECS)
                 && entry.base_url == base_url)
@@ -407,7 +423,7 @@ async fn ensure_ollama_preflight(
                 models,
                 base_url: base_url.to_string(),
             };
-            let mut guard = OLLAMA_PREFLIGHT_CACHE.lock().unwrap();
+            let mut guard = OLLAMA_PREFLIGHT_CACHE.lock().unwrap_or_else(|p| p.into_inner());
             *guard = Some(entry.clone());
             entry
         }

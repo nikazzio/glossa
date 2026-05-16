@@ -57,6 +57,7 @@
     "blobContextAutoDesc": "Automatica — ~{{tokens}} token basati su {{model}}",
     "blobBudgetTokens": "Budget token",
     "blobContextReset": "Ripristina automatica",
+    "blobComputeFailed": "Calcolo della memoria contestuale fallito — la traduzione proseguirà senza contesto cross-chunk",
     "blobOverlap": "Sovrapposizione (chunk)",
     "blobOverlapHint": "Quanti chunk dalla coda del blocco precedente includere all'inizio del successivo, per non perdere il filo ai confini.",
     "inheritDefault": "Eredita dal progetto",

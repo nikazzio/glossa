@@ -57,6 +57,7 @@
     "blobContextAutoDesc": "Automatic — ~{{tokens}} tokens based on {{model}}",
     "blobBudgetTokens": "Token budget",
     "blobContextReset": "Restore automatic",
+    "blobComputeFailed": "Context memory computation failed — translation will proceed without cross-chunk context",
     "blobOverlap": "Overlap (chunks)",
     "blobOverlapHint": "How many chunks from the end of the previous block to prepend to the next, to avoid losing the thread at block boundaries.",
     "inheritDefault": "Inherit from project",
