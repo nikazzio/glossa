@@ -216,30 +216,10 @@ export const llmService = {
     translation: string,
     config: PipelineConfig,
     onPrompt?: (info: PromptInfo) => void,
-    onIdleGrace?: () => void,
     onResponse?: (info: ResponseInfo) => void,
   ): Promise<Omit<JudgeResult, 'status'> & UsageResult> {
     const streamId = `judge-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-    let capturedUsage: TokenUsage | undefined;
-    const unlisten = await listen<StreamTokenPayload>('stream-token', (event) => {
-      if (event.payload.streamId !== streamId) return;
-      if (
-        event.payload.done &&
-        event.payload.inputTokens !== undefined &&
-        event.payload.outputTokens !== undefined
-      ) {
-        capturedUsage = usageFromPayload(event.payload);
-        if (capturedUsage) {
-          logOperation({
-            level: 'info',
-            scope: 'invoke',
-            message: 'Audit stream completed',
-            meta: { provider: config.judgeProvider, model: config.judgeModel, ...capturedUsage },
-          });
-        }
-      }
-    });
     const unlistenPrompt = await listen<{ streamId: string; systemPrompt: string; userPrompt: string }>('chunk-prompt', (event) => {
       if (event.payload.streamId !== streamId) return;
       onPrompt?.({ systemPrompt: event.payload.systemPrompt, userPrompt: event.payload.userPrompt });
@@ -247,10 +227,6 @@ export const llmService = {
     const unlistenResponse = await listen<{ streamId: string; kind: ResponseInfo['kind']; rawJson: string }>('chunk-response', (event) => {
       if (event.payload.streamId !== streamId) return;
       onResponse?.({ kind: event.payload.kind, rawJson: event.payload.rawJson });
-    });
-    const unlistenAlive = await listen<{ streamId: string }>('stream-alive', (event) => {
-      if (event.payload.streamId !== streamId) return;
-      onIdleGrace?.();
     });
 
     useChunksStore.getState().setActiveStreamId(streamId);
@@ -259,18 +235,16 @@ export const llmService = {
         'judge_translation',
         { originalText, translation, config: withUiLanguage(config), streamId, ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl },
       );
-      return {
-        ...result,
-        inputTokens: capturedUsage?.inputTokens,
-        outputTokens: capturedUsage?.outputTokens,
-        cachedInputTokens: capturedUsage?.cachedInputTokens,
-        cacheMissInputTokens: capturedUsage?.cacheMissInputTokens,
-      };
+      logOperation({
+        level: 'info',
+        scope: 'invoke',
+        message: 'Audit completed',
+        meta: { provider: config.judgeProvider, model: config.judgeModel, inputTokens: result.inputTokens, outputTokens: result.outputTokens },
+      });
+      return result;
     } finally {
-      unlisten();
       unlistenPrompt();
       unlistenResponse();
-      unlistenAlive();
       useChunksStore.getState().setActiveStreamId(null);
     }
   },
@@ -279,30 +253,10 @@ export const llmService = {
     input: { original: string; translation: string; blobContext?: string; currentChunkId?: string },
     config: PipelineConfig,
     onPrompt?: (info: PromptInfo) => void,
-    onIdleGrace?: () => void,
     onResponse?: (info: ResponseInfo) => void,
   ): Promise<{ issues: Issue[] } & UsageResult> {
     const streamId = `coherence-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-    let capturedUsage: TokenUsage | undefined;
-    const unlisten = await listen<StreamTokenPayload>('stream-token', (event) => {
-      if (event.payload.streamId !== streamId) return;
-      if (
-        event.payload.done &&
-        event.payload.inputTokens !== undefined &&
-        event.payload.outputTokens !== undefined
-      ) {
-        capturedUsage = usageFromPayload(event.payload);
-        if (capturedUsage) {
-          logOperation({
-            level: 'info',
-            scope: 'invoke',
-            message: 'Coherence stream completed',
-            meta: { provider: config.judgeProvider, model: config.judgeModel, ...capturedUsage },
-          });
-        }
-      }
-    });
     const unlistenPrompt = await listen<{ streamId: string; systemPrompt: string; userPrompt: string }>('chunk-prompt', (event) => {
       if (event.payload.streamId !== streamId) return;
       onPrompt?.({ systemPrompt: event.payload.systemPrompt, userPrompt: event.payload.userPrompt });
@@ -311,10 +265,6 @@ export const llmService = {
       if (event.payload.streamId !== streamId) return;
       onResponse?.({ kind: event.payload.kind, rawJson: event.payload.rawJson });
     });
-    const unlistenAlive = await listen<{ streamId: string }>('stream-alive', (event) => {
-      if (event.payload.streamId !== streamId) return;
-      onIdleGrace?.();
-    });
 
     useChunksStore.getState().setActiveStreamId(streamId);
     try {
@@ -322,18 +272,16 @@ export const llmService = {
         'run_coherence_for_chunk',
         { input, config: withUiLanguage(config), streamId, ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl },
       );
-      return {
-        ...result,
-        inputTokens: capturedUsage?.inputTokens,
-        outputTokens: capturedUsage?.outputTokens,
-        cachedInputTokens: capturedUsage?.cachedInputTokens,
-        cacheMissInputTokens: capturedUsage?.cacheMissInputTokens,
-      };
+      logOperation({
+        level: 'info',
+        scope: 'invoke',
+        message: 'Coherence completed',
+        meta: { provider: config.judgeProvider, model: config.judgeModel, inputTokens: result.inputTokens, outputTokens: result.outputTokens },
+      });
+      return result;
     } finally {
-      unlisten();
       unlistenPrompt();
       unlistenResponse();
-      unlistenAlive();
       useChunksStore.getState().setActiveStreamId(null);
     }
   },

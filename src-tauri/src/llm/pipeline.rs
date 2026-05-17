@@ -204,7 +204,7 @@ pub async fn judge_translation(
     let provider = get_provider(&config.judge_provider, ollama_base_url)?;
     provider.preflight(&config.judge_model).await?;
     let api_key = get_api_key(&app, &config.judge_provider)?;
-    let client = provider.streaming_client()?;
+    let client = provider.http_client()?;
     let structured = build_judge_prompts(&original_text, &translation, &config);
     app.emit(
         "chunk-prompt",
@@ -233,26 +233,15 @@ pub async fn judge_translation(
         return Err(STREAM_CANCELLED_ERROR.to_string());
     }
 
-    let resp = provider.build_streaming_request(&client, &req).await?;
-    let status = resp.status();
-    if !status.is_success() {
-        let text = resp.text().await.unwrap_or_else(|e| {
-            log::warn!("Failed to read error response body: {e}");
-            String::new()
-        });
-        return Err(provider.format_http_error(status, &text));
-    }
-
-    let result = stream_response(
-        &app,
-        resp,
-        provider.as_ref(),
-        &stream_id,
-        &cancel,
-        &config.judge_model,
-    )
-    .await?;
-    let result_text = result.content;
+    let response = tokio::select! {
+        biased;
+        _ = cancel.notify.notified() => {
+            return Err(STREAM_CANCELLED_ERROR.to_string());
+        }
+        result = provider.call(&client, &req) => result?,
+    };
+    let result_text = response.content;
+    let usage = response.usage;
 
     let sanitized = sanitize_llm_json_output(&result_text);
     let parsed: serde_json::Value = match serde_json::from_str(sanitized) {
@@ -272,11 +261,7 @@ pub async fn judge_translation(
             #[cfg(debug_assertions)]
             {
                 let preview: String = result_text.chars().take(500).collect();
-                let truncated = if result_text.chars().nth(500).is_some() {
-                    "…"
-                } else {
-                    ""
-                };
+                let truncated = if result_text.chars().nth(500).is_some() { "…" } else { "" };
                 log::warn!("Failed to parse judge JSON: {e}. Preview: {preview}{truncated}");
             }
             #[cfg(not(debug_assertions))]
@@ -303,16 +288,14 @@ pub async fn judge_translation(
         })
         .unwrap_or_default();
 
-    // system_prompt and user_prompt are delivered via the chunk-prompt event before streaming.
-    // input_tokens and output_tokens are delivered via the stream-token done event.
     Ok(JudgeResponse {
         rating,
         issues,
         content: translation,
-        input_tokens: result.input_tokens,
-        output_tokens: result.output_tokens,
-        cached_input_tokens: result.cached_input_tokens,
-        cache_miss_input_tokens: result.cache_miss_input_tokens,
+        input_tokens: usage.as_ref().map(|u| u.input),
+        output_tokens: usage.as_ref().map(|u| u.output),
+        cached_input_tokens: usage.as_ref().and_then(|u| u.cached_input),
+        cache_miss_input_tokens: usage.as_ref().and_then(|u| u.cache_miss_input),
         system_prompt: None,
         user_prompt: None,
     })
@@ -371,7 +354,7 @@ pub async fn run_coherence_for_chunk(
     let provider = get_provider(&config.judge_provider, ollama_base_url)?;
     provider.preflight(&config.judge_model).await?;
     let api_key = get_api_key(&app, &config.judge_provider)?;
-    let client = provider.streaming_client()?;
+    let client = provider.http_client()?;
     let structured = build_coherence_prompts(&input, &config);
     app.emit(
         "chunk-prompt",
@@ -400,26 +383,15 @@ pub async fn run_coherence_for_chunk(
         return Err(STREAM_CANCELLED_ERROR.to_string());
     }
 
-    let resp = provider.build_streaming_request(&client, &req).await?;
-    let status = resp.status();
-    if !status.is_success() {
-        let text = resp.text().await.unwrap_or_else(|e| {
-            log::warn!("Failed to read error response body: {e}");
-            String::new()
-        });
-        return Err(provider.format_http_error(status, &text));
-    }
-
-    let result = stream_response(
-        &app,
-        resp,
-        provider.as_ref(),
-        &stream_id,
-        &cancel,
-        &config.judge_model,
-    )
-    .await?;
-    let result_text = result.content;
+    let response = tokio::select! {
+        biased;
+        _ = cancel.notify.notified() => {
+            return Err(STREAM_CANCELLED_ERROR.to_string());
+        }
+        result = provider.call(&client, &req) => result?,
+    };
+    let result_text = response.content;
+    let usage = response.usage;
 
     let sanitized = sanitize_llm_json_output(&result_text);
     let parsed: serde_json::Value = match serde_json::from_str(sanitized) {
@@ -457,14 +429,12 @@ pub async fn run_coherence_for_chunk(
         })
         .unwrap_or_default();
 
-    // system_prompt and user_prompt are delivered via the chunk-prompt event before streaming.
-    // input_tokens and output_tokens are delivered via the stream-token done event.
     Ok(CoherenceResponse {
         issues,
-        input_tokens: result.input_tokens,
-        output_tokens: result.output_tokens,
-        cached_input_tokens: result.cached_input_tokens,
-        cache_miss_input_tokens: result.cache_miss_input_tokens,
+        input_tokens: usage.as_ref().map(|u| u.input),
+        output_tokens: usage.as_ref().map(|u| u.output),
+        cached_input_tokens: usage.as_ref().and_then(|u| u.cached_input),
+        cache_miss_input_tokens: usage.as_ref().and_then(|u| u.cache_miss_input),
         system_prompt: None,
         user_prompt: None,
     })
