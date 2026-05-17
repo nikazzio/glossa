@@ -31,7 +31,7 @@ describe('MODEL_CATALOG', () => {
 
   it('resolves reasoning from the catalog for known ids', () => {
     expect(getResolvedModelReasoning('deepseek', 'deepseek-v4-flash')).toBe('optional');
-    expect(getResolvedModelReasoning('anthropic', 'claude-sonnet-4-20250514')).toBe('reasoning');
+    expect(getResolvedModelReasoning('anthropic', 'claude-sonnet-4-20250514')).toBe('optional');
   });
 
   it('falls back to provider-specific inference for unknown ids', () => {

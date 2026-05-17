@@ -55,7 +55,7 @@ impl LlmProvider for AnthropicProvider {
     }
 
     fn default_test_model(&self) -> &'static str {
-        "claude-3-haiku-latest"
+        "claude-haiku-4-5-20251001"
     }
 
     fn stream_timeouts(&self) -> StreamTimeouts {

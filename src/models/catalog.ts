@@ -36,7 +36,11 @@ export const MODEL_CATALOG: ModelEntry[] = [
   // Gemini
   { id: 'gemini-2.5-flash-lite', provider: 'gemini', status: 'stable', reasoning: 'optional', contextWindow: 1_048_576, pricing: { input: 0.10, output: 0.40 }, preferredFor: ['translation', 'format'], description: 'Fast and cost-efficient for high-volume translation tasks' },
   { id: 'gemini-2.5-flash',      provider: 'gemini', status: 'stable', reasoning: 'optional', contextWindow: 1_048_576, pricing: { input: 0.30, output: 2.50 }, preferredFor: ['translation', 'refine', 'judge'], description: 'Balanced speed and quality for translation and review' },
-  { id: 'gemini-2.5-pro',        provider: 'gemini', status: 'stable', reasoning: 'reasoning', contextWindow: 1_048_576, pricing: { input: 1.25, output: 10.00 }, preferredFor: ['refine', 'judge', 'coherence'], discouragedFor: ['format'], description: 'Deep reasoning for complex review and coherence analysis' },
+  { id: 'gemini-2.5-pro',        provider: 'gemini', status: 'stable', reasoning: 'optional', contextWindow: 1_048_576, pricing: { input: 1.25, output: 10.00 }, preferredFor: ['refine', 'judge', 'coherence'], discouragedFor: ['format'], description: 'Deep optional-reasoning for complex review and coherence' },
+  // Gemini 3.x line
+  { id: 'gemini-3-flash-preview',   provider: 'gemini', status: 'preview', reasoning: 'optional', contextWindow: 1_048_576, pricing: { input: 0.50, output: 3.00 }, preferredFor: ['translation', 'refine'], description: 'Preview next-gen flash model with optional thinking' },
+  { id: 'gemini-3.1-flash-lite',    provider: 'gemini', status: 'stable',  reasoning: 'optional', contextWindow: 1_048_576, pricing: { input: 0.25, output: 1.50 }, preferredFor: ['translation', 'format'], description: 'Cost-efficient stable 3.1 flash model' },
+  { id: 'gemini-3.1-pro-preview',   provider: 'gemini', status: 'preview', reasoning: 'optional', contextWindow: 2_097_152, pricing: { input: 2.00, output: 12.00 }, preferredFor: ['judge', 'coherence', 'refine'], discouragedFor: ['format'], description: 'Preview pro model with 2M context for deep analysis' },
   // OpenAI — GPT-4.1 line (non-reasoning, large context)
   { id: 'gpt-4.1-mini', provider: 'openai', status: 'stable', reasoning: 'non_reasoning', contextWindow: 1_047_576, pricing: { input: 0.40,  output: 1.60  }, preferredFor: ['translation', 'format'], description: 'Lightweight non-reasoning model for format and bulk tasks' },
   { id: 'gpt-4.1',      provider: 'openai', status: 'stable', reasoning: 'non_reasoning', contextWindow: 1_047_576, pricing: { input: 2.00,  output: 8.00  }, preferredFor: ['translation', 'refine', 'judge'], description: 'Large-context non-reasoning model for detailed translation' },
@@ -49,10 +53,10 @@ export const MODEL_CATALOG: ModelEntry[] = [
   { id: 'gpt-5.4-nano', provider: 'openai', status: 'stable', reasoning: 'optional',      contextWindow: 400_000,   pricing: { input: 0.20,  output: 1.25  }, preferredFor: ['translation', 'format'], description: 'Compact snapshot with optional reasoning, large context' },
   { id: 'gpt-5.4-mini', provider: 'openai', status: 'stable', reasoning: 'optional',      contextWindow: 400_000,   pricing: { input: 0.75,  output: 4.50  }, preferredFor: ['translation', 'refine', 'judge'], description: 'Mid-tier snapshot with optional reasoning and large context' },
   { id: 'gpt-5.4',      provider: 'openai', status: 'stable', reasoning: 'optional',      contextWindow: 1_000_000, pricing: { input: 2.50,  output: 15.00 }, preferredFor: ['judge', 'coherence', 'refine'], discouragedFor: ['format'], description: 'High-capacity snapshot for complex review tasks' },
-  // Anthropic
-  { id: 'claude-3-5-haiku-latest', provider: 'anthropic', status: 'stable', reasoning: 'non_reasoning', contextWindow: 200_000, pricing: { input: 0.80, output: 4.00 }, preferredFor: ['translation', 'format'], description: 'Fast and affordable for high-volume translation' },
-  { id: 'claude-sonnet-4-0',      provider: 'anthropic', status: 'stable', reasoning: 'reasoning', contextWindow: 200_000, pricing: { input: 3.00, output: 15.00 }, preferredFor: ['translation', 'refine', 'judge', 'coherence'], description: 'Powerful reasoning model for translation and review' },
-  { id: 'claude-opus-4-0',        provider: 'anthropic', status: 'stable', reasoning: 'reasoning', contextWindow: 200_000, pricing: { input: 15.00, output: 75.00 }, preferredFor: ['refine', 'judge', 'coherence'], discouragedFor: ['format'], description: 'Most capable Anthropic model for deep analysis' },
+  // Anthropic (Claude 4 line — all support optional extended/adaptive thinking)
+  { id: 'claude-haiku-4-5-20251001', provider: 'anthropic', status: 'stable', reasoning: 'optional', contextWindow: 200_000, pricing: { input: 1.00, output: 5.00 }, preferredFor: ['translation', 'format'], description: 'Fast and cost-efficient for high-volume translation' },
+  { id: 'claude-sonnet-4-6',         provider: 'anthropic', status: 'stable', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 3.00, output: 15.00 }, preferredFor: ['translation', 'refine', 'judge', 'coherence'], description: 'Balanced quality and speed for translation and review' },
+  { id: 'claude-opus-4-7',           provider: 'anthropic', status: 'stable', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 5.00, output: 25.00 }, preferredFor: ['refine', 'judge', 'coherence'], discouragedFor: ['format'], description: 'Most capable Anthropic model for deep analysis' },
   // DeepSeek (v4 line — 1M context, optional reasoning effort)
   // deepseek-chat / deepseek-reasoner retired 2026-07-24
   { id: 'deepseek-v4-flash', provider: 'deepseek', status: 'stable', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 0.14, output: 0.28 }, preferredFor: ['translation', 'format'], description: 'Extremely cost-effective with optional reasoning effort' },
@@ -116,8 +120,7 @@ export function inferReasoningFromModelId(
     if (normalized.startsWith('gpt-4.1') || normalized.startsWith('gpt-4o')) return 'non_reasoning';
   }
   if (provider === 'anthropic') {
-    if (normalized.includes('haiku')) return 'non_reasoning';
-    if (normalized.includes('sonnet') || normalized.includes('opus')) return 'reasoning';
+    if (normalized.includes('haiku') || normalized.includes('sonnet') || normalized.includes('opus')) return 'optional';
   }
   if (provider === 'gemini') {
     if (normalized.includes('flash-lite') || normalized.includes('2.0-flash-lite')) return 'non_reasoning';

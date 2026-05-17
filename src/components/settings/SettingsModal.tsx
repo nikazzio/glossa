@@ -42,6 +42,8 @@ function getModelGroupLabel(provider: ModelProvider, modelId: string): string {
       if (modelId.includes('-3-')) return 'Claude 3';
       return 'Other';
     case 'gemini':
+      if (modelId.startsWith('gemini-3.1')) return 'Gemini 3.1';
+      if (modelId.startsWith('gemini-3')) return 'Gemini 3';
       if (modelId.startsWith('gemini-2.5')) return 'Gemini 2.5';
       if (modelId.startsWith('gemini-2.0')) return 'Gemini 2.0';
       return 'Gemini';
