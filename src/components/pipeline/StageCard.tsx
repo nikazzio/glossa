@@ -84,7 +84,9 @@ export function StageCard({
     if (stage.provider === 'gemini') {
       const budget = stage.providerOptions?.gemini?.thinkingBudget;
       if (budget === 0) return 'none';
-      if (budget != null) return 'low';
+      if (budget != null && budget < 0) return 'high';
+      if (budget != null && budget <= 1024) return 'low';
+      if (budget != null) return 'medium';
       return defaultEffort;
     }
     return defaultEffort;
@@ -97,7 +99,7 @@ export function StageCard({
     } else if (stage.provider === 'deepseek') {
       onUpdate({ providerOptions: { ...opts, deepseek: { ...opts.deepseek, reasoningEffort: effort } } });
     } else if (stage.provider === 'gemini') {
-      const budget = effort === 'none' ? 0 : undefined;
+      const budget = effort === 'none' ? 0 : effort === 'low' ? 1024 : effort === 'medium' ? 8192 : -1;
       onUpdate({ providerOptions: { ...opts, gemini: { ...opts.gemini, thinkingBudget: budget } } });
     }
   };
@@ -108,7 +110,13 @@ export function StageCard({
 
   const handleProviderChange = (newProvider: ModelProvider) => {
     const models = newProvider === 'ollama' ? ollamaModels : getKnownModelIds(newProvider);
-    onUpdate({ provider: newProvider, model: models[0] || '' });
+    onUpdate({ provider: newProvider, model: models[0] || '', providerOptions: {} });
+  };
+
+  const handleModelChange = (newModel: string) => {
+    const opts = stage.providerOptions ?? {};
+    const cleared = { ...opts, [stage.provider]: undefined };
+    onUpdate({ model: newModel, providerOptions: cleared });
   };
 
   const handleSaveTemplate = async () => {
@@ -170,7 +178,7 @@ export function StageCard({
             <div className="flex flex-1 items-center gap-1.5">
               <select
                 value={stage.model}
-                onChange={(e) => onUpdate({ model: e.target.value })}
+                onChange={(e) => handleModelChange(e.target.value)}
                 disabled={translationsExist || isProcessing}
                 className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
                 aria-label={t('pipeline.stageModelLabel')}

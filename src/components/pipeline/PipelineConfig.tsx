@@ -564,7 +564,9 @@ export function PipelineConfig({
     if (config.judgeProvider === 'gemini') {
       const budget = config.reviewProviderOptions?.gemini?.thinkingBudget;
       if (budget === 0) return 'none';
-      if (budget != null) return 'low';
+      if (budget != null && budget < 0) return 'high';
+      if (budget != null && budget <= 1024) return 'low';
+      if (budget != null) return 'medium';
     }
     return judgeDefaultEffort;
   })();
@@ -575,7 +577,7 @@ export function PipelineConfig({
     } else if (config.judgeProvider === 'deepseek') {
       setConfig((prev) => ({ ...prev, reviewProviderOptions: { ...opts, deepseek: { ...opts.deepseek, reasoningEffort: effort } } }));
     } else if (config.judgeProvider === 'gemini') {
-      const budget = effort === 'none' ? 0 : undefined;
+      const budget = effort === 'none' ? 0 : effort === 'low' ? 1024 : effort === 'medium' ? 8192 : -1;
       setConfig((prev) => ({ ...prev, reviewProviderOptions: { ...opts, gemini: { ...opts.gemini, thinkingBudget: budget } } }));
     }
   };
@@ -691,12 +693,21 @@ export function PipelineConfig({
     }
   };
 
+  const handleJudgeModelChange = (newModel: string) => {
+    setConfig((prev) => ({
+      ...prev,
+      judgeModel: newModel,
+      reviewProviderOptions: { ...prev.reviewProviderOptions, [prev.judgeProvider]: undefined },
+    }));
+  };
+
   const handleJudgeProviderChange = (newProvider: ModelProvider) => {
     const models = getSelectableModelIds(newProvider, useUiStore.getState().ollamaModels);
     setConfig((prev) => ({
       ...prev,
       judgeProvider: newProvider,
       judgeModel: models[0] || '',
+      reviewProviderOptions: {},
     }));
     if (newProvider === 'ollama' && useUiStore.getState().ollamaStatus === 'unknown') {
       toast.message(t('ollama.uncheckedHint'));
@@ -1230,7 +1241,7 @@ export function PipelineConfig({
               {judgeModels.length > 0 ? (
                 <select
                   value={config.judgeModel}
-                  onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
+                  onChange={(e) => handleJudgeModelChange(e.target.value)}
                   className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   aria-label={t('pipeline.auditModelLabel')}
                 >
@@ -1243,7 +1254,7 @@ export function PipelineConfig({
               ) : config.judgeProvider === 'ollama' ? (
                 <input
                   value={config.judgeModel}
-                  onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
+                  onChange={(e) => handleJudgeModelChange(e.target.value)}
                   placeholder={t('ollama.modelPlaceholder')}
                   className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   aria-label={t('pipeline.auditModelLabel')}
@@ -1251,7 +1262,7 @@ export function PipelineConfig({
               ) : (
                 <select
                   value={config.judgeModel}
-                  onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
+                  onChange={(e) => handleJudgeModelChange(e.target.value)}
                   className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   aria-label={t('pipeline.auditModelLabel')}
                 >

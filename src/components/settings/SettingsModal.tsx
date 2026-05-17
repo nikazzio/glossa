@@ -91,7 +91,7 @@ export function SettingsModal() {
   const [urlError, setUrlError] = useState<string | null>(null);
   const trapRef = useFocusTrap(showSettings, () => setShowSettings(false));
   const { overrides, setOverride, resetOverride, resetAll } = usePricingStore();
-  const { statuses: keyStatuses } = useProviderKeyStatus();
+  const { statuses: keyStatuses, refresh: refreshKeyStatuses } = useProviderKeyStatus();
 
   const refreshOllama = async () => {
     setRefreshing(true);
@@ -333,6 +333,7 @@ export function SettingsModal() {
                           <ApiKeyInput
                             label={PROVIDER_LABELS[activeProviderTab]}
                             provider={activeProviderTab}
+                            onKeyChange={refreshKeyStatuses}
                           />
                         </div>
                       )}

@@ -92,12 +92,12 @@ impl OpenAiCompatibleProvider {
 
     /// Attaches reasoning effort to the request body.
     /// Responses API → `reasoning.effort`; Chat Completions → `reasoning_effort`.
-    /// No-op when effort is "none", "auto", or unset.
+    /// No-op when effort is unset or not one of: low, medium, high.
     fn apply_reasoning_effort(&self, req: &LlmRequest<'_>, body: &mut Value) {
         let Some(effort) = self
             .openai_cache_config(req)
             .and_then(|cfg| cfg.reasoning_effort.as_deref())
-            .filter(|e| matches!(*e, "none" | "low" | "medium" | "high"))
+            .filter(|e| matches!(*e, "low" | "medium" | "high"))
         else {
             return;
         };
@@ -237,6 +237,9 @@ impl OpenAiCompatibleProvider {
             "input": req.structured.user,
             "stream": true,
         });
+        if req.json_mode {
+            body["text"] = serde_json::json!({"format": {"type": "json_object"}});
+        }
         self.apply_reasoning_effort(req, &mut body);
 
         client
