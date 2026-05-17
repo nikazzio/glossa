@@ -2,9 +2,9 @@ import { ArrowRightLeft, Play, Languages, FileText, Layers, Pencil, Scale, Refre
 import { useMemo, useState, useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import type { ModelProvider, PipelineMode, PromptTemplate } from '../../types';
-import { MODEL_OPTIONS, LANGUAGES, defaultPersonaText } from '../../constants';
-import { getModelStatus, calculateBlobBudget, getContextWindow } from '../../models/catalog';
+import type { ModelProvider, PipelineMode, PromptTemplate, ReasoningEffortLevel } from '../../types';
+import { LANGUAGES, defaultPersonaText } from '../../constants';
+import { calculateBlobBudget, getContextWindow, getKnownModelIds, getModelStatus, getResolvedModelReasoning, getSelectableModelIds, MODEL_PROVIDER_ORDER } from '../../models/catalog';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { StageCard } from './StageCard';
 import { useChunksStore } from '../../stores/chunksStore';
@@ -16,6 +16,7 @@ import { estimatePipelineCost } from '../../utils/costEstimate';
 import { usePricingStore } from '../../stores/pricingStore';
 import { llmService, ollamaService } from '../../services/llmService';
 import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
+import { ReasoningPicker } from '../models/ReasoningPicker';
 import { PromptPreviewTab } from './PromptPreviewTab';
 import { canRefineWithProvider, formatProviderModelLabel, useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
 
@@ -122,9 +123,6 @@ function PersonaEditor({
               >
                 {isRefining ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
               </button>
-              <span className="rounded-full border border-editorial-border/60 px-2 py-1 text-[9px] font-mono text-editorial-muted">
-                {refineLabel}
-              </span>
               <button
                 type="button"
                 onClick={() => { setShowSaveName(!showSaveName); setShowTemplateList(false); }}
@@ -273,8 +271,7 @@ const DEFAULT_PIPELINE_CONFIG_CLASSNAME =
 
 function useJudgeModelOptions(provider: ModelProvider): string[] {
   const ollamaModels = useUiStore((s) => s.ollamaModels);
-  if (provider === 'ollama') return ollamaModels;
-  return MODEL_OPTIONS[provider] || [];
+  return getSelectableModelIds(provider, ollamaModels);
 }
 
 interface AuditPromptEditorProps {
@@ -377,9 +374,6 @@ function AuditPromptEditor({
             >
               {isRefining ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
             </button>
-            <span className="rounded-full border border-editorial-border/60 px-2 py-1 text-[9px] font-mono text-editorial-muted">
-              {refineLabel}
-            </span>
             <button
               type="button"
               onClick={() => { setShowSaveName(!showSaveName); setShowTemplateList(false); }}
@@ -562,6 +556,32 @@ export function PipelineConfig({
   const judgeOllamaOffline =
     config.judgeProvider === 'ollama' && ollamaStatus === 'disconnected';
 
+  const judgeResolvedReasoning = getResolvedModelReasoning(config.judgeProvider, config.judgeModel);
+  const currentJudgeReasoningEffort: ReasoningEffortLevel = (() => {
+    const judgeDefaultEffort: ReasoningEffortLevel = judgeResolvedReasoning === 'optional' ? 'none' : 'medium';
+    if (config.judgeProvider === 'openai') return config.reviewProviderOptions?.openai?.reasoningEffort ?? judgeDefaultEffort;
+    if (config.judgeProvider === 'deepseek') return config.reviewProviderOptions?.deepseek?.reasoningEffort ?? judgeDefaultEffort;
+    if (config.judgeProvider === 'gemini') {
+      const budget = config.reviewProviderOptions?.gemini?.thinkingBudget;
+      if (budget === 0) return judgeResolvedReasoning === 'reasoning' ? judgeDefaultEffort : 'none';
+      if (budget != null && budget < 0) return 'high';
+      if (budget != null && budget <= 1024) return 'low';
+      if (budget != null) return 'medium';
+    }
+    return judgeDefaultEffort;
+  })();
+  const handleJudgeReasoningChange = (effort: ReasoningEffortLevel) => {
+    const opts = config.reviewProviderOptions ?? {};
+    if (config.judgeProvider === 'openai') {
+      setConfig((prev) => ({ ...prev, reviewProviderOptions: { ...opts, openai: { ...opts.openai, reasoningEffort: effort } } }));
+    } else if (config.judgeProvider === 'deepseek') {
+      setConfig((prev) => ({ ...prev, reviewProviderOptions: { ...opts, deepseek: { ...opts.deepseek, reasoningEffort: effort } } }));
+    } else if (config.judgeProvider === 'gemini') {
+      const budget = effort === 'none' ? 0 : effort === 'low' ? 1024 : effort === 'medium' ? 8192 : -1;
+      setConfig((prev) => ({ ...prev, reviewProviderOptions: { ...opts, gemini: { ...opts.gemini, thinkingBudget: budget } } }));
+    }
+  };
+
   const pricingOverrides = usePricingStore((s) => s.overrides);
   const costEstimate = useMemo(
     () => estimatePipelineCost(chunks, config, pricingOverrides),
@@ -673,15 +693,24 @@ export function PipelineConfig({
     }
   };
 
+  const handleJudgeModelChange = (newModel: string) => {
+    setConfig((prev) => {
+      const opts = prev.reviewProviderOptions ?? {};
+      const cleared = { ...opts };
+      if (prev.judgeProvider === 'openai') cleared.openai = { ...opts.openai, reasoningEffort: undefined };
+      else if (prev.judgeProvider === 'deepseek') cleared.deepseek = { ...opts.deepseek, reasoningEffort: undefined };
+      else if (prev.judgeProvider === 'gemini') cleared.gemini = { ...opts.gemini, thinkingBudget: undefined };
+      return { ...prev, judgeModel: newModel, reviewProviderOptions: cleared };
+    });
+  };
+
   const handleJudgeProviderChange = (newProvider: ModelProvider) => {
-    const models =
-      newProvider === 'ollama'
-        ? useUiStore.getState().ollamaModels
-        : MODEL_OPTIONS[newProvider];
+    const models = getSelectableModelIds(newProvider, useUiStore.getState().ollamaModels);
     setConfig((prev) => ({
       ...prev,
       judgeProvider: newProvider,
       judgeModel: models[0] || '',
+      reviewProviderOptions: {},
     }));
     if (newProvider === 'ollama' && useUiStore.getState().ollamaStatus === 'unknown') {
       toast.message(t('ollama.uncheckedHint'));
@@ -1155,10 +1184,7 @@ export function PipelineConfig({
 
             {/* Stage cards — one per stage in the current mode */}
             {config.stages.map((stage) => {
-              const stageModelOptions =
-                stage.provider === 'ollama'
-                  ? ollamaModels
-                  : (MODEL_OPTIONS[stage.provider] ?? []);
+              const stageModelOptions = getSelectableModelIds(stage.provider, ollamaModels);
               return (
                 <div key={stage.id} className="space-y-3">
                   <div className="flex items-center gap-2">
@@ -1211,14 +1237,14 @@ export function PipelineConfig({
                 className="rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 aria-label={t('models.provider')}
               >
-                {Object.keys(MODEL_OPTIONS).map((p) => (
-                  <option key={p} value={p}>{p}</option>
+                {MODEL_PROVIDER_ORDER.map((p) => (
+                  <option key={p} value={p} disabled={p !== 'ollama' && keyStatuses[p] === false}>{p}</option>
                 ))}
               </select>
               {judgeModels.length > 0 ? (
                 <select
                   value={config.judgeModel}
-                  onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
+                  onChange={(e) => handleJudgeModelChange(e.target.value)}
                   className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   aria-label={t('pipeline.auditModelLabel')}
                 >
@@ -1231,7 +1257,7 @@ export function PipelineConfig({
               ) : config.judgeProvider === 'ollama' ? (
                 <input
                   value={config.judgeModel}
-                  onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
+                  onChange={(e) => handleJudgeModelChange(e.target.value)}
                   placeholder={t('ollama.modelPlaceholder')}
                   className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   aria-label={t('pipeline.auditModelLabel')}
@@ -1239,11 +1265,11 @@ export function PipelineConfig({
               ) : (
                 <select
                   value={config.judgeModel}
-                  onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
+                  onChange={(e) => handleJudgeModelChange(e.target.value)}
                   className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   aria-label={t('pipeline.auditModelLabel')}
                 >
-                  {MODEL_OPTIONS[config.judgeProvider]?.map((m) => (
+                  {getKnownModelIds(config.judgeProvider).map((m) => (
                     <option key={m} value={m}>
                       {m}{getModelStatus(config.judgeProvider, m) === 'preview' ? ' (preview)' : ''}
                     </option>
@@ -1251,6 +1277,19 @@ export function PipelineConfig({
                 </select>
               )}
             </div>
+            {judgeResolvedReasoning !== undefined && judgeResolvedReasoning !== 'non_reasoning' && config.judgeProvider !== 'ollama' && (
+              <div className="flex items-center gap-2">
+                <Wand2 size={11} className="text-editorial-warning shrink-0" />
+                <span className="text-[10px] font-sans uppercase tracking-[0.3em] text-editorial-muted">
+                  {t('pipeline.reasoningEffort')}
+                </span>
+                <ReasoningPicker
+                  value={currentJudgeReasoningEffort}
+                  showNone={judgeResolvedReasoning === 'optional'}
+                  onChange={handleJudgeReasoningChange}
+                />
+              </div>
+            )}
 
             {judgeOllamaOffline && (
               <div className="flex items-center gap-2 text-xs text-editorial-accent">

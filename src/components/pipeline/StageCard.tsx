@@ -16,10 +16,13 @@ import {
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { ModelProvider, OllamaStatus, PipelineStageConfig, PromptTemplate } from '../../types';
-import { MODEL_OPTIONS } from '../../constants';
-import { getModelStatus } from '../../models/catalog';
+import { getKnownModelIds, getModelStatus, getResolvedModelReasoning, MODEL_PROVIDER_ORDER } from '../../models/catalog';
+import type { ReasoningEffortLevel } from '../../types';
+import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
+import { ReasoningPicker } from '../models/ReasoningPicker';
 import { ProviderRuntimeEditor } from './ProviderRuntimeEditor';
 import { canRefineWithProvider, formatProviderModelLabel, type ProviderKeyStatusMap } from '../../hooks/useProviderKeyStatus';
+import { useUiStore } from '../../stores/uiStore';
 
 interface StageCardProps {
   stage: PipelineStageConfig;
@@ -61,6 +64,7 @@ export function StageCard({
   deleteTemplate,
 }: StageCardProps) {
   const { t } = useTranslation();
+  const ollamaModels = useUiStore((s) => s.ollamaModels);
   const [isEditingPrompt, setIsEditingPrompt] = useState(false);
   const [showSaveName, setShowSaveName] = useState(false);
   const [templateName, setTemplateName] = useState('');
@@ -70,17 +74,52 @@ export function StageCard({
   const promptEditable = isEditingPrompt && !translationsExist && !isProcessing;
   const canRefine = canRefineWithProvider(stage.provider, keyStatuses);
   const refineLabel = formatProviderModelLabel(stage.provider, stage.model);
-
   const ollamaOffline = stage.provider === 'ollama' && ollamaStatus === 'disconnected';
+
+  const resolvedReasoning = getResolvedModelReasoning(stage.provider, stage.model);
+  const defaultEffort: ReasoningEffortLevel = resolvedReasoning === 'optional' ? 'none' : 'medium';
+  const currentReasoningEffort: ReasoningEffortLevel = (() => {
+    if (stage.provider === 'openai') return stage.providerOptions?.openai?.reasoningEffort ?? defaultEffort;
+    if (stage.provider === 'deepseek') return stage.providerOptions?.deepseek?.reasoningEffort ?? defaultEffort;
+    if (stage.provider === 'gemini') {
+      const budget = stage.providerOptions?.gemini?.thinkingBudget;
+      if (budget === 0) return resolvedReasoning === 'reasoning' ? defaultEffort : 'none';
+      if (budget != null && budget < 0) return 'high';
+      if (budget != null && budget <= 1024) return 'low';
+      if (budget != null) return 'medium';
+      return defaultEffort;
+    }
+    return defaultEffort;
+  })();
+
+  const handleReasoningChange = (effort: ReasoningEffortLevel) => {
+    const opts = stage.providerOptions ?? {};
+    if (stage.provider === 'openai') {
+      onUpdate({ providerOptions: { ...opts, openai: { ...opts.openai, reasoningEffort: effort } } });
+    } else if (stage.provider === 'deepseek') {
+      onUpdate({ providerOptions: { ...opts, deepseek: { ...opts.deepseek, reasoningEffort: effort } } });
+    } else if (stage.provider === 'gemini') {
+      const budget = effort === 'none' ? 0 : effort === 'low' ? 1024 : effort === 'medium' ? 8192 : -1;
+      onUpdate({ providerOptions: { ...opts, gemini: { ...opts.gemini, thinkingBudget: budget } } });
+    }
+  };
 
   const filteredTemplates = templates.filter((tmpl) =>
     tmpl.name.toLowerCase().includes(templateSearch.toLowerCase()),
   );
 
   const handleProviderChange = (newProvider: ModelProvider) => {
-    const models =
-      newProvider === 'ollama' ? modelOptions : (MODEL_OPTIONS[newProvider] ?? []);
-    onUpdate({ provider: newProvider, model: models[0] || '' });
+    const models = newProvider === 'ollama' ? ollamaModels : getKnownModelIds(newProvider);
+    onUpdate({ provider: newProvider, model: models[0] || '', providerOptions: {} });
+  };
+
+  const handleModelChange = (newModel: string) => {
+    const opts = stage.providerOptions ?? {};
+    const cleared = { ...opts };
+    if (stage.provider === 'openai') cleared.openai = { ...opts.openai, reasoningEffort: undefined };
+    else if (stage.provider === 'deepseek') cleared.deepseek = { ...opts.deepseek, reasoningEffort: undefined };
+    else if (stage.provider === 'gemini') cleared.gemini = { ...opts.gemini, thinkingBudget: undefined };
+    onUpdate({ model: newModel, providerOptions: cleared });
   };
 
   const handleSaveTemplate = async () => {
@@ -134,28 +173,31 @@ export function StageCard({
             className="rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
             aria-label={t('models.provider')}
           >
-            {Object.keys(MODEL_OPTIONS).map((p) => (
-              <option key={p} value={p}>{p}</option>
+            {MODEL_PROVIDER_ORDER.map((p) => (
+              <option key={p} value={p} disabled={p !== 'ollama' && keyStatuses[p] === false}>{p}</option>
             ))}
           </select>
           {modelOptions.length > 0 ? (
-            <select
-              value={stage.model}
-              onChange={(e) => onUpdate({ model: e.target.value })}
-              disabled={translationsExist || isProcessing}
-              className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
-              aria-label={t('pipeline.stageModelLabel')}
-            >
-              {modelOptions.map((m) => (
-                <option key={m} value={m}>
-                  {m}{getModelStatus(stage.provider, m) === 'preview' ? ' (preview)' : ''}
-                </option>
-              ))}
-            </select>
+            <div className="flex flex-1 items-center gap-1.5">
+              <select
+                value={stage.model}
+                onChange={(e) => handleModelChange(e.target.value)}
+                disabled={translationsExist || isProcessing}
+                className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
+                aria-label={t('pipeline.stageModelLabel')}
+              >
+                {modelOptions.map((m) => (
+                  <option key={m} value={m}>
+                    {m}{getModelStatus(stage.provider, m) === 'preview' ? ' (preview)' : ''}
+                  </option>
+                ))}
+              </select>
+              <ModelCapabilityHint provider={stage.provider} model={stage.model} iconOnly />
+            </div>
           ) : (
             <input
               value={stage.model}
-              onChange={(e) => onUpdate({ model: e.target.value })}
+              onChange={(e) => handleModelChange(e.target.value)}
               disabled={translationsExist || isProcessing}
               placeholder={t('ollama.modelPlaceholder')}
               className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
@@ -167,6 +209,20 @@ export function StageCard({
           <div className="flex items-center gap-2 text-xs text-editorial-muted">
             <AlertTriangle size={12} className="shrink-0" />
             <span>{t('pipeline.modelLockedHint')}</span>
+          </div>
+        )}
+        {resolvedReasoning !== undefined && resolvedReasoning !== 'non_reasoning' && stage.provider !== 'ollama' && (
+          <div className="flex items-center gap-2">
+            <Wand2 size={11} className="text-editorial-warning shrink-0" />
+            <span className="text-[10px] font-sans uppercase tracking-[0.3em] text-editorial-muted">
+              {t('pipeline.reasoningEffort')}
+            </span>
+            <ReasoningPicker
+              value={currentReasoningEffort}
+              showNone={resolvedReasoning === 'optional'}
+              disabled={translationsExist || isProcessing}
+              onChange={handleReasoningChange}
+            />
           </div>
         )}
         {ollamaOffline && !translationsExist && (
@@ -214,9 +270,6 @@ export function StageCard({
                 >
                   {isRefining ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
                 </button>
-                <span className="rounded-full border border-editorial-border/60 px-2 py-1 text-[9px] font-mono text-editorial-muted">
-                  {refineLabel}
-                </span>
                 <button
                   type="button"
                   onClick={() => { setShowSaveName(!showSaveName); setShowTemplateList(false); }}

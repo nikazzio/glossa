@@ -181,6 +181,21 @@
     "modelLockedHint": "Model locked — existing translations must be preserved. Start a new project to change model.",
     "modelContextWindowChangedHint": "Context window changed since import — chunk size may no longer be optimal. Consider re-importing the document.",
     "stageModelLabel": "Translation Model",
+    "modelReasoning": {
+      "reasoning": "Reasoning",
+      "non_reasoning": "Direct",
+      "optional": "Adaptive"
+    },
+    "reasoningEffort": "Reasoning",
+    "reasoningEffortNone": "Off",
+    "reasoningEffortLow": "Low",
+    "reasoningEffortMedium": "Medium",
+    "reasoningEffortHigh": "High",
+    "modelFit": {
+      "preferred": "Good fit for {{target}}",
+      "discouraged": "Usually avoid for {{target}}",
+      "neutral": "Usable for {{target}}"
+    },
     "tabAudit": "Quality Control",
     "tabGlossary": "Term Registry",
     "tabPreview": "Prompt Preview",
@@ -319,7 +334,9 @@
     "keySaveFailed": "Failed to save {{provider}} key",
     "keyDeleted": "{{provider}} key removed from keychain",
     "keyDeleteFailed": "Failed to remove {{provider}} key",
-    "keySavedFallback": "{{provider}} key saved to local encrypted fallback storage. This is less secure than the OS keychain."
+    "keySavedFallback": "{{provider}} key saved to local encrypted fallback storage. This is less secure than the OS keychain.",
+    "configureKeyToUse": "Add an API key to enable this provider's models in the pipeline.",
+    "contextWindowBadge": "{{count}} ctx"
   },
   "ollama": {
     "title": "Ollama (Local Models)",

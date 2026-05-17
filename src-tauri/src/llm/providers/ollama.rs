@@ -222,6 +222,7 @@ impl LlmProvider for OllamaProvider {
         )
         .await
     }
+
 }
 
 // ── Ollama config helpers ─────────────────────────────────────────────

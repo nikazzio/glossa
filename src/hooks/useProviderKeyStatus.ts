@@ -20,12 +20,16 @@ export function formatProviderModelLabel(provider: string, model: string): strin
   return `${provider} · ${model || '—'}`;
 }
 
-export function useProviderKeyStatus(): { statuses: ProviderKeyStatusMap; isLoading: boolean } {
+export function useProviderKeyStatus(): { statuses: ProviderKeyStatusMap; isLoading: boolean; refresh: () => void } {
   const [statuses, setStatuses] = useState<ProviderKeyStatusMap>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [tick, setTick] = useState(0);
+
+  const refresh = () => setTick((n) => n + 1);
 
   useEffect(() => {
     let cancelled = false;
+    setIsLoading(true);
 
     Promise.all(
       REMOTE_PROVIDERS.map(async (provider) => [
@@ -48,7 +52,7 @@ export function useProviderKeyStatus(): { statuses: ProviderKeyStatusMap; isLoad
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [tick]);
 
-  return { statuses, isLoading };
+  return { statuses, isLoading, refresh };
 }

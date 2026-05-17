@@ -181,6 +181,21 @@
     "modelLockedHint": "Modello bloccato — esistono traduzioni che devono essere preservate. Crea un nuovo progetto per cambiare modello.",
     "modelContextWindowChangedHint": "La context window è cambiata dall'importazione — la dimensione dei chunk potrebbe non essere più ottimale. Considera di re-importare il documento.",
     "stageModelLabel": "Modello di traduzione",
+    "modelReasoning": {
+      "reasoning": "Reasoning",
+      "non_reasoning": "Diretto",
+      "optional": "Adattivo"
+    },
+    "reasoningEffort": "Ragionamento",
+    "reasoningEffortNone": "Off",
+    "reasoningEffortLow": "Basso",
+    "reasoningEffortMedium": "Medio",
+    "reasoningEffortHigh": "Alto",
+    "modelFit": {
+      "preferred": "Buona scelta per {{target}}",
+      "discouraged": "Di solito da evitare per {{target}}",
+      "neutral": "Usabile per {{target}}"
+    },
     "tabAudit": "Controllo qualità",
     "tabGlossary": "Registro Termini",
     "tabPreview": "Anteprima Prompt",
@@ -319,7 +334,9 @@
     "keySaveFailed": "Salvataggio chiave {{provider}} fallito",
     "keyDeleted": "Chiave {{provider}} rimossa dal portachiavi",
     "keyDeleteFailed": "Rimozione chiave {{provider}} fallita",
-    "keySavedFallback": "Chiave {{provider}} salvata nel fallback locale cifrato. È meno sicuro del portachiavi OS."
+    "keySavedFallback": "Chiave {{provider}} salvata nel fallback locale cifrato. È meno sicuro del portachiavi OS.",
+    "configureKeyToUse": "Aggiungi una API key per abilitare i modelli di questo provider nella pipeline.",
+    "contextWindowBadge": "{{count}} ctx"
   },
   "ollama": {
     "title": "Ollama (Modelli Locali)",

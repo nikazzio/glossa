@@ -1,4 +1,6 @@
 export type ModelProvider = 'gemini' | 'openai' | 'anthropic' | 'deepseek' | 'ollama';
+export type ModelReasoningClass = 'reasoning' | 'non_reasoning' | 'optional';
+export type ModelStatus = 'stable' | 'preview' | 'deprecated';
 export type QualityRating = 'critical' | 'poor' | 'fair' | 'good' | 'excellent';
 export type ChunkStatus = 'ready' | 'processing' | 'completed' | 'error';
 export type ViewMode = 'sandbox' | 'document';
@@ -8,6 +10,7 @@ export type DocumentFormat = 'plain' | 'markdown';
 export type DocumentRenderProfile = 'plain-text' | 'markdown';
 export type ExperimentalImportMode = 'docx-markdown';
 export type OllamaThinkLevel = boolean | 'low' | 'medium' | 'high';
+export type ReasoningEffortLevel = 'none' | 'low' | 'medium' | 'high';
 export type StageRole = 'translation' | 'refine' | 'format';
 export type PipelineMode = 'standard' | 'editorial';
 export type PipelineRunStatus = 'idle' | 'running' | 'completed' | 'interrupted';
@@ -27,17 +30,23 @@ export interface OllamaConfig {
 export interface OpenAICacheConfig {
   promptCacheKey?: string;
   promptCacheRetention?: 'in_memory' | '24h';
+  reasoningEffort?: ReasoningEffortLevel;
+}
+
+export interface DeepSeekConfig {
+  reasoningEffort?: ReasoningEffortLevel;
 }
 
 export interface GeminiCacheConfig {
   explicitCaching?: boolean;
   cacheTtlSeconds?: number;
+  thinkingBudget?: number | null; // 0 = disabled, null = provider default
 }
 
 export interface ProviderRuntimeConfig {
   ollama?: OllamaConfig;
   openai?: OpenAICacheConfig;
-  deepseek?: OpenAICacheConfig;
+  deepseek?: DeepSeekConfig;
   gemini?: GeminiCacheConfig;
 }
 

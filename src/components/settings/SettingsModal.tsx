@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertCircle, Server, RefreshCw, CheckCircle2, XCircle, HelpCircle, Sparkles, Columns2, BookOpen, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
@@ -7,10 +7,61 @@ import { useUiStore } from '../../stores/uiStore';
 import { ApiKeyInput } from './ApiKeyInput';
 import { ollamaService } from '../../services/llmService';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
-import { MODEL_CATALOG } from '../../models/catalog';
+import { getKnownModelIds, getModelEntry, MODEL_CATALOG, MODEL_PROVIDER_ORDER } from '../../models/catalog';
 import { MODEL_PRICING } from '../../constants';
 import { usePricingStore } from '../../stores/pricingStore';
-import { EditorialModalShell } from '../common';
+import { EditorialModalShell, ProviderLogo } from '../common';
+import type { ModelProvider } from '../../types';
+import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
+import { useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
+
+const PROVIDER_LABELS: Record<ModelProvider, string> = {
+  gemini: 'Gemini',
+  openai: 'OpenAI',
+  anthropic: 'Anthropic',
+  deepseek: 'DeepSeek',
+  ollama: 'Ollama',
+};
+
+
+
+function getModelGroupLabel(provider: ModelProvider, modelId: string): string {
+  switch (provider) {
+    case 'openai':
+      if (modelId.startsWith('gpt-5.4')) return 'GPT-5.4';
+      if (modelId.startsWith('gpt-5')) return 'GPT-5';
+      if (modelId.startsWith('gpt-4.1')) return 'GPT-4.1';
+      if (modelId.startsWith('gpt-4o') || modelId.startsWith('chatgpt-4o')) return 'GPT-4o';
+      if (modelId.startsWith('gpt-4')) return 'GPT-4';
+      if (modelId.startsWith('gpt-3')) return 'GPT-3.5';
+      if (/^o\d/.test(modelId)) return 'o-series';
+      return 'Other';
+    case 'anthropic':
+      if (modelId.includes('-4-') || modelId.includes('-4.')) return 'Claude 4';
+      if (modelId.includes('3-5')) return 'Claude 3.5';
+      if (modelId.includes('-3-')) return 'Claude 3';
+      return 'Other';
+    case 'gemini':
+      if (modelId.startsWith('gemini-2.5')) return 'Gemini 2.5';
+      if (modelId.startsWith('gemini-2.0')) return 'Gemini 2.0';
+      return 'Gemini';
+    case 'deepseek':
+      if (modelId.startsWith('deepseek-v4')) return 'DeepSeek V4';
+      return 'DeepSeek';
+    default:
+      return '';
+  }
+}
+
+function groupModelIds(provider: ModelProvider, modelIds: string[]): Array<{ label: string; ids: string[] }> {
+  const map = new Map<string, string[]>();
+  for (const id of modelIds) {
+    const label = getModelGroupLabel(provider, id);
+    if (!map.has(label)) map.set(label, []);
+    map.get(label)!.push(id);
+  }
+  return [...map.entries()].map(([label, ids]) => ({ label, ids }));
+}
 
 export function SettingsModal() {
   const {
@@ -35,10 +86,12 @@ export function SettingsModal() {
   const [refreshing, setRefreshing] = useState(false);
   const [showPricingOverrides, setShowPricingOverrides] = useState(false);
   const [showSecurityAdvisory, setShowSecurityAdvisory] = useState(false);
+  const [activeProviderTab, setActiveProviderTab] = useState<ModelProvider>('openai');
   const [urlDraft, setUrlDraft] = useState(ollamaBaseUrl);
   const [urlError, setUrlError] = useState<string | null>(null);
   const trapRef = useFocusTrap(showSettings, () => setShowSettings(false));
   const { overrides, setOverride, resetOverride, resetAll } = usePricingStore();
+  const { statuses: keyStatuses, refresh: refreshKeyStatuses } = useProviderKeyStatus();
 
   const refreshOllama = async () => {
     setRefreshing(true);
@@ -179,106 +232,173 @@ export function SettingsModal() {
                 />
               </div>
 
-              {/* Cloud Providers */}
+              {/* Provider workspace */}
               <div className="space-y-4">
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
                   {t('settings.providerConfig')}
                 </label>
-                <div className="rounded-[20px] border border-editorial-border bg-editorial-textbox/15 px-5 py-5">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <ApiKeyInput label="Gemini (Native)" provider="gemini" />
-                  <ApiKeyInput label="OpenAI" provider="openai" />
-                  <ApiKeyInput label="Anthropic" provider="anthropic" />
-                  <ApiKeyInput label="DeepSeek" provider="deepseek" />
-                </div>
-                </div>
-              </div>
-
-              {/* Ollama Section */}
-              <div className="space-y-4">
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
-                  {t('ollama.title')}
-                </label>
                 <div className="rounded-[20px] border border-editorial-border bg-editorial-textbox/20 p-6 space-y-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <Server size={16} className="text-editorial-muted" />
-                      <input
-                        type="url"
-                        value={urlDraft}
-                        onChange={(e) => {
-                          setUrlDraft(e.target.value);
-                          setUrlError(null);
-                        }}
-                        onBlur={() => {
-                          const trimmed = urlDraft.trim();
-                          if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
-                            setUrlError(t('ollama.urlInvalid'));
-                          } else {
-                            setUrlError(null);
-                            setOllamaBaseUrl(trimmed);
-                            refreshOllama();
-                          }
-                        }}
-                        className="text-xs font-mono bg-transparent border-b border-editorial-border focus:border-editorial-ink outline-none px-1 w-56"
-                        placeholder="http://localhost:11434"
-                        aria-label={t('ollama.baseUrl')}
-                      />
-                      {urlError && <span className="text-xs text-editorial-accent">{urlError}</span>}
-                      {ollamaStatus === 'connected' && (
-                        <CheckCircle2 size={12} className="text-editorial-ink" aria-label={t('ollama.connected', { count: ollamaModels.length })} />
-                      )}
-                      {ollamaStatus === 'disconnected' && (
-                        <XCircle size={12} className="text-editorial-accent" aria-label={t('ollama.disconnected')} />
-                      )}
-                      {ollamaStatus === 'unknown' && (
-                        <HelpCircle size={12} className="text-editorial-muted" aria-label={t('ollama.unchecked')} />
-                      )}
-                    </div>
-                    <button
-                      onClick={() => refreshOllama()}
-                      disabled={refreshing}
-                      title={t('ollama.refresh')}
-                      className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-ink transition-colors disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                      aria-label={t('ollama.refresh')}
-                    >
-                      <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
-                      {t('ollama.refresh')}
-                    </button>
+                  <div className="flex flex-wrap gap-2">
+                    {MODEL_PROVIDER_ORDER.map((provider) => {
+                      const active = provider === activeProviderTab;
+                      return (
+                        <button
+                          key={provider}
+                          type="button"
+                          onClick={() => setActiveProviderTab(provider)}
+                          title={PROVIDER_LABELS[provider]}
+                          className={`flex h-9 w-9 items-center justify-center rounded-full border text-[11px] font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                            active
+                              ? 'border-editorial-accent bg-editorial-accent text-white'
+                              : 'border-editorial-border bg-editorial-textbox/30 text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent'
+                          }`}
+                        >
+                          <ProviderLogo provider={provider} size={18} />
+                        </button>
+                      );
+                    })}
                   </div>
 
-                  {ollamaStatus === 'connected' && ollamaModels.length > 0 && (
-                    <div className="space-y-2">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
-                        {t('ollama.availableModels')} ({ollamaModels.length})
-                      </span>
-                      <div className="flex flex-wrap gap-2">
-                        {ollamaModels.map((m) => (
-                          <span key={m} className="px-2 py-1 bg-editorial-bg border border-editorial-border text-xs font-mono">
-                            {m}
-                          </span>
-                        ))}
-                      </div>
+                  <div className="space-y-5 border-t border-editorial-border pt-5">
+                    <div className="space-y-3">
+                      {activeProviderTab === 'ollama' ? (
+                        <div className="space-y-4 rounded-[18px] border border-editorial-border bg-editorial-bg/60 p-4">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <Server size={16} className="text-editorial-muted" />
+                              <input
+                                type="url"
+                                value={urlDraft}
+                                onChange={(e) => {
+                                  setUrlDraft(e.target.value);
+                                  setUrlError(null);
+                                }}
+                                onBlur={() => {
+                                  const trimmed = urlDraft.trim();
+                                  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+                                    setUrlError(t('ollama.urlInvalid'));
+                                  } else {
+                                    setUrlError(null);
+                                    setOllamaBaseUrl(trimmed);
+                                    refreshOllama();
+                                  }
+                                }}
+                                className="text-xs font-mono bg-transparent border-b border-editorial-border focus:border-editorial-ink outline-none px-1 w-56"
+                                placeholder="http://localhost:11434"
+                                aria-label={t('ollama.baseUrl')}
+                              />
+                              {urlError && <span className="text-xs text-editorial-accent">{urlError}</span>}
+                              {ollamaStatus === 'connected' && (
+                                <CheckCircle2 size={12} className="text-editorial-ink" aria-label={t('ollama.connected', { count: ollamaModels.length })} />
+                              )}
+                              {ollamaStatus === 'disconnected' && (
+                                <XCircle size={12} className="text-editorial-accent" aria-label={t('ollama.disconnected')} />
+                              )}
+                              {ollamaStatus === 'unknown' && (
+                                <HelpCircle size={12} className="text-editorial-muted" aria-label={t('ollama.unchecked')} />
+                              )}
+                            </div>
+                            <button
+                              onClick={() => refreshOllama()}
+                              disabled={refreshing}
+                              title={t('ollama.refresh')}
+                              className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-ink transition-colors disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                              aria-label={t('ollama.refresh')}
+                            >
+                              <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
+                              {t('ollama.refresh')}
+                            </button>
+                          </div>
+
+                          {ollamaStatus === 'disconnected' && (
+                            <p className="text-xs text-editorial-muted italic">
+                              {t('ollama.notRunning')}
+                            </p>
+                          )}
+
+                          {ollamaStatus === 'unknown' && (
+                            <p className="text-xs text-editorial-muted italic">
+                              {t('ollama.uncheckedHint')}
+                            </p>
+                          )}
+
+                          {ollamaStatus === 'connected' && ollamaModels.length === 0 && (
+                            <p className="text-xs text-editorial-muted italic">
+                              {t('ollama.noModels')}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="rounded-[18px] border border-editorial-border bg-editorial-bg/60 p-4">
+                          <ApiKeyInput
+                            label={PROVIDER_LABELS[activeProviderTab]}
+                            provider={activeProviderTab}
+                            onKeyChange={refreshKeyStatuses}
+                          />
+                        </div>
+                      )}
+
+                      {activeProviderTab !== 'ollama' && !keyStatuses[activeProviderTab] && (
+                        <p className="text-xs text-editorial-muted italic">
+                          {t('settings.configureKeyToUse')}
+                        </p>
+                      )}
                     </div>
-                  )}
 
-                  {ollamaStatus === 'disconnected' && (
-                    <p className="text-xs text-editorial-muted italic">
-                      {t('ollama.notRunning')}
-                    </p>
-                  )}
-
-                  {ollamaStatus === 'unknown' && (
-                    <p className="text-xs text-editorial-muted italic">
-                      {t('ollama.uncheckedHint')}
-                    </p>
-                  )}
-
-                  {ollamaStatus === 'connected' && ollamaModels.length === 0 && (
-                    <p className="text-xs text-editorial-muted italic">
-                      {t('ollama.noModels')}
-                    </p>
-                  )}
+                    {activeProviderTab !== 'ollama' && (() => {
+                      const hasKey = !!keyStatuses[activeProviderTab];
+                      const groups = groupModelIds(activeProviderTab, getKnownModelIds(activeProviderTab));
+                      return (
+                        <div className="space-y-3">
+                          {groups.map(({ label, ids }) => (
+                            <div key={label || '_all'} className="space-y-1.5">
+                              {label && (
+                                <p className="px-1 text-[10px] font-bold uppercase tracking-wider text-editorial-muted">
+                                  {label}
+                                </p>
+                              )}
+                              {ids.map((modelId) => {
+                                const entry = getModelEntry(activeProviderTab, modelId);
+                                return (
+                                  <div
+                                    key={modelId}
+                                    className={`flex items-start gap-3 rounded-[16px] border border-editorial-border bg-editorial-bg/60 px-4 py-2.5 transition-opacity ${!hasKey ? 'opacity-40' : ''}`}
+                                  >
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <span className="text-xs font-mono text-editorial-ink">{modelId}</span>
+                                        <ModelCapabilityHint provider={activeProviderTab} model={modelId} iconOnly />
+                                        {entry?.contextWindow && (
+                                          <span className="rounded-full border border-editorial-border px-2 py-0.5 text-[10px] font-mono text-editorial-muted">
+                                            {entry.contextWindow >= 1_000_000
+                                              ? `${(entry.contextWindow / 1_000_000).toFixed(0)}M`
+                                              : `${Math.round(entry.contextWindow / 1_000)}K`}
+                                          </span>
+                                        )}
+                                        {entry?.pricing && (
+                                          <span className="rounded-full border border-editorial-border px-2 py-0.5 text-[10px] font-mono text-editorial-muted">
+                                            ${entry.pricing.input}/${entry.pricing.output}
+                                          </span>
+                                        )}
+                                        {entry?.status === 'preview' && (
+                                          <span className="rounded-full border border-editorial-warning/40 bg-editorial-warning/10 px-2 py-0.5 text-[10px] font-mono text-editorial-warning">
+                                            preview
+                                          </span>
+                                        )}
+                                      </div>
+                                      {entry?.description && (
+                                        <p className="mt-0.5 text-[11px] text-editorial-muted">{entry.description}</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
                 </div>
               </div>
 

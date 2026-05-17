@@ -6,9 +6,9 @@ import { confirm } from '../../stores/confirmStore';
 import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
 import { useUiStore } from '../../stores/uiStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
-import { MODEL_OPTIONS } from '../../constants';
 import type { ModelProvider } from '../../types';
 import { llmService } from '../../services/llmService';
+import { getSelectableModelIds, MODEL_PROVIDER_ORDER } from '../../models/catalog';
 import { canRefineWithProvider, formatProviderModelLabel, useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
 
 const FILTER_OPTIONS = ['all', 'stage', 'audit', 'persona'] as const;
@@ -17,7 +17,7 @@ type FilterValue = (typeof FILTER_OPTIONS)[number];
 export function PromptTemplatesTab() {
   const { t } = useTranslation();
   const { templates, isLoaded, loadTemplates, saveTemplate, deleteTemplate } = usePromptTemplateStore();
-  const { ollamaModels } = useUiStore();
+  const ollamaModels = useUiStore((s) => s.ollamaModels);
   const { config } = usePipelineStore();
   const [newName, setNewName] = useState('');
   const [newPrompt, setNewPrompt] = useState('');
@@ -26,16 +26,17 @@ export function PromptTemplatesTab() {
   const [filterContext, setFilterContext] = useState<FilterValue>('all');
   const [isRefining, setIsRefining] = useState(false);
   const { statuses: keyStatuses } = useProviderKeyStatus();
+  const getProviderModels = (provider: ModelProvider) => getSelectableModelIds(provider, ollamaModels);
 
   const firstActiveStage = config.stages.find((s) => s.enabled);
   const stageDefaultProvider: ModelProvider = (firstActiveStage?.provider as ModelProvider) ?? 'gemini';
-  const stageDefaultModel = firstActiveStage?.model ?? (MODEL_OPTIONS[stageDefaultProvider]?.[0] ?? '');
+  const stageDefaultModel = firstActiveStage?.model ?? (getProviderModels(stageDefaultProvider)[0] ?? '');
   const auditDefaultProvider: ModelProvider = config.judgeProvider;
   const auditDefaultModel = config.judgeModel;
   const [refineProvider, setRefineProvider] = useState<ModelProvider>(stageDefaultProvider);
   const [refineModel, setRefineModel] = useState<string>(stageDefaultModel);
 
-  const modelOptions = refineProvider === 'ollama' ? ollamaModels : (MODEL_OPTIONS[refineProvider] ?? []);
+  const modelOptions = getProviderModels(refineProvider);
   const canRefine = canRefineWithProvider(refineProvider, keyStatuses);
   const refineLabel = formatProviderModelLabel(refineProvider, refineModel);
 
@@ -188,14 +189,13 @@ export function PromptTemplatesTab() {
                   onChange={(e) => {
                     const p = e.target.value as ModelProvider;
                     setRefineProvider(p);
-                    setRefineModel((MODEL_OPTIONS[p]?.[0]) ?? '');
+                    setRefineModel(getProviderModels(p)[0] ?? '');
                   }}
                   className="rounded-full border border-editorial-border bg-editorial-bg px-3 py-1.5 text-[10px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 >
-                  {(Object.keys(MODEL_OPTIONS) as ModelProvider[]).map((p) => (
+                  {MODEL_PROVIDER_ORDER.map((p) => (
                     <option key={p} value={p}>{p}</option>
                   ))}
-                  <option value="ollama">ollama</option>
                 </select>
                 <select
                   value={refineModel}

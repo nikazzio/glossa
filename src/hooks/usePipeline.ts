@@ -356,7 +356,6 @@ export function usePipeline() {
           textToAudit,
           effectiveConfig ?? config,
           (info: PromptInfo) => pipelineLog.auditPrompt(chunk.id, judgeRef, info.systemPrompt, info.userPrompt),
-          () => pipelineLog.idleGrace('audit', chunk.id),
           (info: ResponseInfo) => pipelineLog.auditResponse(chunk.id, info.rawJson),
         ),
         {
@@ -657,7 +656,6 @@ export function usePipeline() {
             { original: chunk.sourceProcessingText, translation: chunk.translationProcessingText, blobContext, currentChunkId: chunk.id },
             config,
             (info: PromptInfo) => pipelineLog.coherencePrompt(chunk.id, coherenceRef, info.systemPrompt, info.userPrompt),
-            () => pipelineLog.idleGrace('coherence', chunk.id),
             (info: ResponseInfo) => pipelineLog.coherenceResponse(chunk.id, info.rawJson),
           ),
           {
