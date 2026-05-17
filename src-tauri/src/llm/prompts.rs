@@ -41,7 +41,7 @@ fn format_glossary_table(glossary: &[crate::llm::types::GlossaryEntry]) -> Strin
     table
 }
 
-fn effective_source<'a>(config: &'a PipelineConfig) -> &'a str {
+fn effective_source(config: &PipelineConfig) -> &str {
     config
         .custom_source_language
         .as_deref()
@@ -49,7 +49,7 @@ fn effective_source<'a>(config: &'a PipelineConfig) -> &'a str {
         .unwrap_or(&config.source_language)
 }
 
-fn effective_target<'a>(config: &'a PipelineConfig) -> &'a str {
+fn effective_target(config: &PipelineConfig) -> &str {
     config
         .custom_target_language
         .as_deref()

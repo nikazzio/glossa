@@ -103,8 +103,8 @@ fn extract_text_from_document_xml(xml: &str) -> Result<String, String> {
                     paragraphs.push(std::mem::take(&mut current));
                 }
             }
-            Ok(Event::Text(event)) => {
-                if inside_text {
+            Ok(Event::Text(event))
+                if inside_text => {
                     let decoded = event
                         .decode()
                         .map_err(|e| format!("Failed to decode docx text: {}", e))?;
@@ -112,7 +112,6 @@ fn extract_text_from_document_xml(xml: &str) -> Result<String, String> {
                         .map_err(|e| format!("Failed to unescape docx text: {}", e))?;
                     current.push_str(&text);
                 }
-            }
             Ok(Event::Empty(element)) => {
                 let name = element.name();
                 let local = name.as_ref();
@@ -287,8 +286,8 @@ fn build_markdown_from_document_xml(
                     current_paragraph.clear();
                 }
             }
-            Ok(Event::Text(event)) => {
-                if inside_text {
+            Ok(Event::Text(event))
+                if inside_text => {
                     let decoded = event
                         .decode()
                         .map_err(|e| format!("Failed to decode docx text: {}", e))?;
@@ -296,7 +295,6 @@ fn build_markdown_from_document_xml(
                         .map_err(|e| format!("Failed to unescape docx text: {}", e))?;
                     current_run.push_str(&text);
                 }
-            }
             Ok(Event::Eof) => break,
             Err(error) => {
                 return Err(format!("Failed to parse docx document.xml: {}", error));
@@ -422,8 +420,8 @@ fn parse_footnotes_xml(xml: &str) -> Result<BTreeMap<String, String>, String> {
                     current_blocks.clear();
                 }
             }
-            Ok(Event::Text(event)) => {
-                if inside_text {
+            Ok(Event::Text(event))
+                if inside_text => {
                     let decoded = event
                         .decode()
                         .map_err(|e| format!("Failed to decode footnote text: {}", e))?;
@@ -431,7 +429,6 @@ fn parse_footnotes_xml(xml: &str) -> Result<BTreeMap<String, String>, String> {
                         .map_err(|e| format!("Failed to unescape footnote text: {}", e))?;
                     current_run.push_str(&text);
                 }
-            }
             Ok(Event::Eof) => break,
             Err(error) => return Err(format!("Failed to parse docx footnotes.xml: {}", error)),
             _ => {}
@@ -683,8 +680,8 @@ fn parse_heading(line: &str) -> Option<(u8, &str)> {
 
 fn parse_list_item(line: &str) -> Option<(bool, &str)> {
     for marker in ["- ", "* ", "+ "] {
-        if line.starts_with(marker) {
-            return Some((false, line[marker.len()..].trim()));
+        if let Some(rest) = line.strip_prefix(marker) {
+            return Some((false, rest.trim()));
         }
     }
     let mut chars = line.chars().peekable();
@@ -727,19 +724,17 @@ fn parse_markdown_inlines(text: &str) -> Vec<MarkdownInline> {
             }
         }
 
-        if remaining.starts_with("**") {
-            if let Some(end) = remaining[2..].find("**") {
-                let content = &remaining[2..2 + end];
-                nodes.push(MarkdownInline::Strong(content.to_string()));
+        if let Some(after_open) = remaining.strip_prefix("**") {
+            if let Some(end) = after_open.find("**") {
+                nodes.push(MarkdownInline::Strong(after_open[..end].to_string()));
                 index += end + 4;
                 continue;
             }
         }
 
-        if remaining.starts_with('*') {
-            if let Some(end) = remaining[1..].find('*') {
-                let content = &remaining[1..1 + end];
-                nodes.push(MarkdownInline::Emphasis(content.to_string()));
+        if let Some(after_open) = remaining.strip_prefix('*') {
+            if let Some(end) = after_open.find('*') {
+                nodes.push(MarkdownInline::Emphasis(after_open[..end].to_string()));
                 index += end + 2;
                 continue;
             }

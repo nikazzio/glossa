@@ -49,6 +49,7 @@ pub struct StageResult {
 }
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub async fn run_stage(
     app: AppHandle,
     registry: State<'_, StreamRegistry>,
@@ -120,6 +121,7 @@ pub async fn run_stage(
 }
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub async fn run_stage_stream(
     app: AppHandle,
     registry: State<'_, StreamRegistry>,
