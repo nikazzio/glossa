@@ -161,13 +161,8 @@ impl Drop for StreamGuard<'_> {
 /// flows; the frontend checks for this prefix to suppress the toast.
 pub const STREAM_CANCELLED_ERROR: &str = "Stream cancelled";
 
-#[derive(Clone, Debug)]
 pub(crate) struct StreamResult {
     pub(crate) content: String,
-    pub(crate) input_tokens: Option<u32>,
-    pub(crate) output_tokens: Option<u32>,
-    pub(crate) cached_input_tokens: Option<u32>,
-    pub(crate) cache_miss_input_tokens: Option<u32>,
 }
 
 impl PartialEq<&str> for StreamResult {
@@ -415,15 +410,8 @@ where
         }
     }
 
-    let final_usage = acc.usage.final_usage();
     acc.finish(provider, stream_id, &mut emit);
-    Ok(StreamResult {
-        content: acc.full_text,
-        input_tokens: final_usage.as_ref().map(|u| u.input),
-        output_tokens: final_usage.as_ref().map(|u| u.output),
-        cached_input_tokens: final_usage.as_ref().and_then(|u| u.cached_input),
-        cache_miss_input_tokens: final_usage.as_ref().and_then(|u| u.cache_miss_input),
-    })
+    Ok(StreamResult { content: acc.full_text })
 }
 
 /// Read an SSE stream, emit tokens via Tauri events, return the full text.
