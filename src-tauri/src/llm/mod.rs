@@ -307,7 +307,25 @@ mod tests {
         let mut config = make_config();
         config.blob_context = Some("<chunk id=\"chunk-1\">\nHello world\n</chunk>".into());
         config.blob_current_chunk_id = Some("chunk-1".into());
+        // Translation stage: blob context appears in system, no previous iteration in user
         let stage = make_stage("openai");
+        let prompt = build_stage_prompts("Hello world", &stage, &config, None);
+        let system = prompt.flatten_system();
+
+        assert!(system.contains("English to Italian"));
+        assert!(prompt.user.contains("Hello world"));
+        assert!(prompt.user.contains("Current chunk id: chunk-1"));
+        assert!(system.contains("Reference document block"));
+        assert!(system.contains("<chunk id=\"chunk-1\">"));
+    }
+
+    #[test]
+    fn stage_prompt_refine_includes_previous_iteration() {
+        let mut config = make_config();
+        config.blob_context = Some("<chunk id=\"chunk-1\">\nHello world\n</chunk>".into());
+        config.blob_current_chunk_id = Some("chunk-1".into());
+        let mut stage = make_stage("openai");
+        stage.role = Some("refine".into());
         let prev = Some("Ciao mondo".to_string());
         let prompt = build_stage_prompts("Hello world", &stage, &config, prev.as_deref());
         let system = prompt.flatten_system();
