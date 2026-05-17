@@ -395,3 +395,143 @@ pub(crate) fn minimal_pipeline_config(
         ..Default::default()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::llm::types::{CoherenceChunkInput, GlossaryEntry};
+
+    fn en_it_config() -> PipelineConfig {
+        PipelineConfig {
+            source_language: "English".to_string(),
+            target_language: "Italian".to_string(),
+            ..Default::default()
+        }
+    }
+
+    fn simple_input() -> CoherenceChunkInput {
+        CoherenceChunkInput {
+            original: "Hello world".to_string(),
+            translation: "Ciao mondo".to_string(),
+            blob_context: None,
+            current_chunk_id: None,
+        }
+    }
+
+    // ── system block ──────────────────────────────────────────────────
+
+    #[test]
+    fn system_includes_source_and_target_languages() {
+        let prompt = build_coherence_prompts(&simple_input(), &en_it_config());
+        assert!(prompt.system[0].text.contains("English→Italian"));
+    }
+
+    #[test]
+    fn system_block_is_cacheable() {
+        let prompt = build_coherence_prompts(&simple_input(), &en_it_config());
+        assert!(prompt.system[0].cacheable);
+    }
+
+    #[test]
+    fn system_uses_custom_coherence_prompt_when_provided() {
+        let config = PipelineConfig {
+            coherence_prompt: Some("Custom instructions here".to_string()),
+            ..en_it_config()
+        };
+        let prompt = build_coherence_prompts(&simple_input(), &config);
+        assert!(prompt.system[0].text.contains("Custom instructions here"));
+    }
+
+    #[test]
+    fn system_falls_back_to_default_instructions_when_prompt_is_blank() {
+        let config = PipelineConfig {
+            coherence_prompt: Some("   ".to_string()),
+            ..en_it_config()
+        };
+        let prompt = build_coherence_prompts(&simple_input(), &config);
+        assert!(prompt.system[0].text.contains("Terminology consistency"));
+    }
+
+    #[test]
+    fn system_includes_glossary_section_when_glossary_is_non_empty() {
+        let config = PipelineConfig {
+            glossary: vec![GlossaryEntry {
+                term: "AI".to_string(),
+                translation: "IA".to_string(),
+                notes: None,
+            }],
+            ..en_it_config()
+        };
+        let prompt = build_coherence_prompts(&simple_input(), &config);
+        assert!(prompt.system[0].text.contains("Glossary:"));
+        assert!(prompt.system[0].text.contains("AI"));
+    }
+
+    #[test]
+    fn system_omits_glossary_section_when_glossary_is_empty() {
+        let prompt = build_coherence_prompts(&simple_input(), &en_it_config());
+        assert!(!prompt.system[0].text.contains("Glossary:"));
+    }
+
+    #[test]
+    fn system_uses_ui_language_for_response_language_directive() {
+        let config = PipelineConfig {
+            ui_language: Some("French".to_string()),
+            ..en_it_config()
+        };
+        let prompt = build_coherence_prompts(&simple_input(), &config);
+        assert!(prompt.system[0].text.contains("French"));
+    }
+
+    // ── user turn ─────────────────────────────────────────────────────
+
+    #[test]
+    fn user_includes_original_and_translation() {
+        let prompt = build_coherence_prompts(&simple_input(), &en_it_config());
+        assert!(prompt.user.contains("Hello world"));
+        assert!(prompt.user.contains("Ciao mondo"));
+    }
+
+    #[test]
+    fn user_omits_reference_block_when_no_blob_context() {
+        let prompt = build_coherence_prompts(&simple_input(), &en_it_config());
+        assert!(!prompt.user.contains("Reference translated document block"));
+    }
+
+    #[test]
+    fn user_includes_reference_block_when_blob_context_provided() {
+        let input = CoherenceChunkInput {
+            blob_context: Some("Adjacent chunk translation".to_string()),
+            ..simple_input()
+        };
+        let prompt = build_coherence_prompts(&input, &en_it_config());
+        assert!(prompt.user.contains("Reference translated document block"));
+        assert!(prompt.user.contains("Adjacent chunk translation"));
+    }
+
+    #[test]
+    fn user_includes_chunk_id_line_when_current_chunk_id_provided() {
+        let input = CoherenceChunkInput {
+            current_chunk_id: Some("chunk-42".to_string()),
+            ..simple_input()
+        };
+        let prompt = build_coherence_prompts(&input, &en_it_config());
+        assert!(prompt.user.contains("Current chunk id: chunk-42"));
+    }
+
+    #[test]
+    fn user_omits_chunk_id_line_when_not_provided() {
+        let prompt = build_coherence_prompts(&simple_input(), &en_it_config());
+        assert!(!prompt.user.contains("Current chunk id:"));
+    }
+
+    #[test]
+    fn user_omits_reference_block_when_blob_context_is_empty_string() {
+        let input = CoherenceChunkInput {
+            blob_context: Some(String::new()),
+            ..simple_input()
+        };
+        let prompt = build_coherence_prompts(&input, &en_it_config());
+        assert!(!prompt.user.contains("Reference translated document block"));
+    }
+}
