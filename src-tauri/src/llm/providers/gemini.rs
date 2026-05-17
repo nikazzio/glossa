@@ -371,10 +371,9 @@ async fn ensure_gemini_cached_content(
         .map_err(|e| format!("Failed to read Gemini cache response: {e}"))?;
 
     if !status.is_success() {
-        log::debug!(
-            "Gemini cache creation skipped status={} body={}",
-            status,
-            text
+        log::warn!(
+            "Gemini explicit cache creation failed (status={}); falling back to inline system prompt",
+            status
         );
         return Ok(None);
     }

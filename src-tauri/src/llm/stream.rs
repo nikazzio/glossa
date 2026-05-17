@@ -7,7 +7,7 @@ use std::{
     pin::Pin,
     sync::{
         atomic::{AtomicBool, Ordering},
-        Arc, LazyLock, Mutex,
+        Arc, Mutex, OnceLock,
     },
     time::Duration,
 };
@@ -120,7 +120,7 @@ impl StreamRegistry {
         let token = Arc::new(CancelToken::new());
         self.cancels
             .lock()
-            .expect("StreamRegistry mutex poisoned")
+            .unwrap_or_else(|p| p.into_inner())
             .insert(stream_id.to_string(), Arc::clone(&token));
         token
     }
@@ -128,7 +128,7 @@ impl StreamRegistry {
     pub(crate) fn unregister(&self, stream_id: &str) {
         self.cancels
             .lock()
-            .expect("StreamRegistry mutex poisoned")
+            .unwrap_or_else(|p| p.into_inner())
             .remove(stream_id);
     }
 
@@ -136,7 +136,7 @@ impl StreamRegistry {
         if let Some(token) = self
             .cancels
             .lock()
-            .expect("StreamRegistry mutex poisoned")
+            .unwrap_or_else(|p| p.into_inner())
             .get(stream_id)
         {
             token.cancel();
@@ -583,17 +583,5 @@ pub(crate) fn provider_label(provider: &str) -> &'static str {
 
 // ── Lazy HTTP client singletons (shared with providers) ───────────────
 
-pub(crate) static OLLAMA_HTTP_CLIENT: LazyLock<Client> = LazyLock::new(|| {
-    Client::builder()
-        .connect_timeout(Duration::from_secs(HTTP_CONNECT_TIMEOUT_SECS))
-        .timeout(Duration::from_secs(OLLAMA_HTTP_REQUEST_TIMEOUT_SECS))
-        .build()
-        .expect("failed to build shared Ollama HTTP client")
-});
-
-pub(crate) static OLLAMA_STREAMING_HTTP_CLIENT: LazyLock<Client> = LazyLock::new(|| {
-    Client::builder()
-        .connect_timeout(Duration::from_secs(HTTP_CONNECT_TIMEOUT_SECS))
-        .build()
-        .expect("failed to build shared Ollama streaming HTTP client")
-});
+pub(crate) static OLLAMA_HTTP_CLIENT: OnceLock<Result<Client, String>> = OnceLock::new();
+pub(crate) static OLLAMA_STREAMING_HTTP_CLIENT: OnceLock<Result<Client, String>> = OnceLock::new();

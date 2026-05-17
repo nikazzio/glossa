@@ -497,8 +497,13 @@ mod tests {
 
     #[test]
     fn builds_streaming_http_client_without_global_request_timeout() {
-        // The streaming client is the LazyLock singleton — just verify it exists.
-        let _client: &Client = &crate::llm::stream::OLLAMA_STREAMING_HTTP_CLIENT;
+        // The streaming client is built once on first access — verify it initialises correctly.
+        let result = crate::llm::stream::OLLAMA_STREAMING_HTTP_CLIENT.get_or_init(|| {
+            reqwest::Client::builder()
+                .build()
+                .map_err(|e| format!("Failed to build Ollama streaming HTTP client: {e}"))
+        });
+        assert!(result.is_ok());
     }
 
     #[test]

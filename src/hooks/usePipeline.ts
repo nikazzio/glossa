@@ -446,7 +446,9 @@ export function usePipeline() {
       setBlobAssignments(assignments);
     } catch (error: unknown) {
       setBlobAssignments([]);
-      pipelineLog.blobComputeFailed(error instanceof Error ? error.message : String(error));
+      const msg = error instanceof Error ? error.message : String(error);
+      pipelineLog.blobComputeFailed(msg);
+      toast.warning(t('pipeline.blobComputeFailed'), { description: msg });
     }
 
     let errorCount = 0;
@@ -518,8 +520,11 @@ export function usePipeline() {
         config.blobOverlap ?? 1,
       );
       setBlobAssignments(assignments);
-    } catch {
+    } catch (error: unknown) {
       setBlobAssignments([]);
+      const msg = error instanceof Error ? error.message : String(error);
+      pipelineLog.blobComputeFailed(msg);
+      toast.warning(t('pipeline.blobComputeFailed'), { description: msg });
     }
 
     // Force a redo even if this chunk was already completed — the user

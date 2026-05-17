@@ -32,7 +32,10 @@ struct ResponseEvent {
 }
 
 fn pretty_json(value: &serde_json::Value, fallback: &str) -> String {
-    serde_json::to_string_pretty(value).unwrap_or_else(|_| fallback.to_string())
+    serde_json::to_string_pretty(value).unwrap_or_else(|e| {
+        log::warn!("Failed to pretty-print JSON response: {e}");
+        fallback.to_string()
+    })
 }
 
 #[derive(serde::Serialize)]
@@ -162,7 +165,10 @@ pub async fn run_stage_stream(
     let resp = provider.build_streaming_request(&client, &req).await?;
     let status = resp.status();
     if !status.is_success() {
-        let text = resp.text().await.unwrap_or_default();
+        let text = resp.text().await.unwrap_or_else(|e| {
+            log::warn!("Failed to read error response body: {e}");
+            String::new()
+        });
         return Err(provider.format_http_error(status, &text));
     }
 
@@ -230,7 +236,10 @@ pub async fn judge_translation(
     let resp = provider.build_streaming_request(&client, &req).await?;
     let status = resp.status();
     if !status.is_success() {
-        let text = resp.text().await.unwrap_or_default();
+        let text = resp.text().await.unwrap_or_else(|e| {
+            log::warn!("Failed to read error response body: {e}");
+            String::new()
+        });
         return Err(provider.format_http_error(status, &text));
     }
 
@@ -394,7 +403,10 @@ pub async fn run_coherence_for_chunk(
     let resp = provider.build_streaming_request(&client, &req).await?;
     let status = resp.status();
     if !status.is_success() {
-        let text = resp.text().await.unwrap_or_default();
+        let text = resp.text().await.unwrap_or_else(|e| {
+            log::warn!("Failed to read error response body: {e}");
+            String::new()
+        });
         return Err(provider.format_http_error(status, &text));
     }
 

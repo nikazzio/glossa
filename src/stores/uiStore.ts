@@ -187,9 +187,9 @@ export const useUiStore = create<UiState>()(
       focusedIssueRequestId: state.focusedIssueRequestId + 1,
     })),
   clearFocusedIssue: () => set({ focusedIssueQuery: null }),
-  setChunkPresetShort: (value) => set({ chunkPresetShort: Math.max(50, value) }),
-  setChunkPresetMedium: (value) => set({ chunkPresetMedium: Math.max(50, value) }),
-  setChunkPresetLong: (value) => set({ chunkPresetLong: Math.max(50, value) }),
+  setChunkPresetShort: (value) => set((state) => ({ chunkPresetShort: Math.min(Math.max(50, value), state.chunkPresetMedium - 1) })),
+  setChunkPresetMedium: (value) => set((state) => ({ chunkPresetMedium: Math.max(state.chunkPresetShort + 1, Math.min(value, state.chunkPresetLong - 1)) })),
+  setChunkPresetLong: (value) => set((state) => ({ chunkPresetLong: Math.max(state.chunkPresetMedium + 1, Math.max(50, value)) })),
   setOllamaBaseUrl: (url) => set({ ollamaBaseUrl: url }),
     }),
     {
