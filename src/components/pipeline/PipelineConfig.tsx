@@ -16,7 +16,7 @@ import { estimatePipelineCost } from '../../utils/costEstimate';
 import { usePricingStore } from '../../stores/pricingStore';
 import { llmService, ollamaService } from '../../services/llmService';
 import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
-import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
+import { ReasoningPicker } from '../models/ReasoningPicker';
 import { PromptPreviewTab } from './PromptPreviewTab';
 import { canRefineWithProvider, formatProviderModelLabel, useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
 
@@ -123,9 +123,6 @@ function PersonaEditor({
               >
                 {isRefining ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
               </button>
-              <span className="rounded-full border border-editorial-border/60 px-2 py-1 text-[9px] font-mono text-editorial-muted">
-                {refineLabel}
-              </span>
               <button
                 type="button"
                 onClick={() => { setShowSaveName(!showSaveName); setShowTemplateList(false); }}
@@ -388,9 +385,6 @@ function AuditPromptEditor({
             >
               {isRefining ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
             </button>
-            <span className="rounded-full border border-editorial-border/60 px-2 py-1 text-[9px] font-mono text-editorial-muted">
-              {refineLabel}
-            </span>
             <button
               type="button"
               onClick={() => { setShowSaveName(!showSaveName); setShowTemplateList(false); }}
@@ -1301,31 +1295,17 @@ export function PipelineConfig({
                 </select>
               )}
             </div>
-            <ModelCapabilityHint
-              provider={config.judgeProvider}
-              model={config.judgeModel}
-              useCase="judge"
-              useCaseLabel={t('pipeline.tabAudit')}
-            />
             {judgeResolvedReasoning !== undefined && judgeResolvedReasoning !== 'non_reasoning' && config.judgeProvider !== 'ollama' && (
               <div className="flex items-center gap-2">
                 <Wand2 size={11} className="text-editorial-warning shrink-0" />
                 <span className="text-[10px] font-sans uppercase tracking-[0.3em] text-editorial-muted">
                   {t('pipeline.reasoningEffort')}
                 </span>
-                <select
+                <ReasoningPicker
                   value={currentJudgeReasoningEffort}
-                  onChange={(e) => handleJudgeReasoningChange(e.target.value as ReasoningEffortLevel)}
-                  className="rounded-[10px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  aria-label={t('pipeline.reasoningEffort')}
-                >
-                  {judgeResolvedReasoning === 'optional' && (
-                    <option value="none">{t('pipeline.reasoningEffortNone')}</option>
-                  )}
-                  <option value="low">{t('pipeline.reasoningEffortLow')}</option>
-                  <option value="medium">{t('pipeline.reasoningEffortMedium')}</option>
-                  <option value="high">{t('pipeline.reasoningEffortHigh')}</option>
-                </select>
+                  showNone={judgeResolvedReasoning === 'optional'}
+                  onChange={handleJudgeReasoningChange}
+                />
               </div>
             )}
 

@@ -10,7 +10,7 @@ import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { getSelectableModelIds, isShowableModel, MODEL_CATALOG, MODEL_PROVIDER_ORDER } from '../../models/catalog';
 import { MODEL_PRICING } from '../../constants';
 import { usePricingStore } from '../../stores/pricingStore';
-import { EditorialModalShell } from '../common';
+import { EditorialModalShell, ProviderLogo } from '../common';
 import type { ModelProvider } from '../../types';
 import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
 import { useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
@@ -23,13 +23,6 @@ const PROVIDER_LABELS: Record<ModelProvider, string> = {
   ollama: 'Ollama',
 };
 
-const PROVIDER_ABBREV: Record<ModelProvider, string> = {
-  gemini: 'Gm',
-  openai: 'Oa',
-  anthropic: 'An',
-  deepseek: 'Ds',
-  ollama: 'Ol',
-};
 
 
 function getModelGroupLabel(provider: ModelProvider, modelId: string): string {
@@ -363,7 +356,7 @@ export function SettingsModal() {
                               : 'border-editorial-border bg-editorial-textbox/30 text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent'
                           }`}
                         >
-                          {PROVIDER_ABBREV[provider]}
+                          <ProviderLogo provider={provider} size={18} />
                         </button>
                       );
                     })}

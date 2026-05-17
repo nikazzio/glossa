@@ -19,6 +19,7 @@ import type { ModelProvider, OllamaStatus, PipelineStageConfig, PromptTemplate }
 import { getKnownModelIds, getModelStatus, getResolvedModelReasoning, getSelectableModelIds, MODEL_PROVIDER_ORDER } from '../../models/catalog';
 import type { ReasoningEffortLevel } from '../../types';
 import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
+import { ReasoningPicker } from '../models/ReasoningPicker';
 import { ProviderRuntimeEditor } from './ProviderRuntimeEditor';
 import { canRefineWithProvider, formatProviderModelLabel, type ProviderKeyStatusMap } from '../../hooks/useProviderKeyStatus';
 import { useUiStore } from '../../stores/uiStore';
@@ -210,32 +211,18 @@ export function StageCard({
             <span>{t('pipeline.modelLockedHint')}</span>
           </div>
         )}
-        <ModelCapabilityHint
-          provider={stage.provider}
-          model={stage.model}
-          useCase={stage.role ?? 'translation'}
-          useCaseLabel={t(`pipeline.stageRole.${stage.role ?? 'translation'}`)}
-        />
         {resolvedReasoning !== undefined && resolvedReasoning !== 'non_reasoning' && stage.provider !== 'ollama' && (
           <div className="flex items-center gap-2">
             <Wand2 size={11} className="text-editorial-warning shrink-0" />
             <span className="text-[10px] font-sans uppercase tracking-[0.3em] text-editorial-muted">
               {t('pipeline.reasoningEffort')}
             </span>
-            <select
+            <ReasoningPicker
               value={currentReasoningEffort}
-              onChange={(e) => handleReasoningChange(e.target.value as ReasoningEffortLevel)}
+              showNone={resolvedReasoning === 'optional'}
               disabled={translationsExist || isProcessing}
-              className="rounded-[10px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
-              aria-label={t('pipeline.reasoningEffort')}
-            >
-              {resolvedReasoning === 'optional' && (
-                <option value="none">{t('pipeline.reasoningEffortNone')}</option>
-              )}
-              <option value="low">{t('pipeline.reasoningEffortLow')}</option>
-              <option value="medium">{t('pipeline.reasoningEffortMedium')}</option>
-              <option value="high">{t('pipeline.reasoningEffortHigh')}</option>
-            </select>
+              onChange={handleReasoningChange}
+            />
           </div>
         )}
         {ollamaOffline && !translationsExist && (
@@ -283,9 +270,6 @@ export function StageCard({
                 >
                   {isRefining ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
                 </button>
-                <span className="rounded-full border border-editorial-border/60 px-2 py-1 text-[9px] font-mono text-editorial-muted">
-                  {refineLabel}
-                </span>
                 <button
                   type="button"
                   onClick={() => { setShowSaveName(!showSaveName); setShowTemplateList(false); }}

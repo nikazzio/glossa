@@ -1,4 +1,4 @@
-import { ChevronRight, Eye, FileText, Languages, Wand2 } from 'lucide-react';
+import { Eye, FileText, Languages, Wand2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PipelineConfig, StageRole } from '../../types';
@@ -128,13 +128,6 @@ export function PromptPreviewTab({ config }: PromptPreviewTabProps) {
 
       {activeStage ? (
         <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-editorial-ink">
-              {t(`pipeline.stageRole.${activeStage.role}`)}
-            </span>
-            <ChevronRight size={12} className="text-editorial-muted" />
-            <span className="text-[10px] font-mono text-editorial-muted">{activeStage.name}</span>
-          </div>
           <div className="space-y-3">
             {activeStage.blocks.map((block) => (
               <PromptBlockCard key={`${activeStage.id}-${block.id}`} block={block} />

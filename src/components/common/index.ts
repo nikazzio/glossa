@@ -9,3 +9,4 @@ export { HighlightedText } from './HighlightedText';
 export { MarkdownEditor } from './MarkdownEditor';
 export { RunResumeBanner } from './RunResumeBanner';
 export { EditorialModalShell } from './EditorialModalShell';
+export { ProviderLogo } from './ProviderLogo';
