@@ -161,6 +161,7 @@ impl Drop for StreamGuard<'_> {
 /// flows; the frontend checks for this prefix to suppress the toast.
 pub const STREAM_CANCELLED_ERROR: &str = "Stream cancelled";
 
+#[derive(Debug)]
 pub(crate) struct StreamResult {
     pub(crate) content: String,
 }
