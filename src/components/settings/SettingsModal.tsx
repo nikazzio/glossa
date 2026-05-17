@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertCircle, Server, RefreshCw, CheckCircle2, XCircle, HelpCircle, Sparkles, Columns2, BookOpen, ChevronDown, ChevronUp, Brain, Bot, Wand2 } from 'lucide-react';
+import { AlertCircle, Server, RefreshCw, CheckCircle2, XCircle, HelpCircle, Sparkles, Columns2, BookOpen, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useUiStore } from '../../stores/uiStore';
 import { ApiKeyInput } from './ApiKeyInput';
-import { ollamaService, settingsService } from '../../services/llmService';
+import { ollamaService } from '../../services/llmService';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
-import { getSelectableModelIds, isShowableModel, MODEL_CATALOG, MODEL_PROVIDER_ORDER } from '../../models/catalog';
+import { getKnownModelIds, getModelEntry, MODEL_CATALOG, MODEL_PROVIDER_ORDER } from '../../models/catalog';
 import { MODEL_PRICING } from '../../constants';
 import { usePricingStore } from '../../stores/pricingStore';
 import { EditorialModalShell, ProviderLogo } from '../common';
@@ -71,10 +71,6 @@ export function SettingsModal() {
     ollamaModels,
     setOllamaModels,
     setOllamaStatus,
-    providerModels,
-    setProviderModels,
-    enabledProviderModels,
-    setEnabledProviderModels,
     documentLayout,
     setDocumentLayout,
     chunkPresetShort,
@@ -91,47 +87,22 @@ export function SettingsModal() {
   const [showPricingOverrides, setShowPricingOverrides] = useState(false);
   const [showSecurityAdvisory, setShowSecurityAdvisory] = useState(false);
   const [activeProviderTab, setActiveProviderTab] = useState<ModelProvider>('openai');
-  const [refreshErrors, setRefreshErrors] = useState<Partial<Record<ModelProvider, string>>>({});
   const [urlDraft, setUrlDraft] = useState(ollamaBaseUrl);
   const [urlError, setUrlError] = useState<string | null>(null);
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const trapRef = useFocusTrap(showSettings, () => setShowSettings(false));
   const { overrides, setOverride, resetOverride, resetAll } = usePricingStore();
   const { statuses: keyStatuses } = useProviderKeyStatus();
-  const availableProviderModels = useMemo(
-    () => Object.fromEntries(
-      MODEL_PROVIDER_ORDER.map((provider) => [
-        provider,
-        provider === 'ollama'
-          ? ollamaModels
-          : providerModels[provider]
-              ?.map((entry) => entry.id)
-              .filter((id) => isShowableModel(provider, id))
-            ?? MODEL_CATALOG.filter((entry) => entry.provider === provider).map((entry) => entry.id),
-      ]),
-    ) as Record<ModelProvider, string[]>,
-    [ollamaModels, providerModels],
-  );
-  const activeProviderModels = availableProviderModels[activeProviderTab] ?? [];
-  const activeEnabledModels = getSelectableModelIds(activeProviderTab, {
-    enabledModelIds: enabledProviderModels[activeProviderTab],
-    availableModelIds: activeProviderModels,
-  });
 
   const refreshOllama = async () => {
     setRefreshing(true);
     try {
       const models = await ollamaService.listModels();
       setOllamaModels(models);
-      setProviderModels('ollama', models.map((id) => ({ id })));
       setOllamaStatus('connected');
-      setRefreshErrors((prev) => ({ ...prev, ollama: undefined }));
       toast.success(t('ollama.connected', { count: models.length }));
     } catch (err: any) {
       setOllamaModels([]);
-      setProviderModels('ollama', []);
       setOllamaStatus('disconnected');
-      setRefreshErrors((prev) => ({ ...prev, ollama: err?.message ?? t('ollama.disconnected') }));
       toast.error(t('ollama.disconnected'), {
         description: err?.message,
       });
@@ -139,80 +110,6 @@ export function SettingsModal() {
       setRefreshing(false);
     }
   };
-
-  const refreshProviderModels = async (provider: ModelProvider) => {
-    if (provider === 'ollama') {
-      await refreshOllama();
-      return;
-    }
-    setRefreshing(true);
-    try {
-      const models = await settingsService.discoverProviderModels(provider);
-      setProviderModels(provider, models);
-      if (enabledProviderModels[provider] === undefined) {
-        const catalogIds = new Set(
-          MODEL_CATALOG.filter((e) => e.provider === provider).map((e) => e.id),
-        );
-        const initialEnabled = models
-          .map((m) => m.id)
-          .filter((id) => isShowableModel(provider, id) && catalogIds.has(id));
-        if (initialEnabled.length > 0) {
-          setEnabledProviderModels(provider, initialEnabled);
-        }
-      }
-      setRefreshErrors((prev) => ({ ...prev, [provider]: undefined }));
-      toast.success(t('settings.modelsRefreshed', {
-        provider: PROVIDER_LABELS[provider],
-        count: models.length,
-      }));
-    } catch (err: any) {
-      const message = err?.message ?? String(err);
-      setRefreshErrors((prev) => ({ ...prev, [provider]: message }));
-      toast.error(t('settings.modelsRefreshFailed', { provider: PROVIDER_LABELS[provider] }), {
-        description: message,
-      });
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  const toggleProviderModel = (provider: ModelProvider, modelId: string) => {
-    const hasKey = provider === 'ollama' || !!keyStatuses[provider];
-    const current = enabledProviderModels[provider];
-    const base = current === undefined
-      ? (hasKey ? [...availableProviderModels[provider]] : [])
-      : [...current];
-    const set = new Set(base);
-    if (set.has(modelId)) {
-      set.delete(modelId);
-    } else {
-      set.add(modelId);
-    }
-    setEnabledProviderModels(provider, availableProviderModels[provider].filter((id) => set.has(id)));
-  };
-
-  const toggleProviderModelGroup = (provider: ModelProvider, groupIds: string[]) => {
-    const hasKey = provider === 'ollama' || !!keyStatuses[provider];
-    const current = enabledProviderModels[provider];
-    const base = current === undefined
-      ? (hasKey ? [...availableProviderModels[provider]] : [])
-      : [...current];
-    const allEnabled = groupIds.every((id) => base.includes(id));
-    const set = new Set(base);
-    if (allEnabled) {
-      groupIds.forEach((id) => set.delete(id));
-    } else {
-      groupIds.forEach((id) => set.add(id));
-    }
-    setEnabledProviderModels(provider, availableProviderModels[provider].filter((id) => set.has(id)));
-  };
-
-  useEffect(() => {
-    if (!showSettings || activeProviderTab === 'ollama') return;
-    if (!keyStatuses[activeProviderTab]) return;
-    if (providerModels[activeProviderTab] !== undefined) return;
-    void refreshProviderModels(activeProviderTab);
-  }, [activeProviderTab, keyStatuses, providerModels, showSettings]);
 
   return (
     <AnimatePresence>
@@ -364,31 +261,6 @@ export function SettingsModal() {
 
                   <div className="space-y-5 border-t border-editorial-border pt-5">
                     <div className="space-y-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
-                            {PROVIDER_LABELS[activeProviderTab]}
-                          </div>
-                          <p className="mt-1 text-xs leading-relaxed text-editorial-muted">
-                            {t('settings.enabledModelsHint')}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="rounded-full border border-editorial-border px-3 py-1 text-[10px] font-mono text-editorial-muted">
-                            {activeEnabledModels.length}/{activeProviderModels.length}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => void refreshProviderModels(activeProviderTab)}
-                            disabled={refreshing || (activeProviderTab !== 'ollama' && !keyStatuses[activeProviderTab])}
-                            className="flex items-center gap-1.5 rounded-full border border-editorial-border px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                          >
-                            <RefreshCw size={11} className={refreshing ? 'animate-spin' : ''} />
-                            {t('settings.refreshModels')}
-                          </button>
-                        </div>
-                      </div>
-
                       {activeProviderTab === 'ollama' ? (
                         <div className="space-y-4 rounded-[18px] border border-editorial-border bg-editorial-bg/60 p-4">
                           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -467,138 +339,64 @@ export function SettingsModal() {
 
                       {activeProviderTab !== 'ollama' && !keyStatuses[activeProviderTab] && (
                         <p className="text-xs text-editorial-muted italic">
-                          {t('settings.configureKeyToDiscover')}
-                        </p>
-                      )}
-                      {refreshErrors[activeProviderTab] && (
-                        <p className="text-xs text-editorial-warning">
-                          {refreshErrors[activeProviderTab]}
+                          {t('settings.configureKeyToUse')}
                         </p>
                       )}
                     </div>
 
-                    {activeProviderModels.length === 0 ? (
-                      <p className="rounded-[18px] border border-dashed border-editorial-border px-4 py-5 text-sm italic text-editorial-muted">
-                        {activeProviderTab === 'ollama'
-                          ? t('ollama.noModels')
-                          : t('settings.noKnownModels')}
-                      </p>
-                    ) : (
-                      <div className="space-y-3">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-xs font-bold uppercase tracking-wider text-editorial-muted">
-                            {t('settings.modelTypesLegend')}
-                          </span>
-                          <span className="inline-flex items-center gap-1 rounded-full border border-editorial-success/30 bg-editorial-success/10 px-2 py-0.5 text-xs font-mono text-editorial-success">
-                            <Bot size={11} />{t('pipeline.modelReasoning.non_reasoning')}
-                          </span>
-                          <span className="inline-flex items-center gap-1 rounded-full border border-editorial-accent/30 bg-editorial-accent/10 px-2 py-0.5 text-xs font-mono text-editorial-accent">
-                            <Brain size={11} />{t('pipeline.modelReasoning.reasoning')}
-                          </span>
-                          <span className="inline-flex items-center gap-1 rounded-full border border-editorial-warning/30 bg-editorial-warning/10 px-2 py-0.5 text-xs font-mono text-editorial-warning">
-                            <Wand2 size={11} />{t('pipeline.modelReasoning.optional')}
-                          </span>
-                        </div>
-
-                        {(() => {
-                          const hasKey = activeProviderTab === 'ollama' || !!keyStatuses[activeProviderTab];
-                          const explicitEnabled = enabledProviderModels[activeProviderTab];
-                          const groups = activeProviderTab === 'ollama'
-                            ? [{ label: '', ids: activeProviderModels }]
-                            : groupModelIds(activeProviderTab, activeProviderModels);
-                          const showGroupHeaders = groups.length > 1;
-
-                          return (
-                            <div className="max-h-72 overflow-y-auto space-y-3 pr-1">
-                              {groups.map(({ label, ids }) => {
-                                const isCollapsed = collapsedGroups.has(label);
-                                const enabledInGroup = hasKey
-                                  ? ids.filter((id) => explicitEnabled === undefined || explicitEnabled.includes(id))
-                                  : [];
-                                const allGroupChecked = ids.length > 0 && enabledInGroup.length === ids.length;
-                                const someGroupChecked = enabledInGroup.length > 0;
+                    {activeProviderTab !== 'ollama' && (() => {
+                      const hasKey = !!keyStatuses[activeProviderTab];
+                      const groups = groupModelIds(activeProviderTab, getKnownModelIds(activeProviderTab));
+                      return (
+                        <div className="space-y-3">
+                          {groups.map(({ label, ids }) => (
+                            <div key={label || '_all'} className="space-y-1.5">
+                              {label && (
+                                <p className="px-1 text-[10px] font-bold uppercase tracking-wider text-editorial-muted">
+                                  {label}
+                                </p>
+                              )}
+                              {ids.map((modelId) => {
+                                const entry = getModelEntry(activeProviderTab, modelId);
                                 return (
-                                  <div key={label || '_all'} className="space-y-1.5">
-                                    {showGroupHeaders && label && (
-                                      <div className="flex items-center gap-2">
-                                        <input
-                                          type="checkbox"
-                                          ref={(el) => {
-                                            if (el) el.indeterminate = !allGroupChecked && someGroupChecked;
-                                          }}
-                                          checked={allGroupChecked}
-                                          onChange={() => toggleProviderModelGroup(activeProviderTab, ids)}
-                                          disabled={!hasKey}
-                                          className="h-3.5 w-3.5 cursor-pointer rounded border-editorial-border accent-editorial-accent focus:ring-editorial-accent disabled:opacity-40"
-                                        />
-                                        <button
-                                          type="button"
-                                          onClick={() => setCollapsedGroups((prev) => {
-                                            const next = new Set(prev);
-                                            if (next.has(label)) next.delete(label);
-                                            else next.add(label);
-                                            return next;
-                                          })}
-                                          className="flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none"
-                                        >
-                                          {isCollapsed ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
-                                          {label}
-                                        </button>
+                                  <div
+                                    key={modelId}
+                                    className={`flex items-start gap-3 rounded-[16px] border border-editorial-border bg-editorial-bg/60 px-4 py-2.5 transition-opacity ${!hasKey ? 'opacity-40' : ''}`}
+                                  >
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <span className="text-xs font-mono text-editorial-ink">{modelId}</span>
+                                        <ModelCapabilityHint provider={activeProviderTab} model={modelId} iconOnly />
+                                        {entry?.contextWindow && (
+                                          <span className="rounded-full border border-editorial-border px-2 py-0.5 text-[10px] font-mono text-editorial-muted">
+                                            {entry.contextWindow >= 1_000_000
+                                              ? `${(entry.contextWindow / 1_000_000).toFixed(0)}M`
+                                              : `${Math.round(entry.contextWindow / 1_000)}K`}
+                                          </span>
+                                        )}
+                                        {entry?.pricing && (
+                                          <span className="rounded-full border border-editorial-border px-2 py-0.5 text-[10px] font-mono text-editorial-muted">
+                                            ${entry.pricing.input}/${entry.pricing.output}
+                                          </span>
+                                        )}
+                                        {entry?.status === 'preview' && (
+                                          <span className="rounded-full border border-editorial-warning/40 bg-editorial-warning/10 px-2 py-0.5 text-[10px] font-mono text-editorial-warning">
+                                            preview
+                                          </span>
+                                        )}
                                       </div>
-                                    )}
-                                    {!isCollapsed && ids.map((modelId) => {
-                                      const discoveredModel = providerModels[activeProviderTab]?.find((m) => m.id === modelId);
-                                      const checked = hasKey && (explicitEnabled === undefined || explicitEnabled.includes(modelId));
-                                      return (
-                                        <label
-                                          key={modelId}
-                                          className="flex items-center gap-3 rounded-[16px] border border-editorial-border bg-editorial-bg/60 px-4 py-2.5 transition-colors hover:border-editorial-accent/40"
-                                        >
-                                          <input
-                                            type="checkbox"
-                                            checked={checked}
-                                            onChange={() => toggleProviderModel(activeProviderTab, modelId)}
-                                            className="h-4 w-4 rounded border-editorial-border accent-editorial-accent focus:ring-editorial-accent"
-                                          />
-                                          <div className="min-w-0 flex-1">
-                                            <div className="flex flex-wrap items-center gap-2">
-                                              <span className="text-sm font-mono text-editorial-ink">{modelId}</span>
-                                              <ModelCapabilityHint
-                                                provider={activeProviderTab}
-                                                model={modelId}
-                                                iconOnly
-                                              />
-                                              {discoveredModel?.displayName && discoveredModel.displayName !== modelId && (
-                                                <span className="text-xs italic text-editorial-muted">
-                                                  {discoveredModel.displayName}
-                                                </span>
-                                              )}
-                                              {discoveredModel?.contextWindow && (
-                                                <span className="rounded-full border border-editorial-border px-2 py-0.5 text-[10px] font-mono text-editorial-muted">
-                                                  {t('settings.contextWindowBadge', {
-                                                    count: discoveredModel.contextWindow.toLocaleString(),
-                                                  })}
-                                                </span>
-                                              )}
-                                            </div>
-                                          </div>
-                                        </label>
-                                      );
-                                    })}
+                                      {entry?.description && (
+                                        <p className="mt-0.5 text-[11px] text-editorial-muted">{entry.description}</p>
+                                      )}
+                                    </div>
                                   </div>
                                 );
                               })}
                             </div>
-                          );
-                        })()}
-                      </div>
-                    )}
-
-                    {enabledProviderModels[activeProviderTab] !== undefined && activeEnabledModels.length === 0 && (
-                      <p className="text-xs text-editorial-warning">
-                        {t('settings.noEnabledModelsWarning')}
-                      </p>
-                    )}
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>

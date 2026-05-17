@@ -7,7 +7,6 @@ use crate::llm::provider::{
     LlmProvider, LlmRequest, LlmResponse, StreamFormat, TokenUsage, UsageAccumulator,
 };
 use crate::llm::stream::{build_default_http_client, default_stream_timeouts, StreamTimeouts};
-use crate::llm::types::DiscoveredModel;
 
 /// Build the `system` field for Anthropic requests. Each block in the structured
 /// prompt becomes a `{ type: "text", text: "..." }` object. Blocks marked cacheable
@@ -190,58 +189,4 @@ impl LlmProvider for AnthropicProvider {
             .map_err(|e| format!("Anthropic request failed: {e}"))
     }
 
-    async fn discover_models(
-        &self,
-        client: &Client,
-        api_key: &str,
-    ) -> Result<Vec<DiscoveredModel>, String> {
-        let resp = client
-            .get("https://api.anthropic.com/v1/models")
-            .header("x-api-key", api_key)
-            .header("anthropic-version", "2023-06-01")
-            .send()
-            .await
-            .map_err(|e| format!("Anthropic model discovery failed: {e}"))?;
-
-        let status = resp.status();
-        let text = resp
-            .text()
-            .await
-            .map_err(|e| format!("Failed to read Anthropic discovery response: {e}"))?;
-
-        if !status.is_success() {
-            return Err(format_api_error("Anthropic", status, &text));
-        }
-
-        let json: Value = serde_json::from_str(&text)
-            .map_err(|e| format!("Failed to parse Anthropic models response: {e}"))?;
-        let Some(data) = json["data"].as_array() else {
-            return Err("Anthropic models response was missing the data array".to_string());
-        };
-
-        let mut models: Vec<DiscoveredModel> = data
-            .iter()
-            .filter_map(|entry| {
-                let id = entry["id"].as_str()?;
-                let normalized = id.to_ascii_lowercase();
-                let reasoning = if normalized.contains("haiku") {
-                    Some("non_reasoning".to_string())
-                } else if normalized.contains("sonnet") || normalized.contains("opus") {
-                    Some("reasoning".to_string())
-                } else {
-                    None
-                };
-                Some(DiscoveredModel {
-                    id: id.to_string(),
-                    display_name: entry["display_name"].as_str().map(str::to_string),
-                    status: Some("stable".to_string()),
-                    reasoning,
-                    context_window: None,
-                    max_output_tokens: None,
-                })
-            })
-            .collect();
-        models.sort_by(|a, b| a.id.cmp(&b.id));
-        Ok(models)
-    }
 }

@@ -28,7 +28,7 @@ import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { checkContextOverflow, estimateCharTokens } from '../../utils/tokenEstimate';
 import { LANGUAGES } from '../../constants';
-import { getKnownModelIds, getSelectableModelIds, MODEL_PROVIDER_ORDER } from '../../models/catalog';
+import { getSelectableModelIds, MODEL_PROVIDER_ORDER } from '../../models/catalog';
 import { useUiStore } from '../../stores/uiStore';
 import type { ModelProvider } from '../../types';
 
@@ -428,8 +428,6 @@ export function ImportPreviewDialog({
   const [editorMode, setEditorMode] = useState<EditorMode>('cards');
   const { config, updateStage, setConfig } = usePipelineStore();
   const ollamaModels = useUiStore((s) => s.ollamaModels);
-  const providerModels = useUiStore((s) => s.providerModels);
-  const enabledProviderModels = useUiStore((s) => s.enabledProviderModels);
   const chunkPresetShort = useUiStore((s) => s.chunkPresetShort);
   const chunkPresetMedium = useUiStore((s) => s.chunkPresetMedium);
   const chunkPresetLong = useUiStore((s) => s.chunkPresetLong);
@@ -438,14 +436,8 @@ export function ImportPreviewDialog({
   const [selectedProvider, setSelectedProvider] = useState<ModelProvider>(stage0?.provider ?? 'openai');
   const [selectedModel, setSelectedModel] = useState<string>(stage0?.model ?? '');
   const getProviderModels = useCallback(
-    (provider: ModelProvider) => getSelectableModelIds(provider, {
-      enabledModelIds: enabledProviderModels[provider],
-      availableModelIds:
-        provider === 'ollama'
-          ? ollamaModels
-          : providerModels[provider]?.map((model) => model.id) ?? getKnownModelIds(provider),
-    }),
-    [enabledProviderModels, ollamaModels, providerModels],
+    (provider: ModelProvider) => getSelectableModelIds(provider, ollamaModels),
+    [ollamaModels],
   );
 
   const availableModels = getProviderModels(selectedProvider);

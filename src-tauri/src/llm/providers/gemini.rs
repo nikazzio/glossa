@@ -13,7 +13,7 @@ use crate::llm::provider::{
     LlmProvider, LlmRequest, LlmResponse, StreamFormat, TokenUsage, UsageAccumulator,
 };
 use crate::llm::stream::{build_default_http_client, default_stream_timeouts, StreamTimeouts};
-use crate::llm::types::{DiscoveredModel, GeminiCacheConfig};
+use crate::llm::types::GeminiCacheConfig;
 
 pub struct GeminiProvider;
 
@@ -202,79 +202,6 @@ impl LlmProvider for GeminiProvider {
             .map_err(|e| format!("Gemini request failed: {e}"))
     }
 
-    async fn discover_models(
-        &self,
-        client: &Client,
-        api_key: &str,
-    ) -> Result<Vec<DiscoveredModel>, String> {
-        let resp = client
-            .get(format!(
-                "https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
-            ))
-            .send()
-            .await
-            .map_err(|e| format!("Gemini model discovery failed: {e}"))?;
-
-        let status = resp.status();
-        let text = resp
-            .text()
-            .await
-            .map_err(|e| format!("Failed to read Gemini discovery response: {e}"))?;
-
-        if !status.is_success() {
-            return Err(format_api_error("Gemini", status, &text));
-        }
-
-        let json: Value = serde_json::from_str(&text)
-            .map_err(|e| format!("Failed to parse Gemini models response: {e}"))?;
-        let Some(models) = json["models"].as_array() else {
-            return Err("Gemini models response was missing the models array".to_string());
-        };
-
-        let mut discovered: Vec<DiscoveredModel> = models
-            .iter()
-            .filter_map(|entry| {
-                let name = entry["name"].as_str()?;
-                let model_id = name.strip_prefix("models/").unwrap_or(name);
-                let supports_generate = entry["supportedGenerationMethods"]
-                    .as_array()
-                    .is_some_and(|methods| {
-                        methods.iter().any(|method| {
-                            method.as_str() == Some("generateContent")
-                                || method.as_str() == Some("streamGenerateContent")
-                        })
-                    });
-                if !supports_generate {
-                    return None;
-                }
-
-                let normalized = model_id.to_ascii_lowercase();
-                let reasoning = if normalized.contains("flash-lite") || normalized.contains("2.0-flash-lite") {
-                    Some("non_reasoning".to_string())
-                } else if normalized.contains("flash") || normalized.contains("pro") {
-                    Some("optional".to_string())
-                } else {
-                    None
-                };
-                let status = if normalized.contains("preview") || normalized.contains("experimental") {
-                    Some("preview".to_string())
-                } else {
-                    Some("stable".to_string())
-                };
-
-                Some(DiscoveredModel {
-                    id: model_id.to_string(),
-                    display_name: entry["displayName"].as_str().map(str::to_string),
-                    status,
-                    reasoning,
-                    context_window: entry["inputTokenLimit"].as_u64().map(|value| value as u32),
-                    max_output_tokens: entry["outputTokenLimit"].as_u64().map(|value| value as u32),
-                })
-            })
-            .collect();
-        discovered.sort_by(|a, b| a.id.cmp(&b.id));
-        Ok(discovered)
-    }
 }
 
 fn gemini_cache_config<'a>(req: &'a LlmRequest<'_>) -> Option<&'a GeminiCacheConfig> {

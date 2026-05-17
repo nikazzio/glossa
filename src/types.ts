@@ -79,15 +79,6 @@ export interface PipelineStageConfig {
   providerOptions?: ProviderRuntimeConfig;
 }
 
-export interface DiscoveredProviderModel {
-  id: string;
-  displayName?: string;
-  status?: ModelStatus;
-  reasoning?: ModelReasoningClass;
-  contextWindow?: number;
-  maxOutputTokens?: number;
-}
-
 export interface Footnote {
   id: string;
   marker: string;

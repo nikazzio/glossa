@@ -335,15 +335,8 @@
     "keyDeleted": "{{provider}} key removed from keychain",
     "keyDeleteFailed": "Failed to remove {{provider}} key",
     "keySavedFallback": "{{provider}} key saved to local encrypted fallback storage. This is less secure than the OS keychain.",
-    "enabledModelsHint": "Choose which models from this provider should appear in the app.",
-    "refreshModels": "Refresh",
-    "configureKeyToDiscover": "Save an API key for this provider to fetch the models currently available to your account.",
-    "modelsRefreshed": "{{provider}} models refreshed ({{count}} available)",
-    "modelsRefreshFailed": "Failed to refresh {{provider}} models",
-    "contextWindowBadge": "{{count}} ctx",
-    "noKnownModels": "No product-known models are registered for this provider yet.",
-    "noEnabledModelsWarning": "No model is enabled for this provider. It will disappear from stage pickers until you re-enable one.",
-    "modelTypesLegend": "Types"
+    "configureKeyToUse": "Add an API key to enable this provider's models in the pipeline.",
+    "contextWindowBadge": "{{count}} ctx"
   },
   "ollama": {
     "title": "Ollama (Local Models)",

@@ -2,7 +2,6 @@ import { Bot, Brain, Wand2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { ModelProvider } from '../../types';
 import { getModelUseCaseFit, getResolvedModelReasoning, type ModelUseCase } from '../../models/catalog';
-import { useUiStore } from '../../stores/uiStore';
 
 interface ModelCapabilityHintProps {
   provider: ModelProvider;
@@ -20,8 +19,7 @@ export function ModelCapabilityHint({
   iconOnly,
 }: ModelCapabilityHintProps) {
   const { t } = useTranslation();
-  const providerModels = useUiStore((s) => s.providerModels);
-  const reasoning = getResolvedModelReasoning(provider, model, providerModels[provider]);
+  const reasoning = getResolvedModelReasoning(provider, model);
   const fit = useCase ? getModelUseCaseFit(provider, model, useCase) : undefined;
 
   if (!reasoning) return null;

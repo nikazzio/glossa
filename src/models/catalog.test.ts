@@ -17,38 +17,25 @@ describe('MODEL_CATALOG', () => {
     expect(missing).toEqual([]);
   });
 
-  it('falls back to all available models when a provider has no saved curation yet', () => {
+  it('returns all catalog models for a cloud provider', () => {
     expect(getSelectableModelIds('openai')).toEqual(getKnownModelIds('openai'));
   });
 
-  it('returns only user-enabled models when a provider has an explicit curated list', () => {
-    expect(
-      getSelectableModelIds('openai', {
-        enabledModelIds: ['o4-mini'],
-        availableModelIds: getKnownModelIds('openai'),
-      }),
-    ).toEqual(['o4-mini']);
+  it('returns the supplied list for ollama', () => {
+    expect(getSelectableModelIds('ollama', ['llama3', 'mistral'])).toEqual(['llama3', 'mistral']);
   });
 
-  it('allows an explicit empty curated list to hide a provider from pickers', () => {
-    expect(
-      getSelectableModelIds('openai', {
-        enabledModelIds: [],
-        availableModelIds: getKnownModelIds('openai'),
-      }),
-    ).toEqual([]);
+  it('returns empty for ollama when no models provided', () => {
+    expect(getSelectableModelIds('ollama')).toEqual([]);
   });
 
-  it('resolves reasoning from discovered models when the catalog does not know the id', () => {
-    expect(
-      getResolvedModelReasoning('openai', 'gpt-5-nano-custom', [
-        { id: 'gpt-5-nano-custom', reasoning: 'optional' },
-      ]),
-    ).toBe('optional');
+  it('resolves reasoning from the catalog for known ids', () => {
+    expect(getResolvedModelReasoning('deepseek', 'deepseek-v4-flash')).toBe('optional');
+    expect(getResolvedModelReasoning('anthropic', 'claude-sonnet-4-20250514')).toBe('reasoning');
   });
 
   it('falls back to provider-specific inference for unknown ids', () => {
-    expect(getResolvedModelReasoning('deepseek', 'deepseek-v4-flash')).toBe('optional');
-    expect(getResolvedModelReasoning('anthropic', 'claude-sonnet-4-20250514')).toBe('reasoning');
+    expect(getResolvedModelReasoning('openai', 'gpt-5-unknown')).toBe('optional');
+    expect(getResolvedModelReasoning('openai', 'o9-mini')).toBe('reasoning');
   });
 });

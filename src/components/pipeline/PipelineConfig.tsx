@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { ModelProvider, PipelineMode, PromptTemplate, ReasoningEffortLevel } from '../../types';
 import { LANGUAGES, defaultPersonaText } from '../../constants';
-import { calculateBlobBudget, getContextWindow, getKnownModelIds, getModelStatus, getResolvedModelReasoning, getSelectableModelIds, isShowableModel, MODEL_PROVIDER_ORDER } from '../../models/catalog';
+import { calculateBlobBudget, getContextWindow, getKnownModelIds, getModelStatus, getResolvedModelReasoning, getSelectableModelIds, MODEL_PROVIDER_ORDER } from '../../models/catalog';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { StageCard } from './StageCard';
 import { useChunksStore } from '../../stores/chunksStore';
@@ -271,18 +271,7 @@ const DEFAULT_PIPELINE_CONFIG_CLASSNAME =
 
 function useJudgeModelOptions(provider: ModelProvider): string[] {
   const ollamaModels = useUiStore((s) => s.ollamaModels);
-  const providerModels = useUiStore((s) => s.providerModels);
-  const enabledProviderModels = useUiStore((s) => s.enabledProviderModels);
-  return getSelectableModelIds(provider, {
-    enabledModelIds: enabledProviderModels[provider],
-    availableModelIds:
-      provider === 'ollama'
-        ? ollamaModels
-        : providerModels[provider]
-            ?.map((model) => model.id)
-            .filter((id) => isShowableModel(provider, id))
-          ?? getKnownModelIds(provider),
-  });
+  return getSelectableModelIds(provider, ollamaModels);
 }
 
 interface AuditPromptEditorProps {
@@ -522,8 +511,6 @@ export function PipelineConfig({
   const { chunks, isProcessing, cancelRequested, resetCompletedChunks } = useChunksStore();
   const ollamaStatus = useUiStore((s) => s.ollamaStatus);
   const ollamaModels = useUiStore((s) => s.ollamaModels);
-  const providerModels = useUiStore((s) => s.providerModels);
-  const enabledProviderModels = useUiStore((s) => s.enabledProviderModels);
   const { statuses: keyStatuses, isLoading: keyStatusLoading } = useProviderKeyStatus();
   const { t } = useTranslation();
   const judgeModels = useJudgeModelOptions(config.judgeProvider);
@@ -569,11 +556,7 @@ export function PipelineConfig({
   const judgeOllamaOffline =
     config.judgeProvider === 'ollama' && ollamaStatus === 'disconnected';
 
-  const judgeResolvedReasoning = getResolvedModelReasoning(
-    config.judgeProvider,
-    config.judgeModel,
-    providerModels[config.judgeProvider],
-  );
+  const judgeResolvedReasoning = getResolvedModelReasoning(config.judgeProvider, config.judgeModel);
   const currentJudgeReasoningEffort: ReasoningEffortLevel = (() => {
     const judgeDefaultEffort: ReasoningEffortLevel = judgeResolvedReasoning === 'optional' ? 'none' : 'medium';
     if (config.judgeProvider === 'openai') return config.reviewProviderOptions?.openai?.reasoningEffort ?? judgeDefaultEffort;
@@ -709,13 +692,7 @@ export function PipelineConfig({
   };
 
   const handleJudgeProviderChange = (newProvider: ModelProvider) => {
-    const models = getSelectableModelIds(newProvider, {
-      enabledModelIds: enabledProviderModels[newProvider],
-      availableModelIds:
-        newProvider === 'ollama'
-          ? useUiStore.getState().ollamaModels
-          : providerModels[newProvider]?.map((model) => model.id) ?? getKnownModelIds(newProvider),
-    });
+    const models = getSelectableModelIds(newProvider, useUiStore.getState().ollamaModels);
     setConfig((prev) => ({
       ...prev,
       judgeProvider: newProvider,
@@ -1193,16 +1170,7 @@ export function PipelineConfig({
 
             {/* Stage cards — one per stage in the current mode */}
             {config.stages.map((stage) => {
-              const stageModelOptions = getSelectableModelIds(stage.provider, {
-                enabledModelIds: enabledProviderModels[stage.provider],
-                availableModelIds:
-                  stage.provider === 'ollama'
-                    ? ollamaModels
-                    : providerModels[stage.provider]
-                        ?.map((model) => model.id)
-                        .filter((id) => isShowableModel(stage.provider, id))
-                      ?? getKnownModelIds(stage.provider),
-              });
+              const stageModelOptions = getSelectableModelIds(stage.provider, ollamaModels);
               return (
                 <div key={stage.id} className="space-y-3">
                   <div className="flex items-center gap-2">
@@ -1256,7 +1224,7 @@ export function PipelineConfig({
                 aria-label={t('models.provider')}
               >
                 {MODEL_PROVIDER_ORDER.map((p) => (
-                  <option key={p} value={p}>{p}</option>
+                  <option key={p} value={p} disabled={p !== 'ollama' && keyStatuses[p] === false}>{p}</option>
                 ))}
               </select>
               {judgeModels.length > 0 ? (

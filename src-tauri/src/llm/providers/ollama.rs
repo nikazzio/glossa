@@ -14,7 +14,7 @@ use crate::llm::stream::{
     HTTP_CONNECT_TIMEOUT_SECS, OLLAMA_HTTP_CLIENT, OLLAMA_HTTP_REQUEST_TIMEOUT_SECS,
     OLLAMA_STREAMING_HTTP_CLIENT,
 };
-use crate::llm::types::{DiscoveredModel, OllamaConfig, OllamaPreflightStatus};
+use crate::llm::types::{OllamaConfig, OllamaPreflightStatus};
 
 const OLLAMA_BASE_URL: &str = "http://localhost:11434";
 const OLLAMA_PREFLIGHT_CACHE_TTL_SECS: u64 = 5;
@@ -223,24 +223,6 @@ impl LlmProvider for OllamaProvider {
         .await
     }
 
-    async fn discover_models(
-        &self,
-        _client: &Client,
-        _api_key: &str,
-    ) -> Result<Vec<DiscoveredModel>, String> {
-        let models = fetch_ollama_models(&self.base_url).await?;
-        Ok(models
-            .into_iter()
-            .map(|id| DiscoveredModel {
-                id,
-                display_name: None,
-                status: None,
-                reasoning: None,
-                context_window: None,
-                max_output_tokens: None,
-            })
-            .collect())
-    }
 }
 
 // ── Ollama config helpers ─────────────────────────────────────────────

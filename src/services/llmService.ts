@@ -2,7 +2,6 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import i18n from 'i18next';
 import type {
-  DiscoveredProviderModel,
   PipelineConfig,
   PipelineStageConfig,
   JudgeResult,
@@ -416,12 +415,5 @@ export const settingsService = {
 
   async isKeyConfigured(provider: string): Promise<boolean> {
     return invoke<boolean>('get_api_key_status', { provider });
-  },
-
-  async discoverProviderModels(provider: string): Promise<DiscoveredProviderModel[]> {
-    return invoke<DiscoveredProviderModel[]>('discover_provider_models', {
-      provider,
-      ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl,
-    });
   },
 };

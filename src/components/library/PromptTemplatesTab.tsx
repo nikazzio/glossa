@@ -8,7 +8,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import type { ModelProvider } from '../../types';
 import { llmService } from '../../services/llmService';
-import { getKnownModelIds, getSelectableModelIds, MODEL_PROVIDER_ORDER } from '../../models/catalog';
+import { getSelectableModelIds, MODEL_PROVIDER_ORDER } from '../../models/catalog';
 import { canRefineWithProvider, formatProviderModelLabel, useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
 
 const FILTER_OPTIONS = ['all', 'stage', 'audit', 'persona'] as const;
@@ -17,7 +17,7 @@ type FilterValue = (typeof FILTER_OPTIONS)[number];
 export function PromptTemplatesTab() {
   const { t } = useTranslation();
   const { templates, isLoaded, loadTemplates, saveTemplate, deleteTemplate } = usePromptTemplateStore();
-  const { ollamaModels, providerModels, enabledProviderModels } = useUiStore();
+  const ollamaModels = useUiStore((s) => s.ollamaModels);
   const { config } = usePipelineStore();
   const [newName, setNewName] = useState('');
   const [newPrompt, setNewPrompt] = useState('');
@@ -26,14 +26,7 @@ export function PromptTemplatesTab() {
   const [filterContext, setFilterContext] = useState<FilterValue>('all');
   const [isRefining, setIsRefining] = useState(false);
   const { statuses: keyStatuses } = useProviderKeyStatus();
-  const getProviderModels = (provider: ModelProvider) =>
-    getSelectableModelIds(provider, {
-      enabledModelIds: enabledProviderModels[provider],
-      availableModelIds:
-        provider === 'ollama'
-          ? ollamaModels
-          : providerModels[provider]?.map((model) => model.id) ?? getKnownModelIds(provider),
-    });
+  const getProviderModels = (provider: ModelProvider) => getSelectableModelIds(provider, ollamaModels);
 
   const firstActiveStage = config.stages.find((s) => s.enabled);
   const stageDefaultProvider: ModelProvider = (firstActiveStage?.provider as ModelProvider) ?? 'gemini';

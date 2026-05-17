@@ -16,7 +16,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { ModelProvider, OllamaStatus, PipelineStageConfig, PromptTemplate } from '../../types';
-import { getKnownModelIds, getModelStatus, getResolvedModelReasoning, getSelectableModelIds, MODEL_PROVIDER_ORDER } from '../../models/catalog';
+import { getKnownModelIds, getModelStatus, getResolvedModelReasoning, MODEL_PROVIDER_ORDER } from '../../models/catalog';
 import type { ReasoningEffortLevel } from '../../types';
 import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
 import { ReasoningPicker } from '../models/ReasoningPicker';
@@ -64,8 +64,7 @@ export function StageCard({
   deleteTemplate,
 }: StageCardProps) {
   const { t } = useTranslation();
-  const providerModels = useUiStore((s) => s.providerModels);
-  const enabledProviderModels = useUiStore((s) => s.enabledProviderModels);
+  const ollamaModels = useUiStore((s) => s.ollamaModels);
   const [isEditingPrompt, setIsEditingPrompt] = useState(false);
   const [showSaveName, setShowSaveName] = useState(false);
   const [templateName, setTemplateName] = useState('');
@@ -77,11 +76,7 @@ export function StageCard({
   const refineLabel = formatProviderModelLabel(stage.provider, stage.model);
   const ollamaOffline = stage.provider === 'ollama' && ollamaStatus === 'disconnected';
 
-  const resolvedReasoning = getResolvedModelReasoning(
-    stage.provider,
-    stage.model,
-    providerModels[stage.provider],
-  );
+  const resolvedReasoning = getResolvedModelReasoning(stage.provider, stage.model);
   const defaultEffort: ReasoningEffortLevel = resolvedReasoning === 'optional' ? 'none' : 'medium';
   const currentReasoningEffort: ReasoningEffortLevel = (() => {
     if (stage.provider === 'openai') return stage.providerOptions?.openai?.reasoningEffort ?? defaultEffort;
@@ -112,13 +107,7 @@ export function StageCard({
   );
 
   const handleProviderChange = (newProvider: ModelProvider) => {
-    const models = getSelectableModelIds(newProvider, {
-      enabledModelIds: enabledProviderModels[newProvider],
-      availableModelIds:
-        newProvider === 'ollama'
-          ? modelOptions
-          : providerModels[newProvider]?.map((model) => model.id) ?? getKnownModelIds(newProvider),
-    });
+    const models = newProvider === 'ollama' ? ollamaModels : getKnownModelIds(newProvider);
     onUpdate({ provider: newProvider, model: models[0] || '' });
   };
 
@@ -174,7 +163,7 @@ export function StageCard({
             aria-label={t('models.provider')}
           >
             {MODEL_PROVIDER_ORDER.map((p) => (
-              <option key={p} value={p}>{p}</option>
+              <option key={p} value={p} disabled={p !== 'ollama' && keyStatuses[p] === false}>{p}</option>
             ))}
           </select>
           {modelOptions.length > 0 ? (

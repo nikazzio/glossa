@@ -335,15 +335,8 @@
     "keyDeleted": "Chiave {{provider}} rimossa dal portachiavi",
     "keyDeleteFailed": "Rimozione chiave {{provider}} fallita",
     "keySavedFallback": "Chiave {{provider}} salvata nel fallback locale cifrato. È meno sicuro del portachiavi OS.",
-    "enabledModelsHint": "Scegli quali modelli di questo provider devono comparire nell'app.",
-    "refreshModels": "Aggiorna",
-    "configureKeyToDiscover": "Salva una API key per questo provider per leggere i modelli attualmente disponibili sul tuo account.",
-    "modelsRefreshed": "Modelli {{provider}} aggiornati ({{count}} disponibili)",
-    "modelsRefreshFailed": "Aggiornamento modelli {{provider}} fallito",
-    "contextWindowBadge": "{{count}} ctx",
-    "noKnownModels": "Non ci sono ancora modelli registrati internamente per questo provider.",
-    "noEnabledModelsWarning": "Nessun modello è abilitato per questo provider. Sparirà dai selettori degli stage finché non ne riabiliti almeno uno.",
-    "modelTypesLegend": "Tipi"
+    "configureKeyToUse": "Aggiungi una API key per abilitare i modelli di questo provider nella pipeline.",
+    "contextWindowBadge": "{{count}} ctx"
   },
   "ollama": {
     "title": "Ollama (Modelli Locali)",
