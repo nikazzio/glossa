@@ -215,8 +215,14 @@ impl OpenAiCompatibleProvider {
         let json: Value =
             serde_json::from_str(&text).map_err(|e| format!("Failed to parse response: {e}"))?;
 
-        let content = json["output"][0]["content"][0]["text"]
-            .as_str()
+        let content = json["output"]
+            .as_array()
+            .and_then(|items| {
+                items
+                    .iter()
+                    .find(|item| item["type"].as_str() == Some("message"))
+            })
+            .and_then(|msg| msg["content"][0]["text"].as_str())
             .map(String::from)
             .ok_or_else(|| "No text in Responses API output".to_string())?;
 

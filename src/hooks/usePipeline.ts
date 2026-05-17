@@ -177,7 +177,7 @@ export function usePipeline() {
     options: { batchMode?: BatchRunMode },
   ): Promise<ChunkOutcome> => {
     if (useChunksStore.getState().cancelRequested) return 'cancelled';
-    if (options.batchMode === 'resume' && chunk.status === 'completed') return 'skipped';
+    if (options.batchMode === 'resume' && chunk.status === 'completed' && !chunk.translationStale) return 'skipped';
     if (options.batchMode === 'rerun-unlocked' && chunk.translationLocked) return 'skipped';
 
     // Reset only this chunk so we don't carry over a previous run's
@@ -469,13 +469,16 @@ export function usePipeline() {
     } finally {
       setIsProcessing(false);
       useChunksStore.getState().clearCancelRequest();
+      const finalStatus = cancelled || errorCount > 0 ? 'interrupted' : 'completed';
       usePipelineStore.getState().setActivePipelineMeta({
         pipelineId: pipelineState.activePipelineId,
-        runStatus: cancelled || errorCount > 0 ? 'interrupted' : 'completed',
+        runStatus: finalStatus,
         lastRunConfig: buildPipelineFingerprint(config),
       });
+      if (finalStatus === 'interrupted') {
+        useProjectStore.getState().setRunInterrupted(true);
+      }
       if (projectId) {
-        const finalStatus = cancelled || errorCount > 0 ? 'interrupted' : 'completed';
         void setPipelineRunState(projectId, finalStatus).catch(() => {});
       }
     }

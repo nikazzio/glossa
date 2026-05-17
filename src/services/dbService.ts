@@ -61,6 +61,7 @@ const ALLOWED_MIGRATIONS = new Set([
   'operation_logs.phase',
   'operation_logs.duration_ms',
   'operation_logs.detail_kind',
+  'pipeline_configs.pipeline_mode',
 ]);
 
 export async function ensureColumn(table: string, column: string, definition: string): Promise<void> {
@@ -277,6 +278,7 @@ export async function initDatabase(): Promise<void> {
   await ensureColumn('pipeline_configs', 'run_in_progress', 'INTEGER DEFAULT 0');
   await ensureColumn('pipeline_configs', 'run_status', "TEXT DEFAULT 'idle'");
   await ensureColumn('pipeline_configs', 'last_run_config', 'TEXT DEFAULT NULL');
+  await ensureColumn('pipeline_configs', 'pipeline_mode', "TEXT DEFAULT 'standard'");
   // Migrate unique index from (name) to (name, context) so stage/audit can share names
   await conn.execute('DROP INDEX IF EXISTS idx_prompt_templates_name');
   await conn.execute(`

@@ -36,6 +36,7 @@ interface ProjectState {
   removeProject: (id: string) => Promise<void>;
   saveCurrentProject: (name?: string) => Promise<void>;
   closeProject: () => void;
+  setRunInterrupted: (value: boolean) => void;
   clearResumeState: () => void;
 }
 
@@ -96,6 +97,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         ...state.config,
         sourceLanguage: config.sourceLanguage,
         targetLanguage: config.targetLanguage,
+        mode: config.mode,
         stages: config.stages.length > 0 ? config.stages : state.config.stages,
         judgePrompt: config.judgePrompt || state.config.judgePrompt,
         judgeModel: config.judgeModel || state.config.judgeModel,
@@ -162,6 +164,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     });
   },
 
+  setRunInterrupted: (value) => set({ runInterrupted: value }),
   clearResumeState: () => set({ runInterrupted: false, lastRunConfig: null }),
 
   saveCurrentProject: async (name?: string) => {
