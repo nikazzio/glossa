@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, ScanLine, ShieldCheck, RefreshCcw, AlertTriangle } from 'lucide-react';
+import { ChevronDown, ChevronRight, Crosshair, ScanLine, ShieldCheck, RefreshCcw, AlertTriangle } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useChunksStore } from '../../stores/chunksStore';
@@ -241,17 +241,21 @@ function ChunkAuditCard({
                     >
                       {issue.type}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setViewMode('document');
-                        setSelectedChunkId(chunk.id);
-                        focusIssueInChunk(chunk.id, extractIssueFocusQuery(issue));
-                      }}
-                      className="rounded-full border border-editorial-border px-2 py-1 text-[9px] font-bold uppercase tracking-[0.18em] text-editorial-muted transition-colors hover:text-editorial-ink"
-                    >
-                      {t('audit.openChunk')}
-                    </button>
+                    {issue.phrase ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setViewMode('document');
+                          setSelectedChunkId(chunk.id);
+                          focusIssueInChunk(chunk.id, issue.phrase);
+                        }}
+                        title={t('audit.locateInTextTooltip')}
+                        className="flex items-center gap-1 rounded-full border border-editorial-border px-2 py-1 text-[9px] font-bold uppercase tracking-[0.18em] text-editorial-muted transition-colors hover:text-editorial-ink"
+                      >
+                        <Crosshair size={10} />
+                        {t('audit.locateInText')}
+                      </button>
+                    ) : null}
                   </div>
                   <p className="text-sm leading-relaxed text-editorial-ink">
                     {issue.description}
@@ -269,15 +273,4 @@ function ChunkAuditCard({
       )}
     </div>
   );
-}
-
-function extractIssueFocusQuery(issue: TranslationChunk['judgeResult']['issues'][number]): string | null {
-  const candidates = [
-    ...Array.from(issue.description.matchAll(/"([^"]{3,})"/g)).map((match) => match[1]),
-    ...Array.from(issue.suggestedFix?.matchAll(/"([^"]{3,})"/g) ?? []).map((match) => match[1]),
-  ]
-    .map((value) => value.trim())
-    .filter(Boolean);
-
-  return candidates.sort((a, b) => b.length - a.length)[0] ?? null;
 }

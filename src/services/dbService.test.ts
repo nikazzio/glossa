@@ -134,6 +134,9 @@ describe('initDatabase migrations', () => {
       expect.stringContaining('ALTER TABLE pipeline_configs ADD COLUMN review_provider_options TEXT DEFAULT NULL'),
     );
     expect(dbState.db.execute).toHaveBeenCalledWith(
+      expect.stringContaining("ALTER TABLE pipeline_configs ADD COLUMN run_status TEXT DEFAULT 'idle'"),
+    );
+    expect(dbState.db.execute).toHaveBeenCalledWith(
       expect.stringContaining('DELETE FROM pipeline_configs'),
     );
     expect(dbState.db.execute).toHaveBeenCalledWith(
@@ -153,6 +156,9 @@ describe('initDatabase migrations', () => {
     );
     expect(dbState.db.execute).toHaveBeenCalledWith(
       expect.stringContaining('ALTER TABLE translations ADD COLUMN position INTEGER DEFAULT NULL'),
+    );
+    expect(dbState.db.execute).toHaveBeenCalledWith(
+      expect.stringContaining('ALTER TABLE translations ADD COLUMN blob_reference_chunk_ids TEXT DEFAULT NULL'),
     );
   });
 

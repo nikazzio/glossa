@@ -15,6 +15,8 @@ export type OperationLogScope =
   | 'audit'
   | 'coherence'
   | 'chunk';
+export type OperationLogPhase = 'start' | 'end' | 'retry' | 'cache';
+export type OperationLogDetailKind = 'prompt' | 'json' | 'error' | 'note';
 
 export interface OperationLogEntry {
   id: string;
@@ -26,6 +28,9 @@ export interface OperationLogEntry {
   stageId?: string;
   meta?: Record<string, unknown>;
   detail?: string;
+  phase?: OperationLogPhase;
+  durationMs?: number;
+  detailKind?: OperationLogDetailKind;
 }
 
 interface OperationLogState {
@@ -37,7 +42,7 @@ interface OperationLogState {
   clear: () => void;
 }
 
-const MAX_ENTRIES = 400;
+const MAX_ENTRIES = 2000;
 
 export const useOperationLogStore = create<OperationLogState>((set, get) => ({
   entries: [],

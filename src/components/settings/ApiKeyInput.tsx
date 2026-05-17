@@ -7,9 +7,10 @@ import { settingsService } from '../../services/llmService';
 interface ApiKeyInputProps {
   label: string;
   provider: string;
+  onKeyChange?: () => void;
 }
 
-export function ApiKeyInput({ label, provider }: ApiKeyInputProps) {
+export function ApiKeyInput({ label, provider, onKeyChange }: ApiKeyInputProps) {
   const [isConfigured, setIsConfigured] = useState(false);
   const [keyValue, setKeyValue] = useState('');
   const [saving, setSaving] = useState(false);
@@ -30,6 +31,7 @@ export function ApiKeyInput({ label, provider }: ApiKeyInputProps) {
       setIsConfigured(true);
       setKeyValue('');
       setEditing(false);
+      onKeyChange?.();
       if (storage === 'file') {
         toast.warning(t('settings.keySavedFallback', { provider: label }));
       } else {
@@ -48,6 +50,7 @@ export function ApiKeyInput({ label, provider }: ApiKeyInputProps) {
     try {
       await settingsService.deleteApiKey(provider);
       setIsConfigured(false);
+      onKeyChange?.();
       toast.success(t('settings.keyDeleted', { provider: label }));
     } catch (err: any) {
       toast.error(t('settings.keyDeleteFailed', { provider: label }), {

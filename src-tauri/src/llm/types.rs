@@ -1,5 +1,34 @@
 use serde::{Deserialize, Serialize};
 
+/// A single section of a system prompt. `cacheable: true` tells the provider
+/// to insert a cache breakpoint after this block (Anthropic `cache_control`).
+/// Providers that don't support structured caching flatten all blocks to a string.
+#[derive(Debug, Clone)]
+pub struct PromptBlock {
+    pub text: String,
+    pub cacheable: bool,
+}
+
+/// Structured prompt ready for dispatch. System blocks are ordered; the last
+/// cacheable block marks the furthest stable cache boundary for the call.
+#[derive(Debug, Clone)]
+pub struct StructuredPrompt {
+    pub system: Vec<PromptBlock>,
+    pub user: String,
+}
+
+impl StructuredPrompt {
+    /// Flatten all system blocks into a single string for providers that don't
+    /// support structured caching.
+    pub fn flatten_system(&self) -> String {
+        self.system
+            .iter()
+            .map(|b| b.text.as_str())
+            .collect::<Vec<_>>()
+            .join("\n\n")
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GlossaryEntry {
@@ -24,8 +53,27 @@ pub struct OllamaConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct OpenAiCacheConfig {
+    pub prompt_cache_key: Option<String>,
+    pub prompt_cache_retention: Option<String>,
+    pub reasoning_effort: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GeminiCacheConfig {
+    pub explicit_caching: Option<bool>,
+    pub cache_ttl_seconds: Option<u32>,
+    pub thinking_budget: Option<i32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProviderRuntimeConfig {
     pub ollama: Option<OllamaConfig>,
+    pub openai: Option<OpenAiCacheConfig>,
+    pub deepseek: Option<OpenAiCacheConfig>,
+    pub gemini: Option<GeminiCacheConfig>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -33,6 +81,8 @@ pub struct ProviderRuntimeConfig {
 pub struct StageConfig {
     pub id: String,
     pub name: String,
+    #[serde(default)]
+    pub role: Option<String>,
     pub prompt: String,
     pub model: String,
     pub provider: String,
@@ -40,7 +90,7 @@ pub struct StageConfig {
     pub provider_options: Option<ProviderRuntimeConfig>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PipelineConfig {
     pub source_language: String,
@@ -58,6 +108,12 @@ pub struct PipelineConfig {
     pub ui_language: Option<String>,
     pub custom_source_language: Option<String>,
     pub custom_target_language: Option<String>,
+    /// Original text of all chunks in the same blob, injected at call time for context.
+    /// Not persisted — computed from blob assignments before each LLM invocation.
+    pub blob_context: Option<String>,
+    /// Runtime-only id of the chunk currently being translated. Kept outside blob_context
+    /// so the cacheable reference block remains identical for every chunk in the same blob.
+    pub blob_current_chunk_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -86,6 +142,7 @@ pub struct PreflightCheckResult {
     pub reachable: Option<bool>,
 }
 
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OllamaPreflightStatus {
@@ -103,6 +160,8 @@ pub struct JudgeIssue {
     pub severity: String,
     pub description: String,
     pub suggested_fix: Option<String>,
+    /// Exact verbatim substring copied from the target translation that contains the issue.
+    pub phrase: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -116,6 +175,10 @@ pub struct JudgeResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub output_tokens: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub cached_input_tokens: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cache_miss_input_tokens: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub system_prompt: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub user_prompt: Option<String>,
@@ -126,8 +189,9 @@ pub struct JudgeResponse {
 pub struct CoherenceChunkInput {
     pub original: String,
     pub translation: String,
-    pub prev_context: Option<String>,
-    pub next_context: Option<String>,
+    /// Translated text of all chunks in the same blob, for cross-segment consistency checks.
+    pub blob_context: Option<String>,
+    pub current_chunk_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -138,6 +202,10 @@ pub struct CoherenceResponse {
     pub input_tokens: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub output_tokens: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cached_input_tokens: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cache_miss_input_tokens: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub system_prompt: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]

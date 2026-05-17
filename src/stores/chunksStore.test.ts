@@ -74,7 +74,7 @@ describe('chunksStore', () => {
     expect(useUiStore.getState().selectedChunkId).toBe(useChunksStore.getState().chunks[0].id);
   });
 
-  it('resets derived data when editing source text', () => {
+  it('marks existing translation stale when editing source text', () => {
     usePipelineStore.getState().setInputText('Original');
     useChunksStore.getState().generateChunks();
     useChunksStore.getState().setChunks((prev) =>
@@ -82,6 +82,8 @@ describe('chunksStore', () => {
         ...chunk,
         status: 'completed',
         currentDraft: 'Translated',
+        translationDisplayText: 'Translated',
+        translationProcessingText: 'Translated',
         stageResults: {
           'stg-1': { content: 'Translated', status: 'completed' },
         },
@@ -93,41 +95,44 @@ describe('chunksStore', () => {
 
     const chunk = useChunksStore.getState().chunks[0];
     expect(chunk.originalText).toBe('Edited source');
-    expect(chunk.status).toBe('ready');
-    expect(chunk.currentDraft).toBe('');
-    expect(chunk.stageResults).toEqual({});
+    expect(chunk.status).toBe('completed');
+    expect(chunk.currentDraft).toBe('Translated');
+    expect(chunk.stageResults).toEqual({
+      'stg-1': { content: 'Translated', status: 'completed' },
+    });
+    expect(chunk.translationStale).toBe(true);
   });
 
-  it('splits and merges editable chunks while preserving selection', () => {
-    usePipelineStore.getState().setInputText('First sentence. Second sentence.');
-    usePipelineStore.getState().setConfig((prev) => ({ ...prev, useChunking: false }));
+  it('toggles source editing for completed chunks without discarding translation', () => {
+    usePipelineStore.getState().setInputText('Original');
     useChunksStore.getState().generateChunks();
-
-    useChunksStore.getState().splitChunk(useChunksStore.getState().chunks[0].id);
-    expect(useChunksStore.getState().chunks).toHaveLength(2);
-
-    const firstChunkId = useChunksStore.getState().chunks[0].id;
-    expect(useUiStore.getState().selectedChunkId).toBe(firstChunkId);
-
-    useChunksStore.getState().mergeChunkWithNext(firstChunkId);
-    expect(useChunksStore.getState().chunks).toHaveLength(1);
-    expect(useUiStore.getState().selectedChunkId).toBe(
-      useChunksStore.getState().chunks[0].id,
+    useChunksStore.getState().setChunks((prev) =>
+      prev.map((chunk) => ({
+        ...chunk,
+        status: 'completed',
+        currentDraft: 'Translated',
+        translationDisplayText: 'Translated',
+        translationProcessingText: 'Translated',
+        stageResults: {
+          'stg-1': { content: 'Translated', status: 'completed' },
+        },
+      })),
     );
-  });
 
-  it('splits a chunk at an explicit index chosen by the user', () => {
-    useChunksStore.getState().loadDocument('Alpha beta gamma delta', {
-      useChunking: false,
-      targetChunkCount: 0,
+    const chunkId = useChunksStore.getState().chunks[0].id;
+
+    useChunksStore.getState().toggleChunkSourceEditing(chunkId);
+    let chunk = useChunksStore.getState().chunks[0];
+    expect(chunk.sourceEditable).toBe(true);
+    expect(chunk.currentDraft).toBe('Translated');
+    expect(chunk.stageResults).toEqual({
+      'stg-1': { content: 'Translated', status: 'completed' },
     });
 
-    const didSplit = useChunksStore.getState().splitChunkAt(useChunksStore.getState().chunks[0].id, 11);
-
-    expect(didSplit).toBe(true);
-    expect(useChunksStore.getState().chunks).toHaveLength(2);
-    expect(useChunksStore.getState().chunks[0].originalText).toBe('Alpha beta');
-    expect(useChunksStore.getState().chunks[1].originalText).toBe('gamma delta');
+    useChunksStore.getState().toggleChunkSourceEditing(chunkId);
+    chunk = useChunksStore.getState().chunks[0];
+    expect(chunk.sourceEditable).toBe(false);
+    expect(chunk.currentDraft).toBe('Translated');
   });
 
   it('clears chunks and returns to sandbox mode', () => {
@@ -139,6 +144,31 @@ describe('chunksStore', () => {
     expect(useChunksStore.getState().chunks).toEqual([]);
     expect(useUiStore.getState().viewMode).toBe('sandbox');
     expect(useUiStore.getState().selectedChunkId).toBeNull();
+  });
+
+  it('clears stale blob assignments when a chunk is missing from recomputation results', () => {
+    useChunksStore.getState().loadDocument('Alpha.\n\nBeta.', {
+      useChunking: true,
+      targetChunkCount: 2,
+    });
+
+    const [first, second] = useChunksStore.getState().chunks;
+    expect(first).toBeDefined();
+    expect(second).toBeDefined();
+
+    useChunksStore.getState().setBlobAssignments([
+      { chunkId: first!.id, blobId: 'blob-old', position: 0, referenceChunkIds: [first!.id, second!.id] },
+      { chunkId: second!.id, blobId: 'blob-old', position: 1, referenceChunkIds: [first!.id, second!.id] },
+    ]);
+    useChunksStore.getState().setBlobAssignments([
+      { chunkId: first!.id, blobId: 'blob-new', position: 0, referenceChunkIds: [first!.id] },
+    ]);
+
+    const [updatedFirst, updatedSecond] = useChunksStore.getState().chunks;
+    expect(updatedFirst?.blobId).toBe('blob-new');
+    expect(updatedSecond?.blobId).toBeUndefined();
+    expect(updatedSecond?.blobOrder).toBeUndefined();
+    expect(updatedSecond?.blobReferenceChunkIds).toBeUndefined();
   });
 
   it('loadDocument with markdown footnotes separates processingText from displayText', () => {
@@ -179,47 +209,6 @@ describe('chunksStore', () => {
     expect(afterDisplayTexts).toEqual(originalDisplayTexts);
   });
 
-  it('split preserves sourceDisplayText and sourceProcessingText on both halves', () => {
-    useChunksStore.getState().loadDocument('Alpha beta gamma delta epsilon.', {
-      useChunking: false,
-    });
-
-    const chunkId = useChunksStore.getState().chunks[0].id;
-    useChunksStore.getState().splitChunkAt(chunkId, 11);
-
-    const [first, second] = useChunksStore.getState().chunks;
-    expect(first?.sourceDisplayText).toBeTruthy();
-    expect(second?.sourceDisplayText).toBeTruthy();
-    // Legacy field must stay in sync
-    expect(first?.originalText).toBe(first?.sourceDisplayText);
-    expect(second?.originalText).toBe(second?.sourceDisplayText);
-    // After split, chunks have no pending translation
-    expect(first?.translationDisplayText).toBe('');
-    expect(second?.translationDisplayText).toBe('');
-    expect(first?.currentDraft).toBe('');
-    expect(second?.currentDraft).toBe('');
-  });
-
-  it('merge preserves combined sourceDisplayText on the resulting chunk', () => {
-    useChunksStore.getState().loadDocument('Alpha.\n\nBeta.', {
-      useChunking: true,
-      targetChunkCount: 2,
-    });
-
-    const [first] = useChunksStore.getState().chunks;
-    useChunksStore.getState().mergeChunkWithNext(first!.id);
-
-    const merged = useChunksStore.getState().chunks[0];
-    expect(merged?.sourceDisplayText).toContain('Alpha.');
-    expect(merged?.sourceDisplayText).toContain('Beta.');
-    // Legacy field must stay in sync
-    expect(merged?.originalText).toBe(merged?.sourceDisplayText);
-    // Merged chunk starts fresh with no translation
-    expect(merged?.translationDisplayText).toBe('');
-    expect(merged?.currentDraft).toBe('');
-    expect(merged?.status).toBe('ready');
-  });
-
   it('updateChunkOriginalText updates sourceDisplayText and sourceProcessingText', () => {
     usePipelineStore.getState().setInputText('Original text');
     useChunksStore.getState().generateChunks();
@@ -231,6 +220,18 @@ describe('chunksStore', () => {
     expect(chunk?.sourceDisplayText).toBe('Edited text');
     expect(chunk?.sourceProcessingText).toBe('Edited text');
     expect(chunk?.originalText).toBe('Edited text');
+  });
+
+  it('updateChunkOriginalText is a no-op when the source text is unchanged', () => {
+    usePipelineStore.getState().setInputText('Original text');
+    useChunksStore.getState().generateChunks();
+
+    const before = useChunksStore.getState().chunks;
+    const chunkId = before[0].id;
+
+    useChunksStore.getState().updateChunkOriginalText(chunkId, 'Original text');
+
+    expect(useChunksStore.getState().chunks).toBe(before);
   });
 
   describe('O(1) index — per-id updates only touch the target chunk', () => {
@@ -287,38 +288,6 @@ describe('chunksStore', () => {
       expect(after[targetIdx + 1]).toBe(beforeNext);
     });
 
-    it('index remains consistent after split', () => {
-      useChunksStore.getState().loadDocument('Alpha beta gamma delta', { useChunking: false });
-
-      useChunksStore.getState().splitChunkAt(useChunksStore.getState().chunks[0]!.id, 11);
-      expect(useChunksStore.getState().chunks).toHaveLength(2);
-
-      const [first, second] = useChunksStore.getState().chunks;
-      const beforeSecond = second;
-
-      useChunksStore.getState().updateChunkStatus(first!.id, 'processing');
-
-      const after = useChunksStore.getState().chunks;
-      expect(after[0]!.status).toBe('processing');
-      expect(after[1]).toBe(beforeSecond);
-    });
-
-    it('index remains consistent after merge', () => {
-      useChunksStore.getState().loadDocument('Alpha.\n\nBeta.\n\nGamma.', { useChunking: true, targetChunkCount: 3 });
-      expect(useChunksStore.getState().chunks).toHaveLength(3);
-
-      const [first, , third] = useChunksStore.getState().chunks;
-      const beforeThird = third;
-
-      useChunksStore.getState().mergeChunkWithNext(first!.id);
-      expect(useChunksStore.getState().chunks).toHaveLength(2);
-
-      const afterChunks = useChunksStore.getState().chunks;
-      useChunksStore.getState().updateChunkStatus(afterChunks[0]!.id, 'processing');
-
-      expect(useChunksStore.getState().chunks[0]!.status).toBe('processing');
-      expect(useChunksStore.getState().chunks[1]).toBe(beforeThird);
-    });
   });
 
   describe('RAF token batching — appendChunkStageContent', () => {

@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react';
-import { X, AlertCircle, Server, RefreshCw, CheckCircle2, XCircle, HelpCircle, Sparkles, Columns2, BookOpen, ChevronDown, ChevronUp } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AlertCircle, Server, RefreshCw, CheckCircle2, XCircle, HelpCircle, Sparkles, Columns2, BookOpen, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -7,9 +7,63 @@ import { useUiStore } from '../../stores/uiStore';
 import { ApiKeyInput } from './ApiKeyInput';
 import { ollamaService } from '../../services/llmService';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
-import { MODEL_CATALOG } from '../../models/catalog';
+import { getKnownModelIds, getModelEntry, MODEL_CATALOG, MODEL_PROVIDER_ORDER } from '../../models/catalog';
 import { MODEL_PRICING } from '../../constants';
 import { usePricingStore } from '../../stores/pricingStore';
+import { EditorialModalShell, ProviderLogo } from '../common';
+import type { ModelProvider } from '../../types';
+import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
+import { useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
+
+const PROVIDER_LABELS: Record<ModelProvider, string> = {
+  gemini: 'Gemini',
+  openai: 'OpenAI',
+  anthropic: 'Anthropic',
+  deepseek: 'DeepSeek',
+  ollama: 'Ollama',
+};
+
+
+
+function getModelGroupLabel(provider: ModelProvider, modelId: string): string {
+  switch (provider) {
+    case 'openai':
+      if (modelId.startsWith('gpt-5.4')) return 'GPT-5.4';
+      if (modelId.startsWith('gpt-5')) return 'GPT-5';
+      if (modelId.startsWith('gpt-4.1')) return 'GPT-4.1';
+      if (modelId.startsWith('gpt-4o') || modelId.startsWith('chatgpt-4o')) return 'GPT-4o';
+      if (modelId.startsWith('gpt-4')) return 'GPT-4';
+      if (modelId.startsWith('gpt-3')) return 'GPT-3.5';
+      if (/^o\d/.test(modelId)) return 'o-series';
+      return 'Other';
+    case 'anthropic':
+      if (modelId.includes('-4-') || modelId.includes('-4.')) return 'Claude 4';
+      if (modelId.includes('3-5')) return 'Claude 3.5';
+      if (modelId.includes('-3-')) return 'Claude 3';
+      return 'Other';
+    case 'gemini':
+      if (modelId.startsWith('gemini-3.1')) return 'Gemini 3.1';
+      if (modelId.startsWith('gemini-3')) return 'Gemini 3';
+      if (modelId.startsWith('gemini-2.5')) return 'Gemini 2.5';
+      if (modelId.startsWith('gemini-2.0')) return 'Gemini 2.0';
+      return 'Gemini';
+    case 'deepseek':
+      if (modelId.startsWith('deepseek-v4')) return 'DeepSeek V4';
+      return 'DeepSeek';
+    default:
+      return '';
+  }
+}
+
+function groupModelIds(provider: ModelProvider, modelIds: string[]): Array<{ label: string; ids: string[] }> {
+  const map = new Map<string, string[]>();
+  for (const id of modelIds) {
+    const label = getModelGroupLabel(provider, id);
+    if (!map.has(label)) map.set(label, []);
+    map.get(label)!.push(id);
+  }
+  return [...map.entries()].map(([label, ids]) => ({ label, ids }));
+}
 
 export function SettingsModal() {
   const {
@@ -21,20 +75,25 @@ export function SettingsModal() {
     setOllamaStatus,
     documentLayout,
     setDocumentLayout,
-    defaultMinWords,
-    defaultMaxWords,
-    setDefaultMinWords,
-    setDefaultMaxWords,
+    chunkPresetShort,
+    chunkPresetMedium,
+    chunkPresetLong,
+    setChunkPresetShort,
+    setChunkPresetMedium,
+    setChunkPresetLong,
     ollamaBaseUrl,
     setOllamaBaseUrl,
   } = useUiStore();
   const { t } = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
   const [showPricingOverrides, setShowPricingOverrides] = useState(false);
+  const [showSecurityAdvisory, setShowSecurityAdvisory] = useState(false);
+  const [activeProviderTab, setActiveProviderTab] = useState<ModelProvider>('openai');
   const [urlDraft, setUrlDraft] = useState(ollamaBaseUrl);
   const [urlError, setUrlError] = useState<string | null>(null);
   const trapRef = useFocusTrap(showSettings, () => setShowSettings(false));
   const { overrides, setOverride, resetOverride, resetAll } = usePricingStore();
+  const { statuses: keyStatuses, refresh: refreshKeyStatuses } = useProviderKeyStatus();
 
   const refreshOllama = async () => {
     setRefreshing(true);
@@ -75,25 +134,27 @@ export function SettingsModal() {
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
-            className="relative flex flex-col bg-editorial-bg w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-[28px] border border-editorial-border shadow-[0_24px_80px_rgba(26,26,26,0.2)]"
+            className="relative w-full max-w-3xl"
           >
-            {/* ── Header ── */}
-            <div className="shrink-0 border-b border-editorial-border px-8 pb-5 pt-6 flex items-center justify-between gap-4">
-              <h2 id="settings-title" className="font-display text-2xl italic tracking-tight text-editorial-ink">
-                {t('settings.title')}
-              </h2>
-              <button
-                onClick={() => setShowSettings(false)}
-                title={t('settings.close')}
-                className="text-editorial-muted hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                aria-label={t('settings.close')}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* ── Scrollable body ── */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar px-8 py-8">
+            <EditorialModalShell
+              titleId="settings-title"
+              title={t('settings.title')}
+              closeLabel={t('settings.close')}
+              onClose={() => setShowSettings(false)}
+              widthClassName="max-w-3xl"
+              bodyClassName="px-6 py-6 md:px-8"
+              footer={
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setShowSettings(false)}
+                    className="rounded-full border border-editorial-border px-5 py-3 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  >
+                    {t('common.close')}
+                  </button>
+                </div>
+              }
+            >
             <div className="space-y-12">
               {/* Segmentation defaults */}
               <div className="space-y-4">
@@ -103,37 +164,55 @@ export function SettingsModal() {
                 <p className="text-xs text-editorial-muted leading-relaxed">
                   {t('settings.segmentationHint')}
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                   <div className="space-y-1.5">
                     <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted">
-                      {t('settings.defaultMinWords')}
+                      {t('settings.chunkPresetShort')}
                     </label>
                     <input
                       type="number"
-                      min={0}
+                      min={50}
+                      max={chunkPresetMedium - 50}
                       step={50}
-                      value={defaultMinWords}
-                      onChange={(e) => setDefaultMinWords(Number(e.target.value) || 0)}
-                      className="w-full rounded-2xl border border-editorial-border bg-editorial-bg px-4 py-3 text-sm font-mono outline-none focus:border-editorial-ink/40"
+                      value={chunkPresetShort}
+                      onChange={(e) => setChunkPresetShort(Number(e.target.value) || 50)}
+                      className="w-full rounded-[18px] border border-editorial-border bg-editorial-bg px-4 py-3 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                     />
                     <p className="text-[10px] leading-relaxed text-editorial-muted">
-                      {t('settings.defaultMinWordsHint')}
+                      {t('settings.chunkPresetShortHint')}
                     </p>
                   </div>
                   <div className="space-y-1.5">
                     <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted">
-                      {t('settings.defaultMaxWords')}
+                      {t('settings.chunkPresetMedium')}
                     </label>
                     <input
                       type="number"
-                      min={0}
+                      min={chunkPresetShort + 50}
+                      max={chunkPresetLong - 50}
                       step={50}
-                      value={defaultMaxWords}
-                      onChange={(e) => setDefaultMaxWords(Number(e.target.value) || 0)}
-                      className="w-full rounded-2xl border border-editorial-border bg-editorial-bg px-4 py-3 text-sm font-mono outline-none focus:border-editorial-ink/40"
+                      value={chunkPresetMedium}
+                      onChange={(e) => setChunkPresetMedium(Number(e.target.value) || 50)}
+                      className="w-full rounded-[18px] border border-editorial-border bg-editorial-bg px-4 py-3 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                     />
                     <p className="text-[10px] leading-relaxed text-editorial-muted">
-                      {t('settings.defaultMaxWordsHint')}
+                      {t('settings.chunkPresetMediumHint')}
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted">
+                      {t('settings.chunkPresetLong')}
+                    </label>
+                    <input
+                      type="number"
+                      min={chunkPresetMedium + 50}
+                      step={50}
+                      value={chunkPresetLong}
+                      onChange={(e) => setChunkPresetLong(Number(e.target.value) || 50)}
+                      className="w-full rounded-[18px] border border-editorial-border bg-editorial-bg px-4 py-3 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    />
+                    <p className="text-[10px] leading-relaxed text-editorial-muted">
+                      {t('settings.chunkPresetLongHint')}
                     </p>
                   </div>
                 </div>
@@ -155,104 +234,173 @@ export function SettingsModal() {
                 />
               </div>
 
-              {/* Cloud Providers */}
+              {/* Provider workspace */}
               <div className="space-y-4">
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
                   {t('settings.providerConfig')}
                 </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <ApiKeyInput label="Gemini (Native)" provider="gemini" />
-                  <ApiKeyInput label="OpenAI" provider="openai" />
-                  <ApiKeyInput label="Anthropic" provider="anthropic" />
-                  <ApiKeyInput label="DeepSeek" provider="deepseek" />
-                </div>
-              </div>
-
-              {/* Ollama Section */}
-              <div className="space-y-4">
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
-                  {t('ollama.title')}
-                </label>
-                <div className="p-6 border border-editorial-border bg-editorial-textbox/20 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Server size={16} className="text-editorial-muted" />
-                      <input
-                        type="url"
-                        value={urlDraft}
-                        onChange={(e) => {
-                          setUrlDraft(e.target.value);
-                          setUrlError(null);
-                        }}
-                        onBlur={() => {
-                          const trimmed = urlDraft.trim();
-                          if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
-                            setUrlError(t('ollama.urlInvalid'));
-                          } else {
-                            setUrlError(null);
-                            setOllamaBaseUrl(trimmed);
-                            refreshOllama();
-                          }
-                        }}
-                        className="text-xs font-mono bg-transparent border-b border-editorial-border focus:border-editorial-ink outline-none px-1 w-56"
-                        placeholder="http://localhost:11434"
-                        aria-label={t('ollama.baseUrl')}
-                      />
-                      {urlError && <span className="text-xs text-editorial-accent">{urlError}</span>}
-                      {ollamaStatus === 'connected' && (
-                        <CheckCircle2 size={12} className="text-editorial-ink" aria-label={t('ollama.connected', { count: ollamaModels.length })} />
-                      )}
-                      {ollamaStatus === 'disconnected' && (
-                        <XCircle size={12} className="text-editorial-accent" aria-label={t('ollama.disconnected')} />
-                      )}
-                      {ollamaStatus === 'unknown' && (
-                        <HelpCircle size={12} className="text-editorial-muted" aria-label={t('ollama.unchecked')} />
-                      )}
-                    </div>
-                    <button
-                      onClick={() => refreshOllama()}
-                      disabled={refreshing}
-                      title={t('ollama.refresh')}
-                      className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-ink transition-colors disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                      aria-label={t('ollama.refresh')}
-                    >
-                      <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
-                      {t('ollama.refresh')}
-                    </button>
+                <div className="rounded-[20px] border border-editorial-border bg-editorial-textbox/20 p-6 space-y-4">
+                  <div className="flex flex-wrap gap-2">
+                    {MODEL_PROVIDER_ORDER.map((provider) => {
+                      const active = provider === activeProviderTab;
+                      return (
+                        <button
+                          key={provider}
+                          type="button"
+                          onClick={() => setActiveProviderTab(provider)}
+                          title={PROVIDER_LABELS[provider]}
+                          className={`flex h-9 w-9 items-center justify-center rounded-full border text-[11px] font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                            active
+                              ? 'border-editorial-accent bg-editorial-accent text-white'
+                              : 'border-editorial-border bg-editorial-textbox/30 text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent'
+                          }`}
+                        >
+                          <ProviderLogo provider={provider} size={18} />
+                        </button>
+                      );
+                    })}
                   </div>
 
-                  {ollamaStatus === 'connected' && ollamaModels.length > 0 && (
-                    <div className="space-y-2">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
-                        {t('ollama.availableModels')} ({ollamaModels.length})
-                      </span>
-                      <div className="flex flex-wrap gap-2">
-                        {ollamaModels.map((m) => (
-                          <span key={m} className="px-2 py-1 bg-editorial-bg border border-editorial-border text-xs font-mono">
-                            {m}
-                          </span>
-                        ))}
-                      </div>
+                  <div className="space-y-5 border-t border-editorial-border pt-5">
+                    <div className="space-y-3">
+                      {activeProviderTab === 'ollama' ? (
+                        <div className="space-y-4 rounded-[18px] border border-editorial-border bg-editorial-bg/60 p-4">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <Server size={16} className="text-editorial-muted" />
+                              <input
+                                type="url"
+                                value={urlDraft}
+                                onChange={(e) => {
+                                  setUrlDraft(e.target.value);
+                                  setUrlError(null);
+                                }}
+                                onBlur={() => {
+                                  const trimmed = urlDraft.trim();
+                                  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+                                    setUrlError(t('ollama.urlInvalid'));
+                                  } else {
+                                    setUrlError(null);
+                                    setOllamaBaseUrl(trimmed);
+                                    refreshOllama();
+                                  }
+                                }}
+                                className="text-xs font-mono bg-transparent border-b border-editorial-border focus:border-editorial-ink outline-none px-1 w-56"
+                                placeholder="http://localhost:11434"
+                                aria-label={t('ollama.baseUrl')}
+                              />
+                              {urlError && <span className="text-xs text-editorial-accent">{urlError}</span>}
+                              {ollamaStatus === 'connected' && (
+                                <CheckCircle2 size={12} className="text-editorial-ink" aria-label={t('ollama.connected', { count: ollamaModels.length })} />
+                              )}
+                              {ollamaStatus === 'disconnected' && (
+                                <XCircle size={12} className="text-editorial-accent" aria-label={t('ollama.disconnected')} />
+                              )}
+                              {ollamaStatus === 'unknown' && (
+                                <HelpCircle size={12} className="text-editorial-muted" aria-label={t('ollama.unchecked')} />
+                              )}
+                            </div>
+                            <button
+                              onClick={() => refreshOllama()}
+                              disabled={refreshing}
+                              title={t('ollama.refresh')}
+                              className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-ink transition-colors disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                              aria-label={t('ollama.refresh')}
+                            >
+                              <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
+                              {t('ollama.refresh')}
+                            </button>
+                          </div>
+
+                          {ollamaStatus === 'disconnected' && (
+                            <p className="text-xs text-editorial-muted italic">
+                              {t('ollama.notRunning')}
+                            </p>
+                          )}
+
+                          {ollamaStatus === 'unknown' && (
+                            <p className="text-xs text-editorial-muted italic">
+                              {t('ollama.uncheckedHint')}
+                            </p>
+                          )}
+
+                          {ollamaStatus === 'connected' && ollamaModels.length === 0 && (
+                            <p className="text-xs text-editorial-muted italic">
+                              {t('ollama.noModels')}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="rounded-[18px] border border-editorial-border bg-editorial-bg/60 p-4">
+                          <ApiKeyInput
+                            label={PROVIDER_LABELS[activeProviderTab]}
+                            provider={activeProviderTab}
+                            onKeyChange={refreshKeyStatuses}
+                          />
+                        </div>
+                      )}
+
+                      {activeProviderTab !== 'ollama' && !keyStatuses[activeProviderTab] && (
+                        <p className="text-xs text-editorial-muted italic">
+                          {t('settings.configureKeyToUse')}
+                        </p>
+                      )}
                     </div>
-                  )}
 
-                  {ollamaStatus === 'disconnected' && (
-                    <p className="text-xs text-editorial-muted italic">
-                      {t('ollama.notRunning')}
-                    </p>
-                  )}
-
-                  {ollamaStatus === 'unknown' && (
-                    <p className="text-xs text-editorial-muted italic">
-                      {t('ollama.uncheckedHint')}
-                    </p>
-                  )}
-
-                  {ollamaStatus === 'connected' && ollamaModels.length === 0 && (
-                    <p className="text-xs text-editorial-muted italic">
-                      {t('ollama.noModels')}
-                    </p>
-                  )}
+                    {activeProviderTab !== 'ollama' && (() => {
+                      const hasKey = !!keyStatuses[activeProviderTab];
+                      const groups = groupModelIds(activeProviderTab, getKnownModelIds(activeProviderTab));
+                      return (
+                        <div className="space-y-3">
+                          {groups.map(({ label, ids }) => (
+                            <div key={label || '_all'} className="space-y-1.5">
+                              {label && (
+                                <p className="px-1 text-[10px] font-bold uppercase tracking-wider text-editorial-muted">
+                                  {label}
+                                </p>
+                              )}
+                              {ids.map((modelId) => {
+                                const entry = getModelEntry(activeProviderTab, modelId);
+                                return (
+                                  <div
+                                    key={modelId}
+                                    className={`flex items-start gap-3 rounded-[16px] border border-editorial-border bg-editorial-bg/60 px-4 py-2.5 transition-opacity ${!hasKey ? 'opacity-40' : ''}`}
+                                  >
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <span className="text-xs font-mono text-editorial-ink">{modelId}</span>
+                                        <ModelCapabilityHint provider={activeProviderTab} model={modelId} iconOnly />
+                                        {entry?.contextWindow && (
+                                          <span className="rounded-full border border-editorial-border px-2 py-0.5 text-[10px] font-mono text-editorial-muted">
+                                            {entry.contextWindow >= 1_000_000
+                                              ? `${(entry.contextWindow / 1_000_000).toFixed(0)}M`
+                                              : `${Math.round(entry.contextWindow / 1_000)}K`}
+                                          </span>
+                                        )}
+                                        {entry?.pricing && (
+                                          <span className="rounded-full border border-editorial-border px-2 py-0.5 text-[10px] font-mono text-editorial-muted">
+                                            ${entry.pricing.input}/${entry.pricing.output}
+                                          </span>
+                                        )}
+                                        {entry?.status === 'preview' && (
+                                          <span className="rounded-full border border-editorial-warning/40 bg-editorial-warning/10 px-2 py-0.5 text-[10px] font-mono text-editorial-warning">
+                                            preview
+                                          </span>
+                                        )}
+                                      </div>
+                                      {entry?.description && (
+                                        <p className="mt-0.5 text-[11px] text-editorial-muted">{entry.description}</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
                 </div>
               </div>
 
@@ -268,7 +416,7 @@ export function SettingsModal() {
                   {t('cost.pricingOverrides')}
                 </button>
                 {showPricingOverrides && (
-                  <div className="space-y-3">
+                  <div className="space-y-3 rounded-[20px] border border-editorial-border bg-editorial-textbox/15 px-5 py-5">
                     <p className="text-[10px] text-editorial-muted italic">{t('cost.overrideHint')}</p>
                     <div className="border border-editorial-border overflow-x-auto">
                       <table className="w-full text-xs font-mono">
@@ -344,18 +492,34 @@ export function SettingsModal() {
                 )}
               </div>
 
-              <div className="p-8 border border-editorial-border bg-editorial-textbox/20 flex gap-4 items-start">
-                <AlertCircle size={20} className="text-editorial-accent shrink-0" />
-                <div className="space-y-2">
-                  <h4 className="text-[11px] font-bold uppercase tracking-widest">{t('settings.securityAdvisory')}</h4>
-                  <p className="text-xs text-editorial-muted leading-relaxed">
-                    {t('settings.securityMessage')}
-                  </p>
-                </div>
+              <div className="rounded-[20px] border border-editorial-border bg-editorial-textbox/20">
+                <button
+                  type="button"
+                  onClick={() => setShowSecurityAdvisory((current) => !current)}
+                  className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
+                  aria-expanded={showSecurityAdvisory}
+                >
+                  <div className="flex items-center gap-3">
+                    <AlertCircle size={18} className="text-editorial-accent shrink-0" />
+                    <div>
+                      <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
+                        {t('settings.securityAdvisory')}
+                      </div>
+                    </div>
+                  </div>
+                  {showSecurityAdvisory ? <ChevronUp size={14} className="text-editorial-muted" /> : <ChevronDown size={14} className="text-editorial-muted" />}
+                </button>
+                {showSecurityAdvisory ? (
+                  <div className="border-t border-editorial-border px-5 py-4">
+                    <p className="text-sm leading-relaxed text-editorial-muted">
+                      {t('settings.securityMessage')}
+                    </p>
+                  </div>
+                ) : null}
               </div>
 
               </div>
-            </div>
+            </EditorialModalShell>
           </motion.div>
         </div>
       )}

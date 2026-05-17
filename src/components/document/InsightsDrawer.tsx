@@ -8,24 +8,21 @@ import {
   CheckCircle2,
   Circle,
   Clock,
+  Crosshair,
   Cpu,
-  ExternalLink,
   FileText,
   Gauge,
   Highlighter,
   Link2,
   List,
   Loader2,
-  Merge,
   MessageCircle,
   NotebookText,
   PanelRight,
   RefreshCcw,
   ScanLine,
-  Scissors,
   ShieldCheck,
   TerminalSquare,
-  Trash2,
   X,
 } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -36,12 +33,14 @@ import { useUiStore, type InsightsDrawerTab, type ChunkDrawerTab } from '../../s
 import { useChunksStore } from '../../stores/chunksStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { usePricingStore } from '../../stores/pricingStore';
-import { useOperationLogStore } from '../../stores/operationLogStore';
 import { indexPad, qualityLabelKey, qualityTone, calculateCompositeQuality } from '../../utils';
 import { MODEL_PRICING } from '../../constants';
 import { estimatePipelineCost } from '../../utils/costEstimate';
+import { aggregateEntries, formatDurationMs } from '../../utils/operationLogStats';
+import { useOperationLogStore } from '../../stores/operationLogStore';
 import { formatCost } from '../pipeline/CostBadge';
 import { useChunkWatchdog } from '../../hooks/useChunkWatchdog';
+import { OperationsTab } from './OperationsTab';
 import type { TranslationChunk } from '../../types';
 
 interface InsightsDrawerProps {
@@ -98,14 +97,12 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
   const setChunkDrawerTab = useUiStore((state) => state.setChunkDrawerTab);
   const selectedChunkId = useUiStore((state) => state.selectedChunkId);
   const setSelectedChunkId = useUiStore((state) => state.setSelectedChunkId);
-  const setPendingSplitChunkId = useUiStore((state) => state.setPendingSplitChunkId);
   const focusIssueInChunk = useUiStore((state) => state.focusIssueInChunk);
   const chunks = useChunksStore((state) => state.chunks);
   const isProcessing = useChunksStore((state) => state.isProcessing);
   const allChunksTranslated = chunks.length > 0 && chunks.every((c) => c.currentDraft?.trim());
   const allChunksLocked = chunks.length > 0 && chunks.every((c) => c.translationLocked);
   const unlockedChunksCount = chunks.filter((c) => c.currentDraft?.trim() && !c.translationLocked).length;
-  const mergeChunkWithNext = useChunksStore((state) => state.mergeChunkWithNext);
   const currentChunk = chunks.find((c) => c.id === selectedChunkId) ?? chunks[0] ?? null;
   const currentChunkIndex = currentChunk ? chunks.findIndex((c) => c.id === currentChunk.id) : -1;
 
@@ -372,8 +369,6 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
                     isProcessing={isProcessing}
                     stuckChunkIds={stuckChunkIds}
                     onSelect={(id) => setSelectedChunkId(id)}
-                    onSplit={(chunkId) => { setSelectedChunkId(chunkId); setPendingSplitChunkId(chunkId); }}
-                    onMerge={(chunkId) => { setSelectedChunkId(chunkId); mergeChunkWithNext(chunkId); }}
                     onCancelStuck={cancelStuckChunk}
                   />
                 ) : documentDrawerTab === 'stats' ? (
@@ -467,12 +462,10 @@ interface IndexTabProps {
   isProcessing: boolean;
   stuckChunkIds: Set<string>;
   onSelect: (id: string) => void;
-  onSplit: (chunkId: string) => void;
-  onMerge: (chunkId: string) => void;
   onCancelStuck: (chunkId: string) => void;
 }
 
-function IndexTab({ panelId, labelledBy, chunks, currentChunkId, isProcessing, stuckChunkIds, onSelect, onSplit, onMerge, onCancelStuck }: IndexTabProps) {
+function IndexTab({ panelId, labelledBy, chunks, currentChunkId, isProcessing, stuckChunkIds, onSelect, onCancelStuck }: IndexTabProps) {
   const { t } = useTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -493,8 +486,6 @@ function IndexTab({ panelId, labelledBy, chunks, currentChunkId, isProcessing, s
     );
   }
 
-  const canEdit = !isProcessing;
-
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} ref={scrollRef} className="overflow-y-auto custom-scrollbar px-4 py-4">
       <ul style={{ height: virtualizer.getTotalSize(), position: 'relative' }} className="w-full">
@@ -504,8 +495,6 @@ function IndexTab({ panelId, labelledBy, chunks, currentChunkId, isProcessing, s
           const isActive = chunk.id === currentChunkId;
           const tone = qualityTone(chunk.judgeResult.status === 'completed' ? chunk.judgeResult.rating : null);
           const wordCount = chunk.originalText.trim() ? chunk.originalText.trim().split(/\s+/).filter(Boolean).length : 0;
-          const isLast = index === chunks.length - 1;
-          const canMutate = canEdit && chunk.status !== 'completed' && chunk.status !== 'processing';
           const isStuck = stuckChunkIds.has(chunk.id);
 
           let statusIcon: React.ReactNode;
@@ -573,31 +562,6 @@ function IndexTab({ panelId, labelledBy, chunks, currentChunkId, isProcessing, s
                     </button>
                   </div>
                 )}
-
-                {canMutate && (
-                  <div className={`flex gap-1.5 border-t px-3 py-2 ${isActive ? 'border-white/10' : 'border-editorial-border/60'}`}>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); onSplit(chunk.id); }}
-                      title={t('pipeline.splitChunkTooltip')}
-                      aria-label={t('pipeline.splitChunk')}
-                      className={`rounded-full border p-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${isActive ? 'border-white/20 text-white/60 hover:bg-white/10 hover:text-white' : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'}`}
-                    >
-                      <Scissors size={13} />
-                    </button>
-                    {!isLast && (
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); onMerge(chunk.id); }}
-                        title={t('pipeline.mergeNextTooltip')}
-                        aria-label={t('pipeline.mergeNext')}
-                        className={`rounded-full border p-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${isActive ? 'border-white/20 text-white/60 hover:bg-white/10 hover:text-white' : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'}`}
-                      >
-                        <Merge size={13} />
-                      </button>
-                    )}
-                  </div>
-                )}
               </div>
             </li>
           );
@@ -619,9 +583,14 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
   const { t } = useTranslation();
   const config = usePipelineStore((state) => state.config);
   const pricingOverrides = usePricingStore((s) => s.overrides);
+  const logEntries = useOperationLogStore((s) => s.entries);
   const costEstimate = useMemo(
     () => estimatePipelineCost(chunks, config, pricingOverrides),
     [chunks, config, pricingOverrides],
+  );
+  const logStats = useMemo(
+    () => aggregateEntries(logEntries, pricingOverrides),
+    [logEntries, pricingOverrides],
   );
 
   const sourceWords = chunks.reduce((acc, c) => acc + countWords(c.originalText), 0);
@@ -639,6 +608,16 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
 
   let totalInput = 0;
   let totalOutput = 0;
+  let totalCachedInput = 0;
+  let totalCacheMissInput = 0;
+  let translationInput = 0;
+  let translationOutput = 0;
+  let translationCachedInput = 0;
+  let translationCacheMissInput = 0;
+  let auditInput = 0;
+  let auditOutput = 0;
+  let auditCachedInput = 0;
+  let auditCacheMissInput = 0;
   let estimatedCostUsd = 0;
   const modelNames = new Set<string>();
   for (const chunk of chunks) {
@@ -649,6 +628,12 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
         if (result.tokenUsage) {
           totalInput += result.tokenUsage.inputTokens ?? 0;
           totalOutput += result.tokenUsage.outputTokens ?? 0;
+          totalCachedInput += result.tokenUsage.cachedInputTokens ?? 0;
+          totalCacheMissInput += result.tokenUsage.cacheMissInputTokens ?? 0;
+          translationInput += result.tokenUsage.inputTokens ?? 0;
+          translationOutput += result.tokenUsage.outputTokens ?? 0;
+          translationCachedInput += result.tokenUsage.cachedInputTokens ?? 0;
+          translationCacheMissInput += result.tokenUsage.cacheMissInputTokens ?? 0;
           const pricing = MODEL_PRICING[`${stage.provider}/${stage.model}`];
           if (pricing) estimatedCostUsd += (result.tokenUsage.inputTokens * pricing.input + result.tokenUsage.outputTokens * pricing.output) / 1_000_000;
         }
@@ -658,12 +643,32 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
       const ju = chunk.judgeResult.tokenUsage;
       totalInput += ju.inputTokens ?? 0;
       totalOutput += ju.outputTokens ?? 0;
+      totalCachedInput += ju.cachedInputTokens ?? 0;
+      totalCacheMissInput += ju.cacheMissInputTokens ?? 0;
+      auditInput += ju.inputTokens ?? 0;
+      auditOutput += ju.outputTokens ?? 0;
+      auditCachedInput += ju.cachedInputTokens ?? 0;
+      auditCacheMissInput += ju.cacheMissInputTokens ?? 0;
       const judgePricing = MODEL_PRICING[`${config.judgeProvider}/${config.judgeModel}`];
       if (judgePricing) estimatedCostUsd += (ju.inputTokens * judgePricing.input + ju.outputTokens * judgePricing.output) / 1_000_000;
       modelNames.add(`${config.judgeProvider} / ${config.judgeModel}`);
     }
+    if (chunk.coherenceResult?.tokenUsage) {
+      const cu = chunk.coherenceResult.tokenUsage;
+      totalInput += cu.inputTokens ?? 0;
+      totalOutput += cu.outputTokens ?? 0;
+      totalCachedInput += cu.cachedInputTokens ?? 0;
+      totalCacheMissInput += cu.cacheMissInputTokens ?? 0;
+      auditInput += cu.inputTokens ?? 0;
+      auditOutput += cu.outputTokens ?? 0;
+      auditCachedInput += cu.cachedInputTokens ?? 0;
+      auditCacheMissInput += cu.cacheMissInputTokens ?? 0;
+    }
   }
   const totalTokens = totalInput + totalOutput;
+  const cacheHitPct = totalInput > 0 ? Math.round((totalCachedInput / totalInput) * 100) : 0;
+  const translationCacheHitPct = translationInput > 0 ? Math.round((translationCachedInput / translationInput) * 100) : 0;
+  const auditCacheHitPct = auditInput > 0 ? Math.round((auditCachedInput / auditInput) * 100) : 0;
 
   if (chunks.length === 0) {
     return (
@@ -733,6 +738,15 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
               <dd className="font-display text-sm italic text-editorial-muted">{totalOutput.toLocaleString()}</dd>
             </div>
           )}
+          {totalCachedInput > 0 && (
+            <>
+              <StatRow label={t('header.cachedInput')} value={totalCachedInput.toLocaleString()} />
+              <StatRow label={t('header.cacheHitRate')} value={`${cacheHitPct}%`} />
+              {totalCacheMissInput > 0 && (
+                <StatRow label={t('header.cacheMissInput')} value={totalCacheMissInput.toLocaleString()} />
+              )}
+            </>
+          )}
           <StatRow
             label={t('header.estimatedCost')}
             value={totalTokens > 0
@@ -741,6 +755,9 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
               : costEstimate.totalUsd === null ? t('cost.unknown')
               : `~${formatCost(costEstimate.totalUsd)}`}
           />
+          {logStats.totalDurationMs > 0 && (
+            <StatRow label={t('log.totalDuration')} value={formatDurationMs(logStats.totalDurationMs)} />
+          )}
         </dl>
         {modelNames.size > 0 && (
           <div className="mt-3 space-y-1">
@@ -749,6 +766,30 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
             ))}
           </div>
         )}
+      </section>
+
+      <section className="rounded-[20px] border border-editorial-border bg-editorial-bg px-4 py-3">
+        <div className="mb-3 flex items-center gap-1.5 text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+          <Cpu size={11} className="text-editorial-accent shrink-0" /> {t('document.translationCacheLabel')}
+        </div>
+        <dl className="space-y-2">
+          <StatRow label={t('header.tokenCount')} value={(translationInput + translationOutput).toLocaleString()} />
+          <StatRow label={t('header.cachedInput')} value={translationCachedInput.toLocaleString()} />
+          <StatRow label={t('header.cacheHitRate')} value={`${translationCacheHitPct}%`} />
+          <StatRow label={t('header.cacheMissInput')} value={translationCacheMissInput.toLocaleString()} />
+        </dl>
+      </section>
+
+      <section className="rounded-[20px] border border-editorial-border bg-editorial-bg px-4 py-3">
+        <div className="mb-3 flex items-center gap-1.5 text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+          <Cpu size={11} className="text-editorial-accent shrink-0" /> {t('document.auditCacheLabel')}
+        </div>
+        <dl className="space-y-2">
+          <StatRow label={t('header.tokenCount')} value={(auditInput + auditOutput).toLocaleString()} />
+          <StatRow label={t('header.cachedInput')} value={auditCachedInput.toLocaleString()} />
+          <StatRow label={t('header.cacheHitRate')} value={`${auditCacheHitPct}%`} />
+          <StatRow label={t('header.cacheMissInput')} value={auditCacheMissInput.toLocaleString()} />
+        </dl>
       </section>
     </div>
   );
@@ -945,173 +986,6 @@ function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
   );
 }
 
-function OperationsTab({
-  panelId,
-  labelledBy,
-  currentChunkId,
-  chunks,
-  onSelectChunk,
-}: {
-  panelId: string;
-  labelledBy: string;
-  currentChunkId: string | null;
-  chunks: TranslationChunk[];
-  onSelectChunk: (id: string) => void;
-}) {
-  const { t } = useTranslation();
-  const entries = useOperationLogStore((state) => state.entries);
-  const clear = useOperationLogStore((state) => state.clear);
-  const isProcessing = useChunksStore((state) => state.isProcessing);
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  const processingChunk = chunks.find((c) => c.status === 'processing') ?? null;
-  const processingChunkIndex = processingChunk
-    ? chunks.findIndex((c) => c.id === processingChunk.id)
-    : -1;
-
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [entries.length]);
-
-  return (
-    <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex h-full flex-col">
-      <div className="border-b border-editorial-border px-5 py-4">
-        <div className="flex items-center justify-between">
-          <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-            {t('document.operationsShellTitle')}
-          </p>
-          <div className="flex items-center gap-1">
-            {isProcessing && processingChunk && (
-              <button
-                type="button"
-                onClick={() => onSelectChunk(processingChunk.id)}
-                title={t('document.operationsGoToChunk')}
-                aria-label={t('document.operationsGoToChunk')}
-                className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              >
-                <ExternalLink size={14} />
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={clear}
-              title={t('document.operationsClear')}
-              aria-label={t('document.operationsClear')}
-              className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            >
-              <Trash2 size={14} />
-            </button>
-          </div>
-        </div>
-        {isProcessing && (
-          <div className="mt-2.5 flex items-center gap-2" role="status" aria-live="polite">
-            <Loader2 size={11} className="animate-spin shrink-0 text-[#9eb4ff]" />
-            <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#9eb4ff]">
-              {t('document.operationsRunning')}
-            </span>
-            {processingChunkIndex >= 0 && (
-              <span className="font-display text-xs italic text-[#9eb4ff]/70">
-                {indexPad(processingChunkIndex + 1)}/{indexPad(chunks.length)}
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-
-      {entries.length === 0 && !isProcessing ? (
-        <div className="flex flex-1 items-center justify-center px-6 py-12 text-center text-sm text-editorial-muted">
-          {t('document.operationsEmpty')}
-        </div>
-      ) : (
-        <div ref={scrollRef} className="flex-1 overflow-y-auto bg-[#111111] px-4 py-4 font-mono text-xs text-[#d6d6d6] custom-scrollbar">
-          <div className="space-y-2">
-            {(() => {
-              const scopeLabel: Record<string, string> = {
-                pipeline:  t('log.scopePipeline'),
-                preflight: t('log.scopePreflight'),
-                invoke:    t('log.scopeInvoke'),
-                stage:     t('log.scopeStage'),
-                audit:     t('log.scopeAudit'),
-                coherence: t('log.scopeCoherence'),
-                chunk:     t('log.scopeChunk'),
-              };
-              const levelLabel: Record<string, string> = {
-                info:    t('log.levelInfo'),
-                success: t('log.levelSuccess'),
-                warn:    t('log.levelWarn'),
-                error:   t('log.levelError'),
-              };
-              const chunkIndexMap = new Map(chunks.map((c, i) => [c.id, i]));
-              return entries.map((entry) => {
-              const levelColor =
-                entry.level === 'error'   ? { text: 'text-[#ff6b6b]', border: 'border-[#ff6b6b]/40' }
-                : entry.level === 'warn'  ? { text: 'text-[#f6c90e]', border: 'border-[#f6c90e]/40' }
-                : entry.level === 'success' ? { text: 'text-[#69db7c]', border: 'border-[#69db7c]/40' }
-                : { text: 'text-[#74c0fc]', border: 'border-[#74c0fc]/30' };
-              const chunkIndex = entry.chunkId != null ? (chunkIndexMap.get(entry.chunkId) ?? -1) : -1;
-              return (
-                <div
-                  key={entry.id}
-                  className="rounded-[12px] border border-white/10 bg-white/[0.03] px-3 py-2"
-                >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[#555]">$</span>
-                    <span className="text-[#666]">{entry.at.slice(11, 19)}</span>
-                    <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.22em] text-[#888]">
-                      {scopeLabel[entry.scope] ?? entry.scope}
-                    </span>
-                    <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.22em] ${levelColor.border} ${levelColor.text}`}>
-                      {levelLabel[entry.level] ?? entry.level}
-                    </span>
-                  </div>
-                  <p className={`mt-2 leading-relaxed ${levelColor.text}`}>
-                    {entry.message}
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-2 text-[10px]">
-                    {chunkIndex >= 0 && (
-                      <span className="rounded-full border border-white/10 px-2 py-0.5 text-[#888]">
-                        {t('log.unitLabel')} {indexPad(chunkIndex + 1)}
-                      </span>
-                    )}
-                    {formatOperationMeta(entry.meta).map((item) => (
-                      <span key={item} className="rounded-full border border-white/10 px-2 py-0.5 text-[#666]">
-                        {item}
-                      </span>
-                    ))}
-                  </div>
-                  {entry.detail && (
-                    <details className="mt-2 border-t border-white/10 pt-2">
-                      <summary className="cursor-pointer select-none text-[10px] text-[#666] hover:text-[#aaa]">
-                        ▶ {t('log.showPrompt')}
-                      </summary>
-                      <pre className="mt-2 max-h-52 overflow-y-auto whitespace-pre-wrap text-[10px] leading-relaxed text-[#aaa] custom-scrollbar">
-                        {entry.detail}
-                      </pre>
-                    </details>
-                  )}
-                </div>
-              );
-            });
-            })()}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function formatOperationMeta(meta?: Record<string, unknown>): string[] {
-  if (!meta) return [];
-  return Object.entries(meta).flatMap(([key, value]) => {
-    if (value === undefined || value === null || value === '') return [];
-    if (Array.isArray(value)) return [`${key}: ${value.join(', ')}`];
-    if (typeof value === 'object') return [`${key}: ${JSON.stringify(value)}`];
-    return [`${key}: ${String(value)}`];
-  });
-}
-
 // ── IssueList ──────────────────────────────────────────────────────────────
 
 interface IssueListProps {
@@ -1138,15 +1012,17 @@ function IssueList({ issues, chunkId, onSelectChunk, onFocusIssue }: IssueListPr
               </span>
               <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-ink">{issue.type}</span>
             </div>
-            <button
-              type="button"
-              onClick={() => { onSelectChunk(chunkId); onFocusIssue(chunkId, extractIssueFocusQuery(issue)); }}
-              title={t('audit.openChunk')}
-              aria-label={t('audit.openChunk')}
-              className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            >
-              <ExternalLink size={13} />
-            </button>
+            {issue.phrase && (
+              <button
+                type="button"
+                onClick={() => { onSelectChunk(chunkId); onFocusIssue(chunkId, issue.phrase); }}
+                title={t('audit.locateInTextTooltip')}
+                aria-label={t('audit.locateInTextTooltip')}
+                className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              >
+                <Crosshair size={13} />
+              </button>
+            )}
           </div>
           <p className="text-sm leading-relaxed text-editorial-ink">{issue.description}</p>
           {issue.suggestedFix && (
@@ -1166,13 +1042,6 @@ function countWords(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
-function extractIssueFocusQuery(issue: TranslationChunk['judgeResult']['issues'][number]): string | null {
-  const candidates = [
-    ...Array.from(issue.description.matchAll(/"([^"]{3,})"/g)).map((m) => m[1]),
-    ...Array.from(issue.suggestedFix?.matchAll(/"([^"]{3,})"/g) ?? []).map((m) => m[1]),
-  ].map((v) => v.trim()).filter(Boolean);
-  return candidates.sort((a, b) => b.length - a.length)[0] ?? null;
-}
 
 // ── Glossary Tab ────────────────────────────────────────────────────────────
 

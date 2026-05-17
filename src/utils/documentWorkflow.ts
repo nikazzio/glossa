@@ -31,6 +31,7 @@ export function buildImportPreview(
     minWords?: number;
     maxWords?: number;
     headingAware?: boolean;
+    carryTrailingShortBlocks?: boolean;
     format?: 'plain' | 'markdown';
     experimental?: 'docx-markdown';
   },

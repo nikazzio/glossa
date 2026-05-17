@@ -25,6 +25,7 @@ import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useLibraryStore } from '../../stores/libraryStore';
 import { importTextFile, exportTranslation, exportBilingual } from '../../services/fileService';
+import { getContextWindow } from '../../models/catalog';
 import type { ExportFormat } from '../document/ExportDialog';
 
 const ExportDialog = lazy(() =>
@@ -47,6 +48,7 @@ interface PendingImport {
   useChunking: boolean;
   targetChunkCount: number;
   headingAware: boolean;
+  carryTrailingShortBlocks: boolean;
   format?: 'plain' | 'markdown';
   experimental?: 'docx-markdown';
 }
@@ -67,8 +69,9 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
     setViewMode,
     showConfigDrawer,
     setShowConfigDrawer,
-    defaultMinWords,
-    defaultMaxWords,
+    chunkPresetShort,
+    chunkPresetMedium,
+    chunkPresetLong,
   } = useUiStore();
   const {
     currentProjectId,
@@ -107,6 +110,7 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
           useChunking: config.useChunking !== false,
           targetChunkCount: config.targetChunkCount ?? 0,
           headingAware: config.headingAware ?? true,
+          carryTrailingShortBlocks: config.carryTrailingShortBlocks ?? true,
           format: imported.format,
           experimental: imported.experimental,
         });
@@ -118,17 +122,34 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
 
   const handleConfirmImport = (manualChunks?: string[]) => {
     if (!pendingImport) return;
+    const stage0 = config.stages[0];
+    const contextWindow = stage0
+      ? getContextWindow(stage0.provider, stage0.model)
+      : undefined;
+    const totalWords = pendingImport.text.trim().split(/\s+/).filter(Boolean).length;
+    const derivedWordsPerChunk = pendingImport.targetChunkCount > 0
+      ? Math.round(totalWords / pendingImport.targetChunkCount)
+      : chunkPresetMedium;
+    const presets = [chunkPresetShort, chunkPresetMedium, chunkPresetLong];
+    const activePreset = presets.reduce((nearest, p) =>
+      Math.abs(derivedWordsPerChunk - p) < Math.abs(derivedWordsPerChunk - nearest) ? p : nearest,
+      presets[0],
+    );
+    const minWords = Math.round(activePreset * 0.5);
+    const maxWords = Math.round(activePreset * 1.5);
     setConfig((prev) => ({
       ...prev,
       useChunking: pendingImport.useChunking,
       targetChunkCount: pendingImport.targetChunkCount,
-      minWords: defaultMinWords,
-      maxWords: defaultMaxWords,
+      minWords,
+      maxWords,
       headingAware: pendingImport.headingAware,
+      carryTrailingShortBlocks: pendingImport.carryTrailingShortBlocks,
       documentFormat: pendingImport.format ?? 'plain',
       renderProfile: pendingImport.format === 'markdown' ? 'markdown' : 'plain-text',
       markdownAware: pendingImport.format === 'markdown',
       experimentalImport: pendingImport.experimental ?? null,
+      chunkedWithContextWindow: contextWindow,
     }));
     loadDocument(
       pendingImport.text,
@@ -136,9 +157,10 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
         useChunking: pendingImport.useChunking,
         targetChunkCount: pendingImport.targetChunkCount,
         markdownAware: pendingImport.format === 'markdown',
-        minWords: defaultMinWords,
-        maxWords: defaultMaxWords,
+        minWords,
+        maxWords,
         headingAware: pendingImport.headingAware,
+        carryTrailingShortBlocks: pendingImport.carryTrailingShortBlocks,
         extractFootnotes: pendingImport.experimental === 'docx-markdown',
       },
       manualChunks,
@@ -357,9 +379,8 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
             text={pendingImport.text}
             useChunking={pendingImport.useChunking}
             targetChunkCount={pendingImport.targetChunkCount}
-            minWords={defaultMinWords}
-            maxWords={defaultMaxWords}
             headingAware={pendingImport.headingAware}
+            carryTrailingShortBlocks={pendingImport.carryTrailingShortBlocks}
             markdownAware={pendingImport.format === 'markdown'}
             format={pendingImport.format}
             experimental={pendingImport.experimental}
@@ -376,6 +397,11 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
             onHeadingAwareChange={(value) =>
               setPendingImport((current) =>
                 current ? { ...current, headingAware: value } : current,
+              )
+            }
+            onCarryTrailingShortBlocksChange={(value) =>
+              setPendingImport((current) =>
+                current ? { ...current, carryTrailingShortBlocks: value } : current,
               )
             }
             onCancel={() => setPendingImport(null)}

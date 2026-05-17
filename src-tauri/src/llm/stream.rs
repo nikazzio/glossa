@@ -7,7 +7,7 @@ use std::{
     pin::Pin,
     sync::{
         atomic::{AtomicBool, Ordering},
-        Arc, LazyLock, Mutex,
+        Arc, Mutex, OnceLock,
     },
     time::Duration,
 };
@@ -120,7 +120,7 @@ impl StreamRegistry {
         let token = Arc::new(CancelToken::new());
         self.cancels
             .lock()
-            .expect("StreamRegistry mutex poisoned")
+            .unwrap_or_else(|p| p.into_inner())
             .insert(stream_id.to_string(), Arc::clone(&token));
         token
     }
@@ -128,7 +128,7 @@ impl StreamRegistry {
     pub(crate) fn unregister(&self, stream_id: &str) {
         self.cancels
             .lock()
-            .expect("StreamRegistry mutex poisoned")
+            .unwrap_or_else(|p| p.into_inner())
             .remove(stream_id);
     }
 
@@ -136,7 +136,7 @@ impl StreamRegistry {
         if let Some(token) = self
             .cancels
             .lock()
-            .expect("StreamRegistry mutex poisoned")
+            .unwrap_or_else(|p| p.into_inner())
             .get(stream_id)
         {
             token.cancel();
@@ -161,6 +161,23 @@ impl Drop for StreamGuard<'_> {
 /// flows; the frontend checks for this prefix to suppress the toast.
 pub const STREAM_CANCELLED_ERROR: &str = "Stream cancelled";
 
+#[derive(Debug)]
+pub(crate) struct StreamResult {
+    pub(crate) content: String,
+}
+
+impl PartialEq<&str> for StreamResult {
+    fn eq(&self, other: &&str) -> bool {
+        self.content == *other
+    }
+}
+
+impl PartialEq<StreamResult> for &str {
+    fn eq(&self, other: &StreamResult) -> bool {
+        *self == other.content
+    }
+}
+
 // ── Internal stream token type ────────────────────────────────────────
 
 #[derive(Clone, Serialize)]
@@ -173,6 +190,10 @@ pub(crate) struct StreamToken {
     pub(crate) input_tokens: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) output_tokens: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) cached_input_tokens: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) cache_miss_input_tokens: Option<u32>,
 }
 
 // ── Stream chunk abstraction ──────────────────────────────────────────
@@ -228,6 +249,8 @@ impl StreamAccumulator {
             done: false,
             input_tokens: None,
             output_tokens: None,
+            cached_input_tokens: None,
+            cache_miss_input_tokens: None,
         });
     }
 
@@ -309,12 +332,25 @@ impl StreamAccumulator {
         }
 
         let final_usage = self.usage.final_usage();
+        if let Some(usage) = final_usage.as_ref() {
+            log::info!(
+                "LLM stream completed provider={} stream_id={} input_tokens={} output_tokens={} cached_input_tokens={} cache_miss_input_tokens={}",
+                provider.id(),
+                stream_id,
+                usage.input,
+                usage.output,
+                usage.cached_input.unwrap_or(0),
+                usage.cache_miss_input.unwrap_or(0),
+            );
+        }
         emit(StreamToken {
             stream_id: stream_id.to_string(),
             token: String::new(),
             done: true,
             input_tokens: final_usage.as_ref().map(|u| u.input),
             output_tokens: final_usage.as_ref().map(|u| u.output),
+            cached_input_tokens: final_usage.as_ref().and_then(|u| u.cached_input),
+            cache_miss_input_tokens: final_usage.as_ref().and_then(|u| u.cache_miss_input),
         });
     }
 }
@@ -329,7 +365,7 @@ pub(crate) async fn consume_stream<S, E, G>(
     mut emit: E,
     model: &str,
     mut on_idle_grace: G,
-) -> Result<String, String>
+) -> Result<StreamResult, String>
 where
     S: StreamChunkSource,
     E: FnMut(StreamToken),
@@ -376,7 +412,7 @@ where
     }
 
     acc.finish(provider, stream_id, &mut emit);
-    Ok(acc.full_text)
+    Ok(StreamResult { content: acc.full_text })
 }
 
 /// Read an SSE stream, emit tokens via Tauri events, return the full text.
@@ -393,18 +429,26 @@ pub(crate) async fn stream_response(
     stream_id: &str,
     cancel: &Arc<CancelToken>,
     model: &str,
-) -> Result<String, String> {
+) -> Result<StreamResult, String> {
     let mut source = ReqwestChunkSource {
         resp: &mut resp,
         provider_id: provider.id(),
     };
     let alive_app = app.clone();
     let alive_sid = stream_id.to_string();
-    consume_stream(provider, stream_id, cancel, &mut source, |token| {
-        let _ = app.emit("stream-token", token);
-    }, model, move || {
-        let _ = alive_app.emit("stream-alive", serde_json::json!({ "streamId": alive_sid }));
-    })
+    consume_stream(
+        provider,
+        stream_id,
+        cancel,
+        &mut source,
+        |token| {
+            let _ = app.emit("stream-token", token);
+        },
+        model,
+        move || {
+            let _ = alive_app.emit("stream-alive", serde_json::json!({ "streamId": alive_sid }));
+        },
+    )
     .await
 }
 
@@ -528,17 +572,5 @@ pub(crate) fn provider_label(provider: &str) -> &'static str {
 
 // ── Lazy HTTP client singletons (shared with providers) ───────────────
 
-pub(crate) static OLLAMA_HTTP_CLIENT: LazyLock<Client> = LazyLock::new(|| {
-    Client::builder()
-        .connect_timeout(Duration::from_secs(HTTP_CONNECT_TIMEOUT_SECS))
-        .timeout(Duration::from_secs(OLLAMA_HTTP_REQUEST_TIMEOUT_SECS))
-        .build()
-        .expect("failed to build shared Ollama HTTP client")
-});
-
-pub(crate) static OLLAMA_STREAMING_HTTP_CLIENT: LazyLock<Client> = LazyLock::new(|| {
-    Client::builder()
-        .connect_timeout(Duration::from_secs(HTTP_CONNECT_TIMEOUT_SECS))
-        .build()
-        .expect("failed to build shared Ollama streaming HTTP client")
-});
+pub(crate) static OLLAMA_HTTP_CLIENT: OnceLock<Result<Client, String>> = OnceLock::new();
+pub(crate) static OLLAMA_STREAMING_HTTP_CLIENT: OnceLock<Result<Client, String>> = OnceLock::new();

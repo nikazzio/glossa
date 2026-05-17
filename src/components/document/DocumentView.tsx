@@ -1,4 +1,5 @@
 import {
+  AlertTriangle,
   CheckCheck,
   ChevronLeft,
   ChevronRight,
@@ -9,15 +10,14 @@ import {
   Languages,
   Loader2,
   Lock,
-  Merge,
   Pencil,
   PanelLeft,
   PanelRight,
   Play,
   RotateCcw,
   ScanLine,
-  Scissors,
   Square,
+  Wand2,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
@@ -26,15 +26,12 @@ import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
 import { usePricingStore } from '../../stores/pricingStore';
-import { confirm } from '../../stores/confirmStore';
 import type { TranslationChunk } from '../../types';
 import {
-  findBestSplitIndex,
   indexPad,
   qualityLabelKey,
   qualityTone,
 } from '../../utils';
-import { buildSplitPreview } from '../../utils/documentWorkflow';
 import { estimatePipelineCost } from '../../utils/costEstimate';
 import { CopyButton, MarkdownEditor, ProcessingLine } from '../common';
 import { CostBreakdownPanel } from '../pipeline/CostBadge';
@@ -71,9 +68,7 @@ export function DocumentView({
     updateChunkDraft,
     updateChunkOriginalText,
     toggleChunkTranslationLock,
-    splitChunkAt,
-    mergeChunkWithNext,
-    unlockChunkForEdit,
+    toggleChunkSourceEditing,
   } = useChunksStore();
   const {
     selectedChunkId,
@@ -85,17 +80,15 @@ export function DocumentView({
     focusedIssueQuery,
     focusedIssueRequestId,
     clearFocusedIssue,
-    pendingSplitChunkId,
-    setPendingSplitChunkId,
   } = useUiStore();
 
   const [viewportWidth, setViewportWidth] = useState(
     typeof window === 'undefined' ? 0 : window.innerWidth,
   );
-  const [splitDraft, setSplitDraft] = useState<{ chunkId: string; splitAt: number } | null>(null);
   const [paneFocus, setPaneFocus] = useState<'both' | 'source' | 'translation'>('both');
   const [traceStageId, setTraceStageId] = useState<string | null>(null);
   const [showCostPanel, setShowCostPanel] = useState(false);
+  const [selectedStageId, setSelectedStageId] = useState<string>('');
 
   const costEstimate = useMemo(
     () => estimatePipelineCost(chunks, config, pricingOverrides),
@@ -120,12 +113,19 @@ export function DocumentView({
     chunks.findIndex((chunk) => chunk.id === selectedChunkId),
   );
   const currentChunk = chunks[currentIndex] ?? null;
+  const enabledStages = config.stages.filter((s) => s.enabled);
+  const lastStageId = enabledStages[enabledStages.length - 1]?.id ?? '';
+  const isEditorialMode = enabledStages.length > 1;
   const deferredOriginalText = useDeferredValue(currentChunk?.originalText ?? '');
-  const deferredDraftText = useDeferredValue(currentChunk?.currentDraft ?? '');
+  const effectiveSelectedStageId = selectedStageId || lastStageId;
+  const isLastSelected = effectiveSelectedStageId === lastStageId;
+  const rawStageContent = isLastSelected
+    ? (currentChunk?.currentDraft ?? '')
+    : (currentChunk?.stageResults[effectiveSelectedStageId]?.content ?? '');
+  const deferredStageContent = useDeferredValue(rawStageContent);
   const currentQualityLabel = currentChunk
     ? t(qualityLabelKey(currentChunk.judgeResult.rating))
     : t('audit.ratingNone');
-
 
   useEffect(() => {
     if (!chunks.length) return;
@@ -134,29 +134,10 @@ export function DocumentView({
     }
   }, [chunks, selectedChunkId, setSelectedChunkId]);
 
-  const handleUnlockSource = async (chunkId: string) => {
-    const ok = await confirm({
-      title: t('pipeline.confirmUnlockTitle'),
-      message: t('pipeline.confirmUnlockMessage'),
-      confirmLabel: t('pipeline.unlockSource'),
-      danger: true,
-    });
-    if (ok) unlockChunkForEdit(chunkId);
-  };
-
-  const openSplitDialog = (chunkId: string, text: string) => {
-    const initialSplitAt =
-      findBestSplitIndex(text, { markdownAware: config.markdownAware }) ??
-      Math.max(1, Math.floor(text.length / 2));
-    setSplitDraft({ chunkId, splitAt: initialSplitAt });
-  };
-
+  // Reset to last stage whenever the chunk changes
   useEffect(() => {
-    if (!pendingSplitChunkId || !currentChunk || currentChunk.id !== pendingSplitChunkId) return;
-    openSplitDialog(currentChunk.id, currentChunk.originalText);
-    setPendingSplitChunkId(null);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingSplitChunkId, currentChunk?.id]);
+    setSelectedStageId(lastStageId);
+  }, [currentChunk?.id, lastStageId]);
 
   // Hooks devono essere chiamati prima di qualsiasi return condizionale
   const hasGlossary = config.glossary.length > 0;
@@ -167,18 +148,18 @@ export function DocumentView({
     'source',
   );
   const translationHighlight = useGlossaryHighlight(
-    paneFocus !== 'source' ? deferredDraftText : '',
+    paneFocus !== 'source' ? deferredStageContent : '',
     showHighlight && paneFocus !== 'source' ? config.glossary : [],
     'translation',
   );
 
   const sourceHighlightHtml = useMemo(() => {
     const hasFootnoteMarkers = /\[[⁰¹²³⁴⁵⁶⁷⁸⁹]/.test(deferredOriginalText);
-    const showGlossary = showHighlight && currentChunk?.status !== 'completed' && paneFocus !== 'translation';
+    const showGlossary = showHighlight && paneFocus !== 'translation';
     if (!showGlossary && !hasFootnoteMarkers) return null;
     const base = showGlossary ? sourceHighlight.html : escapeHtml(deferredOriginalText);
     return hasFootnoteMarkers ? highlightSuperscriptMarkersHtml(base) : base;
-  }, [deferredOriginalText, currentChunk?.status, showHighlight, paneFocus, sourceHighlight.html]);
+  }, [deferredOriginalText, showHighlight, paneFocus, sourceHighlight.html]);
 
   if (!currentChunk) {
     return (
@@ -204,6 +185,10 @@ export function DocumentView({
   const isBook = resolvedLayout === 'book';
   const prevChunk = chunks[currentIndex - 1];
   const nextChunk = chunks[currentIndex + 1];
+  const sourceReadOnly =
+    currentChunk.status === 'processing' ||
+    (currentChunk.status === 'completed' && currentChunk.sourceEditable !== true);
+  const sourceEditDisabled = currentChunk.status === 'processing';
   const chunkTone = qualityTone(currentChunk.judgeResult.rating);
 
   return (
@@ -308,21 +293,27 @@ export function DocumentView({
               <div className="flex items-center gap-2">
                 {config.stages
                   .filter((stage) => stage.enabled)
-                  .map((stage, stageIndex) => (
-                    <button
-                      key={stage.id}
-                      type="button"
-                      onClick={() => setTraceStageId(stage.id)}
-                      className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                      title={stage.name}
-                      aria-label={stage.name}
-                    >
-                      <CompactStatusIndicator
-                        status={currentChunk.stageResults[stage.id]?.status || 'idle'}
-                        icon={Languages}
-                      />
-                    </button>
-                  ))}
+                  .map((stage) => {
+                    const stageIcon: LucideIcon =
+                      stage.role === 'refine' ? Pencil
+                      : stage.role === 'format' ? FileText
+                      : Languages;
+                    return (
+                      <button
+                        key={stage.id}
+                        type="button"
+                        onClick={() => setTraceStageId(stage.id)}
+                        className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                        title={stage.name}
+                        aria-label={stage.name}
+                      >
+                        <CompactStatusIndicator
+                          status={currentChunk.stageResults[stage.id]?.status || 'idle'}
+                          icon={stageIcon}
+                        />
+                      </button>
+                    );
+                  })}
                 <button
                   type="button"
                   className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
@@ -404,35 +395,15 @@ export function DocumentView({
               </ChunkIconButton>
               {currentChunk.status === 'completed' ? (
                 <ChunkIconButton
-                  onClick={() => handleUnlockSource(currentChunk.id)}
-                  title={t('pipeline.unlockSource')}
-                  disabled={isProcessing}
+                  onClick={() => toggleChunkSourceEditing(currentChunk.id)}
+                  title={currentChunk.sourceEditable ? t('document.disableSourceEditing') : t('document.enableSourceEditing')}
+                  disabled={sourceEditDisabled}
+                  active={currentChunk.sourceEditable === true}
+                  ariaPressed={currentChunk.sourceEditable === true}
                 >
                   <Pencil size={16} />
                 </ChunkIconButton>
-              ) : (
-                <>
-                  <ChunkIconButton
-                    onClick={() => openSplitDialog(currentChunk.id, currentChunk.originalText)}
-                    title={t('pipeline.splitChunk')}
-                    disabled={isProcessing || currentChunk.originalText.trim().length < 2}
-                  >
-                    <Scissors size={16} />
-                  </ChunkIconButton>
-                  <ChunkIconButton
-                    onClick={() => mergeChunkWithNext(currentChunk.id)}
-                    title={t('pipeline.mergeNext')}
-                    disabled={
-                      isProcessing ||
-                      currentIndex === chunks.length - 1 ||
-                      chunks[currentIndex + 1]?.status === 'completed' ||
-                      chunks[currentIndex + 1]?.status === 'processing'
-                    }
-                  >
-                    <Merge size={16} />
-                  </ChunkIconButton>
-                </>
-              )}
+              ) : null}
               {hasGlossary && (
                 <ChunkIconButton
                   onClick={() => setGlossaryHighlightEnabled(!glossaryHighlightEnabled)}
@@ -448,14 +419,13 @@ export function DocumentView({
           </div>
         </div>
 
-        <div className={`grid gap-5 flex-1 min-h-0 ${paneFocus === 'both' ? (isBook ? '2xl:grid-cols-2' : 'grid-cols-1') : 'grid-cols-1'}`}>
+        <div className={`grid gap-5 flex-1 min-h-0 auto-rows-fr ${paneFocus === 'both' ? (isBook ? '2xl:grid-cols-2' : 'grid-cols-1') : 'grid-cols-1'}`}>
           {paneFocus !== 'translation' && (
             <DocumentPage
               label={t('pipeline.originalSource')}
               eyebrow={t('document.leftPage')}
-              readOnly={currentChunk.status === 'completed'}
-              highlighted={focusedChunkId === currentChunk.id}
-              statusBadge={currentChunk.status === 'completed' ? (
+              readOnly={sourceReadOnly}
+              statusBadge={currentChunk.status === 'completed' && currentChunk.sourceEditable !== true ? (
                 <InlineStatusBadge tone="amber" icon={<Lock size={13} />} label={t('document.sourceLockedTitle')} />
               ) : null}
             >
@@ -463,8 +433,8 @@ export function DocumentView({
                 value={currentChunk.originalText}
                 onChange={(nextValue) => updateChunkOriginalText(currentChunk.id, nextValue)}
                 markdownEnabled={config.markdownAware === true}
-                disabled={isProcessing}
-                readOnly={currentChunk.status === 'completed'}
+                disabled={currentChunk.status === 'processing'}
+                readOnly={sourceReadOnly}
                 fillHeight
                 textClassName="text-[15px] leading-8 text-editorial-ink"
                 previewClassName="min-h-[280px] text-[15px] leading-8 text-editorial-ink"
@@ -473,52 +443,82 @@ export function DocumentView({
             </DocumentPage>
           )}
 
-          {paneFocus !== 'source' && (
-            <DocumentPage
-              label={t('pipeline.candidateTranslation')}
-              eyebrow={t('document.rightPage')}
-              actions={<CopyButton text={currentChunk.currentDraft || ''} />}
-              highlighted={focusedChunkId === currentChunk.id}
-              titleMeta={currentChunk.judgeResult.status === 'completed' ? (
-                <span className={`font-display text-base italic ${QUALITY_TONE_COLOR[chunkTone]}`}>
-                  {currentQualityLabel}
-                </span>
-              ) : null}
-              statusBadge={currentChunk.translationLocked ? (
-                <InlineStatusBadge tone="emerald" icon={<CheckCheck size={13} />} label={t('document.translationLockedBadge')} />
-              ) : null}
-            >
-              <MarkdownEditor
-                value={currentChunk.currentDraft || ''}
-                onChange={(nextValue) => updateChunkDraft(currentChunk.id, nextValue)}
-                markdownEnabled={config.markdownAware === true}
-                readOnly={currentChunk.translationLocked === true}
-                fillHeight
-                textClassName="text-[15px] leading-8 text-editorial-ink"
-                previewClassName="min-h-[280px] text-[15px] leading-8 text-editorial-ink"
-                placeholder={t('pipeline.candidatePlaceholder')}
-                highlightHtml={showHighlight ? translationHighlight.html : null}
-                focusQuery={focusedChunkId === currentChunk.id ? focusedIssueQuery : null}
-                focusRequestId={focusedChunkId === currentChunk.id ? focusedIssueRequestId : 0}
-                onFocusQueryHandled={clearFocusedIssue}
-              />
-            </DocumentPage>
-          )}
+          {paneFocus !== 'source' && (() => {
+            const stageReadOnly = !isLastSelected || currentChunk.translationLocked === true;
+            const stageActions = isEditorialMode ? (
+              <div className="flex items-center gap-1">
+                {enabledStages.map((s) => {
+                  const Icon = s.role === 'refine' ? Wand2 : s.role === 'format' ? FileText : Languages;
+                  const isActive = effectiveSelectedStageId === s.id;
+                  const hasContent = s.id === lastStageId
+                    ? true
+                    : !!(currentChunk.stageResults[s.id]?.content);
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setSelectedStageId(s.id)}
+                      title={t('document.viewStageResult', { stage: t(`pipeline.stageRole.${s.role ?? 'translation'}`) })}
+                      aria-label={t('document.viewStageResult', { stage: t(`pipeline.stageRole.${s.role ?? 'translation'}`) })}
+                      aria-pressed={isActive}
+                      disabled={!hasContent}
+                      className={`inline-flex h-7 w-7 items-center justify-center rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-30 ${
+                        isActive
+                          ? 'border-editorial-accent bg-editorial-accent text-white'
+                          : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent'
+                      }`}
+                    >
+                      <Icon size={13} />
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null;
+
+            return (
+              <DocumentPage
+                label={t('pipeline.candidateTranslation')}
+                eyebrow={t('document.rightPage')}
+                subtitle={isEditorialMode ? t(`pipeline.stageRole.${enabledStages.find(s => s.id === effectiveSelectedStageId)?.role ?? 'translation'}`) : undefined}
+                actions={stageActions}
+                statusBadge={currentChunk.translationStale ? (
+                  <InlineStatusBadge tone="amber" icon={<AlertTriangle size={13} />} label={t('document.translationStaleBadge')} />
+                ) : currentChunk.translationLocked ? (
+                  <InlineStatusBadge tone="emerald" icon={<CheckCheck size={13} />} label={t('document.translationLockedBadge')} />
+                ) : null}
+                footer={
+                  <div className="flex items-center justify-between">
+                    <div>
+                      {currentChunk.judgeResult.status === 'completed' && (
+                        <span className={`font-display text-base italic ${QUALITY_TONE_COLOR[chunkTone]}`}>
+                          {currentQualityLabel}
+                        </span>
+                      )}
+                    </div>
+                    <CopyButton text={rawStageContent} />
+                  </div>
+                }
+              >
+                <MarkdownEditor
+                  value={rawStageContent}
+                  onChange={isLastSelected ? (nextValue) => updateChunkDraft(currentChunk.id, nextValue) : () => {}}
+                  markdownEnabled={config.markdownAware === true}
+                  readOnly={stageReadOnly}
+                  fillHeight
+                  textClassName="text-[15px] leading-8 text-editorial-ink"
+                  previewClassName="min-h-[280px] text-[15px] leading-8 text-editorial-ink"
+                  placeholder={isLastSelected ? t('pipeline.candidatePlaceholder') : ''}
+                  highlightHtml={showHighlight ? translationHighlight.html : null}
+                  focusQuery={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueQuery : null}
+                  focusRequestId={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueRequestId : 0}
+                  onFocusQueryHandled={isLastSelected ? clearFocusedIssue : undefined}
+                />
+              </DocumentPage>
+            );
+          })()}
         </div>
 
       </div>
-      {splitDraft && currentChunk.id === splitDraft.chunkId && (
-        <SplitChunkDialog
-          text={currentChunk.originalText}
-          splitAt={splitDraft.splitAt}
-          onSplitAtChange={(splitAt) => setSplitDraft((current) => (current ? { ...current, splitAt } : current))}
-          onCancel={() => setSplitDraft(null)}
-          onConfirm={() => {
-            const didSplit = splitChunkAt(currentChunk.id, splitDraft.splitAt);
-            if (didSplit) setSplitDraft(null);
-          }}
-        />
-      )}
       {traceStageId ? (
         <StageTraceDialog
           chunk={currentChunk}
@@ -533,11 +533,13 @@ export function DocumentView({
 interface DocumentPageProps {
   label: string;
   eyebrow: string;
+  subtitle?: string;
   readOnly?: boolean;
   highlighted?: boolean;
   titleMeta?: React.ReactNode;
   statusBadge?: React.ReactNode;
   actions?: React.ReactNode;
+  footer?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -613,15 +615,17 @@ function StageTraceDialog({
 function DocumentPage({
   label,
   eyebrow,
+  subtitle,
   readOnly = false,
   highlighted = false,
   titleMeta,
   statusBadge,
   actions,
+  footer,
   children,
 }: DocumentPageProps) {
   return (
-    <section className={`relative rounded-[24px] bg-[#fffdf9] px-6 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_18px_45px_rgba(74,50,17,0.08)] flex flex-col ${
+    <section className={`relative rounded-[24px] bg-[#fffdf9] px-6 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_18px_45px_rgba(74,50,17,0.08)] flex flex-col min-h-0 ${
       highlighted ? 'border border-editorial-accent ring-2 ring-editorial-accent/30' : 'border border-[#d8cfbf]'
     }`}>
       <div className="mb-4 shrink-0 flex items-center justify-between gap-4 border-b border-[#ede4d6] pb-3">
@@ -635,6 +639,11 @@ function DocumentPage({
             </h3>
             {statusBadge}
           </div>
+          {subtitle && (
+            <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-accent">
+              {subtitle}
+            </p>
+          )}
         </div>
         <div className="shrink-0 flex items-center gap-2">
           {titleMeta}
@@ -644,6 +653,11 @@ function DocumentPage({
       <div className={`flex flex-col flex-1 min-h-0 ${readOnly ? 'opacity-90' : ''}`}>
         {children}
       </div>
+      {footer && (
+        <div className="mt-3 pt-3 border-t border-[#ede4d6] shrink-0">
+          {footer}
+        </div>
+      )}
     </section>
   );
 }
@@ -740,112 +754,6 @@ function CompactStatusIndicator({
         </span>
       )}
     </span>
-  );
-}
-
-function SplitChunkDialog({
-  text,
-  splitAt,
-  onSplitAtChange,
-  onCancel,
-  onConfirm,
-}: {
-  text: string;
-  splitAt: number;
-  onSplitAtChange: (splitAt: number) => void;
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  const { t } = useTranslation();
-  const trapRef = useFocusTrap(true, onCancel);
-  const adjustedPreview = buildSplitPreview(text, splitAt, {
-    markdownAware: usePipelineStore.getState().config.markdownAware,
-  });
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-editorial-ink/35 p-4 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="manual-split-title"
-      aria-describedby="manual-split-hint"
-      ref={trapRef}
-    >
-      <div className="flex max-h-[90vh] w-full max-w-5xl flex-col rounded-[28px] border border-editorial-border bg-editorial-bg shadow-[0_24px_80px_rgba(26,26,26,0.2)]">
-        <div className="shrink-0 border-b border-editorial-border px-6 py-5 md:px-8 md:py-6">
-          <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-            {t('document.manualSplitLabel')}
-          </div>
-          <h3
-            id="manual-split-title"
-            className="mt-2 font-display text-3xl italic tracking-tight text-editorial-ink"
-          >
-            {t('document.manualSplitTitle')}
-          </h3>
-          <p
-            id="manual-split-hint"
-            className="mt-2 text-sm leading-relaxed text-editorial-muted"
-          >
-            {t('document.manualSplitHint')}
-          </p>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-6 py-6 md:px-8 custom-scrollbar">
-          <div className="grid gap-6 xl:grid-cols-2">
-            <div className="rounded-[22px] border border-editorial-border bg-editorial-textbox/35 p-5">
-              <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
-                {t('pipeline.originalSource')}
-              </div>
-              <textarea
-                value={text}
-                readOnly
-                onClick={(event) => onSplitAtChange(event.currentTarget.selectionStart)}
-                onKeyUp={(event) => onSplitAtChange(event.currentTarget.selectionStart)}
-                onSelect={(event) => onSplitAtChange(event.currentTarget.selectionStart)}
-                className="min-h-[260px] w-full resize-none bg-transparent text-sm leading-7 text-editorial-ink outline-none"
-              />
-            </div>
-
-            <div className="space-y-4">
-              <div className="rounded-[22px] border border-editorial-border bg-editorial-bg p-5">
-                <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
-                  {t('document.splitPreviewFirst')}
-                </div>
-                <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-editorial-ink">
-                  {adjustedPreview.beforeText || '—'}
-                </p>
-              </div>
-              <div className="rounded-[22px] border border-editorial-border bg-editorial-bg p-5">
-                <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
-                  {t('document.splitPreviewSecond')}
-                </div>
-                <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-editorial-ink">
-                  {adjustedPreview.afterText || '—'}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="shrink-0 flex flex-col-reverse gap-3 border-t border-editorial-border px-6 py-4 md:px-8 sm:flex-row sm:justify-end">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="rounded-full border border-editorial-border px-5 py-3 text-[11px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink"
-          >
-            {t('common.cancel')}
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={!adjustedPreview.isValid}
-            className="rounded-full bg-editorial-ink px-5 py-3 text-[11px] font-bold uppercase tracking-[0.25em] text-white transition-colors hover:bg-editorial-accent disabled:opacity-40"
-          >
-            {t('document.manualSplitConfirm')}
-          </button>
-        </div>
-      </div>
-    </div>
   );
 }
 

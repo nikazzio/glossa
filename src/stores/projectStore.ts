@@ -36,6 +36,7 @@ interface ProjectState {
   removeProject: (id: string) => Promise<void>;
   saveCurrentProject: (name?: string) => Promise<void>;
   closeProject: () => void;
+  setRunInterrupted: (value: boolean) => void;
   clearResumeState: () => void;
 }
 
@@ -86,6 +87,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const ui = useUiStore.getState();
     const restoredChunks = restoreTranslations(savedTranslations);
     usePipelineStore.setState((state) => ({
+      activePipelineId: config.pipelineId,
+      runStatus: config.runStatus,
+      lastRunConfig: config.lastRunConfig,
       inputText: config.inputText,
       inputProcessingText: config.inputProcessingText,
       sourceFootnotes: config.sourceFootnotes,
@@ -93,6 +97,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         ...state.config,
         sourceLanguage: config.sourceLanguage,
         targetLanguage: config.targetLanguage,
+        mode: config.mode,
         stages: config.stages.length > 0 ? config.stages : state.config.stages,
         judgePrompt: config.judgePrompt || state.config.judgePrompt,
         judgeModel: config.judgeModel || state.config.judgeModel,
@@ -109,6 +114,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         persona: config.persona,
         customSourceLanguage: config.customSourceLanguage,
         customTargetLanguage: config.customTargetLanguage,
+        blobBudgetTokens: config.blobBudgetTokens,
+        blobOverlap: config.blobOverlap,
       },
     }));
     chunksStore.setChunks(restoredChunks);
@@ -122,7 +129,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       saveState: 'saved',
       lastSaveError: null,
       trackedSnapshot: null,
-      runInterrupted: config.runInProgress,
+      runInterrupted: config.runStatus === 'running' || config.runStatus === 'interrupted',
       lastRunConfig: config.lastRunConfig,
     });
   },
@@ -157,6 +164,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     });
   },
 
+  setRunInterrupted: (value) => set({ runInterrupted: value }),
   clearResumeState: () => set({ runInterrupted: false, lastRunConfig: null }),
 
   saveCurrentProject: async (name?: string) => {

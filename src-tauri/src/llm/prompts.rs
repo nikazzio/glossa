@@ -1,4 +1,7 @@
-use crate::llm::types::{CoherenceChunkInput, PipelineConfig, ProviderRuntimeConfig, StageConfig};
+use crate::llm::types::{
+    CoherenceChunkInput, PipelineConfig, PromptBlock, ProviderRuntimeConfig, StageConfig,
+    StructuredPrompt,
+};
 
 pub(crate) const REFINE_STAGE_SYSTEM_PROMPT: &str = "\
 You are an expert prompt engineer specializing in multi-stage AI translation pipelines.\n\
@@ -22,30 +25,6 @@ Rules:\n\
 - Use professional translation-industry QA terminology where appropriate\n\
 - Output ONLY the rewritten prompt text — no preamble, no explanation, no quotes";
 
-/// Returns a slice of `text` starting from the `(word_count - n)`-th word,
-/// i.e. the trailing `n` words. Returns the full string if it has ≤ n words.
-pub(crate) fn last_n_words(text: &str, n: usize) -> &str {
-    if n == 0 {
-        return "";
-    }
-    let mut word_count = 0;
-    let mut in_word = false;
-    for (i, c) in text.char_indices().rev() {
-        if c.is_whitespace() {
-            if in_word {
-                word_count += 1;
-                if word_count >= n {
-                    return text[i + c.len_utf8()..].trim_start();
-                }
-                in_word = false;
-            }
-        } else {
-            in_word = true;
-        }
-    }
-    text.trim_start()
-}
-
 fn format_glossary_table(glossary: &[crate::llm::types::GlossaryEntry]) -> String {
     if glossary.is_empty() {
         return String::new();
@@ -62,7 +41,7 @@ fn format_glossary_table(glossary: &[crate::llm::types::GlossaryEntry]) -> Strin
     table
 }
 
-fn effective_source<'a>(config: &'a PipelineConfig) -> &'a str {
+fn effective_source(config: &PipelineConfig) -> &str {
     config
         .custom_source_language
         .as_deref()
@@ -70,7 +49,7 @@ fn effective_source<'a>(config: &'a PipelineConfig) -> &'a str {
         .unwrap_or(&config.source_language)
 }
 
-fn effective_target<'a>(config: &'a PipelineConfig) -> &'a str {
+fn effective_target(config: &PipelineConfig) -> &str {
     config
         .custom_target_language
         .as_deref()
@@ -82,9 +61,12 @@ pub(crate) fn build_stage_prompts(
     text: &str,
     stage: &StageConfig,
     config: &PipelineConfig,
-    previous_result: &Option<String>,
-    previous_translation: &Option<String>,
-) -> (String, String) {
+    previous_result: Option<&str>,
+) -> StructuredPrompt {
+    if stage.role.as_deref() == Some("format") {
+        return build_format_stage_prompts(text, stage);
+    }
+
     let glossary_table = format_glossary_table(&config.glossary);
 
     let markdown_rules = if config.markdown_aware.unwrap_or(false) {
@@ -123,47 +105,115 @@ pub(crate) fn build_stage_prompts(
         .filter(|p| !p.trim().is_empty())
         .unwrap_or(&default_opener);
 
-    let system_prompt = format!(
-        "{}\n\n\
-         Core Instructions:\n{}\n\n\
+    // Block 1 (cacheable): static project-level context — persona, constraints, glossary.
+    // Identical for every chunk in the run, so caches across the whole document.
+    let static_block = format!(
+        "{opener}\n\n\
          Structural Preservation Rules:\n\
          - Preserve paragraph boundaries and line breaks unless the source is clearly malformed\n\
          - Do not collapse repeated spaces, tabs, list structure, or footnote placement when they carry formatting meaning\n\n\
-         {}{}",
-        opener,
-        stage.prompt,
-        glossary_rules,
-        markdown_rules,
+         {glossary_rules}{markdown_rules}",
     );
 
-    let context_block = match previous_translation {
-        Some(prev) if !prev.is_empty() => {
-            let tail = last_n_words(prev, 300);
-            format!(
-                "[Context from previous segment — do not translate, use only for stylistic and terminological coherence]\n\
-                 {tail}\n\
-                 [End of context]\n\n"
-            )
-        }
-        _ => String::new(),
-    };
+    let mut system = vec![PromptBlock {
+        text: static_block,
+        cacheable: true,
+    }];
 
-    let user_prompt = match previous_result {
-        Some(prev) if !prev.is_empty() => format!(
-            "{context_block}Original: {text}\n\nPrevious Iteration: {prev}\n\n\
-             Refine the above translation according to your instructions. Provide ONLY the final text."
+    // Blob context (cacheable) comes BEFORE stage instructions so all stable content
+    // forms a contiguous prefix: [static + blob]. This lets every provider cache the
+    // longest common prefix — Anthropic via a single breakpoint here, OpenAI/DeepSeek/
+    // Gemini via automatic prefix caching — giving cache hits across all stages within
+    // the same blob, not only within a single stage.
+    if let Some(blob) = config.blob_context.as_deref().filter(|s| !s.is_empty()) {
+        system.push(PromptBlock {
+            text: format!(
+                "[Reference document block - context only]\n\
+                 This block may include the current chunk. Use it for terminology, continuity, names, pronouns, formatting, and narrative context.\n\
+                 Do not translate this block as a whole. Translate only the current chunk identified in the user message.\n\
+                 {blob}\n\
+                 [End reference document block]"
+            ),
+            cacheable: true,
+        });
+    }
+
+    // Stage-specific instructions come last: they vary per stage but are smaller than
+    // the static+blob prefix, so non-caching them costs less than before.
+    let glossary_reminder = if config.glossary.is_empty() {
+        ""
+    } else {
+        "\n\nGlossary Reminder:\n- Apply the glossary entries specified above when they appear in the source text."
+    };
+    let output_contract = if stage.role.as_deref() == Some("refine") {
+        "Output only the refined translation."
+    } else {
+        "Output only the translated text."
+    };
+    system.push(PromptBlock {
+        text: format!(
+            "Core Instructions:\n{}{}\n\n{}",
+            stage.prompt, glossary_reminder, output_contract
         ),
-        _ => format!("{context_block}Text to translate: {text}\n\nProvide ONLY the translated text."),
+        cacheable: false,
+    });
+
+    let current_chunk_line = config
+        .blob_current_chunk_id
+        .as_deref()
+        .filter(|s| !s.is_empty())
+        .map(|id| format!("Current chunk id: {id}\n\n"))
+        .unwrap_or_default();
+
+    let user = if stage.role.as_deref() == Some("refine") {
+        format!(
+            "{current_chunk_line}Original text for the current chunk:\n{text}\n\n\
+             Previous Iteration for the current chunk:\n{}\n\n\
+             Refine only the current chunk according to your instructions. Output only the refined translation.",
+            previous_result.unwrap_or_default()
+        )
+    } else {
+        format!(
+            "{current_chunk_line}Text to translate from the current chunk:\n{text}\n\n\
+             Translate only the current chunk. Output only its translation."
+        )
     };
 
-    (system_prompt, user_prompt)
+    StructuredPrompt { system, user }
+}
+
+fn build_format_stage_prompts(text: &str, stage: &StageConfig) -> StructuredPrompt {
+    let system = vec![
+        PromptBlock {
+            text: "\
+You are a deterministic text post-processor for already translated text.\n\
+The input is already translated. Do not translate, retranslate, paraphrase, improve style, correct meaning, expand, shorten, or alter wording except where a minimal formatting repair requires it.\n\
+Allowed changes: repair broken Markdown or footnote syntax, and restore clearly corrupted spacing or line breaks.\n\
+Do not add new emphasis, code, link, heading, list, quote, table, or other markup. Change existing Markdown markers only when necessary to restore valid syntax.\n\
+Return the complete text. If no change is needed, return the input exactly.\n\
+Do not return explanations, comments, JSON, diffs, or 'no changes'."
+                .to_string(),
+            cacheable: true,
+        },
+        PromptBlock {
+            text: format!("Core Formatting Instructions:\n{}\n\nOutput only the formatted text.", stage.prompt),
+            cacheable: false,
+        },
+    ];
+
+    let user = format!(
+        "Text to format from the current chunk:\n{text}\n\n\
+         Apply only the formatting instructions. Output only the complete formatted text."
+    );
+
+    StructuredPrompt { system, user }
 }
 
 pub(crate) fn build_judge_prompts(
     original_text: &str,
     translation: &str,
     config: &PipelineConfig,
-) -> (String, String) {
+) -> StructuredPrompt {
     let glossary_table = format_glossary_table(&config.glossary);
     let src = effective_source(config);
     let tgt = effective_target(config);
@@ -179,10 +229,18 @@ pub(crate) fn build_judge_prompts(
         format!("Glossary to adhere to:\n{glossary_table}\n\n")
     };
 
-    let system_prompt = format!(
-        "As a translation quality judge, evaluate the following translation.\n\
-         Source ({src}): {original_text}\n\
-         Target ({tgt}): {translation}\n\n\
+    let markdown_rules = if config.markdown_aware.unwrap_or(false) {
+        "When Markdown is present, verify that the translation preserves markers, footnotes, \
+         inline emphasis, and block structure exactly enough to remain valid Markdown.\n\n"
+    } else {
+        ""
+    };
+
+    // Block 1 (cacheable): static judge context — role, instructions, glossary, format spec.
+    // original_text and translation are in the user turn so this block is constant for the
+    // whole project run, enabling near-100% cache hit rate across all chunk judge calls.
+    let system_block = format!(
+        "You are a translation quality judge for {src}→{tgt} translations.\n\n\
          Specific Audit Instructions:\n{instructions}\n\n\
          {glossary_section}\
          {markdown_rules}\
@@ -190,27 +248,39 @@ pub(crate) fn build_judge_prompts(
          - rating: one of 'critical', 'poor', 'fair', 'good', 'excellent' \
            (semantic translation quality: critical=unusable, poor=weak, fair=usable with revision, \
            good=solid, excellent=publication-ready)\n\
-         - issues: array of objects {{ type: 'glossary'|'fluency'|'accuracy'|'grammar', \
-           severity: 'low'|'medium'|'high', description: string, suggestedFix: string }}\n\
-         Write all description and suggestedFix values in {ui_lang}. \
-         Keep the rating value as one of the English literals above.",
+         - issues: array of objects with these fields:\n\
+           - type: 'glossary'|'fluency'|'accuracy'|'grammar'\n\
+           - severity: 'low'|'medium'|'high'\n\
+           - description: string — explanation of the issue in {ui_lang}\n\
+           - suggestedFix: string — how to correct it in {ui_lang}\n\
+           - phrase: string — the exact verbatim substring of the WRONG or problematic text \
+             as it actually appears in the target translation (not the source term, not the \
+             suggested correction); copy it character-for-character from the target text; \
+             if the issue recurs in multiple places, copy only the first occurrence\n\
+         Write description and suggestedFix in {ui_lang}. \
+         Keep rating and type values as the English literals above.",
         instructions = config.judge_prompt,
-        markdown_rules = if config.markdown_aware.unwrap_or(false) {
-            "When Markdown is present, verify that the translation preserves markers, footnotes, inline emphasis, and block structure exactly enough to remain valid Markdown.\n\n"
-        } else {
-            ""
-        },
     );
 
-    let user_prompt = "Perform the audit now and return the JSON report.".to_string();
+    let user = format!(
+        "Source ({src}): {original_text}\n\
+         Target ({tgt}): {translation}\n\n\
+         Perform the audit now and return the JSON report."
+    );
 
-    (system_prompt, user_prompt)
+    StructuredPrompt {
+        system: vec![PromptBlock {
+            text: system_block,
+            cacheable: true,
+        }],
+        user,
+    }
 }
 
 pub(crate) fn build_coherence_prompts(
     input: &CoherenceChunkInput,
     config: &PipelineConfig,
-) -> (String, String) {
+) -> StructuredPrompt {
     let glossary_table = format_glossary_table(&config.glossary);
     let src = effective_source(config);
     let tgt = effective_target(config);
@@ -238,42 +308,59 @@ pub(crate) fn build_coherence_prompts(
         format!("Glossary:\n{glossary_table}\n\n")
     };
 
-    let system_prompt = format!(
+    // Block 1 (cacheable): static coherence context — role, instructions, glossary, format spec.
+    // Constant for the whole project run. blob_context stays in the user turn, but is
+    // placed before the current segment so provider prefix caches can reuse the stable
+    // reference block for every chunk in the same blob.
+    let system_block = format!(
         "You are a translation coherence auditor for {src}→{tgt} translations.\n\
          Your task: identify cross-segment inconsistencies between a translated segment and its surrounding context.\n\
          {instructions}\n\
          {glossary_section}\
-         Write all description and suggestedFix values in {ui_lang}.\n\
+         Write description and suggestedFix values in {ui_lang}.\n\
          Respond with valid JSON only:\n\
          {{\"issues\": [{{\"type\": \"consistency\"|\"glossary\", \
          \"severity\": \"low\"|\"medium\"|\"high\", \
-         \"description\": \"string\", \"suggestedFix\": \"string\"}}]}}",
+         \"description\": \"string\", \
+         \"suggestedFix\": \"string\", \
+         \"phrase\": \"exact verbatim substring of the WRONG text as it appears in the target translation, not the source term nor the correction; first occurrence only\"}}]}}",
     );
 
-    let prev_block = input
-        .prev_context
+    let context_block = input
+        .blob_context
         .as_deref()
         .filter(|s| !s.is_empty())
-        .map(|ctx| {
-            format!("[Previous segment — context only]\n{ctx}\n[End of previous context]\n\n")
-        })
+        .map(|ctx| format!(
+            "[Reference translated document block - context only]\n\
+             This block may include the current chunk. Use it to compare terminology and continuity across the document block.\n\
+             The current chunk to audit is identified below.\n\
+             {ctx}\n\
+             [End reference translated document block]\n\n"
+        ))
         .unwrap_or_default();
 
-    let next_block = input
-        .next_context
+    let current_chunk_line = input
+        .current_chunk_id
         .as_deref()
         .filter(|s| !s.is_empty())
-        .map(|ctx| format!("\n[Next segment — context only]\n{ctx}\n[End of next context]"))
+        .map(|id| format!("Current chunk id: {id}\n\n"))
         .unwrap_or_default();
 
-    let user_prompt = format!(
-        "{prev_block}[Current segment]\nOriginal: {original}\nTranslation: {translation}\n[End of current segment]{next_block}\n\n\
+    let user = format!(
+        "{context_block}{current_chunk_line}[Current segment]\nOriginal: {original}\nTranslation: {translation}\n\
+         [End of current segment]\n\n\
          Identify cross-segment coherence issues and return the JSON. If no issues, return {{\"issues\": []}}.",
         original = input.original,
         translation = input.translation,
     );
 
-    (system_prompt, user_prompt)
+    StructuredPrompt {
+        system: vec![PromptBlock {
+            text: system_block,
+            cacheable: true,
+        }],
+        user,
+    }
 }
 
 /// Strips markdown code fences and any preamble text that LLMs sometimes wrap around JSON output.
@@ -304,20 +391,147 @@ pub(crate) fn minimal_pipeline_config(
     review_provider_options: Option<ProviderRuntimeConfig>,
 ) -> PipelineConfig {
     PipelineConfig {
-        source_language: String::new(),
-        target_language: String::new(),
-        stages: vec![],
-        judge_prompt: String::new(),
-        judge_model: String::new(),
-        judge_provider: String::new(),
-        glossary: vec![],
-        use_chunking: None,
-        markdown_aware: None,
-        coherence_prompt: None,
         review_provider_options,
-        persona: None,
-        ui_language: None,
-        custom_source_language: None,
-        custom_target_language: None,
+        ..Default::default()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::llm::types::{CoherenceChunkInput, GlossaryEntry};
+
+    fn en_it_config() -> PipelineConfig {
+        PipelineConfig {
+            source_language: "English".to_string(),
+            target_language: "Italian".to_string(),
+            ..Default::default()
+        }
+    }
+
+    fn simple_input() -> CoherenceChunkInput {
+        CoherenceChunkInput {
+            original: "Hello world".to_string(),
+            translation: "Ciao mondo".to_string(),
+            blob_context: None,
+            current_chunk_id: None,
+        }
+    }
+
+    // ── system block ──────────────────────────────────────────────────
+
+    #[test]
+    fn system_includes_source_and_target_languages() {
+        let prompt = build_coherence_prompts(&simple_input(), &en_it_config());
+        assert!(prompt.system[0].text.contains("English→Italian"));
+    }
+
+    #[test]
+    fn system_block_is_cacheable() {
+        let prompt = build_coherence_prompts(&simple_input(), &en_it_config());
+        assert!(prompt.system[0].cacheable);
+    }
+
+    #[test]
+    fn system_uses_custom_coherence_prompt_when_provided() {
+        let config = PipelineConfig {
+            coherence_prompt: Some("Custom instructions here".to_string()),
+            ..en_it_config()
+        };
+        let prompt = build_coherence_prompts(&simple_input(), &config);
+        assert!(prompt.system[0].text.contains("Custom instructions here"));
+    }
+
+    #[test]
+    fn system_falls_back_to_default_instructions_when_prompt_is_blank() {
+        let config = PipelineConfig {
+            coherence_prompt: Some("   ".to_string()),
+            ..en_it_config()
+        };
+        let prompt = build_coherence_prompts(&simple_input(), &config);
+        assert!(prompt.system[0].text.contains("Terminology consistency"));
+    }
+
+    #[test]
+    fn system_includes_glossary_section_when_glossary_is_non_empty() {
+        let config = PipelineConfig {
+            glossary: vec![GlossaryEntry {
+                term: "AI".to_string(),
+                translation: "IA".to_string(),
+                notes: None,
+            }],
+            ..en_it_config()
+        };
+        let prompt = build_coherence_prompts(&simple_input(), &config);
+        assert!(prompt.system[0].text.contains("Glossary:"));
+        assert!(prompt.system[0].text.contains("AI"));
+    }
+
+    #[test]
+    fn system_omits_glossary_section_when_glossary_is_empty() {
+        let prompt = build_coherence_prompts(&simple_input(), &en_it_config());
+        assert!(!prompt.system[0].text.contains("Glossary:"));
+    }
+
+    #[test]
+    fn system_uses_ui_language_for_response_language_directive() {
+        let config = PipelineConfig {
+            ui_language: Some("French".to_string()),
+            ..en_it_config()
+        };
+        let prompt = build_coherence_prompts(&simple_input(), &config);
+        assert!(prompt.system[0].text.contains("French"));
+    }
+
+    // ── user turn ─────────────────────────────────────────────────────
+
+    #[test]
+    fn user_includes_original_and_translation() {
+        let prompt = build_coherence_prompts(&simple_input(), &en_it_config());
+        assert!(prompt.user.contains("Hello world"));
+        assert!(prompt.user.contains("Ciao mondo"));
+    }
+
+    #[test]
+    fn user_omits_reference_block_when_no_blob_context() {
+        let prompt = build_coherence_prompts(&simple_input(), &en_it_config());
+        assert!(!prompt.user.contains("Reference translated document block"));
+    }
+
+    #[test]
+    fn user_includes_reference_block_when_blob_context_provided() {
+        let input = CoherenceChunkInput {
+            blob_context: Some("Adjacent chunk translation".to_string()),
+            ..simple_input()
+        };
+        let prompt = build_coherence_prompts(&input, &en_it_config());
+        assert!(prompt.user.contains("Reference translated document block"));
+        assert!(prompt.user.contains("Adjacent chunk translation"));
+    }
+
+    #[test]
+    fn user_includes_chunk_id_line_when_current_chunk_id_provided() {
+        let input = CoherenceChunkInput {
+            current_chunk_id: Some("chunk-42".to_string()),
+            ..simple_input()
+        };
+        let prompt = build_coherence_prompts(&input, &en_it_config());
+        assert!(prompt.user.contains("Current chunk id: chunk-42"));
+    }
+
+    #[test]
+    fn user_omits_chunk_id_line_when_not_provided() {
+        let prompt = build_coherence_prompts(&simple_input(), &en_it_config());
+        assert!(!prompt.user.contains("Current chunk id:"));
+    }
+
+    #[test]
+    fn user_omits_reference_block_when_blob_context_is_empty_string() {
+        let input = CoherenceChunkInput {
+            blob_context: Some(String::new()),
+            ..simple_input()
+        };
+        let prompt = build_coherence_prompts(&input, &en_it_config());
+        assert!(!prompt.user.contains("Reference translated document block"));
     }
 }

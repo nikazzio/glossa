@@ -1,4 +1,6 @@
 export type ModelProvider = 'gemini' | 'openai' | 'anthropic' | 'deepseek' | 'ollama';
+export type ModelReasoningClass = 'reasoning' | 'non_reasoning' | 'optional';
+export type ModelStatus = 'stable' | 'preview' | 'deprecated';
 export type QualityRating = 'critical' | 'poor' | 'fair' | 'good' | 'excellent';
 export type ChunkStatus = 'ready' | 'processing' | 'completed' | 'error';
 export type ViewMode = 'sandbox' | 'document';
@@ -8,6 +10,10 @@ export type DocumentFormat = 'plain' | 'markdown';
 export type DocumentRenderProfile = 'plain-text' | 'markdown';
 export type ExperimentalImportMode = 'docx-markdown';
 export type OllamaThinkLevel = boolean | 'low' | 'medium' | 'high';
+export type ReasoningEffortLevel = 'none' | 'low' | 'medium' | 'high';
+export type StageRole = 'translation' | 'refine' | 'format';
+export type PipelineMode = 'standard' | 'editorial';
+export type PipelineRunStatus = 'idle' | 'running' | 'completed' | 'interrupted';
 
 export interface OllamaConfig {
   temperature?: number;
@@ -21,8 +27,27 @@ export interface OllamaConfig {
   advancedOptions?: Record<string, unknown>;
 }
 
+export interface OpenAICacheConfig {
+  promptCacheKey?: string;
+  promptCacheRetention?: 'in_memory' | '24h';
+  reasoningEffort?: ReasoningEffortLevel;
+}
+
+export interface DeepSeekConfig {
+  reasoningEffort?: ReasoningEffortLevel;
+}
+
+export interface GeminiCacheConfig {
+  explicitCaching?: boolean;
+  cacheTtlSeconds?: number;
+  thinkingBudget?: number | null; // 0 = disabled, null = provider default
+}
+
 export interface ProviderRuntimeConfig {
   ollama?: OllamaConfig;
+  openai?: OpenAICacheConfig;
+  deepseek?: DeepSeekConfig;
+  gemini?: GeminiCacheConfig;
 }
 
 export interface GlossaryEntry {
@@ -44,11 +69,11 @@ export interface Glossary {
 export interface PipelineStageConfig {
   id: string;
   name: string;
+  role?: StageRole;
   prompt: string;
   model: string;
   provider: ModelProvider;
   enabled: boolean;
-  rollingContext?: boolean;
   sourceLanguage?: string;
   targetLanguage?: string;
   providerOptions?: ProviderRuntimeConfig;
@@ -79,17 +104,29 @@ export interface TranslationChunk {
   coherenceResult?: CoherenceResult;
   currentDraft?: string;
   translationLocked?: boolean;
+  translationStale?: boolean;
+  sourceEditable?: boolean;
   footnotes?: Footnote[];
+  blobId?: string;
+  blobOrder?: number;
+  blobReferenceChunkIds?: string[];
 }
 
 export interface TokenUsage {
   inputTokens: number;
   outputTokens: number;
+  cachedInputTokens?: number;
+  cacheMissInputTokens?: number;
 }
 
 export interface PromptInfo {
   systemPrompt: string;
   userPrompt: string;
+}
+
+export interface ResponseInfo {
+  kind: 'judge' | 'coherence';
+  rawJson: string;
 }
 
 export interface PromptTemplate {
@@ -121,6 +158,7 @@ export interface Issue {
   severity: 'low' | 'medium' | 'high';
   description: string;
   suggestedFix?: string;
+  phrase?: string;
 }
 
 export interface CoherenceResult {
@@ -134,6 +172,7 @@ export interface CoherenceResult {
 export interface PipelineConfig {
   sourceLanguage: string;
   targetLanguage: string;
+  mode?: PipelineMode;
   stages: PipelineStageConfig[];
   judgePrompt: string;
   judgeModel: string;
@@ -145,6 +184,7 @@ export interface PipelineConfig {
   minWords?: number;
   maxWords?: number;
   headingAware?: boolean;
+  carryTrailingShortBlocks?: boolean;
   documentFormat?: DocumentFormat;
   renderProfile?: DocumentRenderProfile;
   markdownAware?: boolean;
@@ -155,4 +195,10 @@ export interface PipelineConfig {
   uiLanguage?: string;
   customSourceLanguage?: string;
   customTargetLanguage?: string;
+  blobBudgetTokens?: number;
+  blobOverlap?: number;
+  chunkedWithContextWindow?: number;
+  // Runtime-only prompt context. Computed per invocation, never persisted.
+  blobContext?: string;
+  blobCurrentChunkId?: string;
 }

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import {
-  X, ChevronRight,
+  ChevronRight, HelpCircle,
   FolderOpen, Upload, SlidersHorizontal, Save,
-  LibraryBig, Globe, Settings, HelpCircle,
+  LibraryBig, Globe, Settings,
   LayoutTemplate, PanelRight,
   CheckCheck, PanelTopClose, ScanLine,
   Wand2, BookmarkPlus, BookOpen,
@@ -12,6 +12,7 @@ import { appLogDir } from '@tauri-apps/api/path';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { EditorialModalShell } from '../common';
 
 interface HelpGuideProps {
   open: boolean;
@@ -49,66 +50,66 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
       aria-labelledby="help-title"
       ref={trapRef}
     >
-      <div className="relative flex h-[88vh] w-full max-w-4xl flex-col overflow-hidden rounded-[28px] border border-editorial-border bg-editorial-bg shadow-[0_24px_80px_rgba(26,26,26,0.2)]">
+      <div className="relative flex h-[88vh] w-full max-w-4xl">
+        <EditorialModalShell
+          titleId="help-title"
+          title={t('help.title')}
+          closeLabel={t('settings.close')}
+          onClose={onClose}
+          icon={<HelpCircle size={22} />}
+          eyebrow={t('help.eyebrow')}
+          widthClassName="max-w-4xl"
+          panelClassName="h-[88vh]"
+          bodyClassName="p-0"
+          footer={
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-full border border-editorial-border px-5 py-3 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              >
+                {t('common.close')}
+              </button>
+            </div>
+          }
+        >
+          <div className="flex h-full min-h-0 overflow-hidden">
+            <nav className="flex w-56 shrink-0 flex-col overflow-hidden border-r border-editorial-border bg-editorial-textbox/30">
+              <ul className="flex-1 space-y-0.5 overflow-y-auto p-3 custom-scrollbar">
+                {sections.map((s) => (
+                  <li key={s.id}>
+                    <button
+                      type="button"
+                      onClick={() => setActiveSection(s.id)}
+                      className={`flex w-full items-center gap-2 rounded-full px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                        activeSection === s.id
+                          ? 'bg-editorial-accent text-white'
+                          : 'text-editorial-ink/60 hover:text-editorial-accent'
+                      }`}
+                    >
+                      <ChevronRight size={11} className={activeSection === s.id ? 'opacity-100' : 'opacity-0'} />
+                      {s.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </nav>
 
-        {/* ── Header ── */}
-        <div className="shrink-0 border-b border-editorial-border px-6 pb-4 pt-5">
-          <div className="flex items-center justify-between gap-4">
-            <h3 id="help-title" className="font-display text-2xl italic tracking-tight text-editorial-ink">
-              {t('help.title')}
-            </h3>
-            <button
-              type="button"
-              onClick={onClose}
-              className="shrink-0 rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              aria-label={t('settings.close')}
-            >
-              <X size={16} />
-            </button>
+            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+              {activeSection === 'overview'        && <OverviewSection />}
+              {activeSection === 'pipeline'        && <PipelineSection />}
+              {activeSection === 'features'        && <FeaturesSection />}
+              {activeSection === 'streaming'       && <StreamingSection />}
+              {activeSection === 'audit'           && <AuditSection />}
+              {activeSection === 'projects'        && <ProjectsSection />}
+              {activeSection === 'providers'       && <ProvidersSection />}
+              {activeSection === 'ollama'          && <OllamaSection />}
+              {activeSection === 'glossary'        && <GlossarySection />}
+              {activeSection === 'shortcuts'       && <ShortcutsSection />}
+              {activeSection === 'troubleshooting' && <TroubleshootingSection />}
+            </div>
           </div>
-        </div>
-
-        {/* ── Body: sidebar nav + content ── */}
-        <div className="flex flex-1 min-h-0 overflow-hidden">
-
-          {/* Sidebar nav */}
-          <nav className="flex w-56 shrink-0 flex-col overflow-hidden border-r border-editorial-border bg-editorial-textbox/30">
-            <ul className="flex-1 space-y-0.5 overflow-y-auto p-3 custom-scrollbar">
-              {sections.map((s) => (
-                <li key={s.id}>
-                  <button
-                    type="button"
-                    onClick={() => setActiveSection(s.id)}
-                    className={`flex w-full items-center gap-2 rounded-full px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                      activeSection === s.id
-                        ? 'bg-editorial-accent text-white'
-                        : 'text-editorial-ink/60 hover:text-editorial-accent'
-                    }`}
-                  >
-                    <ChevronRight size={11} className={activeSection === s.id ? 'opacity-100' : 'opacity-0'} />
-                    {s.label}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </nav>
-
-          {/* Scrollable content */}
-          <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-            {activeSection === 'overview'        && <OverviewSection />}
-            {activeSection === 'pipeline'        && <PipelineSection />}
-            {activeSection === 'features'        && <FeaturesSection />}
-            {activeSection === 'streaming'       && <StreamingSection />}
-            {activeSection === 'audit'           && <AuditSection />}
-            {activeSection === 'projects'        && <ProjectsSection />}
-            {activeSection === 'providers'       && <ProvidersSection />}
-            {activeSection === 'ollama'          && <OllamaSection />}
-            {activeSection === 'glossary'        && <GlossarySection />}
-            {activeSection === 'shortcuts'       && <ShortcutsSection />}
-            {activeSection === 'troubleshooting' && <TroubleshootingSection />}
-          </div>
-
-        </div>
+        </EditorialModalShell>
       </div>
     </div>
   );
@@ -150,9 +151,9 @@ function Step({ n, title, children }: { n: number; title: string; children: Reac
 
 function Tip({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="mt-6 p-4 bg-editorial-textbox/30 border border-editorial-border">
-      <h4 className="text-[10px] font-bold uppercase tracking-widest text-editorial-accent mb-2">{title}</h4>
-      <p className="text-[13px] text-editorial-ink/70 leading-relaxed">{children}</p>
+    <div className="mt-6 rounded-[20px] border border-editorial-border bg-editorial-textbox/30 px-5 py-4">
+      <h4 className="mb-2 text-[10px] font-bold uppercase tracking-[0.3em] text-editorial-accent">{title}</h4>
+      <p className="text-[13px] leading-relaxed text-editorial-ink/70">{children}</p>
     </div>
   );
 }
@@ -169,27 +170,27 @@ function Kbd({ children }: { children: React.ReactNode }) {
 
 function OverviewSection() {
   const { t } = useTranslation();
+  const flowSteps = ['step1', 'step2', 'step3', 'step4', 'step5', 'step6'] as const;
   return (
     <>
       <SectionTitle>{t('help.overview.title')}</SectionTitle>
       <P>{t('help.overview.p1')}</P>
       <P>{t('help.overview.p2')}</P>
 
-      <div className="my-8 p-6 bg-editorial-textbox/30 border border-editorial-border font-mono text-xs leading-loose">
-        <div className="text-editorial-ink/50 mb-3 uppercase tracking-widest text-[10px] font-bold">{t('help.overview.flowTitle')}</div>
-        <div className="pl-4 border-l-2 border-editorial-accent space-y-2">
-          <div className="text-editorial-ink">📝 {t('help.overview.step1')}</div>
-          <div className="text-editorial-ink/40">↓</div>
-          <div className="text-editorial-ink">⚙️ {t('help.overview.step2')}</div>
-          <div className="text-editorial-ink/40">↓</div>
-          <div className="text-editorial-ink">✨ {t('help.overview.step3')}</div>
-          <div className="text-editorial-ink/40">↓</div>
-          <div className="text-editorial-ink">🔍 {t('help.overview.step4')}</div>
-          <div className="text-editorial-ink/40">↓</div>
-          <div className="text-editorial-ink">✏️ {t('help.overview.step5')}</div>
-          <div className="text-editorial-ink/40">↓</div>
-          <div className="text-editorial-ink">📤 {t('help.overview.step6')}</div>
+      <div className="my-8 rounded-[20px] border border-editorial-border bg-editorial-textbox/25 p-6">
+        <div className="mb-4 text-[10px] font-bold uppercase tracking-[0.3em] text-editorial-muted">
+          {t('help.overview.flowTitle')}
         </div>
+        <ol className="space-y-3 border-l-2 border-editorial-accent pl-5">
+          {flowSteps.map((key, idx) => (
+            <li key={key} className="flex items-start gap-3 text-sm leading-relaxed text-editorial-ink">
+              <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-editorial-accent/40 bg-editorial-bg text-[10px] font-bold text-editorial-accent">
+                {idx + 1}
+              </span>
+              <span>{t(`help.overview.${key}`)}</span>
+            </li>
+          ))}
+        </ol>
       </div>
 
       <P>{t('help.overview.p3')}</P>
@@ -204,21 +205,52 @@ function PipelineSection() {
       <SectionTitle>{t('help.pipeline.title')}</SectionTitle>
       <P>{t('help.pipeline.intro')}</P>
 
+      <SubTitle>{t('help.pipeline.modesTitle')}</SubTitle>
+      <P>{t('help.pipeline.modesDesc')}</P>
+
+      <div className="my-6 space-y-3">
+        <ModeRow
+          name={t('help.pipeline.modeStandardName')}
+          stages={t('help.pipeline.modeStandardStages')}
+          desc={t('help.pipeline.modeStandardDesc')}
+        />
+        <ModeRow
+          name={t('help.pipeline.modeEditorialName')}
+          stages={t('help.pipeline.modeEditorialStages')}
+          desc={t('help.pipeline.modeEditorialDesc')}
+        />
+      </div>
+
       <Step n={1} title={t('help.pipeline.configTitle')}>
         {t('help.pipeline.configDesc')}
       </Step>
       <Step n={2} title={t('help.pipeline.stagesTitle')}>
         {t('help.pipeline.stagesDesc')}
       </Step>
-      <Step n={3} title={t('help.pipeline.runTitle')}>
+      <Step n={3} title={t('help.pipeline.previewTitle')}>
+        {t('help.pipeline.previewDesc')}
+      </Step>
+      <Step n={4} title={t('help.pipeline.runTitle')}>
         {t('help.pipeline.runDesc')}
       </Step>
-      <Step n={4} title={t('help.pipeline.editTitle')}>
+      <Step n={5} title={t('help.pipeline.editTitle')}>
         {t('help.pipeline.editDesc')}
       </Step>
 
       <Tip title={t('help.pipeline.tipTitle')}>{t('help.pipeline.tipDesc')}</Tip>
     </>
+  );
+}
+
+function ModeRow({ name, stages, desc }: { name: string; stages: string; desc: string }) {
+  return (
+    <div className="rounded-[20px] border border-editorial-border bg-editorial-textbox/15 px-5 py-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <span className="font-display text-base italic text-editorial-ink">{name}</span>
+        <span className="font-mono text-[11px] text-editorial-accent">{stages}</span>
+      </div>
+      <p className="mt-2 text-[13px] leading-relaxed text-editorial-ink/75">{desc}</p>
+    </div>
   );
 }
 
@@ -229,8 +261,29 @@ function FeaturesSection() {
       <SectionTitle>{t('help.features.title')}</SectionTitle>
       <P>{t('help.features.intro')}</P>
 
+      <SubTitle>{t('help.features.documentWorkspaceTitle')}</SubTitle>
+      <P>{t('help.features.documentWorkspaceDesc')}</P>
+
+      <SubTitle>{t('help.features.documentToolsTitle')}</SubTitle>
+      <P>{t('help.features.documentToolsDesc')}</P>
+
+      <SubTitle>{t('help.features.insightsTitle')}</SubTitle>
+      <P>{t('help.features.insightsDesc')}</P>
+
+      <SubTitle>{t('help.features.statsTitle')}</SubTitle>
+      <P>{t('help.features.statsDesc')}</P>
+
+      <SubTitle>{t('help.features.operationsLogTitle')}</SubTitle>
+      <P>{t('help.features.operationsLogDesc')}</P>
+
       <SubTitle>{t('help.features.configDrawerTitle')}</SubTitle>
       <P>{t('help.features.configDrawerDesc')}</P>
+
+      <SubTitle>{t('help.features.modalsTitle')}</SubTitle>
+      <P>{t('help.features.modalsDesc')}</P>
+
+      <SubTitle>{t('help.features.personaTitle')}</SubTitle>
+      <P>{t('help.features.personaDesc')}</P>
 
       <SubTitle>{t('help.features.templatesTitle')}</SubTitle>
       <P>{t('help.features.templatesDesc')}</P>
@@ -238,17 +291,11 @@ function FeaturesSection() {
       <SubTitle>{t('help.features.refineTitle')}</SubTitle>
       <P>{t('help.features.refineDesc')}</P>
 
-      <SubTitle>{t('help.features.tokenTitle')}</SubTitle>
-      <P>{t('help.features.tokenDesc')}</P>
+      <SubTitle>{t('help.features.refineGatingTitle')}</SubTitle>
+      <P>{t('help.features.refineGatingDesc')}</P>
 
-      <SubTitle>{t('help.features.sandboxTitle')}</SubTitle>
-      <P>{t('help.features.sandboxDesc')}</P>
-
-      <SubTitle>{t('help.features.exportTitle')}</SubTitle>
-      <P>{t('help.features.exportDesc')}</P>
-
-      <SubTitle>{t('help.features.documentToolsTitle')}</SubTitle>
-      <P>{t('help.features.documentToolsDesc')}</P>
+      <SubTitle>{t('help.features.promptPreviewTitle')}</SubTitle>
+      <P>{t('help.features.promptPreviewDesc')}</P>
 
       <SubTitle>{t('help.features.segmentationTitle')}</SubTitle>
       <P>{t('help.features.segmentationDesc')}</P>
@@ -265,23 +312,17 @@ function FeaturesSection() {
       <SubTitle>{t('help.features.chunkActionsTitle')}</SubTitle>
       <P>{t('help.features.chunkActionsDesc')}</P>
 
-      <SubTitle>{t('help.features.rollingContextTitle')}</SubTitle>
-      <P>{t('help.features.rollingContextDesc')}</P>
+      <SubTitle>{t('help.features.tokenTitle')}</SubTitle>
+      <P>{t('help.features.tokenDesc')}</P>
 
-      <SubTitle>{t('help.features.personaTitle')}</SubTitle>
-      <P>{t('help.features.personaDesc')}</P>
-
-      <SubTitle>{t('help.features.operationsLogTitle')}</SubTitle>
-      <P>{t('help.features.operationsLogDesc')}</P>
-
-      <SubTitle>{t('help.features.insightsTitle')}</SubTitle>
-      <P>{t('help.features.insightsDesc')}</P>
-
-      <SubTitle>{t('help.features.statsTitle')}</SubTitle>
-      <P>{t('help.features.statsDesc')}</P>
+      <SubTitle>{t('help.features.exportTitle')}</SubTitle>
+      <P>{t('help.features.exportDesc')}</P>
 
       <SubTitle>{t('help.features.watchdogTitle')}</SubTitle>
       <P>{t('help.features.watchdogDesc')}</P>
+
+      <SubTitle>{t('help.features.sandboxTitle')}</SubTitle>
+      <P>{t('help.features.sandboxDesc')}</P>
 
       <div className="my-4 space-y-2">
         <FeatureRow icon={<PanelTopClose size={14} />} text={t('help.shortcuts.toggleEditorTools')} />
@@ -306,20 +347,21 @@ function StreamingSection() {
 
 function AuditSection() {
   const { t } = useTranslation();
+  const issueTypes = ['glossary', 'accuracy', 'fluency', 'grammar', 'consistency'] as const;
   return (
     <>
       <SectionTitle>{t('help.audit.title')}</SectionTitle>
       <P>{t('help.audit.intro')}</P>
 
-      <div className="space-y-3 my-6">
-        {(['glossary', 'accuracy', 'fluency', 'grammar', 'consistency'] as const).map((type) => (
-          <div key={type} className="flex items-start gap-3 p-4 bg-editorial-textbox/20 border border-editorial-border">
-            <span className={`text-[10px] font-bold uppercase px-2 py-0.5 shrink-0 tracking-wider ${
-              type === 'grammar' ? 'bg-editorial-accent text-white' : 'bg-editorial-ink text-white'
-            }`}>
-              {type}
+      <div className="my-6 space-y-3">
+        {issueTypes.map((type) => (
+          <div key={type} className="flex items-start gap-3 rounded-[20px] border border-editorial-border bg-editorial-textbox/15 px-5 py-4">
+            <span className="shrink-0 rounded-full border border-editorial-accent/40 bg-editorial-accent/12 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-accent">
+              {t(`help.audit.${type}Label`)}
             </span>
-            <span className="text-[13px] text-editorial-ink/75">{t(`help.audit.${type}Issue`)}</span>
+            <span className="text-[13px] leading-relaxed text-editorial-ink/80">
+              {t(`help.audit.${type}Issue`)}
+            </span>
           </div>
         ))}
       </div>
@@ -358,29 +400,32 @@ function ProjectsSection() {
 
 function ProvidersSection() {
   const { t } = useTranslation();
+  const rows: { name: string; modelsKey: string; noteKey: string }[] = [
+    { name: 'Gemini',    modelsKey: 'help.providers.geminiModels',    noteKey: 'help.providers.geminiNote' },
+    { name: 'OpenAI',    modelsKey: 'help.providers.openaiModels',    noteKey: 'help.providers.openaiNote' },
+    { name: 'Anthropic', modelsKey: 'help.providers.anthropicModels', noteKey: 'help.providers.anthropicNote' },
+    { name: 'DeepSeek',  modelsKey: 'help.providers.deepseekModels',  noteKey: 'help.providers.deepseekNote' },
+    { name: 'Ollama',    modelsKey: 'help.providers.ollamaModels',    noteKey: 'help.providers.ollamaNote' },
+  ];
   return (
     <>
       <SectionTitle>{t('help.providers.title')}</SectionTitle>
       <P>{t('help.providers.intro')}</P>
 
-      <div className="overflow-x-auto my-6">
-        <table className="w-full text-[13px] border-collapse">
-          <thead>
-            <tr className="border-b-2 border-editorial-ink">
-              <th className="text-left py-2.5 pr-4 font-bold uppercase tracking-widest text-[10px] text-editorial-ink">{t('help.providers.provider')}</th>
-              <th className="text-left py-2.5 pr-4 font-bold uppercase tracking-widest text-[10px] text-editorial-ink">{t('help.providers.models')}</th>
-              <th className="text-left py-2.5 font-bold uppercase tracking-widest text-[10px] text-editorial-ink">{t('help.providers.notes')}</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-editorial-border">
-            <tr><td className="py-2.5 pr-4 font-bold text-editorial-ink">Gemini</td><td className="py-2.5 pr-4 font-mono text-xs text-editorial-ink/70">gemini-3-flash-preview, gemini-3.1-pro-preview, gemini-2.5-flash-lite-preview</td><td className="py-2.5 text-editorial-ink/70">{t('help.providers.geminiNote')}</td></tr>
-            <tr><td className="py-2.5 pr-4 font-bold text-editorial-ink">OpenAI</td><td className="py-2.5 pr-4 font-mono text-xs text-editorial-ink/70">gpt-4o, gpt-4o-mini, o1-preview</td><td className="py-2.5 text-editorial-ink/70">{t('help.providers.openaiNote')}</td></tr>
-            <tr><td className="py-2.5 pr-4 font-bold text-editorial-ink">Anthropic</td><td className="py-2.5 pr-4 font-mono text-xs text-editorial-ink/70">claude-3-5-sonnet-latest, claude-3-haiku-latest</td><td className="py-2.5 text-editorial-ink/70">{t('help.providers.anthropicNote')}</td></tr>
-            <tr><td className="py-2.5 pr-4 font-bold text-editorial-ink">DeepSeek</td><td className="py-2.5 pr-4 font-mono text-xs text-editorial-ink/70">deepseek-chat, deepseek-reasoner</td><td className="py-2.5 text-editorial-ink/70">{t('help.providers.deepseekNote')}</td></tr>
-            <tr><td className="py-2.5 pr-4 font-bold text-editorial-ink">Ollama</td><td className="py-2.5 pr-4 font-mono text-xs text-editorial-ink/70">{t('help.providers.ollamaModels')}</td><td className="py-2.5 text-editorial-ink/70">{t('help.providers.ollamaNote')}</td></tr>
-          </tbody>
-        </table>
+      <div className="my-6 space-y-3">
+        {rows.map((row) => (
+          <div key={row.name} className="rounded-[20px] border border-editorial-border bg-editorial-textbox/15 px-5 py-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-3">
+              <span className="font-display text-base italic text-editorial-ink">{row.name}</span>
+              <span className="font-mono text-[11px] text-editorial-accent">{t(row.modelsKey)}</span>
+            </div>
+            <p className="mt-2 text-[13px] leading-relaxed text-editorial-ink/75">{t(row.noteKey)}</p>
+          </div>
+        ))}
       </div>
+
+      <SubTitle>{t('help.providers.gatingTitle')}</SubTitle>
+      <P>{t('help.providers.gatingDesc')}</P>
 
       <P>{t('help.providers.security')}</P>
     </>
@@ -396,19 +441,19 @@ function OllamaSection() {
 
       <Step n={1} title={t('help.ollama.installTitle')}>
         <span>{t('help.ollama.installDesc')}</span>
-        <code className="block mt-2 p-3 bg-editorial-textbox border border-editorial-border text-xs font-mono text-editorial-ink">
+        <code className="mt-3 block rounded-[14px] border border-editorial-border bg-editorial-textbox px-4 py-3 text-xs font-mono text-editorial-ink">
           curl -fsSL https://ollama.com/install.sh | sh
         </code>
       </Step>
       <Step n={2} title={t('help.ollama.pullTitle')}>
         <span>{t('help.ollama.pullDesc')}</span>
-        <code className="block mt-2 p-3 bg-editorial-textbox border border-editorial-border text-xs font-mono text-editorial-ink">
+        <code className="mt-3 block rounded-[14px] border border-editorial-border bg-editorial-textbox px-4 py-3 text-xs font-mono text-editorial-ink">
           ollama pull llama3.2
         </code>
       </Step>
       <Step n={3} title={t('help.ollama.serveTitle')}>
         <span>{t('help.ollama.serveDesc')}</span>
-        <code className="block mt-2 p-3 bg-editorial-textbox border border-editorial-border text-xs font-mono text-editorial-ink">
+        <code className="mt-3 block rounded-[14px] border border-editorial-border bg-editorial-textbox px-4 py-3 text-xs font-mono text-editorial-ink">
           ollama serve
         </code>
       </Step>
@@ -533,7 +578,7 @@ function TroubleshootingSection() {
 
       <SubTitle>{t('help.troubleshooting.logFileTitle')}</SubTitle>
       <P>{t('help.troubleshooting.logFileDesc')}</P>
-      <div className="flex items-center gap-2 rounded-xl border border-editorial-border bg-editorial-textbox/20 px-4 py-3 font-mono text-xs text-editorial-ink/80">
+      <div className="flex items-center gap-2 rounded-[14px] border border-editorial-border bg-editorial-textbox/20 px-4 py-3 font-mono text-xs text-editorial-ink/80">
         <span className="flex-1 break-all">{logPath ?? '…'}</span>
         <button
           type="button"
@@ -542,7 +587,7 @@ function TroubleshootingSection() {
           title={t('common.copy')}
           aria-label={copied ? t('pipeline.copied') : t('common.copy')}
           aria-live="polite"
-          className="shrink-0 rounded-lg border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-30"
+          className="shrink-0 rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-30"
         >
           {copied ? <Check size={13} /> : <Copy size={13} />}
         </button>
@@ -550,7 +595,7 @@ function TroubleshootingSection() {
 
       <SubTitle>{t('help.troubleshooting.rustLogTitle')}</SubTitle>
       <P>{t('help.troubleshooting.rustLogDesc')}</P>
-      <div className="rounded-xl border border-editorial-border bg-editorial-textbox/20 px-4 py-3 font-mono text-xs text-editorial-ink/80">
+      <div className="rounded-[14px] border border-editorial-border bg-editorial-textbox/20 px-4 py-3 font-mono text-xs text-editorial-ink/80">
         RUST_LOG=debug
       </div>
     </>
@@ -559,7 +604,7 @@ function TroubleshootingSection() {
 
 function FeatureRow({ icon, text }: { icon: React.ReactNode; text: string }) {
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-editorial-border bg-editorial-textbox/20 px-4 py-3">
+    <div className="flex items-center gap-3 rounded-[18px] border border-editorial-border bg-editorial-textbox/20 px-4 py-3">
       <span className="rounded-full border border-editorial-border bg-editorial-bg p-2 text-editorial-accent">
         {icon}
       </span>

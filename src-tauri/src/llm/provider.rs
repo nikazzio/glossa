@@ -3,18 +3,19 @@ use reqwest::Client;
 use std::time::Duration;
 
 use crate::llm::stream::{StreamTimeouts, HTTP_CONNECT_TIMEOUT_SECS};
-use crate::llm::types::ProviderRuntimeConfig;
+use crate::llm::types::{ProviderRuntimeConfig, StructuredPrompt};
 
 #[derive(Debug, Clone)]
 pub struct TokenUsage {
     pub input: u32,
     pub output: u32,
+    pub cached_input: Option<u32>,
+    pub cache_miss_input: Option<u32>,
 }
 
 pub struct LlmRequest<'a> {
     pub model: &'a str,
-    pub system_prompt: &'a str,
-    pub user_prompt: &'a str,
+    pub structured: &'a StructuredPrompt,
     pub api_key: &'a str,
     pub json_mode: bool,
     pub provider_options: Option<&'a ProviderRuntimeConfig>,
@@ -41,12 +42,19 @@ pub struct UsageAccumulator {
     pub latest_input: Option<u32>,
     pub latest_output: Option<u32>,
     pub pending_input: Option<u32>,
+    pub latest_cached_input: Option<u32>,
+    pub latest_cache_miss_input: Option<u32>,
 }
 
 impl UsageAccumulator {
     pub fn final_usage(&self) -> Option<TokenUsage> {
         match (self.latest_input, self.latest_output) {
-            (Some(i), Some(o)) => Some(TokenUsage { input: i, output: o }),
+            (Some(i), Some(o)) => Some(TokenUsage {
+                input: i,
+                output: o,
+                cached_input: self.latest_cached_input,
+                cache_miss_input: self.latest_cache_miss_input,
+            }),
             _ => None,
         }
     }

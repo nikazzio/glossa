@@ -1,11 +1,17 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  AlignCenter,
+  AlignJustify,
+  AlignLeft,
   AlertTriangle,
+  ArrowLeftRight,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
+  Cpu,
   FileText,
+  Globe,
   Hash,
   Info,
   LayoutGrid,
@@ -13,12 +19,18 @@ import {
   RotateCcw,
   Scissors,
   SplitSquareVertical,
+  X,
+  type LucideIcon,
 } from 'lucide-react';
 import { buildImportPreview } from '../../utils/documentWorkflow';
 import { findBestSplitIndex, recommendChunkCount, trimSplitFragment } from '../../utils';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { checkContextOverflow, estimateCharTokens } from '../../utils/tokenEstimate';
+import { LANGUAGES } from '../../constants';
+import { getSelectableModelIds, MODEL_PROVIDER_ORDER } from '../../models/catalog';
+import { useUiStore } from '../../stores/uiStore';
+import type { ModelProvider } from '../../types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -31,15 +43,15 @@ interface ImportPreviewDialogProps {
   text: string;
   useChunking: boolean;
   targetChunkCount: number;
-  minWords: number;
-  maxWords: number;
   headingAware: boolean;
+  carryTrailingShortBlocks: boolean;
   markdownAware?: boolean;
   format?: 'plain' | 'markdown';
   experimental?: 'docx-markdown';
   onUseChunkingChange: (value: boolean) => void;
   onTargetChunkCountChange: (value: number) => void;
   onHeadingAwareChange: (value: boolean) => void;
+  onCarryTrailingShortBlocksChange: (value: boolean) => void;
   onCancel: () => void;
   onConfirm: (manualChunks?: string[]) => void;
 }
@@ -399,22 +411,65 @@ export function ImportPreviewDialog({
   text,
   useChunking,
   targetChunkCount,
-  minWords,
-  maxWords,
   headingAware,
+  carryTrailingShortBlocks,
   markdownAware = false,
   format,
   experimental,
   onUseChunkingChange,
   onTargetChunkCountChange,
   onHeadingAwareChange,
+  onCarryTrailingShortBlocksChange,
   onCancel,
   onConfirm,
 }: ImportPreviewDialogProps) {
   const { t } = useTranslation();
   const trapRef = useFocusTrap(true, onCancel);
   const [editorMode, setEditorMode] = useState<EditorMode>('cards');
-  const config = usePipelineStore((s) => s.config);
+  const { config, updateStage, setConfig } = usePipelineStore();
+  const ollamaModels = useUiStore((s) => s.ollamaModels);
+  const chunkPresetShort = useUiStore((s) => s.chunkPresetShort);
+  const chunkPresetMedium = useUiStore((s) => s.chunkPresetMedium);
+  const chunkPresetLong = useUiStore((s) => s.chunkPresetLong);
+
+  const stage0 = config.stages[0];
+  const [selectedProvider, setSelectedProvider] = useState<ModelProvider>(stage0?.provider ?? 'openai');
+  const [selectedModel, setSelectedModel] = useState<string>(stage0?.model ?? '');
+  const getProviderModels = useCallback(
+    (provider: ModelProvider) => getSelectableModelIds(provider, ollamaModels),
+    [ollamaModels],
+  );
+
+  const availableModels = getProviderModels(selectedProvider);
+
+  const handleProviderChange = (provider: ModelProvider) => {
+    setSelectedProvider(provider);
+    const models = getProviderModels(provider);
+    const model = models[0] ?? '';
+    setSelectedModel(model);
+    if (stage0) updateStage(stage0.id, { provider, model });
+  };
+
+  const handleModelChange = (model: string) => {
+    setSelectedModel(model);
+    if (stage0) updateStage(stage0.id, { model });
+  };
+
+  const handleSourceLanguageChange = (lang: string) => {
+    setConfig((prev) => ({ ...prev, sourceLanguage: lang }));
+  };
+
+  const handleTargetLanguageChange = (lang: string) => {
+    setConfig((prev) => ({ ...prev, targetLanguage: lang }));
+  };
+
+  const handleSwapLanguages = () => {
+    setConfig((prev) => ({
+      ...prev,
+      sourceLanguage: prev.targetLanguage,
+      targetLanguage: prev.sourceLanguage,
+    }));
+  };
 
   // ── Settings: words-per-chunk ↔ targetChunkCount sync ─────────────────────
   const totalWords = useMemo(() => {
@@ -424,44 +479,38 @@ export function ImportPreviewDialog({
 
   useEffect(() => {
     if (targetChunkCount === 0) {
-      onTargetChunkCountChange(recommendChunkCount(text, 700));
+      onTargetChunkCountChange(recommendChunkCount(text, chunkPresetMedium));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const effectiveTargetChunkCount = targetChunkCount > 0
     ? targetChunkCount
-    : recommendChunkCount(text, 700);
+    : recommendChunkCount(text, chunkPresetMedium);
 
   const derivedWordsPerChunk = effectiveTargetChunkCount > 0
     ? Math.round(totalWords / effectiveTargetChunkCount)
-    : 700;
-
-  const [wordsPerChunkInput, setWordsPerChunkInput] = useState(String(derivedWordsPerChunk));
-  const isUserEditing = useRef(false);
-  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (!isUserEditing.current) {
-      setWordsPerChunkInput(String(derivedWordsPerChunk));
-    }
-  }, [derivedWordsPerChunk]);
+    : chunkPresetMedium;
 
   const handleWordsPerChunkChange = (value: number) => {
     onTargetChunkCountChange(recommendChunkCount(text, Math.max(50, value)));
   };
 
-  const handleWordsPerChunkInputChange = (raw: string) => {
-    isUserEditing.current = true;
-    setWordsPerChunkInput(raw);
-    if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    const parsed = Number(raw);
-    if (parsed >= 50) {
-      debounceTimer.current = setTimeout(() => {
-        handleWordsPerChunkChange(parsed);
-      }, 350);
-    }
-  };
+  const CHUNK_PRESETS: { words: number; titleKey: string; Icon: LucideIcon }[] = [
+    { words: chunkPresetShort, titleKey: 'files.chunkShortTitle', Icon: AlignLeft },
+    { words: chunkPresetMedium, titleKey: 'files.chunkMediumTitle', Icon: AlignCenter },
+    { words: chunkPresetLong, titleKey: 'files.chunkLongTitle', Icon: AlignJustify },
+  ];
+
+  const activePresetWords = CHUNK_PRESETS.reduce<number>((nearest, p) =>
+    Math.abs(derivedWordsPerChunk - p.words) < Math.abs(derivedWordsPerChunk - nearest)
+      ? p.words
+      : nearest,
+    CHUNK_PRESETS[0].words,
+  );
+
+  const effectiveMinWords = Math.round(activePresetWords * 0.5);
+  const effectiveMaxWords = Math.round(activePresetWords * 1.5);
 
   // ── Algorithmic chunk computation ──────────────────────────────────────────
   const preview = useMemo(
@@ -469,13 +518,14 @@ export function ImportPreviewDialog({
       useChunking,
       targetChunkCount: effectiveTargetChunkCount,
       markdownAware,
-      minWords,
-      maxWords,
+      minWords: effectiveMinWords,
+      maxWords: effectiveMaxWords,
       headingAware,
+      carryTrailingShortBlocks,
       format,
       experimental,
     }),
-    [useChunking, effectiveTargetChunkCount, markdownAware, minWords, maxWords, headingAware, format, experimental, text],
+    [useChunking, effectiveTargetChunkCount, markdownAware, activePresetWords, headingAware, carryTrailingShortBlocks, format, experimental, text],
   );
 
   const algorithmicParaChunks = useMemo(
@@ -665,7 +715,6 @@ export function ImportPreviewDialog({
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
-  const chunkCountLabel = `${activeParaChunks.length} ${t('pipeline.unitsReady')}`;
 
   return (
     <div
@@ -680,7 +729,7 @@ export function ImportPreviewDialog({
         {/* ── Unified header (filename + title + stats + controls) ───────── */}
         <div className="shrink-0 border-b border-editorial-border px-6 pb-4 pt-5">
 
-          {/* Row 1: filename + mode toggle */}
+          {/* Row 1: filename + mode toggle + close */}
           <div className="mb-3 flex items-center justify-between gap-4">
             <div className="flex min-w-0 items-center gap-2">
               <FileText size={15} className="shrink-0 text-editorial-muted" />
@@ -691,22 +740,33 @@ export function ImportPreviewDialog({
                 </span>
               )}
             </div>
-            <div className="flex shrink-0 items-center gap-0 rounded-full border border-editorial-border bg-editorial-bg px-1 py-1 shadow-sm">
+            <div className="flex shrink-0 items-center gap-3">
+              <div className="flex items-center gap-0 rounded-full border border-editorial-border bg-editorial-bg px-1 py-1 shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => setEditorMode('cards')}
+                  title={t('files.viewCards')}
+                  className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${editorMode === 'cards' ? 'bg-editorial-accent text-white' : 'text-editorial-muted hover:text-editorial-accent'}`}
+                >
+                  <LayoutGrid size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditorMode('segments')}
+                  title={t('files.viewSegments')}
+                  className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${editorMode === 'segments' ? 'bg-editorial-accent text-white' : 'text-editorial-muted hover:text-editorial-accent'}`}
+                >
+                  <SplitSquareVertical size={16} />
+                </button>
+              </div>
               <button
                 type="button"
-                onClick={() => setEditorMode('cards')}
-                title={t('files.viewCards')}
-                className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${editorMode === 'cards' ? 'bg-editorial-accent text-white' : 'text-editorial-muted hover:text-editorial-accent'}`}
+                onClick={onCancel}
+                title={t('common.close')}
+                aria-label={t('common.close')}
+                className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
               >
-                <LayoutGrid size={16} />
-              </button>
-              <button
-                type="button"
-                onClick={() => setEditorMode('segments')}
-                title={t('files.viewSegments')}
-                className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${editorMode === 'segments' ? 'bg-editorial-accent text-white' : 'text-editorial-muted hover:text-editorial-accent'}`}
-              >
-                <SplitSquareVertical size={16} />
+                <X size={16} />
               </button>
             </div>
           </div>
@@ -720,21 +780,23 @@ export function ImportPreviewDialog({
           </h2>
 
           {/* Row 3: stats */}
-          <div className="mb-4 flex flex-wrap items-center gap-3 text-xs font-mono text-editorial-muted">
-            <span>{preview.stats.words}w</span>
-            <span>·</span>
-            <span>{preview.stats.paragraphs} {t('pipeline.paragraphs').toLowerCase()}</span>
-            <span>·</span>
-            <span className={hasManualEdits ? 'text-editorial-warning' : ''}>{chunkCountLabel}</span>
+          <p className="mb-4 text-xs font-mono text-editorial-muted whitespace-nowrap">
+            {preview.stats.words.toLocaleString()} {t('pipeline.words').toLowerCase()}
+            {' · '}
+            {preview.stats.paragraphs} {t('pipeline.paragraphs').toLowerCase()}
+            {' · '}
+            <span className={hasManualEdits ? 'text-editorial-warning' : ''}>
+              {activeParaChunks.length} {t('pipeline.statsSegmentsUnit')}
+            </span>
             {hasManualEdits && (
-              <span className="text-editorial-warning italic">{t('files.manualEditsActive')}</span>
+              <span className="ml-2 italic text-editorial-warning">{t('files.manualEditsActive')}</span>
             )}
             {preview.warnings.length > 0 && (
-              <span title={preview.warnings.map((w) => t(`files.importWarning.${w}`)).join('\n')}>
-                <Info size={12} className="text-editorial-muted/60 cursor-help" />
+              <span className="ml-1" title={preview.warnings.map((w) => t(`files.importWarning.${w}`)).join('\n')}>
+                <Info size={12} className="inline align-middle text-editorial-muted/60 cursor-help" />
               </span>
             )}
-          </div>
+          </p>
 
           {/* Separator */}
           <div className="mb-4 h-px bg-editorial-border" />
@@ -773,44 +835,39 @@ export function ImportPreviewDialog({
               </button>
             )}
 
+            <button
+              type="button"
+              onClick={() => useChunking && onCarryTrailingShortBlocksChange(!carryTrailingShortBlocks)}
+              title={t('pipeline.trailingShortBlocks')}
+              disabled={!useChunking}
+              className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-30 ${
+                carryTrailingShortBlocks && useChunking
+                  ? 'border-editorial-accent bg-editorial-accent text-white'
+                  : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
+              }`}
+            >
+              <ArrowLeftRight size={14} />
+            </button>
+
             {/* Separator */}
             {useChunking && <span className="select-none text-editorial-border">·</span>}
 
-            {/* Words per chunk — compact input */}
-            {useChunking && (
-              <div className="flex items-center gap-1.5">
-                <input
-                  type="number"
-                  min={50}
-                  step={50}
-                  value={wordsPerChunkInput}
-                  onChange={(e) => handleWordsPerChunkInputChange(e.target.value)}
-                  onBlur={(e) => {
-                    if (debounceTimer.current) clearTimeout(debounceTimer.current);
-                    isUserEditing.current = false;
-                    const next = Math.max(50, Number(e.target.value) || 700);
-                    setWordsPerChunkInput(String(next));
-                    handleWordsPerChunkChange(next);
-                  }}
-                  title={t('files.wordsPerChunk')}
-                  className="w-16 rounded-lg border border-editorial-border bg-editorial-bg px-2 py-1 text-sm font-mono outline-none focus:border-editorial-ink/40"
-                />
-                <span className="text-xs text-editorial-muted">w</span>
-              </div>
-            )}
-
-            {/* Min / Max read-only from settings */}
-            {useChunking && (
-              <>
-                <span className="select-none text-editorial-border">·</span>
-                <span
-                  className="cursor-help text-xs text-editorial-muted/70"
-                  title={t('files.minMaxFromSettings')}
-                >
-                  {minWords}–{maxWords} w
-                </span>
-              </>
-            )}
+            {/* Chunk size presets */}
+            {useChunking && CHUNK_PRESETS.map(({ words, titleKey, Icon }) => (
+              <button
+                key={words}
+                type="button"
+                onClick={() => handleWordsPerChunkChange(words)}
+                title={t(titleKey)}
+                className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                  activePresetWords === words
+                    ? 'border-editorial-accent bg-editorial-accent text-white'
+                    : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
+                }`}
+              >
+                <Icon size={14} />
+              </button>
+            ))}
 
             {/* Recalculate — visible + contrasted only when there are manual edits */}
             <button
@@ -826,6 +883,72 @@ export function ImportPreviewDialog({
             >
               <RotateCcw size={13} />
             </button>
+          </div>
+
+          {/* Row 5: pipeline setup — language pair + model */}
+          <div className="mt-3 pt-3 border-t border-editorial-border/60">
+            <div className="grid grid-cols-[1.25rem_1fr] gap-y-2.5 gap-x-2 items-center">
+              {/* Language pair */}
+              <Globe size={11} className="text-editorial-accent shrink-0" />
+              <div className="flex items-center gap-1.5">
+                <select
+                  value={config.sourceLanguage}
+                  onChange={(e) => handleSourceLanguageChange(e.target.value)}
+                  className="w-32 rounded-[10px] border border-editorial-border bg-editorial-bg px-2 py-1.5 text-xs font-mono outline-none focus:border-editorial-ink/40 appearance-none"
+                  aria-label={t('pipeline.sourceLanguage')}
+                >
+                  {LANGUAGES.map((lang) => (
+                    <option key={lang} value={lang}>{t(`languages.${lang}`)}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={handleSwapLanguages}
+                  title={t('pipeline.swapLanguages')}
+                  aria-label={t('pipeline.swapLanguages')}
+                  className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                >
+                  <ArrowLeftRight size={12} />
+                </button>
+                <select
+                  value={config.targetLanguage}
+                  onChange={(e) => handleTargetLanguageChange(e.target.value)}
+                  className="w-32 rounded-[10px] border border-editorial-border bg-editorial-bg px-2 py-1.5 text-xs font-mono outline-none focus:border-editorial-ink/40 appearance-none"
+                  aria-label={t('pipeline.targetLanguage')}
+                >
+                  {LANGUAGES.map((lang) => (
+                    <option key={lang} value={lang}>{t(`languages.${lang}`)}</option>
+                  ))}
+                </select>
+              </div>
+              {/* Model */}
+              <Cpu size={11} className="text-editorial-accent shrink-0" />
+              <div className="flex items-center gap-1.5">
+                <select
+                  value={selectedProvider}
+                  onChange={(e) => handleProviderChange(e.target.value as ModelProvider)}
+                  className="w-24 rounded-[10px] border border-editorial-border bg-editorial-bg px-2 py-1.5 text-xs font-bold uppercase outline-none focus:border-editorial-ink/40 appearance-none"
+                  aria-label={t('pipeline.source')}
+                >
+                  {MODEL_PROVIDER_ORDER.map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+                <select
+                  value={selectedModel}
+                  onChange={(e) => handleModelChange(e.target.value)}
+                  disabled={availableModels.length === 0}
+                  className="flex-1 min-w-0 rounded-[10px] border border-editorial-border bg-editorial-bg px-2 py-1.5 text-xs font-mono outline-none focus:border-editorial-ink/40 appearance-none disabled:opacity-40"
+                  aria-label={t('pipeline.stageModelLabel')}
+                >
+                  {availableModels.length === 0 ? (
+                    <option value="">{t('ollama.noModels')}</option>
+                  ) : (
+                    availableModels.map((m) => <option key={m} value={m}>{m}</option>)
+                  )}
+                </select>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -857,8 +980,8 @@ export function ImportPreviewDialog({
                       paras={paras}
                       index={i}
                       total={activeParaChunks.length}
-                      minWords={minWords}
-                      maxWords={maxWords}
+                      minWords={effectiveMinWords}
+                      maxWords={effectiveMaxWords}
                       isExpanded={expandedChunks.has(i)}
                       onToggleExpand={() => toggleExpanded(i)}
                       onSplit={() => splitChunkAtMid(i)}
@@ -880,8 +1003,8 @@ export function ImportPreviewDialog({
           ) : (
             <SegmentEditor
               chunks={activeParaChunks}
-              minWords={minWords}
-              maxWords={maxWords}
+              minWords={effectiveMinWords}
+              maxWords={effectiveMaxWords}
               onAddBoundary={addBoundaryAt}
               onRemoveBoundary={removeBoundaryAt}
               onSplitParagraph={splitParagraphAt}

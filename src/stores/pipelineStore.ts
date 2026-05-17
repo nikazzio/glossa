@@ -1,20 +1,34 @@
 import { create } from 'zustand';
 import type {
   PipelineConfig,
+  PipelineMode,
+  PipelineRunStatus,
   PipelineStageConfig,
   ModelProvider,
 } from '../types';
 import { DEFAULT_STAGES, DEFAULT_JUDGE_PROMPT, DEFAULT_COHERENCE_PROMPT } from '../constants';
+import { buildStagesForMode } from '../pipeline/pipelineModes';
 import { getGlossaryEntries } from '../services/glossaryService';
 import type { FootnoteDefinition } from '../types';
 import { deriveSourceDocumentState } from '../utils/documentState';
 
 interface PipelineState {
+  // The current app still edits a single active pipeline per document.
+  // When multi-pipeline support lands, lift these three fields into a
+  // collection keyed by pipeline id instead of keeping one active slot.
+  activePipelineId: string | null;
+  runStatus: PipelineRunStatus;
+  lastRunConfig: string | null;
   inputText: string;
   inputProcessingText: string;
   sourceFootnotes: FootnoteDefinition[];
   config: PipelineConfig;
 
+  setActivePipelineMeta: (meta: {
+    pipelineId: string | null;
+    runStatus: PipelineRunStatus;
+    lastRunConfig: string | null;
+  }) => void;
   setInputText: (text: string) => void;
   setSourceDocument: (input: {
     displayText: string;
@@ -23,6 +37,7 @@ interface PipelineState {
     renderProfile?: PipelineConfig['renderProfile'];
   }) => void;
   setConfig: (updater: PipelineConfig | ((prev: PipelineConfig) => PipelineConfig)) => void;
+  setMode: (mode: PipelineMode) => void;
   assignGlossary: (glossaryId: string | null) => Promise<void>;
   resetToDefaults: () => void;
 
@@ -34,9 +49,10 @@ interface PipelineState {
 const DEFAULT_PIPELINE_CONFIG: PipelineConfig = {
   sourceLanguage: 'English',
   targetLanguage: 'Italian',
+  mode: 'standard',
   stages: DEFAULT_STAGES,
   judgePrompt: DEFAULT_JUDGE_PROMPT,
-  judgeModel: 'gpt-4o-mini',
+  judgeModel: 'gpt-5.4-mini',
   judgeProvider: 'openai',
   glossary: [],
   assignedGlossaryId: null,
@@ -45,6 +61,7 @@ const DEFAULT_PIPELINE_CONFIG: PipelineConfig = {
   minWords: 600,
   maxWords: 1200,
   headingAware: true,
+  carryTrailingShortBlocks: true,
   documentFormat: 'plain',
   renderProfile: 'plain-text',
   markdownAware: false,
@@ -54,10 +71,20 @@ const DEFAULT_PIPELINE_CONFIG: PipelineConfig = {
 };
 
 export const usePipelineStore = create<PipelineState>((set) => ({
+  activePipelineId: null,
+  runStatus: 'idle',
+  lastRunConfig: null,
   inputText: '',
   inputProcessingText: '',
   sourceFootnotes: [],
   config: { ...DEFAULT_PIPELINE_CONFIG, stages: DEFAULT_STAGES },
+
+  setActivePipelineMeta: ({ pipelineId, runStatus, lastRunConfig }) =>
+    set({
+      activePipelineId: pipelineId,
+      runStatus,
+      lastRunConfig,
+    }),
 
   setInputText: (text) =>
     set((state) => {
@@ -95,8 +122,20 @@ export const usePipelineStore = create<PipelineState>((set) => ({
       };
     }),
 
+  setMode: (mode) =>
+    set((state) => ({
+      config: {
+        ...state.config,
+        mode,
+        stages: buildStagesForMode(mode, state.config.stages),
+      },
+    })),
+
   resetToDefaults: () =>
     set({
+      activePipelineId: null,
+      runStatus: 'idle',
+      lastRunConfig: null,
       inputText: '',
       inputProcessingText: '',
       sourceFootnotes: [],
@@ -125,11 +164,11 @@ export const usePipelineStore = create<PipelineState>((set) => ({
           {
             id: `stg-${Date.now()}`,
             name: 'New Stage',
+            role: 'translation' as const,
             prompt: '',
-            model: 'gpt-4o-mini',
+            model: 'gpt-5-nano',
             provider: 'openai' as ModelProvider,
             enabled: true,
-            rollingContext: true,
           },
         ],
       },

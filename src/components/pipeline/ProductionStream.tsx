@@ -86,8 +86,6 @@ const ChunkDraftText = memo(function ChunkDraftText({
 interface ChunkRowProps {
   chunk: TranslationChunk;
   idx: number;
-  isLast: boolean;
-  nextChunkStatus?: string;
   glossary: GlossaryEntry[];
   showHighlight: boolean;
   isProcessing: boolean;
@@ -96,8 +94,6 @@ interface ChunkRowProps {
   onRetranslate: (id: string) => void;
   onReaudit: (id: string) => void;
   onUnlockSource: (id: string) => void;
-  onSplitChunk: (id: string) => void;
-  onMergeChunk: (id: string) => void;
   onUpdateOriginal: (id: string, text: string) => void;
   onUpdateDraft: (id: string, text: string) => void;
 }
@@ -105,8 +101,6 @@ interface ChunkRowProps {
 const ChunkRow = memo(function ChunkRow({
   chunk,
   idx,
-  isLast,
-  nextChunkStatus,
   glossary,
   showHighlight,
   isProcessing,
@@ -115,8 +109,6 @@ const ChunkRow = memo(function ChunkRow({
   onRetranslate,
   onReaudit,
   onUnlockSource,
-  onSplitChunk,
-  onMergeChunk,
   onUpdateOriginal,
   onUpdateDraft,
 }: ChunkRowProps) {
@@ -127,10 +119,6 @@ const ChunkRow = memo(function ChunkRow({
   const handleRetranslate = useCallback(() => onRetranslate(chunk.id), [chunk.id, onRetranslate]);
   const handleReaudit = useCallback(() => onReaudit(chunk.id), [chunk.id, onReaudit]);
   const handleUnlock = useCallback(() => onUnlockSource(chunk.id), [chunk.id, onUnlockSource]);
-  const handleSplit = useCallback(() => onSplitChunk(chunk.id), [chunk.id, onSplitChunk]);
-  const handleMerge = useCallback(() => onMergeChunk(chunk.id), [chunk.id, onMergeChunk]);
-
-  const canMerge = !isLast && nextChunkStatus !== 'completed' && nextChunkStatus !== 'processing';
 
   return (
     <div className="space-y-8 border-b border-editorial-border pb-16 last:border-0 last:pb-0 group">
@@ -144,15 +132,15 @@ const ChunkRow = memo(function ChunkRow({
           </span>
         </div>
         <div className="flex gap-4">
-          {enabledStages.map((s, si) => (
+          {enabledStages.map((s) => (
             <StatusIndicator
               key={s.id}
               status={chunk.stageResults[s.id]?.status || 'idle'}
-              label={indexPad(si + 1)}
+              label={t(`pipeline.stageRole.${s.role ?? 'translation'}`)}
               retryInfo={chunk.stageResults[s.id]?.retryInfo}
             />
           ))}
-          <StatusIndicator status={chunk.judgeResult.status} label="Audit" />
+          <StatusIndicator status={chunk.judgeResult.status} label={t('pipeline.tabAudit')} />
         </div>
       </div>
 
@@ -191,26 +179,7 @@ const ChunkRow = memo(function ChunkRow({
                 >
                   <Pencil size={11} /> {t('pipeline.unlockSource')}
                 </button>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={handleSplit}
-                    disabled={isProcessing || chunk.originalText.trim().length < 2}
-                    className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  >
-                    {t('pipeline.splitChunk')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleMerge}
-                    disabled={isProcessing || !canMerge}
-                    className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  >
-                    {t('pipeline.mergeNext')}
-                  </button>
-                </>
-              )}
+              ) : null}
             </div>
           </div>
           <ChunkSourceText
@@ -293,8 +262,6 @@ export function ProductionStream({
     clearChunks,
     updateChunkDraft,
     updateChunkOriginalText,
-    splitChunk,
-    mergeChunkWithNext,
     unlockChunkForEdit,
   } = useChunksStore();
   const { glossaryHighlightEnabled, setGlossaryHighlightEnabled } = useUiStore();
@@ -341,16 +308,6 @@ export function ProductionStream({
     (id: string, text: string) => updateChunkDraft(id, text),
     [updateChunkDraft],
   );
-
-  const handleSplitChunk = useCallback((id: string) => {
-    logger.debug('chunk.split', { chunkId: id });
-    splitChunk(id);
-  }, [splitChunk]);
-
-  const handleMergeChunk = useCallback((id: string) => {
-    logger.debug('chunk.merge', { chunkId: id });
-    mergeChunkWithNext(id);
-  }, [mergeChunkWithNext]);
 
   const handleRetranslateChunk = useCallback((id: string) => {
     logger.info('chunk.retranslate', { chunkId: id });
@@ -491,8 +448,6 @@ export function ProductionStream({
             key={chunk.id}
             chunk={chunk}
             idx={idx}
-            isLast={idx === chunks.length - 1}
-            nextChunkStatus={chunks[idx + 1]?.status}
             glossary={config.glossary}
             showHighlight={showHighlight}
             isProcessing={isProcessing}
@@ -501,8 +456,6 @@ export function ProductionStream({
             onRetranslate={handleRetranslateChunk}
             onReaudit={handleReauditChunk}
             onUnlockSource={handleUnlockSource}
-            onSplitChunk={handleSplitChunk}
-            onMergeChunk={handleMergeChunk}
             onUpdateOriginal={handleUpdateOriginal}
             onUpdateDraft={handleUpdateDraft}
           />

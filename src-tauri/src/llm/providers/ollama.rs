@@ -11,7 +11,8 @@ use crate::llm::provider::{
 };
 use crate::llm::stream::{
     format_transport_error, ollama_stream_timeouts, with_stream_header_timeout, StreamTimeouts,
-    OLLAMA_HTTP_CLIENT, OLLAMA_STREAMING_HTTP_CLIENT,
+    HTTP_CONNECT_TIMEOUT_SECS, OLLAMA_HTTP_CLIENT, OLLAMA_HTTP_REQUEST_TIMEOUT_SECS,
+    OLLAMA_STREAMING_HTTP_CLIENT,
 };
 use crate::llm::types::{OllamaConfig, OllamaPreflightStatus};
 
@@ -79,11 +80,26 @@ impl LlmProvider for OllamaProvider {
     }
 
     fn http_client(&self) -> Result<Client, String> {
-        Ok(OLLAMA_HTTP_CLIENT.clone())
+        OLLAMA_HTTP_CLIENT
+            .get_or_init(|| {
+                Client::builder()
+                    .connect_timeout(Duration::from_secs(HTTP_CONNECT_TIMEOUT_SECS))
+                    .timeout(Duration::from_secs(OLLAMA_HTTP_REQUEST_TIMEOUT_SECS))
+                    .build()
+                    .map_err(|e| format!("Failed to build Ollama HTTP client: {e}"))
+            })
+            .clone()
     }
 
     fn streaming_client(&self) -> Result<Client, String> {
-        Ok(OLLAMA_STREAMING_HTTP_CLIENT.clone())
+        OLLAMA_STREAMING_HTTP_CLIENT
+            .get_or_init(|| {
+                Client::builder()
+                    .connect_timeout(Duration::from_secs(HTTP_CONNECT_TIMEOUT_SECS))
+                    .build()
+                    .map_err(|e| format!("Failed to build Ollama streaming HTTP client: {e}"))
+            })
+            .clone()
     }
 
     fn extract_streaming_token(&self, data: &str) -> Option<String> {
@@ -129,10 +145,11 @@ impl LlmProvider for OllamaProvider {
             .map(|c| merge_ollama_config(None, Some(c)))
             .unwrap_or_else(default_ollama_config);
 
+        let system = req.structured.flatten_system();
         let body = build_ollama_chat_body(
             req.model,
-            req.system_prompt,
-            req.user_prompt,
+            &system,
+            &req.structured.user,
             &ollama,
             false,
             req.json_mode,
@@ -163,7 +180,12 @@ impl LlmProvider for OllamaProvider {
             .map(String::from)
             .ok_or_else(|| "No content in Ollama response".to_string())?;
 
-        let usage = parse_ollama_usage(&json).map(|(i, o)| TokenUsage { input: i, output: o });
+        let usage = parse_ollama_usage(&json).map(|(i, o)| TokenUsage {
+            input: i,
+            output: o,
+            cached_input: None,
+            cache_miss_input: None,
+        });
 
         Ok(LlmResponse { content, usage })
     }
@@ -179,10 +201,11 @@ impl LlmProvider for OllamaProvider {
             .map(|c| merge_ollama_config(None, Some(c)))
             .unwrap_or_else(default_ollama_config);
 
+        let system = req.structured.flatten_system();
         let body = build_ollama_chat_body(
             req.model,
-            req.system_prompt,
-            req.user_prompt,
+            &system,
+            &req.structured.user,
             &ollama,
             true,
             req.json_mode,
@@ -199,6 +222,7 @@ impl LlmProvider for OllamaProvider {
         )
         .await
     }
+
 }
 
 // ── Ollama config helpers ─────────────────────────────────────────────
@@ -372,9 +396,12 @@ fn find_matching_ollama_model<'a>(
     })
 }
 
-async fn ensure_ollama_preflight(model: Option<&str>, base_url: &str) -> Result<OllamaPreflightStatus, String> {
+async fn ensure_ollama_preflight(
+    model: Option<&str>,
+    base_url: &str,
+) -> Result<OllamaPreflightStatus, String> {
     let cached = {
-        let guard = OLLAMA_PREFLIGHT_CACHE.lock().unwrap();
+        let guard = OLLAMA_PREFLIGHT_CACHE.lock().unwrap_or_else(|p| p.into_inner());
         guard.as_ref().and_then(|entry| {
             (entry.fetched_at.elapsed() < Duration::from_secs(OLLAMA_PREFLIGHT_CACHE_TTL_SECS)
                 && entry.base_url == base_url)
@@ -397,7 +424,7 @@ async fn ensure_ollama_preflight(model: Option<&str>, base_url: &str) -> Result<
                 models,
                 base_url: base_url.to_string(),
             };
-            let mut guard = OLLAMA_PREFLIGHT_CACHE.lock().unwrap();
+            let mut guard = OLLAMA_PREFLIGHT_CACHE.lock().unwrap_or_else(|p| p.into_inner());
             *guard = Some(entry.clone());
             entry
         }

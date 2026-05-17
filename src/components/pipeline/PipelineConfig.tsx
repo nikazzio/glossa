@@ -1,11 +1,12 @@
-import { ArrowRightLeft, Play, Layers, Languages, Cpu, FileText, Link2, Pencil, Scale, RefreshCw, Loader2, X, ShieldCheck, AlertTriangle, RotateCcw, Wand2, BookmarkPlus, BookOpen, Check, Trash2, Bot, Settings, Globe } from 'lucide-react';
+import { ArrowRightLeft, Play, Languages, FileText, Layers, Pencil, Scale, RefreshCw, Loader2, X, RotateCcw, Wand2, BookmarkPlus, BookOpen, Check, Trash2, Bot, Settings, Globe, ShieldCheck, Cpu, AlertTriangle, Eye, KeyRound } from 'lucide-react';
 import { useMemo, useState, useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import type { ModelProvider, PromptTemplate } from '../../types';
-import { MODEL_OPTIONS, LANGUAGES } from '../../constants';
-import { getModelStatus } from '../../models/catalog';
+import type { ModelProvider, PipelineMode, PromptTemplate, ReasoningEffortLevel } from '../../types';
+import { LANGUAGES, defaultPersonaText } from '../../constants';
+import { calculateBlobBudget, getContextWindow, getKnownModelIds, getModelStatus, getResolvedModelReasoning, getSelectableModelIds, MODEL_PROVIDER_ORDER } from '../../models/catalog';
 import { usePipelineStore } from '../../stores/pipelineStore';
+import { StageCard } from './StageCard';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
 import { confirm } from '../../stores/confirmStore';
@@ -13,10 +14,13 @@ import { CostBadge } from './CostBadge';
 import { ProviderRuntimeEditor } from './ProviderRuntimeEditor';
 import { estimatePipelineCost } from '../../utils/costEstimate';
 import { usePricingStore } from '../../stores/pricingStore';
-import { llmService } from '../../services/llmService';
+import { llmService, ollamaService } from '../../services/llmService';
 import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
+import { ReasoningPicker } from '../models/ReasoningPicker';
+import { PromptPreviewTab } from './PromptPreviewTab';
+import { canRefineWithProvider, formatProviderModelLabel, useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
 
-export type ConfigSection = 'settings' | 'stages' | 'audit' | 'glossary';
+export type ConfigSection = 'settings' | 'translation' | 'audit' | 'glossary' | 'preview';
 
 interface PersonaEditorProps {
   persona: string | undefined;
@@ -24,6 +28,8 @@ interface PersonaEditorProps {
   targetLanguage: string;
   templates: PromptTemplate[];
   isRefining: boolean;
+  canRefine: boolean;
+  refineLabel: string;
   onChange: (value: string | undefined) => void;
   onRefine: () => void;
   onSaveTemplate: (name: string, prompt: string) => Promise<void>;
@@ -36,6 +42,8 @@ function PersonaEditor({
   targetLanguage,
   templates,
   isRefining,
+  canRefine,
+  refineLabel,
   onChange,
   onRefine,
   onSaveTemplate,
@@ -48,7 +56,7 @@ function PersonaEditor({
   const [templateSearch, setTemplateSearch] = useState('');
 
   const isCustom = !!persona?.trim();
-  const defaultText = `You are an expert translator and linguist specialized in ${sourceLanguage} to ${targetLanguage} translation.`;
+  const defaultText = defaultPersonaText(sourceLanguage, targetLanguage);
 
   const filteredTemplates = templates.filter((tmpl) =>
     tmpl.name.toLowerCase().includes(templateSearch.toLowerCase()),
@@ -89,7 +97,7 @@ function PersonaEditor({
   };
 
   return (
-    <div className="mt-4 pt-4 border-t border-editorial-border/40 space-y-2">
+    <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
           <Bot size={11} className="text-editorial-accent shrink-0" />
@@ -108,9 +116,9 @@ function PersonaEditor({
               <button
                 type="button"
                 onClick={onRefine}
-                disabled={isRefining || !persona?.trim()}
-                title={t('pipeline.refinePrompt')}
-                aria-label={t('pipeline.refinePrompt')}
+                disabled={isRefining || !persona?.trim() || !canRefine}
+                title={t('pipeline.refinePromptWithModel', { model: refineLabel })}
+                aria-label={t('pipeline.refinePromptWithModel', { model: refineLabel })}
                 className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40"
               >
                 {isRefining ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
@@ -236,7 +244,7 @@ function PersonaEditor({
         value={isCustom ? persona : defaultText}
         disabled={!isCustom}
         onChange={(e) => onChange(e.target.value.trim() ? e.target.value : undefined)}
-        rows={isCustom ? 4 : 2}
+        rows={isCustom ? 8 : 2}
         className={`w-full rounded-[14px] border px-3 py-2 text-xs font-mono outline-none leading-relaxed resize-y ${
           isCustom
             ? 'bg-editorial-textbox/40 border-editorial-border/60 focus-visible:ring-2 focus-visible:ring-editorial-accent'
@@ -263,8 +271,7 @@ const DEFAULT_PIPELINE_CONFIG_CLASSNAME =
 
 function useJudgeModelOptions(provider: ModelProvider): string[] {
   const ollamaModels = useUiStore((s) => s.ollamaModels);
-  if (provider === 'ollama') return ollamaModels;
-  return MODEL_OPTIONS[provider] || [];
+  return getSelectableModelIds(provider, ollamaModels);
 }
 
 interface AuditPromptEditorProps {
@@ -274,6 +281,8 @@ interface AuditPromptEditorProps {
   placeholder: string;
   templates: PromptTemplate[];
   isRefining: boolean;
+  canRefine: boolean;
+  refineLabel: string;
   onRefine: () => void;
   onChange: (value: string) => void;
   onApplyTemplate: (template: PromptTemplate) => void;
@@ -298,6 +307,8 @@ function AuditPromptEditor({
   placeholder,
   templates,
   isRefining,
+  canRefine,
+  refineLabel,
   onRefine,
   onChange,
   onApplyTemplate,
@@ -356,9 +367,9 @@ function AuditPromptEditor({
             <button
               type="button"
               onClick={onRefine}
-              disabled={isRefining || !value.trim()}
-              title={t('pipeline.refinePrompt')}
-              aria-label={`${t('pipeline.refinePrompt')}: ${label}`}
+              disabled={isRefining || !value.trim() || !canRefine}
+              title={t('pipeline.refinePromptWithModel', { model: refineLabel })}
+              aria-label={`${t('pipeline.refinePromptWithModel', { model: refineLabel })}: ${label}`}
               className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40"
             >
               {isRefining ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
@@ -494,24 +505,28 @@ export function PipelineConfig({
   const {
     config,
     setConfig,
-    removeStage,
+    setMode,
     updateStage,
   } = usePipelineStore();
   const { chunks, isProcessing, cancelRequested, resetCompletedChunks } = useChunksStore();
-  const ollamaStatus = useUiStore((state) => state.ollamaStatus);
+  const ollamaStatus = useUiStore((s) => s.ollamaStatus);
+  const ollamaModels = useUiStore((s) => s.ollamaModels);
+  const { statuses: keyStatuses, isLoading: keyStatusLoading } = useProviderKeyStatus();
   const { t } = useTranslation();
   const judgeModels = useJudgeModelOptions(config.judgeProvider);
+  const [isRefreshingOllama, setIsRefreshingOllama] = useState(false);
   const [isRefiningPersona, setIsRefiningPersona] = useState(false);
-  const [isRefiningStage, setIsRefiningStage] = useState(false);
+  const [refiningStageId, setRefiningStageId] = useState<string | null>(null);
   const [isRefiningJudge, setIsRefiningJudge] = useState(false);
   const [isRefiningCoherence, setIsRefiningCoherence] = useState(false);
-  const [activeTab, setActiveTab] = useState<ConfigSection>(visibleSection ?? 'stages');
+  const [activeTab, setActiveTab] = useState<ConfigSection>(visibleSection ?? 'translation');
 
   const { templates, loadTemplates, saveTemplate, deleteTemplate } = usePromptTemplateStore();
 
   const cannotRun = isProcessing || chunks.length === 0;
   const completedCount = chunks.filter((c) => c.status === 'completed').length;
   const canRerunAll = !isProcessing && completedCount > 0;
+  const translationsExist = completedCount > 0;
 
   useEffect(() => {
     loadTemplates();
@@ -541,6 +556,32 @@ export function PipelineConfig({
   const judgeOllamaOffline =
     config.judgeProvider === 'ollama' && ollamaStatus === 'disconnected';
 
+  const judgeResolvedReasoning = getResolvedModelReasoning(config.judgeProvider, config.judgeModel);
+  const currentJudgeReasoningEffort: ReasoningEffortLevel = (() => {
+    const judgeDefaultEffort: ReasoningEffortLevel = judgeResolvedReasoning === 'optional' ? 'none' : 'medium';
+    if (config.judgeProvider === 'openai') return config.reviewProviderOptions?.openai?.reasoningEffort ?? judgeDefaultEffort;
+    if (config.judgeProvider === 'deepseek') return config.reviewProviderOptions?.deepseek?.reasoningEffort ?? judgeDefaultEffort;
+    if (config.judgeProvider === 'gemini') {
+      const budget = config.reviewProviderOptions?.gemini?.thinkingBudget;
+      if (budget === 0) return judgeResolvedReasoning === 'reasoning' ? judgeDefaultEffort : 'none';
+      if (budget != null && budget < 0) return 'high';
+      if (budget != null && budget <= 1024) return 'low';
+      if (budget != null) return 'medium';
+    }
+    return judgeDefaultEffort;
+  })();
+  const handleJudgeReasoningChange = (effort: ReasoningEffortLevel) => {
+    const opts = config.reviewProviderOptions ?? {};
+    if (config.judgeProvider === 'openai') {
+      setConfig((prev) => ({ ...prev, reviewProviderOptions: { ...opts, openai: { ...opts.openai, reasoningEffort: effort } } }));
+    } else if (config.judgeProvider === 'deepseek') {
+      setConfig((prev) => ({ ...prev, reviewProviderOptions: { ...opts, deepseek: { ...opts.deepseek, reasoningEffort: effort } } }));
+    } else if (config.judgeProvider === 'gemini') {
+      const budget = effort === 'none' ? 0 : effort === 'low' ? 1024 : effort === 'medium' ? 8192 : -1;
+      setConfig((prev) => ({ ...prev, reviewProviderOptions: { ...opts, gemini: { ...opts.gemini, thinkingBudget: budget } } }));
+    }
+  };
+
   const pricingOverrides = usePricingStore((s) => s.overrides);
   const costEstimate = useMemo(
     () => estimatePipelineCost(chunks, config, pricingOverrides),
@@ -548,31 +589,57 @@ export function PipelineConfig({
   );
 
   const stage0 = config.stages[0];
-  const stageModels = useJudgeModelOptions(stage0?.provider ?? 'openai');
-  const stageOllamaOffline = stage0?.provider === 'ollama' && ollamaStatus === 'disconnected';
+  const personaRefineLabel = formatProviderModelLabel(stage0?.provider ?? 'gemini', stage0?.model ?? '');
+  const canRefinePersona = stage0 ? canRefineWithProvider(stage0.provider, keyStatuses) : false;
+  const judgeRefineLabel = formatProviderModelLabel(config.judgeProvider, config.judgeModel);
+  const canRefineJudge = canRefineWithProvider(config.judgeProvider, keyStatuses);
+  const missingRefineProviders = (Object.entries(keyStatuses) as Array<[string, boolean | undefined]>)
+    .filter(([, configured]) => configured === false)
+    .map(([provider]) => provider);
 
-  const handleStageProviderChange = (newProvider: ModelProvider) => {
-    if (!stage0) return;
-    const models = newProvider === 'ollama' ? useUiStore.getState().ollamaModels : MODEL_OPTIONS[newProvider];
-    updateStage(stage0.id, { provider: newProvider, model: models[0] || '' });
-    if (newProvider === 'ollama' && useUiStore.getState().ollamaStatus === 'unknown') {
-      toast.message(t('ollama.uncheckedHint'));
-    } else if (newProvider === 'ollama' && useUiStore.getState().ollamaStatus === 'disconnected') {
-      toast.warning(t('ollama.selectedButOffline'));
+  // Min context window across all source-aware stages (translation + refine receive source text)
+  const minSourceAwareContextWindow = config.stages
+    .filter((s) => s.enabled && s.role !== 'format')
+    .reduce<number | undefined>((min, s) => {
+      const cw = getContextWindow(s.provider, s.model);
+      if (cw === undefined) return min;
+      return min === undefined ? cw : Math.min(min, cw);
+    }, undefined);
+  const contextWindowChanged =
+    !translationsExist &&
+    chunks.length > 0 &&
+    config.chunkedWithContextWindow !== undefined &&
+    minSourceAwareContextWindow !== undefined &&
+    minSourceAwareContextWindow !== config.chunkedWithContextWindow;
+
+  const handleRefreshOllama = async () => {
+    setIsRefreshingOllama(true);
+    try {
+      const models = await ollamaService.listModels();
+      useUiStore.getState().setOllamaModels(models);
+      useUiStore.getState().setOllamaStatus('connected');
+      toast.success(t('ollama.connected', { count: models.length }));
+    } catch (err: unknown) {
+      useUiStore.getState().setOllamaModels([]);
+      useUiStore.getState().setOllamaStatus('disconnected');
+      toast.error(t('ollama.disconnected'), { description: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setIsRefreshingOllama(false);
     }
   };
 
-  const handleRefineStagePrompt = async () => {
-    if (!stage0?.prompt.trim() || !stage0?.model.trim()) return;
-    setIsRefiningStage(true);
+  const handleRefineStagePrompt = async (stageId: string) => {
+    const stage = config.stages.find((s) => s.id === stageId);
+    if (!stage?.prompt.trim() || !stage?.model.trim()) return;
+    setRefiningStageId(stageId);
     try {
-      const refined = await llmService.refinePrompt(stage0.prompt, stage0.provider, stage0.model, 'stage');
-      updateStage(stage0.id, { prompt: refined });
+      const refined = await llmService.refinePrompt(stage.prompt, stage.provider, stage.model, 'stage');
+      updateStage(stageId, { prompt: refined });
       toast.success(t('pipeline.refined'));
     } catch (err: unknown) {
       toast.error(t('pipeline.refineFailed'), { description: err instanceof Error ? err.message : String(err) });
     } finally {
-      setIsRefiningStage(false);
+      setRefiningStageId(null);
     }
   };
 
@@ -626,15 +693,24 @@ export function PipelineConfig({
     }
   };
 
+  const handleJudgeModelChange = (newModel: string) => {
+    setConfig((prev) => {
+      const opts = prev.reviewProviderOptions ?? {};
+      const cleared = { ...opts };
+      if (prev.judgeProvider === 'openai') cleared.openai = { ...opts.openai, reasoningEffort: undefined };
+      else if (prev.judgeProvider === 'deepseek') cleared.deepseek = { ...opts.deepseek, reasoningEffort: undefined };
+      else if (prev.judgeProvider === 'gemini') cleared.gemini = { ...opts.gemini, thinkingBudget: undefined };
+      return { ...prev, judgeModel: newModel, reviewProviderOptions: cleared };
+    });
+  };
+
   const handleJudgeProviderChange = (newProvider: ModelProvider) => {
-    const models =
-      newProvider === 'ollama'
-        ? useUiStore.getState().ollamaModels
-        : MODEL_OPTIONS[newProvider];
+    const models = getSelectableModelIds(newProvider, useUiStore.getState().ollamaModels);
     setConfig((prev) => ({
       ...prev,
       judgeProvider: newProvider,
       judgeModel: models[0] || '',
+      reviewProviderOptions: {},
     }));
     if (newProvider === 'ollama' && useUiStore.getState().ollamaStatus === 'unknown') {
       toast.message(t('ollama.uncheckedHint'));
@@ -645,9 +721,10 @@ export function PipelineConfig({
 
   const TAB_TITLE: Record<ConfigSection, string> = {
     settings: t('pipeline.tabSettings'),
-    stages: t('pipeline.tabStages'),
+    translation: t('pipeline.tabTranslation'),
     audit: t('pipeline.tabAudit'),
     glossary: t('pipeline.tabGlossary'),
+    preview: t('pipeline.tabPreview'),
   };
 
   const tabBtnCls = (active: boolean) =>
@@ -722,20 +799,13 @@ export function PipelineConfig({
             targetLanguage={config.targetLanguage}
             templates={personaTemplates}
             isRefining={isRefiningPersona}
+            canRefine={canRefinePersona}
+            refineLabel={personaRefineLabel}
             onChange={(value) => setConfig((prev) => ({ ...prev, persona: value }))}
             onRefine={handleRefinePersona}
             onSaveTemplate={(name, prompt) => saveTemplate(name, prompt, 'persona')}
             deleteTemplate={deleteTemplate}
           />
-          <div className="flex flex-col items-center gap-4 py-8 text-center">
-            <div className="rounded-full border border-editorial-border/60 p-4 text-editorial-muted/50">
-              <Layers size={24} />
-            </div>
-            <div className="space-y-1">
-              <p className="text-base font-bold text-editorial-ink">{t('pipeline.noProjectTitle')}</p>
-              <p className="text-xs leading-relaxed text-editorial-muted max-w-[260px]">{t('pipeline.noProjectHint')}</p>
-            </div>
-          </div>
         </div>
       )}
 
@@ -765,13 +835,13 @@ export function PipelineConfig({
         <button
           type="button"
           role="tab"
-          aria-selected={activeTab === 'stages'}
-          aria-controls="pconfig-panel-stages"
-          id="pconfig-tab-stages"
-          onClick={() => setActiveTab('stages')}
-          title={t('pipeline.tabStages')}
-          aria-label={t('pipeline.tabStages')}
-          className={tabBtnCls(activeTab === 'stages')}
+          aria-selected={activeTab === 'translation'}
+          aria-controls="pconfig-panel-translation"
+          id="pconfig-tab-translation"
+          onClick={() => setActiveTab('translation')}
+          title={t('pipeline.tabTranslation')}
+          aria-label={t('pipeline.tabTranslation')}
+          className={tabBtnCls(activeTab === 'translation')}
         >
           <Languages size={16} />
         </button>
@@ -803,6 +873,19 @@ export function PipelineConfig({
         >
           <BookOpen size={16} />
         </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'preview'}
+          aria-controls="pconfig-panel-preview"
+          id="pconfig-tab-preview"
+          onClick={() => setActiveTab('preview')}
+          title={t('pipeline.tabPreview')}
+          aria-label={t('pipeline.tabPreview')}
+          className={tabBtnCls(activeTab === 'preview')}
+        >
+          <Eye size={16} />
+        </button>
         <span className="mx-1 h-4 w-px bg-editorial-border/70" aria-hidden="true" />
         <span className="text-sm font-display italic text-editorial-ink">{TAB_TITLE[activeTab]}</span>
       </div>
@@ -822,6 +905,85 @@ export function PipelineConfig({
         {/* ── SETTINGS ── */}
         {activeTab === 'settings' && (
           <div id="pconfig-panel-settings" role="tabpanel" aria-labelledby="pconfig-tab-settings" className="space-y-6">
+            {/* Mode selector */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-1.5">
+                <Layers size={11} className="text-editorial-accent shrink-0" />
+                <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                  {t('pipeline.modeLabel')}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                {([
+                  { mode: 'standard' as PipelineMode, Icon: Languages },
+                  { mode: 'editorial' as PipelineMode, Icon: Layers },
+                ]).map(({ mode: m, Icon }) => {
+                  const isActive = (config.mode ?? 'standard') === m;
+                  return (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setMode(m)}
+                      disabled={translationsExist || isProcessing}
+                      title={t(`pipeline.mode.${m}`)}
+                      aria-label={t(`pipeline.mode.${m}`)}
+                      aria-pressed={isActive}
+                      className={`rounded-full border p-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40 ${
+                        isActive
+                          ? 'border-editorial-accent bg-editorial-accent text-white'
+                          : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
+                      }`}
+                    >
+                      <Icon size={16} />
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="rounded-[14px] border border-editorial-border/40 bg-editorial-textbox/20 px-3 py-3 space-y-2.5">
+                {([
+                  {
+                    mode: 'standard' as PipelineMode,
+                    stages: [
+                      { role: 'translation', Icon: Languages, labelKey: 'pipeline.stageRole.translation' },
+                      { role: 'audit', Icon: ShieldCheck, labelKey: 'pipeline.tabAudit' },
+                    ],
+                  },
+                  {
+                    mode: 'editorial' as PipelineMode,
+                    stages: [
+                      { role: 'translation', Icon: Languages, labelKey: 'pipeline.stageRole.translation' },
+                      { role: 'refine', Icon: Wand2, labelKey: 'pipeline.stageRole.refine' },
+                      { role: 'format', Icon: FileText, labelKey: 'pipeline.stageRole.format' },
+                      { role: 'audit', Icon: ShieldCheck, labelKey: 'pipeline.tabAudit' },
+                    ],
+                  },
+                ]).map(({ mode: m, stages }) => {
+                  const isActive = (config.mode ?? 'standard') === m;
+                  return (
+                    <div key={m} className={`flex items-center gap-2.5 transition-opacity ${isActive ? '' : 'opacity-25'}`}>
+                      <span className={`shrink-0 w-[68px] text-[10px] font-bold uppercase tracking-widest ${isActive ? 'text-editorial-accent' : 'text-editorial-muted'}`}>
+                        {t(`pipeline.mode.${m}`)}
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        {stages.map(({ role, Icon, labelKey }, i) => (
+                          <span key={role} className="flex items-center gap-1.5">
+                            {i > 0 && <span className="text-editorial-muted/40 text-xs">›</span>}
+                            <span
+                              title={t(labelKey)}
+                              aria-label={t(labelKey)}
+                              className={`inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors ${isActive ? 'border-editorial-success/40 bg-editorial-success/12 text-editorial-success' : 'border-editorial-border bg-editorial-bg text-editorial-muted'}`}
+                            >
+                              <Icon size={14} strokeWidth={1.9} />
+                            </span>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="space-y-2">
               <div className="flex items-center gap-1.5">
                 <Globe size={11} className="text-editorial-accent shrink-0" />
@@ -875,144 +1037,181 @@ export function PipelineConfig({
                 </p>
               )}
             </div>
+
             <PersonaEditor
               persona={config.persona}
               sourceLanguage={config.sourceLanguage}
               targetLanguage={config.targetLanguage}
               templates={personaTemplates}
               isRefining={isRefiningPersona}
+              canRefine={canRefinePersona}
+              refineLabel={personaRefineLabel}
               onChange={(value) => setConfig((prev) => ({ ...prev, persona: value }))}
               onRefine={handleRefinePersona}
               onSaveTemplate={(name, prompt) => saveTemplate(name, prompt, 'persona')}
               deleteTemplate={deleteTemplate}
             />
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-1.5">
+                <KeyRound size={11} className="text-editorial-accent shrink-0" />
+                <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                  {t('pipeline.refineKeyLabel')}
+                </p>
+              </div>
+              {!keyStatusLoading && (
+                <p className="text-[11px] leading-relaxed text-editorial-muted">
+                  {missingRefineProviders.length > 0
+                    ? t('pipeline.refineKeyMissingHint', { providers: missingRefineProviders.join(', ') })
+                    : t('pipeline.refineKeyReadyHint')}
+                </p>
+              )}
+            </div>
           </div>
         )}
 
         {/* ── TRADUZIONE ── */}
-        {activeTab === 'stages' && stage0 && (
+        {activeTab === 'translation' && (
           <div
-            id="pconfig-panel-stages"
+            id="pconfig-panel-translation"
             role="tabpanel"
-            aria-labelledby="pconfig-tab-stages"
+            aria-labelledby="pconfig-tab-translation"
             className="space-y-6"
           >
-            {/* Model + options card */}
-            <div className="space-y-3 rounded-[20px] border border-editorial-border bg-editorial-bg/70 px-5 py-4">
-              <div className="flex items-center gap-1.5">
-                <Cpu size={11} className="text-editorial-accent shrink-0" />
-                <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-                  {t('pipeline.stageModelLabel')}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <select
-                  value={stage0.provider}
-                  onChange={(e) => handleStageProviderChange(e.target.value as ModelProvider)}
-                  className="rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  aria-label={t('models.provider')}
-                >
-                  {Object.keys(MODEL_OPTIONS).map((p) => (
-                    <option key={p} value={p}>{p}</option>
-                  ))}
-                </select>
-                {stageModels.length > 0 ? (
-                  <select
-                    value={stage0.model}
-                    onChange={(e) => updateStage(stage0.id, { model: e.target.value })}
-                    className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                    aria-label={t('pipeline.stageModelLabel')}
+            {/* Context memory card */}
+            {(() => {
+              const isOverride = (config.blobBudgetTokens ?? 0) > 0;
+              const auto = calculateBlobBudget(config.stages);
+              return (
+                <div className="space-y-3 rounded-[20px] border border-editorial-border bg-editorial-bg/70 px-5 py-4">
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={isOverride}
+                    disabled={translationsExist}
+                    onClick={() => setConfig((prev) => ({
+                      ...prev,
+                      blobBudgetTokens: isOverride ? 0 : auto.budget,
+                    }))}
+                    className={`flex w-full items-center justify-between text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed ${
+                      isOverride ? '' : 'opacity-80 hover:opacity-100'
+                    }`}
                   >
-                    {stageModels.map((m) => (
-                      <option key={m} value={m}>
-                        {m}{getModelStatus(stage0.provider, m) === 'preview' ? ' (preview)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                ) : stage0.provider === 'ollama' ? (
-                  <input
-                    value={stage0.model}
-                    onChange={(e) => updateStage(stage0.id, { model: e.target.value })}
-                    placeholder={t('ollama.modelPlaceholder')}
-                    className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                    aria-label={t('pipeline.stageModelLabel')}
-                  />
-                ) : (
-                  <select
-                    value={stage0.model}
-                    onChange={(e) => updateStage(stage0.id, { model: e.target.value })}
-                    className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                    aria-label={t('pipeline.stageModelLabel')}
-                  >
-                    {MODEL_OPTIONS[stage0.provider]?.map((m) => (
-                      <option key={m} value={m}>
-                        {m}{getModelStatus(stage0.provider, m) === 'preview' ? ' (preview)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-              {stageOllamaOffline && (
-                <div className="flex items-center gap-2 text-xs text-editorial-accent">
-                  <AlertTriangle size={14} />
-                  <span>{t('ollama.selectedButOffline')}</span>
-                </div>
-              )}
-              {/* Rolling context toggle */}
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1.5">
-                  <Link2 size={11} className="text-editorial-accent shrink-0" />
-                  <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-                    {t('pipeline.rollingContext')}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={stage0.rollingContext !== false}
-                  onClick={() => updateStage(stage0.id, { rollingContext: stage0.rollingContext !== false ? false : true })}
-                  title={t('pipeline.rollingContext')}
-                  aria-label={t('pipeline.rollingContext')}
-                  className={`ml-auto rounded-full border p-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                    stage0.rollingContext !== false
-                      ? 'border-editorial-ink bg-editorial-ink text-white'
-                      : 'border-editorial-border text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
-                  }`}
-                >
-                  <Link2 size={11} />
-                </button>
-              </div>
-              <ProviderRuntimeEditor
-                provider={stage0.provider}
-                value={stage0.providerOptions}
-                onChange={(providerOptions) => updateStage(stage0.id, { providerOptions })}
-                title={t('pipeline.providerOptions.stageTitle')}
-                hint={t('pipeline.providerOptions.stageHint')}
-              />
-            </div>
+                    <span className="space-y-0.5">
+                      <span className="flex items-center gap-1.5">
+                        <FileText size={11} className="text-editorial-accent shrink-0" />
+                        <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                          {t('pipeline.blobContext')}
+                        </span>
+                      </span>
+                      {!isOverride && (
+                        <span className="block pl-4 text-xs text-editorial-muted/70">
+                          {t('pipeline.blobContextAutoDesc', { tokens: auto.budget.toLocaleString(), model: auto.modelId || 'ollama' })}
+                        </span>
+                      )}
+                    </span>
+                    <span
+                      className={`flex h-5 w-9 items-center rounded-full border px-0.5 transition-colors shrink-0 ${
+                        isOverride
+                          ? 'border-editorial-ink bg-editorial-ink justify-end'
+                          : 'border-editorial-border bg-editorial-textbox/60 justify-start'
+                      }`}
+                      aria-hidden="true"
+                    >
+                      <span className="h-3.5 w-3.5 rounded-full bg-white" />
+                    </span>
+                  </button>
 
-            {/* Translation instructions card */}
-            <AuditPromptEditor
-              label={t('pipeline.prompt')}
-              hint=""
-              value={stage0.prompt}
-              placeholder={t('pipeline.stagePromptPlaceholder')}
-              templates={templates.filter((tmpl) => tmpl.context === 'stage')}
-              isRefining={isRefiningStage}
-              onRefine={handleRefineStagePrompt}
-              onChange={(value) => updateStage(stage0.id, { prompt: value })}
-              onApplyTemplate={(tmpl) => updateStage(stage0.id, {
-                prompt: tmpl.prompt,
-                ...(tmpl.defaultModel ? { model: tmpl.defaultModel } : {}),
-                ...(tmpl.defaultProvider ? { provider: tmpl.defaultProvider as ModelProvider } : {}),
-              })}
-              saveTemplate={saveTemplate}
-              deleteTemplate={deleteTemplate}
-              defaultModel={stage0.model}
-              defaultProvider={stage0.provider}
-              icon={<FileText size={11} />}
-              context="stage"
-            />
+                  {isOverride && (
+                    <div className="space-y-3 pt-1">
+                      <div className="flex flex-wrap gap-4 items-center">
+                        <div className="flex items-center gap-2">
+                          <label className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                            {t('pipeline.blobBudgetTokens')}
+                          </label>
+                          <input
+                            type="number"
+                            min={1}
+                            value={config.blobBudgetTokens ?? auto.budget}
+                            onChange={(e) => setConfig((prev) => ({
+                              ...prev,
+                              blobBudgetTokens: Math.max(1, Number(e.target.value) || 1),
+                            }))}
+                            className="w-24 rounded-[10px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                            aria-label={t('pipeline.blobBudgetTokens')}
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <label className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                            {t('pipeline.blobOverlap')}
+                          </label>
+                          <input
+                            type="number"
+                            min={0}
+                            value={config.blobOverlap ?? 1}
+                            onChange={(e) => setConfig((prev) => ({
+                              ...prev,
+                              blobOverlap: Math.max(0, Number(e.target.value) || 0),
+                            }))}
+                            className="w-16 rounded-[10px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                            aria-label={t('pipeline.blobOverlap')}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setConfig((prev) => ({ ...prev, blobBudgetTokens: 0 }))}
+                          title={t('pipeline.blobContextReset')}
+                          aria-label={t('pipeline.blobContextReset')}
+                          className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                        >
+                          <RotateCcw size={12} />
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-editorial-muted/70">{t('pipeline.blobOverlapHint')}</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Context window warning */}
+            {contextWindowChanged && (
+              <div className="flex items-center gap-2 text-xs text-editorial-warning">
+                <ShieldCheck size={12} className="shrink-0 text-editorial-warning" />
+                <span>{t('pipeline.modelContextWindowChangedHint')}</span>
+              </div>
+            )}
+
+            {/* Stage cards — one per stage in the current mode */}
+            {config.stages.map((stage) => {
+              const stageModelOptions = getSelectableModelIds(stage.provider, ollamaModels);
+              return (
+                <div key={stage.id} className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-ink font-bold">
+                      {t(`pipeline.stageRole.${stage.role ?? 'translation'}`)}
+                    </span>
+                    <span className="h-px flex-1 bg-editorial-border/60" aria-hidden="true" />
+                  </div>
+                  <StageCard
+                    stage={stage}
+                    templates={templates.filter((tmpl) => tmpl.context === 'stage')}
+                    isRefining={refiningStageId === stage.id}
+                    translationsExist={translationsExist}
+                    isProcessing={isProcessing}
+                    ollamaStatus={ollamaStatus}
+                    isRefreshingOllama={isRefreshingOllama}
+                    modelOptions={stageModelOptions}
+                    keyStatuses={keyStatuses}
+                    onUpdate={(updates) => updateStage(stage.id, updates)}
+                    onRefinePrompt={() => handleRefineStagePrompt(stage.id)}
+                    onRefreshOllama={handleRefreshOllama}
+                    saveTemplate={saveTemplate}
+                    deleteTemplate={deleteTemplate}
+                  />
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -1038,14 +1237,14 @@ export function PipelineConfig({
                 className="rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 aria-label={t('models.provider')}
               >
-                {Object.keys(MODEL_OPTIONS).map((p) => (
-                  <option key={p} value={p}>{p}</option>
+                {MODEL_PROVIDER_ORDER.map((p) => (
+                  <option key={p} value={p} disabled={p !== 'ollama' && keyStatuses[p] === false}>{p}</option>
                 ))}
               </select>
               {judgeModels.length > 0 ? (
                 <select
                   value={config.judgeModel}
-                  onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
+                  onChange={(e) => handleJudgeModelChange(e.target.value)}
                   className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   aria-label={t('pipeline.auditModelLabel')}
                 >
@@ -1058,7 +1257,7 @@ export function PipelineConfig({
               ) : config.judgeProvider === 'ollama' ? (
                 <input
                   value={config.judgeModel}
-                  onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
+                  onChange={(e) => handleJudgeModelChange(e.target.value)}
                   placeholder={t('ollama.modelPlaceholder')}
                   className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   aria-label={t('pipeline.auditModelLabel')}
@@ -1066,11 +1265,11 @@ export function PipelineConfig({
               ) : (
                 <select
                   value={config.judgeModel}
-                  onChange={(e) => setConfig((prev) => ({ ...prev, judgeModel: e.target.value }))}
+                  onChange={(e) => handleJudgeModelChange(e.target.value)}
                   className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   aria-label={t('pipeline.auditModelLabel')}
                 >
-                  {MODEL_OPTIONS[config.judgeProvider]?.map((m) => (
+                  {getKnownModelIds(config.judgeProvider).map((m) => (
                     <option key={m} value={m}>
                       {m}{getModelStatus(config.judgeProvider, m) === 'preview' ? ' (preview)' : ''}
                     </option>
@@ -1078,6 +1277,19 @@ export function PipelineConfig({
                 </select>
               )}
             </div>
+            {judgeResolvedReasoning !== undefined && judgeResolvedReasoning !== 'non_reasoning' && config.judgeProvider !== 'ollama' && (
+              <div className="flex items-center gap-2">
+                <Wand2 size={11} className="text-editorial-warning shrink-0" />
+                <span className="text-[10px] font-sans uppercase tracking-[0.3em] text-editorial-muted">
+                  {t('pipeline.reasoningEffort')}
+                </span>
+                <ReasoningPicker
+                  value={currentJudgeReasoningEffort}
+                  showNone={judgeResolvedReasoning === 'optional'}
+                  onChange={handleJudgeReasoningChange}
+                />
+              </div>
+            )}
 
             {judgeOllamaOffline && (
               <div className="flex items-center gap-2 text-xs text-editorial-accent">
@@ -1102,6 +1314,8 @@ export function PipelineConfig({
               placeholder={t('pipeline.auditPlaceholder')}
               templates={auditTemplates}
               isRefining={isRefiningJudge}
+              canRefine={canRefineJudge}
+              refineLabel={judgeRefineLabel}
               onRefine={handleRefineJudgePrompt}
               onChange={(value) => setConfig((prev) => ({ ...prev, judgePrompt: value }))}
               onApplyTemplate={(template) => {
@@ -1125,6 +1339,8 @@ export function PipelineConfig({
               placeholder={t('pipeline.coherencePromptPlaceholder')}
               templates={auditTemplates}
               isRefining={isRefiningCoherence}
+              canRefine={canRefineJudge}
+              refineLabel={judgeRefineLabel}
               onRefine={handleRefineCoherencePrompt}
               onChange={(value) => setConfig((prev) => ({ ...prev, coherencePrompt: value }))}
               onApplyTemplate={(template) => {
@@ -1161,6 +1377,11 @@ export function PipelineConfig({
               </div>
             )}
           </div>
+        )}
+
+        {/* ── PREVIEW ── */}
+        {activeTab === 'preview' && (
+          <PromptPreviewTab config={config} />
         )}
 
       </div>

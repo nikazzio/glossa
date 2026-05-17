@@ -4,6 +4,7 @@ import { readTextFile, writeFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import type { ExperimentalImportMode, TranslationChunk } from '../types';
 import { qualityExportLabel } from '../utils';
 import { buildMarkdownHtmlDocument, flattenMarkdownToText } from './markdown';
+import { normalizeImportedText } from '../utils/textNormalization';
 
 // ── Import ───────────────────────────────────────────────────────────
 
@@ -39,22 +40,16 @@ export async function importTextFile(): Promise<ImportedTextFile | null> {
 async function readImportedText(path: string): Promise<Pick<ImportedTextFile, 'text' | 'format' | 'experimental'>> {
   const ext = extension(path);
   if (ext === 'docx') {
-    return {
-      text: await invoke<string>('extract_docx_markdown', { path }),
-      format: 'markdown',
-      experimental: 'docx-markdown',
-    };
+    const raw = await invoke<string>('extract_docx_markdown', { path });
+    return { text: normalizeImportedText(raw, 'markdown'), format: 'markdown', experimental: 'docx-markdown' };
   }
   if (ext === 'pdf') {
-    return {
-      text: await invoke<string>('extract_pdf_text', { path }),
-      format: 'plain',
-    };
+    const raw = await invoke<string>('extract_pdf_text', { path });
+    return { text: normalizeImportedText(raw, 'plain'), format: 'plain' };
   }
-  return {
-    text: await readTextFile(path),
-    format: ext === 'md' ? 'markdown' : 'plain',
-  };
+  const format = ext === 'md' ? 'markdown' : 'plain';
+  const raw = await readTextFile(path);
+  return { text: normalizeImportedText(raw, format), format };
 }
 
 // ── Export ────────────────────────────────────────────────────────────

@@ -1,3 +1,4 @@
+pub mod blobs;
 pub mod pipeline;
 pub mod prompts;
 pub mod provider;
@@ -9,21 +10,20 @@ pub use stream::StreamRegistry;
 
 #[cfg(test)]
 mod tests {
-    use crate::llm::provider::{LlmProvider, LlmRequest, LlmResponse, StreamFormat, UsageAccumulator};
+    use crate::llm::prompts::{
+        build_judge_prompts, build_stage_prompts, parse_judge_rating, sanitize_llm_json_output,
+    };
+    use crate::llm::provider::{
+        LlmProvider, LlmRequest, LlmResponse, StreamFormat, UsageAccumulator,
+    };
+    use crate::llm::providers::ollama::{build_ollama_options, merge_ollama_config};
     use crate::llm::providers::{format_api_error, get_provider, provider_label_from_url};
     use crate::llm::stream::{
-        consume_stream, format_stream_idle_timeout_with_duration,
-        format_stream_header_timeout_with_duration, format_stream_total_timeout_with_duration,
+        consume_stream, format_stream_header_timeout_with_duration,
+        format_stream_idle_timeout_with_duration, format_stream_total_timeout_with_duration,
         provider_label, with_stream_header_timeout, CancelToken, StreamChunkSource, StreamGuard,
-        StreamRegistry, StreamTimeouts, StreamToken, STREAM_CANCELLED_ERROR,
-        HTTP_STREAM_IDLE_TIMEOUT_SECS, HTTP_STREAM_TOTAL_TIMEOUT_SECS,
-    };
-    use crate::llm::prompts::{
-        build_judge_prompts, build_stage_prompts,
-        parse_judge_rating, sanitize_llm_json_output,
-    };
-    use crate::llm::providers::ollama::{
-        build_ollama_options, merge_ollama_config,
+        StreamRegistry, StreamTimeouts, StreamToken, HTTP_STREAM_IDLE_TIMEOUT_SECS,
+        HTTP_STREAM_TOTAL_TIMEOUT_SECS, STREAM_CANCELLED_ERROR,
     };
     use crate::llm::types::{
         GlossaryEntry, JudgeIssue, OllamaConfig, PipelineConfig, ProviderRuntimeConfig, StageConfig,
@@ -32,7 +32,13 @@ mod tests {
     use bytes::Bytes;
     use reqwest::Client;
     use serde_json::{Map, Value};
-    use std::{collections::VecDeque, future::Future, pin::Pin, sync::{Arc, Mutex as StdMutex}, time::Duration};
+    use std::{
+        collections::VecDeque,
+        future::Future,
+        pin::Pin,
+        sync::{Arc, Mutex as StdMutex},
+        time::Duration,
+    };
     use tokio::time::{advance, sleep};
     use wiremock::matchers::{method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};
@@ -86,7 +92,8 @@ mod tests {
         }
 
         fn stream_timeouts(&self) -> StreamTimeouts {
-            self.timeouts.unwrap_or_else(|| self.inner.stream_timeouts())
+            self.timeouts
+                .unwrap_or_else(|| self.inner.stream_timeouts())
         }
 
         fn http_client(&self) -> Result<Client, String> {
@@ -178,6 +185,8 @@ mod tests {
             ui_language: None,
             custom_source_language: None,
             custom_target_language: None,
+            blob_context: None,
+            blob_current_chunk_id: None,
         }
     }
 
@@ -185,6 +194,7 @@ mod tests {
         StageConfig {
             id: "stg-1".into(),
             name: "Translation".into(),
+            role: None,
             prompt: "Translate accurately.".into(),
             model: "test-model".into(),
             provider: provider.into(),
@@ -205,15 +215,25 @@ mod tests {
     #[test]
     fn extract_openai_streaming() {
         let provider = DelegatingTestProvider::new("openai");
-        let data = r#"{"choices":[{"delta":{"content":"Hello"}}]}"#;
+        let data = r#"{"type":"response.output_text.delta","delta":"Hello"}"#;
         assert_eq!(provider.extract_streaming_token(data), Some("Hello".into()));
+    }
+
+    #[test]
+    fn extract_openai_streaming_non_text_event_returns_none() {
+        let provider = DelegatingTestProvider::new("openai");
+        let data = r#"{"type":"response.created","response":{"id":"resp_123"}}"#;
+        assert_eq!(provider.extract_streaming_token(data), None);
     }
 
     #[test]
     fn extract_deepseek_streaming() {
         let provider = DelegatingTestProvider::new("deepseek");
         let data = r#"{"choices":[{"delta":{"content":"Bonjour"}}]}"#;
-        assert_eq!(provider.extract_streaming_token(data), Some("Bonjour".into()));
+        assert_eq!(
+            provider.extract_streaming_token(data),
+            Some("Bonjour".into())
+        );
     }
 
     #[test]
@@ -254,7 +274,7 @@ mod tests {
     #[test]
     fn extract_empty_content_returns_empty_string() {
         let provider = DelegatingTestProvider::new("openai");
-        let data = r#"{"choices":[{"delta":{"content":""}}]}"#;
+        let data = r#"{"type":"response.output_text.delta","delta":""}"#;
         assert_eq!(provider.extract_streaming_token(data), Some("".into()));
     }
 
@@ -271,31 +291,52 @@ mod tests {
     fn stage_prompt_without_previous() {
         let config = make_config();
         let stage = make_stage("gemini");
-        let (system, user) = build_stage_prompts("Hello world", &stage, &config, &None, &None);
+        let prompt = build_stage_prompts("Hello world", &stage, &config, None);
+        let system = prompt.flatten_system();
 
         assert!(system.contains("English to Italian"));
         assert!(system.contains("Translate accurately."));
         assert!(system.contains("| API | API |"));
-        assert!(user.contains("Hello world"));
-        assert!(!user.contains("Previous Iteration"));
-        assert!(!user.contains("Previous Chunk Translation Context"));
+        assert!(prompt.user.contains("Hello world"));
+        assert!(!prompt.user.contains("Previous Iteration"));
+        assert!(!system.contains("Reference document context"));
     }
 
     #[test]
-    fn stage_prompt_with_previous() {
-        let config = make_config();
+    fn stage_prompt_with_blob_context() {
+        let mut config = make_config();
+        config.blob_context = Some("<chunk id=\"chunk-1\">\nHello world\n</chunk>".into());
+        config.blob_current_chunk_id = Some("chunk-1".into());
+        // Translation stage: blob context appears in system, no previous iteration in user
         let stage = make_stage("openai");
-        let prev = Some("Ciao mondo".to_string());
-        let previous_translation = Some("Traduzione chunk precedente".to_string());
-        let (system, user) =
-            build_stage_prompts("Hello world", &stage, &config, &prev, &previous_translation);
+        let prompt = build_stage_prompts("Hello world", &stage, &config, None);
+        let system = prompt.flatten_system();
 
         assert!(system.contains("English to Italian"));
-        assert!(user.contains("Hello world"));
-        assert!(user.contains("Ciao mondo"));
-        assert!(user.contains("Previous Iteration"));
-        assert!(user.contains("Context from previous segment"));
-        assert!(user.contains("Traduzione chunk precedente"));
+        assert!(prompt.user.contains("Hello world"));
+        assert!(prompt.user.contains("Current chunk id: chunk-1"));
+        assert!(system.contains("Reference document block"));
+        assert!(system.contains("<chunk id=\"chunk-1\">"));
+    }
+
+    #[test]
+    fn stage_prompt_refine_includes_previous_iteration() {
+        let mut config = make_config();
+        config.blob_context = Some("<chunk id=\"chunk-1\">\nHello world\n</chunk>".into());
+        config.blob_current_chunk_id = Some("chunk-1".into());
+        let mut stage = make_stage("openai");
+        stage.role = Some("refine".into());
+        let prev = Some("Ciao mondo".to_string());
+        let prompt = build_stage_prompts("Hello world", &stage, &config, prev.as_deref());
+        let system = prompt.flatten_system();
+
+        assert!(system.contains("English to Italian"));
+        assert!(prompt.user.contains("Hello world"));
+        assert!(prompt.user.contains("Ciao mondo"));
+        assert!(prompt.user.contains("Previous Iteration"));
+        assert!(prompt.user.contains("Current chunk id: chunk-1"));
+        assert!(system.contains("Reference document block"));
+        assert!(system.contains("<chunk id=\"chunk-1\">"));
     }
 
     #[test]
@@ -303,7 +344,7 @@ mod tests {
         let mut config = make_config();
         config.glossary = vec![];
         let stage = make_stage("gemini");
-        let (system, _) = build_stage_prompts("text", &stage, &config, &None, &None);
+        let system = build_stage_prompts("text", &stage, &config, None).flatten_system();
 
         assert!(system.contains("No glossary entries were provided"));
     }
@@ -324,11 +365,40 @@ mod tests {
             },
         ];
         let stage = make_stage("gemini");
-        let (system, _) = build_stage_prompts("text", &stage, &config, &None, &None);
+        let system = build_stage_prompts("text", &stage, &config, None).flatten_system();
 
         assert!(system.contains("| API | API | tech |"));
         assert!(system.contains("| bug | errore |"));
         assert!(system.contains("Treat every glossary entry as mandatory terminology"));
+        assert!(system.contains("Glossary Reminder"));
+        assert!(system.contains("Apply the glossary entries specified above"));
+    }
+
+    #[test]
+    fn format_stage_prompt_omits_glossary_persona_and_source_context() {
+        let mut config = make_config();
+        config.blob_context = Some("<chunk id=\"chunk-1\">\nHello world\n</chunk>".into());
+        config.blob_current_chunk_id = Some("chunk-1".into());
+        let mut stage = make_stage("gemini");
+        stage.role = Some("format".into());
+        stage.prompt = "Fix formatting only.".into();
+        let prev = Some("Previous should not appear".to_string());
+        let prompt = build_stage_prompts("Ciao **mondo", &stage, &config, prev.as_deref());
+        let system = prompt.flatten_system();
+
+        assert!(system.contains("deterministic text post-processor"));
+        assert!(system.contains("Fix formatting only."));
+        assert!(system.contains("Output only the formatted text"));
+        assert!(!system.contains("Glossary Constraints"));
+        assert!(!system.contains("| API | API |"));
+        assert!(!system.contains("English to Italian"));
+        assert!(!system.contains("Reference document block"));
+        assert!(!system.contains("Output only the translated text"));
+        assert!(prompt.user.contains("Text to format"));
+        assert!(prompt.user.contains("Ciao **mondo"));
+        assert!(!prompt.user.contains("Original text"));
+        assert!(!prompt.user.contains("Previous Iteration"));
+        assert!(!prompt.user.contains("Previous should not appear"));
     }
 
     #[test]
@@ -336,13 +406,13 @@ mod tests {
         let mut config = make_config();
         config.markdown_aware = Some(true);
         let stage = make_stage("gemini");
-        let (system, user) =
-            build_stage_prompts("Text with note[^1].", &stage, &config, &None, &None);
+        let prompt = build_stage_prompts("Text with note[^1].", &stage, &config, None);
+        let system = prompt.flatten_system();
 
         assert!(system.contains("Markdown"));
         assert!(system.contains("Preserve every Markdown marker"));
         assert!(system.contains("Preserve paragraph boundaries and line breaks"));
-        assert!(user.contains("Text with note[^1]."));
+        assert!(prompt.user.contains("Text with note[^1]."));
     }
 
     // ── build_judge_prompts ──────────────────────────────────────────
@@ -350,12 +420,16 @@ mod tests {
     #[test]
     fn judge_prompt_includes_source_and_target() {
         let config = make_config();
-        let (system, user) = build_judge_prompts("Hello", "Ciao", &config);
+        let prompt = build_judge_prompts("Hello", "Ciao", &config);
+        let system = prompt.flatten_system();
 
+        // Source/target text now live in the user turn for cacheability
         assert!(system.contains("English"));
         assert!(system.contains("Italian"));
-        assert!(system.contains("Hello"));
-        assert!(system.contains("Ciao"));
+        assert!(!system.contains("Hello"));
+        assert!(!system.contains("Ciao"));
+        assert!(prompt.user.contains("Hello"));
+        assert!(prompt.user.contains("Ciao"));
         assert!(system.contains("rating"));
         assert!(system.contains("critical"));
         assert!(system.contains("poor"));
@@ -363,13 +437,13 @@ mod tests {
         assert!(system.contains("good"));
         assert!(system.contains("excellent"));
         assert!(system.contains("issues"));
-        assert!(user.contains("audit"));
+        assert!(prompt.user.contains("audit"));
     }
 
     #[test]
     fn judge_prompt_includes_instructions() {
         let config = make_config();
-        let (system, _) = build_judge_prompts("src", "tgt", &config);
+        let system = build_judge_prompts("src", "tgt", &config).flatten_system();
 
         assert!(system.contains("Evaluate translation quality."));
     }
@@ -377,7 +451,7 @@ mod tests {
     #[test]
     fn judge_prompt_includes_glossary_json() {
         let config = make_config();
-        let (system, _) = build_judge_prompts("src", "tgt", &config);
+        let system = build_judge_prompts("src", "tgt", &config).flatten_system();
 
         assert!(system.contains("API"));
         assert!(system.contains("Keep as-is"));
@@ -440,15 +514,26 @@ mod tests {
 
     #[test]
     fn builds_streaming_http_client_without_global_request_timeout() {
-        // The streaming client is the LazyLock singleton — just verify it exists.
-        let _client: &Client = &crate::llm::stream::OLLAMA_STREAMING_HTTP_CLIENT;
+        // The streaming client is built once on first access — verify it initialises correctly.
+        let result = crate::llm::stream::OLLAMA_STREAMING_HTTP_CLIENT.get_or_init(|| {
+            reqwest::Client::builder()
+                .build()
+                .map_err(|e| format!("Failed to build Ollama streaming HTTP client: {e}"))
+        });
+        assert!(result.is_ok());
     }
 
     #[test]
     fn effective_stage_ollama_config_applies_defaults() {
         let stage = make_stage("ollama");
         // A stage with no provider_options falls back to defaults.
-        let ollama = merge_ollama_config(None, stage.provider_options.as_ref().and_then(|o| o.ollama.as_ref()));
+        let ollama = merge_ollama_config(
+            None,
+            stage
+                .provider_options
+                .as_ref()
+                .and_then(|o| o.ollama.as_ref()),
+        );
 
         assert_eq!(ollama.temperature, Some(0.1));
         assert_eq!(ollama.top_p, Some(1.0));
@@ -476,6 +561,9 @@ mod tests {
                     serde_json::json!(1.05),
                 )])),
             }),
+            openai: None,
+            deepseek: None,
+            gemini: None,
         });
 
         let ollama = merge_ollama_config(
@@ -536,7 +624,11 @@ mod tests {
 
     #[test]
     fn format_ollama_api_error_maps_timeout_and_runtime_failures() {
-        let timeout = format_api_error("Ollama", reqwest::StatusCode::REQUEST_TIMEOUT, "slow model load");
+        let timeout = format_api_error(
+            "Ollama",
+            reqwest::StatusCode::REQUEST_TIMEOUT,
+            "slow model load",
+        );
         let runtime = format_api_error("Ollama", reqwest::StatusCode::BAD_GATEWAY, "gpu oom");
 
         assert!(timeout.contains("timed out") || timeout.contains("408"));
@@ -577,6 +669,7 @@ mod tests {
             severity: "low".into(),
             description: "Minor".into(),
             suggested_fix: None,
+            phrase: None,
         };
         let json = serde_json::to_string(&issue).unwrap();
         assert!(json.contains(r#""type":"fluency"#));
@@ -591,6 +684,8 @@ mod tests {
             done: false,
             input_tokens: None,
             output_tokens: None,
+            cached_input_tokens: None,
+            cache_miss_input_tokens: None,
         };
         let json = serde_json::to_string(&token).unwrap();
         assert!(json.contains("streamId"));
@@ -608,6 +703,8 @@ mod tests {
             done: true,
             input_tokens: Some(100),
             output_tokens: Some(50),
+            cached_input_tokens: Some(60),
+            cache_miss_input_tokens: Some(40),
         };
         let json = serde_json::to_string(&token).unwrap();
         assert!(json.contains("inputTokens"));
@@ -794,8 +891,16 @@ mod tests {
                 ))),
             }]);
 
-            consume_stream(&provider, "stream-1", &cancel, &mut source, |_| {}, "test-model", || {})
-                .await
+            consume_stream(
+                &provider,
+                "stream-1",
+                &cancel,
+                &mut source,
+                |_| {},
+                "test-model",
+                || {},
+            )
+            .await
         });
 
         tokio::task::yield_now().await;
@@ -843,8 +948,16 @@ mod tests {
                 },
             ]);
 
-            consume_stream(&provider, "stream-2", &cancel, &mut source, |_| {}, "test-model", || {})
-                .await
+            consume_stream(
+                &provider,
+                "stream-2",
+                &cancel,
+                &mut source,
+                |_| {},
+                "test-model",
+                || {},
+            )
+            .await
         });
 
         tokio::task::yield_now().await;
@@ -929,8 +1042,16 @@ mod tests {
         );
         let mut source = MockChunkSource::new(vec![MockChunk::Immediate(Err("stream broke"))]);
 
-        let result = consume_stream(&provider, "stream-err", &cancel, &mut source, |_| {}, "test-model", || {})
-            .await;
+        let result = consume_stream(
+            &provider,
+            "stream-err",
+            &cancel,
+            &mut source,
+            |_| {},
+            "test-model",
+            || {},
+        )
+        .await;
 
         assert_eq!(result.unwrap_err(), "stream broke");
     }
@@ -993,20 +1114,28 @@ mod tests {
             .mount(&server)
             .await;
 
-        // Use an OpenAI-compatible provider pointed at the mock server
+        // Use an OpenAI-compatible provider (Chat Completions path) pointed at the mock server
         use crate::llm::provider::LlmRequest;
+        use crate::llm::types::{PromptBlock, StructuredPrompt};
         let prov = crate::llm::providers::openai::OpenAiCompatibleProvider::new_with_base_url(
             "openai",
             "OpenAI",
             &format!("{}", server.uri()),
             "OPENAI_API_KEY",
-            "gpt-4o-mini",
+            "gpt-4.1-mini",
+            false,
         );
         let client = Client::new();
+        let structured = StructuredPrompt {
+            system: vec![PromptBlock {
+                text: "Translate from English to Italian".into(),
+                cacheable: false,
+            }],
+            user: "Hello world".into(),
+        };
         let req = LlmRequest {
             model: "test-model",
-            system_prompt: "Translate from English to Italian",
-            user_prompt: "Hello world",
+            structured: &structured,
             api_key: "test-key",
             json_mode: false,
             provider_options: None,
@@ -1025,18 +1154,26 @@ mod tests {
             .await;
 
         use crate::llm::provider::LlmRequest;
+        use crate::llm::types::{PromptBlock, StructuredPrompt};
         let prov = crate::llm::providers::openai::OpenAiCompatibleProvider::new_with_base_url(
             "openai",
             "OpenAI",
             &format!("{}", server.uri()),
             "OPENAI_API_KEY",
-            "gpt-4o-mini",
+            "gpt-4.1-mini",
+            false,
         );
         let client = Client::new();
+        let structured = StructuredPrompt {
+            system: vec![PromptBlock {
+                text: "system".into(),
+                cacheable: false,
+            }],
+            user: "user".into(),
+        };
         let req = LlmRequest {
             model: "test-model",
-            system_prompt: "system",
-            user_prompt: "user",
+            structured: &structured,
             api_key: "bad-key",
             json_mode: false,
             provider_options: None,
@@ -1056,18 +1193,26 @@ mod tests {
             .await;
 
         use crate::llm::provider::LlmRequest;
+        use crate::llm::types::{PromptBlock, StructuredPrompt};
         let prov = crate::llm::providers::openai::OpenAiCompatibleProvider::new_with_base_url(
             "openai",
             "OpenAI",
             &format!("{}", server.uri()),
             "OPENAI_API_KEY",
-            "gpt-4o-mini",
+            "gpt-4.1-mini",
+            false,
         );
         let client = Client::new();
+        let structured = StructuredPrompt {
+            system: vec![PromptBlock {
+                text: "system".into(),
+                cacheable: false,
+            }],
+            user: "user".into(),
+        };
         let req = LlmRequest {
             model: "test-model",
-            system_prompt: "system",
-            user_prompt: "user",
+            structured: &structured,
             api_key: "key",
             json_mode: false,
             provider_options: None,
@@ -1092,12 +1237,13 @@ mod tests {
                 total: Duration::from_millis(5000),
             },
         );
+        // OpenAI now uses the Responses API streaming format
         let mut source = MockChunkSource::new(vec![
             MockChunk::Immediate(Ok(Some(Bytes::from_static(
-                b"data: {\"choices\":[{\"delta\":{\"content\":\"Ciao\"}}]}\n\n",
+                b"data: {\"type\":\"response.output_text.delta\",\"delta\":\"Ciao\"}\n\n",
             )))),
             MockChunk::Immediate(Ok(Some(Bytes::from_static(
-                b"data: {\"choices\":[{\"delta\":{\"content\":\" mondo\"}}]}\n\n",
+                b"data: {\"type\":\"response.output_text.delta\",\"delta\":\" mondo\"}\n\n",
             )))),
             MockChunk::Immediate(Ok(Some(Bytes::from_static(b"data: [DONE]\n\n")))),
             MockChunk::Immediate(Ok(None)),
@@ -1149,8 +1295,16 @@ mod tests {
             MockChunk::Immediate(Ok(None)),
         ]);
 
-        let result = consume_stream(&provider, "stream-anthropic", &cancel, &mut source, |_| {}, "test-model", || {})
-            .await;
+        let result = consume_stream(
+            &provider,
+            "stream-anthropic",
+            &cancel,
+            &mut source,
+            |_| {},
+            "test-model",
+            || {},
+        )
+        .await;
 
         assert_eq!(result.unwrap(), "Guten Tag");
     }
@@ -1169,13 +1323,19 @@ mod tests {
             },
         );
         let mut source = MockChunkSource::new(vec![MockChunk::Immediate(Ok(Some(
-            Bytes::from_static(
-                b"data: {\"choices\":[{\"delta\":{\"content\":\"Never\"}}]}\n\n",
-            ),
+            Bytes::from_static(b"data: {\"choices\":[{\"delta\":{\"content\":\"Never\"}}]}\n\n"),
         )))]);
 
-        let result = consume_stream(&provider, "stream-precancelled", &cancel, &mut source, |_| {}, "test-model", || {})
-            .await;
+        let result = consume_stream(
+            &provider,
+            "stream-precancelled",
+            &cancel,
+            &mut source,
+            |_| {},
+            "test-model",
+            || {},
+        )
+        .await;
 
         assert_eq!(result.unwrap_err(), STREAM_CANCELLED_ERROR);
     }
@@ -1212,6 +1372,7 @@ mod tests {
                     severity: v["severity"].as_str()?.to_string(),
                     description: v["description"].as_str()?.to_string(),
                     suggested_fix: v["suggestedFix"].as_str().map(|s| s.to_string()),
+                    phrase: v["phrase"].as_str().map(|s| s.to_string()),
                 })
             })
             .collect();
@@ -1220,6 +1381,9 @@ mod tests {
         assert_eq!(issues.len(), 1);
         assert_eq!(issues[0].issue_type, "fluency");
         assert_eq!(issues[0].severity, "low");
-        assert_eq!(issues[0].suggested_fix.as_deref(), Some("Rephrase slightly"));
+        assert_eq!(
+            issues[0].suggested_fix.as_deref(),
+            Some("Rephrase slightly")
+        );
     }
 }

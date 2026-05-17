@@ -11,11 +11,8 @@ import { usePipelineStore } from './pipelineStore';
 import { useUiStore } from './uiStore';
 import {
   chunkText,
-  findBestSplitIndex,
   generateId,
   qualityDefault,
-  resolveSplitIndex,
-  trimSplitFragment,
 } from '../utils';
 import {
   buildChunkFootnotes,
@@ -128,6 +125,7 @@ interface ChunksState {
       minWords?: number;
       maxWords?: number;
       headingAware?: boolean;
+      carryTrailingShortBlocks?: boolean;
       extractFootnotes?: boolean;
     },
     precomputedChunks?: string[],
@@ -141,14 +139,15 @@ interface ChunksState {
   toggleChunkTranslationLock: (chunkId: string) => void;
   updateChunkStatus: (chunkId: string, status: ChunkStatus) => void;
   updateChunkOriginalText: (chunkId: string, text: string) => void;
+  toggleChunkSourceEditing: (chunkId: string) => void;
   updateChunkCoherence: (chunkId: string, result: CoherenceResult) => void;
-  splitChunk: (chunkId: string) => void;
-  splitChunkAt: (chunkId: string, splitAt: number) => boolean;
-  mergeChunkWithNext: (chunkId: string) => void;
   resetCompletedChunks: () => void;
   resetAllChunks: () => void;
   unlockChunkForEdit: (chunkId: string) => void;
   clearChunkStages: (chunkId: string) => void;
+  setBlobAssignments: (
+    assignments: Array<{ chunkId: string; blobId: string; position: number; referenceChunkIds: string[] }>
+  ) => void;
 }
 
 export const useChunksStore = create<ChunksState>((set, get) => ({
@@ -182,6 +181,7 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
       minWords: config.minWords,
       maxWords: config.maxWords,
       headingAware: config.headingAware,
+      carryTrailingShortBlocks: config.carryTrailingShortBlocks,
     }, sourceFootnotes);
 
     const ui = useUiStore.getState();
@@ -284,25 +284,43 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
       chunks: updateSingleChunk(state.chunks, chunkId, (chunk) => ({
         ...chunk,
         status,
+        ...(status === 'processing'
+          ? { translationStale: false, sourceEditable: false }
+          : status === 'completed'
+            ? { sourceEditable: false }
+            : {}),
       })),
     })),
 
   updateChunkOriginalText: (chunkId, text) =>
     set((state) => {
+      const chunkIdx = chunkIndex.get(chunkId);
+      if (chunkIdx === undefined) return {};
+      const chunk = state.chunks[chunkIdx];
+      if (!chunk || chunk.originalText === text) return {};
+
       const sourceFootnotes = usePipelineStore.getState().sourceFootnotes;
-      const nextChunks = updateSingleChunk(state.chunks, chunkId, (chunk) =>
-        resetChunkForSourceEdit(
-          updateChunkSourceFields(
-            chunk,
-            deriveChunkDisplayText(text, sourceFootnotes),
-            text,
-            buildChunkFootnotes(text, sourceFootnotes),
-          ),
-        ),
-      );
+      const nextChunks = updateSingleChunk(state.chunks, chunkId, (current) => {
+        const hasTranslation = !!(current.currentDraft || Object.keys(current.stageResults).length > 0);
+        const updated = updateChunkSourceFields(
+          current,
+          deriveChunkDisplayText(text, sourceFootnotes),
+          text,
+          buildChunkFootnotes(text, sourceFootnotes),
+        );
+        return hasTranslation ? { ...updated, translationStale: true } : updated;
+      });
       syncProjectSourceDocument(nextChunks);
       return { chunks: nextChunks };
     }),
+
+  toggleChunkSourceEditing: (chunkId) =>
+    set((state) => ({
+      chunks: updateSingleChunk(state.chunks, chunkId, (chunk) => ({
+        ...chunk,
+        sourceEditable: !chunk.sourceEditable,
+      })),
+    })),
 
   updateChunkCoherence: (chunkId, result) =>
     set((state) => ({
@@ -311,64 +329,6 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
         coherenceResult: result,
       })),
     })),
-
-  splitChunk: (chunkId) =>
-    set((state) => {
-      const chunkIdx = chunkIndex.get(chunkId);
-      if (chunkIdx === undefined) return {};
-      const chunk = state.chunks[chunkIdx]!;
-      const splitAt = findBestSplitIndex(chunk.sourceProcessingText, {
-        markdownAware: usePipelineStore.getState().config.markdownAware,
-      });
-      if (!splitAt) return {};
-
-      return splitChunkState(state.chunks, chunkId, splitAt) ?? {};
-    }),
-
-  splitChunkAt: (chunkId, splitAt) => {
-    let didSplit = false;
-
-    set((state) => {
-      const next = splitChunkState(state.chunks, chunkId, splitAt);
-      if (!next) return {};
-      didSplit = true;
-      return next;
-    });
-
-    return didSplit;
-  },
-
-  mergeChunkWithNext: (chunkId) =>
-    set((state) => {
-      const index = chunkIndex.get(chunkId);
-      if (index === undefined || index >= state.chunks.length - 1) return {};
-
-      const current = state.chunks[index];
-      const next = state.chunks[index + 1];
-      const isDirty = (status: ChunkStatus) =>
-        status === 'completed' || status === 'processing';
-      if (isDirty(current.status) || isDirty(next.status)) return {};
-
-      const mergedProcessingText = `${current.sourceProcessingText}\n\n${next.sourceProcessingText}`;
-      const sourceFootnotes = usePipelineStore.getState().sourceFootnotes;
-      const merged = resetChunkForSourceEdit(
-        updateChunkSourceFields(
-          current,
-          deriveChunkDisplayText(mergedProcessingText, sourceFootnotes),
-          mergedProcessingText,
-          buildChunkFootnotes(mergedProcessingText, sourceFootnotes),
-        ),
-      );
-
-      const chunks = [
-        ...state.chunks.slice(0, index),
-        merged,
-        ...state.chunks.slice(index + 2),
-      ];
-      syncProjectSourceDocument(chunks);
-      syncSelectedChunk(chunks, merged.id);
-      return { chunks };
-    }),
 
   resetCompletedChunks: () =>
     set((state) => ({
@@ -403,6 +363,36 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
     }));
   },
 
+  setBlobAssignments: (assignments) => {
+    const map = new Map(assignments.map((a) => [
+      a.chunkId,
+      {
+        blobId: a.blobId,
+        blobOrder: a.position,
+        blobReferenceChunkIds: a.referenceChunkIds,
+      },
+    ]));
+    set((state) => ({
+      chunks: state.chunks.map((chunk) => {
+        const assignment = map.get(chunk.id);
+        if (!assignment) {
+          return {
+            ...chunk,
+            blobId: undefined,
+            blobOrder: undefined,
+            blobReferenceChunkIds: undefined,
+          };
+        }
+        return {
+          ...chunk,
+          blobId: assignment.blobId,
+          blobOrder: assignment.blobOrder,
+          blobReferenceChunkIds: assignment.blobReferenceChunkIds,
+        };
+      }),
+    }));
+  },
+
 }));
 
 function createEmptyJudgeResult(): JudgeResult {
@@ -424,6 +414,8 @@ function resetChunkForSourceEdit<T extends TranslationChunk>(chunk: T): T {
     translationProcessingText: '',
     currentDraft: '',
     translationLocked: false,
+    translationStale: false,
+    sourceEditable: false,
   }) as T;
 }
 
@@ -443,6 +435,7 @@ function chunksFromTexts(
       stageResults: {},
       judgeResult: createEmptyJudgeResult(),
       translationLocked: false,
+      sourceEditable: false,
       ...(footnotes?.length ? { footnotes } : {}),
     });
   });
@@ -457,59 +450,11 @@ function buildChunks(
     minWords?: number;
     maxWords?: number;
     headingAware?: boolean;
+    carryTrailingShortBlocks?: boolean;
   },
   sourceFootnotes: ReturnType<typeof usePipelineStore.getState>['sourceFootnotes'],
 ): TranslationChunk[] {
   return chunksFromTexts(chunkText(text, options), sourceFootnotes);
-}
-
-function splitChunkState(
-  chunks: TranslationChunk[],
-  chunkId: string,
-  splitAt: number,
-): { chunks: TranslationChunk[] } | null {
-  const index = chunkIndex.get(chunkId);
-  if (index === undefined) return null;
-
-  const chunk = chunks[index];
-  if (chunk.status === 'completed' || chunk.status === 'processing') return null;
-
-  const boundedSplitAt = resolveSplitIndex(chunk.sourceProcessingText, splitAt, {
-    markdownAware: usePipelineStore.getState().config.markdownAware,
-  });
-  if (boundedSplitAt === null) return null;
-  const firstText = trimSplitFragment(chunk.sourceProcessingText.slice(0, boundedSplitAt));
-  const secondText = trimSplitFragment(chunk.sourceProcessingText.slice(boundedSplitAt));
-  if (!firstText || !secondText) return null;
-
-  const sourceFootnotes = usePipelineStore.getState().sourceFootnotes;
-  const first = resetChunkForSourceEdit(
-    updateChunkSourceFields(
-      chunk,
-      deriveChunkDisplayText(firstText, sourceFootnotes),
-      firstText,
-      buildChunkFootnotes(firstText, sourceFootnotes),
-    ),
-  );
-  const second = resetChunkForSourceEdit({
-    ...updateChunkSourceFields(
-      chunk,
-      deriveChunkDisplayText(secondText, sourceFootnotes),
-      secondText,
-      buildChunkFootnotes(secondText, sourceFootnotes),
-    ),
-    id: generateId('chunk'),
-  });
-
-  const nextChunks = [
-    ...chunks.slice(0, index),
-    first,
-    second,
-    ...chunks.slice(index + 1),
-  ];
-  syncProjectSourceDocument(nextChunks);
-  syncSelectedChunk(nextChunks, first.id);
-  return { chunks: nextChunks };
 }
 
 function syncProjectSourceDocument(chunks: TranslationChunk[]) {

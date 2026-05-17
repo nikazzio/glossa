@@ -170,6 +170,9 @@ describe('projectService glossary persistence', () => {
           currentDraft: 'Beta translated',
           status: 'completed',
           translationLocked: true,
+          blobId: 'blob-1',
+          blobOrder: 1,
+          blobReferenceChunkIds: ['chunk-a', 'chunk-b'],
           stageResults: {},
           judgeResult: {
             content: 'Beta translated',
@@ -219,11 +222,11 @@ describe('projectService glossary persistence', () => {
     );
     expect(dbMocks.execute).toHaveBeenCalledWith(
       expect.stringContaining('position'),
-      ['chunk-b', 'proj-1', 'Beta', 'Beta translated', 0, 'completed', '{}', 'completed', 'good', 1, '[]', null, null, 'Beta', 'Beta', 'Beta translated', 'Beta translated'],
+      ['chunk-b', 'proj-1', 'Beta', 'Beta translated', 0, 'completed', '{}', 'completed', 'good', 1, '[]', null, null, 'Beta', 'Beta', 'Beta translated', 'Beta translated', 'blob-1', 1, '["chunk-a","chunk-b"]'],
     );
     expect(dbMocks.execute).toHaveBeenCalledWith(
       expect.stringContaining('position'),
-      ['chunk-a', 'proj-1', 'Alpha', 'Alpha translated', 1, 'completed', '{}', 'completed', 'excellent', 0, '[]', null, null, 'Alpha', 'Alpha', 'Alpha translated', 'Alpha translated'],
+      ['chunk-a', 'proj-1', 'Alpha', 'Alpha translated', 1, 'completed', '{}', 'completed', 'excellent', 0, '[]', null, null, 'Alpha', 'Alpha', 'Alpha translated', 'Alpha translated', null, 0, null],
     );
     expect(
       dbMocks.execute.mock.calls.filter(
@@ -413,6 +416,34 @@ describe('projectService glossary persistence', () => {
     // Legacy fields must mirror the display fields
     expect(restored[0]?.originalText).toBe('Display source');
     expect(restored[0]?.currentDraft).toBe('Display translation');
+  });
+
+  it('restoreTranslations restores persisted blob reference windows', () => {
+    const restored = restoreTranslations([
+      {
+        id: 'chunk-1',
+        project_id: 'proj-1',
+        original_text: 'Source',
+        final_translation: 'Translation',
+        source_display_text: 'Source',
+        source_processing_text: 'Source',
+        translation_display_text: 'Translation',
+        translation_processing_text: 'Translation',
+        chunk_status: 'completed',
+        stage_results: '{}',
+        judge_status: 'completed',
+        judge_rating: 'good',
+        judge_issues: '[]',
+        blob_id: 'blob-1',
+        blob_order: 2,
+        blob_reference_chunk_ids: '["chunk-0","chunk-1","chunk-2"]',
+        created_at: '2026-01-01T00:00:00Z',
+      },
+    ]);
+
+    expect(restored[0]?.blobId).toBe('blob-1');
+    expect(restored[0]?.blobOrder).toBe(2);
+    expect(restored[0]?.blobReferenceChunkIds).toEqual(['chunk-0', 'chunk-1', 'chunk-2']);
   });
 
 });

@@ -86,6 +86,7 @@ export interface ChunkTextOptions {
   minWords?: number;
   maxWords?: number;
   headingAware?: boolean;
+  carryTrailingShortBlocks?: boolean;
 }
 
 export function estimateTextStats(text: string): TextStats {
@@ -118,6 +119,10 @@ export function chunkText(text: string, options: ChunkTextOptions = {}): string[
 
   if (options.headingAware) {
     chunks = mergeHeadingChunks(chunks);
+  }
+
+  if (options.carryTrailingShortBlocks) {
+    chunks = mergeTrailingShortBlocks(chunks);
   }
 
   if (options.minWords && options.minWords > 0) {
@@ -228,27 +233,149 @@ function isHeadingChunk(text: string): boolean {
   return /^#{1,6}\s+\S/.test(trimmed) && !trimmed.includes('\n');
 }
 
+function getNonEmptyTrimmedLines(text: string): string[] {
+  return text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function isListLikeLine(line: string): boolean {
+  return /^[-*+]\s+/.test(line) || /^\d+[.)]\s+/.test(line);
+}
+
+function isPlainTextHeadingLike(text: string): boolean {
+  const lines = getNonEmptyTrimmedLines(text);
+  if (lines.length === 0 || lines.length > 2) return false;
+  if (countWords(text) > 12 || text.trim().length > 90) return false;
+  return lines.every((line) =>
+    /^[A-Z0-9À-ÖØ-Þ]/.test(line) &&
+    !/[.!?…]$/.test(line) &&
+    !isListLikeLine(line),
+  );
+}
+
+function isCarryableTrailingShortBlock(text: string): boolean {
+  const lines = getNonEmptyTrimmedLines(text);
+  if (lines.length === 0 || lines.length > 2) return false;
+  if (countWords(text) > 20 || text.trim().length > 140) return false;
+  return lines.every((line) => !isListLikeLine(line));
+}
+
+// Detects a strict heading-like trailing block preceded by a blank line.
+function extractTrailingHeading(text: string): { main: string; heading: string } | null {
+  const blankLinePattern = /\r?\n\r?\n/g;
+  let lastMatch: RegExpExecArray | null = null;
+  let match: RegExpExecArray | null;
+
+  while ((match = blankLinePattern.exec(text)) !== null) {
+    lastMatch = match;
+  }
+
+  if (!lastMatch) return null;
+
+  const sepStart = lastMatch.index;
+  const sepEnd = sepStart + lastMatch[0].length;
+  const main = text.slice(0, sepStart);
+  const trailing = text.slice(sepEnd);
+
+  if (!main.trim() || !trailing.trim()) return null;
+  if (!isHeadingChunk(trailing) && !isPlainTextHeadingLike(trailing)) return null;
+  return { main, heading: trailing };
+}
+
 function mergeHeadingChunks(chunks: string[]): string[] {
   if (chunks.length <= 1) return chunks;
   const result: string[] = [];
   let headingAccumulator = '';
-  for (const chunk of chunks) {
+  // Precompute for each index whether any body chunk follows it (O(n) reverse pass)
+  const hasBodyAfter = new Array<boolean>(chunks.length).fill(false);
+  for (let j = chunks.length - 2; j >= 0; j--) {
+    hasBodyAfter[j] = !isHeadingChunk(chunks[j + 1]!) || (hasBodyAfter[j + 1] ?? false);
+  }
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i]!;
     if (isHeadingChunk(chunk)) {
       headingAccumulator = headingAccumulator
         ? `${headingAccumulator}\n\n${chunk}`
         : chunk;
     } else {
-      const merged = headingAccumulator
-        ? `${headingAccumulator}\n\n${chunk}`
-        : chunk;
-      result.push(merged);
-      headingAccumulator = '';
+      const extracted = hasBodyAfter[i] ? extractTrailingHeading(chunk) : null;
+      if (extracted) {
+        // Push the body of this chunk (with any pending headings), carry the trailing heading forward
+        const merged = headingAccumulator
+          ? `${headingAccumulator}\n\n${extracted.main}`
+          : extracted.main;
+        result.push(merged);
+        headingAccumulator = extracted.heading;
+      } else {
+        const merged = headingAccumulator
+          ? `${headingAccumulator}\n\n${chunk}`
+          : chunk;
+        result.push(merged);
+        headingAccumulator = '';
+      }
     }
   }
   // If trailing headings remain (no following non-heading chunk), push them as-is
   if (headingAccumulator) {
     result.push(headingAccumulator);
   }
+  return result;
+}
+
+function extractTrailingShortBlock(text: string): { main: string; trailing: string } | null {
+  const blankLinePattern = /\r?\n\r?\n/g;
+  let lastMatch: RegExpExecArray | null = null;
+  let match: RegExpExecArray | null;
+
+  while ((match = blankLinePattern.exec(text)) !== null) {
+    lastMatch = match;
+  }
+
+  if (!lastMatch) return null;
+
+  const sepStart = lastMatch.index;
+  const sepEnd = sepStart + lastMatch[0].length;
+  const main = text.slice(0, sepStart);
+  const trailing = text.slice(sepEnd);
+
+  if (!main.trim() || !trailing.trim()) return null;
+  if (!isCarryableTrailingShortBlock(trailing)) return null;
+  return { main, trailing };
+}
+
+function mergeTrailingShortBlocks(chunks: string[]): string[] {
+  if (chunks.length <= 1) return chunks;
+  const result: string[] = [];
+  let carried = '';
+
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i]!;
+    const hadCarried = carried.length > 0;
+    const withCarried = hadCarried ? `${carried}\n\n${chunk}` : chunk;
+    carried = '';
+
+    if (i === chunks.length - 1) {
+      result.push(withCarried);
+      continue;
+    }
+
+    if (hadCarried) {
+      result.push(withCarried);
+      continue;
+    }
+
+    const extracted = extractTrailingShortBlock(withCarried);
+    if (!extracted) {
+      result.push(withCarried);
+      continue;
+    }
+
+    result.push(extracted.main);
+    carried = extracted.trailing;
+  }
+
   return result;
 }
 

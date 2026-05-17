@@ -183,7 +183,7 @@ export function MarkdownEditor({
 
   const preview = (
     <div
-      className={`${minHeightClassName} rounded-2xl border border-editorial-border/70 bg-editorial-bg/55 p-4 ${previewClassName}`}
+      className={`${fillHeight ? 'flex-1 min-h-0 overflow-y-auto' : minHeightClassName} rounded-2xl border border-editorial-border bg-editorial-textbox/60 p-4 ${previewClassName}`}
       style={textSizeStyle}
     >
       {value.trim() ? (
@@ -417,10 +417,29 @@ export function MarkdownEditor({
       {mode === 'write' && !highlightHtml ? textarea : null}
       {mode === 'preview' ? preview : null}
       {mode === 'split' ? (
-        <div className="grid gap-4 xl:grid-cols-2">
-          {textarea}
-          {preview}
-        </div>
+        fillHeight ? (
+          <div className="flex-1 min-h-0 grid gap-4 xl:grid-cols-2">
+            <textarea
+              ref={textareaRef}
+              value={value}
+              onChange={(event) => onChange(event.target.value)}
+              readOnly={readOnly}
+              disabled={disabled}
+              placeholder={placeholder}
+              onClick={syncSelection}
+              onKeyUp={syncSelection}
+              onSelect={syncSelection}
+              className={`h-full resize-none w-full bg-transparent outline-none ${textClassName} disabled:opacity-70 read-only:cursor-not-allowed`}
+              style={textSizeStyle}
+            />
+            {preview}
+          </div>
+        ) : (
+          <div className="grid gap-4 xl:grid-cols-2">
+            {textarea}
+            {preview}
+          </div>
+        )
       ) : null}
     </div>
   );

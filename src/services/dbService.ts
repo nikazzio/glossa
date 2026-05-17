@@ -51,7 +51,17 @@ const ALLOWED_MIGRATIONS = new Set([
   'pipeline_configs.custom_source_language',
   'pipeline_configs.custom_target_language',
   'pipeline_configs.run_in_progress',
+  'pipeline_configs.run_status',
   'pipeline_configs.last_run_config',
+  'pipeline_configs.blob_budget_tokens',
+  'pipeline_configs.blob_overlap',
+  'translations.blob_id',
+  'translations.blob_order',
+  'translations.blob_reference_chunk_ids',
+  'operation_logs.phase',
+  'operation_logs.duration_ms',
+  'operation_logs.detail_kind',
+  'pipeline_configs.pipeline_mode',
 ]);
 
 export async function ensureColumn(table: string, column: string, definition: string): Promise<void> {
@@ -108,7 +118,8 @@ export async function initDatabase(): Promise<void> {
       render_profile TEXT DEFAULT 'plain-text',
       markdown_aware INTEGER DEFAULT 0,
       experimental_import TEXT DEFAULT NULL,
-      review_provider_options TEXT DEFAULT NULL
+      review_provider_options TEXT DEFAULT NULL,
+      run_status TEXT DEFAULT 'idle'
     )
   `);
 
@@ -245,9 +256,29 @@ export async function initDatabase(): Promise<void> {
   `);
   await ensureColumn('translations', 'coherence_result', 'TEXT DEFAULT NULL');
   await ensureColumn('translations', 'footnotes', 'TEXT DEFAULT NULL');
+  await ensureColumn('translations', 'blob_id', 'TEXT DEFAULT NULL');
+  await ensureColumn('translations', 'blob_order', 'INTEGER DEFAULT 0');
+  await ensureColumn('translations', 'blob_reference_chunk_ids', 'TEXT DEFAULT NULL');
+  await ensureColumn('pipeline_configs', 'blob_budget_tokens', 'INTEGER DEFAULT 0');
+  await ensureColumn('pipeline_configs', 'blob_overlap', 'INTEGER DEFAULT 1');
+  await ensureColumn('operation_logs', 'phase', 'TEXT DEFAULT NULL');
+  await ensureColumn('operation_logs', 'duration_ms', 'INTEGER DEFAULT NULL');
+  await ensureColumn('operation_logs', 'detail_kind', 'TEXT DEFAULT NULL');
+
+  await conn.execute(`
+    CREATE TABLE IF NOT EXISTS macro_blocks (
+      id TEXT PRIMARY KEY,
+      project_id TEXT REFERENCES projects(id) ON DELETE CASCADE,
+      blob_index INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   await ensureColumn('prompt_templates', 'context', "TEXT NOT NULL DEFAULT 'stage'");
   await ensureColumn('pipeline_configs', 'run_in_progress', 'INTEGER DEFAULT 0');
+  await ensureColumn('pipeline_configs', 'run_status', "TEXT DEFAULT 'idle'");
   await ensureColumn('pipeline_configs', 'last_run_config', 'TEXT DEFAULT NULL');
+  await ensureColumn('pipeline_configs', 'pipeline_mode', "TEXT DEFAULT 'standard'");
   // Migrate unique index from (name) to (name, context) so stage/audit can share names
   await conn.execute('DROP INDEX IF EXISTS idx_prompt_templates_name');
   await conn.execute(`
@@ -338,7 +369,11 @@ export async function setSetting(key: string, value: string): Promise<void> {
 
 // ── Operation Logs ───────────────────────────────────────────────────
 
-const MAX_OPERATION_LOG_ENTRIES = 400;
+const MAX_OPERATION_LOG_ENTRIES = 2000;
+const MAX_DETAIL_LENGTH = 10_000;
+
+const VALID_PHASES = new Set(['start', 'end', 'retry', 'cache']);
+const VALID_DETAIL_KINDS = new Set(['prompt', 'json', 'error', 'note']);
 
 interface DbOperationLogRow {
   id: string;
@@ -351,6 +386,9 @@ interface DbOperationLogRow {
   stage_id: string | null;
   meta: string | null;
   detail: string | null;
+  phase: string | null;
+  duration_ms: number | null;
+  detail_kind: string | null;
 }
 
 export interface PersistedLogEntry {
@@ -363,13 +401,16 @@ export interface PersistedLogEntry {
   stageId?: string;
   meta?: Record<string, unknown>;
   detail?: string;
+  phase?: string;
+  durationMs?: number;
+  detailKind?: string;
 }
 
 export async function saveOperationLogEntry(projectId: string, entry: PersistedLogEntry): Promise<void> {
   await execute(
     `INSERT OR IGNORE INTO operation_logs
-       (id, project_id, at, level, scope, message, chunk_id, stage_id, meta, detail)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+       (id, project_id, at, level, scope, message, chunk_id, stage_id, meta, detail, phase, duration_ms, detail_kind)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
     [
       entry.id,
       projectId,
@@ -380,7 +421,10 @@ export async function saveOperationLogEntry(projectId: string, entry: PersistedL
       entry.chunkId ?? null,
       entry.stageId ?? null,
       entry.meta ? JSON.stringify(entry.meta) : null,
-      entry.detail ?? null,
+      entry.detail ? entry.detail.slice(0, MAX_DETAIL_LENGTH) : null,
+      entry.phase ?? null,
+      entry.durationMs ?? null,
+      entry.detailKind ?? null,
     ],
   );
   await execute(
@@ -422,6 +466,9 @@ export async function loadOperationLogs(projectId: string): Promise<PersistedLog
     ...(row.stage_id ? { stageId: row.stage_id } : {}),
     ...(row.meta ? { meta: JSON.parse(row.meta) as Record<string, unknown> } : {}),
     ...(row.detail ? { detail: row.detail } : {}),
+    ...(row.phase && VALID_PHASES.has(row.phase) ? { phase: row.phase } : {}),
+    ...(row.duration_ms != null ? { durationMs: row.duration_ms } : {}),
+    ...(row.detail_kind && VALID_DETAIL_KINDS.has(row.detail_kind) ? { detailKind: row.detail_kind } : {}),
   }));
 }
 

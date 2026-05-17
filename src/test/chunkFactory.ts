@@ -31,5 +31,8 @@ export function makeTranslationChunk(
     currentDraft: overrides.currentDraft ?? translationDisplayText,
     translationLocked: overrides.translationLocked ?? false,
     footnotes: overrides.footnotes,
+    blobId: overrides.blobId,
+    blobOrder: overrides.blobOrder,
+    blobReferenceChunkIds: overrides.blobReferenceChunkIds,
   };
 }
