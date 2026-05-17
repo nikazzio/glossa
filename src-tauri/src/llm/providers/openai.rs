@@ -90,6 +90,25 @@ impl OpenAiCompatibleProvider {
         }
     }
 
+    /// Attaches reasoning effort to the request body.
+    /// Responses API → `reasoning.effort`; Chat Completions → `reasoning_effort`.
+    /// No-op when effort is "none", "auto", or unset.
+    fn apply_reasoning_effort(&self, req: &LlmRequest<'_>, body: &mut Value) {
+        let Some(effort) = self
+            .openai_cache_config(req)
+            .and_then(|cfg| cfg.reasoning_effort.as_deref())
+            .filter(|e| matches!(*e, "none" | "low" | "medium" | "high"))
+        else {
+            return;
+        };
+
+        if self.use_responses_api {
+            body["reasoning"] = serde_json::json!({ "effort": effort });
+        } else {
+            body["reasoning_effort"] = Value::String(effort.to_string());
+        }
+    }
+
     /// Attaches prompt_cache_key (and optionally prompt_cache_retention) to a
     /// Chat Completions request body. No-op for the Responses API path.
     fn apply_cache_fields(&self, req: &LlmRequest<'_>, body: &mut Value) {
@@ -173,6 +192,7 @@ impl OpenAiCompatibleProvider {
         if req.json_mode {
             body["text"] = serde_json::json!({"format": {"type": "json_object"}});
         }
+        self.apply_reasoning_effort(req, &mut body);
 
         let resp = client
             .post(&url)
@@ -211,12 +231,13 @@ impl OpenAiCompatibleProvider {
     ) -> Result<reqwest::Response, String> {
         let url = format!("{}/responses", self.base_url);
 
-        let body = serde_json::json!({
+        let mut body = serde_json::json!({
             "model": req.model,
             "instructions": req.structured.flatten_system(),
             "input": req.structured.user,
             "stream": true,
         });
+        self.apply_reasoning_effort(req, &mut body);
 
         client
             .post(&url)
@@ -389,6 +410,7 @@ impl LlmProvider for OpenAiCompatibleProvider {
             body["response_format"] = serde_json::json!({"type": "json_object"});
         }
         self.apply_cache_fields(req, &mut body);
+        self.apply_reasoning_effort(req, &mut body);
 
         let mut request = client.post(&url).json(&body);
         if !req.api_key.is_empty() {
@@ -448,6 +470,7 @@ impl LlmProvider for OpenAiCompatibleProvider {
             "stream_options": {"include_usage": true}
         });
         self.apply_cache_fields(req, &mut body);
+        self.apply_reasoning_effort(req, &mut body);
 
         let mut request = client.post(&url).json(&body);
         if !req.api_key.is_empty() {

@@ -81,7 +81,7 @@ export function StageCard({
     stage.model,
     providerModels[stage.provider],
   );
-  const defaultEffort: ReasoningEffortLevel = resolvedReasoning === 'optional' ? 'none' : 'auto';
+  const defaultEffort: ReasoningEffortLevel = resolvedReasoning === 'optional' ? 'none' : 'medium';
   const currentReasoningEffort: ReasoningEffortLevel = (() => {
     if (stage.provider === 'openai') return stage.providerOptions?.openai?.reasoningEffort ?? defaultEffort;
     if (stage.provider === 'deepseek') return stage.providerOptions?.deepseek?.reasoningEffort ?? defaultEffort;
@@ -101,7 +101,7 @@ export function StageCard({
     } else if (stage.provider === 'deepseek') {
       onUpdate({ providerOptions: { ...opts, deepseek: { ...opts.deepseek, reasoningEffort: effort } } });
     } else if (stage.provider === 'gemini') {
-      const budget = effort === 'none' ? 0 : effort === 'auto' ? null : undefined;
+      const budget = effort === 'none' ? 0 : undefined;
       onUpdate({ providerOptions: { ...opts, gemini: { ...opts.gemini, thinkingBudget: budget } } });
     }
   };
@@ -229,7 +229,6 @@ export function StageCard({
               className="rounded-[10px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
               aria-label={t('pipeline.reasoningEffort')}
             >
-              <option value="auto">{t('pipeline.reasoningEffortAuto')}</option>
               {resolvedReasoning === 'optional' && (
                 <option value="none">{t('pipeline.reasoningEffortNone')}</option>
               )}

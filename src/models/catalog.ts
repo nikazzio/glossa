@@ -100,6 +100,11 @@ export function isShowableModel(provider: ModelProvider, modelId: string): boole
     return true;
   }
 
+  if (provider === 'deepseek') {
+    if (/\d{8}$/.test(id)) return false;
+    return true;
+  }
+
   return true;
 }
 

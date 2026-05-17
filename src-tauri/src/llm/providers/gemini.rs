@@ -99,11 +99,12 @@ impl LlmProvider for GeminiProvider {
             req.model, req.api_key
         );
 
-        let gen_config = if req.json_mode {
+        let mut gen_config = if req.json_mode {
             serde_json::json!({ "responseMimeType": "application/json" })
         } else {
             serde_json::json!({})
         };
+        apply_thinking_config(req, &mut gen_config);
 
         let mut body = serde_json::json!({
             "contents": [{ "role": "user", "parts": [{"text": req.structured.user}] }],
@@ -178,8 +179,12 @@ impl LlmProvider for GeminiProvider {
             req.model, req.api_key
         );
 
+        let mut gen_config = serde_json::json!({});
+        apply_thinking_config(req, &mut gen_config);
+
         let mut body = serde_json::json!({
-            "contents": [{ "role": "user", "parts": [{"text": req.structured.user}] }]
+            "contents": [{ "role": "user", "parts": [{"text": req.structured.user}] }],
+            "generationConfig": gen_config
         });
 
         if let Some(cache_name) = ensure_gemini_cached_content(client, req).await? {
@@ -274,6 +279,12 @@ impl LlmProvider for GeminiProvider {
 
 fn gemini_cache_config<'a>(req: &'a LlmRequest<'_>) -> Option<&'a GeminiCacheConfig> {
     req.provider_options.as_ref()?.gemini.as_ref()
+}
+
+fn apply_thinking_config(req: &LlmRequest<'_>, gen_config: &mut Value) {
+    if let Some(budget) = gemini_cache_config(req).and_then(|cfg| cfg.thinking_budget) {
+        gen_config["thinkingConfig"] = json!({ "thinkingBudget": budget });
+    }
 }
 
 fn gemini_explicit_caching_enabled(req: &LlmRequest<'_>) -> bool {

@@ -581,14 +581,15 @@ export function PipelineConfig({
     providerModels[config.judgeProvider],
   );
   const currentJudgeReasoningEffort: ReasoningEffortLevel = (() => {
-    if (config.judgeProvider === 'openai') return config.reviewProviderOptions?.openai?.reasoningEffort ?? 'auto';
-    if (config.judgeProvider === 'deepseek') return config.reviewProviderOptions?.deepseek?.reasoningEffort ?? 'auto';
+    const judgeDefaultEffort: ReasoningEffortLevel = judgeResolvedReasoning === 'optional' ? 'none' : 'medium';
+    if (config.judgeProvider === 'openai') return config.reviewProviderOptions?.openai?.reasoningEffort ?? judgeDefaultEffort;
+    if (config.judgeProvider === 'deepseek') return config.reviewProviderOptions?.deepseek?.reasoningEffort ?? judgeDefaultEffort;
     if (config.judgeProvider === 'gemini') {
       const budget = config.reviewProviderOptions?.gemini?.thinkingBudget;
       if (budget === 0) return 'none';
       if (budget != null) return 'low';
     }
-    return 'auto';
+    return judgeDefaultEffort;
   })();
   const handleJudgeReasoningChange = (effort: ReasoningEffortLevel) => {
     const opts = config.reviewProviderOptions ?? {};
@@ -597,7 +598,7 @@ export function PipelineConfig({
     } else if (config.judgeProvider === 'deepseek') {
       setConfig((prev) => ({ ...prev, reviewProviderOptions: { ...opts, deepseek: { ...opts.deepseek, reasoningEffort: effort } } }));
     } else if (config.judgeProvider === 'gemini') {
-      const budget = effort === 'none' ? 0 : effort === 'auto' ? null : undefined;
+      const budget = effort === 'none' ? 0 : undefined;
       setConfig((prev) => ({ ...prev, reviewProviderOptions: { ...opts, gemini: { ...opts.gemini, thinkingBudget: budget } } }));
     }
   };
@@ -1318,7 +1319,6 @@ export function PipelineConfig({
                   className="rounded-[10px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   aria-label={t('pipeline.reasoningEffort')}
                 >
-                  <option value="auto">{t('pipeline.reasoningEffortAuto')}</option>
                   {judgeResolvedReasoning === 'optional' && (
                     <option value="none">{t('pipeline.reasoningEffortNone')}</option>
                   )}

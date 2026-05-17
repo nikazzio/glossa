@@ -186,7 +186,6 @@
       "optional": "Adattivo"
     },
     "reasoningEffort": "Ragionamento",
-    "reasoningEffortAuto": "Auto",
     "reasoningEffortNone": "Off",
     "reasoningEffortLow": "Basso",
     "reasoningEffortMedium": "Medio",

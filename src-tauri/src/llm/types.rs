@@ -56,6 +56,7 @@ pub struct OllamaConfig {
 pub struct OpenAiCacheConfig {
     pub prompt_cache_key: Option<String>,
     pub prompt_cache_retention: Option<String>,
+    pub reasoning_effort: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -63,6 +64,7 @@ pub struct OpenAiCacheConfig {
 pub struct GeminiCacheConfig {
     pub explicit_caching: Option<bool>,
     pub cache_ttl_seconds: Option<u32>,
+    pub thinking_budget: Option<i32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
