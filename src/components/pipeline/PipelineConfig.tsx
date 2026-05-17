@@ -563,7 +563,7 @@ export function PipelineConfig({
     if (config.judgeProvider === 'deepseek') return config.reviewProviderOptions?.deepseek?.reasoningEffort ?? judgeDefaultEffort;
     if (config.judgeProvider === 'gemini') {
       const budget = config.reviewProviderOptions?.gemini?.thinkingBudget;
-      if (budget === 0) return 'none';
+      if (budget === 0) return judgeResolvedReasoning === 'reasoning' ? judgeDefaultEffort : 'none';
       if (budget != null && budget < 0) return 'high';
       if (budget != null && budget <= 1024) return 'low';
       if (budget != null) return 'medium';
@@ -694,11 +694,14 @@ export function PipelineConfig({
   };
 
   const handleJudgeModelChange = (newModel: string) => {
-    setConfig((prev) => ({
-      ...prev,
-      judgeModel: newModel,
-      reviewProviderOptions: { ...prev.reviewProviderOptions, [prev.judgeProvider]: undefined },
-    }));
+    setConfig((prev) => {
+      const opts = prev.reviewProviderOptions ?? {};
+      const cleared = { ...opts };
+      if (prev.judgeProvider === 'openai') cleared.openai = { ...opts.openai, reasoningEffort: undefined };
+      else if (prev.judgeProvider === 'deepseek') cleared.deepseek = { ...opts.deepseek, reasoningEffort: undefined };
+      else if (prev.judgeProvider === 'gemini') cleared.gemini = { ...opts.gemini, thinkingBudget: undefined };
+      return { ...prev, judgeModel: newModel, reviewProviderOptions: cleared };
+    });
   };
 
   const handleJudgeProviderChange = (newProvider: ModelProvider) => {
