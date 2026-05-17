@@ -194,7 +194,7 @@ export function StageCard({
           ) : (
             <input
               value={stage.model}
-              onChange={(e) => onUpdate({ model: e.target.value })}
+              onChange={(e) => handleModelChange(e.target.value)}
               disabled={translationsExist || isProcessing}
               placeholder={t('ollama.modelPlaceholder')}
               className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
