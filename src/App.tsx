@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef } from 'react';
 import { initLogger } from './utils/logger';
 import { Header } from './components/layout';
 import { ErrorBoundary, ConfirmDialog, PreflightDialog, RunResumeBanner } from './components/common';
@@ -7,6 +7,7 @@ import { useProjectAutosave } from './hooks/useProjectAutosave';
 import { useUiStore } from './stores/uiStore';
 import { useProjectStore } from './stores/projectStore';
 import { useLibraryStore } from './stores/libraryStore';
+import { useChunksStore } from './stores/chunksStore';
 import { Toaster } from 'sonner';
 
 const PipelineConfig = lazy(() =>
@@ -44,10 +45,18 @@ export default function App() {
     runPipeline,
     runAuditOnly,
     runSingleChunk,
+    runDryRun,
     auditSingleChunk,
     runCoherenceAudit,
     cancelPipeline,
   } = usePipeline();
+
+  // In document mode, retranslate a single chunk: produces preview if no real
+  // translations exist yet (test phase), completed otherwise (review phase).
+  const handleRetranslateChunk = useCallback((chunkId: string) => {
+    const hasCompleted = useChunksStore.getState().chunks.some((c) => c.status === 'completed');
+    runSingleChunk(chunkId, hasCompleted ? 'completed' : 'preview');
+  }, [runSingleChunk]);
   useProjectAutosave();
   const viewMode = useUiStore((state) => state.viewMode);
   const showConfigDrawer = useUiStore((state) => state.showConfigDrawer);
@@ -77,10 +86,11 @@ export default function App() {
           <Suspense fallback={null}>
             <main className="flex flex-1 min-h-0 overflow-hidden">
               <DocumentView
-                onRetranslateChunk={runSingleChunk}
+                onRetranslateChunk={handleRetranslateChunk}
                 onReauditChunk={auditSingleChunk}
                 onRunPipeline={runPipeline}
                 onCancelPipeline={cancelPipeline}
+                onDryRun={runDryRun}
               />
               <InsightsDrawer onReauditChunk={auditSingleChunk} onRunCoherenceAudit={runCoherenceAudit} />
             </main>

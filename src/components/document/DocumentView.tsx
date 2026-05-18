@@ -5,6 +5,7 @@ import {
   ChevronRight,
   Columns2,
   FileText,
+  FlaskConical,
   Highlighter,
   Info,
   Languages,
@@ -17,10 +18,13 @@ import {
   RotateCcw,
   ScanLine,
   Square,
+  Trash2,
   Wand2,
+  X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { confirm } from '../../stores/confirmStore';
 import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
@@ -44,6 +48,7 @@ interface DocumentViewProps {
   onReauditChunk: (chunkId: string) => void;
   onRunPipeline?: () => void;
   onCancelPipeline?: () => void;
+  onDryRun?: () => void;
 }
 
 const QUALITY_TONE_COLOR: Record<ReturnType<typeof qualityTone>, string> = {
@@ -57,6 +62,7 @@ export function DocumentView({
   onReauditChunk,
   onRunPipeline,
   onCancelPipeline,
+  onDryRun,
 }: DocumentViewProps) {
   const { t } = useTranslation();
   const { config } = usePipelineStore();
@@ -69,7 +75,12 @@ export function DocumentView({
     updateChunkOriginalText,
     toggleChunkTranslationLock,
     toggleChunkSourceEditing,
+    resetPreviewChunks,
+    resetAllChunks,
   } = useChunksStore();
+
+  const previewCount = chunks.filter((c) => c.status === 'preview').length;
+  const completedCount = chunks.filter((c) => c.status === 'completed').length;
   const {
     selectedChunkId,
     setSelectedChunkId,
@@ -194,70 +205,101 @@ export function DocumentView({
   return (
     <section className="w-full bg-[#f7f3ec] overflow-y-auto min-h-0 h-full custom-scrollbar flex flex-col">
       <div className="mx-auto w-full max-w-[1720px] px-5 py-4 md:px-6 md:py-5 flex flex-col flex-1 min-h-0 gap-5">
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-start gap-2 shrink-0">
           {/* Run button: cerchio con stesso stile della navbar, si fonde con essa */}
           {onRunPipeline && onCancelPipeline && (
-            <div className="relative flex h-[80px] w-[80px] flex-shrink-0 items-center justify-center rounded-full border border-editorial-border bg-editorial-bg/90 shadow-[0_16px_50px_rgba(26,26,26,0.05)]">
-              {isProcessing ? (
-                cancelRequested ? (
-                  <button
-                    type="button"
-                    disabled
-                    title={t('pipeline.stopping')}
-                    aria-label={t('pipeline.stopping')}
-                    className="flex h-[64px] w-[64px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted opacity-50 focus:outline-none"
-                  >
-                    <Loader2 size={24} className="animate-spin" />
-                  </button>
+            <div className="flex flex-col items-center gap-1.5 shrink-0">
+              <div className="relative flex h-[80px] w-[80px] flex-shrink-0 items-center justify-center rounded-full border border-editorial-border bg-editorial-bg/90 shadow-[0_16px_50px_rgba(26,26,26,0.05)]">
+                {isProcessing ? (
+                  cancelRequested ? (
+                    <button
+                      type="button"
+                      disabled
+                      title={t('pipeline.stopping')}
+                      aria-label={t('pipeline.stopping')}
+                      className="flex h-[64px] w-[64px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted opacity-50 focus:outline-none"
+                    >
+                      <Loader2 size={24} className="animate-spin" />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={onCancelPipeline}
+                      title={t('pipeline.stopPipeline')}
+                      aria-label={t('pipeline.stopPipeline')}
+                      className="flex h-[64px] w-[64px] items-center justify-center rounded-full border border-editorial-accent bg-editorial-bg text-editorial-accent transition-colors hover:bg-editorial-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    >
+                      <Square size={22} fill="currentColor" />
+                    </button>
+                  )
                 ) : (
                   <button
                     type="button"
-                    onClick={onCancelPipeline}
-                    title={t('pipeline.stopPipeline')}
-                    aria-label={t('pipeline.stopPipeline')}
-                    className="flex h-[64px] w-[64px] items-center justify-center rounded-full border border-editorial-accent bg-editorial-bg text-editorial-accent transition-colors hover:bg-editorial-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    onClick={onRunPipeline}
+                    title={t('pipeline.beginPipeline')}
+                    aria-label={t('pipeline.beginPipeline')}
+                    className="flex h-[64px] w-[64px] items-center justify-center rounded-full bg-editorial-ink text-white transition-colors hover:bg-editorial-ink/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   >
-                    <Square size={22} fill="currentColor" />
+                    <Play size={26} fill="currentColor" />
                   </button>
-                )
-              ) : (
-                <button
-                  type="button"
-                  onClick={onRunPipeline}
-                  title={t('pipeline.beginPipeline')}
-                  aria-label={t('pipeline.beginPipeline')}
-                  className="flex h-[64px] w-[64px] items-center justify-center rounded-full bg-editorial-ink text-white transition-colors hover:bg-editorial-ink/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                >
-                  <Play size={26} fill="currentColor" />
-                </button>
-              )}
+                )}
 
-              {/* Cost info dot — più grande, angolo basso-sinistra esterno al cerchio */}
-              {costEstimate.stages.length > 0 && (
-                <div
-                  className="absolute -bottom-1.5 -left-1.5"
-                  onMouseEnter={() => setShowCostPanel(true)}
-                  onMouseLeave={() => setShowCostPanel(false)}
-                >
-                  <button
-                    type="button"
-                    onFocus={() => setShowCostPanel(true)}
-                    onBlur={() => setShowCostPanel(false)}
-                    aria-label={t('cost.breakdown')}
-                    className="flex h-[22px] w-[22px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted transition-colors hover:border-editorial-ink hover:text-editorial-ink focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                {/* Cost info dot — più grande, angolo basso-sinistra esterno al cerchio */}
+                {costEstimate.stages.length > 0 && (
+                  <div
+                    className="absolute -bottom-1.5 -left-1.5"
+                    onMouseEnter={() => setShowCostPanel(true)}
+                    onMouseLeave={() => setShowCostPanel(false)}
                   >
-                    <Info size={11} />
-                  </button>
-                </div>
-              )}
-              {/* Popup costi: ancorato al cerchio (top-full = sotto la riga), non all'info dot */}
-              {showCostPanel && costEstimate.stages.length > 0 && (
-                <div
-                  className="absolute left-0 top-full z-50 mt-3 w-64"
-                  onMouseEnter={() => setShowCostPanel(true)}
-                  onMouseLeave={() => setShowCostPanel(false)}
-                >
-                  <CostBreakdownPanel estimate={costEstimate} />
+                    <button
+                      type="button"
+                      onFocus={() => setShowCostPanel(true)}
+                      onBlur={() => setShowCostPanel(false)}
+                      aria-label={t('cost.breakdown')}
+                      className="flex h-[22px] w-[22px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted transition-colors hover:border-editorial-ink hover:text-editorial-ink focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                    >
+                      <Info size={11} />
+                    </button>
+                  </div>
+                )}
+                {/* Popup costi: ancorato al cerchio (top-full = sotto la riga), non all'info dot */}
+                {showCostPanel && costEstimate.stages.length > 0 && (
+                  <div
+                    className="absolute left-0 top-full z-50 mt-3 w-64"
+                    onMouseEnter={() => setShowCostPanel(true)}
+                    onMouseLeave={() => setShowCostPanel(false)}
+                  >
+                    <CostBreakdownPanel estimate={costEstimate} />
+                  </div>
+                )}
+              </div>
+
+              {/* Azioni secondarie: test e pulizia anteprima */}
+              {!isProcessing && (onDryRun || previewCount > 0) && (
+                <div className="flex items-center gap-1">
+                  {onDryRun && !completedCount && (
+                    <button
+                      type="button"
+                      onClick={onDryRun}
+                      title={t('pipeline.dryRun')}
+                      aria-label={t('pipeline.dryRun')}
+                      className="flex items-center gap-1 rounded-full border border-editorial-border px-2 py-0.5 text-[9px] font-sans uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                    >
+                      <FlaskConical size={9} />
+                      {t('pipeline.dryRunShort')}
+                    </button>
+                  )}
+                  {previewCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={resetPreviewChunks}
+                      title={t('pipeline.clearPreview')}
+                      aria-label={t('pipeline.clearPreview')}
+                      className="flex items-center justify-center rounded-full border border-editorial-border p-1 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                    >
+                      <X size={9} />
+                    </button>
+                  )}
                 </div>
               )}
             </div>

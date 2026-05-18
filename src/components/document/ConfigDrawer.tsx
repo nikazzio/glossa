@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
-import { X, LibraryBig, Save } from 'lucide-react';
+import { X, LibraryBig, Save, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Drawer } from '../common';
 import { PipelineConfig } from '../pipeline/PipelineConfig';
 import { useUiStore } from '../../stores/uiStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
+import { useChunksStore } from '../../stores/chunksStore';
 import { useLibraryStore } from '../../stores/libraryStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { assignGlossaryToProject } from '../../services/glossaryService';
 import { upsertGlossaryEntries } from '../../services/glossaryService';
 import { DictionaryEntryEditor } from '../library';
+import { confirm } from '../../stores/confirmStore';
 
 interface ConfigDrawerProps {
   onRunPipeline: () => void;
@@ -29,8 +31,23 @@ export function ConfigDrawer({
   const [glossaryDirty, setGlossaryDirty] = useState(false);
   const [isSavingGlossary, setIsSavingGlossary] = useState(false);
   const { config, setConfig, assignGlossary } = usePipelineStore();
+  const { chunks, resetAllChunks } = useChunksStore();
   const { glossaries, setShowLibraryPanel, loadGlossaries, isLoaded } = useLibraryStore();
   const { currentProjectId } = useProjectStore();
+
+  const completedCount = chunks.filter((c) => c.status === 'completed').length;
+
+  const handleResetAll = async () => {
+    const ok = await confirm({
+      title: t('pipeline.confirmResetAllTitle'),
+      message: t('pipeline.confirmResetAllMessage', { count: completedCount }),
+      confirmLabel: t('pipeline.resetAll'),
+      danger: true,
+    });
+    if (!ok) return;
+    resetAllChunks();
+    toast.success(t('pipeline.resetAllDone'));
+  };
 
   useEffect(() => {
     if (showConfigDrawer && !isLoaded) loadGlossaries();
@@ -168,6 +185,19 @@ export function ConfigDrawer({
         libraryGlossarySection={libraryGlossarySection}
         className="flex flex-1 flex-col overflow-y-auto bg-editorial-bg/40 custom-scrollbar min-h-0"
       />
+
+      {completedCount > 0 && (
+        <div className="shrink-0 border-t border-editorial-border/40 px-6 py-4">
+          <button
+            type="button"
+            onClick={handleResetAll}
+            className="flex w-full items-center justify-center gap-2 rounded-full border border-editorial-accent/40 px-4 py-2 text-xs font-bold uppercase tracking-widest text-editorial-accent/70 transition-colors hover:border-editorial-accent hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          >
+            <Trash2 size={12} />
+            {t('pipeline.resetAll')}
+          </button>
+        </div>
+      )}
     </Drawer>
   );
 }
