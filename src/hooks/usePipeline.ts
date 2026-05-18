@@ -559,8 +559,8 @@ export function usePipeline() {
     const allChunks = useChunksStore.getState().chunks;
     if (allChunks.length === 0) return;
 
-    // Pick first chunk that is not locked and not already a real translation
-    const target = allChunks.find((c) => !c.translationLocked && c.status !== 'completed');
+    // Pick first chunk that has not been translated or tested yet
+    const target = allChunks.find((c) => c.status === 'ready');
     if (!target) {
       toast.message(t('pipeline.dryRunNoTarget'));
       return;

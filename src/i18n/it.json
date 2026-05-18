@@ -119,6 +119,7 @@
     "chunkStatus": {
       "ready": "Pronto",
       "processing": "In corso",
+      "preview": "Anteprima",
       "completed": "Completato",
       "error": "Errore"
     },
