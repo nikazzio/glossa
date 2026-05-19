@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.8.0](https://github.com/nikazzio/glossa/compare/glossa-v0.7.0...glossa-v0.8.0) (2026-05-19)
+
+
+### ✨ Features
+
+* epic engine refactor — model registry, provider modernization, pipeline architecture ([371ed72](https://github.com/nikazzio/glossa/commit/371ed725d0627e15fcd62e15f8eeae8b0930c97d))
+* normalizeImportedText — cleanup testo grezzo prima del chunking ([#158](https://github.com/nikazzio/glossa/issues/158)) ([0f03840](https://github.com/nikazzio/glossa/commit/0f0384017d494a0ba0bb50f5577971e15f034f0d))
+* translation workflow redesign — preview status, dry run, full reset ([#176](https://github.com/nikazzio/glossa/issues/176)) ([72b05bd](https://github.com/nikazzio/glossa/commit/72b05bdc605b942d88dbcd379198986f001ad118))
+
 ## [0.7.0](https://github.com/nikazzio/glossa/compare/glossa-v0.6.2...glossa-v0.7.0) (2026-05-13)
 
 
