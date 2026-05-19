@@ -19,6 +19,7 @@ import {
   ScanLine,
   Square,
   Wand2,
+  Zap,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
@@ -203,11 +204,11 @@ export function DocumentView({
     <section className="w-full bg-[#f7f3ec] overflow-y-auto min-h-0 h-full custom-scrollbar flex flex-col">
       <div className="mx-auto w-full max-w-[1720px] px-5 py-4 md:px-6 md:py-5 flex flex-col flex-1 min-h-0 gap-5">
         <div className="flex items-start gap-2 shrink-0">
-          {/* Pannello run: toggle modalità + cerchio + ritraduzione chunk */}
+          {/* Pannello run: striscia orizzontale compatta */}
           {onRunPipeline && onCancelPipeline && (
-            <div className="flex flex-col items-center gap-3 shrink-0 rounded-[22px] border border-editorial-border bg-editorial-bg/90 px-4 py-4 shadow-[0_16px_50px_rgba(26,26,26,0.05)]">
+            <div className="flex items-center gap-2 shrink-0 rounded-[20px] border border-editorial-border bg-editorial-bg/90 px-3 py-2.5 shadow-[0_16px_50px_rgba(26,26,26,0.05)]">
 
-              {/* Toggle Test / Produzione */}
+              {/* Toggle Test / Produzione — solo icone */}
               <div
                 className={`flex rounded-full border border-editorial-border bg-editorial-textbox/40 p-0.5 ${completedCount > 0 ? 'opacity-40 pointer-events-none' : ''}`}
                 aria-disabled={completedCount > 0}
@@ -218,32 +219,35 @@ export function DocumentView({
                   onClick={() => setPipelineMode('test')}
                   disabled={completedCount > 0}
                   title={t('pipeline.modeTestHint')}
-                  className={`flex items-center gap-1 rounded-full px-3 py-1 text-[10px] font-sans font-semibold uppercase tracking-[0.22em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                  aria-label={t('pipeline.modeTest')}
+                  className={`rounded-full p-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
                     pipelineMode === 'test'
                       ? 'bg-editorial-bg text-editorial-ink shadow-sm'
                       : 'text-editorial-muted hover:text-editorial-ink'
                   }`}
                 >
-                  <FlaskConical size={9} />
-                  {t('pipeline.modeTest')}
+                  <FlaskConical size={11} />
                 </button>
                 <button
                   type="button"
                   onClick={() => setPipelineMode('production')}
                   disabled={completedCount > 0}
                   title={t('pipeline.modeProductionHint')}
-                  className={`rounded-full px-3 py-1 text-[10px] font-sans font-semibold uppercase tracking-[0.22em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                  aria-label={t('pipeline.modeProduction')}
+                  className={`rounded-full p-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
                     pipelineMode === 'production'
-                      ? 'bg-editorial-bg text-editorial-ink shadow-sm'
+                      ? 'bg-editorial-bg text-editorial-charcoal shadow-sm'
                       : 'text-editorial-muted hover:text-editorial-ink'
                   }`}
                 >
-                  {t('pipeline.modeProduction')}
+                  <Zap size={11} />
                 </button>
               </div>
 
+              <div className="h-5 w-px bg-editorial-border shrink-0" />
+
               {/* Cerchio avvio pipeline */}
-              <div className="relative flex h-[72px] w-[72px] flex-shrink-0 items-center justify-center rounded-full border border-editorial-border bg-editorial-bg/90">
+              <div className="relative flex h-[44px] w-[44px] flex-shrink-0 items-center justify-center rounded-full border border-editorial-border bg-editorial-bg/90">
                 {isProcessing ? (
                   cancelRequested ? (
                     <button
@@ -251,9 +255,9 @@ export function DocumentView({
                       disabled
                       title={t('pipeline.stopping')}
                       aria-label={t('pipeline.stopping')}
-                      className="flex h-[58px] w-[58px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted opacity-50 focus:outline-none"
+                      className="flex h-[36px] w-[36px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted opacity-50 focus:outline-none"
                     >
-                      <Loader2 size={22} className="animate-spin" />
+                      <Loader2 size={16} className="animate-spin" />
                     </button>
                   ) : (
                     <button
@@ -261,9 +265,9 @@ export function DocumentView({
                       onClick={onCancelPipeline}
                       title={t('pipeline.stopPipeline')}
                       aria-label={t('pipeline.stopPipeline')}
-                      className="flex h-[58px] w-[58px] items-center justify-center rounded-full border border-editorial-accent bg-editorial-bg text-editorial-accent transition-colors hover:bg-editorial-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                      className="flex h-[36px] w-[36px] items-center justify-center rounded-full border border-editorial-accent bg-editorial-bg text-editorial-accent transition-colors hover:bg-editorial-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                     >
-                      <Square size={20} fill="currentColor" />
+                      <Square size={14} fill="currentColor" />
                     </button>
                   )
                 ) : (
@@ -272,16 +276,16 @@ export function DocumentView({
                     onClick={pipelineMode === 'test' ? onDryRun : onRunPipeline}
                     title={t('pipeline.beginPipeline')}
                     aria-label={t('pipeline.beginPipeline')}
-                    className="flex h-[58px] w-[58px] items-center justify-center rounded-full bg-editorial-charcoal text-white transition-colors hover:bg-editorial-charcoal/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    className="flex h-[36px] w-[36px] items-center justify-center rounded-full bg-editorial-charcoal text-white transition-colors hover:bg-editorial-charcoal/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   >
-                    <Play size={22} fill="currentColor" />
+                    <Play size={16} fill="currentColor" />
                   </button>
                 )}
 
                 {/* Dot costi */}
                 {costEstimate.stages.length > 0 && (
                   <div
-                    className="absolute -bottom-1.5 -left-1.5"
+                    className="absolute -bottom-1 -right-1"
                     onMouseEnter={() => setShowCostPanel(true)}
                     onMouseLeave={() => setShowCostPanel(false)}
                   >
@@ -290,15 +294,15 @@ export function DocumentView({
                       onFocus={() => setShowCostPanel(true)}
                       onBlur={() => setShowCostPanel(false)}
                       aria-label={t('cost.breakdown')}
-                      className="flex h-[20px] w-[20px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted transition-colors hover:border-editorial-charcoal hover:text-editorial-charcoal focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                      className="flex h-[16px] w-[16px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted transition-colors hover:border-editorial-charcoal hover:text-editorial-charcoal focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
                     >
-                      <Info size={10} />
+                      <Info size={8} />
                     </button>
                   </div>
                 )}
                 {showCostPanel && costEstimate.stages.length > 0 && (
                   <div
-                    className="absolute left-0 top-full z-50 mt-3 w-64"
+                    className="absolute left-0 top-full z-50 mt-2 w-64"
                     onMouseEnter={() => setShowCostPanel(true)}
                     onMouseLeave={() => setShowCostPanel(false)}
                   >
@@ -307,19 +311,19 @@ export function DocumentView({
                 )}
               </div>
 
-              {/* Ritraduzione chunk corrente */}
-              {!isProcessing && currentChunk && currentChunk.originalText.trim() && (
-                <button
-                  type="button"
-                  onClick={() => onRetranslateChunk(currentChunk.id)}
-                  title={pipelineMode === 'test' ? t('pipeline.retestChunk') : t('pipeline.retranslateChunk')}
-                  aria-label={pipelineMode === 'test' ? t('pipeline.retestChunk') : t('pipeline.retranslateChunk')}
-                  className="flex items-center gap-1.5 rounded-full border border-editorial-border px-3 py-1 text-[10px] font-sans font-medium text-editorial-muted transition-colors hover:border-editorial-charcoal/60 hover:text-editorial-charcoal focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                >
-                  <RotateCcw size={10} />
-                  {pipelineMode === 'test' ? t('pipeline.retestChunk') : t('pipeline.retranslateChunk')}
-                </button>
-              )}
+              <div className="h-5 w-px bg-editorial-border shrink-0" />
+
+              {/* Ritraduzione chunk corrente — solo icona */}
+              <button
+                type="button"
+                onClick={() => onRetranslateChunk(currentChunk.id)}
+                disabled={isProcessing || !currentChunk.originalText.trim()}
+                title={pipelineMode === 'test' ? t('pipeline.retestChunk') : t('pipeline.retranslateChunk')}
+                aria-label={pipelineMode === 'test' ? t('pipeline.retestChunk') : t('pipeline.retranslateChunk')}
+                className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-charcoal/60 hover:text-editorial-charcoal focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <RotateCcw size={13} />
+              </button>
             </div>
           )}
 
@@ -537,7 +541,7 @@ export function DocumentView({
                 statusBadge={currentChunk.translationStale ? (
                   <InlineStatusBadge tone="amber" icon={<AlertTriangle size={13} />} label={t('document.translationStaleBadge')} />
                 ) : currentChunk.status === 'preview' ? (
-                  <InlineStatusBadge tone="muted" icon={<FlaskConical size={13} />} label={t('document.chunkPreviewBadge')} />
+                  <InlineStatusBadge tone="muted" icon={<FlaskConical size={13} />} />
                 ) : currentChunk.translationLocked ? (
                   <InlineStatusBadge tone="emerald" icon={<CheckCheck size={13} />} label={t('document.translationLockedBadge')} />
                 ) : null}
@@ -724,7 +728,7 @@ function InlineStatusBadge({
 }: {
   tone: 'amber' | 'emerald' | 'muted';
   icon: React.ReactNode;
-  label: string;
+  label?: string;
 }) {
   const toneClasses =
     tone === 'amber'
@@ -733,9 +737,14 @@ function InlineStatusBadge({
         ? 'border-emerald-300/80 bg-emerald-50 text-emerald-900'
         : 'border-editorial-border bg-editorial-textbox/60 text-editorial-muted';
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] ${toneClasses}`}>
+    <span
+      title={label}
+      className={`inline-flex items-center rounded-full border ${label ? 'gap-1.5 px-2.5 py-1' : 'p-1.5'} ${toneClasses}`}
+    >
       {icon}
-      {label}
+      {label && (
+        <span className="text-[10px] font-bold uppercase tracking-[0.18em]">{label}</span>
+      )}
     </span>
   );
 }
