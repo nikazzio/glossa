@@ -18,9 +18,7 @@ import {
   RotateCcw,
   ScanLine,
   Square,
-  Trash2,
   Wand2,
-  X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
@@ -75,11 +73,8 @@ export function DocumentView({
     updateChunkOriginalText,
     toggleChunkTranslationLock,
     toggleChunkSourceEditing,
-    resetPreviewChunks,
-    resetAllChunks,
   } = useChunksStore();
 
-  const previewCount = chunks.filter((c) => c.status === 'preview').length;
   const completedCount = chunks.filter((c) => c.status === 'completed').length;
   const {
     selectedChunkId,
@@ -87,6 +82,8 @@ export function DocumentView({
     documentLayout,
     glossaryHighlightEnabled,
     setGlossaryHighlightEnabled,
+    pipelineMode,
+    setPipelineMode,
     focusedChunkId,
     focusedIssueQuery,
     focusedIssueRequestId,
@@ -206,10 +203,47 @@ export function DocumentView({
     <section className="w-full bg-[#f7f3ec] overflow-y-auto min-h-0 h-full custom-scrollbar flex flex-col">
       <div className="mx-auto w-full max-w-[1720px] px-5 py-4 md:px-6 md:py-5 flex flex-col flex-1 min-h-0 gap-5">
         <div className="flex items-start gap-2 shrink-0">
-          {/* Run button: cerchio con stesso stile della navbar, si fonde con essa */}
+          {/* Pannello run: toggle modalità + cerchio + ritraduzione chunk */}
           {onRunPipeline && onCancelPipeline && (
-            <div className="flex flex-col items-center gap-1.5 shrink-0">
-              <div className="relative flex h-[80px] w-[80px] flex-shrink-0 items-center justify-center rounded-full border border-editorial-border bg-editorial-bg/90 shadow-[0_16px_50px_rgba(26,26,26,0.05)]">
+            <div className="flex flex-col items-center gap-3 shrink-0 rounded-[22px] border border-editorial-border bg-editorial-bg/90 px-4 py-4 shadow-[0_16px_50px_rgba(26,26,26,0.05)]">
+
+              {/* Toggle Test / Produzione */}
+              <div
+                className={`flex rounded-full border border-editorial-border bg-editorial-textbox/40 p-0.5 ${completedCount > 0 ? 'opacity-40 pointer-events-none' : ''}`}
+                aria-disabled={completedCount > 0}
+                title={completedCount > 0 ? t('pipeline.modeLockedHint') : undefined}
+              >
+                <button
+                  type="button"
+                  onClick={() => setPipelineMode('test')}
+                  disabled={completedCount > 0}
+                  title={t('pipeline.modeTestHint')}
+                  className={`flex items-center gap-1 rounded-full px-3 py-1 text-[10px] font-sans font-semibold uppercase tracking-[0.22em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                    pipelineMode === 'test'
+                      ? 'bg-editorial-bg text-editorial-ink shadow-sm'
+                      : 'text-editorial-muted hover:text-editorial-ink'
+                  }`}
+                >
+                  <FlaskConical size={9} />
+                  {t('pipeline.modeTest')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPipelineMode('production')}
+                  disabled={completedCount > 0}
+                  title={t('pipeline.modeProductionHint')}
+                  className={`rounded-full px-3 py-1 text-[10px] font-sans font-semibold uppercase tracking-[0.22em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                    pipelineMode === 'production'
+                      ? 'bg-editorial-bg text-editorial-ink shadow-sm'
+                      : 'text-editorial-muted hover:text-editorial-ink'
+                  }`}
+                >
+                  {t('pipeline.modeProduction')}
+                </button>
+              </div>
+
+              {/* Cerchio avvio pipeline */}
+              <div className="relative flex h-[72px] w-[72px] flex-shrink-0 items-center justify-center rounded-full border border-editorial-border bg-editorial-bg/90">
                 {isProcessing ? (
                   cancelRequested ? (
                     <button
@@ -217,9 +251,9 @@ export function DocumentView({
                       disabled
                       title={t('pipeline.stopping')}
                       aria-label={t('pipeline.stopping')}
-                      className="flex h-[64px] w-[64px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted opacity-50 focus:outline-none"
+                      className="flex h-[58px] w-[58px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted opacity-50 focus:outline-none"
                     >
-                      <Loader2 size={24} className="animate-spin" />
+                      <Loader2 size={22} className="animate-spin" />
                     </button>
                   ) : (
                     <button
@@ -227,24 +261,24 @@ export function DocumentView({
                       onClick={onCancelPipeline}
                       title={t('pipeline.stopPipeline')}
                       aria-label={t('pipeline.stopPipeline')}
-                      className="flex h-[64px] w-[64px] items-center justify-center rounded-full border border-editorial-accent bg-editorial-bg text-editorial-accent transition-colors hover:bg-editorial-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                      className="flex h-[58px] w-[58px] items-center justify-center rounded-full border border-editorial-accent bg-editorial-bg text-editorial-accent transition-colors hover:bg-editorial-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                     >
-                      <Square size={22} fill="currentColor" />
+                      <Square size={20} fill="currentColor" />
                     </button>
                   )
                 ) : (
                   <button
                     type="button"
-                    onClick={onRunPipeline}
+                    onClick={pipelineMode === 'test' ? onDryRun : onRunPipeline}
                     title={t('pipeline.beginPipeline')}
                     aria-label={t('pipeline.beginPipeline')}
-                    className="flex h-[64px] w-[64px] items-center justify-center rounded-full bg-editorial-ink text-white transition-colors hover:bg-editorial-ink/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    className="flex h-[58px] w-[58px] items-center justify-center rounded-full bg-editorial-charcoal text-white transition-colors hover:bg-editorial-charcoal/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   >
-                    <Play size={26} fill="currentColor" />
+                    <Play size={22} fill="currentColor" />
                   </button>
                 )}
 
-                {/* Cost info dot — più grande, angolo basso-sinistra esterno al cerchio */}
+                {/* Dot costi */}
                 {costEstimate.stages.length > 0 && (
                   <div
                     className="absolute -bottom-1.5 -left-1.5"
@@ -256,13 +290,12 @@ export function DocumentView({
                       onFocus={() => setShowCostPanel(true)}
                       onBlur={() => setShowCostPanel(false)}
                       aria-label={t('cost.breakdown')}
-                      className="flex h-[22px] w-[22px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted transition-colors hover:border-editorial-ink hover:text-editorial-ink focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                      className="flex h-[20px] w-[20px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted transition-colors hover:border-editorial-charcoal hover:text-editorial-charcoal focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
                     >
-                      <Info size={11} />
+                      <Info size={10} />
                     </button>
                   </div>
                 )}
-                {/* Popup costi: ancorato al cerchio (top-full = sotto la riga), non all'info dot */}
                 {showCostPanel && costEstimate.stages.length > 0 && (
                   <div
                     className="absolute left-0 top-full z-50 mt-3 w-64"
@@ -274,33 +307,18 @@ export function DocumentView({
                 )}
               </div>
 
-              {/* Azioni secondarie: test e pulizia anteprima */}
-              {!isProcessing && (onDryRun || previewCount > 0) && (
-                <div className="flex items-center gap-1">
-                  {onDryRun && !completedCount && (
-                    <button
-                      type="button"
-                      onClick={onDryRun}
-                      title={t('pipeline.dryRun')}
-                      aria-label={t('pipeline.dryRun')}
-                      className="flex items-center gap-1 rounded-full border border-editorial-border px-2 py-0.5 text-[9px] font-sans uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
-                    >
-                      <FlaskConical size={9} />
-                      {t('pipeline.dryRunShort')}
-                    </button>
-                  )}
-                  {previewCount > 0 && (
-                    <button
-                      type="button"
-                      onClick={resetPreviewChunks}
-                      title={t('pipeline.clearPreview')}
-                      aria-label={t('pipeline.clearPreview')}
-                      className="flex items-center justify-center rounded-full border border-editorial-border p-1 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
-                    >
-                      <X size={9} />
-                    </button>
-                  )}
-                </div>
+              {/* Ritraduzione chunk corrente */}
+              {!isProcessing && currentChunk && currentChunk.originalText.trim() && (
+                <button
+                  type="button"
+                  onClick={() => onRetranslateChunk(currentChunk.id)}
+                  title={pipelineMode === 'test' ? t('pipeline.retestChunk') : t('pipeline.retranslateChunk')}
+                  aria-label={pipelineMode === 'test' ? t('pipeline.retestChunk') : t('pipeline.retranslateChunk')}
+                  className="flex items-center gap-1.5 rounded-full border border-editorial-border px-3 py-1 text-[10px] font-sans font-medium text-editorial-muted transition-colors hover:border-editorial-charcoal/60 hover:text-editorial-charcoal focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                >
+                  <RotateCcw size={10} />
+                  {pipelineMode === 'test' ? t('pipeline.retestChunk') : t('pipeline.retranslateChunk')}
+                </button>
               )}
             </div>
           )}
@@ -422,13 +440,6 @@ export function DocumentView({
               className="flex items-center gap-1 shrink-0"
             >
               <ChunkIconButton
-                onClick={() => onRetranslateChunk(currentChunk.id)}
-                title={t('pipeline.retranslateChunk')}
-                disabled={isProcessing || currentChunk.originalText.trim().length === 0}
-              >
-                <RotateCcw size={16} />
-              </ChunkIconButton>
-              <ChunkIconButton
                 onClick={() => onReauditChunk(currentChunk.id)}
                 title={t('pipeline.reauditChunk')}
                 disabled={isProcessing || !currentChunk.currentDraft}
@@ -525,6 +536,8 @@ export function DocumentView({
                 actions={stageActions}
                 statusBadge={currentChunk.translationStale ? (
                   <InlineStatusBadge tone="amber" icon={<AlertTriangle size={13} />} label={t('document.translationStaleBadge')} />
+                ) : currentChunk.status === 'preview' ? (
+                  <InlineStatusBadge tone="muted" icon={<FlaskConical size={13} />} label={t('document.chunkPreviewBadge')} />
                 ) : currentChunk.translationLocked ? (
                   <InlineStatusBadge tone="emerald" icon={<CheckCheck size={13} />} label={t('document.translationLockedBadge')} />
                 ) : null}
@@ -709,14 +722,16 @@ function InlineStatusBadge({
   icon,
   label,
 }: {
-  tone: 'amber' | 'emerald';
+  tone: 'amber' | 'emerald' | 'muted';
   icon: React.ReactNode;
   label: string;
 }) {
   const toneClasses =
     tone === 'amber'
       ? 'border-amber-300/80 bg-amber-50 text-amber-900'
-      : 'border-emerald-300/80 bg-emerald-50 text-emerald-900';
+      : tone === 'emerald'
+        ? 'border-emerald-300/80 bg-emerald-50 text-emerald-900'
+        : 'border-editorial-border bg-editorial-textbox/60 text-editorial-muted';
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] ${toneClasses}`}>
       {icon}

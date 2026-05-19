@@ -51,11 +51,13 @@ export default function App() {
     cancelPipeline,
   } = usePipeline();
 
-  // In document mode, retranslate a single chunk: produces preview if no real
-  // translations exist yet (test phase), completed otherwise (review phase).
+  // In document mode, retranslate a single chunk using the active pipeline mode.
+  // If completed translations already exist, always produce completed output
+  // regardless of mode (belt-and-suspenders against any future dirty state).
   const handleRetranslateChunk = useCallback((chunkId: string) => {
+    const mode = useUiStore.getState().pipelineMode;
     const hasCompleted = useChunksStore.getState().chunks.some((c) => c.status === 'completed');
-    runSingleChunk(chunkId, hasCompleted ? 'completed' : 'preview');
+    runSingleChunk(chunkId, (!hasCompleted && mode === 'test') ? 'preview' : 'completed');
   }, [runSingleChunk]);
   useProjectAutosave();
   const viewMode = useUiStore((state) => state.viewMode);

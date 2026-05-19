@@ -28,6 +28,7 @@ export function ConfigDrawer({
   const { t } = useTranslation();
   const showConfigDrawer = useUiStore((state) => state.showConfigDrawer);
   const setShowConfigDrawer = useUiStore((state) => state.setShowConfigDrawer);
+  const setPipelineMode = useUiStore((state) => state.setPipelineMode);
   const [glossaryDirty, setGlossaryDirty] = useState(false);
   const [isSavingGlossary, setIsSavingGlossary] = useState(false);
   const { config, setConfig, assignGlossary } = usePipelineStore();
@@ -46,6 +47,7 @@ export function ConfigDrawer({
     });
     if (!ok) return;
     resetAllChunks();
+    setPipelineMode('test');
     toast.success(t('pipeline.resetAllDone'));
   };
 

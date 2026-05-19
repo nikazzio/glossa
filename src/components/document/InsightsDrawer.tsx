@@ -521,7 +521,7 @@ function IndexTab({ panelId, labelledBy, chunks, currentChunkId, isProcessing, s
               style={{ position: 'absolute', top: virtualRow.start, left: 0, right: 0 }}
               className="pb-2"
             >
-              <div className={`rounded-2xl border transition-colors ${isActive ? 'border-editorial-ink bg-editorial-ink' : 'border-editorial-border bg-editorial-bg hover:border-editorial-ink/40'}`}>
+              <div className={`rounded-2xl border transition-colors ${isActive ? 'border-editorial-charcoal bg-editorial-charcoal' : 'border-editorial-border bg-editorial-bg hover:border-editorial-charcoal/40'}`}>
                 <button type="button" onClick={() => onSelect(chunk.id)} className="w-full px-4 pt-3 pb-2 text-left">
                   <div className="flex items-center gap-2">
                     {statusIcon}
