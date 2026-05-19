@@ -22,7 +22,6 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
-import { confirm } from '../../stores/confirmStore';
 import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
@@ -66,7 +65,7 @@ export function DocumentView({
     toggleChunkSourceEditing,
   } = useChunksStore();
 
-  const completedCount = chunks.filter((c) => c.status === 'completed').length;
+  const completedCount = chunks.filter((c) => c.status === 'completed' || c.translationLocked).length;
   const {
     selectedChunkId,
     setSelectedChunkId,
@@ -516,7 +515,7 @@ export function DocumentView({
                 statusBadge={currentChunk.translationStale ? (
                   <InlineStatusBadge tone="amber" icon={<AlertTriangle size={13} />} label={t('document.translationStaleBadge')} />
                 ) : currentChunk.status === 'preview' ? (
-                  <InlineStatusBadge tone="muted" icon={<FlaskConical size={13} />} />
+                  <InlineStatusBadge tone="muted" icon={<FlaskConical size={13} />} ariaLabel={t('document.chunkPreviewBadge')} />
                 ) : currentChunk.translationLocked ? (
                   <InlineStatusBadge tone="emerald" icon={<CheckCheck size={13} />} label={t('document.translationLockedBadge')} />
                 ) : null}
@@ -693,10 +692,12 @@ function InlineStatusBadge({
   tone,
   icon,
   label,
+  ariaLabel,
 }: {
   tone: 'amber' | 'emerald' | 'muted';
   icon: React.ReactNode;
   label?: string;
+  ariaLabel?: string;
 }) {
   const toneClasses =
     tone === 'amber'
@@ -706,7 +707,8 @@ function InlineStatusBadge({
         : 'border-editorial-border bg-editorial-textbox/60 text-editorial-muted';
   return (
     <span
-      title={label}
+      title={label ?? ariaLabel}
+      aria-label={ariaLabel ?? label}
       className={`inline-flex items-center rounded-full border ${label ? 'gap-1.5 px-2.5 py-1' : 'p-1.5'} ${toneClasses}`}
     >
       {icon}

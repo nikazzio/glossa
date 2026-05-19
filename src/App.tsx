@@ -56,7 +56,7 @@ export default function App() {
   // regardless of mode (belt-and-suspenders against any future dirty state).
   const handleRetranslateChunk = useCallback((chunkId: string) => {
     const mode = useUiStore.getState().pipelineMode;
-    const hasCompleted = useChunksStore.getState().chunks.some((c) => c.status === 'completed');
+    const hasCompleted = useChunksStore.getState().chunks.some((c) => c.status === 'completed' || c.translationLocked);
     runSingleChunk(chunkId, (!hasCompleted && mode === 'test') ? 'preview' : 'completed');
   }, [runSingleChunk]);
   useProjectAutosave();

@@ -32,7 +32,7 @@ export function ConfigDrawer({
   const [glossaryDirty, setGlossaryDirty] = useState(false);
   const [isSavingGlossary, setIsSavingGlossary] = useState(false);
   const { config, setConfig, assignGlossary } = usePipelineStore();
-  const { chunks, resetAllChunks, resetPreviewChunks } = useChunksStore();
+  const { chunks, resetAllChunks, resetPreviewChunks, isProcessing } = useChunksStore();
   const { glossaries, setShowLibraryPanel, loadGlossaries, isLoaded } = useLibraryStore();
   const { currentProjectId } = useProjectStore();
 
@@ -200,7 +200,8 @@ export function ConfigDrawer({
             <button
               type="button"
               onClick={handleResetAll}
-              className="flex w-full items-center justify-center gap-2 rounded-full border border-editorial-accent/40 px-4 py-2 text-xs font-bold uppercase tracking-widest text-editorial-accent/70 transition-colors hover:border-editorial-accent hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              disabled={isProcessing}
+              className="flex w-full items-center justify-center gap-2 rounded-full border border-editorial-accent/40 px-4 py-2 text-xs font-bold uppercase tracking-widest text-editorial-accent/70 transition-colors hover:border-editorial-accent hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Trash2 size={12} />
               {t('pipeline.resetAll')}
@@ -209,7 +210,8 @@ export function ConfigDrawer({
             <button
               type="button"
               onClick={handleResetPreview}
-              className="flex w-full items-center justify-center gap-2 rounded-full border border-editorial-border px-4 py-2 text-xs font-bold uppercase tracking-widest text-editorial-muted transition-colors hover:border-editorial-charcoal/60 hover:text-editorial-charcoal focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              disabled={isProcessing}
+              className="flex w-full items-center justify-center gap-2 rounded-full border border-editorial-border px-4 py-2 text-xs font-bold uppercase tracking-widest text-editorial-muted transition-colors hover:border-editorial-charcoal/60 hover:text-editorial-charcoal focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Trash2 size={12} />
               {t('pipeline.resetPreview')}

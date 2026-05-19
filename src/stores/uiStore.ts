@@ -8,7 +8,7 @@ import type {
 
 export type InsightsDrawerTab = 'index' | 'stats' | 'coherence' | 'glossary';
 export type ChunkDrawerTab = 'audit' | 'notes' | 'operations';
-export type PipelineMode = 'test' | 'production';
+export type RunPhase = 'test' | 'production';
 
 interface UiState {
   viewMode: ViewMode;
@@ -28,8 +28,8 @@ interface UiState {
   focusedIssueQuery: string | null;
   focusedIssueRequestId: number;
 
-  pipelineMode: PipelineMode;
-  setPipelineMode: (mode: PipelineMode) => void;
+  pipelineMode: RunPhase;
+  setPipelineMode: (mode: RunPhase) => void;
 
   // App-level chunk preset word targets (persisted)
   chunkPresetShort: number;
@@ -77,7 +77,7 @@ export const useUiStore = create<UiState>()(
   ollamaModels: [],
   ollamaStatus: 'unknown',
   glossaryHighlightEnabled: false,
-  pipelineMode: 'test' as PipelineMode,
+  pipelineMode: 'test',
   focusedChunkId: null,
   focusedIssueQuery: null,
   focusedIssueRequestId: 0,
