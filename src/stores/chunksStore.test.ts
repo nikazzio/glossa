@@ -437,4 +437,70 @@ describe('chunksStore', () => {
       expect(chunk?.stageResults).toEqual({});
     });
   });
+
+  describe('preview workflow — resetPreviewChunks and resetAllChunks', () => {
+    it('resetPreviewChunks resets only preview chunks back to ready', () => {
+      usePipelineStore.getState().setInputText('A.\n\nB.\n\nC.');
+      useChunksStore.getState().generateChunks();
+      const [a, b, c] = useChunksStore.getState().chunks;
+
+      useChunksStore.getState().updateChunkStatus(a!.id, 'preview');
+      useChunksStore.getState().updateChunkStatus(b!.id, 'completed');
+      // c remains ready
+
+      useChunksStore.getState().resetPreviewChunks();
+
+      const after = useChunksStore.getState().chunks;
+      expect(after[0]!.status).toBe('ready');
+      expect(after[1]!.status).toBe('completed');
+      expect(after[2]!.status).toBe('ready');
+    });
+
+    it('resetPreviewChunks clears draft and stage results from preview chunks', () => {
+      usePipelineStore.getState().setInputText('Hello world.');
+      useChunksStore.getState().generateChunks();
+      const chunkId = useChunksStore.getState().chunks[0]!.id;
+
+      useChunksStore.getState().updateChunkDraft(chunkId, 'Ciao mondo');
+      useChunksStore.getState().updateChunkStage(chunkId, 'stg-1', { content: 'Ciao mondo', status: 'completed' });
+      useChunksStore.getState().updateChunkStatus(chunkId, 'preview');
+
+      useChunksStore.getState().resetPreviewChunks();
+
+      const chunk = useChunksStore.getState().chunks[0];
+      expect(chunk?.status).toBe('ready');
+      expect(chunk?.currentDraft).toBe('');
+      expect(chunk?.stageResults).toEqual({});
+    });
+
+    it('resetAllChunks resets completed and preview chunks but leaves ready ones untouched', () => {
+      usePipelineStore.getState().setInputText('A.\n\nB.\n\nC.');
+      useChunksStore.getState().generateChunks();
+      const [a, b, c] = useChunksStore.getState().chunks;
+
+      useChunksStore.getState().updateChunkStatus(a!.id, 'completed');
+      useChunksStore.getState().updateChunkStatus(b!.id, 'preview');
+      // c stays ready
+
+      const beforeC = useChunksStore.getState().chunks[2];
+      useChunksStore.getState().resetAllChunks();
+
+      const after = useChunksStore.getState().chunks;
+      expect(after[0]!.status).toBe('ready');
+      expect(after[1]!.status).toBe('ready');
+      expect(after[2]).toBe(beforeC);
+    });
+
+    it('updateChunkStatus to preview does not set sourceEditable', () => {
+      usePipelineStore.getState().setInputText('Test.');
+      useChunksStore.getState().generateChunks();
+      const chunkId = useChunksStore.getState().chunks[0]!.id;
+
+      useChunksStore.getState().updateChunkStatus(chunkId, 'preview');
+
+      const chunk = useChunksStore.getState().chunks[0];
+      expect(chunk?.status).toBe('preview');
+      expect(chunk?.sourceEditable).toBe(false);
+    });
+  });
 });

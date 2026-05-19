@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef } from 'react';
 import { initLogger } from './utils/logger';
 import { Header } from './components/layout';
 import { ErrorBoundary, ConfirmDialog, PreflightDialog, RunResumeBanner } from './components/common';
@@ -7,6 +7,7 @@ import { useProjectAutosave } from './hooks/useProjectAutosave';
 import { useUiStore } from './stores/uiStore';
 import { useProjectStore } from './stores/projectStore';
 import { useLibraryStore } from './stores/libraryStore';
+import { useChunksStore } from './stores/chunksStore';
 import { Toaster } from 'sonner';
 
 const PipelineConfig = lazy(() =>
@@ -44,10 +45,20 @@ export default function App() {
     runPipeline,
     runAuditOnly,
     runSingleChunk,
+    runDryRun,
     auditSingleChunk,
     runCoherenceAudit,
     cancelPipeline,
   } = usePipeline();
+
+  // In document mode, retranslate a single chunk using the active pipeline mode.
+  // If completed translations already exist, always produce completed output
+  // regardless of mode (belt-and-suspenders against any future dirty state).
+  const handleRetranslateChunk = useCallback((chunkId: string) => {
+    const mode = useUiStore.getState().pipelineMode;
+    const hasCompleted = useChunksStore.getState().chunks.some((c) => c.status === 'completed' || c.translationLocked);
+    runSingleChunk(chunkId, (!hasCompleted && mode === 'test') ? 'preview' : 'completed');
+  }, [runSingleChunk]);
   useProjectAutosave();
   const viewMode = useUiStore((state) => state.viewMode);
   const showConfigDrawer = useUiStore((state) => state.showConfigDrawer);
@@ -77,10 +88,11 @@ export default function App() {
           <Suspense fallback={null}>
             <main className="flex flex-1 min-h-0 overflow-hidden">
               <DocumentView
-                onRetranslateChunk={runSingleChunk}
+                onRetranslateChunk={handleRetranslateChunk}
                 onReauditChunk={auditSingleChunk}
                 onRunPipeline={runPipeline}
                 onCancelPipeline={cancelPipeline}
+                onDryRun={runDryRun}
               />
               <InsightsDrawer onReauditChunk={auditSingleChunk} onRunCoherenceAudit={runCoherenceAudit} />
             </main>

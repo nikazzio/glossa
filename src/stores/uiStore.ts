@@ -8,6 +8,7 @@ import type {
 
 export type InsightsDrawerTab = 'index' | 'stats' | 'coherence' | 'glossary';
 export type ChunkDrawerTab = 'audit' | 'notes' | 'operations';
+export type RunPhase = 'test' | 'production';
 
 interface UiState {
   viewMode: ViewMode;
@@ -26,6 +27,9 @@ interface UiState {
   focusedChunkId: string | null;
   focusedIssueQuery: string | null;
   focusedIssueRequestId: number;
+
+  pipelineMode: RunPhase;
+  setPipelineMode: (mode: RunPhase) => void;
 
   // App-level chunk preset word targets (persisted)
   chunkPresetShort: number;
@@ -73,6 +77,7 @@ export const useUiStore = create<UiState>()(
   ollamaModels: [],
   ollamaStatus: 'unknown',
   glossaryHighlightEnabled: false,
+  pipelineMode: 'test',
   focusedChunkId: null,
   focusedIssueQuery: null,
   focusedIssueRequestId: 0,
@@ -156,6 +161,7 @@ export const useUiStore = create<UiState>()(
   setChunkDrawerTab: (tab) => set({ chunkDrawerTab: tab }),
   setOllamaModels: (models) => set({ ollamaModels: models }),
   setOllamaStatus: (status) => set({ ollamaStatus: status }),
+  setPipelineMode: (mode) => set({ pipelineMode: mode }),
   setGlossaryHighlightEnabled: (enabled) => set({ glossaryHighlightEnabled: enabled }),
   setFocusedChunkId: (chunkId) => set({ focusedChunkId: chunkId }),
   focusIssueInChunk: (chunkId, query) =>

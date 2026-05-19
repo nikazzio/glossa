@@ -26,7 +26,7 @@ const STAGE_TEMPLATES: Record<StageRole, StageTemplate> = {
     role: 'format',
     name: 'Format',
     defaultPrompt:
-      'Correct only technical formatting defects in the already translated text: broken Markdown syntax, broken footnote syntax, clearly corrupted spacing, or clearly corrupted line breaks. Do not alter meaning, wording, tone, or content. Do not add new emphasis, code, links, headings, lists, or other markup. Change existing Markdown markers only when required to restore valid syntax. Output the complete corrected text.',
+      'Clean up the already translated text. Remove all footnote markers and inline footnote references (e.g. [^1], [1], superscript numbers) — footnotes are managed separately and must not appear in the translation. Then correct only technical formatting defects: broken Markdown syntax, clearly corrupted spacing, or clearly corrupted line breaks. Do not alter meaning, wording, tone, or content. Do not add new emphasis, code, links, headings, lists, or other markup. Change existing Markdown markers only when required to restore valid syntax. Output the complete corrected text.',
   },
 };
 

@@ -55,6 +55,7 @@ function assembleTranslationBlobContext(chunks: TranslationChunk[], chunkId: str
 
 type ChunkOutcome = 'completed' | 'failed' | 'cancelled' | 'skipped';
 type BatchRunMode = 'resume' | 'rerun-unlocked';
+type FinalChunkStatus = 'completed' | 'preview';
 
 /**
  * Hook that encapsulates pipeline execution logic.
@@ -495,7 +496,7 @@ export function usePipeline() {
     }
   }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureProvidersReady, setBlobAssignments]);
 
-  const runSingleChunk = useCallback(async (chunkId: string) => {
+  const runSingleChunk = useCallback(async (chunkId: string, finalStatus: FinalChunkStatus = 'completed') => {
     if (useChunksStore.getState().isProcessing) return;
     const chunk = useChunksStore.getState().chunks.find((c) => c.id === chunkId);
     if (!chunk) return;
@@ -534,6 +535,10 @@ export function usePipeline() {
     const freshChunk = useChunksStore.getState().chunks.find((c) => c.id === chunkId) ?? chunk;
     const outcome = await executePipelineForChunk(freshChunk, {});
 
+    if (outcome === 'completed' && finalStatus === 'preview') {
+      updateChunkStatus(chunkId, 'preview');
+    }
+
     setIsProcessing(false);
     useChunksStore.getState().clearCancelRequest();
 
@@ -542,12 +547,79 @@ export function usePipeline() {
       toast.message(t('pipeline.stopConfirmed'));
     } else if (outcome === 'completed') {
       pipelineLog.singlePipelineCompleted(chunkId);
-      toast.success(t('pipeline.singleChunkCompleted'));
+      toast.success(finalStatus === 'preview' ? t('pipeline.dryRunChunkCompleted') : t('pipeline.singleChunkCompleted'));
     } else if (outcome === 'failed') {
       // Per-chunk failure already raised a toast inside the helper; no
       // extra summary toast is needed.
     }
   }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureProvidersReady, setBlobAssignments]);
+
+  const runDryRun = useCallback(async () => {
+    if (useChunksStore.getState().isProcessing) return;
+    const allChunks = useChunksStore.getState().chunks;
+    if (allChunks.length === 0) return;
+
+    // Pick first chunk that has not been translated or tested yet
+    const target = allChunks.find((c) => c.status === 'ready');
+    if (!target) {
+      toast.message(t('pipeline.dryRunNoTarget'));
+      return;
+    }
+
+    pipelineLog.singlePipelineStart(target.id);
+    if (!(await ensureProvidersReady([
+      ...config.stages.filter((s) => s.enabled).map((s, i) => ({
+        provider: s.provider,
+        model: s.model,
+        label: `${s.name || `Stage ${i + 1}`} — ${s.provider} ${s.model}`,
+      })),
+      { provider: config.judgeProvider, model: config.judgeModel, label: `Judge — ${config.judgeProvider} ${config.judgeModel}` },
+    ]))) return;
+
+    useChunksStore.getState().clearCancelRequest();
+    setIsProcessing(true);
+
+    try {
+      const budget = (config.blobBudgetTokens ?? 0) > 0
+        ? config.blobBudgetTokens!
+        : calculateBlobBudget(config.stages).budget;
+      const assignments = await llmService.computeBlobs(
+        allChunks.map((c) => ({ id: c.id, text: c.sourceProcessingText })),
+        budget,
+        config.blobOverlap ?? 1,
+      );
+      setBlobAssignments(assignments);
+    } catch (error: unknown) {
+      setBlobAssignments([]);
+      const msg = error instanceof Error ? error.message : String(error);
+      pipelineLog.blobComputeFailed(msg);
+      toast.warning(t('pipeline.blobComputeFailed'), { description: msg });
+    }
+
+    const freshTarget = useChunksStore.getState().chunks.find((c) => c.id === target.id) ?? target;
+    const outcome = await executePipelineForChunk(freshTarget, {});
+
+    if (outcome === 'completed') {
+      updateChunkStatus(target.id, 'preview');
+      const projectId = useProjectStore.getState().currentProjectId;
+      if (projectId) {
+        const saved = useChunksStore.getState().chunks.find((c) => c.id === target.id);
+        const position = allChunks.indexOf(target);
+        if (saved) void saveChunkCheckpoint(projectId, saved, position).catch(() => {});
+      }
+    }
+
+    setIsProcessing(false);
+    useChunksStore.getState().clearCancelRequest();
+
+    if (outcome === 'cancelled') {
+      pipelineLog.singlePipelineCancelled(target.id);
+      toast.message(t('pipeline.stopConfirmed'));
+    } else if (outcome === 'completed') {
+      pipelineLog.singlePipelineCompleted(target.id);
+      toast.success(t('pipeline.dryRunCompleted'));
+    }
+  }, [config, t, setIsProcessing, updateChunkStatus, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, clearChunkStages, ensureProvidersReady, setBlobAssignments]);
 
   const runAuditOnly = useCallback(async () => {
     if (useChunksStore.getState().isProcessing) return;
@@ -727,6 +799,7 @@ export function usePipeline() {
   return {
     runPipeline,
     runSingleChunk,
+    runDryRun,
     runAuditOnly,
     auditSingleChunk,
     runCoherenceAudit,

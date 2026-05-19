@@ -11,6 +11,7 @@ import {
   Crosshair,
   Cpu,
   FileText,
+  FlaskConical,
   Gauge,
   Highlighter,
   Link2,
@@ -504,6 +505,8 @@ function IndexTab({ panelId, labelledBy, chunks, currentChunkId, isProcessing, s
               : <Loader2 size={13} className="animate-spin text-editorial-warning shrink-0" />;
           } else if (chunk.status === 'completed') {
             statusIcon = <CheckCircle2 size={13} className="text-editorial-success shrink-0" />;
+          } else if (chunk.status === 'preview') {
+            statusIcon = <FlaskConical size={13} className="text-editorial-muted shrink-0" />;
           } else if (chunk.status === 'error') {
             statusIcon = <AlertCircle size={13} className="text-editorial-accent shrink-0" />;
           } else {
@@ -518,7 +521,7 @@ function IndexTab({ panelId, labelledBy, chunks, currentChunkId, isProcessing, s
               style={{ position: 'absolute', top: virtualRow.start, left: 0, right: 0 }}
               className="pb-2"
             >
-              <div className={`rounded-2xl border transition-colors ${isActive ? 'border-editorial-ink bg-editorial-ink' : 'border-editorial-border bg-editorial-bg hover:border-editorial-ink/40'}`}>
+              <div className={`rounded-2xl border transition-colors ${isActive ? 'border-editorial-charcoal bg-editorial-charcoal' : 'border-editorial-border bg-editorial-bg hover:border-editorial-charcoal/40'}`}>
                 <button type="button" onClick={() => onSelect(chunk.id)} className="w-full px-4 pt-3 pb-2 text-left">
                   <div className="flex items-center gap-2">
                     {statusIcon}
@@ -600,6 +603,7 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
   const idleCount = chunks.filter((c) => c.status === 'ready').length;
   const processingCount = chunks.filter((c) => c.status === 'processing').length;
   const completedCount = chunks.filter((c) => c.status === 'completed').length;
+  const previewCount = chunks.filter((c) => c.status === 'preview').length;
   const errorCount = chunks.filter((c) => c.status === 'error').length;
   const progressPct = total > 0 ? Math.round((completedCount / total) * 100) : 0;
   const compositeQuality = calculateCompositeQuality(chunks);
@@ -704,6 +708,7 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
         <div className="flex flex-wrap gap-3">
           {idleCount > 0 && <div className="flex items-center gap-1.5 text-[10px] text-editorial-muted"><Circle size={10} className="text-editorial-muted/50" /><span className="font-bold">{idleCount}</span> {t('pipeline.chunkStatus.ready')}</div>}
           {processingCount > 0 && <div className="flex items-center gap-1.5 text-[10px] text-editorial-warning"><Loader2 size={10} className="animate-spin" /><span className="font-bold">{processingCount}</span> {t('pipeline.chunkStatus.processing')}</div>}
+          {previewCount > 0 && <div className="flex items-center gap-1.5 text-[10px] text-editorial-muted"><FlaskConical size={10} /><span className="font-bold">{previewCount}</span> {t('pipeline.chunkStatus.preview')}</div>}
           {completedCount > 0 && <div className="flex items-center gap-1.5 text-[10px] text-editorial-success"><CheckCircle2 size={10} /><span className="font-bold">{completedCount}</span> {t('pipeline.chunkStatus.completed')}</div>}
           {errorCount > 0 && <div className="flex items-center gap-1.5 text-[10px] text-editorial-accent"><AlertCircle size={10} /><span className="font-bold">{errorCount}</span> {t('pipeline.chunkStatus.error')}</div>}
         </div>

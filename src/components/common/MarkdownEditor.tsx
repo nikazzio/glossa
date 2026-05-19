@@ -470,8 +470,8 @@ function ToolbarButton({
       disabled={disabled}
       className={`rounded-full border p-2 transition-colors disabled:cursor-not-allowed disabled:opacity-35 ${
         active
-          ? 'border-editorial-ink bg-editorial-ink text-white'
-          : 'border-editorial-border text-editorial-muted hover:text-editorial-ink'
+          ? 'border-editorial-accent bg-editorial-accent text-white'
+          : 'border-editorial-border text-editorial-muted hover:text-editorial-charcoal'
       }`}
     >
       {children}
