@@ -80,6 +80,8 @@ export function DocumentView({
     clearFocusedIssue,
   } = useUiStore();
 
+  const effectivePipelineMode = completedCount > 0 ? 'production' : pipelineMode;
+
   const [viewportWidth, setViewportWidth] = useState(
     typeof window === 'undefined' ? 0 : window.innerWidth,
   );
@@ -258,7 +260,7 @@ export function DocumentView({
                 ) : (
                   <button
                     type="button"
-                    onClick={pipelineMode === 'test' ? onDryRun : onRunPipeline}
+                    onClick={effectivePipelineMode === 'test' ? onDryRun : onRunPipeline}
                     title={t('pipeline.beginPipeline')}
                     aria-label={t('pipeline.beginPipeline')}
                     className="flex h-[44px] w-[44px] items-center justify-center rounded-full bg-editorial-charcoal text-white transition-colors hover:bg-editorial-charcoal/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
@@ -303,8 +305,8 @@ export function DocumentView({
                 type="button"
                 onClick={() => onRetranslateChunk(currentChunk.id)}
                 disabled={isProcessing || !currentChunk.originalText.trim()}
-                title={pipelineMode === 'test' ? t('pipeline.retestChunk') : t('pipeline.retranslateChunk')}
-                aria-label={pipelineMode === 'test' ? t('pipeline.retestChunk') : t('pipeline.retranslateChunk')}
+                title={effectivePipelineMode === 'test' ? t('pipeline.retestChunk') : t('pipeline.retranslateChunk')}
+                aria-label={effectivePipelineMode === 'test' ? t('pipeline.retestChunk') : t('pipeline.retranslateChunk')}
                 className="rounded-full border border-editorial-border p-2.5 text-editorial-muted transition-colors hover:border-editorial-charcoal/60 hover:text-editorial-charcoal focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <RotateCcw size={15} />

@@ -145,6 +145,8 @@
     "confirmResetAllTitle": "Azzerare tutte le traduzioni?",
     "confirmResetAllMessage": "{{count}} traduzioni e i relativi audit verranno eliminati. L'azione non è reversibile.",
     "resetAllDone": "Traduzioni azzerate",
+    "resetPreview": "Azzera anteprima",
+    "resetPreviewDone": "Anteprima azzerata",
     "modeTest": "Test",
     "modeProduction": "Produzione",
     "modeTestHint": "Esegue la pipeline su un solo blocco e produce un'anteprima. La configurazione rimane modificabile.",

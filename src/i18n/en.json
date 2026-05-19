@@ -145,6 +145,8 @@
     "confirmResetAllTitle": "Reset all translations?",
     "confirmResetAllMessage": "{{count}} translations and their audits will be deleted. This cannot be undone.",
     "resetAllDone": "Translations reset",
+    "resetPreview": "Clear preview",
+    "resetPreviewDone": "Preview cleared",
     "modeTest": "Test",
     "modeProduction": "Production",
     "modeTestHint": "Runs the pipeline on one chunk and produces a preview. Configuration stays editable.",
