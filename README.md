@@ -18,16 +18,32 @@ A desktop application that chains multiple LLM passes — draft, refinement, aud
 
 ## How it works
 
-Glossa runs your source text through a **configurable translation pass** — with its own model, provider, prompt, and optional persona — and an AI judge that audits the result against your glossary and quality criteria, assigning a semantic quality rating and reporting categorized issues with suggested fixes.
+Glossa runs your source text through a configurable pipeline of LLM stages, then audits the result with an AI judge.
 
+**Standard mode** — single translation pass:
 ```
 Source text
-  │
-  └─► Translation Pass
-        Model + provider + instructions + optional persona
-        ↓
-      AI Judge: quality rating + issues + suggested fixes
+  └─► Translation (model + prompt + persona)
+        └─► AI Judge: quality rating + issues + suggested fixes
 ```
+
+**Editorial mode** — three-stage refinement:
+```
+Source text
+  └─► Translation → Refine → Format
+                               └─► AI Judge
+```
+
+Each stage has its own model, provider, prompt, and can be individually inspected. Long documents are split into chunks processed in sequence.
+
+**Four-phase workflow** (Document mode):
+
+| Phase | What happens |
+|-------|-------------|
+| **Configure** | Set up pipeline, language pair, glossary |
+| **Test** | Run one chunk as a preview — config stays editable, nothing is locked |
+| **Translate** | Full production run across all unlocked chunks |
+| **Review** | Audit panel with quality ratings, issues, and suggested fixes |
 
 Translations stream token-by-token in real time. You can edit the candidate translation manually before auditing, re-run only the audit, and iterate until the quality meets your standards.
 
@@ -38,7 +54,9 @@ Translations stream token-by-token in real time. You can edit the candidate tran
 | **5 LLM providers** | Gemini, OpenAI, Anthropic, DeepSeek, **Ollama** (local models) |
 | **Streaming** | Real-time token display during translation |
 | **Responsive stop** | Stop requests cancel in-flight Ollama and cloud-provider stage calls, then halt after the current unit |
-| **Configurable translation** | Model, provider, prompt, and optional persona per project |
+| **Standard pipeline** | Single translation pass with model, provider, prompt, and optional persona |
+| **Editorial pipeline** | Three-stage Translation → Refine → Format, each with its own model and prompt |
+| **Test / Production mode** | Test on a single chunk before committing to a full run; config stays editable until you switch to Production |
 | **AI Judge** | LLM-as-a-judge audit with semantic quality ratings, categorized issues, and fixes |
 | **Glossary** | Keyword registry enforced across all stages and the audit |
 | **Import-aware segmentation** | Splits source text by paragraphs, keeps Markdown headings attached to following content, and can carry only genuinely short plain-text trailing blocks forward |
@@ -183,12 +201,17 @@ In the configuration panel (sidebar in **Sandbox** mode, gear icon in **Document
 1. Import a file (`.txt`, `.md`, `.docx`, `.pdf`) via the upload icon
 2. Set segmentation options in the preview dialog and confirm
    - In Markdown mode, isolated `#` headings stay attached to the paragraph that follows
-   - Plain-text trailing-block carry only moves genuinely short section openers, not full prose paragraphs rendered on one line
    - Markdown imports preserve significant whitespace before chunking
-3. Open the document and click **"Begin Pipeline"**
-4. Navigate chunks via the **Insights** panel (Index tab)
+3. Open the document — you are now in **Configure** phase with the pipeline fully editable
+4. **Test** the pipeline on a single chunk first:
+   - The run bar defaults to **Test mode** (flask icon)
+   - Click the run button — Glossa processes one chunk and marks it as *preview*
+   - Inspect the result in the translation pane; config remains unlocked
+   - Repeat until satisfied, then switch to **Production mode** (lightning icon)
+5. Click run in **Production mode** to translate all remaining chunks
+6. Navigate chunks via the **Insights** panel (Index tab) and review the audit results
 
-If a batch is interrupted, the next run resumes and skips chunks already completed in that interrupted run. If a full batch already finished, running it again starts a new round and reprocesses every chunk that is not explicitly locked.
+If a batch is interrupted, the next run resumes and skips chunks already completed. If a full batch already finished, running it again reprocesses every chunk that is not explicitly locked.
 
 ### 3. Review the audit
 
@@ -223,9 +246,9 @@ If a batch is interrupted, the next run resumes and skips chunks already complet
 ```
 ┌──────────────────────────────────────────┐
 │  Frontend (React 19 + Zustand + Vite)    │
-│  ├── PipelineConfig   (left panel)       │
-│  ├── ProductionStream (center panel)     │
-│  ├── AuditPanel       (right panel)      │
+│  ├── ConfigDrawer     (pipeline setup)   │
+│  ├── DocumentView     (chunk editor)     │
+│  ├── InsightsDrawer   (audit + index)    │
 │  ├── SettingsModal    (API keys, Ollama) │
 │  └── ProjectPanel     (CRUD projects)    │
 ├──────────────────────────────────────────┤
