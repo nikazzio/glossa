@@ -19,7 +19,7 @@ interface HelpGuideProps {
   onClose: () => void;
 }
 
-type Section = 'overview' | 'pipeline' | 'features' | 'streaming' | 'audit' | 'projects' | 'providers' | 'ollama' | 'glossary' | 'shortcuts' | 'troubleshooting';
+type Section = 'overview' | 'pipeline' | 'features' | 'streaming' | 'context' | 'audit' | 'projects' | 'providers' | 'ollama' | 'glossary' | 'shortcuts' | 'troubleshooting';
 
 export function HelpGuide({ open, onClose }: HelpGuideProps) {
   const [activeSection, setActiveSection] = useState<Section>('overview');
@@ -31,6 +31,7 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
     { id: 'pipeline',        label: t('help.sections.pipeline') },
     { id: 'features',        label: t('help.sections.features') },
     { id: 'streaming',       label: t('help.sections.streaming') },
+    { id: 'context',         label: t('help.sections.context') },
     { id: 'audit',           label: t('help.sections.audit') },
     { id: 'projects',        label: t('help.sections.projects') },
     { id: 'providers',       label: t('help.sections.providers') },
@@ -100,6 +101,7 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
               {activeSection === 'pipeline'        && <PipelineSection />}
               {activeSection === 'features'        && <FeaturesSection />}
               {activeSection === 'streaming'       && <StreamingSection />}
+              {activeSection === 'context'         && <ContextSection />}
               {activeSection === 'audit'           && <AuditSection />}
               {activeSection === 'projects'        && <ProjectsSection />}
               {activeSection === 'providers'       && <ProvidersSection />}
@@ -329,6 +331,53 @@ function FeaturesSection() {
         <FeatureRow icon={<CheckCheck size={14} />} text={t('help.shortcuts.lockTranslation')} />
         <FeatureRow icon={<ScanLine size={14} />} text={t('help.shortcuts.openStageTrace')} />
       </div>
+    </>
+  );
+}
+
+function ContextSection() {
+  const { t } = useTranslation();
+  return (
+    <>
+      <SectionTitle>{t('help.context.title')}</SectionTitle>
+      <P>{t('help.context.intro')}</P>
+
+      <SubTitle>{t('help.context.blobTitle')}</SubTitle>
+      <P>{t('help.context.blobDesc')}</P>
+
+      <SubTitle>{t('help.context.cachingTitle')}</SubTitle>
+      <P>{t('help.context.cachingDesc')}</P>
+
+      <div className="my-6 space-y-2">
+        {(['layer1', 'layer2', 'layer3'] as const).map((key) => (
+          <div key={key} className="flex items-start gap-4 rounded-[20px] border border-editorial-border bg-editorial-textbox/15 px-5 py-4">
+            <span className="mt-0.5 shrink-0 rounded-full border border-editorial-accent/40 bg-editorial-bg px-3 py-1 font-mono text-[10px] font-bold text-editorial-accent">
+              {t(`help.context.${key}Label`)}
+            </span>
+            <span className="text-[13px] leading-relaxed text-editorial-ink/80">
+              {t(`help.context.${key}Desc`)}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <SubTitle>{t('help.context.isolationTitle')}</SubTitle>
+      <P>{t('help.context.isolationDesc')}</P>
+
+      <div className="my-6 space-y-2">
+        {(['translation', 'refine', 'format', 'coherence'] as const).map((key) => (
+          <div key={key} className="flex items-start gap-4 rounded-[20px] border border-editorial-border bg-editorial-textbox/15 px-5 py-4">
+            <span className="mt-0.5 w-20 shrink-0 font-mono text-[11px] font-bold text-editorial-accent">
+              {t(`help.context.stage${key.charAt(0).toUpperCase() + key.slice(1)}`)}
+            </span>
+            <span className="text-[13px] leading-relaxed text-editorial-ink/80">
+              {t(`help.context.stage${key.charAt(0).toUpperCase() + key.slice(1)}Desc`)}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <Tip title={t('help.context.tipTitle')}>{t('help.context.tipDesc')}</Tip>
     </>
   );
 }

@@ -68,6 +68,64 @@ Non implementare funzionalità "per il futuro". Se non serve adesso, non si scri
 - **Async**: usa `tokio` correttamente, evita blocking call dentro async, niente `std::thread::sleep` in async
 - **Errori**: mai ingoiare errori in silenzio — ogni catch/match deve loggare o propagare
 
+## Invarianti architetturali della pipeline
+
+Queste invarianti proteggono le ottimizzazioni core del sistema di traduzione. **Non modificare questi pattern senza capire le implicazioni a cascata.**
+
+### Sistema blob (contesto di riferimento)
+
+Prima di qualsiasi run — batch o chunk singolo — il backend calcola le **assegnazioni blob**: raggruppa i chunk in finestre di riferimento cacheabili (`src-tauri/src/llm/blobs.rs`).
+
+- Se il documento intero entra entro il 70% del budget token, un blob globale unico copre tutti i chunk — massimizza i cache hit e dà al modello visibilità globale.
+- Altrimenti vengono generate finestre locali sovrapposte (overlap configurabile): i chunk di bordo sono condivisi tra finestre adiacenti per garantire coerenza sui confini.
+- Il blob context è il **testo sorgente** dei chunk della finestra, serializzato come `<chunk id="...">testo</chunk>`.
+- Il blob include il chunk corrente — il prompt istruisce esplicitamente il modello a tradurre solo il chunk identificato nel user turn, non il blob intero.
+
+### Struttura del prompt — ordine critico
+
+Il system prompt ha sempre tre blocchi in quest'ordine preciso:
+
+```
+[1] Blocco statico — cacheable
+    persona + regole strutturali + glossario
+    → identico per tutti i chunk del run → cache hit garantito
+
+[2] Blob context — cacheable
+    testo sorgente dei chunk nella finestra di riferimento
+    → identico per tutti i chunk dello stesso blob → cache hit per blob
+
+[3] Istruzioni stage — NON cacheable
+    prompt specifico dello stage corrente
+    → varia per stage ma è il blocco più piccolo
+```
+
+Quest'ordine **non deve essere invertito**. Tutti i provider (Anthropic via breakpoint espliciti, OpenAI/Gemini/DeepSeek via prefix caching automatico) cacheano il prefisso comune più lungo. Qualsiasi inversione spezza il caching e moltiplica i costi su documenti lunghi.
+
+### Isolamento degli stage — regole per tipo
+
+Ogni stage riceve esattamente quello di cui ha bisogno. Aggiungere contesto in eccesso è un rischio reale (retraduzione, deriva di stile, costi inutili).
+
+| Stage | Testo primario | Blob sorgente | `previous_result` | Blob traduzioni |
+|---|---|---|---|---|
+| Translation | testo sorgente chunk | ✅ | ❌ | ❌ |
+| Refine | testo sorgente chunk | ✅ | ✅ output translation | ❌ |
+| Format | output stage precedente | ❌ **cieco** | ❌ | ❌ |
+| Judge | sorgente + traduzione finale | ❌ | ❌ | ❌ |
+| Coherence audit | — | ❌ | ❌ | ✅ blob delle traduzioni |
+
+Il **format stage è volutamente cieco**: non vede sorgente, blob, né previous_result. Riceve solo l'output tradotto dello stage precedente. Questo impedisce retraduzione o alterazione del contenuto.
+
+Il **coherence audit** usa un blob costruito dalle *traduzioni* già completate (non dal sorgente) per confrontare coerenza terminologica tra chunk tradotti.
+
+### Performance frontend
+
+- **RAF token batching**: `appendChunkStageContent` non fa `setState` su ogni token — accoda in un buffer e fa un singolo commit per `requestAnimationFrame`. Non bypassare con `setState` diretti nei percorsi di streaming.
+- **O(1) chunk index**: la `Map<chunkId, index>` in `chunksStore` si ricostruisce solo quando `chunks.length` cambia. Per aggiornamenti slot-by-slot usa `updateSingleChunk`. Non fare lookup lineari sull'array dei chunk.
+
+### Cancellazione in-flight
+
+Il backend usa `tokio::select! { biased; _ = cancel.notify.notified() => ...; result = provider.call(...) => ... }`. Il `biased` garantisce che il cancel token venga controllato prima di iniziare la chiamata HTTP. Non interporre `await` lunghi tra la registrazione del cancel token e la provider call.
+
 ## Test
 
 - Scrivi il test prima dell'implementazione (TDD)

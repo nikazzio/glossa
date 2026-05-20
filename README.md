@@ -244,29 +244,35 @@ If a batch is interrupted, the next run resumes and skips chunks already complet
 ## Architecture
 
 ```
-┌──────────────────────────────────────────┐
-│  Frontend (React 19 + Zustand + Vite)    │
-│  ├── ConfigDrawer     (pipeline setup)   │
-│  ├── DocumentView     (chunk editor)     │
-│  ├── InsightsDrawer   (audit + index)    │
-│  ├── SettingsModal    (API keys, Ollama) │
-│  └── ProjectPanel     (CRUD projects)    │
-├──────────────────────────────────────────┤
-│  Tauri IPC (invoke / events)             │
-├──────────────────────────────────────────┤
-│  Rust Backend                            │
-│  ├── LLM calls   (reqwest + SSE stream)  │
-│  ├── API keys    (OS keyring)            │
-│  └── Plugins     (SQLite, FS, Dialog)    │
-└──────────────────────────────────────────┘
+┌──────────────────────────────────────────────┐
+│  Frontend (React 19 + Zustand + Vite)        │
+│  ├── components/pipeline   (config + run UI) │
+│  ├── components/document   (chunk workspace) │
+│  ├── components/help       (in-app guide)    │
+│  ├── hooks/usePipeline     (execution logic) │
+│  ├── stores/               (Zustand stores)  │
+│  └── services/llmService   (IPC bridge)      │
+├──────────────────────────────────────────────┤
+│  Tauri IPC (invoke commands / SSE events)    │
+├──────────────────────────────────────────────┤
+│  Rust Backend                                │
+│  ├── llm/pipeline  (Tauri commands)          │
+│  ├── llm/prompts   (prompt assembly)         │
+│  ├── llm/blobs     (reference blob system)   │
+│  ├── llm/stream    (SSE streaming)           │
+│  ├── llm/providers (OpenAI, Anthropic, …)    │
+│  ├── keystore      (OS keychain)             │
+│  └── db            (SQLite via sqlx)         │
+└──────────────────────────────────────────────┘
 ```
 
 | Layer | Tech |
 |-------|------|
-| Desktop shell | Tauri v2 (webview + Rust sidecar) |
-| Frontend | React 19, TypeScript, Tailwind CSS, Zustand |
+| Desktop shell | Tauri v2 (webview + Rust backend) |
+| Frontend | React 19, TypeScript, Tailwind CSS v4, Zustand |
 | LLM integration | Rust `reqwest` with SSE streaming |
-| Storage | SQLite via `tauri-plugin-sql` |
+| Prompt caching | Structured cacheable/non-cacheable prompt blocks |
+| Storage | SQLite via `sqlx` + `tauri-plugin-sql` |
 | API key security | OS keychain via `keyring` crate |
 | i18n | `react-i18next` with bundled JSON |
 
@@ -274,17 +280,34 @@ If a batch is interrupted, the next run resumes and skips chunks already complet
 
 ```
 glossa/
-├── src/                    # React frontend
-│   ├── components/         # UI components (pipeline, audit, settings, projects)
-│   ├── hooks/              # usePipeline (execution logic)
-│   ├── services/           # llmService, projectService, fileService, dbService
-│   ├── stores/             # Zustand stores (pipeline, project)
-│   ├── i18n/               # en.json, it.json
-│   └── utils/              # retry logic, helpers
-├── src-tauri/              # Rust backend
+├── src/                      # React frontend
+│   ├── components/           # UI components by domain
+│   │   ├── pipeline/         # Config drawer, run controls, prompt preview
+│   │   ├── document/         # Chunk workspace, insights, editor
+│   │   ├── help/             # In-app user guide
+│   │   ├── settings/         # Settings modal, API keys
+│   │   └── common/           # Shared UI primitives
+│   ├── hooks/                # usePipeline (pipeline execution)
+│   ├── services/             # llmService, projectService, fileService, dbService
+│   ├── stores/               # Zustand stores (pipeline, chunks, ui, project)
+│   ├── models/               # Model catalog, blob budget calculation
+│   ├── pipeline/             # Pipeline mode definitions and stage templates
+│   ├── i18n/                 # en.json, it.json
+│   └── utils/                # Chunking, retry, fingerprint, logging
+├── src-tauri/                # Rust backend
 │   ├── src/
-│   │   ├── lib.rs          # Tauri app entry, plugin registration
-│   │   └── llm.rs          # All LLM providers, streaming, Ollama, keychain
+│   │   ├── lib.rs            # Tauri app entry, plugin registration, command registration
+│   │   ├── llm/
+│   │   │   ├── pipeline.rs   # Tauri commands (run_stage, judge, coherence, blobs)
+│   │   │   ├── prompts.rs    # Prompt assembly with cacheable block structure
+│   │   │   ├── blobs.rs      # Reference blob grouping and token budget logic
+│   │   │   ├── stream.rs     # SSE streaming + cancel token registry
+│   │   │   ├── provider.rs   # LlmRequest trait and provider abstraction
+│   │   │   ├── types.rs      # Shared types (PipelineConfig, StageConfig, …)
+│   │   │   └── providers/    # openai.rs, anthropic.rs, gemini.rs, ollama.rs
+│   │   ├── keystore.rs       # OS keychain read/write
+│   │   ├── db.rs             # SQLite project persistence
+│   │   └── documents.rs      # File import (txt, md, docx, pdf)
 │   ├── Cargo.toml
 │   └── tauri.conf.json
 └── package.json
