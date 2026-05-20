@@ -91,6 +91,10 @@ pub async fn run_stage(
         return Err(STREAM_CANCELLED_ERROR.to_string());
     }
 
+    log::info!(
+        "LLM call starting provider={} model={} stage={} stream_id={}",
+        stage.provider, stage.model, stage.name, stream_id
+    );
     // Non-streaming providers still run over HTTP. Race the request against
     // the shared cancel token so "Stop" drops the in-flight request here too.
     let response = tokio::select! {
@@ -100,16 +104,18 @@ pub async fn run_stage(
         }
         result = provider.call(&client, &req) => result?,
     };
-    if let Some(usage) = response.usage.as_ref() {
-        log::info!(
-            "LLM call completed provider={} model={} input_tokens={} output_tokens={} cached_input_tokens={} cache_miss_input_tokens={}",
-            stage.provider,
-            stage.model,
-            usage.input,
-            usage.output,
+    match response.usage.as_ref() {
+        Some(usage) => log::info!(
+            "LLM call completed provider={} model={} stage={} stream_id={} input_tokens={} output_tokens={} cached_input_tokens={} cache_miss_input_tokens={}",
+            stage.provider, stage.model, stage.name, stream_id,
+            usage.input, usage.output,
             usage.cached_input.unwrap_or(0),
             usage.cache_miss_input.unwrap_or(0),
-        );
+        ),
+        None => log::info!(
+            "LLM call completed provider={} model={} stage={} stream_id={} (no usage data)",
+            stage.provider, stage.model, stage.name, stream_id
+        ),
     }
     Ok(StageResult {
         content: response.content,
@@ -164,6 +170,10 @@ pub async fn run_stage_stream(
         return Err(STREAM_CANCELLED_ERROR.to_string());
     }
 
+    log::info!(
+        "LLM stream starting provider={} model={} stage={} stream_id={}",
+        stage.provider, stage.model, stage.name, stream_id
+    );
     let resp = provider.build_streaming_request(&client, &req).await?;
     let status = resp.status();
     if !status.is_success() {
