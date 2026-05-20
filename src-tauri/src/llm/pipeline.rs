@@ -91,6 +91,7 @@ pub async fn run_stage(
         return Err(STREAM_CANCELLED_ERROR.to_string());
     }
 
+    log::info!("LLM call starting provider={} model={}", stage.provider, stage.model);
     // Non-streaming providers still run over HTTP. Race the request against
     // the shared cancel token so "Stop" drops the in-flight request here too.
     let response = tokio::select! {
@@ -164,6 +165,7 @@ pub async fn run_stage_stream(
         return Err(STREAM_CANCELLED_ERROR.to_string());
     }
 
+    log::info!("LLM stream starting provider={} model={}", stage.provider, stage.model);
     let resp = provider.build_streaming_request(&client, &req).await?;
     let status = resp.status();
     if !status.is_success() {

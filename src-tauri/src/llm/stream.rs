@@ -65,7 +65,11 @@ pub(crate) fn build_http_client_with_timeout(timeout_secs: u64) -> Result<Client
 }
 
 pub(crate) fn build_default_http_client() -> Result<Client, String> {
-    build_http_client_with_timeout(HTTP_REQUEST_TIMEOUT_SECS)
+    shared_cloud_http_client()
+}
+
+pub(crate) fn build_default_streaming_http_client() -> Result<Client, String> {
+    shared_cloud_streaming_client()
 }
 
 // ── Stream cancellation registry ─────────────────────────────────────
@@ -571,6 +575,43 @@ pub(crate) fn provider_label(provider: &str) -> &'static str {
 }
 
 // ── Lazy HTTP client singletons (shared with providers) ───────────────
+//
+// One connection pool per (timeout profile, streaming/non-streaming) pair.
+// reqwest::Client is Arc-backed: cloning is cheap and all clones share the
+// same underlying pool, so TLS sessions are reused across pipeline commands.
 
+pub(crate) static CLOUD_HTTP_CLIENT: OnceLock<Result<Client, String>> = OnceLock::new();
+pub(crate) static CLOUD_STREAMING_HTTP_CLIENT: OnceLock<Result<Client, String>> = OnceLock::new();
 pub(crate) static OLLAMA_HTTP_CLIENT: OnceLock<Result<Client, String>> = OnceLock::new();
 pub(crate) static OLLAMA_STREAMING_HTTP_CLIENT: OnceLock<Result<Client, String>> = OnceLock::new();
+
+/// Returns the shared cloud HTTP client (120 s request timeout).
+/// Initialises the pool on first call; subsequent calls are a cheap clone.
+pub(crate) fn shared_cloud_http_client() -> Result<Client, String> {
+    CLOUD_HTTP_CLIENT
+        .get_or_init(|| {
+            let result = build_http_client_with_timeout(HTTP_REQUEST_TIMEOUT_SECS);
+            if result.is_ok() {
+                log::info!("Shared cloud HTTP client pool initialised");
+            }
+            result
+        })
+        .clone()
+}
+
+/// Returns the shared cloud streaming client (connect-timeout only;
+/// per-stream idle/total timeouts are handled separately in `stream_response`).
+pub(crate) fn shared_cloud_streaming_client() -> Result<Client, String> {
+    CLOUD_STREAMING_HTTP_CLIENT
+        .get_or_init(|| {
+            let result = Client::builder()
+                .connect_timeout(Duration::from_secs(HTTP_CONNECT_TIMEOUT_SECS))
+                .build()
+                .map_err(|e| format!("Failed to build cloud streaming HTTP client: {e}"));
+            if result.is_ok() {
+                log::info!("Shared cloud streaming HTTP client pool initialised");
+            }
+            result
+        })
+        .clone()
+}

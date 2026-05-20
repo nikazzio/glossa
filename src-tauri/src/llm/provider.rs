@@ -1,8 +1,7 @@
 use async_trait::async_trait;
 use reqwest::Client;
-use std::time::Duration;
 
-use crate::llm::stream::{StreamTimeouts, HTTP_CONNECT_TIMEOUT_SECS};
+use crate::llm::stream::{build_default_streaming_http_client, StreamTimeouts};
 use crate::llm::types::{ProviderRuntimeConfig, StructuredPrompt};
 
 #[derive(Debug, Clone)]
@@ -84,14 +83,11 @@ pub trait LlmProvider: Send + Sync {
 
     /// Build the HTTP client for streaming requests.
     ///
-    /// Default omits the global request timeout — streaming sessions are long-lived
-    /// and rely on `StreamTimeouts` (idle + total) instead. Providers that use a
-    /// shared static client (Ollama) override this.
+    /// Default returns the shared cloud streaming pool (connect-timeout only;
+    /// per-stream idle/total timeouts are enforced in `stream_response`).
+    /// Ollama overrides this with its own shared pool and wider timeouts.
     fn streaming_client(&self) -> Result<Client, String> {
-        Client::builder()
-            .connect_timeout(Duration::from_secs(HTTP_CONNECT_TIMEOUT_SECS))
-            .build()
-            .map_err(|e| format!("Failed to build streaming HTTP client: {e}"))
+        build_default_streaming_http_client()
     }
 
     /// Format a non-2xx HTTP response into a user-facing error message.
