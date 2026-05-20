@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useRef } from 'react';
 import { initLogger } from './utils/logger';
-import { Header } from './components/layout';
+import { Header, PipelineBar } from './components/layout';
 import { ErrorBoundary, ConfirmDialog, PreflightDialog, RunResumeBanner } from './components/common';
 import { usePipeline } from './hooks/usePipeline';
 import { useProjectAutosave } from './hooks/useProjectAutosave';
@@ -82,6 +82,7 @@ export default function App() {
             onRunPipeline={runPipeline}
             onCancelPipeline={cancelPipeline}
           />
+          <PipelineBar />
         </div>
 
         {viewMode === 'document' ? (

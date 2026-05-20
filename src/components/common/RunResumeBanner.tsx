@@ -5,18 +5,16 @@ import { useChunksStore } from '../../stores/chunksStore';
 import { usePipeline } from '../../hooks/usePipeline';
 import { buildPipelineFingerprint } from '../../utils/pipelineFingerprint';
 import { usePipelineStore } from '../../stores/pipelineStore';
-import { setPipelineRunState } from '../../services/projectService';
+import { setPipelineRunState } from '../../services/pipelineService';
 
 export function RunResumeBanner() {
   const { t } = useTranslation();
   const runInterrupted = useProjectStore((s) => s.runInterrupted);
   const lastRunConfig = useProjectStore((s) => s.lastRunConfig);
   const clearResumeState = useProjectStore((s) => s.clearResumeState);
-  const currentProjectId = useProjectStore((s) => s.currentProjectId);
+  const activePipelineId = useProjectStore((s) => s.activePipelineId);
   const chunks = useChunksStore((s) => s.chunks);
   const config = usePipelineStore((s) => s.config);
-  const activePipelineId = usePipelineStore((s) => s.activePipelineId);
-  const setActivePipelineMeta = usePipelineStore((s) => s.setActivePipelineMeta);
   const { runPipeline } = usePipeline();
   const resetAllChunks = useChunksStore((s) => s.resetAllChunks);
 
@@ -41,13 +39,9 @@ export function RunResumeBanner() {
 
   const handleDismiss = () => {
     clearResumeState();
-    setActivePipelineMeta({
-      pipelineId: activePipelineId,
-      runStatus: 'idle',
-      lastRunConfig,
-    });
-    if (currentProjectId) {
-      void setPipelineRunState(currentProjectId, 'idle').catch(() => {});
+    usePipelineStore.setState({ runStatus: 'idle' });
+    if (activePipelineId) {
+      void setPipelineRunState(activePipelineId, 'idle').catch(() => {});
     }
   };
 

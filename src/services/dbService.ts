@@ -35,6 +35,13 @@ const ALLOWED_MIGRATIONS = new Set([
   'pipeline_configs.experimental_import',
   'pipeline_configs.review_provider_options',
   'projects.view_mode',
+  'projects.source_display_text',
+  'projects.source_processing_text',
+  'projects.source_footnotes',
+  'projects.document_format',
+  'projects.render_profile',
+  'projects.markdown_aware',
+  'projects.experimental_import',
   'translations.position',
   'translations.chunk_status',
   'translations.judge_status',
@@ -46,6 +53,7 @@ const ALLOWED_MIGRATIONS = new Set([
   'translations.source_processing_text',
   'translations.translation_display_text',
   'translations.translation_processing_text',
+  'translations.pipeline_id',
   'prompt_templates.context',
   'pipeline_configs.persona',
   'pipeline_configs.custom_source_language',
@@ -134,6 +142,46 @@ export async function initDatabase(): Promise<void> {
   await conn.execute(`
     CREATE UNIQUE INDEX IF NOT EXISTS idx_pipeline_configs_project_id
     ON pipeline_configs(project_id)
+  `);
+
+  // pipelines — replaces pipeline_configs: supports multiple pipelines per project.
+  // source_display_text / source_processing_text / source_footnotes are nullable:
+  // when null the pipeline inherits the project-level source text (v1.0 behaviour).
+  // Populate them only when a pipeline carries its own document (future feature).
+  await conn.execute(`
+    CREATE TABLE IF NOT EXISTS pipelines (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      name TEXT NOT NULL DEFAULT 'Default',
+      source_language TEXT NOT NULL DEFAULT 'English',
+      target_language TEXT NOT NULL DEFAULT 'Italian',
+      pipeline_mode TEXT DEFAULT 'standard',
+      stages TEXT NOT NULL DEFAULT '[]',
+      judge_prompt TEXT DEFAULT '',
+      judge_model TEXT DEFAULT '',
+      judge_provider TEXT DEFAULT '',
+      use_chunking INTEGER DEFAULT 1,
+      target_chunk_count INTEGER DEFAULT 0,
+      source_display_text TEXT DEFAULT NULL,
+      source_processing_text TEXT DEFAULT NULL,
+      source_footnotes TEXT DEFAULT NULL,
+      review_provider_options TEXT DEFAULT NULL,
+      persona TEXT DEFAULT NULL,
+      custom_source_language TEXT DEFAULT NULL,
+      custom_target_language TEXT DEFAULT NULL,
+      blob_budget_tokens INTEGER DEFAULT 0,
+      blob_overlap INTEGER DEFAULT 1,
+      run_status TEXT DEFAULT 'idle',
+      last_run_config TEXT DEFAULT NULL,
+      run_in_progress INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await conn.execute(`
+    CREATE INDEX IF NOT EXISTS idx_pipelines_project_id
+    ON pipelines(project_id)
   `);
 
   await conn.execute(`
@@ -310,6 +358,75 @@ export async function initDatabase(): Promise<void> {
     `);
   } catch (error) {
     console.warn('[Glossa] Ghost glossary cleanup migration failed', error);
+  }
+
+  // ── Multi-pipeline migration ─────────────────────────────────────────
+
+  // Add source-text columns to projects (project owns the document, pipelines own the config).
+  await ensureColumn('projects', 'source_display_text', "TEXT DEFAULT ''");
+  await ensureColumn('projects', 'source_processing_text', "TEXT DEFAULT ''");
+  await ensureColumn('projects', 'source_footnotes', "TEXT DEFAULT '[]'");
+  await ensureColumn('projects', 'document_format', "TEXT DEFAULT 'plain'");
+  await ensureColumn('projects', 'render_profile', "TEXT DEFAULT 'plain-text'");
+  await ensureColumn('projects', 'markdown_aware', 'INTEGER DEFAULT 0');
+  await ensureColumn('projects', 'experimental_import', 'TEXT DEFAULT NULL');
+
+  // Add pipeline_id to translations (translations belong to a pipeline, not a project).
+  await ensureColumn('translations', 'pipeline_id', 'TEXT DEFAULT NULL');
+
+  // Populate pipelines from pipeline_configs (one-time, idempotent via INSERT OR IGNORE).
+  try {
+    await conn.execute(`
+      INSERT OR IGNORE INTO pipelines (
+        id, project_id, name, source_language, target_language, pipeline_mode,
+        stages, judge_prompt, judge_model, judge_provider,
+        use_chunking, target_chunk_count,
+        review_provider_options, persona, custom_source_language, custom_target_language,
+        blob_budget_tokens, blob_overlap, run_status, last_run_config, run_in_progress
+      )
+      SELECT
+        pc.id, pc.project_id, 'Default', p.source_language, p.target_language,
+        COALESCE(pc.pipeline_mode, 'standard'),
+        pc.stages,
+        COALESCE(pc.judge_prompt, ''), COALESCE(pc.judge_model, ''), COALESCE(pc.judge_provider, ''),
+        COALESCE(pc.use_chunking, 1), COALESCE(pc.target_chunk_count, 0),
+        pc.review_provider_options, pc.persona, pc.custom_source_language, pc.custom_target_language,
+        COALESCE(pc.blob_budget_tokens, 0), COALESCE(pc.blob_overlap, 1),
+        COALESCE(pc.run_status, 'idle'), pc.last_run_config, COALESCE(pc.run_in_progress, 0)
+      FROM pipeline_configs pc
+      JOIN projects p ON p.id = pc.project_id
+    `);
+  } catch (error) {
+    console.warn('[Glossa] Pipeline migration from pipeline_configs failed', error);
+  }
+
+  // Copy source text from pipeline_configs to projects (only where still empty).
+  try {
+    await conn.execute(`
+      UPDATE projects
+      SET
+        source_display_text    = COALESCE((SELECT source_display_text    FROM pipeline_configs WHERE project_id = projects.id), ''),
+        source_processing_text = COALESCE((SELECT source_processing_text FROM pipeline_configs WHERE project_id = projects.id), ''),
+        source_footnotes       = COALESCE((SELECT source_footnotes       FROM pipeline_configs WHERE project_id = projects.id), '[]'),
+        document_format        = COALESCE((SELECT document_format        FROM pipeline_configs WHERE project_id = projects.id), 'plain'),
+        render_profile         = COALESCE((SELECT render_profile         FROM pipeline_configs WHERE project_id = projects.id), 'plain-text'),
+        markdown_aware         = COALESCE((SELECT markdown_aware         FROM pipeline_configs WHERE project_id = projects.id), 0),
+        experimental_import    =          (SELECT experimental_import    FROM pipeline_configs WHERE project_id = projects.id)
+      WHERE source_display_text IS NULL OR source_display_text = ''
+    `);
+  } catch (error) {
+    console.warn('[Glossa] Source text migration to projects failed', error);
+  }
+
+  // Set pipeline_id in translations from the project-to-pipeline mapping.
+  try {
+    await conn.execute(`
+      UPDATE translations
+      SET pipeline_id = (SELECT id FROM pipelines WHERE project_id = translations.project_id LIMIT 1)
+      WHERE pipeline_id IS NULL
+    `);
+  } catch (error) {
+    console.warn('[Glossa] pipeline_id migration in translations failed', error);
   }
 
   console.log('[Glossa] Database initialized');

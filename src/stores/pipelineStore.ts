@@ -13,10 +13,6 @@ import type { FootnoteDefinition } from '../types';
 import { deriveSourceDocumentState } from '../utils/documentState';
 
 interface PipelineState {
-  // The current app still edits a single active pipeline per document.
-  // When multi-pipeline support lands, lift these three fields into a
-  // collection keyed by pipeline id instead of keeping one active slot.
-  activePipelineId: string | null;
   runStatus: PipelineRunStatus;
   lastRunConfig: string | null;
   inputText: string;
@@ -24,11 +20,6 @@ interface PipelineState {
   sourceFootnotes: FootnoteDefinition[];
   config: PipelineConfig;
 
-  setActivePipelineMeta: (meta: {
-    pipelineId: string | null;
-    runStatus: PipelineRunStatus;
-    lastRunConfig: string | null;
-  }) => void;
   setInputText: (text: string) => void;
   setSourceDocument: (input: {
     displayText: string;
@@ -71,20 +62,12 @@ const DEFAULT_PIPELINE_CONFIG: PipelineConfig = {
 };
 
 export const usePipelineStore = create<PipelineState>((set) => ({
-  activePipelineId: null,
   runStatus: 'idle',
   lastRunConfig: null,
   inputText: '',
   inputProcessingText: '',
   sourceFootnotes: [],
   config: { ...DEFAULT_PIPELINE_CONFIG, stages: DEFAULT_STAGES },
-
-  setActivePipelineMeta: ({ pipelineId, runStatus, lastRunConfig }) =>
-    set({
-      activePipelineId: pipelineId,
-      runStatus,
-      lastRunConfig,
-    }),
 
   setInputText: (text) =>
     set((state) => {
@@ -133,7 +116,6 @@ export const usePipelineStore = create<PipelineState>((set) => ({
 
   resetToDefaults: () =>
     set({
-      activePipelineId: null,
       runStatus: 'idle',
       lastRunConfig: null,
       inputText: '',

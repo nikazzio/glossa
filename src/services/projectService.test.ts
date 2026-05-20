@@ -1,6 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { PipelineConfig } from '../types';
-import { makeTranslationChunk } from '../test/chunkFactory';
 
 const dbMocks = vi.hoisted(() => ({
   execute: vi.fn(),
@@ -10,440 +8,121 @@ const dbMocks = vi.hoisted(() => ({
 
 vi.mock('./dbService', () => dbMocks);
 
-const {
-  getProjectConfig,
-  saveProjectConfig,
-  saveProjectState,
-  loadTranslations,
-  restoreTranslations,
-} = await import('./projectService');
+const { getProjectSource, saveProjectSource } = await import('./projectService');
 
-describe('projectService glossary persistence', () => {
+describe('projectService — source text', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    dbMocks.runInTransaction.mockImplementation(
-      async (fn: (run: (query: string, params?: unknown[]) => Promise<void>) => Promise<unknown>) =>
-        fn(dbMocks.execute),
-    );
   });
 
-  it('saves pipeline config and project metadata without touching glossary tables', async () => {
-    const config: PipelineConfig = {
-      sourceLanguage: 'Italian',
-      targetLanguage: 'English',
-      stages: [],
-      judgePrompt: 'Judge',
-      judgeModel: 'gemini-3-flash-preview',
-      judgeProvider: 'gemini',
-      glossary: [
-        { id: 'entry-1', term: 'virtute', translation: 'virtue', notes: 'Keep ethical sense' },
-      ],
-      useChunking: true,
-      targetChunkCount: 8,
-      documentFormat: 'markdown',
-      markdownAware: true,
-      experimentalImport: 'docx-markdown',
-      reviewProviderOptions: {
-        ollama: { temperature: 0.1, keepAlive: '15m', think: false, numCtx: 8192 },
-      },
-      renderProfile: 'markdown',
-    };
-
-    await saveProjectConfig('proj-1', config, 'document');
-
-    expect(dbMocks.execute).toHaveBeenCalledWith(
-      expect.stringContaining('INSERT INTO pipeline_configs'),
-      expect.any(Array),
-    );
-    expect(dbMocks.execute).toHaveBeenCalledWith(
-      expect.stringContaining('view_mode = $3'),
-      ['Italian', 'English', 'document', 'proj-1'],
-    );
-    // Glossary tables must NOT be touched — glossaries are managed exclusively
-    // through libraryStore / glossaryService, never during project save.
-    expect(dbMocks.execute).not.toHaveBeenCalledWith(
-      expect.stringContaining('INSERT INTO glossaries'),
-      expect.any(Array),
-    );
-    expect(dbMocks.execute).not.toHaveBeenCalledWith(
-      expect.stringContaining('INSERT INTO glossary_entries'),
-      expect.any(Array),
-    );
-    expect(dbMocks.execute).not.toHaveBeenCalledWith(
-      expect.stringContaining('DELETE FROM glossary_entries'),
-      expect.any(Array),
-    );
-  });
-
-  it('restores glossary ids and target chunk count from a saved config', async () => {
-    dbMocks.select
-      .mockResolvedValueOnce([
-        {
-          source_language: 'Latin',
-          target_language: 'English',
-          source_text: 'Arma virumque cano',
-          source_display_text: 'Arma virumque cano',
-          source_processing_text: 'Arma virumque cano',
-          source_footnotes: '[]',
-          stages: '[]',
-          judge_prompt: 'Judge',
-          judge_model: 'gemini-3-flash-preview',
-          judge_provider: 'gemini',
-          use_chunking: 1,
-          target_chunk_count: 5,
-          document_format: 'markdown',
-          render_profile: 'markdown',
-          markdown_aware: 1,
-          experimental_import: 'docx-markdown',
-          review_provider_options: '{"ollama":{"temperature":0.1,"keepAlive":"15m","think":false,"numCtx":8192}}',
-        },
-      ])
-      .mockResolvedValueOnce([{ glossary_id: 'glossary-proj-1' }])
-      .mockResolvedValueOnce([
-        {
-          id: 'entry-1',
-          term: 'virtute',
-          translation: 'virtue',
-          notes: 'Keep ethical sense',
-        },
-      ]);
-
-    const config = await getProjectConfig('proj-1');
-
-    expect(config?.sourceLanguage).toBe('Latin');
-    expect(config?.targetLanguage).toBe('English');
-    expect(config?.inputText).toBe('Arma virumque cano');
-    expect(config?.inputProcessingText).toBe('Arma virumque cano');
-    expect(config?.targetChunkCount).toBe(5);
-    expect(config?.documentFormat).toBe('markdown');
-    expect(config?.renderProfile).toBe('markdown');
-    expect(config?.markdownAware).toBe(true);
-    expect(config?.experimentalImport).toBe('docx-markdown');
-    expect(config?.reviewProviderOptions).toEqual({
-      ollama: {
-        temperature: 0.1,
-        keepAlive: '15m',
-        think: false,
-        numCtx: 8192,
-      },
-    });
-    expect(config?.assignedGlossaryId).toBe('glossary-proj-1');
-    expect(config?.glossary).toEqual([
-      {
-        id: 'entry-1',
-        term: 'virtute',
-        translation: 'virtue',
-        notes: 'Keep ethical sense',
-      },
-    ]);
-  });
-
-  it('saves source text and chunk positions atomically', async () => {
-    await saveProjectState({
-      projectId: 'proj-1',
-      inputText: 'Alpha\n\nBeta',
-      inputProcessingText: 'Alpha\n\nBeta',
-      sourceFootnotes: [],
-      config: {
-        sourceLanguage: 'Latin',
-        targetLanguage: 'English',
-        stages: [],
-        judgePrompt: 'Judge',
-        judgeModel: 'gemini-3-flash-preview',
-        judgeProvider: 'gemini',
-        glossary: [],
-        useChunking: true,
-        targetChunkCount: 2,
-        documentFormat: 'markdown',
-        markdownAware: true,
-        experimentalImport: 'docx-markdown',
-        reviewProviderOptions: {
-          ollama: { temperature: 0.1, keepAlive: '15m', think: false, numCtx: 8192 },
-        },
-        renderProfile: 'markdown',
-      },
-      viewMode: 'document',
-      chunks: [
-        makeTranslationChunk({
-          id: 'chunk-b',
-          originalText: 'Beta',
-          currentDraft: 'Beta translated',
-          status: 'completed',
-          translationLocked: true,
-          blobId: 'blob-1',
-          blobOrder: 1,
-          blobReferenceChunkIds: ['chunk-a', 'chunk-b'],
-          stageResults: {},
-          judgeResult: {
-            content: 'Beta translated',
-            status: 'completed',
-            rating: 'good',
-            issues: [],
-          },
-        }),
-        makeTranslationChunk({
-          id: 'chunk-a',
-          originalText: 'Alpha',
-          currentDraft: 'Alpha translated',
-          status: 'completed',
-          translationLocked: false,
-          stageResults: {},
-          judgeResult: {
-            content: 'Alpha translated',
-            status: 'completed',
-            rating: 'excellent',
-            issues: [],
-          },
-        }),
-      ],
-    });
-
-    expect(dbMocks.runInTransaction).toHaveBeenCalledTimes(1);
-    expect(dbMocks.execute).toHaveBeenCalledWith(
-      expect.stringContaining('INSERT INTO pipeline_configs'),
-      expect.arrayContaining([
-        'cfg-proj-1',
-        'proj-1',
-        'Judge',
-        'gemini-3-flash-preview',
-        'gemini',
-        1,
-        2,
-        'Alpha\n\nBeta',
-        'Alpha\n\nBeta',
-        'Alpha\n\nBeta',
-        '[]',
-        'markdown',
-        'markdown',
-        1,
-        'docx-markdown',
-        '{"ollama":{"temperature":0.1,"keepAlive":"15m","think":false,"numCtx":8192}}',
-      ]),
-    );
-    expect(dbMocks.execute).toHaveBeenCalledWith(
-      expect.stringContaining('position'),
-      ['chunk-b', 'proj-1', 'Beta', 'Beta translated', 0, 'completed', '{}', 'completed', 'good', 1, '[]', null, null, 'Beta', 'Beta', 'Beta translated', 'Beta translated', 'blob-1', 1, '["chunk-a","chunk-b"]'],
-    );
-    expect(dbMocks.execute).toHaveBeenCalledWith(
-      expect.stringContaining('position'),
-      ['chunk-a', 'proj-1', 'Alpha', 'Alpha translated', 1, 'completed', '{}', 'completed', 'excellent', 0, '[]', null, null, 'Alpha', 'Alpha', 'Alpha translated', 'Alpha translated', null, 0, null],
-    );
-    expect(
-      dbMocks.execute.mock.calls.filter(
-        ([query]) => typeof query === 'string' && query.includes('UPDATE projects SET') && query.includes('updated_at = CURRENT_TIMESTAMP'),
-      ),
-    ).toHaveLength(1);
-  });
-
-  it('rolls back the transaction when a chunk save fails', async () => {
-    dbMocks.execute.mockImplementation(async (query: string) => {
-      if (query.includes('INSERT INTO translations')) {
-        throw new Error('disk full');
-      }
-    });
-
-    await expect(
-      saveProjectState({
-        projectId: 'proj-1',
-        inputText: 'Alpha',
-        inputProcessingText: 'Alpha',
-        sourceFootnotes: [],
-        config: {
-          sourceLanguage: 'Latin',
-          targetLanguage: 'English',
-          stages: [],
-          judgePrompt: 'Judge',
-          judgeModel: 'gemini-3-flash-preview',
-        judgeProvider: 'gemini',
-        glossary: [],
-        useChunking: true,
-        targetChunkCount: 1,
-        documentFormat: 'markdown',
-        renderProfile: 'markdown',
-        markdownAware: true,
-        experimentalImport: 'docx-markdown',
-      },
-        viewMode: 'document',
-        chunks: [
-          makeTranslationChunk({
-            id: 'chunk-a',
-            originalText: 'Alpha',
-            currentDraft: 'Alpha translated',
-            status: 'completed',
-            stageResults: {},
-            judgeResult: {
-              content: 'Alpha translated',
-              status: 'completed',
-              rating: 'excellent',
-              issues: [],
-            },
-          }),
-        ],
-      }),
-    ).rejects.toThrow('disk full');
-
-    expect(dbMocks.runInTransaction).toHaveBeenCalledTimes(1);
-  });
-
-  it('returns empty stages array when the stored stages column is corrupted JSON', async () => {
-    dbMocks.select
-      .mockResolvedValueOnce([
-        {
-          source_language: 'Latin',
-          target_language: 'English',
-          source_text: '',
-          source_display_text: '',
-          source_processing_text: '',
-          source_footnotes: '[]',
-          stages: '{{not valid json}}',
-          judge_prompt: 'Judge',
-          judge_model: 'gemini-3-flash-preview',
-          judge_provider: 'gemini',
-          use_chunking: 1,
-          target_chunk_count: 0,
-          document_format: 'plain',
-          render_profile: 'plain-text',
-          markdown_aware: 0,
-          experimental_import: null,
-          view_mode: null,
-        },
-      ])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([]);
-
-    const config = await getProjectConfig('proj-1');
-
-    expect(config).not.toBeNull();
-    expect(config?.stages).toEqual([]);
-  });
-
-  it('propagates the error from saveProjectState when a write fails mid-save', async () => {
-    let callCount = 0;
-    dbMocks.execute.mockImplementation(async (query: string) => {
-      callCount++;
-      // Fail on the second execute call to simulate a partial write
-      if (callCount === 2) throw new Error('disk full');
-    });
-
-    await expect(
-      saveProjectState({
-        projectId: 'proj-1',
-        inputText: 'Hello',
-        inputProcessingText: 'Hello',
-        sourceFootnotes: [],
-        config: {
-          sourceLanguage: 'Latin',
-          targetLanguage: 'English',
-          stages: [],
-          judgePrompt: 'Judge',
-          judgeModel: 'gemini-3-flash-preview',
-          judgeProvider: 'gemini',
-          glossary: [],
-          useChunking: true,
-          targetChunkCount: 0,
-          documentFormat: 'plain',
-          renderProfile: 'plain-text',
-          markdownAware: false,
-          experimentalImport: null,
-        },
-        viewMode: 'document',
-        chunks: [],
-      }),
-    ).rejects.toThrow('disk full');
-  });
-
-  it('loads translations ordered by explicit position before timestamps', async () => {
+  it('returns null when the project does not exist', async () => {
     dbMocks.select.mockResolvedValueOnce([]);
 
-    await loadTranslations('proj-1');
+    const result = await getProjectSource('proj-missing');
 
-    expect(dbMocks.select).toHaveBeenCalledWith(
-      'SELECT * FROM translations WHERE project_id = $1 ORDER BY CASE WHEN position IS NULL THEN 1 ELSE 0 END, position ASC, created_at ASC',
-      ['proj-1'],
+    expect(result).toBeNull();
+  });
+
+  it('returns defaults when optional columns are null', async () => {
+    dbMocks.select.mockResolvedValueOnce([
+      {
+        source_display_text: null,
+        source_processing_text: null,
+        source_footnotes: null,
+        document_format: null,
+        render_profile: null,
+        markdown_aware: null,
+        experimental_import: null,
+        view_mode: null,
+      },
+    ]);
+
+    const result = await getProjectSource('proj-1');
+
+    expect(result).not.toBeNull();
+    expect(result?.sourceDisplayText).toBe('');
+    expect(result?.sourceProcessingText).toBe('');
+    expect(result?.sourceFootnotes).toEqual([]);
+    expect(result?.documentFormat).toBe('plain');
+    expect(result?.renderProfile).toBe('plain-text');
+    expect(result?.markdownAware).toBe(false);
+    expect(result?.experimentalImport).toBeNull();
+  });
+
+  it('parses source footnotes JSON correctly', async () => {
+    const footnotes = [{ id: 'fn-1', marker: '*', content: 'A note' }];
+    dbMocks.select.mockResolvedValueOnce([
+      {
+        source_display_text: 'Hello',
+        source_processing_text: 'Hello',
+        source_footnotes: JSON.stringify(footnotes),
+        document_format: 'markdown',
+        render_profile: 'markdown',
+        markdown_aware: 1,
+        experimental_import: 'docx-markdown',
+        view_mode: 'document',
+      },
+    ]);
+
+    const result = await getProjectSource('proj-1');
+
+    expect(result?.sourceFootnotes).toEqual(footnotes);
+    expect(result?.markdownAware).toBe(true);
+    expect(result?.documentFormat).toBe('markdown');
+    expect(result?.viewMode).toBe('document');
+  });
+
+  it('returns empty footnotes array when stored JSON is corrupted', async () => {
+    dbMocks.select.mockResolvedValueOnce([
+      {
+        source_display_text: '',
+        source_processing_text: '',
+        source_footnotes: '{{not valid json}}',
+        document_format: 'plain',
+        render_profile: 'plain-text',
+        markdown_aware: 0,
+        experimental_import: null,
+        view_mode: null,
+      },
+    ]);
+
+    const result = await getProjectSource('proj-1');
+
+    expect(result?.sourceFootnotes).toEqual([]);
+  });
+
+  it('saveProjectSource writes all columns with correct values', async () => {
+    await saveProjectSource(
+      'proj-1',
+      'Display text',
+      'Processing text',
+      [],
+      {
+        documentFormat: 'markdown',
+        renderProfile: 'markdown',
+        markdownAware: true,
+        experimentalImport: 'docx-markdown',
+        sourceLanguage: 'Latin',
+        targetLanguage: 'English',
+      },
+      'document',
     );
-  });
 
-  it('returns empty translation fields when new columns are absent', async () => {
-    const restored = restoreTranslations([
-      {
-        id: 'chunk-1',
-        project_id: 'proj-1',
-        original_text: 'Source',
-        final_translation: 'Old translation',
-        chunk_status: 'completed',
-        stage_results: JSON.stringify({
-          'stg-1': { content: 'Stage translation', status: 'completed' },
-        }),
-        judge_status: 'completed',
-        judge_rating: 'good',
-        judge_issues: '[]',
-        created_at: '2026-04-29T00:00:00Z',
-      },
+    expect(dbMocks.execute).toHaveBeenCalledOnce();
+    const [query, params] = dbMocks.execute.mock.calls[0] as [string, unknown[]];
+    expect(query).toContain('UPDATE projects SET');
+    expect(params).toEqual([
+      'Display text',
+      'Processing text',
+      '[]',
+      'markdown',
+      'markdown',
+      1,
+      'docx-markdown',
+      'Latin',
+      'English',
+      'document',
+      'proj-1',
     ]);
-
-    // Without new columns, both fields default to '' — no fallback to stage results or final_translation
-    expect(restored[0]?.translationDisplayText).toBe('');
-    expect(restored[0]?.translationProcessingText).toBe('');
-    expect(restored[0]?.currentDraft).toBe('');
-    expect(restored[0]?.sourceDisplayText).toBe('');
-    expect(restored[0]?.sourceProcessingText).toBe('');
   });
-
-  it('restoreTranslations maps source_display_text and translation_display_text to the new chunk fields', () => {
-    const restored = restoreTranslations([
-      {
-        id: 'chunk-1',
-        project_id: 'proj-1',
-        original_text: 'Legacy source',
-        final_translation: 'Legacy translation',
-        source_display_text: 'Display source',
-        source_processing_text: 'Processing source',
-        translation_display_text: 'Display translation',
-        translation_processing_text: 'Processing translation',
-        chunk_status: 'completed',
-        stage_results: '{}',
-        judge_status: 'idle',
-        judge_rating: 'fair',
-        judge_issues: '[]',
-        created_at: '2026-01-01T00:00:00Z',
-      },
-    ]);
-
-    expect(restored[0]?.sourceDisplayText).toBe('Display source');
-    expect(restored[0]?.sourceProcessingText).toBe('Processing source');
-    expect(restored[0]?.translationDisplayText).toBe('Display translation');
-    expect(restored[0]?.translationProcessingText).toBe('Processing translation');
-    // Legacy fields must mirror the display fields
-    expect(restored[0]?.originalText).toBe('Display source');
-    expect(restored[0]?.currentDraft).toBe('Display translation');
-  });
-
-  it('restoreTranslations restores persisted blob reference windows', () => {
-    const restored = restoreTranslations([
-      {
-        id: 'chunk-1',
-        project_id: 'proj-1',
-        original_text: 'Source',
-        final_translation: 'Translation',
-        source_display_text: 'Source',
-        source_processing_text: 'Source',
-        translation_display_text: 'Translation',
-        translation_processing_text: 'Translation',
-        chunk_status: 'completed',
-        stage_results: '{}',
-        judge_status: 'completed',
-        judge_rating: 'good',
-        judge_issues: '[]',
-        blob_id: 'blob-1',
-        blob_order: 2,
-        blob_reference_chunk_ids: '["chunk-0","chunk-1","chunk-2"]',
-        created_at: '2026-01-01T00:00:00Z',
-      },
-    ]);
-
-    expect(restored[0]?.blobId).toBe('blob-1');
-    expect(restored[0]?.blobOrder).toBe(2);
-    expect(restored[0]?.blobReferenceChunkIds).toEqual(['chunk-0', 'chunk-1', 'chunk-2']);
-  });
-
 });

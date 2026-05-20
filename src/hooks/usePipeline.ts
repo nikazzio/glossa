@@ -11,7 +11,7 @@ import { qualityDefault, qualityFailure } from '../utils';
 import { pipelineLog } from '../utils/pipelineLogging';
 import type { Issue, JudgeResult, PromptInfo, ResponseInfo, TokenUsage, TranslationChunk } from '../types';
 import { useProjectStore } from '../stores/projectStore';
-import { saveChunkCheckpoint, setPipelineRunState } from '../services/projectService';
+import { saveChunkCheckpoint, setPipelineRunState } from '../services/pipelineService';
 import { buildPipelineFingerprint } from '../utils/pipelineFingerprint';
 import { calculateBlobBudget } from '../models/catalog';
 
@@ -424,14 +424,10 @@ export function usePipeline() {
     const batchMode: BatchRunMode = pipelineState.runStatus === 'completed'
       ? 'rerun-unlocked'
       : 'resume';
-    const projectId = useProjectStore.getState().currentProjectId;
-    usePipelineStore.getState().setActivePipelineMeta({
-      pipelineId: pipelineState.activePipelineId,
-      runStatus: 'running',
-      lastRunConfig: buildPipelineFingerprint(config),
-    });
-    if (projectId) {
-      void setPipelineRunState(projectId, 'running', buildPipelineFingerprint(config)).catch(() => {});
+    const activePipelineId = useProjectStore.getState().activePipelineId;
+    usePipelineStore.setState({ runStatus: 'running', lastRunConfig: buildPipelineFingerprint(config) });
+    if (activePipelineId) {
+      void setPipelineRunState(activePipelineId, 'running', buildPipelineFingerprint(config)).catch(() => {});
     }
 
     try {
@@ -459,11 +455,11 @@ export function usePipeline() {
         const outcome = await executePipelineForChunk(chunk, { batchMode });
         if (outcome === 'cancelled') { cancelled = true; break; }
         if (outcome === 'failed') errorCount++;
-        if ((outcome === 'completed' || outcome === 'failed') && projectId) {
+        if ((outcome === 'completed' || outcome === 'failed') && activePipelineId) {
           const fresh = useChunksStore.getState().chunks.find((c) => c.id === chunk.id);
           const position = liveChunks.indexOf(chunk);
           if (fresh) {
-            void saveChunkCheckpoint(projectId, fresh, position).catch(() => {});
+            void saveChunkCheckpoint(activePipelineId, fresh, position).catch(() => {});
           }
         }
       }
@@ -471,16 +467,12 @@ export function usePipeline() {
       setIsProcessing(false);
       useChunksStore.getState().clearCancelRequest();
       const finalStatus = cancelled || errorCount > 0 ? 'interrupted' : 'completed';
-      usePipelineStore.getState().setActivePipelineMeta({
-        pipelineId: pipelineState.activePipelineId,
-        runStatus: finalStatus,
-        lastRunConfig: buildPipelineFingerprint(config),
-      });
+      usePipelineStore.setState({ runStatus: finalStatus, lastRunConfig: buildPipelineFingerprint(config) });
       if (finalStatus === 'interrupted') {
         useProjectStore.getState().setRunInterrupted(true);
       }
-      if (projectId) {
-        void setPipelineRunState(projectId, finalStatus).catch(() => {});
+      if (activePipelineId) {
+        void setPipelineRunState(activePipelineId, finalStatus).catch(() => {});
       }
     }
 
@@ -601,11 +593,11 @@ export function usePipeline() {
 
     if (outcome === 'completed') {
       updateChunkStatus(target.id, 'preview');
-      const projectId = useProjectStore.getState().currentProjectId;
-      if (projectId) {
+      const pipelineId = useProjectStore.getState().activePipelineId;
+      if (pipelineId) {
         const saved = useChunksStore.getState().chunks.find((c) => c.id === target.id);
         const position = allChunks.indexOf(target);
-        if (saved) void saveChunkCheckpoint(projectId, saved, position).catch(() => {});
+        if (saved) void saveChunkCheckpoint(pipelineId, saved, position).catch(() => {});
       }
     }
 
