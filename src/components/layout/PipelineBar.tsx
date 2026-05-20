@@ -1,27 +1,32 @@
-import { useRef, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { useState } from 'react';
+import { Minus, Plus } from 'lucide-react';
 import { useProjectStore } from '../../stores/projectStore';
+import { useUiStore } from '../../stores/uiStore';
+import { confirm } from '../../stores/confirmStore';
 import type { Pipeline } from '../../types';
+
+const MAX_PIPELINES = 10;
 
 interface PipelineTabProps {
   pipeline: Pipeline;
   index: number;
   isActive: boolean;
+  canDelete: boolean;
   onSelect: () => void;
+  onDelete: () => void;
   onRename: (name: string) => void;
 }
 
-function PipelineTab({ pipeline, index, isActive, onSelect, onRename }: PipelineTabProps) {
+function PipelineTab({ pipeline, index, isActive, canDelete, onSelect, onDelete, onRename }: PipelineTabProps) {
+  const [hovered, setHovered] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(pipeline.name);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   const startEdit = (e: React.MouseEvent) => {
     if (!isActive) return;
     e.stopPropagation();
     setEditValue(pipeline.name);
     setEditing(true);
-    setTimeout(() => inputRef.current?.select(), 0);
   };
 
   const commitEdit = () => {
@@ -35,68 +40,85 @@ function PipelineTab({ pipeline, index, isActive, onSelect, onRename }: Pipeline
     if (e.key === 'Escape') { setEditing(false); setEditValue(pipeline.name); }
   };
 
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const confirmed = await confirm({
+      title: `Eliminare "${pipeline.name}"?`,
+      message: 'Le traduzioni associate a questa pipeline verranno eliminate definitivamente.',
+      confirmLabel: 'Elimina',
+      danger: true,
+    });
+    if (confirmed) onDelete();
+  };
+
+  const showDeleteHint = hovered && canDelete && !editing;
+
   return (
-    <button
-      onClick={onSelect}
-      className={`group flex items-center gap-1.5 rounded px-2 py-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-        isActive
-          ? 'text-editorial-ink'
-          : 'text-editorial-muted hover:text-editorial-ink'
-      }`}
-      aria-pressed={isActive}
+    <div
+      className="flex items-center gap-2"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
-      <span
-        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold transition-colors ${
-          isActive
+      {/* Circle: delete button on hover, number otherwise */}
+      <button
+        onClick={showDeleteHint ? handleDelete : onSelect}
+        aria-label={showDeleteHint ? `Elimina ${pipeline.name}` : `Seleziona ${pipeline.name}`}
+        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+          showDeleteHint
+            ? 'border border-editorial-accent/50 bg-editorial-accent/10 text-editorial-accent hover:bg-editorial-accent hover:text-white'
+            : isActive
             ? 'border border-editorial-accent/40 bg-editorial-accent/10 text-editorial-accent'
-            : 'border border-editorial-border/60 text-editorial-muted/60 group-hover:border-editorial-accent/30 group-hover:text-editorial-accent/70'
+            : 'border border-editorial-border/60 text-editorial-muted/60 hover:border-editorial-accent/30 hover:text-editorial-accent/70'
         }`}
       >
-        {index + 1}
-      </span>
+        {showDeleteHint ? <Minus size={11} /> : index + 1}
+      </button>
 
+      {/* Name: click to select, double-click to rename (when active) */}
       {editing ? (
         <input
-          ref={inputRef}
+          autoFocus
           value={editValue}
           onChange={(e) => setEditValue(e.target.value)}
           onBlur={commitEdit}
           onKeyDown={handleKeyDown}
-          onClick={(e) => e.stopPropagation()}
           className="font-display italic tracking-tight text-editorial-ink text-sm bg-transparent border-b border-editorial-accent outline-none w-32 leading-none"
           aria-label="Rinomina pipeline"
         />
       ) : (
-        <span
+        <button
+          onClick={onSelect}
           onDoubleClick={startEdit}
-          className="font-display italic tracking-tight text-sm leading-none select-none"
+          className={`font-display italic tracking-tight text-sm leading-none focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent rounded ${
+            isActive ? 'text-editorial-ink' : 'text-editorial-muted hover:text-editorial-ink'
+          }`}
           title={isActive ? 'Doppio clic per rinominare' : undefined}
         >
           {pipeline.name}
-        </span>
+        </button>
       )}
-    </button>
+    </div>
   );
 }
 
 export function PipelineBar() {
+  const viewMode = useUiStore((s) => s.viewMode);
   const pipelines = useProjectStore((s) => s.pipelines);
   const activePipelineId = useProjectStore((s) => s.activePipelineId);
   const switchPipeline = useProjectStore((s) => s.switchPipeline);
   const createNewPipeline = useProjectStore((s) => s.createNewPipeline);
+  const deletePipeline = useProjectStore((s) => s.deletePipeline);
   const renamePipeline = useProjectStore((s) => s.renamePipeline);
 
-  if (pipelines.length === 0) return null;
+  if (viewMode !== 'document' || pipelines.length === 0) return null;
 
-  const handleAdd = () => {
-    void createNewPipeline(`Pipeline ${pipelines.length + 1}`);
-  };
+  const atLimit = pipelines.length >= MAX_PIPELINES;
 
   return (
     <div
       role="tablist"
       aria-label="Pipeline"
-      className="flex-shrink-0 flex items-center gap-0.5 bg-[#f7f3ec] px-6 py-1 md:px-10"
+      className="flex items-center gap-3 bg-[#f7f3ec] px-6 py-1.5 md:px-10"
     >
       {pipelines.map((pipeline, index) => (
         <PipelineTab
@@ -104,18 +126,22 @@ export function PipelineBar() {
           pipeline={pipeline}
           index={index}
           isActive={pipeline.id === activePipelineId}
+          canDelete={pipelines.length > 1}
           onSelect={() => void switchPipeline(pipeline.id)}
+          onDelete={() => void deletePipeline(pipeline.id)}
           onRename={(name) => void renamePipeline(pipeline.id, name)}
         />
       ))}
 
-      <button
-        onClick={handleAdd}
-        aria-label="Aggiungi pipeline"
-        className="ml-1 flex h-5 w-5 items-center justify-center rounded-full border border-editorial-border/50 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-      >
-        <Plus size={10} />
-      </button>
+      {!atLimit && (
+        <button
+          onClick={() => void createNewPipeline(`Pipeline ${pipelines.length + 1}`)}
+          aria-label="Aggiungi pipeline"
+          className="flex h-6 w-6 items-center justify-center rounded-full border border-editorial-border/50 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+        >
+          <Plus size={11} />
+        </button>
+      )}
     </div>
   );
 }
