@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Minus, Plus } from 'lucide-react';
 import { useProjectStore } from '../../stores/projectStore';
-import { useUiStore } from '../../stores/uiStore';
 import { confirm } from '../../stores/confirmStore';
 import type { Pipeline } from '../../types';
 
@@ -15,6 +14,15 @@ interface PipelineTabProps {
   onSelect: () => void;
   onDelete: () => void;
   onRename: (name: string) => void;
+}
+
+function isModified(pipeline: Pipeline): boolean {
+  // A pipeline is "new" if it was never run and never had its config saved
+  // (updatedAt matches createdAt within a few seconds of creation).
+  if (pipeline.lastRunConfig !== null) return true;
+  const created = new Date(pipeline.createdAt).getTime();
+  const updated = new Date(pipeline.updatedAt).getTime();
+  return Math.abs(updated - created) > 5000;
 }
 
 function PipelineTab({ pipeline, index, isActive, canDelete, onSelect, onDelete, onRename }: PipelineTabProps) {
@@ -42,13 +50,16 @@ function PipelineTab({ pipeline, index, isActive, canDelete, onSelect, onDelete,
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const confirmed = await confirm({
-      title: `Eliminare "${pipeline.name}"?`,
-      message: 'Le traduzioni associate a questa pipeline verranno eliminate definitivamente.',
-      confirmLabel: 'Elimina',
-      danger: true,
-    });
-    if (confirmed) onDelete();
+    if (isModified(pipeline)) {
+      const confirmed = await confirm({
+        title: `Eliminare "${pipeline.name}"?`,
+        message: 'Le traduzioni associate a questa pipeline verranno eliminate definitivamente.',
+        confirmLabel: 'Elimina',
+        danger: true,
+      });
+      if (!confirmed) return;
+    }
+    onDelete();
   };
 
   const showDeleteHint = hovered && canDelete && !editing;
@@ -59,7 +70,6 @@ function PipelineTab({ pipeline, index, isActive, canDelete, onSelect, onDelete,
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {/* Circle: delete button on hover, number otherwise */}
       <button
         onClick={showDeleteHint ? handleDelete : onSelect}
         aria-label={showDeleteHint ? `Elimina ${pipeline.name}` : `Seleziona ${pipeline.name}`}
@@ -74,7 +84,6 @@ function PipelineTab({ pipeline, index, isActive, canDelete, onSelect, onDelete,
         {showDeleteHint ? <Minus size={11} /> : index + 1}
       </button>
 
-      {/* Name: click to select, double-click to rename (when active) */}
       {editing ? (
         <input
           autoFocus
@@ -102,7 +111,6 @@ function PipelineTab({ pipeline, index, isActive, canDelete, onSelect, onDelete,
 }
 
 export function PipelineBar() {
-  const viewMode = useUiStore((s) => s.viewMode);
   const pipelines = useProjectStore((s) => s.pipelines);
   const activePipelineId = useProjectStore((s) => s.activePipelineId);
   const switchPipeline = useProjectStore((s) => s.switchPipeline);
@@ -110,7 +118,7 @@ export function PipelineBar() {
   const deletePipeline = useProjectStore((s) => s.deletePipeline);
   const renamePipeline = useProjectStore((s) => s.renamePipeline);
 
-  if (viewMode !== 'document' || pipelines.length === 0) return null;
+  if (pipelines.length === 0) return null;
 
   const atLimit = pipelines.length >= MAX_PIPELINES;
 
@@ -118,7 +126,7 @@ export function PipelineBar() {
     <div
       role="tablist"
       aria-label="Pipeline"
-      className="flex items-center gap-3 bg-[#f7f3ec] px-6 py-1.5 md:px-10"
+      className="flex shrink-0 items-center gap-3 bg-[#f7f3ec] px-6 py-1.5 md:px-10"
     >
       {pipelines.map((pipeline, index) => (
         <PipelineTab

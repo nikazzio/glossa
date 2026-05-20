@@ -82,19 +82,21 @@ export default function App() {
             onRunPipeline={runPipeline}
             onCancelPipeline={cancelPipeline}
           />
-          <PipelineBar />
         </div>
 
         {viewMode === 'document' ? (
           <Suspense fallback={null}>
             <main className="flex flex-1 min-h-0 overflow-hidden">
-              <DocumentView
-                onRetranslateChunk={handleRetranslateChunk}
-                onReauditChunk={auditSingleChunk}
-                onRunPipeline={runPipeline}
-                onCancelPipeline={cancelPipeline}
-                onDryRun={runDryRun}
-              />
+              <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+                <PipelineBar />
+                <DocumentView
+                  onRetranslateChunk={handleRetranslateChunk}
+                  onReauditChunk={auditSingleChunk}
+                  onRunPipeline={runPipeline}
+                  onCancelPipeline={cancelPipeline}
+                  onDryRun={runDryRun}
+                />
+              </div>
               <InsightsDrawer onReauditChunk={auditSingleChunk} onRunCoherenceAudit={runCoherenceAudit} />
             </main>
           </Suspense>
