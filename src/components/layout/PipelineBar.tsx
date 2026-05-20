@@ -48,8 +48,8 @@ function PipelineTab({ pipeline, index, isActive, onSelect, onRename }: Pipeline
       <span
         className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold transition-colors ${
           isActive
-            ? 'bg-editorial-ink text-editorial-paper'
-            : 'border border-editorial-border/70 text-editorial-muted group-hover:border-editorial-ink/40 group-hover:text-editorial-ink'
+            ? 'border border-editorial-accent/40 bg-editorial-accent/10 text-editorial-accent'
+            : 'border border-editorial-border/60 text-editorial-muted/60 group-hover:border-editorial-accent/30 group-hover:text-editorial-accent/70'
         }`}
       >
         {index + 1}
@@ -96,7 +96,7 @@ export function PipelineBar() {
     <div
       role="tablist"
       aria-label="Pipeline"
-      className="flex-shrink-0 flex items-center gap-0.5 border-b border-editorial-border/40 px-6 py-1 md:px-10 bg-[linear-gradient(180deg,#f8f3ea_0%,#f4ede0_100%)]"
+      className="flex-shrink-0 flex items-center gap-0.5 bg-[#f7f3ec] px-6 py-1 md:px-10"
     >
       {pipelines.map((pipeline, index) => (
         <PipelineTab
