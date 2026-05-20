@@ -66,22 +66,27 @@ function PipelineTab({ pipeline, index, isActive, canDelete, onSelect, onDelete,
 
   return (
     <div
-      className="flex items-center gap-2"
+      className={`flex items-center gap-2 rounded-full transition-all ${
+        isActive
+          ? 'bg-editorial-bg border border-editorial-border/50 shadow-[0_1px_6px_rgba(26,26,26,0.08)] px-3.5 py-1.5'
+          : 'px-2 py-1 cursor-pointer hover:bg-editorial-bg/60'
+      }`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onClick={!isActive ? onSelect : undefined}
     >
       <button
-        onClick={showDeleteHint ? handleDelete : onSelect}
+        onClick={showDeleteHint ? handleDelete : (isActive ? undefined : onSelect)}
         aria-label={showDeleteHint ? `Elimina ${pipeline.name}` : `Seleziona ${pipeline.name}`}
         className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
           showDeleteHint
-            ? 'border border-editorial-accent/50 bg-editorial-accent/10 text-editorial-accent hover:bg-editorial-accent hover:text-white'
+            ? 'bg-editorial-accent text-white cursor-pointer'
             : isActive
-            ? 'border border-editorial-accent/40 bg-editorial-accent/10 text-editorial-accent'
-            : 'border border-editorial-border/60 text-editorial-muted/60 hover:border-editorial-accent/30 hover:text-editorial-accent/70'
+            ? 'bg-editorial-accent text-white'
+            : 'text-editorial-muted/50 hover:text-editorial-accent/60'
         }`}
       >
-        {showDeleteHint ? <Minus size={11} /> : index + 1}
+        {showDeleteHint ? <Minus size={10} /> : index + 1}
       </button>
 
       {editing ? (
@@ -96,10 +101,10 @@ function PipelineTab({ pipeline, index, isActive, canDelete, onSelect, onDelete,
         />
       ) : (
         <button
-          onClick={onSelect}
+          onClick={isActive ? undefined : onSelect}
           onDoubleClick={startEdit}
           className={`font-display italic tracking-tight text-sm leading-none focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent rounded ${
-            isActive ? 'text-editorial-ink' : 'text-editorial-muted hover:text-editorial-ink'
+            isActive ? 'text-editorial-ink cursor-default' : 'text-editorial-muted/60 hover:text-editorial-ink'
           }`}
           title={isActive ? 'Doppio clic per rinominare' : undefined}
         >
@@ -126,7 +131,7 @@ export function PipelineBar() {
     <div
       role="tablist"
       aria-label="Pipeline"
-      className="flex shrink-0 items-center gap-3 bg-[#f7f3ec] px-6 py-1.5 md:px-10"
+      className="flex shrink-0 items-center gap-1.5 bg-[#f7f3ec] px-5 pt-2 pb-1.5 md:px-6"
     >
       {pipelines.map((pipeline, index) => (
         <PipelineTab
@@ -145,9 +150,9 @@ export function PipelineBar() {
         <button
           onClick={() => void createNewPipeline(`Pipeline ${pipelines.length + 1}`)}
           aria-label="Aggiungi pipeline"
-          className="flex h-6 w-6 items-center justify-center rounded-full border border-editorial-border/50 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          className="ml-1 flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-editorial-border/40 text-editorial-muted/40 transition-colors hover:border-editorial-accent/50 hover:text-editorial-accent/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
         >
-          <Plus size={11} />
+          <Plus size={10} />
         </button>
       )}
     </div>

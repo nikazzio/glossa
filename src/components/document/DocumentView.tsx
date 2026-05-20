@@ -159,20 +159,45 @@ export function DocumentView({
 
   if (!currentChunk) {
     return (
-      <section className="flex w-full items-center justify-center bg-editorial-bg p-10">
-        <div className="max-w-xl text-center space-y-4">
-          <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full border border-editorial-border bg-editorial-textbox/40">
-            <FileText size={24} className="text-editorial-muted/60" />
+      <section className="flex w-full flex-col items-center justify-center bg-[#f7f3ec] overflow-y-auto min-h-0 px-8 py-16">
+        <div className="w-full max-w-2xl flex flex-col items-center">
+          {/* Brand mark */}
+          <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-full border border-editorial-border/60 bg-editorial-bg shadow-[0_4px_20px_rgba(26,26,26,0.06)]">
+            <FileText size={20} className="text-editorial-accent" />
           </div>
-          <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+
+          {/* Label */}
+          <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
             {t('document.emptyLabel')}
           </div>
-          <h2 className="font-display text-4xl italic tracking-tight text-editorial-ink">
+
+          {/* Headline */}
+          <h2 className="mb-4 text-center font-display text-5xl italic tracking-tight text-editorial-ink">
             {t('document.emptyTitle')}
           </h2>
-          <p className="text-sm leading-relaxed text-editorial-muted">
+
+          {/* Body */}
+          <p className="mb-12 max-w-md text-center text-sm leading-relaxed text-editorial-muted">
             {t('document.emptyBody')}
           </p>
+
+          {/* Dashboard placeholder cards */}
+          <div className="grid w-full grid-cols-3 gap-3">
+            {([
+              { icon: Languages, label: t('document.emptyCardPipeline') },
+              { icon: Zap,       label: t('document.emptyCardTranslations') },
+              { icon: Wand2,     label: t('document.emptyCardQuality') },
+            ] as const).map(({ icon: Icon, label }) => (
+              <div
+                key={label}
+                className="flex flex-col items-center gap-3 rounded-[20px] border border-editorial-border/60 bg-editorial-bg/70 px-5 py-6 text-center"
+              >
+                <Icon size={18} className="text-editorial-muted/40" />
+                <div className="font-display text-3xl italic text-editorial-ink/20">—</div>
+                <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted/50">{label}</div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
     );
@@ -188,7 +213,7 @@ export function DocumentView({
 
   return (
     <section className="w-full bg-[#f7f3ec] overflow-y-auto min-h-0 h-full custom-scrollbar flex flex-col">
-      <div className="mx-auto w-full max-w-[1720px] px-5 py-4 md:px-6 md:py-5 flex flex-col flex-1 min-h-0 gap-5">
+      <div className="mx-auto w-full max-w-[1720px] px-5 py-3 md:px-6 md:py-4 flex flex-col flex-1 min-h-0 gap-5">
         <div className="flex items-stretch gap-2 shrink-0">
           {/* Pannello run: striscia orizzontale compatta */}
           {onRunPipeline && onCancelPipeline && (

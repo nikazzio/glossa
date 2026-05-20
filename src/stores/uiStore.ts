@@ -70,7 +70,7 @@ export const useUiStore = create<UiState>()(
   showSettings: false,
   showHelp: false,
   showConfigDrawer: false,
-  showDocumentDrawer: true,
+  showDocumentDrawer: false,
   documentDrawerTab: 'index',
   showChunkDrawer: false,
   chunkDrawerTab: 'audit',
@@ -90,7 +90,6 @@ export const useUiStore = create<UiState>()(
     set({
       viewMode: mode,
       showConfigDrawer: false,
-      showDocumentDrawer: mode === 'document',
       showChunkDrawer: false,
     }),
   setDocumentLayout: (layout) => set({ documentLayout: layout }),
