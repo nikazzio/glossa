@@ -458,8 +458,9 @@ export function usePipeline() {
         if ((outcome === 'completed' || outcome === 'failed') && activePipelineId) {
           const fresh = useChunksStore.getState().chunks.find((c) => c.id === chunk.id);
           const position = liveChunks.indexOf(chunk);
-          if (fresh) {
-            void saveChunkCheckpoint(activePipelineId, fresh, position).catch(() => {});
+          const currentProjectId = useProjectStore.getState().currentProjectId;
+          if (fresh && currentProjectId) {
+            void saveChunkCheckpoint(currentProjectId, activePipelineId, fresh, position).catch(() => {});
           }
         }
       }
@@ -594,10 +595,11 @@ export function usePipeline() {
     if (outcome === 'completed') {
       updateChunkStatus(target.id, 'preview');
       const pipelineId = useProjectStore.getState().activePipelineId;
-      if (pipelineId) {
+      const currentProjectId = useProjectStore.getState().currentProjectId;
+      if (pipelineId && currentProjectId) {
         const saved = useChunksStore.getState().chunks.find((c) => c.id === target.id);
         const position = allChunks.indexOf(target);
-        if (saved) void saveChunkCheckpoint(pipelineId, saved, position).catch(() => {});
+        if (saved) void saveChunkCheckpoint(currentProjectId, pipelineId, saved, position).catch(() => {});
       }
     }
 

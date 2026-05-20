@@ -159,7 +159,7 @@ export function DocumentView({
 
   if (!currentChunk) {
     return (
-      <section className="flex w-full flex-col items-center justify-center bg-[#f7f3ec] overflow-y-auto min-h-0 px-8 py-16">
+      <section className="flex w-full flex-col items-center justify-center bg-[#f7f3ec] overflow-y-auto min-h-0 flex-1 px-8 py-16">
         <div className="w-full max-w-2xl flex flex-col items-center">
           {/* Brand mark */}
           <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-full border border-editorial-border/60 bg-editorial-bg shadow-[0_4px_20px_rgba(26,26,26,0.06)]">

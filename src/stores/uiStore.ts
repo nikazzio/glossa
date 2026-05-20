@@ -87,11 +87,12 @@ export const useUiStore = create<UiState>()(
   ollamaBaseUrl: 'http://localhost:11434',
 
   setViewMode: (mode) =>
-    set({
+    set((state) => ({
       viewMode: mode,
       showConfigDrawer: false,
+      showDocumentDrawer: mode !== 'document' ? false : state.showDocumentDrawer,
       showChunkDrawer: false,
-    }),
+    })),
   setDocumentLayout: (layout) => set({ documentLayout: layout }),
   setSelectedChunkId: (chunkId) => set({ selectedChunkId: chunkId }),
   setShowSettings: (show) =>

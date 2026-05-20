@@ -302,7 +302,10 @@
     "refineKeyLabel": "Prompt refinement",
     "refineKeyMissingHint": "Prompt refinement is disabled for remote providers without API keys. Configure: {{providers}}. Ollama remains available without a key.",
     "refineKeyReadyHint": "Prompt refinement is ready for configured providers. Ollama does not require an API key.",
-    "contextOverflowWarning": "The longest chunk (~{{tokens}} tokens) may exceed {{model}}'s context window ({{window}} tokens). Consider reducing chunk size or using a model with a larger context window."
+    "contextOverflowWarning": "The longest chunk (~{{tokens}} tokens) may exceed {{model}}'s context window ({{window}} tokens). Consider reducing chunk size or using a model with a larger context window.",
+    "deleteTitle": "Delete \"{{name}}\"?",
+    "deleteMessage": "All translations associated with this pipeline will be permanently deleted.",
+    "deleteConfirm": "Delete"
   },
   "audit": {
     "title": "Audit Logs",

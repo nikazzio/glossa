@@ -97,7 +97,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     if (activePipelineId) {
       await runInTransaction(async (run) => {
         await saveProjectSource(id, pipeline.inputText, pipeline.inputProcessingText, pipeline.sourceFootnotes, pipeline.config, ui.viewMode);
-        await saveFullState(activePipelineId, pipeline.config, chunks, run);
+        await saveFullState(id, activePipelineId, pipeline.config, chunks, run);
       });
     }
 
@@ -269,7 +269,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
         if (activePipelineId) {
           await runInTransaction(async (run) => {
-            await saveFullState(activePipelineId!, pipeline.config, chunksStore.chunks, run);
+            await saveFullState(currentProjectId!, activePipelineId!, pipeline.config, chunksStore.chunks, run);
           });
         }
 
@@ -291,8 +291,17 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   // ── Pipeline management ──────────────────────────────────────────────
 
   switchPipeline: async (pipelineId: string) => {
-    const { currentProjectId } = get();
+    const { currentProjectId, activePipelineId } = get();
     if (!currentProjectId) return;
+
+    // Persist current pipeline before switching to avoid losing unsaved edits
+    if (activePipelineId && activePipelineId !== pipelineId) {
+      const pipeline = usePipelineStore.getState();
+      const chunks = useChunksStore.getState().chunks;
+      await runInTransaction(async (run) => {
+        await saveFullState(currentProjectId, activePipelineId, pipeline.config, chunks, run);
+      });
+    }
 
     const [pipelineData, savedTranslations, source] = await Promise.all([
       getPipelineConfig(pipelineId),
@@ -337,7 +346,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   createNewPipeline: async (name: string) => {
     const { currentProjectId } = get();
     if (!currentProjectId) return;
-    await createPipeline(currentProjectId, name);
+    const { sourceLanguage, targetLanguage } = usePipelineStore.getState().config;
+    await createPipeline(currentProjectId, name, sourceLanguage, targetLanguage);
     const pipelines = await listPipelines(currentProjectId);
     set({ pipelines });
   },

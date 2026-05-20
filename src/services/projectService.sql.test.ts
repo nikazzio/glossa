@@ -36,11 +36,7 @@ function parseInsert(tableName: string): { columns: string[]; placeholderCount: 
 }
 
 describe('pipelineService SQL structure', () => {
-  it('pipelines INSERT columns match VALUES placeholders', () => {
-    // savePipelineConfig uses UPDATE, not INSERT with ON CONFLICT.
-    // saveFullState also updates pipelines with UPDATE.
-    // The pipelines table creation uses INSERT OR IGNORE in dbService migrations.
-    // This test verifies the translations upsert statement.
+  it('translations upsert columns match VALUES placeholders', () => {
     const result = parseInsert('translations');
     expect(result).not.toBeNull();
     expect(result!.placeholderCount).toBe(result!.columns.length);

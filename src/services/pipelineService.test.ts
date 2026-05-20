@@ -203,7 +203,7 @@ describe('pipelineService', () => {
         }),
       ];
 
-      await saveFullState('pipeline-1', baseConfig, chunks, run);
+      await saveFullState('proj-1', 'pipeline-1', baseConfig, chunks, run);
 
       expect(run).toHaveBeenCalledWith(
         expect.stringContaining('UPDATE pipelines SET'),
@@ -227,7 +227,7 @@ describe('pipelineService', () => {
       });
 
       await expect(
-        saveFullState('pipeline-1', baseConfig, [
+        saveFullState('proj-1', 'pipeline-1', baseConfig, [
           makeTranslationChunk({
             id: 'chunk-a',
             originalText: 'Alpha',
@@ -243,7 +243,7 @@ describe('pipelineService', () => {
     it('skips translation writes when chunks array is empty', async () => {
       const run = vi.fn().mockResolvedValue(undefined);
 
-      await saveFullState('pipeline-1', baseConfig, [], run);
+      await saveFullState('proj-1', 'pipeline-1', baseConfig, [], run);
 
       // Only the UPDATE pipelines call; no INSERT INTO translations
       expect(run).toHaveBeenCalledWith(

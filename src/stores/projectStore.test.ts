@@ -285,6 +285,7 @@ describe('projectStore', () => {
       'document',
     );
     expect(pipelineServiceMocks.saveFullState).toHaveBeenCalledWith(
+      'proj-1',
       'pipeline-1',
       expect.objectContaining({ sourceLanguage: 'English', targetLanguage: 'Italian' }),
       [],
@@ -313,6 +314,7 @@ describe('projectStore', () => {
       'sandbox',
     );
     expect(pipelineServiceMocks.saveFullState).toHaveBeenCalledWith(
+      'proj-first-save',
       'pipeline-first-save',
       expect.any(Object),
       [],
@@ -362,6 +364,7 @@ describe('projectStore', () => {
       'sandbox',
     );
     expect(pipelineServiceMocks.saveFullState).toHaveBeenCalledWith(
+      'proj-new',
       'pipeline-new',
       expect.any(Object),
       [],

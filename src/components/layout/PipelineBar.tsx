@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Minus, Plus } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useProjectStore } from '../../stores/projectStore';
 import { confirm } from '../../stores/confirmStore';
 import type { Pipeline } from '../../types';
@@ -26,6 +27,7 @@ function isModified(pipeline: Pipeline): boolean {
 }
 
 function PipelineTab({ pipeline, index, isActive, canDelete, onSelect, onDelete, onRename }: PipelineTabProps) {
+  const { t } = useTranslation();
   const [hovered, setHovered] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(pipeline.name);
@@ -52,9 +54,9 @@ function PipelineTab({ pipeline, index, isActive, canDelete, onSelect, onDelete,
     e.stopPropagation();
     if (isModified(pipeline)) {
       const confirmed = await confirm({
-        title: `Eliminare "${pipeline.name}"?`,
-        message: 'Le traduzioni associate a questa pipeline verranno eliminate definitivamente.',
-        confirmLabel: 'Elimina',
+        title: t('pipeline.deleteTitle', { name: pipeline.name }),
+        message: t('pipeline.deleteMessage'),
+        confirmLabel: t('pipeline.deleteConfirm'),
         danger: true,
       });
       if (!confirmed) return;
@@ -129,7 +131,7 @@ export function PipelineBar() {
 
   return (
     <div
-      role="tablist"
+      role="group"
       aria-label="Pipeline"
       className="flex shrink-0 items-center gap-1.5 bg-[#f7f3ec] px-5 pt-2 pb-1.5 md:px-6"
     >

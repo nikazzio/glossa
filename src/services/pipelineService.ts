@@ -150,12 +150,17 @@ export async function getPipelineConfig(pipelineId: string): Promise<{
   };
 }
 
-export async function createPipeline(projectId: string, name: string): Promise<string> {
+export async function createPipeline(
+  projectId: string,
+  name: string,
+  sourceLanguage: string,
+  targetLanguage: string,
+): Promise<string> {
   const id = `pipeline-${Date.now()}`;
   await execute(
-    `INSERT INTO pipelines (id, project_id, name, stages, judge_prompt, judge_model, judge_provider)
-     VALUES ($1, $2, $3, '[]', '', '', '')`,
-    [id, projectId, name],
+    `INSERT INTO pipelines (id, project_id, name, source_language, target_language, stages, judge_prompt, judge_model, judge_provider)
+     VALUES ($1, $2, $3, $4, $5, '[]', '', '', '')`,
+    [id, projectId, name, sourceLanguage, targetLanguage],
   );
   return id;
 }
@@ -271,17 +276,18 @@ export async function loadTranslations(pipelineId: string): Promise<SavedTransla
 }
 
 export async function saveChunkCheckpoint(
+  projectId: string,
   pipelineId: string,
   chunk: TranslationChunk,
   position: number,
 ): Promise<void> {
   await execute(
     `INSERT INTO translations (
-       id, pipeline_id, original_text, final_translation, position, chunk_status, stage_results,
+       id, pipeline_id, project_id, original_text, final_translation, position, chunk_status, stage_results,
        judge_status, judge_rating, translation_locked, judge_issues, coherence_result, footnotes,
        source_display_text, source_processing_text, translation_display_text, translation_processing_text,
        blob_id, blob_order, blob_reference_chunk_ids
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
      ON CONFLICT(id) DO UPDATE SET
        original_text                = excluded.original_text,
        final_translation            = excluded.final_translation,
@@ -304,6 +310,7 @@ export async function saveChunkCheckpoint(
     [
       chunk.id,
       pipelineId,
+      projectId,
       chunk.sourceDisplayText,
       chunk.translationDisplayText || chunk.judgeResult.content || lastStageContent(chunk.stageResults) || '',
       position,
@@ -327,15 +334,17 @@ export async function saveChunkCheckpoint(
 }
 
 export async function saveTranslations(
+  projectId: string,
   pipelineId: string,
   chunks: TranslationChunk[],
 ): Promise<void> {
-  await saveTranslationsInternal(pipelineId, chunks, execute);
+  await saveTranslationsInternal(projectId, pipelineId, chunks, execute);
 }
 
 type ExecuteQuery = (query: string, params?: unknown[]) => Promise<void>;
 
 async function saveTranslationsInternal(
+  projectId: string,
   pipelineId: string,
   chunks: TranslationChunk[],
   run: ExecuteQuery,
@@ -348,11 +357,11 @@ async function saveTranslationsInternal(
   for (const [position, chunk] of chunks.entries()) {
     await run(
       `INSERT INTO translations (
-         id, pipeline_id, original_text, final_translation, position, chunk_status, stage_results,
+         id, pipeline_id, project_id, original_text, final_translation, position, chunk_status, stage_results,
          judge_status, judge_rating, translation_locked, judge_issues, coherence_result, footnotes,
          source_display_text, source_processing_text, translation_display_text, translation_processing_text,
          blob_id, blob_order, blob_reference_chunk_ids
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
        ON CONFLICT(id) DO UPDATE SET
          original_text                = excluded.original_text,
          final_translation            = excluded.final_translation,
@@ -375,6 +384,7 @@ async function saveTranslationsInternal(
       [
         chunk.id,
         pipelineId,
+        projectId,
         chunk.sourceDisplayText,
         chunk.translationDisplayText || chunk.judgeResult.content || lastStageContent(chunk.stageResults) || '',
         position,
@@ -405,6 +415,7 @@ async function saveTranslationsInternal(
 }
 
 export async function saveFullState(
+  projectId: string,
   pipelineId: string,
   config: PipelineConfig,
   chunks: TranslationChunk[],
@@ -448,7 +459,7 @@ export async function saveFullState(
       pipelineId,
     ],
   );
-  await saveTranslationsInternal(pipelineId, chunks, run);
+  await saveTranslationsInternal(projectId, pipelineId, chunks, run);
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────

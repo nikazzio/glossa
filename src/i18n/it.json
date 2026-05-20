@@ -302,7 +302,10 @@
     "refineKeyLabel": "Rifinitura prompt",
     "refineKeyMissingHint": "La rifinitura dei prompt è disabilitata per i provider remoti senza API key. Configura: {{providers}}. Ollama resta disponibile senza chiave.",
     "refineKeyReadyHint": "La rifinitura dei prompt è pronta per i provider configurati. Ollama non richiede API key.",
-    "contextOverflowWarning": "Il chunk più lungo (~{{tokens}} token) potrebbe superare la finestra di contesto di {{model}} ({{window}} token). Riduci la dimensione dei chunk o usa un modello con contesto più grande."
+    "contextOverflowWarning": "Il chunk più lungo (~{{tokens}} token) potrebbe superare la finestra di contesto di {{model}} ({{window}} token). Riduci la dimensione dei chunk o usa un modello con contesto più grande.",
+    "deleteTitle": "Eliminare \"{{name}}\"?",
+    "deleteMessage": "Le traduzioni associate a questa pipeline verranno eliminate definitivamente.",
+    "deleteConfirm": "Elimina"
   },
   "audit": {
     "title": "Log Audit",
