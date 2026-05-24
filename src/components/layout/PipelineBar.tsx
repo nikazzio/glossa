@@ -118,6 +118,7 @@ function PipelineTab({ pipeline, index, isActive, canDelete, onSelect, onDelete,
 }
 
 export function PipelineBar() {
+  const { t } = useTranslation();
   const pipelines = useProjectStore((s) => s.pipelines);
   const activePipelineId = useProjectStore((s) => s.activePipelineId);
   const switchPipeline = useProjectStore((s) => s.switchPipeline);
