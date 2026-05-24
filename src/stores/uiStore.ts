@@ -30,6 +30,8 @@ interface UiState {
 
   pipelineMode: RunPhase;
   setPipelineMode: (mode: RunPhase) => void;
+  pipelineTestChunkCount: number;
+  setPipelineTestChunkCount: (count: number) => void;
 
   // App-level chunk preset word targets (persisted)
   chunkPresetShort: number;
@@ -78,6 +80,7 @@ export const useUiStore = create<UiState>()(
   ollamaStatus: 'unknown',
   glossaryHighlightEnabled: false,
   pipelineMode: 'test',
+  pipelineTestChunkCount: 3,
   focusedChunkId: null,
   focusedIssueQuery: null,
   focusedIssueRequestId: 0,
@@ -162,6 +165,10 @@ export const useUiStore = create<UiState>()(
   setOllamaModels: (models) => set({ ollamaModels: models }),
   setOllamaStatus: (status) => set({ ollamaStatus: status }),
   setPipelineMode: (mode) => set({ pipelineMode: mode }),
+  setPipelineTestChunkCount: (count) => {
+    const normalized = Number.isFinite(count) ? Math.floor(count) : 1;
+    set({ pipelineTestChunkCount: Math.max(1, normalized) });
+  },
   setGlossaryHighlightEnabled: (enabled) => set({ glossaryHighlightEnabled: enabled }),
   setFocusedChunkId: (chunkId) => set({ focusedChunkId: chunkId }),
   focusIssueInChunk: (chunkId, query) =>
@@ -184,6 +191,7 @@ export const useUiStore = create<UiState>()(
         chunkPresetShort: state.chunkPresetShort,
         chunkPresetMedium: state.chunkPresetMedium,
         chunkPresetLong: state.chunkPresetLong,
+        pipelineTestChunkCount: state.pipelineTestChunkCount,
         ollamaBaseUrl: state.ollamaBaseUrl,
       }),
     },

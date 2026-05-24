@@ -552,14 +552,20 @@ export function usePipeline() {
     const allChunks = useChunksStore.getState().chunks;
     if (allChunks.length === 0) return;
 
-    // Pick first chunk that has not been translated or tested yet
-    const target = allChunks.find((c) => c.status === 'ready');
-    if (!target) {
+    const requestedTestChunks = Math.max(1, useUiStore.getState().pipelineTestChunkCount);
+    const targets = allChunks
+      .filter((c) => c.status === 'ready')
+      .slice(0, requestedTestChunks);
+
+    if (targets.length === 0) {
       toast.message(t('pipeline.dryRunNoTarget'));
       return;
     }
 
-    pipelineLog.singlePipelineStart(target.id);
+    pipelineLog.batchPipelineStart(
+      targets.length,
+      config.stages.filter((stage) => stage.enabled).length,
+    );
     if (!(await ensureProvidersReady([
       ...config.stages.filter((s) => s.enabled).map((s, i) => ({
         provider: s.provider,
@@ -589,29 +595,57 @@ export function usePipeline() {
       toast.warning(t('pipeline.blobComputeFailed'), { description: msg });
     }
 
-    const freshTarget = useChunksStore.getState().chunks.find((c) => c.id === target.id) ?? target;
-    const outcome = await executePipelineForChunk(freshTarget, {});
+    let completedPreviewCount = 0;
+    let errorCount = 0;
+    let cancelled = false;
 
-    if (outcome === 'completed') {
-      updateChunkStatus(target.id, 'preview');
-      const pipelineId = useProjectStore.getState().activePipelineId;
-      const currentProjectId = useProjectStore.getState().currentProjectId;
-      if (pipelineId && currentProjectId) {
-        const saved = useChunksStore.getState().chunks.find((c) => c.id === target.id);
-        const position = allChunks.indexOf(target);
-        if (saved) void saveChunkCheckpoint(currentProjectId, pipelineId, saved, position).catch(() => {});
+    for (const target of targets) {
+      const freshTarget = useChunksStore.getState().chunks.find((c) => c.id === target.id) ?? target;
+      const outcome = await executePipelineForChunk(freshTarget, {});
+
+      if (outcome === 'cancelled') {
+        cancelled = true;
+        break;
+      }
+
+      if (outcome === 'completed') {
+        updateChunkStatus(target.id, 'preview');
+        const pipelineId = useProjectStore.getState().activePipelineId;
+        const currentProjectId = useProjectStore.getState().currentProjectId;
+        if (pipelineId && currentProjectId) {
+          const saved = useChunksStore.getState().chunks.find((c) => c.id === target.id);
+          const position = allChunks.indexOf(target);
+          if (saved) void saveChunkCheckpoint(currentProjectId, pipelineId, saved, position).catch(() => {});
+        }
+        completedPreviewCount++;
+      } else if (outcome === 'failed') {
+        errorCount++;
       }
     }
 
     setIsProcessing(false);
     useChunksStore.getState().clearCancelRequest();
 
-    if (outcome === 'cancelled') {
-      pipelineLog.singlePipelineCancelled(target.id);
+    if (cancelled) {
+      pipelineLog.batchPipelineCancelled();
       toast.message(t('pipeline.stopConfirmed'));
-    } else if (outcome === 'completed') {
-      pipelineLog.singlePipelineCompleted(target.id);
-      toast.success(t('pipeline.dryRunCompleted'));
+    } else if (completedPreviewCount > 0 && errorCount === 0) {
+      pipelineLog.batchPipelineCompleted();
+      toast.success(
+        completedPreviewCount === 1
+          ? t('pipeline.dryRunCompleted')
+          : t('pipeline.dryRunCompletedMany', { count: completedPreviewCount }),
+      );
+    } else if (errorCount > 0) {
+      pipelineLog.batchPipelineCompletedWithErrors(errorCount);
+      toast.warning(
+        completedPreviewCount > 0
+          ? t('pipeline.dryRunCompletedMany', { count: completedPreviewCount })
+          : t('errors.pipelineCompletedWithErrors', { count: errorCount }),
+        completedPreviewCount > 0
+          ? { description: t('errors.pipelineCompletedWithErrors', { count: errorCount }) }
+          : undefined,
+      );
     }
   }, [config, t, setIsProcessing, updateChunkStatus, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, clearChunkStages, ensureProvidersReady, setBlobAssignments]);
 

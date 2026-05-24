@@ -32,12 +32,11 @@ export function ConfigDrawer({
   const [glossaryDirty, setGlossaryDirty] = useState(false);
   const [isSavingGlossary, setIsSavingGlossary] = useState(false);
   const { config, setConfig, assignGlossary } = usePipelineStore();
-  const { chunks, resetAllChunks, resetPreviewChunks, isProcessing } = useChunksStore();
+  const { chunks, resetAllChunks, isProcessing } = useChunksStore();
   const { glossaries, setShowLibraryPanel, loadGlossaries, isLoaded } = useLibraryStore();
   const { currentProjectId } = useProjectStore();
 
   const completedCount = chunks.filter((c) => c.status === 'completed').length;
-  const previewCount = chunks.filter((c) => c.status === 'preview').length;
 
   const handleResetAll = async () => {
     const ok = await confirm({
@@ -50,11 +49,6 @@ export function ConfigDrawer({
     resetAllChunks();
     setPipelineMode('test');
     toast.success(t('pipeline.resetAllDone'));
-  };
-
-  const handleResetPreview = () => {
-    resetPreviewChunks();
-    toast.success(t('pipeline.resetPreviewDone'));
   };
 
   useEffect(() => {
@@ -194,29 +188,17 @@ export function ConfigDrawer({
         className="flex flex-1 flex-col overflow-y-auto bg-editorial-bg/40 custom-scrollbar min-h-0"
       />
 
-      {(completedCount > 0 || previewCount > 0) && (
+      {completedCount > 0 && (
         <div className="shrink-0 border-t border-editorial-border/40 px-6 py-4">
-          {completedCount > 0 ? (
-            <button
-              type="button"
-              onClick={handleResetAll}
-              disabled={isProcessing}
-              className="flex w-full items-center justify-center gap-2 rounded-full border border-editorial-accent/40 px-4 py-2 text-xs font-bold uppercase tracking-widest text-editorial-accent/70 transition-colors hover:border-editorial-accent hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <Trash2 size={12} />
-              {t('pipeline.resetAll')}
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={handleResetPreview}
-              disabled={isProcessing}
-              className="flex w-full items-center justify-center gap-2 rounded-full border border-editorial-border px-4 py-2 text-xs font-bold uppercase tracking-widest text-editorial-muted transition-colors hover:border-editorial-charcoal/60 hover:text-editorial-charcoal focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <Trash2 size={12} />
-              {t('pipeline.resetPreview')}
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={handleResetAll}
+            disabled={isProcessing}
+            className="flex w-full items-center justify-center gap-2 rounded-full border border-editorial-accent/40 px-4 py-2 text-xs font-bold uppercase tracking-widest text-editorial-accent/70 transition-colors hover:border-editorial-accent hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Trash2 size={12} />
+            {t('pipeline.resetAll')}
+          </button>
         </div>
       )}
     </Drawer>

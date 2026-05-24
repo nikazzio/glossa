@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { toast } from 'sonner';
 import { usePipelineStore } from '../stores/pipelineStore';
 import { useChunksStore } from '../stores/chunksStore';
+import { useUiStore } from '../stores/uiStore';
 import { makeTranslationChunk } from '../test/chunkFactory';
 import { usePipeline } from './usePipeline';
 
@@ -761,6 +762,7 @@ describe('usePipeline', () => {
 
   describe('runDryRun — test phase', () => {
     it('marks the first ready chunk as preview after a successful run', async () => {
+      useUiStore.setState({ pipelineTestChunkCount: 1 });
       llmMocks.runStage.mockResolvedValue({ content: 'Test translation' });
       llmMocks.judgeTranslation.mockResolvedValue({ content: '', rating: 'good', issues: [] });
 

@@ -10,10 +10,12 @@ import {
   Languages,
   Loader2,
   Lock,
+  Minus,
   Pencil,
   PanelLeft,
   PanelRight,
   Play,
+  Plus,
   RotateCcw,
   ScanLine,
   Square,
@@ -73,6 +75,8 @@ export function DocumentView({
     glossaryHighlightEnabled,
     pipelineMode,
     setPipelineMode,
+    pipelineTestChunkCount,
+    setPipelineTestChunkCount,
     focusedChunkId,
     focusedIssueQuery,
     focusedIssueRequestId,
@@ -80,6 +84,14 @@ export function DocumentView({
   } = useUiStore();
 
   const effectivePipelineMode = completedCount > 0 ? 'production' : pipelineMode;
+  const runChunkCount = effectivePipelineMode === 'test'
+    ? Math.max(1, Math.min(pipelineTestChunkCount, chunks.length || 1))
+    : chunks.length;
+  const canAdjustTestCount = effectivePipelineMode === 'test' && completedCount === 0 && !isProcessing;
+  const runPanelClass =
+    effectivePipelineMode === 'test'
+      ? 'border-amber-200/70 bg-[#faf4e7]/95 shadow-[0_16px_50px_rgba(129,89,30,0.06)]'
+      : 'border-editorial-border bg-editorial-bg/90 shadow-[0_16px_50px_rgba(26,26,26,0.05)]';
 
   const [viewportWidth, setViewportWidth] = useState(
     typeof window === 'undefined' ? 0 : window.innerWidth,
@@ -99,6 +111,12 @@ export function DocumentView({
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
+
+  useEffect(() => {
+    if (chunks.length > 0 && pipelineTestChunkCount > chunks.length) {
+      setPipelineTestChunkCount(chunks.length);
+    }
+  }, [chunks.length, pipelineTestChunkCount, setPipelineTestChunkCount]);
 
   const resolvedLayout =
     documentLayout === 'auto'
@@ -217,136 +235,162 @@ export function DocumentView({
         <div className="flex items-stretch gap-2 shrink-0">
           {/* Pannello run: striscia orizzontale compatta */}
           {onRunPipeline && onCancelPipeline && (
-            <div className="flex items-center gap-2.5 shrink-0 rounded-[20px] border border-editorial-border bg-editorial-bg/90 px-4 py-3 shadow-[0_16px_50px_rgba(26,26,26,0.05)]">
+            <div className={`grid shrink-0 grid-cols-[auto_auto] items-stretch gap-x-3 gap-y-2 rounded-[20px] border px-4 py-3 ${runPanelClass}`}>
+              <div className="grid w-fit gap-2 self-stretch">
+                <div
+                  className={`flex w-full items-center justify-center rounded-full border border-editorial-border bg-editorial-textbox/40 p-0.5 ${completedCount > 0 ? 'opacity-40 pointer-events-none' : ''}`}
+                  aria-disabled={completedCount > 0}
+                  title={completedCount > 0 ? t('pipeline.modeLockedHint') : undefined}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setPipelineMode('test')}
+                    disabled={completedCount > 0}
+                    title={t('pipeline.modeTestHint')}
+                    aria-label={t('pipeline.modeTest')}
+                    className={`flex flex-1 items-center justify-center rounded-full px-4 py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                      pipelineMode === 'test'
+                        ? 'bg-editorial-bg text-editorial-ink shadow-sm'
+                        : 'text-editorial-muted hover:text-editorial-ink'
+                    }`}
+                  >
+                    <FlaskConical size={12} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPipelineMode('production')}
+                    disabled={completedCount > 0}
+                    title={t('pipeline.modeProductionHint')}
+                    aria-label={t('pipeline.modeProduction')}
+                    className={`flex flex-1 items-center justify-center rounded-full px-4 py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                      pipelineMode === 'production'
+                        ? 'bg-editorial-bg text-editorial-charcoal shadow-sm'
+                        : 'text-editorial-muted hover:text-editorial-ink'
+                    }`}
+                  >
+                    <Zap size={12} />
+                  </button>
+                </div>
 
-              {/* Toggle Test / Produzione — solo icone */}
-              <div
-                className={`flex rounded-full border border-editorial-border bg-editorial-textbox/40 p-0.5 ${completedCount > 0 ? 'opacity-40 pointer-events-none' : ''}`}
-                aria-disabled={completedCount > 0}
-                title={completedCount > 0 ? t('pipeline.modeLockedHint') : undefined}
-              >
-                <button
-                  type="button"
-                  onClick={() => setPipelineMode('test')}
-                  disabled={completedCount > 0}
-                  title={t('pipeline.modeTestHint')}
-                  aria-label={t('pipeline.modeTest')}
-                  className={`rounded-full p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                    pipelineMode === 'test'
-                      ? 'bg-editorial-bg text-editorial-ink shadow-sm'
-                      : 'text-editorial-muted hover:text-editorial-ink'
-                  }`}
-                >
-                  <FlaskConical size={13} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPipelineMode('production')}
-                  disabled={completedCount > 0}
-                  title={t('pipeline.modeProductionHint')}
-                  aria-label={t('pipeline.modeProduction')}
-                  className={`rounded-full p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                    pipelineMode === 'production'
-                      ? 'bg-editorial-bg text-editorial-charcoal shadow-sm'
-                      : 'text-editorial-muted hover:text-editorial-ink'
-                  }`}
-                >
-                  <Zap size={13} />
-                </button>
+                <div className="flex items-center gap-1" title={t('pipeline.testChunkCountHint')} aria-label={t('pipeline.testChunkCountHint')}>
+                  <button
+                    type="button"
+                    onClick={() => setPipelineTestChunkCount(runChunkCount - 1)}
+                    disabled={!canAdjustTestCount || runChunkCount <= 1}
+                    title={t('pipeline.decreaseTestChunkCount')}
+                    aria-label={t('pipeline.decreaseTestChunkCount')}
+                    className="flex h-[24px] w-[24px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted transition-colors hover:border-editorial-charcoal/60 hover:text-editorial-charcoal focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-35"
+                  >
+                    <Minus size={8} />
+                  </button>
+                  <div
+                    className={`flex h-[34px] min-w-[34px] items-center justify-center rounded-full border px-2 text-[12px] font-bold tracking-[0.12em] shadow-[0_1px_6px_rgba(26,26,26,0.06)] ${
+                      effectivePipelineMode === 'test'
+                        ? 'border-amber-200/80 bg-amber-50 text-amber-900'
+                        : 'border-editorial-border bg-editorial-bg text-editorial-ink'
+                    }`}
+                    title={t('pipeline.runChunkCount', { count: runChunkCount })}
+                    aria-label={t('pipeline.runChunkCount', { count: runChunkCount })}
+                  >
+                    {runChunkCount}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPipelineTestChunkCount(runChunkCount + 1)}
+                    disabled={!canAdjustTestCount || runChunkCount >= chunks.length}
+                    title={t('pipeline.increaseTestChunkCount')}
+                    aria-label={t('pipeline.increaseTestChunkCount')}
+                    className="flex h-[24px] w-[24px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted transition-colors hover:border-editorial-charcoal/60 hover:text-editorial-charcoal focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-35"
+                  >
+                    <Plus size={8} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onRetranslateChunk(currentChunk.id)}
+                    disabled={isProcessing || !currentChunk.originalText.trim()}
+                    title={effectivePipelineMode === 'test' ? t('pipeline.retestChunk') : t('pipeline.retranslateChunk')}
+                    aria-label={effectivePipelineMode === 'test' ? t('pipeline.retestChunk') : t('pipeline.retranslateChunk')}
+                    className="flex h-[34px] w-[34px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted transition-colors hover:border-editorial-charcoal/60 hover:text-editorial-charcoal focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <RotateCcw size={11} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onReauditChunk(currentChunk.id)}
+                    disabled={isProcessing || !currentChunk.currentDraft}
+                    title={t('pipeline.reauditChunk')}
+                    aria-label={t('pipeline.reauditChunk')}
+                    className="flex h-[34px] w-[34px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted transition-colors hover:border-editorial-charcoal/60 hover:text-editorial-charcoal focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <ScanLine size={11} />
+                  </button>
+                </div>
               </div>
 
-              <div className="h-6 w-px bg-editorial-border shrink-0" />
-
-              {/* Cerchio avvio pipeline */}
-              <div className="relative flex h-[54px] w-[54px] flex-shrink-0 items-center justify-center rounded-full border border-editorial-border bg-editorial-bg/90">
-                {isProcessing ? (
-                  cancelRequested ? (
-                    <button
-                      type="button"
-                      disabled
-                      title={t('pipeline.stopping')}
-                      aria-label={t('pipeline.stopping')}
-                      className="flex h-[44px] w-[44px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted opacity-50 focus:outline-none"
-                    >
-                      <Loader2 size={20} className="animate-spin" />
-                    </button>
+              <div className="relative row-span-2 flex min-h-[74px] items-center justify-center self-center pl-1">
+                <div className="relative flex h-[84px] w-[84px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg/90">
+                  {isProcessing ? (
+                    cancelRequested ? (
+                      <button
+                        type="button"
+                        disabled
+                        title={t('pipeline.stopping')}
+                        aria-label={t('pipeline.stopping')}
+                        className="flex h-[64px] w-[64px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted opacity-50 focus:outline-none"
+                      >
+                        <Loader2 size={22} className="animate-spin" />
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={onCancelPipeline}
+                        title={t('pipeline.stopPipeline')}
+                        aria-label={t('pipeline.stopPipeline')}
+                        className="flex h-[64px] w-[64px] items-center justify-center rounded-full border border-editorial-accent bg-editorial-bg text-editorial-accent transition-colors hover:bg-editorial-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                      >
+                        <Square size={21} fill="currentColor" />
+                      </button>
+                    )
                   ) : (
                     <button
                       type="button"
-                      onClick={onCancelPipeline}
-                      title={t('pipeline.stopPipeline')}
-                      aria-label={t('pipeline.stopPipeline')}
-                      className="flex h-[44px] w-[44px] items-center justify-center rounded-full border border-editorial-accent bg-editorial-bg text-editorial-accent transition-colors hover:bg-editorial-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                      onClick={effectivePipelineMode === 'test' ? onDryRun : onRunPipeline}
+                      title={t('pipeline.beginPipeline')}
+                      aria-label={t('pipeline.beginPipeline')}
+                      className="flex h-[64px] w-[64px] items-center justify-center rounded-full bg-editorial-charcoal text-white transition-colors hover:bg-editorial-charcoal/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                     >
-                      <Square size={17} fill="currentColor" />
+                      <Play size={22} fill="currentColor" />
                     </button>
-                  )
-                ) : (
-                  <button
-                    type="button"
-                    onClick={effectivePipelineMode === 'test' ? onDryRun : onRunPipeline}
-                    title={t('pipeline.beginPipeline')}
-                    aria-label={t('pipeline.beginPipeline')}
-                    className="flex h-[44px] w-[44px] items-center justify-center rounded-full bg-editorial-charcoal text-white transition-colors hover:bg-editorial-charcoal/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  >
-                    <Play size={20} fill="currentColor" />
-                  </button>
-                )}
+                  )}
 
-                {/* Dot costi */}
-                {costEstimate.stages.length > 0 && (
-                  <div
-                    className="absolute -bottom-1 -right-1"
-                    onMouseEnter={() => setShowCostPanel(true)}
-                    onMouseLeave={() => setShowCostPanel(false)}
-                  >
-                    <button
-                      type="button"
-                      onFocus={() => setShowCostPanel(true)}
-                      onBlur={() => setShowCostPanel(false)}
-                      aria-label={t('cost.breakdown')}
-                      className="flex h-[18px] w-[18px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted transition-colors hover:border-editorial-charcoal hover:text-editorial-charcoal focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                  {costEstimate.stages.length > 0 && (
+                    <div
+                      className="absolute -bottom-1 -right-1"
+                      onMouseEnter={() => setShowCostPanel(true)}
+                      onMouseLeave={() => setShowCostPanel(false)}
                     >
-                      <Info size={9} />
-                    </button>
-                  </div>
-                )}
-                {showCostPanel && costEstimate.stages.length > 0 && (
-                  <div
-                    className="absolute left-0 top-full z-50 mt-2 w-64"
-                    onMouseEnter={() => setShowCostPanel(true)}
-                    onMouseLeave={() => setShowCostPanel(false)}
-                  >
-                    <CostBreakdownPanel estimate={costEstimate} />
-                  </div>
-                )}
+                      <button
+                        type="button"
+                        onFocus={() => setShowCostPanel(true)}
+                        onBlur={() => setShowCostPanel(false)}
+                        aria-label={t('cost.breakdown')}
+                        className="flex h-[18px] w-[18px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted transition-colors hover:border-editorial-charcoal hover:text-editorial-charcoal focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                      >
+                        <Info size={9} />
+                      </button>
+                    </div>
+                  )}
+                  {showCostPanel && costEstimate.stages.length > 0 && (
+                    <div
+                      className="absolute left-0 top-full z-50 mt-2 w-64"
+                      onMouseEnter={() => setShowCostPanel(true)}
+                      onMouseLeave={() => setShowCostPanel(false)}
+                    >
+                      <CostBreakdownPanel estimate={costEstimate} />
+                    </div>
+                  )}
+                </div>
               </div>
-
-              <div className="h-6 w-px bg-editorial-border shrink-0" />
-
-              {/* Ritraduzione chunk corrente — solo icona */}
-              <button
-                type="button"
-                onClick={() => onRetranslateChunk(currentChunk.id)}
-                disabled={isProcessing || !currentChunk.originalText.trim()}
-                title={effectivePipelineMode === 'test' ? t('pipeline.retestChunk') : t('pipeline.retranslateChunk')}
-                aria-label={effectivePipelineMode === 'test' ? t('pipeline.retestChunk') : t('pipeline.retranslateChunk')}
-                className="rounded-full border border-editorial-border p-2.5 text-editorial-muted transition-colors hover:border-editorial-charcoal/60 hover:text-editorial-charcoal focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <RotateCcw size={15} />
-              </button>
-
-              {/* Rivaluta chunk — solo icona */}
-              <button
-                type="button"
-                onClick={() => onReauditChunk(currentChunk.id)}
-                disabled={isProcessing || !currentChunk.currentDraft}
-                title={t('pipeline.reauditChunk')}
-                aria-label={t('pipeline.reauditChunk')}
-                className="rounded-full border border-editorial-border p-2.5 text-editorial-muted transition-colors hover:border-editorial-charcoal/60 hover:text-editorial-charcoal focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <ScanLine size={15} />
-              </button>
             </div>
           )}
 
