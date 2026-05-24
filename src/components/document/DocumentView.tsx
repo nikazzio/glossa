@@ -184,12 +184,12 @@ export function DocumentView({
           {/* Dashboard placeholder cards */}
           <div className="grid w-full grid-cols-3 gap-3">
             {([
-              { icon: Languages, label: t('document.emptyCardPipeline') },
-              { icon: Zap,       label: t('document.emptyCardTranslations') },
-              { icon: Wand2,     label: t('document.emptyCardQuality') },
-            ] as const).map(({ icon: Icon, label }) => (
+              { key: 'pipeline',     icon: Languages, label: t('document.emptyCardPipeline') },
+              { key: 'translations', icon: Zap,       label: t('document.emptyCardTranslations') },
+              { key: 'quality',      icon: Wand2,     label: t('document.emptyCardQuality') },
+            ] as const).map(({ key, icon: Icon, label }) => (
               <div
-                key={label}
+                key={key}
                 className="flex flex-col items-center gap-3 rounded-[20px] border border-editorial-border/60 bg-editorial-bg/70 px-5 py-6 text-center"
               >
                 <Icon size={18} className="text-editorial-muted/40" />

@@ -94,9 +94,11 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const pipelines = await listPipelines(id);
     const activePipelineId = pipelines[0]?.id ?? null;
 
+    // saveProjectSource uses execute() directly — must run outside the transaction
+    // to avoid deadlocking on the shared write-serialization queue.
+    await saveProjectSource(id, pipeline.inputText, pipeline.inputProcessingText, pipeline.sourceFootnotes, pipeline.config, ui.viewMode);
     if (activePipelineId) {
       await runInTransaction(async (run) => {
-        await saveProjectSource(id, pipeline.inputText, pipeline.inputProcessingText, pipeline.sourceFootnotes, pipeline.config, ui.viewMode);
         await saveFullState(id, activePipelineId, pipeline.config, chunks, run);
       });
     }

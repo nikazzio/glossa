@@ -1,4 +1,4 @@
-import { select, execute, runInTransaction } from './dbService';
+import { select, execute } from './dbService';
 import { logger } from '../utils/logger';
 import { normalizeQualityRating, qualityDefault } from '../utils';
 import type {
@@ -52,7 +52,9 @@ interface DbPipeline {
   updated_at: string;
 }
 
-function parseJson<T>(value: string | null | undefined, fallback: T): T {
+function parseJson<T>(value: string | null | undefined): T | undefined;
+function parseJson<T>(value: string | null | undefined, fallback: T): T;
+function parseJson<T>(value: string | null | undefined, fallback?: T): T | undefined {
   if (!value) return fallback;
   try { return JSON.parse(value) as T; } catch { return fallback; }
 }
@@ -88,7 +90,7 @@ function rowToPipelineConfig(row: DbPipeline, glossary: GlossaryEntry[], assigne
     judgeProvider: row.judge_provider as PipelineConfig['judgeProvider'],
     useChunking: row.use_chunking === 1,
     targetChunkCount: row.target_chunk_count ?? 0,
-    reviewProviderOptions: parseJson<ProviderRuntimeConfig>(row.review_provider_options, undefined as unknown as ProviderRuntimeConfig),
+    reviewProviderOptions: parseJson<ProviderRuntimeConfig>(row.review_provider_options),
     persona: row.persona?.trim() || undefined,
     customSourceLanguage: row.custom_source_language || undefined,
     customTargetLanguage: row.custom_target_language || undefined,
@@ -477,7 +479,7 @@ export function restoreTranslations(rows: SavedTranslation[]): TranslationChunk[
   return rows.map((row) => {
     const judgeResult = restoreJudgeResult(row);
     const stageResults = parseJson<Record<string, PipelineResult>>(row.stage_results, {});
-    const coherenceResult = parseJson<CoherenceResult>(row.coherence_result, undefined as unknown as CoherenceResult);
+    const coherenceResult = parseJson<CoherenceResult>(row.coherence_result);
     const footnotes = row.footnotes ? parseJson<Footnote[]>(row.footnotes, []) : undefined;
     const blobReferenceChunkIds = row.blob_reference_chunk_ids
       ? (parseJson<unknown>(row.blob_reference_chunk_ids, []) as string[]).filter((v): v is string => typeof v === 'string')

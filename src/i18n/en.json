@@ -305,7 +305,12 @@
     "contextOverflowWarning": "The longest chunk (~{{tokens}} tokens) may exceed {{model}}'s context window ({{window}} tokens). Consider reducing chunk size or using a model with a larger context window.",
     "deleteTitle": "Delete \"{{name}}\"?",
     "deleteMessage": "All translations associated with this pipeline will be permanently deleted.",
-    "deleteConfirm": "Delete"
+    "deleteConfirm": "Delete",
+    "ariaDelete": "Delete {{name}}",
+    "ariaSelect": "Select {{name}}",
+    "ariaRename": "Rename pipeline",
+    "renameHint": "Double-click to rename",
+    "ariaAdd": "Add pipeline"
   },
   "audit": {
     "title": "Audit Logs",

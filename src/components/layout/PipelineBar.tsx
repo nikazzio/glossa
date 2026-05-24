@@ -79,7 +79,7 @@ function PipelineTab({ pipeline, index, isActive, canDelete, onSelect, onDelete,
     >
       <button
         onClick={showDeleteHint ? handleDelete : (isActive ? undefined : onSelect)}
-        aria-label={showDeleteHint ? `Elimina ${pipeline.name}` : `Seleziona ${pipeline.name}`}
+        aria-label={showDeleteHint ? t('pipeline.ariaDelete', { name: pipeline.name }) : t('pipeline.ariaSelect', { name: pipeline.name })}
         className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
           showDeleteHint
             ? 'bg-editorial-accent text-white cursor-pointer'
@@ -99,7 +99,7 @@ function PipelineTab({ pipeline, index, isActive, canDelete, onSelect, onDelete,
           onBlur={commitEdit}
           onKeyDown={handleKeyDown}
           className="font-display italic tracking-tight text-editorial-ink text-sm bg-transparent border-b border-editorial-accent outline-none w-32 leading-none"
-          aria-label="Rinomina pipeline"
+          aria-label={t('pipeline.ariaRename')}
         />
       ) : (
         <button
@@ -108,7 +108,7 @@ function PipelineTab({ pipeline, index, isActive, canDelete, onSelect, onDelete,
           className={`font-display italic tracking-tight text-sm leading-none focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent rounded ${
             isActive ? 'text-editorial-ink cursor-default' : 'text-editorial-muted/60 hover:text-editorial-ink'
           }`}
-          title={isActive ? 'Doppio clic per rinominare' : undefined}
+          title={isActive ? t('pipeline.renameHint') : undefined}
         >
           {pipeline.name}
         </button>
@@ -151,7 +151,7 @@ export function PipelineBar() {
       {!atLimit && (
         <button
           onClick={() => void createNewPipeline(`Pipeline ${pipelines.length + 1}`)}
-          aria-label="Aggiungi pipeline"
+          aria-label={t('pipeline.ariaAdd')}
           className="ml-1 flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-editorial-border/40 text-editorial-muted/40 transition-colors hover:border-editorial-accent/50 hover:text-editorial-accent/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
         >
           <Plus size={10} />
