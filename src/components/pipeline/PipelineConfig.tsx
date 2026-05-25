@@ -3,7 +3,7 @@ import { useMemo, useState, useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { ModelProvider, PipelineMode, PromptTemplate, ReasoningEffortLevel } from '../../types';
-import { LANGUAGES, defaultPersonaText } from '../../constants';
+import { LANGUAGES, defaultPersonaText, DEFAULT_JUDGE_PROMPT, DEFAULT_COHERENCE_PROMPT } from '../../constants';
 import { calculateBlobBudget, getContextWindow, getKnownModelIds, getModelStatus, getResolvedModelReasoning, getSelectableModelIds, MODEL_PROVIDER_ORDER } from '../../models/catalog';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { StageCard } from './StageCard';
@@ -16,6 +16,7 @@ import { estimatePipelineCost } from '../../utils/costEstimate';
 import { usePricingStore } from '../../stores/pricingStore';
 import { llmService, ollamaService } from '../../services/llmService';
 import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
+import { useOperationLogStore } from '../../stores/operationLogStore';
 import { ReasoningPicker } from '../models/ReasoningPicker';
 import { PromptPreviewTab } from './PromptPreviewTab';
 import { canRefineWithProvider, formatProviderModelLabel, useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
@@ -50,6 +51,7 @@ function PersonaEditor({
   deleteTemplate,
 }: PersonaEditorProps) {
   const { t } = useTranslation();
+  const [isEditing, setIsEditing] = useState(false);
   const [showSaveName, setShowSaveName] = useState(false);
   const [templateName, setTemplateName] = useState('');
   const [showTemplateList, setShowTemplateList] = useState(false);
@@ -62,9 +64,19 @@ function PersonaEditor({
     tmpl.name.toLowerCase().includes(templateSearch.toLowerCase()),
   );
 
-  const handleCustomize = () => onChange(defaultText);
+  const handleStartEdit = () => {
+    if (!isCustom) onChange(defaultText);
+    setIsEditing(true);
+  };
+  const handleCloseEdit = () => {
+    setIsEditing(false);
+    setShowSaveName(false);
+    setShowTemplateList(false);
+    setTemplateName('');
+  };
   const handleReset = () => {
     onChange(undefined);
+    setIsEditing(false);
     setShowSaveName(false);
     setShowTemplateList(false);
     setTemplateName('');
@@ -111,7 +123,7 @@ function PersonaEditor({
           )}
         </div>
         <div className="flex items-center gap-1">
-          {isCustom ? (
+          {isEditing ? (
             <>
               <button
                 type="button"
@@ -143,29 +155,42 @@ function PersonaEditor({
               </button>
               <button
                 type="button"
-                onClick={handleReset}
-                title={t('pipeline.personaReset')}
-                aria-label={t('pipeline.personaReset')}
+                onClick={handleCloseEdit}
+                title={t('common.close')}
+                aria-label={t('common.close')}
                 className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
               >
                 <X size={14} />
               </button>
             </>
           ) : (
-            <button
-              type="button"
-              onClick={handleCustomize}
-              title={t('pipeline.personaCustomize')}
-              aria-label={t('pipeline.personaCustomize')}
-              className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
-            >
-              <Pencil size={14} />
-            </button>
+            <>
+              {isCustom && (
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  title={t('pipeline.promptReset')}
+                  aria-label={t('pipeline.promptReset')}
+                  className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                >
+                  <RotateCcw size={14} />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleStartEdit}
+                title={t('pipeline.personaCustomize')}
+                aria-label={t('pipeline.personaCustomize')}
+                className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+              >
+                <Pencil size={14} />
+              </button>
+            </>
           )}
         </div>
       </div>
 
-      {isCustom && showSaveName && (
+      {isEditing && showSaveName && (
         <div className="flex items-center gap-1.5">
           <input
             value={templateName}
@@ -198,7 +223,7 @@ function PersonaEditor({
         </div>
       )}
 
-      {isCustom && showTemplateList && (
+      {isEditing && showTemplateList && (
         <div className="rounded-lg border border-editorial-border bg-editorial-bg shadow-lg overflow-hidden">
           <div className="p-2 border-b border-editorial-border/60">
             <input
@@ -242,11 +267,11 @@ function PersonaEditor({
 
       <textarea
         value={isCustom ? persona : defaultText}
-        disabled={!isCustom}
+        disabled={!isEditing}
         onChange={(e) => onChange(e.target.value.trim() ? e.target.value : undefined)}
-        rows={isCustom ? 8 : 2}
-        className={`w-full rounded-[14px] border px-3 py-2 text-xs font-mono outline-none leading-relaxed resize-y ${
-          isCustom
+        rows={isEditing ? 12 : isCustom ? 4 : 2}
+        className={`w-full rounded-[14px] border px-3 py-2 text-xs font-mono outline-none leading-relaxed resize-y ${isEditing ? 'min-h-[10rem] ' : ''}${
+          isEditing
             ? 'bg-editorial-textbox/40 border-editorial-border/60 focus-visible:ring-2 focus-visible:ring-editorial-accent'
             : 'bg-editorial-textbox/10 border-editorial-border/30 text-editorial-muted/60 cursor-default'
         }`}
@@ -298,6 +323,8 @@ interface AuditPromptEditorProps {
   defaultProvider?: string;
   icon?: ReactNode;
   context?: 'stage' | 'audit';
+  defaultValue?: string;
+  onReset?: () => void;
 }
 
 function AuditPromptEditor({
@@ -318,12 +345,24 @@ function AuditPromptEditor({
   defaultProvider,
   icon,
   context = 'audit',
+  defaultValue,
+  onReset,
 }: AuditPromptEditorProps) {
   const { t } = useTranslation();
+  const [isEditing, setIsEditing] = useState(false);
   const [showSaveName, setShowSaveName] = useState(false);
   const [templateName, setTemplateName] = useState('');
   const [showTemplateList, setShowTemplateList] = useState(false);
   const [templateSearch, setTemplateSearch] = useState('');
+
+  const isCustomPrompt = !!defaultValue && value.trim() !== defaultValue.trim();
+
+  const handleCloseEdit = () => {
+    setIsEditing(false);
+    setShowSaveName(false);
+    setShowTemplateList(false);
+    setTemplateName('');
+  };
 
   const filteredTemplates = templates.filter((tmpl) =>
     tmpl.name.toLowerCase().includes(templateSearch.toLowerCase()),
@@ -362,36 +401,77 @@ function AuditPromptEditor({
           <div className="flex items-center gap-1.5">
             {icon && <span className="text-editorial-accent shrink-0">{icon}</span>}
             <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">{label}</span>
+            {isCustomPrompt && (
+              <span className="rounded-full bg-editorial-accent/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-editorial-accent">
+                {t('pipeline.promptCustomBadge')}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={onRefine}
-              disabled={isRefining || !value.trim() || !canRefine}
-              title={t('pipeline.refinePromptWithModel', { model: refineLabel })}
-              aria-label={`${t('pipeline.refinePromptWithModel', { model: refineLabel })}: ${label}`}
-              className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40"
-            >
-              {isRefining ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
-            </button>
-            <button
-              type="button"
-              onClick={() => { setShowSaveName(!showSaveName); setShowTemplateList(false); }}
-              title={t('pipeline.templates.save')}
-              aria-label={`${t('pipeline.templates.save')}: ${label}`}
-              className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
-            >
-              <BookmarkPlus size={16} />
-            </button>
-            <button
-              type="button"
-              onClick={() => { setShowTemplateList(!showTemplateList); setShowSaveName(false); }}
-              title={t('pipeline.templates.load')}
-              aria-label={`${t('pipeline.templates.load')}: ${label}`}
-              className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
-            >
-              <BookOpen size={16} />
-            </button>
+            {isEditing ? (
+              <>
+                <button
+                  type="button"
+                  onClick={onRefine}
+                  disabled={isRefining || !value.trim() || !canRefine}
+                  title={t('pipeline.refinePromptWithModel', { model: refineLabel })}
+                  aria-label={`${t('pipeline.refinePromptWithModel', { model: refineLabel })}: ${label}`}
+                  className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40"
+                >
+                  {isRefining ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowSaveName(!showSaveName); setShowTemplateList(false); }}
+                  title={t('pipeline.templates.save')}
+                  aria-label={`${t('pipeline.templates.save')}: ${label}`}
+                  className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                >
+                  <BookmarkPlus size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowTemplateList(!showTemplateList); setShowSaveName(false); }}
+                  title={t('pipeline.templates.load')}
+                  aria-label={`${t('pipeline.templates.load')}: ${label}`}
+                  className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                >
+                  <BookOpen size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCloseEdit}
+                  title={t('common.close')}
+                  aria-label={`${t('common.close')}: ${label}`}
+                  className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                >
+                  <X size={16} />
+                </button>
+              </>
+            ) : (
+              <>
+                {isCustomPrompt && onReset && (
+                  <button
+                    type="button"
+                    onClick={onReset}
+                    title={t('pipeline.promptReset')}
+                    aria-label={`${t('pipeline.promptReset')}: ${label}`}
+                    className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                  >
+                    <RotateCcw size={16} />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(true)}
+                  title={t('pipeline.editPrompt')}
+                  aria-label={`${t('pipeline.editPrompt')}: ${label}`}
+                  className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                >
+                  <Pencil size={16} />
+                </button>
+              </>
+            )}
           </div>
         </div>
         {hint && (
@@ -485,8 +565,13 @@ function AuditPromptEditor({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        rows={8}
-        className="w-full rounded-[16px] bg-editorial-textbox/40 border border-editorial-border/60 p-4 text-sm font-mono outline-none leading-relaxed resize-y focus-visible:ring-2 focus-visible:ring-editorial-accent"
+        disabled={!isEditing}
+        rows={isEditing ? 12 : 4}
+        className={`w-full rounded-[16px] border p-4 text-sm font-mono outline-none leading-relaxed resize-y min-h-[10rem] ${
+          isEditing
+            ? 'bg-editorial-textbox/40 border-editorial-border/60 focus-visible:ring-2 focus-visible:ring-editorial-accent'
+            : 'bg-editorial-textbox/10 border-editorial-border/30 text-editorial-muted/60 cursor-default'
+        }`}
       />
     </div>
   );
@@ -508,7 +593,8 @@ export function PipelineConfig({
     setMode,
     updateStage,
   } = usePipelineStore();
-  const { chunks, isProcessing, cancelRequested, resetCompletedChunks } = useChunksStore();
+  const { chunks, isProcessing, cancelRequested, resetAllChunks } = useChunksStore();
+  const clearLog = useOperationLogStore((s) => s.clear);
   const ollamaStatus = useUiStore((s) => s.ollamaStatus);
   const ollamaModels = useUiStore((s) => s.ollamaModels);
   const { statuses: keyStatuses, isLoading: keyStatusLoading } = useProviderKeyStatus();
@@ -543,7 +629,8 @@ export function PipelineConfig({
       danger: true,
     });
     if (!ok) return;
-    resetCompletedChunks();
+    resetAllChunks();
+    clearLog();
     onRunPipeline();
   };
 
@@ -1331,6 +1418,8 @@ export function PipelineConfig({
               defaultModel={config.judgeModel}
               defaultProvider={config.judgeProvider}
               icon={<Scale size={11} />}
+              defaultValue={DEFAULT_JUDGE_PROMPT}
+              onReset={() => setConfig((prev) => ({ ...prev, judgePrompt: DEFAULT_JUDGE_PROMPT }))}
             />
             <AuditPromptEditor
               label={t('pipeline.coherencePromptLabel')}
@@ -1356,6 +1445,8 @@ export function PipelineConfig({
               defaultModel={config.judgeModel}
               defaultProvider={config.judgeProvider}
               icon={<RefreshCw size={11} />}
+              defaultValue={DEFAULT_COHERENCE_PROMPT}
+              onReset={() => setConfig((prev) => ({ ...prev, coherencePrompt: DEFAULT_COHERENCE_PROMPT }))}
             />
           </div>
         )}

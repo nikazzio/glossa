@@ -180,6 +180,48 @@ className={`rounded-full border px-4 py-1.5 text-xs font-bold uppercase tracking
 
 Non usare `editorial-ink` per i pulsanti di selezione: usare sempre `editorial-accent` (rosso).
 
+### Barra di navigazione con icone + label corsivo (OBBLIGATORIO)
+
+Ogni gruppo di filtri/tab deve usare questo pattern — **identico** a quello del menu LibraryPanel:
+
+```tsx
+<div className="flex items-center gap-2">
+  {OPTIONS.map((opt) => {
+    const isActive = current === opt;
+    return (
+      <button key={opt} onClick={() => setCurrent(opt)}
+        title={label(opt)} aria-label={label(opt)}
+        className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+          isActive
+            ? 'border-editorial-accent bg-editorial-accent text-white'
+            : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
+        }`}>
+        <SomeIcon size={14} />
+      </button>
+    );
+  })}
+  <span className="mx-1 h-4 w-px self-center bg-editorial-border/70" aria-hidden="true" />
+  <span className="self-center font-display text-sm italic text-editorial-ink">{label(current)}</span>
+</div>
+```
+
+Regole: pulsanti **solo icona** (descrizione in `title`/`aria-label`); separatore `w-px h-4`; label corsivo `font-display text-sm italic text-editorial-ink`; hover inattivo `hover:border-editorial-accent/40`.
+
+### Pulsanti azione (Nuovo, Aggiungi, ecc.)
+
+Sempre **solo icona**, mai testo + icona nel pannello libreria/configurazione:
+
+```tsx
+<button onClick={handler} title={t('...')} aria-label={t('...')}
+  className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent">
+  <PlusIcon size={13} />
+</button>
+```
+
+### Coerenza degli stili (CRITICO)
+
+**Mai introdurre varianti** di pattern già esistenti. Prima di aggiungere un nuovo pulsante, tab, o filtro, cerca nell'UI un componente analogo e replica esattamente lo stesso stile. Deviazioni richiedono approvazione esplicita dell'utente.
+
 ### Ordine degli elementi nel tab Impostazioni
 
 Disporre dall'alto verso il basso per importanza percepita dall'utente:

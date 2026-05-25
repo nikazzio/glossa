@@ -85,6 +85,7 @@ const ALLOWED_MIGRATIONS = new Set([
   'pipelines.source_display_text',
   'pipelines.source_processing_text',
   'pipelines.source_footnotes',
+  'pipelines.coherence_prompt',
 ]);
 
 export async function ensureColumn(table: string, column: string, definition: string): Promise<void> {
@@ -186,6 +187,7 @@ export async function initDatabase(): Promise<void> {
       custom_target_language TEXT DEFAULT NULL,
       blob_budget_tokens INTEGER DEFAULT 0,
       blob_overlap INTEGER DEFAULT 1,
+      coherence_prompt TEXT DEFAULT NULL,
       run_status TEXT DEFAULT 'idle',
       last_run_config TEXT DEFAULT NULL,
       run_in_progress INTEGER DEFAULT 0,
@@ -399,6 +401,7 @@ export async function initDatabase(): Promise<void> {
   await ensureColumn('pipelines', 'custom_target_language', 'TEXT DEFAULT NULL');
   await ensureColumn('pipelines', 'blob_budget_tokens', 'INTEGER DEFAULT 0');
   await ensureColumn('pipelines', 'blob_overlap', 'INTEGER DEFAULT 1');
+  await ensureColumn('pipelines', 'coherence_prompt', 'TEXT DEFAULT NULL');
   await ensureColumn('pipelines', 'run_status', "TEXT DEFAULT 'idle'");
   await ensureColumn('pipelines', 'last_run_config', 'TEXT DEFAULT NULL');
   await ensureColumn('pipelines', 'run_in_progress', 'INTEGER DEFAULT 0');

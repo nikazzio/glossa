@@ -7,6 +7,7 @@ import {
   Loader2,
   Pencil,
   RefreshCw,
+  RotateCcw,
   Trash2,
   Wand2,
   WifiOff,
@@ -23,6 +24,7 @@ import { ReasoningPicker } from '../models/ReasoningPicker';
 import { ProviderRuntimeEditor } from './ProviderRuntimeEditor';
 import { canRefineWithProvider, formatProviderModelLabel, type ProviderKeyStatusMap } from '../../hooks/useProviderKeyStatus';
 import { useUiStore } from '../../stores/uiStore';
+import { STAGE_TEMPLATES } from '../../pipeline/pipelineModes';
 
 interface StageCardProps {
   stage: PipelineStageConfig;
@@ -71,6 +73,8 @@ export function StageCard({
   const [showTemplateList, setShowTemplateList] = useState(false);
   const [templateSearch, setTemplateSearch] = useState('');
 
+  const role = stage.role ?? 'translation';
+  const isCustomPrompt = stage.prompt.trim() !== STAGE_TEMPLATES[role].defaultPrompt.trim();
   const promptEditable = isEditingPrompt && !translationsExist && !isProcessing;
   const canRefine = canRefineWithProvider(stage.provider, keyStatuses);
   const refineLabel = formatProviderModelLabel(stage.provider, stage.model);
@@ -254,9 +258,16 @@ export function StageCard({
       {/* Prompt editor */}
       <div className="rounded-[20px] border border-editorial-border bg-editorial-bg/70 px-5 py-4 space-y-3">
         <div className="flex items-center justify-between gap-3">
-          <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-            {t('pipeline.prompt')}
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+              {t('pipeline.prompt')}
+            </span>
+            {isCustomPrompt && !isEditingPrompt && (
+              <span className="rounded-full bg-editorial-accent/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-editorial-accent">
+                {t('pipeline.promptCustomBadge')}
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-1.5">
             {isEditingPrompt ? (
               <>
@@ -299,16 +310,30 @@ export function StageCard({
                 </button>
               </>
             ) : (
-              <button
-                type="button"
-                onClick={() => setIsEditingPrompt(true)}
-                disabled={translationsExist || isProcessing}
-                title={t('pipeline.editPrompt')}
-                aria-label={t('pipeline.editPrompt')}
-                className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <Pencil size={16} />
-              </button>
+              <>
+                {isCustomPrompt && (
+                  <button
+                    type="button"
+                    onClick={() => onUpdate({ prompt: STAGE_TEMPLATES[role].defaultPrompt })}
+                    disabled={translationsExist || isProcessing}
+                    title={t('pipeline.promptReset')}
+                    aria-label={t('pipeline.promptReset')}
+                    className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <RotateCcw size={16} />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setIsEditingPrompt(true)}
+                  disabled={translationsExist || isProcessing}
+                  title={t('pipeline.editPrompt')}
+                  aria-label={t('pipeline.editPrompt')}
+                  className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Pencil size={16} />
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -401,8 +426,8 @@ export function StageCard({
           onChange={(e) => onUpdate({ prompt: e.target.value })}
           placeholder={t('pipeline.stagePromptPlaceholder')}
           disabled={!promptEditable}
-          rows={8}
-          className={`w-full rounded-[16px] border p-4 text-sm font-mono outline-none leading-relaxed resize-y ${
+          rows={12}
+          className={`w-full rounded-[16px] border p-4 text-sm font-mono outline-none leading-relaxed resize-y min-h-[10rem] ${
             promptEditable
               ? 'bg-editorial-textbox/40 border-editorial-border/60 focus-visible:ring-2 focus-visible:ring-editorial-accent'
               : 'bg-editorial-textbox/10 border-editorial-border/30 text-editorial-muted/60 cursor-default'

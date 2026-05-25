@@ -185,7 +185,7 @@ export function ConfigDrawer({
         showActions={false}
         showOnlyGlobalDefaults={false}
         libraryGlossarySection={libraryGlossarySection}
-        className="flex flex-1 flex-col overflow-y-auto bg-editorial-bg/40 custom-scrollbar min-h-0"
+        className="flex flex-1 flex-col bg-editorial-bg/40 min-h-0"
       />
 
       {completedCount > 0 && (

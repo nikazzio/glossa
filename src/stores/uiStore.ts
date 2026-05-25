@@ -41,6 +41,10 @@ interface UiState {
   // Ollama host (persisted)
   ollamaBaseUrl: string;
 
+  // How to initialise a new pipeline (persisted)
+  newPipelineInit: 'copy-first' | 'copy-previous' | 'defaults';
+  setNewPipelineInit: (value: 'copy-first' | 'copy-previous' | 'defaults') => void;
+
   setViewMode: (mode: ViewMode) => void;
   setDocumentLayout: (layout: DocumentLayoutPreference) => void;
   setSelectedChunkId: (chunkId: string | null) => void;
@@ -88,6 +92,7 @@ export const useUiStore = create<UiState>()(
   chunkPresetMedium: 700,
   chunkPresetLong: 1000,
   ollamaBaseUrl: 'http://localhost:11434',
+  newPipelineInit: 'copy-first',
 
   setViewMode: (mode) =>
     set((state) => ({
@@ -182,6 +187,7 @@ export const useUiStore = create<UiState>()(
   setChunkPresetMedium: (value) => set((state) => ({ chunkPresetMedium: Math.max(state.chunkPresetShort + 1, Math.min(value, state.chunkPresetLong - 1)) })),
   setChunkPresetLong: (value) => set((state) => ({ chunkPresetLong: Math.max(state.chunkPresetMedium + 1, Math.max(50, value)) })),
   setOllamaBaseUrl: (url) => set({ ollamaBaseUrl: url }),
+  setNewPipelineInit: (value) => set({ newPipelineInit: value }),
     }),
     {
       name: 'glossa-ui-prefs',
@@ -193,6 +199,7 @@ export const useUiStore = create<UiState>()(
         chunkPresetLong: state.chunkPresetLong,
         pipelineTestChunkCount: state.pipelineTestChunkCount,
         ollamaBaseUrl: state.ollamaBaseUrl,
+        newPipelineInit: state.newPipelineInit,
       }),
     },
   ),

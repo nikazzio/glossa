@@ -4,6 +4,7 @@ import en from './en.json';
 import it from './it.json';
 
 const savedLang = localStorage.getItem('glossa-lang') || 'en';
+document.documentElement.lang = savedLang;
 
 i18n.use(initReactI18next).init({
   resources: {
@@ -19,6 +20,7 @@ i18n.use(initReactI18next).init({
 
 i18n.on('languageChanged', (lng) => {
   localStorage.setItem('glossa-lang', lng);
+  document.documentElement.lang = lng;
 });
 
 export default i18n;

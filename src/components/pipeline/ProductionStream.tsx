@@ -1,5 +1,5 @@
 import { memo, useMemo, useCallback } from 'react';
-import { Trash2, AlertTriangle, Pencil, RotateCcw, ScanLine, Highlighter } from 'lucide-react';
+import { Trash2, AlertTriangle, Pencil, RotateCcw, Highlighter } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
@@ -92,7 +92,6 @@ interface ChunkRowProps {
   enabledStages: PipelineStageConfig[];
   markdownEnabled: boolean;
   onRetranslate: (id: string) => void;
-  onReaudit: (id: string) => void;
   onUnlockSource: (id: string) => void;
   onUpdateOriginal: (id: string, text: string) => void;
   onUpdateDraft: (id: string, text: string) => void;
@@ -107,7 +106,6 @@ const ChunkRow = memo(function ChunkRow({
   enabledStages,
   markdownEnabled,
   onRetranslate,
-  onReaudit,
   onUnlockSource,
   onUpdateOriginal,
   onUpdateDraft,
@@ -117,7 +115,6 @@ const ChunkRow = memo(function ChunkRow({
   const handleUpdateOriginal = useCallback((text: string) => onUpdateOriginal(chunk.id, text), [chunk.id, onUpdateOriginal]);
   const handleUpdateDraft = useCallback((text: string) => onUpdateDraft(chunk.id, text), [chunk.id, onUpdateDraft]);
   const handleRetranslate = useCallback(() => onRetranslate(chunk.id), [chunk.id, onRetranslate]);
-  const handleReaudit = useCallback(() => onReaudit(chunk.id), [chunk.id, onReaudit]);
   const handleUnlock = useCallback(() => onUnlockSource(chunk.id), [chunk.id, onUnlockSource]);
 
   return (
@@ -159,15 +156,6 @@ const ChunkRow = memo(function ChunkRow({
                 className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent flex items-center gap-1"
               >
                 <RotateCcw size={11} /> {t('pipeline.retranslateChunk')}
-              </button>
-              <button
-                type="button"
-                onClick={handleReaudit}
-                disabled={isProcessing || !chunk.currentDraft}
-                title={chunk.currentDraft ? t('pipeline.reauditChunk') : t('pipeline.auditSkippedNoDraft')}
-                className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent flex items-center gap-1"
-              >
-                <ScanLine size={11} /> {t('pipeline.reauditChunk')}
               </button>
               {chunk.status === 'completed' ? (
                 <button
@@ -246,12 +234,10 @@ const ChunkRow = memo(function ChunkRow({
 
 interface ProductionStreamProps {
   onRetranslateChunk: (chunkId: string) => void;
-  onReauditChunk: (chunkId: string) => void;
 }
 
 export function ProductionStream({
   onRetranslateChunk,
-  onReauditChunk,
 }: ProductionStreamProps) {
   const { inputText, setInputText, config, setConfig } = usePipelineStore();
   const {
@@ -313,11 +299,6 @@ export function ProductionStream({
     logger.info('chunk.retranslate', { chunkId: id });
     onRetranslateChunk(id);
   }, [onRetranslateChunk]);
-
-  const handleReauditChunk = useCallback((id: string) => {
-    logger.info('chunk.reaudit', { chunkId: id });
-    onReauditChunk(id);
-  }, [onReauditChunk]);
 
   return (
     <section className="col-span-1 md:col-span-6 bg-editorial-bg p-8 overflow-y-auto min-h-0 h-full border-r border-editorial-border custom-scrollbar">
@@ -454,7 +435,6 @@ export function ProductionStream({
             enabledStages={enabledStages}
             markdownEnabled={markdownEnabled}
             onRetranslate={handleRetranslateChunk}
-            onReaudit={handleReauditChunk}
             onUnlockSource={handleUnlockSource}
             onUpdateOriginal={handleUpdateOriginal}
             onUpdateDraft={handleUpdateDraft}

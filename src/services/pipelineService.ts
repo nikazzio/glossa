@@ -45,6 +45,7 @@ interface DbPipeline {
   custom_target_language: string | null;
   blob_budget_tokens: number | null;
   blob_overlap: number | null;
+  coherence_prompt: string | null;
   run_status: string | null;
   last_run_config: string | null;
   run_in_progress: number | null;
@@ -96,6 +97,7 @@ function rowToPipelineConfig(row: DbPipeline, glossary: GlossaryEntry[], assigne
     customTargetLanguage: row.custom_target_language || undefined,
     blobBudgetTokens: row.blob_budget_tokens ?? undefined,
     blobOverlap: row.blob_overlap ?? undefined,
+    coherencePrompt: row.coherence_prompt?.trim() || undefined,
     glossary,
     assignedGlossaryId,
     documentFormat: 'plain',
@@ -228,8 +230,9 @@ export async function savePipelineConfig(
        custom_target_language   = $13,
        blob_budget_tokens       = $14,
        blob_overlap             = $15,
+       coherence_prompt         = $16,
        updated_at               = CURRENT_TIMESTAMP
-     WHERE id = $16`,
+     WHERE id = $17`,
     [
       config.sourceLanguage,
       config.targetLanguage,
@@ -246,6 +249,7 @@ export async function savePipelineConfig(
       config.customTargetLanguage || null,
       config.blobBudgetTokens ?? 0,
       config.blobOverlap ?? 1,
+      config.coherencePrompt?.trim() || null,
       pipelineId,
     ],
   );
@@ -440,8 +444,9 @@ export async function saveFullState(
        custom_target_language   = $13,
        blob_budget_tokens       = $14,
        blob_overlap             = $15,
+       coherence_prompt         = $16,
        updated_at               = CURRENT_TIMESTAMP
-     WHERE id = $16`,
+     WHERE id = $17`,
     [
       config.sourceLanguage,
       config.targetLanguage,
@@ -458,6 +463,7 @@ export async function saveFullState(
       config.customTargetLanguage || null,
       config.blobBudgetTokens ?? 0,
       config.blobOverlap ?? 1,
+      config.coherencePrompt?.trim() || null,
       pipelineId,
     ],
   );

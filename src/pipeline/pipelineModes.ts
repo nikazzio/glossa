@@ -7,7 +7,7 @@ interface StageTemplate {
   defaultPrompt: string;
 }
 
-const STAGE_TEMPLATES: Record<StageRole, StageTemplate> = {
+export const STAGE_TEMPLATES: Record<StageRole, StageTemplate> = {
   translation: {
     id: 'stg-translation',
     role: 'translation',

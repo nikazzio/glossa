@@ -14,6 +14,7 @@ import { useProjectStore } from '../stores/projectStore';
 import { saveChunkCheckpoint, setPipelineRunState } from '../services/pipelineService';
 import { buildPipelineFingerprint } from '../utils/pipelineFingerprint';
 import { calculateBlobBudget } from '../models/catalog';
+import { stripFootnoteMarkers } from '../utils/footnoteExtractor';
 
 function escapeChunkId(value: string): string {
   return value
@@ -227,7 +228,7 @@ export function usePipeline() {
       // Format stage is blind: receives the previous stage output as primary text,
       // with no access to the source. Translation and refine stages receive the source
       // text plus the previous stage output for comparison.
-      const stageText = isFormatStage ? lastResult : chunk.sourceProcessingText;
+      const stageText = isFormatStage ? lastResult : stripFootnoteMarkers(chunk.sourceProcessingText);
       const stagePrevious = isFormatStage ? undefined : (lastResult || undefined);
 
       try {
@@ -312,7 +313,7 @@ export function usePipeline() {
     updateChunkDraft(chunk.id, lastResult);
 
     if (lastResult) {
-      const auditOutcome = await runJudgeForChunk(chunk, lastResult, lastEffectiveConfig);
+      const auditOutcome = await runJudgeForChunk(chunk, lastResult);
       if (auditOutcome === 'failed') return 'failed';
       if (auditOutcome === 'cancelled') return 'cancelled';
     }
@@ -353,7 +354,7 @@ export function usePipeline() {
     try {
       const judgeData = await withRetry(
         () => llmService.judgeTranslation(
-          chunk.sourceProcessingText,
+          stripFootnoteMarkers(chunk.sourceProcessingText),
           textToAudit,
           effectiveConfig ?? config,
           (info: PromptInfo) => pipelineLog.auditPrompt(chunk.id, judgeRef, info.systemPrompt, info.userPrompt),
@@ -756,7 +757,7 @@ export function usePipeline() {
       try {
         const result = await withRetry(
           () => llmService.runCoherenceForChunk(
-            { original: chunk.sourceProcessingText, translation: chunk.translationProcessingText, blobContext, currentChunkId: chunk.id },
+            { original: stripFootnoteMarkers(chunk.sourceProcessingText), translation: chunk.translationProcessingText, blobContext, currentChunkId: chunk.id },
             config,
             (info: PromptInfo) => pipelineLog.coherencePrompt(chunk.id, coherenceRef, info.systemPrompt, info.userPrompt),
             (info: ResponseInfo) => pipelineLog.coherenceResponse(chunk.id, info.rawJson),

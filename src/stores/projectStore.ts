@@ -11,6 +11,7 @@ import {
   listPipelines,
   getPipelineConfig,
   createPipeline,
+  savePipelineConfig,
   renamePipeline,
   duplicatePipeline,
   deletePipeline,
@@ -354,12 +355,24 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   createNewPipeline: async (name: string) => {
-    const { currentProjectId } = get();
+    const { currentProjectId, pipelines, activePipelineId } = get();
     if (!currentProjectId) return;
     const { sourceLanguage, targetLanguage } = usePipelineStore.getState().config;
-    await createPipeline(currentProjectId, name, sourceLanguage, targetLanguage);
-    const pipelines = await listPipelines(currentProjectId);
-    set({ pipelines });
+    const newId = await createPipeline(currentProjectId, name, sourceLanguage, targetLanguage);
+
+    const initMode = useUiStore.getState().newPipelineInit;
+    if (initMode !== 'defaults' && pipelines.length > 0) {
+      const sourcePipelineId = initMode === 'copy-first'
+        ? pipelines[0].id
+        : (activePipelineId ?? pipelines[0].id);
+      const sourceData = await getPipelineConfig(sourcePipelineId);
+      if (sourceData) {
+        await savePipelineConfig(newId, sourceData.config);
+      }
+    }
+
+    const updated = await listPipelines(currentProjectId);
+    set({ pipelines: updated });
   },
 
   deletePipeline: async (pipelineId: string) => {

@@ -139,9 +139,10 @@ export function DictionariesTab() {
         <button
           onClick={() => setCreating(true)}
           title={t('library.newDictionary')}
-          className="flex items-center gap-2 rounded-full border border-editorial-border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          aria-label={t('library.newDictionary')}
+          className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
         >
-          <Plus size={13} /> {t('library.newDictionary')}
+          <Plus size={13} />
         </button>
       </div>
 
@@ -194,7 +195,7 @@ export function DictionariesTab() {
               key={g.id}
               className={`rounded-[20px] border transition-colors ${
                 isAssigned
-                  ? 'border-editorial-accent/50 bg-editorial-accent/8'
+                  ? 'border-editorial-accent/40 bg-editorial-bg'
                   : 'border-editorial-border bg-editorial-textbox/12 hover:border-editorial-accent/30'
               }`}
             >

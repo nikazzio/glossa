@@ -28,7 +28,7 @@ export function DictionaryEntryEditor({ entries, onChange, readOnly = false }: P
   }, [entries]);
 
   const addEntry = () => {
-    onChange([...entries, { id: generateId('gle'), term: '', translation: '' }]);
+    onChange([{ id: generateId('gle'), term: '', translation: '' }, ...entries]);
   };
 
   const updateEntry = (id: string, updates: Partial<GlossaryEntry>) => {
@@ -40,34 +40,45 @@ export function DictionaryEntryEditor({ entries, onChange, readOnly = false }: P
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <label className="block text-[11px] font-bold uppercase tracking-widest text-editorial-muted">
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
           {t('pipeline.keywordRegistry')}
           {entries.length > 0 && (
-            <span className="ml-2 text-editorial-muted/70 normal-case font-mono tracking-normal">
+            <span className="ml-2 font-mono font-normal normal-case tracking-normal text-editorial-muted/60">
               ({entries.length})
             </span>
           )}
-        </label>
+        </span>
         {!readOnly && (
           <button
             onClick={addEntry}
             title={t('pipeline.addGlossaryEntry')}
-            className="text-editorial-accent hover:scale-110 transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             aria-label={t('pipeline.addGlossaryEntry')}
+            className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
           >
-            <Plus size={14} />
+            <Plus size={13} />
           </button>
         )}
       </div>
 
       {entries.length === 0 ? (
-        <p className="text-[11px] text-editorial-muted/60 text-center py-4 border border-dashed border-editorial-border/60 rounded-lg">
+        <p className="rounded-[14px] border border-dashed border-editorial-border/60 py-6 text-center text-[11px] italic text-editorial-muted/60">
           {t('pipeline.glossaryEmpty')}
         </p>
       ) : (
-        <div className="space-y-2">
+        <div className="overflow-y-auto custom-scrollbar max-h-[420px] rounded-[14px] border border-editorial-border bg-editorial-bg [scrollbar-gutter:stable]">
+          {/* Intestazioni colonne (sticky) */}
+          <div className="sticky top-0 z-10 grid grid-cols-[1fr_1fr_auto] border-b border-editorial-border bg-editorial-textbox/80 px-3 py-2">
+            <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
+              {t('pipeline.source')}
+            </span>
+            <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
+              {t('pipeline.target')}
+            </span>
+            <span className="w-7" />
+          </div>
+
           {entries.map((g, i) => {
             const rowKey = g.id ?? `gle-fallback-${i}`;
             const isDuplicate = g.id ? duplicateTermIds.has(g.id) : false;
@@ -75,52 +86,55 @@ export function DictionaryEntryEditor({ entries, onChange, readOnly = false }: P
             return (
               <div
                 key={rowKey}
-                className={`rounded-lg border p-2 space-y-1.5 ${
-                  isDuplicate
-                    ? 'border-editorial-warning/60 bg-editorial-textbox/20'
-                    : 'border-editorial-border/40 bg-editorial-textbox/20'
+                className={`group border-b border-editorial-border/40 last:border-b-0 ${
+                  isDuplicate ? 'bg-amber-50/60' : 'hover:bg-editorial-textbox/30'
                 }`}
               >
-                <div className="flex gap-2 items-center">
+                <div className="grid grid-cols-[1fr_1fr_auto] items-stretch">
                   <input
                     value={g.term}
                     onChange={(e) => g.id && updateEntry(g.id, { term: e.target.value })}
                     readOnly={readOnly}
-                    className="w-full bg-transparent rounded py-2 px-2 text-[11px] font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent border border-editorial-border/40 focus:border-editorial-accent/60 read-only:opacity-70"
                     placeholder={t('pipeline.source')}
                     aria-label={`${t('pipeline.source')} ${i + 1}`}
+                    className="border-r border-editorial-border/40 bg-transparent px-3 py-2 text-[12px] font-mono text-editorial-ink outline-none placeholder:text-editorial-muted/35 focus:bg-editorial-accent/5 read-only:opacity-60"
                   />
                   <input
                     value={g.translation}
                     onChange={(e) => g.id && updateEntry(g.id, { translation: e.target.value })}
                     readOnly={readOnly}
-                    className="w-full bg-transparent rounded py-2 px-2 text-[11px] font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent border border-editorial-border/40 focus:border-editorial-accent/60 read-only:opacity-70"
                     placeholder={t('pipeline.target')}
                     aria-label={`${t('pipeline.target')} ${i + 1}`}
+                    className="bg-transparent px-3 py-2 text-[12px] font-mono text-editorial-ink outline-none placeholder:text-editorial-muted/35 focus:bg-editorial-accent/5 read-only:opacity-60"
                   />
-                  {!readOnly && (
+                  {!readOnly ? (
                     <button
                       onClick={() => g.id && removeEntry(g.id)}
                       title={removeLabel}
-                      className="ml-auto text-editorial-muted/60 hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent shrink-0 p-1"
                       aria-label={removeLabel}
+                      className="flex w-7 items-center justify-center text-editorial-muted/25 transition-colors hover:text-editorial-accent focus:outline-none group-hover:text-editorial-muted/50"
                     >
                       <X size={12} />
                     </button>
+                  ) : (
+                    <span className="w-7" />
                   )}
                 </div>
+                {/* Riga note — sempre presente ma minimale */}
                 <input
                   value={g.notes ?? ''}
                   onChange={(e) => g.id && updateEntry(g.id, { notes: e.target.value })}
                   readOnly={readOnly}
-                  className="w-full bg-transparent rounded py-1.5 px-2 text-[11px] font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent border border-editorial-border/30 focus:border-editorial-accent/60 text-editorial-muted placeholder:text-editorial-muted/40 read-only:opacity-70"
                   placeholder={t('pipeline.glossaryNotes')}
                   aria-label={`${t('pipeline.glossaryNotes')} ${i + 1}`}
+                  className="w-full border-t border-editorial-border/25 bg-transparent px-3 py-1 text-[11px] font-mono text-editorial-muted/70 outline-none placeholder:text-editorial-muted/25 focus:bg-editorial-accent/5 read-only:opacity-60"
                 />
                 {isDuplicate && (
-                  <span className="text-[9px] uppercase tracking-widest text-editorial-warning font-bold pl-1">
-                    {t('pipeline.duplicateTerm')}
-                  </span>
+                  <div className="border-t border-amber-200 bg-amber-50/80 px-3 py-1">
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-amber-700">
+                      {t('pipeline.duplicateTerm')}
+                    </span>
+                  </div>
                 )}
               </div>
             );
