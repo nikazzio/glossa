@@ -316,7 +316,8 @@
     "ariaSelect": "Seleziona {{name}}",
     "ariaRename": "Rinomina pipeline",
     "renameHint": "Doppio clic per rinominare",
-    "ariaAdd": "Aggiungi pipeline"
+    "ariaAdd": "Aggiungi pipeline",
+    "saveFirstToAdd": "Salva il progetto prima di aggiungere pipeline"
   },
   "audit": {
     "title": "Log Audit",

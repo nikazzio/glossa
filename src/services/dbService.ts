@@ -70,6 +70,21 @@ const ALLOWED_MIGRATIONS = new Set([
   'operation_logs.duration_ms',
   'operation_logs.detail_kind',
   'pipeline_configs.pipeline_mode',
+  'pipelines.pipeline_mode',
+  'pipelines.use_chunking',
+  'pipelines.words_per_chunk',
+  'pipelines.review_provider_options',
+  'pipelines.persona',
+  'pipelines.custom_source_language',
+  'pipelines.custom_target_language',
+  'pipelines.blob_budget_tokens',
+  'pipelines.blob_overlap',
+  'pipelines.run_status',
+  'pipelines.last_run_config',
+  'pipelines.run_in_progress',
+  'pipelines.source_display_text',
+  'pipelines.source_processing_text',
+  'pipelines.source_footnotes',
 ]);
 
 export async function ensureColumn(table: string, column: string, definition: string): Promise<void> {
@@ -373,6 +388,23 @@ export async function initDatabase(): Promise<void> {
 
   // Add pipeline_id to translations (translations belong to a pipeline, not a project).
   await ensureColumn('translations', 'pipeline_id', 'TEXT DEFAULT NULL');
+
+  // Ensure all optional pipelines columns exist on older DBs that predate them.
+  await ensureColumn('pipelines', 'pipeline_mode', "TEXT DEFAULT 'standard'");
+  await ensureColumn('pipelines', 'use_chunking', 'INTEGER DEFAULT 1');
+  await ensureColumn('pipelines', 'words_per_chunk', 'INTEGER DEFAULT 0');
+  await ensureColumn('pipelines', 'review_provider_options', 'TEXT DEFAULT NULL');
+  await ensureColumn('pipelines', 'persona', 'TEXT DEFAULT NULL');
+  await ensureColumn('pipelines', 'custom_source_language', 'TEXT DEFAULT NULL');
+  await ensureColumn('pipelines', 'custom_target_language', 'TEXT DEFAULT NULL');
+  await ensureColumn('pipelines', 'blob_budget_tokens', 'INTEGER DEFAULT 0');
+  await ensureColumn('pipelines', 'blob_overlap', 'INTEGER DEFAULT 1');
+  await ensureColumn('pipelines', 'run_status', "TEXT DEFAULT 'idle'");
+  await ensureColumn('pipelines', 'last_run_config', 'TEXT DEFAULT NULL');
+  await ensureColumn('pipelines', 'run_in_progress', 'INTEGER DEFAULT 0');
+  await ensureColumn('pipelines', 'source_display_text', 'TEXT DEFAULT NULL');
+  await ensureColumn('pipelines', 'source_processing_text', 'TEXT DEFAULT NULL');
+  await ensureColumn('pipelines', 'source_footnotes', 'TEXT DEFAULT NULL');
 
   // Populate pipelines from pipeline_configs (one-time, idempotent via INSERT OR IGNORE).
   try {

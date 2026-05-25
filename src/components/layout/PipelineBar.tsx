@@ -121,6 +121,7 @@ export function PipelineBar() {
   const { t } = useTranslation();
   const pipelines = useProjectStore((s) => s.pipelines);
   const activePipelineId = useProjectStore((s) => s.activePipelineId);
+  const currentProjectId = useProjectStore((s) => s.currentProjectId);
   const switchPipeline = useProjectStore((s) => s.switchPipeline);
   const createNewPipeline = useProjectStore((s) => s.createNewPipeline);
   const deletePipeline = useProjectStore((s) => s.deletePipeline);
@@ -129,6 +130,7 @@ export function PipelineBar() {
   if (pipelines.length === 0) return null;
 
   const atLimit = pipelines.length >= MAX_PIPELINES;
+  const canAdd = !!currentProjectId && !atLimit;
 
   return (
     <div
@@ -151,9 +153,15 @@ export function PipelineBar() {
 
       {!atLimit && (
         <button
-          onClick={() => void createNewPipeline(`Pipeline ${pipelines.length + 1}`)}
+          onClick={canAdd ? () => void createNewPipeline(`Pipeline ${pipelines.length + 1}`) : undefined}
+          disabled={!canAdd}
           aria-label={t('pipeline.ariaAdd')}
-          className="ml-1 flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-editorial-border/40 text-editorial-muted/40 transition-colors hover:border-editorial-accent/50 hover:text-editorial-accent/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          title={!currentProjectId ? t('pipeline.saveFirstToAdd') : undefined}
+          className={`ml-1 flex h-6 w-6 items-center justify-center rounded-full border border-dashed transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+            canAdd
+              ? 'border-editorial-border/40 text-editorial-muted/40 hover:border-editorial-accent/50 hover:text-editorial-accent/70'
+              : 'cursor-not-allowed border-editorial-border/20 text-editorial-muted/20'
+          }`}
         >
           <Plus size={10} />
         </button>

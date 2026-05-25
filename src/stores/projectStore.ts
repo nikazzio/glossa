@@ -251,13 +251,14 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       try {
         let currentProjectId = get().currentProjectId;
         let activePipelineId = get().activePipelineId;
+        let newPipelines: Pipeline[] | null = null;
 
         if (!currentProjectId) {
           if (!name?.trim()) throw new Error('Project name required for first save.');
           currentProjectId = await createProject(name.trim(), pipeline.config.sourceLanguage, pipeline.config.targetLanguage);
           const pipelines = await listPipelines(currentProjectId);
           activePipelineId = pipelines[0]?.id ?? null;
-          set({ pipelines });
+          newPipelines = pipelines;
         }
 
         await saveProjectSource(
@@ -277,7 +278,14 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
         logger.info('saveCurrentProject: done', { projectId: currentProjectId });
         await get().loadProjects().catch(() => {});
-        set({ currentProjectId, activePipelineId, saveState: 'saved', lastSaveError: null, trackedSnapshot: effectiveSnapshot });
+        set({
+          currentProjectId,
+          activePipelineId,
+          saveState: 'saved',
+          lastSaveError: null,
+          trackedSnapshot: effectiveSnapshot,
+          ...(newPipelines !== null ? { pipelines: newPipelines } : {}),
+        });
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Failed to save project.';
         logger.error('saveCurrentProject: failed', { message });

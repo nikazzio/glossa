@@ -316,7 +316,8 @@
     "ariaSelect": "Select {{name}}",
     "ariaRename": "Rename pipeline",
     "renameHint": "Double-click to rename",
-    "ariaAdd": "Add pipeline"
+    "ariaAdd": "Add pipeline",
+    "saveFirstToAdd": "Save the project before adding pipelines"
   },
   "audit": {
     "title": "Audit Logs",
