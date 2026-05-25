@@ -194,7 +194,7 @@ export interface PipelineConfig {
   glossary: GlossaryEntry[];
   assignedGlossaryId?: string | null;
   useChunking?: boolean;
-  targetChunkCount?: number;
+  wordsPerChunk?: number;
   minWords?: number;
   maxWords?: number;
   headingAware?: boolean;

@@ -24,7 +24,7 @@ function serializeWrite<T>(fn: () => Promise<T>): Promise<T> {
 // Whitelist of (table.column) pairs allowed to be added via migration.
 // Any call with values outside this set is rejected to prevent SQL injection.
 const ALLOWED_MIGRATIONS = new Set([
-  'pipeline_configs.target_chunk_count',
+  'pipeline_configs.words_per_chunk',
   'pipeline_configs.source_text',
   'pipeline_configs.source_display_text',
   'pipeline_configs.source_processing_text',
@@ -117,7 +117,7 @@ export async function initDatabase(): Promise<void> {
       judge_model TEXT DEFAULT 'gemini-3-flash-preview',
       judge_provider TEXT DEFAULT 'gemini',
       use_chunking INTEGER DEFAULT 1,
-      target_chunk_count INTEGER DEFAULT 0,
+      words_per_chunk INTEGER DEFAULT 0,
       source_text TEXT DEFAULT '',
       source_display_text TEXT DEFAULT '',
       source_processing_text TEXT DEFAULT '',
@@ -161,7 +161,7 @@ export async function initDatabase(): Promise<void> {
       judge_model TEXT DEFAULT '',
       judge_provider TEXT DEFAULT '',
       use_chunking INTEGER DEFAULT 1,
-      target_chunk_count INTEGER DEFAULT 0,
+      words_per_chunk INTEGER DEFAULT 0,
       source_display_text TEXT DEFAULT NULL,
       source_processing_text TEXT DEFAULT NULL,
       source_footnotes TEXT DEFAULT NULL,
@@ -241,7 +241,7 @@ export async function initDatabase(): Promise<void> {
     )
   `);
 
-  await ensureColumn('pipeline_configs', 'target_chunk_count', "INTEGER DEFAULT 0");
+  await ensureColumn('pipeline_configs', 'words_per_chunk', "INTEGER DEFAULT 0");
   await ensureColumn('pipeline_configs', 'source_text', "TEXT DEFAULT ''");
   await ensureColumn('pipeline_configs', 'source_display_text', "TEXT DEFAULT ''");
   await ensureColumn('pipeline_configs', 'source_processing_text', "TEXT DEFAULT ''");
@@ -380,7 +380,7 @@ export async function initDatabase(): Promise<void> {
       INSERT OR IGNORE INTO pipelines (
         id, project_id, name, source_language, target_language, pipeline_mode,
         stages, judge_prompt, judge_model, judge_provider,
-        use_chunking, target_chunk_count,
+        use_chunking, words_per_chunk,
         review_provider_options, persona, custom_source_language, custom_target_language,
         blob_budget_tokens, blob_overlap, run_status, last_run_config, run_in_progress
       )
@@ -389,7 +389,7 @@ export async function initDatabase(): Promise<void> {
         COALESCE(pc.pipeline_mode, 'standard'),
         pc.stages,
         COALESCE(pc.judge_prompt, ''), COALESCE(pc.judge_model, ''), COALESCE(pc.judge_provider, ''),
-        COALESCE(pc.use_chunking, 1), COALESCE(pc.target_chunk_count, 0),
+        COALESCE(pc.use_chunking, 1), COALESCE(pc.words_per_chunk, 0),
         pc.review_provider_options, pc.persona, pc.custom_source_language, pc.custom_target_language,
         COALESCE(pc.blob_budget_tokens, 0), COALESCE(pc.blob_overlap, 1),
         COALESCE(pc.run_status, 'idle'), pc.last_run_config, COALESCE(pc.run_in_progress, 0)

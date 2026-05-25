@@ -48,7 +48,7 @@ const DEFAULT_PIPELINE_CONFIG: PipelineConfig = {
   glossary: [],
   assignedGlossaryId: null,
   useChunking: true,
-  targetChunkCount: 0,
+  wordsPerChunk: 0,
   minWords: 600,
   maxWords: 1200,
   headingAware: true,

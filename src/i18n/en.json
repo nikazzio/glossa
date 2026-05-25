@@ -109,7 +109,7 @@
     "words": "Words",
     "paragraphs": "Paragraphs",
     "recommendedChunks": "Suggested chunks",
-    "targetChunks": "Target chunks",
+    "targetChunks": "Words per chunk",
     "useRecommendation": "Use suggestion",
     "zeroMeansAuto": "0 keeps paragraph-based auto segmentation.",
     "chunkPreview": "Chunk Preview",
@@ -749,7 +749,11 @@
       "watchdogTitle": "Stuck-chunk detection",
       "watchdogDesc": "A background watchdog monitors chunks that linger in the 'processing' state longer than expected. If a chunk appears stuck — for example an Ollama model working on a very long context — a warning appears in the Index tab with a Cancel button to abort just that chunk without stopping the whole pipeline.",
       "sandboxTitle": "Sandbox mode (alternative)",
-      "sandboxDesc": "Alongside the document workspace there's a lighter Sandbox mode for quick experiments on short snippets (Sandbox icon in the header). It has no index, no stats, no coherence audit: use it to compare models or iterate fast on a single pass. Serious work stays in the document workspace."
+      "sandboxDesc": "Alongside the document workspace there's a lighter Sandbox mode for quick experiments on short snippets (Sandbox icon in the header). It has no index, no stats, no coherence audit: use it to compare models or iterate fast on a single pass. Serious work stays in the document workspace.",
+      "footnotesTitle": "Footnotes",
+      "footnotesDesc": "When you import a DOCX or Markdown document with footnotes, Glossa separates them entirely from the translation process. Both the note text and the inline position markers are removed from what the model receives — the model sees clean body text only. The original document, shown in the editor, retains markers and notes exactly as they appeared. The note content is saved with the project. After translation you will need to handle footnotes manually: decide which notes to carry over, adapt their text to the target language, and place them where they make sense in the translated text — which may differ from their position in the original.",
+      "footnotesTipTitle": "Why notes are not translated automatically",
+      "footnotesTipDesc": "In a translation, a footnote often cannot be placed at the same position as in the original, and its text may need to be rewritten rather than translated word for word. Keeping notes out of the pipeline prevents the model from making arbitrary decisions about their placement and wording. You stay in control."
     },
     "context": {
       "title": "Context & caching",

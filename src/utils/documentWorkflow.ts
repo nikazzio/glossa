@@ -26,7 +26,7 @@ export function buildImportPreview(
   text: string,
   options: {
     useChunking?: boolean;
-    targetChunkCount?: number;
+    targetWordsPerChunk?: number;
     markdownAware?: boolean;
     minWords?: number;
     maxWords?: number;
@@ -48,7 +48,7 @@ export function buildImportPreview(
     chunks,
     format: options.format,
     experimental: options.experimental,
-    warnings: buildImportWarnings(text, options),
+    warnings: buildImportWarnings(options),
   };
 }
 
@@ -76,23 +76,12 @@ export function buildSplitPreview(
     adjustedSplitAt: boundedSplitAt,
   };
 }
-function buildImportWarnings(
-  text: string,
-  options: {
-    markdownAware?: boolean;
-    format?: 'plain' | 'markdown';
-    experimental?: 'docx-markdown';
-  },
-): string[] {
+function buildImportWarnings(options: {
+  format?: 'plain' | 'markdown';
+  experimental?: 'docx-markdown';
+}): string[] {
   const warnings: string[] = [];
-  if (options.format === 'markdown') {
-    warnings.push('markdown');
-  }
-  if (options.experimental === 'docx-markdown') {
-    warnings.push('docx-markdown');
-  }
-  if (options.markdownAware && /\[\^[^\]]+\]:/.test(text)) {
-    warnings.push('footnotes');
-  }
+  if (options.format === 'markdown') warnings.push('markdown');
+  if (options.experimental === 'docx-markdown') warnings.push('docx-markdown');
   return warnings;
 }

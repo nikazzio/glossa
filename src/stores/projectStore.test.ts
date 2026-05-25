@@ -144,7 +144,7 @@ describe('projectStore', () => {
         judgeProvider: 'gemini',
         glossary: [],
         useChunking: true,
-        targetChunkCount: 0,
+        wordsPerChunk: 0,
       },
     }));
   });
@@ -183,7 +183,7 @@ describe('projectStore', () => {
         judgeModel: 'claude-3-5-sonnet',
         judgeProvider: 'anthropic',
         useChunking: false,
-        targetChunkCount: 0,
+        wordsPerChunk: 0,
         documentFormat: 'plain',
         renderProfile: 'plain-text',
         markdownAware: false,
@@ -250,7 +250,7 @@ describe('projectStore', () => {
         judgeModel: '',
         judgeProvider: '',
         useChunking: true,
-        targetChunkCount: 0,
+        wordsPerChunk: 0,
         documentFormat: 'plain',
         renderProfile: 'plain-text',
         markdownAware: false,

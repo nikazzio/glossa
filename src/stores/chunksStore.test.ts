@@ -11,7 +11,7 @@ describe('chunksStore', () => {
       config: {
         ...state.config,
         useChunking: true,
-        targetChunkCount: 0,
+        wordsPerChunk: 0,
         minWords: 0,
         maxWords: 0,
         headingAware: false,
@@ -63,7 +63,7 @@ describe('chunksStore', () => {
   it('loads imported text into document mode even when it becomes a single chunk', () => {
     useChunksStore.getState().loadDocument('Single imported paragraph.', {
       useChunking: false,
-      targetChunkCount: 0,
+      targetWordsPerChunk: 0,
     });
 
     expect(useChunksStore.getState().chunks).toHaveLength(1);
@@ -149,7 +149,7 @@ describe('chunksStore', () => {
   it('clears stale blob assignments when a chunk is missing from recomputation results', () => {
     useChunksStore.getState().loadDocument('Alpha.\n\nBeta.', {
       useChunking: true,
-      targetChunkCount: 2,
+      targetWordsPerChunk: 0,
     });
 
     const [first, second] = useChunksStore.getState().chunks;

@@ -14,6 +14,7 @@ import {
   generateId,
   qualityDefault,
 } from '../utils';
+import { extractFootnotes } from '../utils/footnoteExtractor';
 import {
   buildChunkFootnotes,
   composeDocumentDisplayText,
@@ -120,7 +121,7 @@ interface ChunksState {
     text: string,
     options?: {
       useChunking?: boolean;
-      targetChunkCount?: number;
+      targetWordsPerChunk?: number;
       markdownAware?: boolean;
       minWords?: number;
       maxWords?: number;
@@ -177,7 +178,7 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
 
     const chunks = buildChunks(inputProcessingText, {
       useChunking: config.useChunking,
-      targetChunkCount: config.targetChunkCount,
+      targetWordsPerChunk: config.wordsPerChunk,
       markdownAware: config.markdownAware,
       minWords: config.minWords,
       maxWords: config.maxWords,
@@ -436,7 +437,7 @@ function chunksFromTexts(
     return withSyncedChunkFields({
       id: generateId('chunk'),
       sourceDisplayText: deriveChunkDisplayText(chunkTextValue, sourceFootnotes),
-      sourceProcessingText: chunkTextValue,
+      sourceProcessingText: extractFootnotes(chunkTextValue).cleanText,
       translationDisplayText: '',
       translationProcessingText: '',
       status: 'ready' as const,
@@ -453,7 +454,7 @@ function buildChunks(
   text: string,
   options: {
     useChunking?: boolean;
-    targetChunkCount?: number;
+    targetWordsPerChunk?: number;
     markdownAware?: boolean;
     minWords?: number;
     maxWords?: number;

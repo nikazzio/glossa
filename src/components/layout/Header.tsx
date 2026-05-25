@@ -25,6 +25,9 @@ import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useLibraryStore } from '../../stores/libraryStore';
 import { importTextFile, exportTranslation, exportBilingual } from '../../services/fileService';
+import { savePipelineConfig } from '../../services/pipelineService';
+import type { ImportDialogPipelineConfig } from '../document/ImportPreviewDialog';
+import { extractFootnotes } from '../../utils/footnoteExtractor';
 import { getContextWindow } from '../../models/catalog';
 import type { ExportFormat } from '../document/ExportDialog';
 
@@ -44,9 +47,12 @@ const HelpGuide = lazy(() =>
 
 interface PendingImport {
   fileName: string;
+  /** Testo pulito (senza definizioni note) — usato dal dialog per chunking e preview. */
   text: string;
+  /** Testo originale completo (con note in fondo) — passato a loadDocument. */
+  rawText: string;
   useChunking: boolean;
-  targetChunkCount: number;
+  wordsPerChunk: number;
   headingAware: boolean;
   carryTrailingShortBlocks: boolean;
   format?: 'plain' | 'markdown';
@@ -80,6 +86,7 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
     closeProject,
     projects,
     saveState,
+    activePipelineId,
   } = useProjectStore();
   const setShowLibraryPanel = useLibraryStore((state) => state.setShowLibraryPanel);
   const { t, i18n } = useTranslation();
@@ -104,11 +111,14 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
     try {
       const imported = await importTextFile();
       if (imported) {
+        const isMarkdown = imported.format === 'markdown';
+        const cleanText = isMarkdown ? extractFootnotes(imported.text).cleanText : imported.text;
         setPendingImport({
           fileName: imported.name,
-          text: imported.text,
+          text: cleanText,
+          rawText: imported.text,
           useChunking: config.useChunking !== false,
-          targetChunkCount: config.targetChunkCount ?? 0,
+          wordsPerChunk: config.wordsPerChunk ?? chunkPresetMedium,
           headingAware: config.headingAware ?? true,
           carryTrailingShortBlocks: config.carryTrailingShortBlocks ?? true,
           format: imported.format,
@@ -120,27 +130,29 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
     }
   };
 
-  const handleConfirmImport = (manualChunks?: string[]) => {
+  const handleConfirmImport = (manualChunks?: string[], pipelineConfig?: ImportDialogPipelineConfig) => {
     if (!pendingImport) return;
-    const stage0 = config.stages[0];
-    const contextWindow = stage0
-      ? getContextWindow(stage0.provider, stage0.model)
-      : undefined;
-    const totalWords = pendingImport.text.trim().split(/\s+/).filter(Boolean).length;
-    const derivedWordsPerChunk = pendingImport.targetChunkCount > 0
-      ? Math.round(totalWords / pendingImport.targetChunkCount)
-      : chunkPresetMedium;
+    const provider = pipelineConfig?.provider ?? config.stages[0]?.provider;
+    const model = pipelineConfig?.model ?? config.stages[0]?.model;
+    const contextWindow = provider && model ? getContextWindow(provider, model) : undefined;
+    const wordsPerChunk = pendingImport.wordsPerChunk > 0 ? pendingImport.wordsPerChunk : chunkPresetMedium;
     const presets = [chunkPresetShort, chunkPresetMedium, chunkPresetLong];
-    const activePreset = presets.reduce((nearest, p) =>
-      Math.abs(derivedWordsPerChunk - p) < Math.abs(derivedWordsPerChunk - nearest) ? p : nearest,
-      presets[0],
+    const nearestPreset = presets.reduce((nearest, p) =>
+      Math.abs(wordsPerChunk - p) < Math.abs(wordsPerChunk - nearest) ? p : nearest,
+      presets[0]!,
     );
-    const minWords = Math.round(activePreset * 0.5);
-    const maxWords = Math.round(activePreset * 1.5);
-    setConfig((prev) => ({
-      ...prev,
+    const minWords = Math.round(nearestPreset * 0.5);
+    const maxWords = Math.round(nearestPreset * 1.5);
+    const updatedStages = pipelineConfig
+      ? config.stages.map((s, i) => i === 0 ? { ...s, provider: pipelineConfig.provider, model: pipelineConfig.model } : s)
+      : config.stages;
+    const updatedConfig = {
+      ...config,
+      sourceLanguage: pipelineConfig?.sourceLanguage ?? config.sourceLanguage,
+      targetLanguage: pipelineConfig?.targetLanguage ?? config.targetLanguage,
+      stages: updatedStages,
       useChunking: pendingImport.useChunking,
-      targetChunkCount: pendingImport.targetChunkCount,
+      wordsPerChunk,
       minWords,
       maxWords,
       headingAware: pendingImport.headingAware,
@@ -150,12 +162,13 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
       markdownAware: pendingImport.format === 'markdown',
       experimentalImport: pendingImport.experimental ?? null,
       chunkedWithContextWindow: contextWindow,
-    }));
+    } as const;
+    setConfig(() => updatedConfig);
     loadDocument(
-      pendingImport.text,
+      pendingImport.rawText,
       {
         useChunking: pendingImport.useChunking,
-        targetChunkCount: pendingImport.targetChunkCount,
+        targetWordsPerChunk: wordsPerChunk,
         markdownAware: pendingImport.format === 'markdown',
         minWords,
         maxWords,
@@ -165,6 +178,9 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
       },
       manualChunks,
     );
+    if (activePipelineId) {
+      savePipelineConfig(activePipelineId, updatedConfig).catch(() => {});
+    }
     setPendingImport(null);
     toast.success(t('files.imported'));
   };
@@ -378,7 +394,7 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
             fileName={pendingImport.fileName}
             text={pendingImport.text}
             useChunking={pendingImport.useChunking}
-            targetChunkCount={pendingImport.targetChunkCount}
+            wordsPerChunk={pendingImport.wordsPerChunk}
             headingAware={pendingImport.headingAware}
             carryTrailingShortBlocks={pendingImport.carryTrailingShortBlocks}
             markdownAware={pendingImport.format === 'markdown'}
@@ -389,9 +405,9 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
                 current ? { ...current, useChunking: value } : current,
               )
             }
-            onTargetChunkCountChange={(value) =>
+            onWordsPerChunkChange={(value) =>
               setPendingImport((current) =>
-                current ? { ...current, targetChunkCount: value } : current,
+                current ? { ...current, wordsPerChunk: value } : current,
               )
             }
             onHeadingAwareChange={(value) =>

@@ -35,7 +35,7 @@ interface DbPipeline {
   judge_model: string;
   judge_provider: string;
   use_chunking: number;
-  target_chunk_count: number;
+  words_per_chunk: number;
   source_display_text: string | null;
   source_processing_text: string | null;
   source_footnotes: string | null;
@@ -89,7 +89,7 @@ function rowToPipelineConfig(row: DbPipeline, glossary: GlossaryEntry[], assigne
     judgeModel: row.judge_model,
     judgeProvider: row.judge_provider as PipelineConfig['judgeProvider'],
     useChunking: row.use_chunking === 1,
-    targetChunkCount: row.target_chunk_count ?? 0,
+    wordsPerChunk: row.words_per_chunk ?? 0,
     reviewProviderOptions: parseJson<ProviderRuntimeConfig>(row.review_provider_options),
     persona: row.persona?.trim() || undefined,
     customSourceLanguage: row.custom_source_language || undefined,
@@ -184,7 +184,7 @@ export async function duplicatePipeline(sourcePipelineId: string, newName: strin
     `INSERT INTO pipelines (
        id, project_id, name, source_language, target_language, pipeline_mode,
        stages, judge_prompt, judge_model, judge_provider,
-       use_chunking, target_chunk_count,
+       use_chunking, words_per_chunk,
        review_provider_options, persona, custom_source_language, custom_target_language,
        blob_budget_tokens, blob_overlap
      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
@@ -193,7 +193,7 @@ export async function duplicatePipeline(sourcePipelineId: string, newName: strin
       source.source_language, source.target_language,
       source.pipeline_mode ?? 'standard',
       source.stages, source.judge_prompt, source.judge_model, source.judge_provider,
-      source.use_chunking, source.target_chunk_count,
+      source.use_chunking, source.words_per_chunk,
       source.review_provider_options, source.persona,
       source.custom_source_language, source.custom_target_language,
       source.blob_budget_tokens ?? 0, source.blob_overlap ?? 1,
@@ -221,7 +221,7 @@ export async function savePipelineConfig(
        judge_model              = $6,
        judge_provider           = $7,
        use_chunking             = $8,
-       target_chunk_count       = $9,
+       words_per_chunk       = $9,
        review_provider_options  = $10,
        persona                  = $11,
        custom_source_language   = $12,
@@ -239,7 +239,7 @@ export async function savePipelineConfig(
       config.judgeModel,
       config.judgeProvider,
       config.useChunking !== false ? 1 : 0,
-      config.targetChunkCount ?? 0,
+      config.wordsPerChunk ?? 0,
       config.reviewProviderOptions ? JSON.stringify(config.reviewProviderOptions) : null,
       config.persona?.trim() || null,
       config.customSourceLanguage || null,
@@ -433,7 +433,7 @@ export async function saveFullState(
        judge_model              = $6,
        judge_provider           = $7,
        use_chunking             = $8,
-       target_chunk_count       = $9,
+       words_per_chunk       = $9,
        review_provider_options  = $10,
        persona                  = $11,
        custom_source_language   = $12,
@@ -451,7 +451,7 @@ export async function saveFullState(
       config.judgeModel,
       config.judgeProvider,
       config.useChunking !== false ? 1 : 0,
-      config.targetChunkCount ?? 0,
+      config.wordsPerChunk ?? 0,
       config.reviewProviderOptions ? JSON.stringify(config.reviewProviderOptions) : null,
       config.persona?.trim() || null,
       config.customSourceLanguage || null,

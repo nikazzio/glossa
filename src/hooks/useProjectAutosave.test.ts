@@ -28,7 +28,7 @@ describe('useProjectAutosave', () => {
       config: {
         ...state.config,
         useChunking: false,
-        targetChunkCount: 0,
+        wordsPerChunk: 0,
       },
     }));
 

@@ -30,7 +30,7 @@ const basePipelineRow = {
   judge_model: 'gemini-3-flash-preview',
   judge_provider: 'gemini',
   use_chunking: 1,
-  target_chunk_count: 5,
+  words_per_chunk: 5,
   source_display_text: null,
   source_processing_text: null,
   source_footnotes: '[]',
@@ -58,7 +58,7 @@ const baseConfig: PipelineConfig = {
     { id: 'entry-1', term: 'virtute', translation: 'virtue', notes: 'Keep ethical sense' },
   ],
   useChunking: true,
-  targetChunkCount: 8,
+  wordsPerChunk: 8,
   documentFormat: 'markdown',
   markdownAware: true,
   experimentalImport: 'docx-markdown',
@@ -133,7 +133,7 @@ describe('pipelineService', () => {
       expect(result).not.toBeNull();
       expect(result?.config.sourceLanguage).toBe('Latin');
       expect(result?.config.targetLanguage).toBe('English');
-      expect(result?.config.targetChunkCount).toBe(5);
+      expect(result?.config.wordsPerChunk).toBe(5);
       expect(result?.config.reviewProviderOptions).toEqual({
         ollama: { temperature: 0.1, keepAlive: '15m', think: false, numCtx: 8192 },
       });

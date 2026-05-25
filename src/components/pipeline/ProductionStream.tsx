@@ -264,7 +264,7 @@ export function ProductionStream({
     updateChunkOriginalText,
     unlockChunkForEdit,
   } = useChunksStore();
-  const { glossaryHighlightEnabled, setGlossaryHighlightEnabled } = useUiStore();
+  const { glossaryHighlightEnabled, setGlossaryHighlightEnabled, chunkPresetMedium } = useUiStore();
   const { t } = useTranslation();
 
   const stats = useMemo(() => estimateTextStats(inputText), [inputText]);
@@ -380,17 +380,17 @@ export function ProductionStream({
                   <input
                     type="number"
                     min={0}
-                    value={config.targetChunkCount || 0}
+                    value={config.wordsPerChunk || 0}
                     onChange={(e) => setConfig((prev) => ({
                       ...prev,
-                      targetChunkCount: Math.max(0, Number(e.target.value) || 0),
+                      wordsPerChunk: Math.max(0, Number(e.target.value) || 0),
                     }))}
                     className="w-24 bg-editorial-bg border border-editorial-border px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                     aria-label={t('pipeline.targetChunks')}
                   />
                   <button
                     type="button"
-                    onClick={() => setConfig((prev) => ({ ...prev, targetChunkCount: recommendedChunks }))}
+                    onClick={() => setConfig((prev) => ({ ...prev, wordsPerChunk: chunkPresetMedium }))}
                     disabled={recommendedChunks === 0}
                     className="text-[10px] font-bold uppercase tracking-widest text-editorial-accent disabled:text-editorial-muted disabled:opacity-50"
                   >
@@ -411,7 +411,7 @@ export function ProductionStream({
             {inputText.trim() && (
               <button
                 type="button"
-                onClick={() => loadDocument(inputText, { useChunking: config.useChunking, targetChunkCount: config.targetChunkCount, markdownAware: config.markdownAware })}
+                onClick={() => loadDocument(inputText, { useChunking: config.useChunking, targetWordsPerChunk: config.wordsPerChunk, markdownAware: config.markdownAware })}
                 className="w-full rounded-full border border-editorial-border px-6 py-4 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink"
               >
                 {t('document.openInReader')}
@@ -435,7 +435,7 @@ export function ProductionStream({
             </div>
             <button
               type="button"
-              onClick={() => loadDocument(inputText, { useChunking: config.useChunking, targetChunkCount: config.targetChunkCount, markdownAware: config.markdownAware })}
+              onClick={() => loadDocument(inputText, { useChunking: config.useChunking, targetWordsPerChunk: config.wordsPerChunk, markdownAware: config.markdownAware })}
               className="rounded-full border border-editorial-border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink"
             >
               {t('document.openInReader')}
