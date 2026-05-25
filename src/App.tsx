@@ -91,7 +91,6 @@ export default function App() {
                 <PipelineBar />
                 <DocumentView
                   onRetranslateChunk={handleRetranslateChunk}
-                  onReauditChunk={auditSingleChunk}
                   onRunPipeline={runPipeline}
                   onCancelPipeline={cancelPipeline}
                   onDryRun={runDryRun}

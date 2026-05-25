@@ -40,7 +40,6 @@ import { highlightSuperscriptMarkersHtml } from '../../utils/footnoteExtractor';
 
 interface DocumentViewProps {
   onRetranslateChunk: (chunkId: string) => void;
-  onReauditChunk: (chunkId: string) => void;
   onRunPipeline?: () => void;
   onCancelPipeline?: () => void;
   onDryRun?: () => void;
@@ -49,7 +48,6 @@ interface DocumentViewProps {
 
 export function DocumentView({
   onRetranslateChunk,
-  onReauditChunk,
   onRunPipeline,
   onCancelPipeline,
   onDryRun,
@@ -313,16 +311,6 @@ export function DocumentView({
                     className="flex h-[34px] w-[34px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted transition-colors hover:border-editorial-charcoal/60 hover:text-editorial-charcoal focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <RotateCcw size={11} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onReauditChunk(currentChunk.id)}
-                    disabled={isProcessing || !currentChunk.currentDraft}
-                    title={t('pipeline.reauditChunk')}
-                    aria-label={t('pipeline.reauditChunk')}
-                    className="flex h-[34px] w-[34px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted transition-colors hover:border-editorial-charcoal/60 hover:text-editorial-charcoal focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    <ScanLine size={11} />
                   </button>
                 </div>
               </div>
