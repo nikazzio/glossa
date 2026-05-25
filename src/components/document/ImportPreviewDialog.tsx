@@ -528,8 +528,8 @@ export function ImportPreviewDialog({
       ...config.stages
         .filter((s) => s.enabled)
         .map((s) => ({
-          provider: s === stage0 ? selectedProvider : s.provider,
-          model: s === stage0 ? selectedModel : s.model,
+          provider: stage0 && s.id === stage0.id ? selectedProvider : s.provider,
+          model: stage0 && s.id === stage0.id ? selectedModel : s.model,
           numCtx: s.providerOptions?.ollama?.numCtx,
         })),
       {

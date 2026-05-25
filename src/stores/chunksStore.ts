@@ -14,7 +14,6 @@ import {
   generateId,
   qualityDefault,
 } from '../utils';
-import { extractFootnotes } from '../utils/footnoteExtractor';
 import {
   buildChunkFootnotes,
   composeDocumentDisplayText,
@@ -437,7 +436,7 @@ function chunksFromTexts(
     return withSyncedChunkFields({
       id: generateId('chunk'),
       sourceDisplayText: deriveChunkDisplayText(chunkTextValue, sourceFootnotes),
-      sourceProcessingText: extractFootnotes(chunkTextValue).cleanText,
+      sourceProcessingText: chunkTextValue,
       translationDisplayText: '',
       translationProcessingText: '',
       status: 'ready' as const,
