@@ -311,6 +311,7 @@
     "deleteTitle": "Eliminare \"{{name}}\"?",
     "deleteMessage": "Le traduzioni associate a questa pipeline verranno eliminate definitivamente.",
     "deleteConfirm": "Elimina",
+    "ariaGroup": "Pipeline",
     "ariaDelete": "Elimina {{name}}",
     "ariaSelect": "Seleziona {{name}}",
     "ariaRename": "Rinomina pipeline",

@@ -133,7 +133,7 @@ export function PipelineBar() {
   return (
     <div
       role="group"
-      aria-label="Pipeline"
+      aria-label={t('pipeline.ariaGroup')}
       className="flex shrink-0 items-center gap-1.5 bg-[#f7f3ec] px-5 pt-2 pb-1.5 md:px-6"
     >
       {pipelines.map((pipeline, index) => (

@@ -481,9 +481,11 @@ export function restoreTranslations(rows: SavedTranslation[]): TranslationChunk[
     const stageResults = parseJson<Record<string, PipelineResult>>(row.stage_results, {});
     const coherenceResult = parseJson<CoherenceResult>(row.coherence_result);
     const footnotes = row.footnotes ? parseJson<Footnote[]>(row.footnotes, []) : undefined;
-    const blobReferenceChunkIds = row.blob_reference_chunk_ids
-      ? (parseJson<unknown>(row.blob_reference_chunk_ids, []) as string[]).filter((v): v is string => typeof v === 'string')
-      : undefined;
+    const blobReferenceChunkIds = (() => {
+      if (!row.blob_reference_chunk_ids) return undefined;
+      const parsed = parseJson<unknown>(row.blob_reference_chunk_ids);
+      return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : [];
+    })();
 
     return {
       id: row.id,
