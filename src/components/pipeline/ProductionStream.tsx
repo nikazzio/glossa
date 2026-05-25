@@ -268,7 +268,7 @@ export function ProductionStream({
   const { t } = useTranslation();
 
   const stats = useMemo(() => estimateTextStats(inputText), [inputText]);
-  const recommendedChunks = useMemo(() => recommendChunkCount(inputText), [inputText]);
+  const recommendedChunks = useMemo(() => recommendChunkCount(inputText, chunkPresetMedium), [inputText, chunkPresetMedium]);
   const enabledStages = useMemo(() => config.stages.filter((s) => s.enabled), [config.stages]);
   const hasGlossary = config.glossary.length > 0;
   const showHighlight = glossaryHighlightEnabled && hasGlossary;

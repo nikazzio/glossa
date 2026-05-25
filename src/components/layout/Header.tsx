@@ -28,8 +28,10 @@ import { importTextFile, exportTranslation, exportBilingual } from '../../servic
 import { savePipelineConfig } from '../../services/pipelineService';
 import type { ImportDialogPipelineConfig } from '../document/ImportPreviewDialog';
 import { extractFootnotes } from '../../utils/footnoteExtractor';
+import { logger } from '../../utils/logger';
 import { getContextWindow } from '../../models/catalog';
 import type { ExportFormat } from '../document/ExportDialog';
+import type { DocumentFormat, DocumentRenderProfile } from '../../types';
 
 const ExportDialog = lazy(() =>
   import('../document/ExportDialog').then((m) => ({ default: m.ExportDialog })),
@@ -157,12 +159,12 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
       maxWords,
       headingAware: pendingImport.headingAware,
       carryTrailingShortBlocks: pendingImport.carryTrailingShortBlocks,
-      documentFormat: pendingImport.format ?? 'plain',
-      renderProfile: pendingImport.format === 'markdown' ? 'markdown' : 'plain-text',
+      documentFormat: (pendingImport.format ?? 'plain') as DocumentFormat,
+      renderProfile: (pendingImport.format === 'markdown' ? 'markdown' : 'plain-text') as DocumentRenderProfile,
       markdownAware: pendingImport.format === 'markdown',
       experimentalImport: pendingImport.experimental ?? null,
       chunkedWithContextWindow: contextWindow,
-    } as const;
+    };
     setConfig(() => updatedConfig);
     loadDocument(
       pendingImport.rawText,
@@ -179,7 +181,9 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
       manualChunks,
     );
     if (activePipelineId) {
-      savePipelineConfig(activePipelineId, updatedConfig).catch(() => {});
+      savePipelineConfig(activePipelineId, updatedConfig).catch((err: unknown) => {
+        logger.error('savePipelineConfig after import failed', { error: err instanceof Error ? err.message : String(err) });
+      });
     }
     setPendingImport(null);
     toast.success(t('files.imported'));

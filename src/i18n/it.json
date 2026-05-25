@@ -703,7 +703,7 @@
       "editTitle": "Revisione e iterazione",
       "editDesc": "La traduzione candidata è modificabile inline. Dopo le correzioni manuali puoi cliccare 'Rivaluta' nel pannello audit per rilanciare il giudice solo sul chunk modificato, oppure 'Blocca traduzione' (spunta verde) per marcarlo come definitivo e proteggerlo da rielaborazioni accidentali.",
       "tipTitle": "Consiglio: mescola i provider",
-      "tipDesc": "Usa un modello rapido per traduzione (Gemini Flash, DeepSeek, modelli Ollama leggeri), un modello capace per refine (Claude Sonnet, GPT-4o), un modello rigoroso per il giudice. Le scelte per stage sono indipendenti e i costi vengono aggregati nel pannello statistiche."
+      "tipDesc": "Usa un modello rapido per traduzione (Gemini Flash, DeepSeek, modelli Ollama leggeri), un modello capace per refine (Claude Sonnet, GPT-5), un modello rigoroso per il giudice. Le scelte per stage sono indipendenti e i costi vengono aggregati nel pannello statistiche."
     },
     "features": {
       "title": "Funzionalità",
@@ -846,7 +846,7 @@
       "useTitle": "Configura in Glossa",
       "useDesc": "Apri Impostazioni — la sezione Ollama mostra lo stato della connessione e i modelli disponibili. Seleziona 'ollama' come provider in qualsiasi stage o giudice e scegli un modello dal menu a tendina del componente stage.",
       "recommendedTitle": "Modelli consigliati per la traduzione",
-      "recommendedDesc": "Per traduzione generale: llama3.1 (8B), mistral (7B), gemma2 (9B). Per qualità superiore su macchine potenti: llama3.1:70b o mixtral:8x7b. Modelli sotto i 3B parametri tendono a produrre traduzioni di qualità inferiore — preferiscili solo per esperimenti veloci.",
+      "recommendedDesc": "Per traduzione generale: llama3.2 (3B), qwen2.5 (7B), gemma3 (9B). Per qualità superiore su macchine potenti: llama3.3:70b o qwen2.5:32b. Modelli sotto i 3B parametri tendono a produrre traduzioni di qualità inferiore — preferiscili solo per esperimenti veloci.",
       "thinkTitle": "Modalità Think",
       "thinkDesc": "Alcuni modelli Ollama supportano un passaggio di ragionamento esteso prima di rispondere. Nella sezione Ollama delle Impostazioni puoi impostare il livello Think: off, basso, medio o alto. Un livello più alto può migliorare la qualità a costo di tempo e token. Abilitalo solo per modelli che supportano esplicitamente il thinking — su modelli standard non ha effetto."
     },
