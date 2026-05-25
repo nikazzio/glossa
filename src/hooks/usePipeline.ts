@@ -673,11 +673,6 @@ export function usePipeline() {
       const outcome = await runJudgeForChunk(chunk, chunk.translationProcessingText);
       if (outcome === 'cancelled') { cancelled = true; break; }
       if (outcome === 'failed') errorCount++;
-
-      if (useChunksStore.getState().cancelRequested) {
-        cancelled = true;
-        break;
-      }
     }
 
     setIsProcessing(false);

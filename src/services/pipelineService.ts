@@ -48,7 +48,6 @@ interface DbPipeline {
   coherence_prompt: string | null;
   run_status: string | null;
   last_run_config: string | null;
-  run_in_progress: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -262,12 +261,11 @@ export async function setPipelineRunState(
 ): Promise<void> {
   await execute(
     `UPDATE pipelines
-     SET run_in_progress = $1,
-         run_status      = $2,
-         last_run_config = CASE WHEN $3 IS NULL THEN last_run_config ELSE $3 END,
+     SET run_status      = $1,
+         last_run_config = CASE WHEN $2 IS NULL THEN last_run_config ELSE $2 END,
          updated_at      = CURRENT_TIMESTAMP
-     WHERE id = $4`,
-    [runStatus === 'running' ? 1 : 0, runStatus, configFingerprint ?? null, pipelineId],
+     WHERE id = $3`,
+    [runStatus, configFingerprint ?? null, pipelineId],
   );
 }
 
@@ -339,7 +337,7 @@ export async function saveChunkCheckpoint(
   );
 }
 
-export async function saveTranslations(
+async function saveTranslations(
   projectId: string,
   pipelineId: string,
   chunks: TranslationChunk[],
