@@ -373,6 +373,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
     const updated = await listPipelines(currentProjectId);
     set({ pipelines: updated });
+    await get().switchPipeline(newId);
   },
 
   deletePipeline: async (pipelineId: string) => {

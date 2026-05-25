@@ -82,6 +82,12 @@ function dropPendingBatchForChunk(chunkId: string): void {
   }
 }
 
+// Drop all pending tokens regardless of chunk. Used by full-store resets.
+function dropAllPendingBatches(): void {
+  cancelRaf();
+  pendingBatch = null;
+}
+
 // Exported so tests can flush synchronously without needing RAF stubs.
 // Also cancels any in-flight RAF handle to prevent double-application after a manual flush.
 export function flushPendingTokenBatch(): void {
@@ -345,12 +351,16 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
       ),
     })),
 
-  resetAllChunks: () =>
+  resetAllChunks: () => {
+    dropAllPendingBatches();
     set((state) => ({
       chunks: state.chunks.map((chunk) =>
         chunk.status !== 'ready' ? resetChunkForSourceEdit(chunk) : chunk,
       ),
-    })),
+      cancelRequested: false,
+      activeStreamId: null,
+    }));
+  },
 
   unlockChunkForEdit: (chunkId) =>
     set((state) => ({
