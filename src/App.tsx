@@ -109,6 +109,7 @@ export default function App() {
               />
               <ProductionStream
                 onRetranslateChunk={runSingleChunk}
+                onReauditChunk={auditSingleChunk}
               />
               <AuditPanel
                 onRunAuditOnly={runAuditOnly}
