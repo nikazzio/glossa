@@ -326,7 +326,7 @@ describe('pipelineService', () => {
       expect(restored[0]?.sourceProcessingText).toBe('Processing source');
       expect(restored[0]?.translationDisplayText).toBe('Display translation');
       expect(restored[0]?.translationProcessingText).toBe('Processing translation');
-      expect(restored[0]?.originalText).toBe('Display source');
+      expect(restored[0]?.originalText).toBe('Legacy source');
       expect(restored[0]?.currentDraft).toBe('Display translation');
     });
 

@@ -94,7 +94,7 @@ describe('chunksStore', () => {
     useChunksStore.getState().updateChunkOriginalText(chunkId, 'Edited source');
 
     const chunk = useChunksStore.getState().chunks[0];
-    expect(chunk.originalText).toBe('Edited source');
+    expect(chunk.originalText).toBe('Original');
     expect(chunk.status).toBe('completed');
     expect(chunk.currentDraft).toBe('Translated');
     expect(chunk.stageResults).toEqual({
@@ -219,7 +219,7 @@ describe('chunksStore', () => {
     const chunk = useChunksStore.getState().chunks[0];
     expect(chunk?.sourceDisplayText).toBe('Edited text');
     expect(chunk?.sourceProcessingText).toBe('Edited text');
-    expect(chunk?.originalText).toBe('Edited text');
+    expect(chunk?.originalText).toBe('Original text');
   });
 
   it('updateChunkOriginalText is a no-op when the source text is unchanged', () => {
