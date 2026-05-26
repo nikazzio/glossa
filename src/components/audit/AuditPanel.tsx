@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Crosshair, ScanLine, ShieldCheck, RefreshCcw, AlertTriangle } from 'lucide-react';
+import { ChevronDown, ChevronRight, Crosshair, ScanLine, ShieldCheck, RefreshCcw, AlertTriangle, Check, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useChunksStore } from '../../stores/chunksStore';
@@ -24,6 +24,8 @@ export function AuditPanel({ onRunAuditOnly, onReauditChunk }: AuditPanelProps) 
 
   // Track which chunks are expanded in the drill-down. Default closed.
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [resolvedKeys, setResolvedKeys] = useState<Set<string>>(new Set());
+  const [rejectedKeys, setRejectedKeys] = useState<Set<string>>(new Set());
 
   const auditedChunks = useMemo(
     () => chunks.filter((c) => c.judgeResult.status === 'completed' || c.judgeResult.status === 'error'),
@@ -61,6 +63,26 @@ export function AuditPanel({ onRunAuditOnly, onReauditChunk }: AuditPanelProps) 
       const next = new Set(prev);
       if (next.has(chunkId)) next.delete(chunkId);
       else next.add(chunkId);
+      return next;
+    });
+  };
+
+  const toggleResolved = (key: string) => {
+    setResolvedKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) { next.delete(key); return next; }
+      next.add(key);
+      setRejectedKeys((r) => { const rn = new Set(r); rn.delete(key); return rn; });
+      return next;
+    });
+  };
+
+  const toggleRejected = (key: string) => {
+    setRejectedKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) { next.delete(key); return next; }
+      next.add(key);
+      setResolvedKeys((r) => { const rn = new Set(r); rn.delete(key); return rn; });
       return next;
     });
   };
@@ -104,6 +126,10 @@ export function AuditPanel({ onRunAuditOnly, onReauditChunk }: AuditPanelProps) 
                     onToggle={() => toggleExpanded(chunk.id)}
                     onReaudit={() => onReauditChunk(chunk.id)}
                     isProcessing={isProcessing}
+                    resolvedKeys={resolvedKeys}
+                    rejectedKeys={rejectedKeys}
+                    onToggleResolved={toggleResolved}
+                    onToggleRejected={toggleRejected}
                   />
                 );
               })}
@@ -153,10 +179,15 @@ interface ChunkAuditCardProps {
   onToggle: () => void;
   onReaudit: () => void;
   isProcessing: boolean;
+  resolvedKeys: Set<string>;
+  rejectedKeys: Set<string>;
+  onToggleResolved: (key: string) => void;
+  onToggleRejected: (key: string) => void;
 }
 
 function ChunkAuditCard({
   chunk, index, isExpanded, onToggle, onReaudit, isProcessing,
+  resolvedKeys, rejectedKeys, onToggleResolved, onToggleRejected,
 }: ChunkAuditCardProps) {
   const { t } = useTranslation();
   const { focusIssueInChunk, setSelectedChunkId, setViewMode } = useUiStore();
@@ -231,42 +262,75 @@ function ChunkAuditCard({
           )}
           {hasIssues && (
             <ul className="space-y-3">
-              {issues.map((issue, i) => (
-                <li key={i} className="space-y-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <span
-                      className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-sm ${
-                        issue.severity === 'high' ? 'bg-editorial-accent text-white' : 'bg-editorial-ink text-white'
-                      }`}
-                    >
-                      {issue.type}
-                    </span>
-                    {issue.phrase ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setViewMode('document');
-                          setSelectedChunkId(chunk.id);
-                          focusIssueInChunk(chunk.id, issue.phrase);
-                        }}
-                        title={t('audit.locateInTextTooltip')}
-                        className="flex items-center gap-1 rounded-full border border-editorial-border px-2 py-1 text-[9px] font-bold uppercase tracking-[0.18em] text-editorial-muted transition-colors hover:text-editorial-ink"
+              {issues.map((issue, i) => {
+                const issueKey = `${chunk.id}-${i}`;
+                const isResolved = resolvedKeys.has(issueKey);
+                const isRejected = rejectedKeys.has(issueKey);
+                return (
+                  <li key={i} className={`space-y-1 transition-opacity ${isResolved || isRejected ? 'opacity-40' : ''}`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <span
+                        className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-sm ${
+                          issue.severity === 'high' ? 'bg-editorial-accent text-white' : 'bg-editorial-ink text-white'
+                        }`}
                       >
-                        <Crosshair size={10} />
-                        {t('audit.locateInText')}
-                      </button>
-                    ) : null}
-                  </div>
-                  <p className="text-sm leading-relaxed text-editorial-ink">
-                    {issue.description}
-                  </p>
-                  {issue.suggestedFix && (
-                    <div className="rounded-xl border border-editorial-border/70 bg-editorial-bg px-3 py-2 text-[11px] leading-relaxed text-editorial-muted">
-                      {t('audit.fix')}: {issue.suggestedFix}
+                        {issue.type}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        {issue.phrase ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setViewMode('document');
+                              setSelectedChunkId(chunk.id);
+                              focusIssueInChunk(chunk.id, issue.phrase);
+                            }}
+                            title={t('audit.locateInTextTooltip')}
+                            className="flex items-center gap-1 rounded-full border border-editorial-border px-2 py-1 text-[9px] font-bold uppercase tracking-[0.18em] text-editorial-muted transition-colors hover:text-editorial-ink"
+                          >
+                            <Crosshair size={10} />
+                            {t('audit.locateInText')}
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() => onToggleResolved(issueKey)}
+                          title={isResolved ? t('audit.markUnresolved') : t('audit.markResolved')}
+                          aria-label={isResolved ? t('audit.markUnresolved') : t('audit.markResolved')}
+                          className={`rounded-full border p-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                            isResolved
+                              ? 'border-editorial-success bg-editorial-success/10 text-editorial-success'
+                              : 'border-editorial-border text-editorial-muted hover:border-editorial-success/60 hover:text-editorial-success'
+                          }`}
+                        >
+                          <Check size={10} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onToggleRejected(issueKey)}
+                          title={isRejected ? t('audit.markUnrejected') : t('audit.markRejected')}
+                          aria-label={isRejected ? t('audit.markUnrejected') : t('audit.markRejected')}
+                          className={`rounded-full border p-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                            isRejected
+                              ? 'border-editorial-accent bg-editorial-accent/10 text-editorial-accent'
+                              : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent'
+                          }`}
+                        >
+                          <X size={10} />
+                        </button>
+                      </div>
                     </div>
-                  )}
-                </li>
-              ))}
+                    <p className={`text-sm leading-relaxed text-editorial-ink ${isResolved ? 'line-through' : ''}`}>
+                      {issue.description}
+                    </p>
+                    {issue.suggestedFix && (
+                      <div className="rounded-xl border border-editorial-border/70 bg-editorial-bg px-3 py-2 text-[11px] leading-relaxed text-editorial-muted">
+                        {t('audit.fix')}: {issue.suggestedFix}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

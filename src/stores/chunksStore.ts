@@ -145,6 +145,7 @@ interface ChunksState {
   toggleChunkTranslationLock: (chunkId: string) => void;
   updateChunkStatus: (chunkId: string, status: ChunkStatus) => void;
   updateChunkOriginalText: (chunkId: string, text: string) => void;
+  restoreChunkSourceText: (chunkId: string) => void;
   toggleChunkSourceEditing: (chunkId: string) => void;
   updateChunkCoherence: (chunkId: string, result: CoherenceResult) => void;
   resetCompletedChunks: () => void;
@@ -321,6 +322,26 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
       return { chunks: nextChunks };
     }),
 
+  restoreChunkSourceText: (chunkId) =>
+    set((state) => {
+      const chunkIdx = chunkIndex.get(chunkId);
+      if (chunkIdx === undefined) return {};
+      const sourceFootnotes = usePipelineStore.getState().sourceFootnotes;
+      const nextChunks = updateSingleChunk(state.chunks, chunkId, (chunk) => {
+        if (chunk.sourceDisplayText === chunk.originalText) return chunk;
+        const hasTranslation = !!(chunk.currentDraft || Object.keys(chunk.stageResults).length > 0);
+        const updated = updateChunkSourceFields(
+          chunk,
+          chunk.originalText,
+          chunk.originalText,
+          buildChunkFootnotes(chunk.originalText, sourceFootnotes),
+        );
+        return hasTranslation ? { ...updated, translationStale: true } : updated;
+      });
+      syncProjectSourceDocument(nextChunks);
+      return { chunks: nextChunks };
+    }),
+
   toggleChunkSourceEditing: (chunkId) =>
     set((state) => ({
       chunks: updateSingleChunk(state.chunks, chunkId, (chunk) => ({
@@ -442,11 +463,13 @@ function chunksFromTexts(
   sourceFootnotes: ReturnType<typeof usePipelineStore.getState>['sourceFootnotes'],
 ): TranslationChunk[] {
   return chunkTexts.map((chunkTextValue) => {
+    const displayText = deriveChunkDisplayText(chunkTextValue, sourceFootnotes);
     const footnotes = buildChunkFootnotes(chunkTextValue, sourceFootnotes);
     return withSyncedChunkFields({
       id: generateId('chunk'),
-      sourceDisplayText: deriveChunkDisplayText(chunkTextValue, sourceFootnotes),
+      sourceDisplayText: displayText,
       sourceProcessingText: chunkTextValue,
+      originalText: displayText,
       translationDisplayText: '',
       translationProcessingText: '',
       status: 'ready' as const,

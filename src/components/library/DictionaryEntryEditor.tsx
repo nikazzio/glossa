@@ -67,7 +67,7 @@ export function DictionaryEntryEditor({ entries, onChange, readOnly = false }: P
           {t('pipeline.glossaryEmpty')}
         </p>
       ) : (
-        <div className="overflow-y-auto custom-scrollbar max-h-[420px] rounded-[14px] border border-editorial-border bg-editorial-bg [scrollbar-gutter:stable]">
+        <div className="overflow-y-auto custom-scrollbar max-h-[420px] rounded-[14px] border border-editorial-border bg-editorial-bg pr-2">
           {/* Intestazioni colonne (sticky) */}
           <div className="sticky top-0 z-10 grid grid-cols-[1fr_1fr_auto] border-b border-editorial-border bg-editorial-textbox/80 px-3 py-2">
             <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-editorial-muted">

@@ -3,7 +3,7 @@ import { initReactI18next } from 'react-i18next';
 import en from './en.json';
 import it from './it.json';
 
-const savedLang = localStorage.getItem('glossa-lang') || 'en';
+const savedLang = localStorage.getItem('glossa-lang') || 'it';
 document.documentElement.lang = savedLang;
 
 i18n.use(initReactI18next).init({

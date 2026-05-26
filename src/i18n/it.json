@@ -343,7 +343,11 @@
     "auditFailed": "Audit fallito",
     "openChunk": "Apri unità",
     "locateInText": "Evidenzia",
-    "locateInTextTooltip": "Evidenzia la frase nel testo tradotto"
+    "locateInTextTooltip": "Evidenzia la frase nel testo tradotto",
+    "markResolved": "Segna come risolto",
+    "markUnresolved": "Rimuovi marcatura risolto",
+    "markRejected": "Rifiuta suggerimento",
+    "markUnrejected": "Rimuovi rifiuto"
   },
   "settings": {
     "title": "Configurazione / Chiavi API",
@@ -641,9 +645,10 @@
     "translationCacheLabel": "Cache traduzione",
     "auditCacheLabel": "Cache audit",
     "sourceLockedTitle": "Sorgente non modificabile",
-    "sourceLockedBody": "Questo testo resta non modificabile finche non abiliti \"Modifica sorgente\" nella barra in alto.",
+    "sourceLockedBody": "Questo testo resta non modificabile. Usa il pulsante matita qui sopra per abilitare la modifica.",
     "enableSourceEditing": "Modifica sorgente",
     "disableSourceEditing": "Blocca sorgente",
+    "restoreSourceText": "Ripristina originale",
     "focusIssue": "Mostra problema",
     "focusBoth": "Mostra entrambi",
     "focusSource": "Solo sorgente",

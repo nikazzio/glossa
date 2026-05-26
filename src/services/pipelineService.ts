@@ -293,7 +293,6 @@ export async function saveChunkCheckpoint(
        blob_id, blob_order, blob_reference_chunk_ids
      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
      ON CONFLICT(id) DO UPDATE SET
-       original_text                = excluded.original_text,
        final_translation            = excluded.final_translation,
        position                     = excluded.position,
        chunk_status                 = excluded.chunk_status,
@@ -315,7 +314,7 @@ export async function saveChunkCheckpoint(
       chunk.id,
       pipelineId,
       projectId,
-      chunk.sourceDisplayText,
+      chunk.originalText,
       chunk.translationDisplayText || chunk.judgeResult.content || lastStageContent(chunk.stageResults) || '',
       position,
       chunk.status,
@@ -367,7 +366,6 @@ async function saveTranslationsInternal(
          blob_id, blob_order, blob_reference_chunk_ids
        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
        ON CONFLICT(id) DO UPDATE SET
-         original_text                = excluded.original_text,
          final_translation            = excluded.final_translation,
          position                     = excluded.position,
          chunk_status                 = excluded.chunk_status,
@@ -389,7 +387,7 @@ async function saveTranslationsInternal(
         chunk.id,
         pipelineId,
         projectId,
-        chunk.sourceDisplayText,
+        chunk.originalText,
         chunk.translationDisplayText || chunk.judgeResult.content || lastStageContent(chunk.stageResults) || '',
         position,
         chunk.status,
@@ -497,7 +495,7 @@ export function restoreTranslations(rows: SavedTranslation[]): TranslationChunk[
       sourceProcessingText: row.source_processing_text ?? '',
       translationDisplayText: row.translation_display_text ?? '',
       translationProcessingText: row.translation_processing_text ?? '',
-      originalText: row.source_display_text ?? '',
+      originalText: row.original_text ?? row.source_display_text ?? '',
       status: (row.chunk_status || (judgeResult.status === 'completed' ? 'completed' : 'ready')) as TranslationChunk['status'],
       stageResults,
       judgeResult,

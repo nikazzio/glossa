@@ -61,6 +61,7 @@ export function DocumentView({
     cancelRequested,
     updateChunkDraft,
     updateChunkOriginalText,
+    restoreChunkSourceText,
     toggleChunkTranslationLock,
     toggleChunkSourceEditing,
   } = useChunksStore();
@@ -81,11 +82,11 @@ export function DocumentView({
     clearFocusedIssue,
   } = useUiStore();
 
-  const effectivePipelineMode = completedCount > 0 ? 'production' : pipelineMode;
+  const effectivePipelineMode = pipelineMode;
   const runChunkCount = effectivePipelineMode === 'test'
     ? Math.max(1, Math.min(pipelineTestChunkCount, chunks.length || 1))
     : chunks.length;
-  const canAdjustTestCount = effectivePipelineMode === 'test' && completedCount === 0 && !isProcessing;
+  const canAdjustTestCount = effectivePipelineMode === 'test' && !isProcessing;
   const runPanelClass =
     effectivePipelineMode === 'test'
       ? 'border-amber-200/70 bg-[#faf4e7]/95 shadow-[0_16px_50px_rgba(129,89,30,0.06)]'
@@ -131,7 +132,7 @@ export function DocumentView({
   const enabledStages = config.stages.filter((s) => s.enabled);
   const lastStageId = enabledStages[enabledStages.length - 1]?.id ?? '';
   const isEditorialMode = enabledStages.length > 1;
-  const deferredOriginalText = useDeferredValue(currentChunk?.originalText ?? '');
+  const deferredSourceText = useDeferredValue(currentChunk?.sourceDisplayText ?? '');
   const effectiveSelectedStageId = selectedStageId || lastStageId;
   const isLastSelected = effectiveSelectedStageId === lastStageId;
   const rawStageContent = isLastSelected
@@ -155,7 +156,7 @@ export function DocumentView({
   const hasGlossary = config.glossary.length > 0;
   const showHighlight = glossaryHighlightEnabled && hasGlossary;
   const sourceHighlight = useGlossaryHighlight(
-    paneFocus !== 'translation' ? deferredOriginalText : '',
+    paneFocus !== 'translation' ? deferredSourceText : '',
     showHighlight && paneFocus !== 'translation' ? config.glossary : [],
     'source',
   );
@@ -166,12 +167,12 @@ export function DocumentView({
   );
 
   const sourceHighlightHtml = useMemo(() => {
-    const hasFootnoteMarkers = /\[[⁰¹²³⁴⁵⁶⁷⁸⁹]/.test(deferredOriginalText);
+    const hasFootnoteMarkers = /\[[⁰¹²³⁴⁵⁶⁷⁸⁹]/.test(deferredSourceText);
     const showGlossary = showHighlight && paneFocus !== 'translation';
     if (!showGlossary && !hasFootnoteMarkers) return null;
-    const base = showGlossary ? sourceHighlight.html : escapeHtml(deferredOriginalText);
+    const base = showGlossary ? sourceHighlight.html : escapeHtml(deferredSourceText);
     return hasFootnoteMarkers ? highlightSuperscriptMarkersHtml(base) : base;
-  }, [deferredOriginalText, showHighlight, paneFocus, sourceHighlight.html]);
+  }, [deferredSourceText, showHighlight, paneFocus, sourceHighlight.html]);
 
   if (!currentChunk) {
     return (
@@ -224,7 +225,7 @@ export function DocumentView({
   const nextChunk = chunks[currentIndex + 1];
   const sourceReadOnly =
     currentChunk.status === 'processing' ||
-    (currentChunk.status === 'completed' && currentChunk.sourceEditable !== true);
+    currentChunk.sourceEditable !== true;
   const sourceEditDisabled = currentChunk.status === 'processing';
 
   return (
@@ -235,18 +236,14 @@ export function DocumentView({
           {onRunPipeline && onCancelPipeline && (
             <div className={`grid shrink-0 grid-cols-[auto_auto] items-stretch gap-x-3 gap-y-2 rounded-[20px] border px-4 py-3 ${runPanelClass}`}>
               <div className="grid w-fit gap-2 self-stretch">
-                <div
-                  className={`flex w-full items-center justify-center rounded-full border border-editorial-border bg-editorial-textbox/40 p-0.5 ${completedCount > 0 ? 'opacity-40 pointer-events-none' : ''}`}
-                  aria-disabled={completedCount > 0}
-                  title={completedCount > 0 ? t('pipeline.modeLockedHint') : undefined}
-                >
+                <div className="flex w-full items-center justify-center rounded-full border border-editorial-border bg-editorial-textbox/40 p-0.5">
                   <button
                     type="button"
                     onClick={() => setPipelineMode('test')}
-                    disabled={completedCount > 0}
+                    disabled={isProcessing}
                     title={t('pipeline.modeTestHint')}
                     aria-label={t('pipeline.modeTest')}
-                    className={`flex flex-1 items-center justify-center rounded-full px-4 py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                    className={`flex flex-1 items-center justify-center rounded-full px-4 py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed ${
                       pipelineMode === 'test'
                         ? 'bg-editorial-bg text-editorial-ink shadow-sm'
                         : 'text-editorial-muted hover:text-editorial-ink'
@@ -257,10 +254,10 @@ export function DocumentView({
                   <button
                     type="button"
                     onClick={() => setPipelineMode('production')}
-                    disabled={completedCount > 0}
+                    disabled={isProcessing}
                     title={t('pipeline.modeProductionHint')}
                     aria-label={t('pipeline.modeProduction')}
-                    className={`flex flex-1 items-center justify-center rounded-full px-4 py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                    className={`flex flex-1 items-center justify-center rounded-full px-4 py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed ${
                       pipelineMode === 'production'
                         ? 'bg-editorial-bg text-editorial-charcoal shadow-sm'
                         : 'text-editorial-muted hover:text-editorial-ink'
@@ -471,17 +468,6 @@ export function DocumentView({
                   icon={ScanLine}
                 />
               </button>
-              {currentChunk.status === 'completed' && (
-                <ChunkIconButton
-                  onClick={() => toggleChunkSourceEditing(currentChunk.id)}
-                  title={currentChunk.sourceEditable ? t('document.disableSourceEditing') : t('document.enableSourceEditing')}
-                  disabled={sourceEditDisabled}
-                  active={currentChunk.sourceEditable === true}
-                  ariaPressed={currentChunk.sourceEditable === true}
-                >
-                  <Pencil size={18} />
-                </ChunkIconButton>
-              )}
               <button
                 type="button"
                 onClick={() => toggleChunkTranslationLock(currentChunk.id)}
@@ -512,12 +498,34 @@ export function DocumentView({
               label={t('pipeline.originalSource')}
               eyebrow={t('document.leftPage')}
               readOnly={sourceReadOnly}
-              statusBadge={currentChunk.status === 'completed' && currentChunk.sourceEditable !== true ? (
+              statusBadge={sourceReadOnly && currentChunk.status !== 'processing' ? (
                 <InlineStatusBadge tone="amber" icon={<Lock size={13} />} label={t('document.sourceLockedTitle')} />
               ) : null}
+              actions={
+                <div className="flex items-center gap-1">
+                  <ChunkIconButton
+                    onClick={() => toggleChunkSourceEditing(currentChunk.id)}
+                    title={currentChunk.sourceEditable ? t('document.disableSourceEditing') : t('document.enableSourceEditing')}
+                    disabled={sourceEditDisabled}
+                    active={currentChunk.sourceEditable === true}
+                    ariaPressed={currentChunk.sourceEditable === true}
+                  >
+                    <Pencil size={14} />
+                  </ChunkIconButton>
+                  {currentChunk.sourceDisplayText !== currentChunk.originalText && (
+                    <ChunkIconButton
+                      onClick={() => restoreChunkSourceText(currentChunk.id)}
+                      title={t('document.restoreSourceText')}
+                      disabled={sourceEditDisabled}
+                    >
+                      <RotateCcw size={14} />
+                    </ChunkIconButton>
+                  )}
+                </div>
+              }
             >
               <MarkdownEditor
-                value={currentChunk.originalText}
+                value={currentChunk.sourceDisplayText}
                 onChange={(nextValue) => updateChunkOriginalText(currentChunk.id, nextValue)}
                 markdownEnabled={config.markdownAware === true}
                 disabled={currentChunk.status === 'processing'}

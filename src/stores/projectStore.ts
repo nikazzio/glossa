@@ -371,18 +371,17 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       }
     }
 
-    // Snapshot chunks before the switch empties them (switchPipeline saves old pipeline
-    // with its original state first, then loads new pipeline which has no translations)
-    const preSwitchChunks = useChunksStore.getState().chunks;
+    // Check if there is a document loaded before the switch clears chunks
+    const hasDocument = useChunksStore.getState().chunks.length > 0;
 
     const updated = await listPipelines(currentProjectId);
     set({ pipelines: updated });
     await get().switchPipeline(newId);
 
-    // Restore source document: new pipeline inherits chunks reset to ready state
-    if (preSwitchChunks.length > 0) {
-      useChunksStore.getState().setChunks(preSwitchChunks);
-      useChunksStore.getState().resetAllChunks();
+    // Re-generate chunks from source text with fresh IDs — avoids ON CONFLICT(id)
+    // overwriting the old pipeline's translations in the shared translations table.
+    if (hasDocument) {
+      useChunksStore.getState().generateChunks();
     }
 
     // New pipeline starts with a clean operation log

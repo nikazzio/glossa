@@ -407,8 +407,14 @@ export function usePipeline() {
     // mutate the store right before invoking us (e.g. the "Re-run all"
     // button which resetCompletedChunks() then runPipeline()) see the
     // freshest state instead of a stale useCallback closure.
-    const liveChunks = useChunksStore.getState().chunks;
-    if (liveChunks.length === 0) return;
+    const allChunks = useChunksStore.getState().chunks;
+    if (allChunks.length === 0) return;
+
+    const { pipelineMode, pipelineTestChunkCount } = useUiStore.getState();
+    const isTestMode = pipelineMode === 'test';
+    // In test mode always process the first N chunks (never resume from a mid-point).
+    const liveChunks = isTestMode ? allChunks.slice(0, pipelineTestChunkCount) : allChunks;
+
     pipelineLog.batchPipelineStart(liveChunks.length, config.stages.filter((stage) => stage.enabled).length);
     if (!(await ensureProvidersReady([
       ...config.stages.filter((stage) => stage.enabled).map((stage, i) => ({
@@ -422,7 +428,8 @@ export function usePipeline() {
     setIsProcessing(true);
 
     const pipelineState = usePipelineStore.getState();
-    const batchMode: BatchRunMode = pipelineState.runStatus === 'completed'
+    // In test mode always re-run the test chunks regardless of prior state.
+    const batchMode: BatchRunMode = isTestMode || pipelineState.runStatus === 'completed'
       ? 'rerun-unlocked'
       : 'resume';
     const activePipelineId = useProjectStore.getState().activePipelineId;
