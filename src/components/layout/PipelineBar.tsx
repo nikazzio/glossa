@@ -133,8 +133,7 @@ export function PipelineBar() {
   const deletePipeline = useProjectStore((s) => s.deletePipeline);
   const renamePipeline = useProjectStore((s) => s.renamePipeline);
 
-  if (pipelines.length === 0) return null;
-
+  const isGhostState = !currentProjectId && pipelines.length === 0;
   const atLimit = pipelines.length >= MAX_PIPELINES;
   const canAdd = !!currentProjectId && !atLimit;
 
@@ -144,7 +143,16 @@ export function PipelineBar() {
       aria-label={t('pipeline.ariaGroup')}
       className="flex shrink-0 items-center gap-1.5 bg-[#f7f3ec] px-5 pt-2 pb-1.5 md:px-6"
     >
-      {pipelines.map((pipeline, index) => (
+      {isGhostState ? (
+        <div className="flex items-center gap-2 rounded-full bg-editorial-bg border border-editorial-border/50 shadow-[0_1px_6px_rgba(26,26,26,0.08)] px-3.5 py-1.5">
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-editorial-accent text-white text-[11px] font-bold">
+            1
+          </span>
+          <span className="font-display italic tracking-tight text-editorial-ink text-sm leading-none cursor-default">
+            {t('pipeline.defaultName', 'Pipeline 1')}
+          </span>
+        </div>
+      ) : pipelines.map((pipeline, index) => (
         <PipelineTab
           key={pipeline.id}
           pipeline={pipeline}
