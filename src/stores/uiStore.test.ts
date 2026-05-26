@@ -8,6 +8,14 @@ beforeEach(() => {
 });
 
 describe('uiStore drawer mutual exclusion', () => {
+  it('defaults the test chunk count to three and clamps it to at least one', () => {
+    const state = useUiStore.getState();
+    expect(state.pipelineTestChunkCount).toBe(3);
+
+    state.setPipelineTestChunkCount(0);
+    expect(useUiStore.getState().pipelineTestChunkCount).toBe(1);
+  });
+
   it('opening the config drawer closes settings, help and both insight drawers', () => {
     useUiStore.setState({
       showSettings: true,

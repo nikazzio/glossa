@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useRef } from 'react';
 import { initLogger } from './utils/logger';
-import { Header } from './components/layout';
+import { Header, PipelineBar } from './components/layout';
 import { ErrorBoundary, ConfirmDialog, PreflightDialog, RunResumeBanner } from './components/common';
 import { usePipeline } from './hooks/usePipeline';
 import { useProjectAutosave } from './hooks/useProjectAutosave';
@@ -87,13 +87,15 @@ export default function App() {
         {viewMode === 'document' ? (
           <Suspense fallback={null}>
             <main className="flex flex-1 min-h-0 overflow-hidden">
-              <DocumentView
-                onRetranslateChunk={handleRetranslateChunk}
-                onReauditChunk={auditSingleChunk}
-                onRunPipeline={runPipeline}
-                onCancelPipeline={cancelPipeline}
-                onDryRun={runDryRun}
-              />
+              <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+                <PipelineBar />
+                <DocumentView
+                  onRetranslateChunk={handleRetranslateChunk}
+                  onRunPipeline={runPipeline}
+                  onCancelPipeline={cancelPipeline}
+                  onDryRun={runDryRun}
+                />
+              </div>
               <InsightsDrawer onReauditChunk={auditSingleChunk} onRunCoherenceAudit={runCoherenceAudit} />
             </main>
           </Suspense>

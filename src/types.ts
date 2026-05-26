@@ -15,6 +15,20 @@ export type StageRole = 'translation' | 'refine' | 'format';
 export type PipelineMode = 'standard' | 'editorial';
 export type PipelineRunStatus = 'idle' | 'running' | 'completed' | 'interrupted';
 
+/** A translation pipeline entity as stored in the DB. */
+export interface Pipeline {
+  id: string;
+  projectId: string;
+  name: string;
+  sourceLanguage: string;
+  targetLanguage: string;
+  mode: PipelineMode;
+  runStatus: PipelineRunStatus;
+  lastRunConfig: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface OllamaConfig {
   temperature?: number;
   topP?: number;
@@ -180,7 +194,7 @@ export interface PipelineConfig {
   glossary: GlossaryEntry[];
   assignedGlossaryId?: string | null;
   useChunking?: boolean;
-  targetChunkCount?: number;
+  wordsPerChunk?: number;
   minWords?: number;
   maxWords?: number;
   headingAware?: boolean;

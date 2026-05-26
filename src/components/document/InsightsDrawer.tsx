@@ -488,7 +488,7 @@ function IndexTab({ panelId, labelledBy, chunks, currentChunkId, isProcessing, s
   }
 
   return (
-    <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} ref={scrollRef} className="overflow-y-auto custom-scrollbar px-4 py-4">
+    <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-4 py-4">
       <ul style={{ height: virtualizer.getTotalSize(), position: 'relative' }} className="w-full">
         {virtualizer.getVirtualItems().map((virtualRow) => {
           const chunk = chunks[virtualRow.index];

@@ -5,7 +5,7 @@ describe('documentWorkflow', () => {
   it('builds an import preview with chunk and text statistics', () => {
     const preview = buildImportPreview('First paragraph.\n\nSecond paragraph.', {
       useChunking: true,
-      targetChunkCount: 0,
+      targetWordsPerChunk: 0,
     });
 
     expect(preview.stats.words).toBe(4);
@@ -22,7 +22,7 @@ describe('documentWorkflow', () => {
   it('keeps experimental markdown metadata in the preview result', () => {
     const preview = buildImportPreview('Text with note[^1].\n\n[^1]: A note.', {
       useChunking: true,
-      targetChunkCount: 0,
+      targetWordsPerChunk: 0,
       markdownAware: true,
       format: 'markdown',
       experimental: 'docx-markdown',

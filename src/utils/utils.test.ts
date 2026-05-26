@@ -80,7 +80,7 @@ describe('document chunking', () => {
       'Thirteen fourteen fifteen sixteen.',
     ].join('\n\n');
 
-    const chunks = chunkText(text, { useChunking: true, targetChunkCount: 2 });
+    const chunks = chunkText(text, { useChunking: true, targetWordsPerChunk: 8 });
     expect(chunks).toHaveLength(2);
     expect(chunks[0]).toContain('One two');
     expect(chunks[1]).toContain('Thirteen');
@@ -88,7 +88,7 @@ describe('document chunking', () => {
 
   it('falls back to one chunk when chunking is disabled', () => {
     const text = 'First paragraph.\n\nSecond paragraph.';
-    expect(chunkText(text, { useChunking: false, targetChunkCount: 4 })).toEqual([text]);
+    expect(chunkText(text, { useChunking: false, targetWordsPerChunk: 0 })).toEqual([text]);
   });
 
   it('keeps markdown footnote blocks intact when chunking markdown-aware content', () => {
@@ -103,7 +103,7 @@ describe('document chunking', () => {
 
     const chunks = chunkText(text, {
       useChunking: true,
-      targetChunkCount: 2,
+      targetWordsPerChunk: 8,
       markdownAware: true,
     });
 
@@ -118,7 +118,7 @@ describe('document chunking', () => {
 
     const chunks = chunkText(text, {
       useChunking: true,
-      targetChunkCount: 3,
+      targetWordsPerChunk: 3,
       markdownAware: true,
     });
 
@@ -134,7 +134,7 @@ describe('document chunking', () => {
 
     const chunks = chunkText(text, {
       useChunking: true,
-      targetChunkCount: 0,
+      targetWordsPerChunk: 0,
       headingAware: true,
       carryTrailingShortBlocks: false,
     });
@@ -154,7 +154,7 @@ describe('document chunking', () => {
 
     const chunks = chunkText([shortPara, title, longPara, extraPara, lastPara].join('\n\n'), {
       useChunking: true,
-      targetChunkCount: 3,
+      targetWordsPerChunk: 15,
       headingAware: true,
       carryTrailingShortBlocks: false,
     });
@@ -175,7 +175,7 @@ describe('document chunking', () => {
 
     const chunks = chunkText([shortPara, heading, longPara, extraPara, lastPara].join('\n\n'), {
       useChunking: true,
-      targetChunkCount: 3,
+      targetWordsPerChunk: 15,
       headingAware: true,
       carryTrailingShortBlocks: false,
     });
@@ -196,7 +196,7 @@ describe('document chunking', () => {
 
     const chunks = chunkText([shortPara, trailingPara, longPara, extraPara, lastPara].join('\n\n'), {
       useChunking: true,
-      targetChunkCount: 3,
+      targetWordsPerChunk: 16,
       headingAware: true,
       carryTrailingShortBlocks: false,
     });
@@ -217,7 +217,7 @@ describe('document chunking', () => {
 
     const chunks = chunkText([shortPara, trailingPara, longPara, extraPara, lastPara].join('\n\n'), {
       useChunking: true,
-      targetChunkCount: 3,
+      targetWordsPerChunk: 16,
       headingAware: false,
       carryTrailingShortBlocks: true,
     });
@@ -242,13 +242,13 @@ describe('document chunking', () => {
     const text = [intro, longSingleLine, body, ending].join('\n\n');
     const withoutCarry = chunkText(text, {
       useChunking: true,
-      targetChunkCount: 3,
+      targetWordsPerChunk: 50,
       headingAware: false,
       carryTrailingShortBlocks: false,
     });
     const withCarry = chunkText(text, {
       useChunking: true,
-      targetChunkCount: 3,
+      targetWordsPerChunk: 50,
       headingAware: false,
       carryTrailingShortBlocks: true,
     });
@@ -265,13 +265,13 @@ describe('document chunking', () => {
     const text = [intro, trailingSentence, body, ending].join('\n\n');
     const withoutHeadingAware = chunkText(text, {
       useChunking: true,
-      targetChunkCount: 3,
+      targetWordsPerChunk: 15,
       headingAware: false,
       carryTrailingShortBlocks: false,
     });
     const withHeadingAware = chunkText(text, {
       useChunking: true,
-      targetChunkCount: 3,
+      targetWordsPerChunk: 15,
       headingAware: true,
       carryTrailingShortBlocks: false,
     });
@@ -288,7 +288,7 @@ describe('document chunking', () => {
 
     const chunks = chunkText(text, {
       useChunking: true,
-      targetChunkCount: 0,
+      targetWordsPerChunk: 0,
       minWords: 4,
     });
 
@@ -303,7 +303,7 @@ describe('document chunking', () => {
 
     const chunks = chunkText(text, {
       useChunking: true,
-      targetChunkCount: 1,
+      targetWordsPerChunk: 0,
       maxWords: 5,
     });
 
@@ -322,7 +322,7 @@ describe('document chunking', () => {
 
     const chunks = chunkText(text, {
       useChunking: true,
-      targetChunkCount: 0,
+      targetWordsPerChunk: 0,
       markdownAware: true,
       maxWords: 3,
     });

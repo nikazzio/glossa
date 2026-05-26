@@ -83,6 +83,8 @@ export function SettingsModal() {
     setChunkPresetLong,
     ollamaBaseUrl,
     setOllamaBaseUrl,
+    newPipelineInit,
+    setNewPipelineInit,
   } = useUiStore();
   const { t } = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
@@ -215,6 +217,32 @@ export function SettingsModal() {
                       {t('settings.chunkPresetLongHint')}
                     </p>
                   </div>
+                </div>
+              </div>
+
+              {/* Inizializzazione nuova pipeline */}
+              <div className="space-y-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
+                  {t('settings.newPipelineInit')}
+                </p>
+                <p className="text-xs text-editorial-muted leading-relaxed">
+                  {t('settings.newPipelineInitHint')}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {(['copy-first', 'copy-previous', 'defaults'] as const).map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => setNewPipelineInit(option)}
+                      className={`rounded-full border px-4 py-1.5 text-xs font-bold uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                        newPipelineInit === option
+                          ? 'border-editorial-accent bg-editorial-accent text-white'
+                          : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent'
+                      }`}
+                    >
+                      {t(`settings.newPipelineInit${option.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join('')}`)}
+                    </button>
+                  ))}
                 </div>
               </div>
 

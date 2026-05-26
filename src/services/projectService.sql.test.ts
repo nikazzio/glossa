@@ -1,28 +1,23 @@
 /**
- * Static validation of SQL INSERT statements in projectService.ts.
+ * Static validation of SQL INSERT statements in pipelineService.ts.
  *
- * All DB calls are mocked in the unit tests, so SQL syntax errors — like a
- * mismatch between the number of columns and the number of VALUES placeholders
- * — are invisible at test time and only surface as runtime crashes.
- *
- * These tests read the source file as text and assert structural correctness
- * without requiring a real database or additional dependencies. They would
- * have caught the bug where pipeline_configs had 17 columns but only 16
- * VALUES placeholders ($17 for review_provider_options was missing).
+ * All DB calls are mocked in unit tests, so SQL syntax errors — like a mismatch
+ * between the number of columns and VALUES placeholders — are invisible at test time
+ * and only surface as runtime crashes. These tests read the source file as text and
+ * assert structural correctness without requiring a real database.
  */
 import { readFileSync } from 'fs';
-import { resolve } from 'path';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { describe, expect, it } from 'vitest';
 
-const source = readFileSync(resolve(__dirname, './projectService.ts'), 'utf-8');
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const source = readFileSync(resolve(__dirname, './pipelineService.ts'), 'utf-8');
 
 function parseInsert(tableName: string): { columns: string[]; placeholderCount: number } | null {
   // [^()]+ matches column names (which never contain parens) cleanly.
   // VALUES uses a one-level-nesting pattern to handle COALESCE($N, '') correctly:
   //   [^()]+ matches non-paren chars, (?:\([^()]*\)[^()]*)* handles one nested group.
-  // The regex skips the first INSERT INTO pipeline_configs (4-col create) automatically
-  // because that INSERT has no ON CONFLICT clause, so the regex only matches the
-  // upsert INSERT that does.
   const pattern = new RegExp(
     `INSERT INTO ${tableName} \\(([^()]+)\\)\\s*VALUES \\(([^()]+(?:\\([^()]*\\)[^()]*)*)\\)\\s*ON CONFLICT`,
     's',
@@ -35,23 +30,36 @@ function parseInsert(tableName: string): { columns: string[]; placeholderCount: 
     .map((s) => s.trim())
     .filter(Boolean);
 
-  // Count every $N occurrence in the VALUES clause only.
-  // COALESCE($9, '') still contributes exactly one $N per column.
   const placeholderCount = (match[2].match(/\$\d+/g) ?? []).length;
 
   return { columns, placeholderCount };
 }
 
-describe('projectService SQL structure', () => {
-  it('pipeline_configs INSERT columns match VALUES placeholders', () => {
-    const result = parseInsert('pipeline_configs');
+describe('pipelineService SQL structure', () => {
+  it('translations upsert columns match VALUES placeholders', () => {
+    const result = parseInsert('translations');
     expect(result).not.toBeNull();
     expect(result!.placeholderCount).toBe(result!.columns.length);
   });
 
-  it('translations INSERT columns match VALUES placeholders', () => {
-    const result = parseInsert('translations');
-    expect(result).not.toBeNull();
-    expect(result!.placeholderCount).toBe(result!.columns.length);
+  it('translations INSERT columns match VALUES placeholders across both INSERT statements', () => {
+    // pipelineService has two INSERT INTO translations statements (saveChunkCheckpoint + saveTranslationsInternal).
+    // Both must have matching column counts. We verify by finding both matches.
+    const pattern = new RegExp(
+      `INSERT INTO translations \\(([^()]+)\\)\\s*VALUES \\(([^()]+(?:\\([^()]*\\)[^()]*)*)\\)\\s*ON CONFLICT`,
+      'gs',
+    );
+    const matches = [...source.matchAll(pattern)];
+
+    expect(matches.length).toBeGreaterThanOrEqual(1);
+
+    for (const match of matches) {
+      const columns = match[1]
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const placeholderCount = (match[2].match(/\$\d+/g) ?? []).length;
+      expect(placeholderCount).toBe(columns.length);
+    }
   });
 });

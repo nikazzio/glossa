@@ -121,7 +121,7 @@ export function LibraryPanel() {
                     </span>
                   </div>
                 </div>
-                <div className="flex-1 overflow-y-auto px-6 py-6 md:px-8 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto px-6 py-6 md:px-8 custom-scrollbar [scrollbar-gutter:stable]">
                   {activeTab === 'dictionaries' && <DictionariesTab />}
                   {activeTab === 'templates' && <PromptTemplatesTab />}
                 </div>

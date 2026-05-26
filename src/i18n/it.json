@@ -109,7 +109,7 @@
     "words": "Parole",
     "paragraphs": "Paragrafi",
     "recommendedChunks": "Chunk suggeriti",
-    "targetChunks": "Numero chunk",
+    "targetChunks": "Parole per chunk",
     "useRecommendation": "Usa suggerimento",
     "zeroMeansAuto": "0 mantiene la segmentazione automatica per paragrafi.",
     "chunkPreview": "Anteprima Chunk",
@@ -139,8 +139,13 @@
     "dryRunShort": "Test",
     "clearPreview": "Cancella risultati di test",
     "dryRunCompleted": "Test completato — risultato in anteprima",
+    "dryRunCompletedMany": "Test completato — {{count}} blocchi in anteprima",
     "dryRunChunkCompleted": "Blocco rielaborato in anteprima",
     "dryRunNoTarget": "Nessun blocco disponibile per il test",
+    "runChunkCount": "Questa esecuzione elaborerà {{count}} blocchi.",
+    "testChunkCountHint": "Quanti blocchi pronti deve elaborare il test.",
+    "increaseTestChunkCount": "Aumenta il numero di blocchi del test",
+    "decreaseTestChunkCount": "Diminuisci il numero di blocchi del test",
     "resetAll": "Reset completo",
     "confirmResetAllTitle": "Azzerare tutte le traduzioni?",
     "confirmResetAllMessage": "{{count}} traduzioni e i relativi audit verranno eliminati. L'azione non è reversibile.",
@@ -294,6 +299,8 @@
       "deleted": "Template eliminato"
     },
     "editPrompt": "Modifica prompt",
+    "promptCustomBadge": "Personalizzato",
+    "promptReset": "Ripristina default",
     "refinePrompt": "Rifinisci prompt",
     "refinePromptWithModel": "Rifinisci prompt con {{model}}",
     "refining": "Rifinendo...",
@@ -302,7 +309,17 @@
     "refineKeyLabel": "Rifinitura prompt",
     "refineKeyMissingHint": "La rifinitura dei prompt è disabilitata per i provider remoti senza API key. Configura: {{providers}}. Ollama resta disponibile senza chiave.",
     "refineKeyReadyHint": "La rifinitura dei prompt è pronta per i provider configurati. Ollama non richiede API key.",
-    "contextOverflowWarning": "Il chunk più lungo (~{{tokens}} token) potrebbe superare la finestra di contesto di {{model}} ({{window}} token). Riduci la dimensione dei chunk o usa un modello con contesto più grande."
+    "contextOverflowWarning": "Il chunk più lungo (~{{tokens}} token) potrebbe superare la finestra di contesto di {{model}} ({{window}} token). Riduci la dimensione dei chunk o usa un modello con contesto più grande.",
+    "deleteTitle": "Eliminare \"{{name}}\"?",
+    "deleteMessage": "Le traduzioni associate a questa pipeline verranno eliminate definitivamente.",
+    "deleteConfirm": "Elimina",
+    "ariaGroup": "Pipeline",
+    "ariaDelete": "Elimina {{name}}",
+    "ariaSelect": "Seleziona {{name}}",
+    "ariaRename": "Rinomina pipeline",
+    "renameHint": "Doppio clic per rinominare",
+    "ariaAdd": "Aggiungi pipeline",
+    "saveFirstToAdd": "Salva il progetto prima di aggiungere pipeline"
   },
   "audit": {
     "title": "Log Audit",
@@ -326,7 +343,11 @@
     "auditFailed": "Audit fallito",
     "openChunk": "Apri unità",
     "locateInText": "Evidenzia",
-    "locateInTextTooltip": "Evidenzia la frase nel testo tradotto"
+    "locateInTextTooltip": "Evidenzia la frase nel testo tradotto",
+    "markResolved": "Segna come risolto",
+    "markUnresolved": "Rimuovi marcatura risolto",
+    "markRejected": "Rifiuta suggerimento",
+    "markUnrejected": "Rimuovi rifiuto"
   },
   "settings": {
     "title": "Configurazione / Chiavi API",
@@ -339,6 +360,11 @@
     "chunkPresetMediumHint": "~700 parole — default bilanciato.",
     "chunkPresetLong": "Lunghi",
     "chunkPresetLongHint": "~1000 parole — pochi segmenti grandi, più contesto per chiamata.",
+    "newPipelineInit": "Inizializzazione nuova pipeline",
+    "newPipelineInitHint": "Impostazioni da copiare alla creazione di una nuova pipeline.",
+    "newPipelineInitCopyFirst": "Copia prima pipeline",
+    "newPipelineInitCopyPrevious": "Copia pipeline corrente",
+    "newPipelineInitDefaults": "Usa default",
     "securityAdvisory": "Avviso di Sicurezza",
     "securityMessage": "Le chiavi API vengono salvate nel portachiavi del sistema operativo quando disponibile. Se il portachiavi non è accessibile, Glossa usa un file locale cifrato protetto da una chiave locale alla macchina; è una soluzione meno sicura del portachiavi OS. Le chiavi non lasciano mai il tuo dispositivo. Ollama gira interamente sulla tua macchina — nessun dato viene inviato a server esterni.",
     "secretsPanel": "Pannello segreti",
@@ -619,9 +645,10 @@
     "translationCacheLabel": "Cache traduzione",
     "auditCacheLabel": "Cache audit",
     "sourceLockedTitle": "Sorgente non modificabile",
-    "sourceLockedBody": "Questo testo resta non modificabile finche non abiliti \"Modifica sorgente\" nella barra in alto.",
+    "sourceLockedBody": "Questo testo resta non modificabile. Usa il pulsante matita qui sopra per abilitare la modifica.",
     "enableSourceEditing": "Modifica sorgente",
     "disableSourceEditing": "Blocca sorgente",
+    "restoreSourceText": "Ripristina originale",
     "focusIssue": "Mostra problema",
     "focusBoth": "Mostra entrambi",
     "focusSource": "Solo sorgente",
@@ -629,6 +656,9 @@
     "emptyLabel": "Modalità Documento",
     "emptyTitle": "Nessun documento ancora preparato.",
     "emptyBody": "Prepara un testo in più chunk per usare il lettore documento, oppure torna a Sandbox per lavorare rapidamente su un testo singolo.",
+    "emptyCardPipeline": "Pipeline",
+    "emptyCardTranslations": "Traduzioni",
+    "emptyCardQuality": "Qualità",
     "indexEmptyTitle": "Nessuna unità da mostrare.",
     "indexEmptyBody": "Importa un testo e preparalo in chunk per iniziare.",
     "watchdogStuck": "Bloccato",
@@ -687,7 +717,7 @@
       "editTitle": "Revisione e iterazione",
       "editDesc": "La traduzione candidata è modificabile inline. Dopo le correzioni manuali puoi cliccare 'Rivaluta' nel pannello audit per rilanciare il giudice solo sul chunk modificato, oppure 'Blocca traduzione' (spunta verde) per marcarlo come definitivo e proteggerlo da rielaborazioni accidentali.",
       "tipTitle": "Consiglio: mescola i provider",
-      "tipDesc": "Usa un modello rapido per traduzione (Gemini Flash, DeepSeek, modelli Ollama leggeri), un modello capace per refine (Claude Sonnet, GPT-4o), un modello rigoroso per il giudice. Le scelte per stage sono indipendenti e i costi vengono aggregati nel pannello statistiche."
+      "tipDesc": "Usa un modello rapido per traduzione (Gemini Flash, DeepSeek, modelli Ollama leggeri), un modello capace per refine (Claude Sonnet, GPT-5), un modello rigoroso per il giudice. Le scelte per stage sono indipendenti e i costi vengono aggregati nel pannello statistiche."
     },
     "features": {
       "title": "Funzionalità",
@@ -733,7 +763,11 @@
       "watchdogTitle": "Rilevamento chunk bloccati",
       "watchdogDesc": "Un watchdog in background monitora i chunk rimasti in stato 'in elaborazione' più del previsto. Se un chunk sembra bloccato — ad esempio un modello Ollama che lavora su un contesto molto ampio — un avviso compare nel tab Indice con un pulsante Annulla per interrompere solo quel chunk senza fermare l'intera pipeline.",
       "sandboxTitle": "Modalità Sandbox (alternativa)",
-      "sandboxDesc": "Oltre al workspace documento, esiste una modalità Sandbox più leggera per esperimenti rapidi su brevi estratti (icona Sandbox nell'header). Non ha indice, statistiche o audit di coerenza: usala per confrontare modelli o iterare velocemente su un singolo passaggio. Il lavoro serio resta nel workspace documento."
+      "sandboxDesc": "Oltre al workspace documento, esiste una modalità Sandbox più leggera per esperimenti rapidi su brevi estratti (icona Sandbox nell'header). Non ha indice, statistiche o audit di coerenza: usala per confrontare modelli o iterare velocemente su un singolo passaggio. Il lavoro serio resta nel workspace documento.",
+      "footnotesTitle": "Note a piè di pagina",
+      "footnotesDesc": "Quando importi un documento DOCX o Markdown con note a piè di pagina, Glossa le separa completamente dal processo di traduzione. Il modello riceve solo il corpo del testo, senza il contenuto delle note e senza i marcatori inline — testo pulito. Il documento originale, visibile nell'editor, mantiene marcatori e note esattamente come apparivano. Il testo delle note viene salvato con il progetto. Dopo la traduzione dovrai gestire le note manualmente: decidere quali riportare, adattarne il testo alla lingua di destinazione e posizionarle dove ha senso nel testo tradotto, che può differire dalla posizione nell'originale.",
+      "footnotesTipTitle": "Perché le note non vengono tradotte automaticamente",
+      "footnotesTipDesc": "In una traduzione, una nota a piè di pagina spesso non può essere collocata nella stessa posizione dell'originale, e il suo testo va riscritto più che tradotto letteralmente. Tenerle fuori dalla pipeline impedisce al modello di prendere decisioni arbitrarie su posizione e formulazione. Rimani tu a decidere."
     },
     "context": {
       "title": "Contesto e caching",
@@ -826,7 +860,7 @@
       "useTitle": "Configura in Glossa",
       "useDesc": "Apri Impostazioni — la sezione Ollama mostra lo stato della connessione e i modelli disponibili. Seleziona 'ollama' come provider in qualsiasi stage o giudice e scegli un modello dal menu a tendina del componente stage.",
       "recommendedTitle": "Modelli consigliati per la traduzione",
-      "recommendedDesc": "Per traduzione generale: llama3.1 (8B), mistral (7B), gemma2 (9B). Per qualità superiore su macchine potenti: llama3.1:70b o mixtral:8x7b. Modelli sotto i 3B parametri tendono a produrre traduzioni di qualità inferiore — preferiscili solo per esperimenti veloci.",
+      "recommendedDesc": "Per traduzione generale: llama3.2 (3B), qwen2.5 (7B), gemma3 (9B). Per qualità superiore su macchine potenti: llama3.3:70b o qwen2.5:32b. Modelli sotto i 3B parametri tendono a produrre traduzioni di qualità inferiore — preferiscili solo per esperimenti veloci.",
       "thinkTitle": "Modalità Think",
       "thinkDesc": "Alcuni modelli Ollama supportano un passaggio di ragionamento esteso prima di rispondere. Nella sezione Ollama delle Impostazioni puoi impostare il livello Think: off, basso, medio o alto. Un livello più alto può migliorare la qualità a costo di tempo e token. Abilitalo solo per modelli che supportano esplicitamente il thinking — su modelli standard non ha effetto."
     },

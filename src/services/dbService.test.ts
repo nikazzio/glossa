@@ -125,7 +125,7 @@ describe('initDatabase migrations', () => {
     await initDatabase();
 
     expect(dbState.db.execute).toHaveBeenCalledWith(
-      expect.stringContaining('ALTER TABLE pipeline_configs ADD COLUMN target_chunk_count INTEGER DEFAULT 0'),
+      expect.stringContaining('ALTER TABLE pipeline_configs ADD COLUMN words_per_chunk INTEGER DEFAULT 0'),
     );
     expect(dbState.db.execute).toHaveBeenCalledWith(
       expect.stringContaining("ALTER TABLE pipeline_configs ADD COLUMN source_text TEXT DEFAULT ''"),

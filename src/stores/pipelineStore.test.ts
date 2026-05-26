@@ -32,7 +32,7 @@ describe('pipelineStore', () => {
         judgeProvider: 'gemini',
         glossary: [],
         useChunking: true,
-        targetChunkCount: 0,
+        wordsPerChunk: 0,
       },
     });
   });

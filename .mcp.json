@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "code-review-graph": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "caveman-shrink",
+        "uvx",
+        "code-review-graph",
+        "serve"
+      ],
+      "cwd": "/home/niki/workspace/personal/glossa",
+      "type": "stdio"
+    }
+  }
+}

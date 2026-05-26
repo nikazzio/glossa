@@ -176,6 +176,9 @@ export function MarkdownEditor({
       onClick={syncSelection}
       onKeyUp={syncSelection}
       onSelect={syncSelection}
+      spellCheck={false}
+      autoCorrect="off"
+      autoCapitalize="off"
       className={textareaClassName}
       style={textSizeStyle}
     />
@@ -400,6 +403,9 @@ export function MarkdownEditor({
               onKeyUp={syncSelection}
               onSelect={syncSelection}
               onScroll={syncHighlightLayer}
+              spellCheck={false}
+              autoCorrect="off"
+              autoCapitalize="off"
               className={`${textareaClassName} absolute inset-0 h-full w-full resize-none`}
               style={{ ...textSizeStyle, color: 'transparent', caretColor: 'var(--color-editorial-ink)' }}
             />
@@ -429,6 +435,9 @@ export function MarkdownEditor({
               onClick={syncSelection}
               onKeyUp={syncSelection}
               onSelect={syncSelection}
+              spellCheck={false}
+              autoCorrect="off"
+              autoCapitalize="off"
               className={`h-full resize-none w-full bg-transparent outline-none ${textClassName} disabled:opacity-70 read-only:cursor-not-allowed`}
               style={textSizeStyle}
             />

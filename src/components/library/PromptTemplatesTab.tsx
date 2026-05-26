@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Trash2, BookmarkPlus, Check, X, Wand2, Loader2 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Trash2, BookmarkPlus, Check, X, Wand2, Loader2, LayoutGrid, Languages, Scale, Bot } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { confirm } from '../../stores/confirmStore';
@@ -13,6 +13,13 @@ import { canRefineWithProvider, formatProviderModelLabel, useProviderKeyStatus }
 
 const FILTER_OPTIONS = ['all', 'stage', 'audit', 'persona'] as const;
 type FilterValue = (typeof FILTER_OPTIONS)[number];
+
+const FILTER_ICONS: Record<FilterValue, React.ReactNode> = {
+  all: <LayoutGrid size={14} />,
+  stage: <Languages size={14} />,
+  audit: <Scale size={14} />,
+  persona: <Bot size={14} />,
+};
 
 export function PromptTemplatesTab() {
   const { t } = useTranslation();
@@ -123,30 +130,37 @@ export function PromptTemplatesTab() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="flex items-center gap-2">
           {FILTER_OPTIONS.map((ctx) => {
             const isActive = filterContext === ctx;
             return (
               <button
                 key={ctx}
                 onClick={() => setFilterContext(ctx)}
-                className={`rounded-full border px-4 py-1.5 text-xs font-bold uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                title={filterLabel(ctx)}
+                aria-label={filterLabel(ctx)}
+                className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
                   isActive
                     ? 'border-editorial-accent bg-editorial-accent text-white'
-                    : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent'
+                    : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
                 }`}
               >
-                {filterLabel(ctx)}
+                {FILTER_ICONS[ctx]}
               </button>
             );
           })}
+          <span className="mx-1 h-4 w-px self-center bg-editorial-border/70" aria-hidden="true" />
+          <span className="self-center font-display text-sm italic text-editorial-ink">
+            {filterLabel(filterContext)}
+          </span>
         </div>
         <button
           onClick={() => setCreating(true)}
           title={t('library.newTemplate')}
-          className="flex items-center gap-2 rounded-full border border-editorial-border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          aria-label={t('library.newTemplate')}
+          className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
         >
-          <BookmarkPlus size={13} /> {t('library.newTemplate')}
+          <BookmarkPlus size={13} />
         </button>
       </div>
 

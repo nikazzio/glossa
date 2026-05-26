@@ -26,3 +26,19 @@ Desktop.ini
 
 #working
 STATO_SESSIONE*
+
+# RTK (AI Token Optimizer) cache and hooks
+.rtk/
+# Added by code-review-graph
+.code-review-graph/
+
+# AI tool configs (altri provider — gestiti separatamente)
+.agents/
+.gemini/
+.kiro/
+.qoder/
+.cursorrules
+.windsurfrules
+.opencode.json
+AGENTS.md
+GEMINI.md

@@ -77,12 +77,11 @@ export function buildChunkFootnotes(
   return assigned.length > 0 ? assigned : undefined;
 }
 
-export function withSyncedChunkFields<T extends Omit<TranslationChunk, 'originalText' | 'currentDraft'>>(
+export function withSyncedChunkFields<T extends Omit<TranslationChunk, 'currentDraft'>>(
   chunk: T,
 ): TranslationChunk {
   return {
     ...chunk,
-    originalText: chunk.sourceDisplayText,
     currentDraft: chunk.translationDisplayText,
   };
 }

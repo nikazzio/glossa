@@ -3,25 +3,38 @@ import {
   listProjects,
   createProject,
   deleteProject,
-  getProjectConfig,
-  loadTranslations,
-  restoreTranslations,
-  saveProjectState,
+  getProjectSource,
+  saveProjectSource,
   type Project,
 } from '../services/projectService';
+import {
+  listPipelines,
+  getPipelineConfig,
+  createPipeline,
+  savePipelineConfig,
+  renamePipeline,
+  duplicatePipeline,
+  deletePipeline,
+  saveFullState,
+  loadTranslations,
+  restoreTranslations,
+} from '../services/pipelineService';
 import { usePipelineStore } from './pipelineStore';
 import { useChunksStore } from './chunksStore';
 import { useUiStore } from './uiStore';
 import { useOperationLogStore } from './operationLogStore';
 import { buildProjectSnapshot } from '../utils/projectSnapshot';
 import { logger } from '../utils/logger';
-import type { PipelineConfig } from '../types';
+import { runInTransaction } from '../services/dbService';
+import type { Pipeline, PipelineConfig } from '../types';
 
 let saveInFlight: Promise<void> | null = null;
 
 interface ProjectState {
   projects: Project[];
   currentProjectId: string | null;
+  pipelines: Pipeline[];
+  activePipelineId: string | null;
   showProjectPanel: boolean;
   saveState: 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
   lastSaveError: string | null;
@@ -38,11 +51,19 @@ interface ProjectState {
   closeProject: () => void;
   setRunInterrupted: (value: boolean) => void;
   clearResumeState: () => void;
+
+  switchPipeline: (pipelineId: string) => Promise<void>;
+  createNewPipeline: (name: string) => Promise<void>;
+  deletePipeline: (pipelineId: string) => Promise<void>;
+  renamePipeline: (pipelineId: string, name: string) => Promise<void>;
+  duplicatePipeline: (pipelineId: string, newName: string) => Promise<void>;
 }
 
 export const useProjectStore = create<ProjectState>((set, get) => ({
   projects: [],
   currentProjectId: null,
+  pipelines: [],
+  activePipelineId: null,
   showProjectPanel: false,
   saveState: 'idle',
   lastSaveError: null,
@@ -65,87 +86,118 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   createAndOpen: async (name: string) => {
-    await persistCurrentState({ set, get, name });
+    const pipeline = usePipelineStore.getState();
+    const ui = useUiStore.getState();
+    const chunks = useChunksStore.getState().chunks;
+
+    const id = await createProject(name, pipeline.config.sourceLanguage, pipeline.config.targetLanguage);
+
+    const pipelines = await listPipelines(id);
+    const activePipelineId = pipelines[0]?.id ?? null;
+
+    // saveProjectSource uses execute() directly — must run outside the transaction
+    // to avoid deadlocking on the shared write-serialization queue.
+    await saveProjectSource(id, pipeline.inputText, pipeline.inputProcessingText, pipeline.sourceFootnotes, pipeline.config, ui.viewMode);
+    if (activePipelineId) {
+      await runInTransaction(async (run) => {
+        await saveFullState(id, activePipelineId, pipeline.config, chunks, run);
+      });
+    }
+
+    const trackedSnapshot = buildProjectSnapshot({
+      inputText: pipeline.inputText,
+      inputProcessingText: pipeline.inputProcessingText,
+      sourceFootnotes: pipeline.sourceFootnotes,
+      config: pipeline.config,
+      chunks,
+      viewMode: ui.viewMode,
+    });
+
+    void get().loadProjects().catch(() => {});
+    set({ currentProjectId: id, activePipelineId, pipelines, saveState: 'saved', lastSaveError: null, trackedSnapshot });
   },
 
   openProject: async (id: string) => {
     logger.info('openProject: start', { id });
-    const [config, savedTranslations] = await Promise.all([
-      getProjectConfig(id),
-      loadTranslations(id),
-    ]);
-    await useOperationLogStore.getState().loadFromDb(id);
-    if (!config) throw new Error(`Project config not found for id: ${id}`);
-    logger.info('openProject: loaded from db', {
-      id,
-      sourceLen: config.inputText?.length ?? 0,
-      savedTranslationsCount: savedTranslations.length,
-    });
 
-    const pipeline = usePipelineStore.getState();
-    const chunksStore = useChunksStore.getState();
-    const ui = useUiStore.getState();
-    const restoredChunks = restoreTranslations(savedTranslations);
-    usePipelineStore.setState((state) => ({
-      activePipelineId: config.pipelineId,
-      runStatus: config.runStatus,
-      lastRunConfig: config.lastRunConfig,
-      inputText: config.inputText,
-      inputProcessingText: config.inputProcessingText,
-      sourceFootnotes: config.sourceFootnotes,
-      config: {
-        ...state.config,
-        sourceLanguage: config.sourceLanguage,
-        targetLanguage: config.targetLanguage,
-        mode: config.mode,
-        stages: config.stages.length > 0 ? config.stages : state.config.stages,
-        judgePrompt: config.judgePrompt || state.config.judgePrompt,
-        judgeModel: config.judgeModel || state.config.judgeModel,
-        judgeProvider: (config.judgeProvider as PipelineConfig['judgeProvider']) || state.config.judgeProvider,
-        useChunking: config.useChunking,
-        targetChunkCount: config.targetChunkCount,
-        documentFormat: config.documentFormat ?? 'plain',
-        renderProfile: config.renderProfile ?? 'plain-text',
-        markdownAware: config.markdownAware ?? false,
-        experimentalImport: config.experimentalImport ?? null,
-        reviewProviderOptions: config.reviewProviderOptions ?? state.config.reviewProviderOptions,
-        glossary: config.glossary,
-        assignedGlossaryId: config.assignedGlossaryId,
-        persona: config.persona,
-        customSourceLanguage: config.customSourceLanguage,
-        customTargetLanguage: config.customTargetLanguage,
-        blobBudgetTokens: config.blobBudgetTokens,
-        blobOverlap: config.blobOverlap,
-      },
-    }));
-    chunksStore.setChunks(restoredChunks);
-    ui.setViewMode(
-      config.viewMode ?? (restoredChunks.length === 0 && config.inputText.trim() ? 'sandbox' : 'document'),
+    const [source, allPipelines] = await Promise.all([
+      getProjectSource(id),
+      listPipelines(id),
+    ]);
+
+    if (!source) throw new Error(`Project not found: ${id}`);
+
+    const activePipelineId = allPipelines[0]?.id ?? null;
+
+    let restoredChunks = useChunksStore.getState().chunks.filter(() => false); // empty typed array
+
+    if (activePipelineId) {
+      const [pipelineData, savedTranslations] = await Promise.all([
+        getPipelineConfig(activePipelineId),
+        loadTranslations(activePipelineId),
+      ]);
+
+      await useOperationLogStore.getState().loadFromDb(id);
+
+      restoredChunks = restoreTranslations(savedTranslations);
+
+      if (pipelineData) {
+        const { pipeline, config } = pipelineData;
+        const mergedConfig: PipelineConfig = {
+          ...config,
+          documentFormat: source.documentFormat,
+          renderProfile: source.renderProfile,
+          markdownAware: source.markdownAware,
+          experimentalImport: source.experimentalImport,
+        };
+
+        usePipelineStore.setState((state) => ({
+          runStatus: pipeline.runStatus,
+          lastRunConfig: pipeline.lastRunConfig,
+          inputText: source.sourceDisplayText,
+          inputProcessingText: source.sourceProcessingText,
+          sourceFootnotes: source.sourceFootnotes,
+          config: {
+            ...state.config,
+            ...mergedConfig,
+            stages: config.stages.length > 0 ? config.stages : state.config.stages,
+            judgePrompt: config.judgePrompt,
+            judgeModel: config.judgeModel || state.config.judgeModel,
+            judgeProvider: (config.judgeProvider || state.config.judgeProvider) as import('../types').ModelProvider,
+          },
+        }));
+
+        set({
+          runInterrupted: pipeline.runStatus === 'running' || pipeline.runStatus === 'interrupted',
+          lastRunConfig: pipeline.lastRunConfig,
+        });
+      }
+    }
+
+    useChunksStore.getState().setChunks(restoredChunks);
+    useUiStore.getState().setViewMode(
+      source.viewMode ?? (restoredChunks.length === 0 && source.sourceDisplayText.trim() ? 'sandbox' : 'document'),
     );
-    ui.setSelectedChunkId(restoredChunks[0]?.id ?? null);
+    useUiStore.getState().setSelectedChunkId(restoredChunks[0]?.id ?? null);
 
     set({
       currentProjectId: id,
+      pipelines: allPipelines,
+      activePipelineId,
       saveState: 'saved',
       lastSaveError: null,
       trackedSnapshot: null,
-      runInterrupted: config.runStatus === 'running' || config.runStatus === 'interrupted',
-      lastRunConfig: config.lastRunConfig,
     });
+
+    logger.info('openProject: done', { id, activePipelineId, chunksCount: restoredChunks.length });
   },
 
   removeProject: async (id: string) => {
     await deleteProject(id);
-    const state = get();
-    if (state.currentProjectId === id) {
-      set({
-        currentProjectId: null,
-        saveState: 'idle',
-        lastSaveError: null,
-        trackedSnapshot: null,
-      });
+    if (get().currentProjectId === id) {
+      set({ currentProjectId: null, pipelines: [], activePipelineId: null, saveState: 'idle', lastSaveError: null, trackedSnapshot: null });
     }
-    await state.loadProjects();
+    await get().loadProjects();
   },
 
   closeProject: () => {
@@ -156,6 +208,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     useOperationLogStore.setState({ entries: [], currentProjectId: null });
     set({
       currentProjectId: null,
+      pipelines: [],
+      activePipelineId: null,
       saveState: 'idle',
       lastSaveError: null,
       trackedSnapshot: null,
@@ -175,9 +229,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
     const operation = (async () => {
       const chunksStore = useChunksStore.getState();
-      if (chunksStore.isProcessing) {
-        throw new Error('Cannot save while the pipeline is processing.');
-      }
+      if (chunksStore.isProcessing) throw new Error('Cannot save while the pipeline is processing.');
 
       const pipeline = usePipelineStore.getState();
       const ui = useUiStore.getState();
@@ -194,104 +246,173 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         trigger: name ? 'first-save' : 'manual-or-autosave',
         currentProjectId: get().currentProjectId,
         chunksCount: chunksStore.chunks.length,
-        inputTextLen: pipeline.inputText.length,
-        isProcessing: chunksStore.isProcessing,
       });
       set({ saveState: 'saving', lastSaveError: null });
 
       try {
-        const currentProjectId =
-          get().currentProjectId ??
-          (name?.trim()
-            ? await createProject(
-                name.trim(),
-                pipeline.config.sourceLanguage,
-                pipeline.config.targetLanguage,
-              )
-            : null);
+        let currentProjectId = get().currentProjectId;
+        let activePipelineId = get().activePipelineId;
+        let newPipelines: Pipeline[] | null = null;
 
         if (!currentProjectId) {
-          throw new Error('Project name required for first save.');
+          if (!name?.trim()) throw new Error('Project name required for first save.');
+          currentProjectId = await createProject(name.trim(), pipeline.config.sourceLanguage, pipeline.config.targetLanguage);
+          const pipelines = await listPipelines(currentProjectId);
+          activePipelineId = pipelines[0]?.id ?? null;
+          newPipelines = pipelines;
         }
 
-        await saveProjectState({
-          projectId: currentProjectId,
-          inputText: pipeline.inputText,
-          inputProcessingText: pipeline.inputProcessingText,
-          sourceFootnotes: pipeline.sourceFootnotes,
-          config: pipeline.config,
-          viewMode: ui.viewMode,
-          chunks: chunksStore.chunks,
-        });
-        logger.info('saveCurrentProject: done', {
-          projectId: currentProjectId,
-          chunksCount: chunksStore.chunks.length,
-          inputTextLen: pipeline.inputText.length,
-        });
+        await saveProjectSource(
+          currentProjectId,
+          pipeline.inputText,
+          pipeline.inputProcessingText,
+          pipeline.sourceFootnotes,
+          pipeline.config,
+          ui.viewMode,
+        );
+
+        if (activePipelineId) {
+          await runInTransaction(async (run) => {
+            await saveFullState(currentProjectId!, activePipelineId!, pipeline.config, chunksStore.chunks, run);
+          });
+        }
+
+        logger.info('saveCurrentProject: done', { projectId: currentProjectId });
         await get().loadProjects().catch(() => {});
         set({
           currentProjectId,
+          activePipelineId,
           saveState: 'saved',
           lastSaveError: null,
           trackedSnapshot: effectiveSnapshot,
+          ...(newPipelines !== null ? { pipelines: newPipelines } : {}),
         });
-      } catch (error: any) {
-        logger.error('saveCurrentProject: failed', { message: error?.message });
-        set({
-          saveState: 'error',
-          lastSaveError: error?.message ?? 'Failed to save project.',
-        });
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Failed to save project.';
+        logger.error('saveCurrentProject: failed', { message });
+        set({ saveState: 'error', lastSaveError: message });
         throw error;
       }
     })();
 
-    saveInFlight = operation.finally(() => {
-      saveInFlight = null;
-    });
-
+    saveInFlight = operation.finally(() => { saveInFlight = null; });
     return saveInFlight;
   },
-}));
 
-async function persistCurrentState({
-  set,
-  get,
-  name,
-}: {
-  set: (partial: Partial<ProjectState>) => void;
-  get: () => ProjectState;
-  name: string;
-}) {
-  const pipeline = usePipelineStore.getState();
-  const ui = useUiStore.getState();
-  const chunks = useChunksStore.getState().chunks;
-  const trackedSnapshot = buildProjectSnapshot({
-    inputText: pipeline.inputText,
-    inputProcessingText: pipeline.inputProcessingText,
-    sourceFootnotes: pipeline.sourceFootnotes,
-    config: pipeline.config,
-    chunks,
-    viewMode: ui.viewMode,
-  });
-  const id = await createProject(
-    name,
-    pipeline.config.sourceLanguage,
-    pipeline.config.targetLanguage,
-  );
-  await saveProjectState({
-    projectId: id,
-    inputText: pipeline.inputText,
-    inputProcessingText: pipeline.inputProcessingText,
-    sourceFootnotes: pipeline.sourceFootnotes,
-    config: pipeline.config,
-    viewMode: ui.viewMode,
-    chunks,
-  });
-  void get().loadProjects().catch(() => {});
-  set({
-    currentProjectId: id,
-    saveState: 'saved',
-    lastSaveError: null,
-    trackedSnapshot,
-  });
-}
+  // ── Pipeline management ──────────────────────────────────────────────
+
+  switchPipeline: async (pipelineId: string) => {
+    const { currentProjectId, activePipelineId } = get();
+    if (!currentProjectId) return;
+
+    // Persist current pipeline before switching to avoid losing unsaved edits
+    if (activePipelineId && activePipelineId !== pipelineId) {
+      const pipeline = usePipelineStore.getState();
+      const chunks = useChunksStore.getState().chunks;
+      await runInTransaction(async (run) => {
+        await saveFullState(currentProjectId, activePipelineId, pipeline.config, chunks, run);
+      });
+    }
+
+    const [pipelineData, savedTranslations, source] = await Promise.all([
+      getPipelineConfig(pipelineId),
+      loadTranslations(pipelineId),
+      getProjectSource(currentProjectId),
+    ]);
+
+    if (!pipelineData || !source) return;
+
+    const { pipeline, config } = pipelineData;
+    const mergedConfig: PipelineConfig = {
+      ...config,
+      documentFormat: source.documentFormat,
+      renderProfile: source.renderProfile,
+      markdownAware: source.markdownAware,
+      experimentalImport: source.experimentalImport,
+    };
+
+    usePipelineStore.setState((state) => ({
+      runStatus: pipeline.runStatus,
+      lastRunConfig: pipeline.lastRunConfig,
+      config: {
+        ...state.config,
+        ...mergedConfig,
+        stages: config.stages.length > 0 ? config.stages : state.config.stages,
+        judgePrompt: config.judgePrompt,
+        judgeModel: config.judgeModel || state.config.judgeModel,
+        judgeProvider: (config.judgeProvider || state.config.judgeProvider) as import('../types').ModelProvider,
+      },
+    }));
+
+    useChunksStore.getState().setChunks(restoreTranslations(savedTranslations));
+    useUiStore.getState().setSelectedChunkId(null);
+
+    set({
+      activePipelineId: pipelineId,
+      runInterrupted: pipeline.runStatus === 'running' || pipeline.runStatus === 'interrupted',
+      lastRunConfig: pipeline.lastRunConfig,
+    });
+  },
+
+  createNewPipeline: async (name: string) => {
+    const { currentProjectId, pipelines, activePipelineId } = get();
+    if (!currentProjectId) return;
+    const { sourceLanguage, targetLanguage } = usePipelineStore.getState().config;
+    const newId = await createPipeline(currentProjectId, name, sourceLanguage, targetLanguage);
+
+    const initMode = useUiStore.getState().newPipelineInit;
+    if (initMode !== 'defaults' && pipelines.length > 0) {
+      const sourcePipelineId = initMode === 'copy-first'
+        ? pipelines[0].id
+        : (activePipelineId ?? pipelines[0].id);
+      const sourceData = await getPipelineConfig(sourcePipelineId);
+      if (sourceData) {
+        await savePipelineConfig(newId, sourceData.config);
+      }
+    }
+
+    // Check if there is a document loaded before the switch clears chunks
+    const hasDocument = useChunksStore.getState().chunks.length > 0;
+
+    const updated = await listPipelines(currentProjectId);
+    set({ pipelines: updated });
+    await get().switchPipeline(newId);
+
+    // Re-generate chunks from source text with fresh IDs — avoids ON CONFLICT(id)
+    // overwriting the old pipeline's translations in the shared translations table.
+    if (hasDocument) {
+      useChunksStore.getState().generateChunks();
+    }
+
+    // New pipeline starts with a clean operation log
+    useOperationLogStore.getState().clear();
+  },
+
+  deletePipeline: async (pipelineId: string) => {
+    const { currentProjectId, activePipelineId, pipelines } = get();
+    if (!currentProjectId || pipelines.length <= 1) return;
+    await deletePipeline(pipelineId);
+    const updated = await listPipelines(currentProjectId);
+    const nextActive = activePipelineId === pipelineId ? (updated[0]?.id ?? null) : activePipelineId;
+    set({ pipelines: updated, activePipelineId: nextActive });
+    if (activePipelineId === pipelineId && nextActive) {
+      await get().switchPipeline(nextActive);
+    }
+  },
+
+  renamePipeline: async (pipelineId: string, name: string) => {
+    await renamePipeline(pipelineId, name);
+    const { currentProjectId } = get();
+    if (!currentProjectId) return;
+    const pipelines = await listPipelines(currentProjectId);
+    set({ pipelines });
+  },
+
+  duplicatePipeline: async (pipelineId: string, newName: string) => {
+    const { currentProjectId } = get();
+    if (!currentProjectId) return;
+    await duplicatePipeline(pipelineId, newName);
+    const pipelines = await listPipelines(currentProjectId);
+    set({ pipelines });
+  },
+}));

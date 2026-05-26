@@ -30,6 +30,8 @@ interface UiState {
 
   pipelineMode: RunPhase;
   setPipelineMode: (mode: RunPhase) => void;
+  pipelineTestChunkCount: number;
+  setPipelineTestChunkCount: (count: number) => void;
 
   // App-level chunk preset word targets (persisted)
   chunkPresetShort: number;
@@ -38,6 +40,10 @@ interface UiState {
 
   // Ollama host (persisted)
   ollamaBaseUrl: string;
+
+  // How to initialise a new pipeline (persisted)
+  newPipelineInit: 'copy-first' | 'copy-previous' | 'defaults';
+  setNewPipelineInit: (value: 'copy-first' | 'copy-previous' | 'defaults') => void;
 
   setViewMode: (mode: ViewMode) => void;
   setDocumentLayout: (layout: DocumentLayoutPreference) => void;
@@ -70,7 +76,7 @@ export const useUiStore = create<UiState>()(
   showSettings: false,
   showHelp: false,
   showConfigDrawer: false,
-  showDocumentDrawer: true,
+  showDocumentDrawer: false,
   documentDrawerTab: 'index',
   showChunkDrawer: false,
   chunkDrawerTab: 'audit',
@@ -78,6 +84,7 @@ export const useUiStore = create<UiState>()(
   ollamaStatus: 'unknown',
   glossaryHighlightEnabled: false,
   pipelineMode: 'test',
+  pipelineTestChunkCount: 3,
   focusedChunkId: null,
   focusedIssueQuery: null,
   focusedIssueRequestId: 0,
@@ -85,14 +92,15 @@ export const useUiStore = create<UiState>()(
   chunkPresetMedium: 700,
   chunkPresetLong: 1000,
   ollamaBaseUrl: 'http://localhost:11434',
+  newPipelineInit: 'copy-first',
 
   setViewMode: (mode) =>
-    set({
+    set((state) => ({
       viewMode: mode,
       showConfigDrawer: false,
-      showDocumentDrawer: mode === 'document',
+      showDocumentDrawer: mode !== 'document' ? false : state.showDocumentDrawer,
       showChunkDrawer: false,
-    }),
+    })),
   setDocumentLayout: (layout) => set({ documentLayout: layout }),
   setSelectedChunkId: (chunkId) => set({ selectedChunkId: chunkId }),
   setShowSettings: (show) =>
@@ -162,6 +170,10 @@ export const useUiStore = create<UiState>()(
   setOllamaModels: (models) => set({ ollamaModels: models }),
   setOllamaStatus: (status) => set({ ollamaStatus: status }),
   setPipelineMode: (mode) => set({ pipelineMode: mode }),
+  setPipelineTestChunkCount: (count) => {
+    const normalized = Number.isFinite(count) ? Math.floor(count) : 1;
+    set({ pipelineTestChunkCount: Math.max(1, normalized) });
+  },
   setGlossaryHighlightEnabled: (enabled) => set({ glossaryHighlightEnabled: enabled }),
   setFocusedChunkId: (chunkId) => set({ focusedChunkId: chunkId }),
   focusIssueInChunk: (chunkId, query) =>
@@ -175,6 +187,7 @@ export const useUiStore = create<UiState>()(
   setChunkPresetMedium: (value) => set((state) => ({ chunkPresetMedium: Math.max(state.chunkPresetShort + 1, Math.min(value, state.chunkPresetLong - 1)) })),
   setChunkPresetLong: (value) => set((state) => ({ chunkPresetLong: Math.max(state.chunkPresetMedium + 1, Math.max(50, value)) })),
   setOllamaBaseUrl: (url) => set({ ollamaBaseUrl: url }),
+  setNewPipelineInit: (value) => set({ newPipelineInit: value }),
     }),
     {
       name: 'glossa-ui-prefs',
@@ -184,7 +197,9 @@ export const useUiStore = create<UiState>()(
         chunkPresetShort: state.chunkPresetShort,
         chunkPresetMedium: state.chunkPresetMedium,
         chunkPresetLong: state.chunkPresetLong,
+        pipelineTestChunkCount: state.pipelineTestChunkCount,
         ollamaBaseUrl: state.ollamaBaseUrl,
+        newPipelineInit: state.newPipelineInit,
       }),
     },
   ),

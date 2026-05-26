@@ -24,6 +24,7 @@ import {
   updateChunkTranslationFields,
   withSyncedChunkFields,
 } from '../utils/documentState';
+import { stripFootnoteMarkers, stripSuperscriptMarkers } from '../utils/footnoteExtractor';
 
 // --- Internal O(1) chunk index ---
 // Maps chunkId → array index. Kept as a module-level variable; never part of Zustand state.
@@ -82,6 +83,12 @@ function dropPendingBatchForChunk(chunkId: string): void {
   }
 }
 
+// Drop all pending tokens regardless of chunk. Used by full-store resets.
+function dropAllPendingBatches(): void {
+  cancelRaf();
+  pendingBatch = null;
+}
+
 // Exported so tests can flush synchronously without needing RAF stubs.
 // Also cancels any in-flight RAF handle to prevent double-application after a manual flush.
 export function flushPendingTokenBatch(): void {
@@ -120,7 +127,7 @@ interface ChunksState {
     text: string,
     options?: {
       useChunking?: boolean;
-      targetChunkCount?: number;
+      targetWordsPerChunk?: number;
       markdownAware?: boolean;
       minWords?: number;
       maxWords?: number;
@@ -139,6 +146,7 @@ interface ChunksState {
   toggleChunkTranslationLock: (chunkId: string) => void;
   updateChunkStatus: (chunkId: string, status: ChunkStatus) => void;
   updateChunkOriginalText: (chunkId: string, text: string) => void;
+  restoreChunkSourceText: (chunkId: string) => void;
   toggleChunkSourceEditing: (chunkId: string) => void;
   updateChunkCoherence: (chunkId: string, result: CoherenceResult) => void;
   resetCompletedChunks: () => void;
@@ -177,7 +185,7 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
 
     const chunks = buildChunks(inputProcessingText, {
       useChunking: config.useChunking,
-      targetChunkCount: config.targetChunkCount,
+      targetWordsPerChunk: config.wordsPerChunk,
       markdownAware: config.markdownAware,
       minWords: config.minWords,
       maxWords: config.maxWords,
@@ -315,6 +323,26 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
       return { chunks: nextChunks };
     }),
 
+  restoreChunkSourceText: (chunkId) =>
+    set((state) => {
+      const chunkIdx = chunkIndex.get(chunkId);
+      if (chunkIdx === undefined) return {};
+      const sourceFootnotes = usePipelineStore.getState().sourceFootnotes;
+      const nextChunks = updateSingleChunk(state.chunks, chunkId, (chunk) => {
+        if (chunk.sourceDisplayText === chunk.originalText) return chunk;
+        const hasTranslation = !!(chunk.currentDraft || Object.keys(chunk.stageResults).length > 0);
+        const updated = updateChunkSourceFields(
+          chunk,
+          chunk.originalText,
+          stripSuperscriptMarkers(chunk.originalText),
+          chunk.footnotes,
+        );
+        return hasTranslation ? { ...updated, translationStale: true } : updated;
+      });
+      syncProjectSourceDocument(nextChunks);
+      return { chunks: nextChunks };
+    }),
+
   toggleChunkSourceEditing: (chunkId) =>
     set((state) => ({
       chunks: updateSingleChunk(state.chunks, chunkId, (chunk) => ({
@@ -345,12 +373,16 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
       ),
     })),
 
-  resetAllChunks: () =>
+  resetAllChunks: () => {
+    dropAllPendingBatches();
     set((state) => ({
       chunks: state.chunks.map((chunk) =>
         chunk.status !== 'ready' ? resetChunkForSourceEdit(chunk) : chunk,
       ),
-    })),
+      cancelRequested: false,
+      activeStreamId: null,
+    }));
+  },
 
   unlockChunkForEdit: (chunkId) =>
     set((state) => ({
@@ -432,11 +464,13 @@ function chunksFromTexts(
   sourceFootnotes: ReturnType<typeof usePipelineStore.getState>['sourceFootnotes'],
 ): TranslationChunk[] {
   return chunkTexts.map((chunkTextValue) => {
+    const displayText = deriveChunkDisplayText(chunkTextValue, sourceFootnotes);
     const footnotes = buildChunkFootnotes(chunkTextValue, sourceFootnotes);
     return withSyncedChunkFields({
       id: generateId('chunk'),
-      sourceDisplayText: deriveChunkDisplayText(chunkTextValue, sourceFootnotes),
-      sourceProcessingText: chunkTextValue,
+      sourceDisplayText: displayText,
+      sourceProcessingText: stripFootnoteMarkers(chunkTextValue),
+      originalText: displayText,
       translationDisplayText: '',
       translationProcessingText: '',
       status: 'ready' as const,
@@ -453,7 +487,7 @@ function buildChunks(
   text: string,
   options: {
     useChunking?: boolean;
-    targetChunkCount?: number;
+    targetWordsPerChunk?: number;
     markdownAware?: boolean;
     minWords?: number;
     maxWords?: number;

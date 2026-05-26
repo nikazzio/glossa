@@ -10,10 +10,12 @@ import {
   Languages,
   Loader2,
   Lock,
+  Minus,
   Pencil,
   PanelLeft,
   PanelRight,
   Play,
+  Plus,
   RotateCcw,
   ScanLine,
   Square,
@@ -38,7 +40,6 @@ import { highlightSuperscriptMarkersHtml } from '../../utils/footnoteExtractor';
 
 interface DocumentViewProps {
   onRetranslateChunk: (chunkId: string) => void;
-  onReauditChunk: (chunkId: string) => void;
   onRunPipeline?: () => void;
   onCancelPipeline?: () => void;
   onDryRun?: () => void;
@@ -47,7 +48,6 @@ interface DocumentViewProps {
 
 export function DocumentView({
   onRetranslateChunk,
-  onReauditChunk,
   onRunPipeline,
   onCancelPipeline,
   onDryRun,
@@ -61,6 +61,7 @@ export function DocumentView({
     cancelRequested,
     updateChunkDraft,
     updateChunkOriginalText,
+    restoreChunkSourceText,
     toggleChunkTranslationLock,
     toggleChunkSourceEditing,
   } = useChunksStore();
@@ -73,13 +74,23 @@ export function DocumentView({
     glossaryHighlightEnabled,
     pipelineMode,
     setPipelineMode,
+    pipelineTestChunkCount,
+    setPipelineTestChunkCount,
     focusedChunkId,
     focusedIssueQuery,
     focusedIssueRequestId,
     clearFocusedIssue,
   } = useUiStore();
 
-  const effectivePipelineMode = completedCount > 0 ? 'production' : pipelineMode;
+  const effectivePipelineMode = pipelineMode;
+  const runChunkCount = effectivePipelineMode === 'test'
+    ? Math.max(1, Math.min(pipelineTestChunkCount, chunks.length || 1))
+    : chunks.length;
+  const canAdjustTestCount = effectivePipelineMode === 'test' && !isProcessing;
+  const runPanelClass =
+    effectivePipelineMode === 'test'
+      ? 'border-amber-200/70 bg-[#faf4e7]/95 shadow-[0_16px_50px_rgba(129,89,30,0.06)]'
+      : 'border-editorial-border bg-editorial-bg/90 shadow-[0_16px_50px_rgba(26,26,26,0.05)]';
 
   const [viewportWidth, setViewportWidth] = useState(
     typeof window === 'undefined' ? 0 : window.innerWidth,
@@ -100,6 +111,12 @@ export function DocumentView({
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
+  useEffect(() => {
+    if (chunks.length > 0 && pipelineTestChunkCount > chunks.length) {
+      setPipelineTestChunkCount(chunks.length);
+    }
+  }, [chunks.length, pipelineTestChunkCount, setPipelineTestChunkCount]);
+
   const resolvedLayout =
     documentLayout === 'auto'
       ? viewportWidth >= 1500
@@ -115,7 +132,7 @@ export function DocumentView({
   const enabledStages = config.stages.filter((s) => s.enabled);
   const lastStageId = enabledStages[enabledStages.length - 1]?.id ?? '';
   const isEditorialMode = enabledStages.length > 1;
-  const deferredOriginalText = useDeferredValue(currentChunk?.originalText ?? '');
+  const deferredSourceText = useDeferredValue(currentChunk?.sourceDisplayText ?? '');
   const effectiveSelectedStageId = selectedStageId || lastStageId;
   const isLastSelected = effectiveSelectedStageId === lastStageId;
   const rawStageContent = isLastSelected
@@ -139,7 +156,7 @@ export function DocumentView({
   const hasGlossary = config.glossary.length > 0;
   const showHighlight = glossaryHighlightEnabled && hasGlossary;
   const sourceHighlight = useGlossaryHighlight(
-    paneFocus !== 'translation' ? deferredOriginalText : '',
+    paneFocus !== 'translation' ? deferredSourceText : '',
     showHighlight && paneFocus !== 'translation' ? config.glossary : [],
     'source',
   );
@@ -150,29 +167,54 @@ export function DocumentView({
   );
 
   const sourceHighlightHtml = useMemo(() => {
-    const hasFootnoteMarkers = /\[[⁰¹²³⁴⁵⁶⁷⁸⁹]/.test(deferredOriginalText);
+    const hasFootnoteMarkers = /\[[⁰¹²³⁴⁵⁶⁷⁸⁹]/.test(deferredSourceText);
     const showGlossary = showHighlight && paneFocus !== 'translation';
     if (!showGlossary && !hasFootnoteMarkers) return null;
-    const base = showGlossary ? sourceHighlight.html : escapeHtml(deferredOriginalText);
+    const base = showGlossary ? sourceHighlight.html : escapeHtml(deferredSourceText);
     return hasFootnoteMarkers ? highlightSuperscriptMarkersHtml(base) : base;
-  }, [deferredOriginalText, showHighlight, paneFocus, sourceHighlight.html]);
+  }, [deferredSourceText, showHighlight, paneFocus, sourceHighlight.html]);
 
   if (!currentChunk) {
     return (
-      <section className="flex w-full items-center justify-center bg-editorial-bg p-10">
-        <div className="max-w-xl text-center space-y-4">
-          <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full border border-editorial-border bg-editorial-textbox/40">
-            <FileText size={24} className="text-editorial-muted/60" />
+      <section className="flex w-full flex-col items-center justify-center bg-[#f7f3ec] overflow-y-auto min-h-0 flex-1 px-8 py-16">
+        <div className="w-full max-w-2xl flex flex-col items-center">
+          {/* Brand mark */}
+          <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-full border border-editorial-border/60 bg-editorial-bg shadow-[0_4px_20px_rgba(26,26,26,0.06)]">
+            <FileText size={20} className="text-editorial-accent" />
           </div>
-          <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+
+          {/* Label */}
+          <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
             {t('document.emptyLabel')}
           </div>
-          <h2 className="font-display text-4xl italic tracking-tight text-editorial-ink">
+
+          {/* Headline */}
+          <h2 className="mb-4 text-center font-display text-5xl italic tracking-tight text-editorial-ink">
             {t('document.emptyTitle')}
           </h2>
-          <p className="text-sm leading-relaxed text-editorial-muted">
+
+          {/* Body */}
+          <p className="mb-12 max-w-md text-center text-sm leading-relaxed text-editorial-muted">
             {t('document.emptyBody')}
           </p>
+
+          {/* Dashboard placeholder cards */}
+          <div className="grid w-full grid-cols-3 gap-3">
+            {([
+              { key: 'pipeline',     icon: Languages, label: t('document.emptyCardPipeline') },
+              { key: 'translations', icon: Zap,       label: t('document.emptyCardTranslations') },
+              { key: 'quality',      icon: Wand2,     label: t('document.emptyCardQuality') },
+            ] as const).map(({ key, icon: Icon, label }) => (
+              <div
+                key={key}
+                className="flex flex-col items-center gap-3 rounded-[20px] border border-editorial-border/60 bg-editorial-bg/70 px-5 py-6 text-center"
+              >
+                <Icon size={18} className="text-editorial-muted/40" />
+                <div className="font-display text-3xl italic text-editorial-ink/20">—</div>
+                <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted/50">{label}</div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
     );
@@ -183,145 +225,157 @@ export function DocumentView({
   const nextChunk = chunks[currentIndex + 1];
   const sourceReadOnly =
     currentChunk.status === 'processing' ||
-    (currentChunk.status === 'completed' && currentChunk.sourceEditable !== true);
+    currentChunk.sourceEditable !== true;
   const sourceEditDisabled = currentChunk.status === 'processing';
 
   return (
     <section className="w-full bg-[#f7f3ec] overflow-y-auto min-h-0 h-full custom-scrollbar flex flex-col">
-      <div className="mx-auto w-full max-w-[1720px] px-5 py-4 md:px-6 md:py-5 flex flex-col flex-1 min-h-0 gap-5">
+      <div className="mx-auto w-full max-w-[1720px] px-5 py-3 md:px-6 md:py-4 flex flex-col flex-1 min-h-0 gap-5">
         <div className="flex items-stretch gap-2 shrink-0">
           {/* Pannello run: striscia orizzontale compatta */}
           {onRunPipeline && onCancelPipeline && (
-            <div className="flex items-center gap-2.5 shrink-0 rounded-[20px] border border-editorial-border bg-editorial-bg/90 px-4 py-3 shadow-[0_16px_50px_rgba(26,26,26,0.05)]">
+            <div className={`grid shrink-0 grid-cols-[auto_auto] items-stretch gap-x-3 gap-y-2 rounded-[20px] border px-4 py-3 ${runPanelClass}`}>
+              <div className="grid w-fit gap-2 self-stretch">
+                <div className="flex w-full items-center justify-center rounded-full border border-editorial-border bg-editorial-textbox/40 p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setPipelineMode('test')}
+                    disabled={isProcessing}
+                    title={t('pipeline.modeTestHint')}
+                    aria-label={t('pipeline.modeTest')}
+                    className={`flex flex-1 items-center justify-center rounded-full px-4 py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed ${
+                      pipelineMode === 'test'
+                        ? 'bg-editorial-bg text-editorial-ink shadow-sm'
+                        : 'text-editorial-muted hover:text-editorial-ink'
+                    }`}
+                  >
+                    <FlaskConical size={12} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPipelineMode('production')}
+                    disabled={isProcessing}
+                    title={t('pipeline.modeProductionHint')}
+                    aria-label={t('pipeline.modeProduction')}
+                    className={`flex flex-1 items-center justify-center rounded-full px-4 py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed ${
+                      pipelineMode === 'production'
+                        ? 'bg-editorial-bg text-editorial-charcoal shadow-sm'
+                        : 'text-editorial-muted hover:text-editorial-ink'
+                    }`}
+                  >
+                    <Zap size={12} />
+                  </button>
+                </div>
 
-              {/* Toggle Test / Produzione — solo icone */}
-              <div
-                className={`flex rounded-full border border-editorial-border bg-editorial-textbox/40 p-0.5 ${completedCount > 0 ? 'opacity-40 pointer-events-none' : ''}`}
-                aria-disabled={completedCount > 0}
-                title={completedCount > 0 ? t('pipeline.modeLockedHint') : undefined}
-              >
-                <button
-                  type="button"
-                  onClick={() => setPipelineMode('test')}
-                  disabled={completedCount > 0}
-                  title={t('pipeline.modeTestHint')}
-                  aria-label={t('pipeline.modeTest')}
-                  className={`rounded-full p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                    pipelineMode === 'test'
-                      ? 'bg-editorial-bg text-editorial-ink shadow-sm'
-                      : 'text-editorial-muted hover:text-editorial-ink'
-                  }`}
-                >
-                  <FlaskConical size={13} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPipelineMode('production')}
-                  disabled={completedCount > 0}
-                  title={t('pipeline.modeProductionHint')}
-                  aria-label={t('pipeline.modeProduction')}
-                  className={`rounded-full p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                    pipelineMode === 'production'
-                      ? 'bg-editorial-bg text-editorial-charcoal shadow-sm'
-                      : 'text-editorial-muted hover:text-editorial-ink'
-                  }`}
-                >
-                  <Zap size={13} />
-                </button>
+                <div className="flex items-center gap-1" title={t('pipeline.testChunkCountHint')} aria-label={t('pipeline.testChunkCountHint')}>
+                  <button
+                    type="button"
+                    onClick={() => setPipelineTestChunkCount(runChunkCount - 1)}
+                    disabled={!canAdjustTestCount || runChunkCount <= 1}
+                    title={t('pipeline.decreaseTestChunkCount')}
+                    aria-label={t('pipeline.decreaseTestChunkCount')}
+                    className="flex h-[24px] w-[24px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted transition-colors hover:border-editorial-charcoal/60 hover:text-editorial-charcoal focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-35"
+                  >
+                    <Minus size={8} />
+                  </button>
+                  <div
+                    className={`flex h-[34px] min-w-[34px] items-center justify-center rounded-full border px-2 text-[12px] font-bold tracking-[0.12em] shadow-[0_1px_6px_rgba(26,26,26,0.06)] ${
+                      effectivePipelineMode === 'test'
+                        ? 'border-amber-200/80 bg-amber-50 text-amber-900'
+                        : 'border-editorial-border bg-editorial-bg text-editorial-ink'
+                    }`}
+                    title={t('pipeline.runChunkCount', { count: runChunkCount })}
+                    aria-label={t('pipeline.runChunkCount', { count: runChunkCount })}
+                  >
+                    {runChunkCount}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPipelineTestChunkCount(runChunkCount + 1)}
+                    disabled={!canAdjustTestCount || runChunkCount >= chunks.length}
+                    title={t('pipeline.increaseTestChunkCount')}
+                    aria-label={t('pipeline.increaseTestChunkCount')}
+                    className="flex h-[24px] w-[24px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted transition-colors hover:border-editorial-charcoal/60 hover:text-editorial-charcoal focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-35"
+                  >
+                    <Plus size={8} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onRetranslateChunk(currentChunk.id)}
+                    disabled={isProcessing || !currentChunk.originalText.trim()}
+                    title={effectivePipelineMode === 'test' ? t('pipeline.retestChunk') : t('pipeline.retranslateChunk')}
+                    aria-label={effectivePipelineMode === 'test' ? t('pipeline.retestChunk') : t('pipeline.retranslateChunk')}
+                    className="flex h-[34px] w-[34px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted transition-colors hover:border-editorial-charcoal/60 hover:text-editorial-charcoal focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <RotateCcw size={11} />
+                  </button>
+                </div>
               </div>
 
-              <div className="h-6 w-px bg-editorial-border shrink-0" />
-
-              {/* Cerchio avvio pipeline */}
-              <div className="relative flex h-[54px] w-[54px] flex-shrink-0 items-center justify-center rounded-full border border-editorial-border bg-editorial-bg/90">
-                {isProcessing ? (
-                  cancelRequested ? (
-                    <button
-                      type="button"
-                      disabled
-                      title={t('pipeline.stopping')}
-                      aria-label={t('pipeline.stopping')}
-                      className="flex h-[44px] w-[44px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted opacity-50 focus:outline-none"
-                    >
-                      <Loader2 size={20} className="animate-spin" />
-                    </button>
+              <div className="relative row-span-2 flex min-h-[74px] items-center justify-center self-center pl-1">
+                <div className="relative flex h-[84px] w-[84px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg/90">
+                  {isProcessing ? (
+                    cancelRequested ? (
+                      <button
+                        type="button"
+                        disabled
+                        title={t('pipeline.stopping')}
+                        aria-label={t('pipeline.stopping')}
+                        className="flex h-[64px] w-[64px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted opacity-50 focus:outline-none"
+                      >
+                        <Loader2 size={22} className="animate-spin" />
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={onCancelPipeline}
+                        title={t('pipeline.stopPipeline')}
+                        aria-label={t('pipeline.stopPipeline')}
+                        className="flex h-[64px] w-[64px] items-center justify-center rounded-full border border-editorial-accent bg-editorial-bg text-editorial-accent transition-colors hover:bg-editorial-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                      >
+                        <Square size={21} fill="currentColor" />
+                      </button>
+                    )
                   ) : (
                     <button
                       type="button"
-                      onClick={onCancelPipeline}
-                      title={t('pipeline.stopPipeline')}
-                      aria-label={t('pipeline.stopPipeline')}
-                      className="flex h-[44px] w-[44px] items-center justify-center rounded-full border border-editorial-accent bg-editorial-bg text-editorial-accent transition-colors hover:bg-editorial-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                      onClick={effectivePipelineMode === 'test' ? onDryRun : onRunPipeline}
+                      title={t('pipeline.beginPipeline')}
+                      aria-label={t('pipeline.beginPipeline')}
+                      className="flex h-[64px] w-[64px] items-center justify-center rounded-full bg-editorial-charcoal text-white transition-colors hover:bg-editorial-charcoal/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                     >
-                      <Square size={17} fill="currentColor" />
+                      <Play size={22} fill="currentColor" />
                     </button>
-                  )
-                ) : (
-                  <button
-                    type="button"
-                    onClick={effectivePipelineMode === 'test' ? onDryRun : onRunPipeline}
-                    title={t('pipeline.beginPipeline')}
-                    aria-label={t('pipeline.beginPipeline')}
-                    className="flex h-[44px] w-[44px] items-center justify-center rounded-full bg-editorial-charcoal text-white transition-colors hover:bg-editorial-charcoal/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  >
-                    <Play size={20} fill="currentColor" />
-                  </button>
-                )}
+                  )}
 
-                {/* Dot costi */}
-                {costEstimate.stages.length > 0 && (
-                  <div
-                    className="absolute -bottom-1 -right-1"
-                    onMouseEnter={() => setShowCostPanel(true)}
-                    onMouseLeave={() => setShowCostPanel(false)}
-                  >
-                    <button
-                      type="button"
-                      onFocus={() => setShowCostPanel(true)}
-                      onBlur={() => setShowCostPanel(false)}
-                      aria-label={t('cost.breakdown')}
-                      className="flex h-[18px] w-[18px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted transition-colors hover:border-editorial-charcoal hover:text-editorial-charcoal focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                  {costEstimate.stages.length > 0 && (
+                    <div
+                      className="absolute -bottom-1 -right-1"
+                      onMouseEnter={() => setShowCostPanel(true)}
+                      onMouseLeave={() => setShowCostPanel(false)}
                     >
-                      <Info size={9} />
-                    </button>
-                  </div>
-                )}
-                {showCostPanel && costEstimate.stages.length > 0 && (
-                  <div
-                    className="absolute left-0 top-full z-50 mt-2 w-64"
-                    onMouseEnter={() => setShowCostPanel(true)}
-                    onMouseLeave={() => setShowCostPanel(false)}
-                  >
-                    <CostBreakdownPanel estimate={costEstimate} />
-                  </div>
-                )}
+                      <button
+                        type="button"
+                        onFocus={() => setShowCostPanel(true)}
+                        onBlur={() => setShowCostPanel(false)}
+                        aria-label={t('cost.breakdown')}
+                        className="flex h-[18px] w-[18px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted transition-colors hover:border-editorial-charcoal hover:text-editorial-charcoal focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                      >
+                        <Info size={9} />
+                      </button>
+                    </div>
+                  )}
+                  {showCostPanel && costEstimate.stages.length > 0 && (
+                    <div
+                      className="absolute left-0 top-full z-50 mt-2 w-64"
+                      onMouseEnter={() => setShowCostPanel(true)}
+                      onMouseLeave={() => setShowCostPanel(false)}
+                    >
+                      <CostBreakdownPanel estimate={costEstimate} />
+                    </div>
+                  )}
+                </div>
               </div>
-
-              <div className="h-6 w-px bg-editorial-border shrink-0" />
-
-              {/* Ritraduzione chunk corrente — solo icona */}
-              <button
-                type="button"
-                onClick={() => onRetranslateChunk(currentChunk.id)}
-                disabled={isProcessing || !currentChunk.originalText.trim()}
-                title={effectivePipelineMode === 'test' ? t('pipeline.retestChunk') : t('pipeline.retranslateChunk')}
-                aria-label={effectivePipelineMode === 'test' ? t('pipeline.retestChunk') : t('pipeline.retranslateChunk')}
-                className="rounded-full border border-editorial-border p-2.5 text-editorial-muted transition-colors hover:border-editorial-charcoal/60 hover:text-editorial-charcoal focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <RotateCcw size={15} />
-              </button>
-
-              {/* Rivaluta chunk — solo icona */}
-              <button
-                type="button"
-                onClick={() => onReauditChunk(currentChunk.id)}
-                disabled={isProcessing || !currentChunk.currentDraft}
-                title={t('pipeline.reauditChunk')}
-                aria-label={t('pipeline.reauditChunk')}
-                className="rounded-full border border-editorial-border p-2.5 text-editorial-muted transition-colors hover:border-editorial-charcoal/60 hover:text-editorial-charcoal focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <ScanLine size={15} />
-              </button>
             </div>
           )}
 
@@ -414,17 +468,6 @@ export function DocumentView({
                   icon={ScanLine}
                 />
               </button>
-              {currentChunk.status === 'completed' && (
-                <ChunkIconButton
-                  onClick={() => toggleChunkSourceEditing(currentChunk.id)}
-                  title={currentChunk.sourceEditable ? t('document.disableSourceEditing') : t('document.enableSourceEditing')}
-                  disabled={sourceEditDisabled}
-                  active={currentChunk.sourceEditable === true}
-                  ariaPressed={currentChunk.sourceEditable === true}
-                >
-                  <Pencil size={18} />
-                </ChunkIconButton>
-              )}
               <button
                 type="button"
                 onClick={() => toggleChunkTranslationLock(currentChunk.id)}
@@ -455,12 +498,34 @@ export function DocumentView({
               label={t('pipeline.originalSource')}
               eyebrow={t('document.leftPage')}
               readOnly={sourceReadOnly}
-              statusBadge={currentChunk.status === 'completed' && currentChunk.sourceEditable !== true ? (
+              statusBadge={sourceReadOnly && currentChunk.status !== 'processing' ? (
                 <InlineStatusBadge tone="amber" icon={<Lock size={13} />} label={t('document.sourceLockedTitle')} />
               ) : null}
+              actions={
+                <div className="flex items-center gap-1">
+                  <ChunkIconButton
+                    onClick={() => toggleChunkSourceEditing(currentChunk.id)}
+                    title={currentChunk.sourceEditable ? t('document.disableSourceEditing') : t('document.enableSourceEditing')}
+                    disabled={sourceEditDisabled}
+                    active={currentChunk.sourceEditable === true}
+                    ariaPressed={currentChunk.sourceEditable === true}
+                  >
+                    <Pencil size={14} />
+                  </ChunkIconButton>
+                  {currentChunk.sourceDisplayText !== currentChunk.originalText && (
+                    <ChunkIconButton
+                      onClick={() => restoreChunkSourceText(currentChunk.id)}
+                      title={t('document.restoreSourceText')}
+                      disabled={sourceEditDisabled}
+                    >
+                      <RotateCcw size={14} />
+                    </ChunkIconButton>
+                  )}
+                </div>
+              }
             >
               <MarkdownEditor
-                value={currentChunk.originalText}
+                value={currentChunk.sourceDisplayText}
                 onChange={(nextValue) => updateChunkOriginalText(currentChunk.id, nextValue)}
                 markdownEnabled={config.markdownAware === true}
                 disabled={currentChunk.status === 'processing'}

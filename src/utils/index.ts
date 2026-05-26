@@ -81,7 +81,7 @@ export interface TextStats {
 
 export interface ChunkTextOptions {
   useChunking?: boolean;
-  targetChunkCount?: number;
+  targetWordsPerChunk?: number;
   markdownAware?: boolean;
   minWords?: number;
   maxWords?: number;
@@ -112,26 +112,15 @@ export function chunkText(text: string, options: ChunkTextOptions = {}): string[
   if (!normalized.trim()) return [];
   if (options.useChunking === false) return [normalized];
 
-  const target = Math.max(0, Math.floor(options.targetChunkCount ?? 0));
-  let chunks = target > 1
-    ? splitIntoTargetChunks(normalized, target, options)
+  const targetWords = options.targetWordsPerChunk ?? 0;
+  let chunks = targetWords > 0
+    ? splitByWordTarget(normalized, targetWords, options)
     : splitParagraphs(normalized, options);
 
-  if (options.headingAware) {
-    chunks = mergeHeadingChunks(chunks);
-  }
-
-  if (options.carryTrailingShortBlocks) {
-    chunks = mergeTrailingShortBlocks(chunks);
-  }
-
-  if (options.minWords && options.minWords > 0) {
-    chunks = mergeSmallChunks(chunks, options.minWords);
-  }
-
-  if (options.maxWords && options.maxWords > 0) {
-    chunks = splitLargeChunks(chunks, options.maxWords, options);
-  }
+  if (options.headingAware) chunks = mergeHeadingChunks(chunks);
+  if (options.carryTrailingShortBlocks) chunks = mergeTrailingShortBlocks(chunks);
+  if (options.minWords && options.minWords > 0) chunks = mergeSmallChunks(chunks, options.minWords);
+  if (options.maxWords && options.maxWords > 0) chunks = splitLargeChunks(chunks, options.maxWords, options);
 
   return chunks;
 }
@@ -178,51 +167,34 @@ function splitParagraphs(text: string, options: ChunkTextOptions = {}): string[]
   return blocks.map(({ start, end }) => text.slice(start, end));
 }
 
-function splitIntoTargetChunks(text: string, target: number, options: ChunkTextOptions = {}): string[] {
+function splitByWordTarget(text: string, targetWordsPerChunk: number, options: ChunkTextOptions = {}): string[] {
   const blocks = options.markdownAware
     ? mergeMarkdownFootnoteBlocks(text, getBlockRanges(text))
     : getBlockRanges(text);
 
   if (blocks.length <= 1) {
-    if (options.markdownAware) {
-      return [text];
-    }
-    return splitWordsIntoTargetChunks(text, target);
+    if (options.markdownAware) return [text];
+    const total = countWords(text);
+    return splitWordsEvenly(text, Math.max(1, Math.round(total / targetWordsPerChunk)));
   }
 
-  const totalWords = blocks.reduce((acc, block) => acc + countWords(text.slice(block.start, block.end)), 0);
-  const targetWords = Math.max(1, Math.ceil(totalWords / target));
   const chunks: string[] = [];
-  let current: Array<{ start: number; end: number }> = [];
+  let current: BlockRange[] = [];
   let currentWords = 0;
 
-  blocks.forEach((block, index) => {
-    const blockText = text.slice(block.start, block.end);
-    const paragraphWords = countWords(blockText);
-    const remainingParagraphs = blocks.length - index;
-    const remainingSlots = target - chunks.length;
-    const shouldClose =
-      current.length > 0 &&
-      currentWords + paragraphWords > targetWords &&
-      remainingSlots > 1 &&
-      (options.markdownAware || remainingParagraphs >= remainingSlots);
-
-    if (shouldClose) {
+  for (const block of blocks) {
+    const blockWords = countWords(text.slice(block.start, block.end));
+    if (current.length > 0 && currentWords + blockWords > targetWordsPerChunk) {
       chunks.push(text.slice(current[0].start, current[current.length - 1].end));
       current = [];
       currentWords = 0;
     }
-
     current.push(block);
-    currentWords += paragraphWords;
-  });
+    currentWords += blockWords;
+  }
 
   if (current.length > 0) {
     chunks.push(text.slice(current[0].start, current[current.length - 1].end));
-  }
-
-  if (!options.markdownAware && chunks.length < target && chunks.length === 1) {
-    return splitWordsIntoTargetChunks(text, target);
   }
 
   return chunks;
@@ -351,24 +323,17 @@ function mergeTrailingShortBlocks(chunks: string[]): string[] {
   let carried = '';
 
   for (let i = 0; i < chunks.length; i++) {
-    const chunk = chunks[i]!;
-    const hadCarried = carried.length > 0;
-    const withCarried = hadCarried ? `${carried}\n\n${chunk}` : chunk;
+    const combined = carried ? `${carried}\n\n${chunks[i]!}` : chunks[i]!;
     carried = '';
 
     if (i === chunks.length - 1) {
-      result.push(withCarried);
+      result.push(combined);
       continue;
     }
 
-    if (hadCarried) {
-      result.push(withCarried);
-      continue;
-    }
-
-    const extracted = extractTrailingShortBlock(withCarried);
+    const extracted = extractTrailingShortBlock(combined);
     if (!extracted) {
-      result.push(withCarried);
+      result.push(combined);
       continue;
     }
 
@@ -395,24 +360,24 @@ function mergeSmallChunks(chunks: string[], minWords: number): string[] {
   return result;
 }
 
-function splitLargeChunks(
-  chunks: string[],
-  maxWords: number,
-  options: ChunkTextOptions = {},
-): string[] {
+function splitLargeChunks(chunks: string[], maxWords: number, options: ChunkTextOptions = {}): string[] {
   const result: string[] = [];
   for (const chunk of chunks) {
-    const words = countWords(chunk);
-    if (words <= maxWords) {
+    if (countWords(chunk) <= maxWords) {
       result.push(chunk);
       continue;
     }
     if (options.markdownAware) {
-      result.push(chunk);
+      const blocks = getBlockRanges(chunk);
+      if (blocks.length > 1) {
+        result.push(...splitByWordTarget(chunk, maxWords, options));
+      } else {
+        result.push(chunk);
+      }
       continue;
     }
-    const parts = Math.ceil(words / maxWords);
-    result.push(...splitWordsIntoTargetChunks(chunk, parts));
+    const parts = Math.ceil(countWords(chunk) / maxWords);
+    result.push(...splitWordsEvenly(chunk, parts));
   }
   return result;
 }
@@ -434,18 +399,18 @@ function findNearestMarkdownBoundary(text: string, pivot: number): number | null
   )[0];
 }
 
-function splitWordsIntoTargetChunks(text: string, target: number): string[] {
+function splitWordsEvenly(text: string, partCount: number): string[] {
   const words = Array.from(text.matchAll(/\S+/g))
     .map((match) => ({ start: match.index ?? 0, end: (match.index ?? 0) + match[0].length }));
   if (words.length === 0) return [];
 
-  const chunkSize = Math.max(1, Math.ceil(words.length / target));
+  const chunkSize = Math.max(1, Math.ceil(words.length / partCount));
   const chunks: string[] = [];
 
   for (let i = 0; i < words.length; i += chunkSize) {
     const first = words[i];
     const last = words[Math.min(i + chunkSize - 1, words.length - 1)];
-    chunks.push(text.slice(first.start, last.end));
+    chunks.push(text.slice(first!.start, last!.end));
   }
 
   return chunks;

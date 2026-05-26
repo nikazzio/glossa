@@ -219,10 +219,10 @@ describe('updateChunkSourceFields', () => {
     expect(updated.sourceProcessingText).toBe('New Processing');
   });
 
-  it('syncs the legacy originalText field to sourceDisplayText', () => {
+  it('preserves frozen originalText when source fields change', () => {
     const chunk = makeTranslationChunk({ id: 'c', originalText: 'Old source' });
     const updated = updateChunkSourceFields(chunk, 'New Display', 'New Processing');
-    expect(updated.originalText).toBe('New Display');
+    expect(updated.originalText).toBe('Old source');
   });
 
   it('attaches footnotes when provided', () => {

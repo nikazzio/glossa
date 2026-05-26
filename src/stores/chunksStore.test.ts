@@ -11,7 +11,7 @@ describe('chunksStore', () => {
       config: {
         ...state.config,
         useChunking: true,
-        targetChunkCount: 0,
+        wordsPerChunk: 0,
         minWords: 0,
         maxWords: 0,
         headingAware: false,
@@ -63,7 +63,7 @@ describe('chunksStore', () => {
   it('loads imported text into document mode even when it becomes a single chunk', () => {
     useChunksStore.getState().loadDocument('Single imported paragraph.', {
       useChunking: false,
-      targetChunkCount: 0,
+      targetWordsPerChunk: 0,
     });
 
     expect(useChunksStore.getState().chunks).toHaveLength(1);
@@ -94,7 +94,7 @@ describe('chunksStore', () => {
     useChunksStore.getState().updateChunkOriginalText(chunkId, 'Edited source');
 
     const chunk = useChunksStore.getState().chunks[0];
-    expect(chunk.originalText).toBe('Edited source');
+    expect(chunk.originalText).toBe('Original');
     expect(chunk.status).toBe('completed');
     expect(chunk.currentDraft).toBe('Translated');
     expect(chunk.stageResults).toEqual({
@@ -149,7 +149,7 @@ describe('chunksStore', () => {
   it('clears stale blob assignments when a chunk is missing from recomputation results', () => {
     useChunksStore.getState().loadDocument('Alpha.\n\nBeta.', {
       useChunking: true,
-      targetChunkCount: 2,
+      targetWordsPerChunk: 0,
     });
 
     const [first, second] = useChunksStore.getState().chunks;
@@ -178,8 +178,8 @@ describe('chunksStore', () => {
     });
 
     const chunk = useChunksStore.getState().chunks[0];
-    // Chunk processing text has markers but no definition lines
-    expect(chunk?.sourceProcessingText).toBe('Body [^1].');
+    // Chunk processing text is clean — footnote markers stripped, nothing goes to LLM
+    expect(chunk?.sourceProcessingText).toBe('Body .');
     // Document-level display text retains the definition lines
     expect(usePipelineStore.getState().inputText).toContain('[^1]: A note.');
     // Document-level processing text strips definitions
@@ -219,7 +219,7 @@ describe('chunksStore', () => {
     const chunk = useChunksStore.getState().chunks[0];
     expect(chunk?.sourceDisplayText).toBe('Edited text');
     expect(chunk?.sourceProcessingText).toBe('Edited text');
-    expect(chunk?.originalText).toBe('Edited text');
+    expect(chunk?.originalText).toBe('Original text');
   });
 
   it('updateChunkOriginalText is a no-op when the source text is unchanged', () => {

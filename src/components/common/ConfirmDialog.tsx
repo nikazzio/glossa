@@ -24,61 +24,65 @@ export function ConfirmDialog() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-editorial-ink/70 backdrop-blur-sm"
+            className="absolute inset-0 bg-editorial-ink/35 backdrop-blur-sm"
             onClick={() => resolve(false)}
           />
+
           <motion.div
-            initial={{ scale: 0.96, opacity: 0 }}
+            initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.96, opacity: 0 }}
-            className="relative bg-editorial-bg w-full max-w-md p-8 shadow-2xl border border-editorial-border"
+            exit={{ scale: 0.95, opacity: 0 }}
+            className="relative w-full max-w-md rounded-[28px] border border-editorial-border bg-editorial-bg shadow-[0_24px_80px_rgba(26,26,26,0.2)]"
           >
-            <button
-              type="button"
-              onClick={() => resolve(false)}
-              title={t('common.close')}
-              aria-label={t('common.close')}
-              className="absolute right-4 top-4 text-editorial-muted hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            >
-              <X size={18} />
-            </button>
-            <div className="flex items-start gap-4">
-              {request.danger && (
-                <AlertTriangle
-                  size={20}
-                  className="text-editorial-accent shrink-0 mt-1"
-                  aria-hidden="true"
-                />
-              )}
-              <div className="flex-1 space-y-3">
-                <h3
-                  id="confirm-title"
-                  className="font-display text-lg italic tracking-tight text-editorial-ink"
-                >
-                  {request.title}
-                </h3>
-                {request.message && (
-                  <p
-                    id="confirm-message"
-                    className="text-xs text-editorial-muted leading-relaxed"
+            {/* Header */}
+            <div className="border-b border-editorial-border px-6 py-5">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  {request.danger && (
+                    <AlertTriangle size={20} className="text-editorial-accent shrink-0" aria-hidden="true" />
+                  )}
+                  <h3
+                    id="confirm-title"
+                    className="font-display text-2xl italic tracking-tight text-editorial-ink"
                   >
-                    {request.message}
-                  </p>
-                )}
+                    {request.title}
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => resolve(false)}
+                  aria-label={t('common.close')}
+                  title={t('common.close')}
+                  className="shrink-0 rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                >
+                  <X size={16} />
+                </button>
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 mt-8">
+            {/* Body */}
+            {request.message && (
+              <div className="px-6 py-5">
+                <p id="confirm-message" className="text-sm leading-relaxed text-editorial-muted">
+                  {request.message}
+                </p>
+              </div>
+            )}
+
+            {/* Footer */}
+            <div className="flex justify-end gap-3 border-t border-editorial-border px-6 py-4">
               <button
+                type="button"
                 onClick={() => resolve(false)}
-                className="px-5 py-3 border border-editorial-border text-[10px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-ink hover:bg-editorial-textbox/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="rounded-full border border-editorial-border px-5 py-2 text-[10px] font-bold uppercase tracking-widest text-editorial-muted transition-colors hover:border-editorial-ink/40 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               >
                 {request.cancelLabel ?? t('common.cancel')}
               </button>
               <button
+                type="button"
                 onClick={() => resolve(true)}
                 autoFocus={!request.danger}
-                className={`px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-white transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2 ${
+                className={`rounded-full px-5 py-2 text-[10px] font-bold uppercase tracking-widest text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2 ${
                   request.danger
                     ? 'bg-editorial-accent hover:bg-editorial-accent/90'
                     : 'bg-editorial-ink hover:bg-editorial-ink/90'

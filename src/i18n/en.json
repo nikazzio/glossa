@@ -109,7 +109,7 @@
     "words": "Words",
     "paragraphs": "Paragraphs",
     "recommendedChunks": "Suggested chunks",
-    "targetChunks": "Target chunks",
+    "targetChunks": "Words per chunk",
     "useRecommendation": "Use suggestion",
     "zeroMeansAuto": "0 keeps paragraph-based auto segmentation.",
     "chunkPreview": "Chunk Preview",
@@ -139,8 +139,13 @@
     "dryRunShort": "Test",
     "clearPreview": "Clear test results",
     "dryRunCompleted": "Test completed — result in preview",
+    "dryRunCompletedMany": "Test completed — {{count}} chunks in preview",
     "dryRunChunkCompleted": "Chunk re-processed in preview",
     "dryRunNoTarget": "No chunk available for test run",
+    "runChunkCount": "This run will process {{count}} chunk(s).",
+    "testChunkCountHint": "How many ready chunks the test run should process.",
+    "increaseTestChunkCount": "Increase test chunk count",
+    "decreaseTestChunkCount": "Decrease test chunk count",
     "resetAll": "Full reset",
     "confirmResetAllTitle": "Reset all translations?",
     "confirmResetAllMessage": "{{count}} translations and their audits will be deleted. This cannot be undone.",
@@ -294,6 +299,8 @@
       "deleted": "Template deleted"
     },
     "editPrompt": "Edit prompt",
+    "promptCustomBadge": "Custom",
+    "promptReset": "Reset to default",
     "refinePrompt": "Refine prompt",
     "refinePromptWithModel": "Refine prompt with {{model}}",
     "refining": "Refining...",
@@ -302,7 +309,17 @@
     "refineKeyLabel": "Prompt refinement",
     "refineKeyMissingHint": "Prompt refinement is disabled for remote providers without API keys. Configure: {{providers}}. Ollama remains available without a key.",
     "refineKeyReadyHint": "Prompt refinement is ready for configured providers. Ollama does not require an API key.",
-    "contextOverflowWarning": "The longest chunk (~{{tokens}} tokens) may exceed {{model}}'s context window ({{window}} tokens). Consider reducing chunk size or using a model with a larger context window."
+    "contextOverflowWarning": "The longest chunk (~{{tokens}} tokens) may exceed {{model}}'s context window ({{window}} tokens). Consider reducing chunk size or using a model with a larger context window.",
+    "deleteTitle": "Delete \"{{name}}\"?",
+    "deleteMessage": "All translations associated with this pipeline will be permanently deleted.",
+    "deleteConfirm": "Delete",
+    "ariaGroup": "Pipeline",
+    "ariaDelete": "Delete {{name}}",
+    "ariaSelect": "Select {{name}}",
+    "ariaRename": "Rename pipeline",
+    "renameHint": "Double-click to rename",
+    "ariaAdd": "Add pipeline",
+    "saveFirstToAdd": "Save the project before adding pipelines"
   },
   "audit": {
     "title": "Audit Logs",
@@ -326,7 +343,11 @@
     "auditFailed": "Audit failed",
     "openChunk": "Open chunk",
     "locateInText": "Highlight",
-    "locateInTextTooltip": "Highlight phrase in translated text"
+    "locateInTextTooltip": "Highlight phrase in translated text",
+    "markResolved": "Mark as resolved",
+    "markUnresolved": "Remove resolved mark",
+    "markRejected": "Reject suggestion",
+    "markUnrejected": "Remove rejection"
   },
   "settings": {
     "title": "Global Config / Secrets",
@@ -339,6 +360,11 @@
     "chunkPresetMediumHint": "~700 words — balanced default.",
     "chunkPresetLong": "Long",
     "chunkPresetLongHint": "~1000 words — few large chunks, more context per call.",
+    "newPipelineInit": "New pipeline initialisation",
+    "newPipelineInitHint": "Settings to copy when creating a new pipeline.",
+    "newPipelineInitCopyFirst": "Copy first pipeline",
+    "newPipelineInitCopyPrevious": "Copy current pipeline",
+    "newPipelineInitDefaults": "Use defaults",
     "securityAdvisory": "Security Advisory",
     "securityMessage": "API keys are stored in your operating system's keychain when available. If the keychain is unavailable, Glossa falls back to a local encrypted file protected by a machine-local key; this is less secure than the OS keychain. Keys never leave your device. Ollama runs entirely on your machine — no data is sent to external servers.",
     "secretsPanel": "Secrets panel",
@@ -619,9 +645,10 @@
     "translationCacheLabel": "Translation cache",
     "auditCacheLabel": "Audit cache",
     "sourceLockedTitle": "Source not editable",
-    "sourceLockedBody": "This text stays read-only until you enable \"Edit source\" in the top toolbar.",
+    "sourceLockedBody": "This text stays read-only. Use the pencil button above to enable editing.",
     "enableSourceEditing": "Edit source",
     "disableSourceEditing": "Lock source",
+    "restoreSourceText": "Restore original",
     "focusIssue": "Focus issue",
     "focusBoth": "Show both",
     "focusSource": "Source only",
@@ -629,6 +656,9 @@
     "emptyLabel": "Document Mode",
     "emptyTitle": "No document is staged yet.",
     "emptyBody": "Prepare a text into multiple chunks to use the document reader, or switch back to Sandbox for quick single-text work.",
+    "emptyCardPipeline": "Pipelines",
+    "emptyCardTranslations": "Translations",
+    "emptyCardQuality": "Quality",
     "indexEmptyTitle": "No units to display.",
     "indexEmptyBody": "Import a text and split it into chunks to get started.",
     "watchdogStuck": "Stuck",
@@ -687,7 +717,7 @@
       "editTitle": "Review and iteration",
       "editDesc": "The candidate translation is editable inline. After manual corrections you can click 'Re-evaluate' in the audit panel to rerun the judge on the edited chunk only, or 'Lock translation' (green tick) to mark it final and protect it from accidental reprocessing.",
       "tipTitle": "Tip: mix providers",
-      "tipDesc": "Use a fast model for translation (Gemini Flash, DeepSeek, light Ollama models), a capable model for refine (Claude Sonnet, GPT-4o), a strict model for the judge. Stage choices are independent and costs are aggregated in the stats panel."
+      "tipDesc": "Use a fast model for translation (Gemini Flash, DeepSeek, light Ollama models), a capable model for refine (Claude Sonnet, GPT-5), a strict model for the judge. Stage choices are independent and costs are aggregated in the stats panel."
     },
     "features": {
       "title": "Features",
@@ -733,7 +763,11 @@
       "watchdogTitle": "Stuck-chunk detection",
       "watchdogDesc": "A background watchdog monitors chunks that linger in the 'processing' state longer than expected. If a chunk appears stuck — for example an Ollama model working on a very long context — a warning appears in the Index tab with a Cancel button to abort just that chunk without stopping the whole pipeline.",
       "sandboxTitle": "Sandbox mode (alternative)",
-      "sandboxDesc": "Alongside the document workspace there's a lighter Sandbox mode for quick experiments on short snippets (Sandbox icon in the header). It has no index, no stats, no coherence audit: use it to compare models or iterate fast on a single pass. Serious work stays in the document workspace."
+      "sandboxDesc": "Alongside the document workspace there's a lighter Sandbox mode for quick experiments on short snippets (Sandbox icon in the header). It has no index, no stats, no coherence audit: use it to compare models or iterate fast on a single pass. Serious work stays in the document workspace.",
+      "footnotesTitle": "Footnotes",
+      "footnotesDesc": "When you import a DOCX or Markdown document with footnotes, Glossa separates them entirely from the translation process. Both the note text and the inline position markers are removed from what the model receives — the model sees clean body text only. The original document, shown in the editor, retains markers and notes exactly as they appeared. The note content is saved with the project. After translation you will need to handle footnotes manually: decide which notes to carry over, adapt their text to the target language, and place them where they make sense in the translated text — which may differ from their position in the original.",
+      "footnotesTipTitle": "Why notes are not translated automatically",
+      "footnotesTipDesc": "In a translation, a footnote often cannot be placed at the same position as in the original, and its text may need to be rewritten rather than translated word for word. Keeping notes out of the pipeline prevents the model from making arbitrary decisions about their placement and wording. You stay in control."
     },
     "context": {
       "title": "Context & caching",
@@ -826,7 +860,7 @@
       "useTitle": "Configure in Glossa",
       "useDesc": "Open Settings — the Ollama section shows connection status and installed models. Pick 'ollama' as the provider in any stage or judge and select a model from the stage's dropdown.",
       "recommendedTitle": "Recommended models for translation",
-      "recommendedDesc": "For general translation: llama3.1 (8B), mistral (7B), gemma2 (9B). For higher quality on capable machines: llama3.1:70b or mixtral:8x7b. Models under 3B parameters tend to produce lower-quality translations — keep them for quick experiments.",
+      "recommendedDesc": "For general translation: llama3.2 (3B), qwen2.5 (7B), gemma3 (9B). For higher quality on capable machines: llama3.3:70b or qwen2.5:32b. Models under 3B parameters tend to produce lower-quality translations — keep them for quick experiments.",
       "thinkTitle": "Think mode",
       "thinkDesc": "Some Ollama models support an extended reasoning step before responding. In the Ollama section of Settings you can set the Think level: off, low, medium, or high. Higher levels can improve quality at the cost of time and tokens. Only enable it for models that explicitly support thinking — on standard models it has no effect."
     },
