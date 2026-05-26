@@ -72,21 +72,24 @@ export function parseMarkdownDocument(markdown: string): MarkdownDocument {
         tableLines.push(bodyLines[index]);
         index += 1;
       }
+      const isSeparatorRow = (row: string) => /^\|[\s|:-]+\|$/.test(row.trim());
       const parseTableRow = (row: string): MarkdownInlineNode[][] =>
         row
-          .split('|')
+          .split(/(?<!\\)\|/)
           .slice(1, -1)
-          .map((cell) => parseInlineMarkdown(cell.trim()));
+          .map((cell) => parseInlineMarkdown(cell.replace(/\\\|/g, '|').trim()));
 
-      const isSeparatorRow = (row: string) => /^\|[\s|:-]+\|$/.test(row.trim());
-
-      const dataLines = tableLines.filter((r) => !isSeparatorRow(r));
-      if (dataLines.length > 0) {
+      if (tableLines.some(isSeparatorRow)) {
+        const dataLines = tableLines.filter((r) => !isSeparatorRow(r));
         const [headerLine, ...bodyTableLines] = dataLines;
         blocks.push({
           type: 'table',
           headers: parseTableRow(headerLine),
           rows: bodyTableLines.map(parseTableRow),
+        });
+      } else {
+        tableLines.forEach((tl) => {
+          blocks.push({ type: 'paragraph', children: parseInlineMarkdown(tl.trim()) });
         });
       }
       continue;

@@ -177,7 +177,7 @@ fn normalize_pdf_text(text: &str) -> String {
         .replace('\u{FB04}', "ffl")
         .replace('\u{FB05}', "st")
         .replace('\u{FB06}', "st")
-        .replace('\u{000C}', "\n\n");
+        .replace('\u{000C}', "\n\n---\n\n");
 
     let mut result = String::with_capacity(text.len());
     let mut consecutive_blank: u32 = 0;
@@ -346,7 +346,7 @@ fn build_markdown_from_document_xml(
                 } else if local.ends_with(b":drawing") || local == b"drawing" {
                     if let Some(alt) = drawing_alt.take() {
                         let safe_alt = alt.replace('[', "(").replace(']', ")");
-                        current_paragraph.push_str(&format!("![{safe_alt}]"));
+                        current_paragraph.push_str(&format!("[Image: {safe_alt}]"));
                     }
                     in_drawing = false;
                 } else if local.ends_with(b":hyperlink") || local == b"hyperlink" {
@@ -639,9 +639,8 @@ fn apply_paragraph_markdown_style(
     if let Some(level) = heading_level_from_style(style) {
         return format!("{} {}", "#".repeat(level as usize), paragraph.trim());
     }
-    if let Some(level) = list_level {
-        let indent = "  ".repeat(level as usize);
-        return format!("{indent}- {}", paragraph.trim());
+    if list_level.is_some() {
+        return format!("- {}", paragraph.trim());
     }
     paragraph.to_string()
 }
@@ -1230,6 +1229,22 @@ mod tests {
     use std::io::Write;
     use zip::write::SimpleFileOptions;
 
+    fn build_docx_with_rels(document_xml: &str, rels_xml: &str) -> Vec<u8> {
+        let mut buffer: Vec<u8> = Vec::new();
+        {
+            let cursor = Cursor::new(&mut buffer);
+            let mut writer = zip::ZipWriter::new(cursor);
+            let options =
+                SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+            writer.start_file("word/document.xml", options).unwrap();
+            writer.write_all(document_xml.as_bytes()).unwrap();
+            writer.start_file("word/_rels/document.xml.rels", options).unwrap();
+            writer.write_all(rels_xml.as_bytes()).unwrap();
+            writer.finish().unwrap();
+        }
+        buffer
+    }
+
     fn build_docx(document_xml: &str) -> Vec<u8> {
         let mut buffer: Vec<u8> = Vec::new();
         {
@@ -1402,7 +1417,7 @@ List marker \* item and \[link\](url) plus \_emphasis\_ and \[^1\]"#
         let buffer = build_docx(xml);
         let extracted = extract_docx_markdown_from_bytes(&buffer).expect("expected markdown");
         assert!(extracted.contains("- Top level"), "top-level list item missing");
-        assert!(extracted.contains("  - Nested"), "nested list item missing");
+        assert!(extracted.contains("- Nested"), "nested list item missing");
     }
 
     #[test]
@@ -1422,7 +1437,7 @@ List marker \* item and \[link\](url) plus \_emphasis\_ and \[^1\]"#
         let buffer = build_docx(xml);
         let extracted = extract_docx_markdown_from_bytes(&buffer).expect("expected markdown");
         assert!(
-            extracted.contains("![A diagram of the system]"),
+            extracted.contains("[Image: A diagram of the system]"),
             "image alt text missing: {extracted}"
         );
     }
@@ -1452,14 +1467,35 @@ List marker \* item and \[link\](url) plus \_emphasis\_ and \[^1\]"#
     }
 
     #[test]
-    fn replaces_pdf_form_feed_with_paragraph_break() {
+    fn replaces_pdf_form_feed_with_page_break_marker() {
         let text = "Page one.\x0CPage two.";
         let normalized = normalize_pdf_text(text);
         assert!(normalized.contains("Page one."), "page one missing");
         assert!(normalized.contains("Page two."), "page two missing");
+        assert!(normalized.contains("---"), "page break marker expected between pages");
+    }
+
+    #[test]
+    fn extracts_docx_hyperlink_via_relationships() {
+        let document_xml = r#"<?xml version="1.0"?>
+<w:document xmlns:w="x" xmlns:r="r">
+  <w:body>
+    <w:p>
+      <w:hyperlink r:id="rId1">
+        <w:r><w:t>Anthropic</w:t></w:r>
+      </w:hyperlink>
+    </w:p>
+  </w:body>
+</w:document>"#;
+        let rels_xml = r#"<?xml version="1.0"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://anthropic.com" TargetMode="External"/>
+</Relationships>"#;
+        let buffer = build_docx_with_rels(document_xml, rels_xml);
+        let extracted = extract_docx_markdown_from_bytes(&buffer).expect("expected markdown");
         assert!(
-            normalized.contains("\n\n"),
-            "paragraph break expected between pages"
+            extracted.contains("[Anthropic](https://anthropic.com)"),
+            "hyperlink not resolved: {extracted}"
         );
     }
 
