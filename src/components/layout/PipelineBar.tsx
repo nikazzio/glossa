@@ -17,12 +17,18 @@ interface PipelineTabProps {
   onRename: (name: string) => void;
 }
 
+function parseTimestamp(ts: string): number {
+  // SQLite CURRENT_TIMESTAMP yields "YYYY-MM-DD HH:MM:SS" — not reliably
+  // parsed by WebKit/Safari's Date constructor. Normalize to ISO 8601 first.
+  return new Date(ts.replace(' ', 'T')).getTime();
+}
+
 function isModified(pipeline: Pipeline): boolean {
   // A pipeline is "new" if it was never run and never had its config saved
   // (updatedAt matches createdAt within a few seconds of creation).
   if (pipeline.lastRunConfig !== null) return true;
-  const created = new Date(pipeline.createdAt).getTime();
-  const updated = new Date(pipeline.updatedAt).getTime();
+  const created = parseTimestamp(pipeline.createdAt);
+  const updated = parseTimestamp(pipeline.updatedAt);
   return Math.abs(updated - created) > 5000;
 }
 

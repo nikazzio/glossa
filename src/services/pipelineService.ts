@@ -1,6 +1,6 @@
 import { select, execute } from './dbService';
 import { logger } from '../utils/logger';
-import { normalizeQualityRating, qualityDefault } from '../utils';
+import { generateId, normalizeQualityRating, qualityDefault } from '../utils';
 import type {
   CoherenceResult,
   DocumentFormat,
@@ -159,10 +159,9 @@ export async function createPipeline(
   sourceLanguage: string,
   targetLanguage: string,
 ): Promise<string> {
-  const id = `pipeline-${Date.now()}`;
+  const id = generateId('pipeline');
   await execute(
-    `INSERT INTO pipelines (id, project_id, name, source_language, target_language, stages, judge_prompt, judge_model, judge_provider)
-     VALUES ($1, $2, $3, $4, $5, '[]', '', '', '')`,
+    `INSERT INTO pipelines (id, project_id, name, source_language, target_language) VALUES ($1, $2, $3, $4, $5)`,
     [id, projectId, name, sourceLanguage, targetLanguage],
   );
   return id;
@@ -179,7 +178,7 @@ export async function duplicatePipeline(sourcePipelineId: string, newName: strin
   const rows = await select<DbPipeline>('SELECT * FROM pipelines WHERE id = $1', [sourcePipelineId]);
   if (rows.length === 0) throw new Error(`Pipeline not found: ${sourcePipelineId}`);
   const source = rows[0];
-  const newId = `pipeline-${Date.now()}`;
+  const newId = generateId('pipeline');
 
   await execute(
     `INSERT INTO pipelines (

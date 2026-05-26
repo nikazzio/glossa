@@ -162,8 +162,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
             ...mergedConfig,
             stages: config.stages.length > 0 ? config.stages : state.config.stages,
             judgePrompt: config.judgePrompt,
-            judgeModel: config.judgeModel,
-            judgeProvider: config.judgeProvider,
+            judgeModel: config.judgeModel || state.config.judgeModel,
+            judgeProvider: (config.judgeProvider || state.config.judgeProvider) as import('../types').ModelProvider,
           },
         }));
 
@@ -339,8 +339,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         ...mergedConfig,
         stages: config.stages.length > 0 ? config.stages : state.config.stages,
         judgePrompt: config.judgePrompt,
-        judgeModel: config.judgeModel,
-        judgeProvider: config.judgeProvider,
+        judgeModel: config.judgeModel || state.config.judgeModel,
+        judgeProvider: (config.judgeProvider || state.config.judgeProvider) as import('../types').ModelProvider,
       },
     }));
 
