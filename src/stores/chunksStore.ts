@@ -24,6 +24,7 @@ import {
   updateChunkTranslationFields,
   withSyncedChunkFields,
 } from '../utils/documentState';
+import { stripFootnoteMarkers, stripSuperscriptMarkers } from '../utils/footnoteExtractor';
 
 // --- Internal O(1) chunk index ---
 // Maps chunkId → array index. Kept as a module-level variable; never part of Zustand state.
@@ -333,8 +334,8 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
         const updated = updateChunkSourceFields(
           chunk,
           chunk.originalText,
-          chunk.originalText,
-          buildChunkFootnotes(chunk.originalText, sourceFootnotes),
+          stripSuperscriptMarkers(chunk.originalText),
+          chunk.footnotes,
         );
         return hasTranslation ? { ...updated, translationStale: true } : updated;
       });
@@ -468,7 +469,7 @@ function chunksFromTexts(
     return withSyncedChunkFields({
       id: generateId('chunk'),
       sourceDisplayText: displayText,
-      sourceProcessingText: chunkTextValue,
+      sourceProcessingText: stripFootnoteMarkers(chunkTextValue),
       originalText: displayText,
       translationDisplayText: '',
       translationProcessingText: '',

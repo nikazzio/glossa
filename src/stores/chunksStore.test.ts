@@ -178,8 +178,8 @@ describe('chunksStore', () => {
     });
 
     const chunk = useChunksStore.getState().chunks[0];
-    // Chunk processing text has markers but no definition lines
-    expect(chunk?.sourceProcessingText).toBe('Body [^1].');
+    // Chunk processing text is clean — footnote markers stripped, nothing goes to LLM
+    expect(chunk?.sourceProcessingText).toBe('Body .');
     // Document-level display text retains the definition lines
     expect(usePipelineStore.getState().inputText).toContain('[^1]: A note.');
     // Document-level processing text strips definitions

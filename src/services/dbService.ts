@@ -464,6 +464,18 @@ export async function initDatabase(): Promise<void> {
     console.warn('[Glossa] pipeline_id migration in translations failed', error);
   }
 
+  // Unique constraint: translations are unique per (pipeline_id, chunk_id) so two pipelines
+  // cannot overwrite each other's rows even if chunk IDs happen to collide.
+  try {
+    await conn.execute(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_translations_pipeline_chunk
+        ON translations(pipeline_id, id)
+        WHERE pipeline_id IS NOT NULL
+    `);
+  } catch (error) {
+    console.warn('[Glossa] translations pipeline_chunk index failed', error);
+  }
+
   console.log('[Glossa] Database initialized');
 }
 
