@@ -495,7 +495,7 @@ export function restoreTranslations(rows: SavedTranslation[]): TranslationChunk[
       sourceProcessingText: row.source_processing_text ?? '',
       translationDisplayText: row.translation_display_text ?? '',
       translationProcessingText: row.translation_processing_text ?? '',
-      originalText: row.original_text ?? row.source_display_text ?? '',
+      originalText: row.source_display_text ?? row.original_text ?? '',
       status: (row.chunk_status || (judgeResult.status === 'completed' ? 'completed' : 'ready')) as TranslationChunk['status'],
       stageResults,
       judgeResult,

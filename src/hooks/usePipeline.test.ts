@@ -62,6 +62,7 @@ describe('usePipeline', () => {
     llmMocks.runCoherenceForChunk.mockResolvedValue({ issues: [] });
     preflightMocks.showPreflightDialog.mockResolvedValue(true);
 
+    useUiStore.setState({ pipelineMode: 'document' });
     usePipelineStore.setState((state) => ({
       ...state,
       activePipelineId: 'cfg-proj-test',
