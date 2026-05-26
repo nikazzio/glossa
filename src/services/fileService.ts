@@ -44,7 +44,9 @@ async function readImportedText(path: string): Promise<Pick<ImportedTextFile, 't
     return { text: normalizeImportedText(raw, 'markdown'), format: 'markdown', experimental: 'docx-markdown' };
   }
   if (ext === 'pdf') {
-    const raw = await invoke<string>('extract_pdf_text', { path });
+    const raw = await invoke<string>('extract_pdf_text', { path }).catch((err: unknown) => {
+      throw new Error(typeof err === 'string' ? err : 'pdf_import_failed');
+    });
     return { text: normalizeImportedText(raw, 'plain'), format: 'plain' };
   }
   const format = ext === 'md' ? 'markdown' : 'plain';

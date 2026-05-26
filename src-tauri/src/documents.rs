@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::io::{Cursor, Read, Seek, Write};
 
@@ -73,8 +73,13 @@ pub fn extract_docx_markdown_from_bytes(bytes: &[u8]) -> Result<String, String> 
         .map(parse_footnotes_xml)
         .transpose()?
         .unwrap_or_default();
+    let rels_xml = read_docx_entry(&mut archive, "word/_rels/document.xml.rels")?;
+    let relationships = rels_xml
+        .as_deref()
+        .map(parse_relationships_xml)
+        .unwrap_or_default();
 
-    build_markdown_from_document_xml(&document_xml, &footnotes)
+    build_markdown_from_document_xml(&document_xml, &footnotes, &relationships)
 }
 
 fn extract_text_from_document_xml(xml: &str) -> Result<String, String> {
@@ -157,19 +162,41 @@ pub fn extract_pdf_text_from_bytes(bytes: &[u8]) -> Result<String, String> {
 
     let normalized = normalize_pdf_text(&extracted);
     if normalized.trim().is_empty() {
-        return Err("The .pdf file did not contain any extractable text.".to_string());
+        return Err("pdf_no_text_layer".to_string());
     }
 
     Ok(normalized)
 }
 
 fn normalize_pdf_text(text: &str) -> String {
-    text.lines()
-        .map(|line| line.trim_end().to_string())
-        .collect::<Vec<_>>()
-        .join("\n")
-        .trim()
-        .to_string()
+    let text = text
+        .replace('\u{FB00}', "ff")
+        .replace('\u{FB01}', "fi")
+        .replace('\u{FB02}', "fl")
+        .replace('\u{FB03}', "ffi")
+        .replace('\u{FB04}', "ffl")
+        .replace('\u{FB05}', "st")
+        .replace('\u{FB06}', "st")
+        .replace('\u{000C}', "\n\n");
+
+    let mut result = String::with_capacity(text.len());
+    let mut consecutive_blank: u32 = 0;
+
+    for line in text.lines() {
+        let trimmed = line.trim_end();
+        if trimmed.is_empty() {
+            consecutive_blank += 1;
+            if consecutive_blank <= 1 {
+                result.push('\n');
+            }
+        } else {
+            consecutive_blank = 0;
+            result.push_str(trimmed);
+            result.push('\n');
+        }
+    }
+
+    result.trim().to_string()
 }
 
 fn read_docx_entry<R: Read + Seek>(
@@ -190,6 +217,7 @@ fn read_docx_entry<R: Read + Seek>(
 fn build_markdown_from_document_xml(
     xml: &str,
     footnotes: &BTreeMap<String, String>,
+    relationships: &HashMap<String, String>,
 ) -> Result<String, String> {
     let mut reader = Reader::from_str(xml);
     reader.config_mut().trim_text(false);
@@ -201,17 +229,44 @@ fn build_markdown_from_document_xml(
     let mut run_bold = false;
     let mut run_italic = false;
     let mut paragraph_style: Option<String> = None;
-    let mut paragraph_is_list = false;
+    // None = not a list, Some(level) = list at given indent level
+    let mut paragraph_list_level: Option<u8> = None;
     let mut footnote_number_by_id: BTreeMap<String, usize> = BTreeMap::new();
     let mut referenced_footnotes: Vec<String> = Vec::new();
+
+    // Table state
+    let mut in_table_cell = false;
+    let mut current_table_rows: Vec<Vec<String>> = Vec::new();
+    let mut current_table_row: Vec<String> = Vec::new();
+    let mut current_table_cell = String::new();
+
+    // Hyperlink state: record start position in current_paragraph, resolve URL at end
+    let mut hyperlink_url: Option<String> = None;
+    let mut hyperlink_start: usize = 0;
+
+    // Drawing/image alt text state
+    let mut in_drawing = false;
+    let mut drawing_alt: Option<String> = None;
 
     loop {
         match reader.read_event() {
             Ok(Event::Start(element)) => {
                 let local = element.name().as_ref().to_vec();
-                if local.ends_with(b":p") || local == b"p" {
+                if local.ends_with(b":tbl") || local == b"tbl" {
+                    current_table_rows.clear();
+                } else if local.ends_with(b":tc") || local == b"tc" {
+                    in_table_cell = true;
+                    current_table_cell.clear();
+                } else if local.ends_with(b":drawing") || local == b"drawing" {
+                    in_drawing = true;
+                    drawing_alt = None;
+                } else if local.ends_with(b":hyperlink") || local == b"hyperlink" {
+                    hyperlink_start = current_paragraph.len();
+                    hyperlink_url = extract_attr_value(&element, reader.decoder(), b"id")?
+                        .and_then(|rid| relationships.get(&rid).cloned());
+                } else if local.ends_with(b":p") || local == b"p" {
                     paragraph_style = None;
-                    paragraph_is_list = false;
+                    paragraph_list_level = None;
                 } else if local.ends_with(b":r") || local == b"r" {
                     current_run.clear();
                     run_bold = false;
@@ -223,7 +278,13 @@ fn build_markdown_from_document_xml(
                 } else if local.ends_with(b":i") || local == b"i" {
                     run_italic = true;
                 } else if local.ends_with(b":numPr") || local == b"numPr" {
-                    paragraph_is_list = true;
+                    paragraph_list_level = Some(0);
+                } else if local.ends_with(b":ilvl") || local == b"ilvl" {
+                    if let Some(val) = extract_attr_value(&element, reader.decoder(), b"val")? {
+                        if let Ok(level) = val.parse::<u8>() {
+                            paragraph_list_level = Some(level);
+                        }
+                    }
                 } else if local.ends_with(b":pStyle") || local == b"pStyle" {
                     paragraph_style = extract_attr_value(&element, reader.decoder(), b"val")?;
                 }
@@ -239,17 +300,19 @@ fn build_markdown_from_document_xml(
                 } else if local.ends_with(b":i") || local == b"i" {
                     run_italic = true;
                 } else if local.ends_with(b":numPr") || local == b"numPr" {
-                    paragraph_is_list = true;
+                    paragraph_list_level = Some(0);
+                } else if local.ends_with(b":ilvl") || local == b"ilvl" {
+                    if let Some(val) = extract_attr_value(&element, reader.decoder(), b"val")? {
+                        if let Ok(level) = val.parse::<u8>() {
+                            paragraph_list_level = Some(level);
+                        }
+                    }
                 } else if local.ends_with(b":pStyle") || local == b"pStyle" {
                     paragraph_style = extract_attr_value(&element, reader.decoder(), b"val")?;
                 } else if local.ends_with(b":footnoteReference") || local == b"footnoteReference" {
-                    if let Some(id) = element.attributes().flatten().find(|attr| {
-                        attr.key.as_ref().ends_with(b":id") || attr.key.as_ref() == b"id"
-                    }) {
-                        let value = id
-                            .decode_and_unescape_value(reader.decoder())
-                            .map_err(|e| format!("Failed to decode footnote id: {}", e))?;
-                        let old_id = value.to_string();
+                    if let Some(old_id) =
+                        extract_attr_value(&element, reader.decoder(), b"id")?
+                    {
                         let number = match footnote_number_by_id.get(&old_id) {
                             Some(existing) => *existing,
                             None => {
@@ -261,6 +324,12 @@ fn build_markdown_from_document_xml(
                         };
                         current_paragraph.push_str(&format!("[^{number}]"));
                     }
+                } else if (local.ends_with(b":docPr") || local == b"docPr") && in_drawing {
+                    let descr = extract_attr_value(&element, reader.decoder(), b"descr")?;
+                    let name = extract_attr_value(&element, reader.decoder(), b"name")?;
+                    drawing_alt = descr
+                        .filter(|s| !s.is_empty())
+                        .or_else(|| name.filter(|s| !s.is_empty()));
                 }
             }
             Ok(Event::End(element)) => {
@@ -274,27 +343,59 @@ fn build_markdown_from_document_xml(
                         run_italic,
                     ));
                     current_run.clear();
+                } else if local.ends_with(b":drawing") || local == b"drawing" {
+                    if let Some(alt) = drawing_alt.take() {
+                        let safe_alt = alt.replace('[', "(").replace(']', ")");
+                        current_paragraph.push_str(&format!("![{safe_alt}]"));
+                    }
+                    in_drawing = false;
+                } else if local.ends_with(b":hyperlink") || local == b"hyperlink" {
+                    if let Some(url) = hyperlink_url.take() {
+                        let link_text = current_paragraph[hyperlink_start..].to_string();
+                        current_paragraph.truncate(hyperlink_start);
+                        current_paragraph.push_str(&format!("[{link_text}]({url})"));
+                    }
+                } else if local.ends_with(b":tc") || local == b"tc" {
+                    current_table_row.push(current_table_cell.trim().to_string());
+                    current_table_cell.clear();
+                    in_table_cell = false;
+                } else if local.ends_with(b":tr") || local == b"tr" {
+                    if !current_table_row.is_empty() {
+                        current_table_rows.push(current_table_row.clone());
+                        current_table_row.clear();
+                    }
+                } else if local.ends_with(b":tbl") || local == b"tbl" {
+                    if let Some(table_md) = format_markdown_table(&current_table_rows) {
+                        paragraphs.push(table_md);
+                    }
+                    current_table_rows.clear();
                 } else if local.ends_with(b":p") || local == b"p" {
                     let paragraph = current_paragraph.trim_end();
-                    if !paragraph.is_empty() {
+                    if in_table_cell {
+                        if !paragraph.is_empty() {
+                            if !current_table_cell.is_empty() {
+                                current_table_cell.push(' ');
+                            }
+                            current_table_cell.push_str(paragraph);
+                        }
+                    } else if !paragraph.is_empty() {
                         paragraphs.push(apply_paragraph_markdown_style(
                             paragraph,
                             paragraph_style.as_deref(),
-                            paragraph_is_list,
+                            paragraph_list_level,
                         ));
                     }
                     current_paragraph.clear();
                 }
             }
-            Ok(Event::Text(event))
-                if inside_text => {
-                    let decoded = event
-                        .decode()
-                        .map_err(|e| format!("Failed to decode docx text: {}", e))?;
-                    let text = quick_xml::escape::unescape(&decoded)
-                        .map_err(|e| format!("Failed to unescape docx text: {}", e))?;
-                    current_run.push_str(&text);
-                }
+            Ok(Event::Text(event)) if inside_text => {
+                let decoded = event
+                    .decode()
+                    .map_err(|e| format!("Failed to decode docx text: {}", e))?;
+                let text = quick_xml::escape::unescape(&decoded)
+                    .map_err(|e| format!("Failed to unescape docx text: {}", e))?;
+                current_run.push_str(&text);
+            }
             Ok(Event::Eof) => break,
             Err(error) => {
                 return Err(format!("Failed to parse docx document.xml: {}", error));
@@ -438,6 +539,81 @@ fn parse_footnotes_xml(xml: &str) -> Result<BTreeMap<String, String>, String> {
     Ok(footnotes)
 }
 
+fn parse_relationships_xml(xml: &str) -> HashMap<String, String> {
+    let mut reader = Reader::from_str(xml);
+    reader.config_mut().trim_text(true);
+    let mut result = HashMap::new();
+
+    loop {
+        match reader.read_event() {
+            Ok(Event::Empty(element)) | Ok(Event::Start(element)) => {
+                let local = element.name().as_ref().to_vec();
+                if local == b"Relationship" || local.ends_with(b":Relationship") {
+                    let mut id: Option<String> = None;
+                    let mut target: Option<String> = None;
+                    let mut is_hyperlink = false;
+                    for attr in element.attributes().flatten() {
+                        let key = attr.key.as_ref();
+                        if key == b"Id" {
+                            id = attr
+                                .decode_and_unescape_value(reader.decoder())
+                                .ok()
+                                .map(|v| v.to_string());
+                        } else if key == b"Target" {
+                            target = attr
+                                .decode_and_unescape_value(reader.decoder())
+                                .ok()
+                                .map(|v| v.to_string());
+                        } else if key == b"Type" {
+                            if let Ok(t) = attr.decode_and_unescape_value(reader.decoder()) {
+                                if t.contains("hyperlink") {
+                                    is_hyperlink = true;
+                                }
+                            }
+                        }
+                    }
+                    if is_hyperlink {
+                        if let (Some(id), Some(target)) = (id, target) {
+                            result.insert(id, target);
+                        }
+                    }
+                }
+            }
+            Ok(Event::Eof) => break,
+            _ => {}
+        }
+    }
+
+    result
+}
+
+fn format_markdown_table(rows: &[Vec<String>]) -> Option<String> {
+    if rows.is_empty() {
+        return None;
+    }
+    let col_count = rows.iter().map(|r| r.len()).max().unwrap_or(0);
+    if col_count == 0 {
+        return None;
+    }
+
+    let escape_cell = |s: &str| s.replace('|', "\\|");
+
+    let header_cells: Vec<String> = rows[0].iter().map(|c| escape_cell(c)).collect();
+    let separator = vec!["---"; col_count].join(" | ");
+
+    let mut lines = vec![
+        format!("| {} |", header_cells.join(" | ")),
+        format!("| {} |", separator),
+    ];
+
+    for row in rows.iter().skip(1) {
+        let cells: Vec<String> = row.iter().map(|c| escape_cell(c)).collect();
+        lines.push(format!("| {} |", cells.join(" | ")));
+    }
+
+    Some(lines.join("\n"))
+}
+
 fn extract_attr_value(
     element: &quick_xml::events::BytesStart<'_>,
     decoder: quick_xml::encoding::Decoder,
@@ -455,12 +631,17 @@ fn extract_attr_value(
     Ok(None)
 }
 
-fn apply_paragraph_markdown_style(paragraph: &str, style: Option<&str>, is_list: bool) -> String {
+fn apply_paragraph_markdown_style(
+    paragraph: &str,
+    style: Option<&str>,
+    list_level: Option<u8>,
+) -> String {
     if let Some(level) = heading_level_from_style(style) {
         return format!("{} {}", "#".repeat(level as usize), paragraph.trim());
     }
-    if is_list {
-        return format!("- {}", paragraph.trim());
+    if let Some(level) = list_level {
+        let indent = "  ".repeat(level as usize);
+        return format!("{indent}- {}", paragraph.trim());
     }
     paragraph.to_string()
 }
@@ -1176,6 +1357,109 @@ mod tests {
             r#"\# Heading literal
 
 List marker \* item and \[link\](url) plus \_emphasis\_ and \[^1\]"#
+        );
+    }
+
+    #[test]
+    fn extracts_docx_table_as_markdown() {
+        let xml = r#"<?xml version="1.0"?>
+<w:document xmlns:w="x">
+  <w:body>
+    <w:tbl>
+      <w:tr>
+        <w:tc><w:p><w:r><w:t>Name</w:t></w:r></w:p></w:tc>
+        <w:tc><w:p><w:r><w:t>Age</w:t></w:r></w:p></w:tc>
+      </w:tr>
+      <w:tr>
+        <w:tc><w:p><w:r><w:t>Alice</w:t></w:r></w:p></w:tc>
+        <w:tc><w:p><w:r><w:t>30</w:t></w:r></w:p></w:tc>
+      </w:tr>
+    </w:tbl>
+  </w:body>
+</w:document>"#;
+        let buffer = build_docx(xml);
+        let extracted = extract_docx_markdown_from_bytes(&buffer).expect("expected markdown");
+        assert!(extracted.contains("| Name | Age |"), "header row missing");
+        assert!(extracted.contains("| --- | --- |"), "separator row missing");
+        assert!(extracted.contains("| Alice | 30 |"), "data row missing");
+    }
+
+    #[test]
+    fn extracts_docx_nested_list() {
+        let xml = r#"<?xml version="1.0"?>
+<w:document xmlns:w="x">
+  <w:body>
+    <w:p>
+      <w:pPr><w:numPr><w:ilvl w:val="0"/></w:numPr></w:pPr>
+      <w:r><w:t>Top level</w:t></w:r>
+    </w:p>
+    <w:p>
+      <w:pPr><w:numPr><w:ilvl w:val="1"/></w:numPr></w:pPr>
+      <w:r><w:t>Nested</w:t></w:r>
+    </w:p>
+  </w:body>
+</w:document>"#;
+        let buffer = build_docx(xml);
+        let extracted = extract_docx_markdown_from_bytes(&buffer).expect("expected markdown");
+        assert!(extracted.contains("- Top level"), "top-level list item missing");
+        assert!(extracted.contains("  - Nested"), "nested list item missing");
+    }
+
+    #[test]
+    fn extracts_docx_image_alt_text() {
+        let xml = r#"<?xml version="1.0"?>
+<w:document xmlns:w="x" xmlns:wp="wp">
+  <w:body>
+    <w:p>
+      <w:r>
+        <w:drawing>
+          <wp:inline><wp:docPr id="1" name="Fig1" descr="A diagram of the system"/></wp:inline>
+        </w:drawing>
+      </w:r>
+    </w:p>
+  </w:body>
+</w:document>"#;
+        let buffer = build_docx(xml);
+        let extracted = extract_docx_markdown_from_bytes(&buffer).expect("expected markdown");
+        assert!(
+            extracted.contains("![A diagram of the system]"),
+            "image alt text missing: {extracted}"
+        );
+    }
+
+    #[test]
+    fn normalizes_pdf_ligatures() {
+        let text = "The \u{FB01}nal re\u{FB02}ection of the e\u{FB03}cient plan.";
+        let normalized = normalize_pdf_text(text);
+        assert_eq!(normalized, "The final reflection of the efficient plan.");
+    }
+
+    #[test]
+    fn preserves_pdf_paragraph_breaks() {
+        let text = "First paragraph.\n\nSecond paragraph.";
+        let normalized = normalize_pdf_text(text);
+        assert!(
+            normalized.contains("First paragraph.\n\nSecond paragraph."),
+            "paragraph break not preserved: {normalized:?}"
+        );
+    }
+
+    #[test]
+    fn collapses_pdf_excess_blank_lines() {
+        let text = "A\n\n\n\nB";
+        let normalized = normalize_pdf_text(text);
+        assert_eq!(normalized, "A\n\nB");
+    }
+
+    #[test]
+    fn replaces_pdf_form_feed_with_paragraph_break() {
+        let text = "Page one.\x0CPage two.";
+        let normalized = normalize_pdf_text(text);
+        assert!(normalized.contains("Page one."), "page one missing");
+        assert!(normalized.contains("Page two."), "page two missing");
+        assert!(
+            normalized.contains("\n\n"),
+            "paragraph break expected between pages"
         );
     }
 

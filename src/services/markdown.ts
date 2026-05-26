@@ -8,7 +8,8 @@ export type MarkdownInlineNode =
 export type MarkdownBlock =
   | { type: 'heading'; level: 1 | 2 | 3; children: MarkdownInlineNode[] }
   | { type: 'paragraph'; children: MarkdownInlineNode[] }
-  | { type: 'list'; ordered: boolean; items: MarkdownInlineNode[][] };
+  | { type: 'list'; ordered: boolean; items: MarkdownInlineNode[][] }
+  | { type: 'table'; headers: MarkdownInlineNode[][]; rows: MarkdownInlineNode[][][] };
 
 export interface MarkdownFootnote {
   id: string;
@@ -62,6 +63,32 @@ export function parseMarkdownDocument(markdown: string): MarkdownDocument {
         children: parseInlineMarkdown(headingMatch[2].trim()),
       });
       index += 1;
+      continue;
+    }
+
+    if (line.trimStart().startsWith('|')) {
+      const tableLines: string[] = [];
+      while (index < bodyLines.length && bodyLines[index].trimStart().startsWith('|')) {
+        tableLines.push(bodyLines[index]);
+        index += 1;
+      }
+      const parseTableRow = (row: string): MarkdownInlineNode[][] =>
+        row
+          .split('|')
+          .slice(1, -1)
+          .map((cell) => parseInlineMarkdown(cell.trim()));
+
+      const isSeparatorRow = (row: string) => /^\|[\s|:-]+\|$/.test(row.trim());
+
+      const dataLines = tableLines.filter((r) => !isSeparatorRow(r));
+      if (dataLines.length > 0) {
+        const [headerLine, ...bodyTableLines] = dataLines;
+        blocks.push({
+          type: 'table',
+          headers: parseTableRow(headerLine),
+          rows: bodyTableLines.map(parseTableRow),
+        });
+      }
       continue;
     }
 
@@ -148,6 +175,9 @@ export function buildMarkdownHtmlDocument(markdown: string, title = 'Glossa Expo
     '    .footnotes ol { padding-left: 1.25rem; }',
     '    .footnotes p { margin: 0; }',
     '    .footnote-backref { text-decoration: none; margin-left: 0.35rem; }',
+    '    table { border-collapse: collapse; width: 100%; margin: 0 0 1rem; }',
+    '    th, td { border: 1px solid #cdbda3; padding: 0.4rem 0.75rem; text-align: left; }',
+    '    thead { background: #ede8df; }',
     '  </style>',
     '</head>',
     '<body>',
@@ -169,6 +199,14 @@ export function flattenMarkdownToText(markdown: string): string {
 
     if (block.type === 'paragraph') {
       lines.push(flattenInline(block.children), '');
+      return;
+    }
+
+    if (block.type === 'table') {
+      const allCells = [block.headers, ...block.rows]
+        .map((row) => row.map((cell) => flattenInline(cell)).join(' | '))
+        .join('\n');
+      lines.push(allCells, '');
       return;
     }
 
@@ -200,6 +238,18 @@ function renderBlockToHtml(block: MarkdownBlock): string {
   }
   if (block.type === 'paragraph') {
     return `<p>${renderInlineToHtml(block.children)}</p>`;
+  }
+  if (block.type === 'table') {
+    const headerCells = block.headers
+      .map((cell) => `<th>${renderInlineToHtml(cell)}</th>`)
+      .join('');
+    const bodyRows = block.rows
+      .map((row) => {
+        const cells = row.map((cell) => `<td>${renderInlineToHtml(cell)}</td>`).join('');
+        return `<tr>${cells}</tr>`;
+      })
+      .join('');
+    return `<table><thead><tr>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table>`;
   }
   const tag = block.ordered ? 'ol' : 'ul';
   const items = block.items
