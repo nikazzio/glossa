@@ -144,11 +144,11 @@ export function ConfigDrawer({
     <AnimatePresence>
       {showConfigDrawer && (
         <motion.div
-          initial={{ width: 0, opacity: 0 }}
-          animate={{ width: 680, opacity: 1 }}
-          exit={{ width: 0, opacity: 0 }}
+          initial={{ x: -680, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: -680, opacity: 0 }}
           transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-          className="flex shrink-0 flex-col overflow-hidden border-r border-editorial-border bg-editorial-bg"
+          className="absolute top-0 bottom-0 left-12 z-20 flex w-[680px] flex-col overflow-hidden border-r border-editorial-border bg-editorial-bg shadow-xl"
           aria-labelledby="config-drawer-title"
         >
           {/* Header */}

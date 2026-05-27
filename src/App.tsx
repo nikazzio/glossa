@@ -85,7 +85,7 @@ export default function App() {
 
         {viewMode === 'document' ? (
           <Suspense fallback={null}>
-            <main className="flex flex-1 min-h-0 overflow-hidden">
+            <main className="relative flex flex-1 min-h-0 overflow-hidden">
               <PipelineStrip />
               <ConfigDrawer
                 onRunPipeline={runPipeline}

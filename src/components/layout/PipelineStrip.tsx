@@ -4,37 +4,50 @@ import { usePipelineStore } from '../../stores/pipelineStore';
 import { useUiStore } from '../../stores/uiStore';
 
 export function PipelineStrip() {
-  const { pipelines, activePipelineId, switchPipeline, createNewPipeline } = useProjectStore();
+  const { pipelines, activePipelineId, currentProjectId, switchPipeline, createNewPipeline } = useProjectStore();
   const runStatus = usePipelineStore((s) => s.runStatus);
   const { showConfigDrawer, setShowConfigDrawer } = useUiStore();
+
+  const hasProject = !!currentProjectId;
 
   return (
     <div className="flex w-12 shrink-0 flex-col items-center border-r border-editorial-border bg-editorial-bg/60 py-3">
       <div className="flex flex-1 flex-col items-center gap-2">
-        {pipelines.map((pipeline, i) => {
-          const isActive = pipeline.id === activePipelineId;
-          const isRunning = isActive && runStatus === 'running';
-          return (
-            <button
-              key={pipeline.id}
-              onClick={() => switchPipeline(pipeline.id)}
-              title={pipeline.name}
-              aria-label={pipeline.name}
-              className={`relative flex h-9 w-9 items-center justify-center rounded-[6px] text-xs font-black transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                isActive
-                  ? 'bg-editorial-accent text-white'
-                  : 'border border-editorial-border bg-editorial-textbox text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent'
-              }`}
-            >
-              {isRunning ? (
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-transparent border-t-white" />
-              ) : (
-                String(i + 1)
-              )}
-            </button>
-          );
-        })}
-        {pipelines.length < 10 && (
+        {pipelines.length === 0 ? (
+          // Placeholder prima del salvataggio — rappresenta la config corrente
+          <div
+            title="Pipeline 1"
+            aria-label="Pipeline 1"
+            className="relative flex h-9 w-9 items-center justify-center rounded-[6px] bg-editorial-accent text-xs font-black text-white"
+          >
+            1
+          </div>
+        ) : (
+          pipelines.map((pipeline, i) => {
+            const isActive = pipeline.id === activePipelineId;
+            const isRunning = isActive && runStatus === 'running';
+            return (
+              <button
+                key={pipeline.id}
+                onClick={() => switchPipeline(pipeline.id)}
+                title={pipeline.name}
+                aria-label={pipeline.name}
+                className={`relative flex h-9 w-9 items-center justify-center rounded-[6px] text-xs font-black transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                  isActive
+                    ? 'bg-editorial-accent text-white'
+                    : 'border border-editorial-border bg-editorial-textbox text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent'
+                }`}
+              >
+                {isRunning ? (
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-transparent border-t-white" />
+                ) : (
+                  String(i + 1)
+                )}
+              </button>
+            );
+          })
+        )}
+        {hasProject && pipelines.length > 0 && pipelines.length < 10 && (
           <button
             onClick={() => createNewPipeline(`Pipeline ${pipelines.length + 1}`)}
             title="Nuova pipeline"
