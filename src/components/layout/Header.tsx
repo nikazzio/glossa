@@ -6,7 +6,6 @@ import {
   FilePen,
   FolderOpen,
   FolderX,
-  Globe,
   HelpCircle,
   LayoutTemplate,
   LibraryBig,
@@ -263,25 +262,21 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
 
         {/* ── Riga 1: logo + azioni ── */}
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-          <div className="flex flex-wrap items-center gap-4">
-            <div>
-              <div className="brand font-display text-4xl italic tracking-tight text-editorial-ink">
-                {t('app.title')}
-              </div>
-              <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-                {t('app.subtitle')}
-              </div>
-              <div className="text-[9px] font-mono tracking-[0.2em] text-editorial-muted/50 mt-0.5">
-                v{__APP_VERSION__}
-              </div>
+          <div>
+            <div className="brand font-display text-4xl italic tracking-tight text-editorial-ink">
+              {t('app.title')}
             </div>
+            <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+              {t('app.subtitle')}
+            </div>
+
             {currentProject && (
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1.5 mt-1">
                 <button
                   onClick={() => setShowProjectPanel(true)}
                   title={projectsLabel}
                   aria-label={`${projectsLabel}: ${currentProject.name}`}
-                  className="rounded-full border border-editorial-border bg-editorial-bg/70 px-3 py-1.5 text-[10px] font-mono text-editorial-muted transition-colors hover:border-editorial-ink hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  className="font-display text-[15px] italic text-editorial-ink/80 transition-colors hover:text-editorial-ink focus:outline-none focus-visible:underline"
                 >
                   {currentProject.name}
                 </button>
@@ -292,15 +287,21 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
                   disabled={isProcessing}
                   title={closeProjectLabel}
                   aria-label={closeProjectLabel}
-                  className="rounded-full border border-editorial-border/60 p-1.5 text-editorial-muted/60 transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="rounded-full border border-editorial-border/60 p-1 text-editorial-muted/50 transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  <FolderX size={12} />
+                  <FolderX size={11} />
                 </button>
               </div>
             )}
             {!currentProject && (
-              <SaveStatusBadge saveState={saveState} currentProjectId={currentProjectId} label={saveStatusLabel} />
+              <div className="mt-1">
+                <SaveStatusBadge saveState={saveState} currentProjectId={currentProjectId} label={saveStatusLabel} />
+              </div>
             )}
+
+            <div className="text-[9px] font-mono tracking-[0.2em] text-editorial-muted/50 mt-0.5">
+              v{__APP_VERSION__}
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center justify-end gap-2">
@@ -358,10 +359,9 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
                 >
                   <LibraryBig size={16} />
                 </IconButton>
-                <IconButton onClick={toggleLang} title={`${langLabel} (${i18n.language.toUpperCase()} → ${i18n.language === 'it' ? 'EN' : 'IT'})`} ariaLabel={langLabel}>
-                  <span className="flex items-center gap-0.5">
-                    <Globe size={13} />
-                    <span className="font-mono text-[9px] font-bold leading-none">{i18n.language.toUpperCase()}</span>
+                <IconButton onClick={toggleLang} title={`${langLabel} (${i18n.language === 'it' ? 'IT → EN' : 'EN → IT'})`} ariaLabel={langLabel}>
+                  <span className="font-mono text-[11px] font-bold leading-none">
+                    {i18n.language.toUpperCase()}
                   </span>
                 </IconButton>
                 <IconButton
