@@ -911,6 +911,12 @@
       "logFileDesc": "Glossa writes a rotating log named \"glossa\" in this directory. Attach or copy it when reporting a bug.",
       "rustLogTitle": "Verbose logging",
       "rustLogDesc": "Set the RUST_LOG environment variable to override the runtime log level:"
+    },
+    "version": {
+      "check": "Check for updates",
+      "upToDate": "Up to date",
+      "updateAvailable": "Update available: {{tag}}",
+      "error": "Could not check"
     }
   },
   "library": {
