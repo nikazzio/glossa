@@ -23,6 +23,7 @@ src-tauri/target/
 Thumbs.db
 Desktop.ini
 .claude/
+.superpowers/
 
 #working
 STATO_SESSIONE*
