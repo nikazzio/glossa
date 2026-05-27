@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.9.0](https://github.com/nikazzio/glossa/compare/glossa-v0.8.0...glossa-v0.9.0) (2026-05-27)
+
+
+### ✨ Features
+
+* import robusto DOCX/PDF + rendering tabelle markdown ([#194](https://github.com/nikazzio/glossa/issues/194)) ([bcb5c84](https://github.com/nikazzio/glossa/commit/bcb5c84b03886719ef190cd4ead362b6ee75d7ed))
+* pipeline multiple per progetto con PipelineBar ([#162](https://github.com/nikazzio/glossa/issues/162)) ([#179](https://github.com/nikazzio/glossa/issues/179)) ([9a86267](https://github.com/nikazzio/glossa/commit/9a86267bb11572bcea2bf2c859aa051c54e9613e))
+* UI style unification — palette, font, design system ([#26](https://github.com/nikazzio/glossa/issues/26), [#129](https://github.com/nikazzio/glossa/issues/129)) ([#195](https://github.com/nikazzio/glossa/issues/195)) ([4a39c82](https://github.com/nikazzio/glossa/commit/4a39c829854bc6244d47dccc131fd029f2379c29))
+
+
+### 🐛 Bug Fixes
+
+* focus trap + ESC in ConfigDrawer (post-merge) ([ea83f86](https://github.com/nikazzio/glossa/commit/ea83f86e70815f25433077ddd654f5a0e44a691b))
+
 ## [0.8.0](https://github.com/nikazzio/glossa/compare/glossa-v0.7.0...glossa-v0.8.0) (2026-05-19)
 
 
