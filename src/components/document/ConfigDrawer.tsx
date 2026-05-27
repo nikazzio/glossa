@@ -3,6 +3,7 @@ import { X, LibraryBig, Save, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { AnimatePresence, motion } from 'motion/react';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { PipelineConfig } from '../pipeline/PipelineConfig';
 import { useUiStore } from '../../stores/uiStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
@@ -28,6 +29,7 @@ export function ConfigDrawer({
   const { t } = useTranslation();
   const showConfigDrawer = useUiStore((state) => state.showConfigDrawer);
   const setShowConfigDrawer = useUiStore((state) => state.setShowConfigDrawer);
+  const drawerRef = useFocusTrap(showConfigDrawer, () => setShowConfigDrawer(false));
   const setPipelineMode = useUiStore((state) => state.setPipelineMode);
   const [glossaryDirty, setGlossaryDirty] = useState(false);
   const [isSavingGlossary, setIsSavingGlossary] = useState(false);
@@ -161,6 +163,7 @@ export function ConfigDrawer({
           />
           <motion.div
             key="drawer"
+            ref={drawerRef}
             initial={{ x: -680, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: -680, opacity: 0 }}
