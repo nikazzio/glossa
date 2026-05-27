@@ -16,6 +16,7 @@ import {
   SlidersHorizontal,
   Upload,
 } from 'lucide-react';
+import { IconButton } from '../ui';
 import { lazy, Suspense, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -303,31 +304,7 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
           </div>
 
           <div className="flex flex-wrap items-center justify-end gap-2">
-            {/* Export cluster – visibile solo in modalità documento con chunk */}
-            {viewMode === 'document' && chunks.length > 0 && (
-              <ActionCluster>
-                <IconButton
-                  onClick={() => setShowExportDialog(true)}
-                  title={exportLabel}
-                  ariaLabel={exportLabel}
-                >
-                  <FileOutput size={15} />
-                </IconButton>
-              </ActionCluster>
-            )}
-
-            {/* Sandbox – solo icona */}
-            <IconButton
-              onClick={() => setViewMode(viewMode === 'sandbox' ? 'document' : 'sandbox')}
-              title={sandboxLabel}
-              ariaLabel={sandboxLabel}
-              ariaPressed={viewMode === 'sandbox'}
-              active={viewMode === 'sandbox'}
-            >
-              <LayoutTemplate size={16} />
-            </IconButton>
-
-            {/* Cluster Progetto */}
+            {/* Cluster Documento */}
             <ActionCluster>
               <div className="flex flex-wrap items-center gap-1">
                 <IconButton
@@ -359,10 +336,19 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
                 >
                   <Save size={16} />
                 </IconButton>
+                {viewMode === 'document' && chunks.length > 0 && (
+                  <IconButton
+                    onClick={() => setShowExportDialog(true)}
+                    title={exportLabel}
+                    ariaLabel={exportLabel}
+                  >
+                    <FileOutput size={16} />
+                  </IconButton>
+                )}
               </div>
             </ActionCluster>
 
-            {/* Cluster Generale */}
+            {/* Cluster App */}
             <ActionCluster>
               <div className="flex flex-wrap items-center gap-1">
                 <IconButton
@@ -372,15 +358,18 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
                 >
                   <LibraryBig size={16} />
                 </IconButton>
-                <button
-                  onClick={toggleLang}
-                  title={langLabel}
-                  className="flex items-center gap-1.5 rounded-full border border-editorial-border px-3 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  aria-label={langLabel}
+                <IconButton onClick={toggleLang} title={langLabel} ariaLabel={langLabel}>
+                  <Globe size={16} />
+                </IconButton>
+                <IconButton
+                  onClick={() => setViewMode(viewMode === 'sandbox' ? 'document' : 'sandbox')}
+                  title={sandboxLabel}
+                  ariaLabel={sandboxLabel}
+                  ariaPressed={viewMode === 'sandbox'}
+                  active={viewMode === 'sandbox'}
                 >
-                  <Globe size={14} />
-                  {i18n.language.toUpperCase()}
-                </button>
+                  <LayoutTemplate size={16} />
+                </IconButton>
                 <IconButton
                   onClick={() => setShowSettings(true)}
                   title={settingsLabel}
@@ -486,43 +475,6 @@ function ActionCluster({
   );
 }
 
-interface IconButtonProps {
-  onClick: () => void;
-  children: React.ReactNode;
-  title: string;
-  ariaLabel: string;
-  active?: boolean;
-  disabled?: boolean;
-  ariaPressed?: boolean;
-}
-
-function IconButton({
-  onClick,
-  children,
-  title,
-  ariaLabel,
-  active = false,
-  disabled = false,
-  ariaPressed,
-}: IconButtonProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      title={title}
-      aria-label={ariaLabel}
-      aria-pressed={ariaPressed}
-      disabled={disabled}
-      className={`rounded-full border border-editorial-border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40 ${
-        active
-          ? 'bg-editorial-ink text-white'
-          : 'text-editorial-muted hover:bg-editorial-textbox/50 hover:text-editorial-ink'
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
 
 function SaveStatusBadge({
   saveState,

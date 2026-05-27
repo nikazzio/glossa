@@ -89,7 +89,7 @@ export function DocumentView({
   const canAdjustTestCount = effectivePipelineMode === 'test' && !isProcessing;
   const runPanelClass =
     effectivePipelineMode === 'test'
-      ? 'border-amber-200/70 bg-[#faf4e7]/95 shadow-[0_16px_50px_rgba(129,89,30,0.06)]'
+      ? 'border-editorial-warning/30 bg-editorial-textbox/60 shadow-[0_16px_50px_rgba(26,26,26,0.06)]'
       : 'border-editorial-border bg-editorial-bg/90 shadow-[0_16px_50px_rgba(26,26,26,0.05)]';
 
   const [viewportWidth, setViewportWidth] = useState(
@@ -281,7 +281,7 @@ export function DocumentView({
                   <div
                     className={`flex h-[34px] min-w-[34px] items-center justify-center rounded-full border px-2 text-[12px] font-bold tracking-[0.12em] shadow-[0_1px_6px_rgba(26,26,26,0.06)] ${
                       effectivePipelineMode === 'test'
-                        ? 'border-amber-200/80 bg-amber-50 text-amber-900'
+                        ? 'border-editorial-warning/40 bg-editorial-textbox text-editorial-ink'
                         : 'border-editorial-border bg-editorial-bg text-editorial-ink'
                     }`}
                     title={t('pipeline.runChunkCount', { count: runChunkCount })}
@@ -766,9 +766,9 @@ function InlineStatusBadge({
 }) {
   const toneClasses =
     tone === 'amber'
-      ? 'border-amber-300/80 bg-amber-50 text-amber-900'
+      ? 'border-editorial-warning/40 bg-editorial-textbox text-editorial-ink'
       : tone === 'emerald'
-        ? 'border-emerald-300/80 bg-emerald-50 text-emerald-900'
+        ? 'border-editorial-success/50 bg-editorial-success/8 text-editorial-success'
         : 'border-editorial-border bg-editorial-textbox/60 text-editorial-muted';
   return (
     <span
@@ -824,7 +824,7 @@ const COMPACT_STATUS_TONE = {
   processing:
     'border-editorial-warning/45 bg-editorial-warning/12 text-editorial-warning animate-pulse',
   error: 'border-editorial-accent/40 bg-editorial-accent/10 text-editorial-accent',
-  retrying: 'border-amber-500/45 bg-amber-500/12 text-amber-600 animate-pulse',
+  retrying: 'border-editorial-warning/45 bg-editorial-warning/12 text-editorial-warning animate-pulse',
   idle: 'border-editorial-border bg-editorial-bg text-editorial-muted',
 } as const;
 

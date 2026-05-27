@@ -978,8 +978,8 @@ export function ImportPreviewDialog({
         {/* ── Context overflow warning ──────────────────────────────────────── */}
         {contextWarning && (
           <div className="shrink-0 px-6 pb-2">
-            <div className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-400">
-              <AlertTriangle size={14} className="mt-0.5 shrink-0 text-amber-500" />
+            <div className="flex items-start gap-2 rounded-lg border border-editorial-warning/40 bg-editorial-warning/10 p-3 text-xs text-editorial-warning">
+              <AlertTriangle size={14} className="mt-0.5 shrink-0 text-editorial-warning" />
               <span>
                 {t('pipeline.contextOverflowWarning', {
                   tokens: contextWarning.estimatedTokens.toLocaleString(),
