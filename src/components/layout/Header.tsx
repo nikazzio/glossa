@@ -538,16 +538,16 @@ function SaveStatusBadge({
 
   if (saveState === 'saving') {
     icon = <Loader2 size={13} className="animate-spin" />;
-    colorClass = 'border-amber-400/60 bg-amber-50/60 text-amber-600';
+    colorClass = 'border-editorial-muted/50 bg-editorial-muted/8 text-editorial-muted';
   } else if (saveState === 'error') {
     icon = <AlertCircle size={13} />;
     colorClass = 'border-editorial-accent/50 bg-editorial-accent/10 text-editorial-accent';
   } else if (saveState === 'dirty') {
     icon = <CircleDot size={13} />;
-    colorClass = 'border-amber-300/60 bg-amber-50/60 text-amber-700';
+    colorClass = 'border-editorial-muted/50 bg-editorial-muted/8 text-editorial-muted';
   } else if (currentProjectId) {
     icon = <CircleCheck size={13} />;
-    colorClass = 'border-emerald-400/60 bg-emerald-50/60 text-emerald-600';
+    colorClass = 'border-editorial-success/50 bg-editorial-success/8 text-editorial-success';
   } else {
     icon = <FilePen size={13} />;
   }

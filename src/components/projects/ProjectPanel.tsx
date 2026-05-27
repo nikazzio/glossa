@@ -167,9 +167,11 @@ export function ProjectPanel() {
                 ) : (
                   <button
                     onClick={() => setCreating(true)}
-                    className="flex w-full items-center justify-center gap-2 rounded-full border border-dashed border-editorial-border px-5 py-3 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:border-editorial-accent hover:text-editorial-accent"
+                    title={t('projects.new')}
+                    aria-label={t('projects.new')}
+                    className="rounded-full border border-dashed border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   >
-                    <Plus size={14} /> {t('projects.new')}
+                    <Plus size={14} />
                   </button>
                 )}
 
