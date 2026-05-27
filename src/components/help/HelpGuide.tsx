@@ -6,8 +6,9 @@ import {
   LayoutTemplate, PanelRight,
   CheckCheck, PanelTopClose, ScanLine,
   Wand2, BookmarkPlus, BookOpen,
-  Copy, Check,
+  Copy, Check, Palette,
 } from 'lucide-react';
+import { StyleGuide } from './StyleGuide';
 import { appLogDir } from '@tauri-apps/api/path';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -19,7 +20,7 @@ interface HelpGuideProps {
   onClose: () => void;
 }
 
-type Section = 'overview' | 'pipeline' | 'features' | 'streaming' | 'context' | 'audit' | 'projects' | 'providers' | 'ollama' | 'glossary' | 'shortcuts' | 'troubleshooting';
+type Section = 'overview' | 'pipeline' | 'features' | 'streaming' | 'context' | 'audit' | 'projects' | 'providers' | 'ollama' | 'glossary' | 'shortcuts' | 'troubleshooting' | 'design';
 
 export function HelpGuide({ open, onClose }: HelpGuideProps) {
   const [activeSection, setActiveSection] = useState<Section>('overview');
@@ -39,6 +40,7 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
     { id: 'glossary',        label: t('help.sections.library') },
     { id: 'shortcuts',       label: t('help.sections.shortcuts') },
     { id: 'troubleshooting', label: t('help.sections.troubleshooting') },
+    { id: 'design',          label: 'Design System' },
   ];
 
   if (!open) return null;
@@ -109,6 +111,7 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
               {activeSection === 'glossary'        && <GlossarySection />}
               {activeSection === 'shortcuts'       && <ShortcutsSection />}
               {activeSection === 'troubleshooting' && <TroubleshootingSection />}
+              {activeSection === 'design'          && <StyleGuide />}
             </div>
           </div>
         </EditorialModalShell>
@@ -121,7 +124,7 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="font-display text-3xl italic tracking-tight mb-6 pb-3 border-b border-editorial-ink text-editorial-ink">
+    <h2 className="font-display text-3xl tracking-tight mb-6 pb-3 border-b border-editorial-border text-editorial-ink" style={{ fontVariationSettings: '"wght" 560' }}>
       {children}
     </h2>
   );

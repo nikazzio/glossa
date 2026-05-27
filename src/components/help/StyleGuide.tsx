@@ -1,0 +1,190 @@
+import { useEffect, useState } from 'react';
+import { Play, Plus, Save, Settings, CircleCheck, AlertCircle, Loader2, FilePen } from 'lucide-react';
+
+// Reads a CSS custom property from :root at render time — stays in sync with theme changes
+function useCssVar(name: string): string {
+  const [value, setValue] = useState('');
+  useEffect(() => {
+    setValue(getComputedStyle(document.documentElement).getPropertyValue(name).trim());
+  }, [name]);
+  return value;
+}
+
+function hexToLuminance(hex: string): number {
+  if (!hex || hex.length < 7) return 0;
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const lin = (c: number) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+
+function contrastRatio(fg: string, bg: string): number {
+  const l1 = hexToLuminance(fg);
+  const l2 = hexToLuminance(bg);
+  return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+}
+
+function ContrastBadge({ fg, bg }: { fg: string; bg: string }) {
+  const ratio = contrastRatio(fg, bg);
+  const pass = ratio >= 4.5;
+  const large = ratio >= 3 && ratio < 4.5;
+  return (
+    <span className={`font-mono text-[9px] px-1.5 py-0.5 rounded border ${
+      pass  ? 'bg-editorial-success/10 text-editorial-success border-editorial-success/30' :
+      large ? 'bg-editorial-warning/10 text-editorial-warning border-editorial-warning/30' :
+              'bg-editorial-accent/10 text-editorial-accent border-editorial-accent/30'
+    }`}>
+      {ratio.toFixed(1)}:1 {pass ? '✓' : large ? '△' : '✗'}
+    </span>
+  );
+}
+
+const COLOR_TOKENS = [
+  { name: 'bg',       var: '--color-editorial-bg',       label: 'Sfondo' },
+  { name: 'ink',      var: '--color-editorial-ink',      label: 'Testo principale' },
+  { name: 'charcoal', var: '--color-editorial-charcoal', label: 'Pipeline / azioni primarie' },
+  { name: 'accent',   var: '--color-editorial-accent',   label: 'Accento / interazione' },
+  { name: 'muted',    var: '--color-editorial-muted',    label: 'Testo secondario' },
+  { name: 'success',  var: '--color-editorial-success',  label: 'Stato OK / salvato' },
+  { name: 'border',   var: '--color-editorial-border',   label: 'Bordi' },
+  { name: 'textbox',  var: '--color-editorial-textbox',  label: 'Sfondo input' },
+];
+
+function ColorSection() {
+  const bg = useCssVar('--color-editorial-bg');
+  const tokenValues = COLOR_TOKENS.map(t => ({ ...t, value: useCssVar(t.var) }));
+
+  return (
+    <div className="space-y-2">
+      {tokenValues.map(({ name, label, value }) => (
+        <div key={name} className="flex items-center gap-3">
+          <div
+            className="h-8 w-8 shrink-0 rounded-lg border border-editorial-border/60"
+            style={{ backgroundColor: value }}
+          />
+          <div className="flex-1 min-w-0">
+            <p className="font-mono text-[10px] text-editorial-muted">editorial-{name}</p>
+            <p className="font-mono text-[10px] text-editorial-ink/50">{value || '…'}</p>
+          </div>
+          <p className="text-[11px] text-editorial-muted shrink-0 hidden sm:block">{label}</p>
+          {value && bg && name !== 'bg' && <ContrastBadge fg={value} bg={bg} />}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const TYPE_SCALE = [
+  { label: 'Display',   specimen: 'La traduzione come arte',                              cls: 'font-display text-2xl italic text-editorial-ink' },
+  { label: 'Heading',   specimen: 'Configurazione pipeline',                              cls: 'font-display text-lg text-editorial-ink' },
+  { label: 'Body',      specimen: 'Testo principale dell\'interfaccia — leggibile.',       cls: 'font-sans text-[15px] text-editorial-ink' },
+  { label: 'Secondary', specimen: 'Descrizione contestuale, nota breve.',                 cls: 'font-sans text-[13px] text-editorial-muted' },
+  { label: 'Label',     specimen: 'IMPOSTAZIONI PIPELINE',                                cls: 'font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted' },
+  { label: 'Micro',     specimen: 'DEV · v0.9.1',                                        cls: 'font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-editorial-muted' },
+];
+
+function TypographySection() {
+  return (
+    <div className="space-y-4">
+      {TYPE_SCALE.map(({ label, specimen, cls }) => (
+        <div key={label} className="flex items-baseline gap-4 border-b border-editorial-border pb-3 last:border-0">
+          <span className="w-20 shrink-0 font-mono text-[9px] text-editorial-muted uppercase tracking-wider">{label}</span>
+          <p className={cls}>{specimen}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ComponentsSection() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <p className="font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted mb-3">Icon buttons</p>
+        <div className="flex items-center gap-3 flex-wrap">
+          <button className="rounded-full border border-editorial-border p-2 text-editorial-muted" title="Default"><Settings size={14} /></button>
+          <button className="rounded-full border border-editorial-accent/60 p-2 text-editorial-accent" title="Hover"><Save size={14} /></button>
+          <button className="rounded-full border-0 bg-editorial-ink p-2 text-white" title="Active"><Plus size={14} /></button>
+          <button className="rounded-full border border-editorial-border p-2 text-editorial-muted opacity-35 cursor-not-allowed" disabled title="Disabled"><Settings size={14} /></button>
+          <button className="rounded-full border border-dashed border-editorial-border p-2 text-editorial-muted" title="Nuovo"><Plus size={14} /></button>
+          <button className="flex items-center gap-1.5 rounded-full bg-editorial-charcoal px-4 py-2 text-[10px] font-bold uppercase tracking-[0.15em] text-white">
+            <Play size={11} fill="currentColor" /> Avvia
+          </button>
+        </div>
+        <div className="mt-1.5 flex gap-6 text-[9px] text-editorial-muted font-mono">
+          <span>default</span><span>hover</span><span>active</span><span>disabled</span><span>+ nuovo</span><span>start</span>
+        </div>
+      </div>
+
+      <div>
+        <p className="font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted mb-3">Pill buttons</p>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button className="rounded-full bg-editorial-ink px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-white">Primary</button>
+          <button className="rounded-full border border-editorial-border px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted">Secondary</button>
+          <button className="rounded-full border border-editorial-accent px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-accent">Accent</button>
+        </div>
+      </div>
+
+      <div>
+        <p className="font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted mb-3">Status badges</p>
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-editorial-success/50 bg-editorial-success/10 px-2.5 py-1 text-[10px] text-editorial-success">
+            <CircleCheck size={11} /> Salvato
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-editorial-muted/30 bg-editorial-muted/8 px-2.5 py-1 text-[10px] text-editorial-muted">
+            <Loader2 size={11} className="animate-spin" /> Salvataggio
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-editorial-muted/30 bg-editorial-muted/8 px-2.5 py-1 text-[10px] text-editorial-muted">
+            <FilePen size={11} /> Non salvato
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-editorial-accent/50 bg-editorial-accent/8 px-2.5 py-1 text-[10px] text-editorial-accent">
+            <AlertCircle size={11} /> Errore
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function StyleGuide() {
+  return (
+    <div className="space-y-10">
+      <div className="border-b border-editorial-border pb-6">
+        <p className="font-sans text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted mb-2">Glossa</p>
+        <h2 className="font-display text-3xl text-editorial-ink mb-2" style={{ fontVariationSettings: '"wght" 560' }}>Design System</h2>
+        <p className="font-sans text-[13px] text-editorial-muted">Token, tipografia e componenti base dell'interfaccia. I valori dei colori sono letti in tempo reale dai CSS custom properties.</p>
+      </div>
+
+      <section>
+        <h3 className="font-display text-xl italic text-editorial-ink mb-1">Colori</h3>
+        <p className="text-[12px] text-editorial-muted mb-5">Token letti dai CSS custom properties — aggiornamento automatico con il dark mode.</p>
+        <ColorSection />
+      </section>
+
+      <section>
+        <h3 className="font-display text-xl italic text-editorial-ink mb-1">Tipografia</h3>
+        <p className="text-[12px] text-editorial-muted mb-5">
+          Serif: <span className="font-mono">Elstob</span> (variable, opsz 6–18, wght 200–800) —
+          Sans: <span className="font-mono">Plus Jakarta Sans</span> (variable, wght 200–800)
+        </p>
+        <TypographySection />
+      </section>
+
+      <section>
+        <h3 className="font-display text-xl italic text-editorial-ink mb-1">Componenti</h3>
+        <p className="text-[12px] text-editorial-muted mb-5">Stili base per i componenti interattivi principali.</p>
+        <ComponentsSection />
+      </section>
+
+      <section className="rounded-2xl border border-dashed border-editorial-border p-5 opacity-50">
+        <h3 className="font-display text-xl italic text-editorial-ink mb-1">Dark mode</h3>
+        <p className="text-[12px] text-editorial-muted">
+          I token <span className="font-mono">--color-editorial-*</span> verranno ridefiniti
+          in <span className="font-mono">@media (prefers-color-scheme: dark)</span> in <span className="font-mono">index.css</span>.
+          Questa sezione si popolerà automaticamente.
+        </p>
+      </section>
+    </div>
+  );
+}
