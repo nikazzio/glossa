@@ -156,7 +156,7 @@ export function ConfigDrawer({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="absolute top-0 bottom-0 left-12 right-0 z-10 bg-editorial-ink/20 backdrop-blur-sm"
+            className="absolute top-0 bottom-0 left-12 right-0 z-30 bg-editorial-ink/20 backdrop-blur-sm"
             onClick={() => setShowConfigDrawer(false)}
           />
           <motion.div
@@ -165,7 +165,7 @@ export function ConfigDrawer({
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: -680, opacity: 0 }}
             transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-            className="absolute top-0 bottom-0 left-12 z-20 flex w-[680px] flex-col overflow-hidden border-r border-editorial-border bg-editorial-bg shadow-xl"
+            className="absolute top-0 bottom-0 left-12 z-40 flex w-[680px] flex-col overflow-hidden border-r border-editorial-border bg-editorial-bg shadow-xl"
             aria-labelledby="config-drawer-title"
           >
           {/* Header */}
@@ -174,36 +174,23 @@ export function ConfigDrawer({
               <div className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
                 {t('document.configDrawerTitle')}
               </div>
-              <h2
+              <input
                 id="config-drawer-title"
-                className="mt-1 font-display text-2xl italic tracking-tight text-editorial-ink"
-              >
-                {t('pipeline.globalSetup')}
-              </h2>
-              {activePipeline && (
-                <input
-                  type="text"
-                  value={nameValue}
-                  onChange={(e) => setNameValue(e.target.value)}
-                  onBlur={() => {
-                    const trimmed = nameValue.trim();
-                    if (trimmed && trimmed !== activePipeline.name && activePipelineId) {
-                      void renamePipeline(activePipelineId, trimmed);
-                    } else {
-                      setNameValue(activePipeline.name);
-                    }
-                  }}
-                  onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
-                  className="mt-2 w-full rounded-[10px] border border-editorial-border bg-editorial-textbox/40 px-3 py-1.5 text-sm font-bold text-editorial-ink outline-none transition-colors focus:border-editorial-accent focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  aria-label="Nome pipeline"
-                />
-              )}
-              <p
-                id="config-drawer-hint"
-                className="mt-1 text-xs leading-relaxed text-editorial-muted"
-              >
-                {t('document.configDrawerHint')}
-              </p>
+                type="text"
+                value={nameValue}
+                onChange={(e) => setNameValue(e.target.value)}
+                onBlur={() => {
+                  const trimmed = nameValue.trim();
+                  if (!trimmed) { setNameValue(activePipeline?.name ?? t('pipeline.globalSetup')); return; }
+                  if (activePipelineId && activePipeline && trimmed !== activePipeline.name) {
+                    void renamePipeline(activePipelineId, trimmed);
+                  }
+                }}
+                onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                placeholder={t('pipeline.globalSetup')}
+                aria-label="Nome pipeline"
+                className="mt-1 w-full bg-transparent font-display text-2xl italic tracking-tight text-editorial-ink outline-none placeholder-editorial-muted/40 transition-colors focus:text-editorial-accent"
+              />
             </div>
             <button
               type="button"
