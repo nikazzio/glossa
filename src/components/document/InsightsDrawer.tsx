@@ -542,7 +542,7 @@ function IndexTab({ panelId, labelledBy, chunks, currentChunkId, isProcessing, s
                     </div>
                   )}
                   {chunk.translationLocked && (
-                    <div className={`mt-1.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.18em] ${isActive ? 'text-emerald-200' : 'text-editorial-success'}`}>
+                    <div className={`mt-1.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.18em] ${isActive ? 'text-white/80' : 'text-editorial-success'}`}>
                       <CheckCheck size={12} />
                       {t('document.translationLockedBadge')}
                     </div>

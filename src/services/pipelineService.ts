@@ -81,6 +81,7 @@ function rowToPipeline(row: DbPipeline): Pipeline {
 
 function rowToPipelineConfig(row: DbPipeline, glossary: GlossaryEntry[], assignedGlossaryId: string | null): PipelineConfig {
   return {
+    pipelineId: row.id,
     sourceLanguage: row.source_language,
     targetLanguage: row.target_language,
     mode: (row.pipeline_mode === 'editorial' ? 'editorial' : 'standard') as PipelineMode,

@@ -20,8 +20,8 @@ const STATUS_TONE = {
     label: 'text-editorial-accent',
   },
   retrying: {
-    dot: 'bg-amber-500 ring-amber-500/30 animate-pulse',
-    label: 'text-amber-600',
+    dot: 'bg-editorial-warning ring-editorial-warning/30 animate-pulse',
+    label: 'text-editorial-warning',
   },
   idle: {
     dot: 'bg-editorial-border ring-editorial-border/0',

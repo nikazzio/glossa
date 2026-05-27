@@ -4,6 +4,7 @@ import { buildPromptPreviewStages } from './promptPreview';
 
 function createConfig(overrides: Partial<PipelineConfig> = {}): PipelineConfig {
   return {
+    pipelineId: '',
     sourceLanguage: 'English',
     targetLanguage: 'Italian',
     stages: [],

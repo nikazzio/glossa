@@ -3,6 +3,7 @@ import { estimateTokens, estimatePipelineCost } from './costEstimate';
 import type { PipelineConfig } from '../types';
 
 const baseConfig: PipelineConfig = {
+  pipelineId: '',
   sourceLanguage: 'English',
   targetLanguage: 'Italian',
   stages: [

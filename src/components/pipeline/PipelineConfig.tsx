@@ -475,7 +475,7 @@ function AuditPromptEditor({
           </div>
         </div>
         {hint && (
-          <p className="text-[10px] leading-relaxed text-editorial-muted/70">{hint}</p>
+          <p className="text-xs leading-relaxed text-editorial-muted/70">{hint}</p>
         )}
       </div>
 
@@ -875,7 +875,7 @@ export function PipelineConfig({
               </select>
             </div>
             {!!config.persona && (
-              <p className="text-[10px] leading-relaxed text-editorial-muted/60">
+              <p className="text-xs leading-relaxed text-editorial-muted/60">
                 {t('pipeline.languagePairLockedByPersona')}
               </p>
             )}
@@ -1119,7 +1119,7 @@ export function PipelineConfig({
                 </select>
               </div>
               {!!config.persona && (
-                <p className="text-[10px] leading-relaxed text-editorial-muted/60">
+                <p className="text-xs leading-relaxed text-editorial-muted/60">
                   {t('pipeline.languagePairLockedByPersona')}
                 </p>
               )}

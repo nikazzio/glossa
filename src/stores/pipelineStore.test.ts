@@ -15,6 +15,7 @@ describe('pipelineStore', () => {
     usePipelineStore.setState({
       inputText: '',
       config: {
+        pipelineId: '',
         sourceLanguage: 'English',
         targetLanguage: 'Italian',
         stages: [

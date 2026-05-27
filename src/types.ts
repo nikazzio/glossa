@@ -184,6 +184,7 @@ export interface CoherenceResult {
 }
 
 export interface PipelineConfig {
+  pipelineId: string;
   sourceLanguage: string;
   targetLanguage: string;
   mode?: PipelineMode;

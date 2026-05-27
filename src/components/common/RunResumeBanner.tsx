@@ -52,7 +52,7 @@ export function RunResumeBanner() {
     >
       <div className="bg-editorial-paper border border-editorial-border rounded-lg shadow-lg p-4">
         <div className="flex items-start gap-3">
-          <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" aria-hidden="true" />
+          <AlertTriangle size={18} className="text-editorial-warning shrink-0 mt-0.5" aria-hidden="true" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-editorial-ink">
               {t('resume.title')}
@@ -61,7 +61,7 @@ export function RunResumeBanner() {
               {t('resume.progress', { completed: completedCount, total: totalCount })}
             </p>
             {configChanged && (
-              <p className="text-xs text-amber-600 mt-1">
+              <p className="text-xs text-editorial-muted mt-1">
                 {t('resume.configChanged')}
               </p>
             )}

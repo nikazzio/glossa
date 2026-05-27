@@ -56,7 +56,7 @@ export function PipelineActions({
             disabled={cannotRun}
             title={runReason ?? t('pipeline.beginPipeline')}
             aria-label={t('pipeline.beginPipeline')}
-            className="flex items-center gap-2 rounded-full bg-editorial-ink px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-white transition-colors hover:bg-editorial-ink/90 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            className="flex items-center gap-2 rounded-full bg-editorial-charcoal px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-white transition-colors hover:bg-editorial-charcoal/90 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
           >
             <Play size={12} fill="currentColor" />
             <span>{t('pipeline.beginPipeline')}</span>
@@ -74,7 +74,7 @@ export function PipelineActions({
         disabled={cannotRun}
         title={runReason ?? t('pipeline.beginPipeline')}
         aria-label={t('pipeline.beginPipeline')}
-        className="bg-editorial-ink text-white px-6 py-4 text-[11px] font-bold uppercase tracking-[2px] transition-all hover:bg-editorial-ink/90 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
+        className="rounded-full bg-editorial-charcoal text-white px-6 py-4 text-[11px] font-bold uppercase tracking-[2px] transition-all hover:bg-editorial-charcoal/90 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
       >
         {isProcessing ? (
           <span className="flex items-center justify-center gap-2">

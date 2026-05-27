@@ -77,7 +77,7 @@ export function PreflightDialog() {
                     {result.ok ? (
                       <CheckCircle2
                         size={16}
-                        className="text-green-600 shrink-0 mt-0.5"
+                        className="text-editorial-success shrink-0 mt-0.5"
                         aria-hidden="true"
                       />
                     ) : (

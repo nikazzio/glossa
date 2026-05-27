@@ -6,8 +6,9 @@ import {
   LayoutTemplate, PanelRight,
   CheckCheck, PanelTopClose, ScanLine,
   Wand2, BookmarkPlus, BookOpen,
-  Copy, Check,
+  Copy, Check, RefreshCw,
 } from 'lucide-react';
+import { StyleGuide } from './StyleGuide';
 import { appLogDir } from '@tauri-apps/api/path';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -19,7 +20,7 @@ interface HelpGuideProps {
   onClose: () => void;
 }
 
-type Section = 'overview' | 'pipeline' | 'features' | 'streaming' | 'context' | 'audit' | 'projects' | 'providers' | 'ollama' | 'glossary' | 'shortcuts' | 'troubleshooting';
+type Section = 'overview' | 'pipeline' | 'features' | 'context' | 'audit' | 'projects' | 'providers' | 'ollama' | 'glossary' | 'shortcuts' | 'troubleshooting' | 'design';
 
 export function HelpGuide({ open, onClose }: HelpGuideProps) {
   const [activeSection, setActiveSection] = useState<Section>('overview');
@@ -30,7 +31,6 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
     { id: 'overview',        label: t('help.sections.overview') },
     { id: 'pipeline',        label: t('help.sections.pipeline') },
     { id: 'features',        label: t('help.sections.features') },
-    { id: 'streaming',       label: t('help.sections.streaming') },
     { id: 'context',         label: t('help.sections.context') },
     { id: 'audit',           label: t('help.sections.audit') },
     { id: 'projects',        label: t('help.sections.projects') },
@@ -39,6 +39,7 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
     { id: 'glossary',        label: t('help.sections.library') },
     { id: 'shortcuts',       label: t('help.sections.shortcuts') },
     { id: 'troubleshooting', label: t('help.sections.troubleshooting') },
+    { id: 'design',          label: t('help.sections.design') },
   ];
 
   if (!open) return null;
@@ -75,7 +76,7 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
           }
         >
           <div className="flex h-full min-h-0 overflow-hidden">
-            <nav className="flex w-56 shrink-0 flex-col overflow-hidden border-r border-editorial-border bg-editorial-textbox/30">
+            <nav className="flex w-60 shrink-0 flex-col overflow-hidden border-r border-editorial-border bg-editorial-textbox/30">
               <ul className="flex-1 space-y-0.5 overflow-y-auto p-3 custom-scrollbar">
                 {sections.map((s) => (
                   <li key={s.id}>
@@ -100,7 +101,6 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
               {activeSection === 'overview'        && <OverviewSection />}
               {activeSection === 'pipeline'        && <PipelineSection />}
               {activeSection === 'features'        && <FeaturesSection />}
-              {activeSection === 'streaming'       && <StreamingSection />}
               {activeSection === 'context'         && <ContextSection />}
               {activeSection === 'audit'           && <AuditSection />}
               {activeSection === 'projects'        && <ProjectsSection />}
@@ -109,6 +109,7 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
               {activeSection === 'glossary'        && <GlossarySection />}
               {activeSection === 'shortcuts'       && <ShortcutsSection />}
               {activeSection === 'troubleshooting' && <TroubleshootingSection />}
+              {activeSection === 'design'          && <StyleGuide />}
             </div>
           </div>
         </EditorialModalShell>
@@ -121,7 +122,7 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="font-display text-3xl italic tracking-tight mb-6 pb-3 border-b border-editorial-ink text-editorial-ink">
+    <h2 className="font-display text-3xl tracking-tight mb-6 pb-3 border-b border-editorial-border text-editorial-ink" style={{ fontVariationSettings: '"wght" 560' }}>
       {children}
     </h2>
   );
@@ -196,7 +197,53 @@ function OverviewSection() {
       </div>
 
       <P>{t('help.overview.p3')}</P>
+      <VersionWidget />
     </>
+  );
+}
+
+function VersionWidget() {
+  const { t } = useTranslation();
+  const [status, setStatus] = useState<'idle' | 'loading' | 'up-to-date' | 'update-available' | 'error'>('idle');
+  const [latestTag, setLatestTag] = useState<string | null>(null);
+
+  const checkForUpdates = async () => {
+    setStatus('loading');
+    try {
+      const res = await fetch('https://api.github.com/repos/nikazzio/glossa/releases/latest');
+      if (!res.ok) throw new Error('fetch failed');
+      const data = await (res.json() as Promise<{ tag_name: string }>);
+      const normalize = (v: string) => v.trim().replace(/^glossa-/i, '').replace(/^v/, '');
+      setLatestTag(data.tag_name);
+      setStatus(normalize(data.tag_name) === normalize(String(__APP_VERSION__)) ? 'up-to-date' : 'update-available');
+    } catch {
+      setStatus('error');
+    }
+  };
+
+  return (
+    <div className="mt-8 flex items-center gap-3 rounded-[14px] border border-editorial-border bg-editorial-textbox/20 px-4 py-3">
+      <span className="font-mono text-[11px] text-editorial-muted/70">v{__APP_VERSION__}</span>
+      <button
+        type="button"
+        onClick={checkForUpdates}
+        disabled={status === 'loading'}
+        title={t('help.version.check')}
+        aria-label={t('help.version.check')}
+        className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
+      >
+        <RefreshCw size={13} className={status === 'loading' ? 'animate-spin' : ''} />
+      </button>
+      {status === 'up-to-date' && (
+        <span className="text-[11px] text-editorial-success">{t('help.version.upToDate')}</span>
+      )}
+      {status === 'update-available' && latestTag && (
+        <span className="text-[11px] text-editorial-accent">{t('help.version.updateAvailable', { tag: latestTag })}</span>
+      )}
+      {status === 'error' && (
+        <span className="text-[11px] text-editorial-muted/60">{t('help.version.error')}</span>
+      )}
+    </div>
   );
 }
 
@@ -382,18 +429,6 @@ function ContextSection() {
       </div>
 
       <Tip title={t('help.context.tipTitle')}>{t('help.context.tipDesc')}</Tip>
-    </>
-  );
-}
-
-function StreamingSection() {
-  const { t } = useTranslation();
-  return (
-    <>
-      <SectionTitle>{t('help.streaming.title')}</SectionTitle>
-      <P>{t('help.streaming.p1')}</P>
-      <P>{t('help.streaming.p2')}</P>
-      <P>{t('help.streaming.p3')}</P>
     </>
   );
 }

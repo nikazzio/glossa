@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useRef } from 'react';
 import { initLogger } from './utils/logger';
-import { Header, PipelineBar } from './components/layout';
+import { Header, PipelineStrip } from './components/layout';
 import { ErrorBoundary, ConfirmDialog, PreflightDialog, RunResumeBanner } from './components/common';
 import { usePipeline } from './hooks/usePipeline';
 import { useProjectAutosave } from './hooks/useProjectAutosave';
@@ -61,7 +61,6 @@ export default function App() {
   }, [runSingleChunk]);
   useProjectAutosave();
   const viewMode = useUiStore((state) => state.viewMode);
-  const showConfigDrawer = useUiStore((state) => state.showConfigDrawer);
   const showSettings = useUiStore((state) => state.showSettings);
   const showProjectPanel = useProjectStore((state) => state.showProjectPanel);
   const showLibraryPanel = useLibraryStore((state) => state.showLibraryPanel);
@@ -86,16 +85,19 @@ export default function App() {
 
         {viewMode === 'document' ? (
           <Suspense fallback={null}>
-            <main className="flex flex-1 min-h-0 overflow-hidden">
-              <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-                <PipelineBar />
-                <DocumentView
-                  onRetranslateChunk={handleRetranslateChunk}
-                  onRunPipeline={runPipeline}
-                  onCancelPipeline={cancelPipeline}
-                  onDryRun={runDryRun}
-                />
-              </div>
+            <main className="relative flex flex-1 min-h-0 overflow-hidden">
+              <PipelineStrip />
+              <ConfigDrawer
+                onRunPipeline={runPipeline}
+                onRunAuditOnly={runAuditOnly}
+                onCancelPipeline={cancelPipeline}
+              />
+              <DocumentView
+                onRetranslateChunk={handleRetranslateChunk}
+                onRunPipeline={runPipeline}
+                onCancelPipeline={cancelPipeline}
+                onDryRun={runDryRun}
+              />
               <InsightsDrawer onReauditChunk={auditSingleChunk} onRunCoherenceAudit={runCoherenceAudit} />
             </main>
           </Suspense>
@@ -119,16 +121,6 @@ export default function App() {
           </Suspense>
         )}
 
-        {showConfigDrawer && (
-          <Suspense fallback={null}>
-            <ConfigDrawer
-              onRunPipeline={runPipeline}
-              onRunAuditOnly={runAuditOnly}
-              onCancelPipeline={cancelPipeline}
-            />
-          </Suspense>
-        )}
-
         {settingsLoaded.current && (
           <Suspense fallback={null}>
             <SettingsModal />
@@ -148,6 +140,7 @@ export default function App() {
         <ConfirmDialog />
         <PreflightDialog />
         <RunResumeBanner />
+
       </div>
       <Toaster
         position="bottom-right"
