@@ -6,7 +6,7 @@ import {
   LayoutTemplate, PanelRight,
   CheckCheck, PanelTopClose, ScanLine,
   Wand2, BookmarkPlus, BookOpen,
-  Copy, Check, Palette, RefreshCw,
+  Copy, Check, RefreshCw,
 } from 'lucide-react';
 import { StyleGuide } from './StyleGuide';
 import { appLogDir } from '@tauri-apps/api/path';
@@ -39,7 +39,7 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
     { id: 'glossary',        label: t('help.sections.library') },
     { id: 'shortcuts',       label: t('help.sections.shortcuts') },
     { id: 'troubleshooting', label: t('help.sections.troubleshooting') },
-    { id: 'design',          label: 'Design System' },
+    { id: 'design',          label: t('help.sections.design') },
   ];
 
   if (!open) return null;

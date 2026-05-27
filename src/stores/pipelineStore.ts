@@ -41,7 +41,7 @@ const DEFAULT_PIPELINE_CONFIG: PipelineConfig = {
   pipelineId: '',
   sourceLanguage: 'English',
   targetLanguage: 'Italian',
-  mode: 'editorial',
+  mode: 'standard',
   stages: DEFAULT_STAGES,
   judgePrompt: DEFAULT_JUDGE_PROMPT,
   judgeModel: 'gpt-5.4-mini',

@@ -1,9 +1,11 @@
 import { Settings2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useProjectStore } from '../../stores/projectStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useUiStore } from '../../stores/uiStore';
 
 export function PipelineStrip() {
+  const { t } = useTranslation();
   const { pipelines, activePipelineId, currentProjectId, switchPipeline, createNewPipeline } = useProjectStore();
   const runStatus = usePipelineStore((s) => s.runStatus);
   const { showConfigDrawer, setShowConfigDrawer } = useUiStore();
@@ -16,8 +18,8 @@ export function PipelineStrip() {
         {pipelines.length === 0 ? (
           // Placeholder prima del salvataggio — rappresenta la config corrente
           <div
-            title="Pipeline 1"
-            aria-label="Pipeline 1"
+            title={t('pipeline.pipelineNumber', { number: 1 })}
+            aria-label={t('pipeline.pipelineNumber', { number: 1 })}
             className="relative flex h-9 w-9 items-center justify-center rounded-[6px] bg-editorial-accent text-xs font-black text-white"
           >
             1
@@ -49,9 +51,9 @@ export function PipelineStrip() {
         )}
         {hasProject && pipelines.length > 0 && pipelines.length < 10 && (
           <button
-            onClick={() => createNewPipeline(`Pipeline ${pipelines.length + 1}`)}
-            title="Nuova pipeline"
-            aria-label="Nuova pipeline"
+            onClick={() => createNewPipeline(t('pipeline.pipelineNumber', { number: pipelines.length + 1 }))}
+            title={t('pipeline.newPipeline')}
+            aria-label={t('pipeline.newPipeline')}
             className="flex h-8 w-8 items-center justify-center rounded border border-dashed border-editorial-border text-sm text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
           >
             +

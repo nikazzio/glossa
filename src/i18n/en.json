@@ -319,7 +319,10 @@
     "ariaRename": "Rename pipeline",
     "renameHint": "Double-click to rename",
     "ariaAdd": "Add pipeline",
-    "saveFirstToAdd": "Save the project before adding pipelines"
+    "saveFirstToAdd": "Save the project before adding pipelines",
+    "pipelineNameLabel": "Pipeline name",
+    "newPipeline": "New pipeline",
+    "pipelineNumber": "Pipeline {{number}}"
   },
   "audit": {
     "title": "Audit Logs",
@@ -681,7 +684,8 @@
       "glossary": "Library",
       "library": "Library",
       "shortcuts": "Interface",
-      "troubleshooting": "Troubleshooting"
+      "troubleshooting": "Troubleshooting",
+      "design": "Design System"
     },
     "overview": {
       "title": "What is Glossa?",

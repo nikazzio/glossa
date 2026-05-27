@@ -1,13 +1,17 @@
 import { useEffect, useState } from 'react';
 import { Play, Plus, Save, Settings, CircleCheck, AlertCircle, Loader2, FilePen } from 'lucide-react';
 
-// Reads a CSS custom property from :root at render time — stays in sync with theme changes
-function useCssVar(name: string): string {
-  const [value, setValue] = useState('');
+function useCssVarMap(vars: readonly string[]): Record<string, string> {
+  const [values, setValues] = useState<Record<string, string>>({});
   useEffect(() => {
-    setValue(getComputedStyle(document.documentElement).getPropertyValue(name).trim());
-  }, [name]);
-  return value;
+    const map: Record<string, string> = {};
+    vars.forEach(v => {
+      map[v] = getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+    });
+    setValues(map);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return values;
 }
 
 function hexToLuminance(hex: string): number {
@@ -51,9 +55,12 @@ const COLOR_TOKENS = [
   { name: 'textbox',  var: '--color-editorial-textbox',  label: 'Sfondo input' },
 ];
 
+const ALL_CSS_VARS = ['--color-editorial-bg', ...COLOR_TOKENS.map(t => t.var)] as const;
+
 function ColorSection() {
-  const bg = useCssVar('--color-editorial-bg');
-  const tokenValues = COLOR_TOKENS.map(t => ({ ...t, value: useCssVar(t.var) }));
+  const cssValues = useCssVarMap(ALL_CSS_VARS);
+  const bg = cssValues['--color-editorial-bg'] ?? '';
+  const tokenValues = COLOR_TOKENS.map(t => ({ ...t, value: cssValues[t.var] ?? '' }));
 
   return (
     <div className="space-y-2">

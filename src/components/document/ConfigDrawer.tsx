@@ -165,6 +165,8 @@ export function ConfigDrawer({
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: -680, opacity: 0 }}
             transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+            role="dialog"
+            aria-modal="true"
             className="absolute top-0 bottom-0 left-12 z-40 flex w-[680px] flex-col overflow-hidden border-r border-editorial-border bg-editorial-bg shadow-xl"
             aria-labelledby="config-drawer-title"
           >
@@ -188,8 +190,8 @@ export function ConfigDrawer({
                 }}
                 onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
                 placeholder={t('pipeline.globalSetup')}
-                aria-label="Nome pipeline"
-                className="mt-1 w-full bg-transparent font-display text-2xl italic tracking-tight text-editorial-ink outline-none placeholder-editorial-muted/40 transition-colors focus:text-editorial-accent"
+                aria-label={t('pipeline.pipelineNameLabel')}
+                className="mt-1 w-full bg-transparent font-display text-2xl italic tracking-tight text-editorial-ink outline-none placeholder:text-editorial-muted/40 transition-colors focus:text-editorial-accent"
               />
             </div>
             <button
