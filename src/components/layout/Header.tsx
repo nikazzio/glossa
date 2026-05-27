@@ -127,8 +127,13 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
           experimental: imported.experimental,
         });
       }
-    } catch (err: any) {
-      toast.error(t('files.importError'), { description: err.message });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg === 'pdf_no_text_layer') {
+        toast.error(t('files.pdfScannedError'));
+      } else {
+        toast.error(t('files.importError'), { description: msg });
+      }
     }
   };
 

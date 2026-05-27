@@ -494,6 +494,7 @@
     "import": "Importa file di testo",
     "imported": "File importato con successo",
     "importError": "Importazione fallita",
+    "pdfScannedError": "Questo PDF non contiene testo selezionabile. Potrebbe essere un documento scansionato.",
     "importPreviewLabel": "Anteprima Import",
     "importPreviewTitle": "Controlla il documento prima di creare i chunk",
     "importPreviewHint": "Regola la segmentazione prima di sostituire il workspace corrente.",

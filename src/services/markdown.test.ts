@@ -66,4 +66,45 @@ describe('markdown service', () => {
     expect(html).toContain('<title>Sample Export</title>');
     expect(html).toContain('<main class="glossa-export">');
   });
+
+  describe('table parsing and rendering', () => {
+    const tableMd = [
+      '| Name | Age |',
+      '| --- | --- |',
+      '| Alice | 30 |',
+      '| Bob | 25 |',
+    ].join('\n');
+
+    it('parses a markdown table into AST', () => {
+      const parsed = parseMarkdownDocument(tableMd);
+      expect(parsed.blocks).toHaveLength(1);
+      const block = parsed.blocks[0];
+      expect(block.type).toBe('table');
+      if (block.type === 'table') {
+        expect(block.headers).toHaveLength(2);
+        expect(block.rows).toHaveLength(2);
+      }
+    });
+
+    it('renders a table to HTML with thead and tbody', () => {
+      const html = renderMarkdownToHtmlFragment(tableMd);
+      expect(html).toContain('<table>');
+      expect(html).toContain('<thead>');
+      expect(html).toContain('<tbody>');
+      expect(html).toContain('<th>Name</th>');
+      expect(html).toContain('<td>Alice</td>');
+    });
+
+    it('handles inline bold inside table cells', () => {
+      const md = '| **Header** |\n| --- |\n| cell |';
+      const html = renderMarkdownToHtmlFragment(md);
+      expect(html).toContain('<strong>Header</strong>');
+    });
+
+    it('flattens table to text with pipe separators', () => {
+      const text = flattenMarkdownToText(tableMd);
+      expect(text).toContain('Name | Age');
+      expect(text).toContain('Alice | 30');
+    });
+  });
 });

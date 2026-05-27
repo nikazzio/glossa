@@ -291,7 +291,7 @@ export async function saveChunkCheckpoint(
        source_display_text, source_processing_text, translation_display_text, translation_processing_text,
        blob_id, blob_order, blob_reference_chunk_ids
      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
-     ON CONFLICT(pipeline_id, id) DO UPDATE SET
+     ON CONFLICT(pipeline_id, id) WHERE pipeline_id IS NOT NULL DO UPDATE SET
        final_translation            = excluded.final_translation,
        position                     = excluded.position,
        chunk_status                 = excluded.chunk_status,
@@ -364,7 +364,7 @@ async function saveTranslationsInternal(
          source_display_text, source_processing_text, translation_display_text, translation_processing_text,
          blob_id, blob_order, blob_reference_chunk_ids
        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
-       ON CONFLICT(pipeline_id, id) DO UPDATE SET
+       ON CONFLICT(pipeline_id, id) WHERE pipeline_id IS NOT NULL DO UPDATE SET
          final_translation            = excluded.final_translation,
          position                     = excluded.position,
          chunk_status                 = excluded.chunk_status,
