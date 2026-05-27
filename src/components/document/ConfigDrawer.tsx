@@ -34,7 +34,13 @@ export function ConfigDrawer({
   const { config, setConfig, assignGlossary } = usePipelineStore();
   const { chunks, resetAllChunks, isProcessing } = useChunksStore();
   const { glossaries, setShowLibraryPanel, loadGlossaries, isLoaded } = useLibraryStore();
-  const { currentProjectId } = useProjectStore();
+  const { currentProjectId, pipelines, activePipelineId, renamePipeline } = useProjectStore();
+  const activePipeline = pipelines.find((p) => p.id === activePipelineId);
+  const [nameValue, setNameValue] = useState(activePipeline?.name ?? '');
+
+  useEffect(() => {
+    setNameValue(activePipeline?.name ?? '');
+  }, [activePipeline?.name]);
 
   const completedCount = chunks.filter((c) => c.status === 'completed').length;
 
@@ -143,14 +149,25 @@ export function ConfigDrawer({
   return (
     <AnimatePresence>
       {showConfigDrawer && (
-        <motion.div
-          initial={{ x: -680, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          exit={{ x: -680, opacity: 0 }}
-          transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-          className="absolute top-0 bottom-0 left-12 z-20 flex w-[680px] flex-col overflow-hidden border-r border-editorial-border bg-editorial-bg shadow-xl"
-          aria-labelledby="config-drawer-title"
-        >
+        <>
+          <motion.div
+            key="backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="absolute top-0 bottom-0 left-12 right-0 z-10 bg-editorial-ink/20 backdrop-blur-sm"
+            onClick={() => setShowConfigDrawer(false)}
+          />
+          <motion.div
+            key="drawer"
+            initial={{ x: -680, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: -680, opacity: 0 }}
+            transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+            className="absolute top-0 bottom-0 left-12 z-20 flex w-[680px] flex-col overflow-hidden border-r border-editorial-border bg-editorial-bg shadow-xl"
+            aria-labelledby="config-drawer-title"
+          >
           {/* Header */}
           <div className="flex items-start justify-between gap-3 border-b border-editorial-border px-6 pt-4 pb-4">
             <div className="min-w-0">
@@ -163,6 +180,24 @@ export function ConfigDrawer({
               >
                 {t('pipeline.globalSetup')}
               </h2>
+              {activePipeline && (
+                <input
+                  type="text"
+                  value={nameValue}
+                  onChange={(e) => setNameValue(e.target.value)}
+                  onBlur={() => {
+                    const trimmed = nameValue.trim();
+                    if (trimmed && trimmed !== activePipeline.name && activePipelineId) {
+                      void renamePipeline(activePipelineId, trimmed);
+                    } else {
+                      setNameValue(activePipeline.name);
+                    }
+                  }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                  className="mt-2 w-full rounded-[10px] border border-editorial-border bg-editorial-textbox/40 px-3 py-1.5 text-sm font-bold text-editorial-ink outline-none transition-colors focus:border-editorial-accent focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  aria-label="Nome pipeline"
+                />
+              )}
               <p
                 id="config-drawer-hint"
                 className="mt-1 text-xs leading-relaxed text-editorial-muted"
@@ -203,7 +238,8 @@ export function ConfigDrawer({
               </button>
             </div>
           )}
-        </motion.div>
+          </motion.div>
+        </>
       )}
     </AnimatePresence>
   );

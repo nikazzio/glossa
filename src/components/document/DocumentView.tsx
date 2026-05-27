@@ -235,14 +235,14 @@ export function DocumentView({
     <section className="w-full bg-[#f7f3ec] overflow-y-auto min-h-0 h-full custom-scrollbar flex flex-col">
       <div className="mx-auto w-full max-w-[1720px] px-5 py-3 md:px-6 md:py-4 flex flex-col flex-1 min-h-0 gap-5">
         <div className="flex items-stretch gap-2 shrink-0">
-          {activePipeline && (
-            <span className="self-center rounded-full border border-editorial-accent/40 bg-editorial-accent/10 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-editorial-accent">
-              {activePipeline.name}
-            </span>
-          )}
           {/* Pannello run: striscia orizzontale compatta */}
           {onRunPipeline && onCancelPipeline && (
             <div className={`grid shrink-0 grid-cols-[auto_auto] items-stretch gap-x-3 gap-y-2 rounded-[20px] border px-4 py-3 ${runPanelClass}`}>
+              {activePipeline && (
+                <div className="col-span-2 text-[9px] font-bold uppercase tracking-wider text-editorial-accent/70">
+                  {activePipeline.name}
+                </div>
+              )}
               <div className="grid w-fit gap-2 self-stretch">
                 <div className="flex w-full items-center justify-center rounded-full border border-editorial-border bg-editorial-textbox/40 p-0.5">
                   <button
