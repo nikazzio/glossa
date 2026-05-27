@@ -77,7 +77,7 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
           }
         >
           <div className="flex h-full min-h-0 overflow-hidden">
-            <nav className="flex w-56 shrink-0 flex-col overflow-hidden border-r border-editorial-border bg-editorial-textbox/30">
+            <nav className="flex w-60 shrink-0 flex-col overflow-hidden border-r border-editorial-border bg-editorial-textbox/30">
               <ul className="flex-1 space-y-0.5 overflow-y-auto p-3 custom-scrollbar">
                 {sections.map((s) => (
                   <li key={s.id}>

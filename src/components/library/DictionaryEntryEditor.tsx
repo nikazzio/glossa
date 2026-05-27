@@ -67,7 +67,7 @@ export function DictionaryEntryEditor({ entries, onChange, readOnly = false }: P
           {t('pipeline.glossaryEmpty')}
         </p>
       ) : (
-        <div className="overflow-y-auto custom-scrollbar max-h-[420px] rounded-[14px] border border-editorial-border bg-editorial-bg pr-2">
+        <div className="overflow-y-auto custom-scrollbar max-h-[420px] rounded-[14px] border border-editorial-border bg-editorial-bg">
           {/* Intestazioni colonne (sticky) */}
           <div className="sticky top-0 z-10 grid grid-cols-[1fr_1fr_auto] border-b border-editorial-border bg-editorial-textbox/80 px-3 py-2">
             <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
@@ -86,7 +86,7 @@ export function DictionaryEntryEditor({ entries, onChange, readOnly = false }: P
             return (
               <div
                 key={rowKey}
-                className={`group border-b border-editorial-border/40 last:border-b-0 ${
+                className={`group border-b border-editorial-border/60 last:border-b-0 ${
                   isDuplicate ? 'bg-editorial-warning/8' : 'hover:bg-editorial-textbox/30'
                 }`}
               >
@@ -127,7 +127,7 @@ export function DictionaryEntryEditor({ entries, onChange, readOnly = false }: P
                   readOnly={readOnly}
                   placeholder={t('pipeline.glossaryNotes')}
                   aria-label={`${t('pipeline.glossaryNotes')} ${i + 1}`}
-                  className="w-full border-t border-editorial-border/25 bg-transparent px-3 py-1 text-[11px] font-mono text-editorial-muted/70 outline-none placeholder:text-editorial-muted/25 focus:bg-editorial-accent/5 read-only:opacity-60"
+                  className="w-full border-t border-editorial-border/25 bg-editorial-textbox/20 px-3 py-1.5 pl-5 text-[11px] font-mono text-editorial-muted/70 outline-none placeholder:text-editorial-muted/30 focus:bg-editorial-accent/5 read-only:opacity-60"
                 />
                 {isDuplicate && (
                   <div className="border-t border-editorial-warning/30 bg-editorial-warning/8 px-3 py-1">

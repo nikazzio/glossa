@@ -358,8 +358,11 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
                 >
                   <LibraryBig size={16} />
                 </IconButton>
-                <IconButton onClick={toggleLang} title={langLabel} ariaLabel={langLabel}>
-                  <Globe size={16} />
+                <IconButton onClick={toggleLang} title={`${langLabel} (${i18n.language.toUpperCase()} → ${i18n.language === 'it' ? 'EN' : 'IT'})`} ariaLabel={langLabel}>
+                  <span className="flex items-center gap-0.5">
+                    <Globe size={13} />
+                    <span className="font-mono text-[9px] font-bold leading-none">{i18n.language.toUpperCase()}</span>
+                  </span>
                 </IconButton>
                 <IconButton
                   onClick={() => setViewMode(viewMode === 'sandbox' ? 'document' : 'sandbox')}
@@ -486,7 +489,7 @@ function SaveStatusBadge({
   label: string;
 }) {
   let icon: React.ReactNode;
-  let colorClass = 'border-editorial-border/70 bg-editorial-textbox/40 text-editorial-muted';
+  let colorClass = 'border-editorial-border bg-editorial-textbox/40 text-editorial-muted';
 
   if (saveState === 'saving') {
     icon = <Loader2 size={13} className="animate-spin" />;
