@@ -213,7 +213,7 @@ function VersionWidget() {
       const res = await fetch('https://api.github.com/repos/nikazzio/glossa/releases/latest');
       if (!res.ok) throw new Error('fetch failed');
       const data = await (res.json() as Promise<{ tag_name: string }>);
-      const normalize = (v: string) => v.trim().replace(/^v/, '');
+      const normalize = (v: string) => v.trim().replace(/^glossa-/i, '').replace(/^v/, '');
       setLatestTag(data.tag_name);
       setStatus(normalize(data.tag_name) === normalize(String(__APP_VERSION__)) ? 'up-to-date' : 'update-available');
     } catch {
@@ -228,10 +228,11 @@ function VersionWidget() {
         type="button"
         onClick={checkForUpdates}
         disabled={status === 'loading'}
-        className="inline-flex items-center gap-1.5 rounded-full border border-editorial-border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
+        title={t('help.version.check')}
+        aria-label={t('help.version.check')}
+        className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
       >
-        <RefreshCw size={10} className={status === 'loading' ? 'animate-spin' : ''} />
-        {t('help.version.check')}
+        <RefreshCw size={13} className={status === 'loading' ? 'animate-spin' : ''} />
       </button>
       {status === 'up-to-date' && (
         <span className="text-[11px] text-editorial-success">{t('help.version.upToDate')}</span>

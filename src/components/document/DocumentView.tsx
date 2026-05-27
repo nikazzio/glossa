@@ -507,7 +507,7 @@ export function DocumentView({
               eyebrow={t('document.leftPage')}
               readOnly={sourceReadOnly}
               statusBadge={sourceReadOnly && currentChunk.status !== 'processing' ? (
-                <InlineStatusBadge tone="amber" icon={<Lock size={13} />} label={t('document.sourceLockedTitle')} />
+                <InlineStatusBadge tone="amber" icon={<Lock size={13} />} ariaLabel={t('document.sourceLockedTitle')} />
               ) : null}
               actions={
                 <div className="flex items-center gap-1">
