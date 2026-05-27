@@ -27,6 +27,7 @@ Desktop.ini
 
 #working
 STATO_SESSIONE*
+src/dev/
 
 # RTK (AI Token Optimizer) cache and hooks
 .rtk/
