@@ -48,6 +48,7 @@ const basePipelineRow = {
 };
 
 const baseConfig: PipelineConfig = {
+  pipelineId: '',
   sourceLanguage: 'Italian',
   targetLanguage: 'English',
   stages: [],

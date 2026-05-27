@@ -12,7 +12,6 @@ import {
   Loader2,
   Save,
   Settings,
-  SlidersHorizontal,
   Upload,
 } from 'lucide-react';
 import { IconButton } from '../ui';
@@ -75,8 +74,6 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
     showHelp,
     viewMode,
     setViewMode,
-    showConfigDrawer,
-    setShowConfigDrawer,
     chunkPresetShort,
     chunkPresetMedium,
     chunkPresetLong,
@@ -240,7 +237,6 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
   const langLabel = t('language.label');
   const settingsLabel = t('header.settings');
   const helpLabel = t('help.title');
-  const openConfigLabel = t('header.openConfig');
   const libraryLabel = t('library.openLibrary');
   const sandboxLabel = viewMode === 'sandbox' ? t('header.exitSandbox') : t('header.sandbox');
   const exportLabel = t('header.exportLabel');
@@ -261,22 +257,24 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
       <div className="flex flex-col gap-5">
 
         {/* ── Riga 1: logo + azioni ── */}
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div>
-            <div className="brand font-display text-4xl italic tracking-tight text-editorial-ink">
+            <div className="brand font-display text-5xl italic tracking-tight text-editorial-ink">
               {t('app.title')}
             </div>
             <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
               {t('app.subtitle')}
             </div>
+          </div>
 
+          <div className="flex flex-col items-end gap-2">
             {currentProject && (
-              <div className="flex items-center gap-1.5 mt-1">
+              <div className="flex items-center gap-2">
                 <button
                   onClick={() => setShowProjectPanel(true)}
                   title={projectsLabel}
                   aria-label={`${projectsLabel}: ${currentProject.name}`}
-                  className="font-display text-[15px] italic text-editorial-ink/80 transition-colors hover:text-editorial-ink focus:outline-none focus-visible:underline"
+                  className="font-display text-[19px] italic text-editorial-ink/80 transition-colors hover:text-editorial-ink focus:outline-none focus-visible:underline"
                 >
                   {currentProject.name}
                 </button>
@@ -287,104 +285,90 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
                   disabled={isProcessing}
                   title={closeProjectLabel}
                   aria-label={closeProjectLabel}
-                  className="rounded-full border border-editorial-border/60 p-1 text-editorial-muted/50 transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="rounded-full border border-editorial-border/60 p-1.5 text-editorial-muted/50 transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  <FolderX size={11} />
+                  <FolderX size={15} />
                 </button>
               </div>
             )}
-            {!currentProject && (
-              <div className="mt-1">
-                <SaveStatusBadge saveState={saveState} currentProjectId={currentProjectId} label={saveStatusLabel} />
-              </div>
-            )}
 
-            <div className="text-[9px] font-mono tracking-[0.2em] text-editorial-muted/50 mt-0.5">
-              v{__APP_VERSION__}
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {/* Cluster Documento */}
+              <ActionCluster>
+                <div className="flex flex-wrap items-center gap-1">
+                  <IconButton
+                    onClick={() => setShowProjectPanel(true)}
+                    title={projectsLabel}
+                    ariaLabel={projectsLabel}
+                  >
+                    <FolderOpen size={16} />
+                  </IconButton>
+                  <IconButton onClick={handleImport} title={importLabel} ariaLabel={importLabel}>
+                    <Upload size={16} />
+                  </IconButton>
+                  <IconButton
+                    onClick={handleSave}
+                    title={saveLabel}
+                    ariaLabel={saveLabel}
+                    disabled={isProcessing}
+                  >
+                    <Save size={16} />
+                  </IconButton>
+                  {viewMode === 'document' && chunks.length > 0 && (
+                    <IconButton
+                      onClick={() => setShowExportDialog(true)}
+                      title={exportLabel}
+                      ariaLabel={exportLabel}
+                    >
+                      <FileOutput size={16} />
+                    </IconButton>
+                  )}
+                </div>
+              </ActionCluster>
+
+              {/* Cluster App */}
+              <ActionCluster>
+                <div className="flex flex-wrap items-center gap-1">
+                  <IconButton
+                    onClick={() => setShowLibraryPanel(true)}
+                    title={libraryLabel}
+                    ariaLabel={libraryLabel}
+                  >
+                    <LibraryBig size={16} />
+                  </IconButton>
+                  <IconButton
+                    onClick={() => setViewMode(viewMode === 'sandbox' ? 'document' : 'sandbox')}
+                    title={sandboxLabel}
+                    ariaLabel={sandboxLabel}
+                    ariaPressed={viewMode === 'sandbox'}
+                    active={viewMode === 'sandbox'}
+                  >
+                    <LayoutTemplate size={16} />
+                  </IconButton>
+                  <IconButton
+                    onClick={() => setShowSettings(true)}
+                    title={settingsLabel}
+                    ariaLabel={settingsLabel}
+                  >
+                    <Settings size={16} />
+                  </IconButton>
+                  <button
+                    type="button"
+                    onClick={toggleLang}
+                    title={`${langLabel} (${i18n.language === 'it' ? 'IT → EN' : 'EN → IT'})`}
+                    aria-label={langLabel}
+                    className="inline-flex h-[30px] w-[30px] flex-none items-center justify-center rounded-full border border-editorial-border text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  >
+                    <span className="select-none font-mono text-[10px] font-bold leading-none">
+                      {i18n.language.toUpperCase()}
+                    </span>
+                  </button>
+                  <IconButton onClick={() => setShowHelp(true)} title={helpLabel} ariaLabel={helpLabel}>
+                    <HelpCircle size={16} />
+                  </IconButton>
+                </div>
+              </ActionCluster>
             </div>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {/* Cluster Documento */}
-            <ActionCluster>
-              <div className="flex flex-wrap items-center gap-1">
-                <IconButton
-                  onClick={() => setShowProjectPanel(true)}
-                  title={projectsLabel}
-                  ariaLabel={projectsLabel}
-                >
-                  <FolderOpen size={16} />
-                </IconButton>
-                <IconButton onClick={handleImport} title={importLabel} ariaLabel={importLabel}>
-                  <Upload size={16} />
-                </IconButton>
-                {viewMode === 'document' && (
-                  <IconButton
-                    onClick={() => setShowConfigDrawer(!showConfigDrawer)}
-                    title={openConfigLabel}
-                    ariaLabel={openConfigLabel}
-                    ariaPressed={showConfigDrawer}
-                    active={showConfigDrawer}
-                  >
-                    <SlidersHorizontal size={16} />
-                  </IconButton>
-                )}
-                <IconButton
-                  onClick={handleSave}
-                  title={saveLabel}
-                  ariaLabel={saveLabel}
-                  disabled={isProcessing}
-                >
-                  <Save size={16} />
-                </IconButton>
-                {viewMode === 'document' && chunks.length > 0 && (
-                  <IconButton
-                    onClick={() => setShowExportDialog(true)}
-                    title={exportLabel}
-                    ariaLabel={exportLabel}
-                  >
-                    <FileOutput size={16} />
-                  </IconButton>
-                )}
-              </div>
-            </ActionCluster>
-
-            {/* Cluster App */}
-            <ActionCluster>
-              <div className="flex flex-wrap items-center gap-1">
-                <IconButton
-                  onClick={() => setShowLibraryPanel(true)}
-                  title={libraryLabel}
-                  ariaLabel={libraryLabel}
-                >
-                  <LibraryBig size={16} />
-                </IconButton>
-                <IconButton onClick={toggleLang} title={`${langLabel} (${i18n.language === 'it' ? 'IT → EN' : 'EN → IT'})`} ariaLabel={langLabel}>
-                  <span className="font-mono text-[11px] font-bold leading-none">
-                    {i18n.language.toUpperCase()}
-                  </span>
-                </IconButton>
-                <IconButton
-                  onClick={() => setViewMode(viewMode === 'sandbox' ? 'document' : 'sandbox')}
-                  title={sandboxLabel}
-                  ariaLabel={sandboxLabel}
-                  ariaPressed={viewMode === 'sandbox'}
-                  active={viewMode === 'sandbox'}
-                >
-                  <LayoutTemplate size={16} />
-                </IconButton>
-                <IconButton
-                  onClick={() => setShowSettings(true)}
-                  title={settingsLabel}
-                  ariaLabel={settingsLabel}
-                >
-                  <Settings size={16} />
-                </IconButton>
-                <IconButton onClick={() => setShowHelp(true)} title={helpLabel} ariaLabel={helpLabel}>
-                  <HelpCircle size={16} />
-                </IconButton>
-              </div>
-            </ActionCluster>
           </div>
         </div>
       </div>
@@ -492,19 +476,19 @@ function SaveStatusBadge({
   let colorClass = 'border-editorial-border bg-editorial-textbox/40 text-editorial-muted';
 
   if (saveState === 'saving') {
-    icon = <Loader2 size={13} className="animate-spin" />;
+    icon = <Loader2 size={15} className="animate-spin" />;
     colorClass = 'border-editorial-muted/50 bg-editorial-muted/8 text-editorial-muted';
   } else if (saveState === 'error') {
-    icon = <AlertCircle size={13} />;
+    icon = <AlertCircle size={15} />;
     colorClass = 'border-editorial-accent/50 bg-editorial-accent/10 text-editorial-accent';
   } else if (saveState === 'dirty') {
-    icon = <CircleDot size={13} />;
+    icon = <CircleDot size={15} />;
     colorClass = 'border-editorial-muted/50 bg-editorial-muted/8 text-editorial-muted';
   } else if (currentProjectId) {
-    icon = <CircleCheck size={13} />;
+    icon = <CircleCheck size={15} />;
     colorClass = 'border-editorial-success/50 bg-editorial-success/8 text-editorial-success';
   } else {
-    icon = <FilePen size={13} />;
+    icon = <FilePen size={15} />;
   }
 
   return (
@@ -512,7 +496,7 @@ function SaveStatusBadge({
       title={label}
       aria-label={label}
       role="status"
-      className={`inline-flex items-center justify-center rounded-full border p-1.5 transition-colors ${colorClass}`}
+      className={`inline-flex items-center justify-center rounded-full border p-2 transition-colors ${colorClass}`}
     >
       {icon}
     </span>

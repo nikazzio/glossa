@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { X, LibraryBig, Save, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Drawer } from '../common';
+import { AnimatePresence, motion } from 'motion/react';
 import { PipelineConfig } from '../pipeline/PipelineConfig';
 import { useUiStore } from '../../stores/uiStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
@@ -141,66 +141,70 @@ export function ConfigDrawer({
   );
 
   return (
-    <Drawer
-      open={showConfigDrawer}
-      side="left"
-      onClose={() => setShowConfigDrawer(false)}
-      ariaLabelledBy="config-drawer-title"
-      ariaDescribedBy="config-drawer-hint"
-      maxWidth="max-w-[680px]"
-    >
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3 border-b border-editorial-border px-6 pt-4 pb-4">
-        <div className="min-w-0">
-          <div className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-            {t('document.configDrawerTitle')}
-          </div>
-          <h2
-            id="config-drawer-title"
-            className="mt-1 font-display text-2xl italic tracking-tight text-editorial-ink"
-          >
-            {t('pipeline.globalSetup')}
-          </h2>
-          <p
-            id="config-drawer-hint"
-            className="mt-1 text-xs leading-relaxed text-editorial-muted"
-          >
-            {t('document.configDrawerHint')}
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setShowConfigDrawer(false)}
-          className="shrink-0 mt-1 rounded-full border border-editorial-border p-2.5 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-          aria-label={t('header.closeDrawer')}
+    <AnimatePresence>
+      {showConfigDrawer && (
+        <motion.div
+          initial={{ width: 0, opacity: 0 }}
+          animate={{ width: 680, opacity: 1 }}
+          exit={{ width: 0, opacity: 0 }}
+          transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+          className="flex shrink-0 flex-col overflow-hidden border-r border-editorial-border bg-editorial-bg"
+          aria-labelledby="config-drawer-title"
         >
-          <X size={16} />
-        </button>
-      </div>
+          {/* Header */}
+          <div className="flex items-start justify-between gap-3 border-b border-editorial-border px-6 pt-4 pb-4">
+            <div className="min-w-0">
+              <div className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                {t('document.configDrawerTitle')}
+              </div>
+              <h2
+                id="config-drawer-title"
+                className="mt-1 font-display text-2xl italic tracking-tight text-editorial-ink"
+              >
+                {t('pipeline.globalSetup')}
+              </h2>
+              <p
+                id="config-drawer-hint"
+                className="mt-1 text-xs leading-relaxed text-editorial-muted"
+              >
+                {t('document.configDrawerHint')}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowConfigDrawer(false)}
+              className="mt-1 shrink-0 rounded-full border border-editorial-border p-2.5 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              aria-label={t('header.closeDrawer')}
+            >
+              <X size={16} />
+            </button>
+          </div>
 
-      <PipelineConfig
-        onRunPipeline={onRunPipeline}
-        onRunAuditOnly={onRunAuditOnly}
-        onCancelPipeline={onCancelPipeline}
-        showActions={false}
-        showOnlyGlobalDefaults={false}
-        libraryGlossarySection={libraryGlossarySection}
-        className="flex flex-1 flex-col bg-editorial-bg/40 min-h-0"
-      />
+          <PipelineConfig
+            onRunPipeline={onRunPipeline}
+            onRunAuditOnly={onRunAuditOnly}
+            onCancelPipeline={onCancelPipeline}
+            showActions={false}
+            showOnlyGlobalDefaults={false}
+            libraryGlossarySection={libraryGlossarySection}
+            className="flex flex-1 flex-col bg-editorial-bg/40 min-h-0"
+          />
 
-      {completedCount > 0 && (
-        <div className="shrink-0 border-t border-editorial-border/40 px-6 py-4">
-          <button
-            type="button"
-            onClick={handleResetAll}
-            disabled={isProcessing}
-            className="flex w-full items-center justify-center gap-2 rounded-full border border-editorial-accent/40 px-4 py-2 text-xs font-bold uppercase tracking-widest text-editorial-accent/70 transition-colors hover:border-editorial-accent hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <Trash2 size={12} />
-            {t('pipeline.resetAll')}
-          </button>
-        </div>
+          {completedCount > 0 && (
+            <div className="shrink-0 border-t border-editorial-border/40 px-6 py-4">
+              <button
+                type="button"
+                onClick={handleResetAll}
+                disabled={isProcessing}
+                className="flex w-full items-center justify-center gap-2 rounded-full border border-editorial-accent/40 px-4 py-2 text-xs font-bold uppercase tracking-widest text-editorial-accent/70 transition-colors hover:border-editorial-accent hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <Trash2 size={12} />
+                {t('pipeline.resetAll')}
+              </button>
+            </div>
+          )}
+        </motion.div>
       )}
-    </Drawer>
+    </AnimatePresence>
   );
 }

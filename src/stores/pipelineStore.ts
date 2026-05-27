@@ -38,6 +38,7 @@ interface PipelineState {
 }
 
 const DEFAULT_PIPELINE_CONFIG: PipelineConfig = {
+  pipelineId: '',
   sourceLanguage: 'English',
   targetLanguage: 'Italian',
   mode: 'standard',
@@ -98,6 +99,7 @@ export const usePipelineStore = create<PipelineState>((set) => ({
       return {
         config: {
           ...nextConfig,
+          pipelineId: state.config.pipelineId,
           renderProfile: nextConfig.renderProfile ?? nextDocument.renderProfile,
         },
         inputProcessingText: nextDocument.processingText,

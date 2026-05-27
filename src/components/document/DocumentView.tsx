@@ -28,6 +28,7 @@ import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
+import { useProjectStore } from '../../stores/projectStore';
 import { usePricingStore } from '../../stores/pricingStore';
 import type { TranslationChunk } from '../../types';
 import { indexPad } from '../../utils';
@@ -54,6 +55,8 @@ export function DocumentView({
 }: DocumentViewProps) {
   const { t } = useTranslation();
   const { config } = usePipelineStore();
+  const { pipelines, activePipelineId } = useProjectStore();
+  const activePipeline = pipelines.find((p) => p.id === activePipelineId);
   const pricingOverrides = usePricingStore((s) => s.overrides);
   const {
     chunks,
@@ -232,6 +235,11 @@ export function DocumentView({
     <section className="w-full bg-[#f7f3ec] overflow-y-auto min-h-0 h-full custom-scrollbar flex flex-col">
       <div className="mx-auto w-full max-w-[1720px] px-5 py-3 md:px-6 md:py-4 flex flex-col flex-1 min-h-0 gap-5">
         <div className="flex items-stretch gap-2 shrink-0">
+          {activePipeline && (
+            <span className="self-center rounded-full border border-editorial-accent/40 bg-editorial-accent/10 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-editorial-accent">
+              {activePipeline.name}
+            </span>
+          )}
           {/* Pannello run: striscia orizzontale compatta */}
           {onRunPipeline && onCancelPipeline && (
             <div className={`grid shrink-0 grid-cols-[auto_auto] items-stretch gap-x-3 gap-y-2 rounded-[20px] border px-4 py-3 ${runPanelClass}`}>
