@@ -391,7 +391,8 @@
     "keySavedFallback": "Chiave {{provider}} salvata nel fallback locale cifrato. È meno sicuro del portachiavi OS.",
     "configureKeyToUse": "Aggiungi una API key per abilitare i modelli di questo provider nella pipeline.",
     "contextWindowBadge": "{{count}} ctx",
-    "panelTitle": "Configurazione"
+    "panelTitle": "Configurazione",
+    "providerTab": "Provider"
   },
   "ollama": {
     "title": "Ollama (Modelli Locali)",
@@ -459,7 +460,8 @@
     "close": "Chiudi",
     "delete": "Elimina",
     "save": "Salva",
-    "all": "Tutti"
+    "all": "Tutti",
+    "clear": "Cancella"
   },
   "projects": {
     "title": "Progetti",

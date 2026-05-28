@@ -215,6 +215,11 @@ export const useUiStore = create<UiState>()(
       version: 2,
       migrate: (persisted: unknown, fromVersion: number) => {
         const s = persisted as Record<string, unknown>;
+        if (fromVersion < 1) {
+          if ('glossaryHighlightEnabled' in s) {
+            s.highlightsEnabled = s.glossaryHighlightEnabled;
+          }
+        }
         if (fromVersion < 2) {
           const colors = (s.highlightColors ?? {}) as Record<string, string>;
           s.highlightColors = { ...colors, auditPhrase: 'rgba(249,115,22,0.25)' };

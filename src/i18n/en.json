@@ -391,7 +391,8 @@
     "keySavedFallback": "{{provider}} key saved to local encrypted fallback storage. This is less secure than the OS keychain.",
     "configureKeyToUse": "Add an API key to enable this provider's models in the pipeline.",
     "contextWindowBadge": "{{count}} ctx",
-    "panelTitle": "Configuration"
+    "panelTitle": "Configuration",
+    "providerTab": "Provider"
   },
   "ollama": {
     "title": "Ollama (Local Models)",
@@ -459,7 +460,8 @@
     "close": "Close",
     "delete": "Delete",
     "save": "Save",
-    "all": "All"
+    "all": "All",
+    "clear": "Clear"
   },
   "projects": {
     "title": "Projects",

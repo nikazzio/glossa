@@ -105,15 +105,17 @@ function NavSelector<T extends string>({
   value,
   onChange,
   getLabel,
+  ariaLabel,
 }: {
   options: Array<{ value: T; icon: ReactNode; labelKey: string }>;
   value: T;
   onChange: (v: T) => void;
   getLabel: (labelKey: string) => string;
+  ariaLabel?: string;
 }) {
   const active = options.find((o) => o.value === value);
   return (
-    <div className="flex items-center gap-2">
+    <div role="group" aria-label={ariaLabel} className="flex items-center gap-2">
       {options.map((opt) => {
         const isActive = value === opt.value;
         const label = getLabel(opt.labelKey);
@@ -124,6 +126,7 @@ function NavSelector<T extends string>({
             onClick={() => onChange(opt.value)}
             title={label}
             aria-label={label}
+            aria-pressed={isActive}
             className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
               isActive
                 ? 'border-editorial-accent bg-editorial-accent text-white'
@@ -197,7 +200,7 @@ export function SettingsModal() {
 
   const tabConfig: Array<{ id: SettingsTab; icon: ReactNode; label: string }> = [
     { id: 'settings', icon: <SlidersHorizontal size={14} />, label: t('header.settings') },
-    { id: 'provider', icon: <Server size={14} />,            label: 'Provider' },
+    { id: 'provider', icon: <Server size={14} />,            label: t('settings.providerTab') },
   ];
 
   const tabBar = (
@@ -211,6 +214,7 @@ export function SettingsModal() {
             onClick={() => setActiveTab(tab.id)}
             title={tab.label}
             aria-label={tab.label}
+            aria-pressed={isActive}
             className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
               isActive
                 ? 'border-editorial-accent bg-editorial-accent text-white'
@@ -341,6 +345,7 @@ export function SettingsModal() {
                       value={newPipelineInit}
                       onChange={setNewPipelineInit}
                       getLabel={(key) => t(key)}
+                      ariaLabel={t('settings.newPipelineInit')}
                     />
                   </div>
 
@@ -357,6 +362,7 @@ export function SettingsModal() {
                       value={documentLayout}
                       onChange={setDocumentLayout}
                       getLabel={(key) => t(key)}
+                      ariaLabel={t('header.readerLayout')}
                     />
                   </div>
 
