@@ -576,6 +576,9 @@ function GlossarySection() {
       <SubTitle>{t('help.glossary.highlightTitle')}</SubTitle>
       <P>{t('help.glossary.highlightDesc')}</P>
 
+      <SubTitle>{t('help.glossary.searchTitle')}</SubTitle>
+      <P>{t('help.glossary.searchDesc')}</P>
+
       <SubTitle>{t('help.glossary.auditTitle')}</SubTitle>
       <P>{t('help.glossary.auditDesc')}</P>
 

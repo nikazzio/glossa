@@ -65,6 +65,24 @@ function groupModelIds(provider: ModelProvider, modelIds: string[]): Array<{ lab
   return [...map.entries()].map(([label, ids]) => ({ label, ids }));
 }
 
+function colorToHex(color: string): string {
+  if (color.startsWith('#')) return color;
+  const m = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  if (m) return '#' + [m[1], m[2], m[3]].map((v) => parseInt(v).toString(16).padStart(2, '0')).join('');
+  return '#000000';
+}
+
+function applyHexToColor(existing: string, hex: string): string {
+  const m = existing.match(/rgba?\(\d+,\s*\d+,\s*\d+,\s*([\d.]+)\)/);
+  if (m) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r},${g},${b},${m[1]})`;
+  }
+  return hex;
+}
+
 export function SettingsModal() {
   const {
     showSettings,
@@ -85,6 +103,8 @@ export function SettingsModal() {
     setOllamaBaseUrl,
     newPipelineInit,
     setNewPipelineInit,
+    highlightColors,
+    setHighlightColor,
   } = useUiStore();
   const { t } = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
@@ -260,6 +280,32 @@ export function SettingsModal() {
                     { value: 'book', label: t('document.layoutBook'), icon: <BookOpen size={14} /> },
                   ]}
                 />
+              </div>
+
+              {/* Evidenziazioni */}
+              <div className="space-y-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
+                  {t('settings.highlights')}
+                </p>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  {([
+                    { key: 'sourceTerm',   label: t('settings.highlightSourceTerm') },
+                    { key: 'matchTerm',    label: t('settings.highlightMatchTerm') },
+                    { key: 'mismatchTerm', label: t('settings.highlightMismatchTerm') },
+                    { key: 'search',       label: t('settings.highlightSearch') },
+                  ] as const).map(({ key, label }) => (
+                    <label key={key} className="flex items-center justify-between gap-3 rounded-[18px] border border-editorial-border bg-editorial-bg/60 px-4 py-3">
+                      <span className="text-xs text-editorial-muted">{label}</span>
+                      <input
+                        type="color"
+                        value={colorToHex(highlightColors[key])}
+                        onChange={(e) => setHighlightColor(key, applyHexToColor(highlightColors[key], e.target.value))}
+                        className="h-7 w-10 cursor-pointer rounded border border-editorial-border bg-transparent p-0.5"
+                        aria-label={label}
+                      />
+                    </label>
+                  ))}
+                </div>
               </div>
 
               {/* Provider workspace */}

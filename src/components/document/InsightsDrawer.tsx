@@ -13,7 +13,6 @@ import {
   FileText,
   FlaskConical,
   Gauge,
-  Highlighter,
   Link2,
   List,
   Loader2,
@@ -22,6 +21,7 @@ import {
   PanelRight,
   RefreshCcw,
   ScanLine,
+  Search,
   ShieldCheck,
   TerminalSquare,
   X,
@@ -42,6 +42,7 @@ import { useOperationLogStore } from '../../stores/operationLogStore';
 import { formatCost } from '../pipeline/CostBadge';
 import { useChunkWatchdog } from '../../hooks/useChunkWatchdog';
 import { OperationsTab } from './OperationsTab';
+import { SearchTab } from './SearchTab';
 import type { TranslationChunk } from '../../types';
 
 interface InsightsDrawerProps {
@@ -51,11 +52,12 @@ interface InsightsDrawerProps {
 
 const PANEL_WIDTH = 430;
 
-const DOC_TAB_ORDER: InsightsDrawerTab[] = ['index', 'stats', 'coherence', 'glossary'];
+const DOC_TAB_ORDER: InsightsDrawerTab[] = ['index', 'search', 'stats', 'coherence', 'glossary'];
 const CHUNK_TAB_ORDER: ChunkDrawerTab[] = ['audit', 'notes', 'operations'];
 
 const DOC_TAB_BUTTON_IDS: Record<InsightsDrawerTab, string> = {
   index: 'insights-tab-button-index',
+  search: 'insights-tab-button-search',
   stats: 'insights-tab-button-stats',
   coherence: 'insights-tab-button-coherence',
   glossary: 'insights-tab-button-glossary',
@@ -63,6 +65,7 @@ const DOC_TAB_BUTTON_IDS: Record<InsightsDrawerTab, string> = {
 
 const DOC_TAB_PANEL_IDS: Record<InsightsDrawerTab, string> = {
   index: 'insights-tab-panel-index',
+  search: 'insights-tab-panel-search',
   stats: 'insights-tab-panel-stats',
   coherence: 'insights-tab-panel-coherence',
   glossary: 'insights-tab-panel-glossary',
@@ -109,8 +112,6 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
 
   const { stuckChunkIds, cancelStuckChunk } = useChunkWatchdog();
   const { config } = usePipelineStore();
-  const glossaryHighlightEnabled = useUiStore((state) => state.glossaryHighlightEnabled);
-  const setGlossaryHighlightEnabled = useUiStore((state) => state.setGlossaryHighlightEnabled);
   const hasGlossary = !!config.assignedGlossaryId && config.glossary.length > 0;
 
   // Redirect away from the glossary tab if the glossary is removed.
@@ -125,12 +126,14 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
 
   const DOC_TAB_ICON: Record<InsightsDrawerTab, React.ReactNode> = {
     index: <List size={16} />,
+    search: <Search size={16} />,
     stats: <BarChart2 size={16} />,
     coherence: <Link2 size={16} />,
     glossary: <BookText size={16} />,
   };
   const DOC_TAB_LABEL: Record<InsightsDrawerTab, string> = {
     index: t('document.insightsTabIndex'),
+    search: t('document.insightsTabSearch'),
     stats: t('document.insightsTabStats'),
     coherence: t('document.insightsTabCoherence'),
     glossary: t('document.insightsTabGlossary'),
@@ -372,6 +375,14 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
                     onSelect={(id) => setSelectedChunkId(id)}
                     onCancelStuck={cancelStuckChunk}
                   />
+                ) : documentDrawerTab === 'search' ? (
+                  <SearchTab
+                    panelId={DOC_TAB_PANEL_IDS.search}
+                    labelledBy={DOC_TAB_BUTTON_IDS.search}
+                    chunks={chunks}
+                    currentChunkId={currentChunk?.id ?? null}
+                    onSelectChunk={setSelectedChunkId}
+                  />
                 ) : documentDrawerTab === 'stats' ? (
                   <StatsTab
                     panelId={DOC_TAB_PANEL_IDS.stats}
@@ -383,8 +394,6 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
                     panelId={DOC_TAB_PANEL_IDS.glossary}
                     labelledBy={DOC_TAB_BUTTON_IDS.glossary}
                     glossary={config.glossary}
-                    highlightEnabled={glossaryHighlightEnabled}
-                    onToggleHighlight={() => setGlossaryHighlightEnabled(!glossaryHighlightEnabled)}
                   />
                 ) : (
                   <CoherenceTab
@@ -1054,11 +1063,9 @@ interface GlossaryTabProps {
   panelId: string;
   labelledBy: string;
   glossary: Array<{ id?: string; term: string; translation: string; notes?: string }>;
-  highlightEnabled: boolean;
-  onToggleHighlight: () => void;
 }
 
-function GlossaryTab({ panelId, labelledBy, glossary, highlightEnabled, onToggleHighlight }: GlossaryTabProps) {
+function GlossaryTab({ panelId, labelledBy, glossary }: GlossaryTabProps) {
   const { t } = useTranslation();
   return (
     <div
@@ -1067,25 +1074,9 @@ function GlossaryTab({ panelId, labelledBy, glossary, highlightEnabled, onToggle
       aria-labelledby={labelledBy}
       className="flex flex-1 flex-col"
     >
-      {/* Toolbar */}
-      <div className="flex items-center justify-between border-b border-editorial-border px-5 py-3">
+      <div className="border-b border-editorial-border px-5 py-3">
         <span className="text-xs font-mono text-editorial-muted">{glossary.length} {t('document.insightsTabGlossary').toLowerCase()}</span>
-        <button
-          type="button"
-          onClick={onToggleHighlight}
-          title={t('library.glossaryHighlightToggle')}
-          aria-pressed={highlightEnabled}
-          className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-            highlightEnabled
-              ? 'border-editorial-accent bg-editorial-accent text-white'
-              : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
-          }`}
-        >
-          <Highlighter size={13} />
-        </button>
       </div>
-
-      {/* Entries */}
       <div className="flex-1 overflow-y-auto custom-scrollbar px-4 py-2">
         <table className="w-full text-sm">
           <tbody>

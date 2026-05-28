@@ -26,7 +26,7 @@ describe('AuditPanel', () => {
       chunkDrawerTab: 'audit',
       ollamaModels: [],
       ollamaStatus: 'unknown',
-      glossaryHighlightEnabled: false,
+      highlightsEnabled: false,
       focusedChunkId: null,
       focusedIssueQuery: null,
       focusedIssueRequestId: 0,

@@ -25,7 +25,7 @@
 | `stores/chunksStore.ts` | chunks[], isProcessing, cancelRequested, activeStreamId | RAF batching per token stream; Map O(1) per chunk lookup |
 | `stores/projectStore.ts` | projects[], currentProjectId, pipelines[], activePipelineId | Multi-pipeline per progetto |
 | `stores/operationLogStore.ts` | entries[], currentProjectId | Max 2000 in-memory, resto in DB |
-| `stores/uiStore.ts` | selectedChunkId, pipelineMode, glossaryHighlightEnabled, ollamaStatus | UI-only state |
+| `stores/uiStore.ts` | selectedChunkId, pipelineMode, highlightsEnabled, highlightColors, searchQuery, ollamaStatus | UI-only state. highlightsEnabled + highlightColors persisted; searchQuery transient |
 | `stores/libraryStore.ts` | glossaries[], dictionaries[], selectedDictionary | — |
 | `stores/promptTemplateStore.ts` | templates[], selectedTemplate | — |
 
