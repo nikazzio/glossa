@@ -85,7 +85,6 @@ export function DocumentView({
     focusedChunkId,
     focusedIssueQuery,
     focusedIssueRequestId,
-    clearFocusedIssue,
   } = useUiStore();
 
   const effectivePipelineMode = pipelineMode;
@@ -172,6 +171,7 @@ export function DocumentView({
     showHighlight && paneFocus !== 'source' ? config.glossary : [],
     'translation',
     highlightsEnabled ? searchQuery : '',
+    focusedIssueQuery ?? '',
   );
 
   const sourceHighlightHtml = useMemo(() => {
@@ -617,10 +617,10 @@ export function DocumentView({
                   textClassName="text-[15px] leading-8 text-editorial-ink"
                   previewClassName="min-h-[280px] text-[15px] leading-8 text-editorial-ink"
                   placeholder={isLastSelected ? t('pipeline.candidatePlaceholder') : ''}
-                  highlightHtml={(showHighlight || (highlightsEnabled && !!searchQuery.trim())) ? translationHighlight.html : null}
+                  highlightHtml={(showHighlight || (highlightsEnabled && !!searchQuery.trim()) || !!focusedIssueQuery) ? translationHighlight.html : null}
                   focusQuery={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueQuery : null}
                   focusRequestId={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueRequestId : 0}
-                  onFocusQueryHandled={isLastSelected ? clearFocusedIssue : undefined}
+
                 />
               </DocumentPage>
             );

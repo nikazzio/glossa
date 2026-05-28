@@ -12,6 +12,7 @@ interface EditorialModalShellProps {
   description?: ReactNode;
   footer?: ReactNode;
   headerActions?: ReactNode;
+  tabBar?: ReactNode;
   widthClassName?: string;
   bodyClassName?: string;
   panelClassName?: string;
@@ -29,6 +30,7 @@ export function EditorialModalShell({
   description,
   footer,
   headerActions,
+  tabBar,
   widthClassName = 'max-w-3xl',
   bodyClassName = 'px-6 py-6 md:px-8',
   panelClassName = '',
@@ -72,6 +74,9 @@ export function EditorialModalShell({
             </button>
           </div>
         </div>
+        {tabBar ? (
+          <div className="mt-4">{tabBar}</div>
+        ) : null}
       </div>
       <div className={`flex-1 overflow-y-auto custom-scrollbar ${bodyClassName}`.trim()}>
         {children}

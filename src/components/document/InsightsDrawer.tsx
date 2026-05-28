@@ -1011,6 +1011,8 @@ interface IssueListProps {
 
 function IssueList({ issues, chunkId, onSelectChunk, onFocusIssue }: IssueListProps) {
   const { t } = useTranslation();
+  const focusedIssueQuery = useUiStore((s) => s.focusedIssueQuery);
+  const clearFocusedIssue = useUiStore((s) => s.clearFocusedIssue);
   return (
     <div className="mt-4 space-y-3">
       {issues.map((issue, index) => (
@@ -1026,17 +1028,31 @@ function IssueList({ issues, chunkId, onSelectChunk, onFocusIssue }: IssueListPr
               </span>
               <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-ink">{issue.type}</span>
             </div>
-            {issue.phrase && (
-              <button
-                type="button"
-                onClick={() => { onSelectChunk(chunkId); onFocusIssue(chunkId, issue.phrase); }}
-                title={t('audit.locateInTextTooltip')}
-                aria-label={t('audit.locateInTextTooltip')}
-                className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              >
-                <Crosshair size={13} />
-              </button>
-            )}
+            {issue.phrase && (() => {
+              const isActive = focusedIssueQuery === issue.phrase;
+              return (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isActive) {
+                      clearFocusedIssue();
+                    } else {
+                      onSelectChunk(chunkId);
+                      onFocusIssue(chunkId, issue.phrase);
+                    }
+                  }}
+                  title={t('audit.locateInTextTooltip')}
+                  aria-label={t('audit.locateInTextTooltip')}
+                  className={`rounded-full border p-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                    isActive
+                      ? 'border-editorial-accent bg-editorial-accent/10 text-editorial-accent'
+                      : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
+                  }`}
+                >
+                  <Crosshair size={13} />
+                </button>
+              );
+            })()}
           </div>
           <p className="text-sm leading-relaxed text-editorial-ink">{issue.description}</p>
           {issue.suggestedFix && (

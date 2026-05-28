@@ -29,6 +29,7 @@ interface UiState {
     matchTerm: string;
     mismatchTerm: string;
     search: string;
+    auditPhrase: string;
   };
   searchQuery: string;
   focusedChunkId: string | null;
@@ -97,6 +98,7 @@ export const useUiStore = create<UiState>()(
     matchTerm: 'rgba(34,197,94,0.18)',
     mismatchTerm: 'rgba(239,68,68,0.15)',
     search: 'rgba(234,179,8,0.25)',
+    auditPhrase: 'rgba(249,115,22,0.25)',
   },
   searchQuery: '',
   pipelineMode: 'test',
@@ -210,6 +212,15 @@ export const useUiStore = create<UiState>()(
     }),
     {
       name: 'glossa-ui-prefs',
+      version: 2,
+      migrate: (persisted: unknown, fromVersion: number) => {
+        const s = persisted as Record<string, unknown>;
+        if (fromVersion < 2) {
+          const colors = (s.highlightColors ?? {}) as Record<string, string>;
+          s.highlightColors = { ...colors, auditPhrase: 'rgba(249,115,22,0.25)' };
+        }
+        return s;
+      },
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         documentLayout: state.documentLayout,

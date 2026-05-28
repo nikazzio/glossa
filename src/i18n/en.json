@@ -368,6 +368,7 @@
     "highlightMatchTerm": "Correct term (translation)",
     "highlightMismatchTerm": "Missing term (translation)",
     "highlightSearch": "Search result",
+    "highlightAuditPhrase": "Audit phrase",
     "newPipelineInit": "New pipeline initialisation",
     "newPipelineInitHint": "Settings to copy when creating a new pipeline.",
     "newPipelineInitCopyFirst": "Copy first pipeline",
@@ -389,7 +390,8 @@
     "keyDeleteFailed": "Failed to remove {{provider}} key",
     "keySavedFallback": "{{provider}} key saved to local encrypted fallback storage. This is less secure than the OS keychain.",
     "configureKeyToUse": "Add an API key to enable this provider's models in the pipeline.",
-    "contextWindowBadge": "{{count}} ctx"
+    "contextWindowBadge": "{{count}} ctx",
+    "panelTitle": "Configuration"
   },
   "ollama": {
     "title": "Ollama (Local Models)",

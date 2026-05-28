@@ -18,6 +18,7 @@ function HighlightColorSync() {
     root.style.setProperty('--hl-match-bg', highlightColors.matchTerm);
     root.style.setProperty('--hl-mismatch-bg', highlightColors.mismatchTerm);
     root.style.setProperty('--hl-search-bg', highlightColors.search);
+    root.style.setProperty('--hl-audit-bg', highlightColors.auditPhrase);
   }, [highlightColors]);
   return null;
 }

@@ -77,25 +77,40 @@ function findSpans(
   return spans;
 }
 
-// Runs matching on the raw text and builds HTML in one pass to avoid
-// (a) entity-escaping breaking matches and (b) replacements matching inside markup.
+// Classes that use background-color (mutually exclusive per interval).
+// Classes not in this set use text-decoration and can coexist with a background.
+const BG_CLASSES = new Set(['hl-match', 'hl-mismatch', 'hl-search', 'hl-audit']);
+
+// Builds HTML using an interval-breakpoint approach so that non-conflicting
+// highlight properties (e.g. underline + background) can coexist on the same
+// <mark> element when their spans overlap.
 function buildHtml(text: string, spans: MatchSpan[]): string {
-  const sorted = [...spans].sort((a, b) =>
-    a.start !== b.start
-      ? a.start - b.start
-      : a.priority !== b.priority
-        ? a.priority - b.priority
-        : (b.end - b.start) - (a.end - a.start),
-  );
+  if (spans.length === 0) return escapeHtml(text);
+
+  const pts = [...new Set([0, text.length, ...spans.flatMap(s => [s.start, s.end])])].sort((a, b) => a - b);
+
   let result = '';
-  let pos = 0;
-  for (const span of sorted) {
-    if (span.start < pos) continue; // skip overlapping spans
-    result += escapeHtml(text.slice(pos, span.start));
-    result += `<mark class="${span.cls}" title="${escapeHtml(span.tooltip)}">${escapeHtml(text.slice(span.start, span.end))}</mark>`;
-    pos = span.end;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const from = pts[i];
+    const to = pts[i + 1];
+    const segment = escapeHtml(text.slice(from, to));
+
+    const active = spans.filter(s => s.start <= from && s.end >= to);
+    if (active.length === 0) { result += segment; continue; }
+
+    // Among background spans, keep only the highest-priority one (lowest number).
+    // Decoration spans (underline) don't conflict with backgrounds — keep all.
+    const bgWinner = active
+      .filter(s => BG_CLASSES.has(s.cls))
+      .sort((a, b) => a.priority - b.priority || (b.end - b.start) - (a.end - a.start))[0];
+    const decoClasses = [...new Set(active.filter(s => !BG_CLASSES.has(s.cls)).map(s => s.cls))];
+
+    const classes = [...(bgWinner ? [bgWinner.cls] : []), ...decoClasses];
+    const tooltip = [...active].sort((a, b) => a.priority - b.priority).find(s => s.tooltip)?.tooltip ?? '';
+
+    result += `<mark class="${classes.join(' ')}"${tooltip ? ` title="${escapeHtml(tooltip)}"` : ''}>${segment}</mark>`;
   }
-  result += escapeHtml(text.slice(pos));
+
   return result;
 }
 
@@ -104,6 +119,7 @@ export function useGlossaryHighlight(
   glossary: GlossaryEntry[],
   mode: 'source' | 'translation',
   searchQuery = '',
+  auditQuery = '',
 ): HighlightResult {
   const debouncedText = useDebounce(text, 300);
   const validEntries = useMemo(
@@ -153,10 +169,15 @@ export function useGlossaryHighlight(
       spans.push(...findSpans(debouncedText, searchRe, 'hl-search', '', 2));
     }
 
+    if (auditQuery.trim()) {
+      const auditRe = new RegExp(escapeRegex(auditQuery.trim()), 'gi');
+      spans.push(...findSpans(debouncedText, auditRe, 'hl-audit', '', 3));
+    }
+
     const matchCount = mode === 'translation'
       ? patterns.filter(({ transRe }) => { transRe.lastIndex = 0; return transRe.test(debouncedText); }).length
       : 0;
 
     return { html: buildHtml(debouncedText, spans), matchCount, totalTerms: validEntries.length };
-  }, [text, debouncedText, patterns, mode, validEntries.length, searchQuery]);
+  }, [text, debouncedText, patterns, mode, validEntries.length, searchQuery, auditQuery]);
 }

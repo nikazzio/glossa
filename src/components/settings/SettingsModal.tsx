@@ -1,5 +1,10 @@
+import type { ReactNode } from 'react';
 import { useState } from 'react';
-import { AlertCircle, Server, RefreshCw, CheckCircle2, XCircle, HelpCircle, Sparkles, Columns2, BookOpen, ChevronDown, ChevronUp, SlidersHorizontal } from 'lucide-react';
+import {
+  AlertCircle, Server, RefreshCw, CheckCircle2, XCircle, HelpCircle,
+  Sparkles, Columns2, BookOpen, ChevronDown, ChevronUp, SlidersHorizontal,
+  ChevronsLeft, Copy, RotateCcw, Scissors, Layers, LayoutTemplate, Palette,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -83,11 +88,59 @@ function applyHexToColor(existing: string, hex: string): string {
   return hex;
 }
 
-const LAYOUT_OPTIONS = [
-  { value: 'auto' as const,     labelKey: 'document.layoutAuto',     icon: <Sparkles size={14} /> },
-  { value: 'standard' as const, labelKey: 'document.layoutStandard', icon: <Columns2 size={14} /> },
-  { value: 'book' as const,     labelKey: 'document.layoutBook',     icon: <BookOpen size={14} /> },
+const LAYOUT_OPTIONS: Array<{ value: 'auto' | 'standard' | 'book'; labelKey: string; icon: ReactNode }> = [
+  { value: 'auto',     labelKey: 'document.layoutAuto',     icon: <Sparkles size={14} /> },
+  { value: 'standard', labelKey: 'document.layoutStandard', icon: <Columns2 size={14} /> },
+  { value: 'book',     labelKey: 'document.layoutBook',     icon: <BookOpen size={14} /> },
 ];
+
+const PIPELINE_INIT_OPTIONS: Array<{ value: 'copy-first' | 'copy-previous' | 'defaults'; labelKey: string; icon: ReactNode }> = [
+  { value: 'copy-first',    labelKey: 'settings.newPipelineInitCopyFirst',    icon: <ChevronsLeft size={14} /> },
+  { value: 'copy-previous', labelKey: 'settings.newPipelineInitCopyPrevious', icon: <Copy size={14} /> },
+  { value: 'defaults',      labelKey: 'settings.newPipelineInitDefaults',     icon: <RotateCcw size={14} /> },
+];
+
+function NavSelector<T extends string>({
+  options,
+  value,
+  onChange,
+  getLabel,
+}: {
+  options: Array<{ value: T; icon: ReactNode; labelKey: string }>;
+  value: T;
+  onChange: (v: T) => void;
+  getLabel: (labelKey: string) => string;
+}) {
+  const active = options.find((o) => o.value === value);
+  return (
+    <div className="flex items-center gap-2">
+      {options.map((opt) => {
+        const isActive = value === opt.value;
+        const label = getLabel(opt.labelKey);
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => onChange(opt.value)}
+            title={label}
+            aria-label={label}
+            className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+              isActive
+                ? 'border-editorial-accent bg-editorial-accent text-white'
+                : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
+            }`}
+          >
+            {opt.icon}
+          </button>
+        );
+      })}
+      <span className="mx-1 h-4 w-px self-center bg-editorial-border/70" aria-hidden="true" />
+      <span className="self-center font-display text-sm italic text-editorial-ink">
+        {active ? getLabel(active.labelKey) : ''}
+      </span>
+    </div>
+  );
+}
 
 export function SettingsModal() {
   const {
@@ -117,7 +170,7 @@ export function SettingsModal() {
   const [showPricingOverrides, setShowPricingOverrides] = useState(false);
   const [showSecurityAdvisory, setShowSecurityAdvisory] = useState(false);
   const [activeProviderTab, setActiveProviderTab] = useState<ModelProvider>('openai');
-  const [activeTab, setActiveTab] = useState<SettingsTab>('provider');
+  const [activeTab, setActiveTab] = useState<SettingsTab>('settings');
   const [urlDraft, setUrlDraft] = useState(ollamaBaseUrl);
   const [urlError, setUrlError] = useState<string | null>(null);
   const trapRef = useFocusTrap(showSettings, () => setShowSettings(false));
@@ -142,10 +195,38 @@ export function SettingsModal() {
     }
   };
 
-  const tabConfig: Array<{ id: SettingsTab; icon: React.ReactNode; label: string }> = [
-    { id: 'provider',  icon: <Server size={14} />,            label: 'Provider' },
-    { id: 'settings',  icon: <SlidersHorizontal size={14} />, label: t('header.settings') },
+  const tabConfig: Array<{ id: SettingsTab; icon: ReactNode; label: string }> = [
+    { id: 'settings', icon: <SlidersHorizontal size={14} />, label: t('header.settings') },
+    { id: 'provider', icon: <Server size={14} />,            label: 'Provider' },
   ];
+
+  const tabBar = (
+    <div className="flex items-center gap-2">
+      {tabConfig.map((tab) => {
+        const isActive = activeTab === tab.id;
+        return (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveTab(tab.id)}
+            title={tab.label}
+            aria-label={tab.label}
+            className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+              isActive
+                ? 'border-editorial-accent bg-editorial-accent text-white'
+                : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
+            }`}
+          >
+            {tab.icon}
+          </button>
+        );
+      })}
+      <span className="mx-1 h-4 w-px self-center bg-editorial-border/70" aria-hidden="true" />
+      <span className="self-center font-display text-sm italic text-editorial-ink">
+        {tabConfig.find((tb) => tb.id === activeTab)?.label}
+      </span>
+    </div>
+  );
 
   return (
     <AnimatePresence>
@@ -172,38 +253,13 @@ export function SettingsModal() {
           >
             <EditorialModalShell
               titleId="settings-title"
-              title={t('settings.title')}
+              title={t('settings.panelTitle')}
               closeLabel={t('settings.close')}
               onClose={() => setShowSettings(false)}
               widthClassName="max-w-3xl"
               bodyClassName="px-6 py-6 md:px-8"
-              headerActions={
-                <div className="flex items-center gap-2">
-                  {tabConfig.map((tab) => {
-                    const isActive = activeTab === tab.id;
-                    return (
-                      <button
-                        key={tab.id}
-                        type="button"
-                        onClick={() => setActiveTab(tab.id)}
-                        title={tab.label}
-                        aria-label={tab.label}
-                        className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                          isActive
-                            ? 'border-editorial-accent bg-editorial-accent text-white'
-                            : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
-                        }`}
-                      >
-                        {tab.icon}
-                      </button>
-                    );
-                  })}
-                  <span className="mx-1 h-4 w-px self-center bg-editorial-border/70" aria-hidden="true" />
-                  <span className="self-center font-display text-sm italic text-editorial-ink">
-                    {tabConfig.find((t) => t.id === activeTab)?.label}
-                  </span>
-                </div>
-              }
+              panelClassName="h-[85vh]"
+              tabBar={tabBar}
               footer={
                 <div className="flex justify-end">
                   <button
@@ -216,6 +272,133 @@ export function SettingsModal() {
                 </div>
               }
             >
+              {/* Tab: Impostazioni generali */}
+              {activeTab === 'settings' && (
+                <div className="space-y-12">
+                  {/* Segmentazione */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-1.5">
+                      <Scissors size={11} className="text-editorial-accent shrink-0" />
+                      <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                        {t('settings.segmentation')}
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                          {t('settings.chunkPresetShort')}
+                        </label>
+                        <input
+                          type="number"
+                          min={50}
+                          max={chunkPresetMedium - 50}
+                          step={50}
+                          value={chunkPresetShort}
+                          onChange={(e) => setChunkPresetShort(Number(e.target.value) || 50)}
+                          className="w-full rounded-[18px] border border-editorial-border bg-editorial-bg px-4 py-3 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                          {t('settings.chunkPresetMedium')}
+                        </label>
+                        <input
+                          type="number"
+                          min={chunkPresetShort + 50}
+                          max={chunkPresetLong - 50}
+                          step={50}
+                          value={chunkPresetMedium}
+                          onChange={(e) => setChunkPresetMedium(Number(e.target.value) || 50)}
+                          className="w-full rounded-[18px] border border-editorial-border bg-editorial-bg px-4 py-3 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                          {t('settings.chunkPresetLong')}
+                        </label>
+                        <input
+                          type="number"
+                          min={chunkPresetMedium + 50}
+                          step={50}
+                          value={chunkPresetLong}
+                          onChange={(e) => setChunkPresetLong(Number(e.target.value) || 50)}
+                          className="w-full rounded-[18px] border border-editorial-border bg-editorial-bg px-4 py-3 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Inizializzazione nuova pipeline */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-1.5">
+                      <Layers size={11} className="text-editorial-accent shrink-0" />
+                      <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                        {t('settings.newPipelineInit')}
+                      </p>
+                    </div>
+                    <NavSelector
+                      options={PIPELINE_INIT_OPTIONS}
+                      value={newPipelineInit}
+                      onChange={setNewPipelineInit}
+                      getLabel={(key) => t(key)}
+                    />
+                  </div>
+
+                  {/* Layout lettura */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-1.5">
+                      <LayoutTemplate size={11} className="text-editorial-accent shrink-0" />
+                      <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                        {t('header.readerLayout')}
+                      </p>
+                    </div>
+                    <NavSelector
+                      options={LAYOUT_OPTIONS}
+                      value={documentLayout}
+                      onChange={setDocumentLayout}
+                      getLabel={(key) => t(key)}
+                    />
+                  </div>
+
+                  {/* Evidenziazioni */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-1.5">
+                      <Palette size={11} className="text-editorial-accent shrink-0" />
+                      <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                        {t('settings.highlights')}
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      {([
+                        { key: 'sourceTerm'   as const, label: t('settings.highlightSourceTerm') },
+                        { key: 'matchTerm'    as const, label: t('settings.highlightMatchTerm') },
+                        { key: 'mismatchTerm' as const, label: t('settings.highlightMismatchTerm') },
+                        { key: 'search'       as const, label: t('settings.highlightSearch') },
+                        { key: 'auditPhrase'  as const, label: t('settings.highlightAuditPhrase') },
+                      ]).map(({ key, label }) => (
+                        <label
+                          key={key}
+                          className="flex cursor-pointer items-center gap-3 rounded-[20px] border border-editorial-border bg-editorial-bg/60 px-4 py-3.5 transition-colors hover:border-editorial-accent/40"
+                        >
+                          <div className="relative h-5 w-5 shrink-0 overflow-hidden rounded-full shadow-sm">
+                            <div className="absolute inset-0" style={{ backgroundColor: highlightColors[key] }} />
+                            <input
+                              type="color"
+                              value={colorToHex(highlightColors[key])}
+                              onChange={(e) => setHighlightColor(key, applyHexToColor(highlightColors[key], e.target.value))}
+                              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                              aria-label={label}
+                            />
+                          </div>
+                          <span className="mx-0.5 h-5 w-px shrink-0 bg-editorial-border/70" aria-hidden="true" />
+                          <span className="font-display text-lg italic text-editorial-ink">{label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Tab: Provider */}
               {activeTab === 'provider' && (
                 <div className="space-y-12">
@@ -499,146 +682,6 @@ export function SettingsModal() {
                         </p>
                       </div>
                     )}
-                  </div>
-                </div>
-              )}
-
-              {/* Tab: Settings */}
-              {activeTab === 'settings' && (
-                <div className="space-y-12">
-                  {/* Segmentation defaults */}
-                  <div className="space-y-4">
-                    <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-                      {t('settings.segmentation')}
-                    </p>
-                    <p className="text-xs text-editorial-muted leading-relaxed">
-                      {t('settings.segmentationHint')}
-                    </p>
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                      <div className="space-y-1.5">
-                        <label className="block text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-                          {t('settings.chunkPresetShort')}
-                        </label>
-                        <input
-                          type="number"
-                          min={50}
-                          max={chunkPresetMedium - 50}
-                          step={50}
-                          value={chunkPresetShort}
-                          onChange={(e) => setChunkPresetShort(Number(e.target.value) || 50)}
-                          className="w-full rounded-[18px] border border-editorial-border bg-editorial-bg px-4 py-3 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                        />
-                        <p className="text-[10px] leading-relaxed text-editorial-muted">
-                          {t('settings.chunkPresetShortHint')}
-                        </p>
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="block text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-                          {t('settings.chunkPresetMedium')}
-                        </label>
-                        <input
-                          type="number"
-                          min={chunkPresetShort + 50}
-                          max={chunkPresetLong - 50}
-                          step={50}
-                          value={chunkPresetMedium}
-                          onChange={(e) => setChunkPresetMedium(Number(e.target.value) || 50)}
-                          className="w-full rounded-[18px] border border-editorial-border bg-editorial-bg px-4 py-3 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                        />
-                        <p className="text-[10px] leading-relaxed text-editorial-muted">
-                          {t('settings.chunkPresetMediumHint')}
-                        </p>
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="block text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-                          {t('settings.chunkPresetLong')}
-                        </label>
-                        <input
-                          type="number"
-                          min={chunkPresetMedium + 50}
-                          step={50}
-                          value={chunkPresetLong}
-                          onChange={(e) => setChunkPresetLong(Number(e.target.value) || 50)}
-                          className="w-full rounded-[18px] border border-editorial-border bg-editorial-bg px-4 py-3 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                        />
-                        <p className="text-[10px] leading-relaxed text-editorial-muted">
-                          {t('settings.chunkPresetLongHint')}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Inizializzazione nuova pipeline */}
-                  <div className="space-y-4">
-                    <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-                      {t('settings.newPipelineInit')}
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {(['copy-first', 'copy-previous', 'defaults'] as const).map((option) => (
-                        <button
-                          key={option}
-                          type="button"
-                          onClick={() => setNewPipelineInit(option)}
-                          className={`rounded-full border px-4 py-1.5 text-xs font-bold uppercase tracking-[0.35em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                            newPipelineInit === option
-                              ? 'border-editorial-accent bg-editorial-accent text-white'
-                              : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent'
-                          }`}
-                        >
-                          {t(`settings.newPipelineInit${option.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join('')}`)}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Layout lettura */}
-                  <div className="space-y-4">
-                    <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-                      {t('header.readerLayout')}
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {LAYOUT_OPTIONS.map(({ value, labelKey, icon }) => (
-                        <button
-                          key={value}
-                          type="button"
-                          onClick={() => setDocumentLayout(value)}
-                          className={`flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-bold uppercase tracking-[0.35em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                            documentLayout === value
-                              ? 'border-editorial-accent bg-editorial-accent text-white'
-                              : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent'
-                          }`}
-                        >
-                          {icon}
-                          {t(labelKey)}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Evidenziazioni */}
-                  <div className="space-y-4">
-                    <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-                      {t('settings.highlights')}
-                    </p>
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                      {([
-                        { key: 'sourceTerm',   label: t('settings.highlightSourceTerm') },
-                        { key: 'matchTerm',    label: t('settings.highlightMatchTerm') },
-                        { key: 'mismatchTerm', label: t('settings.highlightMismatchTerm') },
-                        { key: 'search',       label: t('settings.highlightSearch') },
-                      ] as const).map(({ key, label }) => (
-                        <label key={key} className="flex items-center justify-between gap-3 rounded-[18px] border border-editorial-border bg-editorial-bg/60 px-4 py-3">
-                          <span className="text-xs text-editorial-muted">{label}</span>
-                          <input
-                            type="color"
-                            value={colorToHex(highlightColors[key])}
-                            onChange={(e) => setHighlightColor(key, applyHexToColor(highlightColors[key], e.target.value))}
-                            className="h-7 w-10 cursor-pointer rounded border border-editorial-border bg-transparent p-0.5"
-                            aria-label={label}
-                          />
-                        </label>
-                      ))}
-                    </div>
                   </div>
                 </div>
               )}

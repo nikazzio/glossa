@@ -117,11 +117,8 @@ export function MarkdownEditor({
 
     setMode('write');
     requestAnimationFrame(() => {
-      element.focus();
-      element.setSelectionRange(matchIndex, matchIndex + normalizedQuery.length);
       element.scrollTop = Math.max(0, element.scrollHeight * (matchIndex / Math.max(1, value.length)) - 120);
       syncHighlightLayer();
-      updateSelection(matchIndex, matchIndex + normalizedQuery.length);
       onFocusQueryHandled?.();
     });
   }, [focusQuery, focusRequestId, onFocusQueryHandled, value]);

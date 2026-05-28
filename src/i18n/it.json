@@ -368,6 +368,7 @@
     "highlightMatchTerm": "Termine corretto (traduzione)",
     "highlightMismatchTerm": "Termine mancante (traduzione)",
     "highlightSearch": "Risultato ricerca",
+    "highlightAuditPhrase": "Frase audit",
     "newPipelineInit": "Inizializzazione nuova pipeline",
     "newPipelineInitHint": "Impostazioni da copiare alla creazione di una nuova pipeline.",
     "newPipelineInitCopyFirst": "Copia prima pipeline",
@@ -389,7 +390,8 @@
     "keyDeleteFailed": "Rimozione chiave {{provider}} fallita",
     "keySavedFallback": "Chiave {{provider}} salvata nel fallback locale cifrato. È meno sicuro del portachiavi OS.",
     "configureKeyToUse": "Aggiungi una API key per abilitare i modelli di questo provider nella pipeline.",
-    "contextWindowBadge": "{{count}} ctx"
+    "contextWindowBadge": "{{count}} ctx",
+    "panelTitle": "Configurazione"
   },
   "ollama": {
     "title": "Ollama (Modelli Locali)",
