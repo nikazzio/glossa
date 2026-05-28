@@ -221,8 +221,15 @@ export const useUiStore = create<UiState>()(
           }
         }
         if (fromVersion < 2) {
-          const colors = (s.highlightColors ?? {}) as Record<string, string>;
-          s.highlightColors = { ...colors, auditPhrase: 'rgba(249,115,22,0.25)' };
+          const defaults: Record<string, string> = {
+            sourceTerm: '#3b82f6',
+            matchTerm: 'rgba(34,197,94,0.18)',
+            mismatchTerm: 'rgba(239,68,68,0.15)',
+            search: 'rgba(234,179,8,0.25)',
+            auditPhrase: 'rgba(249,115,22,0.25)',
+          };
+          const existing = (s.highlightColors ?? {}) as Record<string, string>;
+          s.highlightColors = { ...defaults, ...existing };
         }
         return s;
       },

@@ -89,24 +89,26 @@ function buildHtml(text: string, spans: MatchSpan[]): string {
 
   const pts = [...new Set([0, text.length, ...spans.flatMap(s => [s.start, s.end])])].sort((a, b) => a - b);
 
+  const bgSpans = spans
+    .filter(s => BG_CLASSES.has(s.cls))
+    .sort((a, b) => a.priority - b.priority || (b.end - b.start) - (a.end - a.start));
+  const decoSpans = spans.filter(s => !BG_CLASSES.has(s.cls));
+
   let result = '';
   for (let i = 0; i < pts.length - 1; i++) {
     const from = pts[i];
     const to = pts[i + 1];
     const segment = escapeHtml(text.slice(from, to));
 
-    const active = spans.filter(s => s.start <= from && s.end >= to);
-    if (active.length === 0) { result += segment; continue; }
+    const activeBg = bgSpans.filter(s => s.start <= from && s.end >= to);
+    const activeDeco = decoSpans.filter(s => s.start <= from && s.end >= to);
 
-    // Among background spans, keep only the highest-priority one (lowest number).
-    // Decoration spans (underline) don't conflict with backgrounds — keep all.
-    const bgWinner = active
-      .filter(s => BG_CLASSES.has(s.cls))
-      .sort((a, b) => a.priority - b.priority || (b.end - b.start) - (a.end - a.start))[0];
-    const decoClasses = [...new Set(active.filter(s => !BG_CLASSES.has(s.cls)).map(s => s.cls))];
+    if (activeBg.length === 0 && activeDeco.length === 0) { result += segment; continue; }
 
+    const bgWinner = activeBg[0];
+    const decoClasses = [...new Set(activeDeco.map(s => s.cls))];
     const classes = [...(bgWinner ? [bgWinner.cls] : []), ...decoClasses];
-    const tooltip = [...active].sort((a, b) => a.priority - b.priority).find(s => s.tooltip)?.tooltip ?? '';
+    const tooltip = activeBg[0]?.tooltip || activeDeco[0]?.tooltip || '';
 
     result += `<mark class="${classes.join(' ')}"${tooltip ? ` title="${escapeHtml(tooltip)}"` : ''}>${segment}</mark>`;
   }

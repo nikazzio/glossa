@@ -562,7 +562,7 @@ export function SettingsModal() {
                                             )}
                                           </div>
                                           {entry?.description && (
-                                            <p className="mt-0.5 text-[11px] text-editorial-muted">{entry.description}</p>
+                                            <p className="mt-0.5 text-xs text-editorial-muted">{entry.description}</p>
                                           )}
                                         </div>
                                       </div>

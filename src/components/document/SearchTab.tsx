@@ -131,6 +131,7 @@ export function SearchTab({ panelId, labelledBy, chunks, currentChunkId, onSelec
             <button
               type="button"
               onClick={() => { setSearchQuery(''); inputRef.current?.focus(); }}
+              title={t('common.clear')}
               aria-label={t('common.clear')}
               className="shrink-0 text-editorial-muted hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent rounded-full"
             >
@@ -204,7 +205,7 @@ export function SearchTab({ panelId, labelledBy, chunks, currentChunkId, onSelec
                       </div>
                     </div>
                     <p
-                      className={`text-[11px] leading-snug ${isActive ? 'text-white/75' : 'text-editorial-muted'}`}
+                      className={`text-xs leading-snug ${isActive ? 'text-white/75' : 'text-editorial-muted'}`}
                       // eslint-disable-next-line react/no-danger
                       dangerouslySetInnerHTML={{ __html: highlightSnippet(snippet, debouncedQuery) }}
                     />
