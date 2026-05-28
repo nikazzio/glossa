@@ -747,7 +747,7 @@
       "documentToolsTitle": "Editor tools",
       "documentToolsDesc": "Source and translation editors have a compact toolbar that can be collapsed when you want to read the clean text. On the candidate translation, the green tick locks it as final; each stage status badge opens a modal with the full output of that stage (trace), useful to see what the model actually produced.",
       "insightsTitle": "Insights panel",
-      "insightsDesc": "Slides in from the right via the panel icon in the header. Two levels: the Document panel (Index, Stats, Coherence, Glossary) for whole-document metrics, and the Chunk panel (Audit, Notes, Operations) for the selected chunk. Selecting a chunk in the index automatically opens the Chunk level.",
+      "insightsDesc": "Slides in from the right via the panel icon in the header. Two levels: the Document panel (Index, Search, Stats, Coherence, Glossary) for whole-document metrics and search, and the Chunk panel (Audit, Notes, Operations) for the selected chunk. Selecting a chunk in the index automatically opens the Chunk level.",
       "statsTitle": "Session stats",
       "statsDesc": "The Stats tab aggregates input and output tokens, estimated cost, and chunk distribution for the current session, broken down by provider and model. Useful to monitor spend on long documents translated across multiple sessions.",
       "operationsLogTitle": "Structured operations log",

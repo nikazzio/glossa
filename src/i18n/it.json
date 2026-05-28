@@ -747,7 +747,7 @@
       "documentToolsTitle": "Strumenti dell'editor",
       "documentToolsDesc": "Gli editor sorgente e traduzione hanno una toolbar compatta che si può collassare quando vuoi leggere il testo pulito. Sulla traduzione candidata, la spunta verde la blocca come definitiva; il badge di stato di ogni stage apre una modale con l'output completo di quello stage (trace), utile per capire cosa ha effettivamente prodotto il modello.",
       "insightsTitle": "Pannello Insight",
-      "insightsDesc": "Si apre dalla destra con l'icona pannello nell'header. Ha due livelli: il pannello Documento (Indice, Statistiche, Coerenza, Glossario) per metriche di tutto il documento, e il pannello Chunk (Audit, Note, Operazioni) per il chunk selezionato. La selezione di un chunk nell'indice apre automaticamente il livello Chunk.",
+      "insightsDesc": "Si apre dalla destra con l'icona pannello nell'header. Ha due livelli: il pannello Documento (Indice, Cerca, Statistiche, Coerenza, Glossario) per metriche e ricerca su tutto il documento, e il pannello Chunk (Audit, Note, Operazioni) per il chunk selezionato. La selezione di un chunk nell'indice apre automaticamente il livello Chunk.",
       "statsTitle": "Statistiche di sessione",
       "statsDesc": "Il tab Statistiche aggrega token in input e output, costo stimato e distribuzione dei chunk per la sessione corrente, separati per provider e modello. Utile per monitorare il consumo su documenti lunghi tradotti in più sessioni.",
       "operationsLogTitle": "Log operazioni strutturato",
