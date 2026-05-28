@@ -353,7 +353,7 @@
     "markUnrejected": "Remove rejection"
   },
   "settings": {
-    "title": "Global Config / Secrets",
+    "title": "Settings",
     "providerConfig": "Provider Configuration",
     "segmentation": "Segmentation Defaults",
     "segmentationHint": "Target chunk size for each preset. Min and max are derived automatically (×0.5 and ×1.5).",

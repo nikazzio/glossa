@@ -353,7 +353,7 @@
     "markUnrejected": "Rimuovi rifiuto"
   },
   "settings": {
-    "title": "Configurazione / Chiavi API",
+    "title": "Impostazioni",
     "providerConfig": "Configurazione Provider",
     "segmentation": "Segmentazione Predefinita",
     "segmentationHint": "Parole obiettivo per ciascun preset. Minimo e massimo vengono derivati automaticamente (×0,5 e ×1,5).",
