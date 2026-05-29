@@ -12,16 +12,16 @@ const STATUS_TONE = {
     label: 'text-editorial-success',
   },
   processing: {
-    dot: 'bg-editorial-warning ring-editorial-warning/30 animate-pulse',
-    label: 'text-editorial-warning',
+    dot: 'bg-editorial-running ring-editorial-running/30 animate-pulse',
+    label: 'text-editorial-running',
   },
   error: {
     dot: 'bg-editorial-accent ring-editorial-accent/30',
     label: 'text-editorial-accent',
   },
   retrying: {
-    dot: 'bg-editorial-warning ring-editorial-warning/30 animate-pulse',
-    label: 'text-editorial-warning',
+    dot: 'bg-editorial-running ring-editorial-running/30 animate-pulse',
+    label: 'text-editorial-running',
   },
   idle: {
     dot: 'bg-editorial-border ring-editorial-border/0',

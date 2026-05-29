@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Copy, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { Tooltip } from '../ui';
 
 interface CopyButtonProps {
   text: string;
@@ -28,15 +29,16 @@ export function CopyButton({ text }: CopyButtonProps) {
   const label = copied ? t('pipeline.copied') : t('pipeline.copy');
 
   return (
-    <button
-      onClick={handleCopy}
-      disabled={isDisabled}
-      title={label}
-      aria-label={label}
-      aria-live="polite"
-      className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
-    >
-      {copied ? <Check size={14} /> : <Copy size={14} />}
-    </button>
+    <Tooltip label={label}>
+      <button
+        onClick={handleCopy}
+        disabled={isDisabled}
+        aria-label={label}
+        aria-live="polite"
+        className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        {copied ? <Check size={14} /> : <Copy size={14} />}
+      </button>
+    </Tooltip>
   );
 }

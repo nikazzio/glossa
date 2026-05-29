@@ -48,6 +48,7 @@
   --color-editorial-textbox: #EAE5DE;
   --color-editorial-success: #3A7A65;
   --color-editorial-warning: #666666;
+  --color-editorial-running: #C49B2A;
 
   /* ── Dark mode — placeholder token overrides (PR futura) ─────────────────── */
   /* @media (prefers-color-scheme: dark) { */
@@ -122,6 +123,22 @@ mark.hl-audit {
   padding: 0 1px;
   color: inherit;
   cursor: help;
+}
+
+mark.hl-diff-add {
+  background-color: rgba(34, 197, 94, 0.22);
+  border-radius: 2px;
+  padding: 0 1px;
+  color: inherit;
+}
+
+mark.hl-diff-rm {
+  background-color: rgba(239, 68, 68, 0.18);
+  border-radius: 2px;
+  padding: 0 1px;
+  color: inherit;
+  text-decoration: line-through;
+  opacity: 0.7;
 }
 
 .hl-footnote-marker {

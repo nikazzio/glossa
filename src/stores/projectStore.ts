@@ -29,6 +29,7 @@ import { runInTransaction } from '../services/dbService';
 import type { Pipeline, PipelineConfig } from '../types';
 
 let saveInFlight: Promise<void> | null = null;
+let createPipelineInFlight: Promise<void> | null = null;
 
 interface ProjectState {
   projects: Project[];
@@ -281,11 +282,12 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         await get().loadProjects().catch(() => {});
         set({
           currentProjectId,
-          activePipelineId,
           saveState: 'saved',
           lastSaveError: null,
           trackedSnapshot: effectiveSnapshot,
-          ...(newPipelines !== null ? { pipelines: newPipelines } : {}),
+          // Only set activePipelineId/pipelines when we just created the project —
+          // otherwise we'd overwrite a switchPipeline that ran during the async save.
+          ...(newPipelines !== null ? { activePipelineId, pipelines: newPipelines } : {}),
         });
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Failed to save project.';
@@ -355,37 +357,42 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   createNewPipeline: async (name: string) => {
-    const { currentProjectId, pipelines, activePipelineId } = get();
-    if (!currentProjectId) return;
-    const { sourceLanguage, targetLanguage } = usePipelineStore.getState().config;
-    const newId = await createPipeline(currentProjectId, name, sourceLanguage, targetLanguage);
+    if (createPipelineInFlight) return;
+    const op = (async () => {
+      const { currentProjectId, pipelines, activePipelineId } = get();
+      if (!currentProjectId) return;
+      const { sourceLanguage, targetLanguage } = usePipelineStore.getState().config;
+      const newId = await createPipeline(currentProjectId, name, sourceLanguage, targetLanguage);
 
-    const initMode = useUiStore.getState().newPipelineInit;
-    if (initMode !== 'defaults' && pipelines.length > 0) {
-      const sourcePipelineId = initMode === 'copy-first'
-        ? pipelines[0].id
-        : (activePipelineId ?? pipelines[0].id);
-      const sourceData = await getPipelineConfig(sourcePipelineId);
-      if (sourceData) {
-        await savePipelineConfig(newId, sourceData.config);
+      const initMode = useUiStore.getState().newPipelineInit;
+      if (initMode !== 'defaults' && pipelines.length > 0) {
+        const sourcePipelineId = initMode === 'copy-first'
+          ? pipelines[0].id
+          : (activePipelineId ?? pipelines[0].id);
+        const sourceData = await getPipelineConfig(sourcePipelineId);
+        if (sourceData) {
+          await savePipelineConfig(newId, sourceData.config);
+        }
       }
-    }
 
-    // Check if there is a document loaded before the switch clears chunks
-    const hasDocument = useChunksStore.getState().chunks.length > 0;
+      // Check if there is a document loaded before the switch clears chunks
+      const hasDocument = useChunksStore.getState().chunks.length > 0;
 
-    const updated = await listPipelines(currentProjectId);
-    set({ pipelines: updated });
-    await get().switchPipeline(newId);
+      const updated = await listPipelines(currentProjectId);
+      set({ pipelines: updated });
+      await get().switchPipeline(newId);
 
-    // Re-generate chunks from source text with fresh IDs — avoids ON CONFLICT(id)
-    // overwriting the old pipeline's translations in the shared translations table.
-    if (hasDocument) {
-      useChunksStore.getState().generateChunks();
-    }
+      // Re-generate chunks from source text with fresh IDs — avoids ON CONFLICT(id)
+      // overwriting the old pipeline's translations in the shared translations table.
+      if (hasDocument) {
+        useChunksStore.getState().generateChunks();
+      }
 
-    // New pipeline starts with a clean operation log
-    useOperationLogStore.getState().clear();
+      // New pipeline starts with a clean operation log
+      useOperationLogStore.getState().clear();
+    })();
+    createPipelineInFlight = op.finally(() => { createPipelineInFlight = null; });
+    return createPipelineInFlight;
   },
 
   deletePipeline: async (pipelineId: string) => {

@@ -15,10 +15,11 @@ when-to-read: prima di creare o modificare qualsiasi componente visivo
 | `editorial-accent` | #C8705E | Accenti, bottoni attivi, selezioni |
 | `editorial-muted` | #666666 | Testo disabilitato / secondario |
 | `editorial-success` | #3A7A65 | Stato positivo |
+| `editorial-running` | #C49B2A | Step pipeline in esecuzione (dot + label gialli con `animate-pulse`) |
 | `editorial-border` | #C2BCB4 | Bordi e separatori |
 | `editorial-textbox` | #EAE5DE | Background input |
 
-> Warning rimosso — usa `editorial-muted` (#666666) al suo posto.
+> `editorial-warning` (#666666) = grigio, per avvisi generici. Per lo stato *in esecuzione* usa `editorial-running` (giallo).
 
 **Font:**
 - `font-display` (Elstob variable) — heading corsivi, label attive nelle barre filtro

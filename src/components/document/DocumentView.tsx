@@ -1,25 +1,15 @@
 import {
   AlertTriangle,
-  CheckCheck,
   ChevronLeft,
   ChevronRight,
-  Columns2,
   FileText,
   FlaskConical,
-  Highlighter,
-  Info,
+  GitCompare,
   Languages,
-  Loader2,
   Lock,
-  Minus,
   Pencil,
-  PanelLeft,
-  PanelRight,
-  Play,
-  Plus,
   RotateCcw,
   ScanLine,
-  Square,
   Wand2,
   Zap,
 } from 'lucide-react';
@@ -29,40 +19,61 @@ import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
-import { useProjectStore } from '../../stores/projectStore';
-import { usePricingStore } from '../../stores/pricingStore';
 import type { TranslationChunk } from '../../types';
 import { indexPad } from '../../utils';
-import { estimatePipelineCost } from '../../utils/costEstimate';
-import { CopyButton, MarkdownEditor, ProcessingLine } from '../common';
-import { CostBreakdownPanel } from '../pipeline/CostBadge';
+import { CopyButton, HighlightedText, MarkdownEditor, ProcessingLine } from '../common';
+import { Tooltip } from '../ui';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { escapeHtml, useGlossaryHighlight } from '../../hooks/useGlossaryHighlight';
+import { usePanelScrollSync } from '../../hooks/usePanelScrollSync';
+import { useStageDiff } from '../../hooks/useStageDiff';
 import { highlightSuperscriptMarkersHtml } from '../../utils/footnoteExtractor';
+
+const NOOP_CHANGE = () => {};
 
 interface DocumentViewProps {
   onRetranslateChunk: (chunkId: string) => void;
-  onRunPipeline?: () => void;
-  onCancelPipeline?: () => void;
-  onDryRun?: () => void;
+}
+
+const NAV_STAGE_TONE = {
+  completed: 'border-editorial-success/40 bg-editorial-success/12 text-editorial-success',
+  processing: 'border-editorial-running/45 bg-editorial-running/12 text-editorial-running animate-pulse',
+  retrying: 'border-editorial-running/45 bg-editorial-running/12 text-editorial-running animate-pulse',
+  error: 'border-editorial-accent/40 bg-editorial-accent/10 text-editorial-accent',
+  idle: 'border-editorial-border bg-editorial-bg text-editorial-muted/60',
+} as const;
+
+function NavStageIndicator({ status, icon: Icon, onClick, disabled, title }: {
+  status: string;
+  icon: LucideIcon;
+  onClick: () => void;
+  disabled: boolean;
+  title: string;
+}) {
+  const tone = (status === 'completed' || status === 'processing' || status === 'error' || status === 'retrying')
+    ? status as keyof typeof NAV_STAGE_TONE
+    : 'idle';
+  return (
+    <Tooltip label={title}>
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        aria-label={title}
+        className={`inline-flex h-7 w-7 items-center justify-center rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed ${NAV_STAGE_TONE[tone]}`}
+      >
+        <Icon size={12} strokeWidth={1.9} />
+      </button>
+    </Tooltip>
+  );
 }
 
 
-export function DocumentView({
-  onRetranslateChunk,
-  onRunPipeline,
-  onCancelPipeline,
-  onDryRun,
-}: DocumentViewProps) {
+export function DocumentView({ onRetranslateChunk }: DocumentViewProps) {
   const { t } = useTranslation();
   const { config } = usePipelineStore();
-  const { pipelines, activePipelineId } = useProjectStore();
-  const activePipeline = pipelines.find((p) => p.id === activePipelineId);
-  const pricingOverrides = usePricingStore((s) => s.overrides);
   const {
     chunks,
-    isProcessing,
-    cancelRequested,
     updateChunkDraft,
     updateChunkOriginalText,
     restoreChunkSourceText,
@@ -70,44 +81,32 @@ export function DocumentView({
     toggleChunkSourceEditing,
   } = useChunksStore();
 
-  const completedCount = chunks.filter((c) => c.status === 'completed' || c.translationLocked).length;
   const {
     selectedChunkId,
     setSelectedChunkId,
     documentLayout,
+    documentPaneFocus: paneFocus,
+    syncScrollEnabled,
     highlightsEnabled,
-    setHighlightsEnabled,
     searchQuery,
-    pipelineMode,
-    setPipelineMode,
     pipelineTestChunkCount,
     setPipelineTestChunkCount,
     focusedChunkId,
     focusedIssueQuery,
     focusedIssueRequestId,
+    traceStageId,
+    setTraceStageId,
   } = useUiStore();
-
-  const effectivePipelineMode = pipelineMode;
-  const runChunkCount = effectivePipelineMode === 'test'
-    ? Math.max(1, Math.min(pipelineTestChunkCount, chunks.length || 1))
-    : chunks.length;
-  const canAdjustTestCount = effectivePipelineMode === 'test' && !isProcessing;
-  const runPanelClass =
-    effectivePipelineMode === 'test'
-      ? 'border-editorial-warning/30 bg-editorial-textbox/60 shadow-[0_16px_50px_rgba(26,26,26,0.06)]'
-      : 'border-editorial-border bg-editorial-bg/90 shadow-[0_16px_50px_rgba(26,26,26,0.05)]';
 
   const [viewportWidth, setViewportWidth] = useState(
     typeof window === 'undefined' ? 0 : window.innerWidth,
   );
-  const [paneFocus, setPaneFocus] = useState<'both' | 'source' | 'translation'>('both');
-  const [traceStageId, setTraceStageId] = useState<string | null>(null);
-  const [showCostPanel, setShowCostPanel] = useState(false);
   const [selectedStageId, setSelectedStageId] = useState<string>('');
+  const [showDiffMode, setShowDiffMode] = useState(false);
+  const [diffPairKey, setDiffPairKey] = useState<string>('');
 
-  const costEstimate = useMemo(
-    () => estimatePipelineCost(chunks, config, pricingOverrides),
-    [chunks, config, pricingOverrides],
+  const { sourceRef: scrollSourceRef, translationRef: scrollTranslationRef } = usePanelScrollSync(
+    paneFocus === 'both' && syncScrollEnabled,
   );
 
   useEffect(() => {
@@ -134,7 +133,7 @@ export function DocumentView({
     chunks.findIndex((chunk) => chunk.id === selectedChunkId),
   );
   const currentChunk = chunks[currentIndex] ?? null;
-  const enabledStages = config.stages.filter((s) => s.enabled);
+  const enabledStages = useMemo(() => config.stages.filter((s) => s.enabled), [config.stages]);
   const lastStageId = enabledStages[enabledStages.length - 1]?.id ?? '';
   const isEditorialMode = enabledStages.length > 1;
   const deferredSourceText = useDeferredValue(currentChunk?.sourceDisplayText ?? '');
@@ -157,6 +156,36 @@ export function DocumentView({
     setSelectedStageId(lastStageId);
   }, [currentChunk?.id, lastStageId]);
 
+  // Diff mode is only available in translation-only pane.
+  useEffect(() => {
+    if (paneFocus !== 'translation') setShowDiffMode(false);
+  }, [paneFocus]);
+
+  const diffPairs = useMemo(() => {
+    return enabledStages.slice(0, -1).map((stage, index) => {
+      const nextStage = enabledStages[index + 1];
+      return {
+        key: `${stage.id}::${nextStage.id}`,
+        fromId: stage.id,
+        toId: nextStage.id,
+        fromName: stage.name,
+        toName: nextStage.id === lastStageId ? t('document.finalDraft') : nextStage.name,
+      };
+    });
+  }, [enabledStages, lastStageId, t]);
+
+  useEffect(() => {
+    if (diffPairs.length === 0) {
+      setDiffPairKey('');
+      return;
+    }
+    setDiffPairKey((prev) => (
+      prev && diffPairs.some((pair) => pair.key === prev)
+        ? prev
+        : diffPairs[0]!.key
+    ));
+  }, [diffPairs]);
+
   // Hooks devono essere chiamati prima di qualsiasi return condizionale
   const hasGlossary = config.glossary.length > 0;
   const showHighlight = highlightsEnabled && hasGlossary;
@@ -174,6 +203,17 @@ export function DocumentView({
     focusedIssueQuery ?? '',
   );
 
+  const activeDiffPair = diffPairs.find((pair) => pair.key === diffPairKey) ?? diffPairs[0] ?? null;
+  const effectiveDiffStageIdA = activeDiffPair?.fromId ?? '';
+  const effectiveDiffStageIdB = activeDiffPair?.toId ?? '';
+  const diffTextA = effectiveDiffStageIdA === lastStageId
+    ? (currentChunk?.currentDraft ?? '')
+    : (currentChunk?.stageResults[effectiveDiffStageIdA]?.content ?? '');
+  const diffTextB = effectiveDiffStageIdB === lastStageId
+    ? (currentChunk?.currentDraft ?? '')
+    : (currentChunk?.stageResults[effectiveDiffStageIdB]?.content ?? '');
+  const stageDiff = useStageDiff(showDiffMode ? diffTextA : '', showDiffMode ? diffTextB : '');
+
   const sourceHighlightHtml = useMemo(() => {
     const hasFootnoteMarkers = /\[[⁰¹²³⁴⁵⁶⁷⁸⁹]/.test(deferredSourceText);
     const showGlossary = showHighlight && paneFocus !== 'translation';
@@ -185,7 +225,7 @@ export function DocumentView({
 
   if (!currentChunk) {
     return (
-      <section className="flex w-full flex-col items-center justify-center bg-[#f7f3ec] overflow-y-auto min-h-0 flex-1 px-8 py-16">
+      <section className="flex w-full flex-col items-center justify-center bg-[#f4efe5] overflow-y-auto min-h-0 flex-1 px-8 py-16">
         <div className="w-full max-w-2xl flex flex-col items-center">
           {/* Brand mark */}
           <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-full border border-editorial-border/60 bg-editorial-bg shadow-[0_4px_20px_rgba(26,26,26,0.06)]">
@@ -238,280 +278,104 @@ export function DocumentView({
   const sourceEditDisabled = currentChunk.status === 'processing';
 
   return (
-    <section className="w-full bg-[#f7f3ec] overflow-y-auto min-h-0 h-full custom-scrollbar flex flex-col">
+    <section className="w-full bg-[#f4efe5] overflow-y-auto min-h-0 h-full custom-scrollbar flex flex-col">
       <div className="mx-auto w-full max-w-[1720px] px-5 py-3 md:px-6 md:py-4 flex flex-col flex-1 min-h-0 gap-5">
-        <div className="flex items-stretch gap-2 shrink-0">
-          {/* Pannello run: striscia orizzontale compatta */}
-          {onRunPipeline && onCancelPipeline && (
-            <div className={`grid shrink-0 grid-cols-[auto_auto] items-stretch gap-x-3 gap-y-2 rounded-[20px] border px-4 py-3 ${runPanelClass}`}>
-              {activePipeline && (
-                <div className="col-span-2 text-[9px] font-bold uppercase tracking-wider text-editorial-accent/70">
-                  {activePipeline.name}
-                </div>
-              )}
-              <div className="grid w-fit gap-2 self-stretch">
-                <div className="flex w-full items-center justify-center rounded-full border border-editorial-border bg-editorial-textbox/40 p-0.5">
-                  <button
-                    type="button"
-                    onClick={() => setPipelineMode('test')}
-                    disabled={isProcessing}
-                    title={t('pipeline.modeTestHint')}
-                    aria-label={t('pipeline.modeTest')}
-                    className={`flex flex-1 items-center justify-center rounded-full px-4 py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed ${
-                      pipelineMode === 'test'
-                        ? 'bg-editorial-bg text-editorial-ink shadow-sm'
-                        : 'text-editorial-muted hover:text-editorial-ink'
-                    }`}
-                  >
-                    <FlaskConical size={12} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPipelineMode('production')}
-                    disabled={isProcessing}
-                    title={t('pipeline.modeProductionHint')}
-                    aria-label={t('pipeline.modeProduction')}
-                    className={`flex flex-1 items-center justify-center rounded-full px-4 py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed ${
-                      pipelineMode === 'production'
-                        ? 'bg-editorial-bg text-editorial-charcoal shadow-sm'
-                        : 'text-editorial-muted hover:text-editorial-ink'
-                    }`}
-                  >
-                    <Zap size={12} />
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-1" title={t('pipeline.testChunkCountHint')} aria-label={t('pipeline.testChunkCountHint')}>
-                  <button
-                    type="button"
-                    onClick={() => setPipelineTestChunkCount(runChunkCount - 1)}
-                    disabled={!canAdjustTestCount || runChunkCount <= 1}
-                    title={t('pipeline.decreaseTestChunkCount')}
-                    aria-label={t('pipeline.decreaseTestChunkCount')}
-                    className="flex h-[24px] w-[24px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted transition-colors hover:border-editorial-charcoal/60 hover:text-editorial-charcoal focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-35"
-                  >
-                    <Minus size={8} />
-                  </button>
-                  <div
-                    className={`flex h-[34px] min-w-[34px] items-center justify-center rounded-full border px-2 text-[12px] font-bold tracking-[0.12em] shadow-[0_1px_6px_rgba(26,26,26,0.06)] ${
-                      effectivePipelineMode === 'test'
-                        ? 'border-editorial-warning/40 bg-editorial-textbox text-editorial-ink'
-                        : 'border-editorial-border bg-editorial-bg text-editorial-ink'
-                    }`}
-                    title={t('pipeline.runChunkCount', { count: runChunkCount })}
-                    aria-label={t('pipeline.runChunkCount', { count: runChunkCount })}
-                  >
-                    {runChunkCount}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setPipelineTestChunkCount(runChunkCount + 1)}
-                    disabled={!canAdjustTestCount || runChunkCount >= chunks.length}
-                    title={t('pipeline.increaseTestChunkCount')}
-                    aria-label={t('pipeline.increaseTestChunkCount')}
-                    className="flex h-[24px] w-[24px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted transition-colors hover:border-editorial-charcoal/60 hover:text-editorial-charcoal focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-35"
-                  >
-                    <Plus size={8} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onRetranslateChunk(currentChunk.id)}
-                    disabled={isProcessing || !currentChunk.originalText.trim()}
-                    title={effectivePipelineMode === 'test' ? t('pipeline.retestChunk') : t('pipeline.retranslateChunk')}
-                    aria-label={effectivePipelineMode === 'test' ? t('pipeline.retestChunk') : t('pipeline.retranslateChunk')}
-                    className="flex h-[34px] w-[34px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted transition-colors hover:border-editorial-charcoal/60 hover:text-editorial-charcoal focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    <RotateCcw size={11} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="relative row-span-2 flex min-h-[74px] items-center justify-center self-center pl-1">
-                <div className="relative flex h-[84px] w-[84px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg/90">
-                  {isProcessing ? (
-                    cancelRequested ? (
-                      <button
-                        type="button"
-                        disabled
-                        title={t('pipeline.stopping')}
-                        aria-label={t('pipeline.stopping')}
-                        className="flex h-[64px] w-[64px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted opacity-50 focus:outline-none"
-                      >
-                        <Loader2 size={22} className="animate-spin" />
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={onCancelPipeline}
-                        title={t('pipeline.stopPipeline')}
-                        aria-label={t('pipeline.stopPipeline')}
-                        className="flex h-[64px] w-[64px] items-center justify-center rounded-full border border-editorial-accent bg-editorial-bg text-editorial-accent transition-colors hover:bg-editorial-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                      >
-                        <Square size={21} fill="currentColor" />
-                      </button>
-                    )
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={effectivePipelineMode === 'test' ? onDryRun : onRunPipeline}
-                      title={t('pipeline.beginPipeline')}
-                      aria-label={t('pipeline.beginPipeline')}
-                      className="flex h-[64px] w-[64px] items-center justify-center rounded-full bg-editorial-charcoal text-white transition-colors hover:bg-editorial-charcoal/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                    >
-                      <Play size={22} fill="currentColor" />
-                    </button>
-                  )}
-
-                  {costEstimate.stages.length > 0 && (
-                    <div
-                      className="absolute -bottom-1 -right-1"
-                      onMouseEnter={() => setShowCostPanel(true)}
-                      onMouseLeave={() => setShowCostPanel(false)}
-                    >
-                      <button
-                        type="button"
-                        onFocus={() => setShowCostPanel(true)}
-                        onBlur={() => setShowCostPanel(false)}
-                        aria-label={t('cost.breakdown')}
-                        className="flex h-[18px] w-[18px] items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted transition-colors hover:border-editorial-charcoal hover:text-editorial-charcoal focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
-                      >
-                        <Info size={9} />
-                      </button>
-                    </div>
-                  )}
-                  {showCostPanel && costEstimate.stages.length > 0 && (
-                    <div
-                      className="absolute left-0 top-full z-50 mt-2 w-64"
-                      onMouseEnter={() => setShowCostPanel(true)}
-                      onMouseLeave={() => setShowCostPanel(false)}
-                    >
-                      <CostBreakdownPanel estimate={costEstimate} />
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
+        <div className="shrink-0">
           {/* Navigation bar */}
-          <div className="flex-1 rounded-[22px] border border-editorial-border bg-editorial-bg/90 px-6 py-3 shadow-[0_16px_50px_rgba(26,26,26,0.05)] flex items-center">
-          <div className="flex w-full flex-wrap items-center justify-between gap-3">
-
-            {/* Sinistra: navigazione chunk */}
-            <div className="flex items-center gap-1.5 rounded-full border border-editorial-border bg-editorial-bg/70 px-2.5 py-1.5">
-              <ChunkIconButton
-                onClick={() => prevChunk && setSelectedChunkId(prevChunk.id)}
-                title={t('document.previousChunk')}
-                disabled={!prevChunk}
-              >
-                <ChevronLeft size={16} />
-              </ChunkIconButton>
-              <span className="font-display text-xl italic text-editorial-accent shrink-0 min-w-[96px] text-center">
-                {indexPad(currentIndex + 1)}/{indexPad(chunks.length)}
-              </span>
-              <ChunkIconButton
-                onClick={() => nextChunk && setSelectedChunkId(nextChunk.id)}
-                title={t('document.nextChunk')}
-                disabled={!nextChunk}
-              >
-                <ChevronRight size={16} />
-              </ChunkIconButton>
-            </div>
-
-            {/* Centro: pannelli visualizzazione + toggle highlights */}
-            <div className="flex items-center gap-1">
-              <ChunkIconButton
-                onClick={() => setPaneFocus('both')}
-                title={t('document.focusBoth')}
-                active={paneFocus === 'both'}
-                ariaPressed={paneFocus === 'both'}
-              >
-                <Columns2 size={18} />
-              </ChunkIconButton>
-              <ChunkIconButton
-                onClick={() => setPaneFocus('source')}
-                title={t('document.focusSource')}
-                active={paneFocus === 'source'}
-                ariaPressed={paneFocus === 'source'}
-              >
-                <PanelLeft size={18} />
-              </ChunkIconButton>
-              <ChunkIconButton
-                onClick={() => setPaneFocus('translation')}
-                title={t('document.focusTranslation')}
-                active={paneFocus === 'translation'}
-                ariaPressed={paneFocus === 'translation'}
-              >
-                <PanelRight size={18} />
-              </ChunkIconButton>
-              <span className="mx-1 h-4 w-px bg-editorial-border/60" aria-hidden="true" />
-              <ChunkIconButton
-                onClick={() => setHighlightsEnabled(!highlightsEnabled)}
-                title={t('document.highlightsToggle')}
-                active={highlightsEnabled}
-                ariaPressed={highlightsEnabled}
-              >
-                <Highlighter size={18} />
-              </ChunkIconButton>
-            </div>
-
-            {/* Destra: stati pipeline + modifica sorgente + blocca */}
-            <div className="flex items-center gap-2">
-              {config.stages
-                .filter((stage) => stage.enabled)
-                .map((stage) => {
-                  const stageIcon: LucideIcon =
+          <div className="w-full rounded-[20px] border border-editorial-border bg-editorial-bg/90 px-4 py-3 shadow-[0_16px_50px_rgba(26,26,26,0.05)]">
+            <div className="flex items-center gap-x-4 gap-y-2">
+              <div className="flex flex-1 flex-wrap items-center gap-1.5">
+                {enabledStages.map((stage) => {
+                  const Icon: LucideIcon =
                     stage.role === 'refine' ? Pencil
                     : stage.role === 'format' ? FileText
                     : Languages;
                   return (
-                    <button
+                    <NavStageIndicator
                       key={stage.id}
-                      type="button"
-                      onClick={() => setTraceStageId(stage.id)}
-                      className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                      icon={Icon}
                       title={stage.name}
-                      aria-label={stage.name}
-                    >
-                      <CompactStatusIndicator
-                        status={currentChunk.stageResults[stage.id]?.status || 'idle'}
-                        icon={stageIcon}
-                      />
-                    </button>
+                      disabled={false}
+                      status={currentChunk.stageResults[stage.id]?.status ?? 'idle'}
+                      onClick={() => setTraceStageId(traceStageId === stage.id ? null : stage.id)}
+                    />
                   );
                 })}
-              <button
-                type="button"
-                className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                title={t('pipeline.audit')}
-                aria-label={t('pipeline.audit')}
-              >
-                <CompactStatusIndicator
-                  status={currentChunk.judgeResult.status}
+                <NavStageIndicator
                   icon={ScanLine}
+                  title={t('pipeline.audit')}
+                  disabled={false}
+                  status={currentChunk.judgeResult.status ?? 'idle'}
+                  onClick={() => setTraceStageId(traceStageId === '_judge' ? null : '_judge')}
                 />
-              </button>
-              <button
-                type="button"
-                onClick={() => toggleChunkTranslationLock(currentChunk.id)}
-                disabled={!currentChunk.currentDraft?.trim()}
-                title={
-                  currentChunk.translationLocked
-                    ? t('document.unlockTranslation')
-                    : t('document.lockTranslation')
-                }
-                aria-pressed={currentChunk.translationLocked === true}
-                className={`inline-flex h-9 w-9 items-center justify-center rounded-full border focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-35 ${
-                  currentChunk.translationLocked
-                    ? 'border-editorial-success/40 bg-editorial-success/12 text-editorial-success'
-                    : 'border-editorial-border bg-editorial-bg text-editorial-muted'
-                }`}
-              >
-                <CheckCheck size={16} />
-              </button>
+              </div>
+
+              <div className="flex shrink-0 items-center gap-3">
+                <ChunkIconButton
+                  onClick={() => prevChunk && setSelectedChunkId(prevChunk.id)}
+                  title={t('document.previousChunk')}
+                  disabled={!prevChunk}
+                >
+                  <ChevronLeft size={16} />
+                </ChunkIconButton>
+                <div className="min-w-[7.5rem] text-center">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.28em] text-editorial-muted/75">
+                    {t('document.chunkLabel')}
+                  </div>
+                  <div className="font-display text-[1.8rem] italic leading-none text-editorial-accent">
+                    {indexPad(currentIndex + 1)}<span className="px-1 text-editorial-muted/55">/</span>{indexPad(chunks.length)}
+                  </div>
+                </div>
+                <ChunkIconButton
+                  onClick={() => nextChunk && setSelectedChunkId(nextChunk.id)}
+                  title={t('document.nextChunk')}
+                  disabled={!nextChunk}
+                >
+                  <ChevronRight size={16} />
+                </ChunkIconButton>
+              </div>
+              <div className="flex-1" />
+
             </div>
 
-          </div>
+            {chunks.length > 1 && (
+              <div className="mt-2 flex items-center gap-1.5 overflow-x-auto py-1 custom-scrollbar">
+                {chunks.map((chunk, idx) => {
+                  const segmentTone =
+                    chunk.status === 'completed'
+                      ? 'bg-editorial-success/18 shadow-[inset_0_0_0_1px_rgba(58,122,101,0.16)]'
+                      : chunk.status === 'preview'
+                        ? 'bg-editorial-charcoal/22 shadow-[inset_0_0_0_1px_rgba(58,122,114,0.12)]'
+                        : chunk.status === 'error'
+                          ? 'bg-editorial-accent/22 shadow-[inset_0_0_0_1px_rgba(200,112,94,0.18)]'
+                          : chunk.status === 'processing'
+                            ? 'bg-editorial-running/24 animate-pulse shadow-[inset_0_0_0_1px_rgba(196,155,42,0.22)]'
+                            : 'bg-editorial-border/40';
+                  const isCurrent = idx === currentIndex;
+                  const sizeClass = chunk.translationLocked
+                    ? (isCurrent ? 'h-4.5 w-4.5' : 'h-4 w-4')
+                    : (isCurrent ? 'h-4 w-4' : 'h-3 w-3');
+                  return (
+                    <Tooltip key={chunk.id} label={`${idx + 1}`}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedChunkId(chunk.id)}
+                        aria-label={`${idx + 1}`}
+                        className={`relative shrink-0 rounded-full transition-all duration-150 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                          isCurrent
+                            ? `${sizeClass} border border-editorial-charcoal/28 ${segmentTone} shadow-[0_0_0_1px_rgba(255,255,255,0.28)]`
+                            : `${sizeClass} ${segmentTone} hover:-translate-y-px hover:ring-1 hover:ring-editorial-charcoal/12`
+                        }`}
+                      >
+                        {chunk.translationLocked ? (
+                          <span className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-editorial-success" />
+                        ) : null}
+                      </button>
+                    </Tooltip>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
@@ -546,6 +410,7 @@ export function DocumentView({
                   )}
                 </div>
               }
+              scrollRef={scrollSourceRef}
             >
               <MarkdownEditor
                 value={currentChunk.sourceDisplayText}
@@ -563,33 +428,77 @@ export function DocumentView({
 
           {paneFocus !== 'source' && (() => {
             const stageReadOnly = !isLastSelected || currentChunk.translationLocked === true;
+            const lockToggle = (
+              <Tooltip label={currentChunk.translationLocked ? t('document.unlockTranslation') : t('document.lockTranslation')}>
+                <button
+                  type="button"
+                  onClick={() => toggleChunkTranslationLock(currentChunk.id)}
+                  disabled={!currentChunk.currentDraft?.trim()}
+                  aria-label={currentChunk.translationLocked ? t('document.unlockTranslation') : t('document.lockTranslation')}
+                  aria-pressed={currentChunk.translationLocked === true}
+                  className={`inline-flex items-center rounded-full border p-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40 ${
+                    currentChunk.translationLocked
+                      ? 'border-editorial-success/50 bg-editorial-success/10 text-editorial-success'
+                      : 'border-editorial-border/60 text-editorial-muted/50 hover:border-editorial-accent/40 hover:text-editorial-accent'
+                  }`}
+                >
+                  <Lock size={13} />
+                </button>
+              </Tooltip>
+            );
+            const stageButtons = enabledStages.map((s) => {
+              const Icon = s.role === 'refine' ? Wand2 : s.role === 'format' ? FileText : Languages;
+              const isActive = effectiveSelectedStageId === s.id;
+              const hasContent = s.id === lastStageId
+                ? true
+                : !!(currentChunk.stageResults[s.id]?.content);
+              return (
+                <ChunkIconButton
+                  key={s.id}
+                  onClick={() => setSelectedStageId(s.id)}
+                  title={t('document.viewStageResult', { stage: t(`pipeline.stageRole.${s.role ?? 'translation'}`) })}
+                  disabled={!hasContent || showDiffMode}
+                  active={isActive && !showDiffMode}
+                  ariaPressed={isActive && !showDiffMode}
+                >
+                  <Icon size={14} />
+                </ChunkIconButton>
+              );
+            });
+            const diffButtons = diffPairs.map((pair) => {
+              const isActive = pair.key === diffPairKey && showDiffMode;
+              const fromStage = enabledStages.find((s) => s.id === pair.fromId);
+              const DiffIcon = fromStage?.role === 'refine' ? Wand2 : fromStage?.role === 'format' ? FileText : Languages;
+              return (
+                <ChunkIconButton
+                  key={pair.key}
+                  onClick={() => setDiffPairKey(pair.key)}
+                  title={`${pair.fromName} → ${pair.toName}`}
+                  disabled={!showDiffMode}
+                  active={isActive}
+                  ariaPressed={isActive}
+                >
+                  <DiffIcon size={14} />
+                </ChunkIconButton>
+              );
+            });
             const stageActions = isEditorialMode ? (
               <div className="flex items-center gap-1">
-                {enabledStages.map((s) => {
-                  const Icon = s.role === 'refine' ? Wand2 : s.role === 'format' ? FileText : Languages;
-                  const isActive = effectiveSelectedStageId === s.id;
-                  const hasContent = s.id === lastStageId
-                    ? true
-                    : !!(currentChunk.stageResults[s.id]?.content);
-                  return (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => setSelectedStageId(s.id)}
-                      title={t('document.viewStageResult', { stage: t(`pipeline.stageRole.${s.role ?? 'translation'}`) })}
-                      aria-label={t('document.viewStageResult', { stage: t(`pipeline.stageRole.${s.role ?? 'translation'}`) })}
-                      aria-pressed={isActive}
-                      disabled={!hasContent}
-                      className={`inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-30 ${
-                        isActive
-                          ? 'border-editorial-accent bg-editorial-accent text-white'
-                          : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent'
-                      }`}
-                    >
-                      <Icon size={14} />
-                    </button>
-                  );
-                })}
+                {stageButtons}
+                <span className="mx-1 h-4 w-px bg-editorial-border/60" aria-hidden="true" />
+                <ChunkIconButton
+                  onClick={() => {
+                    if (paneFocus !== 'translation') return;
+                    setShowDiffMode(!showDiffMode);
+                  }}
+                  title={showDiffMode ? t('document.diffModeDisable') : t('document.diffModeEnable')}
+                  active={showDiffMode}
+                  ariaPressed={showDiffMode}
+                  disabled={paneFocus !== 'translation'}
+                >
+                  <GitCompare size={14} />
+                </ChunkIconButton>
+                {diffButtons}
               </div>
             ) : null;
 
@@ -597,31 +506,47 @@ export function DocumentView({
               <DocumentPage
                 label={t('pipeline.candidateTranslation')}
                 eyebrow={t('document.rightPage')}
-                subtitle={isEditorialMode ? t(`pipeline.stageRole.${enabledStages.find(s => s.id === effectiveSelectedStageId)?.role ?? 'translation'}`) : undefined}
-                subtitleAction={rawStageContent ? <CopyButton text={rawStageContent} /> : undefined}
+                eyebrowMeta={currentChunk.status === 'preview' ? (
+                  <Tooltip label={t('document.chunkPreviewBadge')}>
+                    <span aria-label={t('document.chunkPreviewBadge')} className="inline-flex items-center text-editorial-muted/70">
+                      <FlaskConical size={11} />
+                    </span>
+                  </Tooltip>
+                ) : null}
+                subtitle={
+                  showDiffMode && activeDiffPair
+                    ? `${activeDiffPair.fromName} → ${activeDiffPair.toName}`
+                    : undefined
+                }
+                titleMeta={rawStageContent ? <CopyButton text={rawStageContent} /> : null}
                 actions={stageActions}
                 statusBadge={currentChunk.translationStale ? (
                   <InlineStatusBadge tone="amber" icon={<AlertTriangle size={13} />} label={t('document.translationStaleBadge')} />
-                ) : currentChunk.status === 'preview' ? (
-                  <InlineStatusBadge tone="muted" icon={<FlaskConical size={13} />} ariaLabel={t('document.chunkPreviewBadge')} />
-                ) : currentChunk.translationLocked ? (
-                  <InlineStatusBadge tone="emerald" icon={<CheckCheck size={13} />} label={t('document.translationLockedBadge')} />
-                ) : null}
+                ) : lockToggle}
+                scrollRef={scrollTranslationRef}
               >
-                <MarkdownEditor
-                  value={rawStageContent}
-                  onChange={isLastSelected ? (nextValue) => updateChunkDraft(currentChunk.id, nextValue) : () => {}}
-                  markdownEnabled={config.markdownAware === true}
-                  readOnly={stageReadOnly}
-                  fillHeight
-                  textClassName="text-[15px] leading-8 text-editorial-ink"
-                  previewClassName="min-h-[280px] text-[15px] leading-8 text-editorial-ink"
-                  placeholder={isLastSelected ? t('pipeline.candidatePlaceholder') : ''}
-                  highlightHtml={(showHighlight || (highlightsEnabled && !!searchQuery.trim()) || !!focusedIssueQuery) ? translationHighlight.html : null}
-                  focusQuery={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueQuery : null}
-                  focusRequestId={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueRequestId : 0}
-
-                />
+                {showDiffMode ? (
+                  <div className="flex flex-col flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+                    <HighlightedText
+                      html={stageDiff.html}
+                      className="text-[15px] leading-8 text-editorial-ink min-h-[280px]"
+                    />
+                  </div>
+                ) : (
+                  <MarkdownEditor
+                    value={rawStageContent}
+                    onChange={isLastSelected ? (nextValue) => updateChunkDraft(currentChunk.id, nextValue) : NOOP_CHANGE}
+                    markdownEnabled={config.markdownAware === true}
+                    readOnly={stageReadOnly}
+                    fillHeight
+                    textClassName="text-[15px] leading-8 text-editorial-ink"
+                    previewClassName="min-h-[280px] text-[15px] leading-8 text-editorial-ink"
+                    placeholder={isLastSelected ? t('pipeline.candidatePlaceholder') : ''}
+                    highlightHtml={(showHighlight || (highlightsEnabled && !!searchQuery.trim()) || !!focusedIssueQuery) ? translationHighlight.html : null}
+                    focusQuery={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueQuery : null}
+                    focusRequestId={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueRequestId : 0}
+                  />
+                )}
               </DocumentPage>
             );
           })()}
@@ -632,6 +557,7 @@ export function DocumentView({
         <StageTraceDialog
           chunk={currentChunk}
           stage={config.stages.find((entry) => entry.id === traceStageId) ?? null}
+          isJudge={traceStageId === '_judge'}
           onClose={() => setTraceStageId(null)}
         />
       ) : null}
@@ -642,29 +568,34 @@ export function DocumentView({
 interface DocumentPageProps {
   label: string;
   eyebrow: string;
+  eyebrowMeta?: React.ReactNode;
   subtitle?: string;
   subtitleAction?: React.ReactNode;
   readOnly?: boolean;
   highlighted?: boolean;
   titleMeta?: React.ReactNode;
   statusBadge?: React.ReactNode;
-  actions?: React.ReactNode;
+  actions?: React.ReactNode | null;
   footer?: React.ReactNode;
+  scrollRef?: React.RefObject<HTMLDivElement | null>;
   children: React.ReactNode;
 }
 
 function StageTraceDialog({
   chunk,
   stage,
+  isJudge = false,
   onClose,
 }: {
   chunk: TranslationChunk;
   stage: ReturnType<typeof usePipelineStore.getState>['config']['stages'][number] | null;
+  isJudge?: boolean;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
   const trapRef = useFocusTrap(true, onClose);
-  const result = stage ? chunk.stageResults[stage.id] : null;
+  const result = isJudge ? chunk.judgeResult : stage ? chunk.stageResults[stage.id] : null;
+  const dialogTitle = isJudge ? t('pipeline.audit') : (stage?.name ?? t('errors.unknownError'));
 
   return (
     <div
@@ -683,7 +614,7 @@ function StageTraceDialog({
             id="stage-trace-title"
             className="mt-2 font-display text-3xl italic tracking-tight text-editorial-ink"
           >
-            {stage?.name ?? t('errors.unknownError')}
+            {dialogTitle}
           </h3>
           <p className="mt-2 text-sm leading-relaxed text-editorial-muted">
             {result?.status ?? 'idle'}
@@ -725,6 +656,7 @@ function StageTraceDialog({
 function DocumentPage({
   label,
   eyebrow,
+  eyebrowMeta,
   subtitle,
   subtitleAction,
   readOnly = false,
@@ -733,16 +665,21 @@ function DocumentPage({
   statusBadge,
   actions,
   footer,
+  scrollRef,
   children,
 }: DocumentPageProps) {
   return (
     <section className={`relative rounded-[24px] bg-[#fffdf9] px-6 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_18px_45px_rgba(74,50,17,0.08)] flex flex-col min-h-0 ${
       highlighted ? 'border border-editorial-accent ring-2 ring-editorial-accent/30' : 'border border-[#d8cfbf]'
     }`}>
-      <div className="mb-4 shrink-0 flex items-center justify-between gap-4 border-b border-[#ede4d6] pb-3">
+      {/* Header con altezza minima fissa per allineare il corpo testo tra i due pannelli */}
+      <div className="mb-4 shrink-0 flex items-start justify-between gap-4 border-b border-[#ede4d6] pb-3">
         <div className="min-w-0">
-          <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-            {eyebrow}
+          <div className="flex items-center gap-2">
+            <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+              {eyebrow}
+            </div>
+            {eyebrowMeta}
           </div>
           <div className="mt-1.5 flex flex-wrap items-center gap-2">
             <h3 className="font-display text-[1.7rem] italic tracking-tight text-editorial-ink">
@@ -759,12 +696,15 @@ function DocumentPage({
             </div>
           )}
         </div>
-        <div className="shrink-0 flex items-center gap-2">
+        <div className="shrink-0 flex items-center gap-2 pt-1 ml-6">
           {titleMeta}
+          {titleMeta && actions && (
+            <span className="h-4 w-px bg-editorial-border/60" aria-hidden="true" />
+          )}
           {actions}
         </div>
       </div>
-      <div className={`flex flex-col flex-1 min-h-0 ${readOnly ? 'opacity-90' : ''}`}>
+      <div ref={scrollRef} className={`flex flex-col flex-1 min-h-0 ${readOnly ? 'opacity-90' : ''}`}>
         {children}
       </div>
       {footer && (
@@ -794,16 +734,17 @@ function InlineStatusBadge({
         ? 'border-editorial-success/50 bg-editorial-success/8 text-editorial-success'
         : 'border-editorial-border bg-editorial-textbox/60 text-editorial-muted';
   return (
-    <span
-      title={label ?? ariaLabel}
-      aria-label={ariaLabel ?? label}
-      className={`inline-flex items-center rounded-full border ${label ? 'gap-1.5 px-2.5 py-1' : 'p-1.5'} ${toneClasses}`}
-    >
-      {icon}
-      {label && (
-        <span className="text-[10px] font-bold uppercase tracking-[0.18em]">{label}</span>
-      )}
-    </span>
+    <Tooltip label={label ?? ariaLabel}>
+      <span
+        aria-label={ariaLabel ?? label}
+        className={`inline-flex items-center rounded-full border ${label ? 'gap-1.5 px-2.5 py-1' : 'p-1.5'} ${toneClasses}`}
+      >
+        {icon}
+        {label && (
+          <span className="text-[10px] font-bold uppercase tracking-[0.18em]">{label}</span>
+        )}
+      </span>
+    </Tooltip>
   );
 }
 
@@ -813,6 +754,7 @@ function ChunkIconButton({
   title,
   disabled = false,
   active = false,
+  activeClassName,
   ariaPressed,
 }: {
   onClick: () => void;
@@ -820,24 +762,26 @@ function ChunkIconButton({
   title: string;
   disabled?: boolean;
   active?: boolean;
+  activeClassName?: string;
   ariaPressed?: boolean;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      title={title}
-      aria-label={title}
-      aria-pressed={ariaPressed}
-      disabled={disabled}
-      className={`rounded-full border p-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40 ${
-        active
-          ? 'border-editorial-accent bg-editorial-accent text-white'
-          : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
-      }`}
-    >
-      {children}
-    </button>
+    <Tooltip label={title}>
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={title}
+        aria-pressed={ariaPressed}
+        disabled={disabled}
+        className={`rounded-full border p-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40 ${
+          active
+            ? (activeClassName ?? 'border-editorial-accent bg-editorial-accent text-white')
+            : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
+        }`}
+      >
+        {children}
+      </button>
+    </Tooltip>
   );
 }
 
@@ -845,9 +789,9 @@ const COMPACT_STATUS_TONE = {
   completed:
     'border-editorial-success/40 bg-editorial-success/12 text-editorial-success',
   processing:
-    'border-editorial-warning/45 bg-editorial-warning/12 text-editorial-warning animate-pulse',
+    'border-editorial-running/45 bg-editorial-running/12 text-editorial-running animate-pulse',
   error: 'border-editorial-accent/40 bg-editorial-accent/10 text-editorial-accent',
-  retrying: 'border-editorial-warning/45 bg-editorial-warning/12 text-editorial-warning animate-pulse',
+  retrying: 'border-editorial-running/45 bg-editorial-running/12 text-editorial-running animate-pulse',
   idle: 'border-editorial-border bg-editorial-bg text-editorial-muted',
 } as const;
 
@@ -855,23 +799,27 @@ function CompactStatusIndicator({
   status,
   label,
   icon: Icon,
+  size = 'md',
 }: {
   status: string;
   label?: string;
   icon?: LucideIcon;
+  size?: 'sm' | 'md';
 }) {
   const tone =
     status === 'completed' || status === 'processing' || status === 'error' || status === 'retrying'
       ? status
       : 'idle';
+  const sizeClass = size === 'sm' ? 'h-7 w-7' : 'h-9 w-9';
+  const iconSize = size === 'sm' ? 13 : 16;
 
   return (
     <span
-      className={`inline-flex h-9 w-9 items-center justify-center rounded-full border transition-colors ${COMPACT_STATUS_TONE[tone]}`}
+      className={`inline-flex ${sizeClass} items-center justify-center rounded-full border transition-colors ${COMPACT_STATUS_TONE[tone]}`}
       aria-hidden="true"
     >
       {Icon ? (
-        <Icon size={16} strokeWidth={1.9} />
+        <Icon size={iconSize} strokeWidth={1.9} />
       ) : (
         <span className="font-display text-[11px] italic tracking-[0.02em]">
           {label}

@@ -9,10 +9,13 @@ import type {
 export type InsightsDrawerTab = 'index' | 'search' | 'stats' | 'coherence' | 'glossary';
 export type ChunkDrawerTab = 'audit' | 'notes' | 'operations';
 export type RunPhase = 'test' | 'production';
+export type DocumentPaneFocus = 'both' | 'source' | 'translation';
 
 interface UiState {
   viewMode: ViewMode;
   documentLayout: DocumentLayoutPreference;
+  documentPaneFocus: DocumentPaneFocus;
+  syncScrollEnabled: boolean;
   selectedChunkId: string | null;
   showSettings: boolean;
   showHelp: boolean;
@@ -36,6 +39,9 @@ interface UiState {
   focusedIssueQuery: string | null;
   focusedIssueRequestId: number;
 
+  traceStageId: string | null;
+  setTraceStageId: (id: string | null) => void;
+
   pipelineMode: RunPhase;
   setPipelineMode: (mode: RunPhase) => void;
   pipelineTestChunkCount: number;
@@ -53,8 +59,14 @@ interface UiState {
   newPipelineInit: 'copy-first' | 'copy-previous' | 'defaults';
   setNewPipelineInit: (value: 'copy-first' | 'copy-previous' | 'defaults') => void;
 
+  // Maximum number of pipelines allowed (persisted)
+  maxPipelines: number;
+  setMaxPipelines: (value: number) => void;
+
   setViewMode: (mode: ViewMode) => void;
   setDocumentLayout: (layout: DocumentLayoutPreference) => void;
+  setDocumentPaneFocus: (focus: DocumentPaneFocus) => void;
+  setSyncScrollEnabled: (enabled: boolean) => void;
   setSelectedChunkId: (chunkId: string | null) => void;
   setShowSettings: (show: boolean) => void;
   setShowHelp: (show: boolean) => void;
@@ -82,6 +94,8 @@ export const useUiStore = create<UiState>()(
     (set) => ({
   viewMode: 'document',
   documentLayout: 'auto',
+  documentPaneFocus: 'both',
+  syncScrollEnabled: false,
   selectedChunkId: null,
   showSettings: false,
   showHelp: false,
@@ -106,11 +120,13 @@ export const useUiStore = create<UiState>()(
   focusedChunkId: null,
   focusedIssueQuery: null,
   focusedIssueRequestId: 0,
+  traceStageId: null,
   chunkPresetShort: 400,
   chunkPresetMedium: 700,
   chunkPresetLong: 1000,
   ollamaBaseUrl: 'http://localhost:11434',
   newPipelineInit: 'copy-first',
+  maxPipelines: 5,
 
   setViewMode: (mode) =>
     set((state) => ({
@@ -120,6 +136,8 @@ export const useUiStore = create<UiState>()(
       showChunkDrawer: false,
     })),
   setDocumentLayout: (layout) => set({ documentLayout: layout }),
+  setDocumentPaneFocus: (focus) => set({ documentPaneFocus: focus }),
+  setSyncScrollEnabled: (enabled) => set({ syncScrollEnabled: enabled }),
   setSelectedChunkId: (chunkId) => set({ selectedChunkId: chunkId }),
   setShowSettings: (show) =>
     set((state) =>
@@ -204,15 +222,17 @@ export const useUiStore = create<UiState>()(
       focusedIssueRequestId: state.focusedIssueRequestId + 1,
     })),
   clearFocusedIssue: () => set({ focusedIssueQuery: null }),
+  setTraceStageId: (id) => set({ traceStageId: id }),
   setChunkPresetShort: (value) => set((state) => ({ chunkPresetShort: Math.min(Math.max(50, value), state.chunkPresetMedium - 1) })),
   setChunkPresetMedium: (value) => set((state) => ({ chunkPresetMedium: Math.max(state.chunkPresetShort + 1, Math.min(value, state.chunkPresetLong - 1)) })),
   setChunkPresetLong: (value) => set((state) => ({ chunkPresetLong: Math.max(state.chunkPresetMedium + 1, Math.max(50, value)) })),
   setOllamaBaseUrl: (url) => set({ ollamaBaseUrl: url }),
   setNewPipelineInit: (value) => set({ newPipelineInit: value }),
+  setMaxPipelines: (value) => set({ maxPipelines: Math.max(1, Math.min(20, value)) }),
     }),
     {
       name: 'glossa-ui-prefs',
-      version: 2,
+      version: 4,
       migrate: (persisted: unknown, fromVersion: number) => {
         const s = persisted as Record<string, unknown>;
         if (fromVersion < 1) {
@@ -231,11 +251,20 @@ export const useUiStore = create<UiState>()(
           const existing = (s.highlightColors ?? {}) as Record<string, string>;
           s.highlightColors = { ...defaults, ...existing };
         }
+        if (fromVersion < 3) {
+          s.maxPipelines = 5;
+        }
+        if (fromVersion < 4) {
+          s.documentPaneFocus = 'both';
+          s.syncScrollEnabled = false;
+        }
         return s;
       },
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         documentLayout: state.documentLayout,
+        documentPaneFocus: state.documentPaneFocus,
+        syncScrollEnabled: state.syncScrollEnabled,
         chunkPresetShort: state.chunkPresetShort,
         chunkPresetMedium: state.chunkPresetMedium,
         chunkPresetLong: state.chunkPresetLong,
@@ -244,6 +273,7 @@ export const useUiStore = create<UiState>()(
         newPipelineInit: state.newPipelineInit,
         highlightsEnabled: state.highlightsEnabled,
         highlightColors: state.highlightColors,
+        maxPipelines: state.maxPipelines,
       }),
     },
   ),

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Tooltip } from './Tooltip';
 
 interface IconButtonProps {
   onClick?: () => void;
@@ -41,16 +42,17 @@ export function IconButton({
   }
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      title={title}
-      aria-label={ariaLabel ?? title}
-      aria-pressed={ariaPressed}
-      className={`${BASE} ${SIZE_CLASS[size]} ${stateClass} ${className}`}
-    >
-      {children}
-    </button>
+    <Tooltip label={title}>
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        aria-label={ariaLabel ?? title}
+        aria-pressed={ariaPressed}
+        className={`${BASE} ${SIZE_CLASS[size]} ${stateClass} ${className}`}
+      >
+        {children}
+      </button>
+    </Tooltip>
   );
 }
