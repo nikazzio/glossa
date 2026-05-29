@@ -48,6 +48,7 @@
   --color-editorial-textbox: #EAE5DE;
   --color-editorial-success: #3A7A65;
   --color-editorial-warning: #666666;
+  --color-editorial-running: #C49B2A;
 
   /* ── Dark mode — placeholder token overrides (PR futura) ─────────────────── */
   /* @media (prefers-color-scheme: dark) { */

@@ -279,12 +279,53 @@ export function DocumentView({
         <div className="flex items-stretch gap-2 shrink-0">
           {/* Pannello run: striscia orizzontale compatta */}
           {onRunPipeline && onCancelPipeline && (
-            <div className={`grid shrink-0 grid-cols-[auto_auto] items-stretch gap-x-3 gap-y-2 rounded-[20px] border px-4 py-3 ${runPanelClass}`}>
-              {activePipeline && (
-                <div className="col-span-2 text-[9px] font-bold uppercase tracking-wider text-editorial-accent/70">
-                  {activePipeline.name}
+            <div className={`grid shrink-0 grid-cols-[auto_auto] items-stretch gap-x-3 gap-y-2 rounded-[20px] border px-5 py-3 ${runPanelClass}`}>
+              <div className="col-span-2 flex items-center justify-between gap-3 min-h-[20px]">
+                {activePipeline ? (
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-editorial-accent/70 shrink-0">
+                    {activePipeline.name}
+                  </span>
+                ) : <span />}
+                <div className="flex items-center gap-1">
+                  {config.stages.map((stage) => {
+                    const stageIcon: LucideIcon =
+                      stage.role === 'refine' ? Pencil
+                      : stage.role === 'format' ? FileText
+                      : Languages;
+                    return (
+                      <button
+                        key={stage.id}
+                        type="button"
+                        onClick={() => stage.enabled && currentChunk && setTraceStageId(stage.id)}
+                        disabled={!stage.enabled || !currentChunk}
+                        title={stage.name}
+                        aria-label={stage.name}
+                        className={`rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed ${!stage.enabled ? 'opacity-25' : ''}`}
+                      >
+                        <CompactStatusIndicator
+                          status={stage.enabled ? (currentChunk?.stageResults[stage.id]?.status ?? 'idle') : 'idle'}
+                          icon={stageIcon}
+                          size="sm"
+                        />
+                      </button>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    onClick={() => currentChunk && setTraceStageId('_judge')}
+                    disabled={!currentChunk}
+                    title={t('pipeline.audit')}
+                    aria-label={t('pipeline.audit')}
+                    className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed"
+                  >
+                    <CompactStatusIndicator
+                      status={currentChunk?.judgeResult.status ?? 'idle'}
+                      icon={ScanLine}
+                      size="sm"
+                    />
+                  </button>
                 </div>
-              )}
+              </div>
               <div className="grid w-fit gap-2 self-stretch">
                 <div className="flex w-full items-center justify-center rounded-full border border-editorial-border bg-editorial-textbox/40 p-0.5">
                   <button
@@ -463,16 +504,16 @@ export function DocumentView({
                         : chunk.status === 'error'
                           ? 'bg-editorial-accent/70'
                           : chunk.status === 'processing'
-                            ? 'bg-editorial-warning/70 animate-pulse'
-                            : 'bg-editorial-border';
+                            ? 'bg-editorial-running/80 animate-pulse'
+                            : 'bg-editorial-charcoal/25';
                     return (
                       <button
                         key={chunk.id}
                         type="button"
                         onClick={() => setSelectedChunkId(chunk.id)}
                         title={truncateChunk(chunk.sourceDisplayText)}
-                        className={`h-1.5 w-1.5 shrink-0 rounded-full transition-colors ${dotTone} ${
-                          idx === currentIndex ? 'ring-1 ring-editorial-accent/60 ring-offset-1 ring-offset-editorial-bg' : ''
+                        className={`h-2.5 w-2.5 shrink-0 rounded-full transition-colors ${dotTone} ${
+                          idx === currentIndex ? 'ring-1 ring-editorial-charcoal/50 ring-offset-1 ring-offset-editorial-bg' : ''
                         }`}
                       />
                     );
@@ -539,9 +580,9 @@ export function DocumentView({
               </ChunkIconButton>
             </div>
 
-            {/* Destra: stage controls + qualità */}
+            {/* Destra: diff select + lock */}
             <div className="flex items-center gap-2">
-              {showDiffMode ? (
+              {showDiffMode && (
                 <div className="flex items-center gap-2">
                   <StageSelect
                     value={effectiveDiffStageIdA}
@@ -559,44 +600,6 @@ export function DocumentView({
                     label="B"
                   />
                 </div>
-              ) : (
-                <>
-                  {config.stages
-                    .filter((stage) => stage.enabled)
-                    .map((stage) => {
-                      const stageIcon: LucideIcon =
-                        stage.role === 'refine' ? Pencil
-                        : stage.role === 'format' ? FileText
-                        : Languages;
-                      return (
-                        <button
-                          key={stage.id}
-                          type="button"
-                          onClick={() => setTraceStageId(stage.id)}
-                          className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                          title={stage.name}
-                          aria-label={stage.name}
-                        >
-                          <CompactStatusIndicator
-                            status={currentChunk.stageResults[stage.id]?.status || 'idle'}
-                            icon={stageIcon}
-                          />
-                        </button>
-                      );
-                    })}
-                  <button
-                    type="button"
-                    onClick={() => setTraceStageId('_judge')}
-                    className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                    title={t('pipeline.audit')}
-                    aria-label={t('pipeline.audit')}
-                  >
-                    <CompactStatusIndicator
-                      status={currentChunk.judgeResult.status}
-                      icon={ScanLine}
-                    />
-                  </button>
-                </>
               )}
               <button
                 type="button"
@@ -700,7 +703,7 @@ export function DocumentView({
                   );
                 })}
                 <span className="mx-1 h-4 w-px bg-editorial-border/60" aria-hidden="true" />
-                <span className="font-display text-sm italic text-editorial-muted/80 shrink-0">
+                <span className="font-display text-sm italic text-editorial-muted/80 w-[8rem] truncate">
                   {activeStage?.name ?? t('document.finalDraft')}
                 </span>
               </div>
@@ -898,8 +901,11 @@ function DocumentPage({
             </div>
           )}
         </div>
-        <div className="shrink-0 flex items-center gap-2 pt-1">
+        <div className="shrink-0 flex items-center gap-2 pt-1 ml-6">
           {titleMeta}
+          {titleMeta && actions && (
+            <span className="h-4 w-px bg-editorial-border/60" aria-hidden="true" />
+          )}
           {actions}
         </div>
       </div>
@@ -984,9 +990,9 @@ const COMPACT_STATUS_TONE = {
   completed:
     'border-editorial-success/40 bg-editorial-success/12 text-editorial-success',
   processing:
-    'border-editorial-warning/45 bg-editorial-warning/12 text-editorial-warning animate-pulse',
+    'border-editorial-running/45 bg-editorial-running/12 text-editorial-running animate-pulse',
   error: 'border-editorial-accent/40 bg-editorial-accent/10 text-editorial-accent',
-  retrying: 'border-editorial-warning/45 bg-editorial-warning/12 text-editorial-warning animate-pulse',
+  retrying: 'border-editorial-running/45 bg-editorial-running/12 text-editorial-running animate-pulse',
   idle: 'border-editorial-border bg-editorial-bg text-editorial-muted',
 } as const;
 
@@ -994,23 +1000,27 @@ function CompactStatusIndicator({
   status,
   label,
   icon: Icon,
+  size = 'md',
 }: {
   status: string;
   label?: string;
   icon?: LucideIcon;
+  size?: 'sm' | 'md';
 }) {
   const tone =
     status === 'completed' || status === 'processing' || status === 'error' || status === 'retrying'
       ? status
       : 'idle';
+  const sizeClass = size === 'sm' ? 'h-7 w-7' : 'h-9 w-9';
+  const iconSize = size === 'sm' ? 13 : 16;
 
   return (
     <span
-      className={`inline-flex h-9 w-9 items-center justify-center rounded-full border transition-colors ${COMPACT_STATUS_TONE[tone]}`}
+      className={`inline-flex ${sizeClass} items-center justify-center rounded-full border transition-colors ${COMPACT_STATUS_TONE[tone]}`}
       aria-hidden="true"
     >
       {Icon ? (
-        <Icon size={16} strokeWidth={1.9} />
+        <Icon size={iconSize} strokeWidth={1.9} />
       ) : (
         <span className="font-display text-[11px] italic tracking-[0.02em]">
           {label}
