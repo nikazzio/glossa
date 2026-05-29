@@ -44,3 +44,5 @@ src/dev/
 .opencode.json
 AGENTS.md
 GEMINI.md
+skills-lock.json
+.mcp.json
