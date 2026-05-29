@@ -12,27 +12,24 @@ export function ConfirmDialog() {
   return (
     <AnimatePresence>
       {open && request && (
-        <div
-          className="fixed inset-0 z-[200] flex items-center justify-center p-6"
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-editorial-ink/35 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
           aria-labelledby="confirm-title"
           aria-describedby={request.message ? 'confirm-message' : undefined}
           ref={trapRef}
+          onClick={() => resolve(false)}
         >
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-editorial-ink/35 backdrop-blur-sm"
-            onClick={() => resolve(false)}
-          />
-
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
             className="relative w-full max-w-md rounded-[28px] border border-editorial-border bg-editorial-bg shadow-[0_24px_80px_rgba(26,26,26,0.2)]"
+            onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
             <div className="border-b border-editorial-border px-6 py-5">
@@ -92,7 +89,7 @@ export function ConfirmDialog() {
               </button>
             </div>
           </motion.div>
-        </div>
+        </motion.div>
       )}
     </AnimatePresence>
   );

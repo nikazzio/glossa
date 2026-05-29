@@ -9,10 +9,13 @@ import type {
 export type InsightsDrawerTab = 'index' | 'search' | 'stats' | 'coherence' | 'glossary';
 export type ChunkDrawerTab = 'audit' | 'notes' | 'operations';
 export type RunPhase = 'test' | 'production';
+export type DocumentPaneFocus = 'both' | 'source' | 'translation';
 
 interface UiState {
   viewMode: ViewMode;
   documentLayout: DocumentLayoutPreference;
+  documentPaneFocus: DocumentPaneFocus;
+  syncScrollEnabled: boolean;
   selectedChunkId: string | null;
   showSettings: boolean;
   showHelp: boolean;
@@ -62,6 +65,8 @@ interface UiState {
 
   setViewMode: (mode: ViewMode) => void;
   setDocumentLayout: (layout: DocumentLayoutPreference) => void;
+  setDocumentPaneFocus: (focus: DocumentPaneFocus) => void;
+  setSyncScrollEnabled: (enabled: boolean) => void;
   setSelectedChunkId: (chunkId: string | null) => void;
   setShowSettings: (show: boolean) => void;
   setShowHelp: (show: boolean) => void;
@@ -89,6 +94,8 @@ export const useUiStore = create<UiState>()(
     (set) => ({
   viewMode: 'document',
   documentLayout: 'auto',
+  documentPaneFocus: 'both',
+  syncScrollEnabled: false,
   selectedChunkId: null,
   showSettings: false,
   showHelp: false,
@@ -129,6 +136,8 @@ export const useUiStore = create<UiState>()(
       showChunkDrawer: false,
     })),
   setDocumentLayout: (layout) => set({ documentLayout: layout }),
+  setDocumentPaneFocus: (focus) => set({ documentPaneFocus: focus }),
+  setSyncScrollEnabled: (enabled) => set({ syncScrollEnabled: enabled }),
   setSelectedChunkId: (chunkId) => set({ selectedChunkId: chunkId }),
   setShowSettings: (show) =>
     set((state) =>
@@ -223,7 +232,7 @@ export const useUiStore = create<UiState>()(
     }),
     {
       name: 'glossa-ui-prefs',
-      version: 3,
+      version: 4,
       migrate: (persisted: unknown, fromVersion: number) => {
         const s = persisted as Record<string, unknown>;
         if (fromVersion < 1) {
@@ -245,11 +254,17 @@ export const useUiStore = create<UiState>()(
         if (fromVersion < 3) {
           s.maxPipelines = 5;
         }
+        if (fromVersion < 4) {
+          s.documentPaneFocus = 'both';
+          s.syncScrollEnabled = false;
+        }
         return s;
       },
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         documentLayout: state.documentLayout,
+        documentPaneFocus: state.documentPaneFocus,
+        syncScrollEnabled: state.syncScrollEnabled,
         chunkPresetShort: state.chunkPresetShort,
         chunkPresetMedium: state.chunkPresetMedium,
         chunkPresetLong: state.chunkPresetLong,

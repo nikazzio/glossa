@@ -154,6 +154,7 @@
     "resetPreviewDone": "Anteprima azzerata",
     "modeTest": "Test",
     "modeProduction": "Produzione",
+    "modeLabel": "Modalità",
     "modeTestHint": "Esegue la pipeline su un solo blocco e produce un'anteprima. La configurazione rimane modificabile.",
     "modeProductionHint": "Esegue la pipeline sull'intero documento.",
     "modeLockedHint": "Modalità bloccata — esistono già traduzioni. Usa Reset completo per ricominciare.",
@@ -326,7 +327,8 @@
     "deletePipeline": "Elimina pipeline",
     "confirmDeleteTitle": "Eliminare la pipeline?",
     "confirmDeleteMessage": "\"{{name}}\" verrà rimossa definitivamente insieme a tutte le sue traduzioni.",
-    "configurePipeline": "Configura pipeline"
+    "configurePipeline": "Configura pipeline",
+    "sectionTitle": "Pipeline"
   },
   "audit": {
     "title": "Log Audit",
@@ -680,6 +682,8 @@
     "focusBoth": "Mostra entrambi",
     "focusSource": "Solo sorgente",
     "focusTranslation": "Solo traduzione",
+    "panelsTitle": "Pannelli",
+    "chunkLabel": "Chunk",
     "scrollSyncEnable": "Abilita scroll sincronizzato",
     "scrollSyncDisable": "Disabilita scroll sincronizzato",
     "diffModeEnable": "Confronta stage",
