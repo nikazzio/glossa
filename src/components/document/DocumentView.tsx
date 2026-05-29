@@ -147,7 +147,7 @@ export function DocumentView({
     chunks.findIndex((chunk) => chunk.id === selectedChunkId),
   );
   const currentChunk = chunks[currentIndex] ?? null;
-  const enabledStages = config.stages.filter((s) => s.enabled);
+  const enabledStages = useMemo(() => config.stages.filter((s) => s.enabled), [config.stages]);
   const lastStageId = enabledStages[enabledStages.length - 1]?.id ?? '';
   const isEditorialMode = enabledStages.length > 1;
   const deferredSourceText = useDeferredValue(currentChunk?.sourceDisplayText ?? '');
@@ -586,6 +586,7 @@ export function DocumentView({
                     })}
                   <button
                     type="button"
+                    onClick={() => setTraceStageId('_judge')}
                     className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                     title={t('pipeline.audit')}
                     aria-label={t('pipeline.audit')}
@@ -670,6 +671,7 @@ export function DocumentView({
 
           {paneFocus !== 'source' && (() => {
             const stageReadOnly = !isLastSelected || currentChunk.translationLocked === true;
+            const activeStage = enabledStages.find((s) => s.id === effectiveSelectedStageId);
             const stageActions = isEditorialMode ? (
               <div className="flex items-center gap-1">
                 {enabledStages.map((s) => {
@@ -697,6 +699,10 @@ export function DocumentView({
                     </button>
                   );
                 })}
+                <span className="mx-1 h-4 w-px bg-editorial-border/60" aria-hidden="true" />
+                <span className="font-display text-sm italic text-editorial-muted/80 shrink-0">
+                  {activeStage?.name ?? t('document.finalDraft')}
+                </span>
               </div>
             ) : null;
 
@@ -712,11 +718,10 @@ export function DocumentView({
                 subtitle={
                   showDiffMode
                     ? `${diffStageName(effectiveDiffStageIdA)} → ${diffStageName(effectiveDiffStageIdB)}`
-                    : isEditorialMode
-                      ? t(`pipeline.stageRole.${enabledStages.find(s => s.id === effectiveSelectedStageId)?.role ?? 'translation'}`)
-                      : undefined
+                    : undefined
                 }
-                subtitleAction={!showDiffMode && rawStageContent ? <CopyButton text={rawStageContent} /> : undefined}
+                subtitleAction={showDiffMode && rawStageContent ? <CopyButton text={rawStageContent} /> : undefined}
+                titleMeta={!showDiffMode && rawStageContent ? <CopyButton text={rawStageContent} /> : undefined}
                 actions={!showDiffMode ? stageActions : null}
                 statusBadge={currentChunk.translationStale ? (
                   <InlineStatusBadge tone="amber" icon={<AlertTriangle size={13} />} label={t('document.translationStaleBadge')} />
@@ -759,6 +764,7 @@ export function DocumentView({
         <StageTraceDialog
           chunk={currentChunk}
           stage={config.stages.find((entry) => entry.id === traceStageId) ?? null}
+          isJudge={traceStageId === '_judge'}
           onClose={() => setTraceStageId(null)}
         />
       ) : null}
@@ -784,15 +790,18 @@ interface DocumentPageProps {
 function StageTraceDialog({
   chunk,
   stage,
+  isJudge = false,
   onClose,
 }: {
   chunk: TranslationChunk;
   stage: ReturnType<typeof usePipelineStore.getState>['config']['stages'][number] | null;
+  isJudge?: boolean;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
   const trapRef = useFocusTrap(true, onClose);
-  const result = stage ? chunk.stageResults[stage.id] : null;
+  const result = isJudge ? chunk.judgeResult : stage ? chunk.stageResults[stage.id] : null;
+  const dialogTitle = isJudge ? t('pipeline.audit') : (stage?.name ?? t('errors.unknownError'));
 
   return (
     <div
@@ -811,7 +820,7 @@ function StageTraceDialog({
             id="stage-trace-title"
             className="mt-2 font-display text-3xl italic tracking-tight text-editorial-ink"
           >
-            {stage?.name ?? t('errors.unknownError')}
+            {dialogTitle}
           </h3>
           <p className="mt-2 text-sm leading-relaxed text-editorial-muted">
             {result?.status ?? 'idle'}
@@ -869,7 +878,7 @@ function DocumentPage({
       highlighted ? 'border border-editorial-accent ring-2 ring-editorial-accent/30' : 'border border-[#d8cfbf]'
     }`}>
       {/* Header con altezza minima fissa per allineare il corpo testo tra i due pannelli */}
-      <div className="mb-4 shrink-0 flex items-start justify-between gap-4 border-b border-[#ede4d6] pb-3 min-h-[72px]">
+      <div className="mb-4 shrink-0 flex items-start justify-between gap-4 border-b border-[#ede4d6] pb-3">
         <div className="min-w-0">
           <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
             {eyebrow}
