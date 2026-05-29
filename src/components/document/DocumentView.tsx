@@ -6,6 +6,7 @@ import {
   Columns2,
   FileText,
   FlaskConical,
+  Highlighter,
   Info,
   Languages,
   Loader2,
@@ -74,7 +75,9 @@ export function DocumentView({
     selectedChunkId,
     setSelectedChunkId,
     documentLayout,
-    glossaryHighlightEnabled,
+    highlightsEnabled,
+    setHighlightsEnabled,
+    searchQuery,
     pipelineMode,
     setPipelineMode,
     pipelineTestChunkCount,
@@ -82,7 +85,6 @@ export function DocumentView({
     focusedChunkId,
     focusedIssueQuery,
     focusedIssueRequestId,
-    clearFocusedIssue,
   } = useUiStore();
 
   const effectivePipelineMode = pipelineMode;
@@ -157,25 +159,29 @@ export function DocumentView({
 
   // Hooks devono essere chiamati prima di qualsiasi return condizionale
   const hasGlossary = config.glossary.length > 0;
-  const showHighlight = glossaryHighlightEnabled && hasGlossary;
+  const showHighlight = highlightsEnabled && hasGlossary;
   const sourceHighlight = useGlossaryHighlight(
     paneFocus !== 'translation' ? deferredSourceText : '',
     showHighlight && paneFocus !== 'translation' ? config.glossary : [],
     'source',
+    highlightsEnabled ? searchQuery : '',
   );
   const translationHighlight = useGlossaryHighlight(
     paneFocus !== 'source' ? deferredStageContent : '',
     showHighlight && paneFocus !== 'source' ? config.glossary : [],
     'translation',
+    highlightsEnabled ? searchQuery : '',
+    focusedIssueQuery ?? '',
   );
 
   const sourceHighlightHtml = useMemo(() => {
     const hasFootnoteMarkers = /\[[⁰¹²³⁴⁵⁶⁷⁸⁹]/.test(deferredSourceText);
     const showGlossary = showHighlight && paneFocus !== 'translation';
-    if (!showGlossary && !hasFootnoteMarkers) return null;
-    const base = showGlossary ? sourceHighlight.html : escapeHtml(deferredSourceText);
+    const hasSearch = highlightsEnabled && !!searchQuery.trim() && paneFocus !== 'translation';
+    if (!showGlossary && !hasSearch && !hasFootnoteMarkers) return null;
+    const base = (showGlossary || hasSearch) ? sourceHighlight.html : escapeHtml(deferredSourceText);
     return hasFootnoteMarkers ? highlightSuperscriptMarkersHtml(base) : base;
-  }, [deferredSourceText, showHighlight, paneFocus, sourceHighlight.html]);
+  }, [deferredSourceText, showHighlight, highlightsEnabled, searchQuery, paneFocus, sourceHighlight.html]);
 
   if (!currentChunk) {
     return (
@@ -412,7 +418,7 @@ export function DocumentView({
               </ChunkIconButton>
             </div>
 
-            {/* Centro: pannelli visualizzazione */}
+            {/* Centro: pannelli visualizzazione + toggle highlights */}
             <div className="flex items-center gap-1">
               <ChunkIconButton
                 onClick={() => setPaneFocus('both')}
@@ -437,6 +443,15 @@ export function DocumentView({
                 ariaPressed={paneFocus === 'translation'}
               >
                 <PanelRight size={18} />
+              </ChunkIconButton>
+              <span className="mx-1 h-4 w-px bg-editorial-border/60" aria-hidden="true" />
+              <ChunkIconButton
+                onClick={() => setHighlightsEnabled(!highlightsEnabled)}
+                title={t('document.highlightsToggle')}
+                active={highlightsEnabled}
+                ariaPressed={highlightsEnabled}
+              >
+                <Highlighter size={18} />
               </ChunkIconButton>
             </div>
 
@@ -602,10 +617,10 @@ export function DocumentView({
                   textClassName="text-[15px] leading-8 text-editorial-ink"
                   previewClassName="min-h-[280px] text-[15px] leading-8 text-editorial-ink"
                   placeholder={isLastSelected ? t('pipeline.candidatePlaceholder') : ''}
-                  highlightHtml={showHighlight ? translationHighlight.html : null}
+                  highlightHtml={(showHighlight || (highlightsEnabled && !!searchQuery.trim()) || !!focusedIssueQuery) ? translationHighlight.html : null}
                   focusQuery={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueQuery : null}
                   focusRequestId={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueRequestId : 0}
-                  onFocusQueryHandled={isLastSelected ? clearFocusedIssue : undefined}
+
                 />
               </DocumentPage>
             );

@@ -54,6 +54,33 @@ describe('useGlossaryHighlight', () => {
     expect(result.current.html).toContain('class="hl-source-term"');
     expect(result.current.html).toContain('>API<');
   });
+
+  it('merges underline and background when search overlaps a source glossary term', () => {
+    const { result } = renderHook(() =>
+      useGlossaryHighlight('Il libro è qui.', GLOSSARY, 'source', 'libro'),
+    );
+
+    act(() => { vi.advanceTimersByTime(300); });
+
+    expect(result.current.html).toContain('hl-source-term');
+    expect(result.current.html).toContain('hl-search');
+    // Both classes must be on the same <mark>, not separate elements
+    expect(result.current.html).toMatch(
+      /class="[^"]*hl-search[^"]*hl-source-term[^"]*"|class="[^"]*hl-source-term[^"]*hl-search[^"]*"/,
+    );
+  });
+
+  it('resolves two background classes by priority — hl-match beats hl-search', () => {
+    const { result } = renderHook(() =>
+      useGlossaryHighlight('These books are here.', GLOSSARY, 'translation', 'books'),
+    );
+
+    act(() => { vi.advanceTimersByTime(300); });
+
+    // hl-match (priority 0) wins over hl-search (priority 2) on "books"
+    expect(result.current.html).toContain('hl-match');
+    expect(result.current.html).not.toMatch(/>books<\/mark>.*class="hl-search"/);
+  });
 });
 
 describe('escapeHtml', () => {

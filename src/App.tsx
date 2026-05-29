@@ -10,6 +10,19 @@ import { useLibraryStore } from './stores/libraryStore';
 import { useChunksStore } from './stores/chunksStore';
 import { Toaster } from 'sonner';
 
+function HighlightColorSync() {
+  const highlightColors = useUiStore((s) => s.highlightColors);
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty('--hl-source-term-color', highlightColors.sourceTerm);
+    root.style.setProperty('--hl-match-bg', highlightColors.matchTerm);
+    root.style.setProperty('--hl-mismatch-bg', highlightColors.mismatchTerm);
+    root.style.setProperty('--hl-search-bg', highlightColors.search);
+    root.style.setProperty('--hl-audit-bg', highlightColors.auditPhrase);
+  }, [highlightColors]);
+  return null;
+}
+
 const PipelineConfig = lazy(() =>
   import('./components/pipeline').then((m) => ({ default: m.PipelineConfig })),
 );
@@ -75,6 +88,7 @@ export default function App() {
 
   return (
     <ErrorBoundary>
+      <HighlightColorSync />
       <div className="h-screen overflow-hidden bg-editorial-bg text-editorial-ink font-sans flex flex-col">
         <div className="flex-shrink-0">
           <Header

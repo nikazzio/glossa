@@ -6,7 +6,7 @@ import type {
   ViewMode,
 } from '../types';
 
-export type InsightsDrawerTab = 'index' | 'stats' | 'coherence' | 'glossary';
+export type InsightsDrawerTab = 'index' | 'search' | 'stats' | 'coherence' | 'glossary';
 export type ChunkDrawerTab = 'audit' | 'notes' | 'operations';
 export type RunPhase = 'test' | 'production';
 
@@ -23,7 +23,15 @@ interface UiState {
   chunkDrawerTab: ChunkDrawerTab;
   ollamaModels: string[];
   ollamaStatus: OllamaStatus;
-  glossaryHighlightEnabled: boolean;
+  highlightsEnabled: boolean;
+  highlightColors: {
+    sourceTerm: string;
+    matchTerm: string;
+    mismatchTerm: string;
+    search: string;
+    auditPhrase: string;
+  };
+  searchQuery: string;
   focusedChunkId: string | null;
   focusedIssueQuery: string | null;
   focusedIssueRequestId: number;
@@ -57,7 +65,9 @@ interface UiState {
   setChunkDrawerTab: (tab: ChunkDrawerTab) => void;
   setOllamaModels: (models: string[]) => void;
   setOllamaStatus: (status: OllamaStatus) => void;
-  setGlossaryHighlightEnabled: (enabled: boolean) => void;
+  setHighlightsEnabled: (enabled: boolean) => void;
+  setHighlightColor: (type: keyof UiState['highlightColors'], color: string) => void;
+  setSearchQuery: (query: string) => void;
   setFocusedChunkId: (chunkId: string | null) => void;
   focusIssueInChunk: (chunkId: string, query?: string | null) => void;
   clearFocusedIssue: () => void;
@@ -82,7 +92,15 @@ export const useUiStore = create<UiState>()(
   chunkDrawerTab: 'audit',
   ollamaModels: [],
   ollamaStatus: 'unknown',
-  glossaryHighlightEnabled: false,
+  highlightsEnabled: true,
+  highlightColors: {
+    sourceTerm: '#3b82f6',
+    matchTerm: 'rgba(34,197,94,0.18)',
+    mismatchTerm: 'rgba(239,68,68,0.15)',
+    search: 'rgba(234,179,8,0.25)',
+    auditPhrase: 'rgba(249,115,22,0.25)',
+  },
+  searchQuery: '',
   pipelineMode: 'test',
   pipelineTestChunkCount: 3,
   focusedChunkId: null,
@@ -174,7 +192,10 @@ export const useUiStore = create<UiState>()(
     const normalized = Number.isFinite(count) ? Math.floor(count) : 1;
     set({ pipelineTestChunkCount: Math.max(1, normalized) });
   },
-  setGlossaryHighlightEnabled: (enabled) => set({ glossaryHighlightEnabled: enabled }),
+  setHighlightsEnabled: (enabled) => set({ highlightsEnabled: enabled }),
+  setHighlightColor: (type, color) =>
+    set((state) => ({ highlightColors: { ...state.highlightColors, [type]: color } })),
+  setSearchQuery: (query) => set({ searchQuery: query }),
   setFocusedChunkId: (chunkId) => set({ focusedChunkId: chunkId }),
   focusIssueInChunk: (chunkId, query) =>
     set((state) => ({
@@ -191,6 +212,27 @@ export const useUiStore = create<UiState>()(
     }),
     {
       name: 'glossa-ui-prefs',
+      version: 2,
+      migrate: (persisted: unknown, fromVersion: number) => {
+        const s = persisted as Record<string, unknown>;
+        if (fromVersion < 1) {
+          if ('glossaryHighlightEnabled' in s) {
+            s.highlightsEnabled = s.glossaryHighlightEnabled;
+          }
+        }
+        if (fromVersion < 2) {
+          const defaults: Record<string, string> = {
+            sourceTerm: '#3b82f6',
+            matchTerm: 'rgba(34,197,94,0.18)',
+            mismatchTerm: 'rgba(239,68,68,0.15)',
+            search: 'rgba(234,179,8,0.25)',
+            auditPhrase: 'rgba(249,115,22,0.25)',
+          };
+          const existing = (s.highlightColors ?? {}) as Record<string, string>;
+          s.highlightColors = { ...defaults, ...existing };
+        }
+        return s;
+      },
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         documentLayout: state.documentLayout,
@@ -200,6 +242,8 @@ export const useUiStore = create<UiState>()(
         pipelineTestChunkCount: state.pipelineTestChunkCount,
         ollamaBaseUrl: state.ollamaBaseUrl,
         newPipelineInit: state.newPipelineInit,
+        highlightsEnabled: state.highlightsEnabled,
+        highlightColors: state.highlightColors,
       }),
     },
   ),

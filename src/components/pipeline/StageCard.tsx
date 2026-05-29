@@ -4,6 +4,7 @@ import {
   BookOpen,
   Check,
   Cpu,
+  FileText,
   Loader2,
   Pencil,
   RefreshCw,
@@ -259,6 +260,7 @@ export function StageCard({
       <div className="rounded-[20px] border border-editorial-border bg-editorial-bg/70 px-5 py-4 space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-1.5">
+            <FileText size={11} className="text-editorial-accent shrink-0" />
             <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
               {t('pipeline.prompt')}
             </span>

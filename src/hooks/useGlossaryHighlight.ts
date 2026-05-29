@@ -77,25 +77,42 @@ function findSpans(
   return spans;
 }
 
-// Runs matching on the raw text and builds HTML in one pass to avoid
-// (a) entity-escaping breaking matches and (b) replacements matching inside markup.
+// Classes that use background-color (mutually exclusive per interval).
+// Classes not in this set use text-decoration and can coexist with a background.
+const BG_CLASSES = new Set(['hl-match', 'hl-mismatch', 'hl-search', 'hl-audit']);
+
+// Builds HTML using an interval-breakpoint approach so that non-conflicting
+// highlight properties (e.g. underline + background) can coexist on the same
+// <mark> element when their spans overlap.
 function buildHtml(text: string, spans: MatchSpan[]): string {
-  const sorted = [...spans].sort((a, b) =>
-    a.start !== b.start
-      ? a.start - b.start
-      : a.priority !== b.priority
-        ? a.priority - b.priority
-        : (b.end - b.start) - (a.end - a.start),
-  );
+  if (spans.length === 0) return escapeHtml(text);
+
+  const pts = [...new Set([0, text.length, ...spans.flatMap(s => [s.start, s.end])])].sort((a, b) => a - b);
+
+  const bgSpans = spans
+    .filter(s => BG_CLASSES.has(s.cls))
+    .sort((a, b) => a.priority - b.priority || (b.end - b.start) - (a.end - a.start));
+  const decoSpans = spans.filter(s => !BG_CLASSES.has(s.cls));
+
   let result = '';
-  let pos = 0;
-  for (const span of sorted) {
-    if (span.start < pos) continue; // skip overlapping spans
-    result += escapeHtml(text.slice(pos, span.start));
-    result += `<mark class="${span.cls}" title="${escapeHtml(span.tooltip)}">${escapeHtml(text.slice(span.start, span.end))}</mark>`;
-    pos = span.end;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const from = pts[i];
+    const to = pts[i + 1];
+    const segment = escapeHtml(text.slice(from, to));
+
+    const activeBg = bgSpans.filter(s => s.start <= from && s.end >= to);
+    const activeDeco = decoSpans.filter(s => s.start <= from && s.end >= to);
+
+    if (activeBg.length === 0 && activeDeco.length === 0) { result += segment; continue; }
+
+    const bgWinner = activeBg[0];
+    const decoClasses = [...new Set(activeDeco.map(s => s.cls))];
+    const classes = [...(bgWinner ? [bgWinner.cls] : []), ...decoClasses];
+    const tooltip = activeBg[0]?.tooltip || activeDeco[0]?.tooltip || '';
+
+    result += `<mark class="${classes.join(' ')}"${tooltip ? ` title="${escapeHtml(tooltip)}"` : ''}>${segment}</mark>`;
   }
-  result += escapeHtml(text.slice(pos));
+
   return result;
 }
 
@@ -103,6 +120,8 @@ export function useGlossaryHighlight(
   text: string,
   glossary: GlossaryEntry[],
   mode: 'source' | 'translation',
+  searchQuery = '',
+  auditQuery = '',
 ): HighlightResult {
   const debouncedText = useDebounce(text, 300);
   const validEntries = useMemo(
@@ -124,31 +143,43 @@ export function useGlossaryHighlight(
     if (text !== debouncedText) {
       return { html: escapeHtml(text), matchCount: 0, totalTerms: validEntries.length };
     }
-    if (!debouncedText || patterns.length === 0) {
-      return { html: escapeHtml(debouncedText), matchCount: 0, totalTerms: validEntries.length };
+    if (!debouncedText) {
+      return { html: '', matchCount: 0, totalTerms: validEntries.length };
     }
 
-    if (mode === 'source') {
-      const spans: MatchSpan[] = [];
-      for (const { entry, termRe } of patterns) {
-        const tooltip = `→ ${entry.translation}${entry.notes ? ` | ${entry.notes}` : ''}`;
-        spans.push(...findSpans(debouncedText, termRe, 'hl-source-term', tooltip, 0));
-      }
-      return { html: buildHtml(debouncedText, spans), matchCount: 0, totalTerms: validEntries.length };
-    }
-
-    // translation mode:
-    // - hl-match (priority 0): expected translation found → correctly translated
-    // - hl-mismatch (priority 1): source term found untranslated → missed/wrong translation
     const spans: MatchSpan[] = [];
-    let matchCount = 0;
-    for (const { entry, termRe, transRe } of patterns) {
-      const tooltip = `→ ${entry.translation}${entry.notes ? ` | ${entry.notes}` : ''}`;
-      const transSpans = findSpans(debouncedText, transRe, 'hl-match', tooltip, 0);
-      if (transSpans.length > 0) matchCount++;
-      spans.push(...transSpans);
-      spans.push(...findSpans(debouncedText, termRe, 'hl-mismatch', tooltip, 1));
+
+    if (patterns.length > 0) {
+      if (mode === 'source') {
+        for (const { entry, termRe } of patterns) {
+          const tooltip = `→ ${entry.translation}${entry.notes ? ` | ${entry.notes}` : ''}`;
+          spans.push(...findSpans(debouncedText, termRe, 'hl-source-term', tooltip, 0));
+        }
+      } else {
+        // hl-match (priority 0): expected translation → correct
+        // hl-mismatch (priority 1): source term found untranslated → missed
+        for (const { entry, termRe, transRe } of patterns) {
+          const tooltip = `→ ${entry.translation}${entry.notes ? ` | ${entry.notes}` : ''}`;
+          spans.push(...findSpans(debouncedText, transRe, 'hl-match', tooltip, 0));
+          spans.push(...findSpans(debouncedText, termRe, 'hl-mismatch', tooltip, 1));
+        }
+      }
     }
+
+    if (searchQuery.trim()) {
+      const searchRe = new RegExp(escapeRegex(searchQuery.trim()), 'gi');
+      spans.push(...findSpans(debouncedText, searchRe, 'hl-search', '', 2));
+    }
+
+    if (auditQuery.trim()) {
+      const auditRe = new RegExp(escapeRegex(auditQuery.trim()), 'gi');
+      spans.push(...findSpans(debouncedText, auditRe, 'hl-audit', '', 3));
+    }
+
+    const matchCount = mode === 'translation'
+      ? patterns.filter(({ transRe }) => { transRe.lastIndex = 0; return transRe.test(debouncedText); }).length
+      : 0;
+
     return { html: buildHtml(debouncedText, spans), matchCount, totalTerms: validEntries.length };
-  }, [text, debouncedText, patterns, mode, validEntries.length]);
+  }, [text, debouncedText, patterns, mode, validEntries.length, searchQuery, auditQuery]);
 }

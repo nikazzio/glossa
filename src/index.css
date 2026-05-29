@@ -74,11 +74,19 @@
   border-width: 0;
 }
 
-/* Glossary highlight classes */
+/* Highlight color tokens — overridden at runtime by App.tsx */
+:root {
+  --hl-source-term-color: #3b82f6;
+  --hl-match-bg: rgba(34, 197, 94, 0.18);
+  --hl-mismatch-bg: rgba(239, 68, 68, 0.15);
+  --hl-search-bg: rgba(234, 179, 8, 0.25);
+  --hl-audit-bg: rgba(249, 115, 22, 0.25);
+}
+
 mark.hl-source-term {
   background: transparent;
   text-decoration: underline;
-  text-decoration-color: #3b82f6;
+  text-decoration-color: var(--hl-source-term-color);
   text-decoration-thickness: 2px;
   text-underline-offset: 3px;
   color: inherit;
@@ -86,7 +94,7 @@ mark.hl-source-term {
 }
 
 mark.hl-match {
-  background-color: rgba(34, 197, 94, 0.18);
+  background-color: var(--hl-match-bg);
   border-radius: 2px;
   padding: 0 1px;
   color: inherit;
@@ -94,7 +102,22 @@ mark.hl-match {
 }
 
 mark.hl-mismatch {
-  background-color: rgba(239, 68, 68, 0.15);
+  background-color: var(--hl-mismatch-bg);
+  border-radius: 2px;
+  padding: 0 1px;
+  color: inherit;
+  cursor: help;
+}
+
+mark.hl-search {
+  background-color: var(--hl-search-bg);
+  border-radius: 2px;
+  padding: 0 1px;
+  color: inherit;
+}
+
+mark.hl-audit {
+  background-color: var(--hl-audit-bg);
   border-radius: 2px;
   padding: 0 1px;
   color: inherit;

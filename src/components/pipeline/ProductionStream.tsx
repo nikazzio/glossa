@@ -264,14 +264,14 @@ export function ProductionStream({
     updateChunkOriginalText,
     unlockChunkForEdit,
   } = useChunksStore();
-  const { glossaryHighlightEnabled, setGlossaryHighlightEnabled, chunkPresetMedium } = useUiStore();
+  const { highlightsEnabled, setHighlightsEnabled, chunkPresetMedium } = useUiStore();
   const { t } = useTranslation();
 
   const stats = useMemo(() => estimateTextStats(inputText), [inputText]);
   const recommendedChunks = useMemo(() => recommendChunkCount(inputText, chunkPresetMedium), [inputText, chunkPresetMedium]);
   const enabledStages = useMemo(() => config.stages.filter((s) => s.enabled), [config.stages]);
   const hasGlossary = config.glossary.length > 0;
-  const showHighlight = glossaryHighlightEnabled && hasGlossary;
+  const showHighlight = highlightsEnabled && hasGlossary;
   const markdownEnabled = config.markdownAware === true;
 
   const handleClearStream = useCallback(async () => {
@@ -327,11 +327,11 @@ export function ProductionStream({
           {hasGlossary && (
             <button
               type="button"
-              onClick={() => setGlossaryHighlightEnabled(!glossaryHighlightEnabled)}
-              aria-pressed={glossaryHighlightEnabled}
+              onClick={() => setHighlightsEnabled(!highlightsEnabled)}
+              aria-pressed={highlightsEnabled}
               title={t('library.glossaryHighlightToggle')}
               className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                glossaryHighlightEnabled ? 'text-editorial-ink' : 'text-editorial-muted hover:text-editorial-ink'
+                highlightsEnabled ? 'text-editorial-ink' : 'text-editorial-muted hover:text-editorial-ink'
               }`}
             >
               <Highlighter size={12} />

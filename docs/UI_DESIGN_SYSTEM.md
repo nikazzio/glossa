@@ -27,6 +27,8 @@ when-to-read: prima di creare o modificare qualsiasi componente visivo
 
 **Type scale:** display italic / heading roman wght 560 / body 15px / secondary 13px / label `text-[10px] tracking-[0.35em]` / micro `text-[10px] tracking-[0.12em]`
 
+> **⚠️ Dimensione minima testo contenuto:** `text-xs` (12px). Mai `text-[10px]` o `text-[11px]` per testo leggibile, label di controlli interattivi o descrizioni. `text-[10px]` è **esclusivo** delle etichette sezione uppercase con `tracking-[0.35em]` e badge micro.
+
 ---
 
 ## Regole generali
