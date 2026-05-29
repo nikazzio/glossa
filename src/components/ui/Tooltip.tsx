@@ -25,6 +25,7 @@ interface TooltipProps {
 const TOOLTIP_BOX =
   'pointer-events-none fixed z-[140] w-max max-w-[16rem] rounded-[14px] border border-editorial-border bg-editorial-bg/98 px-3.5 py-2.5 text-center font-display text-[14px] italic leading-tight text-editorial-ink shadow-[0_12px_28px_rgba(26,26,26,0.12)]';
 
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
@@ -94,28 +95,29 @@ export function Tooltip({
 
   if (!label) return <>{children}</>;
 
-  const childElement = children as ReactElement<Record<string, unknown>>;
-  const childProps = isValidElement(children) ? (childElement.props as Record<string, ((event: unknown) => void) | undefined>) : null;
-
   const child = isValidElement(children)
-    ? cloneElement(childElement, {
-        onMouseEnter: (event: unknown) => {
-          setOpen(true);
-          childProps?.onMouseEnter?.(event);
-        },
-        onMouseLeave: (event: unknown) => {
-          setOpen(false);
-          childProps?.onMouseLeave?.(event);
-        },
-        onFocus: (event: unknown) => {
-          setOpen(true);
-          childProps?.onFocus?.(event);
-        },
-        onBlur: (event: unknown) => {
-          setOpen(false);
-          childProps?.onBlur?.(event);
-        },
-      })
+    ? (() => {
+        const childElement = children as ReactElement<Record<string, unknown>>;
+        const childProps = childElement.props as Record<string, ((event: unknown) => void) | undefined>;
+        return cloneElement(childElement, {
+          onMouseEnter: (event: unknown) => {
+            setOpen(true);
+            childProps.onMouseEnter?.(event);
+          },
+          onMouseLeave: (event: unknown) => {
+            setOpen(false);
+            childProps.onMouseLeave?.(event);
+          },
+          onFocus: (event: unknown) => {
+            setOpen(true);
+            childProps.onFocus?.(event);
+          },
+          onBlur: (event: unknown) => {
+            setOpen(false);
+            childProps.onBlur?.(event);
+          },
+        });
+      })()
     : children;
 
   return (

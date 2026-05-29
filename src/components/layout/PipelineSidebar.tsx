@@ -84,8 +84,9 @@ export function PipelineSidebar({
   const testControlsDisabled = isProcessing || pipelineMode !== 'test';
   const syncScrollDisabled = documentPaneFocus !== 'both';
 
-  const currentIndex = Math.max(0, chunks.findIndex((c) => c.id === selectedChunkId));
-  const currentChunk = chunks[currentIndex] ?? null;
+  const foundIndex = chunks.findIndex((c) => c.id === selectedChunkId);
+  const currentIndex = foundIndex >= 0 ? foundIndex : 0;
+  const currentChunk = selectedChunkId && foundIndex >= 0 ? chunks[currentIndex] ?? null : null;
 
   const completedCount = chunks.filter(
     (c) => c.status === 'completed' || c.status === 'preview',

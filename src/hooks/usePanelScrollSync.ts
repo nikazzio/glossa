@@ -25,7 +25,7 @@ export function usePanelScrollSync(enabled: boolean): {
     const translationCtr = translationRef.current;
     if (!sourceCtr || !translationCtr) return;
 
-    const syncFrom = (fromCtr: HTMLElement, toCtr: HTMLElement) => (e: Event) => {
+    const syncFrom = (toCtr: HTMLElement) => (e: Event) => {
       if (isSyncing.current) return;
       const from = e.target as HTMLElement;
       if (from.scrollHeight <= from.clientHeight) return;
@@ -37,8 +37,8 @@ export function usePanelScrollSync(enabled: boolean): {
       requestAnimationFrame(() => { isSyncing.current = false; });
     };
 
-    const onSourceScroll = syncFrom(sourceCtr, translationCtr);
-    const onTranslationScroll = syncFrom(translationCtr, sourceCtr);
+    const onSourceScroll = syncFrom(translationCtr);
+    const onTranslationScroll = syncFrom(sourceCtr);
 
     sourceCtr.addEventListener('scroll', onSourceScroll, { capture: true, passive: true });
     translationCtr.addEventListener('scroll', onTranslationScroll, { capture: true, passive: true });

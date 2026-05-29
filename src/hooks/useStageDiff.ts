@@ -21,6 +21,9 @@ function buildDiffHtml(textA: string, textB: string): string {
 }
 
 export function useStageDiff(textA: string, textB: string): { html: string } {
-  const html = useMemo(() => buildDiffHtml(textA, textB), [textA, textB]);
+  const html = useMemo(() => {
+    if (!textA && !textB) return '';
+    return buildDiffHtml(textA, textB);
+  }, [textA, textB]);
   return { html };
 }

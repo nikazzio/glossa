@@ -29,6 +29,8 @@ import { usePanelScrollSync } from '../../hooks/usePanelScrollSync';
 import { useStageDiff } from '../../hooks/useStageDiff';
 import { highlightSuperscriptMarkersHtml } from '../../utils/footnoteExtractor';
 
+const NOOP_CHANGE = () => {};
+
 interface DocumentViewProps {
   onRetranslateChunk: (chunkId: string) => void;
 }
@@ -283,7 +285,7 @@ export function DocumentView({ onRetranslateChunk }: DocumentViewProps) {
           <div className="w-full rounded-[20px] border border-editorial-border bg-editorial-bg/90 px-4 py-3 shadow-[0_16px_50px_rgba(26,26,26,0.05)]">
             <div className="flex items-center gap-x-4 gap-y-2">
               <div className="flex flex-1 flex-wrap items-center gap-1.5">
-                {config.stages.map((stage) => {
+                {enabledStages.map((stage) => {
                   const Icon: LucideIcon =
                     stage.role === 'refine' ? Pencil
                     : stage.role === 'format' ? FileText
@@ -293,8 +295,8 @@ export function DocumentView({ onRetranslateChunk }: DocumentViewProps) {
                       key={stage.id}
                       icon={Icon}
                       title={stage.name}
-                      disabled={!stage.enabled}
-                      status={stage.enabled ? (currentChunk.stageResults[stage.id]?.status ?? 'idle') : 'idle'}
+                      disabled={false}
+                      status={currentChunk.stageResults[stage.id]?.status ?? 'idle'}
                       onClick={() => setTraceStageId(traceStageId === stage.id ? null : stage.id)}
                     />
                   );
@@ -533,7 +535,7 @@ export function DocumentView({ onRetranslateChunk }: DocumentViewProps) {
                 ) : (
                   <MarkdownEditor
                     value={rawStageContent}
-                    onChange={isLastSelected ? (nextValue) => updateChunkDraft(currentChunk.id, nextValue) : () => {}}
+                    onChange={isLastSelected ? (nextValue) => updateChunkDraft(currentChunk.id, nextValue) : NOOP_CHANGE}
                     markdownEnabled={config.markdownAware === true}
                     readOnly={stageReadOnly}
                     fillHeight
