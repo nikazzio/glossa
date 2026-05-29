@@ -6,9 +6,12 @@ import {
   Columns2,
   FileText,
   FlaskConical,
+  GitCompare,
   Highlighter,
   Info,
   Languages,
+  Link2,
+  Link2Off,
   Loader2,
   Lock,
   Minus,
@@ -34,10 +37,12 @@ import { usePricingStore } from '../../stores/pricingStore';
 import type { TranslationChunk } from '../../types';
 import { indexPad } from '../../utils';
 import { estimatePipelineCost } from '../../utils/costEstimate';
-import { CopyButton, MarkdownEditor, ProcessingLine } from '../common';
+import { CopyButton, HighlightedText, MarkdownEditor, ProcessingLine } from '../common';
 import { CostBreakdownPanel } from '../pipeline/CostBadge';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { escapeHtml, useGlossaryHighlight } from '../../hooks/useGlossaryHighlight';
+import { usePanelScrollSync } from '../../hooks/usePanelScrollSync';
+import { useStageDiff } from '../../hooks/useStageDiff';
 import { highlightSuperscriptMarkersHtml } from '../../utils/footnoteExtractor';
 
 interface DocumentViewProps {
@@ -104,6 +109,14 @@ export function DocumentView({
   const [traceStageId, setTraceStageId] = useState<string | null>(null);
   const [showCostPanel, setShowCostPanel] = useState(false);
   const [selectedStageId, setSelectedStageId] = useState<string>('');
+  const [syncScrollEnabled, setSyncScrollEnabled] = useState(false);
+  const [showDiffMode, setShowDiffMode] = useState(false);
+  const [diffStageIdA, setDiffStageIdA] = useState<string>('');
+  const [diffStageIdB, setDiffStageIdB] = useState<string>('');
+
+  const { sourceRef: scrollSourceRef, translationRef: scrollTranslationRef } = usePanelScrollSync(
+    paneFocus === 'both' && syncScrollEnabled,
+  );
 
   const costEstimate = useMemo(
     () => estimatePipelineCost(chunks, config, pricingOverrides),
@@ -157,6 +170,19 @@ export function DocumentView({
     setSelectedStageId(lastStageId);
   }, [currentChunk?.id, lastStageId]);
 
+  // Reset diff mode when switching to both-panel view
+  useEffect(() => {
+    if (paneFocus === 'both') setShowDiffMode(false);
+  }, [paneFocus]);
+
+  // Initialise diff stage IDs when stages are available
+  useEffect(() => {
+    if (enabledStages.length >= 2) {
+      setDiffStageIdA((prev) => prev || enabledStages[0].id);
+      setDiffStageIdB((prev) => prev || lastStageId);
+    }
+  }, [enabledStages, lastStageId]);
+
   // Hooks devono essere chiamati prima di qualsiasi return condizionale
   const hasGlossary = config.glossary.length > 0;
   const showHighlight = highlightsEnabled && hasGlossary;
@@ -173,6 +199,16 @@ export function DocumentView({
     highlightsEnabled ? searchQuery : '',
     focusedIssueQuery ?? '',
   );
+
+  const effectiveDiffStageIdA = diffStageIdA || enabledStages[0]?.id || '';
+  const effectiveDiffStageIdB = diffStageIdB || lastStageId;
+  const diffTextA = effectiveDiffStageIdA === lastStageId
+    ? (currentChunk?.currentDraft ?? '')
+    : (currentChunk?.stageResults[effectiveDiffStageIdA]?.content ?? '');
+  const diffTextB = effectiveDiffStageIdB === lastStageId
+    ? (currentChunk?.currentDraft ?? '')
+    : (currentChunk?.stageResults[effectiveDiffStageIdB]?.content ?? '');
+  const stageDiff = useStageDiff(showDiffMode ? diffTextA : '', showDiffMode ? diffTextB : '');
 
   const sourceHighlightHtml = useMemo(() => {
     const hasFootnoteMarkers = /\[[⁰¹²³⁴⁵⁶⁷⁸⁹]/.test(deferredSourceText);
@@ -397,28 +433,55 @@ export function DocumentView({
           <div className="flex-1 rounded-[22px] border border-editorial-border bg-editorial-bg/90 px-6 py-3 shadow-[0_16px_50px_rgba(26,26,26,0.05)] flex items-center">
           <div className="flex w-full flex-wrap items-center justify-between gap-3">
 
-            {/* Sinistra: navigazione chunk */}
-            <div className="flex items-center gap-1.5 rounded-full border border-editorial-border bg-editorial-bg/70 px-2.5 py-1.5">
-              <ChunkIconButton
-                onClick={() => prevChunk && setSelectedChunkId(prevChunk.id)}
-                title={t('document.previousChunk')}
-                disabled={!prevChunk}
-              >
-                <ChevronLeft size={16} />
-              </ChunkIconButton>
-              <span className="font-display text-xl italic text-editorial-accent shrink-0 min-w-[96px] text-center">
-                {indexPad(currentIndex + 1)}/{indexPad(chunks.length)}
-              </span>
-              <ChunkIconButton
-                onClick={() => nextChunk && setSelectedChunkId(nextChunk.id)}
-                title={t('document.nextChunk')}
-                disabled={!nextChunk}
-              >
-                <ChevronRight size={16} />
-              </ChunkIconButton>
+            {/* Sinistra: navigazione chunk + strip di stato */}
+            <div className="flex flex-col items-center gap-1">
+              <div className="flex items-center gap-1.5 rounded-full border border-editorial-border bg-editorial-bg/70 px-2.5 py-1.5">
+                <ChunkIconButton
+                  onClick={() => prevChunk && setSelectedChunkId(prevChunk.id)}
+                  title={t('document.previousChunk')}
+                  disabled={!prevChunk}
+                >
+                  <ChevronLeft size={16} />
+                </ChunkIconButton>
+                <span className="font-display text-xl italic text-editorial-accent shrink-0 min-w-[96px] text-center">
+                  {indexPad(currentIndex + 1)}/{indexPad(chunks.length)}
+                </span>
+                <ChunkIconButton
+                  onClick={() => nextChunk && setSelectedChunkId(nextChunk.id)}
+                  title={t('document.nextChunk')}
+                  disabled={!nextChunk}
+                >
+                  <ChevronRight size={16} />
+                </ChunkIconButton>
+              </div>
+              {chunks.length > 1 && (
+                <div className="flex items-center gap-[3px] px-1" aria-hidden="true">
+                  {chunks.map((chunk, idx) => {
+                    const dotTone =
+                      chunk.status === 'completed' || chunk.translationLocked
+                        ? 'bg-editorial-success/70'
+                        : chunk.status === 'error'
+                          ? 'bg-editorial-accent/70'
+                          : chunk.status === 'processing'
+                            ? 'bg-editorial-warning/70 animate-pulse'
+                            : 'bg-editorial-border';
+                    return (
+                      <button
+                        key={chunk.id}
+                        type="button"
+                        onClick={() => setSelectedChunkId(chunk.id)}
+                        title={truncateChunk(chunk.sourceDisplayText)}
+                        className={`h-1.5 w-1.5 shrink-0 rounded-full transition-colors ${dotTone} ${
+                          idx === currentIndex ? 'ring-1 ring-editorial-accent/60 ring-offset-1 ring-offset-editorial-bg' : ''
+                        }`}
+                      />
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
-            {/* Centro: pannelli visualizzazione + toggle highlights */}
+            {/* Centro: pannelli + toggle contestuale (scroll sync / diff) + highlights */}
             <div className="flex items-center gap-1">
               <ChunkIconButton
                 onClick={() => setPaneFocus('both')}
@@ -445,52 +508,95 @@ export function DocumentView({
                 <PanelRight size={18} />
               </ChunkIconButton>
               <span className="mx-1 h-4 w-px bg-editorial-border/60" aria-hidden="true" />
+              {paneFocus === 'both' ? (
+                <ChunkIconButton
+                  onClick={() => setSyncScrollEnabled(!syncScrollEnabled)}
+                  title={syncScrollEnabled ? t('document.scrollSyncDisable') : t('document.scrollSyncEnable')}
+                  active={syncScrollEnabled}
+                  ariaPressed={syncScrollEnabled}
+                >
+                  {syncScrollEnabled ? <Link2 size={18} /> : <Link2Off size={18} />}
+                </ChunkIconButton>
+              ) : isEditorialMode && enabledStages.length >= 2 ? (
+                <ChunkIconButton
+                  onClick={() => setShowDiffMode(!showDiffMode)}
+                  title={showDiffMode ? t('document.diffModeDisable') : t('document.diffModeEnable')}
+                  active={showDiffMode}
+                  ariaPressed={showDiffMode}
+                >
+                  <GitCompare size={18} />
+                </ChunkIconButton>
+              ) : null}
+              <span className="mx-1 h-4 w-px bg-editorial-border/60" aria-hidden="true" />
               <ChunkIconButton
                 onClick={() => setHighlightsEnabled(!highlightsEnabled)}
                 title={t('document.highlightsToggle')}
-                active={highlightsEnabled}
-                ariaPressed={highlightsEnabled}
+                active={highlightsEnabled && !showDiffMode}
+                ariaPressed={highlightsEnabled && !showDiffMode}
+                disabled={showDiffMode}
               >
                 <Highlighter size={18} />
               </ChunkIconButton>
             </div>
 
-            {/* Destra: stati pipeline + modifica sorgente + blocca */}
+            {/* Destra: stage controls + qualità */}
             <div className="flex items-center gap-2">
-              {config.stages
-                .filter((stage) => stage.enabled)
-                .map((stage) => {
-                  const stageIcon: LucideIcon =
-                    stage.role === 'refine' ? Pencil
-                    : stage.role === 'format' ? FileText
-                    : Languages;
-                  return (
-                    <button
-                      key={stage.id}
-                      type="button"
-                      onClick={() => setTraceStageId(stage.id)}
-                      className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                      title={stage.name}
-                      aria-label={stage.name}
-                    >
-                      <CompactStatusIndicator
-                        status={currentChunk.stageResults[stage.id]?.status || 'idle'}
-                        icon={stageIcon}
-                      />
-                    </button>
-                  );
-                })}
-              <button
-                type="button"
-                className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                title={t('pipeline.audit')}
-                aria-label={t('pipeline.audit')}
-              >
-                <CompactStatusIndicator
-                  status={currentChunk.judgeResult.status}
-                  icon={ScanLine}
-                />
-              </button>
+              {showDiffMode ? (
+                <div className="flex items-center gap-2">
+                  <StageSelect
+                    value={effectiveDiffStageIdA}
+                    onChange={setDiffStageIdA}
+                    stages={enabledStages}
+                    lastStageId={lastStageId}
+                    label="A"
+                  />
+                  <span className="text-xs text-editorial-muted">vs</span>
+                  <StageSelect
+                    value={effectiveDiffStageIdB}
+                    onChange={setDiffStageIdB}
+                    stages={enabledStages}
+                    lastStageId={lastStageId}
+                    label="B"
+                  />
+                </div>
+              ) : (
+                <>
+                  {config.stages
+                    .filter((stage) => stage.enabled)
+                    .map((stage) => {
+                      const stageIcon: LucideIcon =
+                        stage.role === 'refine' ? Pencil
+                        : stage.role === 'format' ? FileText
+                        : Languages;
+                      return (
+                        <button
+                          key={stage.id}
+                          type="button"
+                          onClick={() => setTraceStageId(stage.id)}
+                          className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                          title={stage.name}
+                          aria-label={stage.name}
+                        >
+                          <CompactStatusIndicator
+                            status={currentChunk.stageResults[stage.id]?.status || 'idle'}
+                            icon={stageIcon}
+                          />
+                        </button>
+                      );
+                    })}
+                  <button
+                    type="button"
+                    className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    title={t('pipeline.audit')}
+                    aria-label={t('pipeline.audit')}
+                  >
+                    <CompactStatusIndicator
+                      status={currentChunk.judgeResult.status}
+                      icon={ScanLine}
+                    />
+                  </button>
+                </>
+              )}
               <button
                 type="button"
                 onClick={() => toggleChunkTranslationLock(currentChunk.id)}
@@ -546,6 +652,7 @@ export function DocumentView({
                   )}
                 </div>
               }
+              scrollRef={scrollSourceRef}
             >
               <MarkdownEditor
                 value={currentChunk.sourceDisplayText}
@@ -593,13 +700,24 @@ export function DocumentView({
               </div>
             ) : null;
 
+            const diffStageName = (stageId: string) =>
+              stageId === lastStageId
+                ? t('document.finalDraft')
+                : (enabledStages.find((s) => s.id === stageId)?.name ?? stageId);
+
             return (
               <DocumentPage
                 label={t('pipeline.candidateTranslation')}
                 eyebrow={t('document.rightPage')}
-                subtitle={isEditorialMode ? t(`pipeline.stageRole.${enabledStages.find(s => s.id === effectiveSelectedStageId)?.role ?? 'translation'}`) : undefined}
-                subtitleAction={rawStageContent ? <CopyButton text={rawStageContent} /> : undefined}
-                actions={stageActions}
+                subtitle={
+                  showDiffMode
+                    ? `${diffStageName(effectiveDiffStageIdA)} → ${diffStageName(effectiveDiffStageIdB)}`
+                    : isEditorialMode
+                      ? t(`pipeline.stageRole.${enabledStages.find(s => s.id === effectiveSelectedStageId)?.role ?? 'translation'}`)
+                      : undefined
+                }
+                subtitleAction={!showDiffMode && rawStageContent ? <CopyButton text={rawStageContent} /> : undefined}
+                actions={!showDiffMode ? stageActions : null}
                 statusBadge={currentChunk.translationStale ? (
                   <InlineStatusBadge tone="amber" icon={<AlertTriangle size={13} />} label={t('document.translationStaleBadge')} />
                 ) : currentChunk.status === 'preview' ? (
@@ -607,21 +725,30 @@ export function DocumentView({
                 ) : currentChunk.translationLocked ? (
                   <InlineStatusBadge tone="emerald" icon={<CheckCheck size={13} />} label={t('document.translationLockedBadge')} />
                 ) : null}
+                scrollRef={scrollTranslationRef}
               >
-                <MarkdownEditor
-                  value={rawStageContent}
-                  onChange={isLastSelected ? (nextValue) => updateChunkDraft(currentChunk.id, nextValue) : () => {}}
-                  markdownEnabled={config.markdownAware === true}
-                  readOnly={stageReadOnly}
-                  fillHeight
-                  textClassName="text-[15px] leading-8 text-editorial-ink"
-                  previewClassName="min-h-[280px] text-[15px] leading-8 text-editorial-ink"
-                  placeholder={isLastSelected ? t('pipeline.candidatePlaceholder') : ''}
-                  highlightHtml={(showHighlight || (highlightsEnabled && !!searchQuery.trim()) || !!focusedIssueQuery) ? translationHighlight.html : null}
-                  focusQuery={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueQuery : null}
-                  focusRequestId={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueRequestId : 0}
-
-                />
+                {showDiffMode ? (
+                  <div className="flex flex-col flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+                    <HighlightedText
+                      html={stageDiff.html}
+                      className="text-[15px] leading-8 text-editorial-ink min-h-[280px]"
+                    />
+                  </div>
+                ) : (
+                  <MarkdownEditor
+                    value={rawStageContent}
+                    onChange={isLastSelected ? (nextValue) => updateChunkDraft(currentChunk.id, nextValue) : () => {}}
+                    markdownEnabled={config.markdownAware === true}
+                    readOnly={stageReadOnly}
+                    fillHeight
+                    textClassName="text-[15px] leading-8 text-editorial-ink"
+                    previewClassName="min-h-[280px] text-[15px] leading-8 text-editorial-ink"
+                    placeholder={isLastSelected ? t('pipeline.candidatePlaceholder') : ''}
+                    highlightHtml={(showHighlight || (highlightsEnabled && !!searchQuery.trim()) || !!focusedIssueQuery) ? translationHighlight.html : null}
+                    focusQuery={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueQuery : null}
+                    focusRequestId={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueRequestId : 0}
+                  />
+                )}
               </DocumentPage>
             );
           })()}
@@ -648,8 +775,9 @@ interface DocumentPageProps {
   highlighted?: boolean;
   titleMeta?: React.ReactNode;
   statusBadge?: React.ReactNode;
-  actions?: React.ReactNode;
+  actions?: React.ReactNode | null;
   footer?: React.ReactNode;
+  scrollRef?: React.RefObject<HTMLDivElement | null>;
   children: React.ReactNode;
 }
 
@@ -733,13 +861,15 @@ function DocumentPage({
   statusBadge,
   actions,
   footer,
+  scrollRef,
   children,
 }: DocumentPageProps) {
   return (
     <section className={`relative rounded-[24px] bg-[#fffdf9] px-6 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_18px_45px_rgba(74,50,17,0.08)] flex flex-col min-h-0 ${
       highlighted ? 'border border-editorial-accent ring-2 ring-editorial-accent/30' : 'border border-[#d8cfbf]'
     }`}>
-      <div className="mb-4 shrink-0 flex items-center justify-between gap-4 border-b border-[#ede4d6] pb-3">
+      {/* Header con altezza minima fissa per allineare il corpo testo tra i due pannelli */}
+      <div className="mb-4 shrink-0 flex items-start justify-between gap-4 border-b border-[#ede4d6] pb-3 min-h-[72px]">
         <div className="min-w-0">
           <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
             {eyebrow}
@@ -759,12 +889,12 @@ function DocumentPage({
             </div>
           )}
         </div>
-        <div className="shrink-0 flex items-center gap-2">
+        <div className="shrink-0 flex items-center gap-2 pt-1">
           {titleMeta}
           {actions}
         </div>
       </div>
-      <div className={`flex flex-col flex-1 min-h-0 ${readOnly ? 'opacity-90' : ''}`}>
+      <div ref={scrollRef} className={`flex flex-col flex-1 min-h-0 ${readOnly ? 'opacity-90' : ''}`}>
         {children}
       </div>
       {footer && (
@@ -878,6 +1008,38 @@ function CompactStatusIndicator({
         </span>
       )}
     </span>
+  );
+}
+
+function StageSelect({
+  value,
+  onChange,
+  stages,
+  lastStageId,
+  label,
+}: {
+  value: string;
+  onChange: (id: string) => void;
+  stages: ReturnType<typeof usePipelineStore.getState>['config']['stages'];
+  lastStageId: string;
+  label: string;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">{label}</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="rounded-full border border-editorial-border bg-editorial-bg px-2.5 py-1 text-xs text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+      >
+        {stages.map((s) => (
+          <option key={s.id} value={s.id}>
+            {s.id === lastStageId ? t('document.finalDraft') : s.name}
+          </option>
+        ))}
+      </select>
+    </div>
   );
 }
 

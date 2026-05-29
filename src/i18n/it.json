@@ -322,7 +322,11 @@
     "saveFirstToAdd": "Salva il progetto prima di aggiungere pipeline",
     "pipelineNameLabel": "Nome pipeline",
     "newPipeline": "Nuova pipeline",
-    "pipelineNumber": "Pipeline {{number}}"
+    "pipelineNumber": "Pipeline {{number}}",
+    "deletePipeline": "Elimina pipeline",
+    "confirmDeleteTitle": "Eliminare la pipeline?",
+    "confirmDeleteMessage": "\"{{name}}\" verrà rimossa definitivamente insieme a tutte le sue traduzioni.",
+    "configurePipeline": "Configura pipeline"
   },
   "audit": {
     "title": "Log Audit",
@@ -676,6 +680,11 @@
     "focusBoth": "Mostra entrambi",
     "focusSource": "Solo sorgente",
     "focusTranslation": "Solo traduzione",
+    "scrollSyncEnable": "Abilita scroll sincronizzato",
+    "scrollSyncDisable": "Disabilita scroll sincronizzato",
+    "diffModeEnable": "Confronta stage",
+    "diffModeDisable": "Esci dal confronto stage",
+    "finalDraft": "Bozza finale",
     "emptyLabel": "Modalità Documento",
     "emptyTitle": "Nessun documento ancora preparato.",
     "emptyBody": "Prepara un testo in più chunk per usare il lettore documento, oppure torna a Sandbox per lavorare rapidamente su un testo singolo.",

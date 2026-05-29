@@ -322,7 +322,11 @@
     "saveFirstToAdd": "Save the project before adding pipelines",
     "pipelineNameLabel": "Pipeline name",
     "newPipeline": "New pipeline",
-    "pipelineNumber": "Pipeline {{number}}"
+    "pipelineNumber": "Pipeline {{number}}",
+    "deletePipeline": "Delete pipeline",
+    "confirmDeleteTitle": "Delete pipeline?",
+    "confirmDeleteMessage": "\"{{name}}\" will be permanently removed along with all its translations.",
+    "configurePipeline": "Configure pipeline"
   },
   "audit": {
     "title": "Audit Logs",
@@ -676,6 +680,11 @@
     "focusBoth": "Show both",
     "focusSource": "Source only",
     "focusTranslation": "Translation only",
+    "scrollSyncEnable": "Enable scroll sync",
+    "scrollSyncDisable": "Disable scroll sync",
+    "diffModeEnable": "Compare stages",
+    "diffModeDisable": "Exit stage comparison",
+    "finalDraft": "Final draft",
     "emptyLabel": "Document Mode",
     "emptyTitle": "No document is staged yet.",
     "emptyBody": "Prepare a text into multiple chunks to use the document reader, or switch back to Sandbox for quick single-text work.",

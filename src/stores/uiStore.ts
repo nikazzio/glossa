@@ -53,6 +53,10 @@ interface UiState {
   newPipelineInit: 'copy-first' | 'copy-previous' | 'defaults';
   setNewPipelineInit: (value: 'copy-first' | 'copy-previous' | 'defaults') => void;
 
+  // Maximum number of pipelines allowed (persisted)
+  maxPipelines: number;
+  setMaxPipelines: (value: number) => void;
+
   setViewMode: (mode: ViewMode) => void;
   setDocumentLayout: (layout: DocumentLayoutPreference) => void;
   setSelectedChunkId: (chunkId: string | null) => void;
@@ -111,6 +115,7 @@ export const useUiStore = create<UiState>()(
   chunkPresetLong: 1000,
   ollamaBaseUrl: 'http://localhost:11434',
   newPipelineInit: 'copy-first',
+  maxPipelines: 5,
 
   setViewMode: (mode) =>
     set((state) => ({
@@ -209,10 +214,11 @@ export const useUiStore = create<UiState>()(
   setChunkPresetLong: (value) => set((state) => ({ chunkPresetLong: Math.max(state.chunkPresetMedium + 1, Math.max(50, value)) })),
   setOllamaBaseUrl: (url) => set({ ollamaBaseUrl: url }),
   setNewPipelineInit: (value) => set({ newPipelineInit: value }),
+  setMaxPipelines: (value) => set({ maxPipelines: Math.max(1, Math.min(20, value)) }),
     }),
     {
       name: 'glossa-ui-prefs',
-      version: 2,
+      version: 3,
       migrate: (persisted: unknown, fromVersion: number) => {
         const s = persisted as Record<string, unknown>;
         if (fromVersion < 1) {
@@ -231,6 +237,9 @@ export const useUiStore = create<UiState>()(
           const existing = (s.highlightColors ?? {}) as Record<string, string>;
           s.highlightColors = { ...defaults, ...existing };
         }
+        if (fromVersion < 3) {
+          s.maxPipelines = 5;
+        }
         return s;
       },
       storage: createJSONStorage(() => localStorage),
@@ -244,6 +253,7 @@ export const useUiStore = create<UiState>()(
         newPipelineInit: state.newPipelineInit,
         highlightsEnabled: state.highlightsEnabled,
         highlightColors: state.highlightColors,
+        maxPipelines: state.maxPipelines,
       }),
     },
   ),
