@@ -36,6 +36,9 @@ interface UiState {
   focusedIssueQuery: string | null;
   focusedIssueRequestId: number;
 
+  traceStageId: string | null;
+  setTraceStageId: (id: string | null) => void;
+
   pipelineMode: RunPhase;
   setPipelineMode: (mode: RunPhase) => void;
   pipelineTestChunkCount: number;
@@ -110,6 +113,7 @@ export const useUiStore = create<UiState>()(
   focusedChunkId: null,
   focusedIssueQuery: null,
   focusedIssueRequestId: 0,
+  traceStageId: null,
   chunkPresetShort: 400,
   chunkPresetMedium: 700,
   chunkPresetLong: 1000,
@@ -209,6 +213,7 @@ export const useUiStore = create<UiState>()(
       focusedIssueRequestId: state.focusedIssueRequestId + 1,
     })),
   clearFocusedIssue: () => set({ focusedIssueQuery: null }),
+  setTraceStageId: (id) => set({ traceStageId: id }),
   setChunkPresetShort: (value) => set((state) => ({ chunkPresetShort: Math.min(Math.max(50, value), state.chunkPresetMedium - 1) })),
   setChunkPresetMedium: (value) => set((state) => ({ chunkPresetMedium: Math.max(state.chunkPresetShort + 1, Math.min(value, state.chunkPresetLong - 1)) })),
   setChunkPresetLong: (value) => set((state) => ({ chunkPresetLong: Math.max(state.chunkPresetMedium + 1, Math.max(50, value)) })),
