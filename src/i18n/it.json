@@ -401,7 +401,14 @@
     "configureKeyToUse": "Aggiungi una API key per abilitare i modelli di questo provider nella pipeline.",
     "contextWindowBadge": "{{count}} ctx",
     "panelTitle": "Configurazione",
-    "providerTab": "Provider"
+    "providerTab": "Provider",
+    "backup": "Backup e ripristino",
+    "backupHint": "Esporta l'intero workspace in un file portabile, o ripristina da un backup precedente.",
+    "backupExport": "Esporta backup",
+    "backupImport": "Importa backup",
+    "backupImportConfirmTitle": "Ripristinare il workspace?",
+    "backupImportConfirmMessage": "Sovrascriverà tutti i progetti, pipeline, traduzioni, glossari e impostazioni attuali. L'operazione non può essere annullata.",
+    "backupImportConfirm": "Ripristina"
   },
   "ollama": {
     "title": "Ollama (Modelli Locali)",
@@ -516,7 +523,10 @@
     "imported": "File importato con successo",
     "importError": "Importazione fallita",
     "pipelineSaveAfterImportFailed": "Impossibile salvare la configurazione pipeline",
-    "pipelineSaveAfterImportFailed": "Impossibile salvare la configurazione pipeline",
+    "backupExportSuccess": "Backup esportato con successo",
+    "backupImportSuccess": "Workspace ripristinato con successo",
+    "backupInvalidFile": "File di backup non valido",
+    "backupIncompatibleVersion": "Il backup è stato creato con una versione più recente di Glossa",
     "pdfScannedError": "Questo PDF non contiene testo selezionabile. Potrebbe essere un documento scansionato.",
     "importPreviewLabel": "Anteprima Import",
     "importPreviewTitle": "Controlla il documento prima di creare i chunk",

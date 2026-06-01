@@ -4,7 +4,9 @@ import {
   AlertCircle, Server, RefreshCw, CheckCircle2, XCircle, HelpCircle,
   Sparkles, Columns2, BookOpen, ChevronDown, ChevronUp, SlidersHorizontal,
   ChevronsLeft, Copy, RotateCcw, Scissors, Layers, LayoutTemplate, Palette,
+  HardDrive, Download, Upload,
 } from 'lucide-react';
+import { exportWorkspace, importWorkspace } from '../../services/backupService';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -171,10 +173,37 @@ export function SettingsModal() {
   const [activeProviderTab, setActiveProviderTab] = useState<ModelProvider>('openai');
   const [activeTab, setActiveTab] = useState<SettingsTab>('settings');
   const [urlDraft, setUrlDraft] = useState(ollamaBaseUrl);
+  const [isBackupBusy, setIsBackupBusy] = useState(false);
   const [urlError, setUrlError] = useState<string | null>(null);
   const trapRef = useFocusTrap(showSettings, () => setShowSettings(false));
   const { overrides, setOverride, resetOverride, resetAll } = usePricingStore();
   const { statuses: keyStatuses, refresh: refreshKeyStatuses } = useProviderKeyStatus();
+
+  const handleExportBackup = async () => {
+    setIsBackupBusy(true);
+    try {
+      await exportWorkspace();
+      toast.success(t('files.backupExportSuccess'));
+    } catch (err: unknown) {
+      toast.error(t('files.backupInvalidFile'), { description: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setIsBackupBusy(false);
+    }
+  };
+
+  const handleImportBackup = async () => {
+    setIsBackupBusy(true);
+    try {
+      const restored = await importWorkspace(t);
+      if (restored) toast.success(t('files.backupImportSuccess'));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const key = msg === 'incompatible_schema_version' ? 'files.backupIncompatibleVersion' : 'files.backupInvalidFile';
+      toast.error(t(key), { description: msg });
+    } finally {
+      setIsBackupBusy(false);
+    }
+  };
 
   const refreshOllama = async () => {
     setRefreshing(true);
@@ -391,6 +420,39 @@ export function SettingsModal() {
                           <span className="font-display text-lg italic text-editorial-ink">{label}</span>
                         </label>
                       ))}
+                    </div>
+                  </div>
+
+                  {/* Backup e ripristino */}
+                  <div className="space-y-3">
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <HardDrive size={11} className="text-editorial-accent shrink-0" />
+                        <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                          {t('settings.backup')}
+                        </p>
+                      </div>
+                      <p className="mt-1 text-xs text-editorial-muted/70">{t('settings.backupHint')}</p>
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={handleExportBackup}
+                        disabled={isBackupBusy}
+                        className="flex items-center gap-2 rounded-full border border-editorial-border px-4 py-2 text-xs font-bold uppercase tracking-widest text-editorial-muted transition-colors hover:border-editorial-ink/60 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        <Download size={13} />
+                        {t('settings.backupExport')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleImportBackup}
+                        disabled={isBackupBusy}
+                        className="flex items-center gap-2 rounded-full border border-editorial-border px-4 py-2 text-xs font-bold uppercase tracking-widest text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        <Upload size={13} />
+                        {t('settings.backupImport')}
+                      </button>
                     </div>
                   </div>
                 </div>
