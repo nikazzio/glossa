@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.10.0](https://github.com/nikazzio/glossa/compare/glossa-v0.9.0...glossa-v0.10.0) (2026-06-01)
+
+
+### ✨ Features
+
+* **#139:** backup e ripristino snapshot completo del workspace ([#204](https://github.com/nikazzio/glossa/issues/204)) ([65519a7](https://github.com/nikazzio/glossa/commit/65519a7ea5d1bc8779bf773da1d9dd8b37087ef2))
+* ricerca globale documento + sistema evidenziazioni unificato ([#140](https://github.com/nikazzio/glossa/issues/140)) ([#196](https://github.com/nikazzio/glossa/issues/196)) ([45204e3](https://github.com/nikazzio/glossa/commit/45204e30cd8aefb66314633e68273faa760b14a7))
+
+
+### 🐛 Bug Fixes
+
+* **#197:** document view UX — nav, lock toggle, diff buttons, tooltip ([#200](https://github.com/nikazzio/glossa/issues/200)) ([9b1683f](https://github.com/nikazzio/glossa/commit/9b1683f895ac8b224cc191a5df5009ae46ee1e39))
+
+
+### ♻️ Refactoring
+
+* **#199:** consolida primitive UI — IconButton CVA, Tooltip, StatusDot, SectionLabel ([#201](https://github.com/nikazzio/glossa/issues/201)) ([dc48d43](https://github.com/nikazzio/glossa/commit/dc48d431c94f8b3b39c6e01c7dcf27f901b033cb))
+* **#202:** cleanup UI post-[#199](https://github.com/nikazzio/glossa/issues/199) — split file monolitici, token CSS, err typing ([#203](https://github.com/nikazzio/glossa/issues/203)) ([ff2c2aa](https://github.com/nikazzio/glossa/commit/ff2c2aac807f433b50c81e3f336c957a1dafaa94))
+
 ## [0.9.0](https://github.com/nikazzio/glossa/compare/glossa-v0.8.0...glossa-v0.9.0) (2026-05-27)
 
 
