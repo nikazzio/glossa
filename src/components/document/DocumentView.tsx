@@ -200,7 +200,7 @@ export function DocumentView({ onRetranslateChunk }: DocumentViewProps) {
 
   if (!currentChunk) {
     return (
-      <section className="flex w-full flex-col items-center justify-center bg-[#f4efe5] overflow-y-auto min-h-0 flex-1 px-8 py-16">
+      <section className="flex w-full flex-col items-center justify-center bg-editorial-paper overflow-y-auto min-h-0 flex-1 px-8 py-16">
         <div className="w-full max-w-2xl flex flex-col items-center">
           {/* Brand mark */}
           <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-full border border-editorial-border/60 bg-editorial-bg shadow-[0_4px_20px_rgba(26,26,26,0.06)]">
@@ -253,7 +253,7 @@ export function DocumentView({ onRetranslateChunk }: DocumentViewProps) {
   const sourceEditDisabled = currentChunk.status === 'processing';
 
   return (
-    <section className="w-full bg-[#f4efe5] overflow-y-auto min-h-0 h-full custom-scrollbar flex flex-col">
+    <section className="w-full bg-editorial-paper overflow-y-auto min-h-0 h-full custom-scrollbar flex flex-col">
       <div className="mx-auto w-full max-w-[1720px] px-5 py-3 md:px-6 md:py-4 flex flex-col flex-1 min-h-0 gap-5">
         <div className="shrink-0">
           {/* Navigation bar */}
@@ -648,11 +648,11 @@ function DocumentPage({
   children,
 }: DocumentPageProps) {
   return (
-    <section className={`relative rounded-[24px] bg-[#fffdf9] px-6 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_18px_45px_rgba(74,50,17,0.08)] flex flex-col min-h-0 ${
-      highlighted ? 'border border-editorial-accent ring-2 ring-editorial-accent/30' : 'border border-[#d8cfbf]'
+    <section className={`relative rounded-[24px] bg-editorial-page px-6 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_18px_45px_rgba(74,50,17,0.08)] flex flex-col min-h-0 ${
+      highlighted ? 'border border-editorial-accent ring-2 ring-editorial-accent/30' : 'border border-editorial-divider'
     }`}>
       {/* Header con altezza minima fissa per allineare il corpo testo tra i due pannelli */}
-      <div className="mb-4 shrink-0 flex items-start justify-between gap-4 border-b border-[#ede4d6] pb-3">
+      <div className="mb-4 shrink-0 flex items-start justify-between gap-4 border-b border-editorial-divider pb-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
@@ -687,7 +687,7 @@ function DocumentPage({
         {children}
       </div>
       {footer && (
-        <div className="mt-3 pt-3 border-t border-[#ede4d6] shrink-0">
+        <div className="mt-3 pt-3 border-t border-editorial-divider shrink-0">
           {footer}
         </div>
       )}

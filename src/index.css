@@ -50,6 +50,11 @@
   --color-editorial-warning: #666666;
   --color-editorial-running: #C49B2A;
 
+  /* ── Surface tokens — usati da DocumentView e sidebar ───────────────────── */
+  --color-editorial-paper: #f4efe5;
+  --color-editorial-page: #fffdf9;
+  --color-editorial-divider: #d8cfbf;
+
   /* ── Dark mode — placeholder token overrides (PR futura) ─────────────────── */
   /* @media (prefers-color-scheme: dark) { */
   /*   --color-editorial-bg: TBD; */
