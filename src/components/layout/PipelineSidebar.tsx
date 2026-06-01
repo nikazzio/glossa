@@ -27,7 +27,7 @@ import { useProjectStore } from '../../stores/projectStore';
 import { useUiStore } from '../../stores/uiStore';
 import { estimatePipelineCost } from '../../utils/costEstimate';
 import { CostBreakdownPanel } from '../pipeline/CostBadge';
-import { Tooltip } from '../ui';
+import { IconButton, Tooltip } from '../ui';
 
 interface PipelineSidebarProps {
   onRunPipeline: () => void;
@@ -385,54 +385,54 @@ export function PipelineSidebar({
             {t('document.panelsTitle')}
           </div>
           <div className="flex items-center justify-center gap-2">
-            <SidebarIconButton
-              compact
+            <IconButton
+              size="md"
+              tone={documentPaneFocus === 'both' ? 'accent' : 'default'}
               onClick={() => setDocumentPaneFocus('both')}
               title={t('document.focusBoth')}
-              active={documentPaneFocus === 'both'}
               ariaPressed={documentPaneFocus === 'both'}
             >
               <Columns2 size={14} />
-            </SidebarIconButton>
-            <SidebarIconButton
-              compact
+            </IconButton>
+            <IconButton
+              size="md"
+              tone={documentPaneFocus === 'source' ? 'accent' : 'default'}
               onClick={() => setDocumentPaneFocus('source')}
               title={t('document.focusSource')}
-              active={documentPaneFocus === 'source'}
               ariaPressed={documentPaneFocus === 'source'}
             >
               <PanelLeft size={14} />
-            </SidebarIconButton>
-            <SidebarIconButton
-              compact
+            </IconButton>
+            <IconButton
+              size="md"
+              tone={documentPaneFocus === 'translation' ? 'accent' : 'default'}
               onClick={() => setDocumentPaneFocus('translation')}
               title={t('document.focusTranslation')}
-              active={documentPaneFocus === 'translation'}
               ariaPressed={documentPaneFocus === 'translation'}
             >
               <PanelRight size={14} />
-            </SidebarIconButton>
+            </IconButton>
           </div>
           <div className="mt-2 flex items-center justify-center gap-2">
-            <SidebarIconButton
-              compact
+            <IconButton
+              size="md"
+              tone={syncScrollEnabled && !syncScrollDisabled ? 'accent' : 'default'}
               onClick={() => setSyncScrollEnabled(!syncScrollEnabled)}
               title={syncScrollEnabled ? t('document.scrollSyncDisable') : t('document.scrollSyncEnable')}
-              active={syncScrollEnabled && !syncScrollDisabled}
               disabled={syncScrollDisabled}
               ariaPressed={syncScrollEnabled && !syncScrollDisabled}
             >
               {syncScrollEnabled && !syncScrollDisabled ? <Link2 size={14} /> : <Link2Off size={14} />}
-            </SidebarIconButton>
-            <SidebarIconButton
-              compact
+            </IconButton>
+            <IconButton
+              size="md"
+              tone={highlightsEnabled ? 'accent' : 'default'}
               onClick={() => setHighlightsEnabled(!highlightsEnabled)}
               title={t('document.highlightsToggle')}
-              active={highlightsEnabled}
               ariaPressed={highlightsEnabled}
             >
               <Highlighter size={14} />
-            </SidebarIconButton>
+            </IconButton>
           </div>
         </div>
       </div>
@@ -440,44 +440,6 @@ export function PipelineSidebar({
   );
 }
 
-function SidebarIconButton({
-  children,
-  active = false,
-  disabled = false,
-  compact = false,
-  title,
-  onClick,
-  ariaPressed,
-}: {
-  children: ReactNode;
-  active?: boolean;
-  disabled?: boolean;
-  compact?: boolean;
-  title: string;
-  onClick: () => void;
-  ariaPressed?: boolean;
-}) {
-  return (
-    <Tooltip label={title}>
-      <button
-        type="button"
-        onClick={onClick}
-        aria-label={title}
-        aria-pressed={ariaPressed}
-        disabled={disabled}
-        className={`inline-flex shrink-0 items-center justify-center rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-35 ${
-          compact ? 'h-9 w-9' : 'h-11 w-11'
-        } ${
-          active
-            ? 'border-editorial-accent bg-editorial-accent text-white'
-            : 'border-editorial-border bg-editorial-textbox text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent'
-        }`}
-      >
-        {children}
-      </button>
-    </Tooltip>
-  );
-}
 
 function SectionLabel({
   children,

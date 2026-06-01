@@ -31,6 +31,7 @@ import { LANGUAGES } from '../../constants';
 import { getSelectableModelIds, MODEL_PROVIDER_ORDER } from '../../models/catalog';
 import { useUiStore } from '../../stores/uiStore';
 import type { ModelProvider } from '../../types';
+import { IconButton } from '../ui';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -800,49 +801,40 @@ export function ImportPreviewDialog({
           <div className="flex flex-wrap items-center gap-2">
 
             {/* Auto-segment toggle — icon button */}
-            <button
-              type="button"
+            <IconButton
+              size="md"
+              tone={useChunking ? 'accent' : 'default'}
               onClick={() => onUseChunkingChange(!useChunking)}
               title={t('pipeline.autoSegment')}
-              className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                useChunking
-                  ? 'border-editorial-accent bg-editorial-accent text-white'
-                  : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
-              }`}
+              ariaPressed={useChunking}
             >
               <Scissors size={14} />
-            </button>
+            </IconButton>
 
             {/* Heading-aware toggle — icon button (markdown only) */}
             {markdownAware && (
-              <button
-                type="button"
+              <IconButton
+                size="md"
+                tone={headingAware && useChunking ? 'accent' : 'default'}
                 onClick={() => useChunking && onHeadingAwareChange(!headingAware)}
                 title={t('pipeline.headingAware')}
                 disabled={!useChunking}
-                className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-30 ${
-                  headingAware && useChunking
-                    ? 'border-editorial-accent bg-editorial-accent text-white'
-                    : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
-                }`}
+                ariaPressed={headingAware && useChunking}
               >
                 <Hash size={14} />
-              </button>
+              </IconButton>
             )}
 
-            <button
-              type="button"
+            <IconButton
+              size="md"
+              tone={carryTrailingShortBlocks && useChunking ? 'accent' : 'default'}
               onClick={() => useChunking && onCarryTrailingShortBlocksChange(!carryTrailingShortBlocks)}
               title={t('pipeline.trailingShortBlocks')}
               disabled={!useChunking}
-              className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-30 ${
-                carryTrailingShortBlocks && useChunking
-                  ? 'border-editorial-accent bg-editorial-accent text-white'
-                  : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
-              }`}
+              ariaPressed={carryTrailingShortBlocks && useChunking}
             >
               <ArrowLeftRight size={14} />
-            </button>
+            </IconButton>
 
             {/* Separator — solo in stato normale */}
             {useChunking && !hasManualEdits && (
@@ -851,19 +843,16 @@ export function ImportPreviewDialog({
 
             {/* Preset inline — solo in stato normale */}
             {useChunking && !hasManualEdits && CHUNK_PRESETS.map(({ words, titleKey, Icon }) => (
-              <button
+              <IconButton
                 key={words}
-                type="button"
+                size="md"
+                tone={activePresetWords === words ? 'accent' : 'default'}
                 onClick={() => handleWordsPerChunkChange(words)}
                 title={t(titleKey)}
-                className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                  activePresetWords === words
-                    ? 'border-editorial-accent bg-editorial-accent text-white'
-                    : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
-                }`}
+                ariaPressed={activePresetWords === words}
               >
                 <Icon size={14} />
-              </button>
+              </IconButton>
             ))}
 
             {/* Con modifiche manuali: preset + ricalcola raggruppati a destra in warning */}

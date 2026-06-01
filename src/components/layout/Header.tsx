@@ -341,7 +341,7 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
                     title={sandboxLabel}
                     ariaLabel={sandboxLabel}
                     ariaPressed={viewMode === 'sandbox'}
-                    active={viewMode === 'sandbox'}
+                    tone={viewMode === 'sandbox' ? 'accent' : 'default'}
                   >
                     <LayoutTemplate size={16} />
                   </IconButton>

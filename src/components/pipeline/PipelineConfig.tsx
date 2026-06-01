@@ -20,6 +20,7 @@ import { useOperationLogStore } from '../../stores/operationLogStore';
 import { ReasoningPicker } from '../models/ReasoningPicker';
 import { PromptPreviewTab } from './PromptPreviewTab';
 import { canRefineWithProvider, formatProviderModelLabel, useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
+import { IconButton } from '../ui';
 
 export type ConfigSection = 'settings' | 'translation' | 'audit' | 'glossary' | 'preview';
 
@@ -814,12 +815,6 @@ export function PipelineConfig({
     preview: t('pipeline.tabPreview'),
   };
 
-  const tabBtnCls = (active: boolean) =>
-    `rounded-full border p-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-      active
-        ? 'border-editorial-accent bg-editorial-accent text-white'
-        : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
-    }`;
 
   return (
     <section className={className ?? DEFAULT_PIPELINE_CONFIG_CLASSNAME}>
@@ -846,8 +841,9 @@ export function PipelineConfig({
                   <option key={lang} value={lang}>{t(`languages.${lang}`)}</option>
                 ))}
               </select>
-              <button
-                type="button"
+              <IconButton
+                size="md"
+                className="shrink-0"
                 onClick={() =>
                   setConfig((prev) => ({
                     ...prev,
@@ -857,11 +853,9 @@ export function PipelineConfig({
                 }
                 disabled={!!config.persona}
                 title={t('pipeline.swapLanguages')}
-                aria-label={t('pipeline.swapLanguages')}
-                className="shrink-0 rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
               >
                 <ArrowRightLeft size={13} />
-              </button>
+              </IconButton>
               <select
                 value={config.targetLanguage}
                 onChange={(e) => setConfig((prev) => ({ ...prev, targetLanguage: e.target.value }))}
@@ -904,75 +898,70 @@ export function PipelineConfig({
         className="flex items-center gap-2 shrink-0 border-b border-editorial-border bg-editorial-bg/60 px-5 py-2"
       >
         {/* Settings */}
-        <button
-          type="button"
+        <IconButton
+          size="lg"
+          tone={activeTab === 'settings' ? 'accent' : 'default'}
+          onClick={() => setActiveTab('settings')}
+          title={t('pipeline.tabSettings')}
+          id="pconfig-tab-settings"
           role="tab"
           aria-selected={activeTab === 'settings'}
           aria-controls="pconfig-panel-settings"
-          id="pconfig-tab-settings"
-          onClick={() => setActiveTab('settings')}
-          title={t('pipeline.tabSettings')}
-          aria-label={t('pipeline.tabSettings')}
-          className={tabBtnCls(activeTab === 'settings')}
         >
           <Settings size={16} />
-        </button>
+        </IconButton>
         <span className="h-4 w-px bg-editorial-border/70 mx-1" aria-hidden="true" />
         {/* Translation */}
-        <button
-          type="button"
+        <IconButton
+          size="lg"
+          tone={activeTab === 'translation' ? 'accent' : 'default'}
+          onClick={() => setActiveTab('translation')}
+          title={t('pipeline.tabTranslation')}
+          id="pconfig-tab-translation"
           role="tab"
           aria-selected={activeTab === 'translation'}
           aria-controls="pconfig-panel-translation"
-          id="pconfig-tab-translation"
-          onClick={() => setActiveTab('translation')}
-          title={t('pipeline.tabTranslation')}
-          aria-label={t('pipeline.tabTranslation')}
-          className={tabBtnCls(activeTab === 'translation')}
         >
           <Languages size={16} />
-        </button>
+        </IconButton>
         {/* Audit */}
-        <button
-          type="button"
+        <IconButton
+          size="lg"
+          tone={activeTab === 'audit' ? 'accent' : 'default'}
+          onClick={() => setActiveTab('audit')}
+          title={t('pipeline.tabAudit')}
+          id="pconfig-tab-audit"
           role="tab"
           aria-selected={activeTab === 'audit'}
           aria-controls="pconfig-panel-audit"
-          id="pconfig-tab-audit"
-          onClick={() => setActiveTab('audit')}
-          title={t('pipeline.tabAudit')}
-          aria-label={t('pipeline.tabAudit')}
-          className={tabBtnCls(activeTab === 'audit')}
         >
           <ShieldCheck size={16} />
-        </button>
+        </IconButton>
         {/* Glossary */}
-        <button
-          type="button"
+        <IconButton
+          size="lg"
+          tone={activeTab === 'glossary' ? 'accent' : 'default'}
+          onClick={() => setActiveTab('glossary')}
+          title={t('pipeline.tabGlossary')}
+          id="pconfig-tab-glossary"
           role="tab"
           aria-selected={activeTab === 'glossary'}
           aria-controls="pconfig-panel-glossary"
-          id="pconfig-tab-glossary"
-          onClick={() => setActiveTab('glossary')}
-          title={t('pipeline.tabGlossary')}
-          aria-label={t('pipeline.tabGlossary')}
-          className={tabBtnCls(activeTab === 'glossary')}
         >
           <BookOpen size={16} />
-        </button>
-        <button
-          type="button"
+        </IconButton>
+        <IconButton
+          size="lg"
+          tone={activeTab === 'preview' ? 'accent' : 'default'}
+          onClick={() => setActiveTab('preview')}
+          title={t('pipeline.tabPreview')}
+          id="pconfig-tab-preview"
           role="tab"
           aria-selected={activeTab === 'preview'}
           aria-controls="pconfig-panel-preview"
-          id="pconfig-tab-preview"
-          onClick={() => setActiveTab('preview')}
-          title={t('pipeline.tabPreview')}
-          aria-label={t('pipeline.tabPreview')}
-          className={tabBtnCls(activeTab === 'preview')}
         >
           <Eye size={16} />
-        </button>
+        </IconButton>
         <span className="mx-1 h-4 w-px bg-editorial-border/70" aria-hidden="true" />
         <span className="text-sm font-display italic text-editorial-ink">{TAB_TITLE[activeTab]}</span>
       </div>
@@ -1007,22 +996,17 @@ export function PipelineConfig({
                 ]).map(({ mode: m, Icon }) => {
                   const isActive = (config.mode ?? 'standard') === m;
                   return (
-                    <button
+                    <IconButton
                       key={m}
-                      type="button"
+                      size="lg"
+                      tone={isActive ? 'accent' : 'default'}
                       onClick={() => setMode(m)}
                       disabled={translationsExist || isProcessing}
                       title={t(`pipeline.mode.${m}`)}
-                      aria-label={t(`pipeline.mode.${m}`)}
-                      aria-pressed={isActive}
-                      className={`rounded-full border p-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40 ${
-                        isActive
-                          ? 'border-editorial-accent bg-editorial-accent text-white'
-                          : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
-                      }`}
+                      ariaPressed={isActive}
                     >
                       <Icon size={16} />
-                    </button>
+                    </IconButton>
                   );
                 })}
               </div>
@@ -1472,7 +1456,9 @@ export function PipelineConfig({
 
         {/* ── PREVIEW ── */}
         {activeTab === 'preview' && (
-          <PromptPreviewTab config={config} />
+          <div id="pconfig-panel-preview" role="tabpanel" aria-labelledby="pconfig-tab-preview">
+            <PromptPreviewTab config={config} />
+          </div>
         )}
 
       </div>

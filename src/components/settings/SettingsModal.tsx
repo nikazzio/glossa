@@ -16,6 +16,7 @@ import { getKnownModelIds, getModelEntry, MODEL_CATALOG, MODEL_PROVIDER_ORDER } 
 import { MODEL_PRICING } from '../../constants';
 import { usePricingStore } from '../../stores/pricingStore';
 import { EditorialModalShell, ProviderLogo } from '../common';
+import { IconButton } from '../ui';
 import type { ModelProvider } from '../../types';
 import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
 import { useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
@@ -120,21 +121,16 @@ function NavSelector<T extends string>({
         const isActive = value === opt.value;
         const label = getLabel(opt.labelKey);
         return (
-          <button
+          <IconButton
             key={opt.value}
-            type="button"
+            size="md"
+            tone={isActive ? 'accent' : 'default'}
             onClick={() => onChange(opt.value)}
             title={label}
-            aria-label={label}
-            aria-pressed={isActive}
-            className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-              isActive
-                ? 'border-editorial-accent bg-editorial-accent text-white'
-                : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
-            }`}
+            ariaPressed={isActive}
           >
             {opt.icon}
-          </button>
+          </IconButton>
         );
       })}
       <span className="mx-1 h-4 w-px self-center bg-editorial-border/70" aria-hidden="true" />
@@ -208,21 +204,16 @@ export function SettingsModal() {
       {tabConfig.map((tab) => {
         const isActive = activeTab === tab.id;
         return (
-          <button
+          <IconButton
             key={tab.id}
-            type="button"
+            size="md"
+            tone={isActive ? 'accent' : 'default'}
             onClick={() => setActiveTab(tab.id)}
             title={tab.label}
-            aria-label={tab.label}
-            aria-pressed={isActive}
-            className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-              isActive
-                ? 'border-editorial-accent bg-editorial-accent text-white'
-                : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
-            }`}
+            ariaPressed={isActive}
           >
             {tab.icon}
-          </button>
+          </IconButton>
         );
       })}
       <span className="mx-1 h-4 w-px self-center bg-editorial-border/70" aria-hidden="true" />

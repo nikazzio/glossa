@@ -62,7 +62,7 @@ export function PromptTemplatesTab() {
 
   const contextBadgeClass = (context: 'stage' | 'audit' | 'persona') => {
     if (context === 'audit') return 'bg-editorial-warning/20 text-editorial-warning';
-    if (context === 'persona') return 'bg-purple-500/15 text-purple-400';
+    if (context === 'persona') return 'bg-editorial-textbox/60 text-editorial-muted';
     return 'bg-editorial-accent/20 text-editorial-accent';
   };
 

@@ -12,7 +12,7 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 
-type TooltipSide = 'top' | 'right' | 'left';
+type TooltipSide = 'top' | 'right' | 'left' | 'bottom';
 
 interface TooltipProps {
   label?: string | null;
@@ -62,11 +62,17 @@ export function Tooltip({
       left = anchorRect.left - offset;
       top = anchorRect.top + anchorRect.height / 2;
       transform = 'translate(-100%, -50%)';
+    } else if (side === 'bottom') {
+      top = anchorRect.bottom + offset;
+      transform = 'translate(-50%, 0)';
     }
 
     if (side === 'top') {
       left = clamp(left, margin + tooltipRect.width / 2, viewportWidth - margin - tooltipRect.width / 2);
       top = Math.max(top, margin + tooltipRect.height);
+    } else if (side === 'bottom') {
+      left = clamp(left, margin + tooltipRect.width / 2, viewportWidth - margin - tooltipRect.width / 2);
+      top = Math.min(top, viewportHeight - margin - tooltipRect.height);
     } else if (side === 'right') {
       left = Math.min(left, viewportWidth - margin - tooltipRect.width);
       top = clamp(top, margin + tooltipRect.height / 2, viewportHeight - margin - tooltipRect.height / 2);
