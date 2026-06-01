@@ -1,6 +1,6 @@
 import { cva, type VariantProps } from 'class-variance-authority';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
-import { Tooltip } from './Tooltip';
+import { Tooltip, type TooltipSide } from './Tooltip';
 
 const iconButton = cva(
   'inline-flex items-center justify-center rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40',
@@ -34,6 +34,7 @@ type IconButtonProps = VariantProps<typeof iconButton> &
     title: string;
     ariaLabel?: string;
     ariaPressed?: boolean;
+    tooltipSide?: TooltipSide;
   };
 
 export function IconButton({
@@ -46,10 +47,11 @@ export function IconButton({
   size,
   tone,
   className,
+  tooltipSide,
   ...rest
 }: IconButtonProps) {
   return (
-    <Tooltip label={title}>
+    <Tooltip label={title} side={tooltipSide}>
       <button
         type="button"
         onClick={onClick}

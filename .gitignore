@@ -34,6 +34,9 @@ src/dev/
 # Added by code-review-graph
 .code-review-graph/
 
+# Repomix
+repomix-output.xml
+
 # AI tool configs (altri provider — gestiti separatamente)
 .agents/
 .gemini/

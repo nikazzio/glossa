@@ -476,6 +476,10 @@ export async function initDatabase(): Promise<void> {
     console.warn('[Glossa] translations pipeline_chunk index failed', error);
   }
 
+  await conn.execute(
+    "INSERT OR IGNORE INTO app_settings (key, value) VALUES ('schema_version', '1')"
+  );
+
   console.log('[Glossa] Database initialized');
 }
 

@@ -401,7 +401,14 @@
     "configureKeyToUse": "Aggiungi una API key per abilitare i modelli di questo provider nella pipeline.",
     "contextWindowBadge": "{{count}} ctx",
     "panelTitle": "Configurazione",
-    "providerTab": "Provider"
+    "providerTab": "Provider",
+    "backup": "Backup e ripristino",
+    "backupHint": "Esporta l'intero workspace in un file portabile, o ripristina da un backup precedente.",
+    "backupExport": "Esporta backup",
+    "backupImport": "Importa backup",
+    "backupImportConfirmTitle": "Ripristinare il workspace?",
+    "backupImportConfirmMessage": "Sovrascriverà tutti i progetti, pipeline, traduzioni, glossari e impostazioni attuali. L'operazione non può essere annullata.",
+    "backupImportConfirm": "Ripristina"
   },
   "ollama": {
     "title": "Ollama (Modelli Locali)",
@@ -516,7 +523,10 @@
     "imported": "File importato con successo",
     "importError": "Importazione fallita",
     "pipelineSaveAfterImportFailed": "Impossibile salvare la configurazione pipeline",
-    "pipelineSaveAfterImportFailed": "Impossibile salvare la configurazione pipeline",
+    "backupExportSuccess": "Backup esportato con successo",
+    "backupImportSuccess": "Workspace ripristinato con successo",
+    "backupInvalidFile": "File di backup non valido",
+    "backupIncompatibleVersion": "Il backup è stato creato con una versione più recente di Glossa",
     "pdfScannedError": "Questo PDF non contiene testo selezionabile. Potrebbe essere un documento scansionato.",
     "importPreviewLabel": "Anteprima Import",
     "importPreviewTitle": "Controlla il documento prima di creare i chunk",
@@ -871,7 +881,9 @@
       "importExportTitle": "Importa ed esporta",
       "importExportDesc": "Usa l'icona upload per importare un file (.txt, .md, .docx, .pdf) come sorgente del documento. Quando ci sono chunk completati, il pulsante Esporta (↗) nell'header apre il dialog di esportazione con formati e opzioni di separatore.",
       "autosaveTitle": "Salvataggio automatico",
-      "autosaveDesc": "Glossa salva automaticamente il progetto in background a ogni cambio di stato significativo: nuovi chunk completati, modifiche alle traduzioni, aggiornamenti di configurazione. L'autosave si attiva solo dopo che il progetto ha un nome: per le bozze nuove, esegui il primo Salva manualmente per dargli un nome e abilitare l'autosave."
+      "autosaveDesc": "Glossa salva automaticamente il progetto in background a ogni cambio di stato significativo: nuovi chunk completati, modifiche alle traduzioni, aggiornamenti di configurazione. L'autosave si attiva solo dopo che il progetto ha un nome: per le bozze nuove, esegui il primo Salva manualmente per dargli un nome e abilitare l'autosave.",
+      "backupTitle": "Backup e ripristino",
+      "backupDesc": "Apri Impostazioni → Backup e ripristino per esportare l'intero workspace come file .glossa-backup. Questo snapshot include tutti i progetti, pipeline, traduzioni, glossari, template e impostazioni. Usa Importa per ripristinare un backup: il workspace corrente verrà cancellato e sostituito completamente con i dati del backup. Dopo il ripristino l'app si riavvia automaticamente — apri il pannello progetti (icona cartella in alto) per selezionare un progetto."
     },
     "providers": {
       "title": "Provider LLM",

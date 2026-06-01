@@ -243,6 +243,8 @@ operation_logs
 
 app_settings
   key PK, value
+  — include 'schema_version' (int) usato da backupService per compatibilità backup
+  — include 'schema_version' (int) usato da backupService per compatibilità backup
 ```
 
 **Persistito vs in-memory:**
