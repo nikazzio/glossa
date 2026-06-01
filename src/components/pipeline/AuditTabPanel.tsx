@@ -3,6 +3,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ModelProvider, PipelineConfig, PromptTemplate, ReasoningEffortLevel } from '../../types';
 import type { ProviderKeyStatusMap } from '../../hooks/useProviderKeyStatus';
+import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
 import { getKnownModelIds, getModelStatus, getResolvedModelReasoning, MODEL_PROVIDER_ORDER } from '../../models/catalog';
 import { DEFAULT_COHERENCE_PROMPT, DEFAULT_JUDGE_PROMPT } from '../../constants';
 import { SectionLabel } from '../ui';
@@ -20,14 +21,14 @@ interface AuditTabPanelProps {
   auditTemplates: PromptTemplate[];
   isRefiningJudge: boolean;
   isRefiningCoherence: boolean;
-  canRefineJudge: boolean;
+  canRefine: boolean;
   judgeRefineLabel: string;
   handleRefineJudgePrompt: () => void;
   handleRefineCoherencePrompt: () => void;
   handleJudgeModelChange: (model: string) => void;
   handleJudgeProviderChange: (provider: ModelProvider) => void;
   keyStatuses: ProviderKeyStatusMap;
-  saveTemplate: (name: string, prompt: string, context: 'stage' | 'audit' | 'persona', defaultModel?: string, defaultProvider?: string) => Promise<void>;
+  saveTemplate: SaveTemplateFn;
   deleteTemplate: (id: string) => Promise<void>;
 }
 
@@ -41,7 +42,7 @@ export function AuditTabPanel({
   auditTemplates,
   isRefiningJudge,
   isRefiningCoherence,
-  canRefineJudge,
+  canRefine,
   judgeRefineLabel,
   handleRefineJudgePrompt,
   handleRefineCoherencePrompt,
@@ -145,7 +146,7 @@ export function AuditTabPanel({
         placeholder={t('pipeline.auditPlaceholder')}
         templates={auditTemplates}
         isRefining={isRefiningJudge}
-        canRefine={canRefineJudge}
+        canRefine={canRefine}
         refineLabel={judgeRefineLabel}
         onRefine={handleRefineJudgePrompt}
         onChange={(value) => setConfig((prev) => ({ ...prev, judgePrompt: value }))}
@@ -158,7 +159,7 @@ export function AuditTabPanel({
           }));
         }}
         saveTemplate={saveTemplate}
-        deleteTemplate={deleteTemplate}
+        onDeleteTemplate={deleteTemplate}
         defaultModel={config.judgeModel}
         defaultProvider={config.judgeProvider}
         icon={<Scale size={11} />}
@@ -173,7 +174,7 @@ export function AuditTabPanel({
         placeholder={t('pipeline.coherencePromptPlaceholder')}
         templates={auditTemplates}
         isRefining={isRefiningCoherence}
-        canRefine={canRefineJudge}
+        canRefine={canRefine}
         refineLabel={judgeRefineLabel}
         onRefine={handleRefineCoherencePrompt}
         onChange={(value) => setConfig((prev) => ({ ...prev, coherencePrompt: value }))}
@@ -186,7 +187,7 @@ export function AuditTabPanel({
           }));
         }}
         saveTemplate={saveTemplate}
-        deleteTemplate={deleteTemplate}
+        onDeleteTemplate={deleteTemplate}
         defaultModel={config.judgeModel}
         defaultProvider={config.judgeProvider}
         icon={<RefreshCw size={11} />}

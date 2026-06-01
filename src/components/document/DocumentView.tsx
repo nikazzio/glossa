@@ -652,7 +652,7 @@ function DocumentPage({
       highlighted ? 'border border-editorial-accent ring-2 ring-editorial-accent/30' : 'border border-editorial-divider'
     }`}>
       {/* Header con altezza minima fissa per allineare il corpo testo tra i due pannelli */}
-      <div className="mb-4 shrink-0 flex items-start justify-between gap-4 border-b border-editorial-divider pb-3">
+      <div className="mb-4 shrink-0 flex items-start justify-between gap-4 border-b border-editorial-divider-soft pb-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
@@ -687,7 +687,7 @@ function DocumentPage({
         {children}
       </div>
       {footer && (
-        <div className="mt-3 pt-3 border-t border-editorial-divider shrink-0">
+        <div className="mt-3 pt-3 border-t border-editorial-divider-soft shrink-0">
           {footer}
         </div>
       )}

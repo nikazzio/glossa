@@ -17,7 +17,7 @@ export interface PersonaEditorProps {
   onChange: (value: string | undefined) => void;
   onRefine: () => void;
   onSaveTemplate: (name: string, prompt: string) => Promise<void>;
-  deleteTemplate: (id: string) => Promise<void>;
+  onDeleteTemplate: (id: string) => Promise<void>;
 }
 
 export function PersonaEditor({
@@ -31,7 +31,7 @@ export function PersonaEditor({
   onChange,
   onRefine,
   onSaveTemplate,
-  deleteTemplate,
+  onDeleteTemplate,
 }: PersonaEditorProps) {
   const { t } = useTranslation();
   const [isEditing, setIsEditing] = useState(false);
@@ -74,7 +74,7 @@ export function PersonaEditor({
       setTemplateName('');
       setShowSaveName(false);
     } catch (err: unknown) {
-      toast.error(t('errors.somethingWentWrong'), {
+      toast.error(t('pipeline.templates.saveFailed'), {
         description: err instanceof Error ? err.message : String(err),
       });
     }
@@ -82,10 +82,10 @@ export function PersonaEditor({
 
   const handleDeleteTemplate = async (id: string) => {
     try {
-      await deleteTemplate(id);
+      await onDeleteTemplate(id);
       toast.success(t('pipeline.templates.deleted'));
     } catch (err: unknown) {
-      toast.error(t('errors.somethingWentWrong'), {
+      toast.error(t('pipeline.templates.deleteFailed'), {
         description: err instanceof Error ? err.message : String(err),
       });
     }

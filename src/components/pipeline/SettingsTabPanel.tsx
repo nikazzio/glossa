@@ -2,6 +2,7 @@ import { ArrowRightLeft, FileText, Globe, KeyRound, Languages, Layers, ShieldChe
 import type { Dispatch, SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PipelineConfig, PipelineMode, PromptTemplate } from '../../types';
+import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
 import { LANGUAGES } from '../../constants';
 import { IconButton, SectionLabel } from '../ui';
 import { PersonaEditor } from './PersonaEditor';
@@ -17,7 +18,7 @@ interface SettingsTabPanelProps {
   canRefinePersona: boolean;
   personaRefineLabel: string;
   handleRefinePersona: () => void;
-  saveTemplate: (name: string, prompt: string, context: 'stage' | 'audit' | 'persona') => Promise<void>;
+  saveTemplate: SaveTemplateFn;
   deleteTemplate: (id: string) => Promise<void>;
   keyStatusLoading: boolean;
   missingRefineProviders: string[];
@@ -172,7 +173,7 @@ export function SettingsTabPanel({
         onChange={(value) => setConfig((prev) => ({ ...prev, persona: value }))}
         onRefine={handleRefinePersona}
         onSaveTemplate={(name, prompt) => saveTemplate(name, prompt, 'persona')}
-        deleteTemplate={deleteTemplate}
+        onDeleteTemplate={deleteTemplate}
       />
 
       {/* Refine keys status */}

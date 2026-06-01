@@ -3,6 +3,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { OllamaStatus, PipelineConfig, PipelineStageConfig, PromptTemplate } from '../../types';
 import type { ProviderKeyStatusMap } from '../../hooks/useProviderKeyStatus';
+import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
 import { calculateBlobBudget, getSelectableModelIds } from '../../models/catalog';
 import { StageCard } from './StageCard';
 
@@ -21,7 +22,7 @@ interface TranslationTabPanelProps {
   handleRefineStagePrompt: (stageId: string) => void;
   handleRefreshOllama: () => void;
   updateStage: (id: string, updates: Partial<PipelineStageConfig>) => void;
-  saveTemplate: (name: string, prompt: string, context: 'stage' | 'audit' | 'persona', defaultModel?: string, defaultProvider?: string) => Promise<void>;
+  saveTemplate: SaveTemplateFn;
   deleteTemplate: (id: string) => Promise<void>;
 }
 

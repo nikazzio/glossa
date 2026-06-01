@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { type ParagraphChunks, countWords } from '../../utils/paragraphChunks';
 
 const COLLAPSE_CHAR_THRESHOLD = 200;
+const PREVIEW_HEAD_CHARS = Math.round(COLLAPSE_CHAR_THRESHOLD * 0.9);
+const PREVIEW_TAIL_CHARS = 120;
 
 // ─── ChunkCard ────────────────────────────────────────────────────────────────
 
@@ -94,7 +96,7 @@ export function ChunkCard({
           <p className="whitespace-pre-wrap">{text}</p>
         ) : (
           <>
-            <p className="whitespace-pre-wrap">{text.slice(0, 180)}</p>
+            <p className="whitespace-pre-wrap">{text.slice(0, PREVIEW_HEAD_CHARS)}</p>
             <button
               type="button"
               onClick={onToggleExpand}
@@ -102,7 +104,7 @@ export function ChunkCard({
             >
               ··· {words}w — {t('files.expandChunk').toLowerCase()} ···
             </button>
-            <p className="whitespace-pre-wrap">{text.slice(-120)}</p>
+            <p className="whitespace-pre-wrap">{text.slice(-PREVIEW_TAIL_CHARS)}</p>
           </>
         )}
       </div>

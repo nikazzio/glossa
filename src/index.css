@@ -54,6 +54,7 @@
   --color-editorial-paper: #f4efe5;
   --color-editorial-page: #fffdf9;
   --color-editorial-divider: #d8cfbf;
+  --color-editorial-divider-soft: #ede4d6;
 
   /* ── Dark mode — placeholder token overrides (PR futura) ─────────────────── */
   /* @media (prefers-color-scheme: dark) { */

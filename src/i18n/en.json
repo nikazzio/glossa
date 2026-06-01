@@ -297,7 +297,10 @@
       "searchPlaceholder": "Search templates...",
       "empty": "No saved templates",
       "saved": "Template saved",
-      "deleted": "Template deleted"
+      "deleted": "Template deleted",
+      "saveFailed": "Failed to save template",
+      "deleteFailed": "Failed to delete template",
+      "loadFailed": "Failed to load templates"
     },
     "editPrompt": "Edit prompt",
     "promptCustomBadge": "Custom",
@@ -512,6 +515,7 @@
     "import": "Import text file",
     "imported": "File imported successfully",
     "importError": "Import failed",
+    "pipelineSaveAfterImportFailed": "Pipeline config could not be saved",
     "pdfScannedError": "This PDF does not contain selectable text. It may be a scanned document.",
     "importPreviewLabel": "Import Preview",
     "importPreviewTitle": "Review the document before creating chunks",

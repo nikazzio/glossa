@@ -82,7 +82,11 @@ export function PipelineConfig({
   const translationsExist = completedCount > 0;
 
   useEffect(() => {
-    loadTemplates();
+    loadTemplates().catch((err: unknown) => {
+      toast.error(t('pipeline.templates.loadFailed'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -340,7 +344,7 @@ export function PipelineConfig({
             onChange={(value) => setConfig((prev) => ({ ...prev, persona: value }))}
             onRefine={handleRefinePersona}
             onSaveTemplate={(name, prompt) => saveTemplate(name, prompt, 'persona')}
-            deleteTemplate={deleteTemplate}
+            onDeleteTemplate={deleteTemplate}
           />
         </div>
       )}
@@ -480,7 +484,7 @@ export function PipelineConfig({
               auditTemplates={auditTemplates}
               isRefiningJudge={isRefiningJudge}
               isRefiningCoherence={isRefiningCoherence}
-              canRefineJudge={canRefineJudge}
+              canRefine={canRefineJudge}
               judgeRefineLabel={judgeRefineLabel}
               handleRefineJudgePrompt={handleRefineJudgePrompt}
               handleRefineCoherencePrompt={handleRefineCoherencePrompt}

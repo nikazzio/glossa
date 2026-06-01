@@ -3,6 +3,7 @@ import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { PromptTemplate } from '../../types';
+import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
 
 export interface AuditPromptEditorProps {
   label: string;
@@ -16,18 +17,11 @@ export interface AuditPromptEditorProps {
   onRefine: () => void;
   onChange: (value: string) => void;
   onApplyTemplate: (template: PromptTemplate) => void;
-  saveTemplate: (
-    name: string,
-    prompt: string,
-    context: 'stage' | 'audit',
-    defaultModel?: string,
-    defaultProvider?: string,
-  ) => Promise<void>;
-  deleteTemplate: (id: string) => Promise<void>;
+  saveTemplate: SaveTemplateFn;
+  onDeleteTemplate: (id: string) => Promise<void>;
   defaultModel?: string;
   defaultProvider?: string;
   icon?: ReactNode;
-  context?: 'stage' | 'audit';
   defaultValue?: string;
   onReset?: () => void;
 }
@@ -45,11 +39,10 @@ export function AuditPromptEditor({
   onChange,
   onApplyTemplate,
   saveTemplate,
-  deleteTemplate,
+  onDeleteTemplate,
   defaultModel,
   defaultProvider,
   icon,
-  context = 'audit',
   defaultValue,
   onReset,
 }: AuditPromptEditorProps) {
@@ -77,12 +70,12 @@ export function AuditPromptEditor({
     const name = templateName.trim();
     if (!name) return;
     try {
-      await saveTemplate(name, value, context, defaultModel, defaultProvider);
+      await saveTemplate(name, value, 'audit', defaultModel, defaultProvider);
       toast.success(t('pipeline.templates.saved'));
       setTemplateName('');
       setShowSaveName(false);
     } catch (err: unknown) {
-      toast.error(t('errors.somethingWentWrong'), {
+      toast.error(t('pipeline.templates.saveFailed'), {
         description: err instanceof Error ? err.message : String(err),
       });
     }
@@ -90,10 +83,10 @@ export function AuditPromptEditor({
 
   const handleDeleteTemplate = async (id: string) => {
     try {
-      await deleteTemplate(id);
+      await onDeleteTemplate(id);
       toast.success(t('pipeline.templates.deleted'));
     } catch (err: unknown) {
-      toast.error(t('errors.somethingWentWrong'), {
+      toast.error(t('pipeline.templates.deleteFailed'), {
         description: err instanceof Error ? err.message : String(err),
       });
     }

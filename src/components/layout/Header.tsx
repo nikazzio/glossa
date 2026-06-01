@@ -134,7 +134,7 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
     }
   };
 
-  const handleConfirmImport = (manualChunks?: string[], pipelineConfig?: ImportDialogPipelineConfig) => {
+  const handleConfirmImport = async (manualChunks?: string[], pipelineConfig?: ImportDialogPipelineConfig) => {
     if (!pendingImport) return;
     const provider = pipelineConfig?.provider ?? config.stages[0]?.provider;
     const model = pipelineConfig?.model ?? config.stages[0]?.model;
@@ -183,9 +183,12 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
       manualChunks,
     );
     if (activePipelineId) {
-      savePipelineConfig(activePipelineId, updatedConfig).catch((err: unknown) => {
+      try {
+        await savePipelineConfig(activePipelineId, updatedConfig);
+      } catch (err: unknown) {
         logger.error('savePipelineConfig after import failed', { error: err instanceof Error ? err.message : String(err) });
-      });
+        toast.warning(t('files.pipelineSaveAfterImportFailed'));
+      }
     }
     setPendingImport(null);
     toast.success(t('files.imported'));
