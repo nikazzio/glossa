@@ -843,6 +843,7 @@ export function PipelineConfig({
               </select>
               <IconButton
                 size="md"
+                className="shrink-0"
                 onClick={() =>
                   setConfig((prev) => ({
                     ...prev,
@@ -902,7 +903,10 @@ export function PipelineConfig({
           tone={activeTab === 'settings' ? 'accent' : 'default'}
           onClick={() => setActiveTab('settings')}
           title={t('pipeline.tabSettings')}
-          ariaPressed={activeTab === 'settings'}
+          id="pconfig-tab-settings"
+          role="tab"
+          aria-selected={activeTab === 'settings'}
+          aria-controls="pconfig-panel-settings"
         >
           <Settings size={16} />
         </IconButton>
@@ -913,7 +917,10 @@ export function PipelineConfig({
           tone={activeTab === 'translation' ? 'accent' : 'default'}
           onClick={() => setActiveTab('translation')}
           title={t('pipeline.tabTranslation')}
-          ariaPressed={activeTab === 'translation'}
+          id="pconfig-tab-translation"
+          role="tab"
+          aria-selected={activeTab === 'translation'}
+          aria-controls="pconfig-panel-translation"
         >
           <Languages size={16} />
         </IconButton>
@@ -923,7 +930,10 @@ export function PipelineConfig({
           tone={activeTab === 'audit' ? 'accent' : 'default'}
           onClick={() => setActiveTab('audit')}
           title={t('pipeline.tabAudit')}
-          ariaPressed={activeTab === 'audit'}
+          id="pconfig-tab-audit"
+          role="tab"
+          aria-selected={activeTab === 'audit'}
+          aria-controls="pconfig-panel-audit"
         >
           <ShieldCheck size={16} />
         </IconButton>
@@ -933,7 +943,10 @@ export function PipelineConfig({
           tone={activeTab === 'glossary' ? 'accent' : 'default'}
           onClick={() => setActiveTab('glossary')}
           title={t('pipeline.tabGlossary')}
-          ariaPressed={activeTab === 'glossary'}
+          id="pconfig-tab-glossary"
+          role="tab"
+          aria-selected={activeTab === 'glossary'}
+          aria-controls="pconfig-panel-glossary"
         >
           <BookOpen size={16} />
         </IconButton>
@@ -942,7 +955,10 @@ export function PipelineConfig({
           tone={activeTab === 'preview' ? 'accent' : 'default'}
           onClick={() => setActiveTab('preview')}
           title={t('pipeline.tabPreview')}
-          ariaPressed={activeTab === 'preview'}
+          id="pconfig-tab-preview"
+          role="tab"
+          aria-selected={activeTab === 'preview'}
+          aria-controls="pconfig-panel-preview"
         >
           <Eye size={16} />
         </IconButton>
@@ -1440,7 +1456,9 @@ export function PipelineConfig({
 
         {/* ── PREVIEW ── */}
         {activeTab === 'preview' && (
-          <PromptPreviewTab config={config} />
+          <div id="pconfig-panel-preview" role="tabpanel" aria-labelledby="pconfig-tab-preview">
+            <PromptPreviewTab config={config} />
+          </div>
         )}
 
       </div>

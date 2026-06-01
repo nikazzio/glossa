@@ -806,6 +806,7 @@ export function ImportPreviewDialog({
               tone={useChunking ? 'accent' : 'default'}
               onClick={() => onUseChunkingChange(!useChunking)}
               title={t('pipeline.autoSegment')}
+              ariaPressed={useChunking}
             >
               <Scissors size={14} />
             </IconButton>
@@ -818,6 +819,7 @@ export function ImportPreviewDialog({
                 onClick={() => useChunking && onHeadingAwareChange(!headingAware)}
                 title={t('pipeline.headingAware')}
                 disabled={!useChunking}
+                ariaPressed={headingAware && useChunking}
               >
                 <Hash size={14} />
               </IconButton>
@@ -829,6 +831,7 @@ export function ImportPreviewDialog({
               onClick={() => useChunking && onCarryTrailingShortBlocksChange(!carryTrailingShortBlocks)}
               title={t('pipeline.trailingShortBlocks')}
               disabled={!useChunking}
+              ariaPressed={carryTrailingShortBlocks && useChunking}
             >
               <ArrowLeftRight size={14} />
             </IconButton>
@@ -846,6 +849,7 @@ export function ImportPreviewDialog({
                 tone={activePresetWords === words ? 'accent' : 'default'}
                 onClick={() => handleWordsPerChunkChange(words)}
                 title={t(titleKey)}
+                ariaPressed={activePresetWords === words}
               >
                 <Icon size={14} />
               </IconButton>

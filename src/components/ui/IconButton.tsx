@@ -1,5 +1,5 @@
 import { cva, type VariantProps } from 'class-variance-authority';
-import type { ReactNode } from 'react';
+import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { Tooltip } from './Tooltip';
 
 const iconButton = cva(
@@ -27,15 +27,14 @@ const iconButton = cva(
 export type IconButtonTone = NonNullable<VariantProps<typeof iconButton>['tone']>;
 export type IconButtonSize = NonNullable<VariantProps<typeof iconButton>['size']>;
 
-interface IconButtonProps extends VariantProps<typeof iconButton> {
-  onClick?: () => void;
-  children: ReactNode;
-  title: string;
-  ariaLabel?: string;
-  disabled?: boolean;
-  ariaPressed?: boolean;
-  className?: string;
-}
+type IconButtonProps = VariantProps<typeof iconButton> &
+  Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onClick' | 'aria-pressed' | 'aria-label'> & {
+    onClick?: () => void;
+    children: ReactNode;
+    title: string;
+    ariaLabel?: string;
+    ariaPressed?: boolean;
+  };
 
 export function IconButton({
   onClick,
@@ -47,6 +46,7 @@ export function IconButton({
   size,
   tone,
   className,
+  ...rest
 }: IconButtonProps) {
   return (
     <Tooltip label={title}>
@@ -57,6 +57,7 @@ export function IconButton({
         aria-label={ariaLabel ?? title}
         aria-pressed={ariaPressed}
         className={iconButton({ size, tone, className })}
+        {...rest}
       >
         {children}
       </button>
