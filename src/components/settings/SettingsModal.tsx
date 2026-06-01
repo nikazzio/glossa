@@ -195,7 +195,10 @@ export function SettingsModal() {
     setIsBackupBusy(true);
     try {
       const restored = await importWorkspace(t);
-      if (restored) toast.success(t('files.backupImportSuccess'));
+      if (restored) {
+        toast.success(t('files.backupImportSuccess'));
+        setTimeout(() => window.location.reload(), 1500);
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       const key = msg === 'incompatible_schema_version' ? 'files.backupIncompatibleVersion' : 'files.backupInvalidFile';

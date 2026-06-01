@@ -883,7 +883,7 @@
       "autosaveTitle": "Autosave",
       "autosaveDesc": "Glossa autosaves the project in the background on every meaningful state change: new completed chunks, translation edits, configuration updates. Autosave only activates once the project has a name: for new drafts, run the first Save manually to give it a name and enable autosave.",
       "backupTitle": "Backup and restore",
-      "backupDesc": "Open Settings → Backup and restore to export the full workspace as a portable .glossa-backup file. This snapshot includes all projects, pipelines, translations, glossaries, templates and settings. Use Import to restore any backup — you will be asked to confirm before the current workspace is overwritten."
+      "backupDesc": "Open Settings → Backup and restore to export the full workspace as a portable .glossa-backup file. This snapshot includes all projects, pipelines, translations, glossaries, templates and settings. Use Import to restore a backup: the current workspace is fully deleted and replaced with the backup data. After restore the app restarts automatically — open the project panel (folder icon at the top) to select a project."
     },
     "providers": {
       "title": "LLM providers",

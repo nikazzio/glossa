@@ -883,7 +883,7 @@
       "autosaveTitle": "Salvataggio automatico",
       "autosaveDesc": "Glossa salva automaticamente il progetto in background a ogni cambio di stato significativo: nuovi chunk completati, modifiche alle traduzioni, aggiornamenti di configurazione. L'autosave si attiva solo dopo che il progetto ha un nome: per le bozze nuove, esegui il primo Salva manualmente per dargli un nome e abilitare l'autosave.",
       "backupTitle": "Backup e ripristino",
-      "backupDesc": "Apri Impostazioni → Backup e ripristino per esportare l'intero workspace come file .glossa-backup. Questo snapshot include tutti i progetti, pipeline, traduzioni, glossari, template e impostazioni. Usa Importa per ripristinare un backup — ti verrà chiesta conferma prima che il workspace corrente venga sovrascritto."
+      "backupDesc": "Apri Impostazioni → Backup e ripristino per esportare l'intero workspace come file .glossa-backup. Questo snapshot include tutti i progetti, pipeline, traduzioni, glossari, template e impostazioni. Usa Importa per ripristinare un backup: il workspace corrente verrà cancellato e sostituito completamente con i dati del backup. Dopo il ripristino l'app si riavvia automaticamente — apri il pannello progetti (icona cartella in alto) per selezionare un progetto."
     },
     "providers": {
       "title": "Provider LLM",
