@@ -234,6 +234,7 @@ If a batch is interrupted, the next run resumes and skips chunks already complet
 - **⬆ Import**: Load `.txt`, `.md`, `.docx`, or `.pdf` files via native OS dialog
 - **⬇ Export**: Save as `.txt`, `.md`, `.html`, `.docx`, or bilingual `.md` (source + translation + audit)
 - **💾 Save**: Persist the current project state to SQLite
+- **🗄 Backup**: Open **Settings → Backup and restore** to export the full workspace (all projects, pipelines, translations, glossaries, templates) as a portable `.glossa-backup` file. Import it on any device to restore everything.
 
 ### 5. Stop, resume, and rerun
 

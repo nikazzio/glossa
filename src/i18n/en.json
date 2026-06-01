@@ -881,7 +881,9 @@
       "importExportTitle": "Import and export",
       "importExportDesc": "Use the upload icon to import a file (.txt, .md, .docx, .pdf) as the document source. When there are completed chunks, the Export button (↗) in the header opens the export dialog with format and separator options.",
       "autosaveTitle": "Autosave",
-      "autosaveDesc": "Glossa autosaves the project in the background on every meaningful state change: new completed chunks, translation edits, configuration updates. Autosave only activates once the project has a name: for new drafts, run the first Save manually to give it a name and enable autosave."
+      "autosaveDesc": "Glossa autosaves the project in the background on every meaningful state change: new completed chunks, translation edits, configuration updates. Autosave only activates once the project has a name: for new drafts, run the first Save manually to give it a name and enable autosave.",
+      "backupTitle": "Backup and restore",
+      "backupDesc": "Open Settings → Backup and restore to export the full workspace as a portable .glossa-backup file. This snapshot includes all projects, pipelines, translations, glossaries, templates and settings. Use Import to restore any backup — you will be asked to confirm before the current workspace is overwritten."
     },
     "providers": {
       "title": "LLM providers",
