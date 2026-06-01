@@ -158,7 +158,7 @@ export function ConfigDrawer({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="absolute top-0 bottom-0 left-12 right-0 z-30 bg-editorial-ink/20 backdrop-blur-sm"
+            className="absolute top-0 bottom-0 left-0 right-0 z-30 bg-editorial-ink/20 backdrop-blur-sm"
             onClick={() => setShowConfigDrawer(false)}
           />
           <motion.div
@@ -170,7 +170,7 @@ export function ConfigDrawer({
             transition={{ type: 'spring', damping: 28, stiffness: 280 }}
             role="dialog"
             aria-modal="true"
-            className="absolute top-0 bottom-0 left-12 z-40 flex w-[680px] flex-col overflow-hidden border-r border-editorial-border bg-editorial-bg shadow-xl"
+            className="absolute top-0 bottom-0 left-0 z-40 flex w-[680px] flex-col overflow-hidden border-r border-editorial-border bg-editorial-bg shadow-xl"
             aria-labelledby="config-drawer-title"
           >
           {/* Header */}
