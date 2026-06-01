@@ -327,7 +327,7 @@ export function PipelineSidebar({
                     </button>
                   </Tooltip>
                   {pipelines.length > 1 && !isPipelineRunning && (
-                    <Tooltip label={t('pipeline.deletePipeline')}>
+                    <Tooltip label={t('pipeline.deletePipeline')} side="right">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
