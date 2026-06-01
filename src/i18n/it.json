@@ -297,7 +297,10 @@
       "searchPlaceholder": "Cerca template...",
       "empty": "Nessun template salvato",
       "saved": "Template salvato",
-      "deleted": "Template eliminato"
+      "deleted": "Template eliminato",
+      "saveFailed": "Salvataggio template fallito",
+      "deleteFailed": "Eliminazione template fallita",
+      "loadFailed": "Caricamento template fallito"
     },
     "editPrompt": "Modifica prompt",
     "promptCustomBadge": "Personalizzato",
@@ -512,6 +515,8 @@
     "import": "Importa file di testo",
     "imported": "File importato con successo",
     "importError": "Importazione fallita",
+    "pipelineSaveAfterImportFailed": "Impossibile salvare la configurazione pipeline",
+    "pipelineSaveAfterImportFailed": "Impossibile salvare la configurazione pipeline",
     "pdfScannedError": "Questo PDF non contiene testo selezionabile. Potrebbe essere un documento scansionato.",
     "importPreviewLabel": "Anteprima Import",
     "importPreviewTitle": "Controlla il documento prima di creare i chunk",

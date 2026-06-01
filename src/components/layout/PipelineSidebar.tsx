@@ -195,7 +195,6 @@ export function PipelineSidebar({
                 onMouseEnter={() => setShowCostPanel(true)}
                 onMouseLeave={() => setShowCostPanel(false)}
               >
-                <Tooltip label={t('cost.breakdown')} side="right">
                   <button
                     type="button"
                     onFocus={() => setShowCostPanel(true)}
@@ -205,7 +204,6 @@ export function PipelineSidebar({
                   >
                     <Info size={11} />
                   </button>
-                </Tooltip>
               </div>
             )}
             {showCostPanel && costEstimate.stages.length > 0 && (
@@ -327,7 +325,7 @@ export function PipelineSidebar({
                     </button>
                   </Tooltip>
                   {pipelines.length > 1 && !isPipelineRunning && (
-                    <Tooltip label={t('pipeline.deletePipeline')}>
+                    <Tooltip label={t('pipeline.deletePipeline')} side="right">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -380,7 +378,7 @@ export function PipelineSidebar({
       <div className="flex-1" />
 
       <div className="pl-3 pr-0 pb-4 pt-3">
-        <div className="-mr-px rounded-l-[20px] rounded-r-none border border-r-0 border-editorial-border bg-[#f4efe5] px-3 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.55),6px_10px_20px_rgba(74,50,17,0.04)]">
+        <div className="-mr-px rounded-l-[20px] rounded-r-none border border-r-0 border-editorial-border bg-editorial-paper px-3 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.55),6px_10px_20px_rgba(74,50,17,0.04)]">
           <div className="pb-2 text-center text-[10px] font-bold uppercase tracking-[0.28em] text-editorial-muted/75">
             {t('document.panelsTitle')}
           </div>

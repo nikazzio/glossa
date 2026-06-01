@@ -134,7 +134,7 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
     }
   };
 
-  const handleConfirmImport = (manualChunks?: string[], pipelineConfig?: ImportDialogPipelineConfig) => {
+  const handleConfirmImport = async (manualChunks?: string[], pipelineConfig?: ImportDialogPipelineConfig) => {
     if (!pendingImport) return;
     const provider = pipelineConfig?.provider ?? config.stages[0]?.provider;
     const model = pipelineConfig?.model ?? config.stages[0]?.model;
@@ -183,9 +183,12 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
       manualChunks,
     );
     if (activePipelineId) {
-      savePipelineConfig(activePipelineId, updatedConfig).catch((err: unknown) => {
+      try {
+        await savePipelineConfig(activePipelineId, updatedConfig);
+      } catch (err: unknown) {
         logger.error('savePipelineConfig after import failed', { error: err instanceof Error ? err.message : String(err) });
-      });
+        toast.warning(t('files.pipelineSaveAfterImportFailed'));
+      }
     }
     setPendingImport(null);
     toast.success(t('files.imported'));
@@ -199,8 +202,8 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
           ? await exportBilingual(chunks)
           : await exportTranslation(chunks, format, { markdownAware, separator });
       if (ok) toast.success(t('files.exported'));
-    } catch (err: any) {
-      toast.error(t('files.exportError'), { description: err.message });
+    } catch (err: unknown) {
+      toast.error(t('files.exportError'), { description: err instanceof Error ? err.message : String(err) });
     }
   };
 
@@ -212,8 +215,8 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
     try {
       await saveCurrentProject();
       toast.success(t('projects.saved'));
-    } catch (err: any) {
-      toast.error(t('projects.saveFailed'), { description: err?.message });
+    } catch (err: unknown) {
+      toast.error(t('projects.saveFailed'), { description: err instanceof Error ? err.message : String(err) });
     }
   };
 
@@ -223,8 +226,8 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
       await saveCurrentProject(name);
       setShowSaveProjectDialog(false);
       toast.success(t('projects.saved'));
-    } catch (err: any) {
-      toast.error(t('projects.saveFailed'), { description: err?.message });
+    } catch (err: unknown) {
+      toast.error(t('projects.saveFailed'), { description: err instanceof Error ? err.message : String(err) });
     } finally {
       setIsCreatingProjectFromSave(false);
     }

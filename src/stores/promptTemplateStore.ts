@@ -6,6 +6,14 @@ import {
   deletePromptTemplate,
 } from '../services/promptTemplateService';
 
+export type SaveTemplateFn = (
+  name: string,
+  prompt: string,
+  context: 'stage' | 'audit' | 'persona',
+  defaultModel?: string,
+  defaultProvider?: string,
+) => Promise<void>;
+
 interface PromptTemplateState {
   templates: PromptTemplate[];
   isLoaded: boolean;

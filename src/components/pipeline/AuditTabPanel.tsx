@@ -1,0 +1,199 @@
+import { AlertTriangle, Cpu, RefreshCw, Scale, Wand2 } from 'lucide-react';
+import type { Dispatch, SetStateAction } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { ModelProvider, PipelineConfig, PromptTemplate, ReasoningEffortLevel } from '../../types';
+import type { ProviderKeyStatusMap } from '../../hooks/useProviderKeyStatus';
+import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
+import { getKnownModelIds, getModelStatus, getResolvedModelReasoning, MODEL_PROVIDER_ORDER } from '../../models/catalog';
+import { DEFAULT_COHERENCE_PROMPT, DEFAULT_JUDGE_PROMPT } from '../../constants';
+import { SectionLabel } from '../ui';
+import { ReasoningPicker } from '../models/ReasoningPicker';
+import { ProviderRuntimeEditor } from './ProviderRuntimeEditor';
+import { AuditPromptEditor } from './AuditPromptEditor';
+
+interface AuditTabPanelProps {
+  config: PipelineConfig;
+  setConfig: Dispatch<SetStateAction<PipelineConfig>>;
+  judgeModels: string[];
+  currentJudgeReasoningEffort: ReasoningEffortLevel;
+  handleJudgeReasoningChange: (effort: ReasoningEffortLevel) => void;
+  judgeOllamaOffline: boolean;
+  auditTemplates: PromptTemplate[];
+  isRefiningJudge: boolean;
+  isRefiningCoherence: boolean;
+  canRefine: boolean;
+  judgeRefineLabel: string;
+  handleRefineJudgePrompt: () => void;
+  handleRefineCoherencePrompt: () => void;
+  handleJudgeModelChange: (model: string) => void;
+  handleJudgeProviderChange: (provider: ModelProvider) => void;
+  keyStatuses: ProviderKeyStatusMap;
+  saveTemplate: SaveTemplateFn;
+  deleteTemplate: (id: string) => Promise<void>;
+}
+
+export function AuditTabPanel({
+  config,
+  setConfig,
+  judgeModels,
+  currentJudgeReasoningEffort,
+  handleJudgeReasoningChange,
+  judgeOllamaOffline,
+  auditTemplates,
+  isRefiningJudge,
+  isRefiningCoherence,
+  canRefine,
+  judgeRefineLabel,
+  handleRefineJudgePrompt,
+  handleRefineCoherencePrompt,
+  handleJudgeModelChange,
+  handleJudgeProviderChange,
+  keyStatuses,
+  saveTemplate,
+  deleteTemplate,
+}: AuditTabPanelProps) {
+  const { t } = useTranslation();
+  const judgeResolvedReasoning = getResolvedModelReasoning(config.judgeProvider, config.judgeModel);
+
+  return (
+    <div
+      id="pconfig-panel-audit"
+      role="tabpanel"
+      aria-labelledby="pconfig-tab-audit"
+      className="space-y-6"
+    >
+      <div className="space-y-3 rounded-[20px] border border-editorial-border bg-editorial-bg/70 px-5 py-4">
+        <SectionLabel icon={Cpu} label={t('pipeline.auditModelLabel')} />
+        <div className="flex gap-2">
+          <select
+            value={config.judgeProvider}
+            onChange={(e) => handleJudgeProviderChange(e.target.value as ModelProvider)}
+            className="rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            aria-label={t('models.provider')}
+          >
+            {MODEL_PROVIDER_ORDER.map((p) => (
+              <option key={p} value={p} disabled={p !== 'ollama' && keyStatuses[p] === false}>{p}</option>
+            ))}
+          </select>
+          {judgeModels.length > 0 ? (
+            <select
+              value={config.judgeModel}
+              onChange={(e) => handleJudgeModelChange(e.target.value)}
+              className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              aria-label={t('pipeline.auditModelLabel')}
+            >
+              {judgeModels.map((m) => (
+                <option key={m} value={m}>
+                  {m}{getModelStatus(config.judgeProvider, m) === 'preview' ? ' (preview)' : ''}
+                </option>
+              ))}
+            </select>
+          ) : config.judgeProvider === 'ollama' ? (
+            <input
+              value={config.judgeModel}
+              onChange={(e) => handleJudgeModelChange(e.target.value)}
+              placeholder={t('ollama.modelPlaceholder')}
+              className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              aria-label={t('pipeline.auditModelLabel')}
+            />
+          ) : (
+            <select
+              value={config.judgeModel}
+              onChange={(e) => handleJudgeModelChange(e.target.value)}
+              className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              aria-label={t('pipeline.auditModelLabel')}
+            >
+              {getKnownModelIds(config.judgeProvider).map((m) => (
+                <option key={m} value={m}>
+                  {m}{getModelStatus(config.judgeProvider, m) === 'preview' ? ' (preview)' : ''}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+        {judgeResolvedReasoning !== undefined && judgeResolvedReasoning !== 'non_reasoning' && config.judgeProvider !== 'ollama' && (
+          <div className="flex items-center gap-2">
+            <Wand2 size={11} className="text-editorial-warning shrink-0" />
+            <span className="text-[10px] font-sans uppercase tracking-[0.3em] text-editorial-muted">
+              {t('pipeline.reasoningEffort')}
+            </span>
+            <ReasoningPicker
+              value={currentJudgeReasoningEffort}
+              showNone={judgeResolvedReasoning === 'optional'}
+              onChange={handleJudgeReasoningChange}
+            />
+          </div>
+        )}
+        {judgeOllamaOffline && (
+          <div className="flex items-center gap-2 text-xs text-editorial-accent">
+            <AlertTriangle size={14} />
+            <span>{t('ollama.selectedButOffline')}</span>
+          </div>
+        )}
+        <ProviderRuntimeEditor
+          provider={config.judgeProvider}
+          value={config.reviewProviderOptions}
+          onChange={(reviewProviderOptions) => setConfig((prev) => ({ ...prev, reviewProviderOptions }))}
+          title={t('pipeline.providerOptions.reviewTitle')}
+          hint={t('pipeline.providerOptions.reviewHint')}
+        />
+      </div>
+
+      <AuditPromptEditor
+        label={t('pipeline.judgePromptLabel')}
+        hint={t('pipeline.judgePromptHint')}
+        value={config.judgePrompt}
+        placeholder={t('pipeline.auditPlaceholder')}
+        templates={auditTemplates}
+        isRefining={isRefiningJudge}
+        canRefine={canRefine}
+        refineLabel={judgeRefineLabel}
+        onRefine={handleRefineJudgePrompt}
+        onChange={(value) => setConfig((prev) => ({ ...prev, judgePrompt: value }))}
+        onApplyTemplate={(template) => {
+          setConfig((prev) => ({
+            ...prev,
+            judgePrompt: template.prompt,
+            judgeModel: template.defaultModel || prev.judgeModel,
+            judgeProvider: (template.defaultProvider as ModelProvider | undefined) || prev.judgeProvider,
+          }));
+        }}
+        saveTemplate={saveTemplate}
+        onDeleteTemplate={deleteTemplate}
+        defaultModel={config.judgeModel}
+        defaultProvider={config.judgeProvider}
+        icon={<Scale size={11} />}
+        defaultValue={DEFAULT_JUDGE_PROMPT}
+        onReset={() => setConfig((prev) => ({ ...prev, judgePrompt: DEFAULT_JUDGE_PROMPT }))}
+      />
+
+      <AuditPromptEditor
+        label={t('pipeline.coherencePromptLabel')}
+        hint={t('pipeline.coherencePromptHint')}
+        value={config.coherencePrompt ?? ''}
+        placeholder={t('pipeline.coherencePromptPlaceholder')}
+        templates={auditTemplates}
+        isRefining={isRefiningCoherence}
+        canRefine={canRefine}
+        refineLabel={judgeRefineLabel}
+        onRefine={handleRefineCoherencePrompt}
+        onChange={(value) => setConfig((prev) => ({ ...prev, coherencePrompt: value }))}
+        onApplyTemplate={(template) => {
+          setConfig((prev) => ({
+            ...prev,
+            coherencePrompt: template.prompt,
+            judgeModel: template.defaultModel || prev.judgeModel,
+            judgeProvider: (template.defaultProvider as ModelProvider | undefined) || prev.judgeProvider,
+          }));
+        }}
+        saveTemplate={saveTemplate}
+        onDeleteTemplate={deleteTemplate}
+        defaultModel={config.judgeModel}
+        defaultProvider={config.judgeProvider}
+        icon={<RefreshCw size={11} />}
+        defaultValue={DEFAULT_COHERENCE_PROMPT}
+        onReset={() => setConfig((prev) => ({ ...prev, coherencePrompt: DEFAULT_COHERENCE_PROMPT }))}
+      />
+    </div>
+  );
+}
