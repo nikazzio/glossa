@@ -82,13 +82,12 @@ export function PipelineConfig({
   const translationsExist = completedCount > 0;
 
   useEffect(() => {
-    loadTemplates().catch((err: unknown) => {
+    void loadTemplates().catch((err: unknown) => {
       toast.error(t('pipeline.templates.loadFailed'), {
         description: err instanceof Error ? err.message : String(err),
       });
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadTemplates]);
 
   const auditTemplates = templates.filter((tmpl) => tmpl.context === 'audit');
   const personaTemplates = templates.filter((tmpl) => tmpl.context === 'persona');
