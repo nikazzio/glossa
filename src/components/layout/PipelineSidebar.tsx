@@ -195,7 +195,6 @@ export function PipelineSidebar({
                 onMouseEnter={() => setShowCostPanel(true)}
                 onMouseLeave={() => setShowCostPanel(false)}
               >
-                <Tooltip label={t('cost.breakdown')} side="right">
                   <button
                     type="button"
                     onFocus={() => setShowCostPanel(true)}
@@ -205,7 +204,6 @@ export function PipelineSidebar({
                   >
                     <Info size={11} />
                   </button>
-                </Tooltip>
               </div>
             )}
             {showCostPanel && costEstimate.stages.length > 0 && (
