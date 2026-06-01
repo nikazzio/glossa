@@ -303,10 +303,11 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
                     onClick={() => setShowProjectPanel(true)}
                     title={projectsLabel}
                     ariaLabel={projectsLabel}
+                    tooltipSide="bottom"
                   >
                     <FolderOpen size={16} />
                   </IconButton>
-                  <IconButton onClick={handleImport} title={importLabel} ariaLabel={importLabel}>
+                  <IconButton onClick={handleImport} title={importLabel} ariaLabel={importLabel} tooltipSide="bottom">
                     <Upload size={16} />
                   </IconButton>
                   <IconButton
@@ -314,6 +315,7 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
                     title={saveLabel}
                     ariaLabel={saveLabel}
                     disabled={isProcessing}
+                    tooltipSide="bottom"
                   >
                     <Save size={16} />
                   </IconButton>
@@ -322,6 +324,7 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
                       onClick={() => setShowExportDialog(true)}
                       title={exportLabel}
                       ariaLabel={exportLabel}
+                      tooltipSide="bottom"
                     >
                       <FileOutput size={16} />
                     </IconButton>
@@ -336,6 +339,7 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
                     onClick={() => setShowLibraryPanel(true)}
                     title={libraryLabel}
                     ariaLabel={libraryLabel}
+                    tooltipSide="bottom"
                   >
                     <LibraryBig size={16} />
                   </IconButton>
@@ -345,6 +349,7 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
                     ariaLabel={sandboxLabel}
                     ariaPressed={viewMode === 'sandbox'}
                     tone={viewMode === 'sandbox' ? 'accent' : 'default'}
+                    tooltipSide="bottom"
                   >
                     <LayoutTemplate size={16} />
                   </IconButton>
@@ -352,6 +357,7 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
                     onClick={() => setShowSettings(true)}
                     title={settingsLabel}
                     ariaLabel={settingsLabel}
+                    tooltipSide="bottom"
                   >
                     <Settings size={16} />
                   </IconButton>
@@ -366,7 +372,7 @@ export function Header({ onRunPipeline, onCancelPipeline }: HeaderProps = {}) {
                       {i18n.language.toUpperCase()}
                     </span>
                   </button>
-                  <IconButton onClick={() => setShowHelp(true)} title={helpLabel} ariaLabel={helpLabel}>
+                  <IconButton onClick={() => setShowHelp(true)} title={helpLabel} ariaLabel={helpLabel} tooltipSide="bottom">
                     <HelpCircle size={16} />
                   </IconButton>
                 </div>

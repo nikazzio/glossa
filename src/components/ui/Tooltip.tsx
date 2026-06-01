@@ -12,7 +12,7 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 
-type TooltipSide = 'top' | 'right' | 'left' | 'bottom';
+export type TooltipSide = 'top' | 'right' | 'left' | 'bottom';
 
 interface TooltipProps {
   label?: string | null;

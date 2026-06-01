@@ -1,0 +1,40 @@
+{
+  "output": {
+    "filePath": "repomix-output.xml",
+    "style": "xml",
+    "compress": true,
+    "showLineNumbers": false,
+    "copyToClipboard": false
+  },
+  "include": [
+    "src/**",
+    "src-tauri/src/**",
+    "src-tauri/Cargo.toml",
+    "package.json",
+    "tsconfig.json",
+    "vite.config.ts",
+    "tailwind.config.*",
+    "docs/**"
+  ],
+  "ignore": {
+    "useGitignore": true,
+    "useDefaultPatterns": true,
+    "customPatterns": [
+      "repomix-output.xml",
+      "src-tauri/target/**",
+      "src-tauri/gen/**",
+      "node_modules/**",
+      "dist/**",
+      ".next/**",
+      "*.lock",
+      "*.log",
+      "coverage/**",
+      "**/*.test.*",
+      "**/*.spec.*",
+      "**/__snapshots__/**"
+    ]
+  },
+  "security": {
+    "enableSecurityCheck": true
+  }
+}
