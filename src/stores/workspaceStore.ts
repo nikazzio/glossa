@@ -29,7 +29,11 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
         listWorkspaces(),
         getActiveWorkspaceId(),
       ]);
-      const activeWorkspace = workspaces.find((w) => w.id === activeId) ?? null;
+      const found = workspaces.find((w) => w.id === activeId);
+      const activeWorkspace = found ?? workspaces[0] ?? null;
+      if (!found && activeWorkspace) {
+        await setActiveWorkspaceId(activeWorkspace.id);
+      }
       set({ workspaces, activeWorkspace, loading: false, isLoaded: true });
     } catch (err) {
       set({ loading: false, isLoaded: true });

@@ -66,6 +66,7 @@ describe('runEmbeddingJob', () => {
 
     await runEmbeddingJob({
       workspaceId: 'ws-1',
+      projectId: 'proj-1',
       embeddingModel: 'text-embedding-3-small',
       splitter: 'regex',
       chunks: [{ id: 'c1', text: 'Ciao. Mondo.' }],
@@ -74,7 +75,7 @@ describe('runEmbeddingJob', () => {
 
     expect(mockInvoke).toHaveBeenCalledWith(
       'vec_upsert_source_phrase',
-      expect.objectContaining({ workspaceId: 'ws-1' }),
+      expect.objectContaining({ projectId: 'proj-1' }),
     );
   });
 
@@ -85,6 +86,7 @@ describe('runEmbeddingJob', () => {
 
     await runEmbeddingJob({
       workspaceId: 'ws-1',
+      projectId: 'proj-1',
       embeddingModel: 'text-embedding-3-small',
       splitter: 'none',
       chunks: [{ id: 'c1', text: 'Una frase.' }],
@@ -140,17 +142,20 @@ describe('saveLockedPhrases', () => {
 
     await saveLockedPhrases({
       workspaceId: 'ws-1',
+      projectId: 'proj-1',
       chunkId: 'c1',
       embeddingModel: 'text-embedding-3-small',
       splitter: 'regex',
       sourceText: 'Ciao mondo.',
       targetText: 'Hello world.',
       minPhraseLength: 3,
+      sourceLanguage: 'it',
+      targetLanguage: 'en',
     });
 
     expect(mockInvoke).toHaveBeenCalledWith(
       'vec_save_locked_phrases',
-      expect.objectContaining({ workspaceId: 'ws-1', chunkId: 'c1' }),
+      expect.objectContaining({ workspaceId: 'ws-1', projectId: 'proj-1', chunkId: 'c1' }),
     );
   });
 });

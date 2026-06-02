@@ -36,6 +36,7 @@ export async function splitPhrases(sourceText: string, splitter: PhraseMemorySpl
 
 export interface EmbeddingJobOptions {
   workspaceId: string;
+  projectId: string;
   embeddingModel: EmbeddingModel;
   splitter: PhraseMemorySplitter;
   chunks: Array<{ id: string; text: string }>;
@@ -43,7 +44,7 @@ export interface EmbeddingJobOptions {
 }
 
 export async function runEmbeddingJob(options: EmbeddingJobOptions): Promise<void> {
-  const { workspaceId, embeddingModel, splitter, chunks, onProgress } = options;
+  const { projectId, embeddingModel, splitter, chunks, onProgress } = options;
 
   const allPhrases: Array<{ chunkId: string; phrase: string }> = [];
   for (const chunk of chunks) {
@@ -65,7 +66,7 @@ export async function runEmbeddingJob(options: EmbeddingJobOptions): Promise<voi
       const embedding = vectors[j];
       if (!embedding) continue;
       const { chunkId, phrase } = batch[j];
-      await invoke('vec_upsert_source_phrase', { workspaceId, chunkId, phrase, embedding });
+      await invoke('vec_upsert_source_phrase', { projectId, chunkId, phrase, embedding });
       totalTokens += estimateTokenCount(phrase);
     }
 
@@ -112,26 +113,34 @@ export async function searchPhraseMemory(options: SearchOptions): Promise<Phrase
 
 export interface SaveLockedPhrasesOptions {
   workspaceId: string;
+  projectId: string;
   chunkId: string;
   embeddingModel: EmbeddingModel;
   splitter: PhraseMemorySplitter;
   sourceText: string;
   targetText: string;
   minPhraseLength: number;
+  sourceLanguage: string;
+  targetLanguage: string;
 }
 
 export async function saveLockedPhrases(options: SaveLockedPhrasesOptions): Promise<void> {
-  const { workspaceId, chunkId, embeddingModel, splitter, sourceText, targetText, minPhraseLength } = options;
+  const {
+    workspaceId, projectId, chunkId, embeddingModel, splitter,
+    sourceText, targetText, minPhraseLength, sourceLanguage, targetLanguage,
+  } = options;
 
   const sourcePhrases = await splitPhrases(sourceText, splitter);
   const targetPhrases = await splitPhrases(targetText, splitter);
   const pairCount = Math.min(sourcePhrases.length, targetPhrases.length);
   if (pairCount === 0) return;
 
-  const paired = sourcePhrases.slice(0, pairCount).map((sp, i) => ({
-    sourcePhrase: sp,
-    targetPhrase: targetPhrases[i],
-  }));
+  const paired = sourcePhrases
+    .slice(0, pairCount)
+    .map((sp, i) => ({ sourcePhrase: sp, targetPhrase: targetPhrases[i] }))
+    .filter((p) => p.sourcePhrase.length >= minPhraseLength);
+
+  if (paired.length === 0) return;
 
   const sourceVectors = await fetchEmbeddings(paired.map((p) => p.sourcePhrase), embeddingModel);
   const pairs = paired.map((p, i) => ({
@@ -140,5 +149,7 @@ export async function saveLockedPhrases(options: SaveLockedPhrasesOptions): Prom
     sourceEmbedding: sourceVectors[i] ?? [],
   }));
 
-  await invoke('vec_save_locked_phrases', { workspaceId, chunkId, pairs, minPhraseLength });
+  await invoke('vec_save_locked_phrases', {
+    workspaceId, projectId, chunkId, pairs, minPhraseLength, sourceLanguage, targetLanguage,
+  });
 }

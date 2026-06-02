@@ -120,6 +120,12 @@ pub async fn split_phrases_llm(
         .await
         .map_err(|e| EmbeddingError::Http(e.to_string()))?;
 
+    if !response.status().is_success() {
+        let status = response.status();
+        let text = response.text().await.unwrap_or_default();
+        return Err(EmbeddingError::Http(format!("{status}: {text}")));
+    }
+
     let json: serde_json::Value = response
         .json()
         .await
@@ -157,7 +163,7 @@ pub async fn split_phrases_llm(
 #[tauri::command]
 pub async fn vec_upsert_source_phrase(
     app: tauri::AppHandle,
-    workspace_id: String,
+    project_id: String,
     chunk_id: String,
     phrase: String,
     embedding: Vec<f32>,
@@ -168,9 +174,9 @@ pub async fn vec_upsert_source_phrase(
 
     conn.execute(
         "INSERT OR REPLACE INTO source_phrase_embeddings \
-         (id, workspace_id, chunk_id, source_phrase, embedding, created_at) \
+         (id, project_id, chunk_id, source_phrase, embedding, created_at) \
          VALUES (lower(hex(randomblob(16))), ?1, ?2, ?3, ?4, datetime('now'))",
-        rusqlite::params![workspace_id, chunk_id, phrase, floats_to_blob(&embedding)],
+        rusqlite::params![project_id, chunk_id, phrase, floats_to_blob(&embedding)],
     )
     .map_err(|e| EmbeddingError::Http(e.to_string()))?;
 
@@ -201,17 +207,21 @@ pub async fn vec_search_phrase_memory(
 
     let mut stmt = conn
         .prepare(
-            "SELECT pm.id, pm.source_phrase, pm.target_phrase, \
-                    vec_distance_cosine(pm.embedding, ?1) AS distance \
-             FROM phrase_memory pm \
-             WHERE pm.workspace_id = ?2 \
-               AND vec_distance_cosine(pm.embedding, ?1) < ?3 \
+            "WITH ranked AS ( \
+               SELECT pm.id, pm.source_phrase, pm.target_phrase, \
+                      vec_distance_cosine(pm.embedding, ?1) AS distance \
+               FROM phrase_memory pm \
+               WHERE pm.workspace_id = ?2 \
+             ) \
+             SELECT id, source_phrase, target_phrase, distance \
+             FROM ranked \
+             WHERE distance < ?3 \
              ORDER BY distance ASC \
              LIMIT ?4",
         )
         .map_err(|e| EmbeddingError::Http(e.to_string()))?;
 
-    let results = stmt
+    let results: rusqlite::Result<Vec<PhraseMatchResult>> = stmt
         .query_map(
             rusqlite::params![blob, workspace_id, threshold, max_results],
             |row| {
@@ -224,10 +234,9 @@ pub async fn vec_search_phrase_memory(
             },
         )
         .map_err(|e| EmbeddingError::Http(e.to_string()))?
-        .filter_map(|r| r.ok())
         .collect();
 
-    Ok(results)
+    results.map_err(|e| EmbeddingError::Http(e.to_string()))
 }
 
 #[derive(Debug, Deserialize)]
@@ -237,13 +246,17 @@ pub struct PhrasePair {
     pub source_embedding: Vec<f32>,
 }
 
+#[allow(clippy::too_many_arguments)]
 #[tauri::command]
 pub async fn vec_save_locked_phrases(
     app: tauri::AppHandle,
     workspace_id: String,
+    project_id: String,
     chunk_id: String,
     pairs: Vec<PhrasePair>,
     min_phrase_length: u32,
+    source_language: String,
+    target_language: String,
 ) -> Result<u32, EmbeddingError> {
     if pairs.is_empty() {
         return Ok(0);
@@ -260,25 +273,29 @@ pub async fn vec_save_locked_phrases(
             continue;
         }
 
-        conn.execute(
-            "INSERT OR IGNORE INTO phrase_memory \
-             (id, workspace_id, source_phrase, target_phrase, embedding, created_at) \
-             VALUES (lower(hex(randomblob(16))), ?1, ?2, ?3, ?4, datetime('now'))",
-            rusqlite::params![
-                workspace_id,
-                pair.source_phrase,
-                pair.target_phrase,
-                floats_to_blob(&pair.source_embedding)
-            ],
-        )
-        .map_err(|e| EmbeddingError::Http(e.to_string()))?;
+        let rows = conn
+            .execute(
+                "INSERT OR IGNORE INTO phrase_memory \
+                 (id, workspace_id, source_phrase, target_phrase, \
+                  source_language, target_language, embedding, created_at) \
+                 VALUES (lower(hex(randomblob(16))), ?1, ?2, ?3, ?4, ?5, ?6, datetime('now'))",
+                rusqlite::params![
+                    workspace_id,
+                    pair.source_phrase,
+                    pair.target_phrase,
+                    source_language,
+                    target_language,
+                    floats_to_blob(&pair.source_embedding)
+                ],
+            )
+            .map_err(|e| EmbeddingError::Http(e.to_string()))?;
 
-        saved += 1;
+        saved += rows as u32;
     }
 
     conn.execute(
-        "DELETE FROM source_phrase_embeddings WHERE chunk_id = ?1 AND workspace_id = ?2",
-        rusqlite::params![chunk_id, workspace_id],
+        "DELETE FROM source_phrase_embeddings WHERE chunk_id = ?1 AND project_id = ?2",
+        rusqlite::params![chunk_id, project_id],
     )
     .map_err(|e| EmbeddingError::Http(e.to_string()))?;
 

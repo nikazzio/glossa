@@ -166,7 +166,7 @@ export default function App() {
   const currentProjectId = useProjectStore((s) => s.currentProjectId);
 
   useEffect(() => {
-    void loadWorkspaces();
+    loadWorkspaces().catch((err: unknown) => console.error('[App] loadWorkspaces failed:', err));
   }, [loadWorkspaces]);
 
   // ── Shell loading ────────────────────────────────────────────────────

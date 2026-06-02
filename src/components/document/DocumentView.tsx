@@ -20,6 +20,7 @@ import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { useProjectStore } from '../../stores/projectStore';
 import { saveLockedPhrases } from '../../services/phraseMemoryService';
 import { logger } from '../../utils/logger';
 import type { TranslationChunk } from '../../types';
@@ -59,19 +60,23 @@ export function DocumentView({ onRetranslateChunk }: DocumentViewProps) {
     toggleChunkSourceEditing,
   } = useChunksStore();
   const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace);
+  const currentProjectId = useProjectStore((s) => s.currentProjectId);
 
   const handleLockToggle = (chunk: TranslationChunk) => {
     const isLocking = !chunk.translationLocked;
     toggleChunkTranslationLock(chunk.id);
-    if (isLocking && activeWorkspace && chunk.sourceProcessingText && chunk.currentDraft) {
+    if (isLocking && activeWorkspace && currentProjectId && chunk.sourceProcessingText && chunk.currentDraft) {
       saveLockedPhrases({
         workspaceId: activeWorkspace.id,
+        projectId: currentProjectId,
         chunkId: chunk.id,
         embeddingModel: activeWorkspace.embeddingModel,
         splitter: 'regex',
         sourceText: chunk.sourceProcessingText,
         targetText: chunk.currentDraft,
         minPhraseLength: 10,
+        sourceLanguage: config.sourceLanguage,
+        targetLanguage: config.targetLanguage,
       }).catch((err) => logger.warn('saveLockedPhrases failed (non-blocking)', { error: String(err) }));
     }
   };
