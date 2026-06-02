@@ -168,6 +168,7 @@ pub fn extract_pdf_text_from_bytes(bytes: &[u8]) -> Result<String, String> {
     Ok(normalized)
 }
 
+#[allow(clippy::collapsible_str_replace)]
 fn normalize_pdf_text(text: &str) -> String {
     let text = text
         .replace('\u{FB00}', "ff")

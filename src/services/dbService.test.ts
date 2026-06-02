@@ -202,7 +202,7 @@ describe('initDatabase migrations', () => {
 
     await initDatabase();
 
-    const seedCalls = (dbState.db.execute.mock.calls as [string, unknown[]][]).filter(
+    const seedCalls = (dbState.db.execute.mock.calls as unknown as [string, unknown[]][]).filter(
       ([q]) => q.includes('INSERT OR IGNORE INTO phrase_memory_presets'),
     );
     expect(seedCalls).toHaveLength(4);
@@ -218,18 +218,14 @@ describe('initDatabase migrations', () => {
     );
   });
 
-  it('creates default workspace and sets it active on fresh database', async () => {
+  it('does not auto-create a default workspace', async () => {
     const { initDatabase } = await import('./dbService');
 
     await initDatabase();
 
-    expect(dbState.db.execute).toHaveBeenCalledWith(
-      expect.stringContaining('INSERT OR IGNORE INTO workspaces'),
-      expect.arrayContaining(['ws_default', 'Default']),
+    const calls = (dbState.db.execute.mock.calls as unknown as [string, unknown[]][]).filter(
+      ([q]) => q.includes('INSERT') && q.includes('workspaces') && !q.includes('phrase_memory'),
     );
-    expect(dbState.db.execute).toHaveBeenCalledWith(
-      expect.stringContaining("UPDATE app_settings SET value = ? WHERE key = 'active_workspace_id'"),
-      expect.arrayContaining(['ws_default']),
-    );
+    expect(calls).toHaveLength(0);
   });
 });

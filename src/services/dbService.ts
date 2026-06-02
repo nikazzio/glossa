@@ -587,23 +587,6 @@ export async function initDatabase(): Promise<void> {
   const { seedBuiltinPresets } = await import('./phraseMemoryPresetService');
   await seedBuiltinPresets(conn);
 
-  // Crea workspace di default se non ne esiste nessuno
-  const wsCount = await conn.select<Array<{ count: number }>>(
-    `SELECT COUNT(*) as count FROM workspaces`
-  );
-  if ((wsCount[0]?.count ?? 0) === 0) {
-    const wsId = `ws_default`;
-    await conn.execute(
-      `INSERT OR IGNORE INTO workspaces (id, name, embedding_model, created_at)
-       VALUES (?, ?, ?, ?)`,
-      [wsId, 'Default', 'text-embedding-3-small', new Date().toISOString()],
-    );
-    await conn.execute(
-      `UPDATE app_settings SET value = ? WHERE key = 'active_workspace_id'`,
-      [wsId],
-    );
-  }
-
   console.log('[Glossa] Database initialized');
 }
 

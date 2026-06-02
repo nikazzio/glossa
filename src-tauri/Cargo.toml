@@ -40,6 +40,7 @@ rand = "0.8"
 async-trait = "0.1"
 rusqlite = { version = "0.32", features = ["bundled"] }
 sqlite-vec = "0.1.6"
+thiserror = "1"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt", "test-util", "time"] }

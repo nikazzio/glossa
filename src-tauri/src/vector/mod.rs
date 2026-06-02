@@ -1,3 +1,5 @@
+pub mod embedding;
+
 use rusqlite::{ffi::sqlite3_auto_extension, Connection, Result as RusqliteResult};
 use std::path::PathBuf;
 use tauri::Manager;
@@ -6,6 +8,7 @@ use tauri::Manager;
 /// Must be called once at startup before opening any connection.
 /// After registration every rusqlite::Connection will have vec_* functions available.
 pub fn register_vec_extension() {
+    #[allow(clippy::missing_transmute_annotations)]
     unsafe {
         sqlite3_auto_extension(Some(std::mem::transmute(
             sqlite_vec::sqlite3_vec_init as *const (),
