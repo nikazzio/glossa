@@ -174,4 +174,62 @@ describe('initDatabase migrations', () => {
       expect.stringContaining('CREATE UNIQUE INDEX IF NOT EXISTS idx_prompt_templates_name_context'),
     );
   });
+
+  it('creates phrase memory schema tables and workspace_id column', async () => {
+    const { initDatabase } = await import('./dbService');
+
+    await initDatabase();
+
+    for (const table of [
+      'workspaces',
+      'phrase_memory_presets',
+      'phrase_memory',
+      'source_phrase_embeddings',
+      'historical_techniques',
+      'technique_tags',
+    ]) {
+      expect(dbState.db.execute).toHaveBeenCalledWith(
+        expect.stringContaining(`CREATE TABLE IF NOT EXISTS ${table}`),
+      );
+    }
+    expect(dbState.db.execute).toHaveBeenCalledWith(
+      expect.stringContaining('ALTER TABLE projects ADD COLUMN workspace_id'),
+    );
+  });
+
+  it('seeds 4 builtin phrase memory presets on fresh database', async () => {
+    const { initDatabase } = await import('./dbService');
+
+    await initDatabase();
+
+    const seedCalls = (dbState.db.execute.mock.calls as [string, unknown[]][]).filter(
+      ([q]) => q.includes('INSERT OR IGNORE INTO phrase_memory_presets'),
+    );
+    expect(seedCalls).toHaveLength(4);
+  });
+
+  it('inserts active_workspace_id key into app_settings on fresh database', async () => {
+    const { initDatabase } = await import('./dbService');
+
+    await initDatabase();
+
+    expect(dbState.db.execute).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO app_settings (key, value) VALUES ('active_workspace_id', '')"),
+    );
+  });
+
+  it('creates default workspace and sets it active on fresh database', async () => {
+    const { initDatabase } = await import('./dbService');
+
+    await initDatabase();
+
+    expect(dbState.db.execute).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT OR IGNORE INTO workspaces'),
+      expect.arrayContaining(['ws_default', 'Default']),
+    );
+    expect(dbState.db.execute).toHaveBeenCalledWith(
+      expect.stringContaining("UPDATE app_settings SET value = ? WHERE key = 'active_workspace_id'"),
+      expect.arrayContaining(['ws_default']),
+    );
+  });
 });
