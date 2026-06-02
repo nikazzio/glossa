@@ -26,6 +26,7 @@ import { useOperationLogStore } from './operationLogStore';
 import { buildProjectSnapshot } from '../utils/projectSnapshot';
 import { logger } from '../utils/logger';
 import { runInTransaction } from '../services/dbService';
+import { useWorkspaceStore } from './workspaceStore';
 import type { Pipeline, PipelineConfig } from '../types';
 
 let saveInFlight: Promise<void> | null = null;
@@ -82,7 +83,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   loadProjects: async () => {
-    const projects = await listProjects();
+    const { activeWorkspace } = useWorkspaceStore.getState();
+    if (!activeWorkspace) { set({ projects: [] }); return; }
+    const projects = await listProjects(activeWorkspace.id);
     set({ projects });
   },
 
@@ -90,8 +93,10 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const pipeline = usePipelineStore.getState();
     const ui = useUiStore.getState();
     const chunks = useChunksStore.getState().chunks;
+    const { activeWorkspace } = useWorkspaceStore.getState();
+    if (!activeWorkspace) throw new Error('No active workspace');
 
-    const id = await createProject(name, pipeline.config.sourceLanguage, pipeline.config.targetLanguage);
+    const id = await createProject(name, pipeline.config.sourceLanguage, pipeline.config.targetLanguage, activeWorkspace.id);
 
     const pipelines = await listPipelines(id);
     const activePipelineId = pipelines[0]?.id ?? null;
@@ -257,7 +262,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
         if (!currentProjectId) {
           if (!name?.trim()) throw new Error('Project name required for first save.');
-          currentProjectId = await createProject(name.trim(), pipeline.config.sourceLanguage, pipeline.config.targetLanguage);
+          const { activeWorkspace } = useWorkspaceStore.getState();
+          if (!activeWorkspace) throw new Error('No active workspace');
+          currentProjectId = await createProject(name.trim(), pipeline.config.sourceLanguage, pipeline.config.targetLanguage, activeWorkspace.id);
           const pipelines = await listPipelines(currentProjectId);
           activePipelineId = pipelines[0]?.id ?? null;
           newPipelines = pipelines;

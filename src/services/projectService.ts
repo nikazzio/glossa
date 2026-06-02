@@ -59,8 +59,11 @@ export interface SavedTranslation {
 
 // ── Projects CRUD ────────────────────────────────────────────────────
 
-export async function listProjects(): Promise<Project[]> {
-  return select<Project>('SELECT * FROM projects ORDER BY updated_at DESC');
+export async function listProjects(workspaceId: string): Promise<Project[]> {
+  return select<Project>(
+    'SELECT * FROM projects WHERE workspace_id = $1 ORDER BY updated_at DESC',
+    [workspaceId],
+  );
 }
 
 export async function getProject(id: string): Promise<Project | null> {
@@ -72,12 +75,13 @@ export async function createProject(
   name: string,
   sourceLang: string,
   targetLang: string,
+  workspaceId: string,
 ): Promise<string> {
   const id = `proj-${Date.now()}`;
   await execute(
-    `INSERT INTO projects (id, name, source_language, target_language)
-     VALUES ($1, $2, $3, $4)`,
-    [id, name, sourceLang, targetLang],
+    `INSERT INTO projects (id, name, source_language, target_language, workspace_id)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [id, name, sourceLang, targetLang, workspaceId],
   );
   // Create default pipeline for this project.
   const pipelineId = `pipeline-${Date.now()}`;

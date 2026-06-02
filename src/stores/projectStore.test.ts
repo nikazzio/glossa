@@ -7,6 +7,16 @@ import type { SavedTranslation } from '../services/projectService';
 import type { Pipeline } from '../types';
 import { buildProjectSnapshot } from '../utils/projectSnapshot';
 
+// ── workspaceStore mock ───────────────────────────────────────────────
+
+vi.mock('./workspaceStore', () => ({
+  useWorkspaceStore: {
+    getState: () => ({
+      activeWorkspace: { id: 'ws-test', name: 'Test', embeddingModel: 'text-embedding-3-small', createdAt: '2024-01-01T00:00:00Z' },
+    }),
+  },
+}));
+
 // ── DB mock (runInTransaction, loadOperationLogs) ─────────────────────
 
 const dbMocks = vi.hoisted(() => ({
@@ -304,7 +314,7 @@ describe('projectStore', () => {
 
     await useProjectStore.getState().saveCurrentProject('My Draft');
 
-    expect(projectServiceMocks.createProject).toHaveBeenCalledWith('My Draft', 'English', 'Italian');
+    expect(projectServiceMocks.createProject).toHaveBeenCalledWith('My Draft', 'English', 'Italian', 'ws-test');
     expect(projectServiceMocks.saveProjectSource).toHaveBeenCalledWith(
       'proj-first-save',
       'Draft text',
