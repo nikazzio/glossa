@@ -4,7 +4,7 @@ import { invoke } from '@tauri-apps/api/core';
 let db: Database | null = null;
 const DB_URL = 'sqlite:glossa.db';
 
-async function getDb(): Promise<Database> {
+export async function getDb(): Promise<Database> {
   if (!db) {
     db = await Database.load(DB_URL);
   }
