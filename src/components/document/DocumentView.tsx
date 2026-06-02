@@ -19,6 +19,9 @@ import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { saveLockedPhrases } from '../../services/phraseMemoryService';
+import { logger } from '../../utils/logger';
 import type { TranslationChunk } from '../../types';
 import { indexPad } from '../../utils';
 import { CopyButton, HighlightedText, MarkdownEditor, ProcessingLine } from '../common';
@@ -55,6 +58,23 @@ export function DocumentView({ onRetranslateChunk }: DocumentViewProps) {
     toggleChunkTranslationLock,
     toggleChunkSourceEditing,
   } = useChunksStore();
+  const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace);
+
+  const handleLockToggle = (chunk: TranslationChunk) => {
+    const isLocking = !chunk.translationLocked;
+    toggleChunkTranslationLock(chunk.id);
+    if (isLocking && activeWorkspace && chunk.sourceProcessingText && chunk.currentDraft) {
+      saveLockedPhrases({
+        workspaceId: activeWorkspace.id,
+        chunkId: chunk.id,
+        embeddingModel: activeWorkspace.embeddingModel,
+        splitter: 'regex',
+        sourceText: chunk.sourceProcessingText,
+        targetText: chunk.currentDraft,
+        minPhraseLength: 10,
+      }).catch((err) => logger.warn('saveLockedPhrases failed (non-blocking)', { error: String(err) }));
+    }
+  };
 
   const {
     selectedChunkId,
@@ -415,7 +435,7 @@ export function DocumentView({ onRetranslateChunk }: DocumentViewProps) {
                 size="sm"
                 tone={currentChunk.translationLocked ? 'success' : 'muted'}
                 title={currentChunk.translationLocked ? t('document.unlockTranslation') : t('document.lockTranslation')}
-                onClick={() => toggleChunkTranslationLock(currentChunk.id)}
+                onClick={() => handleLockToggle(currentChunk)}
                 disabled={!currentChunk.currentDraft?.trim()}
                 ariaPressed={currentChunk.translationLocked === true}
               >

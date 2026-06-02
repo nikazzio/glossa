@@ -83,6 +83,11 @@ llm::pipeline::run_stage,
             documents::export_markdown_docx,
             documents::extract_pdf_text,
             vector::vec_ping,
+            vector::embedding::get_embeddings,
+            vector::embedding::split_phrases_llm,
+            vector::embedding::vec_upsert_source_phrase,
+            vector::embedding::vec_search_phrase_memory,
+            vector::embedding::vec_save_locked_phrases,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

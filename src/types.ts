@@ -246,3 +246,16 @@ export type PhraseMemoryPreset = {
   config: PhraseMemoryPresetConfig;
   createdAt: string;
 };
+
+export type PhraseMatch = {
+  phraseMemoryId: string;
+  sourcePhrase: string;
+  targetPhrase: string;
+  distance: number;
+};
+
+export type EmbeddingJobStatus =
+  | { kind: 'idle' }
+  | { kind: 'running'; processed: number; total: number; estimatedCostUsd: number }
+  | { kind: 'done'; totalPhrases: number }
+  | { kind: 'error'; message: string };

@@ -10,6 +10,8 @@ type WorkspaceStore = {
   workspaces: Workspace[];
   activeWorkspace: Workspace | null;
   loading: boolean;
+  /** true dopo il primo caricamento completato (successo o errore). */
+  isLoaded: boolean;
   loadWorkspaces: () => Promise<void>;
   setActive: (workspace: Workspace) => Promise<void>;
 };
@@ -18,6 +20,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
   workspaces: [],
   activeWorkspace: null,
   loading: false,
+  isLoaded: false,
 
   loadWorkspaces: async () => {
     set({ loading: true });
@@ -27,9 +30,9 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
         getActiveWorkspaceId(),
       ]);
       const activeWorkspace = workspaces.find((w) => w.id === activeId) ?? null;
-      set({ workspaces, activeWorkspace, loading: false });
+      set({ workspaces, activeWorkspace, loading: false, isLoaded: true });
     } catch (err) {
-      set({ loading: false });
+      set({ loading: false, isLoaded: true });
       throw err;
     }
   },
