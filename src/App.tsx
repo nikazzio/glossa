@@ -2,14 +2,12 @@ import { lazy, Suspense, useCallback, useEffect, useRef } from 'react';
 import { initLogger } from './utils/logger';
 import { Header, PipelineSidebar } from './components/layout';
 import { ErrorBoundary, ConfirmDialog, PreflightDialog, RunResumeBanner } from './components/common';
-import { WorkspaceWizard } from './components/workspace/WorkspaceWizard';
 import { usePipeline } from './hooks/usePipeline';
 import { useProjectAutosave } from './hooks/useProjectAutosave';
 import { useUiStore } from './stores/uiStore';
 import { useProjectStore } from './stores/projectStore';
 import { useLibraryStore } from './stores/libraryStore';
 import { useChunksStore } from './stores/chunksStore';
-import { useWorkspaceStore } from './stores/workspaceStore';
 import { Toaster } from 'sonner';
 
 function HighlightColorSync() {
@@ -56,20 +54,6 @@ const LibraryPanel = lazy(() =>
 export default function App() {
   useEffect(() => { void initLogger(); }, []);
 
-  const { activeWorkspace, loading: wsLoading, loadWorkspaces } = useWorkspaceStore();
-  useEffect(() => { void loadWorkspaces(); }, [loadWorkspaces]);
-
-  if (wsLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-editorial-bg">
-        <span className="text-sm text-editorial-muted">Caricamento...</span>
-      </div>
-    );
-  }
-
-  if (!activeWorkspace) {
-    return <WorkspaceWizard />;
-  }
 
   const {
     runPipeline,
