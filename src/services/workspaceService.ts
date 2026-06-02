@@ -1,4 +1,4 @@
-import { getDb } from './dbService';
+import { execute, getSetting, select, setSetting } from './dbService';
 import type { EmbeddingModel, Workspace } from '../types';
 
 const generateId = () =>
@@ -9,7 +9,6 @@ export async function createWorkspace(params: {
   description?: string;
   embeddingModel: EmbeddingModel;
 }): Promise<Workspace> {
-  const db = await getDb();
   const workspace: Workspace = {
     id: generateId(),
     name: params.name,
@@ -17,9 +16,9 @@ export async function createWorkspace(params: {
     embeddingModel: params.embeddingModel,
     createdAt: new Date().toISOString(),
   };
-  await db.execute(
+  await execute(
     `INSERT INTO workspaces (id, name, description, embedding_model, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
+     VALUES ($1, $2, $3, $4, $5)`,
     [workspace.id, workspace.name, workspace.description ?? null,
      workspace.embeddingModel, workspace.createdAt],
   );
@@ -27,12 +26,11 @@ export async function createWorkspace(params: {
 }
 
 export async function listWorkspaces(): Promise<Workspace[]> {
-  const db = await getDb();
-  const rows = await db.select<Array<{
+  const rows = await select<{
     id: string; name: string; description: string | null;
     embedding_model: string; created_at: string;
-  }>>(`SELECT id, name, description, embedding_model, created_at
-       FROM workspaces ORDER BY created_at ASC`);
+  }>(`SELECT id, name, description, embedding_model, created_at
+      FROM workspaces ORDER BY created_at ASC`);
   return rows.map((r) => ({
     id: r.id,
     name: r.name,
@@ -43,31 +41,23 @@ export async function listWorkspaces(): Promise<Workspace[]> {
 }
 
 export async function getActiveWorkspaceId(): Promise<string | null> {
-  const db = await getDb();
-  const rows = await db.select<Array<{ value: string }>>(
-    `SELECT value FROM app_settings WHERE key = 'active_workspace_id'`,
-  );
-  return rows[0]?.value || null;
+  const value = await getSetting('active_workspace_id');
+  return value || null;
 }
 
 export async function setActiveWorkspaceId(id: string): Promise<void> {
-  const db = await getDb();
-  await db.execute(
-    `UPDATE app_settings SET value = ? WHERE key = 'active_workspace_id'`,
-    [id],
-  );
+  await setSetting('active_workspace_id', id);
 }
 
 export async function getActiveWorkspace(): Promise<Workspace | null> {
   const id = await getActiveWorkspaceId();
   if (!id) return null;
-  const db = await getDb();
-  const rows = await db.select<Array<{
+  const rows = await select<{
     id: string; name: string; description: string | null;
     embedding_model: string; created_at: string;
-  }>>(
+  }>(
     `SELECT id, name, description, embedding_model, created_at
-     FROM workspaces WHERE id = ?`,
+     FROM workspaces WHERE id = $1`,
     [id],
   );
   if (!rows[0]) return null;

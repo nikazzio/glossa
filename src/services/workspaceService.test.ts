@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mockDb = vi.hoisted(() => ({
-  execute: vi.fn().mockResolvedValue({}),
+const dbMocks = vi.hoisted(() => ({
+  execute: vi.fn().mockResolvedValue(undefined),
   select: vi.fn().mockResolvedValue([]),
+  getSetting: vi.fn().mockResolvedValue(null),
+  setSetting: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('./dbService', () => ({ getDb: vi.fn(() => Promise.resolve(mockDb)) }));
+vi.mock('./dbService', () => dbMocks);
 
 const { createWorkspace, listWorkspaces, getActiveWorkspaceId, setActiveWorkspaceId } =
   await import('./workspaceService');
@@ -13,8 +15,10 @@ const { createWorkspace, listWorkspaces, getActiveWorkspaceId, setActiveWorkspac
 describe('workspaceService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockDb.execute.mockResolvedValue({});
-    mockDb.select.mockResolvedValue([]);
+    dbMocks.execute.mockResolvedValue(undefined);
+    dbMocks.select.mockResolvedValue([]);
+    dbMocks.getSetting.mockResolvedValue(null);
+    dbMocks.setSetting.mockResolvedValue(undefined);
   });
 
   it('createWorkspace returns workspace with ws_ prefix id', async () => {
@@ -25,22 +29,19 @@ describe('workspaceService', () => {
   });
 
   it('listWorkspaces returns empty array when db returns nothing', async () => {
-    mockDb.select.mockResolvedValueOnce([]);
+    dbMocks.select.mockResolvedValueOnce([]);
     const result = await listWorkspaces();
     expect(result).toEqual([]);
   });
 
-  it('getActiveWorkspaceId returns null when value is empty string', async () => {
-    mockDb.select.mockResolvedValueOnce([{ value: '' }]);
+  it('getActiveWorkspaceId returns null when getSetting returns empty string', async () => {
+    dbMocks.getSetting.mockResolvedValueOnce('');
     const id = await getActiveWorkspaceId();
     expect(id).toBeNull();
   });
 
-  it('setActiveWorkspaceId calls execute with active_workspace_id key', async () => {
+  it('setActiveWorkspaceId calls setSetting with active_workspace_id key', async () => {
     await setActiveWorkspaceId('ws_abc123');
-    expect(mockDb.execute).toHaveBeenCalledWith(
-      expect.stringContaining('active_workspace_id'),
-      ['ws_abc123'],
-    );
+    expect(dbMocks.setSetting).toHaveBeenCalledWith('active_workspace_id', 'ws_abc123');
   });
 });

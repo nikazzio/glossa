@@ -496,8 +496,9 @@ export async function initDatabase(): Promise<void> {
     await conn.execute(
       `ALTER TABLE projects ADD COLUMN workspace_id TEXT REFERENCES workspaces(id)`
     );
-  } catch (_) {
-    // column already exists — idempotent
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (!msg.includes('duplicate column') && !msg.includes('already exists')) throw err;
   }
 
   await conn.execute(`

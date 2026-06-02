@@ -21,12 +21,17 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
 
   loadWorkspaces: async () => {
     set({ loading: true });
-    const [workspaces, activeId] = await Promise.all([
-      listWorkspaces(),
-      getActiveWorkspaceId(),
-    ]);
-    const activeWorkspace = workspaces.find((w) => w.id === activeId) ?? null;
-    set({ workspaces, activeWorkspace, loading: false });
+    try {
+      const [workspaces, activeId] = await Promise.all([
+        listWorkspaces(),
+        getActiveWorkspaceId(),
+      ]);
+      const activeWorkspace = workspaces.find((w) => w.id === activeId) ?? null;
+      set({ workspaces, activeWorkspace, loading: false });
+    } catch (err) {
+      set({ loading: false });
+      throw err;
+    }
   },
 
   setActive: async (workspace) => {

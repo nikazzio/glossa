@@ -220,29 +220,29 @@ export interface PipelineConfig {
 
 // ── Phrase Memory ────────────────────────────────────────────────────
 
-export type EmbeddingModel = 'text-embedding-3-small' | 'text-embedding-3-large'
+export type EmbeddingModel = 'text-embedding-3-small' | 'text-embedding-3-large';
 
-export type PhraseMemorySplitter = 'regex' | 'llm' | 'none'
+export type PhraseMemorySplitter = 'regex' | 'llm' | 'none';
 
 export type Workspace = {
-  id: string
-  name: string
-  description?: string
-  embeddingModel: EmbeddingModel
-  createdAt: string
-}
+  id: string;
+  name: string;
+  description?: string;
+  embeddingModel: EmbeddingModel;
+  createdAt: string;
+};
 
 export type PhraseMemoryPresetConfig = {
-  splitter: PhraseMemorySplitter
-  similarityThreshold: number
-  maxResults: number
-  minPhraseLength: number
-}
+  splitter: PhraseMemorySplitter;
+  similarityThreshold: number;
+  maxResults: number;
+  minPhraseLength: number;
+};
 
 export type PhraseMemoryPreset = {
-  id: string
-  name: string
-  isBuiltin: boolean
-  config: PhraseMemoryPresetConfig
-  createdAt: string
-}
+  id: string;
+  name: string;
+  isBuiltin: boolean;
+  config: PhraseMemoryPresetConfig;
+  createdAt: string;
+};

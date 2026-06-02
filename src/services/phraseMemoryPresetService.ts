@@ -1,3 +1,4 @@
+import { execute, select } from './dbService';
 import type { PhraseMemoryPreset, PhraseMemoryPresetConfig } from '../types';
 import type Database from '@tauri-apps/plugin-sql';
 
@@ -34,18 +35,16 @@ export async function seedBuiltinPresets(db: Database): Promise<void> {
   for (const preset of BUILTIN_PRESETS) {
     await db.execute(
       `INSERT OR IGNORE INTO phrase_memory_presets (id, name, is_builtin, config, created_at)
-       VALUES (?, ?, 1, ?, ?)`,
+       VALUES ($1, $2, 1, $3, $4)`,
       [preset.id, preset.name, JSON.stringify(preset.config), now],
     );
   }
 }
 
 export async function listPresets(): Promise<PhraseMemoryPreset[]> {
-  const { getDb } = await import('./dbService');
-  const db = await getDb();
-  const rows = await db.select<Array<{
+  const rows = await select<{
     id: string; name: string; is_builtin: number; config: string; created_at: string;
-  }>>(`SELECT * FROM phrase_memory_presets ORDER BY is_builtin DESC, name ASC`);
+  }>(`SELECT * FROM phrase_memory_presets ORDER BY is_builtin DESC, name ASC`);
   return rows.map((r) => ({
     id: r.id,
     name: r.name,
@@ -59,23 +58,19 @@ export async function createCustomPreset(
   name: string,
   config: PhraseMemoryPresetConfig,
 ): Promise<PhraseMemoryPreset> {
-  const { getDb } = await import('./dbService');
-  const db = await getDb();
   const id = `pmp_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`;
   const now = new Date().toISOString();
-  await db.execute(
+  await execute(
     `INSERT INTO phrase_memory_presets (id, name, is_builtin, config, created_at)
-     VALUES (?, ?, 0, ?, ?)`,
+     VALUES ($1, $2, 0, $3, $4)`,
     [id, name, JSON.stringify(config), now],
   );
   return { id, name, isBuiltin: false, config, createdAt: now };
 }
 
 export async function deleteCustomPreset(id: string): Promise<void> {
-  const { getDb } = await import('./dbService');
-  const db = await getDb();
-  await db.execute(
-    `DELETE FROM phrase_memory_presets WHERE id = ? AND is_builtin = 0`,
+  await execute(
+    `DELETE FROM phrase_memory_presets WHERE id = $1 AND is_builtin = 0`,
     [id],
   );
 }

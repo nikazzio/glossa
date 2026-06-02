@@ -2,18 +2,23 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockDb = vi.hoisted(() => ({
   execute: vi.fn().mockResolvedValue({}),
+}));
+
+const dbMocks = vi.hoisted(() => ({
+  execute: vi.fn().mockResolvedValue(undefined),
   select: vi.fn().mockResolvedValue([]),
 }));
 
-vi.mock('./dbService', () => ({ getDb: vi.fn(() => Promise.resolve(mockDb)) }));
+vi.mock('./dbService', () => dbMocks);
 
 const { seedBuiltinPresets, listPresets } = await import('./phraseMemoryPresetService');
 
 describe('phraseMemoryPresetService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    dbMocks.execute.mockResolvedValue(undefined);
+    dbMocks.select.mockResolvedValue([]);
     mockDb.execute.mockResolvedValue({});
-    mockDb.select.mockResolvedValue([]);
   });
 
   it('seedBuiltinPresets chiama execute 4 volte (uno per preset)', async () => {
@@ -22,7 +27,7 @@ describe('phraseMemoryPresetService', () => {
   });
 
   it('listPresets mappa is_builtin integer a boolean', async () => {
-    mockDb.select.mockResolvedValueOnce([
+    dbMocks.select.mockResolvedValueOnce([
       {
         id: 'pmp_builtin_modern',
         name: 'Moderno',
