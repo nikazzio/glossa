@@ -10,6 +10,9 @@
 > git checkout -b feat/phrase-memory-plan-4
 > ```
 
+> **Nota Piano 2 — Shell gating già implementata:**
+> La gestione preset avviene dall'editor (progetto aperto) o dalla `WorkspaceHome`. Non esiste più un workspace ghost. Piano 4 deve assicurarsi che il preset selezionato nella pipeline sia sempre associato a un workspace reale.
+
 **Goal:** Esporre il sistema preset di Phrase Memory in due punti: (1) una sezione dedicata nel modale Settings per creare/modificare/eliminare preset custom e clonare quelli built-in; (2) una sezione collassabile nella tab Settings della PipelineConfig per attivare Phrase Memory sulla pipeline e scegliere/sovrascrivere preset. Infine aggiornare `pipelineService.ts` per persistere i tre nuovi campi DB (`use_phrase_memory`, `phrase_memory_preset_id`, `phrase_memory_overrides`).
 
 **Architecture:** Nessun nuovo store Zustand — la selezione preset nella pipeline viaggia dentro `PipelineConfig` (già in `pipelineStore`). Il caricamento dei preset dal DB avviene con una chiamata diretta a `phraseMemoryPresetService.listPresets()` all'interno dei componenti che ne hanno bisogno. I preset built-in sono seed immutabili lato DB; la UI li mostra in sola lettura con un bottone "Clona".

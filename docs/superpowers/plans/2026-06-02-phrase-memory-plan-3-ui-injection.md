@@ -10,6 +10,10 @@
 > git checkout -b feat/phrase-memory-plan-3
 > ```
 
+> **Nota Piano 2 — Shell gating già implementata:**
+> `App.tsx` ha 3 stati: nessun workspace → `WorkspaceWizard`, workspace senza progetto → `WorkspaceHome`, progetto aperto → editor.
+> Il `MemoryTab` vive nello stato 3 (editor con progetto aperto). Non esiste più un workspace ghost `ws_default`.
+
 ---
 
 **Goal:** Implementare il layer UI completo della feature Phrase Memory: tab "Memoria" nel chunk panel, badge match nella lista chunk, iniezione delle coppie selezionate nel prompt al momento del re-run, e dialog "Estrai termine" per creare voci di glossario a partire da un match.
