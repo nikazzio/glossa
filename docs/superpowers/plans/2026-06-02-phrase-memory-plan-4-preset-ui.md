@@ -2,6 +2,14 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Branching strategy:** Crea branch `feat/phrase-memory-plan-4` partendo da `feat/phrase-memory` aggiornato (dopo aver mergiato piano 3). Al termine, apri PR verso `feat/phrase-memory` (non verso `main`). Il branch `feat/phrase-memory` ha già una PR aperta su `main` (#205) per la review complessiva della feature.
+>
+> ```bash
+> git checkout feat/phrase-memory
+> git pull origin feat/phrase-memory
+> git checkout -b feat/phrase-memory-plan-4
+> ```
+
 **Goal:** Esporre il sistema preset di Phrase Memory in due punti: (1) una sezione dedicata nel modale Settings per creare/modificare/eliminare preset custom e clonare quelli built-in; (2) una sezione collassabile nella tab Settings della PipelineConfig per attivare Phrase Memory sulla pipeline e scegliere/sovrascrivere preset. Infine aggiornare `pipelineService.ts` per persistere i tre nuovi campi DB (`use_phrase_memory`, `phrase_memory_preset_id`, `phrase_memory_overrides`).
 
 **Architecture:** Nessun nuovo store Zustand — la selezione preset nella pipeline viaggia dentro `PipelineConfig` (già in `pipelineStore`). Il caricamento dei preset dal DB avviene con una chiamata diretta a `phraseMemoryPresetService.listPresets()` all'interno dei componenti che ne hanno bisogno. I preset built-in sono seed immutabili lato DB; la UI li mostra in sola lettura con un bottone "Clona".

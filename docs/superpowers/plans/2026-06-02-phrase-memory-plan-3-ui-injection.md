@@ -2,6 +2,14 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Branching strategy:** Crea branch `feat/phrase-memory-plan-3` partendo da `feat/phrase-memory` aggiornato (dopo aver mergiato piano 2). Al termine, apri PR verso `feat/phrase-memory` (non verso `main`). Il branch `feat/phrase-memory` ha già una PR aperta su `main` (#205) per la review complessiva della feature.
+>
+> ```bash
+> git checkout feat/phrase-memory
+> git pull origin feat/phrase-memory
+> git checkout -b feat/phrase-memory-plan-3
+> ```
+
 ---
 
 **Goal:** Implementare il layer UI completo della feature Phrase Memory: tab "Memoria" nel chunk panel, badge match nella lista chunk, iniezione delle coppie selezionate nel prompt al momento del re-run, e dialog "Estrai termine" per creare voci di glossario a partire da un match.

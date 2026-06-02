@@ -2,6 +2,14 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Branching strategy:** Crea branch `feat/phrase-memory-plan-2` partendo da `feat/phrase-memory` (NON da `main`). Al termine, apri PR verso `feat/phrase-memory` (non verso `main`). Il branch `feat/phrase-memory` ha già una PR aperta su `main` (#205) per la review complessiva della feature.
+>
+> ```bash
+> git checkout feat/phrase-memory
+> git pull origin feat/phrase-memory
+> git checkout -b feat/phrase-memory-plan-2
+> ```
+
 **Goal:** Implementare la generazione di embedding per frasi sorgente al momento dell'import, la ricerca vettoriale in phrase_memory durante la pipeline, e il salvataggio automatico di coppie frasi al lock del chunk.
 
 **Architecture:** Il lato TypeScript gestisce la chiamata all'API embedding (riutilizzando le chiavi API già presenti nel keystore) e l'orchestrazione del job; il lato Rust (rusqlite + sqlite-vec) espone tre comandi Tauri atomici: `vec_upsert_source_phrase`, `vec_search_phrase_memory`, `vec_save_locked_phrases`. Lo store `phraseMemoryStore` mantiene i match per chunk e lo stato del job di pre-generazione.
