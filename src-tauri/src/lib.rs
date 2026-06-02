@@ -2,12 +2,15 @@ mod db;
 mod documents;
 mod keystore;
 mod llm;
+mod vector;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // The updater plugin requires `plugins.updater` config which only ships in
     // tauri.release.conf.json. Skip it in debug builds so `tauri dev` doesn't
     // panic on missing plugin config.
+    vector::register_vec_extension();
+
     #[allow(unused_mut)]
     let mut builder = tauri::Builder::default()
         .manage(llm::StreamRegistry::new())
@@ -79,6 +82,7 @@ llm::pipeline::run_stage,
             documents::extract_docx_markdown,
             documents::export_markdown_docx,
             documents::extract_pdf_text,
+            vector::vec_ping,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
