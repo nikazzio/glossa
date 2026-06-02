@@ -577,11 +577,14 @@ export async function initDatabase(): Promise<void> {
   const wsKeyCheck = await conn.select<Array<{ count: number }>>(
     `SELECT COUNT(*) as count FROM app_settings WHERE key = 'active_workspace_id'`
   );
-  if (wsKeyCheck[0].count === 0) {
+  if ((wsKeyCheck[0]?.count ?? 0) === 0) {
     await conn.execute(
       `INSERT INTO app_settings (key, value) VALUES ('active_workspace_id', '')`
     );
   }
+
+  const { seedBuiltinPresets } = await import('./phraseMemoryPresetService');
+  await seedBuiltinPresets(conn);
 
   console.log('[Glossa] Database initialized');
 }
