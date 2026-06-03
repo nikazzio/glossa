@@ -18,6 +18,8 @@ export interface Project {
   view_mode?: ViewMode | null;
   created_at: string;
   updated_at: string;
+  pipeline_count: number;
+  pipeline_names: string | null;
 }
 
 export interface ProjectSource {
@@ -61,7 +63,15 @@ export interface SavedTranslation {
 
 export async function listProjects(workspaceId: string): Promise<Project[]> {
   return select<Project>(
-    'SELECT * FROM projects WHERE workspace_id = $1 ORDER BY updated_at DESC',
+    `SELECT
+       p.*,
+       COUNT(pi.id) AS pipeline_count,
+       GROUP_CONCAT(pi.name, ' · ') AS pipeline_names
+     FROM projects p
+     LEFT JOIN pipelines pi ON pi.project_id = p.id
+     WHERE p.workspace_id = $1
+     GROUP BY p.id
+     ORDER BY p.updated_at DESC`,
     [workspaceId],
   );
 }

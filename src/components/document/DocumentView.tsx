@@ -1,5 +1,7 @@
 import {
   AlertTriangle,
+  Archive,
+  BookOpenText,
   ChevronLeft,
   ChevronRight,
   FileText,
@@ -10,6 +12,7 @@ import {
   Pencil,
   RotateCcw,
   ScanLine,
+  Settings2,
   Wand2,
   Zap,
 } from 'lucide-react';
@@ -19,6 +22,9 @@ import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
+import { useProjectStore } from '../../stores/projectStore';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { useLibraryStore } from '../../stores/libraryStore';
 import type { TranslationChunk } from '../../types';
 import { indexPad } from '../../utils';
 import { CopyButton, HighlightedText, MarkdownEditor, ProcessingLine } from '../common';
@@ -34,6 +40,8 @@ const NOOP_CHANGE = () => {};
 
 interface DocumentViewProps {
   onRetranslateChunk: (chunkId: string) => void;
+  onImportDocument: () => void;
+  onOpenWorkspaceSettings: () => void;
 }
 
 const STAGE_TONE_MAP: Record<string, IconButtonTone> = {
@@ -45,9 +53,16 @@ const STAGE_TONE_MAP: Record<string, IconButtonTone> = {
 };
 
 
-export function DocumentView({ onRetranslateChunk }: DocumentViewProps) {
+export function DocumentView({
+  onRetranslateChunk,
+  onImportDocument,
+  onOpenWorkspaceSettings,
+}: DocumentViewProps) {
   const { t } = useTranslation();
   const { config } = usePipelineStore();
+  const { currentProjectId, projects, pipelines, activePipelineId, setShowProjectPanel } = useProjectStore();
+  const activeWorkspace = useWorkspaceStore((state) => state.activeWorkspace);
+  const setShowLibraryPanel = useLibraryStore((state) => state.setShowLibraryPanel);
   const {
     chunks,
     updateChunkDraft,
@@ -77,6 +92,7 @@ export function DocumentView({ onRetranslateChunk }: DocumentViewProps) {
     focusedIssueRequestId,
     traceStageId,
     setTraceStageId,
+    setShowConfigDrawer,
   } = useUiStore();
 
   const [viewportWidth, setViewportWidth] = useState(
@@ -204,47 +220,152 @@ export function DocumentView({ onRetranslateChunk }: DocumentViewProps) {
     return hasFootnoteMarkers ? highlightSuperscriptMarkersHtml(base) : base;
   }, [deferredSourceText, showHighlight, highlightsEnabled, searchQuery, paneFocus, sourceHighlight.html]);
 
+  const currentProject = projects.find((project) => project.id === currentProjectId) ?? null;
+  const activePipeline = pipelines.find((pipeline) => pipeline.id === activePipelineId) ?? null;
+
   if (!currentChunk) {
     return (
-      <section className="flex w-full flex-col items-center justify-center bg-editorial-paper overflow-y-auto min-h-0 flex-1 px-8 py-16">
-        <div className="w-full max-w-2xl flex flex-col items-center">
-          {/* Brand mark */}
-          <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-full border border-editorial-border/60 bg-editorial-bg shadow-[0_4px_20px_rgba(26,26,26,0.06)]">
-            <FileText size={20} className="text-editorial-accent" />
+      <section className="flex w-full flex-1 overflow-y-auto bg-editorial-paper min-h-0 px-8 py-10">
+        <div className="mx-auto grid w-full max-w-7xl gap-6 xl:grid-cols-[minmax(0,1fr)_18rem]">
+          <div className="min-w-0 rounded-[28px] border border-editorial-border/70 bg-editorial-paper px-8 py-8 shadow-[0_12px_36px_rgba(74,50,17,0.06)]">
+            <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[0.28em] text-editorial-muted">
+              <span>{activeWorkspace?.name ?? t('workspace.noActive')}</span>
+              <span className="h-1 w-1 rounded-full bg-editorial-accent/60" aria-hidden="true" />
+              <span>{t('document.projectHomeEyebrow')}</span>
+            </div>
+            <h2 className="mt-4 max-w-4xl font-display text-5xl italic tracking-tight text-editorial-ink md:text-6xl">
+              {currentProject?.name ?? t('document.projectHomeTitle')}
+            </h2>
+            <div className="mt-6 flex items-center gap-2">
+              <Tooltip label={t('document.projectHomeImport')}>
+                <IconButton
+                  onClick={onImportDocument}
+                  title={t('document.projectHomeImport')}
+                  tone="accent"
+                  size="lg"
+                >
+                  <FileText size={16} />
+                </IconButton>
+              </Tooltip>
+              <Tooltip label={t('document.projectHomeConfigurePipeline')}>
+                <IconButton
+                  onClick={() => setShowConfigDrawer(true)}
+                  title={t('document.projectHomeConfigurePipeline')}
+                  size="lg"
+                >
+                  <Settings2 size={16} />
+                </IconButton>
+              </Tooltip>
+              <Tooltip label={t('document.projectHomeConfigureWorkspace')}>
+                <IconButton
+                  onClick={onOpenWorkspaceSettings}
+                  title={t('document.projectHomeConfigureWorkspace')}
+                  size="lg"
+                >
+                  <Archive size={16} />
+                </IconButton>
+              </Tooltip>
+              <Tooltip label={t('projects.title')}>
+                <IconButton
+                  onClick={() => setShowProjectPanel(true)}
+                  title={t('projects.title')}
+                  size="lg"
+                >
+                  <BookOpenText size={16} />
+                </IconButton>
+              </Tooltip>
+            </div>
+
+            <div className="mt-8 grid gap-3 md:grid-cols-3">
+              {([
+                {
+                  key: 'languages',
+                  icon: Languages,
+                  value: `${config.sourceLanguage} -> ${config.targetLanguage}`,
+                },
+                {
+                  key: 'pipeline',
+                  icon: Settings2,
+                  value: activePipeline?.name ?? t('document.projectHomePipelineFallback'),
+                },
+                {
+                  key: 'workspace',
+                  icon: Archive,
+                  value: activeWorkspace?.name ?? '—',
+                },
+              ] as const).map(({ key, icon: Icon, value }) => (
+                <article
+                  key={key}
+                  className="rounded-[22px] border border-editorial-border/65 bg-editorial-bg/45 px-5 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]"
+                >
+                  <div className="flex items-center gap-2 text-editorial-muted">
+                    <Icon size={14} />
+                  </div>
+                  <div className="mt-3 font-display text-2xl italic text-editorial-ink">
+                    {value}
+                  </div>
+                </article>
+              ))}
+            </div>
           </div>
 
-          {/* Label */}
-          <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-            {t('document.emptyLabel')}
-          </div>
-
-          {/* Headline */}
-          <h2 className="mb-4 text-center font-display text-5xl italic tracking-tight text-editorial-ink">
-            {t('document.emptyTitle')}
-          </h2>
-
-          {/* Body */}
-          <p className="mb-12 max-w-md text-center text-sm leading-relaxed text-editorial-muted">
-            {t('document.emptyBody')}
-          </p>
-
-          {/* Dashboard placeholder cards */}
-          <div className="grid w-full grid-cols-3 gap-3">
-            {([
-              { key: 'pipeline',     icon: Languages, label: t('document.emptyCardPipeline') },
-              { key: 'translations', icon: Zap,       label: t('document.emptyCardTranslations') },
-              { key: 'quality',      icon: Wand2,     label: t('document.emptyCardQuality') },
-            ] as const).map(({ key, icon: Icon, label }) => (
-              <div
-                key={key}
-                className="flex flex-col items-center gap-3 rounded-[20px] border border-editorial-border/60 bg-editorial-bg/70 px-5 py-6 text-center"
-              >
-                <Icon size={18} className="text-editorial-muted/40" />
-                <div className="font-display text-3xl italic text-editorial-ink/20">—</div>
-                <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted/50">{label}</div>
+          <aside className="space-y-4">
+            <div className="rounded-[24px] border border-editorial-border/70 bg-editorial-bg/40 px-5 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]">
+              <div className="mt-1 space-y-2">
+                {([
+                  {
+                    key: 'import',
+                    icon: FileText,
+                    label: t('document.projectHomeImport'),
+                    action: onImportDocument,
+                  },
+                  {
+                    key: 'pipeline',
+                    icon: Settings2,
+                    label: t('document.projectHomeConfigurePipeline'),
+                    action: () => setShowConfigDrawer(true),
+                  },
+                  {
+                    key: 'library',
+                    icon: Archive,
+                    label: t('library.openLibrary'),
+                    action: () => setShowLibraryPanel(true),
+                  },
+                ] as const).map(({ key, icon: Icon, label, action }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={action}
+                    className="flex w-full items-center gap-3 rounded-[18px] border border-editorial-border/70 bg-editorial-paper/70 px-4 py-3 text-left transition-colors hover:border-editorial-accent/45 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  >
+                    <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-editorial-border bg-editorial-paper text-editorial-accent">
+                      <Icon size={15} />
+                    </span>
+                    <span className="min-w-0 font-display text-lg italic text-editorial-ink">
+                      {label}
+                    </span>
+                  </button>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+
+            <div className="rounded-[24px] border border-editorial-border/70 bg-editorial-paper px-5 py-5 shadow-[0_12px_30px_rgba(74,50,17,0.05)]">
+              <dl className="space-y-4">
+                <ProjectHomeMetric
+                  label={t('document.projectHomePipeline')}
+                  value={String(pipelines.length)}
+                />
+                <ProjectHomeMetric
+                  label={t('document.projectHomeLanguages')}
+                  value={`${config.sourceLanguage} -> ${config.targetLanguage}`}
+                />
+                <ProjectHomeMetric
+                  label={t('document.projectHomeWorkspace')}
+                  value={activeWorkspace?.name ?? '—'}
+                />
+              </dl>
+            </div>
+          </aside>
         </div>
       </section>
     );
@@ -547,6 +668,19 @@ export function DocumentView({ onRetranslateChunk }: DocumentViewProps) {
         />
       ) : null}
     </section>
+  );
+}
+
+function ProjectHomeMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-end justify-between gap-4 border-b border-editorial-border/55 pb-3 last:border-b-0 last:pb-0">
+      <dt className="text-[10px] font-bold uppercase tracking-[0.22em] text-editorial-muted">
+        {label}
+      </dt>
+      <dd className="font-display text-2xl italic text-editorial-ink">
+        {value}
+      </dd>
+    </div>
   );
 }
 

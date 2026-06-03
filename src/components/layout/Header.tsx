@@ -1,10 +1,11 @@
-import { HelpCircle, LibraryBig, Settings } from 'lucide-react';
-import { IconButton, Tooltip } from '../ui';
+import { HelpCircle, LibraryBig, Save, Settings } from 'lucide-react';
 import { lazy, Suspense, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { useUiStore } from '../../stores/uiStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useLibraryStore } from '../../stores/libraryStore';
+import { IconButton, Tooltip } from '../ui';
 
 const HelpGuide = lazy(() =>
   import('../help/HelpGuide').then((m) => ({ default: m.HelpGuide })),
@@ -12,7 +13,7 @@ const HelpGuide = lazy(() =>
 
 export function Header() {
   const { setShowSettings, setShowHelp, showHelp } = useUiStore();
-  const { currentProjectId, projects } = useProjectStore();
+  const { currentProjectId, projects, saveCurrentProject } = useProjectStore();
   const setShowLibraryPanel = useLibraryStore((s) => s.setShowLibraryPanel);
   const { t, i18n } = useTranslation();
 
@@ -28,22 +29,45 @@ export function Header() {
     i18n.changeLanguage(i18n.language === 'en' ? 'it' : 'en');
   };
 
+  const handleSave = async () => {
+    if (!currentProjectId) return;
+    try {
+      await saveCurrentProject();
+      toast.success(t('projects.saved'));
+    } catch (err: unknown) {
+      toast.error(t('projects.saveFailed'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    }
+  };
+
   return (
     <header className="border-b border-editorial-border bg-[linear-gradient(180deg,#fffdf8_0%,#f8f3ea_100%)] px-5 py-4 md:px-8">
       <div className="flex items-center justify-between gap-4">
         <div className="min-w-0">
-          <div className="flex items-baseline gap-2.5">
-            <span className="font-display text-4xl italic tracking-tight text-editorial-ink md:text-5xl">
+          <div className="flex min-w-0 items-baseline gap-2.5">
+            <span className="shrink-0 font-display text-4xl italic tracking-tight text-editorial-ink md:text-5xl">
               {t('app.brand')}
             </span>
-            <span className="truncate font-display text-lg italic text-editorial-muted md:text-xl">
-              // {brandCtx}
+            <span className="shrink-0 font-display text-lg italic text-editorial-muted md:text-xl">
+              //
+            </span>
+            <span className="min-w-0 truncate font-display text-lg italic text-editorial-muted md:text-xl">
+              {brandCtx}
             </span>
           </div>
         </div>
 
         {/* Right cluster — global actions only */}
         <div className="flex items-center gap-1 rounded-full border border-editorial-border bg-editorial-bg px-1 py-1 shadow-sm">
+          <IconButton
+            onClick={() => void handleSave()}
+            title={t('projects.save')}
+            tooltipSide="bottom"
+            disabled={!currentProjectId}
+          >
+            <Save size={16} />
+          </IconButton>
           <IconButton
             onClick={() => setShowLibraryPanel(true)}
             title={t('library.openLibrary')}

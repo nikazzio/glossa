@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Archive, BookOpenText, LibraryBig, Mic2, Plus } from 'lucide-react';
+import { Archive, BookOpenText, FilePen, LibraryBig, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useProjectStore } from '../../stores/projectStore';
@@ -12,7 +12,7 @@ import { IconButton, PillButton, SectionLabel } from '../ui';
 const AREA_ITEMS = [
   { id: 'translations', icon: BookOpenText, enabled: true },
   { id: 'library', icon: LibraryBig, enabled: false },
-  { id: 'transcriptions', icon: Mic2, enabled: false },
+  { id: 'transcriptions', icon: FilePen, enabled: false },
 ] as const;
 
 export function DashboardSidebar() {
@@ -64,7 +64,7 @@ export function DashboardSidebar() {
   };
 
   return (
-    <div className="flex w-56 shrink-0 flex-col overflow-y-auto border-r border-editorial-border bg-editorial-bg/60 custom-scrollbar">
+    <div className="flex w-56 shrink-0 flex-col overflow-y-auto border-r border-editorial-border bg-editorial-bg/70 custom-scrollbar">
       <nav className="px-3 pt-4" aria-label={t('sidebar.areaLabel')}>
         <SectionLabel icon={BookOpenText} label={t('sidebar.areaLabel')} />
         <div className="mt-3 space-y-1.5">
@@ -74,10 +74,10 @@ export function DashboardSidebar() {
               type="button"
               disabled={!enabled}
               aria-current={enabled ? 'page' : undefined}
-              className={`w-full rounded-[14px] border px-3 py-2.5 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+              className={`w-full px-3 py-2.5 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
                 enabled
-                  ? 'border-editorial-accent/45 bg-editorial-paper text-editorial-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]'
-                  : 'cursor-not-allowed border-editorial-border/70 bg-editorial-bg/45 text-editorial-muted opacity-55'
+                  ? '-mr-3 rounded-l-[18px] rounded-r-none border border-r-0 border-editorial-accent/55 bg-editorial-paper text-editorial-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]'
+                  : 'cursor-not-allowed rounded-[14px] border border-editorial-border/70 bg-editorial-bg/45 text-editorial-muted opacity-55'
               }`}
             >
               <span className="flex items-start gap-2.5">
@@ -127,7 +127,7 @@ export function DashboardSidebar() {
               aria-current={ws.id === activeWorkspace?.id ? 'page' : undefined}
               className={`w-full px-3 py-2.5 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
                 ws.id === activeWorkspace?.id
-                  ? '-mr-3 rounded-l-[20px] rounded-r-none border border-r-0 border-editorial-border bg-editorial-paper text-editorial-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.55),6px_10px_20px_rgba(74,50,17,0.04)]'
+                  ? '-mr-3 rounded-l-[20px] rounded-r-none border border-r-0 border-editorial-border bg-editorial-paper text-editorial-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]'
                   : 'rounded-[12px] border border-editorial-border bg-editorial-bg/70 text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
               }`}
             >

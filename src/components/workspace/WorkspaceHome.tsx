@@ -20,7 +20,7 @@ import { WorkspaceSettingsModal } from './WorkspaceSettingsModal';
 
 export function WorkspaceHome() {
   const { t, i18n } = useTranslation();
-  const { activeWorkspace, workspaces } = useWorkspaceStore();
+  const { activeWorkspace, workspaces, removeWorkspace } = useWorkspaceStore();
   const {
     projects,
     loadProjects,
@@ -99,20 +99,56 @@ export function WorkspaceHome() {
     }
   };
 
+  const handleDeleteWorkspace = async () => {
+    if (!activeWorkspace) return;
+
+    if (projects.length > 0) {
+      await confirm({
+        title: t('workspace.deleteBlockedTitle'),
+        message: t('workspace.deleteBlockedMessage', { count: projects.length }),
+        confirmLabel: t('common.confirm'),
+        danger: true,
+      });
+      return;
+    }
+
+    const ok = await confirm({
+      title: t('workspace.deleteTitle'),
+      message: t('workspace.deleteMessage', { name: activeWorkspace.name }),
+      confirmLabel: t('common.delete'),
+      danger: true,
+    });
+    if (!ok) return;
+
+    try {
+      await removeWorkspace(activeWorkspace.id);
+      toast.success(t('workspace.deleted'));
+    } catch (err: unknown) {
+      toast.error(t('workspace.deleteFailed'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    }
+  };
+
   return (
-    <main className="flex h-full min-h-0 flex-col overflow-y-auto bg-editorial-bg px-5 py-5 custom-scrollbar md:px-8">
+    <main className="flex h-full min-h-0 flex-col overflow-y-auto bg-editorial-paper px-5 py-5 custom-scrollbar md:px-8">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
         <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
           <div className="min-w-0 border-b border-editorial-border/60 pb-5 xl:border-b-0 xl:pb-0">
-            <SectionLabel icon={BookOpenText} label={t('workspace.activeLabel')} />
-            <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="inline-flex items-center gap-2 rounded-l-[18px] rounded-r-none border border-r-0 border-editorial-accent/55 bg-editorial-paper px-4 py-2 text-[10px] font-bold uppercase tracking-[0.28em] text-editorial-accent shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
+              <BookOpenText size={13} />
+              <span>{activeWorkspace?.name ?? t('workspace.noActive')}</span>
+            </div>
+            <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0">
                 <h1 className="font-display text-4xl italic tracking-tight text-editorial-ink md:text-5xl">
                   {activeWorkspace?.name ?? t('workspace.noActive')}
                 </h1>
-                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-editorial-muted [text-wrap:pretty]">
-                  {activeWorkspace?.description || t('workspace.translationBoundary')}
-                </p>
+                {activeWorkspace?.description ? (
+                  <p className="mt-2 max-w-xl text-sm leading-relaxed text-editorial-muted [text-wrap:pretty]">
+                    {activeWorkspace.description}
+                  </p>
+                ) : null}
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <IconButton
@@ -132,15 +168,25 @@ export function WorkspaceHome() {
                 >
                   <Settings2 size={14} />
                 </IconButton>
+                <IconButton
+                  size="md"
+                  tone="muted"
+                  onClick={() => void handleDeleteWorkspace()}
+                  title={t('workspace.delete')}
+                  disabled={!activeWorkspace}
+                >
+                  <Trash2 size={14} />
+                </IconButton>
               </div>
             </div>
           </div>
 
-          <aside className="rounded-l-[20px] rounded-r-none border border-r-0 border-editorial-border bg-editorial-paper px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.55),6px_10px_20px_rgba(74,50,17,0.04)] xl:rounded-r-[20px] xl:border-r">
+          <aside className="rounded-l-[20px] rounded-r-none border border-r-0 border-editorial-border bg-editorial-bg/55 px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] xl:rounded-r-[20px] xl:border-r">
             <SectionLabel icon={Database} label={t('workspace.technicalSummary')} />
             <dl className="mt-4 space-y-3">
               <TechRow label={t('workspace.projectsMetric')} value={String(projects.length)} />
               <TechRow label={t('workspace.workspacesMetric')} value={String(workspaces.length)} />
+              <TechRow label={t('workspace.pipelineMetric')} value={String(projects.reduce((total, project) => total + (project.pipeline_count ?? 0), 0))} />
               <TechRow label={t('workspace.embeddingModel')} value={activeWorkspace?.embeddingModel ?? '—'} />
               <TechRow label={t('workspace.createdAt')} value={createdLabel} />
               <TechRow label={t('workspace.memoryScope')} value={t('workspace.workspaceScoped')} />
@@ -151,14 +197,6 @@ export function WorkspaceHome() {
         <section className="min-h-0">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <SectionLabel icon={FolderOpen} label={t('workspace.projectsTitle')} />
-            {!showNewProjectForm && (
-              <PillButton variant="accent" onClick={() => setShowNewProjectForm(true)}>
-                <span className="inline-flex items-center gap-2">
-                  <Plus size={13} />
-                  {t('workspace.newBookCard')}
-                </span>
-              </PillButton>
-            )}
           </div>
 
           {showNewProjectForm && (
@@ -235,6 +273,8 @@ export function WorkspaceHome() {
                               <span>{project.source_language}{' -> '}{project.target_language}</span>
                               <span aria-hidden="true">/</span>
                               <span>{relativeLabel}</span>
+                              <span aria-hidden="true">/</span>
+                              <span>{t('workspace.pipelineBadge', { count: project.pipeline_count })}</span>
                             </span>
                           </span>
                         </span>
@@ -257,7 +297,7 @@ export function WorkspaceHome() {
                       </span>
                       <span className="inline-flex items-center gap-1 rounded-full border border-editorial-border bg-editorial-bg/70 px-2.5 py-1">
                         <Archive size={11} />
-                        {t('workspace.areas.translations.title')}
+                        {project.pipeline_names || t('workspace.pipelineNamesFallback')}
                       </span>
                     </div>
                   </article>

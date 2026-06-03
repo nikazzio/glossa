@@ -66,6 +66,12 @@ export async function updateWorkspace(
   await execute(`UPDATE workspaces SET ${sets.join(', ')} WHERE id = $${index}`, params);
 }
 
+export async function deleteWorkspace(id: string): Promise<void> {
+  await execute('DELETE FROM phrase_memory WHERE workspace_id = $1', [id]);
+  await execute('DELETE FROM phrase_memory_presets WHERE workspace_id = $1', [id]);
+  await execute('DELETE FROM workspaces WHERE id = $1', [id]);
+}
+
 export async function getActiveWorkspaceId(): Promise<string | null> {
   const value = await getSetting('active_workspace_id');
   return value || null;

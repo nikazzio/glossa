@@ -11,6 +11,7 @@ vi.mock('./dbService', () => dbMocks);
 
 const { createWorkspace, listWorkspaces, updateWorkspace, getActiveWorkspaceId, setActiveWorkspaceId } =
   await import('./workspaceService');
+const { deleteWorkspace } = await import('./workspaceService');
 
 describe('workspaceService', () => {
   beforeEach(() => {
@@ -56,5 +57,15 @@ describe('workspaceService', () => {
   it('setActiveWorkspaceId calls setSetting with active_workspace_id key', async () => {
     await setActiveWorkspaceId('ws_abc123');
     expect(dbMocks.setSetting).toHaveBeenCalledWith('active_workspace_id', 'ws_abc123');
+  });
+
+  it('deleteWorkspace removes workspace-scoped memory before deleting the workspace', async () => {
+    await deleteWorkspace('ws_abc123');
+
+    expect(dbMocks.execute.mock.calls.map(([query]) => query)).toEqual([
+      'DELETE FROM phrase_memory WHERE workspace_id = $1',
+      'DELETE FROM phrase_memory_presets WHERE workspace_id = $1',
+      'DELETE FROM workspaces WHERE id = $1',
+    ]);
   });
 });

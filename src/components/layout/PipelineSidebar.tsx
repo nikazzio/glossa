@@ -16,14 +16,13 @@ import {
   Play,
   Plus,
   RotateCcw,
-  Save,
   Settings2,
   Square,
   Upload,
   X,
   Zap,
 } from 'lucide-react';
-import { lazy, Suspense, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { confirm } from '../../stores/confirmStore';
@@ -36,43 +35,22 @@ import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { estimatePipelineCost } from '../../utils/costEstimate';
 import { CostBreakdownPanel } from '../pipeline/CostBadge';
 import { IconButton, Tooltip } from '../ui';
-import { importTextFile, exportTranslation, exportBilingual } from '../../services/fileService';
-import { savePipelineConfig } from '../../services/pipelineService';
-import { extractFootnotes } from '../../utils/footnoteExtractor';
+import { exportTranslation, exportBilingual } from '../../services/fileService';
 import { logger } from '../../utils/logger';
-import { getContextWindow } from '../../models/catalog';
-import type { ImportDialogPipelineConfig } from '../document/ImportPreviewDialog';
 import type { ExportFormat } from '../document/ExportDialog';
 import { DashboardSidebar } from './DashboardSidebar';
-import type { DocumentFormat, DocumentRenderProfile } from '../../types';
 
 const ExportDialog = lazy(() =>
   import('../document/ExportDialog').then((m) => ({ default: m.ExportDialog })),
 );
-const ImportPreviewDialog = lazy(() =>
-  import('../document/ImportPreviewDialog').then((m) => ({ default: m.ImportPreviewDialog })),
-);
-const SaveProjectDialog = lazy(() =>
-  import('../projects/SaveProjectDialog').then((m) => ({ default: m.SaveProjectDialog })),
-);
-
-interface PendingImport {
-  fileName: string;
-  text: string;
-  rawText: string;
-  useChunking: boolean;
-  wordsPerChunk: number;
-  headingAware: boolean;
-  carryTrailingShortBlocks: boolean;
-  format?: 'plain' | 'markdown';
-  experimental?: 'docx-markdown';
-}
 interface PipelineSidebarProps {
   mode?: 'dashboard' | 'editor';
   onRunPipeline?: () => void;
   onCancelPipeline?: () => void;
   onDryRun?: () => void;
   onRetranslateChunk?: (chunkId: string) => void;
+  onImportDocument?: () => void;
+  onOpenWorkspaceSettings?: () => void;
 }
 
 const LANG_CODES: Record<string, string> = {
@@ -88,11 +66,13 @@ export function PipelineSidebar({
   onCancelPipeline,
   onDryRun,
   onRetranslateChunk,
+  onImportDocument,
+  onOpenWorkspaceSettings,
 }: PipelineSidebarProps) {
   const { t } = useTranslation();
 
   // ── Stores — all hooks before any conditional return ─────────────
-  const { config, setConfig } = usePipelineStore();
+  const { config } = usePipelineStore();
   const runStatus = usePipelineStore((s) => s.runStatus);
   const {
     pipelines,
@@ -102,11 +82,10 @@ export function PipelineSidebar({
     createNewPipeline,
     deletePipeline,
     setShowProjectPanel,
-    saveCurrentProject,
     closeProject,
     loadProjects,
   } = useProjectStore();
-  const { chunks, isProcessing, cancelRequested, loadDocument } = useChunksStore();
+  const { chunks, isProcessing, cancelRequested } = useChunksStore();
   const {
     pipelineMode,
     setPipelineMode,
@@ -122,21 +101,13 @@ export function PipelineSidebar({
     setSyncScrollEnabled,
     highlightsEnabled,
     setHighlightsEnabled,
-    chunkPresetShort,
-    chunkPresetMedium,
-    chunkPresetLong,
   } = useUiStore();
   const pricingOverrides = usePricingStore((s) => s.overrides);
   const { activeWorkspace } = useWorkspaceStore();
 
   // ── Local state ───────────────────────────────────────────────────
   const [showCostPanel, setShowCostPanel] = useState(false);
-  const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
-  const [showSaveProjectDialog, setShowSaveProjectDialog] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
-  const [isCreatingProjectFromSave, setIsCreatingProjectFromSave] = useState(false);
-  const saveDialogLoaded = useRef(false);
-  if (showSaveProjectDialog) saveDialogLoaded.current = true;
 
   // ── Derived ───────────────────────────────────────────────────────
   const isRunning = runStatus === 'running';
@@ -169,138 +140,6 @@ export function PipelineSidebar({
     });
     if (!ok) return;
     await deletePipeline(pipelineId);
-  };
-
-  // ── Doc action handlers ───────────────────────────────────────────
-  const handleImport = async () => {
-    try {
-      const imported = await importTextFile();
-      if (imported) {
-        const isMarkdown = imported.format === 'markdown';
-        const cleanText = isMarkdown ? extractFootnotes(imported.text).cleanText : imported.text;
-        setPendingImport({
-          fileName: imported.name,
-          text: cleanText,
-          rawText: imported.text,
-          useChunking: config.useChunking !== false,
-          wordsPerChunk: config.wordsPerChunk ?? chunkPresetMedium,
-          headingAware: config.headingAware ?? true,
-          carryTrailingShortBlocks: config.carryTrailingShortBlocks ?? true,
-          format: imported.format,
-          experimental: imported.experimental,
-        });
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (msg === 'pdf_no_text_layer') {
-        toast.error(t('files.pdfScannedError'));
-      } else {
-        toast.error(t('files.importError'), { description: msg });
-      }
-    }
-  };
-
-  const handleConfirmImport = async (
-    manualChunks?: string[],
-    pipelineConfig?: ImportDialogPipelineConfig,
-  ) => {
-    if (!pendingImport) return;
-    const provider = pipelineConfig?.provider ?? config.stages[0]?.provider;
-    const model = pipelineConfig?.model ?? config.stages[0]?.model;
-    const contextWindow = provider && model ? getContextWindow(provider, model) : undefined;
-    const wordsPerChunk =
-      pendingImport.wordsPerChunk > 0 ? pendingImport.wordsPerChunk : chunkPresetMedium;
-    const presets = [chunkPresetShort, chunkPresetMedium, chunkPresetLong];
-    const nearestPreset = presets.reduce(
-      (nearest, p) =>
-        Math.abs(wordsPerChunk - p) < Math.abs(wordsPerChunk - nearest) ? p : nearest,
-      presets[0]!,
-    );
-    const minWords = Math.round(nearestPreset * 0.5);
-    const maxWords = Math.round(nearestPreset * 1.5);
-    const updatedStages = pipelineConfig
-      ? config.stages.map((s, i) =>
-          i === 0
-            ? { ...s, provider: pipelineConfig.provider, model: pipelineConfig.model }
-            : s,
-        )
-      : config.stages;
-    const updatedConfig = {
-      ...config,
-      sourceLanguage: pipelineConfig?.sourceLanguage ?? config.sourceLanguage,
-      targetLanguage: pipelineConfig?.targetLanguage ?? config.targetLanguage,
-      stages: updatedStages,
-      useChunking: pendingImport.useChunking,
-      wordsPerChunk,
-      minWords,
-      maxWords,
-      headingAware: pendingImport.headingAware,
-      carryTrailingShortBlocks: pendingImport.carryTrailingShortBlocks,
-      documentFormat: (pendingImport.format ?? 'plain') as DocumentFormat,
-      renderProfile: (pendingImport.format === 'markdown'
-        ? 'markdown'
-        : 'plain-text') as DocumentRenderProfile,
-      markdownAware: pendingImport.format === 'markdown',
-      experimentalImport: pendingImport.experimental ?? null,
-      chunkedWithContextWindow: contextWindow,
-    };
-    setConfig(() => updatedConfig);
-    loadDocument(
-      pendingImport.rawText,
-      {
-        useChunking: pendingImport.useChunking,
-        targetWordsPerChunk: wordsPerChunk,
-        markdownAware: pendingImport.format === 'markdown',
-        minWords,
-        maxWords,
-        headingAware: pendingImport.headingAware,
-        carryTrailingShortBlocks: pendingImport.carryTrailingShortBlocks,
-        extractFootnotes: pendingImport.experimental === 'docx-markdown',
-      },
-      manualChunks,
-    );
-    if (activePipelineId) {
-      try {
-        await savePipelineConfig(activePipelineId, updatedConfig);
-      } catch (err: unknown) {
-        logger.error('savePipelineConfig after import failed', {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        toast.warning(t('files.pipelineSaveAfterImportFailed'));
-      }
-    }
-    setPendingImport(null);
-    toast.success(t('files.imported'));
-  };
-
-  const handleSave = async () => {
-    if (!currentProjectId) {
-      setShowSaveProjectDialog(true);
-      return;
-    }
-    try {
-      await saveCurrentProject();
-      toast.success(t('projects.saved'));
-    } catch (err: unknown) {
-      toast.error(t('projects.saveFailed'), {
-        description: err instanceof Error ? err.message : String(err),
-      });
-    }
-  };
-
-  const handleFirstSave = async (name: string) => {
-    try {
-      setIsCreatingProjectFromSave(true);
-      await saveCurrentProject(name);
-      setShowSaveProjectDialog(false);
-      toast.success(t('projects.saved'));
-    } catch (err: unknown) {
-      toast.error(t('projects.saveFailed'), {
-        description: err instanceof Error ? err.message : String(err),
-      });
-    } finally {
-      setIsCreatingProjectFromSave(false);
-    }
   };
 
   const handleExport = async (
@@ -349,12 +188,20 @@ export function PipelineSidebar({
         </button>
       </div>
 
-      {/* Doc meta + 4 actions */}
+      {/* Project meta + global actions */}
       <div className="px-3 pb-1 pt-2">
-        <p className="mb-1.5 font-mono text-sm tabular-nums text-editorial-muted">
-          {langCode(config.sourceLanguage)} → {langCode(config.targetLanguage)}
-          {chunks.length > 0 && ` · ${completedCount}/${chunks.length}`}
-        </p>
+        <div className="mb-2 grid gap-1.5">
+          <div className="rounded-[16px] border border-editorial-border bg-editorial-paper/70 px-3 py-2">
+            <div className="font-mono text-xs tabular-nums text-editorial-ink">
+              {langCode(config.sourceLanguage)} → {langCode(config.targetLanguage)}
+            </div>
+          </div>
+          <div className="rounded-[16px] border border-editorial-border bg-editorial-bg/60 px-3 py-2">
+            <div className="truncate font-display text-sm italic text-editorial-ink">
+              {activePipeline?.name ?? '—'}
+            </div>
+          </div>
+        </div>
         <div className="flex items-center gap-0.5">
           <IconButton
             size="md"
@@ -366,7 +213,7 @@ export function PipelineSidebar({
           </IconButton>
           <IconButton
             size="md"
-            onClick={() => void handleImport()}
+            onClick={onImportDocument}
             title={t('files.import')}
             tooltipSide="right"
           >
@@ -374,23 +221,21 @@ export function PipelineSidebar({
           </IconButton>
           <IconButton
             size="md"
-            onClick={() => void handleSave()}
-            title={t('projects.save')}
-            disabled={isProcessing}
+            onClick={onOpenWorkspaceSettings}
+            title={t('workspace.configure')}
             tooltipSide="right"
           >
-            <Save size={15} />
+            <Settings2 size={15} />
           </IconButton>
-          {chunks.length > 0 && (
-            <IconButton
-              size="md"
-              onClick={() => setShowExportDialog(true)}
-              title={t('header.exportLabel')}
-              tooltipSide="right"
-            >
-              <FileOutput size={15} />
-            </IconButton>
-          )}
+          <IconButton
+            size="md"
+            onClick={() => setShowExportDialog(true)}
+            title={t('header.exportLabel')}
+            disabled={chunks.length === 0}
+            tooltipSide="right"
+          >
+            <FileOutput size={15} />
+          </IconButton>
         </div>
       </div>
 
@@ -743,45 +588,6 @@ export function PipelineSidebar({
       </div>
 
       {/* Dialogs */}
-      {pendingImport && (
-        <Suspense fallback={null}>
-          <ImportPreviewDialog
-            fileName={pendingImport.fileName}
-            text={pendingImport.text}
-            useChunking={pendingImport.useChunking}
-            wordsPerChunk={pendingImport.wordsPerChunk}
-            headingAware={pendingImport.headingAware}
-            carryTrailingShortBlocks={pendingImport.carryTrailingShortBlocks}
-            markdownAware={pendingImport.format === 'markdown'}
-            format={pendingImport.format}
-            experimental={pendingImport.experimental}
-            onUseChunkingChange={(v) =>
-              setPendingImport((c) => (c ? { ...c, useChunking: v } : c))
-            }
-            onWordsPerChunkChange={(v) =>
-              setPendingImport((c) => (c ? { ...c, wordsPerChunk: v } : c))
-            }
-            onHeadingAwareChange={(v) =>
-              setPendingImport((c) => (c ? { ...c, headingAware: v } : c))
-            }
-            onCarryTrailingShortBlocksChange={(v) =>
-              setPendingImport((c) => (c ? { ...c, carryTrailingShortBlocks: v } : c))
-            }
-            onCancel={() => setPendingImport(null)}
-            onConfirm={handleConfirmImport}
-          />
-        </Suspense>
-      )}
-      {saveDialogLoaded.current && (
-        <Suspense fallback={null}>
-          <SaveProjectDialog
-            open={showSaveProjectDialog}
-            onClose={() => setShowSaveProjectDialog(false)}
-            onConfirm={handleFirstSave}
-            saving={isCreatingProjectFromSave}
-          />
-        </Suspense>
-      )}
       {showExportDialog && (
         <Suspense fallback={null}>
           <ExportDialog

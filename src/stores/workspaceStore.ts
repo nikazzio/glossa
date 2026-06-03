@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { Workspace } from '../types';
 import {
   createWorkspace,
+  deleteWorkspace,
   getActiveWorkspaceId,
   listWorkspaces,
   setActiveWorkspaceId,
@@ -19,6 +20,7 @@ type WorkspaceStore = {
   createAndActivate: (params: { name: string; description?: string; embeddingModel: EmbeddingModel }) => Promise<Workspace>;
   setActive: (workspace: Workspace) => Promise<void>;
   updateActiveWorkspace: (updates: Partial<Pick<Workspace, 'name' | 'description' | 'embeddingModel'>>) => Promise<void>;
+  removeWorkspace: (workspaceId: string) => Promise<void>;
 };
 
 export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
@@ -73,5 +75,10 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
         workspace.id === current.id ? next : workspace,
       ),
     }));
+  },
+
+  removeWorkspace: async (workspaceId) => {
+    await deleteWorkspace(workspaceId);
+    await useWorkspaceStore.getState().loadWorkspaces();
   },
 }));
