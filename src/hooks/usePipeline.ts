@@ -844,21 +844,30 @@ export function usePipeline() {
   ) => {
     const memoryBlock = buildMemoryInjection(selectedMatches);
     if (!memoryBlock) {
-      void runSingleChunk(chunkId, 'completed');
+      await runSingleChunk(chunkId, 'completed');
       return;
     }
     const { config: currentConfig, setConfig } = usePipelineStore.getState();
-    const originalStages = currentConfig.stages;
+    const originalPromptById = new Map(
+      currentConfig.stages.filter((s) => s.enabled).map((s) => [s.id, s.prompt]),
+    );
     setConfig({
       ...currentConfig,
-      stages: originalStages.map((s) =>
+      stages: currentConfig.stages.map((s) =>
         s.enabled ? { ...s, prompt: `${s.prompt}\n\n${memoryBlock}` } : s,
       ),
     });
     try {
       await runSingleChunk(chunkId, 'completed');
     } finally {
-      setConfig({ ...usePipelineStore.getState().config, stages: originalStages });
+      const latestConfig = usePipelineStore.getState().config;
+      setConfig({
+        ...latestConfig,
+        stages: latestConfig.stages.map((s) => {
+          const original = originalPromptById.get(s.id);
+          return original !== undefined ? { ...s, prompt: original } : s;
+        }),
+      });
     }
   }, [runSingleChunk]);
 

@@ -17,7 +17,9 @@ interface ExtractTermDialogProps {
 
 export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSuccess }: ExtractTermDialogProps) {
   const { t } = useTranslation();
-  const config = usePipelineStore((s) => s.config);
+  const stageProvider = usePipelineStore((s) => s.config.stages[0]?.provider ?? 'openai');
+  const stageModel = usePipelineStore((s) => s.config.stages[0]?.model ?? 'gpt-4o');
+  const assignedGlossaryId = usePipelineStore((s) => s.config.assignedGlossaryId);
 
   const [term, setTerm] = useState('');
   const [translation, setTranslation] = useState(targetPhrase);
@@ -35,14 +37,14 @@ export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSucce
           listGlossaries(),
           extractTermFromPhrase(
             sourcePhrase,
-            config.stages[0]?.provider ?? 'openai',
-            config.stages[0]?.model ?? 'gpt-4o',
+            stageProvider,
+            stageModel,
           ).catch(() => ({ term: sourcePhrase.split(' ').slice(0, 3).join(' '), confidence: 0 })),
         ]);
         if (cancelled) return;
         setGlossaries(gl);
         setTerm(suggested.term);
-        if (config.assignedGlossaryId) setSelectedGlossaryId(config.assignedGlossaryId);
+        if (assignedGlossaryId) setSelectedGlossaryId(assignedGlossaryId);
       } catch {
         if (!cancelled) toast.error(t('errors.loadFailed'));
       } finally {
@@ -51,14 +53,14 @@ export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSucce
     };
     void init();
     return () => { cancelled = true; };
-  }, [sourcePhrase, config, t]);
+  }, [sourcePhrase, stageProvider, stageModel, assignedGlossaryId, t]);
 
   const handleConfirm = async () => {
     if (!selectedGlossaryId || !term.trim()) return;
     setIsSaving(true);
     try {
       await addGlossaryEntry(selectedGlossaryId, {
-        id: generateId('ge'),
+        id: generateId('gle'),
         term: term.trim(),
         translation: translation.trim(),
         notes: notes.trim() || undefined,

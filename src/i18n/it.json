@@ -1113,7 +1113,8 @@
     "sourcePhraseLabel": "Frase sorgente",
     "termLabel": "Termine",
     "termExtracted": "Termine aggiunto al glossario",
-    "prelaunchWarning": "{{count}} chunk hanno match di memoria non abilitati"
+    "prelaunchWarning": "{{count}} chunk hanno match di memoria non abilitati",
+    "matchBadge": "{{count}} match"
   },
   "glossary": {
     "translation": "Traduzione",
