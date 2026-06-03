@@ -1,6 +1,7 @@
 {
   "app": {
     "title": "Glossa // Pipeline",
+    "brand": "Glossa",
     "subtitle": "Traduzione assistita da AI"
   },
   "header": {
@@ -25,7 +26,13 @@
     "cacheMissInput": "Input fuori cache",
     "cacheHitRate": "Percentuale cache hit",
     "translationCacheLabel": "Cache traduzione",
-    "auditCacheLabel": "Cache audit"
+    "auditCacheLabel": "Cache audit",
+    "brandArea": "Traduzione"
+  },
+  "sidebar": {
+    "areaLabel": "Area",
+    "workspaceSection": "Workspace",
+    "backToWorkspace": "Torna al workspace"
   },
   "pipeline": {
     "globalSetup": "Progetto",
@@ -537,28 +544,36 @@
     "projectsMetric": "Progetti",
     "workspacesMetric": "Workspace",
     "embeddingModel": "Modello embedding",
-    "areaActive": "Attiva",
-    "areaFuture": "2.0",
+    "technicalSummary": "Riepilogo tecnico",
+    "createdAt": "Creato",
+    "memoryScope": "Ambito memoria",
+    "workspaceScoped": "Per workspace",
     "areas": {
       "translations": {
         "title": "Traduzioni",
-        "body": "Area operativa attuale: progetti, pipeline, Phrase Memory e preset di traduzione vivono qui."
+        "body": "Area operativa attuale: progetti, pipeline, Phrase Memory e preset di traduzione vivono qui.",
+        "sidebarHint": "Progetti e pipeline"
       },
       "library": {
         "title": "Biblioteca",
-        "body": "Area futura per catalogo, testi e materiali di studio, separata dalla memoria di traduzione."
+        "body": "Area futura per catalogo, testi e materiali di studio, separata dalla memoria di traduzione.",
+        "sidebarHint": "Testi e catalogo"
       },
       "transcriptions": {
         "title": "Trascrizioni",
-        "body": "Area futura per OCR, trascrizione e lavorazione del sorgente prima della traduzione."
+        "body": "Area futura per OCR, trascrizione e lavorazione del sorgente prima della traduzione.",
+        "sidebarHint": "OCR e preparazione"
       }
     },
     "projectsTitle": "Progetti del workspace",
     "emptyProjectsTitle": "Nessun progetto in questo workspace",
     "emptyProjectsBody": "Crea un progetto per iniziare una traduzione dentro questo workspace.",
     "switcherTitle": "Cambia workspace",
+    "newBookCard": "Nuovo libro",
     "phraseMemoryTitle": "Phrase Memory del workspace",
     "phraseMemoryBody": "I preset qui sotto appartengono al workspace attivo. La pipeline sceglie se usare o meno la memoria, ma la configurazione dei preset vive qui.",
+    "nameLabel": "Nome",
+    "descriptionLabel": "Descrizione",
     "namePlaceholder": "Nome workspace",
     "descriptionPlaceholder": "Descrizione del workspace",
     "embeddingChangeWarning": "Cambiare modello embedding richiede rigenerare gli embedding esistenti della memoria. Salva solo se vuoi davvero cambiare modello.",
@@ -996,22 +1011,21 @@
     },
     "shortcuts": {
       "title": "Riferimento interfaccia",
-      "toolbarTitle": "Toolbar header",
-      "openProjects": "Apri il pannello Progetti",
-      "importFile": "Importa un file di testo sorgente",
+      "toolbarTitle": "Barra laterale e header",
+      "openProjects": "Apri il pannello Progetti — barra laterale (modalità editor)",
+      "importFile": "Importa un file sorgente — barra laterale (modalità editor)",
       "openConfig": "Apri il pannello di configurazione della pipeline",
-      "saveProject": "Salva il progetto corrente",
-      "openLibrary": "Apri la Libreria (dizionari e template)",
-      "switchLang": "Cambia la lingua dell'interfaccia (IT / EN)",
-      "openSettings": "Apri Impostazioni (chiavi API, Ollama, segmentazione, pricing)",
-      "openHelp": "Apri questa guida",
-      "sandbox": "Apri / chiudi la modalità Sandbox",
+      "saveProject": "Salva il progetto — barra laterale (modalità editor)",
+      "openLibrary": "Apri la Libreria (dizionari e template) — header",
+      "switchLang": "Cambia la lingua dell'interfaccia (IT / EN) — header",
+      "openSettings": "Apri Impostazioni (chiavi API, Ollama, segmentazione, pricing) — header",
+      "openHelp": "Apri questa guida — header",
       "openInsights": "Apri il pannello Insight",
       "toggleEditorTools": "Mostra / nasconde la toolbar degli editor",
       "lockTranslation": "Blocca / sblocca la traduzione candidata come definitiva",
       "phraseMemory": "Memoria — mostra i match trovati, seleziona quelli da usare e salva esplicitamente il chunk corrente",
       "openStageTrace": "Apri la modale con l'output completo di uno stage",
-      "exportTitle": "Esportazione (richiede chunk completati)",
+      "exportTitle": "Esportazione (barra laterale, richiede chunk completati)",
       "exportDesc": "Apre il dialog di esportazione con formato e separatore tra chunk",
       "promptToolsTitle": "Strumenti dei prompt",
       "refineButton": "Bacchetta — rifinisce il prompt usando il provider/modello mostrato a fianco",

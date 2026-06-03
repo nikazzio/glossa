@@ -1,8 +1,12 @@
 import {
+  ChevronLeft,
   Columns2,
+  FileOutput,
   FlaskConical,
+  FolderOpen,
   Highlighter,
   Info,
+  LibraryBig,
   Link2,
   Link2Off,
   Loader2,
@@ -12,38 +16,83 @@ import {
   Play,
   Plus,
   RotateCcw,
+  Save,
   Settings2,
   Square,
+  Upload,
   X,
   Zap,
 } from 'lucide-react';
-import { useMemo, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { confirm } from '../../stores/confirmStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { usePricingStore } from '../../stores/pricingStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useUiStore } from '../../stores/uiStore';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { estimatePipelineCost } from '../../utils/costEstimate';
 import { CostBreakdownPanel } from '../pipeline/CostBadge';
 import { IconButton, Tooltip } from '../ui';
+import { importTextFile, exportTranslation, exportBilingual } from '../../services/fileService';
+import { savePipelineConfig } from '../../services/pipelineService';
+import { extractFootnotes } from '../../utils/footnoteExtractor';
+import { logger } from '../../utils/logger';
+import { getContextWindow } from '../../models/catalog';
+import type { ImportDialogPipelineConfig } from '../document/ImportPreviewDialog';
+import type { ExportFormat } from '../document/ExportDialog';
+import { DashboardSidebar } from './DashboardSidebar';
+import type { DocumentFormat, DocumentRenderProfile } from '../../types';
 
+const ExportDialog = lazy(() =>
+  import('../document/ExportDialog').then((m) => ({ default: m.ExportDialog })),
+);
+const ImportPreviewDialog = lazy(() =>
+  import('../document/ImportPreviewDialog').then((m) => ({ default: m.ImportPreviewDialog })),
+);
+const SaveProjectDialog = lazy(() =>
+  import('../projects/SaveProjectDialog').then((m) => ({ default: m.SaveProjectDialog })),
+);
+
+interface PendingImport {
+  fileName: string;
+  text: string;
+  rawText: string;
+  useChunking: boolean;
+  wordsPerChunk: number;
+  headingAware: boolean;
+  carryTrailingShortBlocks: boolean;
+  format?: 'plain' | 'markdown';
+  experimental?: 'docx-markdown';
+}
 interface PipelineSidebarProps {
-  onRunPipeline: () => void;
-  onCancelPipeline: () => void;
-  onDryRun: () => void;
+  mode?: 'dashboard' | 'editor';
+  onRunPipeline?: () => void;
+  onCancelPipeline?: () => void;
+  onDryRun?: () => void;
   onRetranslateChunk?: (chunkId: string) => void;
 }
 
+const LANG_CODES: Record<string, string> = {
+  Italian: 'IT', English: 'EN', Spanish: 'ES', French: 'FR',
+  German: 'DE', Portuguese: 'PT', Japanese: 'JA', Chinese: 'ZH',
+  Korean: 'KO', Russian: 'RU',
+};
+const langCode = (name: string) => LANG_CODES[name] ?? name.slice(0, 2).toUpperCase();
+
 export function PipelineSidebar({
+  mode = 'editor',
   onRunPipeline,
   onCancelPipeline,
   onDryRun,
   onRetranslateChunk,
 }: PipelineSidebarProps) {
   const { t } = useTranslation();
-  const { config } = usePipelineStore();
+
+  // ── Stores — all hooks before any conditional return ─────────────
+  const { config, setConfig } = usePipelineStore();
   const runStatus = usePipelineStore((s) => s.runStatus);
   const {
     pipelines,
@@ -52,8 +101,12 @@ export function PipelineSidebar({
     switchPipeline,
     createNewPipeline,
     deletePipeline,
+    setShowProjectPanel,
+    saveCurrentProject,
+    closeProject,
+    loadProjects,
   } = useProjectStore();
-  const { chunks, isProcessing, cancelRequested } = useChunksStore();
+  const { chunks, isProcessing, cancelRequested, loadDocument } = useChunksStore();
   const {
     pipelineMode,
     setPipelineMode,
@@ -69,35 +122,45 @@ export function PipelineSidebar({
     setSyncScrollEnabled,
     highlightsEnabled,
     setHighlightsEnabled,
+    chunkPresetShort,
+    chunkPresetMedium,
+    chunkPresetLong,
   } = useUiStore();
   const pricingOverrides = usePricingStore((s) => s.overrides);
-  const [showCostPanel, setShowCostPanel] = useState(false);
+  const { activeWorkspace } = useWorkspaceStore();
 
+  // ── Local state ───────────────────────────────────────────────────
+  const [showCostPanel, setShowCostPanel] = useState(false);
+  const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
+  const [showSaveProjectDialog, setShowSaveProjectDialog] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [isCreatingProjectFromSave, setIsCreatingProjectFromSave] = useState(false);
+  const saveDialogLoaded = useRef(false);
+  if (showSaveProjectDialog) saveDialogLoaded.current = true;
+
+  // ── Derived ───────────────────────────────────────────────────────
   const isRunning = runStatus === 'running';
   const hasProject = !!currentProjectId;
-  const activePipeline = pipelines.find((pipeline) => pipeline.id === activePipelineId) ?? null;
-
+  const activePipeline = pipelines.find((p) => p.id === activePipelineId) ?? null;
   const runChunkCount =
     pipelineMode === 'test'
       ? Math.max(1, Math.min(pipelineTestChunkCount, chunks.length || 1))
       : chunks.length;
   const testControlsDisabled = isProcessing || pipelineMode !== 'test';
   const syncScrollDisabled = documentPaneFocus !== 'both';
-
   const foundIndex = chunks.findIndex((c) => c.id === selectedChunkId);
   const currentIndex = foundIndex >= 0 ? foundIndex : 0;
   const currentChunk = selectedChunkId && foundIndex >= 0 ? chunks[currentIndex] ?? null : null;
-
   const completedCount = chunks.filter(
     (c) => c.status === 'completed' || c.status === 'preview',
   ).length;
-
   const costEstimate = useMemo(
     () => estimatePipelineCost(chunks, config, pricingOverrides),
     [chunks, config, pricingOverrides],
   );
 
-  const handleDelete = async (pipelineId: string, pipelineName: string) => {
+  // ── Pipeline delete ───────────────────────────────────────────────
+  const handleDeletePipeline = async (pipelineId: string, pipelineName: string) => {
     const ok = await confirm({
       title: t('pipeline.confirmDeleteTitle'),
       message: t('pipeline.confirmDeleteMessage', { name: pipelineName }),
@@ -108,13 +171,236 @@ export function PipelineSidebar({
     await deletePipeline(pipelineId);
   };
 
+  // ── Doc action handlers ───────────────────────────────────────────
+  const handleImport = async () => {
+    try {
+      const imported = await importTextFile();
+      if (imported) {
+        const isMarkdown = imported.format === 'markdown';
+        const cleanText = isMarkdown ? extractFootnotes(imported.text).cleanText : imported.text;
+        setPendingImport({
+          fileName: imported.name,
+          text: cleanText,
+          rawText: imported.text,
+          useChunking: config.useChunking !== false,
+          wordsPerChunk: config.wordsPerChunk ?? chunkPresetMedium,
+          headingAware: config.headingAware ?? true,
+          carryTrailingShortBlocks: config.carryTrailingShortBlocks ?? true,
+          format: imported.format,
+          experimental: imported.experimental,
+        });
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg === 'pdf_no_text_layer') {
+        toast.error(t('files.pdfScannedError'));
+      } else {
+        toast.error(t('files.importError'), { description: msg });
+      }
+    }
+  };
+
+  const handleConfirmImport = async (
+    manualChunks?: string[],
+    pipelineConfig?: ImportDialogPipelineConfig,
+  ) => {
+    if (!pendingImport) return;
+    const provider = pipelineConfig?.provider ?? config.stages[0]?.provider;
+    const model = pipelineConfig?.model ?? config.stages[0]?.model;
+    const contextWindow = provider && model ? getContextWindow(provider, model) : undefined;
+    const wordsPerChunk =
+      pendingImport.wordsPerChunk > 0 ? pendingImport.wordsPerChunk : chunkPresetMedium;
+    const presets = [chunkPresetShort, chunkPresetMedium, chunkPresetLong];
+    const nearestPreset = presets.reduce(
+      (nearest, p) =>
+        Math.abs(wordsPerChunk - p) < Math.abs(wordsPerChunk - nearest) ? p : nearest,
+      presets[0]!,
+    );
+    const minWords = Math.round(nearestPreset * 0.5);
+    const maxWords = Math.round(nearestPreset * 1.5);
+    const updatedStages = pipelineConfig
+      ? config.stages.map((s, i) =>
+          i === 0
+            ? { ...s, provider: pipelineConfig.provider, model: pipelineConfig.model }
+            : s,
+        )
+      : config.stages;
+    const updatedConfig = {
+      ...config,
+      sourceLanguage: pipelineConfig?.sourceLanguage ?? config.sourceLanguage,
+      targetLanguage: pipelineConfig?.targetLanguage ?? config.targetLanguage,
+      stages: updatedStages,
+      useChunking: pendingImport.useChunking,
+      wordsPerChunk,
+      minWords,
+      maxWords,
+      headingAware: pendingImport.headingAware,
+      carryTrailingShortBlocks: pendingImport.carryTrailingShortBlocks,
+      documentFormat: (pendingImport.format ?? 'plain') as DocumentFormat,
+      renderProfile: (pendingImport.format === 'markdown'
+        ? 'markdown'
+        : 'plain-text') as DocumentRenderProfile,
+      markdownAware: pendingImport.format === 'markdown',
+      experimentalImport: pendingImport.experimental ?? null,
+      chunkedWithContextWindow: contextWindow,
+    };
+    setConfig(() => updatedConfig);
+    loadDocument(
+      pendingImport.rawText,
+      {
+        useChunking: pendingImport.useChunking,
+        targetWordsPerChunk: wordsPerChunk,
+        markdownAware: pendingImport.format === 'markdown',
+        minWords,
+        maxWords,
+        headingAware: pendingImport.headingAware,
+        carryTrailingShortBlocks: pendingImport.carryTrailingShortBlocks,
+        extractFootnotes: pendingImport.experimental === 'docx-markdown',
+      },
+      manualChunks,
+    );
+    if (activePipelineId) {
+      try {
+        await savePipelineConfig(activePipelineId, updatedConfig);
+      } catch (err: unknown) {
+        logger.error('savePipelineConfig after import failed', {
+          error: err instanceof Error ? err.message : String(err),
+        });
+        toast.warning(t('files.pipelineSaveAfterImportFailed'));
+      }
+    }
+    setPendingImport(null);
+    toast.success(t('files.imported'));
+  };
+
+  const handleSave = async () => {
+    if (!currentProjectId) {
+      setShowSaveProjectDialog(true);
+      return;
+    }
+    try {
+      await saveCurrentProject();
+      toast.success(t('projects.saved'));
+    } catch (err: unknown) {
+      toast.error(t('projects.saveFailed'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    }
+  };
+
+  const handleFirstSave = async (name: string) => {
+    try {
+      setIsCreatingProjectFromSave(true);
+      await saveCurrentProject(name);
+      setShowSaveProjectDialog(false);
+      toast.success(t('projects.saved'));
+    } catch (err: unknown) {
+      toast.error(t('projects.saveFailed'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setIsCreatingProjectFromSave(false);
+    }
+  };
+
+  const handleExport = async (
+    format: ExportFormat,
+    separator: string,
+    markdownAware: boolean,
+  ) => {
+    setShowExportDialog(false);
+    try {
+      const ok =
+        format === 'bilingual'
+          ? await exportBilingual(chunks)
+          : await exportTranslation(chunks, format, { markdownAware, separator });
+      if (ok) toast.success(t('files.exported'));
+    } catch (err: unknown) {
+      toast.error(t('files.exportError'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    }
+  };
+
+  if (mode === 'dashboard') {
+    return <DashboardSidebar />;
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // EDITOR MODE
+  // ══════════════════════════════════════════════════════════════════
   return (
-    <div className="flex w-36 shrink-0 flex-col border-r border-editorial-border bg-editorial-bg/60">
+    <div className="flex w-52 shrink-0 flex-col border-r border-editorial-border bg-editorial-bg/60">
+      {/* Workspace chip → back to dashboard */}
+      <div className="px-3 pt-3">
+        <button
+          type="button"
+          onClick={closeProject}
+          disabled={isProcessing}
+          title={t('sidebar.backToWorkspace')}
+          aria-label={t('sidebar.backToWorkspace')}
+          className="flex w-full items-center gap-1.5 rounded-[10px] border border-editorial-border bg-editorial-bg px-2.5 py-2 text-left transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <LibraryBig size={16} className="shrink-0 text-editorial-muted" />
+          <span className="min-w-0 flex-1 truncate font-display text-base italic text-editorial-ink">
+            {activeWorkspace?.name ?? '—'}
+          </span>
+          <ChevronLeft size={16} className="shrink-0 text-editorial-muted" />
+        </button>
+      </div>
+
+      {/* Doc meta + 4 actions */}
+      <div className="px-3 pb-1 pt-2">
+        <p className="mb-1.5 font-mono text-sm tabular-nums text-editorial-muted">
+          {langCode(config.sourceLanguage)} → {langCode(config.targetLanguage)}
+          {chunks.length > 0 && ` · ${completedCount}/${chunks.length}`}
+        </p>
+        <div className="flex items-center gap-0.5">
+          <IconButton
+            size="md"
+            onClick={() => setShowProjectPanel(true)}
+            title={t('projects.title')}
+            tooltipSide="right"
+          >
+            <FolderOpen size={15} />
+          </IconButton>
+          <IconButton
+            size="md"
+            onClick={() => void handleImport()}
+            title={t('files.import')}
+            tooltipSide="right"
+          >
+            <Upload size={15} />
+          </IconButton>
+          <IconButton
+            size="md"
+            onClick={() => void handleSave()}
+            title={t('projects.save')}
+            disabled={isProcessing}
+            tooltipSide="right"
+          >
+            <Save size={15} />
+          </IconButton>
+          {chunks.length > 0 && (
+            <IconButton
+              size="md"
+              onClick={() => setShowExportDialog(true)}
+              title={t('header.exportLabel')}
+              tooltipSide="right"
+            >
+              <FileOutput size={15} />
+            </IconButton>
+          )}
+        </div>
+      </div>
+
+      <div className="mx-3 mb-0 mt-1 h-px bg-editorial-border/60" />
+
       {/* Run panel */}
       <div className="flex flex-col gap-4 px-3 pt-4">
         {/* Mode toggle */}
         <div className="flex flex-col items-center gap-2">
-          <SectionLabel>{t('pipeline.modeLabel')}</SectionLabel>
+          <div className="text-center text-[10px] font-bold uppercase tracking-[0.28em] text-editorial-muted/75">{t('pipeline.modeLabel')}</div>
           <div className="flex items-center justify-center gap-2">
             <Tooltip label={t('pipeline.modeTestHint')}>
               <button
@@ -149,7 +435,7 @@ export function PipelineSidebar({
           </div>
         </div>
 
-        {/* Run/Stop button + progress */}
+        {/* Run/Stop button */}
         <div className="flex flex-col items-center gap-2.5">
           <div className="relative">
             {isProcessing ? (
@@ -195,15 +481,15 @@ export function PipelineSidebar({
                 onMouseEnter={() => setShowCostPanel(true)}
                 onMouseLeave={() => setShowCostPanel(false)}
               >
-                  <button
-                    type="button"
-                    onFocus={() => setShowCostPanel(true)}
-                    onBlur={() => setShowCostPanel(false)}
-                    aria-label={t('cost.breakdown')}
-                    className="flex h-6 w-6 items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted transition-colors hover:border-editorial-charcoal hover:text-editorial-charcoal focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
-                  >
-                    <Info size={11} />
-                  </button>
+                <button
+                  type="button"
+                  onFocus={() => setShowCostPanel(true)}
+                  onBlur={() => setShowCostPanel(false)}
+                  aria-label={t('cost.breakdown')}
+                  className="flex h-6 w-6 items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted transition-colors hover:border-editorial-charcoal hover:text-editorial-charcoal focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                >
+                  <Info size={11} />
+                </button>
               </div>
             )}
             {showCostPanel && costEstimate.stages.length > 0 && (
@@ -223,7 +509,7 @@ export function PipelineSidebar({
           )}
         </div>
 
-        {/* Chunk count + single-chunk retranslate */}
+        {/* Chunk count + retranslate */}
         <div className="flex flex-col items-center gap-1.5">
           <div className="flex items-center justify-center gap-1">
             <Tooltip label={t('pipeline.decreaseTestChunkCount')}>
@@ -259,12 +545,22 @@ export function PipelineSidebar({
               </button>
             </Tooltip>
           </div>
-          <Tooltip label={pipelineMode === 'test' ? t('pipeline.retestChunk') : t('pipeline.retranslateChunk')}>
+          <Tooltip
+            label={
+              pipelineMode === 'test'
+                ? t('pipeline.retestChunk')
+                : t('pipeline.retranslateChunk')
+            }
+          >
             <button
               type="button"
               onClick={() => currentChunk && onRetranslateChunk?.(currentChunk.id)}
               disabled={isProcessing || !currentChunk || !currentChunk.originalText.trim()}
-              aria-label={pipelineMode === 'test' ? t('pipeline.retestChunk') : t('pipeline.retranslateChunk')}
+              aria-label={
+                pipelineMode === 'test'
+                  ? t('pipeline.retestChunk')
+                  : t('pipeline.retranslateChunk')
+              }
               className={`flex h-10 w-10 items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted transition-colors hover:border-editorial-charcoal/60 hover:text-editorial-charcoal focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40 ${
                 !currentChunk ? 'invisible' : ''
               }`}
@@ -280,7 +576,7 @@ export function PipelineSidebar({
 
       {/* Pipeline selector */}
       <div className="flex flex-col gap-3 overflow-y-auto px-3">
-        <SectionLabel>{t('pipeline.sectionTitle')}</SectionLabel>
+        <div className="text-center text-[10px] font-bold uppercase tracking-[0.28em] text-editorial-muted/75">{t('pipeline.sectionTitle')}</div>
         {activePipeline && (
           <div className="text-center">
             <p
@@ -329,7 +625,7 @@ export function PipelineSidebar({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          void handleDelete(pipeline.id, pipeline.name);
+                          void handleDeletePipeline(pipeline.id, pipeline.name);
                         }}
                         aria-label={t('pipeline.deletePipeline')}
                         className="absolute -right-1 -top-1 hidden h-4 w-4 items-center justify-center rounded-full border border-editorial-border bg-editorial-bg text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none group-hover:flex"
@@ -348,7 +644,9 @@ export function PipelineSidebar({
             <Tooltip label={t('pipeline.newPipeline')}>
               <button
                 onClick={() =>
-                  createNewPipeline(t('pipeline.pipelineNumber', { number: pipelines.length + 1 }))
+                  createNewPipeline(
+                    t('pipeline.pipelineNumber', { number: pipelines.length + 1 }),
+                  )
                 }
                 aria-label={t('pipeline.newPipeline')}
                 className="inline-flex shrink-0 h-11 w-11 items-center justify-center rounded-full border border-dashed border-editorial-border bg-editorial-bg text-base text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
@@ -377,6 +675,7 @@ export function PipelineSidebar({
 
       <div className="flex-1" />
 
+      {/* Panels */}
       <div className="pl-3 pr-0 pb-4 pt-3">
         <div className="-mr-px rounded-l-[20px] rounded-r-none border border-r-0 border-editorial-border bg-editorial-paper px-3 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.55),6px_10px_20px_rgba(74,50,17,0.04)]">
           <div className="pb-2 text-center text-[10px] font-bold uppercase tracking-[0.28em] text-editorial-muted/75">
@@ -416,11 +715,19 @@ export function PipelineSidebar({
               size="md"
               tone={syncScrollEnabled && !syncScrollDisabled ? 'accent' : 'default'}
               onClick={() => setSyncScrollEnabled(!syncScrollEnabled)}
-              title={syncScrollEnabled ? t('document.scrollSyncDisable') : t('document.scrollSyncEnable')}
+              title={
+                syncScrollEnabled
+                  ? t('document.scrollSyncDisable')
+                  : t('document.scrollSyncEnable')
+              }
               disabled={syncScrollDisabled}
               ariaPressed={syncScrollEnabled && !syncScrollDisabled}
             >
-              {syncScrollEnabled && !syncScrollDisabled ? <Link2 size={14} /> : <Link2Off size={14} />}
+              {syncScrollEnabled && !syncScrollDisabled ? (
+                <Link2 size={14} />
+              ) : (
+                <Link2Off size={14} />
+              )}
             </IconButton>
             <IconButton
               size="md"
@@ -434,21 +741,57 @@ export function PipelineSidebar({
           </div>
         </div>
       </div>
-    </div>
-  );
-}
 
-
-function SectionLabel({
-  children,
-  className = '',
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <div className={`text-center text-[10px] font-bold uppercase tracking-[0.28em] text-editorial-muted/75 ${className}`}>
-      {children}
+      {/* Dialogs */}
+      {pendingImport && (
+        <Suspense fallback={null}>
+          <ImportPreviewDialog
+            fileName={pendingImport.fileName}
+            text={pendingImport.text}
+            useChunking={pendingImport.useChunking}
+            wordsPerChunk={pendingImport.wordsPerChunk}
+            headingAware={pendingImport.headingAware}
+            carryTrailingShortBlocks={pendingImport.carryTrailingShortBlocks}
+            markdownAware={pendingImport.format === 'markdown'}
+            format={pendingImport.format}
+            experimental={pendingImport.experimental}
+            onUseChunkingChange={(v) =>
+              setPendingImport((c) => (c ? { ...c, useChunking: v } : c))
+            }
+            onWordsPerChunkChange={(v) =>
+              setPendingImport((c) => (c ? { ...c, wordsPerChunk: v } : c))
+            }
+            onHeadingAwareChange={(v) =>
+              setPendingImport((c) => (c ? { ...c, headingAware: v } : c))
+            }
+            onCarryTrailingShortBlocksChange={(v) =>
+              setPendingImport((c) => (c ? { ...c, carryTrailingShortBlocks: v } : c))
+            }
+            onCancel={() => setPendingImport(null)}
+            onConfirm={handleConfirmImport}
+          />
+        </Suspense>
+      )}
+      {saveDialogLoaded.current && (
+        <Suspense fallback={null}>
+          <SaveProjectDialog
+            open={showSaveProjectDialog}
+            onClose={() => setShowSaveProjectDialog(false)}
+            onConfirm={handleFirstSave}
+            saving={isCreatingProjectFromSave}
+          />
+        </Suspense>
+      )}
+      {showExportDialog && (
+        <Suspense fallback={null}>
+          <ExportDialog
+            chunks={chunks}
+            markdownAware={config.markdownAware === true}
+            onConfirm={handleExport}
+            onCancel={() => setShowExportDialog(false)}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

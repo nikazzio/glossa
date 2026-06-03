@@ -7,6 +7,7 @@
   font-weight: 200 800;
   font-style: normal;
   font-display: swap;
+  size-adjust: 110%;
 }
 @font-face {
   font-family: "Elstob";
@@ -14,6 +15,7 @@
   font-weight: 200 800;
   font-style: italic;
   font-display: swap;
+  size-adjust: 110%;
 }
 
 /* Plus Jakarta Sans variable sans — public/fonts/ (da https://github.com/tokotype/PlusJakartaSans/releases) */
@@ -23,6 +25,7 @@
   font-weight: 200 800;
   font-style: normal;
   font-display: swap;
+  size-adjust: 96%;
 }
 @font-face {
   font-family: "Plus Jakarta Sans";
@@ -30,6 +33,7 @@
   font-weight: 200 800;
   font-style: italic;
   font-display: swap;
+  size-adjust: 96%;
 }
 
 @theme {
@@ -37,6 +41,14 @@
   --font-display: "Elstob", Georgia, serif;
   --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
   --font-mono: "Courier New", Courier, monospace;
+
+  /* ── Font scale — app UI, not marketing scale ────────────────────────────── */
+  --text-xs: 0.8125rem;  /* 13px */
+  --text-sm: 0.9375rem;  /* 15px */
+  --text-base: 1rem;     /* 16px */
+  --text-lg: 1.125rem;   /* 18px */
+  --text-xl: 1.375rem;   /* 22px */
+  --text-2xl: 1.625rem;  /* 26px */
 
   /* ── Palette — Sage Teal H2 (ink 5.66:1 WCAG AA) ────────────────────────── */
   --color-editorial-bg: #F8F5F0;

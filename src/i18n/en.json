@@ -1,6 +1,7 @@
 {
   "app": {
     "title": "Glossa // Pipeline",
+    "brand": "Glossa",
     "subtitle": "AI-assisted translation"
   },
   "header": {
@@ -25,7 +26,13 @@
     "cacheMissInput": "Cache miss input",
     "cacheHitRate": "Cache hit rate",
     "translationCacheLabel": "Translation cache",
-    "auditCacheLabel": "Audit cache"
+    "auditCacheLabel": "Audit cache",
+    "brandArea": "Translation"
+  },
+  "sidebar": {
+    "areaLabel": "Area",
+    "workspaceSection": "Workspace",
+    "backToWorkspace": "Back to workspace"
   },
   "pipeline": {
     "globalSetup": "Project",
@@ -537,28 +544,36 @@
     "projectsMetric": "Projects",
     "workspacesMetric": "Workspaces",
     "embeddingModel": "Embedding model",
-    "areaActive": "Active",
-    "areaFuture": "2.0",
+    "technicalSummary": "Technical summary",
+    "createdAt": "Created",
+    "memoryScope": "Memory scope",
+    "workspaceScoped": "Workspace-scoped",
     "areas": {
       "translations": {
         "title": "Translations",
-        "body": "Current operating area: projects, pipelines, Phrase Memory, and translation presets live here."
+        "body": "Current operating area: projects, pipelines, Phrase Memory, and translation presets live here.",
+        "sidebarHint": "Projects and pipelines"
       },
       "library": {
         "title": "Library",
-        "body": "Future area for catalogues, texts, and study material, separated from translation memory."
+        "body": "Future area for catalogues, texts, and study material, separated from translation memory.",
+        "sidebarHint": "Texts and catalogues"
       },
       "transcriptions": {
         "title": "Transcriptions",
-        "body": "Future area for OCR, transcription, and source preparation before translation."
+        "body": "Future area for OCR, transcription, and source preparation before translation.",
+        "sidebarHint": "OCR and source prep"
       }
     },
     "projectsTitle": "Workspace projects",
     "emptyProjectsTitle": "No projects in this workspace",
     "emptyProjectsBody": "Create a project to start translating inside this workspace.",
     "switcherTitle": "Switch workspace",
+    "newBookCard": "New book",
     "phraseMemoryTitle": "Workspace Phrase Memory",
     "phraseMemoryBody": "The presets below belong to the active workspace. The pipeline decides whether to use memory, but preset configuration lives here.",
+    "nameLabel": "Name",
+    "descriptionLabel": "Description",
     "namePlaceholder": "Workspace name",
     "descriptionPlaceholder": "Workspace description",
     "embeddingChangeWarning": "Changing the embedding model requires regenerating existing memory embeddings. Save only if you really want to change model.",
@@ -996,16 +1011,15 @@
     },
     "shortcuts": {
       "title": "Interface reference",
-      "toolbarTitle": "Header toolbar",
-      "openProjects": "Open the Projects panel",
-      "importFile": "Import a source text file",
+      "toolbarTitle": "Sidebar and header",
+      "openProjects": "Open the Projects panel — sidebar (editor mode)",
+      "importFile": "Import a source text file — sidebar (editor mode)",
       "openConfig": "Open the pipeline configuration panel",
-      "saveProject": "Save the current project",
-      "openLibrary": "Open the Library (dictionaries and templates)",
-      "switchLang": "Switch interface language (IT / EN)",
-      "openSettings": "Open Settings (API keys, Ollama, segmentation, pricing)",
-      "openHelp": "Open this guide",
-      "sandbox": "Open / close Sandbox mode",
+      "saveProject": "Save the current project — sidebar (editor mode)",
+      "openLibrary": "Open the Library (dictionaries and templates) — header",
+      "switchLang": "Switch interface language (IT / EN) — header",
+      "openSettings": "Open Settings (API keys, Ollama, segmentation, pricing) — header",
+      "openHelp": "Open this guide — header",
       "openInsights": "Open the Insights panel",
       "toggleEditorTools": "Show / hide the editor toolbars",
       "lockTranslation": "Lock / unlock the candidate translation as final",

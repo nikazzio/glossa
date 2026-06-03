@@ -91,10 +91,7 @@ function EditorView() {
   return (
     <>
       <div className="flex-shrink-0">
-        <Header
-          onRunPipeline={runPipeline}
-          onCancelPipeline={cancelPipeline}
-        />
+        <Header />
       </div>
       {viewMode === 'document' ? (
         <Suspense fallback={null}>
@@ -199,9 +196,12 @@ export default function App() {
       <ErrorBoundary>
         <div className="h-screen overflow-hidden bg-editorial-bg text-editorial-ink font-sans flex flex-col">
           <div className="flex-shrink-0">
-            <Header onRunPipeline={() => {}} onCancelPipeline={() => {}} />
+            <Header />
           </div>
-          <WorkspaceHome />
+          <div className="flex flex-1 min-h-0">
+            <PipelineSidebar mode="dashboard" />
+            <WorkspaceHome />
+          </div>
           <Suspense fallback={null}>
             <SettingsModal />
             <ProjectPanel />

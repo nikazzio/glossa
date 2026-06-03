@@ -26,9 +26,9 @@ when-to-read: prima di creare o modificare qualsiasi componente visivo
 - `font-sans` (Plus Jakarta Sans variable) — UI generica, etichette, body
 - `font-mono` — solo codice/log
 
-**Type scale:** display italic / heading roman wght 560 / body 15px / secondary 13px / label `text-[10px] tracking-[0.35em]` / micro `text-[10px] tracking-[0.12em]`
+**Type scale app:** `text-xs` 13px / `text-sm` 15px / `text-base` 16px / `text-lg` 18px / `text-xl` 22px / `text-2xl` 26px. I display veri usano `font-display italic` con classi responsive controllate (`text-4xl md:text-5xl` solo per titoli di vista, non per metadati o controlli).
 
-> **⚠️ Dimensione minima testo contenuto:** `text-xs` (12px). Mai `text-[10px]` o `text-[11px]` per testo leggibile, label di controlli interattivi o descrizioni. `text-[10px]` è **esclusivo** delle etichette sezione uppercase con `tracking-[0.35em]` e badge micro.
+> **Dimensione minima testo contenuto:** `text-xs` (13px). Mai `text-[10px]` o `text-[11px]` per testo leggibile, label di controlli interattivi o descrizioni. `text-[10px]` è **esclusivo** delle etichette sezione uppercase con `tracking-[0.28em]`/`tracking-[0.35em]` e badge micro.
 
 ---
 
@@ -141,21 +141,19 @@ Non reintrodurre il pattern `<div className="flex items-center gap-1.5">` manual
 
 ---
 
-### Pulsanti pill (selezione tra opzioni)
+### PillButton — comandi testuali compatti
 
-Per toggle tra opzioni mutuamente esclusive (es. modalità, lingua):
+Usa `PillButton` per comandi testuali compatti dentro dashboard, modali e toolbar secondarie.
 
 ```tsx
-className={`rounded-full border px-4 py-1.5 text-xs font-bold uppercase tracking-widest transition-colors
-  focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent
-  disabled:cursor-not-allowed disabled:opacity-40 ${
-    isActive
-      ? 'border-editorial-accent bg-editorial-accent text-white'
-      : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent'
-  }`}
+<PillButton variant="secondary">{t('common.cancel')}</PillButton>
+<PillButton variant="accent">{t('workspace.newBookCard')}</PillButton>
 ```
 
-Componente: `src/components/ui/PillButton.tsx`
+Regole:
+- `accent` è pieno: `bg-editorial-accent text-white`. Usalo per l'azione primaria locale.
+- `secondary` è neutro e deve restare meno evidente dell'azione primaria.
+- Non creare pill locali con `button` raw se `PillButton` basta.
 
 ---
 
@@ -186,6 +184,61 @@ Regole:
 - Separatore: `span w-px h-4 bg-editorial-border/70`
 - Label corsiva: `font-display text-sm italic text-editorial-ink`
 - Hover inattivo: `hover:border-editorial-accent/40` (non `/60`) — gestito dal tone `default` di `IconButton`
+
+---
+
+## Sidebar, dashboard e pattern "linguetta"
+
+La pipeline sidebar definisce il riferimento visivo per le superfici laterali:
+
+```tsx
+<div className="flex w-52 shrink-0 flex-col border-r border-editorial-border bg-editorial-bg/60" />
+
+<div className="-mr-px rounded-l-[20px] rounded-r-none border border-r-0 border-editorial-border bg-editorial-paper px-3 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.55),6px_10px_20px_rgba(74,50,17,0.04)]" />
+```
+
+Regole:
+- Sidebar e dashboard usano `editorial-bg/60` o `editorial-bg`, non bianco puro.
+- La superficie selezionata che deve sembrare agganciata alla pagina usa la "linguetta": `rounded-l-[20px] rounded-r-none border-r-0 bg-editorial-paper`.
+- Workspace selezionato: usare il pattern linguetta nella lista, senza ripetere il nome come titolo immediatamente sopra.
+- Dashboard/home: niente card bianche generiche. Usa `editorial-paper`, bordi `editorial-border`, icone tonde e metadati proporzionati.
+- Area nav: usa i testi `workspace.areas.<id>.title` e `workspace.areas.<id>.sidebarHint`. Non mostrare badge tipo "Attiva" sull'area Traduzioni.
+- Le aree future possono essere disabilitate, ma devono mantenere forma e gerarchia visiva coerenti.
+
+---
+
+## Tab accessibili
+
+I tab visuali devono seguire WAI-ARIA APG:
+
+```tsx
+<div role="tablist" aria-label={t('workspace.settings.eyebrow')}>
+  <IconButton
+    id="settings-tab-general"
+    role="tab"
+    aria-selected={activeTab === 'general'}
+    aria-controls="settings-panel-general"
+    tone={activeTab === 'general' ? 'accent' : 'default'}
+    title={t('workspace.settings.general')}
+    onClick={() => setActiveTab('general')}
+  >
+    <Settings2 size={14} />
+  </IconButton>
+</div>
+
+<div
+  id="settings-panel-general"
+  role="tabpanel"
+  aria-labelledby="settings-tab-general"
+>
+  ...
+</div>
+```
+
+Regole:
+- Tab: `role="tab"` + `aria-selected` + `aria-controls`.
+- Panel: `role="tabpanel"` + `aria-labelledby`.
+- Non usare `ariaPressed` per tab. `ariaPressed` resta solo per toggle on/off.
 
 ---
 

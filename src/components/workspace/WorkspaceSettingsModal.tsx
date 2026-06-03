@@ -99,17 +99,20 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
   ];
 
   const tabBar = (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2" role="tablist" aria-label={t('workspace.settings.eyebrow')}>
       {tabConfig.map((tab) => {
         const isActive = activeTab === tab.id;
         return (
           <IconButton
             key={tab.id}
+            id={`workspace-settings-tab-${tab.id}`}
             size="md"
             tone={isActive ? 'accent' : 'default'}
             onClick={() => setActiveTab(tab.id)}
             title={tab.label}
-            ariaPressed={isActive}
+            role="tab"
+            aria-selected={isActive}
+            aria-controls={`workspace-settings-panel-${tab.id}`}
           >
             {tab.icon}
           </IconButton>
@@ -171,7 +174,12 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
               }
             >
               {activeTab === 'general' && (
-                <div className="space-y-4">
+                <div
+                  id="workspace-settings-panel-general"
+                  role="tabpanel"
+                  aria-labelledby="workspace-settings-tab-general"
+                  className="space-y-4"
+                >
                   <input
                     value={name}
                     onChange={(e) => setName(e.target.value)}
@@ -206,10 +214,23 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                 </div>
               )}
 
-              {activeTab === 'memory' && <PhraseMemoryPresetManager />}
+              {activeTab === 'memory' && (
+                <div
+                  id="workspace-settings-panel-memory"
+                  role="tabpanel"
+                  aria-labelledby="workspace-settings-tab-memory"
+                >
+                  <PhraseMemoryPresetManager />
+                </div>
+              )}
 
               {activeTab === 'backup' && (
-                <div className="space-y-6">
+                <div
+                  id="workspace-settings-panel-backup"
+                  role="tabpanel"
+                  aria-labelledby="workspace-settings-tab-backup"
+                  className="space-y-6"
+                >
                   <div>
                     <p className="text-xs font-bold uppercase tracking-[0.3em] text-editorial-muted">
                       {t('settings.backup')}
