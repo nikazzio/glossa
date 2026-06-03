@@ -3,3 +3,4 @@ export { ProductionStream } from './ProductionStream';
 export { StageCard } from './StageCard';
 export { PipelineActions } from './PipelineActions';
 export { CostBadge } from './CostBadge';
+export { PhraseMemoryConfig } from './PhraseMemoryConfig';

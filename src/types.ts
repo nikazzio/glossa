@@ -213,6 +213,9 @@ export interface PipelineConfig {
   blobBudgetTokens?: number;
   blobOverlap?: number;
   chunkedWithContextWindow?: number;
+  usePhraseMemory?: boolean;
+  phraseMemoryPresetId?: string | null;
+  phraseMemoryOverrides?: PhraseMemoryOverrides | null;
   // Runtime-only prompt context. Computed per invocation, never persisted.
   blobContext?: string;
   blobCurrentChunkId?: string;
@@ -245,6 +248,13 @@ export type PhraseMemoryPreset = {
   isBuiltin: boolean;
   config: PhraseMemoryPresetConfig;
   createdAt: string;
+};
+
+export type PhraseMemoryOverrides = {
+  splitter?: PhraseMemorySplitter;
+  similarityThreshold?: number;
+  maxResults?: number;
+  minPhraseLength?: number;
 };
 
 export type PhraseMatch = {

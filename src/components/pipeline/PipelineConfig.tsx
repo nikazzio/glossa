@@ -448,6 +448,12 @@ export function PipelineConfig({
               deleteTemplate={deleteTemplate}
               keyStatusLoading={keyStatusLoading}
               missingRefineProviders={missingRefineProviders}
+              usePhraseMemory={config.usePhraseMemory ?? false}
+              phraseMemoryPresetId={config.phraseMemoryPresetId ?? null}
+              phraseMemoryOverrides={config.phraseMemoryOverrides ?? null}
+              onPhraseMemoryChange={({ usePhraseMemory, phraseMemoryPresetId, phraseMemoryOverrides }) =>
+                setConfig((prev) => ({ ...prev, usePhraseMemory, phraseMemoryPresetId, phraseMemoryOverrides }))
+              }
             />
           )}
 

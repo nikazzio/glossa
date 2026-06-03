@@ -119,7 +119,6 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
   const { stuckChunkIds, cancelStuckChunk } = useChunkWatchdog();
   const { rerunChunkWithMemory } = usePipeline();
   const { config } = usePipelineStore();
-  const matchesByChunk = usePhraseMemoryStore((s) => s.matchesByChunk);
   const hasGlossary = !!config.assignedGlossaryId && config.glossary.length > 0;
 
   // Redirect away from the glossary tab if the glossary is removed.
@@ -584,7 +583,7 @@ function IndexTab({ panelId, labelledBy, chunks, currentChunkId, isProcessing, s
                     return (
                       <div className={`mt-1.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.18em] ${isActive ? 'text-white/80' : 'text-editorial-accent'}`}>
                         <Brain size={11} />
-                        {matchCount} match
+                        {t('memory.matchBadge', { count: matchCount })}
                       </div>
                     );
                   })()}

@@ -74,3 +74,31 @@ export async function deleteCustomPreset(id: string): Promise<void> {
     [id],
   );
 }
+
+export async function updateCustomPreset(
+  id: string,
+  name: string,
+  config: PhraseMemoryPresetConfig,
+): Promise<void> {
+  await execute(
+    `UPDATE phrase_memory_presets SET name = $1, config = $2 WHERE id = $3 AND is_builtin = 0`,
+    [name, JSON.stringify(config), id],
+  );
+}
+
+export async function clonePreset(sourceId: string): Promise<string> {
+  const rows = await select<{ name: string; config: string }>(
+    `SELECT name, config FROM phrase_memory_presets WHERE id = $1`,
+    [sourceId],
+  );
+  if (rows.length === 0) throw new Error(`Preset not found: ${sourceId}`);
+  const source = rows[0];
+  const newId = `pmp_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`;
+  const now = new Date().toISOString();
+  await execute(
+    `INSERT INTO phrase_memory_presets (id, name, is_builtin, config, created_at)
+     VALUES ($1, $2, 0, $3, $4)`,
+    [newId, `${source.name} (copia)`, source.config, now],
+  );
+  return newId;
+}

@@ -4,8 +4,9 @@ import {
   AlertCircle, Server, RefreshCw, CheckCircle2, XCircle, HelpCircle,
   Sparkles, Columns2, BookOpen, ChevronDown, ChevronUp, SlidersHorizontal,
   ChevronsLeft, Copy, RotateCcw, Scissors, Layers, LayoutTemplate, Palette,
-  HardDrive, Download, Upload,
+  HardDrive, Download, Upload, Brain,
 } from 'lucide-react';
+import { PhraseMemoryPresetManager } from './PhraseMemoryPresetManager';
 import { exportWorkspace, importWorkspace } from '../../services/backupService';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
@@ -31,7 +32,7 @@ const PROVIDER_LABELS: Record<ModelProvider, string> = {
   ollama: 'Ollama',
 };
 
-type SettingsTab = 'provider' | 'settings';
+type SettingsTab = 'provider' | 'settings' | 'phraseMemory';
 
 function getModelGroupLabel(provider: ModelProvider, modelId: string): string {
   switch (provider) {
@@ -227,8 +228,9 @@ export function SettingsModal() {
   };
 
   const tabConfig: Array<{ id: SettingsTab; icon: ReactNode; label: string }> = [
-    { id: 'settings', icon: <SlidersHorizontal size={14} />, label: t('header.settings') },
-    { id: 'provider', icon: <Server size={14} />,            label: t('settings.providerTab') },
+    { id: 'settings',     icon: <SlidersHorizontal size={14} />, label: t('header.settings') },
+    { id: 'provider',     icon: <Server size={14} />,            label: t('settings.providerTab') },
+    { id: 'phraseMemory', icon: <Brain size={14} />,             label: t('settings.phraseMemoryTab') },
   ];
 
   const tabBar = (
@@ -744,6 +746,24 @@ export function SettingsModal() {
                         </p>
                       </div>
                     )}
+                  </div>
+                </div>
+              )}
+
+              {/* Tab: Phrase Memory */}
+              {activeTab === 'phraseMemory' && (
+                <div className="space-y-8">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-1.5">
+                      <Brain size={11} className="text-editorial-accent shrink-0" />
+                      <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                        {t('settings.phraseMemoryPresetsTitle')}
+                      </p>
+                    </div>
+                    <p className="text-xs leading-relaxed text-editorial-muted/80">
+                      {t('settings.phraseMemoryPresetsHint')}
+                    </p>
+                    <PhraseMemoryPresetManager />
                   </div>
                 </div>
               )}

@@ -221,5 +221,13 @@ export async function addGlossaryEntry(
   glossaryId: string,
   entry: Pick<GlossaryEntry, 'id' | 'term' | 'translation' | 'notes'>,
 ): Promise<void> {
-  await upsertGlossaryEntries(glossaryId, [entry as GlossaryEntry]);
+  await execute(
+    `INSERT INTO glossary_entries (id, glossary_id, term, translation, notes)
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT(id) DO UPDATE SET
+       term = excluded.term,
+       translation = excluded.translation,
+       notes = excluded.notes`,
+    [entry.id, glossaryId, entry.term, entry.translation ?? '', entry.notes ?? ''],
+  );
 }

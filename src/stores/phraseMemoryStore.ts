@@ -76,7 +76,7 @@ export const usePhraseMemoryStore = create<PhraseMemoryState>((set) => ({
       const entry = state.matchesByChunk.get(chunkId);
       if (!entry) return {};
       const next = new Map(state.matchesByChunk);
-      next.set(chunkId, { ...entry, enabledMatchIds: ids });
+      next.set(chunkId, { ...entry, enabledMatchIds: new Set(ids) });
       return { matchesByChunk: next };
     }),
 

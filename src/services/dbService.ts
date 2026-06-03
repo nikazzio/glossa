@@ -542,6 +542,19 @@ export async function initDatabase(): Promise<void> {
     )
   `);
 
+  for (const col of [
+    'ALTER TABLE pipelines ADD COLUMN use_phrase_memory INTEGER NOT NULL DEFAULT 0',
+    'ALTER TABLE pipelines ADD COLUMN phrase_memory_preset_id TEXT DEFAULT NULL',
+    'ALTER TABLE pipelines ADD COLUMN phrase_memory_overrides TEXT DEFAULT NULL',
+  ]) {
+    try {
+      await conn.execute(col);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (!msg.includes('duplicate column') && !msg.includes('already exists')) throw err;
+    }
+  }
+
   await conn.execute(`
     CREATE TABLE IF NOT EXISTS historical_techniques (
       id TEXT PRIMARY KEY,

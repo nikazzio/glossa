@@ -9,7 +9,7 @@ import type { PhraseMemoryMatch } from '../stores/phraseMemoryStore';
  */
 export function buildMemoryInjection(matches: PhraseMemoryMatch[]): string | null {
   if (matches.length === 0) return null;
-  const lines = matches.map((m) => `- "${m.sourcePhrase}" → "${m.targetPhrase}"`);
+  const lines = matches.map((m) => `- ${JSON.stringify(m.sourcePhrase)} → ${JSON.stringify(m.targetPhrase)}`);
   return [
     'Translation memory references (use for terminology consistency only, do not copy verbatim):',
     ...lines,
