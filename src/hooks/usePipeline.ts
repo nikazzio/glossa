@@ -179,6 +179,7 @@ export function usePipeline() {
    * pipeline tracks its own run lifecycle independently for the same document.
    */
   const getChunkMemoryBlock = (chunkId: string): string | undefined => {
+    if (!usePipelineStore.getState().config.usePhraseMemory) return undefined;
     const entry = usePhraseMemoryStore.getState().matchesByChunk.get(chunkId);
     if (!entry || entry.matches.length === 0) return undefined;
     const selected = entry.matches.filter((m) => entry.enabledMatchIds.has(m.id));
@@ -429,17 +430,19 @@ export function usePipeline() {
     const allChunks = useChunksStore.getState().chunks;
     if (allChunks.length === 0) return;
 
-    const blockedChunks = checkAllChunksHaveEnabledMatches(
-      usePhraseMemoryStore.getState().matchesByChunk,
-    );
-    if (blockedChunks.length > 0) {
-      toast.warning(t('memory.prelaunchWarning', { count: blockedChunks.length }));
-    }
-
     const { pipelineMode, pipelineTestChunkCount } = useUiStore.getState();
     const isTestMode = pipelineMode === 'test';
     // In test mode always process the first N chunks (never resume from a mid-point).
     const liveChunks = isTestMode ? allChunks.slice(0, pipelineTestChunkCount) : allChunks;
+    if (config.usePhraseMemory) {
+      const liveChunkIds = new Set(liveChunks.map((chunk) => chunk.id));
+      const blockedChunks = checkAllChunksHaveEnabledMatches(
+        usePhraseMemoryStore.getState().matchesByChunk,
+      ).filter((chunkId) => liveChunkIds.has(chunkId));
+      if (blockedChunks.length > 0) {
+        toast.warning(t('memory.prelaunchWarning', { count: blockedChunks.length }));
+      }
+    }
 
     pipelineLog.batchPipelineStart(liveChunks.length, config.stages.filter((stage) => stage.enabled).length);
     if (!(await ensureProvidersReady([

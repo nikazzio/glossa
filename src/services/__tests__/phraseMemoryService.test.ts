@@ -13,7 +13,9 @@ import {
   splitPhrases,
   runEmbeddingJob,
   searchPhraseMemory,
-  saveLockedPhrases,
+  searchPhraseMemoryBatch,
+  saveSelectedPhrases,
+  savePhrasePairs,
 } from '../phraseMemoryService';
 
 const mockInvoke = vi.mocked(invoke);
@@ -133,14 +135,78 @@ describe('searchPhraseMemory', () => {
   });
 });
 
-describe('saveLockedPhrases', () => {
+describe('searchPhraseMemoryBatch', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('chiama fetchEmbeddings una sola volta per tutti i chunk', async () => {
+    mockFetchEmbeddings.mockResolvedValue([[0.1, 0.2], [0.3, 0.4]]);
+    mockInvoke.mockResolvedValue([
+      { phrase_memory_id: 'pm-1', source_phrase: 'ciao', target_phrase: 'hello', distance: 0.05 },
+    ]);
+
+    const results = await searchPhraseMemoryBatch({
+      workspaceId: 'ws-1',
+      embeddingModel: 'text-embedding-3-small',
+      chunks: [
+        { id: 'c1', text: 'ciao' },
+        { id: 'c2', text: 'mondo' },
+      ],
+      threshold: 0.3,
+      maxResults: 5,
+    });
+
+    expect(mockFetchEmbeddings).toHaveBeenCalledTimes(1);
+    expect(mockFetchEmbeddings).toHaveBeenCalledWith(['ciao', 'mondo'], 'text-embedding-3-small');
+    expect(mockInvoke).toHaveBeenCalledTimes(2);
+    expect(results.get('c1')?.[0]).toMatchObject({ sourcePhrase: 'ciao', targetPhrase: 'hello' });
+  });
+});
+
+describe('saveSelectedPhrases', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('salva solo i chunk passati esplicitamente e aggiorna il progress', async () => {
+    mockFetchEmbeddings.mockResolvedValue([[0.1, 0.2]]);
+    mockInvoke.mockResolvedValue(undefined);
+    const onProgress = vi.fn();
+
+    await saveSelectedPhrases({
+      workspaceId: 'ws-1',
+      projectId: 'proj-1',
+      embeddingModel: 'text-embedding-3-small',
+      splitter: 'regex',
+      minPhraseLength: 3,
+      sourceLanguage: 'it',
+      targetLanguage: 'en',
+      chunks: [
+        { id: 'c1', sourceText: 'Ciao mondo.', targetText: 'Hello world.' },
+        { id: 'c3', sourceText: 'Buona notte.', targetText: 'Good night.' },
+      ],
+      onProgress,
+    });
+
+    expect(mockInvoke).toHaveBeenCalledTimes(2);
+    expect(mockInvoke).toHaveBeenCalledWith(
+      'vec_save_locked_phrases',
+      expect.objectContaining({ chunkId: 'c1' }),
+    );
+    expect(mockInvoke).toHaveBeenCalledWith(
+      'vec_save_locked_phrases',
+      expect.objectContaining({ chunkId: 'c3' }),
+    );
+    expect(onProgress).toHaveBeenCalledWith(1, 2);
+    expect(onProgress).toHaveBeenCalledWith(2, 2);
+  });
+});
+
+describe('savePhrasePairs', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('chiama vec_save_locked_phrases con workspace e chunk corretti', async () => {
     mockFetchEmbeddings.mockResolvedValue([[0.1, 0.2]]);
     mockInvoke.mockResolvedValueOnce(1);
 
-    await saveLockedPhrases({
+    await savePhrasePairs({
       workspaceId: 'ws-1',
       projectId: 'proj-1',
       chunkId: 'c1',

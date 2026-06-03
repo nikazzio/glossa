@@ -40,6 +40,32 @@ export async function listWorkspaces(): Promise<Workspace[]> {
   }));
 }
 
+export async function updateWorkspace(
+  id: string,
+  updates: Partial<Pick<Workspace, 'name' | 'description' | 'embeddingModel'>>,
+): Promise<void> {
+  const sets: string[] = [];
+  const params: unknown[] = [];
+  let index = 1;
+
+  if (updates.name !== undefined) {
+    sets.push(`name = $${index++}`);
+    params.push(updates.name);
+  }
+  if (updates.description !== undefined) {
+    sets.push(`description = $${index++}`);
+    params.push(updates.description || null);
+  }
+  if (updates.embeddingModel !== undefined) {
+    sets.push(`embedding_model = $${index++}`);
+    params.push(updates.embeddingModel);
+  }
+  if (sets.length === 0) return;
+
+  params.push(id);
+  await execute(`UPDATE workspaces SET ${sets.join(', ')} WHERE id = $${index}`, params);
+}
+
 export async function getActiveWorkspaceId(): Promise<string | null> {
   const value = await getSetting('active_workspace_id');
   return value || null;

@@ -24,6 +24,8 @@
 | `stores/pipelineStore.ts` | config pipeline, inputText, sourceFootnotes, runStatus, mode | Config immutabile per run |
 | `stores/chunksStore.ts` | chunks[], isProcessing, cancelRequested, activeStreamId | RAF batching per token stream; Map O(1) per chunk lookup |
 | `stores/projectStore.ts` | projects[], currentProjectId, pipelines[], activePipelineId | Multi-pipeline per progetto |
+| `stores/workspaceStore.ts` | workspaces[], activeWorkspace, loading/isLoaded | Boundary traduzioni: switch/create/update workspace, un workspace attivo per volta |
+| `stores/phraseMemoryStore.ts` | matchesByChunk, enabledMatchIds, jobStatus, searchStatus | Match Phrase Memory per chunk; match trovati read-only finché non selezionati |
 | `stores/operationLogStore.ts` | entries[], currentProjectId | Max 2000 in-memory, resto in DB |
 | `stores/uiStore.ts` | selectedChunkId, pipelineMode, highlightsEnabled, highlightColors, searchQuery, ollamaStatus | UI-only state. highlightsEnabled + highlightColors persisted; searchQuery transient |
 | `stores/libraryStore.ts` | glossaries[], dictionaries[], selectedDictionary | — |
@@ -62,6 +64,22 @@
 | `components/pipeline/StageCard.tsx` | Visualizza singolo stage (token, retry info) |
 | `components/document/ConfigDrawer.tsx` | Drawer config pipeline: mode, lingue, stage, persona, glossary |
 | `components/layout/Header.tsx` | Project/pipeline selector |
+| `components/workspace/WorkspaceHome.tsx` | Dashboard workspace: switch/create/config workspace, progetti, preset Phrase Memory workspace |
+| `components/workspace/WorkspaceWizard.tsx` | Primo avvio: crea il primo workspace reale |
+
+---
+
+## Boundary prodotto: App / Workspace / Pipeline
+
+Glossa 2.0 separa tre livelli:
+
+| Livello | Dove si configura | Cosa contiene |
+|---|---|---|
+| App | `SettingsModal` | Provider/API key, Ollama, segmentazione default, layout, backup/pricing |
+| Workspace traduzioni | `WorkspaceHome` | Progetti di traduzione, modello embedding, preset Phrase Memory, memoria condivisa |
+| Pipeline/progetto | `ConfigDrawer` | Lingue, persona, stage, prompt, glossario assegnato, toggle Phrase Memory |
+
+Il workspace attuale è specifico per l'area **Traduzioni**. Biblioteca e Trascrizioni sono future macro-aree separate; non devono condividere implicitamente la Phrase Memory delle traduzioni.
 
 ---
 
@@ -200,9 +218,13 @@ flushPendingTokenBatch() → un solo setState per frame (O(1) chunk update)
 
 ```
 projects
-  id, name, source_language, target_language, view_mode
+  id, workspace_id FK, name, source_language, target_language, view_mode
   source_display_text, source_processing_text, source_footnotes JSON
   created_at, updated_at
+
+workspaces
+  id, name, description, embedding_model, created_at
+  active_workspace_id vive in app_settings
 
 pipelines  ← multi-pipeline per progetto (feat/multi-pipeline)
   id, project_id FK, name
@@ -244,11 +266,23 @@ operation_logs
 app_settings
   key PK, value
   — include 'schema_version' (int) usato da backupService per compatibilità backup
-  — include 'schema_version' (int) usato da backupService per compatibilità backup
+
+phrase_memory
+  id, workspace_id FK, source_phrase, target_phrase
+  source_language, target_language, author, work, domain, tags, notes
+  chunk_id, project_id, embedding, created_at
+
+phrase_memory_presets
+  id, workspace_id nullable, name, is_builtin, config JSON, created_at
+  built-in globali + custom scoped al workspace
+
+source_phrase_embeddings
+  id, project_id, chunk_id, source_phrase, embedding, created_at
 ```
 
 **Persistito vs in-memory:**
 - ✅ Persistito: source, config, stage_results, translations, run_status, operation_logs
+- ✅ Persistito workspace: progetti, preset Phrase Memory custom, memoria frasi
 - ❌ Solo in-memory: token stream real-time (ricostruito da stage_results su resume)
 
 ---
@@ -281,4 +315,4 @@ app_settings
 
 ---
 
-*Ultimo aggiornamento: 2026-05-26 — branch feat/multi-pipeline*
+*Ultimo aggiornamento: 2026-06-03 — branch feat/phrase-memory*

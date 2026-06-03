@@ -8,7 +8,7 @@ const dbMocks = vi.hoisted(() => ({
 
 vi.mock('./dbService', () => dbMocks);
 
-const { getProjectSource, saveProjectSource } = await import('./projectService');
+const { deleteProject, getProjectSource, saveProjectSource } = await import('./projectService');
 
 describe('projectService — source text', () => {
   beforeEach(() => {
@@ -123,6 +123,27 @@ describe('projectService — source text', () => {
       'English',
       'document',
       'proj-1',
+    ]);
+  });
+});
+
+describe('projectService — deleteProject', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    dbMocks.execute.mockResolvedValue(undefined);
+  });
+
+  it('deletes project-scoped data before deleting the project row', async () => {
+    await deleteProject('proj-1');
+
+    expect(dbMocks.execute.mock.calls.map(([query]) => query)).toEqual([
+      'DELETE FROM operation_logs WHERE project_id = $1',
+      'DELETE FROM project_glossaries WHERE project_id = $1',
+      'DELETE FROM source_phrase_embeddings WHERE project_id = $1',
+      'UPDATE phrase_memory SET project_id = NULL, chunk_id = NULL WHERE project_id = $1',
+      'DELETE FROM translations WHERE project_id = $1',
+      'DELETE FROM pipelines WHERE project_id = $1',
+      'DELETE FROM projects WHERE id = $1',
     ]);
   });
 });

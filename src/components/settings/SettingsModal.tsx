@@ -4,10 +4,8 @@ import {
   AlertCircle, Server, RefreshCw, CheckCircle2, XCircle, HelpCircle,
   Sparkles, Columns2, BookOpen, ChevronDown, ChevronUp, SlidersHorizontal,
   ChevronsLeft, Copy, RotateCcw, Scissors, Layers, LayoutTemplate, Palette,
-  HardDrive, Download, Upload, Brain,
+  LibraryBig, FileText,
 } from 'lucide-react';
-import { PhraseMemoryPresetManager } from './PhraseMemoryPresetManager';
-import { exportWorkspace, importWorkspace } from '../../services/backupService';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -32,7 +30,7 @@ const PROVIDER_LABELS: Record<ModelProvider, string> = {
   ollama: 'Ollama',
 };
 
-type SettingsTab = 'provider' | 'settings' | 'phraseMemory';
+type SettingsTab = 'translations' | 'provider';
 
 function getModelGroupLabel(provider: ModelProvider, modelId: string): string {
   switch (provider) {
@@ -172,42 +170,12 @@ export function SettingsModal() {
   const [showPricingOverrides, setShowPricingOverrides] = useState(false);
   const [showSecurityAdvisory, setShowSecurityAdvisory] = useState(false);
   const [activeProviderTab, setActiveProviderTab] = useState<ModelProvider>('openai');
-  const [activeTab, setActiveTab] = useState<SettingsTab>('settings');
+  const [activeTab, setActiveTab] = useState<SettingsTab>('translations');
   const [urlDraft, setUrlDraft] = useState(ollamaBaseUrl);
-  const [isBackupBusy, setIsBackupBusy] = useState(false);
   const [urlError, setUrlError] = useState<string | null>(null);
   const trapRef = useFocusTrap(showSettings, () => setShowSettings(false));
   const { overrides, setOverride, resetOverride, resetAll } = usePricingStore();
   const { statuses: keyStatuses, refresh: refreshKeyStatuses } = useProviderKeyStatus();
-
-  const handleExportBackup = async () => {
-    setIsBackupBusy(true);
-    try {
-      await exportWorkspace();
-      toast.success(t('files.backupExportSuccess'));
-    } catch (err: unknown) {
-      toast.error(t('files.backupInvalidFile'), { description: err instanceof Error ? err.message : String(err) });
-    } finally {
-      setIsBackupBusy(false);
-    }
-  };
-
-  const handleImportBackup = async () => {
-    setIsBackupBusy(true);
-    try {
-      const restored = await importWorkspace(t);
-      if (restored) {
-        toast.success(t('files.backupImportSuccess'));
-        setTimeout(() => window.location.reload(), 1500);
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      const key = msg === 'incompatible_schema_version' ? 'files.backupIncompatibleVersion' : 'files.backupInvalidFile';
-      toast.error(t(key), { description: msg });
-    } finally {
-      setIsBackupBusy(false);
-    }
-  };
 
   const refreshOllama = async () => {
     setRefreshing(true);
@@ -227,15 +195,19 @@ export function SettingsModal() {
     }
   };
 
-  const tabConfig: Array<{ id: SettingsTab; icon: ReactNode; label: string }> = [
-    { id: 'settings',     icon: <SlidersHorizontal size={14} />, label: t('header.settings') },
+  const activeTabConfig: Array<{ id: SettingsTab; icon: ReactNode; label: string }> = [
+    { id: 'translations', icon: <FileText size={14} />,          label: t('workspace.areas.translations.title') },
     { id: 'provider',     icon: <Server size={14} />,            label: t('settings.providerTab') },
-    { id: 'phraseMemory', icon: <Brain size={14} />,             label: t('settings.phraseMemoryTab') },
+  ];
+
+  const disabledTabConfig: Array<{ icon: ReactNode; label: string }> = [
+    { icon: <LibraryBig size={14} />,  label: t('workspace.areas.library.title') },
+    { icon: <BookOpen size={14} />,    label: t('workspace.areas.transcriptions.title') },
   ];
 
   const tabBar = (
     <div className="flex items-center gap-2">
-      {tabConfig.map((tab) => {
+      {activeTabConfig.map((tab) => {
         const isActive = activeTab === tab.id;
         return (
           <IconButton
@@ -251,8 +223,20 @@ export function SettingsModal() {
         );
       })}
       <span className="mx-1 h-4 w-px self-center bg-editorial-border/70" aria-hidden="true" />
+      {disabledTabConfig.map((tab) => (
+        <IconButton
+          key={tab.label}
+          size="md"
+          tone="default"
+          title={`${tab.label} — Glossa 2.0`}
+          disabled
+        >
+          {tab.icon}
+        </IconButton>
+      ))}
+      <span className="mx-1 h-4 w-px self-center bg-editorial-border/70" aria-hidden="true" />
       <span className="self-center font-display text-sm italic text-editorial-ink">
-        {tabConfig.find((tb) => tb.id === activeTab)?.label}
+        {activeTabConfig.find((tb) => tb.id === activeTab)?.label}
       </span>
     </div>
   );
@@ -301,8 +285,8 @@ export function SettingsModal() {
                 </div>
               }
             >
-              {/* Tab: Impostazioni generali */}
-              {activeTab === 'settings' && (
+              {/* Tab: Traduzioni */}
+              {activeTab === 'translations' && (
                 <div className="space-y-12">
                   {/* Segmentazione */}
                   <div className="space-y-3">
@@ -428,38 +412,6 @@ export function SettingsModal() {
                     </div>
                   </div>
 
-                  {/* Backup e ripristino */}
-                  <div className="space-y-3">
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <HardDrive size={11} className="text-editorial-accent shrink-0" />
-                        <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-                          {t('settings.backup')}
-                        </p>
-                      </div>
-                      <p className="mt-1 text-xs text-editorial-muted/70">{t('settings.backupHint')}</p>
-                    </div>
-                    <div className="flex gap-3">
-                      <button
-                        type="button"
-                        onClick={handleExportBackup}
-                        disabled={isBackupBusy}
-                        className="flex items-center gap-2 rounded-full border border-editorial-border px-4 py-2 text-xs font-bold uppercase tracking-widest text-editorial-muted transition-colors hover:border-editorial-ink/60 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
-                      >
-                        <Download size={13} />
-                        {t('settings.backupExport')}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleImportBackup}
-                        disabled={isBackupBusy}
-                        className="flex items-center gap-2 rounded-full border border-editorial-border px-4 py-2 text-xs font-bold uppercase tracking-widest text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
-                      >
-                        <Upload size={13} />
-                        {t('settings.backupImport')}
-                      </button>
-                    </div>
-                  </div>
                 </div>
               )}
 
@@ -746,24 +698,6 @@ export function SettingsModal() {
                         </p>
                       </div>
                     )}
-                  </div>
-                </div>
-              )}
-
-              {/* Tab: Phrase Memory */}
-              {activeTab === 'phraseMemory' && (
-                <div className="space-y-8">
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-1.5">
-                      <Brain size={11} className="text-editorial-accent shrink-0" />
-                      <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-                        {t('settings.phraseMemoryPresetsTitle')}
-                      </p>
-                    </div>
-                    <p className="text-xs leading-relaxed text-editorial-muted/80">
-                      {t('settings.phraseMemoryPresetsHint')}
-                    </p>
-                    <PhraseMemoryPresetManager />
                   </div>
                 </div>
               )}

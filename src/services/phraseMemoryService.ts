@@ -148,9 +148,9 @@ export async function searchPhraseMemoryBatch(
   return result;
 }
 
-// ── Bulk save completed phrases ───────────────────────────────────────
+// ── Explicit phrase memory save ───────────────────────────────────────
 
-export interface SaveAllCompletedOptions {
+export interface SaveSelectedPhrasesOptions {
   workspaceId: string;
   projectId: string;
   embeddingModel: EmbeddingModel;
@@ -162,7 +162,7 @@ export interface SaveAllCompletedOptions {
   onProgress?: (done: number, total: number) => void;
 }
 
-export async function saveAllCompletedPhrases(options: SaveAllCompletedOptions): Promise<void> {
+export async function saveSelectedPhrases(options: SaveSelectedPhrasesOptions): Promise<void> {
   const {
     workspaceId, projectId, embeddingModel, splitter, minPhraseLength,
     sourceLanguage, targetLanguage, chunks, onProgress,
@@ -170,7 +170,7 @@ export async function saveAllCompletedPhrases(options: SaveAllCompletedOptions):
   const total = chunks.length;
   for (let i = 0; i < chunks.length; i++) {
     const chunk = chunks[i];
-    await saveLockedPhrases({
+    await savePhrasePairs({
       workspaceId, projectId, chunkId: chunk.id, embeddingModel,
       splitter, sourceText: chunk.sourceText, targetText: chunk.targetText,
       minPhraseLength, sourceLanguage, targetLanguage,
@@ -179,9 +179,9 @@ export async function saveAllCompletedPhrases(options: SaveAllCompletedOptions):
   }
 }
 
-// ── Save on lock ─────────────────────────────────────────────────────
+// ── Save phrase pairs ────────────────────────────────────────────────
 
-export interface SaveLockedPhrasesOptions {
+export interface SavePhrasePairsOptions {
   workspaceId: string;
   projectId: string;
   chunkId: string;
@@ -194,7 +194,7 @@ export interface SaveLockedPhrasesOptions {
   targetLanguage: string;
 }
 
-export async function saveLockedPhrases(options: SaveLockedPhrasesOptions): Promise<void> {
+export async function savePhrasePairs(options: SavePhrasePairsOptions): Promise<void> {
   const {
     workspaceId, projectId, chunkId, embeddingModel, splitter,
     sourceText, targetText, minPhraseLength, sourceLanguage, targetLanguage,

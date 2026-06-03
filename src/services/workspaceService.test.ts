@@ -9,7 +9,7 @@ const dbMocks = vi.hoisted(() => ({
 
 vi.mock('./dbService', () => dbMocks);
 
-const { createWorkspace, listWorkspaces, getActiveWorkspaceId, setActiveWorkspaceId } =
+const { createWorkspace, listWorkspaces, updateWorkspace, getActiveWorkspaceId, setActiveWorkspaceId } =
   await import('./workspaceService');
 
 describe('workspaceService', () => {
@@ -32,6 +32,19 @@ describe('workspaceService', () => {
     dbMocks.select.mockResolvedValueOnce([]);
     const result = await listWorkspaces();
     expect(result).toEqual([]);
+  });
+
+  it('updateWorkspace updates only provided fields', async () => {
+    await updateWorkspace('ws_abc123', {
+      name: 'Updated',
+      description: '',
+      embeddingModel: 'text-embedding-3-large',
+    });
+
+    expect(dbMocks.execute).toHaveBeenCalledWith(
+      'UPDATE workspaces SET name = $1, description = $2, embedding_model = $3 WHERE id = $4',
+      ['Updated', null, 'text-embedding-3-large', 'ws_abc123'],
+    );
   });
 
   it('getActiveWorkspaceId returns null when getSetting returns empty string', async () => {

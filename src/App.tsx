@@ -202,6 +202,12 @@ export default function App() {
             <Header onRunPipeline={() => {}} onCancelPipeline={() => {}} />
           </div>
           <WorkspaceHome />
+          <Suspense fallback={null}>
+            <SettingsModal />
+            <ProjectPanel />
+            <LibraryPanel />
+          </Suspense>
+          <ConfirmDialog />
         </div>
         <Toaster
           position="bottom-right"

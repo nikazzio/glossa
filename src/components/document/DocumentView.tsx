@@ -19,12 +19,7 @@ import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
-import { useWorkspaceStore } from '../../stores/workspaceStore';
-import { useProjectStore } from '../../stores/projectStore';
-import { saveLockedPhrases } from '../../services/phraseMemoryService';
-import { listPresets } from '../../services/phraseMemoryPresetService';
-import { logger } from '../../utils/logger';
-import type { TranslationChunk, PhraseMemorySplitter } from '../../types';
+import type { TranslationChunk } from '../../types';
 import { indexPad } from '../../utils';
 import { CopyButton, HighlightedText, MarkdownEditor, ProcessingLine } from '../common';
 import { IconButton, Tooltip, type IconButtonTone } from '../ui';
@@ -61,47 +56,10 @@ export function DocumentView({ onRetranslateChunk }: DocumentViewProps) {
     toggleChunkTranslationLock,
     toggleChunkSourceEditing,
   } = useChunksStore();
-  const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace);
-  const currentProjectId = useProjectStore((s) => s.currentProjectId);
-  const { runSearch } = usePhraseMemoryAutoSearch();
+  usePhraseMemoryAutoSearch();
 
-  const handleLockToggle = async (chunk: TranslationChunk) => {
-    const isLocking = !chunk.translationLocked;
+  const handleLockToggle = (chunk: TranslationChunk) => {
     toggleChunkTranslationLock(chunk.id);
-    if (!isLocking || !config.usePhraseMemory || !activeWorkspace || !currentProjectId || !chunk.sourceProcessingText || !chunk.currentDraft) {
-      return;
-    }
-
-    let splitter: PhraseMemorySplitter = config.phraseMemoryOverrides?.splitter ?? 'regex';
-    let minPhraseLength = config.phraseMemoryOverrides?.minPhraseLength ?? 3;
-
-    if (config.phraseMemoryOverrides?.splitter === undefined || config.phraseMemoryOverrides?.minPhraseLength === undefined) {
-      try {
-        const presets = await listPresets(activeWorkspace.id);
-        const preset = presets.find((p) => p.id === config.phraseMemoryPresetId) ?? presets[0] ?? null;
-        if (preset) {
-          splitter = config.phraseMemoryOverrides?.splitter ?? preset.config.splitter;
-          minPhraseLength = config.phraseMemoryOverrides?.minPhraseLength ?? preset.config.minPhraseLength;
-        }
-      } catch (err: unknown) {
-        logger.warn('listPresets failed in handleLockToggle, using defaults', { error: String(err) });
-      }
-    }
-
-    saveLockedPhrases({
-      workspaceId: activeWorkspace.id,
-      projectId: currentProjectId,
-      chunkId: chunk.id,
-      embeddingModel: activeWorkspace.embeddingModel,
-      splitter,
-      sourceText: chunk.sourceProcessingText,
-      targetText: chunk.currentDraft,
-      minPhraseLength,
-      sourceLanguage: config.sourceLanguage,
-      targetLanguage: config.targetLanguage,
-    })
-      .then(() => runSearch())
-      .catch((err) => logger.warn('saveLockedPhrases failed (non-blocking)', { error: String(err) }));
   };
 
   const {
@@ -774,4 +732,3 @@ function InlineStatusBadge({
     </Tooltip>
   );
 }
-

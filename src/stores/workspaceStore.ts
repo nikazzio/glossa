@@ -1,10 +1,13 @@
 import { create } from 'zustand';
 import type { Workspace } from '../types';
 import {
+  createWorkspace,
   getActiveWorkspaceId,
   listWorkspaces,
   setActiveWorkspaceId,
+  updateWorkspace,
 } from '../services/workspaceService';
+import type { EmbeddingModel } from '../types';
 
 type WorkspaceStore = {
   workspaces: Workspace[];
@@ -13,7 +16,9 @@ type WorkspaceStore = {
   /** true dopo il primo caricamento completato (successo o errore). */
   isLoaded: boolean;
   loadWorkspaces: () => Promise<void>;
+  createAndActivate: (params: { name: string; description?: string; embeddingModel: EmbeddingModel }) => Promise<Workspace>;
   setActive: (workspace: Workspace) => Promise<void>;
+  updateActiveWorkspace: (updates: Partial<Pick<Workspace, 'name' | 'description' | 'embeddingModel'>>) => Promise<void>;
 };
 
 export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
@@ -41,8 +46,32 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
     }
   },
 
+  createAndActivate: async (params) => {
+    const workspace = await createWorkspace(params);
+    await setActiveWorkspaceId(workspace.id);
+    set((state) => ({
+      workspaces: [...state.workspaces, workspace],
+      activeWorkspace: workspace,
+      isLoaded: true,
+    }));
+    return workspace;
+  },
+
   setActive: async (workspace) => {
     await setActiveWorkspaceId(workspace.id);
     set({ activeWorkspace: workspace });
+  },
+
+  updateActiveWorkspace: async (updates) => {
+    const current = useWorkspaceStore.getState().activeWorkspace;
+    if (!current) return;
+    await updateWorkspace(current.id, updates);
+    const next = { ...current, ...updates };
+    set((state) => ({
+      activeWorkspace: next,
+      workspaces: state.workspaces.map((workspace) =>
+        workspace.id === current.id ? next : workspace,
+      ),
+    }));
   },
 }));

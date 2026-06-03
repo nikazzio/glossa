@@ -5,7 +5,7 @@ import {
   LibraryBig, Globe, Settings,
   LayoutTemplate, PanelRight,
   CheckCheck, PanelTopClose, ScanLine,
-  Wand2, BookmarkPlus, BookOpen,
+  Wand2, BookmarkPlus, BookOpen, Brain,
   Copy, Check, RefreshCw,
 } from 'lucide-react';
 import { StyleGuide } from './StyleGuide';
@@ -319,6 +319,13 @@ function FeaturesSection() {
       <SubTitle>{t('help.features.insightsTitle')}</SubTitle>
       <P>{t('help.features.insightsDesc')}</P>
 
+      <SubTitle>{t('help.features.phraseMemoryTitle')}</SubTitle>
+      <P>{t('help.features.phraseMemoryDesc')}</P>
+
+      <SubTitle>{t('help.features.phraseMemoryAutomationTitle')}</SubTitle>
+      <P>{t('help.features.phraseMemoryAutomationDesc')}</P>
+      <Tip title={t('help.features.phraseMemoryTipTitle')}>{t('help.features.phraseMemoryTipDesc')}</Tip>
+
       <SubTitle>{t('help.features.statsTitle')}</SubTitle>
       <P>{t('help.features.statsDesc')}</P>
 
@@ -380,6 +387,7 @@ function FeaturesSection() {
       <div className="my-4 space-y-2">
         <FeatureRow icon={<PanelTopClose size={14} />} text={t('help.shortcuts.toggleEditorTools')} />
         <FeatureRow icon={<CheckCheck size={14} />} text={t('help.shortcuts.lockTranslation')} />
+        <FeatureRow icon={<Brain size={14} />} text={t('help.shortcuts.phraseMemory')} />
         <FeatureRow icon={<ScanLine size={14} />} text={t('help.shortcuts.openStageTrace')} />
       </div>
     </>

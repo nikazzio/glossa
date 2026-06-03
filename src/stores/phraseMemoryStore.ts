@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import type { EmbeddingJobStatus, PhraseMatch } from '../types';
 
+export type PhraseMemorySearchStatus = 'idle' | 'searching' | 'done' | 'error';
+
 export type PhraseMemoryMatch = {
   id: string;
   sourcePhrase: string;
@@ -20,11 +22,13 @@ export type ChunkPhraseMatches = {
 type PhraseMemoryState = {
   matchesByChunk: Map<string, ChunkPhraseMatches>;
   jobStatus: EmbeddingJobStatus;
+  searchStatus: PhraseMemorySearchStatus;
   setMatches: (chunkId: string, matches: PhraseMatch[]) => void;
   clearMatches: (chunkId: string) => void;
   toggleMatchEnabled: (chunkId: string, matchId: string) => void;
   setEnabledMatchIds: (chunkId: string, ids: Set<string>) => void;
   setJobStatus: (status: EmbeddingJobStatus) => void;
+  setSearchStatus: (status: PhraseMemorySearchStatus) => void;
   reset: () => void;
 };
 
@@ -41,10 +45,11 @@ function toMemoryMatch(m: PhraseMatch): PhraseMemoryMatch {
 export const usePhraseMemoryStore = create<PhraseMemoryState>((set) => ({
   matchesByChunk: new Map(),
   jobStatus: { kind: 'idle' },
+  searchStatus: 'idle',
 
   setMatches: (chunkId, raw) => {
     const matches = raw.map(toMemoryMatch);
-    const enabledMatchIds = new Set(matches.map((m) => m.id));
+    const enabledMatchIds = new Set<string>();
     set((state) => {
       const next = new Map(state.matchesByChunk);
       next.set(chunkId, { chunkId, matches, enabledMatchIds });
@@ -82,5 +87,7 @@ export const usePhraseMemoryStore = create<PhraseMemoryState>((set) => ({
 
   setJobStatus: (status) => set({ jobStatus: status }),
 
-  reset: () => set({ matchesByChunk: new Map(), jobStatus: { kind: 'idle' } }),
+  setSearchStatus: (status) => set({ searchStatus: status }),
+
+  reset: () => set({ matchesByChunk: new Map(), jobStatus: { kind: 'idle' }, searchStatus: 'idle' }),
 }));

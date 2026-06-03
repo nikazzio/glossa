@@ -1,10 +1,10 @@
-import { BookPlus, Brain, Check, Clipboard, Database, Loader2, RefreshCcw } from 'lucide-react';
+import { AlertCircle, BookPlus, Brain, Check, Clipboard, Database, Loader2, RefreshCcw } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { usePhraseMemoryMatches } from '../../hooks/usePhraseMemoryMatches';
 import { useSaveToMemory } from '../../hooks/useSaveToMemory';
-import type { PhraseMemoryMatch } from '../../stores/phraseMemoryStore';
+import { usePhraseMemoryStore, type PhraseMemoryMatch } from '../../stores/phraseMemoryStore';
 import { ExtractTermDialog } from './ExtractTermDialog';
 
 interface MemoryTabProps {
@@ -20,11 +20,16 @@ export function MemoryTab({ panelId, labelledBy, currentChunkId, onRerun }: Memo
     usePhraseMemoryMatches(currentChunkId);
   const [extractingMatch, setExtractingMatch] = useState<PhraseMemoryMatch | null>(null);
   const { saveToMemory, isSaving, progress } = useSaveToMemory();
+  const searchStatus = usePhraseMemoryStore((s) => s.searchStatus);
 
   const handleSaveToMemory = async () => {
     try {
-      await saveToMemory();
-      toast.success(t('memory.savedToMemory'));
+      const savedCount = await saveToMemory(currentChunkId ? [currentChunkId] : []);
+      if (savedCount === 0) {
+        toast.message(t('memory.nothingToSave'));
+        return;
+      }
+      toast.success(t('memory.savedToMemory', { count: savedCount }));
     } catch {
       toast.error(t('memory.saveToMemoryFailed'));
     }
@@ -34,7 +39,7 @@ export function MemoryTab({ panelId, labelledBy, currentChunkId, onRerun }: Memo
     <button
       type="button"
       onClick={handleSaveToMemory}
-      disabled={isSaving}
+      disabled={isSaving || !currentChunkId}
       className="flex items-center gap-2 rounded-full border border-editorial-border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:border-editorial-accent/50 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
       aria-label={t('memory.saveToMemoryButton')}
     >
@@ -46,6 +51,18 @@ export function MemoryTab({ panelId, labelledBy, currentChunkId, onRerun }: Memo
         : t('memory.saveToMemoryButton')}
     </button>
   );
+
+  const searchStatusRow = searchStatus === 'searching' ? (
+    <div className="flex items-center justify-center gap-2 rounded-full border border-editorial-border bg-editorial-textbox/35 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted">
+      <Loader2 size={12} className="animate-spin" />
+      {t('memory.searching')}
+    </div>
+  ) : searchStatus === 'error' ? (
+    <div className="flex items-center justify-center gap-2 rounded-full border border-editorial-accent/35 bg-editorial-accent/8 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-accent">
+      <AlertCircle size={12} />
+      {t('memory.searchFailed')}
+    </div>
+  ) : null;
 
   if (!hasMatches) {
     return (
@@ -62,6 +79,7 @@ export function MemoryTab({ panelId, labelledBy, currentChunkId, onRerun }: Memo
         <p className="text-xs leading-relaxed text-editorial-muted/70">
           {t('memory.coldStartBody')}
         </p>
+        {searchStatusRow}
         {saveButton}
       </div>
     );
@@ -69,6 +87,12 @@ export function MemoryTab({ panelId, labelledBy, currentChunkId, onRerun }: Memo
 
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex flex-col">
+      <div className="shrink-0 border-b border-editorial-border px-4 py-3 space-y-2">
+        {searchStatusRow}
+        <p className="text-xs leading-relaxed text-editorial-muted/75">
+          {t('memory.selectionHint')}
+        </p>
+      </div>
       <div className="flex-1 overflow-y-auto custom-scrollbar px-4 py-4 space-y-3">
         {matches.map((match) => (
           <MatchCard

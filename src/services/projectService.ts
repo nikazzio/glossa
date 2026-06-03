@@ -110,6 +110,12 @@ export async function updateProject(
 }
 
 export async function deleteProject(id: string): Promise<void> {
+  await execute('DELETE FROM operation_logs WHERE project_id = $1', [id]);
+  await execute('DELETE FROM project_glossaries WHERE project_id = $1', [id]);
+  await execute('DELETE FROM source_phrase_embeddings WHERE project_id = $1', [id]);
+  await execute('UPDATE phrase_memory SET project_id = NULL, chunk_id = NULL WHERE project_id = $1', [id]);
+  await execute('DELETE FROM translations WHERE project_id = $1', [id]);
+  await execute('DELETE FROM pipelines WHERE project_id = $1', [id]);
   await execute('DELETE FROM projects WHERE id = $1', [id]);
 }
 

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { createWorkspace } from '../../services/workspaceService';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import type { EmbeddingModel } from '../../types';
 
@@ -8,19 +7,17 @@ export function WorkspaceWizard() {
   const [description, setDescription] = useState('');
   const [model, setModel] = useState<EmbeddingModel>('text-embedding-3-small');
   const [loading, setLoading] = useState(false);
-  const { loadWorkspaces, setActive } = useWorkspaceStore();
+  const createAndActivate = useWorkspaceStore((s) => s.createAndActivate);
 
   const handleCreate = async () => {
     if (!name.trim()) return;
     setLoading(true);
     try {
-      const ws = await createWorkspace({
+      await createAndActivate({
         name: name.trim(),
         description: description.trim() || undefined,
         embeddingModel: model,
       });
-      await setActive(ws);
-      await loadWorkspaces();
     } finally {
       setLoading(false);
     }
@@ -71,7 +68,7 @@ export function WorkspaceWizard() {
             </option>
           </select>
           {model === 'text-embedding-3-small' && (
-            <p className="px-1 text-xs text-amber-600">
+            <p className="px-1 text-xs text-editorial-accent">
               Per tradurre tra lingue diverse usa text-embedding-3-large per risultati migliori.
             </p>
           )}
