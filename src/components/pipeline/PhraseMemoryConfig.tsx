@@ -59,7 +59,11 @@ export function PhraseMemoryConfig({
       ...patch,
     });
 
-  const handleToggle = () => emit({ usePhraseMemory: !usePhraseMemory });
+  const handleToggle = () =>
+    emit({
+      usePhraseMemory: !usePhraseMemory,
+      ...(usePhraseMemory ? {} : { phraseMemoryPresetId: presetId ?? presets[0]?.id ?? null }),
+    });
 
   const handlePresetChange = (id: string) =>
     emit({ phraseMemoryPresetId: id, phraseMemoryOverrides: null });

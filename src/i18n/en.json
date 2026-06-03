@@ -401,13 +401,19 @@
     "contextWindowBadge": "{{count}} ctx",
     "panelTitle": "Configuration",
     "providerTab": "Provider",
+    "phraseMemoryTab": "Phrase Memory",
+    "phraseMemoryPresetsTitle": "Preset Phrase Memory",
+    "phraseMemoryPresetsHint": "Built-in presets are read-only. Clone a built-in preset to customise it, or create a custom preset from scratch.",
     "backup": "Backup & Restore",
     "backupHint": "Export the full workspace to a portable file, or restore from a previous backup.",
     "backupExport": "Export backup",
     "backupImport": "Import backup",
     "backupImportConfirmTitle": "Restore workspace?",
     "backupImportConfirmMessage": "This will overwrite all current projects, pipelines, translations, glossaries and settings. The operation cannot be undone.",
-    "backupImportConfirm": "Restore"
+    "backupImportConfirm": "Restore",
+    "phraseMemoryTab": "Phrase Memory",
+    "phraseMemoryPresetsTitle": "Phrase Memory Presets",
+    "phraseMemoryPresetsHint": "Built-in presets are read-only. Clone a built-in preset to customise it, or create a custom preset from scratch."
   },
   "ollama": {
     "title": "Ollama (Local Models)",
@@ -1114,6 +1120,8 @@
     "termLabel": "Term",
     "termExtracted": "Term added to glossary",
     "prelaunchWarning": "{{count}} chunks have disabled memory matches",
+    "matchBadge_one": "{{count}} match",
+    "matchBadge_other": "{{count}} matches",
     "matchBadge": "{{count}} match"
   },
   "glossary": {

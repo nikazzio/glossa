@@ -230,7 +230,7 @@ export function SettingsModal() {
   const tabConfig: Array<{ id: SettingsTab; icon: ReactNode; label: string }> = [
     { id: 'settings',     icon: <SlidersHorizontal size={14} />, label: t('header.settings') },
     { id: 'provider',     icon: <Server size={14} />,            label: t('settings.providerTab') },
-    { id: 'phraseMemory', icon: <Brain size={14} />,             label: 'Phrase Memory' },
+    { id: 'phraseMemory', icon: <Brain size={14} />,             label: t('settings.phraseMemoryTab') },
   ];
 
   const tabBar = (
@@ -757,12 +757,11 @@ export function SettingsModal() {
                     <div className="flex items-center gap-1.5">
                       <Brain size={11} className="text-editorial-accent shrink-0" />
                       <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-                        Preset Phrase Memory
+                        {t('settings.phraseMemoryPresetsTitle')}
                       </p>
                     </div>
                     <p className="text-xs leading-relaxed text-editorial-muted/80">
-                      I preset built-in sono di sola lettura. Clona un preset built-in per personalizzarlo,
-                      oppure crea un preset custom da zero.
+                      {t('settings.phraseMemoryPresetsHint')}
                     </p>
                     <PhraseMemoryPresetManager />
                   </div>

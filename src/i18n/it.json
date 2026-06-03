@@ -401,13 +401,19 @@
     "contextWindowBadge": "{{count}} ctx",
     "panelTitle": "Configurazione",
     "providerTab": "Provider",
+    "phraseMemoryTab": "Phrase Memory",
+    "phraseMemoryPresetsTitle": "Preset Phrase Memory",
+    "phraseMemoryPresetsHint": "I preset built-in sono di sola lettura. Clona un preset built-in per personalizzarlo, oppure crea un preset custom da zero.",
     "backup": "Backup e ripristino",
     "backupHint": "Esporta l'intero workspace in un file portabile, o ripristina da un backup precedente.",
     "backupExport": "Esporta backup",
     "backupImport": "Importa backup",
     "backupImportConfirmTitle": "Ripristinare il workspace?",
     "backupImportConfirmMessage": "Sovrascriverà tutti i progetti, pipeline, traduzioni, glossari e impostazioni attuali. L'operazione non può essere annullata.",
-    "backupImportConfirm": "Ripristina"
+    "backupImportConfirm": "Ripristina",
+    "phraseMemoryTab": "Phrase Memory",
+    "phraseMemoryPresetsTitle": "Preset Phrase Memory",
+    "phraseMemoryPresetsHint": "I preset built-in sono di sola lettura. Clona un preset built-in per personalizzarlo, oppure crea un preset custom da zero."
   },
   "ollama": {
     "title": "Ollama (Modelli Locali)",
@@ -1114,6 +1120,8 @@
     "termLabel": "Termine",
     "termExtracted": "Termine aggiunto al glossario",
     "prelaunchWarning": "{{count}} chunk hanno match di memoria non abilitati",
+    "matchBadge_one": "{{count}} match",
+    "matchBadge_other": "{{count}} match",
     "matchBadge": "{{count}} match"
   },
   "glossary": {
