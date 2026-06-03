@@ -1,6 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { usePhraseMemoryStore } from '../phraseMemoryStore';
+import type { PhraseMatch } from '../../types';
+
+const makeRaw = (id: string, distance = 0.1): PhraseMatch => ({
+  phraseMemoryId: id,
+  sourcePhrase: `src-${id}`,
+  targetPhrase: `tgt-${id}`,
+  distance,
+});
 
 describe('phraseMemoryStore', () => {
   beforeEach(() => {
@@ -8,51 +16,65 @@ describe('phraseMemoryStore', () => {
   });
 
   it('stato iniziale corretto', () => {
-    const { matchesByChunkId, jobStatus } = usePhraseMemoryStore.getState();
-    expect(matchesByChunkId).toEqual({});
+    const { matchesByChunk, jobStatus } = usePhraseMemoryStore.getState();
+    expect(matchesByChunk.size).toBe(0);
     expect(jobStatus).toEqual({ kind: 'idle' });
   });
 
-  it('setMatches aggiorna i match per un chunk', () => {
+  it('setMatches converte PhraseMatch in PhraseMemoryMatch', () => {
     const { result } = renderHook(() => usePhraseMemoryStore());
-    const matches = [{ phraseMemoryId: 'pm-1', sourcePhrase: 'ciao', targetPhrase: 'hello', distance: 0.1 }];
+    act(() => { result.current.setMatches('chunk-1', [makeRaw('pm-1', 0.1)]); });
 
-    act(() => { result.current.setMatches('chunk-1', matches); });
+    const entry = result.current.matchesByChunk.get('chunk-1');
+    expect(entry?.matches[0].id).toBe('pm-1');
+    expect(entry?.matches[0].score).toBeCloseTo(0.9);
+  });
 
-    expect(result.current.matchesByChunkId['chunk-1']).toEqual(matches);
+  it('setMatches inizializza tutti i match come enabled', () => {
+    usePhraseMemoryStore.getState().setMatches('c1', [makeRaw('m1'), makeRaw('m2')]);
+    const entry = usePhraseMemoryStore.getState().matchesByChunk.get('c1');
+    expect(entry?.enabledMatchIds.has('m1')).toBe(true);
+    expect(entry?.enabledMatchIds.has('m2')).toBe(true);
   });
 
   it('clearMatches rimuove solo il chunk specificato', () => {
     const store = usePhraseMemoryStore.getState();
-    store.setMatches('chunk-1', [{ phraseMemoryId: 'pm-1', sourcePhrase: 'a', targetPhrase: 'b', distance: 0.1 }]);
-    store.setMatches('chunk-2', [{ phraseMemoryId: 'pm-2', sourcePhrase: 'c', targetPhrase: 'd', distance: 0.2 }]);
-
+    store.setMatches('chunk-1', [makeRaw('pm-1')]);
+    store.setMatches('chunk-2', [makeRaw('pm-2')]);
     store.clearMatches('chunk-1');
+    expect(usePhraseMemoryStore.getState().matchesByChunk.has('chunk-1')).toBe(false);
+    expect(usePhraseMemoryStore.getState().matchesByChunk.has('chunk-2')).toBe(true);
+  });
 
-    const state = usePhraseMemoryStore.getState();
-    expect(state.matchesByChunkId['chunk-1']).toBeUndefined();
-    expect(state.matchesByChunkId['chunk-2']).toBeDefined();
+  it('toggleMatchEnabled disabilita un match abilitato', () => {
+    const store = usePhraseMemoryStore.getState();
+    store.setMatches('c1', [makeRaw('m1')]);
+    store.toggleMatchEnabled('c1', 'm1');
+    expect(usePhraseMemoryStore.getState().matchesByChunk.get('c1')?.enabledMatchIds.has('m1')).toBe(false);
+  });
+
+  it('toggleMatchEnabled riabilita un match disabilitato', () => {
+    const store = usePhraseMemoryStore.getState();
+    store.setMatches('c1', [makeRaw('m1')]);
+    store.toggleMatchEnabled('c1', 'm1');
+    store.toggleMatchEnabled('c1', 'm1');
+    expect(usePhraseMemoryStore.getState().matchesByChunk.get('c1')?.enabledMatchIds.has('m1')).toBe(true);
   });
 
   it('setJobStatus aggiorna lo stato del job', () => {
     const { result } = renderHook(() => usePhraseMemoryStore());
-
     act(() => {
       result.current.setJobStatus({ kind: 'running', processed: 5, total: 20, estimatedCostUsd: 0.002 });
     });
-
     expect(result.current.jobStatus).toMatchObject({ kind: 'running', processed: 5, total: 20 });
   });
 
   it('reset ripristina lo stato iniziale', () => {
     const store = usePhraseMemoryStore.getState();
-    store.setMatches('chunk-1', [{ phraseMemoryId: 'pm-1', sourcePhrase: 'x', targetPhrase: 'y', distance: 0.05 }]);
+    store.setMatches('chunk-1', [makeRaw('pm-1')]);
     store.setJobStatus({ kind: 'done', totalPhrases: 42 });
-
     store.reset();
-
-    const state = usePhraseMemoryStore.getState();
-    expect(state.matchesByChunkId).toEqual({});
-    expect(state.jobStatus).toEqual({ kind: 'idle' });
+    expect(usePhraseMemoryStore.getState().matchesByChunk.size).toBe(0);
+    expect(usePhraseMemoryStore.getState().jobStatus).toEqual({ kind: 'idle' });
   });
 });

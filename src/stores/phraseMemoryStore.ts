@@ -1,33 +1,86 @@
 import { create } from 'zustand';
 import type { EmbeddingJobStatus, PhraseMatch } from '../types';
 
+export type PhraseMemoryMatch = {
+  id: string;
+  sourcePhrase: string;
+  targetPhrase: string;
+  score: number;
+  author?: string;
+  work?: string;
+  createdAt: string;
+};
+
+export type ChunkPhraseMatches = {
+  chunkId: string;
+  matches: PhraseMemoryMatch[];
+  enabledMatchIds: Set<string>;
+};
+
 type PhraseMemoryState = {
-  matchesByChunkId: Record<string, PhraseMatch[]>;
+  matchesByChunk: Map<string, ChunkPhraseMatches>;
   jobStatus: EmbeddingJobStatus;
   setMatches: (chunkId: string, matches: PhraseMatch[]) => void;
   clearMatches: (chunkId: string) => void;
+  toggleMatchEnabled: (chunkId: string, matchId: string) => void;
+  setEnabledMatchIds: (chunkId: string, ids: Set<string>) => void;
   setJobStatus: (status: EmbeddingJobStatus) => void;
   reset: () => void;
 };
 
-const INITIAL_STATE = {
-  matchesByChunkId: {} as Record<string, PhraseMatch[]>,
-  jobStatus: { kind: 'idle' } as EmbeddingJobStatus,
-};
+function toMemoryMatch(m: PhraseMatch): PhraseMemoryMatch {
+  return {
+    id: m.phraseMemoryId,
+    sourcePhrase: m.sourcePhrase,
+    targetPhrase: m.targetPhrase,
+    score: Math.max(0, Math.min(1, 1 - m.distance)),
+    createdAt: new Date().toISOString(),
+  };
+}
 
 export const usePhraseMemoryStore = create<PhraseMemoryState>((set) => ({
-  ...INITIAL_STATE,
+  matchesByChunk: new Map(),
+  jobStatus: { kind: 'idle' },
 
-  setMatches: (chunkId, matches) =>
-    set((state) => ({ matchesByChunkId: { ...state.matchesByChunkId, [chunkId]: matches } })),
+  setMatches: (chunkId, raw) => {
+    const matches = raw.map(toMemoryMatch);
+    const enabledMatchIds = new Set(matches.map((m) => m.id));
+    set((state) => {
+      const next = new Map(state.matchesByChunk);
+      next.set(chunkId, { chunkId, matches, enabledMatchIds });
+      return { matchesByChunk: next };
+    });
+  },
 
   clearMatches: (chunkId) =>
     set((state) => {
-      const { [chunkId]: _removed, ...rest } = state.matchesByChunkId;
-      return { matchesByChunkId: rest };
+      const next = new Map(state.matchesByChunk);
+      next.delete(chunkId);
+      return { matchesByChunk: next };
+    }),
+
+  toggleMatchEnabled: (chunkId, matchId) =>
+    set((state) => {
+      const entry = state.matchesByChunk.get(chunkId);
+      if (!entry) return {};
+      const ids = new Set(entry.enabledMatchIds);
+      if (ids.has(matchId)) ids.delete(matchId);
+      else ids.add(matchId);
+      const next = new Map(state.matchesByChunk);
+      next.set(chunkId, { ...entry, enabledMatchIds: ids });
+      return { matchesByChunk: next };
+    }),
+
+  setEnabledMatchIds: (chunkId, ids) =>
+    set((state) => {
+      const entry = state.matchesByChunk.get(chunkId);
+      if (!entry) return {};
+      const next = new Map(state.matchesByChunk);
+      next.set(chunkId, { ...entry, enabledMatchIds: ids });
+      return { matchesByChunk: next };
     }),
 
   setJobStatus: (status) => set({ jobStatus: status }),
 
-  reset: () => set({ ...INITIAL_STATE }),
+  reset: () => set({ matchesByChunk: new Map(), jobStatus: { kind: 'idle' } }),
 }));

@@ -11,6 +11,10 @@ import { qualityDefault, qualityFailure } from '../utils';
 import { pipelineLog } from '../utils/pipelineLogging';
 import type { Issue, JudgeResult, PromptInfo, ResponseInfo, TokenUsage, TranslationChunk } from '../types';
 import { useProjectStore } from '../stores/projectStore';
+import { usePhraseMemoryStore } from '../stores/phraseMemoryStore';
+import type { PhraseMemoryMatch } from '../stores/phraseMemoryStore';
+import { buildMemoryInjection } from '../services/phraseMemoryInjection';
+import { checkAllChunksHaveEnabledMatches } from '../utils/memoryPreLaunchCheck';
 import { saveChunkCheckpoint, setPipelineRunState } from '../services/pipelineService';
 import { buildPipelineFingerprint } from '../utils/pipelineFingerprint';
 import { calculateBlobBudget } from '../models/catalog';
@@ -409,6 +413,13 @@ export function usePipeline() {
     // freshest state instead of a stale useCallback closure.
     const allChunks = useChunksStore.getState().chunks;
     if (allChunks.length === 0) return;
+
+    const blockedChunks = checkAllChunksHaveEnabledMatches(
+      usePhraseMemoryStore.getState().matchesByChunk,
+    );
+    if (blockedChunks.length > 0) {
+      toast.warning(t('memory.prelaunchWarning', { count: blockedChunks.length }));
+    }
 
     const { pipelineMode, pipelineTestChunkCount } = useUiStore.getState();
     const isTestMode = pipelineMode === 'test';
@@ -827,9 +838,34 @@ export function usePipeline() {
     toast.message(t('pipeline.stopRequested'));
   }, [requestCancel, t]);
 
+  const rerunChunkWithMemory = useCallback(async (
+    chunkId: string,
+    selectedMatches: PhraseMemoryMatch[],
+  ) => {
+    const memoryBlock = buildMemoryInjection(selectedMatches);
+    if (!memoryBlock) {
+      void runSingleChunk(chunkId, 'completed');
+      return;
+    }
+    const { config: currentConfig, setConfig } = usePipelineStore.getState();
+    const originalStages = currentConfig.stages;
+    setConfig({
+      ...currentConfig,
+      stages: originalStages.map((s) =>
+        s.enabled ? { ...s, prompt: `${s.prompt}\n\n${memoryBlock}` } : s,
+      ),
+    });
+    try {
+      await runSingleChunk(chunkId, 'completed');
+    } finally {
+      setConfig({ ...usePipelineStore.getState().config, stages: originalStages });
+    }
+  }, [runSingleChunk]);
+
   return {
     runPipeline,
     runSingleChunk,
+    rerunChunkWithMemory,
     runDryRun,
     runAuditOnly,
     auditSingleChunk,

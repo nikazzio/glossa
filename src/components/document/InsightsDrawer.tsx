@@ -22,6 +22,7 @@ import {
   RefreshCcw,
   ScanLine,
   Search,
+  Brain,
   ShieldCheck,
   TerminalSquare,
   X,
@@ -32,6 +33,8 @@ import { useTranslation } from 'react-i18next';
 import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useUiStore, type InsightsDrawerTab, type ChunkDrawerTab } from '../../stores/uiStore';
 import { useChunksStore } from '../../stores/chunksStore';
+import { usePhraseMemoryStore } from '../../stores/phraseMemoryStore';
+import { MemoryTab } from './MemoryTab';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { usePricingStore } from '../../stores/pricingStore';
 import { indexPad, qualityLabelKey, qualityTone, calculateCompositeQuality } from '../../utils';
@@ -41,6 +44,7 @@ import { aggregateEntries, formatDurationMs } from '../../utils/operationLogStat
 import { useOperationLogStore } from '../../stores/operationLogStore';
 import { formatCost } from '../pipeline/CostBadge';
 import { useChunkWatchdog } from '../../hooks/useChunkWatchdog';
+import { usePipeline } from '../../hooks/usePipeline';
 import { OperationsTab } from './OperationsTab';
 import { SearchTab } from './SearchTab';
 import type { TranslationChunk } from '../../types';
@@ -53,7 +57,7 @@ interface InsightsDrawerProps {
 const PANEL_WIDTH = 430;
 
 const DOC_TAB_ORDER: InsightsDrawerTab[] = ['index', 'search', 'stats', 'coherence', 'glossary'];
-const CHUNK_TAB_ORDER: ChunkDrawerTab[] = ['audit', 'notes', 'operations'];
+const CHUNK_TAB_ORDER: ChunkDrawerTab[] = ['audit', 'notes', 'operations', 'memory'];
 
 const DOC_TAB_BUTTON_IDS: Record<InsightsDrawerTab, string> = {
   index: 'insights-tab-button-index',
@@ -75,12 +79,14 @@ const CHUNK_TAB_BUTTON_IDS: Record<ChunkDrawerTab, string> = {
   audit: 'chunk-tab-button-audit',
   notes: 'chunk-tab-button-notes',
   operations: 'chunk-tab-button-operations',
+  memory: 'chunk-tab-button-memory',
 };
 
 const CHUNK_TAB_PANEL_IDS: Record<ChunkDrawerTab, string> = {
   audit: 'chunk-tab-panel-audit',
   notes: 'chunk-tab-panel-notes',
   operations: 'chunk-tab-panel-operations',
+  memory: 'chunk-tab-panel-memory',
 };
 
 const QUALITY_TONE_COLOR: Record<ReturnType<typeof qualityTone>, string> = {
@@ -111,7 +117,9 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
   const currentChunkIndex = currentChunk ? chunks.findIndex((c) => c.id === currentChunk.id) : -1;
 
   const { stuckChunkIds, cancelStuckChunk } = useChunkWatchdog();
+  const { rerunChunkWithMemory } = usePipeline();
   const { config } = usePipelineStore();
+  const matchesByChunk = usePhraseMemoryStore((s) => s.matchesByChunk);
   const hasGlossary = !!config.assignedGlossaryId && config.glossary.length > 0;
 
   // Redirect away from the glossary tab if the glossary is removed.
@@ -142,11 +150,13 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
     audit: <ShieldCheck size={16} />,
     notes: <NotebookText size={16} />,
     operations: <TerminalSquare size={16} />,
+    memory: <Brain size={16} />,
   };
   const CHUNK_TAB_LABEL: Record<ChunkDrawerTab, string> = {
     audit: t('document.insightsTabAudit'),
     notes: t('document.insightsTabNotes'),
     operations: t('document.insightsTabOperations'),
+    memory: t('document.insightsTabMemory'),
   };
 
   const enabledDocTabOrder = DOC_TAB_ORDER.filter((tab) => tab !== 'glossary' || hasGlossary);
@@ -276,6 +286,17 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
                     panelId={CHUNK_TAB_PANEL_IDS.notes}
                     labelledBy={CHUNK_TAB_BUTTON_IDS.notes}
                     currentChunk={currentChunk}
+                  />
+                ) : chunkDrawerTab === 'memory' ? (
+                  <MemoryTab
+                    panelId={CHUNK_TAB_PANEL_IDS.memory}
+                    labelledBy={CHUNK_TAB_BUTTON_IDS.memory}
+                    currentChunkId={currentChunk?.id ?? null}
+                    onRerun={(selectedMatches) => {
+                      if (currentChunk?.id) {
+                        void rerunChunkWithMemory(currentChunk.id, selectedMatches);
+                      }
+                    }}
                   />
                 ) : (
                   <OperationsTab
@@ -477,6 +498,7 @@ interface IndexTabProps {
 
 function IndexTab({ panelId, labelledBy, chunks, currentChunkId, isProcessing, stuckChunkIds, onSelect, onCancelStuck }: IndexTabProps) {
   const { t } = useTranslation();
+  const matchesByChunk = usePhraseMemoryStore((s) => s.matchesByChunk);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const virtualizer = useVirtualizer({
@@ -556,6 +578,16 @@ function IndexTab({ panelId, labelledBy, chunks, currentChunkId, isProcessing, s
                       {t('document.translationLockedBadge')}
                     </div>
                   )}
+                  {(() => {
+                    const matchCount = matchesByChunk.get(chunk.id)?.matches.length ?? 0;
+                    if (matchCount === 0) return null;
+                    return (
+                      <div className={`mt-1.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.18em] ${isActive ? 'text-white/80' : 'text-editorial-accent'}`}>
+                        <Brain size={11} />
+                        {matchCount} match
+                      </div>
+                    );
+                  })()}
                 </button>
 
                 {isStuck && chunk.status === 'processing' && (

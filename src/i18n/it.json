@@ -35,7 +35,7 @@
     "autoSegment": "Auto-segmentazione",
     "headingAware": "Titoli nel chunk successivo (Markdown)",
     "trailingShortBlocks": "Blocchi finali brevi nel chunk successivo",
-    "modeLabel": "Modalità di traduzione",
+    "modeLabel": "Modalità",
     "mode": {
       "standard": "Standard",
       "editorial": "Editoriale"
@@ -154,7 +154,6 @@
     "resetPreviewDone": "Anteprima azzerata",
     "modeTest": "Test",
     "modeProduction": "Produzione",
-    "modeLabel": "Modalità",
     "modeTestHint": "Esegue la pipeline su un solo blocco e produce un'anteprima. La configurazione rimane modificabile.",
     "modeProductionHint": "Esegue la pipeline sull'intero documento.",
     "modeLockedHint": "Modalità bloccata — esistono già traduzioni. Usa Reset completo per ricominciare.",
@@ -447,7 +446,10 @@
     "pipelineCompletedWithErrors": "Pipeline completata con {{count}} errore/i",
     "reEvalCompleted": "Rivalutazione completata",
     "coherenceFailed": "Audit di coerenza fallito",
-    "contextOverflow": "Finestra di contesto superata. Riduci la dimensione dei chunk o usa un modello con una finestra di contesto più grande."
+    "contextOverflow": "Finestra di contesto superata. Riduci la dimensione dei chunk o usa un modello con una finestra di contesto più grande.",
+    "clipboardFailed": "Impossibile copiare negli appunti",
+    "saveFailed": "Salvataggio fallito",
+    "loadFailed": "Caricamento fallito"
   },
   "coherence": {
     "title": "Coerenza Documento",
@@ -477,7 +479,8 @@
     "delete": "Elimina",
     "save": "Salva",
     "all": "Tutti",
-    "clear": "Cancella"
+    "clear": "Cancella",
+    "optional": "opzionale"
   },
   "projects": {
     "title": "Progetti",
@@ -713,7 +716,8 @@
     "indexEmptyTitle": "Nessuna unità da mostrare.",
     "indexEmptyBody": "Importa un testo e preparalo in chunk per iniziare.",
     "watchdogStuck": "Bloccato",
-    "watchdogCancel": "Annulla e riprova"
+    "watchdogCancel": "Annulla e riprova",
+    "insightsTabMemory": "Memoria"
   },
   "help": {
     "title": "Guida Utente",
@@ -1096,5 +1100,25 @@
     "resumeButton": "Riprendi",
     "restartButton": "Ricomincia da capo",
     "dismiss": "Ignora"
+  },
+  "memory": {
+    "coldStartTitle": "Nessun match trovato",
+    "coldStartBody": "La memoria si costruisce man mano che approvi le traduzioni.",
+    "rerunButton": "Rielabora con match selezionati",
+    "applyButton": "Applica",
+    "appliedToClipboard": "Traduzione copiata negli appunti",
+    "enableMatch": "Abilita match",
+    "extractTermButton": "Estrai termine",
+    "extractTermTitle": "Estrai termine",
+    "sourcePhraseLabel": "Frase sorgente",
+    "termLabel": "Termine",
+    "termExtracted": "Termine aggiunto al glossario",
+    "prelaunchWarning": "{{count}} chunk hanno match di memoria non abilitati"
+  },
+  "glossary": {
+    "translation": "Traduzione",
+    "notes": "Note",
+    "selectGlossary": "Seleziona glossario",
+    "noGlossarySelected": "— Nessun glossario —"
   }
 }

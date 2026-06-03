@@ -13,9 +13,16 @@
 > **Nota Piano 2 — Shell gating già implementata:**
 > La gestione preset avviene dall'editor (progetto aperto) o dalla `WorkspaceHome`. Non esiste più un workspace ghost. Piano 4 deve assicurarsi che il preset selezionato nella pipeline sia sempre associato a un workspace reale.
 
-**Goal:** Esporre il sistema preset di Phrase Memory in due punti: (1) una sezione dedicata nel modale Settings per creare/modificare/eliminare preset custom e clonare quelli built-in; (2) una sezione collassabile nella tab Settings della PipelineConfig per attivare Phrase Memory sulla pipeline e scegliere/sovrascrivere preset. Infine aggiornare `pipelineService.ts` per persistere i tre nuovi campi DB (`use_phrase_memory`, `phrase_memory_preset_id`, `phrase_memory_overrides`).
+> **Nota di coerenza prodotto/dati:**
+> Il workspace è un boundary reale. Questo piano assume che il Piano 2 sia stato corretto in modo che:
+> - i progetti siano realmente scoped da `workspace_id`;
+> - la `WorkspaceHome` mostri solo i progetti del workspace attivo;
+> - backup/export/import del workspace includano le tabelle phrase memory rilevanti;
+> - l'app non possa aprire l'editor con `activeWorkspace = null`.
 
-**Architecture:** Nessun nuovo store Zustand — la selezione preset nella pipeline viaggia dentro `PipelineConfig` (già in `pipelineStore`). Il caricamento dei preset dal DB avviene con una chiamata diretta a `phraseMemoryPresetService.listPresets()` all'interno dei componenti che ne hanno bisogno. I preset built-in sono seed immutabili lato DB; la UI li mostra in sola lettura con un bottone "Clona".
+**Goal:** Esporre il sistema preset di Phrase Memory in due punti: (1) una sezione dedicata nel modale Settings per creare/modificare/eliminare preset custom e clonare quelli built-in; (2) una sezione collassabile nella tab Settings della PipelineConfig per attivare Phrase Memory sulla pipeline e scegliere/sovrascrivere preset. Infine aggiornare `pipelineService.ts` per persistere i tre nuovi campi DB (`use_phrase_memory`, `phrase_memory_preset_id`, `phrase_memory_overrides`). I preset restano asset condivisi del workspace attivo, non risorse globali dell'app.
+
+**Architecture:** Nessun nuovo store Zustand — la selezione preset nella pipeline viaggia dentro `PipelineConfig` (già in `pipelineStore`). Il caricamento dei preset dal DB avviene con una chiamata diretta a `phraseMemoryPresetService.listPresets()` all'interno dei componenti che ne hanno bisogno. I preset built-in sono seed immutabili lato DB; la UI li mostra in sola lettura con un bottone "Clona". Tutte le operazioni della UI devono essere interpretate come riferite al workspace attivo; Piano 4 non deve introdurre la percezione che i preset siano globali cross-workspace.
 
 **Tech Stack:** React 19, TypeScript, Tailwind v4, Zustand, Vitest + Testing Library, `phraseMemoryPresetService` (Piano 1), `pipelineService` (esistente)
 
@@ -47,6 +54,15 @@
 - `src/components/settings/SettingsModal.tsx` — aggiunge tab/sezione "Phrase Memory"
 - `src/components/pipeline/SettingsTabPanel.tsx` — aggiunge `<PhraseMemoryConfig>` in fondo
 - `src/services/pipelineService.ts` — salva/carica i tre campi phrase memory
+
+---
+
+## Vincoli trasversali del piano
+
+- [ ] La UI preset non deve assumere più l'esistenza di un workspace ghost/default
+- [ ] Ogni entry point ai preset deve mostrare o dedurre chiaramente che si sta lavorando nel workspace attivo
+- [ ] Se `activeWorkspace` è nullo per errore di bootstrap, il fix è a monte nel shell gating/store; non introdurre fallback locali nei componenti preset
+- [ ] Se `phraseMemoryPresetService` oggi lista preset globali, trattalo come comportamento temporaneo solo se coerente con il DB attuale; non nascondere in UI l'eventuale limite
 
 ---
 
@@ -105,6 +121,8 @@ git commit -m "feat(phrase-memory): tipi PhraseMemoryPreset + estensione Pipelin
 ## Task 2: pipelineService — persistenza phrase memory
 
 **File:** `src/services/pipelineService.ts`
+
+> Nota di dominio: `pipelineService` persiste il riferimento al preset nella pipeline del progetto corrente. Il progetto è già scoped al workspace attivo; non duplicare qui uno scope separato del workspace, ma assicurati che il caricamento/salvataggio non renda possibile combinare pipeline di un progetto con preset presentati da un contesto workspace incoerente in UI.
 
 - [ ] **Step 1: Scrivi il test prima dell'implementazione**
 
