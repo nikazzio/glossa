@@ -216,3 +216,10 @@ export async function importEntriesFromCsv(
 
   return parsed.length;
 }
+
+export async function addGlossaryEntry(
+  glossaryId: string,
+  entry: Pick<GlossaryEntry, 'id' | 'term' | 'translation' | 'notes'>,
+): Promise<void> {
+  await upsertGlossaryEntries(glossaryId, [entry as GlossaryEntry]);
+}

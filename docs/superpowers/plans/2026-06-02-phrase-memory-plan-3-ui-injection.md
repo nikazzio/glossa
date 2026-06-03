@@ -14,6 +14,13 @@
 > `App.tsx` ha 3 stati: nessun workspace → `WorkspaceWizard`, workspace senza progetto → `WorkspaceHome`, progetto aperto → editor.
 > Il `MemoryTab` vive nello stato 3 (editor con progetto aperto). Non esiste più un workspace ghost `ws_default`.
 
+> **Nota di coerenza prodotto/dati:**
+> Il workspace va trattato come boundary reale, non cosmetico. Questo piano assume che il Piano 2 sia stato corretto in modo che:
+> - i progetti abbiano `workspace_id` reale e siano filtrati per workspace attivo;
+> - il progetto aperto appartenga sempre al workspace attivo;
+> - `phrase_memory` e `source_phrase_embeddings` siano coerenti con lo schema finale del DB;
+> - l'editor non sia mai raggiungibile con `activeWorkspace = null`.
+
 ---
 
 **Goal:** Implementare il layer UI completo della feature Phrase Memory: tab "Memoria" nel chunk panel, badge match nella lista chunk, iniezione delle coppie selezionate nel prompt al momento del re-run, e dialog "Estrai termine" per creare voci di glossario a partire da un match.
@@ -24,6 +31,7 @@
 - `ExtractTermDialog` — dialog modale gestita con `confirmStore` o state locale; chiama l'LLM con structured output per suggerire il termine, poi inserisce in glossario via `glossaryService`
 - Pipeline injection — `usePipeline` (o equivalente hook che avvia il re-run) riceve le coppie selezionate e le appende in coda a `stage-instructions`; static e blob non vengono mai toccati
 - Pre-pipeline warning — prima del lancio completo la pipeline cerca match su tutti i chunk e avvisa se ci sono match trovati ma tutti disabilitati
+- Scope dati — tutte le query e i match letti/salvati in UI sono implicitamente scoped al workspace del progetto aperto; Piano 3 non deve reintrodurre letture globali cross-workspace
 
 **Tech Stack:** React 19, TypeScript, Tailwind CSS v4, Zustand, Vitest + Testing Library, Tauri v2 invoke per LLM structured output
 
@@ -76,6 +84,13 @@ type ChunkPhraseMatches = {
 
 ## Tasks
 
+### Vincoli trasversali del piano
+
+- [ ] Ogni nuovo test o componente che legge match Phrase Memory deve assumere un progetto aperto reale, appartenente al workspace attivo
+- [ ] Nessun componente del piano deve introdurre fallback a workspace ghost/default o a progetto nullo
+- [ ] Se serve leggere il workspace attivo in UI o hook, usa `workspaceStore` solo come fonte di contesto del progetto aperto, non come sostituto dello scope progetto
+- [ ] Se emergono lookup cross-workspace nei servizi del Piano 2, correggerli prima di proseguire con l'UI
+
 ### Task 1 — Aggiorna `uiStore`: aggiungi `'memory'` a `ChunkDrawerTab`
 
 > TDD: modifica il tipo union + aggiorna i test esistenti di uiStore.
@@ -93,6 +108,8 @@ type ChunkPhraseMatches = {
 ### Task 2 — Aggiorna `InsightsDrawer`: registra il tab 'memory'
 
 > TDD: il componente deve renderizzare il bottone tab "Memoria" e il pannello `MemoryTab` quando `chunkDrawerTab === 'memory'`.
+>
+> Assunzione di contesto: `InsightsDrawer` esiste solo nello stato "progetto aperto". Non aggiungere guardie che tentano di farlo funzionare fuori dall'editor; quello è compito del shell gating già introdotto.
 
 - [ ] **2.1** Scrivi test in `src/components/document/InsightsDrawer.test.tsx` (crea il file se non esiste):
 
@@ -202,6 +219,8 @@ const CHUNK_TAB_LABEL: Record<ChunkDrawerTab, string> = {
 ### Task 3 — Crea `usePhraseMemoryMatches`: hook per match + selezione
 
 > TDD: hook puro con logica di toggle enabled/disabled, senza side effects.
+>
+> Nota di scope: l'hook non deve mai mescolare risultati di chunk provenienti da progetti/workspace diversi. Se il dato nello store non è già scoped correttamente, il fix è a monte nel Piano 2/store, non qui.
 
 - [ ] **3.1** Scrivi test `src/hooks/usePhraseMemoryMatches.test.ts`:
 
