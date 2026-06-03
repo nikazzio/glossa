@@ -13,6 +13,7 @@ import type {
   Pipeline,
   PipelineConfig,
   PipelineMode,
+  PhraseMemoryOverrides,
   PipelineResult,
   PipelineRunStatus,
   PipelineStageConfig,
@@ -46,6 +47,9 @@ interface DbPipeline {
   blob_budget_tokens: number | null;
   blob_overlap: number | null;
   coherence_prompt: string | null;
+  use_phrase_memory: number;
+  phrase_memory_preset_id: string | null;
+  phrase_memory_overrides: string | null;
   run_status: string | null;
   last_run_config: string | null;
   created_at: string;
@@ -98,6 +102,9 @@ function rowToPipelineConfig(row: DbPipeline, glossary: GlossaryEntry[], assigne
     blobBudgetTokens: row.blob_budget_tokens ?? undefined,
     blobOverlap: row.blob_overlap ?? undefined,
     coherencePrompt: row.coherence_prompt?.trim() || undefined,
+    usePhraseMemory: row.use_phrase_memory === 1,
+    phraseMemoryPresetId: row.phrase_memory_preset_id ?? null,
+    phraseMemoryOverrides: parseJson<PhraseMemoryOverrides>(row.phrase_memory_overrides) ?? null,
     glossary,
     assignedGlossaryId,
     documentFormat: 'plain',
@@ -187,8 +194,9 @@ export async function duplicatePipeline(sourcePipelineId: string, newName: strin
        stages, judge_prompt, judge_model, judge_provider,
        use_chunking, words_per_chunk,
        review_provider_options, persona, custom_source_language, custom_target_language,
-       blob_budget_tokens, blob_overlap
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
+       blob_budget_tokens, blob_overlap,
+       use_phrase_memory, phrase_memory_preset_id, phrase_memory_overrides
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)`,
     [
       newId, source.project_id, newName,
       source.source_language, source.target_language,
@@ -198,6 +206,9 @@ export async function duplicatePipeline(sourcePipelineId: string, newName: strin
       source.review_provider_options, source.persona,
       source.custom_source_language, source.custom_target_language,
       source.blob_budget_tokens ?? 0, source.blob_overlap ?? 1,
+      source.use_phrase_memory ?? 0,
+      source.phrase_memory_preset_id ?? null,
+      source.phrase_memory_overrides ?? null,
     ],
   );
   return newId;
@@ -230,8 +241,11 @@ export async function savePipelineConfig(
        blob_budget_tokens       = $14,
        blob_overlap             = $15,
        coherence_prompt         = $16,
+       use_phrase_memory        = $17,
+       phrase_memory_preset_id  = $18,
+       phrase_memory_overrides  = $19,
        updated_at               = CURRENT_TIMESTAMP
-     WHERE id = $17`,
+     WHERE id = $20`,
     [
       config.sourceLanguage,
       config.targetLanguage,
@@ -249,6 +263,9 @@ export async function savePipelineConfig(
       config.blobBudgetTokens ?? 0,
       config.blobOverlap ?? 1,
       config.coherencePrompt?.trim() || null,
+      config.usePhraseMemory ? 1 : 0,
+      config.phraseMemoryPresetId ?? null,
+      config.phraseMemoryOverrides ? JSON.stringify(config.phraseMemoryOverrides) : null,
       pipelineId,
     ],
   );
@@ -441,8 +458,11 @@ export async function saveFullState(
        blob_budget_tokens       = $14,
        blob_overlap             = $15,
        coherence_prompt         = $16,
+       use_phrase_memory        = $17,
+       phrase_memory_preset_id  = $18,
+       phrase_memory_overrides  = $19,
        updated_at               = CURRENT_TIMESTAMP
-     WHERE id = $17`,
+     WHERE id = $20`,
     [
       config.sourceLanguage,
       config.targetLanguage,
@@ -460,6 +480,9 @@ export async function saveFullState(
       config.blobBudgetTokens ?? 0,
       config.blobOverlap ?? 1,
       config.coherencePrompt?.trim() || null,
+      config.usePhraseMemory ? 1 : 0,
+      config.phraseMemoryPresetId ?? null,
+      config.phraseMemoryOverrides ? JSON.stringify(config.phraseMemoryOverrides) : null,
       pipelineId,
     ],
   );
