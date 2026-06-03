@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Brain, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { listPresets } from '../../services/phraseMemoryPresetService';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
 import type { PhraseMemoryOverrides, PhraseMemoryPreset, PhraseMemorySplitter } from '../../types';
 import { SectionLabel } from '../ui';
 
@@ -34,20 +35,22 @@ export function PhraseMemoryConfig({
 }: PhraseMemoryConfigProps) {
   const [presets, setPresets] = useState<PhraseMemoryPreset[]>([]);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace);
 
   const selectedPreset = presets.find((p) => p.id === presetId) ?? presets[0] ?? null;
   const hasOverrides = overrides !== null && Object.keys(overrides).length > 0;
 
   const load = useCallback(async () => {
+    if (!activeWorkspace) return;
     try {
-      const data = await listPresets();
+      const data = await listPresets(activeWorkspace.id);
       setPresets(data);
     } catch (err: unknown) {
       toast.error('Errore caricamento preset', {
         description: err instanceof Error ? err.message : String(err),
       });
     }
-  }, []);
+  }, [activeWorkspace]);
 
   useEffect(() => { void load(); }, [load]);
 

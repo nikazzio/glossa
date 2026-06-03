@@ -5,6 +5,10 @@ vi.mock('../../services/phraseMemoryPresetService', () => ({
   listPresets: vi.fn(),
 }));
 
+vi.mock('../../stores/workspaceStore', () => ({
+  useWorkspaceStore: vi.fn((sel) => sel({ activeWorkspace: { id: 'ws-test', name: 'Test', embeddingModel: 'text-embedding-3-small', createdAt: '' } })),
+}));
+
 import * as presetService from '../../services/phraseMemoryPresetService';
 import type { PhraseMemoryOverrides, PhraseMemoryPreset } from '../../types';
 import { PhraseMemoryConfig } from './PhraseMemoryConfig';

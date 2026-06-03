@@ -22,12 +22,14 @@ import { useUiStore } from '../../stores/uiStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { saveLockedPhrases } from '../../services/phraseMemoryService';
+import { listPresets } from '../../services/phraseMemoryPresetService';
 import { logger } from '../../utils/logger';
-import type { TranslationChunk } from '../../types';
+import type { TranslationChunk, PhraseMemorySplitter } from '../../types';
 import { indexPad } from '../../utils';
 import { CopyButton, HighlightedText, MarkdownEditor, ProcessingLine } from '../common';
 import { IconButton, Tooltip, type IconButtonTone } from '../ui';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { usePhraseMemoryAutoSearch } from '../../hooks/usePhraseMemoryAutoSearch';
 import { escapeHtml, useGlossaryHighlight } from '../../hooks/useGlossaryHighlight';
 import { usePanelScrollSync } from '../../hooks/usePanelScrollSync';
 import { useStageDiff } from '../../hooks/useStageDiff';
@@ -61,24 +63,45 @@ export function DocumentView({ onRetranslateChunk }: DocumentViewProps) {
   } = useChunksStore();
   const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace);
   const currentProjectId = useProjectStore((s) => s.currentProjectId);
+  const { runSearch } = usePhraseMemoryAutoSearch();
 
-  const handleLockToggle = (chunk: TranslationChunk) => {
+  const handleLockToggle = async (chunk: TranslationChunk) => {
     const isLocking = !chunk.translationLocked;
     toggleChunkTranslationLock(chunk.id);
-    if (isLocking && activeWorkspace && currentProjectId && chunk.sourceProcessingText && chunk.currentDraft) {
-      saveLockedPhrases({
-        workspaceId: activeWorkspace.id,
-        projectId: currentProjectId,
-        chunkId: chunk.id,
-        embeddingModel: activeWorkspace.embeddingModel,
-        splitter: 'regex',
-        sourceText: chunk.sourceProcessingText,
-        targetText: chunk.currentDraft,
-        minPhraseLength: 10,
-        sourceLanguage: config.sourceLanguage,
-        targetLanguage: config.targetLanguage,
-      }).catch((err) => logger.warn('saveLockedPhrases failed (non-blocking)', { error: String(err) }));
+    if (!isLocking || !config.usePhraseMemory || !activeWorkspace || !currentProjectId || !chunk.sourceProcessingText || !chunk.currentDraft) {
+      return;
     }
+
+    let splitter: PhraseMemorySplitter = config.phraseMemoryOverrides?.splitter ?? 'regex';
+    let minPhraseLength = config.phraseMemoryOverrides?.minPhraseLength ?? 3;
+
+    if (config.phraseMemoryOverrides?.splitter === undefined || config.phraseMemoryOverrides?.minPhraseLength === undefined) {
+      try {
+        const presets = await listPresets(activeWorkspace.id);
+        const preset = presets.find((p) => p.id === config.phraseMemoryPresetId) ?? presets[0] ?? null;
+        if (preset) {
+          splitter = config.phraseMemoryOverrides?.splitter ?? preset.config.splitter;
+          minPhraseLength = config.phraseMemoryOverrides?.minPhraseLength ?? preset.config.minPhraseLength;
+        }
+      } catch (err: unknown) {
+        logger.warn('listPresets failed in handleLockToggle, using defaults', { error: String(err) });
+      }
+    }
+
+    saveLockedPhrases({
+      workspaceId: activeWorkspace.id,
+      projectId: currentProjectId,
+      chunkId: chunk.id,
+      embeddingModel: activeWorkspace.embeddingModel,
+      splitter,
+      sourceText: chunk.sourceProcessingText,
+      targetText: chunk.currentDraft,
+      minPhraseLength,
+      sourceLanguage: config.sourceLanguage,
+      targetLanguage: config.targetLanguage,
+    })
+      .then(() => runSearch())
+      .catch((err) => logger.warn('saveLockedPhrases failed (non-blocking)', { error: String(err) }));
   };
 
   const {

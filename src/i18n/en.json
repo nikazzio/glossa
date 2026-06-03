@@ -1117,6 +1117,9 @@
     "termLabel": "Term",
     "termExtracted": "Term added to glossary",
     "prelaunchWarning": "{{count}} chunks have disabled memory matches",
+    "saveToMemoryButton": "Save to memory",
+    "savedToMemory": "Translations saved to memory",
+    "saveToMemoryFailed": "Error saving to memory",
     "matchBadge_one": "{{count}} match",
     "matchBadge_other": "{{count}} matches",
     "matchBadge": "{{count}} match"

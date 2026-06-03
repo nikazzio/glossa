@@ -1,8 +1,9 @@
-import { BookPlus, Brain, Check, Clipboard, RefreshCcw } from 'lucide-react';
+import { BookPlus, Brain, Check, Clipboard, Database, Loader2, RefreshCcw } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { usePhraseMemoryMatches } from '../../hooks/usePhraseMemoryMatches';
+import { useSaveToMemory } from '../../hooks/useSaveToMemory';
 import type { PhraseMemoryMatch } from '../../stores/phraseMemoryStore';
 import { ExtractTermDialog } from './ExtractTermDialog';
 
@@ -18,6 +19,33 @@ export function MemoryTab({ panelId, labelledBy, currentChunkId, onRerun }: Memo
   const { matches, enabledMatchIds, selectedMatches, hasMatches, toggleEnabled } =
     usePhraseMemoryMatches(currentChunkId);
   const [extractingMatch, setExtractingMatch] = useState<PhraseMemoryMatch | null>(null);
+  const { saveToMemory, isSaving, progress } = useSaveToMemory();
+
+  const handleSaveToMemory = async () => {
+    try {
+      await saveToMemory();
+      toast.success(t('memory.savedToMemory'));
+    } catch {
+      toast.error(t('memory.saveToMemoryFailed'));
+    }
+  };
+
+  const saveButton = (
+    <button
+      type="button"
+      onClick={handleSaveToMemory}
+      disabled={isSaving}
+      className="flex items-center gap-2 rounded-full border border-editorial-border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:border-editorial-accent/50 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
+      aria-label={t('memory.saveToMemoryButton')}
+    >
+      {isSaving
+        ? <Loader2 size={12} className="animate-spin" />
+        : <Database size={12} />}
+      {isSaving && progress
+        ? `${progress.done}/${progress.total}`
+        : t('memory.saveToMemoryButton')}
+    </button>
+  );
 
   if (!hasMatches) {
     return (
@@ -34,6 +62,7 @@ export function MemoryTab({ panelId, labelledBy, currentChunkId, onRerun }: Memo
         <p className="text-xs leading-relaxed text-editorial-muted/70">
           {t('memory.coldStartBody')}
         </p>
+        {saveButton}
       </div>
     );
   }
@@ -52,7 +81,7 @@ export function MemoryTab({ panelId, labelledBy, currentChunkId, onRerun }: Memo
         ))}
       </div>
 
-      <div className="shrink-0 border-t border-editorial-border px-4 py-3">
+      <div className="shrink-0 border-t border-editorial-border px-4 py-3 space-y-2">
         <button
           type="button"
           onClick={() => onRerun(selectedMatches)}
@@ -63,6 +92,7 @@ export function MemoryTab({ panelId, labelledBy, currentChunkId, onRerun }: Memo
           <RefreshCcw size={14} />
           {t('memory.rerunButton')}
         </button>
+        <div className="flex justify-center">{saveButton}</div>
       </div>
 
       {extractingMatch && (

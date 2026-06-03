@@ -511,6 +511,15 @@ export async function initDatabase(): Promise<void> {
     )
   `);
 
+  try {
+    await conn.execute(
+      `ALTER TABLE phrase_memory_presets ADD COLUMN workspace_id TEXT REFERENCES workspaces(id)`
+    );
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (!msg.includes('duplicate column') && !msg.includes('already exists')) throw err;
+  }
+
   await conn.execute(`
     CREATE TABLE IF NOT EXISTS phrase_memory (
       id TEXT PRIMARY KEY,

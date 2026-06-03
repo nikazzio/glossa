@@ -41,10 +41,13 @@ export async function seedBuiltinPresets(db: Database): Promise<void> {
   }
 }
 
-export async function listPresets(): Promise<PhraseMemoryPreset[]> {
+export async function listPresets(workspaceId: string): Promise<PhraseMemoryPreset[]> {
   const rows = await select<{
     id: string; name: string; is_builtin: number; config: string; created_at: string;
-  }>(`SELECT * FROM phrase_memory_presets ORDER BY is_builtin DESC, name ASC`);
+  }>(
+    `SELECT * FROM phrase_memory_presets WHERE is_builtin = 1 OR workspace_id = $1 ORDER BY is_builtin DESC, name ASC`,
+    [workspaceId],
+  );
   return rows.map((r) => ({
     id: r.id,
     name: r.name,
@@ -57,21 +60,22 @@ export async function listPresets(): Promise<PhraseMemoryPreset[]> {
 export async function createCustomPreset(
   name: string,
   config: PhraseMemoryPresetConfig,
+  workspaceId: string,
 ): Promise<PhraseMemoryPreset> {
   const id = `pmp_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`;
   const now = new Date().toISOString();
   await execute(
-    `INSERT INTO phrase_memory_presets (id, name, is_builtin, config, created_at)
-     VALUES ($1, $2, 0, $3, $4)`,
-    [id, name, JSON.stringify(config), now],
+    `INSERT INTO phrase_memory_presets (id, name, is_builtin, config, created_at, workspace_id)
+     VALUES ($1, $2, 0, $3, $4, $5)`,
+    [id, name, JSON.stringify(config), now, workspaceId],
   );
   return { id, name, isBuiltin: false, config, createdAt: now };
 }
 
-export async function deleteCustomPreset(id: string): Promise<void> {
+export async function deleteCustomPreset(id: string, workspaceId: string): Promise<void> {
   await execute(
-    `DELETE FROM phrase_memory_presets WHERE id = $1 AND is_builtin = 0`,
-    [id],
+    `DELETE FROM phrase_memory_presets WHERE id = $1 AND is_builtin = 0 AND workspace_id = $2`,
+    [id, workspaceId],
   );
 }
 
@@ -79,14 +83,15 @@ export async function updateCustomPreset(
   id: string,
   name: string,
   config: PhraseMemoryPresetConfig,
+  workspaceId: string,
 ): Promise<void> {
   await execute(
-    `UPDATE phrase_memory_presets SET name = $1, config = $2 WHERE id = $3 AND is_builtin = 0`,
-    [name, JSON.stringify(config), id],
+    `UPDATE phrase_memory_presets SET name = $1, config = $2 WHERE id = $3 AND is_builtin = 0 AND workspace_id = $4`,
+    [name, JSON.stringify(config), id, workspaceId],
   );
 }
 
-export async function clonePreset(sourceId: string): Promise<string> {
+export async function clonePreset(sourceId: string, workspaceId: string): Promise<string> {
   const rows = await select<{ name: string; config: string }>(
     `SELECT name, config FROM phrase_memory_presets WHERE id = $1`,
     [sourceId],
@@ -96,9 +101,9 @@ export async function clonePreset(sourceId: string): Promise<string> {
   const newId = `pmp_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`;
   const now = new Date().toISOString();
   await execute(
-    `INSERT INTO phrase_memory_presets (id, name, is_builtin, config, created_at)
-     VALUES ($1, $2, 0, $3, $4)`,
-    [newId, `${source.name} (copia)`, source.config, now],
+    `INSERT INTO phrase_memory_presets (id, name, is_builtin, config, created_at, workspace_id)
+     VALUES ($1, $2, 0, $3, $4, $5)`,
+    [newId, `${source.name} (copia)`, source.config, now, workspaceId],
   );
   return newId;
 }

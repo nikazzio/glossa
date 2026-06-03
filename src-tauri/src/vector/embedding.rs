@@ -140,10 +140,9 @@ pub async fn split_phrases_llm(
         serde_json::from_str(content).map_err(|e| EmbeddingError::Parse(e.to_string()))?;
 
     let arr = parsed
-        .as_array()
-        .or_else(|| parsed.get("phrases").and_then(|v| v.as_array()))
-        .or_else(|| parsed.get("sentences").and_then(|v| v.as_array()))
-        .ok_or_else(|| EmbeddingError::Parse("response is not an array".into()))?;
+        .get("phrases")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| EmbeddingError::Parse("expected object with \"phrases\" array".into()))?;
 
     let validated: Vec<String> = arr
         .iter()

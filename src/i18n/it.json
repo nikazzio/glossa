@@ -1117,6 +1117,9 @@
     "termLabel": "Termine",
     "termExtracted": "Termine aggiunto al glossario",
     "prelaunchWarning": "{{count}} chunk hanno match di memoria non abilitati",
+    "saveToMemoryButton": "Salva in memoria",
+    "savedToMemory": "Traduzioni salvate in memoria",
+    "saveToMemoryFailed": "Errore nel salvataggio in memoria",
     "matchBadge_one": "{{count}} match",
     "matchBadge_other": "{{count}} match",
     "matchBadge": "{{count}} match"

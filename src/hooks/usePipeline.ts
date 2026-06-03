@@ -178,10 +178,18 @@ export function usePipeline() {
    * This separation keeps room for future multi-pipeline support where each
    * pipeline tracks its own run lifecycle independently for the same document.
    */
+  const getChunkMemoryBlock = (chunkId: string): string | undefined => {
+    const entry = usePhraseMemoryStore.getState().matchesByChunk.get(chunkId);
+    if (!entry || entry.matches.length === 0) return undefined;
+    const selected = entry.matches.filter((m) => entry.enabledMatchIds.has(m.id));
+    return buildMemoryInjection(selected) ?? undefined;
+  };
+
   const executePipelineForChunk = async (
     chunk: TranslationChunk,
-    options: { batchMode?: BatchRunMode },
+    options: { batchMode?: BatchRunMode; memoryBlock?: string },
   ): Promise<ChunkOutcome> => {
+    const config = usePipelineStore.getState().config;
     if (useChunksStore.getState().cancelRequested) return 'cancelled';
     if (options.batchMode === 'resume' && chunk.status === 'completed' && !chunk.translationStale) return 'skipped';
     if (options.batchMode === 'rerun-unlocked' && chunk.translationLocked) return 'skipped';
@@ -200,7 +208,13 @@ export function usePipeline() {
     let producedOutput = false;
     updateChunkStatus(chunk.id, 'processing');
 
-    for (const stage of config.stages) {
+    const stages = options.memoryBlock
+      ? config.stages.map((s) =>
+          s.enabled ? { ...s, prompt: `${s.prompt}\n\n${options.memoryBlock}` } : s
+        )
+      : config.stages;
+
+    for (const stage of stages) {
       if (!stage.enabled) continue;
 
       // Override global language pair with stage-specific one if set, but not when persona is active.
@@ -339,6 +353,7 @@ export function usePipeline() {
     textToAudit: string | undefined,
     effectiveConfig?: typeof config,
   ): Promise<ChunkOutcome> => {
+    const config = usePipelineStore.getState().config;
     if (!textToAudit) return 'skipped';
     // We do NOT short-circuit on cancelRequested here — once we have a
     // complete translation for this chunk, finishing the audit costs
@@ -471,7 +486,7 @@ export function usePipeline() {
 
     try {
       for (const chunk of liveChunks) {
-        const outcome = await executePipelineForChunk(chunk, { batchMode });
+        const outcome = await executePipelineForChunk(chunk, { batchMode, memoryBlock: getChunkMemoryBlock(chunk.id) });
         if (outcome === 'cancelled') { cancelled = true; break; }
         if (outcome === 'failed') errorCount++;
         if ((outcome === 'completed' || outcome === 'failed') && activePipelineId) {
@@ -509,6 +524,7 @@ export function usePipeline() {
   }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureProvidersReady, setBlobAssignments]);
 
   const runSingleChunk = useCallback(async (chunkId: string, finalStatus: FinalChunkStatus = 'completed') => {
+    const config = usePipelineStore.getState().config;
     if (useChunksStore.getState().isProcessing) return;
     const chunk = useChunksStore.getState().chunks.find((c) => c.id === chunkId);
     if (!chunk) return;
@@ -545,7 +561,7 @@ export function usePipeline() {
     // Force a redo even if this chunk was already completed — the user
     // explicitly asked for it via the per-chunk action menu.
     const freshChunk = useChunksStore.getState().chunks.find((c) => c.id === chunkId) ?? chunk;
-    const outcome = await executePipelineForChunk(freshChunk, {});
+    const outcome = await executePipelineForChunk(freshChunk, { memoryBlock: getChunkMemoryBlock(chunkId) });
 
     if (outcome === 'completed' && finalStatus === 'preview') {
       updateChunkStatus(chunkId, 'preview');
@@ -564,7 +580,7 @@ export function usePipeline() {
       // Per-chunk failure already raised a toast inside the helper; no
       // extra summary toast is needed.
     }
-  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureProvidersReady, setBlobAssignments]);
+  }, [t, setIsProcessing, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureProvidersReady, setBlobAssignments]);
 
   const runDryRun = useCallback(async () => {
     if (useChunksStore.getState().isProcessing) return;
@@ -620,7 +636,7 @@ export function usePipeline() {
 
     for (const target of targets) {
       const freshTarget = useChunksStore.getState().chunks.find((c) => c.id === target.id) ?? target;
-      const outcome = await executePipelineForChunk(freshTarget, {});
+      const outcome = await executePipelineForChunk(freshTarget, { memoryBlock: getChunkMemoryBlock(freshTarget.id) });
 
       if (outcome === 'cancelled') {
         cancelled = true;

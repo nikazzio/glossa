@@ -8,6 +8,7 @@ import {
   listPresets,
   updateCustomPreset,
 } from '../../services/phraseMemoryPresetService';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
 import type { PhraseMemoryPreset, PhraseMemoryPresetConfig } from '../../types';
 import { IconButton } from '../ui';
 import { PresetForm } from './PresetForm';
@@ -28,10 +29,12 @@ export function PhraseMemoryPresetManager() {
   const [presets, setPresets] = useState<PhraseMemoryPreset[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [formMode, setFormMode] = useState<FormMode>({ type: 'closed' });
+  const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace);
 
   const reload = useCallback(async () => {
+    if (!activeWorkspace) return;
     try {
-      const data = await listPresets();
+      const data = await listPresets(activeWorkspace.id);
       setPresets(data);
     } catch (err: unknown) {
       toast.error('Errore caricamento preset', {
@@ -40,13 +43,14 @@ export function PhraseMemoryPresetManager() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [activeWorkspace]);
 
   useEffect(() => { void reload(); }, [reload]);
 
   const handleClone = async (preset: PhraseMemoryPreset) => {
+    if (!activeWorkspace) return;
     try {
-      await clonePreset(preset.id);
+      await clonePreset(preset.id, activeWorkspace.id);
       await reload();
       toast.success(`"${preset.name}" clonato`);
     } catch (err: unknown) {
@@ -57,8 +61,9 @@ export function PhraseMemoryPresetManager() {
   };
 
   const handleDelete = async (preset: PhraseMemoryPreset) => {
+    if (!activeWorkspace) return;
     try {
-      await deleteCustomPreset(preset.id);
+      await deleteCustomPreset(preset.id, activeWorkspace.id);
       await reload();
       toast.success(`"${preset.name}" eliminato`);
     } catch (err: unknown) {
@@ -69,8 +74,9 @@ export function PhraseMemoryPresetManager() {
   };
 
   const handleCreate = async (name: string, config: PhraseMemoryPresetConfig) => {
+    if (!activeWorkspace) return;
     try {
-      await createCustomPreset(name, config);
+      await createCustomPreset(name, config, activeWorkspace.id);
       setFormMode({ type: 'closed' });
       await reload();
       toast.success(`Preset "${name}" creato`);
@@ -82,9 +88,9 @@ export function PhraseMemoryPresetManager() {
   };
 
   const handleEdit = async (name: string, config: PhraseMemoryPresetConfig) => {
-    if (formMode.type !== 'edit') return;
+    if (formMode.type !== 'edit' || !activeWorkspace) return;
     try {
-      await updateCustomPreset(formMode.preset.id, name, config);
+      await updateCustomPreset(formMode.preset.id, name, config, activeWorkspace.id);
       setFormMode({ type: 'closed' });
       await reload();
       toast.success(`Preset "${name}" aggiornato`);

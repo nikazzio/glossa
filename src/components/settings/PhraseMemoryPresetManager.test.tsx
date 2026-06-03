@@ -9,6 +9,10 @@ vi.mock('../../services/phraseMemoryPresetService', () => ({
   clonePreset: vi.fn(),
 }));
 
+vi.mock('../../stores/workspaceStore', () => ({
+  useWorkspaceStore: vi.fn((sel) => sel({ activeWorkspace: { id: 'ws-test', name: 'Test', embeddingModel: 'text-embedding-3-small', createdAt: '' } })),
+}));
+
 import * as presetService from '../../services/phraseMemoryPresetService';
 import type { PhraseMemoryPreset } from '../../types';
 import { PhraseMemoryPresetManager } from './PhraseMemoryPresetManager';
@@ -70,7 +74,7 @@ describe('PhraseMemoryPresetManager', () => {
     await waitFor(() => screen.getByText('Predefinito'));
     fireEvent.click(screen.getByRole('button', { name: /clona/i }));
     await waitFor(() =>
-      expect(presetService.clonePreset).toHaveBeenCalledWith('preset-default'),
+      expect(presetService.clonePreset).toHaveBeenCalledWith('preset-default', 'ws-test'),
     );
   });
 
@@ -80,7 +84,7 @@ describe('PhraseMemoryPresetManager', () => {
     await waitFor(() => screen.getByText('Mio preset'));
     fireEvent.click(screen.getByRole('button', { name: /elimina/i }));
     await waitFor(() =>
-      expect(presetService.deleteCustomPreset).toHaveBeenCalledWith('preset-custom-1'),
+      expect(presetService.deleteCustomPreset).toHaveBeenCalledWith('preset-custom-1', 'ws-test'),
     );
   });
 
@@ -108,6 +112,7 @@ describe('PhraseMemoryPresetManager', () => {
       expect(presetService.createCustomPreset).toHaveBeenCalledWith(
         'Tecnico',
         expect.objectContaining({ splitter: expect.any(String) }),
+        'ws-test',
       ),
     );
   });

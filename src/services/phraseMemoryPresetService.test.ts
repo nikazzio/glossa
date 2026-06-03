@@ -36,7 +36,7 @@ describe('phraseMemoryPresetService', () => {
         created_at: '2026-01-01T00:00:00.000Z',
       },
     ]);
-    const presets = await listPresets();
+    const presets = await listPresets('ws-test');
     expect(presets[0].isBuiltin).toBe(true);
     expect(presets[0].config.splitter).toBe('regex');
     expect(presets[0].config.similarityThreshold).toBe(0.85);

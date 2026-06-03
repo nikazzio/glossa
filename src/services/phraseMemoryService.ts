@@ -109,6 +109,76 @@ export async function searchPhraseMemory(options: SearchOptions): Promise<Phrase
   }));
 }
 
+// ── Batch search pre-pipeline ────────────────────────────────────────
+
+export interface BatchSearchOptions {
+  workspaceId: string;
+  embeddingModel: EmbeddingModel;
+  chunks: Array<{ id: string; text: string }>;
+  threshold: number;
+  maxResults: number;
+}
+
+export async function searchPhraseMemoryBatch(
+  options: BatchSearchOptions,
+): Promise<Map<string, PhraseMatch[]>> {
+  const { workspaceId, embeddingModel, chunks, threshold, maxResults } = options;
+  if (chunks.length === 0) return new Map();
+
+  const texts = chunks.map((c) => c.text);
+  const embeddings = await fetchEmbeddings(texts, embeddingModel);
+
+  const result = new Map<string, PhraseMatch[]>();
+  for (let i = 0; i < chunks.length; i++) {
+    const embedding = embeddings[i];
+    if (!embedding) continue;
+    const raw = await invoke<RawPhraseMatch[]>('vec_search_phrase_memory', {
+      workspaceId,
+      queryEmbedding: embedding,
+      threshold,
+      maxResults,
+    });
+    result.set(chunks[i].id, raw.map((r) => ({
+      phraseMemoryId: r.phrase_memory_id,
+      sourcePhrase: r.source_phrase,
+      targetPhrase: r.target_phrase,
+      distance: r.distance,
+    })));
+  }
+  return result;
+}
+
+// ── Bulk save completed phrases ───────────────────────────────────────
+
+export interface SaveAllCompletedOptions {
+  workspaceId: string;
+  projectId: string;
+  embeddingModel: EmbeddingModel;
+  splitter: PhraseMemorySplitter;
+  minPhraseLength: number;
+  sourceLanguage: string;
+  targetLanguage: string;
+  chunks: Array<{ id: string; sourceText: string; targetText: string }>;
+  onProgress?: (done: number, total: number) => void;
+}
+
+export async function saveAllCompletedPhrases(options: SaveAllCompletedOptions): Promise<void> {
+  const {
+    workspaceId, projectId, embeddingModel, splitter, minPhraseLength,
+    sourceLanguage, targetLanguage, chunks, onProgress,
+  } = options;
+  const total = chunks.length;
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
+    await saveLockedPhrases({
+      workspaceId, projectId, chunkId: chunk.id, embeddingModel,
+      splitter, sourceText: chunk.sourceText, targetText: chunk.targetText,
+      minPhraseLength, sourceLanguage, targetLanguage,
+    });
+    onProgress?.(i + 1, total);
+  }
+}
+
 // ── Save on lock ─────────────────────────────────────────────────────
 
 export interface SaveLockedPhrasesOptions {
