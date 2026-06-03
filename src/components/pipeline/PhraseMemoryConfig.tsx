@@ -72,7 +72,7 @@ export function PhraseMemoryConfig({
     key: K,
     value: PhraseMemoryOverrides[K],
   ) => {
-    const next = { ...overrides, [key]: value };
+    const next = { ...(overrides ?? {}), [key]: value };
     if (selectedPreset && selectedPreset.config[key] === value) {
       delete next[key];
     }

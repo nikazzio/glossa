@@ -100,9 +100,10 @@ pub async fn split_phrases_llm(
 
     let prompt = format!(
         "Split the following text into individual sentences or meaningful phrases. \
-        Return ONLY a JSON array of strings. Each string must be an exact verbatim \
-        copy from the source text — no paraphrasing, no added punctuation. \
-        Example: [\"First sentence.\", \"Second phrase\"]\n\nText:\n{source_text}"
+        Return a JSON object with a single key \"phrases\" whose value is an array of strings. \
+        Each string must be an exact verbatim copy from the source text — no paraphrasing, \
+        no added punctuation. \
+        Example: {{\"phrases\": [\"First sentence.\", \"Second phrase\"]}}\n\nText:\n{source_text}"
     );
 
     let body = serde_json::json!({

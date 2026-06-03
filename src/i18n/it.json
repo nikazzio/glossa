@@ -410,10 +410,7 @@
     "backupImport": "Importa backup",
     "backupImportConfirmTitle": "Ripristinare il workspace?",
     "backupImportConfirmMessage": "Sovrascriverà tutti i progetti, pipeline, traduzioni, glossari e impostazioni attuali. L'operazione non può essere annullata.",
-    "backupImportConfirm": "Ripristina",
-    "phraseMemoryTab": "Phrase Memory",
-    "phraseMemoryPresetsTitle": "Preset Phrase Memory",
-    "phraseMemoryPresetsHint": "I preset built-in sono di sola lettura. Clona un preset built-in per personalizzarlo, oppure crea un preset custom da zero."
+    "backupImportConfirm": "Ripristina"
   },
   "ollama": {
     "title": "Ollama (Modelli Locali)",
