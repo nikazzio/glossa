@@ -305,6 +305,8 @@ source_phrase_embeddings
 }
 ```
 
+**Cache hit su OpenAI Responses API**: la Responses API non supporta prefix caching cross-call indipendenti senza `previous_response_id`. Per cache hit reali su gpt-5.x, considerare di passare al path Chat Completions (già usato da DeepSeek) con `prompt_cache_key` esplicito.
+
 ---
 
 ## Refactor pendenti noti
