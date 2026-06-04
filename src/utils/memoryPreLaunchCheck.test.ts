@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { checkAllChunksHaveEnabledMatches } from './memoryPreLaunchCheck';
+import { getChunksWithAllMatchesDisabled } from './memoryPreLaunchCheck';
 import type { ChunkPhraseMatches } from '../stores/phraseMemoryStore';
 
 const makeChunkMatches = (enabled: string[]): ChunkPhraseMatches => ({
@@ -11,18 +11,18 @@ const makeChunkMatches = (enabled: string[]): ChunkPhraseMatches => ({
   enabledMatchIds: new Set(enabled),
 });
 
-describe('checkAllChunksHaveEnabledMatches', () => {
+describe('getChunksWithAllMatchesDisabled', () => {
   it('returns empty when all chunks with matches have at least one enabled', () => {
     const map = new Map([['c1', makeChunkMatches(['m1'])]]);
-    expect(checkAllChunksHaveEnabledMatches(map)).toEqual([]);
+    expect(getChunksWithAllMatchesDisabled(map)).toEqual([]);
   });
 
   it('returns chunkIds where matches exist but all are disabled', () => {
     const map = new Map([['c1', makeChunkMatches([])]]);
-    expect(checkAllChunksHaveEnabledMatches(map)).toEqual(['c1']);
+    expect(getChunksWithAllMatchesDisabled(map)).toEqual(['c1']);
   });
 
   it('returns empty when no chunks have matches', () => {
-    expect(checkAllChunksHaveEnabledMatches(new Map())).toEqual([]);
+    expect(getChunksWithAllMatchesDisabled(new Map())).toEqual([]);
   });
 });

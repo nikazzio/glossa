@@ -14,7 +14,7 @@ import { useProjectStore } from '../stores/projectStore';
 import { usePhraseMemoryStore } from '../stores/phraseMemoryStore';
 import type { PhraseMemoryMatch } from '../stores/phraseMemoryStore';
 import { buildMemoryInjection } from '../services/phraseMemoryInjection';
-import { checkAllChunksHaveEnabledMatches } from '../utils/memoryPreLaunchCheck';
+import { getChunksWithAllMatchesDisabled } from '../utils/memoryPreLaunchCheck';
 import { saveChunkCheckpoint, setPipelineRunState } from '../services/pipelineService';
 import { buildPipelineFingerprint } from '../utils/pipelineFingerprint';
 import { calculateBlobBudget } from '../models/catalog';
@@ -436,7 +436,7 @@ export function usePipeline() {
     const liveChunks = isTestMode ? allChunks.slice(0, pipelineTestChunkCount) : allChunks;
     if (config.usePhraseMemory) {
       const liveChunkIds = new Set(liveChunks.map((chunk) => chunk.id));
-      const blockedChunks = checkAllChunksHaveEnabledMatches(
+      const blockedChunks = getChunksWithAllMatchesDisabled(
         usePhraseMemoryStore.getState().matchesByChunk,
       ).filter((chunkId) => liveChunkIds.has(chunkId));
       if (blockedChunks.length > 0) {

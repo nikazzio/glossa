@@ -276,15 +276,17 @@ pub async fn vec_save_locked_phrases(
         let rows = conn
             .execute(
                 "INSERT OR IGNORE INTO phrase_memory \
-                 (id, workspace_id, source_phrase, target_phrase, \
+                 (id, workspace_id, project_id, chunk_id, source_phrase, target_phrase, \
                   source_language, target_language, embedding, created_at) \
-                 VALUES (lower(hex(randomblob(16))), ?1, ?2, ?3, ?4, ?5, ?6, datetime('now'))",
+                 VALUES (lower(hex(randomblob(16))), ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, datetime('now'))",
                 rusqlite::params![
-                    workspace_id,
+                    &workspace_id,
+                    &project_id,
+                    &chunk_id,
                     pair.source_phrase,
                     pair.target_phrase,
-                    source_language,
-                    target_language,
+                    &source_language,
+                    &target_language,
                     floats_to_blob(&pair.source_embedding)
                 ],
             )

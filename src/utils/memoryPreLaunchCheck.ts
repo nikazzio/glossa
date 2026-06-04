@@ -4,7 +4,7 @@ import type { ChunkPhraseMatches } from '../stores/phraseMemoryStore';
  * Returns chunkIds where phrase memory matches exist but ALL are disabled.
  * Used to show a pre-launch warning before running the full pipeline.
  */
-export function checkAllChunksHaveEnabledMatches(
+export function getChunksWithAllMatchesDisabled(
   matchesByChunk: Map<string, ChunkPhraseMatches>,
 ): string[] {
   const blocked: string[] = [];

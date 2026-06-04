@@ -22,6 +22,12 @@ export async function createWorkspace(params: {
     [workspace.id, workspace.name, workspace.description ?? null,
      workspace.embeddingModel, workspace.createdAt],
   );
+  // Backfill projects that existed before workspace support (workspace_id IS NULL).
+  // Only the first workspace creation picks them up; subsequent ones find no orphans.
+  await execute(
+    'UPDATE projects SET workspace_id = $1 WHERE workspace_id IS NULL',
+    [workspace.id],
+  );
   return workspace;
 }
 
