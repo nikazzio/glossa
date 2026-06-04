@@ -312,7 +312,11 @@ source_phrase_embeddings
 | Area | Descrizione | Priorità |
 |---|---|---|
 | `hooks/usePipeline.ts` | 3 blocchi blob assembler identici da estrarre in helper condiviso | bassa (cosmesi) |
+| `services/phraseMemoryService.ts` → `savePhrasePairs()` | Zip silenzioso source↔target: se lo splitter produce lunghezze diverse, le frasi extra vengono scartate senza notifica all'utente. Da segnalare in UI o loggare nel dettaglio. | media |
+| `src-tauri/src/llm/providers/anthropic.rs` | Supporto reasoning da rivedere (verifica integrazione, parametri, formato risposta) | alta |
+| `src-tauri/src/llm/providers/deepseek.rs` | Supporto reasoning da rivedere (verifica integrazione, parametri, formato risposta) | alta |
+| `src-tauri/src/llm/providers/gemini.rs` | Supporto reasoning da rivedere (verifica integrazione, parametri, formato risposta) | alta |
 
 ---
 
-*Ultimo aggiornamento: 2026-06-03 — branch feat/phrase-memory*
+*Ultimo aggiornamento: 2026-06-04 — branch feat/phrase-memory*

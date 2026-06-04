@@ -240,6 +240,7 @@ pub async fn vec_search_phrase_memory(
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PhrasePair {
     pub source_phrase: String,
     pub target_phrase: String,
