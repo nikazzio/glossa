@@ -19,7 +19,7 @@ use crate::llm::provider::{LlmProvider, StreamFormat, UsageAccumulator};
 // ── Timeout constants ────────────────────────────────────────────────
 
 pub(crate) const HTTP_CONNECT_TIMEOUT_SECS: u64 = 10;
-pub(crate) const HTTP_REQUEST_TIMEOUT_SECS: u64 = 120;
+pub(crate) const HTTP_REQUEST_TIMEOUT_SECS: u64 = 300;
 pub(crate) const OLLAMA_HTTP_REQUEST_TIMEOUT_SECS: u64 = 300;
 pub(crate) const HTTP_STREAM_HEADER_TIMEOUT_SECS: u64 = 30;
 pub(crate) const HTTP_STREAM_IDLE_TIMEOUT_SECS: u64 = 30;
