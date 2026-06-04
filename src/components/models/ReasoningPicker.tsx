@@ -1,13 +1,14 @@
 import { useTranslation } from 'react-i18next';
 import type { ReasoningEffortLevel } from '../../types';
 
-const ALL_EFFORTS: ReasoningEffortLevel[] = ['none', 'low', 'medium', 'high'];
+const ALL_EFFORTS: ReasoningEffortLevel[] = ['none', 'low', 'medium', 'high', 'xhigh'];
 
 const EFFORT_I18N_KEY: Record<ReasoningEffortLevel, string> = {
   none: 'pipeline.reasoningEffortNone',
   low: 'pipeline.reasoningEffortLow',
   medium: 'pipeline.reasoningEffortMedium',
   high: 'pipeline.reasoningEffortHigh',
+  xhigh: 'pipeline.reasoningEffortXhigh',
 };
 
 interface ReasoningPickerProps {

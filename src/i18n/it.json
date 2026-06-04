@@ -228,6 +228,7 @@
     "reasoningEffortLow": "Basso",
     "reasoningEffortMedium": "Medio",
     "reasoningEffortHigh": "Alto",
+    "reasoningEffortXhigh": "Max",
     "modelFit": {
       "preferred": "Buona scelta per {{target}}",
       "discouraged": "Di solito da evitare per {{target}}",

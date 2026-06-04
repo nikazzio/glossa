@@ -97,7 +97,7 @@ impl OpenAiCompatibleProvider {
         let Some(effort) = self
             .openai_cache_config(req)
             .and_then(|cfg| cfg.reasoning_effort.as_deref())
-            .filter(|e| matches!(*e, "low" | "medium" | "high"))
+            .filter(|e| matches!(*e, "low" | "medium" | "high" | "xhigh"))
         else {
             return;
         };
