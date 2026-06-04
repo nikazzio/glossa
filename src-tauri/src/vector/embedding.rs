@@ -29,6 +29,43 @@ fn floats_to_blob(v: &[f32]) -> Vec<u8> {
     v.iter().flat_map(|f| f.to_le_bytes()).collect()
 }
 
+fn ensure_source_phrase_embeddings_schema(conn: &rusqlite::Connection) -> Result<(), EmbeddingError> {
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS source_phrase_embeddings (
+            id TEXT PRIMARY KEY,
+            project_id TEXT NOT NULL REFERENCES projects(id),
+            chunk_id TEXT,
+            source_phrase TEXT NOT NULL,
+            embedding BLOB NOT NULL,
+            created_at TEXT NOT NULL
+        );",
+    )
+    .map_err(|e| EmbeddingError::Http(e.to_string()))
+}
+
+fn ensure_phrase_memory_schema(conn: &rusqlite::Connection) -> Result<(), EmbeddingError> {
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS phrase_memory (
+            id TEXT PRIMARY KEY,
+            workspace_id TEXT NOT NULL REFERENCES workspaces(id),
+            source_phrase TEXT NOT NULL,
+            target_phrase TEXT NOT NULL,
+            source_language TEXT NOT NULL,
+            target_language TEXT NOT NULL,
+            author TEXT,
+            work TEXT,
+            domain TEXT,
+            tags TEXT,
+            notes TEXT,
+            chunk_id TEXT,
+            project_id TEXT REFERENCES projects(id),
+            embedding BLOB NOT NULL,
+            created_at TEXT NOT NULL
+        );",
+    )
+    .map_err(|e| EmbeddingError::Http(e.to_string()))
+}
+
 // ── OpenAI response types ────────────────────────────────────────────
 
 #[derive(Deserialize)]
@@ -171,6 +208,7 @@ pub async fn vec_upsert_source_phrase(
     let path = db_path(&app)?;
     let conn = crate::vector::open_vec_connection(&path)
         .map_err(|e| EmbeddingError::Http(e.to_string()))?;
+    ensure_source_phrase_embeddings_schema(&conn)?;
 
     conn.execute(
         "INSERT OR REPLACE INTO source_phrase_embeddings \
@@ -191,6 +229,122 @@ pub struct PhraseMatchResult {
     pub distance: f64,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PhraseMemoryEntryResult {
+    pub id: String,
+    pub workspace_id: String,
+    pub source_phrase: String,
+    pub target_phrase: String,
+    pub source_language: String,
+    pub target_language: String,
+    pub author: Option<String>,
+    pub work: Option<String>,
+    pub domain: Option<String>,
+    pub tags: Option<String>,
+    pub notes: Option<String>,
+    pub chunk_id: Option<String>,
+    pub project_id: Option<String>,
+    pub created_at: String,
+}
+
+#[tauri::command]
+pub async fn vec_list_phrase_memory(
+    app: tauri::AppHandle,
+    workspace_id: String,
+) -> Result<Vec<PhraseMemoryEntryResult>, EmbeddingError> {
+    let path = db_path(&app)?;
+    let conn = crate::vector::open_vec_connection(&path)
+        .map_err(|e| EmbeddingError::Http(e.to_string()))?;
+    ensure_phrase_memory_schema(&conn)?;
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, workspace_id, source_phrase, target_phrase, source_language, target_language, \
+                    author, work, domain, tags, notes, chunk_id, project_id, created_at \
+             FROM phrase_memory \
+             WHERE workspace_id = ?1 \
+             ORDER BY datetime(created_at) DESC, id DESC",
+        )
+        .map_err(|e| EmbeddingError::Http(e.to_string()))?;
+
+    let results: rusqlite::Result<Vec<PhraseMemoryEntryResult>> = stmt
+        .query_map(rusqlite::params![workspace_id], |row| {
+            Ok(PhraseMemoryEntryResult {
+                id: row.get(0)?,
+                workspace_id: row.get(1)?,
+                source_phrase: row.get(2)?,
+                target_phrase: row.get(3)?,
+                source_language: row.get(4)?,
+                target_language: row.get(5)?,
+                author: row.get(6)?,
+                work: row.get(7)?,
+                domain: row.get(8)?,
+                tags: row.get(9)?,
+                notes: row.get(10)?,
+                chunk_id: row.get(11)?,
+                project_id: row.get(12)?,
+                created_at: row.get(13)?,
+            })
+        })
+        .map_err(|e| EmbeddingError::Http(e.to_string()))?
+        .collect();
+
+    results.map_err(|e| EmbeddingError::Http(e.to_string()))
+}
+
+#[tauri::command]
+pub async fn vec_delete_phrase_memory(
+    app: tauri::AppHandle,
+    workspace_id: String,
+    phrase_memory_id: String,
+) -> Result<u32, EmbeddingError> {
+    let path = db_path(&app)?;
+    let conn = crate::vector::open_vec_connection(&path)
+        .map_err(|e| EmbeddingError::Http(e.to_string()))?;
+    ensure_phrase_memory_schema(&conn)?;
+
+    let deleted = conn
+        .execute(
+            "DELETE FROM phrase_memory WHERE id = ?1 AND workspace_id = ?2",
+            rusqlite::params![phrase_memory_id, workspace_id],
+        )
+        .map_err(|e| EmbeddingError::Http(e.to_string()))?;
+
+    Ok(deleted as u32)
+}
+
+#[tauri::command]
+pub async fn vec_update_phrase_memory(
+    app: tauri::AppHandle,
+    workspace_id: String,
+    phrase_memory_id: String,
+    source_phrase: String,
+    target_phrase: String,
+    embedding: Vec<f32>,
+) -> Result<u32, EmbeddingError> {
+    let path = db_path(&app)?;
+    let conn = crate::vector::open_vec_connection(&path)
+        .map_err(|e| EmbeddingError::Http(e.to_string()))?;
+    ensure_phrase_memory_schema(&conn)?;
+
+    let updated = conn
+        .execute(
+            "UPDATE phrase_memory \
+             SET source_phrase = ?1, target_phrase = ?2, embedding = ?3 \
+             WHERE id = ?4 AND workspace_id = ?5",
+            rusqlite::params![
+                source_phrase,
+                target_phrase,
+                floats_to_blob(&embedding),
+                phrase_memory_id,
+                workspace_id
+            ],
+        )
+        .map_err(|e| EmbeddingError::Http(e.to_string()))?;
+
+    Ok(updated as u32)
+}
+
 #[tauri::command]
 pub async fn vec_search_phrase_memory(
     app: tauri::AppHandle,
@@ -202,6 +356,7 @@ pub async fn vec_search_phrase_memory(
     let path = db_path(&app)?;
     let conn = crate::vector::open_vec_connection(&path)
         .map_err(|e| EmbeddingError::Http(e.to_string()))?;
+    ensure_phrase_memory_schema(&conn)?;
 
     let blob = floats_to_blob(&query_embedding);
 
@@ -266,6 +421,8 @@ pub async fn vec_save_locked_phrases(
     let path = db_path(&app)?;
     let conn = crate::vector::open_vec_connection(&path)
         .map_err(|e| EmbeddingError::Http(e.to_string()))?;
+    ensure_phrase_memory_schema(&conn)?;
+    ensure_source_phrase_embeddings_schema(&conn)?;
 
     let mut saved: u32 = 0;
 

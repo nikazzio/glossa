@@ -92,6 +92,40 @@ type RawPhraseMatch = {
   distance: number;
 };
 
+type RawPhraseMemoryEntry = {
+  id: string;
+  workspace_id: string;
+  source_phrase: string;
+  target_phrase: string;
+  source_language: string;
+  target_language: string;
+  author: string | null;
+  work: string | null;
+  domain: string | null;
+  tags: string | null;
+  notes: string | null;
+  chunk_id: string | null;
+  project_id: string | null;
+  created_at: string;
+};
+
+export interface PhraseMemoryEntry {
+  id: string;
+  workspaceId: string;
+  sourcePhrase: string;
+  targetPhrase: string;
+  sourceLanguage: string;
+  targetLanguage: string;
+  author: string | null;
+  work: string | null;
+  domain: string | null;
+  tags: string | null;
+  notes: string | null;
+  chunkId: string | null;
+  projectId: string | null;
+  createdAt: string;
+}
+
 export async function searchPhraseMemory(options: SearchOptions): Promise<PhraseMatch[]> {
   const { workspaceId, embeddingModel, queryText, threshold, maxResults } = options;
   const [queryEmbedding] = await fetchEmbeddings([queryText], embeddingModel);
@@ -107,6 +141,64 @@ export async function searchPhraseMemory(options: SearchOptions): Promise<Phrase
     targetPhrase: r.target_phrase,
     distance: r.distance,
   }));
+}
+
+function toPhraseMemoryEntry(raw: RawPhraseMemoryEntry): PhraseMemoryEntry {
+  return {
+    id: raw.id,
+    workspaceId: raw.workspace_id,
+    sourcePhrase: raw.source_phrase,
+    targetPhrase: raw.target_phrase,
+    sourceLanguage: raw.source_language,
+    targetLanguage: raw.target_language,
+    author: raw.author,
+    work: raw.work,
+    domain: raw.domain,
+    tags: raw.tags,
+    notes: raw.notes,
+    chunkId: raw.chunk_id,
+    projectId: raw.project_id,
+    createdAt: raw.created_at,
+  };
+}
+
+export async function listPhraseMemoryEntries(workspaceId: string): Promise<PhraseMemoryEntry[]> {
+  const raw = await invoke<RawPhraseMemoryEntry[]>('vec_list_phrase_memory', { workspaceId });
+  return raw.map(toPhraseMemoryEntry);
+}
+
+export async function deletePhraseMemoryEntry(
+  workspaceId: string,
+  phraseMemoryId: string,
+): Promise<void> {
+  await invoke('vec_delete_phrase_memory', { workspaceId, phraseMemoryId });
+}
+
+export async function updatePhraseMemoryEntry(options: {
+  workspaceId: string;
+  phraseMemoryId: string;
+  embeddingModel: EmbeddingModel;
+  sourcePhrase: string;
+  targetPhrase: string;
+}): Promise<void> {
+  const sourcePhrase = options.sourcePhrase.trim();
+  const targetPhrase = options.targetPhrase.trim();
+  if (!sourcePhrase || !targetPhrase) {
+    throw new Error('Source and target phrases are required.');
+  }
+
+  const [embedding] = await fetchEmbeddings([sourcePhrase], options.embeddingModel);
+  if (!embedding) {
+    throw new Error('Embedding generation failed.');
+  }
+
+  await invoke('vec_update_phrase_memory', {
+    workspaceId: options.workspaceId,
+    phraseMemoryId: options.phraseMemoryId,
+    sourcePhrase,
+    targetPhrase,
+    embedding,
+  });
 }
 
 // ── Batch search pre-pipeline ────────────────────────────────────────

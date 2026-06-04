@@ -10,12 +10,15 @@ vi.mock('../embeddingService', () => ({
 import { invoke } from '@tauri-apps/api/core';
 import { fetchEmbeddings } from '../embeddingService';
 import {
+  deletePhraseMemoryEntry,
+  listPhraseMemoryEntries,
   splitPhrases,
   runEmbeddingJob,
   searchPhraseMemory,
   searchPhraseMemoryBatch,
   saveSelectedPhrases,
   savePhrasePairs,
+  updatePhraseMemoryEntry,
 } from '../phraseMemoryService';
 
 const mockInvoke = vi.mocked(invoke);
@@ -159,6 +162,74 @@ describe('searchPhraseMemoryBatch', () => {
     expect(mockFetchEmbeddings).toHaveBeenCalledWith(['ciao', 'mondo'], 'text-embedding-3-small');
     expect(mockInvoke).toHaveBeenCalledTimes(2);
     expect(results.get('c1')?.[0]).toMatchObject({ sourcePhrase: 'ciao', targetPhrase: 'hello' });
+  });
+});
+
+describe('phrase memory entry management', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('mappa le entry salvate da snake_case a camelCase', async () => {
+    mockInvoke.mockResolvedValueOnce([
+      {
+        id: 'pm-1',
+        workspace_id: 'ws-1',
+        source_phrase: 'ciao',
+        target_phrase: 'hello',
+        source_language: 'Italian',
+        target_language: 'English',
+        author: null,
+        work: null,
+        domain: null,
+        tags: null,
+        notes: null,
+        chunk_id: 'c1',
+        project_id: 'p1',
+        created_at: '2026-01-01T00:00:00Z',
+      },
+    ]);
+
+    const result = await listPhraseMemoryEntries('ws-1');
+
+    expect(mockInvoke).toHaveBeenCalledWith('vec_list_phrase_memory', { workspaceId: 'ws-1' });
+    expect(result[0]).toMatchObject({
+      id: 'pm-1',
+      workspaceId: 'ws-1',
+      sourcePhrase: 'ciao',
+      targetPhrase: 'hello',
+    });
+  });
+
+  it('elimina una entry workspace-scoped', async () => {
+    mockInvoke.mockResolvedValueOnce(1);
+
+    await deletePhraseMemoryEntry('ws-1', 'pm-1');
+
+    expect(mockInvoke).toHaveBeenCalledWith('vec_delete_phrase_memory', {
+      workspaceId: 'ws-1',
+      phraseMemoryId: 'pm-1',
+    });
+  });
+
+  it('rigenera embedding quando aggiorna una entry', async () => {
+    mockFetchEmbeddings.mockResolvedValueOnce([[0.1, 0.2]]);
+    mockInvoke.mockResolvedValueOnce(undefined);
+
+    await updatePhraseMemoryEntry({
+      workspaceId: 'ws-1',
+      phraseMemoryId: 'pm-1',
+      embeddingModel: 'text-embedding-3-small',
+      sourcePhrase: ' ciao ',
+      targetPhrase: ' hello ',
+    });
+
+    expect(mockFetchEmbeddings).toHaveBeenCalledWith(['ciao'], 'text-embedding-3-small');
+    expect(mockInvoke).toHaveBeenCalledWith('vec_update_phrase_memory', {
+      workspaceId: 'ws-1',
+      phraseMemoryId: 'pm-1',
+      sourcePhrase: 'ciao',
+      targetPhrase: 'hello',
+      embedding: [0.1, 0.2],
+    });
   });
 });
 

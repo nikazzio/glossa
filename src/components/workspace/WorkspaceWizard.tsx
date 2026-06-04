@@ -27,7 +27,7 @@ export function WorkspaceWizard() {
     'w-full rounded-[18px] border border-editorial-border bg-editorial-textbox/30 px-4 py-3 text-sm text-editorial-ink outline-none transition-colors focus:border-editorial-accent focus-visible:ring-2 focus-visible:ring-editorial-accent';
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 p-8">
+    <div className="flex min-h-dvh min-h-[var(--app-min-height)] min-w-[var(--app-min-width)] flex-col items-center justify-center gap-6 p-8">
       <div className="flex flex-col items-center gap-2">
         <h1 className="text-2xl font-semibold text-editorial-ink">
           Crea il tuo primo workspace
