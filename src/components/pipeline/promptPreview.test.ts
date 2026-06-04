@@ -137,6 +137,73 @@ describe('buildPromptPreviewStages', () => {
     expect(stage?.blocks[4]?.body).toBe('Output only the formatted text.');
   });
 
+  it('includes phrase-memory block after stage-instructions when usePhraseMemory is enabled', () => {
+    const config = createConfig({
+      usePhraseMemory: true,
+      stages: [
+        {
+          id: 'stg-translation',
+          name: 'Translation',
+          role: 'translation',
+          prompt: 'Translate faithfully.',
+          model: 'gpt-4o-mini',
+          provider: 'openai',
+          enabled: true,
+        },
+      ],
+    });
+
+    const [stage] = buildPromptPreviewStages(config);
+    const blockIds = stage?.blocks.map((b) => b.id);
+    const memoryIdx = blockIds?.indexOf('phrase-memory') ?? -1;
+    const instructionsIdx = blockIds?.indexOf('stage-instructions') ?? -1;
+
+    expect(memoryIdx).toBeGreaterThan(instructionsIdx);
+    expect(stage?.blocks[memoryIdx]?.kind).toBe('runtime');
+    expect(stage?.blocks[memoryIdx]?.body).toContain('Translation memory references');
+    expect(stage?.blocks[memoryIdx]?.body).toContain('{{source phrase}}');
+  });
+
+  it('omits phrase-memory block when usePhraseMemory is disabled', () => {
+    const config = createConfig({
+      usePhraseMemory: false,
+      stages: [
+        {
+          id: 'stg-translation',
+          name: 'Translation',
+          role: 'translation',
+          prompt: 'Translate faithfully.',
+          model: 'gpt-4o-mini',
+          provider: 'openai',
+          enabled: true,
+        },
+      ],
+    });
+
+    const [stage] = buildPromptPreviewStages(config);
+    expect(stage?.blocks.map((b) => b.id)).not.toContain('phrase-memory');
+  });
+
+  it('omits phrase-memory block in format stages even when usePhraseMemory is enabled', () => {
+    const config = createConfig({
+      usePhraseMemory: true,
+      stages: [
+        {
+          id: 'stg-format',
+          name: 'Format',
+          role: 'format',
+          prompt: 'Repair Markdown only.',
+          model: 'gpt-4o-mini',
+          provider: 'openai',
+          enabled: true,
+        },
+      ],
+    });
+
+    const [stage] = buildPromptPreviewStages(config);
+    expect(stage?.blocks.map((b) => b.id)).not.toContain('phrase-memory');
+  });
+
   it('renders empty glossary constraints explicitly when no glossary entries exist', () => {
     const config = createConfig({
       stages: [

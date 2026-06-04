@@ -90,19 +90,34 @@ impl OpenAiCompatibleProvider {
         }
     }
 
+    /// True when reasoning effort is explicitly configured for this request.
+    fn reasoning_requested(&self, req: &LlmRequest<'_>) -> bool {
+        self.openai_cache_config(req)
+            .and_then(|cfg| cfg.reasoning_effort.as_deref())
+            .is_some_and(|e| matches!(e, "low" | "medium" | "high" | "xhigh"))
+    }
+
+    /// True when this request should use the Responses API.
+    /// OpenAI: only when reasoning is requested (otherwise Chat Completions
+    /// gives reliable cross-call prefix caching without `previous_response_id`).
+    /// DeepSeek and other compat providers: always false.
+    fn use_responses_api_for(&self, req: &LlmRequest<'_>) -> bool {
+        self.use_responses_api && self.reasoning_requested(req)
+    }
+
     /// Attaches reasoning effort to the request body.
     /// Responses API → `reasoning.effort`; Chat Completions → `reasoning_effort`.
-    /// No-op when effort is unset or not one of: low, medium, high.
+    /// No-op when effort is unset or not one of: low, medium, high, xhigh.
     fn apply_reasoning_effort(&self, req: &LlmRequest<'_>, body: &mut Value) {
         let Some(effort) = self
             .openai_cache_config(req)
             .and_then(|cfg| cfg.reasoning_effort.as_deref())
-            .filter(|e| matches!(*e, "low" | "medium" | "high"))
+            .filter(|e| matches!(*e, "low" | "medium" | "high" | "xhigh"))
         else {
             return;
         };
 
-        if self.use_responses_api {
+        if self.use_responses_api_for(req) {
             body["reasoning"] = serde_json::json!({ "effort": effort });
         } else {
             body["reasoning_effort"] = Value::String(effort.to_string());
@@ -357,7 +372,7 @@ impl LlmProvider for OpenAiCompatibleProvider {
     }
 
     async fn call(&self, client: &Client, req: &LlmRequest<'_>) -> Result<LlmResponse, String> {
-        if self.use_responses_api {
+        if self.use_responses_api_for(req) {
             return self.call_responses(client, req).await;
         }
 
@@ -419,7 +434,7 @@ impl LlmProvider for OpenAiCompatibleProvider {
         client: &Client,
         req: &LlmRequest<'_>,
     ) -> Result<reqwest::Response, String> {
-        if self.use_responses_api {
+        if self.use_responses_api_for(req) {
             return self.build_responses_streaming_request(client, req).await;
         }
 

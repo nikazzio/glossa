@@ -1,6 +1,7 @@
 {
   "app": {
     "title": "Glossa // Pipeline",
+    "brand": "Glossa",
     "subtitle": "AI-assisted translation"
   },
   "header": {
@@ -25,7 +26,19 @@
     "cacheMissInput": "Cache miss input",
     "cacheHitRate": "Cache hit rate",
     "translationCacheLabel": "Translation cache",
-    "auditCacheLabel": "Audit cache"
+    "auditCacheLabel": "Audit cache",
+    "brandArea": "Translation",
+    "saveAll": "Save all",
+    "savedAll": "All changes saved",
+    "nothingToSave": "Everything is already saved",
+    "globalSaveFailed": "Save failed",
+    "projectSaveDeferred": "Project save is paused while the pipeline is running",
+    "savedLibraryProjectDeferred": "Library saved. Project save is paused while the pipeline is running"
+  },
+  "sidebar": {
+    "areaLabel": "Area",
+    "workspaceSection": "Workspace",
+    "backToWorkspace": "Back to workspace"
   },
   "pipeline": {
     "globalSetup": "Project",
@@ -35,7 +48,7 @@
     "autoSegment": "Auto-segment",
     "headingAware": "Heading-aware (Markdown)",
     "trailingShortBlocks": "Carry short trailing blocks",
-    "modeLabel": "Translation mode",
+    "modeLabel": "Mode",
     "mode": {
       "standard": "Standard",
       "editorial": "Editorial"
@@ -154,7 +167,6 @@
     "resetPreviewDone": "Preview cleared",
     "modeTest": "Test",
     "modeProduction": "Production",
-    "modeLabel": "Mode",
     "modeTestHint": "Runs the pipeline on one chunk and produces a preview. Configuration stays editable.",
     "modeProductionHint": "Runs the pipeline on the entire document.",
     "modeLockedHint": "Mode locked — real translations exist. Use Full Reset to start over.",
@@ -216,6 +228,7 @@
     "reasoningEffortLow": "Low",
     "reasoningEffortMedium": "Medium",
     "reasoningEffortHigh": "High",
+    "reasoningEffortXhigh": "Max",
     "modelFit": {
       "preferred": "Good fit for {{target}}",
       "discouraged": "Usually avoid for {{target}}",
@@ -264,6 +277,10 @@
       "runtime-task": {
         "title": "Runtime task instruction",
         "hint": "Execution-only instruction that tells the model to translate, refine, or format only the current chunk."
+      },
+      "phrase-memory": {
+        "title": "Phrase memory",
+        "hint": "Translation memory pairs matched for this chunk. Appended to stage instructions at execution time — only enabled matches are injected."
       },
       "output-contract": {
         "title": "Runtime output contract",
@@ -408,7 +425,10 @@
     "backupImport": "Import backup",
     "backupImportConfirmTitle": "Restore workspace?",
     "backupImportConfirmMessage": "This will overwrite all current projects, pipelines, translations, glossaries and settings. The operation cannot be undone.",
-    "backupImportConfirm": "Restore"
+    "backupImportConfirm": "Restore",
+    "phraseMemoryTab": "Phrase Memory",
+    "phraseMemoryPresetsTitle": "Phrase Memory Presets",
+    "phraseMemoryPresetsHint": "Built-in presets are read-only. Clone a built-in preset to customise it, or create a custom preset from scratch."
   },
   "ollama": {
     "title": "Ollama (Local Models)",
@@ -447,7 +467,10 @@
     "pipelineCompletedWithErrors": "Pipeline completed with {{count}} error(s)",
     "reEvalCompleted": "Re-evaluation completed",
     "coherenceFailed": "Coherence audit failed",
-    "contextOverflow": "Context window exceeded. Reduce chunk size or use a model with a larger context window."
+    "contextOverflow": "Context window exceeded. Reduce chunk size or use a model with a larger context window.",
+    "clipboardFailed": "Failed to copy to clipboard",
+    "saveFailed": "Save failed",
+    "loadFailed": "Load failed"
   },
   "coherence": {
     "title": "Document Coherence",
@@ -477,7 +500,8 @@
     "delete": "Delete",
     "save": "Save",
     "all": "All",
-    "clear": "Clear"
+    "clear": "Clear",
+    "optional": "optional"
   },
   "projects": {
     "title": "Projects",
@@ -517,6 +541,70 @@
     "updatedYearsAgo_one": "updated {{count}} year ago",
     "updatedYearsAgo_other": "updated {{count}} years ago",
     "loadFailed": "Failed to load project"
+  },
+  "workspace": {
+    "activeLabel": "Translation workspace",
+    "noActive": "No active workspace",
+    "translationBoundary": "This workspace contains translation projects, Phrase Memory presets, and shared translation memory. Library and transcription will remain separate areas in Glossa 2.0.",
+    "configure": "Configure workspace",
+    "create": "New workspace",
+    "delete": "Delete workspace",
+    "deleteTitle": "Delete this workspace?",
+    "deleteMessage": "\"{{name}}\" will be permanently removed.",
+    "deleteBlockedTitle": "Workspace not empty",
+    "deleteBlockedMessage": "This workspace still contains {{count}} project(s). Remove every project before deleting the workspace.",
+    "deleted": "Workspace deleted",
+    "deleteFailed": "Failed to delete workspace",
+    "created": "Workspace created",
+    "updated": "Workspace updated",
+    "saveFailed": "Failed to save workspace",
+    "saving": "Saving...",
+    "projectsMetric": "Projects",
+    "workspacesMetric": "Workspaces",
+    "pipelineMetric": "Pipelines",
+    "embeddingModel": "Embedding model",
+    "technicalSummary": "Technical summary",
+    "createdAt": "Created",
+    "memoryScope": "Memory scope",
+    "workspaceScoped": "Workspace-scoped",
+    "pipelineBadge_one": "1 pipeline",
+    "pipelineBadge_other": "{{count}} pipelines",
+    "pipelineNamesFallback": "No pipelines",
+    "areas": {
+      "translations": {
+        "title": "Translations",
+        "body": "Current operating area: projects, pipelines, Phrase Memory, and translation presets live here.",
+        "sidebarHint": "Projects and pipelines"
+      },
+      "library": {
+        "title": "Library",
+        "body": "Future area for catalogues, texts, and study material, separated from translation memory.",
+        "sidebarHint": "Texts and catalogues"
+      },
+      "transcriptions": {
+        "title": "Transcriptions",
+        "body": "Future area for OCR, transcription, and source preparation before translation.",
+        "sidebarHint": "OCR and source prep"
+      }
+    },
+    "projectsTitle": "Workspace projects",
+    "emptyProjectsTitle": "No projects in this workspace",
+    "emptyProjectsBody": "Create a project to start translating inside this workspace.",
+    "switcherTitle": "Switch workspace",
+    "newBookCard": "New book",
+    "phraseMemoryTitle": "Workspace Phrase Memory",
+    "phraseMemoryBody": "The presets below belong to the active workspace. The pipeline decides whether to use memory, but preset configuration lives here.",
+    "nameLabel": "Name",
+    "descriptionLabel": "Description",
+    "namePlaceholder": "Workspace name",
+    "descriptionPlaceholder": "Workspace description",
+    "embeddingChangeWarning": "Changing the embedding model requires regenerating existing memory embeddings. Save only if you really want to change model.",
+    "settings": {
+      "eyebrow": "Workspace Settings",
+      "generalTab": "General",
+      "memoryTab": "Phrase Memory",
+      "backupTab": "Backup"
+    }
   },
   "files": {
     "import": "Import text file",
@@ -636,6 +724,27 @@
     "infoChunks": "Completed chunks",
     "infoQuality": "Composite quality",
     "openInReader": "Open in document reader",
+    "projectHomeEyebrow": "Project home",
+    "projectHomeTitle": "Project home",
+    "projectHomeEmpty": "No text loaded.",
+    "projectHomeBody": "This project is ready for document import. Set the pipeline, confirm the workspace context, then bring in the source text and start building the editorial run.",
+    "projectHomeImport": "Import document",
+    "projectHomeConfigurePipeline": "Configure pipeline",
+    "projectHomeConfigureWorkspace": "Configure workspace",
+    "projectHomeLanguages": "Language pair",
+    "projectHomePipeline": "Active pipeline",
+    "projectHomePipelineFallback": "Default pipeline",
+    "projectHomeWorkspace": "Workspace",
+    "projectHomeEditorialTitle": "Prepare the editorial surface",
+    "projectHomeEditorialBody": "The project shell is already active: pipeline settings, shared memory, and document tools are in place before the first import. Use this page as the staging area before opening the reader on live chunks.",
+    "projectHomeActions": "Next actions",
+    "projectHomeImportHint": "Bring in the source file and tune segmentation before it enters the reader.",
+    "projectHomeConfigurePipelineHint": "Adjust stages, models, and review behaviour for this project.",
+    "projectHomeLibraryHint": "Open dictionaries and prompt templates shared across projects.",
+    "projectHomeStatus": "Project status",
+    "projectHomePipelines": "Pipelines",
+    "projectHomeUnits": "Units loaded",
+    "projectHomeMode": "Pipeline mode",
     "previousChunk": "Previous chunk",
     "nextChunk": "Next chunk",
     "leftPage": "Source page",
@@ -713,7 +822,8 @@
     "indexEmptyTitle": "No units to display.",
     "indexEmptyBody": "Import a text and split it into chunks to get started.",
     "watchdogStuck": "Stuck",
-    "watchdogCancel": "Cancel & retry"
+    "watchdogCancel": "Cancel & retry",
+    "insightsTabMemory": "Memory"
   },
   "help": {
     "title": "User Guide",
@@ -784,6 +894,12 @@
       "statsDesc": "The Stats tab aggregates input and output tokens, estimated cost, and chunk distribution for the current session, broken down by provider and model. Useful to monitor spend on long documents translated across multiple sessions.",
       "operationsLogTitle": "Structured operations log",
       "operationsLogDesc": "The Operations tab in the Insights panel records every significant event: prompt sent, stage completion, errors, retries, audit, coherence. Each entry has a scope (pipeline / stage / audit / coherence), a level (info / success / warn / error), and — when relevant — the chunk involved. Prompt entries store the full system and user prompts in an expandable field, so you can inspect the exact request sent.",
+      "phraseMemoryTitle": "Phrase Memory",
+      "phraseMemoryDesc": "Phrase Memory is specific to the translation workspace: it stores source phrase → translated phrase pairs and uses them to suggest consistent renderings in later documents in the same workspace. The Memory tab in the Insights panel shows matches for the current chunk and the button to explicitly save the current chunk to memory.",
+      "phraseMemoryAutomationTitle": "Visible automation",
+      "phraseMemoryAutomationDesc": "When Phrase Memory is enabled, Glossa searches for matches in the background when the document opens or changes, but this search is read-only: it shows badges and suggestions, and does not modify translations or the database. Found matches are not added to the prompt until you select them; memory is written only through the 'Save chunk to memory' button. The translation lock remains an editorial marker only.",
+      "phraseMemoryTipTitle": "Operating rule",
+      "phraseMemoryTipDesc": "If matches are visible but not selected, the pipeline runs without using them and Glossa warns you before launch. Use the checkboxes to decide what enters the prompt and save only translations you actually want to reuse.",
       "configDrawerTitle": "Configuration panel",
       "configDrawerDesc": "Opens with the gear icon. Five tabs: Settings (mode, language pair, persona, refine readiness), Translation (translation stage and refine/format when in editorial mode), Quality Control (judge and coherence prompts), Term Registry (glossary assigned to the project), Prompt Preview (preview of the final prompt for every stage).",
       "modalsTitle": "Unified modals",
@@ -873,17 +989,17 @@
     },
     "projects": {
       "title": "Projects",
-      "intro": "Projects bundle source text, translations, pipeline configuration, and the assigned dictionary. They are stored in local SQLite: no cloud, no sync, everything on your machine.",
+      "intro": "Projects live inside a translation workspace. The workspace contains books, Phrase Memory, and memory presets shared by those books; pipeline configuration remains specific to the opened project/pipeline.",
       "createTitle": "Create a project",
-      "createDesc": "You can start working in an unsaved draft. When you want to persist, click Save in the header: the first save opens a lightweight dialog to assign a name. The Projects panel — folder icon — stays available to open, explicitly create, or delete existing projects.",
+      "createDesc": "From the workspace dashboard you can create, open, or delete projects. A new project is created in the active workspace and uses the current language pair as its initial default.",
       "saveTitle": "Save your work",
       "saveDesc": "Click the save icon at any time to persist the current state. When you reopen a project, configuration, stages, assigned glossary, chunks, translations, and notes are restored as you left them.",
       "importExportTitle": "Import and export",
-      "importExportDesc": "Use the upload icon to import a file (.txt, .md, .docx, .pdf) as the document source. When there are completed chunks, the Export button (↗) in the header opens the export dialog with format and separator options.",
+      "importExportDesc": "Use the upload icon to import a file (.txt, .md, .docx, .pdf) as the document source. When there are completed chunks, the Export button (↗) in the header opens the export dialog with format and separator options. Deleting a project also removes its pipelines, translations, logs, and saved project links.",
       "autosaveTitle": "Autosave",
       "autosaveDesc": "Glossa autosaves the project in the background on every meaningful state change: new completed chunks, translation edits, configuration updates. Autosave only activates once the project has a name: for new drafts, run the first Save manually to give it a name and enable autosave.",
       "backupTitle": "Backup and restore",
-      "backupDesc": "Open Settings → Backup and restore to export the full workspace as a portable .glossa-backup file. This snapshot includes all projects, pipelines, translations, glossaries, templates and settings. Use Import to restore a backup: the current workspace is fully deleted and replaced with the backup data. After restore the app restarts automatically — open the project panel (folder icon at the top) to select a project."
+      "backupDesc": "The workspace dashboard exposes backup and restore. Backup exports local state to a portable .glossa-backup file; restore replaces local data with the imported snapshot. General app settings stay in Settings, while workspace Phrase Memory settings live in the dashboard."
     },
     "providers": {
       "title": "LLM providers",
@@ -938,19 +1054,19 @@
     },
     "shortcuts": {
       "title": "Interface reference",
-      "toolbarTitle": "Header toolbar",
-      "openProjects": "Open the Projects panel",
-      "importFile": "Import a source text file",
+      "toolbarTitle": "Sidebar and header",
+      "openProjects": "Open the Projects panel — sidebar (editor mode)",
+      "importFile": "Import a source text file — sidebar (editor mode)",
       "openConfig": "Open the pipeline configuration panel",
-      "saveProject": "Save the current project",
-      "openLibrary": "Open the Library (dictionaries and templates)",
-      "switchLang": "Switch interface language (IT / EN)",
-      "openSettings": "Open Settings (API keys, Ollama, segmentation, pricing)",
-      "openHelp": "Open this guide",
-      "sandbox": "Open / close Sandbox mode",
+      "saveProject": "Save the current project — sidebar (editor mode)",
+      "openLibrary": "Open the Library (dictionaries and templates) — header",
+      "switchLang": "Switch interface language (IT / EN) — header",
+      "openSettings": "Open Settings (API keys, Ollama, segmentation, pricing) — header",
+      "openHelp": "Open this guide — header",
       "openInsights": "Open the Insights panel",
       "toggleEditorTools": "Show / hide the editor toolbars",
       "lockTranslation": "Lock / unlock the candidate translation as final",
+      "phraseMemory": "Memory — shows found matches, lets you select which ones to use, and explicitly saves the current chunk",
       "openStageTrace": "Open the modal with a stage's full output",
       "exportTitle": "Export (requires completed chunks)",
       "exportDesc": "Opens the export dialog with format and chunk separator",
@@ -1087,7 +1203,8 @@
     "groupBy": "Group",
     "copy": "Copy",
     "copied": "Copied",
-    "copyFailed": "Copy failed"
+    "copyFailed": "Copy failed",
+    "newRun": "new run"
   },
   "resume": {
     "title": "Translation interrupted",
@@ -1096,5 +1213,35 @@
     "resumeButton": "Resume",
     "restartButton": "Restart from scratch",
     "dismiss": "Dismiss"
+  },
+  "memory": {
+    "coldStartTitle": "No matches found",
+    "coldStartBody": "Automatic search does not change anything. To build memory, explicitly save the current chunk when its translation is ready.",
+    "rerunButton": "Reprocess with selected matches",
+    "applyButton": "Apply",
+    "appliedToClipboard": "Translation copied to clipboard",
+    "enableMatch": "Use this match in the pipeline",
+    "extractTermButton": "Extract term",
+    "extractTermTitle": "Extract term",
+    "sourcePhraseLabel": "Source phrase",
+    "termLabel": "Term",
+    "termExtracted": "Term added to glossary",
+    "prelaunchWarning": "{{count}} chunks have memory matches found but not selected",
+    "saveToMemoryButton": "Save chunk to memory",
+    "savedToMemory": "Chunk saved to memory",
+    "nothingToSave": "No ready translation to save in the current chunk",
+    "saveToMemoryFailed": "Error saving to memory",
+    "searching": "Searching memory",
+    "searchFailed": "Memory search failed",
+    "selectionHint": "Found matches are suggestions only: select them to include them in the next pipeline run.",
+    "matchBadge_one": "{{count}} match",
+    "matchBadge_other": "{{count}} matches",
+    "matchBadge": "{{count}} match"
+  },
+  "glossary": {
+    "translation": "Translation",
+    "notes": "Notes",
+    "selectGlossary": "Select glossary",
+    "noGlossarySelected": "— No glossary —"
   }
 }

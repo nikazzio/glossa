@@ -1,14 +1,28 @@
-import { lazy, Suspense, useCallback, useEffect, useRef } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { initLogger } from './utils/logger';
 import { Header, PipelineSidebar } from './components/layout';
 import { ErrorBoundary, ConfirmDialog, PreflightDialog, RunResumeBanner } from './components/common';
+import { motion } from 'motion/react';
 import { usePipeline } from './hooks/usePipeline';
 import { useProjectAutosave } from './hooks/useProjectAutosave';
 import { useUiStore } from './stores/uiStore';
 import { useProjectStore } from './stores/projectStore';
 import { useLibraryStore } from './stores/libraryStore';
 import { useChunksStore } from './stores/chunksStore';
+import { usePipelineStore } from './stores/pipelineStore';
+import { useWorkspaceStore } from './stores/workspaceStore';
+import { WorkspaceWizard } from './components/workspace/WorkspaceWizard';
+import { WorkspaceHome } from './components/workspace/WorkspaceHome';
+import { WorkspaceSettingsModal } from './components/workspace/WorkspaceSettingsModal';
+import { importTextFile } from './services/fileService';
+import { savePipelineConfig } from './services/pipelineService';
+import { extractFootnotes } from './utils/footnoteExtractor';
+import { getContextWindow } from './models/catalog';
+import { logger } from './utils/logger';
+import type { DocumentFormat, DocumentRenderProfile } from './types';
+import type { ImportDialogPipelineConfig } from './components/document/ImportPreviewDialog';
 import { Toaster } from 'sonner';
+import { toast } from 'sonner';
 
 function HighlightColorSync() {
   const highlightColors = useUiStore((s) => s.highlightColors);
@@ -50,10 +64,28 @@ const ProjectPanel = lazy(() =>
 const LibraryPanel = lazy(() =>
   import('./components/library/LibraryPanel').then((m) => ({ default: m.LibraryPanel })),
 );
+const ImportPreviewDialog = lazy(() =>
+  import('./components/document/ImportPreviewDialog').then((m) => ({ default: m.ImportPreviewDialog })),
+);
 
-export default function App() {
-  useEffect(() => { void initLogger(); }, []);
+interface PendingImport {
+  fileName: string;
+  text: string;
+  rawText: string;
+  useChunking: boolean;
+  wordsPerChunk: number;
+  headingAware: boolean;
+  carryTrailingShortBlocks: boolean;
+  format?: 'plain' | 'markdown';
+  experimental?: 'docx-markdown';
+}
 
+/**
+ * Editor view — hooks usati solo quando c'è un progetto aperto.
+ * Estratto in un componente separato per evitare violazioni Rules of Hooks
+ * nella shell gating di App.
+ */
+function EditorView() {
   const {
     runPipeline,
     runAuditOnly,
@@ -64,9 +96,6 @@ export default function App() {
     cancelPipeline,
   } = usePipeline();
 
-  // In document mode, retranslate a single chunk using the active pipeline mode.
-  // If completed translations already exist, always produce completed output
-  // regardless of mode (belt-and-suspenders against any future dirty state).
   const handleRetranslateChunk = useCallback((chunkId: string) => {
     const mode = useUiStore.getState().pipelineMode;
     const hasCompleted = useChunksStore.getState().chunks.some((c) => c.status === 'completed' || c.translationLocked);
@@ -74,11 +103,18 @@ export default function App() {
   }, [runSingleChunk]);
   useProjectAutosave();
   const viewMode = useUiStore((state) => state.viewMode);
+  const setShowConfigDrawer = useUiStore((state) => state.setShowConfigDrawer);
   const showSettings = useUiStore((state) => state.showSettings);
+  const chunkPresetMedium = useUiStore((state) => state.chunkPresetMedium);
+  const chunkPresetShort = useUiStore((state) => state.chunkPresetShort);
+  const chunkPresetLong = useUiStore((state) => state.chunkPresetLong);
   const showProjectPanel = useProjectStore((state) => state.showProjectPanel);
+  const currentProjectId = useProjectStore((state) => state.currentProjectId);
+  const activePipelineId = useProjectStore((state) => state.activePipelineId);
   const showLibraryPanel = useLibraryStore((state) => state.showLibraryPanel);
+  const { config, setConfig } = usePipelineStore();
+  const { loadDocument } = useChunksStore();
 
-  // Keep panels mounted once first opened so their AnimatePresence exit animations run
   const settingsLoaded = useRef(false);
   const projectPanelLoaded = useRef(false);
   const libraryPanelLoaded = useRef(false);
@@ -86,26 +122,135 @@ export default function App() {
   if (showProjectPanel) projectPanelLoaded.current = true;
   if (showLibraryPanel) libraryPanelLoaded.current = true;
 
-  return (
-    <ErrorBoundary>
-      <HighlightColorSync />
-      <div className="h-screen overflow-hidden bg-editorial-bg text-editorial-ink font-sans flex flex-col">
-        <div className="flex-shrink-0">
-          <Header
-            onRunPipeline={runPipeline}
-            onCancelPipeline={cancelPipeline}
-          />
-        </div>
+  const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
+  const [showWorkspaceSettings, setShowWorkspaceSettings] = useState(false);
+  const editorContentKey = `editor-panel-${currentProjectId ?? 'none'}-${viewMode}`;
 
-        {viewMode === 'document' ? (
-          <Suspense fallback={null}>
-            <main className="relative flex flex-1 min-h-0 overflow-hidden">
-              <PipelineSidebar
-                onRunPipeline={runPipeline}
-                onCancelPipeline={cancelPipeline}
-                onDryRun={runDryRun}
-                onRetranslateChunk={handleRetranslateChunk}
-              />
+  const handleImportDocument = useCallback(async () => {
+    try {
+      const imported = await importTextFile();
+      if (!imported) return;
+      const isMarkdown = imported.format === 'markdown';
+      const cleanText = isMarkdown ? extractFootnotes(imported.text).cleanText : imported.text;
+      setPendingImport({
+        fileName: imported.name,
+        text: cleanText,
+        rawText: imported.text,
+        useChunking: config.useChunking !== false,
+        wordsPerChunk: config.wordsPerChunk ?? chunkPresetMedium,
+        headingAware: config.headingAware ?? true,
+        carryTrailingShortBlocks: config.carryTrailingShortBlocks ?? true,
+        format: imported.format,
+        experimental: imported.experimental,
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg === 'pdf_no_text_layer') {
+        toast.error('PDF has no selectable text layer.');
+      } else {
+        toast.error('Import failed.', { description: msg });
+      }
+    }
+  }, [chunkPresetMedium, config]);
+
+  const handleConfirmImport = useCallback(async (
+    manualChunks?: string[],
+    pipelineConfig?: ImportDialogPipelineConfig,
+  ) => {
+    if (!pendingImport) return;
+    const provider = pipelineConfig?.provider ?? config.stages[0]?.provider;
+    const model = pipelineConfig?.model ?? config.stages[0]?.model;
+    const contextWindow = provider && model ? getContextWindow(provider, model) : undefined;
+    const wordsPerChunk =
+      pendingImport.wordsPerChunk > 0 ? pendingImport.wordsPerChunk : chunkPresetMedium;
+    const presets = [chunkPresetShort, chunkPresetMedium, chunkPresetLong];
+    const nearestPreset = presets.reduce(
+      (nearest, preset) =>
+        Math.abs(wordsPerChunk - preset) < Math.abs(wordsPerChunk - nearest) ? preset : nearest,
+      presets[0]!,
+    );
+    const minWords = Math.round(nearestPreset * 0.5);
+    const maxWords = Math.round(nearestPreset * 1.5);
+    const updatedStages = pipelineConfig
+      ? config.stages.map((stage, index) =>
+          index === 0
+            ? { ...stage, provider: pipelineConfig.provider, model: pipelineConfig.model }
+            : stage,
+        )
+      : config.stages;
+    const updatedConfig = {
+      ...config,
+      sourceLanguage: pipelineConfig?.sourceLanguage ?? config.sourceLanguage,
+      targetLanguage: pipelineConfig?.targetLanguage ?? config.targetLanguage,
+      stages: updatedStages,
+      useChunking: pendingImport.useChunking,
+      wordsPerChunk,
+      minWords,
+      maxWords,
+      headingAware: pendingImport.headingAware,
+      carryTrailingShortBlocks: pendingImport.carryTrailingShortBlocks,
+      documentFormat: (pendingImport.format ?? 'plain') as DocumentFormat,
+      renderProfile: (pendingImport.format === 'markdown'
+        ? 'markdown'
+        : 'plain-text') as DocumentRenderProfile,
+      markdownAware: pendingImport.format === 'markdown',
+      experimentalImport: pendingImport.experimental ?? null,
+      chunkedWithContextWindow: contextWindow,
+    };
+    setConfig(() => updatedConfig);
+    loadDocument(
+      pendingImport.rawText,
+      {
+        useChunking: pendingImport.useChunking,
+        targetWordsPerChunk: wordsPerChunk,
+        markdownAware: pendingImport.format === 'markdown',
+        minWords,
+        maxWords,
+        headingAware: pendingImport.headingAware,
+        carryTrailingShortBlocks: pendingImport.carryTrailingShortBlocks,
+        extractFootnotes: pendingImport.experimental === 'docx-markdown',
+      },
+      manualChunks,
+    );
+    if (activePipelineId) {
+      try {
+        await savePipelineConfig(activePipelineId, updatedConfig);
+      } catch (err: unknown) {
+        logger.error('savePipelineConfig after import failed', {
+          error: err instanceof Error ? err.message : String(err),
+        });
+        toast.warning('Pipeline settings could not be fully persisted after import.');
+      }
+    }
+    setPendingImport(null);
+    setShowConfigDrawer(false);
+    toast.success('File imported successfully.');
+  }, [
+    activePipelineId,
+    chunkPresetLong,
+    chunkPresetMedium,
+    chunkPresetShort,
+    config,
+    loadDocument,
+    pendingImport,
+    setConfig,
+    setShowConfigDrawer,
+  ]);
+
+  return (
+    <>
+      {viewMode === 'document' ? (
+        <Suspense fallback={null}>
+          <main className="relative flex flex-1 min-h-0 overflow-hidden">
+            <PipelineSidebar
+              onRunPipeline={runPipeline}
+              onCancelPipeline={cancelPipeline}
+              onDryRun={runDryRun}
+              onRetranslateChunk={handleRetranslateChunk}
+              onImportDocument={handleImportDocument}
+              onOpenWorkspaceSettings={() => setShowWorkspaceSettings(true)}
+            />
+            <div className="relative flex min-w-0 flex-1">
               <ConfigDrawer
                 onRunPipeline={runPipeline}
                 onRunAuditOnly={runAuditOnly}
@@ -113,50 +258,157 @@ export default function App() {
               />
               <DocumentView
                 onRetranslateChunk={handleRetranslateChunk}
+                onImportDocument={handleImportDocument}
               />
               <InsightsDrawer onReauditChunk={auditSingleChunk} onRunCoherenceAudit={runCoherenceAudit} />
-            </main>
-          </Suspense>
-        ) : (
-          <Suspense fallback={null}>
-            <main className="grid grid-cols-1 md:grid-cols-12 flex-1 min-h-0">
-              <PipelineConfig
-                onRunPipeline={runPipeline}
-                onRunAuditOnly={runAuditOnly}
-                onCancelPipeline={cancelPipeline}
-              />
-              <ProductionStream
-                onRetranslateChunk={runSingleChunk}
-                onReauditChunk={auditSingleChunk}
-              />
-              <AuditPanel
-                onRunAuditOnly={runAuditOnly}
-                onReauditChunk={auditSingleChunk}
-              />
-            </main>
-          </Suspense>
-        )}
+              <PanelTransitionVeil panelKey={editorContentKey} tone="paper" variant="project" />
+            </div>
+          </main>
+        </Suspense>
+      ) : (
+        <Suspense fallback={null}>
+          <main className="relative grid grid-cols-1 md:grid-cols-12 flex-1 min-h-0">
+            <PipelineConfig
+              onRunPipeline={runPipeline}
+              onRunAuditOnly={runAuditOnly}
+              onCancelPipeline={cancelPipeline}
+            />
+            <ProductionStream
+              onRetranslateChunk={runSingleChunk}
+              onReauditChunk={auditSingleChunk}
+            />
+            <AuditPanel
+              onRunAuditOnly={runAuditOnly}
+              onReauditChunk={auditSingleChunk}
+            />
+            <PanelTransitionVeil panelKey={editorContentKey} tone="bg" variant="project" />
+          </main>
+        </Suspense>
+      )}
 
-        {settingsLoaded.current && (
+      {settingsLoaded.current && (
+        <Suspense fallback={null}>
+          <SettingsModal />
+        </Suspense>
+      )}
+      {projectPanelLoaded.current && (
+        <Suspense fallback={null}>
+          <ProjectPanel />
+        </Suspense>
+      )}
+      {libraryPanelLoaded.current && (
+        <Suspense fallback={null}>
+          <LibraryPanel />
+        </Suspense>
+      )}
+
+      <ConfirmDialog />
+      <PreflightDialog />
+      <RunResumeBanner />
+      <WorkspaceSettingsModal
+        open={showWorkspaceSettings}
+        onClose={() => setShowWorkspaceSettings(false)}
+      />
+      {pendingImport && (
+        <Suspense fallback={null}>
+          <ImportPreviewDialog
+            fileName={pendingImport.fileName}
+            text={pendingImport.text}
+            useChunking={pendingImport.useChunking}
+            wordsPerChunk={pendingImport.wordsPerChunk}
+            headingAware={pendingImport.headingAware}
+            carryTrailingShortBlocks={pendingImport.carryTrailingShortBlocks}
+            markdownAware={pendingImport.format === 'markdown'}
+            format={pendingImport.format}
+            experimental={pendingImport.experimental}
+            onUseChunkingChange={(value) =>
+              setPendingImport((current) => (current ? { ...current, useChunking: value } : current))
+            }
+            onWordsPerChunkChange={(value) =>
+              setPendingImport((current) => (current ? { ...current, wordsPerChunk: value } : current))
+            }
+            onHeadingAwareChange={(value) =>
+              setPendingImport((current) => (current ? { ...current, headingAware: value } : current))
+            }
+            onCarryTrailingShortBlocksChange={(value) =>
+              setPendingImport((current) => (current ? { ...current, carryTrailingShortBlocks: value } : current))
+            }
+            onCancel={() => setPendingImport(null)}
+            onConfirm={handleConfirmImport}
+          />
+        </Suspense>
+      )}
+    </>
+  );
+}
+
+export default function App() {
+  useEffect(() => { void initLogger(); }, []);
+
+  const { isLoaded, workspaces, activeWorkspace, loadWorkspaces } = useWorkspaceStore();
+  const currentProjectId = useProjectStore((s) => s.currentProjectId);
+  const isWorkspaceHome = Boolean(activeWorkspace && !currentProjectId);
+
+  useEffect(() => {
+    loadWorkspaces().catch((err: unknown) => console.error('[App] loadWorkspaces failed:', err));
+  }, [loadWorkspaces]);
+
+  // ── Shell loading ────────────────────────────────────────────────────
+  if (!isLoaded) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-editorial-bg">
+        <div className="text-sm text-editorial-muted">Caricamento...</div>
+      </div>
+    );
+  }
+
+  // ── First run: nessun workspace ──────────────────────────────────────
+  if (workspaces.length === 0) {
+    return (
+      <ErrorBoundary>
+        <WorkspaceWizard />
+        <Toaster
+          position="bottom-right"
+          toastOptions={{ style: { fontFamily: 'var(--font-sans, system-ui)', fontSize: '12px' } }}
+          richColors
+          closeButton
+        />
+      </ErrorBoundary>
+    );
+  }
+
+  return (
+    <ErrorBoundary>
+      <HighlightColorSync />
+      <div className="h-screen overflow-hidden bg-editorial-bg text-editorial-ink font-sans flex flex-col">
+        <div className="flex-shrink-0">
+          <Header />
+        </div>
+        {isWorkspaceHome ? (
+          <div className="flex flex-1 min-h-0">
+            <PipelineSidebar mode="dashboard" />
+            <div className="relative flex min-w-0 flex-1">
+              <WorkspaceHome />
+              <PanelTransitionVeil
+                panelKey={`workspace-home-${activeWorkspace?.id ?? 'none'}`}
+                tone="paper"
+                variant="workspace"
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="flex min-h-0 flex-1 flex-col">
+            <EditorView />
+          </div>
+        )}
+        {isWorkspaceHome ? (
           <Suspense fallback={null}>
             <SettingsModal />
-          </Suspense>
-        )}
-        {projectPanelLoaded.current && (
-          <Suspense fallback={null}>
             <ProjectPanel />
-          </Suspense>
-        )}
-        {libraryPanelLoaded.current && (
-          <Suspense fallback={null}>
             <LibraryPanel />
           </Suspense>
-        )}
-
+        ) : null}
         <ConfirmDialog />
-        <PreflightDialog />
-        <RunResumeBanner />
-
       </div>
       <Toaster
         position="bottom-right"
@@ -170,5 +422,33 @@ export default function App() {
         closeButton
       />
     </ErrorBoundary>
+  );
+}
+
+function PanelTransitionVeil({
+  panelKey,
+  tone,
+  variant = 'workspace',
+}: {
+  panelKey: string;
+  tone: 'paper' | 'bg';
+  variant?: 'workspace' | 'project';
+}) {
+  const transition =
+    variant === 'project'
+      ? { duration: 0.42, ease: [0.22, 1, 0.36, 1] as const }
+      : { duration: 0.44, ease: [0.19, 1, 0.22, 1] as const };
+  const initialOpacity = variant === 'project' ? 0.78 : 0.92;
+
+  return (
+    <motion.div
+      key={panelKey}
+      initial={{ opacity: initialOpacity }}
+      animate={{ opacity: 0 }}
+      transition={transition}
+      className={`pointer-events-none absolute inset-0 z-20 ${
+        tone === 'paper' ? 'bg-editorial-paper' : 'bg-editorial-bg'
+      }`}
+    />
   );
 }

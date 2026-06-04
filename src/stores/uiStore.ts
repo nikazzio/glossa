@@ -7,7 +7,7 @@ import type {
 } from '../types';
 
 export type InsightsDrawerTab = 'index' | 'search' | 'stats' | 'coherence' | 'glossary';
-export type ChunkDrawerTab = 'audit' | 'notes' | 'operations';
+export type ChunkDrawerTab = 'audit' | 'notes' | 'operations' | 'memory';
 export type RunPhase = 'test' | 'production';
 export type DocumentPaneFocus = 'both' | 'source' | 'translation';
 

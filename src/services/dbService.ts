@@ -4,7 +4,7 @@ import { invoke } from '@tauri-apps/api/core';
 let db: Database | null = null;
 const DB_URL = 'sqlite:glossa.db';
 
-async function getDb(): Promise<Database> {
+export async function getDb(): Promise<Database> {
   if (!db) {
     db = await Database.load(DB_URL);
   }
@@ -479,6 +479,135 @@ export async function initDatabase(): Promise<void> {
   await conn.execute(
     "INSERT OR IGNORE INTO app_settings (key, value) VALUES ('schema_version', '1')"
   );
+
+  // ── Phrase Memory schema ─────────────────────────────────────────────
+
+  await conn.execute(`
+    CREATE TABLE IF NOT EXISTS workspaces (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      embedding_model TEXT NOT NULL DEFAULT 'text-embedding-3-small',
+      created_at TEXT NOT NULL
+    )
+  `);
+
+  try {
+    await conn.execute(
+      `ALTER TABLE projects ADD COLUMN workspace_id TEXT REFERENCES workspaces(id)`
+    );
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (!msg.includes('duplicate column') && !msg.includes('already exists')) throw err;
+  }
+
+  await conn.execute(`
+    CREATE TABLE IF NOT EXISTS phrase_memory_presets (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      is_builtin INTEGER NOT NULL DEFAULT 0,
+      config TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    )
+  `);
+
+  try {
+    await conn.execute(
+      `ALTER TABLE phrase_memory_presets ADD COLUMN workspace_id TEXT REFERENCES workspaces(id)`
+    );
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (!msg.includes('duplicate column') && !msg.includes('already exists')) throw err;
+  }
+
+  await conn.execute(`
+    CREATE TABLE IF NOT EXISTS phrase_memory (
+      id TEXT PRIMARY KEY,
+      workspace_id TEXT NOT NULL REFERENCES workspaces(id),
+      source_phrase TEXT NOT NULL,
+      target_phrase TEXT NOT NULL,
+      source_language TEXT NOT NULL,
+      target_language TEXT NOT NULL,
+      author TEXT,
+      work TEXT,
+      domain TEXT,
+      tags TEXT,
+      notes TEXT,
+      chunk_id TEXT,
+      project_id TEXT REFERENCES projects(id),
+      embedding BLOB NOT NULL,
+      created_at TEXT NOT NULL
+    )
+  `);
+
+  await conn.execute(`
+    CREATE TABLE IF NOT EXISTS source_phrase_embeddings (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL REFERENCES projects(id),
+      chunk_id TEXT,
+      source_phrase TEXT NOT NULL,
+      embedding BLOB NOT NULL,
+      created_at TEXT NOT NULL
+    )
+  `);
+
+  for (const col of [
+    'ALTER TABLE pipelines ADD COLUMN use_phrase_memory INTEGER NOT NULL DEFAULT 0',
+    'ALTER TABLE pipelines ADD COLUMN phrase_memory_preset_id TEXT DEFAULT NULL',
+    'ALTER TABLE pipelines ADD COLUMN phrase_memory_overrides TEXT DEFAULT NULL',
+  ]) {
+    try {
+      await conn.execute(col);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (!msg.includes('duplicate column') && !msg.includes('already exists')) throw err;
+    }
+  }
+
+  await conn.execute(`
+    CREATE TABLE IF NOT EXISTS historical_techniques (
+      id TEXT PRIMARY KEY,
+      workspace_id TEXT NOT NULL REFERENCES workspaces(id),
+      source_text TEXT NOT NULL,
+      translated_text TEXT NOT NULL,
+      source_language TEXT NOT NULL,
+      target_language TEXT NOT NULL,
+      author TEXT,
+      work TEXT,
+      year TEXT,
+      embedding_source BLOB NOT NULL,
+      embedding_translated BLOB NOT NULL,
+      source_chunk_id TEXT,
+      translation_stale INTEGER DEFAULT 0,
+      created_at TEXT NOT NULL
+    )
+  `);
+
+  await conn.execute(`
+    CREATE TABLE IF NOT EXISTS technique_tags (
+      technique_id TEXT NOT NULL REFERENCES historical_techniques(id),
+      category TEXT NOT NULL,
+      value TEXT NOT NULL,
+      PRIMARY KEY (technique_id, category, value)
+    )
+  `);
+
+  await conn.execute(`
+    CREATE INDEX IF NOT EXISTS idx_technique_tags_category_value
+    ON technique_tags(category, value)
+  `);
+
+  const wsKeyCheck = await conn.select<Array<{ count: number }>>(
+    `SELECT COUNT(*) as count FROM app_settings WHERE key = 'active_workspace_id'`
+  );
+  if ((wsKeyCheck[0]?.count ?? 0) === 0) {
+    await conn.execute(
+      `INSERT INTO app_settings (key, value) VALUES ('active_workspace_id', '')`
+    );
+  }
+
+  const { seedBuiltinPresets } = await import('./phraseMemoryPresetService');
+  await seedBuiltinPresets(conn);
 
   console.log('[Glossa] Database initialized');
 }

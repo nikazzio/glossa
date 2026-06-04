@@ -143,6 +143,10 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
   saveAllDirty: async () => {
     const { dirtyIds } = get();
-    await Promise.allSettled(dirtyIds.map((id) => get().saveGlossaryEntries(id)));
+    const results = await Promise.allSettled(dirtyIds.map((id) => get().saveGlossaryEntries(id)));
+    const failed = results.filter((result) => result.status === 'rejected');
+    if (failed.length > 0) {
+      throw new Error('Failed to save one or more dictionaries.');
+    }
   },
 }));

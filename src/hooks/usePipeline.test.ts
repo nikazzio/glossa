@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { usePipelineStore } from '../stores/pipelineStore';
 import { useChunksStore } from '../stores/chunksStore';
 import { useUiStore } from '../stores/uiStore';
+import { usePhraseMemoryStore } from '../stores/phraseMemoryStore';
 import { makeTranslationChunk } from '../test/chunkFactory';
 import { usePipeline } from './usePipeline';
 
@@ -61,6 +62,7 @@ describe('usePipeline', () => {
     llmMocks.computeBlobs.mockResolvedValue([]);
     llmMocks.runCoherenceForChunk.mockResolvedValue({ issues: [] });
     preflightMocks.showPreflightDialog.mockResolvedValue(true);
+    usePhraseMemoryStore.getState().reset();
 
     useUiStore.setState({ pipelineMode: 'production' });
     usePipelineStore.setState((state) => ({
@@ -228,6 +230,68 @@ describe('usePipeline', () => {
     expect(useChunksStore.getState().chunks[1].currentDraft).toBe(
       'Translated only chunk-1',
     );
+  });
+
+  it('does not inject selected memory matches when Phrase Memory is disabled', async () => {
+    usePipelineStore.setState((state) => ({
+      ...state,
+      config: { ...state.config, usePhraseMemory: false },
+    }));
+    usePhraseMemoryStore.getState().setMatches('chunk-1', [
+      {
+        phraseMemoryId: 'pm-1',
+        sourcePhrase: 'stored source',
+        targetPhrase: 'stored target',
+        distance: 0.1,
+      },
+    ]);
+    usePhraseMemoryStore.getState().setEnabledMatchIds('chunk-1', new Set(['pm-1']));
+    llmMocks.runStage.mockResolvedValue({ content: 'Translated without memory' });
+    llmMocks.judgeTranslation.mockResolvedValue({
+      content: '',
+      rating: 'excellent',
+      issues: [],
+    });
+
+    const { result } = renderHook(() => usePipeline());
+    await act(async () => {
+      await result.current.runSingleChunk('chunk-1');
+    });
+
+    const stage = llmMocks.runStage.mock.calls[0][1];
+    expect(stage.prompt).not.toContain('stored source');
+    expect(stage.prompt).not.toContain('stored target');
+  });
+
+  it('injects only explicitly selected memory matches when Phrase Memory is enabled', async () => {
+    usePipelineStore.setState((state) => ({
+      ...state,
+      config: { ...state.config, usePhraseMemory: true },
+    }));
+    usePhraseMemoryStore.getState().setMatches('chunk-1', [
+      {
+        phraseMemoryId: 'pm-1',
+        sourcePhrase: 'stored source',
+        targetPhrase: 'stored target',
+        distance: 0.1,
+      },
+    ]);
+    usePhraseMemoryStore.getState().setEnabledMatchIds('chunk-1', new Set(['pm-1']));
+    llmMocks.runStage.mockResolvedValue({ content: 'Translated with memory' });
+    llmMocks.judgeTranslation.mockResolvedValue({
+      content: '',
+      rating: 'excellent',
+      issues: [],
+    });
+
+    const { result } = renderHook(() => usePipeline());
+    await act(async () => {
+      await result.current.runSingleChunk('chunk-1');
+    });
+
+    const stage = llmMocks.runStage.mock.calls[0][1];
+    expect(stage.prompt).toContain('stored source');
+    expect(stage.prompt).toContain('stored target');
   });
 
   it('re-audits only the targeted chunk', async () => {

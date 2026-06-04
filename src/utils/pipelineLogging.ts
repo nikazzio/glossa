@@ -28,6 +28,16 @@ function promptDetail(systemPrompt: string, userPrompt: string): string {
 export const pipelineLog = {
   // ── Pipeline scope (batch / single, audit-only / pipeline / coherence) ──
 
+  newRunMarker(chunkId?: string): void {
+    logOperation({
+      level: 'info',
+      scope: 'pipeline',
+      message: 'New run',
+      meta: { runBoundary: true },
+      ...(chunkId ? { chunkId } : {}),
+    });
+  },
+
   batchPipelineStart(chunkCount: number, enabledStageCount: number): void {
     logOperation({
       level: 'info',

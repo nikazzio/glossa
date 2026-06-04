@@ -19,11 +19,14 @@ import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
+import { useProjectStore } from '../../stores/projectStore';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
 import type { TranslationChunk } from '../../types';
 import { indexPad } from '../../utils';
 import { CopyButton, HighlightedText, MarkdownEditor, ProcessingLine } from '../common';
 import { IconButton, Tooltip, type IconButtonTone } from '../ui';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { usePhraseMemoryAutoSearch } from '../../hooks/usePhraseMemoryAutoSearch';
 import { escapeHtml, useGlossaryHighlight } from '../../hooks/useGlossaryHighlight';
 import { usePanelScrollSync } from '../../hooks/usePanelScrollSync';
 import { useStageDiff } from '../../hooks/useStageDiff';
@@ -33,6 +36,7 @@ const NOOP_CHANGE = () => {};
 
 interface DocumentViewProps {
   onRetranslateChunk: (chunkId: string) => void;
+  onImportDocument: () => void;
 }
 
 const STAGE_TONE_MAP: Record<string, IconButtonTone> = {
@@ -44,9 +48,14 @@ const STAGE_TONE_MAP: Record<string, IconButtonTone> = {
 };
 
 
-export function DocumentView({ onRetranslateChunk }: DocumentViewProps) {
+export function DocumentView({
+  onRetranslateChunk,
+  onImportDocument,
+}: DocumentViewProps) {
   const { t } = useTranslation();
   const { config } = usePipelineStore();
+  const { currentProjectId, projects } = useProjectStore();
+  const activeWorkspace = useWorkspaceStore((state) => state.activeWorkspace);
   const {
     chunks,
     updateChunkDraft,
@@ -55,6 +64,11 @@ export function DocumentView({ onRetranslateChunk }: DocumentViewProps) {
     toggleChunkTranslationLock,
     toggleChunkSourceEditing,
   } = useChunksStore();
+  usePhraseMemoryAutoSearch();
+
+  const handleLockToggle = (chunk: TranslationChunk) => {
+    toggleChunkTranslationLock(chunk.id);
+  };
 
   const {
     selectedChunkId,
@@ -198,47 +212,38 @@ export function DocumentView({ onRetranslateChunk }: DocumentViewProps) {
     return hasFootnoteMarkers ? highlightSuperscriptMarkersHtml(base) : base;
   }, [deferredSourceText, showHighlight, highlightsEnabled, searchQuery, paneFocus, sourceHighlight.html]);
 
+  const currentProject = projects.find((project) => project.id === currentProjectId) ?? null;
+
   if (!currentChunk) {
     return (
-      <section className="flex w-full flex-col items-center justify-center bg-editorial-paper overflow-y-auto min-h-0 flex-1 px-8 py-16">
-        <div className="w-full max-w-2xl flex flex-col items-center">
-          {/* Brand mark */}
-          <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-full border border-editorial-border/60 bg-editorial-bg shadow-[0_4px_20px_rgba(26,26,26,0.06)]">
-            <FileText size={20} className="text-editorial-accent" />
+      <section className="flex min-h-0 w-full flex-1 items-center justify-center overflow-y-auto bg-editorial-paper px-6 py-10">
+        <div className="mx-auto flex w-full max-w-3xl flex-col items-center text-center">
+          <div className="flex flex-wrap items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-[0.28em] text-editorial-muted">
+              <span>{activeWorkspace?.name ?? t('workspace.noActive')}</span>
+              <span className="h-1 w-1 rounded-full bg-editorial-accent/60" aria-hidden="true" />
+              <span>{t('document.projectHomeEyebrow')}</span>
           </div>
-
-          {/* Label */}
-          <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-            {t('document.emptyLabel')}
-          </div>
-
-          {/* Headline */}
-          <h2 className="mb-4 text-center font-display text-5xl italic tracking-tight text-editorial-ink">
-            {t('document.emptyTitle')}
+          <h2 className="mt-4 max-w-3xl font-display text-4xl italic tracking-tight text-editorial-ink md:text-5xl">
+            {currentProject?.name ?? t('document.projectHomeTitle')}
           </h2>
-
-          {/* Body */}
-          <p className="mb-12 max-w-md text-center text-sm leading-relaxed text-editorial-muted">
-            {t('document.emptyBody')}
+          <p className="mt-3 text-sm text-editorial-muted">
+            {t('document.projectHomeEmpty')}
           </p>
 
-          {/* Dashboard placeholder cards */}
-          <div className="grid w-full grid-cols-3 gap-3">
-            {([
-              { key: 'pipeline',     icon: Languages, label: t('document.emptyCardPipeline') },
-              { key: 'translations', icon: Zap,       label: t('document.emptyCardTranslations') },
-              { key: 'quality',      icon: Wand2,     label: t('document.emptyCardQuality') },
-            ] as const).map(({ key, icon: Icon, label }) => (
-              <div
-                key={key}
-                className="flex flex-col items-center gap-3 rounded-[20px] border border-editorial-border/60 bg-editorial-bg/70 px-5 py-6 text-center"
-              >
-                <Icon size={18} className="text-editorial-muted/40" />
-                <div className="font-display text-3xl italic text-editorial-ink/20">—</div>
-                <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted/50">{label}</div>
-              </div>
-            ))}
-          </div>
+          <button
+            type="button"
+            onClick={onImportDocument}
+            aria-label={t('document.projectHomeImport')}
+            title={t('document.projectHomeImport')}
+            className="group mt-8 flex w-full max-w-xl flex-col items-center rounded-[30px] border border-dashed border-editorial-border bg-editorial-bg/65 px-6 py-8 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] transition-colors hover:border-editorial-accent/40 hover:bg-editorial-bg focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          >
+            <span className="inline-flex h-14 w-14 items-center justify-center rounded-full border border-editorial-border bg-editorial-paper text-editorial-muted transition-colors group-hover:border-editorial-accent/45 group-hover:text-editorial-accent">
+              <FileText size={22} />
+            </span>
+            <span className="mt-3 text-xs font-bold uppercase tracking-[0.24em] text-editorial-muted transition-colors group-hover:text-editorial-accent">
+              {t('document.projectHomeImport')}
+            </span>
+          </button>
         </div>
       </section>
     );
@@ -415,7 +420,7 @@ export function DocumentView({ onRetranslateChunk }: DocumentViewProps) {
                 size="sm"
                 tone={currentChunk.translationLocked ? 'success' : 'muted'}
                 title={currentChunk.translationLocked ? t('document.unlockTranslation') : t('document.lockTranslation')}
-                onClick={() => toggleChunkTranslationLock(currentChunk.id)}
+                onClick={() => handleLockToggle(currentChunk)}
                 disabled={!currentChunk.currentDraft?.trim()}
                 ariaPressed={currentChunk.translationLocked === true}
               >
@@ -726,4 +731,3 @@ function InlineStatusBadge({
     </Tooltip>
   );
 }
-

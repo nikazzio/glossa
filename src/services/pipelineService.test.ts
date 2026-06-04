@@ -45,6 +45,10 @@ const basePipelineRow = {
   run_in_progress: 0,
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
+  coherence_prompt: null,
+  use_phrase_memory: 0,
+  phrase_memory_preset_id: null,
+  phrase_memory_overrides: null,
 };
 
 const baseConfig: PipelineConfig = {
@@ -274,6 +278,65 @@ describe('pipelineService', () => {
         expect.stringContaining('position ASC, created_at ASC'),
         expect.any(Array),
       );
+    });
+  });
+
+  // ── phrase memory fields ─────────────────────────────────────────────
+
+  describe('phrase memory persistence', () => {
+    it('loads usePhraseMemory=false when column is 0', async () => {
+      dbMocks.select
+        .mockResolvedValueOnce([{ ...basePipelineRow, use_phrase_memory: 0 }])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+      const result = await getPipelineConfig('pipeline-1');
+      expect(result?.config.usePhraseMemory).toBe(false);
+      expect(result?.config.phraseMemoryPresetId).toBeNull();
+      expect(result?.config.phraseMemoryOverrides).toBeNull();
+    });
+
+    it('loads usePhraseMemory=true and preset when set', async () => {
+      const row = {
+        ...basePipelineRow,
+        use_phrase_memory: 1,
+        phrase_memory_preset_id: 'preset-default',
+        phrase_memory_overrides: '{"similarityThreshold":0.85}',
+      };
+      dbMocks.select
+        .mockResolvedValueOnce([row])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+      const result = await getPipelineConfig('pipeline-1');
+      expect(result?.config.usePhraseMemory).toBe(true);
+      expect(result?.config.phraseMemoryPresetId).toBe('preset-default');
+      expect(result?.config.phraseMemoryOverrides).toEqual({ similarityThreshold: 0.85 });
+    });
+
+    it('savePipelineConfig persists phrase memory fields', async () => {
+      const config: PipelineConfig = {
+        ...baseConfig,
+        usePhraseMemory: true,
+        phraseMemoryPresetId: 'preset-default',
+        phraseMemoryOverrides: { maxResults: 5 },
+      };
+      await savePipelineConfig('pipeline-1', config);
+      const [query, params] = dbMocks.execute.mock.calls[0] as [string, unknown[]];
+      expect(query).toContain('use_phrase_memory');
+      expect(query).toContain('phrase_memory_preset_id');
+      expect(query).toContain('phrase_memory_overrides');
+      expect(params).toContain(1);
+      expect(params).toContain('preset-default');
+      expect(params).toContain('{"maxResults":5}');
+    });
+
+    it('savePipelineConfig stores null overrides when not set', async () => {
+      const config: PipelineConfig = {
+        ...baseConfig,
+        usePhraseMemory: false,
+      };
+      await savePipelineConfig('pipeline-1', config);
+      const [, params] = dbMocks.execute.mock.calls[0] as [string, unknown[]];
+      expect(params).toContain(0);
     });
   });
 

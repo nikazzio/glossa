@@ -18,6 +18,8 @@ export interface Project {
   view_mode?: ViewMode | null;
   created_at: string;
   updated_at: string;
+  pipeline_count: number;
+  pipeline_names: string | null;
 }
 
 export interface ProjectSource {
@@ -59,8 +61,19 @@ export interface SavedTranslation {
 
 // ── Projects CRUD ────────────────────────────────────────────────────
 
-export async function listProjects(): Promise<Project[]> {
-  return select<Project>('SELECT * FROM projects ORDER BY updated_at DESC');
+export async function listProjects(workspaceId: string): Promise<Project[]> {
+  return select<Project>(
+    `SELECT
+       p.*,
+       COUNT(pi.id) AS pipeline_count,
+       GROUP_CONCAT(pi.name, ' · ') AS pipeline_names
+     FROM projects p
+     LEFT JOIN pipelines pi ON pi.project_id = p.id
+     WHERE p.workspace_id = $1
+     GROUP BY p.id
+     ORDER BY p.updated_at DESC`,
+    [workspaceId],
+  );
 }
 
 export async function getProject(id: string): Promise<Project | null> {
@@ -72,12 +85,13 @@ export async function createProject(
   name: string,
   sourceLang: string,
   targetLang: string,
+  workspaceId: string,
 ): Promise<string> {
   const id = `proj-${Date.now()}`;
   await execute(
-    `INSERT INTO projects (id, name, source_language, target_language)
-     VALUES ($1, $2, $3, $4)`,
-    [id, name, sourceLang, targetLang],
+    `INSERT INTO projects (id, name, source_language, target_language, workspace_id)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [id, name, sourceLang, targetLang, workspaceId],
   );
   // Create default pipeline for this project.
   const pipelineId = `pipeline-${Date.now()}`;
@@ -106,6 +120,12 @@ export async function updateProject(
 }
 
 export async function deleteProject(id: string): Promise<void> {
+  await execute('DELETE FROM operation_logs WHERE project_id = $1', [id]);
+  await execute('DELETE FROM project_glossaries WHERE project_id = $1', [id]);
+  await execute('DELETE FROM source_phrase_embeddings WHERE project_id = $1', [id]);
+  await execute('UPDATE phrase_memory SET project_id = NULL, chunk_id = NULL WHERE project_id = $1', [id]);
+  await execute('DELETE FROM translations WHERE project_id = $1', [id]);
+  await execute('DELETE FROM pipelines WHERE project_id = $1', [id]);
   await execute('DELETE FROM projects WHERE id = $1', [id]);
 }
 

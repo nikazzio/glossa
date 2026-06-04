@@ -11,6 +11,7 @@ export interface PromptPreviewBlock {
     | 'markdown-rules'
     | 'blob-context'
     | 'stage-instructions'
+    | 'phrase-memory'
     | 'current-chunk-id'
     | 'source-chunk-text'
     | 'previous-stage-result'
@@ -109,6 +110,13 @@ function buildSourceAwareBlocks(config: PipelineConfig, stage: PipelineStageConf
       body: `Core Instructions:\n${stage.prompt.trim() || 'No stage instructions yet.'}${glossaryReminder}\n\n${outputContract}`,
       kind: 'static',
     },
+    ...(config.usePhraseMemory
+      ? [{
+          id: 'phrase-memory' as const,
+          body: 'Translation memory references (use for terminology consistency only, do not copy verbatim):\n- "{{source phrase}}" → "{{target phrase}}"',
+          kind: 'runtime' as const,
+        }]
+      : []),
     {
       id: 'current-chunk-id',
       body: 'Current chunk id: {{CURRENT_CHUNK_ID}}',

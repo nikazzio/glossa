@@ -9,8 +9,13 @@ import { showPreflightDialog } from '../stores/preflightStore';
 import { withRetry, friendlyError, is429Error } from '../utils/retry';
 import { qualityDefault, qualityFailure } from '../utils';
 import { pipelineLog } from '../utils/pipelineLogging';
+import { useOperationLogStore } from '../stores/operationLogStore';
 import type { Issue, JudgeResult, PromptInfo, ResponseInfo, TokenUsage, TranslationChunk } from '../types';
 import { useProjectStore } from '../stores/projectStore';
+import { usePhraseMemoryStore } from '../stores/phraseMemoryStore';
+import type { PhraseMemoryMatch } from '../stores/phraseMemoryStore';
+import { buildMemoryInjection } from '../services/phraseMemoryInjection';
+import { getChunksWithAllMatchesDisabled } from '../utils/memoryPreLaunchCheck';
 import { saveChunkCheckpoint, setPipelineRunState } from '../services/pipelineService';
 import { buildPipelineFingerprint } from '../utils/pipelineFingerprint';
 import { calculateBlobBudget } from '../models/catalog';
@@ -174,10 +179,19 @@ export function usePipeline() {
    * This separation keeps room for future multi-pipeline support where each
    * pipeline tracks its own run lifecycle independently for the same document.
    */
+  const getChunkMemoryBlock = (chunkId: string): string | undefined => {
+    if (!usePipelineStore.getState().config.usePhraseMemory) return undefined;
+    const entry = usePhraseMemoryStore.getState().matchesByChunk.get(chunkId);
+    if (!entry || entry.matches.length === 0) return undefined;
+    const selected = entry.matches.filter((m) => entry.enabledMatchIds.has(m.id));
+    return buildMemoryInjection(selected) ?? undefined;
+  };
+
   const executePipelineForChunk = async (
     chunk: TranslationChunk,
-    options: { batchMode?: BatchRunMode },
+    options: { batchMode?: BatchRunMode; memoryBlock?: string },
   ): Promise<ChunkOutcome> => {
+    const config = usePipelineStore.getState().config;
     if (useChunksStore.getState().cancelRequested) return 'cancelled';
     if (options.batchMode === 'resume' && chunk.status === 'completed' && !chunk.translationStale) return 'skipped';
     if (options.batchMode === 'rerun-unlocked' && chunk.translationLocked) return 'skipped';
@@ -196,7 +210,13 @@ export function usePipeline() {
     let producedOutput = false;
     updateChunkStatus(chunk.id, 'processing');
 
-    for (const stage of config.stages) {
+    const stages = options.memoryBlock
+      ? config.stages.map((s) =>
+          s.enabled ? { ...s, prompt: `${s.prompt}\n\n${options.memoryBlock}` } : s
+        )
+      : config.stages;
+
+    for (const stage of stages) {
       if (!stage.enabled) continue;
 
       // Override global language pair with stage-specific one if set, but not when persona is active.
@@ -294,12 +314,13 @@ export function usePipeline() {
           pipelineLog.stageCancelled(chunk.id, stage.id, stage.name, stageDurationMs);
           return 'cancelled';
         }
-        const msg = friendlyError(error instanceof Error ? error.message : String(error));
+        const rawError = error instanceof Error ? error.message : String(error);
+        const msg = friendlyError(rawError);
         updateChunkStage(chunk.id, stage.id, {
           content: '', status: 'error', error: msg,
         });
         updateChunkStatus(chunk.id, 'error');
-        pipelineLog.stageError(chunk.id, stage.id, stage.name, msg, stageDurationMs);
+        pipelineLog.stageError(chunk.id, stage.id, stage.name, rawError, stageDurationMs);
         toast.error(t('errors.stageFailed', { name: stage.name }), { description: msg });
         return 'failed';
       }
@@ -335,6 +356,7 @@ export function usePipeline() {
     textToAudit: string | undefined,
     effectiveConfig?: typeof config,
   ): Promise<ChunkOutcome> => {
+    const config = usePipelineStore.getState().config;
     if (!textToAudit) return 'skipped';
     // We do NOT short-circuit on cancelRequested here — once we have a
     // complete translation for this chunk, finishing the audit costs
@@ -414,7 +436,17 @@ export function usePipeline() {
     const isTestMode = pipelineMode === 'test';
     // In test mode always process the first N chunks (never resume from a mid-point).
     const liveChunks = isTestMode ? allChunks.slice(0, pipelineTestChunkCount) : allChunks;
+    if (config.usePhraseMemory) {
+      const liveChunkIds = new Set(liveChunks.map((chunk) => chunk.id));
+      const blockedChunks = getChunksWithAllMatchesDisabled(
+        usePhraseMemoryStore.getState().matchesByChunk,
+      ).filter((chunkId) => liveChunkIds.has(chunkId));
+      if (blockedChunks.length > 0) {
+        toast.warning(t('memory.prelaunchWarning', { count: blockedChunks.length }));
+      }
+    }
 
+    pipelineLog.newRunMarker();
     pipelineLog.batchPipelineStart(liveChunks.length, config.stages.filter((stage) => stage.enabled).length);
     if (!(await ensureProvidersReady([
       ...config.stages.filter((stage) => stage.enabled).map((stage, i) => ({
@@ -460,7 +492,7 @@ export function usePipeline() {
 
     try {
       for (const chunk of liveChunks) {
-        const outcome = await executePipelineForChunk(chunk, { batchMode });
+        const outcome = await executePipelineForChunk(chunk, { batchMode, memoryBlock: getChunkMemoryBlock(chunk.id) });
         if (outcome === 'cancelled') { cancelled = true; break; }
         if (outcome === 'failed') errorCount++;
         if ((outcome === 'completed' || outcome === 'failed') && activePipelineId) {
@@ -498,9 +530,12 @@ export function usePipeline() {
   }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureProvidersReady, setBlobAssignments]);
 
   const runSingleChunk = useCallback(async (chunkId: string, finalStatus: FinalChunkStatus = 'completed') => {
+    const config = usePipelineStore.getState().config;
     if (useChunksStore.getState().isProcessing) return;
     const chunk = useChunksStore.getState().chunks.find((c) => c.id === chunkId);
     if (!chunk) return;
+    useOperationLogStore.getState().clearChunk(chunkId);
+    pipelineLog.newRunMarker(chunkId);
     pipelineLog.singlePipelineStart(chunkId);
     if (!(await ensureProvidersReady([
       ...config.stages.filter((stage) => stage.enabled).map((stage, i) => ({
@@ -534,7 +569,7 @@ export function usePipeline() {
     // Force a redo even if this chunk was already completed — the user
     // explicitly asked for it via the per-chunk action menu.
     const freshChunk = useChunksStore.getState().chunks.find((c) => c.id === chunkId) ?? chunk;
-    const outcome = await executePipelineForChunk(freshChunk, {});
+    const outcome = await executePipelineForChunk(freshChunk, { memoryBlock: getChunkMemoryBlock(chunkId) });
 
     if (outcome === 'completed' && finalStatus === 'preview') {
       updateChunkStatus(chunkId, 'preview');
@@ -553,7 +588,7 @@ export function usePipeline() {
       // Per-chunk failure already raised a toast inside the helper; no
       // extra summary toast is needed.
     }
-  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureProvidersReady, setBlobAssignments]);
+  }, [t, setIsProcessing, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureProvidersReady, setBlobAssignments]);
 
   const runDryRun = useCallback(async () => {
     if (useChunksStore.getState().isProcessing) return;
@@ -570,6 +605,7 @@ export function usePipeline() {
       return;
     }
 
+    pipelineLog.newRunMarker();
     pipelineLog.batchPipelineStart(
       targets.length,
       config.stages.filter((stage) => stage.enabled).length,
@@ -609,7 +645,7 @@ export function usePipeline() {
 
     for (const target of targets) {
       const freshTarget = useChunksStore.getState().chunks.find((c) => c.id === target.id) ?? target;
-      const outcome = await executePipelineForChunk(freshTarget, {});
+      const outcome = await executePipelineForChunk(freshTarget, { memoryBlock: getChunkMemoryBlock(freshTarget.id) });
 
       if (outcome === 'cancelled') {
         cancelled = true;
@@ -827,9 +863,43 @@ export function usePipeline() {
     toast.message(t('pipeline.stopRequested'));
   }, [requestCancel, t]);
 
+  const rerunChunkWithMemory = useCallback(async (
+    chunkId: string,
+    selectedMatches: PhraseMemoryMatch[],
+  ) => {
+    const memoryBlock = buildMemoryInjection(selectedMatches);
+    if (!memoryBlock) {
+      await runSingleChunk(chunkId, 'completed');
+      return;
+    }
+    const { config: currentConfig, setConfig } = usePipelineStore.getState();
+    const originalPromptById = new Map(
+      currentConfig.stages.filter((s) => s.enabled).map((s) => [s.id, s.prompt]),
+    );
+    setConfig({
+      ...currentConfig,
+      stages: currentConfig.stages.map((s) =>
+        s.enabled ? { ...s, prompt: `${s.prompt}\n\n${memoryBlock}` } : s,
+      ),
+    });
+    try {
+      await runSingleChunk(chunkId, 'completed');
+    } finally {
+      const latestConfig = usePipelineStore.getState().config;
+      setConfig({
+        ...latestConfig,
+        stages: latestConfig.stages.map((s) => {
+          const original = originalPromptById.get(s.id);
+          return original !== undefined ? { ...s, prompt: original } : s;
+        }),
+      });
+    }
+  }, [runSingleChunk]);
+
   return {
     runPipeline,
     runSingleChunk,
+    rerunChunkWithMemory,
     runDryRun,
     runAuditOnly,
     auditSingleChunk,

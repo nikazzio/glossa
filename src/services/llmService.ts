@@ -347,6 +347,16 @@ export const ollamaService = {
   },
 };
 
+// TODO(piano-4): sostituire con comando Tauri extract_key_term reale
+export async function extractTermFromPhrase(
+  sourcePhrase: string,
+  _provider: string,
+  _model: string,
+): Promise<{ term: string; confidence: number }> {
+  const term = sourcePhrase.split(/\s+/).slice(0, 3).join(' ');
+  return { term, confidence: 0 };
+}
+
 export type ApiKeyStorage = 'keychain' | 'file';
 
 /**

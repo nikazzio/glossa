@@ -1,6 +1,7 @@
 {
   "app": {
     "title": "Glossa // Pipeline",
+    "brand": "Glossa",
     "subtitle": "Traduzione assistita da AI"
   },
   "header": {
@@ -25,7 +26,19 @@
     "cacheMissInput": "Input fuori cache",
     "cacheHitRate": "Percentuale cache hit",
     "translationCacheLabel": "Cache traduzione",
-    "auditCacheLabel": "Cache audit"
+    "auditCacheLabel": "Cache audit",
+    "brandArea": "Traduzione",
+    "saveAll": "Salva tutto",
+    "savedAll": "Tutte le modifiche sono salvate",
+    "nothingToSave": "Tutto già salvato",
+    "globalSaveFailed": "Salvataggio fallito",
+    "projectSaveDeferred": "Il salvataggio del progetto è sospeso durante l'esecuzione della pipeline",
+    "savedLibraryProjectDeferred": "Libreria salvata. Il salvataggio del progetto è sospeso durante l'esecuzione della pipeline"
+  },
+  "sidebar": {
+    "areaLabel": "Area",
+    "workspaceSection": "Workspace",
+    "backToWorkspace": "Torna al workspace"
   },
   "pipeline": {
     "globalSetup": "Progetto",
@@ -35,7 +48,7 @@
     "autoSegment": "Auto-segmentazione",
     "headingAware": "Titoli nel chunk successivo (Markdown)",
     "trailingShortBlocks": "Blocchi finali brevi nel chunk successivo",
-    "modeLabel": "Modalità di traduzione",
+    "modeLabel": "Modalità",
     "mode": {
       "standard": "Standard",
       "editorial": "Editoriale"
@@ -154,7 +167,6 @@
     "resetPreviewDone": "Anteprima azzerata",
     "modeTest": "Test",
     "modeProduction": "Produzione",
-    "modeLabel": "Modalità",
     "modeTestHint": "Esegue la pipeline su un solo blocco e produce un'anteprima. La configurazione rimane modificabile.",
     "modeProductionHint": "Esegue la pipeline sull'intero documento.",
     "modeLockedHint": "Modalità bloccata — esistono già traduzioni. Usa Reset completo per ricominciare.",
@@ -216,6 +228,7 @@
     "reasoningEffortLow": "Basso",
     "reasoningEffortMedium": "Medio",
     "reasoningEffortHigh": "Alto",
+    "reasoningEffortXhigh": "Max",
     "modelFit": {
       "preferred": "Buona scelta per {{target}}",
       "discouraged": "Di solito da evitare per {{target}}",
@@ -264,6 +277,10 @@
       "runtime-task": {
         "title": "Istruzione task runtime",
         "hint": "Istruzione valida solo a esecuzione che dice al modello di tradurre, rifinire o formattare solo il chunk corrente."
+      },
+      "phrase-memory": {
+        "title": "Memoria frasi",
+        "hint": "Coppie di memoria di traduzione trovate per questo chunk. Aggiunte alle istruzioni della fase a esecuzione — vengono iniettate solo le corrispondenze abilitate."
       },
       "output-contract": {
         "title": "Contratto output runtime",
@@ -402,6 +419,9 @@
     "contextWindowBadge": "{{count}} ctx",
     "panelTitle": "Configurazione",
     "providerTab": "Provider",
+    "phraseMemoryTab": "Phrase Memory",
+    "phraseMemoryPresetsTitle": "Preset Phrase Memory",
+    "phraseMemoryPresetsHint": "I preset built-in sono di sola lettura. Clona un preset built-in per personalizzarlo, oppure crea un preset custom da zero.",
     "backup": "Backup e ripristino",
     "backupHint": "Esporta l'intero workspace in un file portabile, o ripristina da un backup precedente.",
     "backupExport": "Esporta backup",
@@ -447,7 +467,10 @@
     "pipelineCompletedWithErrors": "Pipeline completata con {{count}} errore/i",
     "reEvalCompleted": "Rivalutazione completata",
     "coherenceFailed": "Audit di coerenza fallito",
-    "contextOverflow": "Finestra di contesto superata. Riduci la dimensione dei chunk o usa un modello con una finestra di contesto più grande."
+    "contextOverflow": "Finestra di contesto superata. Riduci la dimensione dei chunk o usa un modello con una finestra di contesto più grande.",
+    "clipboardFailed": "Impossibile copiare negli appunti",
+    "saveFailed": "Salvataggio fallito",
+    "loadFailed": "Caricamento fallito"
   },
   "coherence": {
     "title": "Coerenza Documento",
@@ -477,7 +500,8 @@
     "delete": "Elimina",
     "save": "Salva",
     "all": "Tutti",
-    "clear": "Cancella"
+    "clear": "Cancella",
+    "optional": "opzionale"
   },
   "projects": {
     "title": "Progetti",
@@ -517,6 +541,70 @@
     "updatedYearsAgo_one": "aggiornato {{count}} anno fa",
     "updatedYearsAgo_other": "aggiornato {{count}} anni fa",
     "loadFailed": "Caricamento progetto fallito"
+  },
+  "workspace": {
+    "activeLabel": "Workspace traduzioni",
+    "noActive": "Nessun workspace attivo",
+    "translationBoundary": "Questo workspace contiene progetti di traduzione, preset Phrase Memory e memoria condivisa. Biblioteca e trascrizioni resteranno aree separate in Glossa 2.0.",
+    "configure": "Configura workspace",
+    "create": "Nuovo workspace",
+    "delete": "Elimina workspace",
+    "deleteTitle": "Eliminare questo workspace?",
+    "deleteMessage": "\"{{name}}\" verrà rimosso in modo definitivo.",
+    "deleteBlockedTitle": "Workspace non vuoto",
+    "deleteBlockedMessage": "Questo workspace contiene ancora {{count}} progetti. Rimuovi tutti i progetti prima di eliminare il workspace.",
+    "deleted": "Workspace eliminato",
+    "deleteFailed": "Eliminazione workspace fallita",
+    "created": "Workspace creato",
+    "updated": "Workspace aggiornato",
+    "saveFailed": "Salvataggio workspace fallito",
+    "saving": "Salvataggio...",
+    "projectsMetric": "Progetti",
+    "workspacesMetric": "Workspace",
+    "pipelineMetric": "Pipeline",
+    "embeddingModel": "Modello embedding",
+    "technicalSummary": "Riepilogo tecnico",
+    "createdAt": "Creato",
+    "memoryScope": "Ambito memoria",
+    "workspaceScoped": "Per workspace",
+    "pipelineBadge_one": "1 pipeline",
+    "pipelineBadge_other": "{{count}} pipeline",
+    "pipelineNamesFallback": "Nessuna pipeline",
+    "areas": {
+      "translations": {
+        "title": "Traduzioni",
+        "body": "Area operativa attuale: progetti, pipeline, Phrase Memory e preset di traduzione vivono qui.",
+        "sidebarHint": "Progetti e pipeline"
+      },
+      "library": {
+        "title": "Biblioteca",
+        "body": "Area futura per catalogo, testi e materiali di studio, separata dalla memoria di traduzione.",
+        "sidebarHint": "Testi e catalogo"
+      },
+      "transcriptions": {
+        "title": "Trascrizioni",
+        "body": "Area futura per OCR, trascrizione e lavorazione del sorgente prima della traduzione.",
+        "sidebarHint": "OCR e preparazione"
+      }
+    },
+    "projectsTitle": "Progetti del workspace",
+    "emptyProjectsTitle": "Nessun progetto in questo workspace",
+    "emptyProjectsBody": "Crea un progetto per iniziare una traduzione dentro questo workspace.",
+    "switcherTitle": "Cambia workspace",
+    "newBookCard": "Nuovo libro",
+    "phraseMemoryTitle": "Phrase Memory del workspace",
+    "phraseMemoryBody": "I preset qui sotto appartengono al workspace attivo. La pipeline sceglie se usare o meno la memoria, ma la configurazione dei preset vive qui.",
+    "nameLabel": "Nome",
+    "descriptionLabel": "Descrizione",
+    "namePlaceholder": "Nome workspace",
+    "descriptionPlaceholder": "Descrizione del workspace",
+    "embeddingChangeWarning": "Cambiare modello embedding richiede rigenerare gli embedding esistenti della memoria. Salva solo se vuoi davvero cambiare modello.",
+    "settings": {
+      "eyebrow": "Impostazioni Workspace",
+      "generalTab": "Generale",
+      "memoryTab": "Phrase Memory",
+      "backupTab": "Backup"
+    }
   },
   "files": {
     "import": "Importa file di testo",
@@ -636,6 +724,27 @@
     "infoChunks": "Chunk completati",
     "infoQuality": "Qualità composita",
     "openInReader": "Apri nel lettore documento",
+    "projectHomeEyebrow": "Home progetto",
+    "projectHomeTitle": "Home progetto",
+    "projectHomeEmpty": "Nessun testo caricato.",
+    "projectHomeBody": "Questo progetto è pronto per l'import del documento. Imposta la pipeline, conferma il contesto del workspace e poi porta dentro il testo sorgente per iniziare il flusso editoriale.",
+    "projectHomeImport": "Importa documento",
+    "projectHomeConfigurePipeline": "Configura pipeline",
+    "projectHomeConfigureWorkspace": "Configura workspace",
+    "projectHomeLanguages": "Coppia linguistica",
+    "projectHomePipeline": "Pipeline attiva",
+    "projectHomePipelineFallback": "Pipeline base",
+    "projectHomeWorkspace": "Workspace",
+    "projectHomeEditorialTitle": "Prepara la superficie editoriale",
+    "projectHomeEditorialBody": "La shell del progetto è già pronta: impostazioni pipeline, memoria condivisa e strumenti documento sono disponibili prima del primo import. Usa questa pagina come area di preparazione prima di aprire il lettore sui chunk reali.",
+    "projectHomeActions": "Prossime azioni",
+    "projectHomeImportHint": "Porta dentro il file sorgente e regola la segmentazione prima che entri nel lettore.",
+    "projectHomeConfigurePipelineHint": "Regola fasi, modelli e comportamento di revisione per questo progetto.",
+    "projectHomeLibraryHint": "Apri dizionari e template prompt condivisi tra i progetti.",
+    "projectHomeStatus": "Stato progetto",
+    "projectHomePipelines": "Pipeline",
+    "projectHomeUnits": "Unità caricate",
+    "projectHomeMode": "Modalità pipeline",
     "previousChunk": "Chunk precedente",
     "nextChunk": "Chunk successivo",
     "leftPage": "Pagina sorgente",
@@ -713,7 +822,8 @@
     "indexEmptyTitle": "Nessuna unità da mostrare.",
     "indexEmptyBody": "Importa un testo e preparalo in chunk per iniziare.",
     "watchdogStuck": "Bloccato",
-    "watchdogCancel": "Annulla e riprova"
+    "watchdogCancel": "Annulla e riprova",
+    "insightsTabMemory": "Memoria"
   },
   "help": {
     "title": "Guida Utente",
@@ -784,6 +894,12 @@
       "statsDesc": "Il tab Statistiche aggrega token in input e output, costo stimato e distribuzione dei chunk per la sessione corrente, separati per provider e modello. Utile per monitorare il consumo su documenti lunghi tradotti in più sessioni.",
       "operationsLogTitle": "Log operazioni strutturato",
       "operationsLogDesc": "Il tab Operazioni del pannello Insight registra ogni evento significativo: prompt inviato, completamento di uno stage, errori, retry, audit, coerenza. Ogni voce ha scope (pipeline / stage / audit / coherence), livello (info / success / warn / error) e — quando rilevante — il chunk interessato. Le voci di prompt contengono system e user prompt completi in un campo espandibile, così puoi ispezionare esattamente la richiesta inviata.",
+      "phraseMemoryTitle": "Phrase Memory",
+      "phraseMemoryDesc": "La Phrase Memory è specifica del workspace di traduzione: raccoglie coppie frase sorgente → frase tradotta e le usa per suggerire rese coerenti nei documenti successivi dello stesso workspace. Il tab Memoria nel pannello Insight mostra i match del chunk corrente e il pulsante per salvare esplicitamente il chunk corrente nella memoria.",
+      "phraseMemoryAutomationTitle": "Automatismi visibili",
+      "phraseMemoryAutomationDesc": "Quando la Phrase Memory è attiva, Glossa cerca match in background all'apertura o al cambio del documento, ma questa ricerca è solo lettura: mostra badge e suggerimenti, non modifica traduzioni né database. I match trovati non entrano nel prompt finché non li selezioni; il salvataggio in memoria avviene solo con il pulsante 'Salva chunk in memoria'. Il lock della traduzione resta solo un marker editoriale.",
+      "phraseMemoryTipTitle": "Regola operativa",
+      "phraseMemoryTipDesc": "Se vedi match ma non li selezioni, la pipeline parte senza usarli e Glossa ti avvisa prima del lancio. Usa i checkbox per decidere cosa includere nel prompt e salva in memoria solo le traduzioni che vuoi davvero riusare.",
       "configDrawerTitle": "Pannello di configurazione",
       "configDrawerDesc": "Si apre con l'icona ingranaggio. Ha cinque tab: Impostazioni (modalità, coppia linguistica, persona, rifinitura prompt), Traduzione (stage di traduzione e refine/format quando in modalità editoriale), Controllo qualità (giudice e prompt di coerenza), Registro Termini (glossario assegnato al progetto), Prompt Preview (anteprima del prompt finale per ogni stage).",
       "modalsTitle": "Modali unificate",
@@ -873,17 +989,17 @@
     },
     "projects": {
       "title": "Progetti",
-      "intro": "I progetti racchiudono testo sorgente, traduzioni, configurazione della pipeline e dizionario assegnato. Sono salvati in SQLite locale: niente cloud, niente sincronizzazione, tutto sulla tua macchina.",
+      "intro": "I progetti vivono dentro un workspace di traduzione. Il workspace contiene i libri, la Phrase Memory e i preset memoria condivisi tra quei libri; la configurazione della pipeline resta invece specifica del progetto/pipeline aperta.",
       "createTitle": "Crea un progetto",
-      "createDesc": "Puoi iniziare a lavorare in una bozza non salvata. Quando vuoi persistere, clicca Salva nell'header: il primo salvataggio apre un dialog leggero per assegnare il nome. Il pannello Progetti — icona cartella — resta disponibile per aprire, creare esplicitamente o eliminare progetti esistenti.",
+      "createDesc": "Dalla dashboard workspace puoi creare un progetto, aprirlo o eliminarlo. Il nuovo progetto viene creato nel workspace attivo e usa la coppia linguistica corrente come default iniziale.",
       "saveTitle": "Salva il lavoro",
       "saveDesc": "Clicca l'icona di salvataggio in qualsiasi momento per persistere lo stato corrente. Quando riapri un progetto, configurazione, stage, glossario assegnato, chunk, traduzioni e note vengono ripristinati come li avevi lasciati.",
       "importExportTitle": "Importa ed esporta",
-      "importExportDesc": "Usa l'icona upload per importare un file (.txt, .md, .docx, .pdf) come sorgente del documento. Quando ci sono chunk completati, il pulsante Esporta (↗) nell'header apre il dialog di esportazione con formati e opzioni di separatore.",
+      "importExportDesc": "Usa l'icona upload per importare un file (.txt, .md, .docx, .pdf) come sorgente del documento. Quando ci sono chunk completati, il pulsante Esporta (↗) nell'header apre il dialog di esportazione con formati e opzioni di separatore. L'eliminazione di un progetto rimuove anche pipeline, traduzioni, log e collegamenti salvati del progetto.",
       "autosaveTitle": "Salvataggio automatico",
       "autosaveDesc": "Glossa salva automaticamente il progetto in background a ogni cambio di stato significativo: nuovi chunk completati, modifiche alle traduzioni, aggiornamenti di configurazione. L'autosave si attiva solo dopo che il progetto ha un nome: per le bozze nuove, esegui il primo Salva manualmente per dargli un nome e abilitare l'autosave.",
       "backupTitle": "Backup e ripristino",
-      "backupDesc": "Apri Impostazioni → Backup e ripristino per esportare l'intero workspace come file .glossa-backup. Questo snapshot include tutti i progetti, pipeline, traduzioni, glossari, template e impostazioni. Usa Importa per ripristinare un backup: il workspace corrente verrà cancellato e sostituito completamente con i dati del backup. Dopo il ripristino l'app si riavvia automaticamente — apri il pannello progetti (icona cartella in alto) per selezionare un progetto."
+      "backupDesc": "La dashboard workspace espone backup e ripristino. Il backup esporta lo stato locale in un file .glossa-backup; il ripristino sostituisce i dati locali con lo snapshot importato. Le impostazioni generali dell'app restano nel pannello Impostazioni, mentre le impostazioni Phrase Memory del workspace sono nella dashboard."
     },
     "providers": {
       "title": "Provider LLM",
@@ -938,21 +1054,21 @@
     },
     "shortcuts": {
       "title": "Riferimento interfaccia",
-      "toolbarTitle": "Toolbar header",
-      "openProjects": "Apri il pannello Progetti",
-      "importFile": "Importa un file di testo sorgente",
+      "toolbarTitle": "Barra laterale e header",
+      "openProjects": "Apri il pannello Progetti — barra laterale (modalità editor)",
+      "importFile": "Importa un file sorgente — barra laterale (modalità editor)",
       "openConfig": "Apri il pannello di configurazione della pipeline",
-      "saveProject": "Salva il progetto corrente",
-      "openLibrary": "Apri la Libreria (dizionari e template)",
-      "switchLang": "Cambia la lingua dell'interfaccia (IT / EN)",
-      "openSettings": "Apri Impostazioni (chiavi API, Ollama, segmentazione, pricing)",
-      "openHelp": "Apri questa guida",
-      "sandbox": "Apri / chiudi la modalità Sandbox",
+      "saveProject": "Salva il progetto — barra laterale (modalità editor)",
+      "openLibrary": "Apri la Libreria (dizionari e template) — header",
+      "switchLang": "Cambia la lingua dell'interfaccia (IT / EN) — header",
+      "openSettings": "Apri Impostazioni (chiavi API, Ollama, segmentazione, pricing) — header",
+      "openHelp": "Apri questa guida — header",
       "openInsights": "Apri il pannello Insight",
       "toggleEditorTools": "Mostra / nasconde la toolbar degli editor",
       "lockTranslation": "Blocca / sblocca la traduzione candidata come definitiva",
+      "phraseMemory": "Memoria — mostra i match trovati, seleziona quelli da usare e salva esplicitamente il chunk corrente",
       "openStageTrace": "Apri la modale con l'output completo di uno stage",
-      "exportTitle": "Esportazione (richiede chunk completati)",
+      "exportTitle": "Esportazione (barra laterale, richiede chunk completati)",
       "exportDesc": "Apre il dialog di esportazione con formato e separatore tra chunk",
       "promptToolsTitle": "Strumenti dei prompt",
       "refineButton": "Bacchetta — rifinisce il prompt usando il provider/modello mostrato a fianco",
@@ -1087,7 +1203,8 @@
     "groupBy": "Raggruppa",
     "copy": "Copia",
     "copied": "Copiato",
-    "copyFailed": "Copia fallita"
+    "copyFailed": "Copia fallita",
+    "newRun": "nuova esecuzione"
   },
   "resume": {
     "title": "Traduzione interrotta",
@@ -1096,5 +1213,35 @@
     "resumeButton": "Riprendi",
     "restartButton": "Ricomincia da capo",
     "dismiss": "Ignora"
+  },
+  "memory": {
+    "coldStartTitle": "Nessun match trovato",
+    "coldStartBody": "La ricerca automatica non modifica nulla. Per alimentare la memoria, salva esplicitamente il chunk corrente quando la traduzione è pronta.",
+    "rerunButton": "Rielabora con match selezionati",
+    "applyButton": "Applica",
+    "appliedToClipboard": "Traduzione copiata negli appunti",
+    "enableMatch": "Usa questo match nella pipeline",
+    "extractTermButton": "Estrai termine",
+    "extractTermTitle": "Estrai termine",
+    "sourcePhraseLabel": "Frase sorgente",
+    "termLabel": "Termine",
+    "termExtracted": "Termine aggiunto al glossario",
+    "prelaunchWarning": "{{count}} chunk hanno match di memoria trovati ma non selezionati",
+    "saveToMemoryButton": "Salva chunk in memoria",
+    "savedToMemory": "Chunk salvato in memoria",
+    "nothingToSave": "Nessuna traduzione pronta da salvare nel chunk corrente",
+    "saveToMemoryFailed": "Errore nel salvataggio in memoria",
+    "searching": "Ricerca memoria in corso",
+    "searchFailed": "Ricerca memoria non riuscita",
+    "selectionHint": "I match trovati sono solo suggerimenti: selezionali per inserirli nella prossima esecuzione della pipeline.",
+    "matchBadge_one": "{{count}} match",
+    "matchBadge_other": "{{count}} match",
+    "matchBadge": "{{count}} match"
+  },
+  "glossary": {
+    "translation": "Traduzione",
+    "notes": "Note",
+    "selectGlossary": "Seleziona glossario",
+    "noGlossarySelected": "— Nessun glossario —"
   }
 }

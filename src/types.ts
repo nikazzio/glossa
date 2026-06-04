@@ -10,7 +10,7 @@ export type DocumentFormat = 'plain' | 'markdown';
 export type DocumentRenderProfile = 'plain-text' | 'markdown';
 export type ExperimentalImportMode = 'docx-markdown';
 export type OllamaThinkLevel = boolean | 'low' | 'medium' | 'high';
-export type ReasoningEffortLevel = 'none' | 'low' | 'medium' | 'high';
+export type ReasoningEffortLevel = 'none' | 'low' | 'medium' | 'high' | 'xhigh';
 export type StageRole = 'translation' | 'refine' | 'format';
 export type PipelineMode = 'standard' | 'editorial';
 export type PipelineRunStatus = 'idle' | 'running' | 'completed' | 'interrupted';
@@ -213,7 +213,59 @@ export interface PipelineConfig {
   blobBudgetTokens?: number;
   blobOverlap?: number;
   chunkedWithContextWindow?: number;
+  usePhraseMemory?: boolean;
+  phraseMemoryPresetId?: string | null;
+  phraseMemoryOverrides?: PhraseMemoryOverrides | null;
   // Runtime-only prompt context. Computed per invocation, never persisted.
   blobContext?: string;
   blobCurrentChunkId?: string;
 }
+
+// ── Phrase Memory ────────────────────────────────────────────────────
+
+export type EmbeddingModel = 'text-embedding-3-small' | 'text-embedding-3-large';
+
+export type PhraseMemorySplitter = 'regex' | 'llm' | 'none';
+
+export type Workspace = {
+  id: string;
+  name: string;
+  description?: string;
+  embeddingModel: EmbeddingModel;
+  createdAt: string;
+};
+
+export type PhraseMemoryPresetConfig = {
+  splitter: PhraseMemorySplitter;
+  similarityThreshold: number;
+  maxResults: number;
+  minPhraseLength: number;
+};
+
+export type PhraseMemoryPreset = {
+  id: string;
+  name: string;
+  isBuiltin: boolean;
+  config: PhraseMemoryPresetConfig;
+  createdAt: string;
+};
+
+export type PhraseMemoryOverrides = {
+  splitter?: PhraseMemorySplitter;
+  similarityThreshold?: number;
+  maxResults?: number;
+  minPhraseLength?: number;
+};
+
+export type PhraseMatch = {
+  phraseMemoryId: string;
+  sourcePhrase: string;
+  targetPhrase: string;
+  distance: number;
+};
+
+export type EmbeddingJobStatus =
+  | { kind: 'idle' }
+  | { kind: 'running'; processed: number; total: number; estimatedCostUsd: number }
+  | { kind: 'done'; totalPhrases: number }
+  | { kind: 'error'; message: string };

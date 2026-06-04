@@ -15,7 +15,7 @@ interface PillButtonProps {
 const VARIANT_CLASS: Record<PillVariant, string> = {
   primary:   'border-transparent bg-editorial-ink text-white hover:bg-editorial-ink/90',
   secondary: 'border-editorial-border text-editorial-muted hover:border-editorial-ink/40 hover:text-editorial-ink',
-  accent:    'border-editorial-accent text-editorial-accent hover:bg-editorial-accent/5',
+  accent:    'border-editorial-accent bg-editorial-accent text-white hover:bg-editorial-accent/90',
   ghost:     'border-transparent text-editorial-muted hover:text-editorial-ink',
 };
 

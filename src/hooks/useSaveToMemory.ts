@@ -1,0 +1,76 @@
+import { useState, useCallback } from 'react';
+import { useChunksStore } from '../stores/chunksStore';
+import { usePipelineStore } from '../stores/pipelineStore';
+import { useWorkspaceStore } from '../stores/workspaceStore';
+import { useProjectStore } from '../stores/projectStore';
+import { usePhraseMemoryStore } from '../stores/phraseMemoryStore';
+import { listPresets } from '../services/phraseMemoryPresetService';
+import { saveSelectedPhrases } from '../services/phraseMemoryService';
+import { logger } from '../utils/logger';
+
+export function useSaveToMemory() {
+  const [isSaving, setIsSaving] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+
+  const saveToMemory = useCallback(async (chunkIds: string[]): Promise<number> => {
+    const config = usePipelineStore.getState().config;
+    const activeWorkspace = useWorkspaceStore.getState().activeWorkspace;
+    const currentProjectId = useProjectStore.getState().currentProjectId;
+    const chunks = useChunksStore.getState().chunks;
+
+    if (!activeWorkspace || !currentProjectId || chunkIds.length === 0) return 0;
+
+    const selectedIds = new Set(chunkIds);
+    const selected = chunks.filter(
+      (c) => selectedIds.has(c.id) && c.sourceProcessingText?.trim() && c.currentDraft?.trim(),
+    );
+    if (selected.length === 0) return 0;
+
+    const presets = await listPresets(activeWorkspace.id);
+    const preset = presets.find((p) => p.id === config.phraseMemoryPresetId) ?? presets[0] ?? null;
+    const splitter = config.phraseMemoryOverrides?.splitter ?? preset?.config.splitter ?? 'regex';
+    const minPhraseLength = config.phraseMemoryOverrides?.minPhraseLength ?? preset?.config.minPhraseLength ?? 3;
+
+    setIsSaving(true);
+    setProgress({ done: 0, total: selected.length });
+    usePhraseMemoryStore.getState().setJobStatus({
+      kind: 'running', processed: 0, total: selected.length, estimatedCostUsd: 0,
+    });
+
+    try {
+      await saveSelectedPhrases({
+        workspaceId: activeWorkspace.id,
+        projectId: currentProjectId,
+        embeddingModel: activeWorkspace.embeddingModel,
+        splitter,
+        minPhraseLength,
+        sourceLanguage: config.sourceLanguage,
+        targetLanguage: config.targetLanguage,
+        chunks: selected.map((c) => ({
+          id: c.id,
+          sourceText: c.sourceProcessingText,
+          targetText: c.currentDraft!,
+        })),
+        onProgress: (done, total) => {
+          setProgress({ done, total });
+          usePhraseMemoryStore.getState().setJobStatus({
+            kind: 'running', processed: done, total, estimatedCostUsd: 0,
+          });
+        },
+      });
+      usePhraseMemoryStore.getState().setJobStatus({
+        kind: 'done', totalPhrases: selected.length,
+      });
+      return selected.length;
+    } catch (err: unknown) {
+      logger.warn('saveToMemory failed', { error: String(err) });
+      usePhraseMemoryStore.getState().setJobStatus({ kind: 'idle' });
+      throw err;
+    } finally {
+      setIsSaving(false);
+      setProgress(null);
+    }
+  }, []);
+
+  return { saveToMemory, isSaving, progress };
+}
