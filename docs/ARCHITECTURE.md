@@ -38,6 +38,8 @@
 | File | Responsabilità |
 |---|---|
 | `hooks/usePipeline.ts` | **Engine principale** — runPipeline, runSingleChunk, auditSingleChunk, cancelPipeline. 3 blocchi blob assembler duplicati (refactor pendente). |
+
+> **INVARIANTE — non toccare senza motivo esplicito**: Ollama usa `runStageStream` (streaming). Tutti gli altri provider (OpenAI, Anthropic, Gemini, DeepSeek) usano `runStage` (non-streaming). Questa separazione è intenzionale: i cloud provider hanno timeout e gestione errori diversi. Non "uniformare" i due path.
 | `hooks/useProjectAutosave.ts` | Autosave con debounce |
 | `hooks/useChunkWatchdog.ts` | Timeout detection per chunk inattivi |
 
