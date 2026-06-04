@@ -202,7 +202,6 @@ impl OpenAiCompatibleProvider {
             "model": req.model,
             "instructions": req.structured.flatten_system(),
             "input": req.structured.user,
-            "store": false,
         });
 
         if req.json_mode {
@@ -258,7 +257,6 @@ impl OpenAiCompatibleProvider {
             "instructions": req.structured.flatten_system(),
             "input": req.structured.user,
             "stream": true,
-            "store": false,
         });
         if req.json_mode {
             body["text"] = serde_json::json!({"format": {"type": "json_object"}});
