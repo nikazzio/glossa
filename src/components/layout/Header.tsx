@@ -1,10 +1,11 @@
 import { HelpCircle, LibraryBig, Save, Settings } from 'lucide-react';
-import { lazy, Suspense, useRef } from 'react';
+import { lazy, Suspense, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useUiStore } from '../../stores/uiStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useLibraryStore } from '../../stores/libraryStore';
+import { useChunksStore } from '../../stores/chunksStore';
 import { IconButton, Tooltip } from '../ui';
 
 const HelpGuide = lazy(() =>
@@ -14,8 +15,10 @@ const HelpGuide = lazy(() =>
 export function Header() {
   const { setShowSettings, setShowHelp, showHelp } = useUiStore();
   const { currentProjectId, projects, saveCurrentProject } = useProjectStore();
-  const setShowLibraryPanel = useLibraryStore((s) => s.setShowLibraryPanel);
+  const { dirtyIds, saveAllDirty, setShowLibraryPanel } = useLibraryStore();
+  const isProcessing = useChunksStore((s) => s.isProcessing);
   const { t, i18n } = useTranslation();
+  const [savingAll, setSavingAll] = useState(false);
 
   const helpLoaded = useRef(false);
   if (showHelp) helpLoaded.current = true;
@@ -30,14 +33,50 @@ export function Header() {
   };
 
   const handleSave = async () => {
-    if (!currentProjectId) return;
+    if (savingAll) return;
+
+    const shouldSaveProject = Boolean(currentProjectId) && !isProcessing;
+    const shouldSaveLibrary = dirtyIds.length > 0;
+    const projectDeferred = Boolean(currentProjectId) && isProcessing;
+
+    if (!shouldSaveProject && !shouldSaveLibrary) {
+      toast[projectDeferred ? 'warning' : 'success'](
+        t(projectDeferred ? 'header.projectSaveDeferred' : 'header.nothingToSave'),
+      );
+      return;
+    }
+
+    setSavingAll(true);
+    const errors: unknown[] = [];
     try {
-      await saveCurrentProject();
-      toast.success(t('projects.saved'));
+      if (shouldSaveProject) {
+        try {
+          await saveCurrentProject();
+        } catch (err: unknown) {
+          errors.push(err);
+        }
+      }
+      if (shouldSaveLibrary) {
+        try {
+          await saveAllDirty();
+        } catch (err: unknown) {
+          errors.push(err);
+        }
+      }
+
+      if (errors.length > 0) {
+        throw errors[0];
+      }
+
+      toast[projectDeferred ? 'warning' : 'success'](
+        t(projectDeferred ? 'header.savedLibraryProjectDeferred' : 'header.savedAll'),
+      );
     } catch (err: unknown) {
-      toast.error(t('projects.saveFailed'), {
+      toast.error(t('header.globalSaveFailed'), {
         description: err instanceof Error ? err.message : String(err),
       });
+    } finally {
+      setSavingAll(false);
     }
   };
 
@@ -62,9 +101,10 @@ export function Header() {
         <div className="flex items-center gap-1 rounded-full border border-editorial-border bg-editorial-bg px-1 py-1 shadow-sm">
           <IconButton
             onClick={() => void handleSave()}
-            title={t('projects.save')}
+            title={t('header.saveAll')}
             tooltipSide="bottom"
-            disabled={!currentProjectId}
+            tone={savingAll ? 'running' : 'default'}
+            aria-busy={savingAll}
           >
             <Save size={16} />
           </IconButton>

@@ -1,7 +1,5 @@
 import {
   AlertTriangle,
-  Archive,
-  BookOpenText,
   ChevronLeft,
   ChevronRight,
   FileText,
@@ -12,7 +10,6 @@ import {
   Pencil,
   RotateCcw,
   ScanLine,
-  Settings2,
   Wand2,
   Zap,
 } from 'lucide-react';
@@ -40,7 +37,6 @@ const NOOP_CHANGE = () => {};
 interface DocumentViewProps {
   onRetranslateChunk: (chunkId: string) => void;
   onImportDocument: () => void;
-  onOpenWorkspaceSettings: () => void;
 }
 
 const STAGE_TONE_MAP: Record<string, IconButtonTone> = {
@@ -55,11 +51,10 @@ const STAGE_TONE_MAP: Record<string, IconButtonTone> = {
 export function DocumentView({
   onRetranslateChunk,
   onImportDocument,
-  onOpenWorkspaceSettings,
 }: DocumentViewProps) {
   const { t } = useTranslation();
   const { config } = usePipelineStore();
-  const { currentProjectId, projects, setShowProjectPanel } = useProjectStore();
+  const { currentProjectId, projects } = useProjectStore();
   const activeWorkspace = useWorkspaceStore((state) => state.activeWorkspace);
   const {
     chunks,
@@ -90,7 +85,6 @@ export function DocumentView({
     focusedIssueRequestId,
     traceStageId,
     setTraceStageId,
-    setShowConfigDrawer,
   } = useUiStore();
 
   const [viewportWidth, setViewportWidth] = useState(
@@ -222,57 +216,34 @@ export function DocumentView({
 
   if (!currentChunk) {
     return (
-      <section className="flex w-full flex-1 overflow-y-auto bg-editorial-paper min-h-0 px-8 py-10">
-        <div className="mx-auto w-full max-w-7xl">
-          <div className="min-w-0 px-8 py-8">
-            <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[0.28em] text-editorial-muted">
+      <section className="flex min-h-0 w-full flex-1 items-center justify-center overflow-y-auto bg-editorial-paper px-6 py-10">
+        <div className="mx-auto flex w-full max-w-3xl flex-col items-center text-center">
+          <div className="flex flex-wrap items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-[0.28em] text-editorial-muted">
               <span>{activeWorkspace?.name ?? t('workspace.noActive')}</span>
               <span className="h-1 w-1 rounded-full bg-editorial-accent/60" aria-hidden="true" />
               <span>{t('document.projectHomeEyebrow')}</span>
-            </div>
-            <h2 className="mt-4 max-w-4xl font-display text-5xl italic tracking-tight text-editorial-ink md:text-6xl">
-              {currentProject?.name ?? t('document.projectHomeTitle')}
-            </h2>
-            <div className="mt-6 flex items-center gap-2">
-              <Tooltip label={t('document.projectHomeImport')}>
-                <IconButton
-                  onClick={onImportDocument}
-                  title={t('document.projectHomeImport')}
-                  tone="accent"
-                  size="lg"
-                >
-                  <FileText size={16} />
-                </IconButton>
-              </Tooltip>
-              <Tooltip label={t('document.projectHomeConfigurePipeline')}>
-                <IconButton
-                  onClick={() => setShowConfigDrawer(true)}
-                  title={t('document.projectHomeConfigurePipeline')}
-                  size="lg"
-                >
-                  <Settings2 size={16} />
-                </IconButton>
-              </Tooltip>
-              <Tooltip label={t('document.projectHomeConfigureWorkspace')}>
-                <IconButton
-                  onClick={onOpenWorkspaceSettings}
-                  title={t('document.projectHomeConfigureWorkspace')}
-                  size="lg"
-                >
-                  <Archive size={16} />
-                </IconButton>
-              </Tooltip>
-              <Tooltip label={t('projects.title')}>
-                <IconButton
-                  onClick={() => setShowProjectPanel(true)}
-                  title={t('projects.title')}
-                  size="lg"
-                >
-                  <BookOpenText size={16} />
-                </IconButton>
-              </Tooltip>
-            </div>
           </div>
+          <h2 className="mt-4 max-w-3xl font-display text-4xl italic tracking-tight text-editorial-ink md:text-5xl">
+            {currentProject?.name ?? t('document.projectHomeTitle')}
+          </h2>
+          <p className="mt-3 text-sm text-editorial-muted">
+            {t('document.projectHomeEmpty')}
+          </p>
+
+          <button
+            type="button"
+            onClick={onImportDocument}
+            aria-label={t('document.projectHomeImport')}
+            title={t('document.projectHomeImport')}
+            className="group mt-8 flex w-full max-w-xl flex-col items-center rounded-[30px] border border-dashed border-editorial-border bg-editorial-bg/65 px-6 py-8 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] transition-colors hover:border-editorial-accent/40 hover:bg-editorial-bg focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          >
+            <span className="inline-flex h-14 w-14 items-center justify-center rounded-full border border-editorial-border bg-editorial-paper text-editorial-muted transition-colors group-hover:border-editorial-accent/45 group-hover:text-editorial-accent">
+              <FileText size={22} />
+            </span>
+            <span className="mt-3 text-xs font-bold uppercase tracking-[0.24em] text-editorial-muted transition-colors group-hover:text-editorial-accent">
+              {t('document.projectHomeImport')}
+            </span>
+          </button>
         </div>
       </section>
     );

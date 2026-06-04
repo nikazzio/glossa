@@ -27,7 +27,13 @@
     "cacheHitRate": "Cache hit rate",
     "translationCacheLabel": "Translation cache",
     "auditCacheLabel": "Audit cache",
-    "brandArea": "Translation"
+    "brandArea": "Translation",
+    "saveAll": "Save all",
+    "savedAll": "All changes saved",
+    "nothingToSave": "Everything is already saved",
+    "globalSaveFailed": "Save failed",
+    "projectSaveDeferred": "Project save is paused while the pipeline is running",
+    "savedLibraryProjectDeferred": "Library saved. Project save is paused while the pipeline is running"
   },
   "sidebar": {
     "areaLabel": "Area",
@@ -715,6 +721,7 @@
     "openInReader": "Open in document reader",
     "projectHomeEyebrow": "Project home",
     "projectHomeTitle": "Project home",
+    "projectHomeEmpty": "No text loaded.",
     "projectHomeBody": "This project is ready for document import. Set the pipeline, confirm the workspace context, then bring in the source text and start building the editorial run.",
     "projectHomeImport": "Import document",
     "projectHomeConfigurePipeline": "Configure pipeline",

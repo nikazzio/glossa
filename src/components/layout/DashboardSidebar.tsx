@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import { Archive, BookOpenText, FilePen, LibraryBig, Plus } from 'lucide-react';
+import { motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useProjectStore } from '../../stores/projectStore';
@@ -14,6 +16,13 @@ const AREA_ITEMS = [
   { id: 'library', icon: LibraryBig, enabled: false },
   { id: 'transcriptions', icon: FilePen, enabled: false },
 ] as const;
+
+const ATTACHED_TAB_TRANSITION = {
+  type: 'spring',
+  stiffness: 360,
+  damping: 40,
+  mass: 0.8,
+} as const;
 
 export function DashboardSidebar() {
   const { t } = useTranslation();
@@ -64,91 +73,84 @@ export function DashboardSidebar() {
   };
 
   return (
-    <div className="flex w-56 shrink-0 flex-col overflow-y-auto border-r border-editorial-border bg-editorial-bg/70 custom-scrollbar">
-      <nav className="px-3 pt-4" aria-label={t('sidebar.areaLabel')}>
-        <SectionLabel icon={BookOpenText} label={t('sidebar.areaLabel')} />
-        <div className="mt-3 space-y-1.5">
-          {AREA_ITEMS.map(({ id, icon: Icon, enabled }) => (
-            <button
-              key={id}
-              type="button"
-              disabled={!enabled}
-              aria-current={enabled ? 'page' : undefined}
-              className={`w-full px-3 py-2.5 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                enabled
-                  ? '-mr-3 rounded-l-[18px] rounded-r-none border border-r-0 border-editorial-accent/55 bg-editorial-paper text-editorial-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]'
-                  : 'cursor-not-allowed rounded-[14px] border border-editorial-border/70 bg-editorial-bg/45 text-editorial-muted opacity-55'
-              }`}
-            >
-              <span className="flex items-start gap-2.5">
-                <span
-                  className={`mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border ${
-                    enabled
+    <motion.div
+      initial={{ opacity: 0, x: -18 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      className="relative isolate flex w-48 shrink-0 flex-col bg-editorial-bg/60 after:pointer-events-none after:absolute after:inset-y-0 after:right-0 after:z-0 after:w-px after:bg-editorial-border after:content-['']"
+    >
+      <nav className="pt-3.5" aria-label={t('sidebar.areaLabel')}>
+        <div className="px-3">
+          <SectionLabel icon={BookOpenText} label={t('sidebar.areaLabel')} />
+        </div>
+        <div className="space-y-1.5 pb-3 pt-2.5">
+          {AREA_ITEMS.map(({ id, icon: Icon, enabled }) => {
+            const isActive = enabled;
+            return (
+              <AttachedSidebarTab
+                key={id}
+                active={isActive}
+                disabled={!enabled}
+                layoutId="dashboard-active-area-tab"
+                ariaCurrent={isActive ? 'page' : undefined}
+                size="area"
+                icon={(
+                  <span className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-colors duration-200 ${
+                    isActive
                       ? 'border-editorial-accent/45 bg-editorial-accent/10 text-editorial-accent'
                       : 'border-editorial-border bg-editorial-textbox/30 text-editorial-muted'
-                  }`}
-                >
-                  <Icon size={13} />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-display text-base italic">
-                    {t(`workspace.areas.${id}.title`)}
+                  }`}>
+                    <Icon size={12} />
                   </span>
-                  <span className="mt-0.5 block text-xs leading-snug text-editorial-muted">
-                    {t(`workspace.areas.${id}.sidebarHint`)}
-                  </span>
-                </span>
-              </span>
-            </button>
-          ))}
+                )}
+                label={t(`workspace.areas.${id}.title`)}
+              />
+            );
+          })}
         </div>
       </nav>
 
-      <div className="mx-3 my-4 h-px bg-editorial-border/60" />
+      <div className="mx-3 mb-3 mt-1 h-px bg-editorial-border/60" aria-hidden="true" />
 
-      <section className="flex min-h-0 flex-1 flex-col px-3 pb-4">
-        <div className="flex items-center justify-between gap-2">
+      <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="px-3 flex items-center justify-between gap-2">
           <SectionLabel icon={Archive} label={t('sidebar.workspaceSection')} />
           <IconButton
             size="sm"
+            tone="muted"
             onClick={() => setShowCreateWsForm(true)}
             title={t('workspace.create')}
+            tooltipSide="right"
+            className="bg-editorial-textbox/25 hover:bg-editorial-textbox/45"
           >
             <Plus size={11} />
           </IconButton>
         </div>
 
-        <div className="mt-3 flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pr-0.5 custom-scrollbar">
-          {workspaces.map((ws) => (
-            <button
-              key={ws.id}
-              type="button"
-              onClick={() => void handleSwitchWorkspace(ws)}
-              aria-current={ws.id === activeWorkspace?.id ? 'page' : undefined}
-              className={`w-full px-3 py-2.5 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                ws.id === activeWorkspace?.id
-                  ? '-mr-3 rounded-l-[20px] rounded-r-none border border-r-0 border-editorial-border bg-editorial-paper text-editorial-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]'
-                  : 'rounded-[12px] border border-editorial-border bg-editorial-bg/70 text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
-              }`}
-            >
-              <span className="flex items-center gap-2">
-                <span
-                  className={`h-2 w-2 shrink-0 rounded-full ${
-                    ws.id === activeWorkspace?.id ? 'bg-editorial-accent' : 'border border-editorial-border'
-                  }`}
-                  aria-hidden="true"
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-display text-base italic">{ws.name}</span>
-                  {ws.description ? (
-                    <span className="mt-0.5 block truncate text-xs text-editorial-muted/75">
-                      {ws.description}
-                    </span>
-                  ) : null}
-                </span>
-              </span>
-            </button>
-          ))}
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto custom-scrollbar space-y-1.5 pb-4 pt-2.5">
+          {workspaces.map((ws) => {
+            const isActive = ws.id === activeWorkspace?.id;
+            return (
+              <AttachedSidebarTab
+                key={ws.id}
+                active={isActive}
+                layoutId="dashboard-active-workspace-tab"
+                onClick={() => void handleSwitchWorkspace(ws)}
+                ariaCurrent={isActive ? 'page' : undefined}
+                icon={(
+                  <span
+                    className={`h-2 w-2 shrink-0 rounded-full transition-colors duration-200 ${
+                      isActive
+                        ? 'bg-editorial-accent'
+                        : 'border border-editorial-border bg-transparent'
+                    }`}
+                    aria-hidden="true"
+                  />
+                )}
+                label={ws.name}
+              />
+            );
+          })}
         </div>
       </section>
 
@@ -163,10 +165,9 @@ export function DashboardSidebar() {
           <EditorialModalShell
             titleId="create-workspace-title"
             title={t('workspace.create')}
-            eyebrow={t('sidebar.workspaceSection')}
             closeLabel={t('common.cancel')}
             onClose={closeCreateWorkspaceForm}
-            widthClassName="max-w-md"
+            widthClassName="max-w-lg"
             bodyClassName="px-5 py-5"
             footer={
               <div className="flex justify-end gap-2">
@@ -225,6 +226,64 @@ export function DashboardSidebar() {
           </EditorialModalShell>
         </div>
       )}
+    </motion.div>
+  );
+}
+
+interface AttachedSidebarTabProps {
+  active: boolean;
+  ariaCurrent?: 'page';
+  disabled?: boolean;
+  icon: ReactNode;
+  label: string;
+  layoutId: string;
+  onClick?: () => void;
+  size?: 'area' | 'workspace';
+}
+
+function AttachedSidebarTab({
+  active,
+  ariaCurrent,
+  disabled = false,
+  icon,
+  label,
+  layoutId,
+  onClick,
+  size = 'workspace',
+}: AttachedSidebarTabProps) {
+  const labelClassName = size === 'area'
+    ? 'font-display text-sm italic'
+    : 'font-sans text-sm';
+  const minHeightClassName = size === 'area' ? 'min-h-16' : 'min-h-[3.25rem]';
+  const sharedButtonClassName = `relative z-10 flex w-full items-center gap-2 rounded-l-[20px] rounded-r-none px-3.5 py-2.5 text-left transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${minHeightClassName}`;
+
+  return (
+    <div className={`relative pl-3 pr-0 ${active ? 'z-20' : 'z-10'}`}>
+      {active ? (
+        <motion.div
+          layoutId={layoutId}
+          transition={ATTACHED_TAB_TRANSITION}
+          className="dashboard-sidebar-tab-surface absolute inset-y-0 left-2 right-0 z-0"
+        />
+      ) : null}
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        aria-current={ariaCurrent}
+        className={`${sharedButtonClassName} ${
+          active
+            ? 'text-editorial-ink'
+            : disabled
+              ? 'cursor-not-allowed text-editorial-muted opacity-55'
+              : 'text-editorial-muted hover:text-editorial-accent'
+        }`}
+      >
+        {icon}
+        <span className={`min-w-0 flex-1 truncate ${labelClassName} ${active ? 'text-editorial-ink' : ''}`}>
+          {label}
+        </span>
+      </button>
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { initLogger } from './utils/logger';
 import { Header, PipelineSidebar } from './components/layout';
 import { ErrorBoundary, ConfirmDialog, PreflightDialog, RunResumeBanner } from './components/common';
-import { AnimatePresence, motion } from 'motion/react';
+import { motion } from 'motion/react';
 import { usePipeline } from './hooks/usePipeline';
 import { useProjectAutosave } from './hooks/useProjectAutosave';
 import { useUiStore } from './stores/uiStore';
@@ -109,6 +109,7 @@ function EditorView() {
   const chunkPresetShort = useUiStore((state) => state.chunkPresetShort);
   const chunkPresetLong = useUiStore((state) => state.chunkPresetLong);
   const showProjectPanel = useProjectStore((state) => state.showProjectPanel);
+  const currentProjectId = useProjectStore((state) => state.currentProjectId);
   const activePipelineId = useProjectStore((state) => state.activePipelineId);
   const showLibraryPanel = useLibraryStore((state) => state.showLibraryPanel);
   const { config, setConfig } = usePipelineStore();
@@ -123,6 +124,7 @@ function EditorView() {
 
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
   const [showWorkspaceSettings, setShowWorkspaceSettings] = useState(false);
+  const editorContentKey = `editor-panel-${currentProjectId ?? 'none'}-${viewMode}`;
 
   const handleImportDocument = useCallback(async () => {
     try {
@@ -237,9 +239,6 @@ function EditorView() {
 
   return (
     <>
-      <div className="flex-shrink-0">
-        <Header />
-      </div>
       {viewMode === 'document' ? (
         <Suspense fallback={null}>
           <main className="relative flex flex-1 min-h-0 overflow-hidden">
@@ -251,22 +250,24 @@ function EditorView() {
               onImportDocument={handleImportDocument}
               onOpenWorkspaceSettings={() => setShowWorkspaceSettings(true)}
             />
-            <ConfigDrawer
-              onRunPipeline={runPipeline}
-              onRunAuditOnly={runAuditOnly}
-              onCancelPipeline={cancelPipeline}
-            />
-            <DocumentView
-              onRetranslateChunk={handleRetranslateChunk}
-              onImportDocument={handleImportDocument}
-              onOpenWorkspaceSettings={() => setShowWorkspaceSettings(true)}
-            />
-            <InsightsDrawer onReauditChunk={auditSingleChunk} onRunCoherenceAudit={runCoherenceAudit} />
+            <div className="relative flex min-w-0 flex-1">
+              <ConfigDrawer
+                onRunPipeline={runPipeline}
+                onRunAuditOnly={runAuditOnly}
+                onCancelPipeline={cancelPipeline}
+              />
+              <DocumentView
+                onRetranslateChunk={handleRetranslateChunk}
+                onImportDocument={handleImportDocument}
+              />
+              <InsightsDrawer onReauditChunk={auditSingleChunk} onRunCoherenceAudit={runCoherenceAudit} />
+              <PanelTransitionVeil panelKey={editorContentKey} tone="paper" variant="project" />
+            </div>
           </main>
         </Suspense>
       ) : (
         <Suspense fallback={null}>
-          <main className="grid grid-cols-1 md:grid-cols-12 flex-1 min-h-0">
+          <main className="relative grid grid-cols-1 md:grid-cols-12 flex-1 min-h-0">
             <PipelineConfig
               onRunPipeline={runPipeline}
               onRunAuditOnly={runAuditOnly}
@@ -280,6 +281,7 @@ function EditorView() {
               onRunAuditOnly={runAuditOnly}
               onReauditChunk={auditSingleChunk}
             />
+            <PanelTransitionVeil panelKey={editorContentKey} tone="bg" variant="project" />
           </main>
         </Suspense>
       )}
@@ -345,6 +347,7 @@ export default function App() {
 
   const { isLoaded, workspaces, activeWorkspace, loadWorkspaces } = useWorkspaceStore();
   const currentProjectId = useProjectStore((s) => s.currentProjectId);
+  const isWorkspaceHome = Boolean(activeWorkspace && !currentProjectId);
 
   useEffect(() => {
     loadWorkspaces().catch((err: unknown) => console.error('[App] loadWorkspaces failed:', err));
@@ -374,61 +377,38 @@ export default function App() {
     );
   }
 
-  // ── Workspace home: workspace attivo ma nessun progetto aperto ───────
-  if (activeWorkspace && !currentProjectId) {
-    return (
-      <ErrorBoundary>
-        <div className="h-screen overflow-hidden bg-editorial-bg text-editorial-ink font-sans flex flex-col">
-          <div className="flex-shrink-0">
-            <Header />
-          </div>
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={`workspace-home-${activeWorkspace.id}`}
-              initial={{ opacity: 0, x: -18 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 18 }}
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="flex flex-1 min-h-0"
-            >
-              <PipelineSidebar mode="dashboard" />
+  return (
+    <ErrorBoundary>
+      <HighlightColorSync />
+      <div className="h-screen overflow-hidden bg-editorial-bg text-editorial-ink font-sans flex flex-col">
+        <div className="flex-shrink-0">
+          <Header />
+        </div>
+        {isWorkspaceHome ? (
+          <div className="flex flex-1 min-h-0">
+            <PipelineSidebar mode="dashboard" />
+            <div className="relative flex min-w-0 flex-1">
               <WorkspaceHome />
-            </motion.div>
-          </AnimatePresence>
+              <PanelTransitionVeil
+                panelKey={`workspace-home-${activeWorkspace?.id ?? 'none'}`}
+                tone="paper"
+                variant="workspace"
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="flex min-h-0 flex-1 flex-col">
+            <EditorView />
+          </div>
+        )}
+        {isWorkspaceHome ? (
           <Suspense fallback={null}>
             <SettingsModal />
             <ProjectPanel />
             <LibraryPanel />
           </Suspense>
-          <ConfirmDialog />
-        </div>
-        <Toaster
-          position="bottom-right"
-          toastOptions={{ style: { fontFamily: 'var(--font-sans, system-ui)', fontSize: '12px' } }}
-          richColors
-          closeButton
-        />
-      </ErrorBoundary>
-    );
-  }
-
-  // ── Project open: mostra editor ─────────────────────────────────────
-  return (
-    <ErrorBoundary>
-      <HighlightColorSync />
-      <div className="h-screen overflow-hidden bg-editorial-bg text-editorial-ink font-sans flex flex-col">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={`project-open-${currentProjectId}`}
-            initial={{ opacity: 0, x: 18 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -18 }}
-            transition={{ duration: 0.22, ease: 'easeOut' }}
-            className="flex min-h-0 flex-1 flex-col"
-          >
-            <EditorView />
-          </motion.div>
-        </AnimatePresence>
+        ) : null}
+        <ConfirmDialog />
       </div>
       <Toaster
         position="bottom-right"
@@ -442,5 +422,33 @@ export default function App() {
         closeButton
       />
     </ErrorBoundary>
+  );
+}
+
+function PanelTransitionVeil({
+  panelKey,
+  tone,
+  variant = 'workspace',
+}: {
+  panelKey: string;
+  tone: 'paper' | 'bg';
+  variant?: 'workspace' | 'project';
+}) {
+  const transition =
+    variant === 'project'
+      ? { duration: 0.42, ease: [0.22, 1, 0.36, 1] as const }
+      : { duration: 0.44, ease: [0.19, 1, 0.22, 1] as const };
+  const initialOpacity = variant === 'project' ? 0.78 : 0.92;
+
+  return (
+    <motion.div
+      key={panelKey}
+      initial={{ opacity: initialOpacity }}
+      animate={{ opacity: 0 }}
+      transition={transition}
+      className={`pointer-events-none absolute inset-0 z-20 ${
+        tone === 'paper' ? 'bg-editorial-paper' : 'bg-editorial-bg'
+      }`}
+    />
   );
 }

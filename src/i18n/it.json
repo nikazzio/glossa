@@ -27,7 +27,13 @@
     "cacheHitRate": "Percentuale cache hit",
     "translationCacheLabel": "Cache traduzione",
     "auditCacheLabel": "Cache audit",
-    "brandArea": "Traduzione"
+    "brandArea": "Traduzione",
+    "saveAll": "Salva tutto",
+    "savedAll": "Tutte le modifiche sono salvate",
+    "nothingToSave": "Tutto già salvato",
+    "globalSaveFailed": "Salvataggio fallito",
+    "projectSaveDeferred": "Il salvataggio del progetto è sospeso durante l'esecuzione della pipeline",
+    "savedLibraryProjectDeferred": "Libreria salvata. Il salvataggio del progetto è sospeso durante l'esecuzione della pipeline"
   },
   "sidebar": {
     "areaLabel": "Area",
@@ -715,6 +721,7 @@
     "openInReader": "Apri nel lettore documento",
     "projectHomeEyebrow": "Home progetto",
     "projectHomeTitle": "Home progetto",
+    "projectHomeEmpty": "Nessun testo caricato.",
     "projectHomeBody": "Questo progetto è pronto per l'import del documento. Imposta la pipeline, conferma il contesto del workspace e poi porta dentro il testo sorgente per iniziare il flusso editoriale.",
     "projectHomeImport": "Importa documento",
     "projectHomeConfigurePipeline": "Configura pipeline",
