@@ -444,6 +444,7 @@ export function usePipeline() {
       }
     }
 
+    pipelineLog.newRunMarker();
     pipelineLog.batchPipelineStart(liveChunks.length, config.stages.filter((stage) => stage.enabled).length);
     if (!(await ensureProvidersReady([
       ...config.stages.filter((stage) => stage.enabled).map((stage, i) => ({
@@ -531,6 +532,7 @@ export function usePipeline() {
     if (useChunksStore.getState().isProcessing) return;
     const chunk = useChunksStore.getState().chunks.find((c) => c.id === chunkId);
     if (!chunk) return;
+    pipelineLog.newRunMarker(chunkId);
     pipelineLog.singlePipelineStart(chunkId);
     if (!(await ensureProvidersReady([
       ...config.stages.filter((stage) => stage.enabled).map((stage, i) => ({
@@ -600,6 +602,7 @@ export function usePipeline() {
       return;
     }
 
+    pipelineLog.newRunMarker();
     pipelineLog.batchPipelineStart(
       targets.length,
       config.stages.filter((stage) => stage.enabled).length,

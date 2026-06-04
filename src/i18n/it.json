@@ -1202,7 +1202,8 @@
     "groupBy": "Raggruppa",
     "copy": "Copia",
     "copied": "Copiato",
-    "copyFailed": "Copia fallita"
+    "copyFailed": "Copia fallita",
+    "newRun": "nuova esecuzione"
   },
   "resume": {
     "title": "Traduzione interrotta",

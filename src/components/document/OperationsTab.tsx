@@ -588,6 +588,16 @@ interface EntryCardProps {
 }
 
 function EntryCard({ entry, chunkIndexMap, t, dense = false }: EntryCardProps) {
+  if (entry.meta?.runBoundary === true) {
+    return (
+      <div className="flex items-center gap-3 py-1.5">
+        <div className="h-px flex-1 bg-white/10" />
+        <span className="text-[10px] uppercase tracking-[0.22em] text-[#555]">{t('log.newRun')}</span>
+        <div className="h-px flex-1 bg-white/10" />
+      </div>
+    );
+  }
+
   const color = LEVEL_COLOR[entry.level];
   const chunkIndex = entry.chunkId != null ? chunkIndexMap.get(entry.chunkId) ?? -1 : -1;
   const scopeLabel = scopeLabels(t)[entry.scope] ?? entry.scope;
@@ -718,6 +728,7 @@ function levelLabels(t: (k: string) => string): Record<OperationLogLevel, string
 function formatMetaItems(meta?: Record<string, unknown>): string[] {
   if (!meta) return [];
   return Object.entries(meta).flatMap(([key, value]) => {
+    if (key === 'runBoundary') return [];
     if (value === undefined || value === null || value === '') return [];
     if (Array.isArray(value)) return [`${key}: ${value.join(', ')}`];
     if (typeof value === 'object') return [`${key}: ${JSON.stringify(value)}`];

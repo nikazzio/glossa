@@ -1202,7 +1202,8 @@
     "groupBy": "Group",
     "copy": "Copy",
     "copied": "Copied",
-    "copyFailed": "Copy failed"
+    "copyFailed": "Copy failed",
+    "newRun": "new run"
   },
   "resume": {
     "title": "Translation interrupted",
