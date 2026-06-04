@@ -19,7 +19,7 @@ import {
   Settings2,
   Square,
   Upload,
-  X,
+
   Zap,
 } from 'lucide-react';
 import { lazy, Suspense, useMemo, useState } from 'react';
@@ -121,6 +121,7 @@ export function PipelineSidebar({
     () => estimatePipelineCost(chunks, config, pricingOverrides),
     [chunks, config, pricingOverrides],
   );
+  const activePipelineName = pipelines.find((p) => p.id === activePipelineId)?.name ?? null;
 
   // ── Pipeline delete ───────────────────────────────────────────────
   const handleDeletePipeline = async (pipelineId: string, pipelineName: string) => {
@@ -165,9 +166,9 @@ export function PipelineSidebar({
       initial={{ opacity: 0, x: -22 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
-      className="flex w-52 shrink-0 flex-col border-r border-editorial-border bg-editorial-bg/60"
+      className="relative isolate flex w-52 shrink-0 flex-col bg-editorial-bg/60 after:pointer-events-none after:absolute after:inset-y-0 after:right-0 after:z-0 after:w-px after:bg-editorial-border after:content-['']"
     >
-      <div className="pl-3 pr-0 pt-3">
+      <div className="relative z-10 pl-3 pr-0 pt-3">
         <div className="-mr-px rounded-l-[20px] rounded-r-none border border-r-0 border-editorial-border bg-editorial-paper px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.55),6px_10px_20px_rgba(74,50,17,0.04)]">
           <div className="flex justify-center pb-2">
             <SectionLabel icon={LibraryBig} label={t('sidebar.workspaceSection')} />
@@ -177,7 +178,7 @@ export function PipelineSidebar({
               {activeWorkspace?.name ?? '—'}
             </span>
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className="mt-3 grid grid-cols-3 gap-2">
             <IconButton
               size="md"
               onClick={closeProject}
@@ -189,6 +190,14 @@ export function PipelineSidebar({
             </IconButton>
             <IconButton
               size="md"
+              onClick={() => setShowProjectPanel(true)}
+              title={t('projects.title')}
+              tooltipSide="right"
+            >
+              <FolderOpen size={15} />
+            </IconButton>
+            <IconButton
+              size="md"
               onClick={onOpenWorkspaceSettings}
               title={t('workspace.configure')}
               tooltipSide="right"
@@ -196,39 +205,26 @@ export function PipelineSidebar({
               <Settings2 size={15} />
             </IconButton>
           </div>
+          {!hasDocument && (
+            <div className="mt-2 flex justify-center">
+              <IconButton
+                size="md"
+                onClick={onImportDocument}
+                title={t('files.import')}
+                tooltipSide="right"
+              >
+                <Upload size={15} />
+              </IconButton>
+            </div>
+          )}
         </div>
       </div>
 
       <div className="mx-3 my-4 h-px bg-editorial-border/60" />
 
-      <div className="min-h-0 flex-1 overflow-y-auto pb-4 custom-scrollbar">
-        <div className="pl-3 pr-0">
+      <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto pb-4 scrollbar-hidden">
+        <div className="relative z-10 pl-3 pr-0">
           <div className="-mr-px rounded-l-[20px] rounded-r-none border border-r-0 border-editorial-border bg-editorial-paper px-3 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.55),6px_10px_20px_rgba(74,50,17,0.04)]">
-            <div className="flex justify-center pb-3">
-              <SectionLabel icon={FolderOpen} label={t('header.projectLabel')} />
-            </div>
-
-            <div className="mb-4 flex items-center justify-center gap-2">
-              <IconButton
-                size="md"
-                onClick={() => setShowProjectPanel(true)}
-                title={t('projects.title')}
-                tooltipSide="right"
-              >
-                <FolderOpen size={15} />
-              </IconButton>
-              {!hasDocument ? (
-                <IconButton
-                  size="md"
-                  onClick={onImportDocument}
-                  title={t('files.import')}
-                  tooltipSide="right"
-                >
-                  <Upload size={15} />
-                </IconButton>
-              ) : null}
-            </div>
-
             <div className="flex flex-col gap-4">
               <div className="flex flex-col items-center gap-2">
                 <SectionLabel icon={FlaskConical} label={t('pipeline.modeLabel')} />
@@ -401,8 +397,13 @@ export function PipelineSidebar({
             <div className="my-4 h-px bg-editorial-border/60" />
 
             <div className="flex flex-col gap-3">
-              <div className="flex justify-center">
+              <div className="flex flex-col items-center gap-1">
                 <SectionLabel icon={Zap} label={t('pipeline.sectionTitle')} />
+                {activePipelineName && (
+                  <span className="max-w-full truncate text-center text-xs text-editorial-muted">
+                    {activePipelineName}
+                  </span>
+                )}
               </div>
               {pipelines.length === 0 ? (
                 <div
@@ -435,18 +436,15 @@ export function PipelineSidebar({
                           )}
                         </IconButton>
                         {pipelines.length > 1 && !isPipelineRunning && (
-                          <IconButton
-                            size="sm"
-                            tone="muted"
-                            onClick={() => {
-                              void handleDeletePipeline(pipeline.id, pipeline.name);
-                            }}
+                          <button
+                            type="button"
+                            onClick={() => void handleDeletePipeline(pipeline.id, pipeline.name)}
                             title={t('pipeline.deletePipeline')}
-                            tooltipSide="right"
-                            className="absolute -right-1 -top-1 hidden h-4 w-4 p-0 group-hover:flex"
+                            aria-label={t('pipeline.deletePipeline')}
+                            className="absolute -right-1 -top-1 z-10 hidden h-4 w-4 items-center justify-center rounded-full border border-editorial-border bg-white text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent group-hover:flex"
                           >
-                            <X size={8} />
-                          </IconButton>
+                            <Minus size={10} />
+                          </button>
                         )}
                       </div>
                     );
@@ -490,7 +488,7 @@ export function PipelineSidebar({
       </div>
 
       {hasDocument ? (
-        <div className="pl-3 pr-0 pb-4 pt-3">
+        <div className="relative z-10 pl-3 pr-0 pb-4 pt-3">
           <div className="-mr-px rounded-l-[20px] rounded-r-none border border-r-0 border-editorial-border bg-editorial-paper px-3 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.55),6px_10px_20px_rgba(74,50,17,0.04)]">
             <div className="flex justify-center pb-2">
               <SectionLabel icon={Columns2} label={t('document.panelsTitle')} />

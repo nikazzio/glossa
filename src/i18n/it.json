@@ -277,6 +277,10 @@
         "title": "Istruzione task runtime",
         "hint": "Istruzione valida solo a esecuzione che dice al modello di tradurre, rifinire o formattare solo il chunk corrente."
       },
+      "phrase-memory": {
+        "title": "Memoria frasi",
+        "hint": "Coppie di memoria di traduzione trovate per questo chunk. Aggiunte alle istruzioni della fase a esecuzione — vengono iniettate solo le corrispondenze abilitate."
+      },
       "output-contract": {
         "title": "Contratto output runtime",
         "hint": "Vincolo finale dell'output valido solo a runtime. Limita la risposta al risultato completo specifico della fase."

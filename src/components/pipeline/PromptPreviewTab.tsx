@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PipelineConfig, StageRole } from '../../types';
 import { buildPromptPreviewStages, type PromptPreviewBlock, type PromptPreviewStage } from './promptPreview';
+import { IconButton } from '../ui';
 
 interface PromptPreviewTabProps {
   config: PipelineConfig;
@@ -63,21 +64,15 @@ function StageSwitch({
   const Icon = STAGE_ICON[stage.role];
 
   return (
-    <button
-      type="button"
+    <IconButton
+      size="md"
+      tone={active ? 'accent' : 'default'}
       onClick={onClick}
-      aria-pressed={active}
-      className={`rounded-full border px-4 py-1.5 text-xs font-bold uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-        active
-          ? 'border-editorial-accent bg-editorial-accent text-white'
-          : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent'
-      }`}
+      title={label}
+      ariaPressed={active}
     >
-      <span className="inline-flex items-center gap-1.5">
-        <Icon size={12} />
-        {label}
-      </span>
-    </button>
+      <Icon size={14} />
+    </IconButton>
   );
 }
 

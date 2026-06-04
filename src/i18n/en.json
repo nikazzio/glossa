@@ -277,6 +277,10 @@
         "title": "Runtime task instruction",
         "hint": "Execution-only instruction that tells the model to translate, refine, or format only the current chunk."
       },
+      "phrase-memory": {
+        "title": "Phrase memory",
+        "hint": "Translation memory pairs matched for this chunk. Appended to stage instructions at execution time — only enabled matches are injected."
+      },
       "output-contract": {
         "title": "Runtime output contract",
         "hint": "Final execution-only output requirement. It constrains the reply to the stage-specific full-text result."
