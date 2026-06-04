@@ -24,7 +24,6 @@ import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
-import { useLibraryStore } from '../../stores/libraryStore';
 import type { TranslationChunk } from '../../types';
 import { indexPad } from '../../utils';
 import { CopyButton, HighlightedText, MarkdownEditor, ProcessingLine } from '../common';
@@ -60,9 +59,8 @@ export function DocumentView({
 }: DocumentViewProps) {
   const { t } = useTranslation();
   const { config } = usePipelineStore();
-  const { currentProjectId, projects, pipelines, activePipelineId, setShowProjectPanel } = useProjectStore();
+  const { currentProjectId, projects, setShowProjectPanel } = useProjectStore();
   const activeWorkspace = useWorkspaceStore((state) => state.activeWorkspace);
-  const setShowLibraryPanel = useLibraryStore((state) => state.setShowLibraryPanel);
   const {
     chunks,
     updateChunkDraft,
@@ -221,13 +219,12 @@ export function DocumentView({
   }, [deferredSourceText, showHighlight, highlightsEnabled, searchQuery, paneFocus, sourceHighlight.html]);
 
   const currentProject = projects.find((project) => project.id === currentProjectId) ?? null;
-  const activePipeline = pipelines.find((pipeline) => pipeline.id === activePipelineId) ?? null;
 
   if (!currentChunk) {
     return (
       <section className="flex w-full flex-1 overflow-y-auto bg-editorial-paper min-h-0 px-8 py-10">
-        <div className="mx-auto grid w-full max-w-7xl gap-6 xl:grid-cols-[minmax(0,1fr)_18rem]">
-          <div className="min-w-0 rounded-[28px] border border-editorial-border/70 bg-editorial-paper px-8 py-8 shadow-[0_12px_36px_rgba(74,50,17,0.06)]">
+        <div className="mx-auto w-full max-w-7xl">
+          <div className="min-w-0 px-8 py-8">
             <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[0.28em] text-editorial-muted">
               <span>{activeWorkspace?.name ?? t('workspace.noActive')}</span>
               <span className="h-1 w-1 rounded-full bg-editorial-accent/60" aria-hidden="true" />
@@ -275,97 +272,7 @@ export function DocumentView({
                 </IconButton>
               </Tooltip>
             </div>
-
-            <div className="mt-8 grid gap-3 md:grid-cols-3">
-              {([
-                {
-                  key: 'languages',
-                  icon: Languages,
-                  value: `${config.sourceLanguage} -> ${config.targetLanguage}`,
-                },
-                {
-                  key: 'pipeline',
-                  icon: Settings2,
-                  value: activePipeline?.name ?? t('document.projectHomePipelineFallback'),
-                },
-                {
-                  key: 'workspace',
-                  icon: Archive,
-                  value: activeWorkspace?.name ?? '—',
-                },
-              ] as const).map(({ key, icon: Icon, value }) => (
-                <article
-                  key={key}
-                  className="rounded-[22px] border border-editorial-border/65 bg-editorial-bg/45 px-5 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]"
-                >
-                  <div className="flex items-center gap-2 text-editorial-muted">
-                    <Icon size={14} />
-                  </div>
-                  <div className="mt-3 font-display text-2xl italic text-editorial-ink">
-                    {value}
-                  </div>
-                </article>
-              ))}
-            </div>
           </div>
-
-          <aside className="space-y-4">
-            <div className="rounded-[24px] border border-editorial-border/70 bg-editorial-bg/40 px-5 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]">
-              <div className="mt-1 space-y-2">
-                {([
-                  {
-                    key: 'import',
-                    icon: FileText,
-                    label: t('document.projectHomeImport'),
-                    action: onImportDocument,
-                  },
-                  {
-                    key: 'pipeline',
-                    icon: Settings2,
-                    label: t('document.projectHomeConfigurePipeline'),
-                    action: () => setShowConfigDrawer(true),
-                  },
-                  {
-                    key: 'library',
-                    icon: Archive,
-                    label: t('library.openLibrary'),
-                    action: () => setShowLibraryPanel(true),
-                  },
-                ] as const).map(({ key, icon: Icon, label, action }) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={action}
-                    className="flex w-full items-center gap-3 rounded-[18px] border border-editorial-border/70 bg-editorial-paper/70 px-4 py-3 text-left transition-colors hover:border-editorial-accent/45 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  >
-                    <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-editorial-border bg-editorial-paper text-editorial-accent">
-                      <Icon size={15} />
-                    </span>
-                    <span className="min-w-0 font-display text-lg italic text-editorial-ink">
-                      {label}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-[24px] border border-editorial-border/70 bg-editorial-paper px-5 py-5 shadow-[0_12px_30px_rgba(74,50,17,0.05)]">
-              <dl className="space-y-4">
-                <ProjectHomeMetric
-                  label={t('document.projectHomePipeline')}
-                  value={String(pipelines.length)}
-                />
-                <ProjectHomeMetric
-                  label={t('document.projectHomeLanguages')}
-                  value={`${config.sourceLanguage} -> ${config.targetLanguage}`}
-                />
-                <ProjectHomeMetric
-                  label={t('document.projectHomeWorkspace')}
-                  value={activeWorkspace?.name ?? '—'}
-                />
-              </dl>
-            </div>
-          </aside>
         </div>
       </section>
     );
@@ -668,19 +575,6 @@ export function DocumentView({
         />
       ) : null}
     </section>
-  );
-}
-
-function ProjectHomeMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-end justify-between gap-4 border-b border-editorial-border/55 pb-3 last:border-b-0 last:pb-0">
-      <dt className="text-[10px] font-bold uppercase tracking-[0.22em] text-editorial-muted">
-        {label}
-      </dt>
-      <dd className="font-display text-2xl italic text-editorial-ink">
-        {value}
-      </dd>
-    </div>
   );
 }
 
