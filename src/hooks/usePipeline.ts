@@ -9,6 +9,7 @@ import { showPreflightDialog } from '../stores/preflightStore';
 import { withRetry, friendlyError, is429Error } from '../utils/retry';
 import { qualityDefault, qualityFailure } from '../utils';
 import { pipelineLog } from '../utils/pipelineLogging';
+import { useOperationLogStore } from '../stores/operationLogStore';
 import type { Issue, JudgeResult, PromptInfo, ResponseInfo, TokenUsage, TranslationChunk } from '../types';
 import { useProjectStore } from '../stores/projectStore';
 import { usePhraseMemoryStore } from '../stores/phraseMemoryStore';
@@ -313,12 +314,13 @@ export function usePipeline() {
           pipelineLog.stageCancelled(chunk.id, stage.id, stage.name, stageDurationMs);
           return 'cancelled';
         }
-        const msg = friendlyError(error instanceof Error ? error.message : String(error));
+        const rawError = error instanceof Error ? error.message : String(error);
+        const msg = friendlyError(rawError);
         updateChunkStage(chunk.id, stage.id, {
           content: '', status: 'error', error: msg,
         });
         updateChunkStatus(chunk.id, 'error');
-        pipelineLog.stageError(chunk.id, stage.id, stage.name, msg, stageDurationMs);
+        pipelineLog.stageError(chunk.id, stage.id, stage.name, rawError, stageDurationMs);
         toast.error(t('errors.stageFailed', { name: stage.name }), { description: msg });
         return 'failed';
       }
@@ -532,6 +534,7 @@ export function usePipeline() {
     if (useChunksStore.getState().isProcessing) return;
     const chunk = useChunksStore.getState().chunks.find((c) => c.id === chunkId);
     if (!chunk) return;
+    useOperationLogStore.getState().clearChunk(chunkId);
     pipelineLog.newRunMarker(chunkId);
     pipelineLog.singlePipelineStart(chunkId);
     if (!(await ensureProvidersReady([

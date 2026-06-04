@@ -39,6 +39,7 @@ interface OperationLogState {
   setProjectId: (id: string | null) => void;
   append: (entry: Omit<OperationLogEntry, 'id' | 'at'>) => void;
   loadFromDb: (projectId: string) => Promise<void>;
+  clearChunk: (chunkId: string) => void;
   clear: () => void;
 }
 
@@ -71,6 +72,12 @@ export const useOperationLogStore = create<OperationLogState>((set, get) => ({
       entries: rows as OperationLogEntry[],
       currentProjectId: projectId,
     });
+  },
+
+  clearChunk: (chunkId: string) => {
+    set((state) => ({
+      entries: state.entries.filter((e) => e.chunkId !== chunkId),
+    }));
   },
 
   clear: () => {
