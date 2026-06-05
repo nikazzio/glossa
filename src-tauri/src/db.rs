@@ -54,11 +54,11 @@ pub fn backup_database_file(
     app: tauri::AppHandle,
     reason: String,
 ) -> Result<Option<String>, String> {
-    let app_data_dir = app
+    let app_config_dir = app
         .path()
-        .app_data_dir()
+        .app_config_dir()
         .map_err(|error| error.to_string())?;
-    let db_path = app_data_dir.join("glossa.db");
+    let db_path = app_config_dir.join("glossa.db");
     if !db_path.exists() {
         return Ok(None);
     }
@@ -77,14 +77,14 @@ pub fn backup_database_file(
         .duration_since(UNIX_EPOCH)
         .map_err(|error| error.to_string())?
         .as_secs();
-    let backup_path = app_data_dir.join(format!("glossa.{timestamp}.{safe_reason}.db.bak"));
+    let backup_path = app_config_dir.join(format!("glossa.{timestamp}.{safe_reason}.db.bak"));
     fs::copy(&db_path, &backup_path).map_err(|error| error.to_string())?;
 
     for suffix in ["wal", "shm"] {
-        let sidecar_path = app_data_dir.join(format!("glossa.db-{suffix}"));
+        let sidecar_path = app_config_dir.join(format!("glossa.db-{suffix}"));
         if sidecar_path.exists() {
             let sidecar_backup_path =
-                app_data_dir.join(format!("glossa.{timestamp}.{safe_reason}.db-{suffix}.bak"));
+                app_config_dir.join(format!("glossa.{timestamp}.{safe_reason}.db-{suffix}.bak"));
             fs::copy(&sidecar_path, sidecar_backup_path).map_err(|error| error.to_string())?;
         }
     }

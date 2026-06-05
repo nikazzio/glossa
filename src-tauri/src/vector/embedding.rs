@@ -24,7 +24,7 @@ impl Serialize for EmbeddingError {
 
 fn db_path(app: &tauri::AppHandle) -> Result<PathBuf, EmbeddingError> {
     app.path()
-        .app_data_dir()
+        .app_config_dir()
         .map(|p| p.join("glossa.db"))
         .map_err(|e| EmbeddingError::Http(format!("cannot resolve db path: {e}")))
 }

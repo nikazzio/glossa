@@ -34,7 +34,7 @@ pub fn vec_ping(app: tauri::AppHandle) -> Result<String, String> {
 
 pub fn get_db_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     app.path()
-        .app_data_dir()
+        .app_config_dir()
         .map(|d| d.join("glossa.db"))
         .map_err(|e| e.to_string())
 }
