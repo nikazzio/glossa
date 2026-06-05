@@ -42,6 +42,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
   const handleSave = async () => {
     if (!name.trim()) return;
     setSaving(true);
+    let shouldClose = false;
     try {
       await updateActiveWorkspace({
         name: name.trim(),
@@ -49,12 +50,14 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
         embeddingModel,
       });
       toast.success(t('workspace.updated'));
+      shouldClose = true;
     } catch (err: unknown) {
       toast.error(t('workspace.saveFailed'), {
         description: err instanceof Error ? err.message : String(err),
       });
     } finally {
       setSaving(false);
+      if (shouldClose) onClose();
     }
   };
 

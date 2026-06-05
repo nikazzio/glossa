@@ -289,21 +289,24 @@ export function PipelineSidebar({
           <div className="flex justify-center pb-2">
             <SectionLabel icon={LibraryBig} label={t('sidebar.workspaceSection')} />
           </div>
-          <div className="text-center">
-            <span className="block truncate font-display text-base italic text-editorial-ink">
-              {activeWorkspace?.name ?? '—'}
-            </span>
-          </div>
-          <div className="mt-3 grid grid-cols-3 gap-2">
+          <div className="flex items-center gap-2">
             <IconButton
-              size="md"
+              size="sm"
               onClick={closeProject}
               title={t('sidebar.backToWorkspace')}
               disabled={isProcessing}
               tooltipSide="right"
+              className="shrink-0"
             >
               <ChevronLeft size={15} />
             </IconButton>
+            <div className="min-w-0 flex-1">
+              <span className="block truncate font-display text-base italic leading-none text-editorial-ink">
+                {activeWorkspace?.name ?? '—'}
+              </span>
+            </div>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             <IconButton
               size="md"
               onClick={() => setShowProjectPanel(true)}
@@ -328,6 +331,7 @@ export function PipelineSidebar({
                 onClick={onImportDocument}
                 title={t('files.import')}
                 tooltipSide="right"
+                className="shrink-0"
               >
                 <Upload size={15} />
               </IconButton>
