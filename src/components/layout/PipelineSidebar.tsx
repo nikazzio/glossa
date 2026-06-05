@@ -19,10 +19,21 @@ import {
   Settings2,
   Square,
   Upload,
-
   Zap,
 } from 'lucide-react';
-import { lazy, Suspense, useMemo, useState } from 'react';
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type RefObject,
+} from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'motion/react';
 import { toast } from 'sonner';
@@ -35,7 +46,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { estimatePipelineCost } from '../../utils/costEstimate';
 import { CostBreakdownPanel } from '../pipeline/CostBadge';
-import { IconButton, SectionLabel } from '../ui';
+import { IconButton, SectionLabel, Tooltip } from '../ui';
 import { exportTranslation, exportBilingual } from '../../services/fileService';
 import type { ExportFormat } from '../document/ExportDialog';
 import { DashboardSidebar } from './DashboardSidebar';
@@ -43,6 +54,83 @@ import { DashboardSidebar } from './DashboardSidebar';
 const ExportDialog = lazy(() =>
   import('../document/ExportDialog').then((m) => ({ default: m.ExportDialog })),
 );
+
+const COST_PANEL_OFFSET = 12;
+const COST_PANEL_WIDTH = 256;
+const VIEWPORT_MARGIN = 12;
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function SidebarCostPanel({
+  anchorRef,
+  estimate,
+  open,
+  onMouseEnter,
+  onMouseLeave,
+}: {
+  anchorRef: RefObject<HTMLDivElement | null>;
+  estimate: ReturnType<typeof estimatePipelineCost>;
+  open: boolean;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
+}) {
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const [style, setStyle] = useState<CSSProperties | null>(null);
+
+  const updatePosition = useCallback(() => {
+    if (!anchorRef.current) return;
+    const anchorRect = anchorRef.current.getBoundingClientRect();
+    const panelHeight = panelRef.current?.offsetHeight ?? 220;
+    const left = Math.min(
+      anchorRect.right + COST_PANEL_OFFSET,
+      window.innerWidth - VIEWPORT_MARGIN - COST_PANEL_WIDTH,
+    );
+    const top = clamp(
+      anchorRect.top + anchorRect.height / 2,
+      VIEWPORT_MARGIN + panelHeight / 2,
+      window.innerHeight - VIEWPORT_MARGIN - panelHeight / 2,
+    );
+    setStyle({
+      left,
+      top,
+      width: COST_PANEL_WIDTH,
+      transform: 'translateY(-50%)',
+    });
+  }, [anchorRef]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    updatePosition();
+  }, [estimate, open, updatePosition]);
+
+  useEffect(() => {
+    if (!open) return;
+    window.addEventListener('scroll', updatePosition, true);
+    window.addEventListener('resize', updatePosition);
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [open, updatePosition]);
+
+  if (!open || typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div
+      ref={panelRef}
+      className="fixed z-[160]"
+      style={style ?? undefined}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+      <CostBreakdownPanel estimate={estimate} />
+    </div>,
+    document.body,
+  );
+}
+
 interface PipelineSidebarProps {
   mode?: 'dashboard' | 'editor';
   onRunPipeline?: () => void;
@@ -100,6 +188,8 @@ export function PipelineSidebar({
   // ── Local state ───────────────────────────────────────────────────
   const [showCostPanel, setShowCostPanel] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const costButtonRef = useRef<HTMLDivElement | null>(null);
+  const costPanelCloseTimer = useRef<number | null>(null);
 
   // ── Derived ───────────────────────────────────────────────────────
   const isRunning = runStatus === 'running';
@@ -122,6 +212,32 @@ export function PipelineSidebar({
     [chunks, config, pricingOverrides],
   );
   const activePipelineName = pipelines.find((p) => p.id === activePipelineId)?.name ?? null;
+
+  const openCostPanel = useCallback(() => {
+    if (costPanelCloseTimer.current !== null) {
+      window.clearTimeout(costPanelCloseTimer.current);
+      costPanelCloseTimer.current = null;
+    }
+    setShowCostPanel(true);
+  }, []);
+
+  const scheduleCloseCostPanel = useCallback(() => {
+    if (costPanelCloseTimer.current !== null) {
+      window.clearTimeout(costPanelCloseTimer.current);
+    }
+    costPanelCloseTimer.current = window.setTimeout(() => {
+      setShowCostPanel(false);
+      costPanelCloseTimer.current = null;
+    }, 120);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (costPanelCloseTimer.current !== null) {
+        window.clearTimeout(costPanelCloseTimer.current);
+      }
+    };
+  }, []);
 
   // ── Pipeline delete ───────────────────────────────────────────────
   const handleDeletePipeline = async (pipelineId: string, pipelineName: string) => {
@@ -238,11 +354,10 @@ export function PipelineSidebar({
                     ariaLabel={t('pipeline.modeTest')}
                     ariaPressed={pipelineMode === 'test'}
                     tooltipSide="right"
-                    className={`h-11 w-11 ${
-                      pipelineMode === 'test'
-                        ? 'border-editorial-accent bg-editorial-bg text-editorial-ink shadow-sm'
-                        : 'bg-editorial-textbox'
-                    }`}
+                    className={`h-11 w-11 ${pipelineMode === 'test'
+                      ? 'border-editorial-accent bg-editorial-bg text-editorial-ink shadow-sm'
+                      : 'bg-editorial-textbox'
+                      }`}
                   >
                     <FlaskConical size={14} />
                   </IconButton>
@@ -255,11 +370,10 @@ export function PipelineSidebar({
                     ariaLabel={t('pipeline.modeProduction')}
                     ariaPressed={pipelineMode === 'production'}
                     tooltipSide="right"
-                    className={`h-11 w-11 ${
-                      pipelineMode === 'production'
-                        ? 'border-editorial-accent bg-editorial-bg text-editorial-charcoal shadow-sm'
-                        : 'bg-editorial-textbox'
-                    }`}
+                    className={`h-11 w-11 ${pipelineMode === 'production'
+                      ? 'border-editorial-accent bg-editorial-bg text-editorial-charcoal shadow-sm'
+                      : 'bg-editorial-textbox'
+                      }`}
                   >
                     <Zap size={14} />
                   </IconButton>
@@ -307,16 +421,18 @@ export function PipelineSidebar({
                   )}
                   {costEstimate.stages.length > 0 && (
                     <div
+                      ref={costButtonRef}
                       className="absolute -bottom-1.5 -right-1.5"
-                      onMouseEnter={() => setShowCostPanel(true)}
-                      onMouseLeave={() => setShowCostPanel(false)}
+                      onMouseEnter={openCostPanel}
+                      onMouseLeave={scheduleCloseCostPanel}
                     >
                       <IconButton
                         size="sm"
                         tone="charcoal"
-                        onFocus={() => setShowCostPanel(true)}
-                        onBlur={() => setShowCostPanel(false)}
-                        title={t('cost.breakdown')}
+                        onFocus={openCostPanel}
+                        onBlur={scheduleCloseCostPanel}
+                        title=""
+                        ariaLabel={t('cost.breakdown')}
                         tooltipSide="right"
                         className="h-6 w-6 bg-editorial-bg p-0"
                       >
@@ -324,15 +440,13 @@ export function PipelineSidebar({
                       </IconButton>
                     </div>
                   )}
-                  {showCostPanel && costEstimate.stages.length > 0 && (
-                    <div
-                      className="absolute left-full top-1/2 z-[120] ml-3 w-64 -translate-y-1/2"
-                      onMouseEnter={() => setShowCostPanel(true)}
-                      onMouseLeave={() => setShowCostPanel(false)}
-                    >
-                      <CostBreakdownPanel estimate={costEstimate} />
-                    </div>
-                  )}
+                  <SidebarCostPanel
+                    anchorRef={costButtonRef}
+                    estimate={costEstimate}
+                    open={showCostPanel && costEstimate.stages.length > 0}
+                    onMouseEnter={openCostPanel}
+                    onMouseLeave={scheduleCloseCostPanel}
+                  />
                 </div>
                 {hasDocument && (
                   <span className="text-xs font-bold tabular-nums tracking-[0.12em] text-editorial-muted">
@@ -354,16 +468,19 @@ export function PipelineSidebar({
                   >
                     <Minus size={12} />
                   </IconButton>
-                  <div
-                    className={`flex h-10 min-w-[38px] items-center justify-center rounded-full border px-2 text-xs font-bold tracking-[0.12em] ${
-                      pipelineMode === 'test'
+                  <Tooltip
+                    label={t('pipeline.runChunkCount', { count: runChunkCount })}
+                    side="right"
+                  >
+                    <div
+                      className={`flex h-10 min-w-[38px] items-center justify-center rounded-full border px-2 text-xs font-bold tracking-[0.12em] ${pipelineMode === 'test'
                         ? 'border-editorial-warning/40 bg-editorial-textbox text-editorial-ink'
                         : 'border-editorial-border bg-editorial-bg text-editorial-muted'
-                    }`}
-                    title={t('pipeline.runChunkCount', { count: runChunkCount })}
-                  >
-                    {runChunkCount}
-                  </div>
+                        }`}
+                    >
+                      {runChunkCount}
+                    </div>
+                  </Tooltip>
                   <IconButton
                     size="md"
                     tone="charcoal"
@@ -406,14 +523,13 @@ export function PipelineSidebar({
                 )}
               </div>
               {pipelines.length === 0 ? (
-                <div
-                  className="flex items-center justify-center"
-                  title={t('pipeline.pipelineNumber', { number: 1 })}
-                >
-                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-editorial-accent text-xs font-black text-white opacity-55">
-                    1
-                  </span>
-                </div>
+                <Tooltip label={t('pipeline.pipelineNumber', { number: 1 })} side="right">
+                  <div className="flex items-center justify-center">
+                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-editorial-accent text-xs font-black text-white opacity-55">
+                      1
+                    </span>
+                  </div>
+                </Tooltip>
               ) : (
                 <div className="flex flex-col items-center gap-2">
                   {pipelines.map((pipeline, i) => {
@@ -436,15 +552,17 @@ export function PipelineSidebar({
                           )}
                         </IconButton>
                         {pipelines.length > 1 && !isPipelineRunning && (
-                          <button
-                            type="button"
-                            onClick={() => void handleDeletePipeline(pipeline.id, pipeline.name)}
+                          <IconButton
+                            size="sm"
+                            tone="muted"
+                            onClick={() => {
+                              void handleDeletePipeline(pipeline.id, pipeline.name);
+                            }}
                             title={t('pipeline.deletePipeline')}
-                            aria-label={t('pipeline.deletePipeline')}
-                            className="absolute -right-1 -top-1 z-10 hidden h-4 w-4 items-center justify-center rounded-full border border-editorial-border bg-white text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent group-hover:flex"
-                          >
-                            <Minus size={10} />
-                          </button>
+                            tooltipSide="right"
+                            className="absolute -right-1 -top-1 z-10 hidden h-4 w-4 bg-editorial-bg p-0 group-hover:flex"
+                          > -
+                          </IconButton>
                         )}
                       </div>
                     );

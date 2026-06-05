@@ -1,5 +1,5 @@
 import { cva, type VariantProps } from 'class-variance-authority';
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { Tooltip, type TooltipSide } from './Tooltip';
 
 const iconButton = cva(
@@ -12,7 +12,7 @@ const iconButton = cva(
         lg: 'p-2.5',
       },
       tone: {
-        default:  'border-editorial-border text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent',
+        default:  'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent',
         accent:   'border-editorial-accent bg-editorial-accent text-white',
         success:  'border-editorial-success/50 bg-editorial-success/10 text-editorial-success',
         charcoal: 'border-editorial-border text-editorial-muted hover:border-editorial-charcoal/60 hover:text-editorial-charcoal',
@@ -37,7 +37,7 @@ type IconButtonProps = VariantProps<typeof iconButton> &
     tooltipSide?: TooltipSide;
   };
 
-export function IconButton({
+export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(function IconButton({
   onClick,
   children,
   title,
@@ -49,10 +49,11 @@ export function IconButton({
   className,
   tooltipSide,
   ...rest
-}: IconButtonProps) {
+}, ref) {
   return (
     <Tooltip label={title} side={tooltipSide}>
       <button
+        ref={ref}
         type="button"
         onClick={onClick}
         disabled={disabled}
@@ -65,4 +66,4 @@ export function IconButton({
       </button>
     </Tooltip>
   );
-}
+});

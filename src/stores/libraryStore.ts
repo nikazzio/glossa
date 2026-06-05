@@ -11,7 +11,7 @@ import {
   upsertGlossaryEntries,
 } from '../services/glossaryService';
 
-export type LibraryTab = 'dictionaries' | 'templates';
+export type LibraryTab = 'dictionaries' | 'templates' | 'memories';
 
 interface LibraryState {
   showLibraryPanel: boolean;

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { BookMarked, BookOpenText } from 'lucide-react';
+import { BookMarked, BookOpenText, Brain } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -7,13 +7,22 @@ import { useLibraryStore, type LibraryTab } from '../../stores/libraryStore';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { confirm } from '../../stores/confirmStore';
 import { DictionariesTab } from './DictionariesTab';
+import { MemoriesTab } from './MemoriesTab';
 import { PromptTemplatesTab } from './PromptTemplatesTab';
 import { EditorialModalShell } from '../common';
+import { IconButton } from '../ui';
 
 const TABS: { id: LibraryTab; labelKey: string }[] = [
   { id: 'dictionaries', labelKey: 'library.tabDictionaries' },
   { id: 'templates', labelKey: 'library.tabTemplates' },
+  { id: 'memories', labelKey: 'library.tabMemories' },
 ];
+
+function tabIcon(tab: LibraryTab) {
+  if (tab === 'dictionaries') return <BookMarked size={16} />;
+  if (tab === 'templates') return <BookOpenText size={16} />;
+  return <Brain size={16} />;
+}
 
 export function LibraryPanel() {
   const { t } = useTranslation();
@@ -97,23 +106,21 @@ export function LibraryPanel() {
             >
               <div className="flex h-full flex-col">
                 <div className="border-b border-editorial-border px-6 py-3 md:px-8">
-                  <div className="flex gap-2" role="tablist">
+                  <div className="flex gap-2" role="tablist" aria-label={t('library.title')}>
                     {TABS.map((tab) => (
-                      <button
+                      <IconButton
                         key={tab.id}
+                        id={`library-tab-${tab.id}`}
                         role="tab"
                         aria-selected={activeTab === tab.id}
+                        aria-controls={`library-panel-${tab.id}`}
+                        size="lg"
+                        tone={activeTab === tab.id ? 'accent' : 'default'}
                         onClick={() => useLibraryStore.getState().setShowLibraryPanel(true, tab.id)}
-                        className={`rounded-full border p-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                          activeTab === tab.id
-                            ? 'border-editorial-accent bg-editorial-accent text-white'
-                            : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
-                        }`}
                         title={t(tab.labelKey)}
-                        aria-label={t(tab.labelKey)}
-                        >
-                          {tab.id === 'dictionaries' ? <BookMarked size={16} /> : <BookOpenText size={16} />}
-                        </button>
+                      >
+                        {tabIcon(tab.id)}
+                      </IconButton>
                     ))}
                     <span className="mx-1 h-4 w-px self-center bg-editorial-border/70" aria-hidden="true" />
                     <span className="self-center font-display text-sm italic text-editorial-ink">
@@ -124,6 +131,7 @@ export function LibraryPanel() {
                 <div className="flex-1 overflow-y-auto px-6 py-6 md:px-8 custom-scrollbar [scrollbar-gutter:stable]">
                   {activeTab === 'dictionaries' && <DictionariesTab />}
                   {activeTab === 'templates' && <PromptTemplatesTab />}
+                  {activeTab === 'memories' && <MemoriesTab />}
                 </div>
               </div>
             </EditorialModalShell>

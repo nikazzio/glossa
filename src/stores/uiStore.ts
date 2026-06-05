@@ -10,6 +10,7 @@ export type InsightsDrawerTab = 'index' | 'search' | 'stats' | 'coherence' | 'gl
 export type ChunkDrawerTab = 'audit' | 'notes' | 'operations' | 'memory';
 export type RunPhase = 'test' | 'production';
 export type DocumentPaneFocus = 'both' | 'source' | 'translation';
+export type HelpSection = 'overview' | 'pipeline' | 'features' | 'context' | 'audit' | 'projects' | 'providers' | 'ollama' | 'glossary' | 'shortcuts' | 'troubleshooting' | 'design';
 
 interface UiState {
   viewMode: ViewMode;
@@ -19,6 +20,7 @@ interface UiState {
   selectedChunkId: string | null;
   showSettings: boolean;
   showHelp: boolean;
+  helpSection: HelpSection;
   showConfigDrawer: boolean;
   showDocumentDrawer: boolean;
   documentDrawerTab: InsightsDrawerTab;
@@ -69,7 +71,7 @@ interface UiState {
   setSyncScrollEnabled: (enabled: boolean) => void;
   setSelectedChunkId: (chunkId: string | null) => void;
   setShowSettings: (show: boolean) => void;
-  setShowHelp: (show: boolean) => void;
+  setShowHelp: (show: boolean, section?: HelpSection) => void;
   setShowConfigDrawer: (show: boolean) => void;
   setShowDocumentDrawer: (show: boolean, tab?: InsightsDrawerTab) => void;
   setDocumentDrawerTab: (tab: InsightsDrawerTab) => void;
@@ -99,6 +101,7 @@ export const useUiStore = create<UiState>()(
   selectedChunkId: null,
   showSettings: false,
   showHelp: false,
+  helpSection: 'overview',
   showConfigDrawer: false,
   showDocumentDrawer: false,
   documentDrawerTab: 'index',
@@ -151,11 +154,12 @@ export const useUiStore = create<UiState>()(
           }
         : { showSettings: false, showHelp: state.showHelp },
     ),
-  setShowHelp: (show) =>
+  setShowHelp: (show, section) =>
     set((state) =>
       show
         ? {
             showHelp: true,
+            helpSection: section ?? 'overview',
             showSettings: false,
             showConfigDrawer: false,
             showDocumentDrawer: false,

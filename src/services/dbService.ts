@@ -3,6 +3,27 @@ import { invoke } from '@tauri-apps/api/core';
 
 let db: Database | null = null;
 const DB_URL = 'sqlite:glossa.db';
+const CURRENT_SCHEMA_VERSION = '2026-06-05-beta-reset';
+
+const RESETTABLE_OBJECTS = [
+  'technique_tags',
+  'historical_techniques',
+  'source_phrase_embeddings',
+  'phrase_memory',
+  'phrase_memory_presets',
+  'operation_logs',
+  'translations',
+  'macro_blocks',
+  'project_glossaries',
+  'glossary_entries',
+  'glossaries',
+  'pipelines',
+  'pipeline_configs',
+  'prompt_templates',
+  'projects',
+  'workspaces',
+  'app_settings',
+];
 
 export async function getDb(): Promise<Database> {
   if (!db) {
@@ -100,6 +121,72 @@ export async function ensureColumn(table: string, column: string, definition: st
   await conn.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
 }
 
+async function tableExists(conn: Database, table: string): Promise<boolean> {
+  const rows = await conn.select<Array<{ count: number }>>(
+    `SELECT COUNT(*) as count FROM sqlite_master WHERE type = 'table' AND name = $1`,
+    [table],
+  );
+  return (rows[0]?.count ?? 0) > 0;
+}
+
+async function getStoredSchemaVersion(conn: Database): Promise<string | null> {
+  if (!(await tableExists(conn, 'app_settings'))) {
+    return null;
+  }
+  try {
+    const rows = await conn.select<Array<{ value: string }>>(
+      `SELECT value FROM app_settings WHERE key = 'schema_version'`,
+    );
+    return rows[0]?.value ?? null;
+  } catch (error) {
+    console.warn('[Glossa] Could not read schema_version', error);
+    return null;
+  }
+}
+
+async function hasExistingUserDatabase(conn: Database): Promise<boolean> {
+  const rows = await conn.select<Array<{ count: number }>>(
+    `SELECT COUNT(*) as count
+     FROM sqlite_master
+     WHERE type IN ('table', 'view')
+       AND name NOT LIKE 'sqlite_%'`,
+  );
+  return (rows[0]?.count ?? 0) > 0;
+}
+
+async function resetDatabaseForCurrentSchema(conn: Database, reason: string): Promise<void> {
+  await conn.execute('PRAGMA wal_checkpoint(FULL)');
+  const backupPath = await invoke<string | null>('backup_database_file', { reason });
+  if (backupPath) {
+    console.warn(`[Glossa] Database schema reset: previous DB backed up to ${backupPath}`);
+  } else {
+    console.warn('[Glossa] Database schema reset: no existing DB file to back up');
+  }
+
+  await conn.execute('PRAGMA foreign_keys=OFF');
+  for (const objectName of RESETTABLE_OBJECTS) {
+    await conn.execute(`DROP TABLE IF EXISTS ${objectName}`);
+  }
+  await conn.execute('PRAGMA foreign_keys=ON');
+}
+
+async function resetOutdatedBetaDatabase(conn: Database): Promise<void> {
+  const existingDatabase = await hasExistingUserDatabase(conn);
+  if (!existingDatabase) {
+    return;
+  }
+
+  const storedVersion = await getStoredSchemaVersion(conn);
+  if (storedVersion === CURRENT_SCHEMA_VERSION) {
+    return;
+  }
+
+  await resetDatabaseForCurrentSchema(
+    conn,
+    storedVersion ? `schema-${storedVersion}-to-${CURRENT_SCHEMA_VERSION}` : `schema-missing-to-${CURRENT_SCHEMA_VERSION}`,
+  );
+}
+
 /** Run migrations on app startup */
 export async function initDatabase(): Promise<void> {
   const conn = await getDb();
@@ -112,6 +199,7 @@ export async function initDatabase(): Promise<void> {
   for (let i = 0; i < 8; i++) {
     await execute('PRAGMA busy_timeout=10000');
   }
+  await resetOutdatedBetaDatabase(conn);
 
   await conn.execute(`
     CREATE TABLE IF NOT EXISTS projects (
@@ -477,7 +565,10 @@ export async function initDatabase(): Promise<void> {
   }
 
   await conn.execute(
-    "INSERT OR IGNORE INTO app_settings (key, value) VALUES ('schema_version', '1')"
+    `INSERT INTO app_settings (key, value)
+     VALUES ('schema_version', $1)
+     ON CONFLICT(key) DO UPDATE SET value = $1`,
+    [CURRENT_SCHEMA_VERSION],
   );
 
   // ── Phrase Memory schema ─────────────────────────────────────────────
@@ -604,6 +695,26 @@ export async function initDatabase(): Promise<void> {
     await conn.execute(
       `INSERT INTO app_settings (key, value) VALUES ('active_workspace_id', '')`
     );
+  }
+
+  const workspaceCheck = await conn.select<Array<{ count: number }>>(
+    `SELECT COUNT(*) as count FROM workspaces`
+  );
+  if ((workspaceCheck[0]?.count ?? 0) === 0) {
+    await conn.execute(`
+      INSERT OR IGNORE INTO workspaces (id, name, description, embedding_model, created_at)
+      VALUES ('ws_default', 'Default', NULL, 'text-embedding-3-small', datetime('now'))
+    `);
+    await conn.execute(`
+      UPDATE projects
+      SET workspace_id = 'ws_default'
+      WHERE workspace_id IS NULL OR workspace_id = ''
+    `);
+    await conn.execute(`
+      UPDATE app_settings
+      SET value = 'ws_default'
+      WHERE key = 'active_workspace_id' AND (value IS NULL OR value = '')
+    `);
   }
 
   const { seedBuiltinPresets } = await import('./phraseMemoryPresetService');

@@ -46,11 +46,10 @@ export function PipelineStrip() {
                   onClick={() => switchPipeline(pipeline.id)}
                   title={pipeline.name}
                   aria-label={pipeline.name}
-                  className={`relative flex h-9 w-9 items-center justify-center rounded-[6px] text-xs font-black transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                    isActive
-                      ? 'bg-editorial-accent text-white'
-                      : 'border border-editorial-border bg-editorial-textbox text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent'
-                  }`}
+                  className={`relative flex h-9 w-9 items-center justify-center rounded-[6px] text-xs font-black transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${isActive
+                    ? 'bg-editorial-accent text-white'
+                    : 'border border-editorial-border bg-editorial-textbox text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent'
+                    }`}
                 >
                   {isPipelineRunning ? (
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-transparent border-t-white" />
@@ -89,11 +88,10 @@ export function PipelineStrip() {
           onClick={() => setShowConfigDrawer(!showConfigDrawer)}
           title={t('pipeline.configurePipeline')}
           aria-label={t('pipeline.configurePipeline')}
-          className={`flex h-8 w-8 items-center justify-center rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-            showConfigDrawer
-              ? 'border-editorial-accent bg-editorial-accent text-white'
-              : 'border-editorial-border bg-editorial-textbox text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent'
-          }`}
+          className={`flex h-8 w-8 items-center justify-center rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${showConfigDrawer
+            ? 'border-editorial-accent bg-editorial-accent text-white'
+            : 'border-editorial-border bg-editorial-textbox text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent'
+            }`}
         >
           <Settings2 size={14} />
         </button>

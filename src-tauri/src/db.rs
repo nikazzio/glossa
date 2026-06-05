@@ -1,6 +1,8 @@
 use serde::Deserialize;
 use serde_json::Value as JsonValue;
-use tauri::State;
+use std::fs;
+use std::time::{SystemTime, UNIX_EPOCH};
+use tauri::{Manager, State};
 use tauri_plugin_sql::{DbInstances, DbPool};
 
 #[derive(Debug, Deserialize)]
@@ -45,6 +47,49 @@ pub async fn execute_transaction(
         #[allow(unreachable_patterns)]
         _ => Err("Only SQLite transactions are supported".to_string()),
     }
+}
+
+#[tauri::command]
+pub fn backup_database_file(
+    app: tauri::AppHandle,
+    reason: String,
+) -> Result<Option<String>, String> {
+    let app_config_dir = app
+        .path()
+        .app_config_dir()
+        .map_err(|error| error.to_string())?;
+    let db_path = app_config_dir.join("glossa.db");
+    if !db_path.exists() {
+        return Ok(None);
+    }
+
+    let safe_reason: String = reason
+        .chars()
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' {
+                ch
+            } else {
+                '-'
+            }
+        })
+        .collect();
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|error| error.to_string())?
+        .as_secs();
+    let backup_path = app_config_dir.join(format!("glossa.{timestamp}.{safe_reason}.db.bak"));
+    fs::copy(&db_path, &backup_path).map_err(|error| error.to_string())?;
+
+    for suffix in ["wal", "shm"] {
+        let sidecar_path = app_config_dir.join(format!("glossa.db-{suffix}"));
+        if sidecar_path.exists() {
+            let sidecar_backup_path =
+                app_config_dir.join(format!("glossa.{timestamp}.{safe_reason}.db-{suffix}.bak"));
+            fs::copy(&sidecar_path, sidecar_backup_path).map_err(|error| error.to_string())?;
+        }
+    }
+
+    Ok(Some(backup_path.to_string_lossy().into_owned()))
 }
 
 fn bind_json_value<'q>(

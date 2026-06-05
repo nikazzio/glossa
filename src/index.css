@@ -95,11 +95,27 @@
 
 /* Highlight color tokens — overridden at runtime by App.tsx */
 :root {
+  --app-min-width: 1080px;
+  --app-min-height: 680px;
   --hl-source-term-color: #3b82f6;
   --hl-match-bg: rgba(34, 197, 94, 0.18);
   --hl-mismatch-bg: rgba(239, 68, 68, 0.15);
   --hl-search-bg: rgba(234, 179, 8, 0.25);
   --hl-audit-bg: rgba(249, 115, 22, 0.25);
+}
+
+html,
+body,
+#root {
+  min-width: var(--app-min-width);
+  min-height: var(--app-min-height);
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background: var(--color-editorial-bg);
 }
 
 mark.hl-source-term {

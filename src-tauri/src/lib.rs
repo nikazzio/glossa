@@ -62,9 +62,10 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            db::backup_database_file,
             db::execute_transaction,
             llm::pipeline::compute_blobs,
-llm::pipeline::run_stage,
+            llm::pipeline::run_stage,
             llm::pipeline::run_stage_stream,
             llm::pipeline::cancel_stream,
             llm::pipeline::judge_translation,
@@ -86,6 +87,9 @@ llm::pipeline::run_stage,
             vector::embedding::get_embeddings,
             vector::embedding::split_phrases_llm,
             vector::embedding::vec_upsert_source_phrase,
+            vector::embedding::vec_list_phrase_memory,
+            vector::embedding::vec_delete_phrase_memory,
+            vector::embedding::vec_update_phrase_memory,
             vector::embedding::vec_search_phrase_memory,
             vector::embedding::vec_save_locked_phrases,
         ])

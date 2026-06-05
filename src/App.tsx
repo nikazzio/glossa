@@ -356,7 +356,7 @@ export default function App() {
   // ── Shell loading ────────────────────────────────────────────────────
   if (!isLoaded) {
     return (
-      <div className="flex h-screen items-center justify-center bg-editorial-bg">
+      <div className="flex h-dvh min-h-[var(--app-min-height)] min-w-[var(--app-min-width)] items-center justify-center bg-editorial-bg">
         <div className="text-sm text-editorial-muted">Caricamento...</div>
       </div>
     );
@@ -378,9 +378,9 @@ export default function App() {
   }
 
   return (
-    <ErrorBoundary>
+      <ErrorBoundary>
       <HighlightColorSync />
-      <div className="h-screen overflow-hidden bg-editorial-bg text-editorial-ink font-sans flex flex-col">
+      <div className="flex h-dvh min-h-[var(--app-min-height)] min-w-[var(--app-min-width)] flex-col overflow-hidden bg-editorial-bg font-sans text-editorial-ink">
         <div className="flex-shrink-0">
           <Header />
         </div>
