@@ -18,7 +18,9 @@ pub fn register_vec_extension() {
 
 pub fn open_vec_connection(db_path: &PathBuf) -> RusqliteResult<Connection> {
     let conn = Connection::open(db_path)?;
-    conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;")?;
+    conn.execute_batch(
+        "PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA busy_timeout=10000;",
+    )?;
     Ok(conn)
 }
 
@@ -26,9 +28,7 @@ pub fn open_vec_connection(db_path: &PathBuf) -> RusqliteResult<Connection> {
 pub fn vec_ping(app: tauri::AppHandle) -> Result<String, String> {
     let db_path = get_db_path(&app)?;
     open_vec_connection(&db_path)
-        .and_then(|conn| {
-            conn.query_row("SELECT vec_version()", [], |row| row.get::<_, String>(0))
-        })
+        .and_then(|conn| conn.query_row("SELECT vec_version()", [], |row| row.get::<_, String>(0)))
         .map_err(|e| e.to_string())
 }
 

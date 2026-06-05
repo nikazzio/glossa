@@ -10,7 +10,9 @@ import {
   Pencil,
   RotateCcw,
   ScanLine,
+  Search,
   Wand2,
+  X,
   Zap,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -93,6 +95,8 @@ export function DocumentView({
   const [selectedStageId, setSelectedStageId] = useState<string>('');
   const [showDiffMode, setShowDiffMode] = useState(false);
   const [diffPairKey, setDiffPairKey] = useState<string>('');
+  const [sourcePaneSearch, setSourcePaneSearch] = useState('');
+  const [translationPaneSearch, setTranslationPaneSearch] = useState('');
 
   const { sourceRef: scrollSourceRef, translationRef: scrollTranslationRef } = usePanelScrollSync(
     paneFocus === 'both' && syncScrollEnabled,
@@ -178,17 +182,19 @@ export function DocumentView({
   // Hooks devono essere chiamati prima di qualsiasi return condizionale
   const hasGlossary = config.glossary.length > 0;
   const showHighlight = highlightsEnabled && hasGlossary;
+  const sourceEffectiveSearch = sourcePaneSearch.trim() || (highlightsEnabled ? searchQuery.trim() : '');
+  const translationEffectiveSearch = translationPaneSearch.trim() || (highlightsEnabled ? searchQuery.trim() : '');
   const sourceHighlight = useGlossaryHighlight(
     paneFocus !== 'translation' ? deferredSourceText : '',
     showHighlight && paneFocus !== 'translation' ? config.glossary : [],
     'source',
-    highlightsEnabled ? searchQuery : '',
+    sourceEffectiveSearch,
   );
   const translationHighlight = useGlossaryHighlight(
     paneFocus !== 'source' ? deferredStageContent : '',
     showHighlight && paneFocus !== 'source' ? config.glossary : [],
     'translation',
-    highlightsEnabled ? searchQuery : '',
+    translationEffectiveSearch,
     focusedIssueQuery ?? '',
   );
 
@@ -206,11 +212,11 @@ export function DocumentView({
   const sourceHighlightHtml = useMemo(() => {
     const hasFootnoteMarkers = /\[[⁰¹²³⁴⁵⁶⁷⁸⁹]/.test(deferredSourceText);
     const showGlossary = showHighlight && paneFocus !== 'translation';
-    const hasSearch = highlightsEnabled && !!searchQuery.trim() && paneFocus !== 'translation';
+    const hasSearch = !!sourceEffectiveSearch && paneFocus !== 'translation';
     if (!showGlossary && !hasSearch && !hasFootnoteMarkers) return null;
     const base = (showGlossary || hasSearch) ? sourceHighlight.html : escapeHtml(deferredSourceText);
     return hasFootnoteMarkers ? highlightSuperscriptMarkersHtml(base) : base;
-  }, [deferredSourceText, showHighlight, highlightsEnabled, searchQuery, paneFocus, sourceHighlight.html]);
+  }, [deferredSourceText, showHighlight, sourceEffectiveSearch, paneFocus, sourceHighlight.html]);
 
   const currentProject = projects.find((project) => project.id === currentProjectId) ?? null;
 
@@ -397,9 +403,13 @@ export function DocumentView({
                   )}
                 </div>
               }
+              searchValue={sourcePaneSearch}
+              onSearchChange={setSourcePaneSearch}
+              searchLabel={t('document.searchInSource')}
               scrollRef={scrollSourceRef}
             >
               <MarkdownEditor
+                identityKey={`${currentChunk.id}:source`}
                 value={currentChunk.sourceDisplayText}
                 onChange={(nextValue) => updateChunkOriginalText(currentChunk.id, nextValue)}
                 markdownEnabled={config.markdownAware === true}
@@ -507,10 +517,13 @@ export function DocumentView({
                 statusBadge={currentChunk.translationStale ? (
                   <InlineStatusBadge tone="amber" icon={<AlertTriangle size={13} />} label={t('document.translationStaleBadge')} />
                 ) : lockToggle}
+                searchValue={translationPaneSearch}
+                onSearchChange={setTranslationPaneSearch}
+                searchLabel={t('document.searchInTranslation')}
                 scrollRef={scrollTranslationRef}
               >
                 {showDiffMode ? (
-                  <div className="flex flex-col flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+                  <div data-scroll-sync="true" className="flex flex-col flex-1 min-h-0 overflow-y-auto custom-scrollbar">
                     <HighlightedText
                       html={stageDiff.html}
                       className="text-[15px] leading-8 text-editorial-ink min-h-[280px]"
@@ -518,6 +531,7 @@ export function DocumentView({
                   </div>
                 ) : (
                   <MarkdownEditor
+                    identityKey={`${currentChunk.id}:candidate:${effectiveSelectedStageId}`}
                     value={rawStageContent}
                     onChange={isLastSelected ? (nextValue) => updateChunkDraft(currentChunk.id, nextValue) : NOOP_CHANGE}
                     markdownEnabled={config.markdownAware === true}
@@ -526,7 +540,7 @@ export function DocumentView({
                     textClassName="text-[15px] leading-8 text-editorial-ink"
                     previewClassName="min-h-[280px] text-[15px] leading-8 text-editorial-ink"
                     placeholder={isLastSelected ? t('pipeline.candidatePlaceholder') : ''}
-                    highlightHtml={(showHighlight || (highlightsEnabled && !!searchQuery.trim()) || !!focusedIssueQuery) ? translationHighlight.html : null}
+                    highlightHtml={(showHighlight || !!translationEffectiveSearch || !!focusedIssueQuery) ? translationHighlight.html : null}
                     focusQuery={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueQuery : null}
                     focusRequestId={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueRequestId : 0}
                   />
@@ -561,6 +575,9 @@ interface DocumentPageProps {
   statusBadge?: React.ReactNode;
   actions?: React.ReactNode | null;
   footer?: React.ReactNode;
+  searchValue?: string;
+  onSearchChange?: (value: string) => void;
+  searchLabel?: string;
   scrollRef?: React.RefObject<HTMLDivElement | null>;
   children: React.ReactNode;
 }
@@ -649,6 +666,9 @@ function DocumentPage({
   statusBadge,
   actions,
   footer,
+  searchValue,
+  onSearchChange,
+  searchLabel,
   scrollRef,
   children,
 }: DocumentPageProps) {
@@ -689,6 +709,13 @@ function DocumentPage({
         </div>
       </div>
       <div ref={scrollRef} className={`flex flex-col flex-1 min-h-0 ${readOnly ? 'opacity-90' : ''}`}>
+        {onSearchChange && searchLabel ? (
+          <PaneSearch
+            value={searchValue ?? ''}
+            onChange={onSearchChange}
+            label={searchLabel}
+          />
+        ) : null}
         {children}
       </div>
       {footer && (
@@ -697,6 +724,50 @@ function DocumentPage({
         </div>
       )}
     </section>
+  );
+}
+
+function PaneSearch({
+  value,
+  onChange,
+  label,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  label: string;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <form
+      role="search"
+      className="mb-3 shrink-0"
+      onSubmit={(event) => event.preventDefault()}
+    >
+      <label className="sr-only">{label}</label>
+      <div className="flex items-center gap-2 rounded-full border border-editorial-divider-soft bg-editorial-bg/70 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] transition-colors focus-within:border-editorial-accent/40 focus-within:ring-2 focus-within:ring-editorial-accent/20">
+        <Search size={13} className="shrink-0 text-editorial-muted" aria-hidden="true" />
+        <input
+          type="search"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={t('document.searchChunkPlaceholder')}
+          aria-label={label}
+          className="min-w-0 flex-1 bg-transparent text-xs text-editorial-ink placeholder:text-editorial-muted/55 focus:outline-none"
+        />
+        {value ? (
+          <IconButton
+            size="sm"
+            tone="muted"
+            onClick={() => onChange('')}
+            title={t('document.clearPaneSearch')}
+            className="shrink-0"
+          >
+            <X size={12} />
+          </IconButton>
+        ) : null}
+      </div>
+    </form>
   );
 }
 

@@ -19,7 +19,7 @@ vi.mock('../services/phraseMemoryService', () => ({
 }));
 
 vi.mock('../utils/logger', () => ({
-  logger: { warn: vi.fn() },
+  logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn() },
 }));
 
 const mockListPresets = vi.mocked(listPresets);
@@ -42,7 +42,7 @@ describe('useSaveToMemory', () => {
         createdAt: '2026-01-01T00:00:00.000Z',
       },
     ]);
-    mockSaveSelectedPhrases.mockResolvedValue(undefined);
+    mockSaveSelectedPhrases.mockResolvedValue(1);
 
     useWorkspaceStore.setState({
       activeWorkspace: {
@@ -110,6 +110,19 @@ describe('useSaveToMemory', () => {
         },
       ],
     }));
+  });
+
+  it('ritorna il numero reale di frasi salvate dal service', async () => {
+    mockSaveSelectedPhrases.mockResolvedValueOnce(3);
+    const { result } = renderHook(() => useSaveToMemory());
+    let savedCount = 0;
+
+    await act(async () => {
+      savedCount = await result.current.saveToMemory(['c1']);
+    });
+
+    expect(savedCount).toBe(3);
+    expect(usePhraseMemoryStore.getState().jobStatus).toEqual({ kind: 'done', totalPhrases: 3 });
   });
 
   it('non salva chunk locked o completed se non sono selezionati', async () => {

@@ -48,6 +48,7 @@ import { usePipeline } from '../../hooks/usePipeline';
 import { OperationsTab } from './OperationsTab';
 import { SearchTab } from './SearchTab';
 import type { TranslationChunk } from '../../types';
+import { IconButton, Tooltip } from '../ui';
 
 interface InsightsDrawerProps {
   onReauditChunk: (chunkId: string) => void;
@@ -212,12 +213,15 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
             onClick={() => setShowChunkDrawer(true)}
             className="flex w-8 shrink-0 flex-col items-center justify-center gap-3 self-stretch border-l border-editorial-border bg-editorial-bg/80 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-editorial-accent"
             aria-label={t('document.openChunkPanel')}
-            title={t('document.openChunkPanel')}
           >
-            <ShieldCheck size={14} />
-            <span className="[writing-mode:vertical-lr] rotate-180 text-[9px] font-bold uppercase tracking-[0.3em]">
-              {t('document.chunkPanelTitle')}
-            </span>
+            <Tooltip label={t('document.openChunkPanel')} side="left" className="h-full w-full">
+              <span className="flex h-full w-full flex-col items-center justify-center gap-3">
+                <ShieldCheck size={14} />
+                <span className="[writing-mode:vertical-lr] rotate-180 text-[9px] font-bold uppercase tracking-[0.3em]">
+                  {t('document.chunkPanelTitle')}
+                </span>
+              </span>
+            </Tooltip>
           </motion.button>
         )}
       </AnimatePresence>
@@ -239,14 +243,15 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
                 <div className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
                   {chunkLabel}
                 </div>
-                <button
-                  type="button"
+                <IconButton
+                  size="md"
                   onClick={() => setShowChunkDrawer(false)}
-                  className="shrink-0 rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  aria-label={t('header.closeDrawer')}
+                  title={t('header.closeDrawer')}
+                  tooltipSide="left"
+                  className="shrink-0"
                 >
                   <X size={16} />
-                </button>
+                </IconButton>
               </div>
 
               <div className="flex items-center gap-2 border-b border-editorial-border bg-editorial-bg/60 px-4 py-2">
@@ -325,12 +330,15 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
             onClick={() => setShowDocumentDrawer(true)}
             className="flex w-8 shrink-0 flex-col items-center justify-center gap-3 self-stretch border-l border-editorial-border bg-editorial-bg/80 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-editorial-accent"
             aria-label={t('header.openInsights')}
-            title={t('header.openInsights')}
           >
-            <PanelRight size={14} />
-            <span className="[writing-mode:vertical-lr] rotate-180 text-[9px] font-bold uppercase tracking-[0.3em]">
-              {t('document.insightsDrawerTitle')}
-            </span>
+            <Tooltip label={t('header.openInsights')} side="left" className="h-full w-full">
+              <span className="flex h-full w-full flex-col items-center justify-center gap-3">
+                <PanelRight size={14} />
+                <span className="[writing-mode:vertical-lr] rotate-180 text-[9px] font-bold uppercase tracking-[0.3em]">
+                  {t('document.insightsDrawerTitle')}
+                </span>
+              </span>
+            </Tooltip>
           </motion.button>
         )}
       </AnimatePresence>
@@ -352,14 +360,15 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
                 <div className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
                   {t('document.insightsDrawerTitle')}
                 </div>
-                <button
-                  type="button"
+                <IconButton
+                  size="md"
                   onClick={() => setShowDocumentDrawer(false)}
-                  className="shrink-0 rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  aria-label={t('header.closeDrawer')}
+                  title={t('header.closeDrawer')}
+                  tooltipSide="left"
+                  className="shrink-0"
                 >
                   <X size={16} />
-                </button>
+                </IconButton>
               </div>
 
               <div className="flex items-center gap-2 border-b border-editorial-border bg-editorial-bg/60 px-4 py-2">
@@ -455,9 +464,11 @@ interface TabButtonProps {
 
 function TabButton({ buttonId, active, disabled, onClick, onKeyDown, label, icon, controls, buttonRef }: TabButtonProps) {
   return (
-    <button
+    <IconButton
       id={buttonId}
-      type="button"
+      ref={buttonRef}
+      size="lg"
+      tone={active ? 'accent' : 'default'}
       role="tab"
       aria-selected={active}
       aria-controls={controls}
@@ -466,19 +477,12 @@ function TabButton({ buttonId, active, disabled, onClick, onKeyDown, label, icon
       tabIndex={active ? 0 : -1}
       onClick={onClick}
       onKeyDown={onKeyDown}
-      ref={buttonRef}
       title={label}
-      aria-label={label}
-      className={`rounded-full border p-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-        disabled
-          ? 'cursor-not-allowed border-editorial-border/30 text-editorial-muted/25'
-          : active
-          ? 'border-editorial-accent bg-editorial-accent text-white'
-          : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
-      }`}
+      ariaLabel={label}
+      tooltipSide="bottom"
     >
       {icon}
-    </button>
+    </IconButton>
   );
 }
 
@@ -881,16 +885,16 @@ function CoherenceTab({ panelId, labelledBy, currentChunk, isProcessing, allChun
           <div className="flex items-center gap-2 text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
             <Link2 size={11} className="text-editorial-accent shrink-0" /> {t('coherence.title')}
           </div>
-          <button
-            type="button"
+          <IconButton
+            size="md"
             onClick={onRunCoherenceAudit}
             disabled={coherenceDisabled}
             title={coherenceTitle}
-            aria-label={t('coherence.runAudit')}
-            className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-30"
+            ariaLabel={t('coherence.runAudit')}
+            tooltipSide="left"
           >
             {coherence?.status === 'processing' ? <Loader2 size={14} className="animate-spin" /> : <ScanLine size={14} />}
-          </button>
+          </IconButton>
         </div>
 
         {allChunksTranslated && !allChunksLocked && (
@@ -963,16 +967,15 @@ function AuditTab({ panelId, labelledBy, currentChunk, isProcessing, onReauditCh
             <div className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">{t('audit.title')}</div>
             <div className={`mt-2 font-display text-xl italic ${QUALITY_TONE_COLOR[tone]}`}>{qualityLabel}</div>
           </div>
-          <button
-            type="button"
+          <IconButton
+            size="md"
             onClick={() => onReauditChunk(currentChunk.id)}
             disabled={isProcessing || !currentChunk.currentDraft}
             title={t('pipeline.reauditChunk')}
-            aria-label={t('pipeline.reauditChunk')}
-            className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-30"
+            tooltipSide="left"
           >
             <RefreshCcw size={14} />
-          </button>
+          </IconButton>
         </div>
 
         {currentChunk.judgeResult.status === 'error' && (
@@ -1062,8 +1065,9 @@ function IssueList({ issues, chunkId, onSelectChunk, onFocusIssue }: IssueListPr
             {issue.phrase && (() => {
               const isActive = focusedIssueQuery === issue.phrase;
               return (
-                <button
-                  type="button"
+                <IconButton
+                  size="sm"
+                  tone={isActive ? 'accent' : 'default'}
                   onClick={() => {
                     if (isActive) {
                       clearFocusedIssue();
@@ -1073,15 +1077,11 @@ function IssueList({ issues, chunkId, onSelectChunk, onFocusIssue }: IssueListPr
                     }
                   }}
                   title={t('audit.locateInTextTooltip')}
-                  aria-label={t('audit.locateInTextTooltip')}
-                  className={`rounded-full border p-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                    isActive
-                      ? 'border-editorial-accent bg-editorial-accent/10 text-editorial-accent'
-                      : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
-                  }`}
+                  ariaPressed={isActive}
+                  tooltipSide="left"
                 >
                   <Crosshair size={13} />
-                </button>
+                </IconButton>
               );
             })()}
           </div>

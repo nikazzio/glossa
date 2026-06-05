@@ -24,6 +24,12 @@ export function useSaveToMemory() {
     const selected = chunks.filter(
       (c) => selectedIds.has(c.id) && c.sourceProcessingText?.trim() && c.currentDraft?.trim(),
     );
+    logger.debug('phrase_memory.save_hook.selection', {
+      requestedChunkCount: chunkIds.length,
+      selectedChunkCount: selected.length,
+      workspaceId: activeWorkspace.id,
+      projectId: currentProjectId,
+    });
     if (selected.length === 0) return 0;
 
     const presets = await listPresets(activeWorkspace.id);
@@ -38,7 +44,7 @@ export function useSaveToMemory() {
     });
 
     try {
-      await saveSelectedPhrases({
+      const savedPhraseCount = await saveSelectedPhrases({
         workspaceId: activeWorkspace.id,
         projectId: currentProjectId,
         embeddingModel: activeWorkspace.embeddingModel,
@@ -59,9 +65,15 @@ export function useSaveToMemory() {
         },
       });
       usePhraseMemoryStore.getState().setJobStatus({
-        kind: 'done', totalPhrases: selected.length,
+        kind: 'done', totalPhrases: savedPhraseCount,
       });
-      return selected.length;
+      logger.info('phrase_memory.save_hook.done', {
+        workspaceId: activeWorkspace.id,
+        projectId: currentProjectId,
+        selectedChunkCount: selected.length,
+        savedPhraseCount,
+      });
+      return savedPhraseCount;
     } catch (err: unknown) {
       logger.warn('saveToMemory failed', { error: String(err) });
       usePhraseMemoryStore.getState().setJobStatus({ kind: 'idle' });

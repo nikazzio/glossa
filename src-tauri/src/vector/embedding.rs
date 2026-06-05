@@ -1,6 +1,10 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use std::time::{Duration, Instant};
 use tauri::Manager;
+
+const OPENAI_CONNECT_TIMEOUT_SECS: u64 = 10;
+const OPENAI_REQUEST_TIMEOUT_SECS: u64 = 45;
 
 #[derive(Debug, thiserror::Error)]
 pub enum EmbeddingError {
@@ -29,7 +33,17 @@ fn floats_to_blob(v: &[f32]) -> Vec<u8> {
     v.iter().flat_map(|f| f.to_le_bytes()).collect()
 }
 
-fn ensure_source_phrase_embeddings_schema(conn: &rusqlite::Connection) -> Result<(), EmbeddingError> {
+fn openai_client() -> Result<reqwest::Client, EmbeddingError> {
+    reqwest::Client::builder()
+        .connect_timeout(Duration::from_secs(OPENAI_CONNECT_TIMEOUT_SECS))
+        .timeout(Duration::from_secs(OPENAI_REQUEST_TIMEOUT_SECS))
+        .build()
+        .map_err(|e| EmbeddingError::Http(format!("cannot build OpenAI client: {e}")))
+}
+
+fn ensure_source_phrase_embeddings_schema(
+    conn: &rusqlite::Connection,
+) -> Result<(), EmbeddingError> {
     conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS source_phrase_embeddings (
             id TEXT PRIMARY KEY,
@@ -89,9 +103,15 @@ pub async fn get_embeddings(
     if texts.is_empty() {
         return Ok(vec![]);
     }
+    let request_started = Instant::now();
+    let total_chars: usize = texts.iter().map(|text| text.len()).sum();
+    log::debug!(
+        "phrase_memory.get_embeddings.start model={model} input_count={} total_chars={total_chars}",
+        texts.len()
+    );
 
-    let api_key = crate::keystore::get_api_key(&app, "openai")
-        .map_err(|_| EmbeddingError::MissingApiKey)?;
+    let api_key =
+        crate::keystore::get_api_key(&app, "openai").map_err(|_| EmbeddingError::MissingApiKey)?;
     if api_key.is_empty() {
         return Err(EmbeddingError::MissingApiKey);
     }
@@ -102,25 +122,51 @@ pub async fn get_embeddings(
         "encoding_format": "float"
     });
 
-    let response = reqwest::Client::new()
+    let response = openai_client()?
         .post("https://api.openai.com/v1/embeddings")
         .bearer_auth(&api_key)
         .json(&body)
         .send()
         .await
-        .map_err(|e| EmbeddingError::Http(e.to_string()))?;
+        .map_err(|e| {
+            log::warn!(
+                "phrase_memory.get_embeddings.request_failed model={model} input_count={} elapsed_ms={} error={e}",
+                texts.len(),
+                request_started.elapsed().as_millis()
+            );
+            EmbeddingError::Http(e.to_string())
+        })?;
 
     if !response.status().is_success() {
         let status = response.status();
         let text = response.text().await.unwrap_or_default();
+        let preview: String = text.chars().take(500).collect();
+        log::warn!(
+            "phrase_memory.get_embeddings.http_error model={model} input_count={} elapsed_ms={} status={status} body_preview={preview:?}",
+            texts.len(),
+            request_started.elapsed().as_millis()
+        );
         return Err(EmbeddingError::Http(format!("{status}: {text}")));
     }
 
     let parsed: OpenAiEmbeddingResponse = response
         .json()
         .await
-        .map_err(|e| EmbeddingError::Parse(e.to_string()))?;
+        .map_err(|e| {
+            log::warn!(
+                "phrase_memory.get_embeddings.parse_failed model={model} input_count={} elapsed_ms={} error={e}",
+                texts.len(),
+                request_started.elapsed().as_millis()
+            );
+            EmbeddingError::Parse(e.to_string())
+        })?;
 
+    log::debug!(
+        "phrase_memory.get_embeddings.done model={model} input_count={} output_count={} elapsed_ms={}",
+        texts.len(),
+        parsed.data.len(),
+        request_started.elapsed().as_millis()
+    );
     Ok(parsed.data.into_iter().map(|o| o.embedding).collect())
 }
 
@@ -129,8 +175,13 @@ pub async fn split_phrases_llm(
     app: tauri::AppHandle,
     source_text: String,
 ) -> Result<Vec<String>, EmbeddingError> {
-    let api_key = crate::keystore::get_api_key(&app, "openai")
-        .map_err(|_| EmbeddingError::MissingApiKey)?;
+    let request_started = Instant::now();
+    log::debug!(
+        "phrase_memory.split_phrases_llm.start source_chars={}",
+        source_text.len()
+    );
+    let api_key =
+        crate::keystore::get_api_key(&app, "openai").map_err(|_| EmbeddingError::MissingApiKey)?;
     if api_key.is_empty() {
         return Err(EmbeddingError::MissingApiKey);
     }
@@ -150,24 +201,41 @@ pub async fn split_phrases_llm(
         "response_format": {"type": "json_object"}
     });
 
-    let response = reqwest::Client::new()
+    let response = openai_client()?
         .post("https://api.openai.com/v1/chat/completions")
         .bearer_auth(&api_key)
         .json(&body)
         .send()
         .await
-        .map_err(|e| EmbeddingError::Http(e.to_string()))?;
+        .map_err(|e| {
+            log::warn!(
+                "phrase_memory.split_phrases_llm.request_failed source_chars={} elapsed_ms={} error={e}",
+                source_text.len(),
+                request_started.elapsed().as_millis()
+            );
+            EmbeddingError::Http(e.to_string())
+        })?;
 
     if !response.status().is_success() {
         let status = response.status();
         let text = response.text().await.unwrap_or_default();
+        let preview: String = text.chars().take(500).collect();
+        log::warn!(
+            "phrase_memory.split_phrases_llm.http_error source_chars={} elapsed_ms={} status={status} body_preview={preview:?}",
+            source_text.len(),
+            request_started.elapsed().as_millis()
+        );
         return Err(EmbeddingError::Http(format!("{status}: {text}")));
     }
 
-    let json: serde_json::Value = response
-        .json()
-        .await
-        .map_err(|e| EmbeddingError::Parse(e.to_string()))?;
+    let json: serde_json::Value = response.json().await.map_err(|e| {
+        log::warn!(
+            "phrase_memory.split_phrases_llm.parse_failed source_chars={} elapsed_ms={} error={e}",
+            source_text.len(),
+            request_started.elapsed().as_millis()
+        );
+        EmbeddingError::Parse(e.to_string())
+    })?;
 
     let content = json["choices"][0]["message"]["content"]
         .as_str()
@@ -194,6 +262,12 @@ pub async fn split_phrases_llm(
         .map(|s| s.to_string())
         .collect();
 
+    log::debug!(
+        "phrase_memory.split_phrases_llm.done source_chars={} phrase_count={} elapsed_ms={}",
+        source_text.len(),
+        validated.len(),
+        request_started.elapsed().as_millis()
+    );
     Ok(validated)
 }
 
@@ -414,24 +488,87 @@ pub async fn vec_save_locked_phrases(
     source_language: String,
     target_language: String,
 ) -> Result<u32, EmbeddingError> {
+    let save_started = Instant::now();
+    log::debug!(
+        "phrase_memory.vec_save_locked_phrases.start workspace_id={workspace_id} project_id={project_id} chunk_id={chunk_id} pair_count={} min_phrase_length={min_phrase_length}",
+        pairs.len()
+    );
     if pairs.is_empty() {
         return Ok(0);
     }
 
     let path = db_path(&app)?;
-    let conn = crate::vector::open_vec_connection(&path)
-        .map_err(|e| EmbeddingError::Http(e.to_string()))?;
-    ensure_phrase_memory_schema(&conn)?;
-    ensure_source_phrase_embeddings_schema(&conn)?;
+    log::debug!(
+        "phrase_memory.vec_save_locked_phrases.db_path path={}",
+        path.display()
+    );
+    let mut conn = crate::vector::open_vec_connection(&path).map_err(|e| {
+        log::warn!(
+            "phrase_memory.vec_save_locked_phrases.db_open_failed path={} error={e}",
+            path.display()
+        );
+        EmbeddingError::Http(e.to_string())
+    })?;
+    log::debug!("phrase_memory.vec_save_locked_phrases.db_opened");
+    ensure_phrase_memory_schema(&conn).map_err(|e| {
+        log::warn!("phrase_memory.vec_save_locked_phrases.schema_phrase_failed error={e}");
+        e
+    })?;
+    ensure_source_phrase_embeddings_schema(&conn).map_err(|e| {
+        log::warn!("phrase_memory.vec_save_locked_phrases.schema_source_failed error={e}");
+        e
+    })?;
+    log::debug!("phrase_memory.vec_save_locked_phrases.schema_ready");
+
+    let workspace_exists: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM workspaces WHERE id = ?1",
+            rusqlite::params![&workspace_id],
+            |row| row.get(0),
+        )
+        .map_err(|e| {
+            log::warn!(
+                "phrase_memory.vec_save_locked_phrases.workspace_check_failed workspace_id={workspace_id} error={e}"
+            );
+            EmbeddingError::Http(e.to_string())
+        })?;
+    let project_exists: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM projects WHERE id = ?1",
+            rusqlite::params![&project_id],
+            |row| row.get(0),
+        )
+        .map_err(|e| {
+            log::warn!(
+                "phrase_memory.vec_save_locked_phrases.project_check_failed project_id={project_id} error={e}"
+            );
+            EmbeddingError::Http(e.to_string())
+        })?;
+    log::debug!(
+        "phrase_memory.vec_save_locked_phrases.refs workspace_id={workspace_id} workspace_exists={workspace_exists} project_id={project_id} project_exists={project_exists}"
+    );
+    if workspace_exists == 0 || project_exists == 0 {
+        return Err(EmbeddingError::Http(format!(
+            "phrase memory references missing: workspace_id={workspace_id} exists={workspace_exists}, project_id={project_id} exists={project_exists}"
+        )));
+    }
 
     let mut saved: u32 = 0;
+    let mut attempted: u32 = 0;
+    let mut skipped_short: u32 = 0;
+    let tx = conn.transaction().map_err(|e| {
+        log::warn!("phrase_memory.vec_save_locked_phrases.transaction_failed error={e}");
+        EmbeddingError::Http(e.to_string())
+    })?;
 
-    for pair in &pairs {
+    for (index, pair) in pairs.iter().enumerate() {
         if (pair.source_phrase.len() as u32) < min_phrase_length {
+            skipped_short += 1;
             continue;
         }
 
-        let rows = conn
+        attempted += 1;
+        let rows = tx
             .execute(
                 "INSERT OR IGNORE INTO phrase_memory \
                  (id, workspace_id, project_id, chunk_id, source_phrase, target_phrase, \
@@ -448,16 +585,46 @@ pub async fn vec_save_locked_phrases(
                     floats_to_blob(&pair.source_embedding)
                 ],
             )
-            .map_err(|e| EmbeddingError::Http(e.to_string()))?;
+            .map_err(|e| {
+                log::warn!(
+                    "phrase_memory.vec_save_locked_phrases.insert_failed workspace_id={workspace_id} project_id={project_id} chunk_id={chunk_id} pair_index={index} source_chars={} target_chars={} embedding_dim={} error={e}",
+                    pair.source_phrase.len(),
+                    pair.target_phrase.len(),
+                    pair.source_embedding.len()
+                );
+                EmbeddingError::Http(format!("phrase memory insert failed at pair {index}: {e}"))
+            })?;
 
         saved += rows as u32;
     }
+    log::debug!(
+        "phrase_memory.vec_save_locked_phrases.insert_loop_done pair_count={} attempted={attempted} skipped_short={skipped_short} saved={saved}",
+        pairs.len()
+    );
 
-    conn.execute(
-        "DELETE FROM source_phrase_embeddings WHERE chunk_id = ?1 AND project_id = ?2",
-        rusqlite::params![chunk_id, project_id],
-    )
-    .map_err(|e| EmbeddingError::Http(e.to_string()))?;
+    let deleted_source_embeddings = tx
+        .execute(
+            "DELETE FROM source_phrase_embeddings WHERE chunk_id = ?1 AND project_id = ?2",
+            rusqlite::params![&chunk_id, &project_id],
+        )
+        .map_err(|e| {
+            log::warn!(
+                "phrase_memory.vec_save_locked_phrases.cleanup_failed project_id={project_id} chunk_id={chunk_id} error={e}"
+            );
+            EmbeddingError::Http(e.to_string())
+        })?;
+    log::debug!(
+        "phrase_memory.vec_save_locked_phrases.cleanup_done deleted_source_embeddings={deleted_source_embeddings}"
+    );
+    tx.commit().map_err(|e| {
+        log::warn!("phrase_memory.vec_save_locked_phrases.commit_failed error={e}");
+        EmbeddingError::Http(e.to_string())
+    })?;
 
+    log::info!(
+        "phrase_memory.vec_save_locked_phrases.done workspace_id={workspace_id} project_id={project_id} chunk_id={chunk_id} pair_count={} attempted={attempted} skipped_short={skipped_short} saved={saved} elapsed_ms={}",
+        pairs.len(),
+        save_started.elapsed().as_millis()
+    );
     Ok(saved)
 }

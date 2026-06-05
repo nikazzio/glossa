@@ -238,10 +238,10 @@ describe('saveSelectedPhrases', () => {
 
   it('salva solo i chunk passati esplicitamente e aggiorna il progress', async () => {
     mockFetchEmbeddings.mockResolvedValue([[0.1, 0.2]]);
-    mockInvoke.mockResolvedValue(undefined);
+    mockInvoke.mockResolvedValue(1);
     const onProgress = vi.fn();
 
-    await saveSelectedPhrases({
+    const savedCount = await saveSelectedPhrases({
       workspaceId: 'ws-1',
       projectId: 'proj-1',
       embeddingModel: 'text-embedding-3-small',
@@ -267,6 +267,7 @@ describe('saveSelectedPhrases', () => {
     );
     expect(onProgress).toHaveBeenCalledWith(1, 2);
     expect(onProgress).toHaveBeenCalledWith(2, 2);
+    expect(savedCount).toBe(2);
   });
 });
 
@@ -277,7 +278,7 @@ describe('savePhrasePairs', () => {
     mockFetchEmbeddings.mockResolvedValue([[0.1, 0.2]]);
     mockInvoke.mockResolvedValueOnce(1);
 
-    await savePhrasePairs({
+    const savedCount = await savePhrasePairs({
       workspaceId: 'ws-1',
       projectId: 'proj-1',
       chunkId: 'c1',
@@ -293,6 +294,30 @@ describe('savePhrasePairs', () => {
     expect(mockInvoke).toHaveBeenCalledWith(
       'vec_save_locked_phrases',
       expect.objectContaining({ workspaceId: 'ws-1', projectId: 'proj-1', chunkId: 'c1' }),
+    );
+    expect(savedCount).toBe(1);
+  });
+
+  it('non salva coppie senza embedding valido', async () => {
+    mockFetchEmbeddings.mockResolvedValue([]);
+
+    const savedCount = await savePhrasePairs({
+      workspaceId: 'ws-1',
+      projectId: 'proj-1',
+      chunkId: 'c1',
+      embeddingModel: 'text-embedding-3-small',
+      splitter: 'regex',
+      sourceText: 'Ciao mondo.',
+      targetText: 'Hello world.',
+      minPhraseLength: 3,
+      sourceLanguage: 'it',
+      targetLanguage: 'en',
+    });
+
+    expect(savedCount).toBe(0);
+    expect(mockInvoke).not.toHaveBeenCalledWith(
+      'vec_save_locked_phrases',
+      expect.anything(),
     );
   });
 });

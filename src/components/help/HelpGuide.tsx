@@ -13,6 +13,7 @@ import { appLogDir } from '@tauri-apps/api/path';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useUiStore, type HelpSection } from '../../stores/uiStore';
 import { EditorialModalShell } from '../common';
 
 interface HelpGuideProps {
@@ -20,12 +21,17 @@ interface HelpGuideProps {
   onClose: () => void;
 }
 
-type Section = 'overview' | 'pipeline' | 'features' | 'context' | 'audit' | 'projects' | 'providers' | 'ollama' | 'glossary' | 'shortcuts' | 'troubleshooting' | 'design';
+type Section = HelpSection;
 
 export function HelpGuide({ open, onClose }: HelpGuideProps) {
   const [activeSection, setActiveSection] = useState<Section>('overview');
   const { t } = useTranslation();
   const trapRef = useFocusTrap(open, onClose);
+  const requestedSection = useUiStore((state) => state.helpSection);
+
+  useEffect(() => {
+    if (open) setActiveSection(requestedSection);
+  }, [open, requestedSection]);
 
   const sections: { id: Section; label: string }[] = [
     { id: 'overview',        label: t('help.sections.overview') },
@@ -315,6 +321,9 @@ function FeaturesSection() {
 
       <SubTitle>{t('help.features.documentToolsTitle')}</SubTitle>
       <P>{t('help.features.documentToolsDesc')}</P>
+
+      <SubTitle>{t('help.features.markdownToolsTitle')}</SubTitle>
+      <P>{t('help.features.markdownToolsDesc')}</P>
 
       <SubTitle>{t('help.features.insightsTitle')}</SubTitle>
       <P>{t('help.features.insightsDesc')}</P>
@@ -614,6 +623,7 @@ function ShortcutsSection() {
     { label: t('help.shortcuts.sandbox'),       icon: <LayoutTemplate size={14} /> },
     { label: t('help.shortcuts.openInsights'),  icon: <PanelRight size={14} /> },
     { label: t('help.shortcuts.toggleEditorTools'), icon: <PanelTopClose size={14} /> },
+    { label: t('help.shortcuts.markdownHelp'), icon: <HelpCircle size={14} /> },
     { label: t('help.shortcuts.lockTranslation'), icon: <CheckCheck size={14} /> },
     { label: t('help.shortcuts.openStageTrace'), icon: <ScanLine size={14} /> },
   ];

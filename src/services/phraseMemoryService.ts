@@ -254,21 +254,47 @@ export interface SaveSelectedPhrasesOptions {
   onProgress?: (done: number, total: number) => void;
 }
 
-export async function saveSelectedPhrases(options: SaveSelectedPhrasesOptions): Promise<void> {
+export async function saveSelectedPhrases(options: SaveSelectedPhrasesOptions): Promise<number> {
   const {
     workspaceId, projectId, embeddingModel, splitter, minPhraseLength,
     sourceLanguage, targetLanguage, chunks, onProgress,
   } = options;
+  logger.debug('phrase_memory.save_selected.start', {
+    workspaceId,
+    projectId,
+    chunkCount: chunks.length,
+    embeddingModel,
+    splitter,
+    minPhraseLength,
+    sourceLanguage,
+    targetLanguage,
+  });
   const total = chunks.length;
+  let savedTotal = 0;
   for (let i = 0; i < chunks.length; i++) {
     const chunk = chunks[i];
-    await savePhrasePairs({
+    const savedForChunk = await savePhrasePairs({
       workspaceId, projectId, chunkId: chunk.id, embeddingModel,
       splitter, sourceText: chunk.sourceText, targetText: chunk.targetText,
       minPhraseLength, sourceLanguage, targetLanguage,
     });
+    savedTotal += savedForChunk;
+    logger.debug('phrase_memory.save_selected.chunk_done', {
+      workspaceId,
+      projectId,
+      chunkId: chunk.id,
+      savedForChunk,
+      savedTotal,
+    });
     onProgress?.(i + 1, total);
   }
+  logger.info('phrase_memory.save_selected.done', {
+    workspaceId,
+    projectId,
+    chunkCount: chunks.length,
+    savedTotal,
+  });
+  return savedTotal;
 }
 
 // ── Save phrase pairs ────────────────────────────────────────────────
@@ -286,7 +312,7 @@ export interface SavePhrasePairsOptions {
   targetLanguage: string;
 }
 
-export async function savePhrasePairs(options: SavePhrasePairsOptions): Promise<void> {
+export async function savePhrasePairs(options: SavePhrasePairsOptions): Promise<number> {
   const {
     workspaceId, projectId, chunkId, embeddingModel, splitter,
     sourceText, targetText, minPhraseLength, sourceLanguage, targetLanguage,
@@ -295,23 +321,77 @@ export async function savePhrasePairs(options: SavePhrasePairsOptions): Promise<
   const sourcePhrases = await splitPhrases(sourceText, splitter);
   const targetPhrases = await splitPhrases(targetText, splitter);
   const pairCount = Math.min(sourcePhrases.length, targetPhrases.length);
-  if (pairCount === 0) return;
+  logger.debug('phrase_memory.save_pairs.split', {
+    workspaceId,
+    projectId,
+    chunkId,
+    splitter,
+    sourcePhraseCount: sourcePhrases.length,
+    targetPhraseCount: targetPhrases.length,
+    pairCount,
+  });
+  if (pairCount === 0) return 0;
 
   const paired = sourcePhrases
     .slice(0, pairCount)
     .map((sp, i) => ({ sourcePhrase: sp, targetPhrase: targetPhrases[i] }))
     .filter((p) => p.sourcePhrase.length >= minPhraseLength);
 
-  if (paired.length === 0) return;
+  logger.debug('phrase_memory.save_pairs.filtered', {
+    workspaceId,
+    projectId,
+    chunkId,
+    candidatePairCount: paired.length,
+    minPhraseLength,
+  });
 
+  if (paired.length === 0) return 0;
+
+  logger.debug('phrase_memory.save_pairs.embedding_start', {
+    workspaceId,
+    projectId,
+    chunkId,
+    embeddingModel,
+    candidatePairCount: paired.length,
+  });
   const sourceVectors = await fetchEmbeddings(paired.map((p) => p.sourcePhrase), embeddingModel);
-  const pairs = paired.map((p, i) => ({
-    sourcePhrase: p.sourcePhrase,
-    targetPhrase: p.targetPhrase,
-    sourceEmbedding: sourceVectors[i] ?? [],
-  }));
+  if (sourceVectors.length !== paired.length) {
+    logger.warn('phrase_memory.save_pairs.embedding_count_mismatch', {
+      workspaceId,
+      projectId,
+      chunkId,
+      expected: paired.length,
+      received: sourceVectors.length,
+    });
+  }
+  const pairs = paired.flatMap((p, i) => {
+    const sourceEmbedding = sourceVectors[i];
+    return sourceEmbedding?.length
+      ? [{ sourcePhrase: p.sourcePhrase, targetPhrase: p.targetPhrase, sourceEmbedding }]
+      : [];
+  });
 
-  await invoke('vec_save_locked_phrases', {
+  if (pairs.length === 0) {
+    logger.warn('phrase_memory.save_pairs.no_valid_embeddings', {
+      workspaceId,
+      projectId,
+      chunkId,
+      candidatePairCount: paired.length,
+      embeddingCount: sourceVectors.length,
+    });
+    return 0;
+  }
+
+  const savedCount = await invoke<number>('vec_save_locked_phrases', {
     workspaceId, projectId, chunkId, pairs, minPhraseLength, sourceLanguage, targetLanguage,
   });
+  logger.info('phrase_memory.save_pairs.insert_done', {
+    workspaceId,
+    projectId,
+    chunkId,
+    candidatePairCount: paired.length,
+    embeddingCount: sourceVectors.length,
+    savedCount,
+  });
+  return savedCount;
 }

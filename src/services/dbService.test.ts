@@ -3,15 +3,26 @@ import { invoke } from '@tauri-apps/api/core';
 
 const dbState = vi.hoisted(() => {
   let failRollback = false;
+  let schemaVersion: string | null = null;
+  let workspaceCount = 0;
+  const userObjects = new Set<string>();
   const columnsByTable = new Map<string, string[]>([
     ['pipeline_configs', ['id', 'project_id', 'stages', 'judge_prompt', 'judge_model', 'judge_provider', 'use_chunking']],
     ['translations', ['id', 'project_id', 'original_text', 'final_translation', 'stage_results', 'judge_issues', 'created_at']],
     ['prompt_templates', []],
   ]);
 
-  const execute = vi.fn(async (query: string) => {
+  const execute = vi.fn(async (query: string, params?: unknown[]) => {
     if (query.trim() === 'ROLLBACK' && failRollback) {
       throw new Error('rollback failed');
+    }
+    const createMatch = query.match(/CREATE TABLE IF NOT EXISTS (\w+)/);
+    if (createMatch) {
+      userObjects.add(createMatch[1]);
+    }
+    const dropMatch = query.match(/DROP TABLE IF EXISTS (\w+)/);
+    if (dropMatch) {
+      userObjects.delete(dropMatch[1]);
     }
     const alterMatch = query.match(/^ALTER TABLE (\w+) ADD COLUMN (\w+) /);
     if (alterMatch) {
@@ -19,9 +30,27 @@ const dbState = vi.hoisted(() => {
       const current = columnsByTable.get(table) ?? [];
       columnsByTable.set(table, [...current, column]);
     }
+    if (query.includes("VALUES ('schema_version', $1)") && params?.[0]) {
+      schemaVersion = String(params[0]);
+    }
   });
 
-  const select = vi.fn(async (query: string) => {
+  const select = vi.fn(async (query: string, params?: unknown[]) => {
+    if (query.includes('FROM sqlite_master') && query.includes("name = $1")) {
+      return [{ count: userObjects.has(String(params?.[0])) ? 1 : 0 }];
+    }
+    if (query.includes('FROM sqlite_master') && query.includes("type IN ('table', 'view')")) {
+      return [{ count: userObjects.size }];
+    }
+    if (query.includes("FROM app_settings WHERE key = 'schema_version'")) {
+      return schemaVersion ? [{ value: schemaVersion }] : [];
+    }
+    if (query.includes('FROM workspaces')) {
+      return [{ count: workspaceCount }];
+    }
+    if (query.includes("FROM app_settings WHERE key = 'active_workspace_id'")) {
+      return [{ count: 0 }];
+    }
     const pragmaMatch = query.match(/^PRAGMA table_info\((\w+)\)$/);
     if (!pragmaMatch) return [];
     const table = pragmaMatch[1];
@@ -32,6 +61,16 @@ const dbState = vi.hoisted(() => {
     columnsByTable,
     setFailRollback: (value: boolean) => {
       failRollback = value;
+    },
+    setExistingObjects: (objects: string[]) => {
+      userObjects.clear();
+      objects.forEach((object) => userObjects.add(object));
+    },
+    setSchemaVersion: (value: string | null) => {
+      schemaVersion = value;
+    },
+    setWorkspaceCount: (value: number) => {
+      workspaceCount = value;
     },
     db: { execute, select },
     load: vi.fn(async () => ({ execute, select })),
@@ -49,6 +88,9 @@ describe('runInTransaction', () => {
     vi.resetModules();
     vi.clearAllMocks();
     dbState.setFailRollback(false);
+    dbState.setExistingObjects([]);
+    dbState.setSchemaVersion(null);
+    dbState.setWorkspaceCount(0);
   });
 
   it('executes callback statements through the native transaction command', async () => {
@@ -114,9 +156,42 @@ describe('initDatabase migrations', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
+    dbState.setExistingObjects([]);
+    dbState.setSchemaVersion(null);
+    dbState.setWorkspaceCount(0);
     dbState.columnsByTable.set('pipeline_configs', ['id', 'project_id', 'stages', 'judge_prompt', 'judge_model', 'judge_provider', 'use_chunking']);
     dbState.columnsByTable.set('translations', ['id', 'project_id', 'original_text', 'final_translation', 'stage_results', 'judge_issues', 'created_at']);
     dbState.columnsByTable.set('prompt_templates', []);
+  });
+
+  it('backs up and resets a beta database with an old schema version', async () => {
+    dbState.setExistingObjects(['app_settings', 'projects', 'translations']);
+    dbState.setSchemaVersion('1');
+    vi.mocked(invoke).mockResolvedValueOnce('/tmp/glossa.legacy.db.bak');
+    const { initDatabase } = await import('./dbService');
+
+    await initDatabase();
+
+    expect(invoke).toHaveBeenCalledWith('backup_database_file', {
+      reason: 'schema-1-to-2026-06-05-beta-reset',
+    });
+    expect(dbState.db.execute).toHaveBeenCalledWith('PRAGMA wal_checkpoint(FULL)');
+    expect(dbState.db.execute).toHaveBeenCalledWith('DROP TABLE IF EXISTS projects');
+    expect(dbState.db.execute).toHaveBeenCalledWith('DROP TABLE IF EXISTS translations');
+    expect(dbState.db.execute).toHaveBeenCalledWith(
+      expect.stringContaining('CREATE TABLE IF NOT EXISTS projects'),
+    );
+  });
+
+  it('does not reset a database with the current beta schema version', async () => {
+    dbState.setExistingObjects(['app_settings', 'projects', 'workspaces']);
+    dbState.setSchemaVersion('2026-06-05-beta-reset');
+    const { initDatabase } = await import('./dbService');
+
+    await initDatabase();
+
+    expect(invoke).not.toHaveBeenCalledWith('backup_database_file', expect.anything());
+    expect(dbState.db.execute).not.toHaveBeenCalledWith('DROP TABLE IF EXISTS projects');
   });
 
   it('adds new pipeline and translation columns for existing databases', async () => {
@@ -218,14 +293,20 @@ describe('initDatabase migrations', () => {
     );
   });
 
-  it('does not auto-create a default workspace', async () => {
+  it('creates a default workspace and backfills old projects', async () => {
     const { initDatabase } = await import('./dbService');
 
     await initDatabase();
 
-    const calls = (dbState.db.execute.mock.calls as unknown as [string, unknown[]][]).filter(
+    const workspaceInsertCalls = (dbState.db.execute.mock.calls as unknown as [string, unknown[]][]).filter(
       ([q]) => q.includes('INSERT') && q.includes('workspaces') && !q.includes('phrase_memory'),
     );
-    expect(calls).toHaveLength(0);
+    expect(workspaceInsertCalls).toHaveLength(1);
+    expect(dbState.db.execute).toHaveBeenCalledWith(
+      expect.stringContaining("SET workspace_id = 'ws_default'"),
+    );
+    expect(dbState.db.execute).toHaveBeenCalledWith(
+      expect.stringContaining("SET value = 'ws_default'"),
+    );
   });
 });
