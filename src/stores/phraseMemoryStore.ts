@@ -8,6 +8,7 @@ export type PhraseMemoryMatch = {
   sourcePhrase: string;
   targetPhrase: string;
   score: number;
+  confidence: number;
   author?: string;
   work?: string;
   createdAt: string;
@@ -38,6 +39,7 @@ function toMemoryMatch(m: PhraseMatch): PhraseMemoryMatch {
     sourcePhrase: m.sourcePhrase,
     targetPhrase: m.targetPhrase,
     score: Math.max(0, Math.min(1, 1 - m.distance)),
+    confidence: Math.max(0, Math.min(1, m.confidence)),
     createdAt: new Date().toISOString(),
   };
 }

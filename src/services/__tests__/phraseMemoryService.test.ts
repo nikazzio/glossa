@@ -1,19 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }));
+vi.mock('../../stores/uiStore', () => ({
+  useUiStore: { getState: () => ({ ollamaBaseUrl: 'http://localhost:11434' }) },
+}));
 vi.mock('../embeddingService', () => ({
   fetchEmbeddings: vi.fn(),
-  estimateTokenCount: vi.fn((t: string) => t.split(/\s+/).length),
-  estimateEmbeddingCostUsd: vi.fn(() => 0.001),
+}));
+vi.mock('../../utils/logger', () => ({
+  logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn() },
 }));
 
 import { invoke } from '@tauri-apps/api/core';
 import { fetchEmbeddings } from '../embeddingService';
 import {
   deletePhraseMemoryEntry,
+  extractPhraseMemoryPairs,
   listPhraseMemoryEntries,
-  splitPhrases,
-  runEmbeddingJob,
   searchPhraseMemory,
   searchPhraseMemoryBatch,
   saveSelectedPhrases,
@@ -24,91 +27,68 @@ import {
 const mockInvoke = vi.mocked(invoke);
 const mockFetchEmbeddings = vi.mocked(fetchEmbeddings);
 
-const SAMPLE = 'Il gatto dorme sul tetto. La luna brilla nel cielo; le stelle sono molte: sono infinite.';
-
-describe('splitPhrases', () => {
+describe('extractPhraseMemoryPairs', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('none restituisce testo intero come unica frase', async () => {
-    expect(await splitPhrases(SAMPLE, 'none')).toEqual([SAMPLE]);
-  });
-
-  it('regex split su . ; :', async () => {
-    const result = await splitPhrases(SAMPLE, 'regex');
-    expect(result.length).toBeGreaterThanOrEqual(4);
-    result.forEach((p) => {
-      expect(p.trim().length).toBeGreaterThan(0);
-      expect(SAMPLE).toContain(p.trim());
-    });
-  });
-
-  it('regex scarta frasi < 3 caratteri', async () => {
-    const result = await splitPhrases('A. BB. Una frase lunga abbastanza.', 'regex');
-    result.forEach((p) => expect(p.trim().length).toBeGreaterThanOrEqual(3));
-  });
-
-  it('llm chiama invoke split_phrases_llm', async () => {
-    const phrases = ['Il gatto dorme sul tetto', 'La luna brilla nel cielo'];
-    mockInvoke.mockResolvedValueOnce(phrases);
-    const result = await splitPhrases(SAMPLE, 'llm');
-    expect(mockInvoke).toHaveBeenCalledWith('split_phrases_llm', { sourceText: SAMPLE });
-    expect(result).toEqual(phrases);
-  });
-
-  it('llm fallback a regex se invoke fallisce', async () => {
-    mockInvoke.mockRejectedValueOnce(new Error('timeout'));
-    const result = await splitPhrases(SAMPLE, 'llm');
-    expect(result.length).toBeGreaterThan(0);
-  });
-});
-
-describe('runEmbeddingJob', () => {
-  beforeEach(() => vi.clearAllMocks());
-
-  it('chiama vec_upsert_source_phrase per ogni frase trovata', async () => {
-    mockFetchEmbeddings.mockResolvedValue([[0.1, 0.2], [0.3, 0.4]]);
-    mockInvoke.mockResolvedValue(undefined);
-
-    await runEmbeddingJob({
-      workspaceId: 'ws-1',
-      projectId: 'proj-1',
-      embeddingModel: 'text-embedding-3-small',
-      splitter: 'regex',
-      chunks: [{ id: 'c1', text: 'Ciao. Mondo.' }],
-      onProgress: vi.fn(),
+  it('returns only verbatim aligned pairs from extractor JSON', async () => {
+    mockInvoke.mockResolvedValueOnce({
+      pairs: [
+        { sourcePhrase: 'Ciao mondo', targetPhrase: 'Hello world', confidence: 0.92 },
+        { sourcePhrase: 'invented', targetPhrase: 'Hello world', confidence: 1 },
+        { sourcePhrase: 'Ciao mondo', targetPhrase: 'invented', confidence: 1 },
+      ],
     });
 
-    expect(mockInvoke).toHaveBeenCalledWith(
-      'vec_upsert_source_phrase',
-      expect.objectContaining({ projectId: 'proj-1' }),
-    );
-  });
-
-  it('chiama onProgress con valori aggiornati', async () => {
-    mockFetchEmbeddings.mockResolvedValue([[0.1, 0.2]]);
-    mockInvoke.mockResolvedValue(undefined);
-    const onProgress = vi.fn();
-
-    await runEmbeddingJob({
-      workspaceId: 'ws-1',
-      projectId: 'proj-1',
-      embeddingModel: 'text-embedding-3-small',
-      splitter: 'none',
-      chunks: [{ id: 'c1', text: 'Una frase.' }],
-      onProgress,
+    const result = await extractPhraseMemoryPairs({
+      provider: 'openai',
+      model: 'gpt-5-nano',
+      prompt: 'Extract',
+      sourceText: 'Ciao mondo. Buona notte.',
+      targetText: 'Hello world. Good night.',
+      sourceLanguage: 'Italian',
+      targetLanguage: 'English',
     });
 
-    expect(onProgress).toHaveBeenCalled();
+    expect(mockInvoke).toHaveBeenCalledWith('extract_phrase_memory_pairs', expect.objectContaining({
+      provider: 'openai',
+      model: 'gpt-5-nano',
+      prompt: 'Extract',
+      sourceText: 'Ciao mondo. Buona notte.',
+      targetText: 'Hello world. Good night.',
+    }));
+    expect(result).toEqual([
+      { sourcePhrase: 'Ciao mondo', targetPhrase: 'Hello world', confidence: 0.92 },
+    ]);
+  });
+
+  it('propagates extractor errors without fallback', async () => {
+    mockInvoke.mockRejectedValueOnce(new Error('invalid json'));
+
+    await expect(extractPhraseMemoryPairs({
+      provider: 'openai',
+      model: 'gpt-5-nano',
+      prompt: 'Extract',
+      sourceText: 'Ciao.',
+      targetText: 'Hello.',
+      sourceLanguage: 'Italian',
+      targetLanguage: 'English',
+    })).rejects.toThrow('invalid json');
   });
 });
 
 describe('searchPhraseMemory', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('restituisce PhraseMatch[] mappato da snake_case', async () => {
+  it('maps snake_case search results including confidence', async () => {
     mockFetchEmbeddings.mockResolvedValue([[0.1, 0.2, 0.3]]);
     mockInvoke.mockResolvedValueOnce([
-      { phrase_memory_id: 'pm-1', source_phrase: 'ciao', target_phrase: 'hello', distance: 0.05 },
+      {
+        phrase_memory_id: 'pm-1',
+        source_phrase: 'ciao',
+        target_phrase: 'hello',
+        distance: 0.05,
+        confidence: 0.8,
+      },
     ]);
 
     const results = await searchPhraseMemory({
@@ -119,32 +99,42 @@ describe('searchPhraseMemory', () => {
       maxResults: 5,
     });
 
-    expect(results[0]).toMatchObject({ sourcePhrase: 'ciao', targetPhrase: 'hello' });
+    expect(results[0]).toMatchObject({
+      sourcePhrase: 'ciao',
+      targetPhrase: 'hello',
+      confidence: 0.8,
+    });
   });
 
-  it('restituisce array vuoto se invoke restituisce []', async () => {
+  it('uses the source query text for search embeddings', async () => {
     mockFetchEmbeddings.mockResolvedValue([[0.1, 0.2]]);
     mockInvoke.mockResolvedValueOnce([]);
 
-    const results = await searchPhraseMemory({
+    await searchPhraseMemory({
       workspaceId: 'ws-1',
       embeddingModel: 'text-embedding-3-small',
-      queryText: 'testo',
+      queryText: 'source only',
       threshold: 0.3,
       maxResults: 5,
     });
 
-    expect(results).toEqual([]);
+    expect(mockFetchEmbeddings).toHaveBeenCalledWith(['source only'], 'text-embedding-3-small');
   });
 });
 
 describe('searchPhraseMemoryBatch', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('chiama fetchEmbeddings una sola volta per tutti i chunk', async () => {
+  it('embeds source chunk text once for all chunks', async () => {
     mockFetchEmbeddings.mockResolvedValue([[0.1, 0.2], [0.3, 0.4]]);
     mockInvoke.mockResolvedValue([
-      { phrase_memory_id: 'pm-1', source_phrase: 'ciao', target_phrase: 'hello', distance: 0.05 },
+      {
+        phrase_memory_id: 'pm-1',
+        source_phrase: 'ciao',
+        target_phrase: 'hello',
+        distance: 0.05,
+        confidence: 0.9,
+      },
     ]);
 
     const results = await searchPhraseMemoryBatch({
@@ -161,20 +151,21 @@ describe('searchPhraseMemoryBatch', () => {
     expect(mockFetchEmbeddings).toHaveBeenCalledTimes(1);
     expect(mockFetchEmbeddings).toHaveBeenCalledWith(['ciao', 'mondo'], 'text-embedding-3-small');
     expect(mockInvoke).toHaveBeenCalledTimes(2);
-    expect(results.get('c1')?.[0]).toMatchObject({ sourcePhrase: 'ciao', targetPhrase: 'hello' });
+    expect(results.get('c1')?.[0]).toMatchObject({ sourcePhrase: 'ciao', confidence: 0.9 });
   });
 });
 
 describe('phrase memory entry management', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('mappa le entry salvate da snake_case a camelCase', async () => {
+  it('maps saved entries from snake_case to camelCase', async () => {
     mockInvoke.mockResolvedValueOnce([
       {
         id: 'pm-1',
         workspace_id: 'ws-1',
         source_phrase: 'ciao',
         target_phrase: 'hello',
+        confidence: 0.88,
         source_language: 'Italian',
         target_language: 'English',
         author: null,
@@ -196,10 +187,11 @@ describe('phrase memory entry management', () => {
       workspaceId: 'ws-1',
       sourcePhrase: 'ciao',
       targetPhrase: 'hello',
+      confidence: 0.88,
     });
   });
 
-  it('elimina una entry workspace-scoped', async () => {
+  it('deletes a workspace-scoped entry', async () => {
     mockInvoke.mockResolvedValueOnce(1);
 
     await deletePhraseMemoryEntry('ws-1', 'pm-1');
@@ -210,7 +202,7 @@ describe('phrase memory entry management', () => {
     });
   });
 
-  it('rigenera embedding quando aggiorna una entry', async () => {
+  it('regenerates source-only embedding when updating an entry', async () => {
     mockFetchEmbeddings.mockResolvedValueOnce([[0.1, 0.2]]);
     mockInvoke.mockResolvedValueOnce(undefined);
 
@@ -236,17 +228,26 @@ describe('phrase memory entry management', () => {
 describe('saveSelectedPhrases', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('salva solo i chunk passati esplicitamente e aggiorna il progress', async () => {
+  it('extracts and saves only explicitly selected chunks', async () => {
+    mockInvoke
+      .mockResolvedValueOnce({
+        pairs: [{ sourcePhrase: 'Ciao mondo', targetPhrase: 'Hello world', confidence: 0.91 }],
+      })
+      .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce({
+        pairs: [{ sourcePhrase: 'Buona notte', targetPhrase: 'Good night', confidence: 0.9 }],
+      })
+      .mockResolvedValueOnce(1);
     mockFetchEmbeddings.mockResolvedValue([[0.1, 0.2]]);
-    mockInvoke.mockResolvedValue(1);
     const onProgress = vi.fn();
 
     const savedCount = await saveSelectedPhrases({
       workspaceId: 'ws-1',
       projectId: 'proj-1',
       embeddingModel: 'text-embedding-3-small',
-      splitter: 'regex',
-      minPhraseLength: 3,
+      extractorProvider: 'openai',
+      extractorModel: 'gpt-5-nano',
+      extractorPrompt: 'Extract',
       sourceLanguage: 'it',
       targetLanguage: 'en',
       chunks: [
@@ -256,14 +257,13 @@ describe('saveSelectedPhrases', () => {
       onProgress,
     });
 
-    expect(mockInvoke).toHaveBeenCalledTimes(2);
     expect(mockInvoke).toHaveBeenCalledWith(
       'vec_save_locked_phrases',
-      expect.objectContaining({ chunkId: 'c1' }),
+      expect.objectContaining({ workspaceId: 'ws-1', projectId: 'proj-1', chunkId: 'c1' }),
     );
     expect(mockInvoke).toHaveBeenCalledWith(
       'vec_save_locked_phrases',
-      expect.objectContaining({ chunkId: 'c3' }),
+      expect.objectContaining({ workspaceId: 'ws-1', projectId: 'proj-1', chunkId: 'c3' }),
     );
     expect(onProgress).toHaveBeenCalledWith(1, 2);
     expect(onProgress).toHaveBeenCalledWith(2, 2);
@@ -274,50 +274,91 @@ describe('saveSelectedPhrases', () => {
 describe('savePhrasePairs', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('chiama vec_save_locked_phrases con workspace e chunk corretti', async () => {
-    mockFetchEmbeddings.mockResolvedValue([[0.1, 0.2]]);
-    mockInvoke.mockResolvedValueOnce(1);
+  it('saves extracted verbatim pairs with source embeddings and confidence', async () => {
+    mockInvoke
+      .mockResolvedValueOnce({
+        pairs: [
+          { sourcePhrase: 'Ciao mondo', targetPhrase: 'Hello world', confidence: 0.93 },
+        ],
+      })
+      .mockResolvedValueOnce(1);
+    mockFetchEmbeddings.mockResolvedValueOnce([[0.1, 0.2]]);
 
     const savedCount = await savePhrasePairs({
       workspaceId: 'ws-1',
       projectId: 'proj-1',
       chunkId: 'c1',
       embeddingModel: 'text-embedding-3-small',
-      splitter: 'regex',
+      extractorProvider: 'openai',
+      extractorModel: 'gpt-5-nano',
+      extractorPrompt: 'Extract',
       sourceText: 'Ciao mondo.',
       targetText: 'Hello world.',
-      minPhraseLength: 3,
       sourceLanguage: 'it',
       targetLanguage: 'en',
     });
 
-    expect(mockInvoke).toHaveBeenCalledWith(
-      'vec_save_locked_phrases',
-      expect.objectContaining({ workspaceId: 'ws-1', projectId: 'proj-1', chunkId: 'c1' }),
-    );
+    expect(mockFetchEmbeddings).toHaveBeenCalledWith(['Ciao mondo'], 'text-embedding-3-small');
+    expect(mockInvoke).toHaveBeenCalledWith('vec_save_locked_phrases', {
+      workspaceId: 'ws-1',
+      projectId: 'proj-1',
+      chunkId: 'c1',
+      sourceLanguage: 'it',
+      targetLanguage: 'en',
+      pairs: [
+        {
+          sourcePhrase: 'Ciao mondo',
+          targetPhrase: 'Hello world',
+          confidence: 0.93,
+          sourceEmbedding: [0.1, 0.2],
+        },
+      ],
+    });
     expect(savedCount).toBe(1);
   });
 
-  it('non salva coppie senza embedding valido', async () => {
-    mockFetchEmbeddings.mockResolvedValue([]);
+  it('does not fallback or save when extractor fails', async () => {
+    mockInvoke.mockRejectedValueOnce(new Error('extractor failed'));
+
+    await expect(savePhrasePairs({
+      workspaceId: 'ws-1',
+      projectId: 'proj-1',
+      chunkId: 'c1',
+      embeddingModel: 'text-embedding-3-small',
+      extractorProvider: 'openai',
+      extractorModel: 'gpt-5-nano',
+      extractorPrompt: 'Extract',
+      sourceText: 'Ciao mondo.',
+      targetText: 'Hello world.',
+      sourceLanguage: 'it',
+      targetLanguage: 'en',
+    })).rejects.toThrow('extractor failed');
+
+    expect(mockFetchEmbeddings).not.toHaveBeenCalled();
+    expect(mockInvoke).not.toHaveBeenCalledWith('vec_save_locked_phrases', expect.anything());
+  });
+
+  it('skips non-verbatim extracted pairs before embedding', async () => {
+    mockInvoke.mockResolvedValueOnce({
+      pairs: [{ sourcePhrase: 'not in source', targetPhrase: 'Hello world', confidence: 0.9 }],
+    });
 
     const savedCount = await savePhrasePairs({
       workspaceId: 'ws-1',
       projectId: 'proj-1',
       chunkId: 'c1',
       embeddingModel: 'text-embedding-3-small',
-      splitter: 'regex',
+      extractorProvider: 'openai',
+      extractorModel: 'gpt-5-nano',
+      extractorPrompt: 'Extract',
       sourceText: 'Ciao mondo.',
       targetText: 'Hello world.',
-      minPhraseLength: 3,
       sourceLanguage: 'it',
       targetLanguage: 'en',
     });
 
     expect(savedCount).toBe(0);
-    expect(mockInvoke).not.toHaveBeenCalledWith(
-      'vec_save_locked_phrases',
-      expect.anything(),
-    );
+    expect(mockFetchEmbeddings).not.toHaveBeenCalled();
+    expect(mockInvoke).not.toHaveBeenCalledWith('vec_save_locked_phrases', expect.anything());
   });
 });

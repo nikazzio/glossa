@@ -1,5 +1,6 @@
 import type { PipelineStageConfig } from './types';
 import { MODEL_CATALOG } from './models/catalog';
+import type { ModelProvider } from './types';
 
 export const DEFAULT_STAGES: PipelineStageConfig[] = [
   {
@@ -18,6 +19,21 @@ export const DEFAULT_JUDGE_PROMPT =
 
 export const DEFAULT_COHERENCE_PROMPT =
   'Check for terminology consistency, narrative continuity, and glossary adherence across segment boundaries.';
+
+export const DEFAULT_MEMORY_EXTRACTOR_PROVIDER: ModelProvider = 'openai';
+export const DEFAULT_MEMORY_EXTRACTOR_MODEL = 'gpt-5-nano';
+export const DEFAULT_MEMORY_EXTRACTOR_PROMPT = `Extract phrase-memory pairs from an original source chunk and its final translation.
+
+Return only JSON in this shape:
+{"pairs":[{"sourcePhrase":"exact source text","targetPhrase":"exact target text","confidence":0.0}]}
+
+Rules:
+- sourcePhrase must be copied verbatim from the original source chunk.
+- targetPhrase must be copied verbatim from the translation.
+- Pair only meaningful reusable phrases, terms, idioms, names, or short clauses.
+- Keep the pairs in source-text order.
+- Do not invent, normalize, paraphrase, translate, or repair text.
+- Use confidence from 0 to 1. Return {"pairs":[]} if no reliable pairs exist.`;
 
 // Derived from MODEL_CATALOG — edit catalog.ts to update prices
 export const MODEL_PRICING: Record<string, { input: number; output: number }> = Object.fromEntries(

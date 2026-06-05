@@ -60,6 +60,10 @@ const DEFAULT_PIPELINE_CONFIG: PipelineConfig = {
   experimentalImport: null,
   coherencePrompt: DEFAULT_COHERENCE_PROMPT,
   reviewProviderOptions: undefined,
+  usePhraseMemory: false,
+  autoSearchPhraseMemory: true,
+  phraseMemorySimilarityThreshold: 0.75,
+  phraseMemoryMaxResults: 10,
 };
 
 export const usePipelineStore = create<PipelineState>((set) => ({

@@ -5,8 +5,8 @@ import type { ChunkPhraseMatches } from '../stores/phraseMemoryStore';
 const makeChunkMatches = (enabled: string[]): ChunkPhraseMatches => ({
   chunkId: 'c1',
   matches: [
-    { id: 'm1', sourcePhrase: 's', targetPhrase: 't', score: 0.9, createdAt: '' },
-    { id: 'm2', sourcePhrase: 's2', targetPhrase: 't2', score: 0.85, createdAt: '' },
+    { id: 'm1', sourcePhrase: 's', targetPhrase: 't', score: 0.9, confidence: 0.8, createdAt: '' },
+    { id: 'm2', sourcePhrase: 's2', targetPhrase: 't2', score: 0.85, confidence: 0.8, createdAt: '' },
   ],
   enabledMatchIds: new Set(enabled),
 });

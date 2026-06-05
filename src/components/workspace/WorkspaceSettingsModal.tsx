@@ -8,9 +8,9 @@ import { exportWorkspace, importWorkspace } from '../../services/backupService';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { EditorialModalShell } from '../common';
-import { IconButton } from '../ui';
-import { PhraseMemoryPresetManager } from '../settings/PhraseMemoryPresetManager';
-import type { EmbeddingModel } from '../../types';
+import { IconButton, PillButton } from '../ui';
+import { MemoryExtractorSettings } from './MemoryExtractorSettings';
+import type { EmbeddingModel, ModelProvider } from '../../types';
 
 type WorkspaceSettingsTab = 'general' | 'memory' | 'backup';
 
@@ -28,6 +28,9 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [embeddingModel, setEmbeddingModel] = useState<EmbeddingModel>('text-embedding-3-small');
+  const [memoryExtractorProvider, setMemoryExtractorProvider] = useState<ModelProvider>('openai');
+  const [memoryExtractorModel, setMemoryExtractorModel] = useState('gpt-5-nano');
+  const [memoryExtractorPrompt, setMemoryExtractorPrompt] = useState('');
   const [saving, setSaving] = useState(false);
   const [isBackupBusy, setIsBackupBusy] = useState(false);
 
@@ -36,6 +39,9 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
     setName(activeWorkspace.name);
     setDescription(activeWorkspace.description ?? '');
     setEmbeddingModel(activeWorkspace.embeddingModel);
+    setMemoryExtractorProvider(activeWorkspace.memoryExtractorProvider);
+    setMemoryExtractorModel(activeWorkspace.memoryExtractorModel);
+    setMemoryExtractorPrompt(activeWorkspace.memoryExtractorPrompt);
     setActiveTab('general');
   }, [open, activeWorkspace]);
 
@@ -48,6 +54,9 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
         name: name.trim(),
         description: description.trim() || undefined,
         embeddingModel,
+        memoryExtractorProvider,
+        memoryExtractorModel,
+        memoryExtractorPrompt,
       });
       toast.success(t('workspace.updated'));
       shouldClose = true;
@@ -162,16 +171,16 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
               panelClassName="h-[80vh]"
               tabBar={tabBar}
               footer={
-                activeTab === 'general' ? (
+                activeTab === 'general' || activeTab === 'memory' ? (
                   <div className="flex justify-end">
-                    <button
-                      type="button"
+                    <PillButton
                       onClick={() => void handleSave()}
-                      disabled={!name.trim() || saving}
-                      className="rounded-full border border-editorial-accent bg-editorial-accent px-5 py-3 text-xs font-bold uppercase tracking-[0.2em] text-white transition-colors duration-150 hover:bg-editorial-accent/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
+                      disabled={!name.trim() || saving || (activeTab === 'memory' && (!memoryExtractorModel.trim() || !memoryExtractorPrompt.trim()))}
+                      variant="accent"
+                      className="px-5 py-3"
                     >
                       {saving ? t('workspace.saving') : t('common.save')}
-                    </button>
+                    </PillButton>
                   </div>
                 ) : null
               }
@@ -223,7 +232,17 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                   role="tabpanel"
                   aria-labelledby="workspace-settings-tab-memory"
                 >
-                  <PhraseMemoryPresetManager />
+                  <MemoryExtractorSettings
+                    provider={memoryExtractorProvider}
+                    model={memoryExtractorModel}
+                    prompt={memoryExtractorPrompt}
+                    onProviderChange={(provider, model) => {
+                      setMemoryExtractorProvider(provider);
+                      setMemoryExtractorModel(model);
+                    }}
+                    onModelChange={setMemoryExtractorModel}
+                    onPromptChange={setMemoryExtractorPrompt}
+                  />
                 </div>
               )}
 

@@ -1,5 +1,5 @@
 import { select, execute } from './dbService';
-import type { PromptTemplate } from '../types';
+import type { PromptTemplate, PromptTemplateContext } from '../types';
 import { generateId } from '../utils';
 
 interface TemplateRow {
@@ -13,7 +13,10 @@ interface TemplateRow {
 }
 
 function rowToTemplate(row: TemplateRow): PromptTemplate {
-  const ctx = row.context === 'audit' ? 'audit' : row.context === 'persona' ? 'persona' : 'stage';
+  const ctx: PromptTemplateContext =
+    row.context === 'audit' || row.context === 'persona' || row.context === 'memory'
+      ? row.context
+      : 'stage';
   return {
     id: row.id,
     name: row.name,
@@ -25,7 +28,7 @@ function rowToTemplate(row: TemplateRow): PromptTemplate {
   };
 }
 
-export async function getPromptTemplates(context?: 'stage' | 'audit' | 'persona'): Promise<PromptTemplate[]> {
+export async function getPromptTemplates(context?: PromptTemplateContext): Promise<PromptTemplate[]> {
   const rows = context
     ? await select<TemplateRow>(
         'SELECT id, name, prompt, context, default_model, default_provider, created_at FROM prompt_templates WHERE context = $1 ORDER BY name ASC',

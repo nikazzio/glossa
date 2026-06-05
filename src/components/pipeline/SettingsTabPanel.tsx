@@ -1,7 +1,7 @@
 import { ArrowRightLeft, FileText, Globe, KeyRound, Languages, Layers, ShieldCheck, Wand2 } from 'lucide-react';
 import type { Dispatch, SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { PipelineConfig, PipelineMode, PromptTemplate, PhraseMemoryOverrides } from '../../types';
+import type { PipelineConfig, PipelineMode, PromptTemplate } from '../../types';
 import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
 import { LANGUAGES } from '../../constants';
 import { IconButton, SectionLabel } from '../ui';
@@ -24,12 +24,14 @@ interface SettingsTabPanelProps {
   keyStatusLoading: boolean;
   missingRefineProviders: string[];
   usePhraseMemory: boolean;
-  phraseMemoryPresetId: string | null | undefined;
-  phraseMemoryOverrides: PhraseMemoryOverrides | null | undefined;
+  autoSearchPhraseMemory: boolean;
+  phraseMemorySimilarityThreshold: number;
+  phraseMemoryMaxResults: number;
   onPhraseMemoryChange: (value: {
     usePhraseMemory: boolean;
-    phraseMemoryPresetId: string | null;
-    phraseMemoryOverrides: PhraseMemoryOverrides | null;
+    autoSearchPhraseMemory: boolean;
+    phraseMemorySimilarityThreshold: number;
+    phraseMemoryMaxResults: number;
   }) => void;
 }
 
@@ -49,8 +51,9 @@ export function SettingsTabPanel({
   keyStatusLoading,
   missingRefineProviders,
   usePhraseMemory,
-  phraseMemoryPresetId,
-  phraseMemoryOverrides,
+  autoSearchPhraseMemory,
+  phraseMemorySimilarityThreshold,
+  phraseMemoryMaxResults,
   onPhraseMemoryChange,
 }: SettingsTabPanelProps) {
   const { t } = useTranslation();
@@ -202,8 +205,9 @@ export function SettingsTabPanel({
       </div>
       <PhraseMemoryConfig
         usePhraseMemory={usePhraseMemory ?? false}
-        presetId={phraseMemoryPresetId ?? null}
-        overrides={phraseMemoryOverrides ?? null}
+        autoSearchPhraseMemory={autoSearchPhraseMemory}
+        phraseMemorySimilarityThreshold={phraseMemorySimilarityThreshold}
+        phraseMemoryMaxResults={phraseMemoryMaxResults}
         onChange={onPhraseMemoryChange}
         disabled={isProcessing}
       />

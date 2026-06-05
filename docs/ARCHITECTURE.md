@@ -66,7 +66,7 @@
 | `components/pipeline/StageCard.tsx` | Visualizza singolo stage (token, retry info) |
 | `components/document/ConfigDrawer.tsx` | Drawer config pipeline: mode, lingue, stage, persona, glossary |
 | `components/layout/Header.tsx` | Project/pipeline selector |
-| `components/workspace/WorkspaceHome.tsx` | Dashboard workspace: switch/create/config workspace, progetti, preset Phrase Memory workspace |
+| `components/workspace/WorkspaceHome.tsx` | Dashboard workspace: switch/create/config workspace, progetti, configurazione extractor Phrase Memory |
 | `components/workspace/WorkspaceWizard.tsx` | Primo avvio: crea il primo workspace reale |
 
 ---
@@ -78,8 +78,8 @@ Glossa 2.0 separa tre livelli:
 | Livello | Dove si configura | Cosa contiene |
 |---|---|---|
 | App | `SettingsModal` | Provider/API key, Ollama, segmentazione default, layout, backup/pricing |
-| Workspace traduzioni | `WorkspaceHome` | Progetti di traduzione, modello embedding, preset Phrase Memory, memoria condivisa |
-| Pipeline/progetto | `ConfigDrawer` | Lingue, persona, stage, prompt, glossario assegnato, toggle Phrase Memory |
+| Workspace traduzioni | `WorkspaceHome` | Progetti di traduzione, modello embedding, extractor Phrase Memory, memoria condivisa |
+| Pipeline/progetto | `ConfigDrawer` | Lingue, persona, stage, prompt, glossario assegnato, toggle/search Phrase Memory |
 
 Il workspace attuale è specifico per l'area **Traduzioni**. Biblioteca e Trascrizioni sono future macro-aree separate; non devono condividere implicitamente la Phrase Memory delle traduzioni.
 
@@ -204,7 +204,7 @@ flushPendingTokenBatch() → un solo setState per frame (O(1) chunk update)
 | File | Responsabilità |
 |---|---|
 | `src-tauri/src/lib.rs` | Entry point Tauri, registrazione comandi, StreamRegistry state |
-| `src-tauri/src/llm/pipeline.rs` | Comandi Tauri: run_stage, run_stage_stream, judge_translation, run_coherence_for_chunk, preflight_pipeline, compute_blobs, cancel_stream |
+| `src-tauri/src/llm/pipeline.rs` | Comandi Tauri: run_stage, run_stage_stream, judge_translation, run_coherence_for_chunk, preflight_pipeline, compute_blobs, extract_phrase_memory_pairs, cancel_stream |
 | `src-tauri/src/llm/blobs.rs` | Algoritmo assegnazione blob (globale vs finestre) |
 | `src-tauri/src/llm/prompts.rs` | Costruzione prompt 3-block, glossario, markdown rules, persona |
 | `src-tauri/src/llm/provider.rs` | Trait LlmProvider, struct LlmRequest |
@@ -213,6 +213,38 @@ flushPendingTokenBatch() → un solo setState per frame (O(1) chunk update)
 | `src-tauri/src/keystore.rs` | OS credential store per API key |
 | `src-tauri/src/db.rs` | execute_transaction wrapper SQLite |
 | `src-tauri/src/documents.rs` | Extract/export DOCX, PDF |
+
+---
+
+## Phrase Memory
+
+**Configurazione:**
+- Workspace: `memoryExtractorProvider`, `memoryExtractorModel`, `memoryExtractorPrompt`; prompt templates con context `memory`.
+- Pipeline: `usePhraseMemory`, `autoSearchPhraseMemory`, `phraseMemorySimilarityThreshold`, `phraseMemoryMaxResults`.
+
+**Salvataggio memoria:**
+```
+Chunk originale + draft/traduzione finale
+  ↓
+phraseMemoryService.savePhrasePairs()
+  ↓
+Tauri: extract_phrase_memory_pairs(provider, model, prompt, sourceText, targetText, languages)
+  ↓
+LLM JSON mode → { pairs: [{ sourcePhrase, targetPhrase, confidence }] }
+  ↓
+Validazione verbatim frontend + backend su source e target
+  ↓
+Embedding solo su sourcePhrase
+  ↓
+vec_save_locked_phrases(..., confidence)
+```
+
+Non esiste fallback locale: se extractor, JSON parsing o validazione falliscono, il chunk non salva coppie. Le coppie vecchie e i preset vengono purgati dal bump schema perché il formato precedente non è compatibile.
+
+**Ricerca memoria:**
+- Auto-search parte solo se `usePhraseMemory` è attivo e `autoSearchPhraseMemory !== false`.
+- Il tab Memory può sempre lanciare refresh manuale per il chunk corrente quando la memoria è abilitata.
+- La query embedding usa solo il testo sorgente del chunk; i match selezionati sono gli unici iniettati nel prompt di run/rerun.
 
 ---
 
@@ -226,6 +258,7 @@ projects
 
 workspaces
   id, name, description, embedding_model, created_at
+  memory_extractor_provider, memory_extractor_model, memory_extractor_prompt
   active_workspace_id vive in app_settings
 
 pipelines  ← multi-pipeline per progetto (feat/multi-pipeline)
@@ -237,6 +270,8 @@ pipelines  ← multi-pipeline per progetto (feat/multi-pipeline)
   persona, custom_source_language, custom_target_language
   blob_budget_tokens, blob_overlap
   review_provider_options JSON
+  use_phrase_memory, auto_search_phrase_memory
+  phrase_memory_similarity_threshold, phrase_memory_max_results
   run_status ('idle'|'running'|'completed'|'interrupted')
   last_run_config JSON (fingerprint per resume)
   created_at, updated_at
@@ -256,7 +291,7 @@ glossaries / glossary_entries / project_glossaries
   CRUD standard, many-to-many project↔glossary
 
 prompt_templates
-  id, name, prompt, context ('stage'|'audit'|'persona')
+  id, name, prompt, context ('stage'|'audit'|'persona'|'memory')
   default_model, default_provider
 
 operation_logs
@@ -272,11 +307,7 @@ app_settings
 phrase_memory
   id, workspace_id FK, source_phrase, target_phrase
   source_language, target_language, author, work, domain, tags, notes
-  chunk_id, project_id, embedding, created_at
-
-phrase_memory_presets
-  id, workspace_id nullable, name, is_builtin, config JSON, created_at
-  built-in globali + custom scoped al workspace
+  chunk_id, project_id, confidence, embedding, created_at
 
 source_phrase_embeddings
   id, project_id, chunk_id, source_phrase, embedding, created_at
@@ -284,7 +315,7 @@ source_phrase_embeddings
 
 **Persistito vs in-memory:**
 - ✅ Persistito: source, config, stage_results, translations, run_status, operation_logs
-- ✅ Persistito workspace: progetti, preset Phrase Memory custom, memoria frasi
+- ✅ Persistito workspace: progetti, configurazione extractor Phrase Memory, memoria frasi
 - ❌ Solo in-memory: token stream real-time (ricostruito da stage_results su resume)
 
 ---
@@ -316,7 +347,6 @@ source_phrase_embeddings
 | Area | Descrizione | Priorità |
 |---|---|---|
 | `hooks/usePipeline.ts` | 3 blocchi blob assembler identici da estrarre in helper condiviso | bassa (cosmesi) |
-| `services/phraseMemoryService.ts` → `savePhrasePairs()` | Zip silenzioso source↔target: se lo splitter produce lunghezze diverse, le frasi extra vengono scartate senza notifica all'utente. Da segnalare in UI o loggare nel dettaglio. | media |
 | `src-tauri/src/llm/providers/anthropic.rs` | Supporto reasoning da rivedere (verifica integrazione, parametri, formato risposta) | alta |
 | `src-tauri/src/llm/providers/deepseek.rs` | Supporto reasoning da rivedere (verifica integrazione, parametri, formato risposta) | alta |
 | `src-tauri/src/llm/providers/gemini.rs` | Supporto reasoning da rivedere (verifica integrazione, parametri, formato risposta) | alta |
@@ -324,4 +354,4 @@ source_phrase_embeddings
 
 ---
 
-*Ultimo aggiornamento: 2026-06-04 — branch feat/phrase-memory*
+*Ultimo aggiornamento: 2026-06-06 — branch feat/phrase-memory*

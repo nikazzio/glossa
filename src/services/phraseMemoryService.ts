@@ -1,95 +1,15 @@
 import { invoke } from '@tauri-apps/api/core';
 import { logger } from '../utils/logger';
-import type { EmbeddingModel, PhraseMatch, PhraseMemorySplitter } from '../types';
-import { fetchEmbeddings, estimateEmbeddingCostUsd, estimateTokenCount } from './embeddingService';
-
-const MIN_PHRASE_CHARS = 3;
-const EMBEDDING_BATCH_SIZE = 20;
-
-// ── Sentence Splitter ────────────────────────────────────────────────
-
-function splitByRegex(text: string): string[] {
-  return text
-    .split(/[.;:]/)
-    .map((s) => s.trim())
-    .filter((s) => s.length >= MIN_PHRASE_CHARS);
-}
-
-export async function splitPhrases(sourceText: string, splitter: PhraseMemorySplitter): Promise<string[]> {
-  switch (splitter) {
-    case 'none':
-      return [sourceText];
-    case 'regex':
-      return splitByRegex(sourceText);
-    case 'llm': {
-      try {
-        return await invoke<string[]>('split_phrases_llm', { sourceText });
-      } catch (err) {
-        logger.warn('split_phrases_llm failed, fallback a regex', { error: String(err) });
-        return splitByRegex(sourceText);
-      }
-    }
-  }
-}
-
-// ── Job pre-generazione embedding ───────────────────────────────────
-
-export interface EmbeddingJobOptions {
-  workspaceId: string;
-  projectId: string;
-  embeddingModel: EmbeddingModel;
-  splitter: PhraseMemorySplitter;
-  chunks: Array<{ id: string; text: string }>;
-  onProgress: (processed: number, total: number, estimatedCostUsd: number) => void;
-}
-
-export async function runEmbeddingJob(options: EmbeddingJobOptions): Promise<void> {
-  const { projectId, embeddingModel, splitter, chunks, onProgress } = options;
-
-  const allPhrases: Array<{ chunkId: string; phrase: string }> = [];
-  for (const chunk of chunks) {
-    const phrases = await splitPhrases(chunk.text, splitter);
-    for (const phrase of phrases) {
-      allPhrases.push({ chunkId: chunk.id, phrase });
-    }
-  }
-
-  const total = allPhrases.length;
-  let processed = 0;
-  let totalTokens = 0;
-
-  for (let i = 0; i < allPhrases.length; i += EMBEDDING_BATCH_SIZE) {
-    const batch = allPhrases.slice(i, i + EMBEDDING_BATCH_SIZE);
-    const vectors = await fetchEmbeddings(batch.map((p) => p.phrase), embeddingModel);
-
-    for (let j = 0; j < batch.length; j++) {
-      const embedding = vectors[j];
-      if (!embedding) continue;
-      const { chunkId, phrase } = batch[j];
-      await invoke('vec_upsert_source_phrase', { projectId, chunkId, phrase, embedding });
-      totalTokens += estimateTokenCount(phrase);
-    }
-
-    processed += batch.length;
-    onProgress(Math.min(processed, total), total, estimateEmbeddingCostUsd(totalTokens, embeddingModel));
-  }
-}
-
-// ── Search pre-pipeline ──────────────────────────────────────────────
-
-export interface SearchOptions {
-  workspaceId: string;
-  embeddingModel: EmbeddingModel;
-  queryText: string;
-  threshold: number;
-  maxResults: number;
-}
+import type { EmbeddingModel, ModelProvider, PhraseMatch } from '../types';
+import { fetchEmbeddings } from './embeddingService';
+import { useUiStore } from '../stores/uiStore';
 
 type RawPhraseMatch = {
   phrase_memory_id: string;
   source_phrase: string;
   target_phrase: string;
   distance: number;
+  confidence: number | null;
 };
 
 type RawPhraseMemoryEntry = {
@@ -97,6 +17,7 @@ type RawPhraseMemoryEntry = {
   workspace_id: string;
   source_phrase: string;
   target_phrase: string;
+  confidence: number | null;
   source_language: string;
   target_language: string;
   author: string | null;
@@ -109,11 +30,22 @@ type RawPhraseMemoryEntry = {
   created_at: string;
 };
 
+type ExtractedPhrasePair = {
+  sourcePhrase: string;
+  targetPhrase: string;
+  confidence: number;
+};
+
+type RawExtractedPairs = {
+  pairs: ExtractedPhrasePair[];
+};
+
 export interface PhraseMemoryEntry {
   id: string;
   workspaceId: string;
   sourcePhrase: string;
   targetPhrase: string;
+  confidence: number;
   sourceLanguage: string;
   targetLanguage: string;
   author: string | null;
@@ -126,21 +58,57 @@ export interface PhraseMemoryEntry {
   createdAt: string;
 }
 
-export async function searchPhraseMemory(options: SearchOptions): Promise<PhraseMatch[]> {
-  const { workspaceId, embeddingModel, queryText, threshold, maxResults } = options;
-  const [queryEmbedding] = await fetchEmbeddings([queryText], embeddingModel);
-  if (!queryEmbedding) return [];
+export interface SearchOptions {
+  workspaceId: string;
+  embeddingModel: EmbeddingModel;
+  queryText: string;
+  threshold: number;
+  maxResults: number;
+}
 
-  const raw = await invoke<RawPhraseMatch[]>('vec_search_phrase_memory', {
-    workspaceId, queryEmbedding, threshold, maxResults,
-  });
+export interface BatchSearchOptions {
+  workspaceId: string;
+  embeddingModel: EmbeddingModel;
+  chunks: Array<{ id: string; text: string }>;
+  threshold: number;
+  maxResults: number;
+}
 
-  return raw.map((r) => ({
-    phraseMemoryId: r.phrase_memory_id,
-    sourcePhrase: r.source_phrase,
-    targetPhrase: r.target_phrase,
-    distance: r.distance,
-  }));
+export interface SaveSelectedPhrasesOptions {
+  workspaceId: string;
+  projectId: string;
+  embeddingModel: EmbeddingModel;
+  extractorProvider: ModelProvider;
+  extractorModel: string;
+  extractorPrompt: string;
+  sourceLanguage: string;
+  targetLanguage: string;
+  chunks: Array<{ id: string; sourceText: string; targetText: string }>;
+  onProgress?: (done: number, total: number) => void;
+}
+
+export interface SavePhrasePairsOptions {
+  workspaceId: string;
+  projectId: string;
+  chunkId: string;
+  embeddingModel: EmbeddingModel;
+  extractorProvider: ModelProvider;
+  extractorModel: string;
+  extractorPrompt: string;
+  sourceText: string;
+  targetText: string;
+  sourceLanguage: string;
+  targetLanguage: string;
+}
+
+function toPhraseMatch(raw: RawPhraseMatch): PhraseMatch {
+  return {
+    phraseMemoryId: raw.phrase_memory_id,
+    sourcePhrase: raw.source_phrase,
+    targetPhrase: raw.target_phrase,
+    distance: raw.distance,
+    confidence: raw.confidence ?? 1,
+  };
 }
 
 function toPhraseMemoryEntry(raw: RawPhraseMemoryEntry): PhraseMemoryEntry {
@@ -149,6 +117,7 @@ function toPhraseMemoryEntry(raw: RawPhraseMemoryEntry): PhraseMemoryEntry {
     workspaceId: raw.workspace_id,
     sourcePhrase: raw.source_phrase,
     targetPhrase: raw.target_phrase,
+    confidence: raw.confidence ?? 1,
     sourceLanguage: raw.source_language,
     targetLanguage: raw.target_language,
     author: raw.author,
@@ -160,6 +129,101 @@ function toPhraseMemoryEntry(raw: RawPhraseMemoryEntry): PhraseMemoryEntry {
     projectId: raw.project_id,
     createdAt: raw.created_at,
   };
+}
+
+function clampConfidence(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(1, value));
+}
+
+function similarityToDistanceThreshold(similarityThreshold: number): number {
+  const clamped = Math.max(0, Math.min(1, similarityThreshold));
+  return 1 - clamped;
+}
+
+function validateExtractedPairs(
+  pairs: ExtractedPhrasePair[],
+  sourceText: string,
+  targetText: string,
+): ExtractedPhrasePair[] {
+  const seen = new Set<string>();
+  return pairs.flatMap((pair) => {
+    const sourcePhrase = pair.sourcePhrase.trim();
+    const targetPhrase = pair.targetPhrase.trim();
+    if (!sourcePhrase || !targetPhrase) return [];
+    if (!sourceText.includes(sourcePhrase) || !targetText.includes(targetPhrase)) return [];
+
+    const key = `${sourcePhrase}\u001f${targetPhrase}`;
+    if (seen.has(key)) return [];
+    seen.add(key);
+    return [{
+      sourcePhrase,
+      targetPhrase,
+      confidence: clampConfidence(pair.confidence),
+    }];
+  });
+}
+
+export async function extractPhraseMemoryPairs(options: {
+  provider: ModelProvider;
+  model: string;
+  prompt: string;
+  sourceText: string;
+  targetText: string;
+  sourceLanguage: string;
+  targetLanguage: string;
+}): Promise<ExtractedPhrasePair[]> {
+  const raw = await invoke<RawExtractedPairs>('extract_phrase_memory_pairs', {
+    provider: options.provider,
+    model: options.model,
+    prompt: options.prompt,
+    sourceText: options.sourceText,
+    targetText: options.targetText,
+    sourceLanguage: options.sourceLanguage,
+    targetLanguage: options.targetLanguage,
+    ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl,
+  });
+
+  return validateExtractedPairs(raw.pairs ?? [], options.sourceText, options.targetText);
+}
+
+export async function searchPhraseMemory(options: SearchOptions): Promise<PhraseMatch[]> {
+  const { workspaceId, embeddingModel, queryText, threshold, maxResults } = options;
+  const [queryEmbedding] = await fetchEmbeddings([queryText], embeddingModel);
+  if (!queryEmbedding) return [];
+
+  const raw = await invoke<RawPhraseMatch[]>('vec_search_phrase_memory', {
+    workspaceId,
+    queryEmbedding,
+    threshold: similarityToDistanceThreshold(threshold),
+    maxResults,
+  });
+
+  return raw.map(toPhraseMatch);
+}
+
+export async function searchPhraseMemoryBatch(
+  options: BatchSearchOptions,
+): Promise<Map<string, PhraseMatch[]>> {
+  const { workspaceId, embeddingModel, chunks, threshold, maxResults } = options;
+  if (chunks.length === 0) return new Map();
+
+  const texts = chunks.map((c) => c.text);
+  const embeddings = await fetchEmbeddings(texts, embeddingModel);
+
+  const result = new Map<string, PhraseMatch[]>();
+  for (let i = 0; i < chunks.length; i++) {
+    const embedding = embeddings[i];
+    if (!embedding) continue;
+    const raw = await invoke<RawPhraseMatch[]>('vec_search_phrase_memory', {
+      workspaceId,
+      queryEmbedding: embedding,
+      threshold: similarityToDistanceThreshold(threshold),
+      maxResults,
+    });
+    result.set(chunks[i].id, raw.map(toPhraseMatch));
+  }
+  return result;
 }
 
 export async function listPhraseMemoryEntries(workspaceId: string): Promise<PhraseMemoryEntry[]> {
@@ -201,62 +265,9 @@ export async function updatePhraseMemoryEntry(options: {
   });
 }
 
-// ── Batch search pre-pipeline ────────────────────────────────────────
-
-export interface BatchSearchOptions {
-  workspaceId: string;
-  embeddingModel: EmbeddingModel;
-  chunks: Array<{ id: string; text: string }>;
-  threshold: number;
-  maxResults: number;
-}
-
-export async function searchPhraseMemoryBatch(
-  options: BatchSearchOptions,
-): Promise<Map<string, PhraseMatch[]>> {
-  const { workspaceId, embeddingModel, chunks, threshold, maxResults } = options;
-  if (chunks.length === 0) return new Map();
-
-  const texts = chunks.map((c) => c.text);
-  const embeddings = await fetchEmbeddings(texts, embeddingModel);
-
-  const result = new Map<string, PhraseMatch[]>();
-  for (let i = 0; i < chunks.length; i++) {
-    const embedding = embeddings[i];
-    if (!embedding) continue;
-    const raw = await invoke<RawPhraseMatch[]>('vec_search_phrase_memory', {
-      workspaceId,
-      queryEmbedding: embedding,
-      threshold,
-      maxResults,
-    });
-    result.set(chunks[i].id, raw.map((r) => ({
-      phraseMemoryId: r.phrase_memory_id,
-      sourcePhrase: r.source_phrase,
-      targetPhrase: r.target_phrase,
-      distance: r.distance,
-    })));
-  }
-  return result;
-}
-
-// ── Explicit phrase memory save ───────────────────────────────────────
-
-export interface SaveSelectedPhrasesOptions {
-  workspaceId: string;
-  projectId: string;
-  embeddingModel: EmbeddingModel;
-  splitter: PhraseMemorySplitter;
-  minPhraseLength: number;
-  sourceLanguage: string;
-  targetLanguage: string;
-  chunks: Array<{ id: string; sourceText: string; targetText: string }>;
-  onProgress?: (done: number, total: number) => void;
-}
-
 export async function saveSelectedPhrases(options: SaveSelectedPhrasesOptions): Promise<number> {
   const {
-    workspaceId, projectId, embeddingModel, splitter, minPhraseLength,
+    workspaceId, projectId, embeddingModel, extractorProvider, extractorModel, extractorPrompt,
     sourceLanguage, targetLanguage, chunks, onProgress,
   } = options;
   logger.debug('phrase_memory.save_selected.start', {
@@ -264,19 +275,28 @@ export async function saveSelectedPhrases(options: SaveSelectedPhrasesOptions): 
     projectId,
     chunkCount: chunks.length,
     embeddingModel,
-    splitter,
-    minPhraseLength,
+    extractorProvider,
+    extractorModel,
     sourceLanguage,
     targetLanguage,
   });
+
   const total = chunks.length;
   let savedTotal = 0;
   for (let i = 0; i < chunks.length; i++) {
     const chunk = chunks[i];
     const savedForChunk = await savePhrasePairs({
-      workspaceId, projectId, chunkId: chunk.id, embeddingModel,
-      splitter, sourceText: chunk.sourceText, targetText: chunk.targetText,
-      minPhraseLength, sourceLanguage, targetLanguage,
+      workspaceId,
+      projectId,
+      chunkId: chunk.id,
+      embeddingModel,
+      extractorProvider,
+      extractorModel,
+      extractorPrompt,
+      sourceText: chunk.sourceText,
+      targetText: chunk.targetText,
+      sourceLanguage,
+      targetLanguage,
     });
     savedTotal += savedForChunk;
     logger.debug('phrase_memory.save_selected.chunk_done', {
@@ -288,6 +308,7 @@ export async function saveSelectedPhrases(options: SaveSelectedPhrasesOptions): 
     });
     onProgress?.(i + 1, total);
   }
+
   logger.info('phrase_memory.save_selected.done', {
     workspaceId,
     projectId,
@@ -297,77 +318,42 @@ export async function saveSelectedPhrases(options: SaveSelectedPhrasesOptions): 
   return savedTotal;
 }
 
-// ── Save phrase pairs ────────────────────────────────────────────────
-
-export interface SavePhrasePairsOptions {
-  workspaceId: string;
-  projectId: string;
-  chunkId: string;
-  embeddingModel: EmbeddingModel;
-  splitter: PhraseMemorySplitter;
-  sourceText: string;
-  targetText: string;
-  minPhraseLength: number;
-  sourceLanguage: string;
-  targetLanguage: string;
-}
-
 export async function savePhrasePairs(options: SavePhrasePairsOptions): Promise<number> {
   const {
-    workspaceId, projectId, chunkId, embeddingModel, splitter,
-    sourceText, targetText, minPhraseLength, sourceLanguage, targetLanguage,
+    workspaceId, projectId, chunkId, embeddingModel, extractorProvider, extractorModel,
+    extractorPrompt, sourceText, targetText, sourceLanguage, targetLanguage,
   } = options;
 
-  const sourcePhrases = await splitPhrases(sourceText, splitter);
-  const targetPhrases = await splitPhrases(targetText, splitter);
-  const pairCount = Math.min(sourcePhrases.length, targetPhrases.length);
-  logger.debug('phrase_memory.save_pairs.split', {
-    workspaceId,
-    projectId,
-    chunkId,
-    splitter,
-    sourcePhraseCount: sourcePhrases.length,
-    targetPhraseCount: targetPhrases.length,
-    pairCount,
-  });
-  if (pairCount === 0) return 0;
-
-  const paired = sourcePhrases
-    .slice(0, pairCount)
-    .map((sp, i) => ({ sourcePhrase: sp, targetPhrase: targetPhrases[i] }))
-    .filter((p) => p.sourcePhrase.length >= minPhraseLength);
-
-  logger.debug('phrase_memory.save_pairs.filtered', {
-    workspaceId,
-    projectId,
-    chunkId,
-    candidatePairCount: paired.length,
-    minPhraseLength,
+  const extractedPairs = await extractPhraseMemoryPairs({
+    provider: extractorProvider,
+    model: extractorModel,
+    prompt: extractorPrompt,
+    sourceText,
+    targetText,
+    sourceLanguage,
+    targetLanguage,
   });
 
-  if (paired.length === 0) return 0;
-
-  logger.debug('phrase_memory.save_pairs.embedding_start', {
+  logger.debug('phrase_memory.save_pairs.extracted', {
     workspaceId,
     projectId,
     chunkId,
+    extractedPairCount: extractedPairs.length,
+    extractorProvider,
+    extractorModel,
+  });
+
+  if (extractedPairs.length === 0) return 0;
+
+  const sourceVectors = await fetchEmbeddings(
+    extractedPairs.map((pair) => pair.sourcePhrase),
     embeddingModel,
-    candidatePairCount: paired.length,
-  });
-  const sourceVectors = await fetchEmbeddings(paired.map((p) => p.sourcePhrase), embeddingModel);
-  if (sourceVectors.length !== paired.length) {
-    logger.warn('phrase_memory.save_pairs.embedding_count_mismatch', {
-      workspaceId,
-      projectId,
-      chunkId,
-      expected: paired.length,
-      received: sourceVectors.length,
-    });
-  }
-  const pairs = paired.flatMap((p, i) => {
+  );
+
+  const pairs = extractedPairs.flatMap((pair, i) => {
     const sourceEmbedding = sourceVectors[i];
     return sourceEmbedding?.length
-      ? [{ sourcePhrase: p.sourcePhrase, targetPhrase: p.targetPhrase, sourceEmbedding }]
+      ? [{ ...pair, sourceEmbedding }]
       : [];
   });
 
@@ -376,20 +362,25 @@ export async function savePhrasePairs(options: SavePhrasePairsOptions): Promise<
       workspaceId,
       projectId,
       chunkId,
-      candidatePairCount: paired.length,
+      candidatePairCount: extractedPairs.length,
       embeddingCount: sourceVectors.length,
     });
     return 0;
   }
 
   const savedCount = await invoke<number>('vec_save_locked_phrases', {
-    workspaceId, projectId, chunkId, pairs, minPhraseLength, sourceLanguage, targetLanguage,
+    workspaceId,
+    projectId,
+    chunkId,
+    pairs,
+    sourceLanguage,
+    targetLanguage,
   });
   logger.info('phrase_memory.save_pairs.insert_done', {
     workspaceId,
     projectId,
     chunkId,
-    candidatePairCount: paired.length,
+    candidatePairCount: extractedPairs.length,
     embeddingCount: sourceVectors.length,
     savedCount,
   });

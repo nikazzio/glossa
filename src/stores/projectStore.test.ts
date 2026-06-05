@@ -12,7 +12,15 @@ import { buildProjectSnapshot } from '../utils/projectSnapshot';
 vi.mock('./workspaceStore', () => ({
   useWorkspaceStore: {
     getState: () => ({
-      activeWorkspace: { id: 'ws-test', name: 'Test', embeddingModel: 'text-embedding-3-small', createdAt: '2024-01-01T00:00:00Z' },
+      activeWorkspace: {
+        id: 'ws-test',
+        name: 'Test',
+        embeddingModel: 'text-embedding-3-small',
+        memoryExtractorProvider: 'openai',
+        memoryExtractorModel: 'gpt-5-nano',
+        memoryExtractorPrompt: 'Extract',
+        createdAt: '2024-01-01T00:00:00Z',
+      },
     }),
   },
 }));

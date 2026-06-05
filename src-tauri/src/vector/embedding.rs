@@ -64,6 +64,7 @@ fn ensure_phrase_memory_schema(conn: &rusqlite::Connection) -> Result<(), Embedd
             workspace_id TEXT NOT NULL REFERENCES workspaces(id),
             source_phrase TEXT NOT NULL,
             target_phrase TEXT NOT NULL,
+            confidence REAL NOT NULL DEFAULT 1.0,
             source_language TEXT NOT NULL,
             target_language TEXT NOT NULL,
             author TEXT,
@@ -77,7 +78,17 @@ fn ensure_phrase_memory_schema(conn: &rusqlite::Connection) -> Result<(), Embedd
             created_at TEXT NOT NULL
         );",
     )
-    .map_err(|e| EmbeddingError::Http(e.to_string()))
+    .map_err(|e| EmbeddingError::Http(e.to_string()))?;
+    if let Err(err) = conn.execute(
+        "ALTER TABLE phrase_memory ADD COLUMN confidence REAL NOT NULL DEFAULT 1.0",
+        [],
+    ) {
+        let message = err.to_string();
+        if !message.contains("duplicate column") && !message.contains("already exists") {
+            return Err(EmbeddingError::Http(message));
+        }
+    }
+    Ok(())
 }
 
 // ── OpenAI response types ────────────────────────────────────────────
@@ -170,137 +181,13 @@ pub async fn get_embeddings(
     Ok(parsed.data.into_iter().map(|o| o.embedding).collect())
 }
 
-#[tauri::command]
-pub async fn split_phrases_llm(
-    app: tauri::AppHandle,
-    source_text: String,
-) -> Result<Vec<String>, EmbeddingError> {
-    let request_started = Instant::now();
-    log::debug!(
-        "phrase_memory.split_phrases_llm.start source_chars={}",
-        source_text.len()
-    );
-    let api_key =
-        crate::keystore::get_api_key(&app, "openai").map_err(|_| EmbeddingError::MissingApiKey)?;
-    if api_key.is_empty() {
-        return Err(EmbeddingError::MissingApiKey);
-    }
-
-    let prompt = format!(
-        "Split the following text into individual sentences or meaningful phrases. \
-        Return a JSON object with a single key \"phrases\" whose value is an array of strings. \
-        Each string must be an exact verbatim copy from the source text — no paraphrasing, \
-        no added punctuation. \
-        Example: {{\"phrases\": [\"First sentence.\", \"Second phrase\"]}}\n\nText:\n{source_text}"
-    );
-
-    let body = serde_json::json!({
-        "model": "gpt-4o-mini",
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0,
-        "response_format": {"type": "json_object"}
-    });
-
-    let response = openai_client()?
-        .post("https://api.openai.com/v1/chat/completions")
-        .bearer_auth(&api_key)
-        .json(&body)
-        .send()
-        .await
-        .map_err(|e| {
-            log::warn!(
-                "phrase_memory.split_phrases_llm.request_failed source_chars={} elapsed_ms={} error={e}",
-                source_text.len(),
-                request_started.elapsed().as_millis()
-            );
-            EmbeddingError::Http(e.to_string())
-        })?;
-
-    if !response.status().is_success() {
-        let status = response.status();
-        let text = response.text().await.unwrap_or_default();
-        let preview: String = text.chars().take(500).collect();
-        log::warn!(
-            "phrase_memory.split_phrases_llm.http_error source_chars={} elapsed_ms={} status={status} body_preview={preview:?}",
-            source_text.len(),
-            request_started.elapsed().as_millis()
-        );
-        return Err(EmbeddingError::Http(format!("{status}: {text}")));
-    }
-
-    let json: serde_json::Value = response.json().await.map_err(|e| {
-        log::warn!(
-            "phrase_memory.split_phrases_llm.parse_failed source_chars={} elapsed_ms={} error={e}",
-            source_text.len(),
-            request_started.elapsed().as_millis()
-        );
-        EmbeddingError::Parse(e.to_string())
-    })?;
-
-    let content = json["choices"][0]["message"]["content"]
-        .as_str()
-        .ok_or_else(|| EmbeddingError::Parse("missing content".into()))?;
-
-    let parsed: serde_json::Value =
-        serde_json::from_str(content).map_err(|e| EmbeddingError::Parse(e.to_string()))?;
-
-    let arr = parsed
-        .get("phrases")
-        .and_then(|v| v.as_array())
-        .ok_or_else(|| EmbeddingError::Parse("expected object with \"phrases\" array".into()))?;
-
-    let validated: Vec<String> = arr
-        .iter()
-        .filter_map(|v| v.as_str())
-        .filter(|phrase| {
-            let ok = source_text.contains(*phrase);
-            if !ok {
-                log::warn!("split_phrases_llm: discarding non-verbatim phrase: {phrase:?}");
-            }
-            ok
-        })
-        .map(|s| s.to_string())
-        .collect();
-
-    log::debug!(
-        "phrase_memory.split_phrases_llm.done source_chars={} phrase_count={} elapsed_ms={}",
-        source_text.len(),
-        validated.len(),
-        request_started.elapsed().as_millis()
-    );
-    Ok(validated)
-}
-
-#[tauri::command]
-pub async fn vec_upsert_source_phrase(
-    app: tauri::AppHandle,
-    project_id: String,
-    chunk_id: String,
-    phrase: String,
-    embedding: Vec<f32>,
-) -> Result<(), EmbeddingError> {
-    let path = db_path(&app)?;
-    let conn = crate::vector::open_vec_connection(&path)
-        .map_err(|e| EmbeddingError::Http(e.to_string()))?;
-    ensure_source_phrase_embeddings_schema(&conn)?;
-
-    conn.execute(
-        "INSERT OR REPLACE INTO source_phrase_embeddings \
-         (id, project_id, chunk_id, source_phrase, embedding, created_at) \
-         VALUES (lower(hex(randomblob(16))), ?1, ?2, ?3, ?4, datetime('now'))",
-        rusqlite::params![project_id, chunk_id, phrase, floats_to_blob(&embedding)],
-    )
-    .map_err(|e| EmbeddingError::Http(e.to_string()))?;
-
-    Ok(())
-}
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PhraseMatchResult {
     pub phrase_memory_id: String,
     pub source_phrase: String,
     pub target_phrase: String,
     pub distance: f64,
+    pub confidence: f64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -309,6 +196,7 @@ pub struct PhraseMemoryEntryResult {
     pub workspace_id: String,
     pub source_phrase: String,
     pub target_phrase: String,
+    pub confidence: f64,
     pub source_language: String,
     pub target_language: String,
     pub author: Option<String>,
@@ -333,7 +221,7 @@ pub async fn vec_list_phrase_memory(
 
     let mut stmt = conn
         .prepare(
-            "SELECT id, workspace_id, source_phrase, target_phrase, source_language, target_language, \
+            "SELECT id, workspace_id, source_phrase, target_phrase, confidence, source_language, target_language, \
                     author, work, domain, tags, notes, chunk_id, project_id, created_at \
              FROM phrase_memory \
              WHERE workspace_id = ?1 \
@@ -348,16 +236,17 @@ pub async fn vec_list_phrase_memory(
                 workspace_id: row.get(1)?,
                 source_phrase: row.get(2)?,
                 target_phrase: row.get(3)?,
-                source_language: row.get(4)?,
-                target_language: row.get(5)?,
-                author: row.get(6)?,
-                work: row.get(7)?,
-                domain: row.get(8)?,
-                tags: row.get(9)?,
-                notes: row.get(10)?,
-                chunk_id: row.get(11)?,
-                project_id: row.get(12)?,
-                created_at: row.get(13)?,
+                confidence: row.get(4)?,
+                source_language: row.get(5)?,
+                target_language: row.get(6)?,
+                author: row.get(7)?,
+                work: row.get(8)?,
+                domain: row.get(9)?,
+                tags: row.get(10)?,
+                notes: row.get(11)?,
+                chunk_id: row.get(12)?,
+                project_id: row.get(13)?,
+                created_at: row.get(14)?,
             })
         })
         .map_err(|e| EmbeddingError::Http(e.to_string()))?
@@ -437,12 +326,12 @@ pub async fn vec_search_phrase_memory(
     let mut stmt = conn
         .prepare(
             "WITH ranked AS ( \
-               SELECT pm.id, pm.source_phrase, pm.target_phrase, \
+               SELECT pm.id, pm.source_phrase, pm.target_phrase, pm.confidence, \
                       vec_distance_cosine(pm.embedding, ?1) AS distance \
                FROM phrase_memory pm \
                WHERE pm.workspace_id = ?2 \
              ) \
-             SELECT id, source_phrase, target_phrase, distance \
+             SELECT id, source_phrase, target_phrase, confidence, distance \
              FROM ranked \
              WHERE distance < ?3 \
              ORDER BY distance ASC \
@@ -458,7 +347,8 @@ pub async fn vec_search_phrase_memory(
                     phrase_memory_id: row.get(0)?,
                     source_phrase: row.get(1)?,
                     target_phrase: row.get(2)?,
-                    distance: row.get(3)?,
+                    confidence: row.get(3)?,
+                    distance: row.get(4)?,
                 })
             },
         )
@@ -473,6 +363,7 @@ pub async fn vec_search_phrase_memory(
 pub struct PhrasePair {
     pub source_phrase: String,
     pub target_phrase: String,
+    pub confidence: f64,
     pub source_embedding: Vec<f32>,
 }
 
@@ -484,13 +375,12 @@ pub async fn vec_save_locked_phrases(
     project_id: String,
     chunk_id: String,
     pairs: Vec<PhrasePair>,
-    min_phrase_length: u32,
     source_language: String,
     target_language: String,
 ) -> Result<u32, EmbeddingError> {
     let save_started = Instant::now();
     log::debug!(
-        "phrase_memory.vec_save_locked_phrases.start workspace_id={workspace_id} project_id={project_id} chunk_id={chunk_id} pair_count={} min_phrase_length={min_phrase_length}",
+        "phrase_memory.vec_save_locked_phrases.start workspace_id={workspace_id} project_id={project_id} chunk_id={chunk_id} pair_count={}",
         pairs.len()
     );
     if pairs.is_empty() {
@@ -555,31 +445,26 @@ pub async fn vec_save_locked_phrases(
 
     let mut saved: u32 = 0;
     let mut attempted: u32 = 0;
-    let mut skipped_short: u32 = 0;
     let tx = conn.transaction().map_err(|e| {
         log::warn!("phrase_memory.vec_save_locked_phrases.transaction_failed error={e}");
         EmbeddingError::Http(e.to_string())
     })?;
 
     for (index, pair) in pairs.iter().enumerate() {
-        if (pair.source_phrase.len() as u32) < min_phrase_length {
-            skipped_short += 1;
-            continue;
-        }
-
         attempted += 1;
         let rows = tx
             .execute(
                 "INSERT OR IGNORE INTO phrase_memory \
                  (id, workspace_id, project_id, chunk_id, source_phrase, target_phrase, \
-                  source_language, target_language, embedding, created_at) \
-                 VALUES (lower(hex(randomblob(16))), ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, datetime('now'))",
+                  confidence, source_language, target_language, embedding, created_at) \
+                 VALUES (lower(hex(randomblob(16))), ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, datetime('now'))",
                 rusqlite::params![
                     &workspace_id,
                     &project_id,
                     &chunk_id,
                     pair.source_phrase,
                     pair.target_phrase,
+                    pair.confidence.clamp(0.0, 1.0),
                     &source_language,
                     &target_language,
                     floats_to_blob(&pair.source_embedding)
@@ -598,7 +483,7 @@ pub async fn vec_save_locked_phrases(
         saved += rows as u32;
     }
     log::debug!(
-        "phrase_memory.vec_save_locked_phrases.insert_loop_done pair_count={} attempted={attempted} skipped_short={skipped_short} saved={saved}",
+        "phrase_memory.vec_save_locked_phrases.insert_loop_done pair_count={} attempted={attempted} saved={saved}",
         pairs.len()
     );
 
@@ -622,7 +507,7 @@ pub async fn vec_save_locked_phrases(
     })?;
 
     log::info!(
-        "phrase_memory.vec_save_locked_phrases.done workspace_id={workspace_id} project_id={project_id} chunk_id={chunk_id} pair_count={} attempted={attempted} skipped_short={skipped_short} saved={saved} elapsed_ms={}",
+        "phrase_memory.vec_save_locked_phrases.done workspace_id={workspace_id} project_id={project_id} chunk_id={chunk_id} pair_count={} attempted={attempted} saved={saved} elapsed_ms={}",
         pairs.len(),
         save_started.elapsed().as_millis()
     );

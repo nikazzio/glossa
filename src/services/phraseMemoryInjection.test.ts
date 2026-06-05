@@ -3,7 +3,7 @@ import { buildMemoryInjection } from './phraseMemoryInjection';
 import type { PhraseMemoryMatch } from '../stores/phraseMemoryStore';
 
 const makeMatch = (src: string, tgt: string): PhraseMemoryMatch => ({
-  id: 'x', sourcePhrase: src, targetPhrase: tgt, score: 0.9, createdAt: '',
+  id: 'x', sourcePhrase: src, targetPhrase: tgt, score: 0.9, confidence: 0.8, createdAt: '',
 });
 
 describe('buildMemoryInjection', () => {

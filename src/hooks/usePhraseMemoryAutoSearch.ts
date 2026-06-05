@@ -5,15 +5,33 @@ import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useChunksStore } from '../stores/chunksStore';
 import { usePhraseMemoryStore } from '../stores/phraseMemoryStore';
 import type { PhraseMemorySearchStatus } from '../stores/phraseMemoryStore';
-import { listPresets } from '../services/phraseMemoryPresetService';
-import { searchPhraseMemoryBatch } from '../services/phraseMemoryService';
+import { searchPhraseMemory, searchPhraseMemoryBatch } from '../services/phraseMemoryService';
 import { logger } from '../utils/logger';
 
-export function usePhraseMemoryAutoSearch(): { runSearch: () => void; status: PhraseMemorySearchStatus } {
+type UsePhraseMemoryAutoSearchOptions = {
+  auto?: boolean;
+};
+
+const DEFAULT_THRESHOLD = 0.75;
+const DEFAULT_MAX_RESULTS = 10;
+
+export function usePhraseMemoryAutoSearch(
+  options: UsePhraseMemoryAutoSearchOptions = {},
+): {
+  runSearch: () => void;
+  runSearchForChunk: (chunkId: string) => Promise<void>;
+  status: PhraseMemorySearchStatus;
+} {
+  const auto = options.auto ?? true;
   const currentProjectId = useProjectStore((s) => s.currentProjectId);
   const usePhraseMemory = usePipelineStore((s) => s.config.usePhraseMemory);
-  const phraseMemoryPresetId = usePipelineStore((s) => s.config.phraseMemoryPresetId ?? '');
-  const phraseMemoryOverridesKey = usePipelineStore((s) => JSON.stringify(s.config.phraseMemoryOverrides ?? {}));
+  const autoSearchPhraseMemory = usePipelineStore((s) => s.config.autoSearchPhraseMemory !== false);
+  const phraseMemorySearchKey = usePipelineStore((s) =>
+    JSON.stringify({
+      threshold: s.config.phraseMemorySimilarityThreshold ?? DEFAULT_THRESHOLD,
+      maxResults: s.config.phraseMemoryMaxResults ?? DEFAULT_MAX_RESULTS,
+    }),
+  );
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspace?.id ?? '');
   const chunksSearchKey = useChunksStore((s) =>
     s.chunks.map((c) => `${c.id}:${c.sourceProcessingText ?? ''}`).join('\u001f'),
@@ -47,19 +65,12 @@ export function usePhraseMemoryAutoSearch(): { runSearch: () => void; status: Ph
 
     void (async () => {
       try {
-        const presets = await listPresets(activeWorkspace.id);
-        const preset = presets.find((p) => p.id === config.phraseMemoryPresetId) ?? presets[0] ?? null;
-        const threshold = config.phraseMemoryOverrides?.similarityThreshold
-          ?? preset?.config.similarityThreshold ?? 0.75;
-        const maxResults = config.phraseMemoryOverrides?.maxResults
-          ?? preset?.config.maxResults ?? 10;
-
         const results = await searchPhraseMemoryBatch({
           workspaceId: activeWorkspace.id,
           embeddingModel: activeWorkspace.embeddingModel,
           chunks: toSearch,
-          threshold,
-          maxResults,
+          threshold: config.phraseMemorySimilarityThreshold ?? DEFAULT_THRESHOLD,
+          maxResults: config.phraseMemoryMaxResults ?? DEFAULT_MAX_RESULTS,
         });
         if (requestIdRef.current !== requestId) return;
 
@@ -76,8 +87,43 @@ export function usePhraseMemoryAutoSearch(): { runSearch: () => void; status: Ph
     })();
   }, []);
 
+  const runSearchForChunk = useCallback(async (chunkId: string) => {
+    const config = usePipelineStore.getState().config;
+    const activeWorkspace = useWorkspaceStore.getState().activeWorkspace;
+    const chunk = useChunksStore.getState().chunks.find((entry) => entry.id === chunkId);
+    const { setMatches, setSearchStatus } = usePhraseMemoryStore.getState();
+
+    if (!config.usePhraseMemory || !activeWorkspace || !chunk?.sourceProcessingText.trim()) {
+      setSearchStatus('idle');
+      return;
+    }
+
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+    setSearchStatus('searching');
+
+    try {
+      const matches = await searchPhraseMemory({
+        workspaceId: activeWorkspace.id,
+        embeddingModel: activeWorkspace.embeddingModel,
+        queryText: chunk.sourceProcessingText,
+        threshold: config.phraseMemorySimilarityThreshold ?? DEFAULT_THRESHOLD,
+        maxResults: config.phraseMemoryMaxResults ?? DEFAULT_MAX_RESULTS,
+      });
+      if (requestIdRef.current !== requestId) return;
+      setMatches(chunkId, matches);
+      setSearchStatus('done');
+    } catch (err: unknown) {
+      if (requestIdRef.current !== requestId) return;
+      logger.warn('phrase memory manual search failed', { chunkId, error: String(err) });
+      setSearchStatus('error');
+      throw err;
+    }
+  }, []);
+
   useEffect(() => {
-    if (currentProjectId && usePhraseMemory) {
+    if (!auto) return;
+    if (currentProjectId && usePhraseMemory && autoSearchPhraseMemory) {
       runSearch();
     } else {
       requestIdRef.current += 1;
@@ -85,13 +131,14 @@ export function usePhraseMemoryAutoSearch(): { runSearch: () => void; status: Ph
     }
   }, [
     activeWorkspaceId,
+    auto,
+    autoSearchPhraseMemory,
     chunksSearchKey,
     currentProjectId,
-    phraseMemoryOverridesKey,
-    phraseMemoryPresetId,
+    phraseMemorySearchKey,
     runSearch,
     usePhraseMemory,
   ]);
 
-  return { runSearch, status };
+  return { runSearch, runSearchForChunk, status };
 }

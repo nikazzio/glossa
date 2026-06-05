@@ -1,5 +1,10 @@
 import { execute, getSetting, select, setSetting } from './dbService';
-import type { EmbeddingModel, Workspace } from '../types';
+import {
+  DEFAULT_MEMORY_EXTRACTOR_MODEL,
+  DEFAULT_MEMORY_EXTRACTOR_PROMPT,
+  DEFAULT_MEMORY_EXTRACTOR_PROVIDER,
+} from '../constants';
+import type { EmbeddingModel, ModelProvider, Workspace } from '../types';
 
 const generateId = () =>
   `ws_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`;
@@ -14,13 +19,21 @@ export async function createWorkspace(params: {
     name: params.name,
     description: params.description,
     embeddingModel: params.embeddingModel,
+    memoryExtractorProvider: DEFAULT_MEMORY_EXTRACTOR_PROVIDER,
+    memoryExtractorModel: DEFAULT_MEMORY_EXTRACTOR_MODEL,
+    memoryExtractorPrompt: DEFAULT_MEMORY_EXTRACTOR_PROMPT,
     createdAt: new Date().toISOString(),
   };
   await execute(
-    `INSERT INTO workspaces (id, name, description, embedding_model, created_at)
-     VALUES ($1, $2, $3, $4, $5)`,
+    `INSERT INTO workspaces (
+       id, name, description, embedding_model,
+       memory_extractor_provider, memory_extractor_model, memory_extractor_prompt,
+       created_at
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
     [workspace.id, workspace.name, workspace.description ?? null,
-     workspace.embeddingModel, workspace.createdAt],
+     workspace.embeddingModel, workspace.memoryExtractorProvider,
+     workspace.memoryExtractorModel, workspace.memoryExtractorPrompt,
+     workspace.createdAt],
   );
   // Backfill projects that existed before workspace support (workspace_id IS NULL).
   // Only the first workspace creation picks them up; subsequent ones find no orphans.
@@ -34,21 +47,33 @@ export async function createWorkspace(params: {
 export async function listWorkspaces(): Promise<Workspace[]> {
   const rows = await select<{
     id: string; name: string; description: string | null;
-    embedding_model: string; created_at: string;
-  }>(`SELECT id, name, description, embedding_model, created_at
+    embedding_model: string;
+    memory_extractor_provider: string | null;
+    memory_extractor_model: string | null;
+    memory_extractor_prompt: string | null;
+    created_at: string;
+  }>(`SELECT id, name, description, embedding_model,
+             memory_extractor_provider, memory_extractor_model, memory_extractor_prompt,
+             created_at
       FROM workspaces ORDER BY created_at ASC`);
   return rows.map((r) => ({
     id: r.id,
     name: r.name,
     description: r.description ?? undefined,
     embeddingModel: r.embedding_model as EmbeddingModel,
+    memoryExtractorProvider: (r.memory_extractor_provider || DEFAULT_MEMORY_EXTRACTOR_PROVIDER) as ModelProvider,
+    memoryExtractorModel: r.memory_extractor_model || DEFAULT_MEMORY_EXTRACTOR_MODEL,
+    memoryExtractorPrompt: r.memory_extractor_prompt || DEFAULT_MEMORY_EXTRACTOR_PROMPT,
     createdAt: r.created_at,
   }));
 }
 
 export async function updateWorkspace(
   id: string,
-  updates: Partial<Pick<Workspace, 'name' | 'description' | 'embeddingModel'>>,
+  updates: Partial<Pick<Workspace,
+    'name' | 'description' | 'embeddingModel' |
+    'memoryExtractorProvider' | 'memoryExtractorModel' | 'memoryExtractorPrompt'
+  >>,
 ): Promise<void> {
   const sets: string[] = [];
   const params: unknown[] = [];
@@ -66,6 +91,18 @@ export async function updateWorkspace(
     sets.push(`embedding_model = $${index++}`);
     params.push(updates.embeddingModel);
   }
+  if (updates.memoryExtractorProvider !== undefined) {
+    sets.push(`memory_extractor_provider = $${index++}`);
+    params.push(updates.memoryExtractorProvider);
+  }
+  if (updates.memoryExtractorModel !== undefined) {
+    sets.push(`memory_extractor_model = $${index++}`);
+    params.push(updates.memoryExtractorModel);
+  }
+  if (updates.memoryExtractorPrompt !== undefined) {
+    sets.push(`memory_extractor_prompt = $${index++}`);
+    params.push(updates.memoryExtractorPrompt);
+  }
   if (sets.length === 0) return;
 
   params.push(id);
@@ -74,7 +111,6 @@ export async function updateWorkspace(
 
 export async function deleteWorkspace(id: string): Promise<void> {
   await execute('DELETE FROM phrase_memory WHERE workspace_id = $1', [id]);
-  await execute('DELETE FROM phrase_memory_presets WHERE workspace_id = $1', [id]);
   await execute('DELETE FROM workspaces WHERE id = $1', [id]);
 }
 
@@ -92,9 +128,15 @@ export async function getActiveWorkspace(): Promise<Workspace | null> {
   if (!id) return null;
   const rows = await select<{
     id: string; name: string; description: string | null;
-    embedding_model: string; created_at: string;
+    embedding_model: string;
+    memory_extractor_provider: string | null;
+    memory_extractor_model: string | null;
+    memory_extractor_prompt: string | null;
+    created_at: string;
   }>(
-    `SELECT id, name, description, embedding_model, created_at
+    `SELECT id, name, description, embedding_model,
+            memory_extractor_provider, memory_extractor_model, memory_extractor_prompt,
+            created_at
      FROM workspaces WHERE id = $1`,
     [id],
   );
@@ -105,6 +147,9 @@ export async function getActiveWorkspace(): Promise<Workspace | null> {
     name: r.name,
     description: r.description ?? undefined,
     embeddingModel: r.embedding_model as EmbeddingModel,
+    memoryExtractorProvider: (r.memory_extractor_provider || DEFAULT_MEMORY_EXTRACTOR_PROVIDER) as ModelProvider,
+    memoryExtractorModel: r.memory_extractor_model || DEFAULT_MEMORY_EXTRACTOR_MODEL,
+    memoryExtractorPrompt: r.memory_extractor_prompt || DEFAULT_MEMORY_EXTRACTOR_PROMPT,
     createdAt: r.created_at,
   };
 }

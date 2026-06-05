@@ -6,13 +6,8 @@ import { usePipelineStore } from '../stores/pipelineStore';
 import { useProjectStore } from '../stores/projectStore';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { makeTranslationChunk } from '../test/chunkFactory';
-import { listPresets } from '../services/phraseMemoryPresetService';
 import { saveSelectedPhrases } from '../services/phraseMemoryService';
 import { useSaveToMemory } from './useSaveToMemory';
-
-vi.mock('../services/phraseMemoryPresetService', () => ({
-  listPresets: vi.fn(),
-}));
 
 vi.mock('../services/phraseMemoryService', () => ({
   saveSelectedPhrases: vi.fn(),
@@ -22,26 +17,11 @@ vi.mock('../utils/logger', () => ({
   logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn() },
 }));
 
-const mockListPresets = vi.mocked(listPresets);
 const mockSaveSelectedPhrases = vi.mocked(saveSelectedPhrases);
 
 describe('useSaveToMemory', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockListPresets.mockResolvedValue([
-      {
-        id: 'preset-1',
-        name: 'Default',
-        isBuiltin: true,
-        config: {
-          splitter: 'regex',
-          similarityThreshold: 0.75,
-          maxResults: 5,
-          minPhraseLength: 3,
-        },
-        createdAt: '2026-01-01T00:00:00.000Z',
-      },
-    ]);
     mockSaveSelectedPhrases.mockResolvedValue(1);
 
     useWorkspaceStore.setState({
@@ -49,6 +29,9 @@ describe('useSaveToMemory', () => {
         id: 'ws-1',
         name: 'Workspace',
         embeddingModel: 'text-embedding-3-small',
+        memoryExtractorProvider: 'openai',
+        memoryExtractorModel: 'gpt-5-nano',
+        memoryExtractorPrompt: 'Extract',
         createdAt: '2026-01-01T00:00:00.000Z',
       },
       workspaces: [],
@@ -62,8 +45,6 @@ describe('useSaveToMemory', () => {
         ...state.config,
         sourceLanguage: 'Italian',
         targetLanguage: 'English',
-        phraseMemoryPresetId: 'preset-1',
-        phraseMemoryOverrides: null,
       },
     }));
     useChunksStore.setState({
@@ -102,6 +83,9 @@ describe('useSaveToMemory', () => {
     expect(mockSaveSelectedPhrases).toHaveBeenCalledWith(expect.objectContaining({
       workspaceId: 'ws-1',
       projectId: 'proj-1',
+      extractorProvider: 'openai',
+      extractorModel: 'gpt-5-nano',
+      extractorPrompt: 'Extract',
       chunks: [
         {
           id: 'c1',

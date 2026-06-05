@@ -1,9 +1,14 @@
 import Database from '@tauri-apps/plugin-sql';
 import { invoke } from '@tauri-apps/api/core';
+import {
+  DEFAULT_MEMORY_EXTRACTOR_MODEL,
+  DEFAULT_MEMORY_EXTRACTOR_PROMPT,
+  DEFAULT_MEMORY_EXTRACTOR_PROVIDER,
+} from '../constants';
 
 let db: Database | null = null;
 const DB_URL = 'sqlite:glossa.db';
-const CURRENT_SCHEMA_VERSION = '2026-06-05-beta-reset';
+const CURRENT_SCHEMA_VERSION = '2026-06-06-phrase-memory-extractor';
 
 const RESETTABLE_OBJECTS = [
   'technique_tags',
@@ -107,6 +112,10 @@ const ALLOWED_MIGRATIONS = new Set([
   'pipelines.source_processing_text',
   'pipelines.source_footnotes',
   'pipelines.coherence_prompt',
+  'pipelines.use_phrase_memory',
+  'pipelines.auto_search_phrase_memory',
+  'pipelines.phrase_memory_similarity_threshold',
+  'pipelines.phrase_memory_max_results',
 ]);
 
 export async function ensureColumn(table: string, column: string, definition: string): Promise<void> {
@@ -276,6 +285,10 @@ export async function initDatabase(): Promise<void> {
       blob_budget_tokens INTEGER DEFAULT 0,
       blob_overlap INTEGER DEFAULT 1,
       coherence_prompt TEXT DEFAULT NULL,
+      use_phrase_memory INTEGER NOT NULL DEFAULT 0,
+      auto_search_phrase_memory INTEGER NOT NULL DEFAULT 1,
+      phrase_memory_similarity_threshold REAL NOT NULL DEFAULT 0.75,
+      phrase_memory_max_results INTEGER NOT NULL DEFAULT 10,
       run_status TEXT DEFAULT 'idle',
       last_run_config TEXT DEFAULT NULL,
       run_in_progress INTEGER DEFAULT 0,
@@ -490,6 +503,10 @@ export async function initDatabase(): Promise<void> {
   await ensureColumn('pipelines', 'blob_budget_tokens', 'INTEGER DEFAULT 0');
   await ensureColumn('pipelines', 'blob_overlap', 'INTEGER DEFAULT 1');
   await ensureColumn('pipelines', 'coherence_prompt', 'TEXT DEFAULT NULL');
+  await ensureColumn('pipelines', 'use_phrase_memory', 'INTEGER NOT NULL DEFAULT 0');
+  await ensureColumn('pipelines', 'auto_search_phrase_memory', 'INTEGER NOT NULL DEFAULT 1');
+  await ensureColumn('pipelines', 'phrase_memory_similarity_threshold', 'REAL NOT NULL DEFAULT 0.75');
+  await ensureColumn('pipelines', 'phrase_memory_max_results', 'INTEGER NOT NULL DEFAULT 10');
   await ensureColumn('pipelines', 'run_status', "TEXT DEFAULT 'idle'");
   await ensureColumn('pipelines', 'last_run_config', 'TEXT DEFAULT NULL');
   await ensureColumn('pipelines', 'run_in_progress', 'INTEGER DEFAULT 0');
@@ -579,32 +596,29 @@ export async function initDatabase(): Promise<void> {
       name TEXT NOT NULL,
       description TEXT,
       embedding_model TEXT NOT NULL DEFAULT 'text-embedding-3-small',
+      memory_extractor_provider TEXT NOT NULL DEFAULT 'openai',
+      memory_extractor_model TEXT NOT NULL DEFAULT 'gpt-5-nano',
+      memory_extractor_prompt TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL
     )
   `);
+
+  for (const col of [
+    "ALTER TABLE workspaces ADD COLUMN memory_extractor_provider TEXT NOT NULL DEFAULT 'openai'",
+    "ALTER TABLE workspaces ADD COLUMN memory_extractor_model TEXT NOT NULL DEFAULT 'gpt-5-nano'",
+    "ALTER TABLE workspaces ADD COLUMN memory_extractor_prompt TEXT NOT NULL DEFAULT ''",
+  ]) {
+    try {
+      await conn.execute(col);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (!msg.includes('duplicate column') && !msg.includes('already exists')) throw err;
+    }
+  }
 
   try {
     await conn.execute(
       `ALTER TABLE projects ADD COLUMN workspace_id TEXT REFERENCES workspaces(id)`
-    );
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (!msg.includes('duplicate column') && !msg.includes('already exists')) throw err;
-  }
-
-  await conn.execute(`
-    CREATE TABLE IF NOT EXISTS phrase_memory_presets (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      is_builtin INTEGER NOT NULL DEFAULT 0,
-      config TEXT NOT NULL,
-      created_at TEXT NOT NULL
-    )
-  `);
-
-  try {
-    await conn.execute(
-      `ALTER TABLE phrase_memory_presets ADD COLUMN workspace_id TEXT REFERENCES workspaces(id)`
     );
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -617,6 +631,7 @@ export async function initDatabase(): Promise<void> {
       workspace_id TEXT NOT NULL REFERENCES workspaces(id),
       source_phrase TEXT NOT NULL,
       target_phrase TEXT NOT NULL,
+      confidence REAL NOT NULL DEFAULT 1.0,
       source_language TEXT NOT NULL,
       target_language TEXT NOT NULL,
       author TEXT,
@@ -631,6 +646,15 @@ export async function initDatabase(): Promise<void> {
     )
   `);
 
+  try {
+    await conn.execute(
+      'ALTER TABLE phrase_memory ADD COLUMN confidence REAL NOT NULL DEFAULT 1.0',
+    );
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (!msg.includes('duplicate column') && !msg.includes('already exists')) throw err;
+  }
+
   await conn.execute(`
     CREATE TABLE IF NOT EXISTS source_phrase_embeddings (
       id TEXT PRIMARY KEY,
@@ -644,8 +668,9 @@ export async function initDatabase(): Promise<void> {
 
   for (const col of [
     'ALTER TABLE pipelines ADD COLUMN use_phrase_memory INTEGER NOT NULL DEFAULT 0',
-    'ALTER TABLE pipelines ADD COLUMN phrase_memory_preset_id TEXT DEFAULT NULL',
-    'ALTER TABLE pipelines ADD COLUMN phrase_memory_overrides TEXT DEFAULT NULL',
+    'ALTER TABLE pipelines ADD COLUMN auto_search_phrase_memory INTEGER NOT NULL DEFAULT 1',
+    'ALTER TABLE pipelines ADD COLUMN phrase_memory_similarity_threshold REAL NOT NULL DEFAULT 0.75',
+    'ALTER TABLE pipelines ADD COLUMN phrase_memory_max_results INTEGER NOT NULL DEFAULT 10',
   ]) {
     try {
       await conn.execute(col);
@@ -702,9 +727,17 @@ export async function initDatabase(): Promise<void> {
   );
   if ((workspaceCheck[0]?.count ?? 0) === 0) {
     await conn.execute(`
-      INSERT OR IGNORE INTO workspaces (id, name, description, embedding_model, created_at)
-      VALUES ('ws_default', 'Default', NULL, 'text-embedding-3-small', datetime('now'))
-    `);
+      INSERT OR IGNORE INTO workspaces (
+        id, name, description, embedding_model,
+        memory_extractor_provider, memory_extractor_model, memory_extractor_prompt,
+        created_at
+      )
+      VALUES ('ws_default', 'Default', NULL, 'text-embedding-3-small', $1, $2, $3, datetime('now'))
+    `, [
+      DEFAULT_MEMORY_EXTRACTOR_PROVIDER,
+      DEFAULT_MEMORY_EXTRACTOR_MODEL,
+      DEFAULT_MEMORY_EXTRACTOR_PROMPT,
+    ]);
     await conn.execute(`
       UPDATE projects
       SET workspace_id = 'ws_default'
@@ -717,8 +750,18 @@ export async function initDatabase(): Promise<void> {
     `);
   }
 
-  const { seedBuiltinPresets } = await import('./phraseMemoryPresetService');
-  await seedBuiltinPresets(conn);
+  await conn.execute(
+    `UPDATE workspaces
+     SET
+       memory_extractor_provider = COALESCE(NULLIF(memory_extractor_provider, ''), $1),
+       memory_extractor_model = COALESCE(NULLIF(memory_extractor_model, ''), $2),
+       memory_extractor_prompt = COALESCE(NULLIF(memory_extractor_prompt, ''), $3)`,
+    [
+      DEFAULT_MEMORY_EXTRACTOR_PROVIDER,
+      DEFAULT_MEMORY_EXTRACTOR_MODEL,
+      DEFAULT_MEMORY_EXTRACTOR_PROMPT,
+    ],
+  );
 
   console.log('[Glossa] Database initialized');
 }

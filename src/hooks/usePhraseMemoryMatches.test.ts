@@ -9,6 +9,7 @@ const makeMatch = (id: string): PhraseMemoryMatch => ({
   sourcePhrase: `source ${id}`,
   targetPhrase: `target ${id}`,
   score: 0.9,
+  confidence: 0.8,
   createdAt: new Date().toISOString(),
 });
 
