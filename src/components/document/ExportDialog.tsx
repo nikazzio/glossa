@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { AlertTriangle, X } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -45,9 +46,11 @@ export function ExportDialog({ chunks, markdownAware, onConfirm, onCancel }: Exp
     { key: 'bilingual', label: t('files.exportBilingual') },
   ];
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-editorial-ink/35 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[300] flex items-center justify-center bg-editorial-ink/35 p-4 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-labelledby="export-dialog-title"
@@ -171,6 +174,7 @@ export function ExportDialog({ chunks, markdownAware, onConfirm, onCancel }: Exp
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

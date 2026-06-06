@@ -6,6 +6,7 @@ import { useChunksStore } from '../stores/chunksStore';
 import { usePhraseMemoryStore } from '../stores/phraseMemoryStore';
 import type { PhraseMemorySearchStatus } from '../stores/phraseMemoryStore';
 import { searchPhraseMemory, searchPhraseMemoryBatch } from '../services/phraseMemoryService';
+import { logOperation } from '../stores/operationLogStore';
 import { logger } from '../utils/logger';
 
 type UsePhraseMemoryAutoSearchOptions = {
@@ -62,6 +63,18 @@ export function usePhraseMemoryAutoSearch(
     }
 
     setSearchStatus('searching');
+    logOperation({
+      level: 'info',
+      scope: 'memory',
+      phase: 'start',
+      message: 'Auto phrase memory search started',
+      meta: {
+        workspaceId: activeWorkspace.id,
+        chunkCount: toSearch.length,
+        threshold: config.phraseMemorySimilarityThreshold ?? DEFAULT_THRESHOLD,
+        maxResults: config.phraseMemoryMaxResults ?? DEFAULT_MAX_RESULTS,
+      },
+    });
 
     void (async () => {
       try {
@@ -79,9 +92,32 @@ export function usePhraseMemoryAutoSearch(
           setMatches(chunkId, matches);
         }
         setLatestSearchStatus('done');
+        logOperation({
+          level: 'success',
+          scope: 'memory',
+          phase: 'end',
+          message: 'Auto phrase memory search completed',
+          meta: {
+            workspaceId: activeWorkspace.id,
+            chunkCount: toSearch.length,
+            matchedChunkCount: results.size,
+          },
+        });
       } catch (err: unknown) {
         if (requestIdRef.current !== requestId) return;
         logger.warn('phrase memory auto-search failed', { error: String(err) });
+        logOperation({
+          level: 'error',
+          scope: 'memory',
+          phase: 'end',
+          message: 'Auto phrase memory search failed',
+          meta: {
+            workspaceId: activeWorkspace.id,
+            error: String(err),
+          },
+          detail: String(err),
+          detailKind: 'error',
+        });
         usePhraseMemoryStore.getState().setSearchStatus('error');
       }
     })();
@@ -101,6 +137,19 @@ export function usePhraseMemoryAutoSearch(
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
     setSearchStatus('searching');
+    logOperation({
+      level: 'info',
+      scope: 'memory',
+      phase: 'start',
+      message: 'Manual phrase memory search started',
+      chunkId,
+      meta: {
+        workspaceId: activeWorkspace.id,
+        queryChars: chunk.sourceProcessingText.length,
+        threshold: config.phraseMemorySimilarityThreshold ?? DEFAULT_THRESHOLD,
+        maxResults: config.phraseMemoryMaxResults ?? DEFAULT_MAX_RESULTS,
+      },
+    });
 
     try {
       const matches = await searchPhraseMemory({
@@ -113,9 +162,33 @@ export function usePhraseMemoryAutoSearch(
       if (requestIdRef.current !== requestId) return;
       setMatches(chunkId, matches);
       setSearchStatus('done');
+      logOperation({
+        level: 'success',
+        scope: 'memory',
+        phase: 'end',
+        message: 'Manual phrase memory search completed',
+        chunkId,
+        meta: {
+          workspaceId: activeWorkspace.id,
+          resultCount: matches.length,
+        },
+      });
     } catch (err: unknown) {
       if (requestIdRef.current !== requestId) return;
       logger.warn('phrase memory manual search failed', { chunkId, error: String(err) });
+      logOperation({
+        level: 'error',
+        scope: 'memory',
+        phase: 'end',
+        message: 'Manual phrase memory search failed',
+        chunkId,
+        meta: {
+          workspaceId: activeWorkspace.id,
+          error: String(err),
+        },
+        detail: String(err),
+        detailKind: 'error',
+      });
       setSearchStatus('error');
       throw err;
     }

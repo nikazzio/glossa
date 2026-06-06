@@ -1211,6 +1211,7 @@
     "scopeStage": "Stage",
     "scopeAudit": "Audit",
     "scopeCoherence": "Coherence",
+    "scopeMemory": "Memory",
     "scopeChunk": "Unit",
     "levelInfo": "info",
     "levelSuccess": "ok",

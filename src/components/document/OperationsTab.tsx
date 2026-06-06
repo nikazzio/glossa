@@ -3,6 +3,7 @@ import {
   CheckCircle2,
   Copy,
   ExternalLink,
+  Database,
   FileText,
   Filter,
   Info,
@@ -56,6 +57,7 @@ const SCOPE_ICONS: Record<OperationLogScope, ReactNode> = {
   stage: <Layers size={11} />,
   audit: <ScanLine size={11} />,
   coherence: <Link2 size={11} />,
+  memory: <Database size={11} />,
   chunk: <FileText size={11} />,
 };
 
@@ -73,6 +75,7 @@ const ALL_SCOPES: OperationLogScope[] = [
   'stage',
   'audit',
   'coherence',
+  'memory',
   'chunk',
 ];
 const ALL_LEVELS: OperationLogLevel[] = ['info', 'success', 'warn', 'error'];
@@ -550,6 +553,7 @@ function groupEntries(entries: OperationLogEntry[]): GroupedEntries {
 function defaultStageKeyForScope(scope: OperationLogScope): string | null {
   if (scope === 'audit') return '__audit__';
   if (scope === 'coherence') return '__coherence__';
+  if (scope === 'memory') return '__memory__';
   return null;
 }
 
@@ -562,6 +566,7 @@ function labelForStageGroup(
   let title: string;
   if (stageKey === '__audit__') title = t('log.scopeAudit');
   else if (stageKey === '__coherence__') title = t('log.scopeCoherence');
+  else if (stageKey === '__memory__') title = t('log.scopeMemory');
   else {
     title = (start?.meta?.stageName as string | undefined) ?? t('log.scopeStage');
   }
@@ -712,6 +717,7 @@ function scopeLabels(t: (k: string) => string): Record<OperationLogScope, string
     stage: t('log.scopeStage'),
     audit: t('log.scopeAudit'),
     coherence: t('log.scopeCoherence'),
+    memory: t('log.scopeMemory'),
     chunk: t('log.scopeChunk'),
   };
 }
