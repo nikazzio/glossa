@@ -1,4 +1,4 @@
-import { AlertCircle, BookPlus, Brain, Check, Clipboard, Database, Loader2, RefreshCcw } from 'lucide-react';
+import { AlertCircle, BookPlus, Brain, Check, Clipboard, Database, Loader2, RefreshCcw, RotateCcw } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -53,6 +53,12 @@ export function MemoryTab({ panelId, labelledBy, currentChunkId, onRerun }: Memo
   ) : searchStatus === 'error' ? (
     <StatusRow icon={<AlertCircle size={13} />} label={t('memory.searchFailed')} tone="error" />
   ) : null;
+  const saveStatusRow = isSaving && progress ? (
+    <StatusRow
+      icon={<Loader2 size={13} className="animate-spin" />}
+      label={`${t('memory.saveToMemoryButton')} ${progress.done}/${progress.total}`}
+    />
+  ) : null;
 
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex min-h-0 flex-1 flex-col">
@@ -62,15 +68,36 @@ export function MemoryTab({ panelId, labelledBy, currentChunkId, onRerun }: Memo
           <div className="flex items-center gap-1">
             <IconButton
               size="md"
+              tone={selectedMatches.length > 0 ? 'accent' : 'default'}
+              title={t('memory.rerunButton')}
+              onClick={() => onRerun(selectedMatches)}
+              disabled={selectedMatches.length === 0}
+              tooltipSide="left"
+            >
+              <RotateCcw size={13} />
+            </IconButton>
+            <IconButton
+              size="md"
+              title={t('memory.saveToMemoryButton')}
+              onClick={() => void handleSaveToMemory()}
+              disabled={isSaving || !currentChunkId}
+              tooltipSide="left"
+            >
+              {isSaving ? <Loader2 size={13} className="animate-spin" /> : <Database size={13} />}
+            </IconButton>
+            <IconButton
+              size="md"
               title={t('memory.refreshButton')}
               onClick={() => void handleRefresh()}
               disabled={!currentChunkId || searchStatus === 'searching'}
+              tooltipSide="left"
             >
               <RefreshCcw size={13} />
             </IconButton>
           </div>
         </div>
         {searchStatusRow}
+        {saveStatusRow}
         <p className="text-xs leading-relaxed text-editorial-muted">
           {hasMatches ? t('memory.selectionHint') : t('memory.coldStartBody')}
         </p>
@@ -96,33 +123,6 @@ export function MemoryTab({ panelId, labelledBy, currentChunkId, onRerun }: Memo
           </p>
         </div>
       )}
-
-      <div className="shrink-0 space-y-2 border-t border-editorial-border px-4 py-3">
-        <PillButton
-          onClick={() => onRerun(selectedMatches)}
-          disabled={selectedMatches.length === 0}
-          variant="accent"
-          className="flex w-full items-center justify-center gap-2 py-2"
-        >
-          <RefreshCcw size={14} />
-          {t('memory.rerunButton')}
-        </PillButton>
-        <div className="flex justify-center">
-          <PillButton
-            onClick={() => void handleSaveToMemory()}
-            disabled={isSaving || !currentChunkId}
-            variant="secondary"
-            className="inline-flex items-center justify-center gap-2"
-          >
-            {isSaving
-              ? <Loader2 size={13} className="animate-spin" />
-              : <Database size={13} />}
-            {isSaving && progress
-              ? `${progress.done}/${progress.total}`
-              : t('memory.saveToMemoryButton')}
-          </PillButton>
-        </div>
-      </div>
 
       {extractingMatch && (
         <ExtractTermDialog
