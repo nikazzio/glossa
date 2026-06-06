@@ -62,7 +62,7 @@ interface InsightsDrawerProps {
 const PANEL_WIDTH = 430;
 
 const DOC_TAB_ORDER: InsightsDrawerTab[] = ['index', 'search', 'stats', 'coherence', 'glossary'];
-const CHUNK_TAB_ORDER: ChunkDrawerTab[] = ['summary', 'audit', 'notes', 'operations', 'memory'];
+const CHUNK_TAB_ORDER: ChunkDrawerTab[] = ['audit', 'notes', 'operations', 'memory', 'summary'];
 
 const DOC_TAB_BUTTON_IDS: Record<InsightsDrawerTab, string> = {
   index: 'insights-tab-button-index',
@@ -283,13 +283,7 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
               </div>
 
               <div className="flex flex-1 flex-col overflow-y-auto bg-editorial-bg/40 custom-scrollbar">
-                {chunkDrawerTab === 'summary' ? (
-                  <ChunkSummaryTab
-                    panelId={CHUNK_TAB_PANEL_IDS.summary}
-                    labelledBy={CHUNK_TAB_BUTTON_IDS.summary}
-                    currentChunk={currentChunk}
-                  />
-                ) : chunkDrawerTab === 'audit' ? (
+                {chunkDrawerTab === 'audit' ? (
                   <AuditTab
                     panelId={CHUNK_TAB_PANEL_IDS.audit}
                     labelledBy={CHUNK_TAB_BUTTON_IDS.audit}
@@ -315,6 +309,12 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
                         void rerunChunkWithMemory(currentChunk.id, selectedMatches);
                       }
                     }}
+                  />
+                ) : chunkDrawerTab === 'summary' ? (
+                  <ChunkSummaryTab
+                    panelId={CHUNK_TAB_PANEL_IDS.summary}
+                    labelledBy={CHUNK_TAB_BUTTON_IDS.summary}
+                    currentChunk={currentChunk}
                   />
                 ) : (
                   <OperationsTab
