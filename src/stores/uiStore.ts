@@ -7,7 +7,7 @@ import type {
 } from '../types';
 
 export type InsightsDrawerTab = 'index' | 'search' | 'stats' | 'coherence' | 'glossary';
-export type ChunkDrawerTab = 'audit' | 'notes' | 'operations' | 'memory';
+export type ChunkDrawerTab = 'summary' | 'audit' | 'notes' | 'operations' | 'memory';
 export type RunPhase = 'test' | 'production';
 export type DocumentPaneFocus = 'both' | 'source' | 'translation';
 export type HelpSection = 'overview' | 'pipeline' | 'features' | 'context' | 'audit' | 'projects' | 'providers' | 'ollama' | 'glossary' | 'shortcuts' | 'troubleshooting' | 'design';
@@ -106,7 +106,7 @@ export const useUiStore = create<UiState>()(
   showDocumentDrawer: false,
   documentDrawerTab: 'index',
   showChunkDrawer: false,
-  chunkDrawerTab: 'audit',
+  chunkDrawerTab: 'summary',
   ollamaModels: [],
   ollamaStatus: 'unknown',
   highlightsEnabled: true,

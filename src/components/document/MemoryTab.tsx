@@ -1,13 +1,15 @@
-import { AlertCircle, BookPlus, Brain, Check, Clipboard, Database, Loader2, RefreshCcw, RotateCcw } from 'lucide-react';
-import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { BookPlus, Brain, Check, Clipboard, Database, Loader2, RefreshCcw, RotateCcw } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { usePhraseMemoryAutoSearch } from '../../hooks/usePhraseMemoryAutoSearch';
 import { usePhraseMemoryMatches } from '../../hooks/usePhraseMemoryMatches';
 import { useSaveToMemory } from '../../hooks/useSaveToMemory';
 import { usePhraseMemoryStore, type PhraseMemoryMatch } from '../../stores/phraseMemoryStore';
-import { IconButton, PillButton, SectionLabel } from '../ui';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { confirm } from '../../stores/confirmStore';
+import { listPhraseMemoryEntries } from '../../services/phraseMemoryService';
+import { IconButton, SectionLabel } from '../ui';
 import { ExtractTermDialog } from './ExtractTermDialog';
 
 interface MemoryTabProps {
@@ -22,9 +24,36 @@ export function MemoryTab({ panelId, labelledBy, currentChunkId, onRerun }: Memo
   const { matches, enabledMatchIds, selectedMatches, hasMatches, toggleEnabled } =
     usePhraseMemoryMatches(currentChunkId);
   const [extractingMatch, setExtractingMatch] = useState<PhraseMemoryMatch | null>(null);
-  const { saveToMemory, isSaving, progress } = useSaveToMemory();
+  const [chunkMemoryCount, setChunkMemoryCount] = useState<number | null>(null);
+  const { saveToMemory, isSaving } = useSaveToMemory();
   const { runSearchForChunk } = usePhraseMemoryAutoSearch({ auto: false });
   const searchStatus = usePhraseMemoryStore((s) => s.searchStatus);
+  const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadChunkMemoryCount(): Promise<void> {
+      if (!activeWorkspace || !currentChunkId) {
+        if (!cancelled) setChunkMemoryCount(null);
+        return;
+      }
+      try {
+        const entries = await listPhraseMemoryEntries(activeWorkspace.id);
+        if (!cancelled) {
+          setChunkMemoryCount(entries.filter((entry) => entry.chunkId === currentChunkId).length);
+        }
+      } catch {
+        if (!cancelled) setChunkMemoryCount(null);
+      }
+    }
+
+    void loadChunkMemoryCount();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeWorkspace?.id, currentChunkId]);
 
   const handleRefresh = async () => {
     if (!currentChunkId) return;
@@ -36,9 +65,18 @@ export function MemoryTab({ panelId, labelledBy, currentChunkId, onRerun }: Memo
   };
 
   const handleSaveToMemory = async () => {
+    const previousCount = chunkMemoryCount ?? null;
     try {
       const savedCount = await saveToMemory(currentChunkId ? [currentChunkId] : []);
+      if (activeWorkspace && currentChunkId) {
+        const entries = await listPhraseMemoryEntries(activeWorkspace.id);
+        setChunkMemoryCount(entries.filter((entry) => entry.chunkId === currentChunkId).length);
+      }
       if (savedCount === 0) {
+        if (previousCount && previousCount > 0) {
+          toast.message(t('memory.nothingToSave'));
+          return;
+        }
         toast.message(t('memory.nothingToSave'));
         return;
       }
@@ -48,17 +86,23 @@ export function MemoryTab({ panelId, labelledBy, currentChunkId, onRerun }: Memo
     }
   };
 
-  const searchStatusRow = searchStatus === 'searching' ? (
-    <StatusRow icon={<Loader2 size={13} className="animate-spin" />} label={t('memory.searching')} />
-  ) : searchStatus === 'error' ? (
-    <StatusRow icon={<AlertCircle size={13} />} label={t('memory.searchFailed')} tone="error" />
-  ) : null;
-  const saveStatusRow = isSaving && progress ? (
-    <StatusRow
-      icon={<Loader2 size={13} className="animate-spin" />}
-      label={`${t('memory.saveToMemoryButton')} ${progress.done}/${progress.total}`}
-    />
-  ) : null;
+  const handleRerun = async () => {
+    if (selectedMatches.length === 0) return;
+    const ok = await confirm({
+      title: t('memory.rerunConfirmTitle'),
+      message: t('memory.rerunConfirmMessage', { count: selectedMatches.length }),
+      confirmLabel: t('memory.rerunConfirmAction'),
+    });
+    if (!ok) return;
+    onRerun(selectedMatches);
+  };
+
+  const saveButtonLabel = chunkMemoryCount && chunkMemoryCount > 0
+    ? t('memory.regenerateMemoryButton')
+    : t('memory.saveToMemoryButton');
+  const rerunTitle = selectedMatches.length > 0
+    ? t('memory.rerunButton')
+    : t('memory.rerunDisabledHint');
 
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex min-h-0 flex-1 flex-col">
@@ -68,9 +112,8 @@ export function MemoryTab({ panelId, labelledBy, currentChunkId, onRerun }: Memo
           <div className="flex items-center gap-1">
             <IconButton
               size="md"
-              tone={selectedMatches.length > 0 ? 'accent' : 'default'}
-              title={t('memory.rerunButton')}
-              onClick={() => onRerun(selectedMatches)}
+              title={rerunTitle}
+              onClick={() => void handleRerun()}
               disabled={selectedMatches.length === 0}
               tooltipSide="left"
             >
@@ -78,29 +121,52 @@ export function MemoryTab({ panelId, labelledBy, currentChunkId, onRerun }: Memo
             </IconButton>
             <IconButton
               size="md"
-              title={t('memory.saveToMemoryButton')}
+              tone={searchStatus === 'searching' ? 'running' : 'default'}
+              title={searchStatus === 'searching' ? t('memory.searching') : t('memory.refreshButton')}
+              onClick={() => void handleRefresh()}
+              disabled={!currentChunkId || searchStatus === 'searching'}
+              tooltipSide="left"
+            >
+              {searchStatus === 'searching' ? <Loader2 size={13} className="animate-spin" /> : <RefreshCcw size={13} />}
+            </IconButton>
+          </div>
+        </div>
+        {chunkMemoryCount !== null ? (
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-editorial-success/35 bg-editorial-success/10 font-display text-sm italic text-editorial-success">
+                {chunkMemoryCount}
+              </div>
+              <p className="min-w-0 text-sm font-medium leading-snug text-editorial-muted">
+                {t('memory.memoriesLabel')}
+              </p>
+            </div>
+            <IconButton
+              size="md"
+              title={saveButtonLabel}
               onClick={() => void handleSaveToMemory()}
               disabled={isSaving || !currentChunkId}
               tooltipSide="left"
             >
               {isSaving ? <Loader2 size={13} className="animate-spin" /> : <Database size={13} />}
             </IconButton>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm leading-snug text-editorial-muted">
+              {hasMatches ? t('memory.selectionHint') : t('memory.coldStartBodyShort')}
+            </p>
             <IconButton
               size="md"
-              title={t('memory.refreshButton')}
-              onClick={() => void handleRefresh()}
-              disabled={!currentChunkId || searchStatus === 'searching'}
+              title={saveButtonLabel}
+              onClick={() => void handleSaveToMemory()}
+              disabled={isSaving || !currentChunkId}
               tooltipSide="left"
             >
-              <RefreshCcw size={13} />
+              {isSaving ? <Loader2 size={13} className="animate-spin" /> : <Database size={13} />}
             </IconButton>
           </div>
-        </div>
-        {searchStatusRow}
-        {saveStatusRow}
-        <p className="text-xs leading-relaxed text-editorial-muted">
-          {hasMatches ? t('memory.selectionHint') : t('memory.coldStartBody')}
-        </p>
+        )}
       </div>
 
       {hasMatches ? (
@@ -121,6 +187,9 @@ export function MemoryTab({ panelId, labelledBy, currentChunkId, onRerun }: Memo
           <p className="text-sm font-medium text-editorial-muted">
             {t('memory.coldStartTitle')}
           </p>
+          {searchStatus === 'searching' && (
+            <Loader2 size={16} className="animate-spin text-editorial-running" />
+          )}
         </div>
       )}
 
@@ -132,26 +201,6 @@ export function MemoryTab({ panelId, labelledBy, currentChunkId, onRerun }: Memo
           onSuccess={() => setExtractingMatch(null)}
         />
       )}
-    </div>
-  );
-}
-
-function StatusRow({
-  icon,
-  label,
-  tone = 'neutral',
-}: {
-  icon: ReactNode;
-  label: string;
-  tone?: 'neutral' | 'error';
-}) {
-  const colorClass = tone === 'error'
-    ? 'border-editorial-accent/35 bg-editorial-accent/8 text-editorial-accent'
-    : 'border-editorial-border bg-editorial-textbox/35 text-editorial-muted';
-  return (
-    <div className={`flex items-center justify-center gap-2 rounded-full border px-3 py-2 text-xs font-bold uppercase tracking-[0.2em] ${colorClass}`}>
-      {icon}
-      {label}
     </div>
   );
 }
@@ -179,7 +228,7 @@ function MatchCard({ match, enabled, onToggle, onExtractTerm }: MatchCardProps) 
   };
 
   return (
-    <article className={`space-y-3 rounded-lg border bg-editorial-bg p-4 transition-colors ${enabled ? 'border-editorial-accent/70' : 'border-editorial-border'}`}>
+    <article className={`space-y-4 rounded-lg border bg-editorial-bg p-4 transition-colors ${enabled ? 'border-editorial-accent/70' : 'border-editorial-border'}`}>
       <div className="flex items-center justify-between gap-3">
         <label className="flex min-w-0 cursor-pointer items-center gap-2">
           <input
@@ -190,7 +239,7 @@ function MatchCard({ match, enabled, onToggle, onExtractTerm }: MatchCardProps) 
             aria-label={t('memory.enableMatch')}
           />
           <span className="truncate text-sm font-medium text-editorial-ink">
-            {t('memory.enableMatch')}
+            {t('memory.matchToggleLabel')}
           </span>
         </label>
         <span className="shrink-0 font-mono text-xs font-bold text-editorial-accent">
@@ -198,41 +247,43 @@ function MatchCard({ match, enabled, onToggle, onExtractTerm }: MatchCardProps) 
         </span>
       </div>
 
-      <div className="space-y-1.5">
-        <p className="text-xs font-bold uppercase tracking-[0.22em] text-editorial-muted">
-          {t('memory.sourcePhraseLabel')}
-        </p>
-        <div className="rounded-md bg-editorial-textbox/45 px-3 py-2 font-mono text-xs leading-relaxed text-editorial-ink">
-          {match.sourcePhrase}
+      <div className="space-y-3">
+        <div className="rounded-md bg-editorial-textbox/45 px-3 py-2">
+          <p className="mb-1 text-[10px] uppercase tracking-[0.28em] text-editorial-muted">
+            {t('memory.sourcePhraseShort')}
+          </p>
+          <div className="text-sm leading-relaxed text-editorial-charcoal">
+            {match.sourcePhrase}
+          </div>
+        </div>
+
+        <div className="rounded-md border border-editorial-border/60 bg-editorial-bg px-3 py-2">
+          <p className="mb-1 text-[10px] uppercase tracking-[0.28em] text-editorial-muted">
+            {t('glossary.translation')}
+          </p>
+          <div className="text-sm leading-relaxed text-editorial-ink">
+            {match.targetPhrase}
+          </div>
         </div>
       </div>
 
-      <div className="space-y-1.5">
-        <p className="text-xs font-bold uppercase tracking-[0.22em] text-editorial-muted">
-          {t('glossary.translation')}
-        </p>
-        <div className="rounded-md border border-editorial-border/60 bg-editorial-bg px-3 py-2 text-xs leading-relaxed text-editorial-ink">
-          {match.targetPhrase}
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <PillButton
+      <div className="flex items-center justify-end gap-1.5">
+        <IconButton
+          size="md"
+          title={t('memory.copyTranslationTitle')}
           onClick={() => void handleCopy()}
-          variant="secondary"
-          className="inline-flex items-center gap-2"
+          tooltipSide="left"
         >
           {copied ? <Check size={13} className="text-editorial-success" /> : <Clipboard size={13} />}
-          {t('memory.applyButton')}
-        </PillButton>
-        <PillButton
+        </IconButton>
+        <IconButton
+          size="md"
+          title={t('memory.extractTermButton')}
           onClick={onExtractTerm}
-          variant="secondary"
-          className="inline-flex items-center gap-2"
+          tooltipSide="left"
         >
           <BookPlus size={13} />
-          {t('memory.extractTermButton')}
-        </PillButton>
+        </IconButton>
       </div>
     </article>
   );
