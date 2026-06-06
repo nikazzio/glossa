@@ -47,8 +47,9 @@ const basePipelineRow = {
   updated_at: '2026-01-01T00:00:00Z',
   coherence_prompt: null,
   use_phrase_memory: 0,
-  phrase_memory_preset_id: null,
-  phrase_memory_overrides: null,
+  auto_search_phrase_memory: 1,
+  phrase_memory_similarity_threshold: 0.75,
+  phrase_memory_max_results: 10,
 };
 
 const baseConfig: PipelineConfig = {
@@ -291,16 +292,18 @@ describe('pipelineService', () => {
         .mockResolvedValueOnce([]);
       const result = await getPipelineConfig('pipeline-1');
       expect(result?.config.usePhraseMemory).toBe(false);
-      expect(result?.config.phraseMemoryPresetId).toBeNull();
-      expect(result?.config.phraseMemoryOverrides).toBeNull();
+      expect(result?.config.autoSearchPhraseMemory).toBe(true);
+      expect(result?.config.phraseMemorySimilarityThreshold).toBe(0.75);
+      expect(result?.config.phraseMemoryMaxResults).toBe(10);
     });
 
-    it('loads usePhraseMemory=true and preset when set', async () => {
+    it('loads usePhraseMemory=true and search settings when set', async () => {
       const row = {
         ...basePipelineRow,
         use_phrase_memory: 1,
-        phrase_memory_preset_id: 'preset-default',
-        phrase_memory_overrides: '{"similarityThreshold":0.85}',
+        auto_search_phrase_memory: 0,
+        phrase_memory_similarity_threshold: 0.85,
+        phrase_memory_max_results: 7,
       };
       dbMocks.select
         .mockResolvedValueOnce([row])
@@ -308,25 +311,29 @@ describe('pipelineService', () => {
         .mockResolvedValueOnce([]);
       const result = await getPipelineConfig('pipeline-1');
       expect(result?.config.usePhraseMemory).toBe(true);
-      expect(result?.config.phraseMemoryPresetId).toBe('preset-default');
-      expect(result?.config.phraseMemoryOverrides).toEqual({ similarityThreshold: 0.85 });
+      expect(result?.config.autoSearchPhraseMemory).toBe(false);
+      expect(result?.config.phraseMemorySimilarityThreshold).toBe(0.85);
+      expect(result?.config.phraseMemoryMaxResults).toBe(7);
     });
 
     it('savePipelineConfig persists phrase memory fields', async () => {
       const config: PipelineConfig = {
         ...baseConfig,
         usePhraseMemory: true,
-        phraseMemoryPresetId: 'preset-default',
-        phraseMemoryOverrides: { maxResults: 5 },
+        autoSearchPhraseMemory: false,
+        phraseMemorySimilarityThreshold: 0.82,
+        phraseMemoryMaxResults: 5,
       };
       await savePipelineConfig('pipeline-1', config);
       const [query, params] = dbMocks.execute.mock.calls[0] as [string, unknown[]];
       expect(query).toContain('use_phrase_memory');
-      expect(query).toContain('phrase_memory_preset_id');
-      expect(query).toContain('phrase_memory_overrides');
+      expect(query).toContain('auto_search_phrase_memory');
+      expect(query).toContain('phrase_memory_similarity_threshold');
+      expect(query).toContain('phrase_memory_max_results');
       expect(params).toContain(1);
-      expect(params).toContain('preset-default');
-      expect(params).toContain('{"maxResults":5}');
+      expect(params).toContain(0);
+      expect(params).toContain(0.82);
+      expect(params).toContain(5);
     });
 
     it('savePipelineConfig stores null overrides when not set', async () => {

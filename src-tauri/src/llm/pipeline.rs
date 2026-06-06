@@ -48,6 +48,20 @@ pub struct StageResult {
     pub cache_miss_input_tokens: Option<u32>,
 }
 
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MemoryExtractorPair {
+    pub source_phrase: String,
+    pub target_phrase: String,
+    pub confidence: f64,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MemoryExtractorResponse {
+    pub pairs: Vec<MemoryExtractorPair>,
+}
+
 #[tauri::command]
 #[allow(clippy::too_many_arguments)]
 pub async fn run_stage(
@@ -352,6 +366,76 @@ pub async fn refine_prompt(
         provider_options: refine_config.review_provider_options.as_ref(),
     };
     prov.call(&client, &req).await.map(|r| r.content)
+}
+
+#[tauri::command]
+#[allow(clippy::too_many_arguments)]
+pub async fn extract_phrase_memory_pairs(
+    app: AppHandle,
+    provider: String,
+    model: String,
+    prompt: String,
+    source_text: String,
+    target_text: String,
+    source_language: String,
+    target_language: String,
+    ollama_base_url: Option<String>,
+) -> Result<MemoryExtractorResponse, String> {
+    let prov = get_provider(&provider, ollama_base_url)?;
+    prov.preflight(&model).await?;
+    let api_key = get_api_key(&app, &provider)?;
+    let client = prov.http_client()?;
+    let structured = crate::llm::types::StructuredPrompt {
+        system: vec![crate::llm::types::PromptBlock {
+            text: prompt,
+            cacheable: false,
+        }],
+        user: format!(
+            "Source language: {source_language}\nTarget language: {target_language}\n\nOriginal source chunk:\n<<<SOURCE\n{source_text}\nSOURCE>>>\n\nFinal/current translation:\n<<<TARGET\n{target_text}\nTARGET>>>\n\nReturn JSON only with key \"pairs\"."
+        ),
+    };
+    let req = LlmRequest {
+        model: &model,
+        structured: &structured,
+        api_key: &api_key,
+        json_mode: true,
+        provider_options: None,
+    };
+
+    let result_text = prov.call(&client, &req).await?.content;
+    let sanitized = sanitize_llm_json_output(&result_text);
+    let parsed: serde_json::Value = serde_json::from_str(sanitized)
+        .map_err(|e| format!("Failed to parse phrase memory JSON: {e}"))?;
+    let pairs = parsed["pairs"]
+        .as_array()
+        .ok_or_else(|| "Phrase memory extractor returned JSON without a pairs array".to_string())?;
+
+    let validated = pairs
+        .iter()
+        .filter_map(|entry| {
+            let source_phrase = entry["sourcePhrase"].as_str()?.trim();
+            let target_phrase = entry["targetPhrase"].as_str()?.trim();
+            if source_phrase.is_empty() || target_phrase.is_empty() {
+                return None;
+            }
+            if !source_text.contains(source_phrase) || !target_text.contains(target_phrase) {
+                log::warn!(
+                    "phrase_memory.extract_pairs.discard_non_verbatim source_chars={} target_chars={}",
+                    source_phrase.len(),
+                    target_phrase.len()
+                );
+                return None;
+            }
+            let confidence = entry["confidence"].as_f64()?.clamp(0.0, 1.0);
+            Some(MemoryExtractorPair {
+                source_phrase: source_phrase.to_string(),
+                target_phrase: target_phrase.to_string(),
+                confidence,
+            })
+        })
+        .collect();
+
+    Ok(MemoryExtractorResponse { pairs: validated })
 }
 
 #[tauri::command]

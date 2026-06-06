@@ -9,6 +9,7 @@ import type {
   TokenUsage,
   PromptInfo,
   ResponseInfo,
+  PromptTemplateContext,
 } from '../types';
 import { useChunksStore } from '../stores/chunksStore';
 import { useUiStore } from '../stores/uiStore';
@@ -290,7 +291,7 @@ export const llmService = {
     prompt: string,
     provider: string,
     model: string,
-    context: 'stage' | 'audit' | 'persona',
+    context: PromptTemplateContext,
   ): Promise<string> {
     return invoke<string>('refine_prompt', { prompt, provider, model, context, ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl });
   },

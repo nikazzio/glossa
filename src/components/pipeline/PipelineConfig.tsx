@@ -449,10 +449,11 @@ export function PipelineConfig({
               keyStatusLoading={keyStatusLoading}
               missingRefineProviders={missingRefineProviders}
               usePhraseMemory={config.usePhraseMemory ?? false}
-              phraseMemoryPresetId={config.phraseMemoryPresetId ?? null}
-              phraseMemoryOverrides={config.phraseMemoryOverrides ?? null}
-              onPhraseMemoryChange={({ usePhraseMemory, phraseMemoryPresetId, phraseMemoryOverrides }) =>
-                setConfig((prev) => ({ ...prev, usePhraseMemory, phraseMemoryPresetId, phraseMemoryOverrides }))
+              autoSearchPhraseMemory={config.autoSearchPhraseMemory !== false}
+              phraseMemorySimilarityThreshold={config.phraseMemorySimilarityThreshold ?? 0.75}
+              phraseMemoryMaxResults={config.phraseMemoryMaxResults ?? 10}
+              onPhraseMemoryChange={(memoryConfig) =>
+                setConfig((prev) => ({ ...prev, ...memoryConfig }))
               }
             />
           )}

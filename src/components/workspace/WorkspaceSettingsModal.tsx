@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Brain, Download, HardDrive, Settings2, Upload } from 'lucide-react';
+import { Brain, Cpu, Download, HardDrive, Settings2, Upload } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -8,9 +8,9 @@ import { exportWorkspace, importWorkspace } from '../../services/backupService';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { EditorialModalShell } from '../common';
-import { IconButton } from '../ui';
-import { PhraseMemoryPresetManager } from '../settings/PhraseMemoryPresetManager';
-import type { EmbeddingModel } from '../../types';
+import { IconButton, PillButton } from '../ui';
+import { MemoryExtractorSettings } from './MemoryExtractorSettings';
+import type { EmbeddingModel, ModelProvider } from '../../types';
 
 type WorkspaceSettingsTab = 'general' | 'memory' | 'backup';
 
@@ -28,6 +28,9 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [embeddingModel, setEmbeddingModel] = useState<EmbeddingModel>('text-embedding-3-small');
+  const [memoryExtractorProvider, setMemoryExtractorProvider] = useState<ModelProvider>('openai');
+  const [memoryExtractorModel, setMemoryExtractorModel] = useState('gpt-5-nano');
+  const [memoryExtractorPrompt, setMemoryExtractorPrompt] = useState('');
   const [saving, setSaving] = useState(false);
   const [isBackupBusy, setIsBackupBusy] = useState(false);
 
@@ -36,19 +39,30 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
     setName(activeWorkspace.name);
     setDescription(activeWorkspace.description ?? '');
     setEmbeddingModel(activeWorkspace.embeddingModel);
+    setMemoryExtractorProvider(activeWorkspace.memoryExtractorProvider);
+    setMemoryExtractorModel(activeWorkspace.memoryExtractorModel);
+    setMemoryExtractorPrompt(activeWorkspace.memoryExtractorPrompt);
     setActiveTab('general');
   }, [open, activeWorkspace]);
 
   const handleSave = async () => {
     if (!name.trim()) return;
+    if (activeTab === 'memory' && (!memoryExtractorModel.trim() || !memoryExtractorPrompt.trim())) return;
     setSaving(true);
     let shouldClose = false;
     try {
-      await updateActiveWorkspace({
+      const updates = activeTab === 'memory' ? {
         name: name.trim(),
         description: description.trim() || undefined,
         embeddingModel,
-      });
+        memoryExtractorProvider,
+        memoryExtractorModel: memoryExtractorModel.trim(),
+        memoryExtractorPrompt: memoryExtractorPrompt.trim(),
+      } : {
+        name: name.trim(),
+        description: description.trim() || undefined,
+      };
+      await updateActiveWorkspace(updates);
       toast.success(t('workspace.updated'));
       shouldClose = true;
     } catch (err: unknown) {
@@ -162,16 +176,16 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
               panelClassName="h-[80vh]"
               tabBar={tabBar}
               footer={
-                activeTab === 'general' ? (
+                activeTab === 'general' || activeTab === 'memory' ? (
                   <div className="flex justify-end">
-                    <button
-                      type="button"
+                    <PillButton
                       onClick={() => void handleSave()}
-                      disabled={!name.trim() || saving}
-                      className="rounded-full border border-editorial-accent bg-editorial-accent px-5 py-3 text-xs font-bold uppercase tracking-[0.2em] text-white transition-colors duration-150 hover:bg-editorial-accent/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
+                      disabled={!name.trim() || saving || (activeTab === 'memory' && (!memoryExtractorModel.trim() || !memoryExtractorPrompt.trim()))}
+                      variant="accent"
+                      className="px-5 py-3"
                     >
                       {saving ? t('workspace.saving') : t('common.save')}
-                    </button>
+                    </PillButton>
                   </div>
                 ) : null
               }
@@ -196,24 +210,6 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                     placeholder={t('workspace.descriptionPlaceholder')}
                     className="min-h-24 w-full rounded-[18px] border border-editorial-border bg-editorial-textbox/30 px-4 py-3 text-sm text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   />
-                  <label className="block space-y-2">
-                    <span className="text-xs font-bold uppercase tracking-[0.3em] text-editorial-muted">
-                      {t('workspace.embeddingModel')}
-                    </span>
-                    <select
-                      value={embeddingModel}
-                      onChange={(e) => setEmbeddingModel(e.target.value as EmbeddingModel)}
-                      className="w-full rounded-[18px] border border-editorial-border bg-editorial-textbox/30 px-4 py-3 text-sm text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                    >
-                      <option value="text-embedding-3-small">text-embedding-3-small</option>
-                      <option value="text-embedding-3-large">text-embedding-3-large</option>
-                    </select>
-                  </label>
-                  {embeddingModel !== activeWorkspace?.embeddingModel && (
-                    <p className="rounded-[18px] border border-editorial-accent/30 bg-editorial-accent/8 px-4 py-3 text-sm leading-relaxed text-editorial-accent [text-wrap:pretty]">
-                      {t('workspace.embeddingChangeWarning')}
-                    </p>
-                  )}
                 </div>
               )}
 
@@ -222,8 +218,40 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                   id="workspace-settings-panel-memory"
                   role="tabpanel"
                   aria-labelledby="workspace-settings-tab-memory"
+                  className="space-y-4"
                 >
-                  <PhraseMemoryPresetManager />
+                  <div className="space-y-3 rounded-[20px] border border-editorial-border bg-editorial-bg/70 px-5 py-4">
+                    <div className="flex items-center gap-1.5">
+                      <Cpu size={11} className="shrink-0 text-editorial-accent" />
+                      <p className="text-xs font-sans uppercase tracking-[0.22em] text-editorial-muted">
+                        {t('workspace.embeddingModel')}
+                      </p>
+                    </div>
+                    <select
+                      value={embeddingModel}
+                      onChange={(e) => setEmbeddingModel(e.target.value as EmbeddingModel)}
+                      className="w-full rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-2 text-xs font-mono text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    >
+                      <option value="text-embedding-3-small">text-embedding-3-small</option>
+                      <option value="text-embedding-3-large">text-embedding-3-large</option>
+                    </select>
+                    {embeddingModel !== activeWorkspace?.embeddingModel && (
+                      <p className="rounded-lg border border-editorial-accent/30 bg-editorial-accent/8 px-3 py-2 text-sm leading-relaxed text-editorial-accent [text-wrap:pretty]">
+                        {t('workspace.embeddingChangeWarning')}
+                      </p>
+                    )}
+                  </div>
+                  <MemoryExtractorSettings
+                    provider={memoryExtractorProvider}
+                    model={memoryExtractorModel}
+                    prompt={memoryExtractorPrompt}
+                    onProviderChange={(provider, model) => {
+                      setMemoryExtractorProvider(provider);
+                      setMemoryExtractorModel(model);
+                    }}
+                    onModelChange={setMemoryExtractorModel}
+                    onPromptChange={setMemoryExtractorPrompt}
+                  />
                 </div>
               )}
 

@@ -19,7 +19,10 @@ type WorkspaceStore = {
   loadWorkspaces: () => Promise<void>;
   createAndActivate: (params: { name: string; description?: string; embeddingModel: EmbeddingModel }) => Promise<Workspace>;
   setActive: (workspace: Workspace) => Promise<void>;
-  updateActiveWorkspace: (updates: Partial<Pick<Workspace, 'name' | 'description' | 'embeddingModel'>>) => Promise<void>;
+  updateActiveWorkspace: (updates: Partial<Pick<Workspace,
+    'name' | 'description' | 'embeddingModel' |
+    'memoryExtractorProvider' | 'memoryExtractorModel' | 'memoryExtractorPrompt'
+  >>) => Promise<void>;
   removeWorkspace: (workspaceId: string) => Promise<void>;
 };
 

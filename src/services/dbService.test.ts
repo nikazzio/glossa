@@ -173,7 +173,7 @@ describe('initDatabase migrations', () => {
     await initDatabase();
 
     expect(invoke).toHaveBeenCalledWith('backup_database_file', {
-      reason: 'schema-1-to-2026-06-05-beta-reset',
+      reason: 'schema-1-to-2026-06-06-phrase-memory-extractor',
     });
     expect(dbState.db.execute).toHaveBeenCalledWith('PRAGMA wal_checkpoint(FULL)');
     expect(dbState.db.execute).toHaveBeenCalledWith('DROP TABLE IF EXISTS projects');
@@ -185,7 +185,7 @@ describe('initDatabase migrations', () => {
 
   it('does not reset a database with the current beta schema version', async () => {
     dbState.setExistingObjects(['app_settings', 'projects', 'workspaces']);
-    dbState.setSchemaVersion('2026-06-05-beta-reset');
+    dbState.setSchemaVersion('2026-06-06-phrase-memory-extractor');
     const { initDatabase } = await import('./dbService');
 
     await initDatabase();
@@ -257,7 +257,6 @@ describe('initDatabase migrations', () => {
 
     for (const table of [
       'workspaces',
-      'phrase_memory_presets',
       'phrase_memory',
       'source_phrase_embeddings',
       'historical_techniques',
@@ -270,17 +269,12 @@ describe('initDatabase migrations', () => {
     expect(dbState.db.execute).toHaveBeenCalledWith(
       expect.stringContaining('ALTER TABLE projects ADD COLUMN workspace_id'),
     );
-  });
-
-  it('seeds 4 builtin phrase memory presets on fresh database', async () => {
-    const { initDatabase } = await import('./dbService');
-
-    await initDatabase();
-
-    const seedCalls = (dbState.db.execute.mock.calls as unknown as [string, unknown[]][]).filter(
-      ([q]) => q.includes('INSERT OR IGNORE INTO phrase_memory_presets'),
+    expect(dbState.db.execute).toHaveBeenCalledWith(
+      expect.stringContaining('memory_extractor_provider TEXT NOT NULL'),
     );
-    expect(seedCalls).toHaveLength(4);
+    expect(dbState.db.execute).toHaveBeenCalledWith(
+      expect.stringContaining('confidence REAL NOT NULL DEFAULT 1.0'),
+    );
   });
 
   it('inserts active_workspace_id key into app_settings on fresh database', async () => {

@@ -13,7 +13,6 @@ import type {
   Pipeline,
   PipelineConfig,
   PipelineMode,
-  PhraseMemoryOverrides,
   PipelineResult,
   PipelineRunStatus,
   PipelineStageConfig,
@@ -48,8 +47,9 @@ interface DbPipeline {
   blob_overlap: number | null;
   coherence_prompt: string | null;
   use_phrase_memory: number;
-  phrase_memory_preset_id: string | null;
-  phrase_memory_overrides: string | null;
+  auto_search_phrase_memory: number | null;
+  phrase_memory_similarity_threshold: number | null;
+  phrase_memory_max_results: number | null;
   run_status: string | null;
   last_run_config: string | null;
   created_at: string;
@@ -103,8 +103,9 @@ function rowToPipelineConfig(row: DbPipeline, glossary: GlossaryEntry[], assigne
     blobOverlap: row.blob_overlap ?? undefined,
     coherencePrompt: row.coherence_prompt?.trim() || undefined,
     usePhraseMemory: row.use_phrase_memory === 1,
-    phraseMemoryPresetId: row.phrase_memory_preset_id ?? null,
-    phraseMemoryOverrides: parseJson<PhraseMemoryOverrides>(row.phrase_memory_overrides) ?? null,
+    autoSearchPhraseMemory: row.auto_search_phrase_memory !== 0,
+    phraseMemorySimilarityThreshold: row.phrase_memory_similarity_threshold ?? 0.75,
+    phraseMemoryMaxResults: row.phrase_memory_max_results ?? 10,
     glossary,
     assignedGlossaryId,
     documentFormat: 'plain',
@@ -195,8 +196,8 @@ export async function duplicatePipeline(sourcePipelineId: string, newName: strin
        use_chunking, words_per_chunk,
        review_provider_options, persona, custom_source_language, custom_target_language,
        blob_budget_tokens, blob_overlap,
-       use_phrase_memory, phrase_memory_preset_id, phrase_memory_overrides
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)`,
+       use_phrase_memory, auto_search_phrase_memory, phrase_memory_similarity_threshold, phrase_memory_max_results
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)`,
     [
       newId, source.project_id, newName,
       source.source_language, source.target_language,
@@ -207,8 +208,9 @@ export async function duplicatePipeline(sourcePipelineId: string, newName: strin
       source.custom_source_language, source.custom_target_language,
       source.blob_budget_tokens ?? 0, source.blob_overlap ?? 1,
       source.use_phrase_memory ?? 0,
-      source.phrase_memory_preset_id ?? null,
-      source.phrase_memory_overrides ?? null,
+      source.auto_search_phrase_memory ?? 1,
+      source.phrase_memory_similarity_threshold ?? 0.75,
+      source.phrase_memory_max_results ?? 10,
     ],
   );
   return newId;
@@ -242,10 +244,11 @@ export async function savePipelineConfig(
        blob_overlap             = $15,
        coherence_prompt         = $16,
        use_phrase_memory        = $17,
-       phrase_memory_preset_id  = $18,
-       phrase_memory_overrides  = $19,
+       auto_search_phrase_memory = $18,
+       phrase_memory_similarity_threshold = $19,
+       phrase_memory_max_results = $20,
        updated_at               = CURRENT_TIMESTAMP
-     WHERE id = $20`,
+     WHERE id = $21`,
     [
       config.sourceLanguage,
       config.targetLanguage,
@@ -264,8 +267,9 @@ export async function savePipelineConfig(
       config.blobOverlap ?? 1,
       config.coherencePrompt?.trim() || null,
       config.usePhraseMemory ? 1 : 0,
-      config.phraseMemoryPresetId ?? null,
-      config.phraseMemoryOverrides ? JSON.stringify(config.phraseMemoryOverrides) : null,
+      config.autoSearchPhraseMemory === false ? 0 : 1,
+      config.phraseMemorySimilarityThreshold ?? 0.75,
+      config.phraseMemoryMaxResults ?? 10,
       pipelineId,
     ],
   );
@@ -459,10 +463,11 @@ export async function saveFullState(
        blob_overlap             = $15,
        coherence_prompt         = $16,
        use_phrase_memory        = $17,
-       phrase_memory_preset_id  = $18,
-       phrase_memory_overrides  = $19,
+       auto_search_phrase_memory = $18,
+       phrase_memory_similarity_threshold = $19,
+       phrase_memory_max_results = $20,
        updated_at               = CURRENT_TIMESTAMP
-     WHERE id = $20`,
+     WHERE id = $21`,
     [
       config.sourceLanguage,
       config.targetLanguage,
@@ -481,8 +486,9 @@ export async function saveFullState(
       config.blobOverlap ?? 1,
       config.coherencePrompt?.trim() || null,
       config.usePhraseMemory ? 1 : 0,
-      config.phraseMemoryPresetId ?? null,
-      config.phraseMemoryOverrides ? JSON.stringify(config.phraseMemoryOverrides) : null,
+      config.autoSearchPhraseMemory === false ? 0 : 1,
+      config.phraseMemorySimilarityThreshold ?? 0.75,
+      config.phraseMemoryMaxResults ?? 10,
       pipelineId,
     ],
   );

@@ -143,11 +143,13 @@ export interface ResponseInfo {
   rawJson: string;
 }
 
+export type PromptTemplateContext = 'stage' | 'audit' | 'persona' | 'memory';
+
 export interface PromptTemplate {
   id: string;
   name: string;
   prompt: string;
-  context: 'stage' | 'audit' | 'persona';
+  context: PromptTemplateContext;
   defaultModel?: string;
   defaultProvider?: string;
   createdAt: string;
@@ -214,8 +216,9 @@ export interface PipelineConfig {
   blobOverlap?: number;
   chunkedWithContextWindow?: number;
   usePhraseMemory?: boolean;
-  phraseMemoryPresetId?: string | null;
-  phraseMemoryOverrides?: PhraseMemoryOverrides | null;
+  autoSearchPhraseMemory?: boolean;
+  phraseMemorySimilarityThreshold?: number;
+  phraseMemoryMaxResults?: number;
   // Runtime-only prompt context. Computed per invocation, never persisted.
   blobContext?: string;
   blobCurrentChunkId?: string;
@@ -225,36 +228,15 @@ export interface PipelineConfig {
 
 export type EmbeddingModel = 'text-embedding-3-small' | 'text-embedding-3-large';
 
-export type PhraseMemorySplitter = 'regex' | 'llm' | 'none';
-
 export type Workspace = {
   id: string;
   name: string;
   description?: string;
   embeddingModel: EmbeddingModel;
+  memoryExtractorProvider: ModelProvider;
+  memoryExtractorModel: string;
+  memoryExtractorPrompt: string;
   createdAt: string;
-};
-
-export type PhraseMemoryPresetConfig = {
-  splitter: PhraseMemorySplitter;
-  similarityThreshold: number;
-  maxResults: number;
-  minPhraseLength: number;
-};
-
-export type PhraseMemoryPreset = {
-  id: string;
-  name: string;
-  isBuiltin: boolean;
-  config: PhraseMemoryPresetConfig;
-  createdAt: string;
-};
-
-export type PhraseMemoryOverrides = {
-  splitter?: PhraseMemorySplitter;
-  similarityThreshold?: number;
-  maxResults?: number;
-  minPhraseLength?: number;
 };
 
 export type PhraseMatch = {
@@ -262,6 +244,7 @@ export type PhraseMatch = {
   sourcePhrase: string;
   targetPhrase: string;
   distance: number;
+  confidence: number;
 };
 
 export type EmbeddingJobStatus =

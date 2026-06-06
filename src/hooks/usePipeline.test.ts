@@ -243,6 +243,7 @@ describe('usePipeline', () => {
         sourcePhrase: 'stored source',
         targetPhrase: 'stored target',
         distance: 0.1,
+        confidence: 0.9,
       },
     ]);
     usePhraseMemoryStore.getState().setEnabledMatchIds('chunk-1', new Set(['pm-1']));
@@ -274,6 +275,7 @@ describe('usePipeline', () => {
         sourcePhrase: 'stored source',
         targetPhrase: 'stored target',
         distance: 0.1,
+        confidence: 0.9,
       },
     ]);
     usePhraseMemoryStore.getState().setEnabledMatchIds('chunk-1', new Set(['pm-1']));

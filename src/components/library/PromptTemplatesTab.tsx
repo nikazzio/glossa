@@ -1,17 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { Trash2, BookmarkPlus, Check, X, Wand2, Loader2, LayoutGrid, Languages, Scale, Bot } from 'lucide-react';
+import { Trash2, BookmarkPlus, Check, X, Wand2, Loader2, LayoutGrid, Languages, Scale, Bot, Brain } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { confirm } from '../../stores/confirmStore';
 import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
 import { useUiStore } from '../../stores/uiStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
-import type { ModelProvider } from '../../types';
+import type { ModelProvider, PromptTemplateContext } from '../../types';
 import { llmService } from '../../services/llmService';
 import { getSelectableModelIds, MODEL_PROVIDER_ORDER } from '../../models/catalog';
 import { canRefineWithProvider, formatProviderModelLabel, useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
+import { IconButton } from '../ui';
 
-const FILTER_OPTIONS = ['all', 'stage', 'audit', 'persona'] as const;
+const FILTER_OPTIONS = ['all', 'stage', 'audit', 'persona', 'memory'] as const;
 type FilterValue = (typeof FILTER_OPTIONS)[number];
 
 const FILTER_ICONS: Record<FilterValue, React.ReactNode> = {
@@ -19,6 +20,7 @@ const FILTER_ICONS: Record<FilterValue, React.ReactNode> = {
   stage: <Languages size={14} />,
   audit: <Scale size={14} />,
   persona: <Bot size={14} />,
+  memory: <Brain size={14} />,
 };
 
 export function PromptTemplatesTab() {
@@ -28,7 +30,7 @@ export function PromptTemplatesTab() {
   const { config } = usePipelineStore();
   const [newName, setNewName] = useState('');
   const [newPrompt, setNewPrompt] = useState('');
-  const [newContext, setNewContext] = useState<'stage' | 'audit' | 'persona'>('stage');
+  const [newContext, setNewContext] = useState<PromptTemplateContext>('stage');
   const [creating, setCreating] = useState(false);
   const [filterContext, setFilterContext] = useState<FilterValue>('all');
   const [isRefining, setIsRefining] = useState(false);
@@ -51,18 +53,21 @@ export function PromptTemplatesTab() {
     if (value === 'all') return t('common.all');
     if (value === 'stage') return t('pipeline.tabStages');
     if (value === 'audit') return t('pipeline.tabAudit');
+    if (value === 'memory') return t('workspace.settings.memoryTab');
     return t('pipeline.tabPersona');
   };
 
-  const contextLabel = (context: 'stage' | 'audit' | 'persona') => {
+  const contextLabel = (context: PromptTemplateContext) => {
     if (context === 'audit') return t('pipeline.tabAudit');
     if (context === 'persona') return t('pipeline.tabPersona');
+    if (context === 'memory') return t('workspace.settings.memoryTab');
     return t('pipeline.tabStages');
   };
 
-  const contextBadgeClass = (context: 'stage' | 'audit' | 'persona') => {
+  const contextBadgeClass = (context: PromptTemplateContext) => {
     if (context === 'audit') return 'bg-editorial-warning/20 text-editorial-warning';
     if (context === 'persona') return 'bg-editorial-textbox/60 text-editorial-muted';
+    if (context === 'memory') return 'bg-editorial-success/15 text-editorial-success';
     return 'bg-editorial-accent/20 text-editorial-accent';
   };
 
@@ -134,19 +139,16 @@ export function PromptTemplatesTab() {
           {FILTER_OPTIONS.map((ctx) => {
             const isActive = filterContext === ctx;
             return (
-              <button
+              <IconButton
                 key={ctx}
-                onClick={() => setFilterContext(ctx)}
+                size="md"
+                tone={isActive ? 'accent' : 'default'}
                 title={filterLabel(ctx)}
-                aria-label={filterLabel(ctx)}
-                className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                  isActive
-                    ? 'border-editorial-accent bg-editorial-accent text-white'
-                    : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
-                }`}
+                onClick={() => setFilterContext(ctx)}
+                ariaPressed={isActive}
               >
                 {FILTER_ICONS[ctx]}
-              </button>
+              </IconButton>
             );
           })}
           <span className="mx-1 h-4 w-px self-center bg-editorial-border/70" aria-hidden="true" />
@@ -154,14 +156,13 @@ export function PromptTemplatesTab() {
             {filterLabel(filterContext)}
           </span>
         </div>
-        <button
+        <IconButton
+          size="md"
           onClick={() => setCreating(true)}
           title={t('library.newTemplate')}
-          aria-label={t('library.newTemplate')}
-          className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
         >
           <BookmarkPlus size={13} />
-        </button>
+        </IconButton>
       </div>
 
       {creating && (
@@ -176,25 +177,28 @@ export function PromptTemplatesTab() {
             />
             <select
               value={newContext}
-              onChange={(e) => setNewContext(e.target.value as 'stage' | 'audit' | 'persona')}
+              onChange={(e) => setNewContext(e.target.value as PromptTemplateContext)}
               className="rounded-[16px] border border-editorial-border bg-editorial-bg/80 px-3 py-2.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             >
               <option value="stage">{t('pipeline.tabStages')}</option>
               <option value="audit">{t('pipeline.tabAudit')}</option>
               <option value="persona">{t('pipeline.tabPersona')}</option>
+              <option value="memory">{t('workspace.settings.memoryTab')}</option>
             </select>
           </div>
-          <p className="text-[11px] leading-relaxed text-editorial-muted">
+          <p className="text-xs leading-relaxed text-editorial-muted">
             {newContext === 'audit'
               ? t('library.templateAuditHint')
               : newContext === 'persona'
                 ? t('library.templatePersonaHint')
+                : newContext === 'memory'
+                  ? t('library.templateMemoryHint')
                 : t('library.templateStageHint')}
           </p>
 
           <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-editorial-muted">
+              <span className="text-xs font-bold uppercase tracking-[0.22em] text-editorial-muted">
                 {t('pipeline.prompt')}
               </span>
               <div className="flex flex-wrap items-center gap-2">
@@ -205,7 +209,7 @@ export function PromptTemplatesTab() {
                     setRefineProvider(p);
                     setRefineModel(getProviderModels(p)[0] ?? '');
                   }}
-                  className="rounded-full border border-editorial-border bg-editorial-bg px-3 py-1.5 text-[10px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  className="rounded-full border border-editorial-border bg-editorial-bg px-3 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 >
                   {MODEL_PROVIDER_ORDER.map((p) => (
                     <option key={p} value={p}>{p}</option>
@@ -214,7 +218,7 @@ export function PromptTemplatesTab() {
                 <select
                   value={refineModel}
                   onChange={(e) => setRefineModel(e.target.value)}
-                  className="max-w-[160px] rounded-full border border-editorial-border bg-editorial-bg px-3 py-1.5 text-[10px] font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  className="max-w-[160px] rounded-full border border-editorial-border bg-editorial-bg px-3 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 >
                   {modelOptions.map((m) => (
                     <option key={m} value={m}>{m}</option>
@@ -243,14 +247,14 @@ export function PromptTemplatesTab() {
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button
               onClick={() => setCreating(false)}
-              className="flex items-center gap-2 rounded-full border border-editorial-border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="flex items-center gap-2 rounded-full border border-editorial-border px-4 py-2 text-xs font-bold uppercase tracking-[0.22em] text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             >
               <X size={13} /> {t('common.cancel')}
             </button>
             <button
               onClick={handleSave}
               disabled={!newName.trim() || !newPrompt.trim()}
-              className="flex items-center gap-2 rounded-full bg-editorial-accent px-5 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-white transition-colors hover:bg-editorial-accent/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex items-center gap-2 rounded-full bg-editorial-accent px-5 py-2 text-xs font-bold uppercase tracking-[0.22em] text-white transition-colors hover:bg-editorial-accent/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Check size={13} /> {t('library.saveTemplate')}
             </button>
@@ -273,7 +277,7 @@ export function PromptTemplatesTab() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <span className="font-display text-base italic text-editorial-ink">{tmpl.name}</span>
-                <span className={`rounded-full px-3 py-0.5 text-[9px] font-bold uppercase tracking-[0.25em] ${contextBadgeClass(tmpl.context)}`}>
+                <span className={`rounded-full px-3 py-0.5 text-xs font-bold uppercase tracking-[0.22em] ${contextBadgeClass(tmpl.context)}`}>
                   {contextLabel(tmpl.context)}
                 </span>
               </div>

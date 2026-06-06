@@ -18,7 +18,6 @@ const INSERT_ORDER = [
   'project_glossaries',
   'glossary_entries',
   'translations',
-  'phrase_memory_presets',
   'phrase_memory',
   'source_phrase_embeddings',
 ] as const;
@@ -26,24 +25,22 @@ const INSERT_ORDER = [
 const SAFE_COL = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
 
 const ALLOWED_COLUMNS: Record<BackupTable, ReadonlySet<string>> = {
-  workspaces:               new Set(['id','name','description','embedding_model','created_at']),
+  workspaces:               new Set(['id','name','description','embedding_model','memory_extractor_provider','memory_extractor_model','memory_extractor_prompt','created_at']),
   glossaries:               new Set(['id','name','description','source_language','target_language','created_at']),
   projects:                 new Set(['id','name','source_language','target_language','workspace_id','created_at','updated_at','view_mode','source_display_text']),
   app_settings:             new Set(['key','value']),
   prompt_templates:         new Set(['id','name','prompt','default_model','default_provider','created_at','updated_at','context']),
-  pipelines:                new Set(['id','project_id','name','source_language','target_language','pipeline_mode','stages','judge_prompt','judge_model','judge_provider','use_chunking','words_per_chunk','source_display_text','source_processing_text','source_footnotes','review_provider_options','persona','custom_source_language','custom_target_language','blob_budget_tokens','blob_overlap','coherence_prompt','run_status','last_run_config','run_in_progress','created_at','updated_at','use_phrase_memory','phrase_memory_preset_id','phrase_memory_overrides']),
+  pipelines:                new Set(['id','project_id','name','source_language','target_language','pipeline_mode','stages','judge_prompt','judge_model','judge_provider','use_chunking','words_per_chunk','source_display_text','source_processing_text','source_footnotes','review_provider_options','persona','custom_source_language','custom_target_language','blob_budget_tokens','blob_overlap','coherence_prompt','run_status','last_run_config','run_in_progress','created_at','updated_at','use_phrase_memory','auto_search_phrase_memory','phrase_memory_similarity_threshold','phrase_memory_max_results']),
   project_glossaries:       new Set(['project_id','glossary_id']),
   glossary_entries:         new Set(['id','glossary_id','term','translation','notes','context','created_at']),
   translations:             new Set(['id','project_id','original_text','final_translation','source_display_text','source_processing_text','translation_display_text','translation_processing_text','position','chunk_status','stage_results','judge_status','judge_rating','translation_locked','judge_issues','created_at','coherence_result','footnotes','blob_id','blob_order','blob_reference_chunk_ids','pipeline_id','notes']),
-  phrase_memory_presets:    new Set(['id','name','is_builtin','config','created_at']),
-  phrase_memory:            new Set(['id','workspace_id','source_phrase','target_phrase','source_language','target_language','author','work','domain','tags','notes','chunk_id','project_id','embedding','created_at']),
+  phrase_memory:            new Set(['id','workspace_id','source_phrase','target_phrase','confidence','source_language','target_language','author','work','domain','tags','notes','chunk_id','project_id','embedding','created_at']),
   source_phrase_embeddings: new Set(['id','project_id','chunk_id','source_phrase','embedding','created_at']),
 };
 
 const DELETE_ORDER = [
   'source_phrase_embeddings',
   'phrase_memory',
-  'phrase_memory_presets',
   'translations',
   'glossary_entries',
   'project_glossaries',

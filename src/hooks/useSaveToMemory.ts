@@ -4,7 +4,6 @@ import { usePipelineStore } from '../stores/pipelineStore';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useProjectStore } from '../stores/projectStore';
 import { usePhraseMemoryStore } from '../stores/phraseMemoryStore';
-import { listPresets } from '../services/phraseMemoryPresetService';
 import { saveSelectedPhrases } from '../services/phraseMemoryService';
 import { logger } from '../utils/logger';
 
@@ -32,11 +31,6 @@ export function useSaveToMemory() {
     });
     if (selected.length === 0) return 0;
 
-    const presets = await listPresets(activeWorkspace.id);
-    const preset = presets.find((p) => p.id === config.phraseMemoryPresetId) ?? presets[0] ?? null;
-    const splitter = config.phraseMemoryOverrides?.splitter ?? preset?.config.splitter ?? 'regex';
-    const minPhraseLength = config.phraseMemoryOverrides?.minPhraseLength ?? preset?.config.minPhraseLength ?? 3;
-
     setIsSaving(true);
     setProgress({ done: 0, total: selected.length });
     usePhraseMemoryStore.getState().setJobStatus({
@@ -48,8 +42,9 @@ export function useSaveToMemory() {
         workspaceId: activeWorkspace.id,
         projectId: currentProjectId,
         embeddingModel: activeWorkspace.embeddingModel,
-        splitter,
-        minPhraseLength,
+        extractorProvider: activeWorkspace.memoryExtractorProvider,
+        extractorModel: activeWorkspace.memoryExtractorModel,
+        extractorPrompt: activeWorkspace.memoryExtractorPrompt,
         sourceLanguage: config.sourceLanguage,
         targetLanguage: config.targetLanguage,
         chunks: selected.map((c) => ({

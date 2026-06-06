@@ -64,7 +64,6 @@ describe('workspaceService', () => {
 
     expect(dbMocks.execute.mock.calls.map(([query]) => query)).toEqual([
       'DELETE FROM phrase_memory WHERE workspace_id = $1',
-      'DELETE FROM phrase_memory_presets WHERE workspace_id = $1',
       'DELETE FROM workspaces WHERE id = $1',
     ]);
   });

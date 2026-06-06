@@ -8,6 +8,7 @@ const makeRaw = (id: string, distance = 0.1): PhraseMatch => ({
   sourcePhrase: `src-${id}`,
   targetPhrase: `tgt-${id}`,
   distance,
+  confidence: 0.85,
 });
 
 describe('phraseMemoryStore', () => {

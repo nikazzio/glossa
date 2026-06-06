@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { PromptTemplate } from '../types';
+import type { PromptTemplate, PromptTemplateContext } from '../types';
 import {
   getPromptTemplates,
   savePromptTemplate,
@@ -9,7 +9,7 @@ import {
 export type SaveTemplateFn = (
   name: string,
   prompt: string,
-  context: 'stage' | 'audit' | 'persona',
+  context: PromptTemplateContext,
   defaultModel?: string,
   defaultProvider?: string,
 ) => Promise<void>;
@@ -21,7 +21,7 @@ interface PromptTemplateState {
   saveTemplate: (
     name: string,
     prompt: string,
-    context: 'stage' | 'audit' | 'persona',
+    context: PromptTemplateContext,
     defaultModel?: string,
     defaultProvider?: string,
   ) => Promise<void>;
