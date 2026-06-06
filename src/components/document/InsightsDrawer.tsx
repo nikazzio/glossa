@@ -45,6 +45,7 @@ import {
   summarizeChunkUsage,
   summarizeGlobalUsage,
   type OperationLogRunSummary,
+  type ScopeBreakdownEntry,
 } from '../../utils/operationLogStats';
 import { useOperationLogStore } from '../../stores/operationLogStore';
 import { useChunkWatchdog } from '../../hooks/useChunkWatchdog';
@@ -744,20 +745,10 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
           <StatRow label={t('document.summaryTranslationRuns')} value={usageSummary.translationRuns.toLocaleString()} />
           <StatRow label={t('document.summaryAuditRuns')} value={usageSummary.auditRuns.toLocaleString()} />
         </dl>
-        {usageSummary.modelNames.length > 0 && (
+        {usageSummary.scopeBreakdown.length > 0 && (
           <div className="mt-3 space-y-1">
-            {usageSummary.modelBreakdown.map(({ modelName, stats }) => (
-              <div key={modelName} className="rounded-xl border border-editorial-border/70 bg-editorial-textbox/40 px-2.5 py-2 text-[10px] text-editorial-muted/80">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-mono truncate">{modelName}</span>
-                  <span className="font-mono text-editorial-ink">{(stats.totalInput + stats.totalOutput).toLocaleString()} tok</span>
-                </div>
-                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[9px] uppercase tracking-[0.18em]">
-                  <span>{t('header.cachedInput')}: {stats.totalCached.toLocaleString()}</span>
-                  <span>{t('header.cacheHitRate')}: {formatCacheHitRate(stats.cacheHitRate)}</span>
-                  <span>{t('header.estimatedCost')}: {formatUsd(stats.totalUsd)}</span>
-                </div>
-              </div>
+            {usageSummary.scopeBreakdown.map((entry) => (
+              <ScopeBreakdownCard key={entry.scope} entry={entry} />
             ))}
           </div>
         )}
@@ -771,6 +762,36 @@ function StatRow({ label, value }: { label: string; value: string }) {
     <div className="flex items-baseline gap-1">
       <dt className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">{label}</dt>
       <dd className="font-display text-sm italic text-editorial-ink">{value}</dd>
+    </div>
+  );
+}
+
+const TOP_SCOPE_I18N_KEYS = new Set(['log.scopeAudit', 'log.scopeCoherence']);
+
+function ScopeBreakdownCard({ entry }: { entry: ScopeBreakdownEntry }) {
+  const { t } = useTranslation();
+  const { labelKey, model, stats } = entry;
+  const label = TOP_SCOPE_I18N_KEYS.has(labelKey) ? t(labelKey) : labelKey;
+  const totalTok = stats.totalInput + stats.totalOutput;
+  return (
+    <div className="rounded-xl border border-editorial-border/70 bg-editorial-textbox/40 px-3 py-2.5">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted shrink-0">{label}</span>
+        <span className="font-display text-sm italic text-editorial-ink shrink-0">{totalTok.toLocaleString()} tok</span>
+      </div>
+      {model && (
+        <div className="mt-0.5 truncate font-mono text-xs text-editorial-muted/70">{model}</div>
+      )}
+      <div className="mt-2 flex gap-5">
+        <div>
+          <dt className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">{t('header.cacheHitRate')}</dt>
+          <dd className="font-display text-sm italic text-editorial-ink">{formatCacheHitRate(stats.cacheHitRate)}</dd>
+        </div>
+        <div>
+          <dt className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">{t('header.estimatedCost')}</dt>
+          <dd className="font-display text-sm italic text-editorial-ink">{formatUsd(stats.totalUsd)}</dd>
+        </div>
+      </div>
     </div>
   );
 }

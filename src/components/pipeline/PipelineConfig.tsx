@@ -450,7 +450,6 @@ export function PipelineConfig({
               missingRefineProviders={missingRefineProviders}
               usePhraseMemory={config.usePhraseMemory ?? false}
               autoSearchPhraseMemory={config.autoSearchPhraseMemory !== false}
-              phraseMemorySimilarityThreshold={config.phraseMemorySimilarityThreshold ?? 0.75}
               phraseMemoryMaxResults={config.phraseMemoryMaxResults ?? 10}
               onPhraseMemoryChange={(memoryConfig) =>
                 setConfig((prev) => ({ ...prev, ...memoryConfig }))

@@ -918,7 +918,7 @@
       "insightsTitle": "Insights panel",
       "insightsDesc": "Slides in from the right via the panel icon in the header. Two levels: the Document panel (Index, Search, Stats, Coherence, Glossary) for whole-document metrics and search, and the Chunk panel (Summary, Audit, Notes, Operations) for the selected chunk. Selecting a chunk in the index automatically opens the Chunk level.",
       "statsTitle": "Session stats",
-      "statsDesc": "The Stats tab aggregates input and output tokens, estimated cost, and chunk distribution for the current session, broken down by provider and model. Useful to monitor spend on long documents translated across multiple sessions.",
+      "statsDesc": "The Stats tab aggregates input and output tokens, estimated cost, and cache hit rate for the current session. The breakdown is per operation — each pipeline stage (e.g. Translation, Refine, Format), Audit, and Coherence — showing the model used and the percentage of tokens served from cache for each.",
       "operationsLogTitle": "Structured operations log",
       "operationsLogDesc": "The Operations tab in the Insights panel records every significant event: prompt sent, stage completion, errors, retries, audit, coherence. Each entry has a scope (pipeline / stage / audit / coherence), a level (info / success / warn / error), and — when relevant — the chunk involved. Prompt entries store the full system and user prompts in an expandable field, so you can inspect the exact request sent.",
       "phraseMemoryTitle": "Phrase Memory",
@@ -988,7 +988,9 @@
       "stageCoherence": "Coherence audit",
       "stageCoherenceDesc": "Compares translated chunks against each other — not against the source. Receives a reference block of already-translated neighbors to spot terminology drift and continuity breaks across the document.",
       "tipTitle": "What this means in practice",
-      "tipDesc": "After the first chunk in a group is processed, subsequent chunks in the same group cost less because the provider reuses the cached layers. On long documents with many chunks the savings are significant, especially in editorial mode where three stages run per chunk."
+      "tipDesc": "After the first chunk in a group is processed, subsequent chunks in the same group cost less because the provider reuses the cached layers. On long documents with many chunks the savings are significant, especially in editorial mode where three stages run per chunk.",
+      "cacheRetentionTitle": "Cache retention per model",
+      "cacheRetentionDesc": "OpenAI uses two different cache policies. Full models (gpt-5.4 and above) use extended retention: the prefix stays cached for up to 24 hours, so each subsequent chunk benefits from the previous run's warm cache. Mini and nano models use in-memory retention only: the prefix expires after 5–10 minutes of inactivity. This explains why Refine (typically on gpt-5.4-mini) can show 0% cache hit even when the prompt is identical: if more than ~10 minutes passed between chunks, the cache has already expired."
     },
     "streaming": {
       "title": "Real-time streaming",
@@ -1292,7 +1294,8 @@
     "selectionHint": "Found matches are suggestions only: select them to include them in the next pipeline run.",
     "matchBadge_one": "{{count}} match",
     "matchBadge_other": "{{count}} matches",
-    "matchBadge": "{{count}} match"
+    "matchBadge": "{{count}} match",
+    "similarityThreshold": "Similarity threshold"
   },
   "glossary": {
     "translation": "Translation",

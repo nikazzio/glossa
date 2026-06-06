@@ -25,12 +25,10 @@ interface SettingsTabPanelProps {
   missingRefineProviders: string[];
   usePhraseMemory: boolean;
   autoSearchPhraseMemory: boolean;
-  phraseMemorySimilarityThreshold: number;
   phraseMemoryMaxResults: number;
   onPhraseMemoryChange: (value: {
     usePhraseMemory: boolean;
     autoSearchPhraseMemory: boolean;
-    phraseMemorySimilarityThreshold: number;
     phraseMemoryMaxResults: number;
   }) => void;
 }
@@ -52,7 +50,6 @@ export function SettingsTabPanel({
   missingRefineProviders,
   usePhraseMemory,
   autoSearchPhraseMemory,
-  phraseMemorySimilarityThreshold,
   phraseMemoryMaxResults,
   onPhraseMemoryChange,
 }: SettingsTabPanelProps) {
@@ -206,7 +203,6 @@ export function SettingsTabPanel({
       <PhraseMemoryConfig
         usePhraseMemory={usePhraseMemory ?? false}
         autoSearchPhraseMemory={autoSearchPhraseMemory}
-        phraseMemorySimilarityThreshold={phraseMemorySimilarityThreshold}
         phraseMemoryMaxResults={phraseMemoryMaxResults}
         onChange={onPhraseMemoryChange}
         disabled={isProcessing}

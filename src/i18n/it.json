@@ -918,7 +918,7 @@
       "insightsTitle": "Pannello Insight",
       "insightsDesc": "Si apre dalla destra con l'icona pannello nell'header. Ha due livelli: il pannello Documento (Indice, Cerca, Statistiche, Coerenza, Glossario) per metriche e ricerca su tutto il documento, e il pannello Chunk (Riepilogo, Audit, Note, Operazioni) per il chunk selezionato. La selezione di un chunk nell'indice apre automaticamente il livello Chunk.",
       "statsTitle": "Statistiche di sessione",
-      "statsDesc": "Il tab Statistiche aggrega token in input e output, costo stimato e distribuzione dei chunk per la sessione corrente, separati per provider e modello. Utile per monitorare il consumo su documenti lunghi tradotti in più sessioni.",
+      "statsDesc": "Il tab Statistiche aggrega token in input e output, costo stimato e cache hit rate per la sessione corrente. Il riepilogo suddivide il consumo per operazione — ogni stage della pipeline (es. Translation, Refine, Format), l'Audit e la Coerenza — mostrando il modello usato e la percentuale di token serviti dalla cache per ciascuno.",
       "operationsLogTitle": "Log operazioni strutturato",
       "operationsLogDesc": "Il tab Operazioni del pannello Insight registra ogni evento significativo: prompt inviato, completamento di uno stage, errori, retry, audit, coerenza. Ogni voce ha scope (pipeline / stage / audit / coherence), livello (info / success / warn / error) e — quando rilevante — il chunk interessato. Le voci di prompt contengono system e user prompt completi in un campo espandibile, così puoi ispezionare esattamente la richiesta inviata.",
       "phraseMemoryTitle": "Phrase Memory",
@@ -988,7 +988,9 @@
       "stageCoherence": "Audit coerenza",
       "stageCoherenceDesc": "Confronta i chunk tradotti tra di loro — non con il sorgente. Riceve un blocco di riferimento di vicini già tradotti per individuare derive terminologiche e rotture di continuità nel documento.",
       "tipTitle": "Cosa significa in pratica",
-      "tipDesc": "Dopo che il primo chunk di un gruppo viene elaborato, i chunk successivi dello stesso gruppo costano meno perché il provider riusa gli strati cachati. Su documenti lunghi con molti chunk il risparmio è significativo, specialmente in modalità editoriale dove tre stage vengono eseguiti per chunk."
+      "tipDesc": "Dopo che il primo chunk di un gruppo viene elaborato, i chunk successivi dello stesso gruppo costano meno perché il provider riusa gli strati cachati. Su documenti lunghi con molti chunk il risparmio è significativo, specialmente in modalità editoriale dove tre stage vengono eseguiti per chunk.",
+      "cacheRetentionTitle": "Cache retention per modello",
+      "cacheRetentionDesc": "OpenAI distingue due politiche di cache. I modelli completi (gpt-5.4 e superiori) usano la extended retention: il prefisso rimane in cache fino a 24 ore, quindi ogni chunk successivo beneficia del riscaldamento del run precedente. I modelli mini e nano usano invece la in-memory retention: il prefisso scade dopo 5–10 minuti di inattività. Questo spiega perché Refine (tipicamente su gpt-5.4-mini) può mostrare 0% di cache hit anche quando il prompt è identico: se sono passati più di 10 minuti tra un chunk e il successivo, la cache è già scaduta."
     },
     "streaming": {
       "title": "Streaming in tempo reale",
@@ -1292,7 +1294,8 @@
     "selectionHint": "I match trovati sono solo suggerimenti: selezionali per inserirli nella prossima esecuzione della pipeline.",
     "matchBadge_one": "{{count}} match",
     "matchBadge_other": "{{count}} match",
-    "matchBadge": "{{count}} match"
+    "matchBadge": "{{count}} match",
+    "similarityThreshold": "Soglia di similarità"
   },
   "glossary": {
     "translation": "Traduzione",

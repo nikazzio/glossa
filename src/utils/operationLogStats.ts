@@ -1,4 +1,4 @@
-import type { OperationLogEntry } from '../stores/operationLogStore';
+import type { OperationLogEntry, OperationLogScope } from '../stores/operationLogStore';
 import { MODEL_PRICING } from '../constants';
 
 export interface OperationLogStats {
@@ -41,6 +41,17 @@ export interface OperationLogRunSummary {
   stats: OperationLogStats;
 }
 
+export interface ScopeBreakdownEntry {
+  /** Human-readable label: stage name for stage entries, scope label key otherwise */
+  labelKey: string;
+  /** Raw scope from the log entry */
+  scope: OperationLogScope;
+  /** stageId for stage entries, undefined for top-level scopes */
+  stageId?: string;
+  model: string | null;
+  stats: OperationLogStats;
+}
+
 export interface GlobalUsageSummary {
   overall: OperationLogStats;
   translation: OperationLogStats;
@@ -51,6 +62,7 @@ export interface GlobalUsageSummary {
     modelName: string;
     stats: OperationLogStats;
   }>;
+  scopeBreakdown: ScopeBreakdownEntry[];
   translationRuns: number;
   auditRuns: number;
   coherenceRuns: number;
@@ -229,6 +241,8 @@ export function summarizeGlobalUsage(
   const coherenceEntries: OperationLogEntry[] = [];
   const modelNames = new Set<string>();
   const entriesByModel = new Map<string, OperationLogEntry[]>();
+  const stageEntriesByStageId = new Map<string, OperationLogEntry[]>();
+  const entriesByTopScope = new Map<OperationLogScope, OperationLogEntry[]>();
   let translationRuns = 0;
   let auditRuns = 0;
   let coherenceRuns = 0;
@@ -241,6 +255,16 @@ export function summarizeGlobalUsage(
       const bucket = entriesByModel.get(modelName) ?? [];
       bucket.push(entry);
       entriesByModel.set(modelName, bucket);
+    }
+    if (entry.scope === 'stage') {
+      const key = entry.stageId ?? '__unknown__';
+      const bucket = stageEntriesByStageId.get(key) ?? [];
+      bucket.push(entry);
+      stageEntriesByStageId.set(key, bucket);
+    } else if (entry.scope === 'audit' || entry.scope === 'coherence') {
+      const bucket = entriesByTopScope.get(entry.scope) ?? [];
+      bucket.push(entry);
+      entriesByTopScope.set(entry.scope, bucket);
     }
     const category = categoryForEntry(entry);
     if (!category || entry.phase !== 'end' || !hasUsage(usage)) continue;
@@ -256,6 +280,43 @@ export function summarizeGlobalUsage(
     }
   }
 
+  // Stage entries: one breakdown row per stageId (e.g. Translation, Refine, Format)
+  // Stage name comes from the start entry's meta.stageName or from the message.
+  const stageRows: ScopeBreakdownEntry[] = Array.from(stageEntriesByStageId.entries())
+    .map(([stageId, stageEntries]) => {
+      const startEntry = stageEntries.find((e) => e.phase === 'start');
+      const stageName =
+        (typeof startEntry?.meta?.stageName === 'string' ? startEntry.meta.stageName : undefined)
+        ?? stageNameFromEntry(stageEntries.find((e) => e.phase === 'end') ?? stageEntries[0])
+        ?? stageId;
+      const endEntry = stageEntries.find((e) => e.phase === 'end');
+      const usage = endEntry ? readUsage(endEntry) : null;
+      const model = usage?.provider && usage.model ? `${usage.provider} / ${usage.model}` : null;
+      const stats = aggregateEntries(stageEntries, pricingOverrides);
+      return { labelKey: stageName, scope: 'stage' as OperationLogScope, stageId, model, stats };
+    })
+    .filter((r) => r.stats.totalInput > 0 || r.stats.totalOutput > 0);
+
+  // Top-level scopes: audit, coherence
+  const TOP_SCOPE_LABEL_KEYS: Partial<Record<OperationLogScope, string>> = {
+    audit: 'log.scopeAudit',
+    coherence: 'log.scopeCoherence',
+  };
+  const topScopeRows: ScopeBreakdownEntry[] = (
+    ['audit', 'coherence'] as OperationLogScope[]
+  )
+    .filter((scope) => entriesByTopScope.has(scope))
+    .map((scope) => {
+      const scopeEntries = entriesByTopScope.get(scope)!;
+      const lastUsage = [...scopeEntries].reverse().map(readUsage).find((u) => u.provider && u.model);
+      const model = lastUsage ? `${lastUsage.provider} / ${lastUsage.model}` : null;
+      const stats = aggregateEntries(scopeEntries, pricingOverrides);
+      return { labelKey: TOP_SCOPE_LABEL_KEYS[scope]!, scope, model, stats };
+    })
+    .filter((r) => r.stats.totalInput > 0 || r.stats.totalOutput > 0);
+
+  const scopeBreakdown: ScopeBreakdownEntry[] = [...stageRows, ...topScopeRows];
+
   return {
     overall,
     translation: aggregateEntries(translationEntries, pricingOverrides),
@@ -268,6 +329,7 @@ export function summarizeGlobalUsage(
         stats: aggregateEntries(modelEntries, pricingOverrides),
       }))
       .sort((a, b) => b.stats.totalInput + b.stats.totalOutput - (a.stats.totalInput + a.stats.totalOutput)),
+    scopeBreakdown,
     translationRuns,
     auditRuns,
     coherenceRuns,

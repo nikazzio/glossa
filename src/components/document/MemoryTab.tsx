@@ -7,10 +7,15 @@ import { usePhraseMemoryMatches } from '../../hooks/usePhraseMemoryMatches';
 import { useSaveToMemory } from '../../hooks/useSaveToMemory';
 import { usePhraseMemoryStore, type PhraseMemoryMatch } from '../../stores/phraseMemoryStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { usePipelineStore } from '../../stores/pipelineStore';
 import { confirm } from '../../stores/confirmStore';
 import { listPhraseMemoryEntries } from '../../services/phraseMemoryService';
 import { IconButton, SectionLabel } from '../ui';
 import { ExtractTermDialog } from './ExtractTermDialog';
+
+const MIN_THRESHOLD = 0.5;
+const MAX_THRESHOLD = 1;
+const DEFAULT_THRESHOLD = 0.75;
 
 interface MemoryTabProps {
   panelId: string;
@@ -29,6 +34,14 @@ export function MemoryTab({ panelId, labelledBy, currentChunkId, onRerun }: Memo
   const { runSearchForChunk } = usePhraseMemoryAutoSearch({ auto: false });
   const searchStatus = usePhraseMemoryStore((s) => s.searchStatus);
   const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace);
+  const threshold = usePipelineStore((s) => s.config.phraseMemorySimilarityThreshold ?? DEFAULT_THRESHOLD);
+  const setConfig = usePipelineStore((s) => s.setConfig);
+
+  const effectiveThreshold = Number.isFinite(threshold) ? threshold : DEFAULT_THRESHOLD;
+
+  const handleThresholdChange = (value: number) => {
+    setConfig((prev) => ({ ...prev, phraseMemorySimilarityThreshold: value }));
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -107,6 +120,8 @@ export function MemoryTab({ panelId, labelledBy, currentChunkId, onRerun }: Memo
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex min-h-0 flex-1 flex-col">
       <div className="shrink-0 space-y-3 border-b border-editorial-border px-4 py-3">
+
+        {/* Row 1: label + match action buttons */}
         <div className="flex items-center justify-between gap-3">
           <SectionLabel icon={Brain} label={t('document.insightsTabMemory')} />
           <div className="flex items-center gap-1">
@@ -131,42 +146,72 @@ export function MemoryTab({ panelId, labelledBy, currentChunkId, onRerun }: Memo
             </IconButton>
           </div>
         </div>
-        {chunkMemoryCount !== null ? (
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-editorial-success/35 bg-editorial-success/10 font-display text-sm italic text-editorial-success">
-                {chunkMemoryCount}
+
+        {/* Threshold slider — below match button, controls search sensitivity */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <label
+              htmlFor="memory-threshold"
+              className="text-[10px] font-sans uppercase tracking-[0.28em] text-editorial-muted"
+            >
+              {t('memory.similarityThreshold')}
+            </label>
+            <span className="font-mono text-xs font-bold text-editorial-accent">
+              {effectiveThreshold.toFixed(2)}
+            </span>
+          </div>
+          <input
+            id="memory-threshold"
+            type="range"
+            min={MIN_THRESHOLD}
+            max={MAX_THRESHOLD}
+            step="0.01"
+            value={effectiveThreshold}
+            onChange={(e) => handleThresholdChange(parseFloat(e.target.value))}
+            className="w-full accent-editorial-accent"
+            aria-label={t('memory.similarityThreshold')}
+          />
+        </div>
+
+        {/* Divider between match controls and memory storage */}
+        <div className="border-t border-editorial-border/50 pt-3">
+          {chunkMemoryCount !== null ? (
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-editorial-success/35 bg-editorial-success/10 font-display text-sm italic text-editorial-success">
+                  {chunkMemoryCount}
+                </div>
+                <p className="min-w-0 text-sm font-medium leading-snug text-editorial-muted">
+                  {t('memory.memoriesLabel')}
+                </p>
               </div>
-              <p className="min-w-0 text-sm font-medium leading-snug text-editorial-muted">
-                {t('memory.memoriesLabel')}
-              </p>
+              <IconButton
+                size="md"
+                title={saveButtonLabel}
+                onClick={() => void handleSaveToMemory()}
+                disabled={isSaving || !currentChunkId}
+                tooltipSide="left"
+              >
+                {isSaving ? <Loader2 size={13} className="animate-spin" /> : <Database size={13} />}
+              </IconButton>
             </div>
-            <IconButton
-              size="md"
-              title={saveButtonLabel}
-              onClick={() => void handleSaveToMemory()}
-              disabled={isSaving || !currentChunkId}
-              tooltipSide="left"
-            >
-              {isSaving ? <Loader2 size={13} className="animate-spin" /> : <Database size={13} />}
-            </IconButton>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-sm leading-snug text-editorial-muted">
-              {hasMatches ? t('memory.selectionHint') : t('memory.coldStartBodyShort')}
-            </p>
-            <IconButton
-              size="md"
-              title={saveButtonLabel}
-              onClick={() => void handleSaveToMemory()}
-              disabled={isSaving || !currentChunkId}
-              tooltipSide="left"
-            >
-              {isSaving ? <Loader2 size={13} className="animate-spin" /> : <Database size={13} />}
-            </IconButton>
-          </div>
-        )}
+          ) : (
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm leading-snug text-editorial-muted">
+                {hasMatches ? t('memory.selectionHint') : t('memory.coldStartBodyShort')}
+              </p>
+              <IconButton
+                size="md"
+                title={saveButtonLabel}
+                onClick={() => void handleSaveToMemory()}
+                disabled={isSaving || !currentChunkId}
+                tooltipSide="left"
+              >
+                {isSaving ? <Loader2 size={13} className="animate-spin" /> : <Database size={13} />}
+              </IconButton>
+            </div>
+          )}
+        </div>
       </div>
 
       {hasMatches ? (
