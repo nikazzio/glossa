@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Brain, Cpu, Download, HardDrive, Settings2, Upload } from 'lucide-react';
+import { Brain, Cpu, Download, HardDrive, Loader2, RefreshCcw, Settings2, Upload } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { exportWorkspace, importWorkspace } from '../../services/backupService';
+import { regenerateAllEmbeddings } from '../../services/phraseMemoryService';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { EditorialModalShell } from '../common';
@@ -33,6 +34,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
   const [memoryExtractorPrompt, setMemoryExtractorPrompt] = useState('');
   const [saving, setSaving] = useState(false);
   const [isBackupBusy, setIsBackupBusy] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
 
   useEffect(() => {
     if (!open || !activeWorkspace) return;
@@ -72,6 +74,21 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
     } finally {
       setSaving(false);
       if (shouldClose) onClose();
+    }
+  };
+
+  const handleRegenerateEmbeddings = async () => {
+    if (!activeWorkspace) return;
+    setIsRegenerating(true);
+    try {
+      const count = await regenerateAllEmbeddings(activeWorkspace.id, activeWorkspace.embeddingModel);
+      toast.success(t('workspace.embeddingsRegenerated', { count }));
+    } catch (err: unknown) {
+      toast.error(t('workspace.embeddingsRegenerateFailed'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setIsRegenerating(false);
     }
   };
 
@@ -252,6 +269,33 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                     onModelChange={setMemoryExtractorModel}
                     onPromptChange={setMemoryExtractorPrompt}
                   />
+
+                  <div className="rounded-[20px] border border-editorial-border bg-editorial-bg/70 px-5 py-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1.5">
+                          <RefreshCcw size={11} className="shrink-0 text-editorial-accent" />
+                          <p className="text-xs font-sans uppercase tracking-[0.22em] text-editorial-muted">
+                            {t('workspace.regenerateEmbeddings')}
+                          </p>
+                        </div>
+                        <p className="text-xs leading-relaxed text-editorial-muted [text-wrap:pretty]">
+                          {t('workspace.regenerateEmbeddingsHint', { model: activeWorkspace?.embeddingModel })}
+                        </p>
+                      </div>
+                      <IconButton
+                        size="md"
+                        title={t('workspace.regenerateEmbeddings')}
+                        onClick={() => void handleRegenerateEmbeddings()}
+                        disabled={isRegenerating || !activeWorkspace}
+                        tooltipSide="left"
+                      >
+                        {isRegenerating
+                          ? <Loader2 size={13} className="animate-spin" />
+                          : <RefreshCcw size={13} />}
+                      </IconButton>
+                    </div>
+                  </div>
                 </div>
               )}
 

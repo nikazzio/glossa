@@ -605,6 +605,10 @@
     "namePlaceholder": "Workspace name",
     "descriptionPlaceholder": "Workspace description",
     "embeddingChangeWarning": "Changing the embedding model requires regenerating existing memory embeddings. Save only if you really want to change model.",
+    "regenerateEmbeddings": "Regenerate all embeddings",
+    "regenerateEmbeddingsHint": "Re-embeds all memory entries with the current model ({{model}}).",
+    "embeddingsRegenerated": "{{count}} entries successfully re-embedded.",
+    "embeddingsRegenerateFailed": "Embedding regeneration failed.",
     "settings": {
       "eyebrow": "Workspace Settings",
       "generalTab": "General",

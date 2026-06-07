@@ -197,6 +197,7 @@ export async function searchPhraseMemory(options: SearchOptions): Promise<Phrase
     queryEmbedding,
     threshold: similarityToDistanceThreshold(threshold),
     maxResults,
+    embeddingModel,
   });
 
   return raw.map(toPhraseMatch);
@@ -220,6 +221,7 @@ export async function searchPhraseMemoryBatch(
       queryEmbedding: embedding,
       threshold: similarityToDistanceThreshold(threshold),
       maxResults,
+      embeddingModel,
     });
     result.set(chunks[i].id, raw.map(toPhraseMatch));
   }
@@ -375,6 +377,7 @@ export async function savePhrasePairs(options: SavePhrasePairsOptions): Promise<
     pairs,
     sourceLanguage,
     targetLanguage,
+    embeddingModel,
   });
   logger.info('phrase_memory.save_pairs.insert_done', {
     workspaceId,
@@ -385,4 +388,11 @@ export async function savePhrasePairs(options: SavePhrasePairsOptions): Promise<
     savedCount,
   });
   return savedCount;
+}
+
+export async function regenerateAllEmbeddings(
+  workspaceId: string,
+  model: EmbeddingModel,
+): Promise<number> {
+  return invoke<number>('vec_regenerate_all_embeddings', { workspaceId, model });
 }
