@@ -91,6 +91,7 @@ pub fn run() {
             vector::embedding::vec_update_phrase_memory,
             vector::embedding::vec_search_phrase_memory,
             vector::embedding::vec_save_locked_phrases,
+            vector::embedding::vec_regenerate_all_embeddings,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

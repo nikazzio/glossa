@@ -605,6 +605,10 @@
     "namePlaceholder": "Nome workspace",
     "descriptionPlaceholder": "Descrizione del workspace",
     "embeddingChangeWarning": "Cambiare modello embedding richiede rigenerare gli embedding esistenti della memoria. Salva solo se vuoi davvero cambiare modello.",
+    "regenerateEmbeddings": "Rigenera tutti gli embedding",
+    "regenerateEmbeddingsHint": "Ri-embeds tutte le entry della memoria con il modello corrente ({{model}}).",
+    "embeddingsRegenerated": "{{count}} entry ri-embedded con successo.",
+    "embeddingsRegenerateFailed": "Rigenerazione embedding fallita.",
     "settings": {
       "eyebrow": "Impostazioni Workspace",
       "generalTab": "Generale",
