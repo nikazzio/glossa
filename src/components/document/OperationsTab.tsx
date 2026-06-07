@@ -1,27 +1,4 @@
-import {
-  AlertTriangle,
-  CheckCircle2,
-  Copy,
-  ExternalLink,
-  Database,
-  FileText,
-  Filter,
-  Info,
-  Layers,
-  Link2,
-  Loader2,
-  Rows3,
-  ScanLine,
-  Search,
-  ShieldCheck,
-  SlidersHorizontal,
-  TerminalSquare,
-  Trash2,
-  Workflow,
-  XCircle,
-  Zap,
-} from 'lucide-react';
-import type { ReactNode } from 'react';
+import { Copy, ExternalLink, Loader2, Search, TerminalSquare, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -50,24 +27,6 @@ interface OperationsTabProps {
   onSelectChunk: (id: string) => void;
 }
 
-const SCOPE_ICONS: Record<OperationLogScope, ReactNode> = {
-  pipeline: <Workflow size={11} />,
-  preflight: <ShieldCheck size={11} />,
-  invoke: <Zap size={11} />,
-  stage: <Layers size={11} />,
-  audit: <ScanLine size={11} />,
-  coherence: <Link2 size={11} />,
-  memory: <Database size={11} />,
-  chunk: <FileText size={11} />,
-};
-
-const LEVEL_ICONS: Record<OperationLogLevel, ReactNode> = {
-  info: <Info size={11} />,
-  success: <CheckCircle2 size={11} />,
-  warn: <AlertTriangle size={11} />,
-  error: <XCircle size={11} />,
-};
-
 const ALL_SCOPES: OperationLogScope[] = [
   'pipeline',
   'preflight',
@@ -80,11 +39,11 @@ const ALL_SCOPES: OperationLogScope[] = [
 ];
 const ALL_LEVELS: OperationLogLevel[] = ['info', 'success', 'warn', 'error'];
 
-const LEVEL_COLOR: Record<OperationLogLevel, { text: string; border: string }> = {
-  error: { text: 'text-[#ff6b6b]', border: 'border-[#ff6b6b]/40' },
-  warn: { text: 'text-[#f6c90e]', border: 'border-[#f6c90e]/40' },
-  success: { text: 'text-[#69db7c]', border: 'border-[#69db7c]/40' },
-  info: { text: 'text-[#74c0fc]', border: 'border-[#74c0fc]/30' },
+const LEVEL_COLOR: Record<OperationLogLevel, string> = {
+  error: 'text-[#ff6b6b]',
+  warn: 'text-[#f6c90e]',
+  success: 'text-[#69db7c]',
+  info: 'text-[#74c0fc]',
 };
 
 export function OperationsTab({
@@ -333,88 +292,77 @@ function FilterBar({
   onToggleGrouped,
 }: FilterBarProps) {
   const { t } = useTranslation();
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const scopeLabel = scopeLabels(t);
   const levelLabel = levelLabels(t);
 
   return (
-    <div className="border-b border-editorial-border px-5 py-3 space-y-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex shrink-0 items-center gap-1.5">
-          <SlidersHorizontal size={11} className="text-editorial-accent shrink-0" />
-          <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-            {t('log.filterScope')}
-          </span>
-        </div>
-        {ALL_SCOPES.map((scope) => (
-          <IconChip
-            key={scope}
-            active={scopeFilter.has(scope)}
-            onClick={() => onToggleScope(scope)}
-            icon={SCOPE_ICONS[scope]}
-            title={scopeLabel[scope]}
-          />
-        ))}
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex shrink-0 items-center gap-1.5">
-          <Filter size={11} className="text-editorial-accent shrink-0" />
-          <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-            {t('log.filterLevel')}
-          </span>
-        </div>
-        {ALL_LEVELS.map((level) => (
-          <IconChip
-            key={level}
-            active={levelFilter.has(level)}
-            onClick={() => onToggleLevel(level)}
-            icon={LEVEL_ICONS[level]}
-            title={levelLabel[level]}
-          />
-        ))}
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex flex-1 min-w-[160px] items-center gap-2 rounded-full border border-editorial-border bg-white/40 px-3 py-1.5">
-          <Search size={11} className="shrink-0 text-editorial-muted" />
+    <div className="border-b border-white/10 bg-[#111111] px-4 py-2 font-mono text-xs space-y-1.5">
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setFiltersOpen((o) => !o)}
+          className="shrink-0 text-[10px] uppercase tracking-[0.22em] text-[#555] transition-colors hover:text-[#999] focus:outline-none"
+        >
+          {filtersOpen ? '▾' : '▸'} {t('log.filters')}
+        </button>
+        <div className="flex flex-1 items-center gap-2">
+          <Search size={10} className="shrink-0 text-[#555]" />
           <input
             type="search"
             value={search}
-            onChange={(event) => onSearchChange(event.target.value)}
+            onChange={(e) => onSearchChange(e.target.value)}
             placeholder={t('log.search')}
-            className="w-full bg-transparent text-xs text-editorial-ink placeholder:text-editorial-muted/70 outline-none"
+            className="w-full bg-transparent text-[11px] text-[#d6d6d6] placeholder:text-[#444] outline-none"
           />
         </div>
-        <IconChip active={grouped} onClick={onToggleGrouped} icon={<Rows3 size={11} />} title={t('log.groupBy')} />
+        <button
+          type="button"
+          onClick={onToggleGrouped}
+          aria-pressed={grouped}
+          className={`shrink-0 text-[10px] uppercase tracking-[0.18em] transition-colors focus:outline-none ${
+            grouped ? 'text-[#9eb4ff]' : 'text-[#555] hover:text-[#999]'
+          }`}
+        >
+          {t('log.grouped')}
+        </button>
       </div>
-    </div>
-  );
-}
 
-function IconChip({
-  active,
-  onClick,
-  icon,
-  title,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: ReactNode;
-  title: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      title={title}
-      aria-label={title}
-      className={`rounded-full border p-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-        active
-          ? 'border-editorial-accent bg-editorial-accent text-white'
-          : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent'
-      }`}
-    >
-      {icon}
-    </button>
+      {filtersOpen && (
+        <div className="space-y-1 pt-0.5">
+          <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+            {ALL_SCOPES.map((scope) => (
+              <button
+                key={scope}
+                type="button"
+                onClick={() => onToggleScope(scope)}
+                aria-pressed={scopeFilter.has(scope)}
+                className={`text-[10px] uppercase tracking-[0.18em] transition-colors focus:outline-none ${
+                  scopeFilter.has(scope) ? 'text-[#cbd5e1]' : 'text-[#3a3a3a] line-through'
+                }`}
+              >
+                {scopeLabel[scope]}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+            {ALL_LEVELS.map((level) => (
+              <button
+                key={level}
+                type="button"
+                onClick={() => onToggleLevel(level)}
+                aria-pressed={levelFilter.has(level)}
+                className={`text-[10px] uppercase tracking-[0.18em] transition-colors focus:outline-none ${
+                  levelFilter.has(level) ? LEVEL_COLOR[level] : 'text-[#3a3a3a] line-through'
+                }`}
+              >
+                {levelLabel[level]}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -610,38 +558,21 @@ function EntryCard({ entry, chunkIndexMap, t, dense = false }: EntryCardProps) {
   const metaItems = formatMetaItems(entry.meta);
 
   return (
-    <div className={`rounded-[10px] border border-white/10 bg-white/[0.03] ${dense ? 'px-3 py-1.5' : 'px-3 py-2'}`}>
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[#555]">$</span>
-        <span className="text-[#666]">{entry.at.slice(11, 19)}</span>
-        <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.22em] text-[#888]">
-          {scopeLabel}
-        </span>
-        <span
-          className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.22em] ${color.border} ${color.text}`}
-        >
-          {levelLabel}
-        </span>
+    <div className={dense ? 'py-0.5' : 'py-1'}>
+      <div className="flex items-baseline gap-2 text-[11px]">
+        <span className="select-none text-[#444]">$</span>
+        <span className="tabular-nums text-[#555]">{entry.at.slice(11, 19)}</span>
+        <span className="text-[#555]">{scopeLabel.toLowerCase()}:{levelLabel.toLowerCase()}</span>
         {entry.durationMs != null && entry.phase === 'end' && (
-          <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] text-[#94a3b8]">
-            {formatDurationMs(entry.durationMs)}
-          </span>
+          <span className="text-[#444]">{formatDurationMs(entry.durationMs)}</span>
+        )}
+        {chunkIndex >= 0 && (
+          <span className="text-[#444]">{t('log.unitLabel')} {indexPad(chunkIndex + 1)}</span>
         )}
       </div>
-      <p className={`mt-1.5 leading-relaxed ${color.text}`}>{entry.message}</p>
-      {(chunkIndex >= 0 || metaItems.length > 0) && (
-        <div className="mt-1.5 flex flex-wrap gap-2 text-[10px]">
-          {chunkIndex >= 0 && (
-            <span className="rounded-full border border-white/10 px-2 py-0.5 text-[#888]">
-              {t('log.unitLabel')} {indexPad(chunkIndex + 1)}
-            </span>
-          )}
-          {metaItems.map((item) => (
-            <span key={item} className="rounded-full border border-white/10 px-2 py-0.5 text-[#666]">
-              {item}
-            </span>
-          ))}
-        </div>
+      <p className={`mt-0.5 pl-4 text-[11px] leading-relaxed ${color}`}>{entry.message}</p>
+      {metaItems.length > 0 && (
+        <p className="mt-0.5 pl-4 text-[10px] text-[#555]">{metaItems.join('  ')}</p>
       )}
       {entry.detail && <DetailBlock detail={entry.detail} kind={entry.detailKind} t={t} />}
     </div>
@@ -682,23 +613,23 @@ function DetailBlock({
   const isError = kind === 'error';
 
   return (
-    <details className="mt-2 border-t border-white/10 pt-2">
-      <summary className="flex cursor-pointer select-none items-center justify-between gap-2 text-[10px] text-[#888] hover:text-[#cbd5e1]">
+    <details className="mt-1 pl-4">
+      <summary className="flex cursor-pointer select-none items-center justify-between gap-2 text-[10px] text-[#555] hover:text-[#888]">
         <span>▶ {summaryLabel}</span>
         <button
           type="button"
           onClick={onCopy}
           title={t('log.copy')}
           aria-label={t('log.copy')}
-          className="flex items-center gap-1 rounded-full border border-white/10 px-2 py-0.5 text-[10px] text-[#888] transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          className="flex items-center gap-1 text-[10px] text-[#555] transition-colors hover:text-[#9eb4ff] focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
         >
           <Copy size={10} />
           {t('log.copy')}
         </button>
       </summary>
       <pre
-        className={`mt-2 max-h-72 overflow-y-auto whitespace-pre-wrap text-[10px] leading-relaxed custom-scrollbar ${
-          isError ? 'text-[#fda4af] bg-[#3b0a0f]/30 rounded-md p-2 border border-[#ff6b6b]/20' : 'text-[#cbd5e1]'
+        className={`mt-1 max-h-[480px] overflow-y-auto whitespace-pre-wrap text-[10px] leading-relaxed custom-scrollbar ${
+          isError ? 'text-[#fda4af] bg-[#3b0a0f]/30 rounded-md p-2 border border-[#ff6b6b]/20' : 'text-[#7a8fa6]'
         }`}
       >
         {detail}
