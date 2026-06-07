@@ -821,7 +821,7 @@ export async function setSetting(key: string, value: string): Promise<void> {
 // ── Operation Logs ───────────────────────────────────────────────────
 
 const MAX_OPERATION_LOG_ENTRIES = 2000;
-const MAX_DETAIL_LENGTH = 10_000;
+const MAX_DETAIL_LENGTH = 500_000;
 
 const VALID_PHASES = new Set(['start', 'end', 'retry', 'cache']);
 const VALID_DETAIL_KINDS = new Set(['prompt', 'json', 'error', 'note']);
