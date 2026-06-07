@@ -457,7 +457,14 @@ pub async fn vec_save_locked_phrases(
         )));
     }
 
-    let replaced_rows = conn
+    let mut saved: u32 = 0;
+    let mut attempted: u32 = 0;
+    let tx = conn.transaction().map_err(|e| {
+        log::warn!("phrase_memory.vec_save_locked_phrases.transaction_failed error={e}");
+        EmbeddingError::Http(e.to_string())
+    })?;
+
+    let replaced_rows = tx
         .execute(
             "DELETE FROM phrase_memory WHERE chunk_id = ?1 AND project_id = ?2",
             rusqlite::params![&chunk_id, &project_id],
@@ -471,13 +478,6 @@ pub async fn vec_save_locked_phrases(
     log::debug!(
         "phrase_memory.vec_save_locked_phrases.replace_done deleted_phrase_memory_rows={replaced_rows}"
     );
-
-    let mut saved: u32 = 0;
-    let mut attempted: u32 = 0;
-    let tx = conn.transaction().map_err(|e| {
-        log::warn!("phrase_memory.vec_save_locked_phrases.transaction_failed error={e}");
-        EmbeddingError::Http(e.to_string())
-    })?;
 
     for (index, pair) in pairs.iter().enumerate() {
         attempted += 1;

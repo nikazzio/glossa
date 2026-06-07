@@ -303,6 +303,7 @@ describe('savePhrasePairs', () => {
       workspaceId: 'ws-1',
       projectId: 'proj-1',
       chunkId: 'c1',
+      embeddingModel: 'text-embedding-3-small',
       sourceLanguage: 'it',
       targetLanguage: 'en',
       pairs: [

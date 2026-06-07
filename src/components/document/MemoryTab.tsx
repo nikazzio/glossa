@@ -79,8 +79,11 @@ export function MemoryTab({ panelId, labelledBy, currentChunkId }: MemoryTabProp
         setChunkMemoryCount(entries.filter((e) => e.chunkId === currentChunkId).length);
       }
       if (savedCount === 0) {
-        if (previousCount && previousCount > 0) toast.message(t('memory.nothingToSave'));
-        else toast.message(t('memory.nothingToSave'));
+        if (previousCount && previousCount > 0) {
+          toast.message(t('memory.chunkAlreadySaved', { count: previousCount }));
+        } else {
+          toast.message(t('memory.nothingToSave'));
+        }
         return;
       }
       toast.success(t('memory.savedToMemory', { count: savedCount }));

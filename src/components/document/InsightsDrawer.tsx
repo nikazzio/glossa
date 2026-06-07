@@ -243,7 +243,7 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
             animate={{ width: PANEL_WIDTH, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
             transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-            className="flex h-full overflow-hidden border-l border-editorial-border bg-editorial-bg/95"
+            className={`flex h-full overflow-hidden border-l bg-editorial-bg/95 ${chunkDrawerTab === 'operations' ? 'border-terminal-border' : 'border-editorial-border'}`}
             role="region"
             aria-label={chunkLabel}
           >
@@ -283,7 +283,7 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
                 <span className="font-display italic text-sm text-editorial-ink">{CHUNK_TAB_LABEL[chunkDrawerTab]}</span>
               </div>
 
-              <div className="flex flex-1 flex-col overflow-y-auto bg-editorial-bg/40 custom-scrollbar">
+              <div className={`flex flex-1 flex-col overflow-y-auto custom-scrollbar ${chunkDrawerTab === 'operations' ? 'bg-black' : 'bg-editorial-bg/40'}`}>
                 {chunkDrawerTab === 'audit' ? (
                   <AuditTab
                     panelId={CHUNK_TAB_PANEL_IDS.audit}
@@ -742,8 +742,8 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
         </dl>
         {usageSummary.scopeBreakdown.length > 0 && (
           <div className="mt-3 space-y-1">
-            {usageSummary.scopeBreakdown.map((entry) => (
-              <ScopeBreakdownCard key={entry.scope} entry={entry} />
+            {usageSummary.scopeBreakdown.map((entry, i) => (
+              <ScopeBreakdownCard key={`${entry.scope}-${i}`} entry={entry} />
             ))}
           </div>
         )}
@@ -809,7 +809,7 @@ function ChunkSummaryTab({ panelId, labelledBy, currentChunk }: ChunkSummaryTabP
   if (!currentChunk || !chunkSummary) {
     return (
       <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="px-6 py-8 text-sm text-editorial-muted">
-        {t('document.insightsAuditEmpty')}
+        {t('document.insightsSummaryEmpty')}
       </div>
     );
   }

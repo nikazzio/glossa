@@ -313,20 +313,43 @@ export async function searchPhraseMemoryBatch(
   });
 
   const texts = chunks.map((c) => c.text);
-  const embeddings = await fetchEmbeddings(texts, embeddingModel);
+  let embeddings: number[][];
+  try {
+    embeddings = await fetchEmbeddings(texts, embeddingModel);
+  } catch (err) {
+    logOperation({
+      level: 'error',
+      scope: 'memory',
+      phase: 'end',
+      message: 'Batch phrase memory search failed during embedding',
+      meta: { workspaceId, embeddingModel, chunkCount: chunks.length, error: String(err) },
+    });
+    throw err;
+  }
 
   const result = new Map<string, PhraseMatch[]>();
   for (let i = 0; i < chunks.length; i++) {
     const embedding = embeddings[i];
     if (!embedding) continue;
-    const raw = await invoke<RawPhraseMatch[]>('vec_search_phrase_memory', {
-      workspaceId,
-      queryEmbedding: embedding,
-      threshold: similarityToDistanceThreshold(threshold),
-      maxResults,
-      embeddingModel,
-    });
-    result.set(chunks[i].id, raw.map(toPhraseMatch));
+    try {
+      const raw = await invoke<RawPhraseMatch[]>('vec_search_phrase_memory', {
+        workspaceId,
+        queryEmbedding: embedding,
+        threshold: similarityToDistanceThreshold(threshold),
+        maxResults,
+        embeddingModel,
+      });
+      result.set(chunks[i].id, raw.map(toPhraseMatch));
+    } catch (err) {
+      logOperation({
+        level: 'error',
+        scope: 'memory',
+        phase: 'end',
+        message: 'Batch phrase memory search failed during vec_search',
+        meta: { workspaceId, embeddingModel, chunkId: chunks[i].id, error: String(err) },
+      });
+      throw err;
+    }
   }
   logOperation({
     level: 'success',
