@@ -305,11 +305,6 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
                     panelId={CHUNK_TAB_PANEL_IDS.memory}
                     labelledBy={CHUNK_TAB_BUTTON_IDS.memory}
                     currentChunkId={currentChunk?.id ?? null}
-                    onRerun={(selectedMatches) => {
-                      if (currentChunk?.id) {
-                        void rerunChunkWithMemory(currentChunk.id, selectedMatches);
-                      }
-                    }}
                   />
                 ) : chunkDrawerTab === 'summary' ? (
                   <ChunkSummaryTab

@@ -28,6 +28,7 @@ type RawPhraseMemoryEntry = {
   notes: string | null;
   chunk_id: string | null;
   project_id: string | null;
+  embedding_model: string | null;
   created_at: string;
 };
 
@@ -56,6 +57,7 @@ export interface PhraseMemoryEntry {
   notes: string | null;
   chunkId: string | null;
   projectId: string | null;
+  embeddingModel: string | null;
   createdAt: string;
 }
 
@@ -128,6 +130,7 @@ function toPhraseMemoryEntry(raw: RawPhraseMemoryEntry): PhraseMemoryEntry {
     notes: raw.notes,
     chunkId: raw.chunk_id,
     projectId: raw.project_id,
+    embeddingModel: raw.embedding_model,
     createdAt: raw.created_at,
   };
 }

@@ -1198,7 +1198,8 @@
     "memoryDeleted": "Memory deleted",
     "memoryDeleteTitle": "Delete this memory?",
     "memoryDeleteMessage": "The selected memory will be removed from this workspace.",
-    "memoryDeleteError": "Delete error"
+    "memoryDeleteError": "Delete error",
+    "embeddingModel": "Embedding model"
   },
   "cost": {
     "free": "Free",

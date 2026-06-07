@@ -160,6 +160,21 @@ export function MemoriesTab() {
         </div>
       </div>
 
+      {(() => {
+        const filteredWs = workspaceFilter !== 'all'
+          ? workspaces.find((w) => w.id === workspaceFilter)
+          : null;
+        if (!filteredWs) return null;
+        return (
+          <div className="flex items-center gap-2 rounded-[14px] border border-editorial-border/60 bg-editorial-textbox/20 px-3 py-2">
+            <span className="text-[10px] font-bold uppercase tracking-[0.28em] text-editorial-muted">
+              {t('library.embeddingModel')}
+            </span>
+            <span className="font-mono text-xs text-editorial-accent">{filteredWs.embeddingModel}</span>
+          </div>
+        );
+      })()}
+
       {isLoading ? (
         <div className="flex items-center justify-center gap-2 rounded-[20px] border border-editorial-border bg-editorial-textbox/15 px-4 py-8 text-xs text-editorial-muted">
           <Loader2 size={14} className="animate-spin" />
@@ -190,6 +205,10 @@ export function MemoriesTab() {
                     <p className="mt-1 truncate text-xs text-editorial-muted/80">
                       {workspaceName(entry.workspaceId, workspaces)} · {formatDate(entry.createdAt)}
                     </p>
+                    <EmbeddingModelBadge
+                      entryModel={entry.embeddingModel}
+                      workspaceModel={workspaces.find((w) => w.id === entry.workspaceId)?.embeddingModel ?? null}
+                    />
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5">
                     {isEditing ? (
@@ -293,6 +312,22 @@ function MemoryTextarea({
         className="w-full resize-y rounded-[16px] border border-editorial-border bg-editorial-bg/80 px-4 py-3 text-sm leading-relaxed text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
       />
     </label>
+  );
+}
+
+function EmbeddingModelBadge({
+  entryModel,
+  workspaceModel,
+}: {
+  entryModel: string | null;
+  workspaceModel: string | null;
+}) {
+  const stale = entryModel !== workspaceModel;
+  const label = entryModel ?? '—';
+  return (
+    <span className={`mt-1 inline-block font-mono text-[10px] ${stale ? 'text-editorial-accent/80' : 'text-editorial-muted/50'}`}>
+      {label}
+    </span>
   );
 }
 

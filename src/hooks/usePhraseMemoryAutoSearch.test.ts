@@ -137,6 +137,7 @@ describe('usePhraseMemoryAutoSearch', () => {
         notes: null,
         chunkId: 'c1',
         projectId: 'proj-1',
+        embeddingModel: null,
         createdAt: '2026-01-01T00:00:00.000Z',
       },
     ]);

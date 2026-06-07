@@ -215,6 +215,7 @@ pub struct PhraseMemoryEntryResult {
     pub notes: Option<String>,
     pub chunk_id: Option<String>,
     pub project_id: Option<String>,
+    pub embedding_model: Option<String>,
     pub created_at: String,
 }
 
@@ -231,7 +232,7 @@ pub async fn vec_list_phrase_memory(
     let mut stmt = conn
         .prepare(
             "SELECT id, workspace_id, source_phrase, target_phrase, confidence, source_language, target_language, \
-                    author, work, domain, tags, notes, chunk_id, project_id, created_at \
+                    author, work, domain, tags, notes, chunk_id, project_id, embedding_model, created_at \
              FROM phrase_memory \
              WHERE workspace_id = ?1 \
              ORDER BY datetime(created_at) DESC, id DESC",
@@ -255,7 +256,8 @@ pub async fn vec_list_phrase_memory(
                 notes: row.get(11)?,
                 chunk_id: row.get(12)?,
                 project_id: row.get(13)?,
-                created_at: row.get(14)?,
+                embedding_model: row.get(14)?,
+                created_at: row.get(15)?,
             })
         })
         .map_err(|e| EmbeddingError::Http(e.to_string()))?
