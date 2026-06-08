@@ -803,6 +803,7 @@
     "operationsShellTitle": "Console",
     "operationsCurrentChunk": "Current chunk",
     "operationsRunning": "pipeline running",
+    "memoryRunning": "memory running",
     "operationsGoToChunk": "Go to processing chunk",
     "insightsGlossaryTitle": "Glossary",
     "insightsGlossaryEmpty": "No glossary assigned.",

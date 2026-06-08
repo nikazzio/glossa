@@ -9,15 +9,15 @@ import {
   type OperationLogLevel,
   type OperationLogScope,
 } from '../../stores/operationLogStore';
+import { usePhraseMemoryStore } from '../../stores/phraseMemoryStore';
 import { usePricingStore } from '../../stores/pricingStore';
 import {
   aggregateEntries,
   formatCacheHitRate,
   formatDurationMs,
-  formatUsd,
 } from '../../utils/operationLogStats';
 import { indexPad } from '../../utils';
-import type { TranslationChunk } from '../../types';
+import type { EmbeddingJobStatus, TranslationChunk } from '../../types';
 
 interface OperationsTabProps {
   panelId: string;
@@ -40,10 +40,10 @@ const ALL_SCOPES: OperationLogScope[] = [
 const ALL_LEVELS: OperationLogLevel[] = ['info', 'success', 'warn', 'error'];
 
 const LEVEL_COLOR: Record<OperationLogLevel, string> = {
-  error: 'text-[#ff6b6b]',
-  warn: 'text-[#f6c90e]',
-  success: 'text-[#69db7c]',
-  info: 'text-[#74c0fc]',
+  error: 'text-terminal-error',
+  warn: 'text-terminal-warn',
+  success: 'text-terminal-success',
+  info: 'text-terminal-info',
 };
 
 export function OperationsTab({
@@ -57,6 +57,7 @@ export function OperationsTab({
   const entries = useOperationLogStore((state) => state.entries);
   const clear = useOperationLogStore((state) => state.clear);
   const isProcessing = useChunksStore((state) => state.isProcessing);
+  const memoryJobStatus = usePhraseMemoryStore((s) => s.jobStatus);
   const pricingOverrides = usePricingStore((state) => state.overrides);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -66,7 +67,10 @@ export function OperationsTab({
   const [grouped, setGrouped] = useState(true);
 
   const chunkScopedEntries = useMemo(
-    () => (currentChunkId ? entries.filter((entry) => entry.chunkId === currentChunkId) : entries),
+    () =>
+      currentChunkId
+        ? entries.filter((entry) => entry.chunkId == null || entry.chunkId === currentChunkId)
+        : entries,
     [entries, currentChunkId],
   );
 
@@ -124,17 +128,16 @@ export function OperationsTab({
   }
 
   return (
-    <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex h-full flex-col">
+    <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex h-full flex-col bg-terminal-bg">
       <Header
         isProcessing={isProcessing}
+        memoryJobStatus={memoryJobStatus}
         processingChunk={processingChunk}
         processingChunkIndex={processingChunkIndex}
         chunksCount={chunks.length}
         onGoToChunk={() => processingChunk && onSelectChunk(processingChunk.id)}
         onClear={clear}
       />
-
-      {filteredEntries.length > 0 && <SummaryRow stats={stats} />}
 
       <FilterBar
         scopeFilter={scopeFilter}
@@ -148,14 +151,14 @@ export function OperationsTab({
       />
 
       {filteredEntries.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center px-6 py-12 text-center text-sm text-editorial-muted">
+        <div className="flex flex-1 items-center justify-center px-6 py-12 text-center text-sm text-terminal-secondary">
           {t('document.operationsEmpty')}
         </div>
       ) : (
         <div
           ref={scrollRef}
           onScroll={onScroll}
-          className="flex-1 overflow-y-auto bg-[#111111] px-4 py-4 font-mono text-xs text-[#d6d6d6] custom-scrollbar"
+          className="flex-1 overflow-y-auto bg-terminal-bg px-4 py-4 font-mono text-xs text-terminal-ink terminal-scrollbar"
         >
           {grouped ? (
             <GroupedView entries={filteredEntries} chunks={chunks} stats={stats} />
@@ -172,6 +175,7 @@ export function OperationsTab({
 
 interface HeaderProps {
   isProcessing: boolean;
+  memoryJobStatus: EmbeddingJobStatus;
   processingChunk: TranslationChunk | null;
   processingChunkIndex: number;
   chunksCount: number;
@@ -181,6 +185,7 @@ interface HeaderProps {
 
 function Header({
   isProcessing,
+  memoryJobStatus,
   processingChunk,
   processingChunkIndex,
   chunksCount,
@@ -189,11 +194,11 @@ function Header({
 }: HeaderProps) {
   const { t } = useTranslation();
   return (
-    <div className="border-b border-editorial-border px-5 py-4">
+    <div className="bg-terminal-chrome px-5 py-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <TerminalSquare size={11} className="text-editorial-accent shrink-0" />
-          <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+          <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-terminal-secondary">
             {t('document.operationsShellTitle')}
           </p>
         </div>
@@ -204,7 +209,7 @@ function Header({
               onClick={onGoToChunk}
               title={t('document.operationsGoToChunk')}
               aria-label={t('document.operationsGoToChunk')}
-              className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="rounded-full border border-terminal-border p-2 text-terminal-secondary transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             >
               <ExternalLink size={14} />
             </button>
@@ -214,7 +219,7 @@ function Header({
             onClick={onClear}
             title={t('document.operationsClear')}
             aria-label={t('document.operationsClear')}
-            className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            className="rounded-full border border-terminal-border p-2 text-terminal-secondary transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
           >
             <Trash2 size={14} />
           </button>
@@ -222,48 +227,30 @@ function Header({
       </div>
       {isProcessing && (
         <div className="mt-2.5 flex items-center gap-2" role="status" aria-live="polite">
-          <Loader2 size={11} className="animate-spin shrink-0 text-[#9eb4ff]" />
-          <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#9eb4ff]">
+          <Loader2 size={11} className="animate-spin shrink-0 text-terminal-accent" />
+          <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-terminal-accent">
             {t('document.operationsRunning')}
           </span>
           {processingChunkIndex >= 0 && (
-            <span className="font-display text-xs italic text-[#9eb4ff]/70">
+            <span className="font-display text-xs italic text-terminal-accent/70">
               {indexPad(processingChunkIndex + 1)}/{indexPad(chunksCount)}
             </span>
           )}
         </div>
       )}
-    </div>
-  );
-}
-
-// ── Summary row ───────────────────────────────────────────────────────────
-
-interface SummaryRowProps {
-  stats: ReturnType<typeof aggregateEntries>;
-}
-
-function SummaryRow({ stats }: SummaryRowProps) {
-  const { t } = useTranslation();
-  return (
-    <div className="flex flex-wrap items-center gap-x-5 gap-y-1 border-b border-editorial-border px-5 py-3 text-[11px] font-sans">
-      <SummaryItem label={t('log.summaryInput')} value={stats.totalInput.toLocaleString()} />
-      <SummaryItem label={t('log.summaryOutput')} value={stats.totalOutput.toLocaleString()} />
-      <SummaryItem label={t('log.cacheHitRate')} value={formatCacheHitRate(stats.cacheHitRate)} />
-      <SummaryItem
-        label={t('log.totalDuration')}
-        value={stats.totalDurationMs > 0 ? formatDurationMs(stats.totalDurationMs) : '—'}
-      />
-      <SummaryItem label={t('log.totalCost')} value={formatUsd(stats.totalUsd)} />
-    </div>
-  );
-}
-
-function SummaryItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-baseline gap-1.5">
-      <span className="text-[9px] uppercase tracking-[0.22em] text-editorial-muted">{label}</span>
-      <span className="font-display text-sm tabular-nums text-editorial-ink">{value}</span>
+      {memoryJobStatus.kind === 'running' && (
+        <div className="mt-2.5 flex items-center gap-2" role="status" aria-live="polite">
+          <Loader2 size={11} className="animate-spin shrink-0 text-terminal-info" />
+          <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-terminal-info">
+            {t('document.memoryRunning')}
+          </span>
+          {memoryJobStatus.total > 0 && (
+            <span className="font-display text-xs italic text-terminal-info/70">
+              {indexPad(memoryJobStatus.processed + 1)}/{indexPad(memoryJobStatus.total)}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -297,23 +284,23 @@ function FilterBar({
   const levelLabel = levelLabels(t);
 
   return (
-    <div className="border-b border-white/10 bg-[#111111] px-4 py-2 font-mono text-xs space-y-1.5">
+    <div className="border-b border-terminal-line bg-terminal-bg px-4 py-2 font-mono text-xs space-y-1.5">
       <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={() => setFiltersOpen((o) => !o)}
-          className="shrink-0 text-[10px] uppercase tracking-[0.22em] text-[#555] transition-colors hover:text-[#999] focus:outline-none"
+          className="shrink-0 text-[10px] uppercase tracking-[0.22em] text-terminal-muted transition-colors hover:text-terminal-secondary focus:outline-none"
         >
           {filtersOpen ? '▾' : '▸'} {t('log.filters')}
         </button>
         <div className="flex flex-1 items-center gap-2">
-          <Search size={10} className="shrink-0 text-[#555]" />
+          <Search size={10} className="shrink-0 text-terminal-muted" />
           <input
             type="search"
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder={t('log.search')}
-            className="w-full bg-transparent text-[11px] text-[#d6d6d6] placeholder:text-[#444] outline-none"
+            className="w-full bg-transparent text-xs text-terminal-ink placeholder:text-terminal-dim outline-none"
           />
         </div>
         <button
@@ -321,7 +308,7 @@ function FilterBar({
           onClick={onToggleGrouped}
           aria-pressed={grouped}
           className={`shrink-0 text-[10px] uppercase tracking-[0.18em] transition-colors focus:outline-none ${
-            grouped ? 'text-[#9eb4ff]' : 'text-[#555] hover:text-[#999]'
+            grouped ? 'text-terminal-accent' : 'text-terminal-muted hover:text-terminal-secondary'
           }`}
         >
           {t('log.grouped')}
@@ -338,7 +325,7 @@ function FilterBar({
                 onClick={() => onToggleScope(scope)}
                 aria-pressed={scopeFilter.has(scope)}
                 className={`text-[10px] uppercase tracking-[0.18em] transition-colors focus:outline-none ${
-                  scopeFilter.has(scope) ? 'text-[#cbd5e1]' : 'text-[#3a3a3a] line-through'
+                  scopeFilter.has(scope) ? 'text-terminal-ink' : 'text-terminal-dim line-through'
                 }`}
               >
                 {scopeLabel[scope]}
@@ -353,7 +340,7 @@ function FilterBar({
                 onClick={() => onToggleLevel(level)}
                 aria-pressed={levelFilter.has(level)}
                 className={`text-[10px] uppercase tracking-[0.18em] transition-colors focus:outline-none ${
-                  levelFilter.has(level) ? LEVEL_COLOR[level] : 'text-[#3a3a3a] line-through'
+                  levelFilter.has(level) ? LEVEL_COLOR[level] : 'text-terminal-dim line-through'
                 }`}
               >
                 {levelLabel[level]}
@@ -409,24 +396,20 @@ function GroupedView({ entries, chunks, stats }: GroupedViewProps) {
         const chunkStats = stats.byChunk.get(chunkId);
         const stageBuckets = Array.from(byStage.entries());
         return (
-          <details
-            key={chunkId}
-            open
-            className="rounded-lg border border-white/10 bg-white/[0.02]"
-          >
-            <summary className="flex cursor-pointer select-none items-center justify-between gap-3 px-3 py-2 text-[11px] uppercase tracking-[0.18em] text-[#cbd5e1]">
+          <details key={chunkId} open className="mt-3">
+            <summary className="flex cursor-pointer select-none items-center justify-between gap-2 py-1.5 text-xs uppercase tracking-[0.18em] text-terminal-secondary list-none [&::-webkit-details-marker]:hidden">
               <span>
                 {t('log.unitLabel')} {chunkIndex >= 0 ? indexPad(chunkIndex + 1) : chunkId}
               </span>
               {chunkStats && (
-                <span className="text-[10px] text-[#94a3b8]">
+                <span className="text-[10px] text-terminal-muted">
                   {chunkStats.totalInput.toLocaleString()}→{chunkStats.totalOutput.toLocaleString()} ·{' '}
                   {formatCacheHitRate(chunkStats.cacheHitRate)} ·{' '}
                   {chunkStats.totalDurationMs > 0 ? formatDurationMs(chunkStats.totalDurationMs) : '—'}
                 </span>
               )}
             </summary>
-            <div className="space-y-2 px-3 pb-3">
+            <div className="ml-3 space-y-1.5 border-l border-terminal-line pl-3 pb-2">
               {looseEntries.map((entry) => (
                 <EntryCard key={entry.id} entry={entry} chunkIndexMap={chunkIndexMap} t={t} dense />
               ))}
@@ -435,14 +418,14 @@ function GroupedView({ entries, chunks, stats }: GroupedViewProps) {
                 const stageStart = stageEntries.find((e) => e.phase === 'start');
                 const stageHeader = labelForStageGroup(stageKey, stageStart, stageEnd, t);
                 return (
-                  <details key={stageKey} open className="rounded-md border border-white/5 bg-white/[0.02]">
-                    <summary className="flex cursor-pointer select-none items-center justify-between gap-3 px-3 py-1.5 text-[11px]">
-                      <span className="font-bold uppercase tracking-[0.18em] text-[#cbd5e1]">
+                  <details key={stageKey} open className="mt-1.5">
+                    <summary className="flex cursor-pointer select-none items-center justify-between gap-2 py-0.5 text-xs list-none [&::-webkit-details-marker]:hidden">
+                      <span className="font-bold uppercase tracking-[0.18em] text-terminal-secondary">
                         {stageHeader.title}
                       </span>
-                      <span className="text-[10px] text-[#94a3b8]">{stageHeader.meta}</span>
+                      <span className="text-[10px] text-terminal-muted">{stageHeader.meta}</span>
                     </summary>
-                    <div className="space-y-2 px-3 pb-2">
+                    <div className="ml-2 space-y-1.5 border-l border-terminal-line pl-2 pb-1">
                       {stageEntries.map((entry) => (
                         <EntryCard key={entry.id} entry={entry} chunkIndexMap={chunkIndexMap} t={t} dense />
                       ))}
@@ -544,9 +527,9 @@ function EntryCard({ entry, chunkIndexMap, t, dense = false }: EntryCardProps) {
   if (entry.meta?.runBoundary === true) {
     return (
       <div className="flex items-center gap-3 py-1.5">
-        <div className="h-px flex-1 bg-white/10" />
-        <span className="text-[10px] uppercase tracking-[0.22em] text-[#555]">{t('log.newRun')}</span>
-        <div className="h-px flex-1 bg-white/10" />
+        <div className="h-px flex-1 bg-terminal-line" />
+        <span className="text-[10px] uppercase tracking-[0.22em] text-terminal-muted">{t('log.newRun')}</span>
+        <div className="h-px flex-1 bg-terminal-line" />
       </div>
     );
   }
@@ -559,20 +542,20 @@ function EntryCard({ entry, chunkIndexMap, t, dense = false }: EntryCardProps) {
 
   return (
     <div className={dense ? 'py-0.5' : 'py-1'}>
-      <div className="flex items-baseline gap-2 text-[11px]">
-        <span className="select-none text-[#444]">$</span>
-        <span className="tabular-nums text-[#555]">{entry.at.slice(11, 19)}</span>
-        <span className="text-[#555]">{scopeLabel.toLowerCase()}:{levelLabel.toLowerCase()}</span>
+      <div className="flex items-baseline gap-2 text-xs">
+        <span className="select-none text-terminal-dim">$</span>
+        <span className="tabular-nums text-terminal-secondary">{entry.at.slice(11, 19)}</span>
+        <span className="text-terminal-secondary">{scopeLabel.toLowerCase()}:{levelLabel.toLowerCase()}</span>
         {entry.durationMs != null && entry.phase === 'end' && (
-          <span className="text-[#444]">{formatDurationMs(entry.durationMs)}</span>
+          <span className="text-terminal-muted">{formatDurationMs(entry.durationMs)}</span>
         )}
         {chunkIndex >= 0 && (
-          <span className="text-[#444]">{t('log.unitLabel')} {indexPad(chunkIndex + 1)}</span>
+          <span className="text-terminal-muted">{t('log.unitLabel')} {indexPad(chunkIndex + 1)}</span>
         )}
       </div>
-      <p className={`mt-0.5 pl-4 text-[11px] leading-relaxed ${color}`}>{entry.message}</p>
+      <p className={`mt-0.5 pl-4 text-xs leading-relaxed ${color}`}>{entry.message}</p>
       {metaItems.length > 0 && (
-        <p className="mt-0.5 pl-4 text-[10px] text-[#555]">{metaItems.join('  ')}</p>
+        <p className="mt-0.5 pl-4 text-xs text-terminal-muted">{metaItems.join('  ')}</p>
       )}
       {entry.detail && <DetailBlock detail={entry.detail} kind={entry.detailKind} t={t} />}
     </div>
@@ -614,22 +597,24 @@ function DetailBlock({
 
   return (
     <details className="mt-1 pl-4">
-      <summary className="flex cursor-pointer select-none items-center justify-between gap-2 text-[10px] text-[#555] hover:text-[#888]">
+      <summary className="flex cursor-pointer select-none items-center justify-between gap-2 text-[10px] text-terminal-muted hover:text-terminal-secondary">
         <span>▶ {summaryLabel}</span>
         <button
           type="button"
           onClick={onCopy}
           title={t('log.copy')}
           aria-label={t('log.copy')}
-          className="flex items-center gap-1 text-[10px] text-[#555] transition-colors hover:text-[#9eb4ff] focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          className="flex items-center gap-1 text-[10px] text-terminal-muted transition-colors hover:text-terminal-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
         >
           <Copy size={10} />
           {t('log.copy')}
         </button>
       </summary>
       <pre
-        className={`mt-1 max-h-[480px] overflow-y-auto whitespace-pre-wrap text-[10px] leading-relaxed custom-scrollbar ${
-          isError ? 'text-[#fda4af] bg-[#3b0a0f]/30 rounded-md p-2 border border-[#ff6b6b]/20' : 'text-[#7a8fa6]'
+        className={`mt-1 max-h-[480px] overflow-y-auto whitespace-pre-wrap text-[10px] leading-relaxed terminal-scrollbar ${
+          isError
+            ? 'text-terminal-error/80 bg-terminal-error/[0.08] rounded-md p-2 border border-terminal-error/20'
+            : 'text-terminal-secondary'
         }`}
       >
         {detail}

@@ -73,6 +73,25 @@
   /*   --color-editorial-bg: TBD; */
   /*   --color-editorial-ink: TBD; */
   /* } */
+
+  /* ── Terminal — versione scura della palette editoriale ──────────────────── */
+  /* Sfondo: nero caldo (non freddo) che armonizza con editorial-bg #F8F5F0    */
+  --color-terminal-bg:        #0d0b09;
+  --color-terminal-chrome:    #131008;
+  --color-terminal-border:    #2a2218;
+  --color-terminal-line:      #1e1810;
+
+  --color-terminal-ink:       #d8cfc5;
+  --color-terminal-secondary: #8a7a6e;
+  --color-terminal-muted:     #908070;
+  --color-terminal-dim:       #3a3028;
+
+  --color-terminal-error:     #c07060;
+  --color-terminal-warn:      #c49b2a;
+  --color-terminal-success:   #5a9a7a;
+  --color-terminal-info:      #7898aa;
+
+  --color-terminal-accent:    #c49b2a;
 }
 
 /* Consistent focus-visible ring across the app */
@@ -206,6 +225,26 @@ mark.hl-diff-rm {
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background-color: var(--color-editorial-muted);
+}
+
+.terminal-scrollbar {
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-terminal-border) transparent;
+}
+.terminal-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.terminal-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.terminal-scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--color-terminal-border);
+  border-radius: 3px;
+}
+.terminal-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-terminal-secondary);
 }
 
 @layer components {
