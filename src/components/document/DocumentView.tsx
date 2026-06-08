@@ -10,30 +10,24 @@ import {
   Pencil,
   RotateCcw,
   ScanLine,
-  Search,
   Wand2,
-  X,
-  Zap,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
-import { useConfigStore } from '../../stores/configStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
-import type { TranslationChunk } from '../../types';
 import { indexPad } from '../../utils';
-import { CopyButton, HighlightedText, MarkdownEditor, ProcessingLine } from '../common';
+import { CopyButton, HighlightedText, MarkdownEditor } from '../common';
 import { IconButton, Tooltip, type IconButtonTone } from '../ui';
-import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { usePhraseMemoryAutoSearch } from '../../hooks/usePhraseMemoryAutoSearch';
-import { escapeHtml, useGlossaryHighlight } from '../../hooks/useGlossaryHighlight';
 import { usePanelScrollSync } from '../../hooks/usePanelScrollSync';
-import { useStageDiff } from '../../hooks/useStageDiff';
-import { highlightSuperscriptMarkersHtml } from '../../utils/footnoteExtractor';
+import { useDocumentViewState } from './hooks/useDocumentViewState';
+import { StageTraceDialog } from './StageTraceDialog';
+import { PaneSearch } from './PaneSearch';
+import { InlineStatusBadge } from './InlineStatusBadge';
 
 const NOOP_CHANGE = () => {};
 
@@ -50,9 +44,100 @@ const STAGE_TONE_MAP: Record<string, IconButtonTone> = {
   idle: 'muted',
 };
 
+interface DocumentPageProps {
+  label: string;
+  eyebrow: string;
+  eyebrowMeta?: React.ReactNode;
+  subtitle?: string;
+  subtitleAction?: React.ReactNode;
+  readOnly?: boolean;
+  highlighted?: boolean;
+  titleMeta?: React.ReactNode;
+  statusBadge?: React.ReactNode;
+  actions?: React.ReactNode | null;
+  footer?: React.ReactNode;
+  searchValue?: string;
+  onSearchChange?: (value: string) => void;
+  searchLabel?: string;
+  scrollRef?: React.RefObject<HTMLDivElement | null>;
+  children: React.ReactNode;
+}
+
+function DocumentPage({
+  label,
+  eyebrow,
+  eyebrowMeta,
+  subtitle,
+  subtitleAction,
+  readOnly = false,
+  highlighted = false,
+  titleMeta,
+  statusBadge,
+  actions,
+  footer,
+  searchValue,
+  onSearchChange,
+  searchLabel,
+  scrollRef,
+  children,
+}: DocumentPageProps) {
+  return (
+    <section className={`relative rounded-[24px] bg-editorial-page px-6 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_18px_45px_rgba(74,50,17,0.08)] flex flex-col min-h-0 ${
+      highlighted ? 'border border-editorial-accent ring-2 ring-editorial-accent/30' : 'border border-editorial-divider'
+    }`}>
+      {/* Header con altezza minima fissa per allineare il corpo testo tra i due pannelli */}
+      <div className="mb-4 shrink-0 flex items-start justify-between gap-4 border-b border-editorial-divider-soft pb-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+              {eyebrow}
+            </div>
+            {eyebrowMeta}
+          </div>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            <h3 className="font-display text-[1.7rem] italic tracking-tight text-editorial-ink">
+              {label}
+            </h3>
+            {statusBadge}
+          </div>
+          {subtitle && (
+            <div className="mt-0.5 flex items-center gap-2">
+              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-accent">
+                {subtitle}
+              </p>
+              {subtitleAction}
+            </div>
+          )}
+        </div>
+        <div className="shrink-0 flex items-center gap-2 pt-1 ml-6">
+          {titleMeta}
+          {titleMeta && actions && (
+            <span className="h-4 w-px bg-editorial-border/60" aria-hidden="true" />
+          )}
+          {actions}
+        </div>
+      </div>
+      <div ref={scrollRef} className={`flex flex-col flex-1 min-h-0 ${readOnly ? 'opacity-90' : ''}`}>
+        {onSearchChange && searchLabel ? (
+          <PaneSearch
+            value={searchValue ?? ''}
+            onChange={onSearchChange}
+            label={searchLabel}
+          />
+        ) : null}
+        {children}
+      </div>
+      {footer && (
+        <div className="mt-3 pt-3 border-t border-editorial-divider-soft shrink-0">
+          {footer}
+        </div>
+      )}
+    </section>
+  );
+}
 
 export function DocumentView({
-  onRetranslateChunk,
+  onRetranslateChunk: _onRetranslateChunk,
   onImportDocument,
 }: DocumentViewProps) {
   const { t } = useTranslation();
@@ -60,7 +145,6 @@ export function DocumentView({
   const { currentProjectId, projects } = useProjectStore();
   const activeWorkspace = useWorkspaceStore((state) => state.activeWorkspace);
   const {
-    chunks,
     updateChunkDraft,
     updateChunkOriginalText,
     restoreChunkSourceText,
@@ -69,156 +153,54 @@ export function DocumentView({
   } = useChunksStore();
   usePhraseMemoryAutoSearch();
 
-  const handleLockToggle = (chunk: TranslationChunk) => {
-    toggleChunkTranslationLock(chunk.id);
-  };
-
   const {
-    selectedChunkId,
-    setSelectedChunkId,
-    documentLayout,
-    documentPaneFocus: paneFocus,
-    syncScrollEnabled,
-    highlightsEnabled,
-    searchQuery,
+    traceStageId,
+    setTraceStageId,
     focusedChunkId,
     focusedIssueQuery,
     focusedIssueRequestId,
-    traceStageId,
-    setTraceStageId,
   } = useUiStore();
 
-  const pipelineTestChunkCount = useConfigStore((state) => state.pipelineTestChunkCount);
-  const setPipelineTestChunkCount = useConfigStore((state) => state.setPipelineTestChunkCount);
-
-  const [viewportWidth, setViewportWidth] = useState(
-    typeof window === 'undefined' ? 0 : window.innerWidth,
-  );
-  const [selectedStageId, setSelectedStageId] = useState<string>('');
-  const [showDiffMode, setShowDiffMode] = useState(false);
-  const [diffPairKey, setDiffPairKey] = useState<string>('');
-  const [sourcePaneSearch, setSourcePaneSearch] = useState('');
-  const [translationPaneSearch, setTranslationPaneSearch] = useState('');
+  const {
+    resolvedLayout,
+    paneFocus,
+    syncScrollEnabled,
+    chunks,
+    currentIndex,
+    currentChunk,
+    enabledStages,
+    lastStageId,
+    isEditorialMode,
+    selectedStageId: _selectedStageId,
+    setSelectedStageId,
+    effectiveSelectedStageId,
+    isLastSelected,
+    rawStageContent,
+    showDiffMode,
+    setShowDiffMode,
+    diffPairKey,
+    setDiffPairKey,
+    diffPairs,
+    activeDiffPair,
+    stageDiff,
+    sourcePaneSearch,
+    setSourcePaneSearch,
+    translationPaneSearch,
+    setTranslationPaneSearch,
+    showHighlight,
+    sourceHighlightHtml,
+    translationHighlight,
+    translationEffectiveSearch,
+    setSelectedChunkId,
+  } = useDocumentViewState();
 
   const { sourceRef: scrollSourceRef, translationRef: scrollTranslationRef } = usePanelScrollSync(
     paneFocus === 'both' && syncScrollEnabled,
   );
 
-  useEffect(() => {
-    const onResize = () => setViewportWidth(window.innerWidth);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
-
-  useEffect(() => {
-    if (chunks.length > 0 && pipelineTestChunkCount > chunks.length) {
-      setPipelineTestChunkCount(chunks.length);
-    }
-  }, [chunks.length, pipelineTestChunkCount, setPipelineTestChunkCount]);
-
-  const resolvedLayout =
-    documentLayout === 'auto'
-      ? viewportWidth >= 1500
-        ? 'book'
-        : 'standard'
-      : documentLayout;
-
-  const currentIndex = Math.max(
-    0,
-    chunks.findIndex((chunk) => chunk.id === selectedChunkId),
-  );
-  const currentChunk = chunks[currentIndex] ?? null;
-  const enabledStages = useMemo(() => config.stages.filter((s) => s.enabled), [config.stages]);
-  const lastStageId = enabledStages[enabledStages.length - 1]?.id ?? '';
-  const isEditorialMode = enabledStages.length > 1;
-  const deferredSourceText = useDeferredValue(currentChunk?.sourceDisplayText ?? '');
-  const effectiveSelectedStageId = selectedStageId || lastStageId;
-  const isLastSelected = effectiveSelectedStageId === lastStageId;
-  const rawStageContent = isLastSelected
-    ? (currentChunk?.currentDraft ?? '')
-    : (currentChunk?.stageResults[effectiveSelectedStageId]?.content ?? '');
-  const deferredStageContent = useDeferredValue(rawStageContent);
-
-  useEffect(() => {
-    if (!chunks.length) return;
-    if (!selectedChunkId || !chunks.some((chunk) => chunk.id === selectedChunkId)) {
-      setSelectedChunkId(chunks[0].id);
-    }
-  }, [chunks, selectedChunkId, setSelectedChunkId]);
-
-  // Reset to last stage whenever the chunk changes
-  useEffect(() => {
-    setSelectedStageId(lastStageId);
-  }, [currentChunk?.id, lastStageId]);
-
-  // Diff mode is only available in translation-only pane.
-  useEffect(() => {
-    if (paneFocus !== 'translation') setShowDiffMode(false);
-  }, [paneFocus]);
-
-  const diffPairs = useMemo(() => {
-    return enabledStages.slice(0, -1).map((stage, index) => {
-      const nextStage = enabledStages[index + 1];
-      return {
-        key: `${stage.id}::${nextStage.id}`,
-        fromId: stage.id,
-        toId: nextStage.id,
-        fromName: stage.name,
-        toName: nextStage.id === lastStageId ? t('document.finalDraft') : nextStage.name,
-      };
-    });
-  }, [enabledStages, lastStageId, t]);
-
-  useEffect(() => {
-    if (diffPairs.length === 0) {
-      setDiffPairKey('');
-      return;
-    }
-    setDiffPairKey((prev) => (
-      prev && diffPairs.some((pair) => pair.key === prev)
-        ? prev
-        : diffPairs[0]!.key
-    ));
-  }, [diffPairs]);
-
-  // Hooks devono essere chiamati prima di qualsiasi return condizionale
-  const hasGlossary = config.glossary.length > 0;
-  const showHighlight = highlightsEnabled && hasGlossary;
-  const sourceEffectiveSearch = sourcePaneSearch.trim() || (highlightsEnabled ? searchQuery.trim() : '');
-  const translationEffectiveSearch = translationPaneSearch.trim() || (highlightsEnabled ? searchQuery.trim() : '');
-  const sourceHighlight = useGlossaryHighlight(
-    paneFocus !== 'translation' ? deferredSourceText : '',
-    showHighlight && paneFocus !== 'translation' ? config.glossary : [],
-    'source',
-    sourceEffectiveSearch,
-  );
-  const translationHighlight = useGlossaryHighlight(
-    paneFocus !== 'source' ? deferredStageContent : '',
-    showHighlight && paneFocus !== 'source' ? config.glossary : [],
-    'translation',
-    translationEffectiveSearch,
-    focusedIssueQuery ?? '',
-  );
-
-  const activeDiffPair = diffPairs.find((pair) => pair.key === diffPairKey) ?? diffPairs[0] ?? null;
-  const effectiveDiffStageIdA = activeDiffPair?.fromId ?? '';
-  const effectiveDiffStageIdB = activeDiffPair?.toId ?? '';
-  const diffTextA = effectiveDiffStageIdA === lastStageId
-    ? (currentChunk?.currentDraft ?? '')
-    : (currentChunk?.stageResults[effectiveDiffStageIdA]?.content ?? '');
-  const diffTextB = effectiveDiffStageIdB === lastStageId
-    ? (currentChunk?.currentDraft ?? '')
-    : (currentChunk?.stageResults[effectiveDiffStageIdB]?.content ?? '');
-  const stageDiff = useStageDiff(showDiffMode ? diffTextA : '', showDiffMode ? diffTextB : '');
-
-  const sourceHighlightHtml = useMemo(() => {
-    const hasFootnoteMarkers = /\[[⁰¹²³⁴⁵⁶⁷⁸⁹]/.test(deferredSourceText);
-    const showGlossary = showHighlight && paneFocus !== 'translation';
-    const hasSearch = !!sourceEffectiveSearch && paneFocus !== 'translation';
-    if (!showGlossary && !hasSearch && !hasFootnoteMarkers) return null;
-    const base = (showGlossary || hasSearch) ? sourceHighlight.html : escapeHtml(deferredSourceText);
-    return hasFootnoteMarkers ? highlightSuperscriptMarkersHtml(base) : base;
-  }, [deferredSourceText, showHighlight, sourceEffectiveSearch, paneFocus, sourceHighlight.html]);
+  const handleLockToggle = (chunk: typeof currentChunk) => {
+    if (chunk) toggleChunkTranslationLock(chunk.id);
+  };
 
   const currentProject = projects.find((project) => project.id === currentProjectId) ?? null;
 
@@ -562,245 +544,5 @@ export function DocumentView({
         />
       ) : null}
     </section>
-  );
-}
-
-interface DocumentPageProps {
-  label: string;
-  eyebrow: string;
-  eyebrowMeta?: React.ReactNode;
-  subtitle?: string;
-  subtitleAction?: React.ReactNode;
-  readOnly?: boolean;
-  highlighted?: boolean;
-  titleMeta?: React.ReactNode;
-  statusBadge?: React.ReactNode;
-  actions?: React.ReactNode | null;
-  footer?: React.ReactNode;
-  searchValue?: string;
-  onSearchChange?: (value: string) => void;
-  searchLabel?: string;
-  scrollRef?: React.RefObject<HTMLDivElement | null>;
-  children: React.ReactNode;
-}
-
-function StageTraceDialog({
-  chunk,
-  stage,
-  isJudge = false,
-  onClose,
-}: {
-  chunk: TranslationChunk;
-  stage: ReturnType<typeof usePipelineStore.getState>['config']['stages'][number] | null;
-  isJudge?: boolean;
-  onClose: () => void;
-}) {
-  const { t } = useTranslation();
-  const trapRef = useFocusTrap(true, onClose);
-  const result = isJudge ? chunk.judgeResult : stage ? chunk.stageResults[stage.id] : null;
-  const dialogTitle = isJudge ? t('pipeline.audit') : (stage?.name ?? t('errors.unknownError'));
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-editorial-ink/35 p-4 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="stage-trace-title"
-      ref={trapRef}
-    >
-      <div className="flex max-h-[90vh] w-full max-w-4xl flex-col rounded-[28px] border border-editorial-border bg-editorial-bg shadow-[0_24px_80px_rgba(26,26,26,0.2)]">
-        <div className="shrink-0 border-b border-editorial-border px-6 py-5 md:px-8 md:py-6">
-          <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-            {t('document.stageTrace')}
-          </div>
-          <h3
-            id="stage-trace-title"
-            className="mt-2 font-display text-3xl italic tracking-tight text-editorial-ink"
-          >
-            {dialogTitle}
-          </h3>
-          <p className="mt-2 text-sm leading-relaxed text-editorial-muted">
-            {result?.status ?? 'idle'}
-          </p>
-        </div>
-        <div className="flex-1 overflow-y-auto px-6 py-6 md:px-8 custom-scrollbar">
-          {result?.status === 'processing' || result?.status === 'retrying' ? (
-            <div className="rounded-[22px] border border-editorial-border bg-editorial-textbox/35 p-5">
-              <ProcessingLine />
-            </div>
-          ) : result?.status === 'error' ? (
-            <div className="rounded-[22px] border border-editorial-accent/40 bg-editorial-textbox/40 p-5 text-sm leading-relaxed text-editorial-accent">
-              {result.error || t('errors.unknownError')}
-            </div>
-          ) : result?.content ? (
-            <pre className="whitespace-pre-wrap rounded-[22px] border border-editorial-border bg-editorial-bg p-5 text-sm leading-relaxed text-editorial-ink">
-              {result.content}
-            </pre>
-          ) : (
-            <div className="rounded-[22px] border border-editorial-border bg-editorial-bg p-5 text-sm text-editorial-muted">
-              {t('document.noStageTrace')}
-            </div>
-          )}
-        </div>
-        <div className="flex justify-end border-t border-editorial-border px-6 py-4 md:px-8">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full border border-editorial-border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink"
-          >
-            {t('common.close')}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function DocumentPage({
-  label,
-  eyebrow,
-  eyebrowMeta,
-  subtitle,
-  subtitleAction,
-  readOnly = false,
-  highlighted = false,
-  titleMeta,
-  statusBadge,
-  actions,
-  footer,
-  searchValue,
-  onSearchChange,
-  searchLabel,
-  scrollRef,
-  children,
-}: DocumentPageProps) {
-  return (
-    <section className={`relative rounded-[24px] bg-editorial-page px-6 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_18px_45px_rgba(74,50,17,0.08)] flex flex-col min-h-0 ${
-      highlighted ? 'border border-editorial-accent ring-2 ring-editorial-accent/30' : 'border border-editorial-divider'
-    }`}>
-      {/* Header con altezza minima fissa per allineare il corpo testo tra i due pannelli */}
-      <div className="mb-4 shrink-0 flex items-start justify-between gap-4 border-b border-editorial-divider-soft pb-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-              {eyebrow}
-            </div>
-            {eyebrowMeta}
-          </div>
-          <div className="mt-1.5 flex flex-wrap items-center gap-2">
-            <h3 className="font-display text-[1.7rem] italic tracking-tight text-editorial-ink">
-              {label}
-            </h3>
-            {statusBadge}
-          </div>
-          {subtitle && (
-            <div className="mt-0.5 flex items-center gap-2">
-              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-accent">
-                {subtitle}
-              </p>
-              {subtitleAction}
-            </div>
-          )}
-        </div>
-        <div className="shrink-0 flex items-center gap-2 pt-1 ml-6">
-          {titleMeta}
-          {titleMeta && actions && (
-            <span className="h-4 w-px bg-editorial-border/60" aria-hidden="true" />
-          )}
-          {actions}
-        </div>
-      </div>
-      <div ref={scrollRef} className={`flex flex-col flex-1 min-h-0 ${readOnly ? 'opacity-90' : ''}`}>
-        {onSearchChange && searchLabel ? (
-          <PaneSearch
-            value={searchValue ?? ''}
-            onChange={onSearchChange}
-            label={searchLabel}
-          />
-        ) : null}
-        {children}
-      </div>
-      {footer && (
-        <div className="mt-3 pt-3 border-t border-editorial-divider-soft shrink-0">
-          {footer}
-        </div>
-      )}
-    </section>
-  );
-}
-
-function PaneSearch({
-  value,
-  onChange,
-  label,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  label: string;
-}) {
-  const { t } = useTranslation();
-
-  return (
-    <form
-      role="search"
-      className="mb-3 shrink-0"
-      onSubmit={(event) => event.preventDefault()}
-    >
-      <label className="sr-only">{label}</label>
-      <div className="flex items-center gap-2 rounded-full border border-editorial-divider-soft bg-editorial-bg/70 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] transition-colors focus-within:border-editorial-accent/40 focus-within:ring-2 focus-within:ring-editorial-accent/20">
-        <Search size={13} className="shrink-0 text-editorial-muted" aria-hidden="true" />
-        <input
-          type="search"
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={t('document.searchChunkPlaceholder')}
-          aria-label={label}
-          className="min-w-0 flex-1 bg-transparent text-xs text-editorial-ink placeholder:text-editorial-muted/55 focus:outline-none"
-        />
-        {value ? (
-          <IconButton
-            size="sm"
-            tone="muted"
-            onClick={() => onChange('')}
-            title={t('document.clearPaneSearch')}
-            className="shrink-0"
-          >
-            <X size={12} />
-          </IconButton>
-        ) : null}
-      </div>
-    </form>
-  );
-}
-
-function InlineStatusBadge({
-  tone,
-  icon,
-  label,
-  ariaLabel,
-}: {
-  tone: 'amber' | 'emerald' | 'muted';
-  icon: React.ReactNode;
-  label?: string;
-  ariaLabel?: string;
-}) {
-  const toneClasses =
-    tone === 'amber'
-      ? 'border-editorial-warning/40 bg-editorial-textbox text-editorial-ink'
-      : tone === 'emerald'
-        ? 'border-editorial-success/50 bg-editorial-success/8 text-editorial-success'
-        : 'border-editorial-border bg-editorial-textbox/60 text-editorial-muted';
-  return (
-    <Tooltip label={label ?? ariaLabel}>
-      <span
-        aria-label={ariaLabel ?? label}
-        className={`inline-flex items-center rounded-full border ${label ? 'gap-1.5 px-2.5 py-1' : 'p-1.5'} ${toneClasses}`}
-      >
-        {icon}
-        {label && (
-          <span className="text-[10px] font-bold uppercase tracking-[0.18em]">{label}</span>
-        )}
-      </span>
-    </Tooltip>
   );
 }

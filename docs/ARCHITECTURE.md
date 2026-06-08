@@ -27,7 +27,8 @@
 | `stores/workspaceStore.ts` | workspaces[], activeWorkspace, loading/isLoaded | Boundary traduzioni: switch/create/update workspace, un workspace attivo per volta |
 | `stores/phraseMemoryStore.ts` | matchesByChunk, enabledMatchIds, jobStatus, searchStatus | Match Phrase Memory per chunk; match trovati read-only finché non selezionati |
 | `stores/operationLogStore.ts` | entries[], currentProjectId | Max 2000 in-memory, resto in DB |
-| `stores/uiStore.ts` | selectedChunkId, pipelineMode, highlightsEnabled, highlightColors, searchQuery, ollamaStatus | UI-only state. highlightsEnabled + highlightColors persisted; searchQuery transient |
+| `stores/uiStore.ts` | selectedChunkId, highlightsEnabled, highlightColors, searchQuery, activePanel, showSettings/Help/ConfigDrawer/DocumentDrawer/ChunkDrawer | UI-only state. highlightsEnabled + highlightColors persisted. activePanel enum sincronizzato con i boolean panel. |
+| `stores/configStore.ts` | pipelineMode, pipelineTestChunkCount, ollamaStatus, ollamaModels, ollamaBaseUrl, newPipelineInit, maxPipelines, chunkPresetShort/Medium/Long | Config app. pipelineTestChunkCount, ollamaBaseUrl, newPipelineInit, maxPipelines, chunkPreset* persisted. ollamaStatus/Models transient. |
 | `stores/libraryStore.ts` | glossaries[], dictionaries[], selectedDictionary | — |
 | `stores/promptTemplateStore.ts` | templates[], selectedTemplate | — |
 
