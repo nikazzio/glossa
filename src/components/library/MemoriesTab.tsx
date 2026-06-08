@@ -1,15 +1,20 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Brain, Check, Loader2, Pencil, RefreshCcw, Trash2, X } from 'lucide-react';
+import { BookMarked, Brain, Check, Loader2, Pencil, RefreshCcw, Trash2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import {
   deletePhraseMemoryEntry,
+  getChunkPositions,
   listPhraseMemoryEntries,
   updatePhraseMemoryEntry,
   type PhraseMemoryEntry,
 } from '../../services/phraseMemoryService';
+import { addGlossaryEntry, getGlossaryEntries } from '../../services/glossaryService';
+import { listProjects } from '../../services/projectService';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { useLibraryStore } from '../../stores/libraryStore';
 import { confirm } from '../../stores/confirmStore';
+import { generateId } from '../../utils';
 import { IconButton, SectionLabel } from '../ui';
 import type { Workspace } from '../../types';
 
@@ -17,17 +22,25 @@ export function MemoriesTab() {
   const { t } = useTranslation();
   const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace);
   const workspaces = useWorkspaceStore((s) => s.workspaces);
+  const glossaries = useLibraryStore((s) => s.glossaries);
   const [entries, setEntries] = useState<PhraseMemoryEntry[]>([]);
+  const [projectNameMap, setProjectNameMap] = useState<Record<string, string>>({});
+  const [chunkPositionMap, setChunkPositionMap] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [workspaceFilter, setWorkspaceFilter] = useState<string>('all');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftSource, setDraftSource] = useState('');
   const [draftTarget, setDraftTarget] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [pickerOpenId, setPickerOpenId] = useState<string | null>(null);
+  const [pickerGlossaryId, setPickerGlossaryId] = useState<string>('');
+  const [addingId, setAddingId] = useState<string | null>(null);
 
   const loadEntries = useCallback(async () => {
     if (workspaces.length === 0) {
       setEntries([]);
+      setProjectNameMap({});
+      setChunkPositionMap({});
       return;
     }
     setIsLoading(true);
@@ -40,11 +53,20 @@ export function MemoriesTab() {
       const results = await Promise.all(
         targetWorkspaces.map((workspace) => listPhraseMemoryEntries(workspace.id)),
       );
-      setEntries(
-        results
-          .flat()
-          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
-      );
+      const loaded = results
+        .flat()
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setEntries(loaded);
+
+      const uniqueWsIds = [...new Set(loaded.map((e) => e.workspaceId))];
+      const projectLists = await Promise.all(uniqueWsIds.map((id) => listProjects(id).catch(() => [])));
+      const projectMap: Record<string, string> = {};
+      projectLists.flat().forEach((p) => { projectMap[p.id] = p.name; });
+      setProjectNameMap(projectMap);
+
+      const chunkIds = loaded.map((e) => e.chunkId).filter((id): id is string => id !== null);
+      const posMap = await getChunkPositions(chunkIds).catch(() => ({}));
+      setChunkPositionMap(posMap);
     } catch (err: unknown) {
       toast.error(t('library.memoryLoadError'), {
         description: err instanceof Error ? err.message : String(err),
@@ -59,6 +81,7 @@ export function MemoriesTab() {
   }, [loadEntries]);
 
   const startEdit = (entry: PhraseMemoryEntry) => {
+    setPickerOpenId(null);
     setEditingId(entry.id);
     setDraftSource(entry.sourcePhrase);
     setDraftTarget(entry.targetPhrase);
@@ -114,6 +137,32 @@ export function MemoriesTab() {
       });
     } finally {
       setBusyId(null);
+    }
+  };
+
+  const handleAddToGlossary = async (entry: PhraseMemoryEntry, glossaryId: string) => {
+    if (!glossaryId) return;
+    setAddingId(entry.id);
+    try {
+      await addGlossaryEntry(glossaryId, {
+        id: generateId('gle'),
+        term: entry.sourcePhrase,
+        translation: entry.targetPhrase,
+      });
+      const freshEntries = await getGlossaryEntries(glossaryId);
+      const store = useLibraryStore.getState();
+      store.setGlossaryEntries(glossaryId, freshEntries);
+      setPickerOpenId(null);
+      setPickerGlossaryId('');
+      toast.success(t('library.addedToGlossary'));
+      store.setShowLibraryPanel(true, 'dictionaries');
+      store.setExpandedGlossaryId(glossaryId);
+    } catch (err: unknown) {
+      toast.error(t('library.addToGlossaryError'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setAddingId(null);
     }
   };
 
@@ -192,6 +241,8 @@ export function MemoriesTab() {
           {entries.map((entry) => {
             const isEditing = editingId === entry.id;
             const isBusy = busyId === entry.id;
+            const isAdding = addingId === entry.id;
+            const isPickerOpen = pickerOpenId === entry.id;
             return (
               <article
                 key={entry.id}
@@ -205,9 +256,11 @@ export function MemoriesTab() {
                     <p className="mt-1 truncate text-xs text-editorial-muted/80">
                       {workspaceName(entry.workspaceId, workspaces)} · {formatDate(entry.createdAt)}
                     </p>
-                    <EmbeddingModelBadge
-                      entryModel={entry.embeddingModel}
-                      workspaceModel={workspaces.find((w) => w.id === entry.workspaceId)?.embeddingModel ?? null}
+                    <OriginLine
+                      entry={entry}
+                      projectNameMap={projectNameMap}
+                      chunkPositionMap={chunkPositionMap}
+                      workspaceEmbeddingModel={workspaces.find((w) => w.id === entry.workspaceId)?.embeddingModel ?? null}
                     />
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5">
@@ -233,6 +286,24 @@ export function MemoriesTab() {
                       </>
                     ) : (
                       <>
+                        <IconButton
+                          size="sm"
+                          tone={isPickerOpen ? 'accent' : 'default'}
+                          onClick={() => {
+                            if (isPickerOpen) {
+                              setPickerOpenId(null);
+                              setPickerGlossaryId('');
+                            } else {
+                              setEditingId(null);
+                              setPickerOpenId(entry.id);
+                              setPickerGlossaryId(glossaries[0]?.id ?? '');
+                            }
+                          }}
+                          title={t('library.addToGlossary')}
+                          disabled={busyId !== null || isAdding || glossaries.length === 0}
+                        >
+                          {isAdding ? <Loader2 size={13} className="animate-spin" /> : <BookMarked size={13} />}
+                        </IconButton>
                         <IconButton
                           size="sm"
                           onClick={() => startEdit(entry)}
@@ -279,6 +350,17 @@ export function MemoriesTab() {
                     </div>
                   </div>
                 )}
+
+                {isPickerOpen && (
+                  <GlossaryPicker
+                    glossaries={glossaries}
+                    selectedId={pickerGlossaryId}
+                    isAdding={isAdding}
+                    onSelect={setPickerGlossaryId}
+                    onConfirm={() => void handleAddToGlossary(entry, pickerGlossaryId)}
+                    onCancel={() => { setPickerOpenId(null); setPickerGlossaryId(''); }}
+                  />
+                )}
               </article>
             );
           })}
@@ -287,6 +369,92 @@ export function MemoriesTab() {
     </div>
   );
 }
+
+// ── Origin line ───────────────────────────────────────────────────────────────
+// Single compact line: ProjectName · chunk:N · embeddingModel
+
+function OriginLine({
+  entry,
+  projectNameMap,
+  chunkPositionMap,
+  workspaceEmbeddingModel,
+}: {
+  entry: PhraseMemoryEntry;
+  projectNameMap: Record<string, string>;
+  chunkPositionMap: Record<string, number>;
+  workspaceEmbeddingModel: string | null;
+}) {
+  const parts: string[] = [];
+
+  if (entry.projectId) {
+    parts.push(projectNameMap[entry.projectId] ?? entry.projectId.slice(0, 8) + '…');
+  }
+  if (entry.chunkId) {
+    const pos = chunkPositionMap[entry.chunkId];
+    parts.push(pos !== undefined ? `chunk:${pos + 1}` : `chunk:${entry.chunkId.slice(0, 6)}…`);
+  }
+  if (entry.embeddingModel) {
+    parts.push(entry.embeddingModel);
+  }
+
+  if (parts.length === 0) return null;
+
+  const stale = entry.embeddingModel !== workspaceEmbeddingModel;
+  return (
+    <p className={`mt-1 font-mono text-[10px] ${stale ? 'text-editorial-accent/80' : 'text-editorial-muted/50'}`}>
+      {parts.join(' · ')}
+    </p>
+  );
+}
+
+// ── Glossary picker ───────────────────────────────────────────────────────────
+
+interface GlossaryPickerProps {
+  glossaries: { id: string; name: string }[];
+  selectedId: string;
+  isAdding: boolean;
+  onSelect: (id: string) => void;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+function GlossaryPicker({ glossaries, selectedId, isAdding, onSelect, onConfirm, onCancel }: GlossaryPickerProps) {
+  const { t } = useTranslation();
+  return (
+    <div className="mt-3 flex items-center gap-2 rounded-[14px] border border-editorial-accent/30 bg-editorial-textbox/20 px-3 py-2.5">
+      <select
+        value={selectedId}
+        onChange={(e) => onSelect(e.target.value)}
+        disabled={isAdding}
+        className="min-w-0 flex-1 rounded-full border border-editorial-border bg-editorial-bg px-3 py-1.5 text-xs text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-50"
+        aria-label={t('glossary.selectGlossary')}
+      >
+        {glossaries.map((g) => (
+          <option key={g.id} value={g.id}>{g.name}</option>
+        ))}
+      </select>
+      <IconButton
+        size="sm"
+        tone="accent"
+        onClick={onConfirm}
+        title={t('common.confirm')}
+        disabled={isAdding || !selectedId}
+      >
+        {isAdding ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+      </IconButton>
+      <IconButton
+        size="sm"
+        onClick={onCancel}
+        title={t('common.cancel')}
+        disabled={isAdding}
+      >
+        <X size={13} />
+      </IconButton>
+    </div>
+  );
+}
+
+// ── Shared sub-components ─────────────────────────────────────────────────────
 
 function MemoryTextarea({
   label,
@@ -312,22 +480,6 @@ function MemoryTextarea({
         className="w-full resize-y rounded-[16px] border border-editorial-border bg-editorial-bg/80 px-4 py-3 text-sm leading-relaxed text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
       />
     </label>
-  );
-}
-
-function EmbeddingModelBadge({
-  entryModel,
-  workspaceModel,
-}: {
-  entryModel: string | null;
-  workspaceModel: string | null;
-}) {
-  const stale = entryModel !== workspaceModel;
-  const label = entryModel ?? '—';
-  return (
-    <span className={`mt-1 inline-block font-mono text-[10px] ${stale ? 'text-editorial-accent/80' : 'text-editorial-muted/50'}`}>
-      {label}
-    </span>
   );
 }
 
