@@ -18,9 +18,7 @@ const STAGE_ICON: Record<StageRole, typeof Languages> = {
 function PromptBlockCard({ block }: { block: PromptPreviewBlock }) {
   const { t } = useTranslation();
   const title = t(`pipeline.promptPreviewBlocks.${block.id}.title`);
-  const hint = block.kind === 'runtime'
-    ? t(`pipeline.promptPreviewBlocks.${block.id}.hint`)
-    : '';
+  const hint = t(`pipeline.promptPreviewBlocks.${block.id}.hint`, '');
 
   return (
     <section className="rounded-[18px] border border-editorial-border bg-editorial-bg/75 px-4 py-3 space-y-2">
