@@ -21,6 +21,7 @@ import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
+import { useConfigStore } from '../../stores/configStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import type { TranslationChunk } from '../../types';
@@ -80,14 +81,15 @@ export function DocumentView({
     syncScrollEnabled,
     highlightsEnabled,
     searchQuery,
-    pipelineTestChunkCount,
-    setPipelineTestChunkCount,
     focusedChunkId,
     focusedIssueQuery,
     focusedIssueRequestId,
     traceStageId,
     setTraceStageId,
   } = useUiStore();
+
+  const pipelineTestChunkCount = useConfigStore((state) => state.pipelineTestChunkCount);
+  const setPipelineTestChunkCount = useConfigStore((state) => state.setPipelineTestChunkCount);
 
   const [viewportWidth, setViewportWidth] = useState(
     typeof window === 'undefined' ? 0 : window.innerWidth,

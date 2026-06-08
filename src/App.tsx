@@ -6,6 +6,7 @@ import { motion } from 'motion/react';
 import { usePipeline } from './hooks/usePipeline';
 import { useProjectAutosave } from './hooks/useProjectAutosave';
 import { useUiStore } from './stores/uiStore';
+import { useConfigStore } from './stores/configStore';
 import { useProjectStore } from './stores/projectStore';
 import { useLibraryStore } from './stores/libraryStore';
 import { useChunksStore } from './stores/chunksStore';
@@ -97,7 +98,7 @@ function EditorView() {
   } = usePipeline();
 
   const handleRetranslateChunk = useCallback((chunkId: string) => {
-    const mode = useUiStore.getState().pipelineMode;
+    const mode = useConfigStore.getState().pipelineMode;
     const hasCompleted = useChunksStore.getState().chunks.some((c) => c.status === 'completed' || c.translationLocked);
     runSingleChunk(chunkId, (!hasCompleted && mode === 'test') ? 'preview' : 'completed');
   }, [runSingleChunk]);
@@ -105,9 +106,9 @@ function EditorView() {
   const viewMode = useUiStore((state) => state.viewMode);
   const setShowConfigDrawer = useUiStore((state) => state.setShowConfigDrawer);
   const showSettings = useUiStore((state) => state.showSettings);
-  const chunkPresetMedium = useUiStore((state) => state.chunkPresetMedium);
-  const chunkPresetShort = useUiStore((state) => state.chunkPresetShort);
-  const chunkPresetLong = useUiStore((state) => state.chunkPresetLong);
+  const chunkPresetMedium = useConfigStore((state) => state.chunkPresetMedium);
+  const chunkPresetShort = useConfigStore((state) => state.chunkPresetShort);
+  const chunkPresetLong = useConfigStore((state) => state.chunkPresetLong);
   const showProjectPanel = useProjectStore((state) => state.showProjectPanel);
   const currentProjectId = useProjectStore((state) => state.currentProjectId);
   const activePipelineId = useProjectStore((state) => state.activePipelineId);

@@ -43,6 +43,7 @@ import { usePipelineStore } from '../../stores/pipelineStore';
 import { usePricingStore } from '../../stores/pricingStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useUiStore } from '../../stores/uiStore';
+import { useConfigStore } from '../../stores/configStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { estimatePipelineCost } from '../../utils/costEstimate';
 import { CostBreakdownPanel } from '../pipeline/CostBadge';
@@ -167,14 +168,9 @@ export function PipelineSidebar({
   } = useProjectStore();
   const { chunks, isProcessing, cancelRequested } = useChunksStore();
   const {
-    pipelineMode,
-    setPipelineMode,
-    pipelineTestChunkCount,
-    setPipelineTestChunkCount,
     showConfigDrawer,
     setShowConfigDrawer,
     selectedChunkId,
-    maxPipelines,
     documentPaneFocus,
     setDocumentPaneFocus,
     syncScrollEnabled,
@@ -182,6 +178,11 @@ export function PipelineSidebar({
     highlightsEnabled,
     setHighlightsEnabled,
   } = useUiStore();
+  const pipelineMode = useConfigStore((s) => s.pipelineMode);
+  const setPipelineMode = useConfigStore((s) => s.setPipelineMode);
+  const pipelineTestChunkCount = useConfigStore((s) => s.pipelineTestChunkCount);
+  const setPipelineTestChunkCount = useConfigStore((s) => s.setPipelineTestChunkCount);
+  const maxPipelines = useConfigStore((s) => s.maxPipelines);
   const pricingOverrides = usePricingStore((s) => s.overrides);
   const { activeWorkspace } = useWorkspaceStore();
 

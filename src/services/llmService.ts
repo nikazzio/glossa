@@ -12,7 +12,7 @@ import type {
   PromptTemplateContext,
 } from '../types';
 import { useChunksStore } from '../stores/chunksStore';
-import { useUiStore } from '../stores/uiStore';
+import { useConfigStore } from '../stores/configStore';
 import { logOperation } from '../stores/operationLogStore';
 
 const LOCALE_NAMES: Record<string, string> = {
@@ -125,7 +125,7 @@ export const llmService = {
         config,
         previousResult: previousResult || null,
         streamId,
-        ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl,
+        ollamaBaseUrl: useConfigStore.getState().ollamaBaseUrl,
       });
       const { content: _usageContent, ...usageMeta } = result;
       logOperation({
@@ -192,7 +192,7 @@ export const llmService = {
         config,
         previousResult: previousResult || null,
         streamId,
-        ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl,
+        ollamaBaseUrl: useConfigStore.getState().ollamaBaseUrl,
       });
     } finally {
       unlisten();
@@ -234,7 +234,7 @@ export const llmService = {
     try {
       const result = await invoke<Omit<JudgeResult, 'status'> & UsageResult>(
         'judge_translation',
-        { originalText, translation, config: withUiLanguage(config), streamId, ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl },
+        { originalText, translation, config: withUiLanguage(config), streamId, ollamaBaseUrl: useConfigStore.getState().ollamaBaseUrl },
       );
       logOperation({
         level: 'info',
@@ -271,7 +271,7 @@ export const llmService = {
     try {
       const result = await invoke<{ issues: Issue[] } & UsageResult>(
         'run_coherence_for_chunk',
-        { input, config: withUiLanguage(config), streamId, ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl },
+        { input, config: withUiLanguage(config), streamId, ollamaBaseUrl: useConfigStore.getState().ollamaBaseUrl },
       );
       logOperation({
         level: 'info',
@@ -293,11 +293,11 @@ export const llmService = {
     model: string,
     context: PromptTemplateContext,
   ): Promise<string> {
-    return invoke<string>('refine_prompt', { prompt, provider, model, context, ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl });
+    return invoke<string>('refine_prompt', { prompt, provider, model, context, ollamaBaseUrl: useConfigStore.getState().ollamaBaseUrl });
   },
 
   async testConnection(provider: string): Promise<boolean> {
-    return invoke<boolean>('test_provider_connection', { provider, ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl });
+    return invoke<boolean>('test_provider_connection', { provider, ollamaBaseUrl: useConfigStore.getState().ollamaBaseUrl });
   },
 
   async computeBlobs(
@@ -316,7 +316,7 @@ export const llmService = {
   async preflightPipeline(
     checks: Array<{ provider: string; model: string; label: string }>,
   ): Promise<PreflightCheckResult[]> {
-    return invoke<PreflightCheckResult[]>('preflight_pipeline', { checks, ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl });
+    return invoke<PreflightCheckResult[]>('preflight_pipeline', { checks, ollamaBaseUrl: useConfigStore.getState().ollamaBaseUrl });
   },
 };
 
@@ -326,12 +326,12 @@ export const llmService = {
 export const ollamaService = {
   async listModels(): Promise<string[]> {
     logOperation({ level: 'info', scope: 'invoke', message: 'Invoking backend model listing for Ollama' });
-    return invoke<string[]>('list_ollama_models', { ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl });
+    return invoke<string[]>('list_ollama_models', { ollamaBaseUrl: useConfigStore.getState().ollamaBaseUrl });
   },
 
   async checkStatus(): Promise<boolean> {
     logOperation({ level: 'info', scope: 'invoke', message: 'Invoking backend reachability check for Ollama' });
-    return invoke<boolean>('check_ollama_status', { ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl });
+    return invoke<boolean>('check_ollama_status', { ollamaBaseUrl: useConfigStore.getState().ollamaBaseUrl });
   },
 
   async checkPreflight(model?: string): Promise<OllamaPreflightStatus> {
@@ -343,7 +343,7 @@ export const ollamaService = {
     });
     return invoke<OllamaPreflightStatus>('check_ollama_preflight', {
       model: model ?? null,
-      ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl,
+      ollamaBaseUrl: useConfigStore.getState().ollamaBaseUrl,
     });
   },
 };

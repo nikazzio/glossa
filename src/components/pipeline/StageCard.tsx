@@ -24,7 +24,7 @@ import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
 import { ReasoningPicker } from '../models/ReasoningPicker';
 import { ProviderRuntimeEditor } from './ProviderRuntimeEditor';
 import { canRefineWithProvider, formatProviderModelLabel, type ProviderKeyStatusMap } from '../../hooks/useProviderKeyStatus';
-import { useUiStore } from '../../stores/uiStore';
+import { useConfigStore } from '../../stores/configStore';
 import { STAGE_TEMPLATES } from '../../pipeline/pipelineModes';
 
 interface StageCardProps {
@@ -67,7 +67,7 @@ export function StageCard({
   deleteTemplate,
 }: StageCardProps) {
   const { t } = useTranslation();
-  const ollamaModels = useUiStore((s) => s.ollamaModels);
+  const ollamaModels = useConfigStore((s) => s.ollamaModels);
   const [isEditingPrompt, setIsEditingPrompt] = useState(false);
   const [showSaveName, setShowSaveName] = useState(false);
   const [templateName, setTemplateName] = useState('');

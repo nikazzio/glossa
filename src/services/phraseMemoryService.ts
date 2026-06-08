@@ -4,7 +4,7 @@ import { logOperation } from '../stores/operationLogStore';
 import { logger } from '../utils/logger';
 import type { EmbeddingModel, ModelProvider, PhraseMatch } from '../types';
 import { fetchEmbeddings } from './embeddingService';
-import { useUiStore } from '../stores/uiStore';
+import { useConfigStore } from '../stores/configStore';
 
 type RawPhraseMatch = {
   phrase_memory_id: string;
@@ -202,7 +202,7 @@ export async function extractPhraseMemoryPairs(options: {
       targetText: options.targetText,
       sourceLanguage: options.sourceLanguage,
       targetLanguage: options.targetLanguage,
-      ollamaBaseUrl: useUiStore.getState().ollamaBaseUrl,
+      ollamaBaseUrl: useConfigStore.getState().ollamaBaseUrl,
     });
 
     const rawCount = raw.pairs?.length ?? 0;

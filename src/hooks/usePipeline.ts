@@ -5,6 +5,7 @@ import { usePipelineStore } from '../stores/pipelineStore';
 import { useChunksStore } from '../stores/chunksStore';
 import { llmService, isStreamCancelledError } from '../services/llmService';
 import { useUiStore } from '../stores/uiStore';
+import { useConfigStore } from '../stores/configStore';
 import { showPreflightDialog } from '../stores/preflightStore';
 import { withRetry, friendlyError, is429Error } from '../utils/retry';
 import { qualityDefault, qualityFailure } from '../utils';
@@ -131,12 +132,12 @@ export function usePipeline() {
     if (ollamaResults.length > 0) {
       const ollamaReachable = ollamaResults.some((r) => r.reachable === true);
       const allOllamaOk = ollamaResults.every((r) => r.ok);
-      useUiStore.getState().setOllamaStatus(ollamaReachable || allOllamaOk ? 'connected' : 'disconnected');
+      useConfigStore.getState().setOllamaStatus(ollamaReachable || allOllamaOk ? 'connected' : 'disconnected');
       const allModels = [...new Set(ollamaResults.flatMap((r) => r.availableModels ?? []))];
       if (allModels.length > 0) {
-        useUiStore.getState().setOllamaModels(allModels);
+        useConfigStore.getState().setOllamaModels(allModels);
       } else if (!ollamaReachable) {
-        useUiStore.getState().setOllamaModels([]);
+        useConfigStore.getState().setOllamaModels([]);
       }
     }
 
@@ -423,7 +424,7 @@ export function usePipeline() {
     const allChunks = useChunksStore.getState().chunks;
     if (allChunks.length === 0) return;
 
-    const { pipelineMode, pipelineTestChunkCount } = useUiStore.getState();
+    const { pipelineMode, pipelineTestChunkCount } = useConfigStore.getState();
     const isTestMode = pipelineMode === 'test';
     // In test mode always process the first N chunks (never resume from a mid-point).
     const liveChunks = isTestMode ? allChunks.slice(0, pipelineTestChunkCount) : allChunks;
@@ -586,7 +587,7 @@ export function usePipeline() {
     const allChunks = useChunksStore.getState().chunks;
     if (allChunks.length === 0) return;
 
-    const requestedTestChunks = Math.max(1, useUiStore.getState().pipelineTestChunkCount);
+    const requestedTestChunks = Math.max(1, useConfigStore.getState().pipelineTestChunkCount);
     const targets = allChunks
       .filter((c) => c.status === 'ready')
       .slice(0, requestedTestChunks);

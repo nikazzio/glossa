@@ -22,6 +22,7 @@ import {
 import { usePipelineStore } from './pipelineStore';
 import { useChunksStore } from './chunksStore';
 import { useUiStore } from './uiStore';
+import { useConfigStore } from './configStore';
 import { useOperationLogStore } from './operationLogStore';
 import { buildProjectSnapshot } from '../utils/projectSnapshot';
 import { logger } from '../utils/logger';
@@ -371,7 +372,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       const { sourceLanguage, targetLanguage } = usePipelineStore.getState().config;
       const newId = await createPipeline(currentProjectId, name, sourceLanguage, targetLanguage);
 
-      const initMode = useUiStore.getState().newPipelineInit;
+      const initMode = useConfigStore.getState().newPipelineInit;
       if (initMode !== 'defaults' && pipelines.length > 0) {
         const sourcePipelineId = initMode === 'copy-first'
           ? pipelines[0].id

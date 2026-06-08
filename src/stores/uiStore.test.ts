@@ -1,5 +1,6 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import { useUiStore } from './uiStore';
+import { useConfigStore } from './configStore';
 
 const initial = useUiStore.getState();
 
@@ -9,11 +10,11 @@ beforeEach(() => {
 
 describe('uiStore drawer mutual exclusion', () => {
   it('defaults the test chunk count to three and clamps it to at least one', () => {
-    const state = useUiStore.getState();
+    const state = useConfigStore.getState();
     expect(state.pipelineTestChunkCount).toBe(3);
 
     state.setPipelineTestChunkCount(0);
-    expect(useUiStore.getState().pipelineTestChunkCount).toBe(1);
+    expect(useConfigStore.getState().pipelineTestChunkCount).toBe(1);
   });
 
   it('opening the config drawer closes settings, help and both insight drawers', () => {

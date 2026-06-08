@@ -8,6 +8,7 @@ import { getContextWindow, getResolvedModelReasoning, getSelectableModelIds } fr
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
+import { useConfigStore } from '../../stores/configStore';
 import { confirm } from '../../stores/confirmStore';
 import { CostBadge } from './CostBadge';
 import { estimatePipelineCost } from '../../utils/costEstimate';
@@ -40,7 +41,7 @@ const DEFAULT_PIPELINE_CONFIG_CLASSNAME =
   'col-span-1 md:col-span-3 border-r border-editorial-border flex flex-col bg-editorial-bg/50 min-h-0 h-full';
 
 function useJudgeModelOptions(provider: ModelProvider): string[] {
-  const ollamaModels = useUiStore((s) => s.ollamaModels);
+  const ollamaModels = useConfigStore((s) => s.ollamaModels);
   return getSelectableModelIds(provider, ollamaModels);
 }
 
@@ -62,8 +63,8 @@ export function PipelineConfig({
   } = usePipelineStore();
   const { chunks, isProcessing, cancelRequested, resetAllChunks } = useChunksStore();
   const clearLog = useOperationLogStore((s) => s.clear);
-  const ollamaStatus = useUiStore((s) => s.ollamaStatus);
-  const ollamaModels = useUiStore((s) => s.ollamaModels);
+  const ollamaStatus = useConfigStore((s) => s.ollamaStatus);
+  const ollamaModels = useConfigStore((s) => s.ollamaModels);
   const { statuses: keyStatuses, isLoading: keyStatusLoading } = useProviderKeyStatus();
   const { t } = useTranslation();
   const judgeModels = useJudgeModelOptions(config.judgeProvider);
@@ -174,12 +175,12 @@ export function PipelineConfig({
     setIsRefreshingOllama(true);
     try {
       const models = await ollamaService.listModels();
-      useUiStore.getState().setOllamaModels(models);
-      useUiStore.getState().setOllamaStatus('connected');
+      useConfigStore.getState().setOllamaModels(models);
+      useConfigStore.getState().setOllamaStatus('connected');
       toast.success(t('ollama.connected', { count: models.length }));
     } catch (err: unknown) {
-      useUiStore.getState().setOllamaModels([]);
-      useUiStore.getState().setOllamaStatus('disconnected');
+      useConfigStore.getState().setOllamaModels([]);
+      useConfigStore.getState().setOllamaStatus('disconnected');
       toast.error(t('ollama.disconnected'), { description: err instanceof Error ? err.message : String(err) });
     } finally {
       setIsRefreshingOllama(false);
@@ -257,16 +258,16 @@ export function PipelineConfig({
   };
 
   const handleJudgeProviderChange = (newProvider: ModelProvider) => {
-    const models = getSelectableModelIds(newProvider, useUiStore.getState().ollamaModels);
+    const models = getSelectableModelIds(newProvider, useConfigStore.getState().ollamaModels);
     setConfig((prev) => ({
       ...prev,
       judgeProvider: newProvider,
       judgeModel: models[0] || '',
       reviewProviderOptions: {},
     }));
-    if (newProvider === 'ollama' && useUiStore.getState().ollamaStatus === 'unknown') {
+    if (newProvider === 'ollama' && useConfigStore.getState().ollamaStatus === 'unknown') {
       toast.message(t('ollama.uncheckedHint'));
-    } else if (newProvider === 'ollama' && useUiStore.getState().ollamaStatus === 'disconnected') {
+    } else if (newProvider === 'ollama' && useConfigStore.getState().ollamaStatus === 'disconnected') {
       toast.warning(t('ollama.selectedButOffline'));
     }
   };

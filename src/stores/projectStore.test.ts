@@ -3,6 +3,7 @@ import { usePipelineStore } from './pipelineStore';
 import { useChunksStore } from './chunksStore';
 import { useProjectStore } from './projectStore';
 import { useUiStore } from './uiStore';
+import { useConfigStore } from './configStore';
 import type { SavedTranslation } from '../services/projectService';
 import type { Pipeline } from '../types';
 import { buildProjectSnapshot } from '../utils/projectSnapshot';
@@ -127,6 +128,8 @@ describe('projectStore', () => {
       selectedChunkId: null,
       showSettings: false,
       showHelp: false,
+    });
+    useConfigStore.setState({
       ollamaModels: [],
       ollamaStatus: 'unknown',
     });

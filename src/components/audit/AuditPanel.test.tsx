@@ -3,6 +3,7 @@ import { describe, expect, it, beforeEach } from 'vitest';
 import { AuditPanel } from './AuditPanel';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
+import { useConfigStore } from '../../stores/configStore';
 
 describe('AuditPanel', () => {
   beforeEach(() => {
@@ -24,12 +25,14 @@ describe('AuditPanel', () => {
       documentDrawerTab: 'index',
       showChunkDrawer: false,
       chunkDrawerTab: 'audit',
-      ollamaModels: [],
-      ollamaStatus: 'unknown',
       highlightsEnabled: false,
       focusedChunkId: null,
       focusedIssueQuery: null,
       focusedIssueRequestId: 0,
+    });
+    useConfigStore.setState({
+      ollamaModels: [],
+      ollamaStatus: 'unknown',
       chunkPresetShort: 400,
       chunkPresetMedium: 700,
       chunkPresetLong: 1000,

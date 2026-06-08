@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { usePipelineStore } from './pipelineStore';
 import { useChunksStore, flushPendingTokenBatch } from './chunksStore';
 import { useUiStore } from './uiStore';
+import { useConfigStore } from './configStore';
 
 describe('chunksStore', () => {
   beforeEach(() => {
@@ -32,6 +33,8 @@ describe('chunksStore', () => {
       selectedChunkId: null,
       showSettings: false,
       showHelp: false,
+    });
+    useConfigStore.setState({
       ollamaModels: [],
       ollamaStatus: 'unknown',
     });
