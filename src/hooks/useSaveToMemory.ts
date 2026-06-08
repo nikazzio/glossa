@@ -69,10 +69,11 @@ export function useSaveToMemory() {
       return 0;
     }
 
+    const jobChunkId = selected.length === 1 ? selected[0].id : null;
     setIsSaving(true);
     setProgress({ done: 0, total: selected.length });
     usePhraseMemoryStore.getState().setJobStatus({
-      kind: 'running', processed: 0, total: selected.length, estimatedCostUsd: 0,
+      kind: 'running', chunkId: jobChunkId, processed: 0, total: selected.length, estimatedCostUsd: 0,
     });
 
     try {
@@ -93,7 +94,7 @@ export function useSaveToMemory() {
         onProgress: (done, total) => {
           setProgress({ done, total });
           usePhraseMemoryStore.getState().setJobStatus({
-            kind: 'running', processed: done, total, estimatedCostUsd: 0,
+            kind: 'running', chunkId: jobChunkId, processed: done, total, estimatedCostUsd: 0,
           });
         },
       });

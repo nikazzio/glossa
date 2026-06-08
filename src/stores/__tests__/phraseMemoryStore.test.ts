@@ -65,7 +65,7 @@ describe('phraseMemoryStore', () => {
   it('setJobStatus aggiorna lo stato del job', () => {
     const { result } = renderHook(() => usePhraseMemoryStore());
     act(() => {
-      result.current.setJobStatus({ kind: 'running', processed: 5, total: 20, estimatedCostUsd: 0.002 });
+      result.current.setJobStatus({ kind: 'running', chunkId: 'chunk-1', processed: 5, total: 20, estimatedCostUsd: 0.002 });
     });
     expect(result.current.jobStatus).toMatchObject({ kind: 'running', processed: 5, total: 20 });
   });

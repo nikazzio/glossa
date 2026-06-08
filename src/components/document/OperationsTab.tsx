@@ -17,7 +17,7 @@ import {
   formatDurationMs,
 } from '../../utils/operationLogStats';
 import { indexPad } from '../../utils';
-import type { EmbeddingJobStatus, TranslationChunk } from '../../types';
+import type { TranslationChunk } from '../../types';
 
 interface OperationsTabProps {
   panelId: string;
@@ -59,6 +59,14 @@ export function OperationsTab({
   const isProcessing = useChunksStore((state) => state.isProcessing);
   const memoryJobStatus = usePhraseMemoryStore((s) => s.jobStatus);
   const pricingOverrides = usePricingStore((state) => state.overrides);
+
+  const isMemoryRunning =
+    memoryJobStatus.kind === 'running' &&
+    (memoryJobStatus.chunkId === null || memoryJobStatus.chunkId === currentChunkId);
+  const memoryProgress =
+    memoryJobStatus.kind === 'running' && memoryJobStatus.total > 1
+      ? { processed: memoryJobStatus.processed, total: memoryJobStatus.total }
+      : null;
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const [scopeFilter, setScopeFilter] = useState<Set<OperationLogScope>>(new Set(ALL_SCOPES));
@@ -67,10 +75,7 @@ export function OperationsTab({
   const [grouped, setGrouped] = useState(true);
 
   const chunkScopedEntries = useMemo(
-    () =>
-      currentChunkId
-        ? entries.filter((entry) => entry.chunkId == null || entry.chunkId === currentChunkId)
-        : entries,
+    () => (currentChunkId ? entries.filter((entry) => entry.chunkId === currentChunkId) : entries),
     [entries, currentChunkId],
   );
 
@@ -131,7 +136,8 @@ export function OperationsTab({
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex h-full flex-col bg-terminal-bg">
       <Header
         isProcessing={isProcessing}
-        memoryJobStatus={memoryJobStatus}
+        isMemoryRunning={isMemoryRunning}
+        memoryProgress={memoryProgress}
         processingChunk={processingChunk}
         processingChunkIndex={processingChunkIndex}
         chunksCount={chunks.length}
@@ -175,7 +181,8 @@ export function OperationsTab({
 
 interface HeaderProps {
   isProcessing: boolean;
-  memoryJobStatus: EmbeddingJobStatus;
+  isMemoryRunning: boolean;
+  memoryProgress: { processed: number; total: number } | null;
   processingChunk: TranslationChunk | null;
   processingChunkIndex: number;
   chunksCount: number;
@@ -185,7 +192,8 @@ interface HeaderProps {
 
 function Header({
   isProcessing,
-  memoryJobStatus,
+  isMemoryRunning,
+  memoryProgress,
   processingChunk,
   processingChunkIndex,
   chunksCount,
@@ -238,15 +246,15 @@ function Header({
           )}
         </div>
       )}
-      {memoryJobStatus.kind === 'running' && (
+      {isMemoryRunning && (
         <div className="mt-2.5 flex items-center gap-2" role="status" aria-live="polite">
           <Loader2 size={11} className="animate-spin shrink-0 text-terminal-info" />
           <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-terminal-info">
             {t('document.memoryRunning')}
           </span>
-          {memoryJobStatus.total > 0 && (
+          {memoryProgress !== null && (
             <span className="font-display text-xs italic text-terminal-info/70">
-              {indexPad(memoryJobStatus.processed + 1)}/{indexPad(memoryJobStatus.total)}
+              {indexPad(memoryProgress.processed + 1)}/{indexPad(memoryProgress.total)}
             </span>
           )}
         </div>

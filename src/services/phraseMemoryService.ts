@@ -176,11 +176,13 @@ export async function extractPhraseMemoryPairs(options: {
   targetText: string;
   sourceLanguage: string;
   targetLanguage: string;
+  chunkId?: string;
 }): Promise<ExtractedPhrasePair[]> {
   logOperation({
     level: 'info',
     scope: 'memory',
     phase: 'start',
+    chunkId: options.chunkId,
     message: 'Memory extractor started',
     meta: {
       provider: options.provider,
@@ -209,6 +211,7 @@ export async function extractPhraseMemoryPairs(options: {
       level: validated.length > 0 ? 'success' : 'warn',
       scope: 'memory',
       phase: 'end',
+      chunkId: options.chunkId,
       message: validated.length > 0
         ? 'Memory extractor returned aligned pairs'
         : 'Memory extractor returned no usable pairs',
@@ -227,6 +230,7 @@ export async function extractPhraseMemoryPairs(options: {
       level: 'error',
       scope: 'memory',
       phase: 'end',
+      chunkId: options.chunkId,
       message: 'Memory extractor failed',
       meta: {
         provider: options.provider,
@@ -412,6 +416,7 @@ export async function saveSelectedPhrases(options: SaveSelectedPhrasesOptions): 
     workspaceId, projectId, embeddingModel, extractorProvider, extractorModel, extractorPrompt,
     sourceLanguage, targetLanguage, chunks, onProgress,
   } = options;
+  const singleChunkId = chunks.length === 1 ? chunks[0].id : undefined;
   logger.debug('phrase_memory.save_selected.start', {
     workspaceId,
     projectId,
@@ -426,6 +431,7 @@ export async function saveSelectedPhrases(options: SaveSelectedPhrasesOptions): 
     level: 'info',
     scope: 'memory',
     phase: 'start',
+    chunkId: singleChunkId,
     message: 'Phrase memory save started',
     meta: {
       workspaceId,
@@ -491,6 +497,7 @@ export async function saveSelectedPhrases(options: SaveSelectedPhrasesOptions): 
     level: savedTotal > 0 ? 'success' : 'warn',
     scope: 'memory',
     phase: 'end',
+    chunkId: singleChunkId,
     message: savedTotal > 0
       ? 'Phrase memory save completed'
       : 'Phrase memory save completed without saved pairs',
@@ -518,6 +525,7 @@ export async function savePhrasePairs(options: SavePhrasePairsOptions): Promise<
     targetText,
     sourceLanguage,
     targetLanguage,
+    chunkId,
   });
 
   logger.debug('phrase_memory.save_pairs.extracted', {
