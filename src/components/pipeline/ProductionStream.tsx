@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
+import { useConfigStore } from '../../stores/configStore';
 import { StatusIndicator, ProcessingLine, CopyButton, MarkdownEditor } from '../common';
 import { estimateTextStats, indexPad, recommendChunkCount } from '../../utils';
 import { confirm } from '../../stores/confirmStore';
@@ -264,7 +265,8 @@ export function ProductionStream({
     updateChunkOriginalText,
     unlockChunkForEdit,
   } = useChunksStore();
-  const { highlightsEnabled, setHighlightsEnabled, chunkPresetMedium } = useUiStore();
+  const { highlightsEnabled, setHighlightsEnabled } = useUiStore();
+  const chunkPresetMedium = useConfigStore((s) => s.chunkPresetMedium);
   const { t } = useTranslation();
 
   const stats = useMemo(() => estimateTextStats(inputText), [inputText]);

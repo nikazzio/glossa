@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { PipelineConfig } from '../pipeline/PipelineConfig';
 import { useUiStore } from '../../stores/uiStore';
+import { useConfigStore } from '../../stores/configStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useLibraryStore } from '../../stores/libraryStore';
@@ -30,7 +31,7 @@ export function ConfigDrawer({
   const showConfigDrawer = useUiStore((state) => state.showConfigDrawer);
   const setShowConfigDrawer = useUiStore((state) => state.setShowConfigDrawer);
   const drawerRef = useFocusTrap(showConfigDrawer, () => setShowConfigDrawer(false));
-  const setPipelineMode = useUiStore((state) => state.setPipelineMode);
+  const setPipelineMode = useConfigStore((state) => state.setPipelineMode);
   const [glossaryDirty, setGlossaryDirty] = useState(false);
   const [isSavingGlossary, setIsSavingGlossary] = useState(false);
   const { config, setConfig, assignGlossary } = usePipelineStore();

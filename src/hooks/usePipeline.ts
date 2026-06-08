@@ -4,13 +4,12 @@ import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../stores/pipelineStore';
 import { useChunksStore } from '../stores/chunksStore';
 import { llmService, isStreamCancelledError } from '../services/llmService';
-import { useUiStore } from '../stores/uiStore';
+import { useConfigStore } from '../stores/configStore';
 import { showPreflightDialog } from '../stores/preflightStore';
 import { withRetry, friendlyError, is429Error } from '../utils/retry';
-import { qualityDefault, qualityFailure } from '../utils';
 import { pipelineLog } from '../utils/pipelineLogging';
 import { useOperationLogStore } from '../stores/operationLogStore';
-import type { Issue, JudgeResult, PromptInfo, ResponseInfo, TokenUsage, TranslationChunk } from '../types';
+import type { PromptInfo, TokenUsage, TranslationChunk } from '../types';
 import { useProjectStore } from '../stores/projectStore';
 import { usePhraseMemoryStore } from '../stores/phraseMemoryStore';
 import type { PhraseMemoryMatch } from '../stores/phraseMemoryStore';
@@ -20,39 +19,10 @@ import { saveChunkCheckpoint, setPipelineRunState } from '../services/pipelineSe
 import { buildPipelineFingerprint } from '../utils/pipelineFingerprint';
 import { calculateBlobBudget } from '../models/catalog';
 import { stripFootnoteMarkers } from '../utils/footnoteExtractor';
-
-function escapeChunkId(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-}
-
-function formatReferenceChunk(chunkId: string, text: string): string {
-  return `<chunk id="${escapeChunkId(chunkId)}">\n${text}\n</chunk>`;
-}
-
-function buildBlobContext(
-  chunks: TranslationChunk[],
-  chunkId: string,
-  selector: (c: TranslationChunk) => string | undefined,
-): string | undefined {
-  const current = chunks.find((c) => c.id === chunkId);
-  if (!current?.blobReferenceChunkIds?.length) return undefined;
-  const byId = new Map(chunks.map((chunk) => [chunk.id, chunk]));
-  const referenceChunks = current.blobReferenceChunkIds
-    .map((id) => byId.get(id))
-    .filter((chunk): chunk is TranslationChunk => !!chunk && !!selector(chunk));
-  if (referenceChunks.length === 0) return undefined;
-  return referenceChunks
-    .map((chunk) => formatReferenceChunk(chunk.id, selector(chunk)!))
-    .join('\n\n') || undefined;
-}
-
-type ChunkOutcome = 'completed' | 'failed' | 'cancelled' | 'skipped';
-type BatchRunMode = 'resume' | 'rerun-unlocked';
-type FinalChunkStatus = 'completed' | 'preview';
+import { buildBlobContext } from './pipeline/blobContext';
+import type { BatchRunMode, ChunkOutcome, FinalChunkStatus } from './pipeline/blobContext';
+import { runJudgeForChunk } from './pipeline/runJudge';
+import { usePipelineAudit } from './usePipelineAudit';
 
 /**
  * Hook that encapsulates pipeline execution logic.
@@ -62,6 +32,8 @@ type FinalChunkStatus = 'completed' | 'preview';
  * Public surface:
  *  - runPipeline / runAuditOnly: iterate over every chunk
  *  - runSingleChunk / auditSingleChunk: same logic restricted to one chunk
+ *  - runDryRun: test-mode batch run
+ *  - runCoherenceAudit: coherence check across all chunks
  *  - cancelPipeline: cancel whatever is in flight
  */
 export function usePipeline() {
@@ -72,7 +44,6 @@ export function usePipeline() {
     updateChunkJudge,
     updateChunkDraft,
     updateChunkStatus,
-    updateChunkCoherence,
     clearChunkStages,
     requestCancel,
     setIsProcessing,
@@ -82,23 +53,19 @@ export function usePipeline() {
   const isProcessing = useChunksStore((state) => state.isProcessing);
   const { t } = useTranslation();
 
+  const judgeActions = { updateChunkJudge, updateChunkStatus, t };
+
   type ProviderCheck = { provider: string; model: string; label: string };
 
   /**
    * Run pre-flight checks for all providers referenced by the given list of
    * (provider, model, label) entries. Deduplicates by (provider, model).
    *
-   * - Shows a loading toast while checks are in flight.
-   * - Updates Ollama UI state from the check results.
-   * - Opens the PreflightDialog when any check fails, letting the user decide
-   *   whether to abort (fix config) or proceed anyway.
-   *
    * Returns true if the pipeline can proceed, false if it should be aborted.
    */
   const ensureProvidersReady = useCallback(async (checks: ProviderCheck[]) => {
     if (checks.length === 0) return true;
 
-    // Deduplicate by (provider, model) — preserves first occurrence's label.
     const seen = new Set<string>();
     const dedupedChecks = checks.filter((c) => {
       const key = `${c.provider}:${c.model}`;
@@ -124,24 +91,20 @@ export function usePipeline() {
 
     toast.dismiss(toastId);
 
-    // Keep Ollama status indicator and model list in sync.
-    // Use `reachable` (not `ok`) so a missing-model failure doesn't incorrectly
-    // mark Ollama as disconnected when it is actually running.
     const ollamaResults = results.filter((r) => r.provider === 'ollama');
     if (ollamaResults.length > 0) {
       const ollamaReachable = ollamaResults.some((r) => r.reachable === true);
       const allOllamaOk = ollamaResults.every((r) => r.ok);
-      useUiStore.getState().setOllamaStatus(ollamaReachable || allOllamaOk ? 'connected' : 'disconnected');
+      useConfigStore.getState().setOllamaStatus(ollamaReachable || allOllamaOk ? 'connected' : 'disconnected');
       const allModels = [...new Set(ollamaResults.flatMap((r) => r.availableModels ?? []))];
       if (allModels.length > 0) {
-        useUiStore.getState().setOllamaModels(allModels);
+        useConfigStore.getState().setOllamaModels(allModels);
       } else if (!ollamaReachable) {
-        useUiStore.getState().setOllamaModels([]);
+        useConfigStore.getState().setOllamaModels([]);
       }
     }
 
     const hasFailures = results.some((r) => !r.ok);
-
     if (hasFailures) {
       pipelineLog.preflightProviderIssues(
         results.filter((r) => !r.ok).map((r) => `${r.provider}/${r.model}: ${r.error}`),
@@ -153,23 +116,11 @@ export function usePipeline() {
     return true;
   }, [t]);
 
-  // ── Internal helpers ────────────────────────────────────────────────
-  // These run the full per-chunk flow. They are plain async functions
-  // (not useCallback) because they only need to be referentially stable
-  // for the lifetime of a single invocation; the exported callbacks
-  // pull them in fresh and that is fine.
+  // ── Audit sub-hook ──────────────────────────────────────────────────
+  const { runAuditOnly, auditSingleChunk, runCoherenceAudit } = usePipelineAudit(ensureProvidersReady);
 
-  /**
-   * Run all enabled translation stages and the audit for a single chunk.
-   * Returns an outcome so the caller can aggregate batch counters.
-   *
-   * Batch mode is chosen from the pipeline run state:
-   * - resume: continue an interrupted batch and skip chunks already completed in that run
-   * - rerun-unlocked: start a new round and re-run every chunk except those explicitly locked
-   *
-   * This separation keeps room for future multi-pipeline support where each
-   * pipeline tracks its own run lifecycle independently for the same document.
-   */
+  // ── Internal helpers ────────────────────────────────────────────────
+
   const getChunkMemoryBlock = (chunkId: string): string | undefined => {
     if (!usePipelineStore.getState().config.usePhraseMemory) return undefined;
     const entry = usePhraseMemoryStore.getState().matchesByChunk.get(chunkId);
@@ -178,6 +129,10 @@ export function usePipeline() {
     return buildMemoryInjection(selected) ?? undefined;
   };
 
+  /**
+   * Run all enabled translation stages and the audit for a single chunk.
+   * Returns an outcome so the caller can aggregate batch counters.
+   */
   const executePipelineForChunk = async (
     chunk: TranslationChunk,
     options: { batchMode?: BatchRunMode; memoryBlock?: string },
@@ -187,12 +142,10 @@ export function usePipeline() {
     if (options.batchMode === 'resume' && chunk.status === 'completed' && !chunk.translationStale) return 'skipped';
     if (options.batchMode === 'rerun-unlocked' && chunk.translationLocked) return 'skipped';
 
-    // Reset only this chunk so we don't carry over a previous run's
-    // stage outputs / draft / audit if it cancels or fails early.
     clearChunkStages(chunk.id);
     pipelineLog.chunkStarted(chunk.id);
     updateChunkJudge(chunk.id, {
-      content: '', status: 'idle', rating: qualityDefault(), issues: [],
+      content: '', status: 'idle', rating: 'fair', issues: [],
     });
     updateChunkDraft(chunk.id, '');
 
@@ -210,13 +163,12 @@ export function usePipeline() {
     for (const stage of stages) {
       if (!stage.enabled) continue;
 
-      // Override global language pair with stage-specific one if set, but not when persona is active.
-      // Format stage is blind: no source blob context (it must not see the original text).
-      // Other stages use source blob context for translation continuity.
       const liveChunks = useChunksStore.getState().chunks;
       const stageRole = stage.role ?? 'translation';
       const isFormatStage = stageRole === 'format';
-      const blobContext = isFormatStage ? undefined : buildBlobContext(liveChunks, chunk.id, (c) => c.sourceProcessingText || undefined);
+      const blobContext = isFormatStage
+        ? undefined
+        : buildBlobContext(liveChunks, chunk.id, (c) => c.sourceProcessingText || undefined);
       const effectiveConfig = {
         ...config,
         ...(!config.persona && stage.sourceLanguage ? { sourceLanguage: stage.sourceLanguage } : {}),
@@ -236,9 +188,6 @@ export function usePipeline() {
       };
       const onIdleGrace = () => pipelineLog.idleGrace('stage', chunk.id, stage.id);
 
-      // Format stage is blind: receives the previous stage output as primary text,
-      // with no access to the source. Translation and refine stages receive the source
-      // text plus the previous stage output for comparison.
       const stageText = isFormatStage ? lastResult : stripFootnoteMarkers(chunk.sourceProcessingText);
       const stagePrevious = isFormatStage ? undefined : (lastResult || undefined);
 
@@ -307,9 +256,7 @@ export function usePipeline() {
         }
         const rawError = error instanceof Error ? error.message : String(error);
         const msg = friendlyError(rawError);
-        updateChunkStage(chunk.id, stage.id, {
-          content: '', status: 'error', error: msg,
-        });
+        updateChunkStage(chunk.id, stage.id, { content: '', status: 'error', error: msg });
         updateChunkStatus(chunk.id, 'error');
         pipelineLog.stageError(chunk.id, stage.id, stage.name, rawError, stageDurationMs);
         toast.error(t('errors.stageFailed', { name: stage.name }), { description: msg });
@@ -325,7 +272,7 @@ export function usePipeline() {
     updateChunkDraft(chunk.id, lastResult);
 
     if (lastResult) {
-      const auditOutcome = await runJudgeForChunk(chunk, lastResult);
+      const auditOutcome = await runJudgeForChunk(chunk, lastResult, judgeActions, lastEffectiveConfig);
       if (auditOutcome === 'failed') return 'failed';
       if (auditOutcome === 'cancelled') return 'cancelled';
     }
@@ -333,99 +280,15 @@ export function usePipeline() {
     return 'completed';
   };
 
-  /**
-   * Run the judge call for a chunk. Used both as the audit step at the
-   * end of executePipelineForChunk and as the body of runAuditOnly /
-   * auditSingleChunk.
-   *
-   * `existingDraft` is what we send to the judge — for the pipeline
-   * flow this is the latest stage output; for re-audit it's the
-   * chunk.currentDraft (which the user may have hand-edited).
-   */
-  const runJudgeForChunk = async (
-    chunk: TranslationChunk,
-    textToAudit: string | undefined,
-    effectiveConfig?: typeof config,
-  ): Promise<ChunkOutcome> => {
-    const config = usePipelineStore.getState().config;
-    if (!textToAudit) return 'skipped';
-    // We do NOT short-circuit on cancelRequested here — once we have a
-    // complete translation for this chunk, finishing the audit costs
-    // nothing extra and matches the documented "stop after the current
-    // chunk" behaviour. The outer loops still check cancel between chunks.
-
-    updateChunkStatus(chunk.id, 'processing');
-    const judgeRef = {
-      provider: (effectiveConfig ?? config).judgeProvider,
-      model: (effectiveConfig ?? config).judgeModel,
-    };
-    pipelineLog.auditStart(chunk.id, judgeRef);
-    const auditStartedAt = Date.now();
-    updateChunkJudge(chunk.id, {
-      content: '', status: 'processing', rating: qualityDefault(), issues: [],
-    });
-    try {
-      const judgeData = await withRetry(
-        () => llmService.judgeTranslation(
-          stripFootnoteMarkers(chunk.sourceProcessingText),
-          textToAudit,
-          effectiveConfig ?? config,
-          (info: PromptInfo) => pipelineLog.auditPrompt(chunk.id, judgeRef, info.systemPrompt, info.userPrompt),
-          (info: ResponseInfo) => pipelineLog.auditResponse(chunk.id, info.rawJson),
-        ),
-        {
-          label: 'Audit',
-          onRetry: (attempt, total, error, delayMs) => pipelineLog.auditRetry(chunk.id, attempt, total, error, delayMs),
-        },
-      );
-      const judgeTokenUsage =
-        judgeData.inputTokens !== undefined && judgeData.outputTokens !== undefined
-          ? {
-              inputTokens: judgeData.inputTokens,
-              outputTokens: judgeData.outputTokens,
-              cachedInputTokens: judgeData.cachedInputTokens,
-              cacheMissInputTokens: judgeData.cacheMissInputTokens,
-            }
-          : undefined;
-      updateChunkJudge(chunk.id, {
-        ...judgeData,
-        content: textToAudit,
-        status: 'completed',
-        ...(judgeTokenUsage ? { tokenUsage: judgeTokenUsage } : {}),
-      } as JudgeResult);
-      updateChunkStatus(chunk.id, 'completed');
-      pipelineLog.auditEnd(chunk.id, judgeRef, Date.now() - auditStartedAt, judgeTokenUsage);
-      return 'completed';
-    } catch (error: unknown) {
-      const msg = friendlyError(error instanceof Error ? error.message : String(error));
-      updateChunkJudge(chunk.id, {
-        content: textToAudit,
-        status: 'error',
-        rating: qualityFailure(),
-        issues: [],
-        error: msg,
-      });
-      updateChunkStatus(chunk.id, 'error');
-      pipelineLog.auditError(chunk.id, msg, Date.now() - auditStartedAt);
-      toast.error(t('errors.auditFailed'), { description: msg });
-      return 'failed';
-    }
-  };
-
   // ── Exported callables ──────────────────────────────────────────────
 
   const runPipeline = useCallback(async () => {
     if (useChunksStore.getState().isProcessing) return;
-    // Read chunks from the store at invocation time so callers that
-    // mutate the store right before invoking us (e.g. the "Re-run all"
-    // button which resetCompletedChunks() then runPipeline()) see the
-    // freshest state instead of a stale useCallback closure.
     const allChunks = useChunksStore.getState().chunks;
     if (allChunks.length === 0) return;
 
-    const { pipelineMode, pipelineTestChunkCount } = useUiStore.getState();
+    const { pipelineMode, pipelineTestChunkCount } = useConfigStore.getState();
     const isTestMode = pipelineMode === 'test';
-    // In test mode always process the first N chunks (never resume from a mid-point).
     const liveChunks = isTestMode ? allChunks.slice(0, pipelineTestChunkCount) : allChunks;
     if (config.usePhraseMemory) {
       const liveChunkIds = new Set(liveChunks.map((chunk) => chunk.id));
@@ -438,12 +301,12 @@ export function usePipeline() {
     }
 
     pipelineLog.newRunMarker();
-    pipelineLog.batchPipelineStart(liveChunks.length, config.stages.filter((stage) => stage.enabled).length);
+    pipelineLog.batchPipelineStart(liveChunks.length, config.stages.filter((s) => s.enabled).length);
     if (!(await ensureProvidersReady([
-      ...config.stages.filter((stage) => stage.enabled).map((stage, i) => ({
-        provider: stage.provider,
-        model: stage.model,
-        label: `${stage.name || `Stage ${i + 1}`} — ${stage.provider} ${stage.model}`,
+      ...config.stages.filter((s) => s.enabled).map((s, i) => ({
+        provider: s.provider,
+        model: s.model,
+        label: `${s.name || `Stage ${i + 1}`} — ${s.provider} ${s.model}`,
       })),
       { provider: config.judgeProvider, model: config.judgeModel, label: `Judge — ${config.judgeProvider} ${config.judgeModel}` },
     ]))) return;
@@ -451,7 +314,6 @@ export function usePipeline() {
     setIsProcessing(true);
 
     const pipelineState = usePipelineStore.getState();
-    // In test mode always re-run the test chunks regardless of prior state.
     const batchMode: BatchRunMode = isTestMode || pipelineState.runStatus === 'completed'
       ? 'rerun-unlocked'
       : 'resume';
@@ -529,10 +391,10 @@ export function usePipeline() {
     pipelineLog.newRunMarker(chunkId);
     pipelineLog.singlePipelineStart(chunkId);
     if (!(await ensureProvidersReady([
-      ...config.stages.filter((stage) => stage.enabled).map((stage, i) => ({
-        provider: stage.provider,
-        model: stage.model,
-        label: `${stage.name || `Stage ${i + 1}`} — ${stage.provider} ${stage.model}`,
+      ...config.stages.filter((s) => s.enabled).map((s, i) => ({
+        provider: s.provider,
+        model: s.model,
+        label: `${s.name || `Stage ${i + 1}`} — ${s.provider} ${s.model}`,
       })),
       { provider: config.judgeProvider, model: config.judgeModel, label: `Judge — ${config.judgeProvider} ${config.judgeModel}` },
     ]))) return;
@@ -557,8 +419,6 @@ export function usePipeline() {
       toast.warning(t('pipeline.blobComputeFailed'), { description: msg });
     }
 
-    // Force a redo even if this chunk was already completed — the user
-    // explicitly asked for it via the per-chunk action menu.
     const freshChunk = useChunksStore.getState().chunks.find((c) => c.id === chunkId) ?? chunk;
     const outcome = await executePipelineForChunk(freshChunk, { memoryBlock: getChunkMemoryBlock(chunkId) });
 
@@ -575,10 +435,8 @@ export function usePipeline() {
     } else if (outcome === 'completed') {
       pipelineLog.singlePipelineCompleted(chunkId);
       toast.success(finalStatus === 'preview' ? t('pipeline.dryRunChunkCompleted') : t('pipeline.singleChunkCompleted'));
-    } else if (outcome === 'failed') {
-      // Per-chunk failure already raised a toast inside the helper; no
-      // extra summary toast is needed.
     }
+    // outcome === 'failed': toast already raised inside executePipelineForChunk
   }, [t, setIsProcessing, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureProvidersReady, setBlobAssignments]);
 
   const runDryRun = useCallback(async () => {
@@ -586,7 +444,7 @@ export function usePipeline() {
     const allChunks = useChunksStore.getState().chunks;
     if (allChunks.length === 0) return;
 
-    const requestedTestChunks = Math.max(1, useUiStore.getState().pipelineTestChunkCount);
+    const requestedTestChunks = Math.max(1, useConfigStore.getState().pipelineTestChunkCount);
     const targets = allChunks
       .filter((c) => c.status === 'ready')
       .slice(0, requestedTestChunks);
@@ -597,10 +455,7 @@ export function usePipeline() {
     }
 
     pipelineLog.newRunMarker();
-    pipelineLog.batchPipelineStart(
-      targets.length,
-      config.stages.filter((stage) => stage.enabled).length,
-    );
+    pipelineLog.batchPipelineStart(targets.length, config.stages.filter((s) => s.enabled).length);
     if (!(await ensureProvidersReady([
       ...config.stages.filter((s) => s.enabled).map((s, i) => ({
         provider: s.provider,
@@ -638,10 +493,7 @@ export function usePipeline() {
       const freshTarget = useChunksStore.getState().chunks.find((c) => c.id === target.id) ?? target;
       const outcome = await executePipelineForChunk(freshTarget, { memoryBlock: getChunkMemoryBlock(freshTarget.id) });
 
-      if (outcome === 'cancelled') {
-        cancelled = true;
-        break;
-      }
+      if (outcome === 'cancelled') { cancelled = true; break; }
 
       if (outcome === 'completed') {
         updateChunkStatus(target.id, 'preview');
@@ -684,171 +536,11 @@ export function usePipeline() {
     }
   }, [config, t, setIsProcessing, updateChunkStatus, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, clearChunkStages, ensureProvidersReady, setBlobAssignments]);
 
-  const runAuditOnly = useCallback(async () => {
-    if (useChunksStore.getState().isProcessing) return;
-    const liveChunks = useChunksStore.getState().chunks;
-    if (liveChunks.length === 0) return;
-    pipelineLog.auditBatchStart(liveChunks.length);
-    if (!(await ensureProvidersReady([
-      { provider: config.judgeProvider, model: config.judgeModel, label: `Judge — ${config.judgeProvider} ${config.judgeModel}` },
-    ]))) return;
-    useChunksStore.getState().clearCancelRequest();
-    setIsProcessing(true);
-
-    let errorCount = 0;
-    let cancelled = false;
-
-    for (const chunk of liveChunks) {
-      if (useChunksStore.getState().cancelRequested) {
-        cancelled = true;
-        break;
-      }
-
-      const outcome = await runJudgeForChunk(chunk, chunk.translationProcessingText);
-      if (outcome === 'cancelled') { cancelled = true; break; }
-      if (outcome === 'failed') errorCount++;
-    }
-
-    setIsProcessing(false);
-    useChunksStore.getState().clearCancelRequest();
-
-    if (cancelled) {
-      pipelineLog.auditBatchCancelled();
-      toast.message(t('pipeline.stopConfirmed'));
-    } else if (errorCount === 0) {
-      pipelineLog.auditBatchCompleted();
-      toast.success(t('errors.reEvalCompleted'));
-    }
-  }, [config, t, setIsProcessing, updateChunkJudge, updateChunkStatus, ensureProvidersReady]);
-
-  const auditSingleChunk = useCallback(async (chunkId: string) => {
-    if (useChunksStore.getState().isProcessing) return;
-    const chunk = useChunksStore.getState().chunks.find((c) => c.id === chunkId);
-    if (!chunk) return;
-    if (!chunk.translationProcessingText) {
-      toast.message(t('pipeline.auditSkippedNoDraft'));
-      return;
-    }
-    if (!(await ensureProvidersReady([
-      { provider: config.judgeProvider, model: config.judgeModel, label: `Judge — ${config.judgeProvider} ${config.judgeModel}` },
-    ]))) return;
-    pipelineLog.auditSingleStart(chunkId);
-    useChunksStore.getState().clearCancelRequest();
-    setIsProcessing(true);
-
-    const outcome = await runJudgeForChunk(chunk, chunk.translationProcessingText);
-
-    setIsProcessing(false);
-    useChunksStore.getState().clearCancelRequest();
-
-    if (outcome === 'cancelled') {
-      pipelineLog.auditSingleCancelled(chunkId);
-      toast.message(t('pipeline.stopConfirmed'));
-    } else if (outcome === 'completed') {
-      pipelineLog.auditSingleCompleted(chunkId);
-      toast.success(t('pipeline.singleChunkAudited'));
-    }
-  }, [config, t, setIsProcessing, updateChunkJudge, updateChunkStatus, ensureProvidersReady]);
-
-  const runCoherenceAudit = useCallback(async () => {
-    if (useChunksStore.getState().isProcessing) return;
-    const liveChunks = useChunksStore.getState().chunks;
-    const auditableChunks = liveChunks.filter((c) => c.translationProcessingText?.trim());
-    if (auditableChunks.length === 0) {
-      toast.message(t('coherence.noChunksToAudit'));
-      return;
-    }
-    if (liveChunks.some((c) => !c.translationProcessingText?.trim())) {
-      toast.message(t('coherence.translationsRequired'));
-      return;
-    }
-    if (!(await ensureProvidersReady([{ provider: config.judgeProvider, model: config.judgeModel, label: `Judge — ${config.judgeProvider} ${config.judgeModel}` }]))) return;
-    pipelineLog.coherenceBatchStart(liveChunks.length);
-
-    useChunksStore.getState().clearCancelRequest();
-    setIsProcessing(true);
-
-    let errorCount = 0;
-    let cancelled = false;
-
-    for (let i = 0; i < liveChunks.length; i++) {
-      const chunk = liveChunks[i];
-      if (!chunk.translationProcessingText?.trim()) continue;
-      if (useChunksStore.getState().cancelRequested) { cancelled = true; break; }
-
-      const blobContext = buildBlobContext(liveChunks, chunk.id, (c) => c.translationProcessingText?.trim() ? c.translationProcessingText : undefined);
-
-      updateChunkCoherence(chunk.id, { status: 'processing', issues: [] });
-      const coherenceRef = { provider: config.judgeProvider, model: config.judgeModel };
-      pipelineLog.coherenceChunkStart(chunk.id, coherenceRef);
-      const coherenceStartedAt = Date.now();
-
-      try {
-        const result = await withRetry(
-          () => llmService.runCoherenceForChunk(
-            { original: stripFootnoteMarkers(chunk.sourceProcessingText), translation: chunk.translationProcessingText, blobContext, currentChunkId: chunk.id },
-            config,
-            (info: PromptInfo) => pipelineLog.coherencePrompt(chunk.id, coherenceRef, info.systemPrompt, info.userPrompt),
-            (info: ResponseInfo) => pipelineLog.coherenceResponse(chunk.id, info.rawJson),
-          ),
-          {
-            label: 'Coherence audit',
-            onRetry: (attempt, total, error, delayMs) => pipelineLog.coherenceRetry(chunk.id, attempt, total, error, delayMs),
-          },
-        );
-        const tokenUsage =
-          result.inputTokens !== undefined && result.outputTokens !== undefined
-            ? {
-                inputTokens: result.inputTokens,
-                outputTokens: result.outputTokens,
-                cachedInputTokens: result.cachedInputTokens,
-                cacheMissInputTokens: result.cacheMissInputTokens,
-              }
-            : undefined;
-        updateChunkCoherence(chunk.id, {
-          status: 'completed',
-          issues: result.issues as Issue[],
-          ...(tokenUsage ? { tokenUsage } : {}),
-        });
-        pipelineLog.coherenceChunkEnd(
-          chunk.id,
-          coherenceRef,
-          Date.now() - coherenceStartedAt,
-          result.issues.length,
-          tokenUsage,
-        );
-      } catch (error: unknown) {
-        const msg = friendlyError(error instanceof Error ? error.message : String(error));
-        updateChunkCoherence(chunk.id, { status: 'error', issues: [], error: msg });
-        pipelineLog.coherenceChunkError(chunk.id, msg, Date.now() - coherenceStartedAt);
-        errorCount++;
-      }
-    }
-
-    setIsProcessing(false);
-    useChunksStore.getState().clearCancelRequest();
-
-    if (cancelled) {
-      pipelineLog.coherenceBatchCancelled();
-      toast.message(t('pipeline.stopConfirmed'));
-    } else if (errorCount === 0) {
-      pipelineLog.coherenceBatchCompleted();
-      toast.success(t('coherence.auditCompleted'));
-    } else {
-      pipelineLog.coherenceBatchCompletedWithErrors(errorCount);
-      toast.warning(t('coherence.auditCompletedWithErrors', { count: errorCount }));
-    }
-  }, [config, t, setIsProcessing, updateChunkCoherence, ensureProvidersReady]);
-
   const cancelPipeline = useCallback(() => {
     requestCancel();
     pipelineLog.cancelRequested();
     const streamId = useChunksStore.getState().activeStreamId;
     if (streamId) {
-      // Best-effort: tell the backend to drop the in-flight HTTP request
-      // so the provider stops billing immediately. Failures are silent
-      // because the cancelRequested flag will still stop the loop between
-      // chunks.
       llmService.cancelStream(streamId).catch(() => {});
     }
     toast.message(t('pipeline.stopRequested'));

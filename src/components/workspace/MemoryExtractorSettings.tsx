@@ -20,7 +20,7 @@ import { getModelStatus, getSelectableModelIds, MODEL_PROVIDER_ORDER } from '../
 import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
 import { llmService } from '../../services/llmService';
 import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
-import { useUiStore } from '../../stores/uiStore';
+import { useConfigStore } from '../../stores/configStore';
 import type { ModelProvider, PromptTemplate } from '../../types';
 
 interface MemoryExtractorSettingsProps {
@@ -41,7 +41,7 @@ export function MemoryExtractorSettings({
   onPromptChange,
 }: MemoryExtractorSettingsProps) {
   const { t } = useTranslation();
-  const ollamaModels = useUiStore((s) => s.ollamaModels);
+  const ollamaModels = useConfigStore((s) => s.ollamaModels);
   const { templates, isLoaded, loadTemplates, saveTemplate, deleteTemplate } = usePromptTemplateStore();
   const { statuses: keyStatuses } = useProviderKeyStatus();
   const [isRefining, setIsRefining] = useState(false);

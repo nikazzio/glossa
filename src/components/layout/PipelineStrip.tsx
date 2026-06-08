@@ -3,13 +3,15 @@ import { useTranslation } from 'react-i18next';
 import { useProjectStore } from '../../stores/projectStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useUiStore } from '../../stores/uiStore';
+import { useConfigStore } from '../../stores/configStore';
 import { confirm } from '../../stores/confirmStore';
 
 export function PipelineStrip() {
   const { t } = useTranslation();
   const { pipelines, activePipelineId, currentProjectId, switchPipeline, createNewPipeline, deletePipeline } = useProjectStore();
   const runStatus = usePipelineStore((s) => s.runStatus);
-  const { showConfigDrawer, setShowConfigDrawer, maxPipelines } = useUiStore();
+  const { showConfigDrawer, setShowConfigDrawer } = useUiStore();
+  const maxPipelines = useConfigStore((s) => s.maxPipelines);
 
   const hasProject = !!currentProjectId;
   const isRunning = runStatus === 'running';

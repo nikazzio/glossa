@@ -244,19 +244,24 @@
     "promptPreviewRuntime": "Runtime",
     "promptPreviewBlocks": {
       "system-opener": {
-        "title": "System opener"
+        "title": "System opener",
+        "hint": "Cached: defines the model role and source/target language pair. Identical for every chunk — stays warm in the provider cache across all stages."
       },
       "structural-rules": {
-        "title": "Structural preservation rules"
+        "title": "Structural preservation rules",
+        "hint": "Cached: paragraph boundaries, whitespace, and footnote placement rules applied at every stage."
       },
       "glossary-constraints": {
-        "title": "Glossary constraints"
+        "title": "Glossary constraints",
+        "hint": "Cached: mandatory terminology enforcement. When a glossary is present this block expands with the full term table."
       },
       "markdown-rules": {
-        "title": "Markdown preservation rules"
+        "title": "Markdown preservation rules",
+        "hint": "Cached: Markdown syntax preservation rules. Only shown when markdown-aware mode is enabled."
       },
       "stage-instructions": {
-        "title": "Stage instructions"
+        "title": "Stage instructions",
+        "hint": "Cached per run: your custom stage prompt followed by the output contract. The output contract is intentionally repeated in the user turn below to reinforce the instruction across both turns."
       },
       "blob-context": {
         "title": "Optional blob context",
@@ -284,10 +289,11 @@
       },
       "output-contract": {
         "title": "Runtime output contract",
-        "hint": "Final execution-only output requirement. It constrains the reply to the stage-specific full-text result."
+        "hint": "Final output requirement repeated in the user turn to reinforce the system instruction. Constrains the reply to the complete stage-specific text result."
       },
       "system-post-processor": {
-        "title": "System post-processor"
+        "title": "System post-processor",
+        "hint": "Cached: hard constraints for the format stage. Prevents retranslation or wording changes — only minimal formatting repairs are allowed."
       }
     },
     "tabPersona": "Persona",

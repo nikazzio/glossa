@@ -244,19 +244,24 @@
     "promptPreviewRuntime": "Runtime",
     "promptPreviewBlocks": {
       "system-opener": {
-        "title": "Apertura di sistema"
+        "title": "Apertura di sistema",
+        "hint": "Cacheabile: definisce il ruolo del modello e la coppia di lingue. Identico per ogni chunk — rimane in cache tra tutti gli stage."
       },
       "structural-rules": {
-        "title": "Regole strutturali"
+        "title": "Regole strutturali",
+        "hint": "Cacheabile: regole di preservazione di paragrafi, spazi e note a piè di pagina, applicate a ogni stage."
       },
       "glossary-constraints": {
-        "title": "Vincoli glossario"
+        "title": "Vincoli glossario",
+        "hint": "Cacheabile: terminologia obbligatoria. Quando è presente un glossario, questo blocco include la tabella completa dei termini."
       },
       "markdown-rules": {
-        "title": "Regole Markdown"
+        "title": "Regole Markdown",
+        "hint": "Cacheabile: regole di preservazione della sintassi Markdown. Mostrato solo quando la modalità markdown-aware è attivata."
       },
       "stage-instructions": {
-        "title": "Istruzioni di fase"
+        "title": "Istruzioni di fase",
+        "hint": "Cacheabile per run: il tuo prompt personalizzato seguito dal contratto di output. Il contratto di output è ripetuto nel turno utente per rinforzare l'istruzione su entrambi i turni — è intenzionale."
       },
       "blob-context": {
         "title": "Contesto blob opzionale",
@@ -284,10 +289,11 @@
       },
       "output-contract": {
         "title": "Contratto output runtime",
-        "hint": "Vincolo finale dell'output valido solo a runtime. Limita la risposta al risultato completo specifico della fase."
+        "hint": "Requisito finale dell'output ripetuto nel turno utente per rinforzare l'istruzione di sistema. Limita la risposta al testo completo specifico della fase."
       },
       "system-post-processor": {
-        "title": "Post-processore di sistema"
+        "title": "Post-processore di sistema",
+        "hint": "Cacheabile: vincoli rigidi per lo stage di formattazione. Impedisce al modello di ritradurre o modificare il testo — sono ammessi solo interventi minimi di correzione della formattazione."
       }
     },
     "tabPersona": "Persona",

@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useUiStore } from '../../stores/uiStore';
+import { useConfigStore } from '../../stores/configStore';
 import { ApiKeyInput } from './ApiKeyInput';
 import { ollamaService } from '../../services/llmService';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
@@ -146,12 +147,16 @@ export function SettingsModal() {
   const {
     showSettings,
     setShowSettings,
+    documentLayout,
+    setDocumentLayout,
+    highlightColors,
+    setHighlightColor,
+  } = useUiStore();
+  const {
     ollamaStatus,
     ollamaModels,
     setOllamaModels,
     setOllamaStatus,
-    documentLayout,
-    setDocumentLayout,
     chunkPresetShort,
     chunkPresetMedium,
     chunkPresetLong,
@@ -162,9 +167,7 @@ export function SettingsModal() {
     setOllamaBaseUrl,
     newPipelineInit,
     setNewPipelineInit,
-    highlightColors,
-    setHighlightColor,
-  } = useUiStore();
+  } = useConfigStore();
   const { t } = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
   const [showPricingOverrides, setShowPricingOverrides] = useState(false);

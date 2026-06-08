@@ -1,9 +1,9 @@
-import { Eye, FileText, Languages, Wand2 } from 'lucide-react';
+import { Eye, FileText, Info, Languages, Wand2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PipelineConfig, StageRole } from '../../types';
 import { buildPromptPreviewStages, type PromptPreviewBlock, type PromptPreviewStage } from './promptPreview';
-import { IconButton } from '../ui';
+import { IconButton, Tooltip } from '../ui';
 
 interface PromptPreviewTabProps {
   config: PipelineConfig;
@@ -18,16 +18,27 @@ const STAGE_ICON: Record<StageRole, typeof Languages> = {
 function PromptBlockCard({ block }: { block: PromptPreviewBlock }) {
   const { t } = useTranslation();
   const title = t(`pipeline.promptPreviewBlocks.${block.id}.title`);
-  const hint = block.kind === 'runtime'
-    ? t(`pipeline.promptPreviewBlocks.${block.id}.hint`)
-    : '';
+  const hint = t(`pipeline.promptPreviewBlocks.${block.id}.hint`, '');
 
   return (
     <section className="rounded-[18px] border border-editorial-border bg-editorial-bg/75 px-4 py-3 space-y-2">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-          {title}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+            {title}
+          </span>
+          {hint && (
+            <Tooltip label={hint} side="bottom">
+              <button
+                type="button"
+                aria-label={hint}
+                className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border border-editorial-muted/40 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+              >
+                <Info size={8} aria-hidden />
+              </button>
+            </Tooltip>
+          )}
+        </div>
         <span
           className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest ${
             block.kind === 'static'
@@ -41,11 +52,6 @@ function PromptBlockCard({ block }: { block: PromptPreviewBlock }) {
       <pre className="whitespace-pre-wrap break-words text-xs leading-relaxed font-mono text-editorial-ink">
         {block.body}
       </pre>
-      {hint ? (
-        <p className="text-[11px] leading-relaxed text-editorial-muted">
-          {hint}
-        </p>
-      ) : null}
     </section>
   );
 }

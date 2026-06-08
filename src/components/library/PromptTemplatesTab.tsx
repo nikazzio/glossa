@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { confirm } from '../../stores/confirmStore';
 import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
 import { useUiStore } from '../../stores/uiStore';
+import { useConfigStore } from '../../stores/configStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import type { ModelProvider, PromptTemplateContext } from '../../types';
 import { llmService } from '../../services/llmService';
@@ -26,7 +27,7 @@ const FILTER_ICONS: Record<FilterValue, React.ReactNode> = {
 export function PromptTemplatesTab() {
   const { t } = useTranslation();
   const { templates, isLoaded, loadTemplates, saveTemplate, deleteTemplate } = usePromptTemplateStore();
-  const ollamaModels = useUiStore((s) => s.ollamaModels);
+  const ollamaModels = useConfigStore((s) => s.ollamaModels);
   const { config } = usePipelineStore();
   const [newName, setNewName] = useState('');
   const [newPrompt, setNewPrompt] = useState('');

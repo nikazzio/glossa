@@ -146,7 +146,7 @@ pub(crate) fn build_stage_prompts(
         "\n\nGlossary Reminder:\n- Apply the glossary entries specified above when they appear in the source text."
     };
     let output_contract = if stage.role.as_deref() == Some("refine") {
-        "Output only the refined translation."
+        "Output the complete refined translation in full. Do not summarize, abbreviate, or output only the changed portions — rewrite the entire chunk from start to finish."
     } else {
         "Output only the translated text."
     };
@@ -169,7 +169,7 @@ pub(crate) fn build_stage_prompts(
         format!(
             "{current_chunk_line}Original text for the current chunk:\n{text}\n\n\
              Previous Iteration for the current chunk:\n{}\n\n\
-             Refine only the current chunk according to your instructions. Output only the refined translation.",
+             Refine only the current chunk according to your instructions. Output the complete refined translation in full — every sentence, from start to finish. Do not abbreviate or output only the changed portions.",
             previous_result.unwrap_or_default()
         )
     } else {

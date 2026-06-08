@@ -30,6 +30,7 @@ import { checkContextOverflow, estimateCharTokens } from '../../utils/tokenEstim
 import { LANGUAGES } from '../../constants';
 import { getSelectableModelIds, MODEL_PROVIDER_ORDER } from '../../models/catalog';
 import { useUiStore } from '../../stores/uiStore';
+import { useConfigStore } from '../../stores/configStore';
 import type { ModelProvider } from '../../types';
 import { IconButton } from '../ui';
 import { ChunkCard, BoundaryDivider, SegmentEditor } from './ChunkEditor';
@@ -87,10 +88,10 @@ export function ImportPreviewDialog({
   const trapRef = useFocusTrap(true, onCancel);
   const [editorMode, setEditorMode] = useState<EditorMode>('cards');
   const { config } = usePipelineStore();
-  const ollamaModels = useUiStore((s) => s.ollamaModels);
-  const chunkPresetShort = useUiStore((s) => s.chunkPresetShort);
-  const chunkPresetMedium = useUiStore((s) => s.chunkPresetMedium);
-  const chunkPresetLong = useUiStore((s) => s.chunkPresetLong);
+  const ollamaModels = useConfigStore((s) => s.ollamaModels);
+  const chunkPresetShort = useConfigStore((s) => s.chunkPresetShort);
+  const chunkPresetMedium = useConfigStore((s) => s.chunkPresetMedium);
+  const chunkPresetLong = useConfigStore((s) => s.chunkPresetLong);
 
   const stage0 = config.stages[0];
   const [sourceLanguage, setSourceLanguage] = useState<string>(config.sourceLanguage);

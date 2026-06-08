@@ -5,6 +5,7 @@ import { useProjectStore } from '../stores/projectStore';
 import { usePipelineStore } from '../stores/pipelineStore';
 import { useChunksStore } from '../stores/chunksStore';
 import { useUiStore } from '../stores/uiStore';
+import { useConfigStore } from '../stores/configStore';
 import { makeTranslationChunk } from '../test/chunkFactory';
 
 describe('useProjectAutosave', () => {
@@ -59,6 +60,8 @@ describe('useProjectAutosave', () => {
       selectedChunkId: 'chunk-0',
       showSettings: false,
       showHelp: false,
+    });
+    useConfigStore.setState({
       ollamaModels: [],
       ollamaStatus: 'unknown',
     });

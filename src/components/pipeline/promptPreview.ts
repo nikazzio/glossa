@@ -64,7 +64,7 @@ function buildSourceAwareBlocks(config: PipelineConfig, stage: PipelineStageConf
     ? '\n\nGlossary Reminder:\n- Apply the glossary entries specified above when they appear in the source text.'
     : '';
   const outputContract = stage.role === 'refine'
-    ? 'Output only the refined translation.'
+    ? 'Output the complete refined translation in full. Do not summarize, abbreviate, or output only the changed portions — rewrite the entire chunk from start to finish.'
     : 'Output only the translated text.';
   const blocks: PromptPreviewBlock[] = [
     {
