@@ -1,26 +1,4 @@
-import {
-  AlertTriangle,
-  CheckCircle2,
-  Copy,
-  ExternalLink,
-  FileText,
-  Filter,
-  Info,
-  Layers,
-  Link2,
-  Loader2,
-  Rows3,
-  ScanLine,
-  Search,
-  ShieldCheck,
-  SlidersHorizontal,
-  TerminalSquare,
-  Trash2,
-  Workflow,
-  XCircle,
-  Zap,
-} from 'lucide-react';
-import type { ReactNode } from 'react';
+import { Copy, ExternalLink, Loader2, Search, TerminalSquare, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -31,12 +9,12 @@ import {
   type OperationLogLevel,
   type OperationLogScope,
 } from '../../stores/operationLogStore';
+import { usePhraseMemoryStore } from '../../stores/phraseMemoryStore';
 import { usePricingStore } from '../../stores/pricingStore';
 import {
   aggregateEntries,
   formatCacheHitRate,
   formatDurationMs,
-  formatUsd,
 } from '../../utils/operationLogStats';
 import { indexPad } from '../../utils';
 import type { TranslationChunk } from '../../types';
@@ -49,23 +27,6 @@ interface OperationsTabProps {
   onSelectChunk: (id: string) => void;
 }
 
-const SCOPE_ICONS: Record<OperationLogScope, ReactNode> = {
-  pipeline: <Workflow size={11} />,
-  preflight: <ShieldCheck size={11} />,
-  invoke: <Zap size={11} />,
-  stage: <Layers size={11} />,
-  audit: <ScanLine size={11} />,
-  coherence: <Link2 size={11} />,
-  chunk: <FileText size={11} />,
-};
-
-const LEVEL_ICONS: Record<OperationLogLevel, ReactNode> = {
-  info: <Info size={11} />,
-  success: <CheckCircle2 size={11} />,
-  warn: <AlertTriangle size={11} />,
-  error: <XCircle size={11} />,
-};
-
 const ALL_SCOPES: OperationLogScope[] = [
   'pipeline',
   'preflight',
@@ -73,15 +34,16 @@ const ALL_SCOPES: OperationLogScope[] = [
   'stage',
   'audit',
   'coherence',
+  'memory',
   'chunk',
 ];
 const ALL_LEVELS: OperationLogLevel[] = ['info', 'success', 'warn', 'error'];
 
-const LEVEL_COLOR: Record<OperationLogLevel, { text: string; border: string }> = {
-  error: { text: 'text-[#ff6b6b]', border: 'border-[#ff6b6b]/40' },
-  warn: { text: 'text-[#f6c90e]', border: 'border-[#f6c90e]/40' },
-  success: { text: 'text-[#69db7c]', border: 'border-[#69db7c]/40' },
-  info: { text: 'text-[#74c0fc]', border: 'border-[#74c0fc]/30' },
+const LEVEL_COLOR: Record<OperationLogLevel, string> = {
+  error: 'text-terminal-error',
+  warn: 'text-terminal-warn',
+  success: 'text-terminal-success',
+  info: 'text-terminal-info',
 };
 
 export function OperationsTab({
@@ -95,7 +57,16 @@ export function OperationsTab({
   const entries = useOperationLogStore((state) => state.entries);
   const clear = useOperationLogStore((state) => state.clear);
   const isProcessing = useChunksStore((state) => state.isProcessing);
+  const memoryJobStatus = usePhraseMemoryStore((s) => s.jobStatus);
   const pricingOverrides = usePricingStore((state) => state.overrides);
+
+  const isMemoryRunning =
+    memoryJobStatus.kind === 'running' &&
+    (memoryJobStatus.chunkId === null || memoryJobStatus.chunkId === currentChunkId);
+  const memoryProgress =
+    memoryJobStatus.kind === 'running' && memoryJobStatus.total > 1
+      ? { processed: memoryJobStatus.processed, total: memoryJobStatus.total }
+      : null;
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const [scopeFilter, setScopeFilter] = useState<Set<OperationLogScope>>(new Set(ALL_SCOPES));
@@ -162,17 +133,17 @@ export function OperationsTab({
   }
 
   return (
-    <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex h-full flex-col">
+    <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex h-full flex-col bg-terminal-bg">
       <Header
         isProcessing={isProcessing}
+        isMemoryRunning={isMemoryRunning}
+        memoryProgress={memoryProgress}
         processingChunk={processingChunk}
         processingChunkIndex={processingChunkIndex}
         chunksCount={chunks.length}
         onGoToChunk={() => processingChunk && onSelectChunk(processingChunk.id)}
         onClear={clear}
       />
-
-      {filteredEntries.length > 0 && <SummaryRow stats={stats} />}
 
       <FilterBar
         scopeFilter={scopeFilter}
@@ -186,14 +157,14 @@ export function OperationsTab({
       />
 
       {filteredEntries.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center px-6 py-12 text-center text-sm text-editorial-muted">
+        <div className="flex flex-1 items-center justify-center px-6 py-12 text-center text-sm text-terminal-secondary">
           {t('document.operationsEmpty')}
         </div>
       ) : (
         <div
           ref={scrollRef}
           onScroll={onScroll}
-          className="flex-1 overflow-y-auto bg-[#111111] px-4 py-4 font-mono text-xs text-[#d6d6d6] custom-scrollbar"
+          className="flex-1 overflow-y-auto bg-terminal-bg px-4 py-4 font-mono text-xs text-terminal-ink terminal-scrollbar"
         >
           {grouped ? (
             <GroupedView entries={filteredEntries} chunks={chunks} stats={stats} />
@@ -210,6 +181,8 @@ export function OperationsTab({
 
 interface HeaderProps {
   isProcessing: boolean;
+  isMemoryRunning: boolean;
+  memoryProgress: { processed: number; total: number } | null;
   processingChunk: TranslationChunk | null;
   processingChunkIndex: number;
   chunksCount: number;
@@ -219,6 +192,8 @@ interface HeaderProps {
 
 function Header({
   isProcessing,
+  isMemoryRunning,
+  memoryProgress,
   processingChunk,
   processingChunkIndex,
   chunksCount,
@@ -227,11 +202,11 @@ function Header({
 }: HeaderProps) {
   const { t } = useTranslation();
   return (
-    <div className="border-b border-editorial-border px-5 py-4">
+    <div className="bg-terminal-chrome px-5 py-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <TerminalSquare size={11} className="text-editorial-accent shrink-0" />
-          <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+          <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-terminal-secondary">
             {t('document.operationsShellTitle')}
           </p>
         </div>
@@ -242,7 +217,7 @@ function Header({
               onClick={onGoToChunk}
               title={t('document.operationsGoToChunk')}
               aria-label={t('document.operationsGoToChunk')}
-              className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="rounded-full border border-terminal-border p-2 text-terminal-secondary transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             >
               <ExternalLink size={14} />
             </button>
@@ -252,7 +227,7 @@ function Header({
             onClick={onClear}
             title={t('document.operationsClear')}
             aria-label={t('document.operationsClear')}
-            className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            className="rounded-full border border-terminal-border p-2 text-terminal-secondary transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
           >
             <Trash2 size={14} />
           </button>
@@ -260,48 +235,30 @@ function Header({
       </div>
       {isProcessing && (
         <div className="mt-2.5 flex items-center gap-2" role="status" aria-live="polite">
-          <Loader2 size={11} className="animate-spin shrink-0 text-[#9eb4ff]" />
-          <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#9eb4ff]">
+          <Loader2 size={11} className="animate-spin shrink-0 text-terminal-accent" />
+          <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-terminal-accent">
             {t('document.operationsRunning')}
           </span>
           {processingChunkIndex >= 0 && (
-            <span className="font-display text-xs italic text-[#9eb4ff]/70">
+            <span className="font-display text-xs italic text-terminal-accent/70">
               {indexPad(processingChunkIndex + 1)}/{indexPad(chunksCount)}
             </span>
           )}
         </div>
       )}
-    </div>
-  );
-}
-
-// ── Summary row ───────────────────────────────────────────────────────────
-
-interface SummaryRowProps {
-  stats: ReturnType<typeof aggregateEntries>;
-}
-
-function SummaryRow({ stats }: SummaryRowProps) {
-  const { t } = useTranslation();
-  return (
-    <div className="flex flex-wrap items-center gap-x-5 gap-y-1 border-b border-editorial-border px-5 py-3 text-[11px] font-sans">
-      <SummaryItem label={t('log.summaryInput')} value={stats.totalInput.toLocaleString()} />
-      <SummaryItem label={t('log.summaryOutput')} value={stats.totalOutput.toLocaleString()} />
-      <SummaryItem label={t('log.cacheHitRate')} value={formatCacheHitRate(stats.cacheHitRate)} />
-      <SummaryItem
-        label={t('log.totalDuration')}
-        value={stats.totalDurationMs > 0 ? formatDurationMs(stats.totalDurationMs) : '—'}
-      />
-      <SummaryItem label={t('log.totalCost')} value={formatUsd(stats.totalUsd)} />
-    </div>
-  );
-}
-
-function SummaryItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-baseline gap-1.5">
-      <span className="text-[9px] uppercase tracking-[0.22em] text-editorial-muted">{label}</span>
-      <span className="font-display text-sm tabular-nums text-editorial-ink">{value}</span>
+      {isMemoryRunning && (
+        <div className="mt-2.5 flex items-center gap-2" role="status" aria-live="polite">
+          <Loader2 size={11} className="animate-spin shrink-0 text-terminal-info" />
+          <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-terminal-info">
+            {t('document.memoryRunning')}
+          </span>
+          {memoryProgress !== null && (
+            <span className="font-display text-xs italic text-terminal-info/70">
+              {indexPad(memoryProgress.processed + 1)}/{indexPad(memoryProgress.total)}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -330,88 +287,77 @@ function FilterBar({
   onToggleGrouped,
 }: FilterBarProps) {
   const { t } = useTranslation();
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const scopeLabel = scopeLabels(t);
   const levelLabel = levelLabels(t);
 
   return (
-    <div className="border-b border-editorial-border px-5 py-3 space-y-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex shrink-0 items-center gap-1.5">
-          <SlidersHorizontal size={11} className="text-editorial-accent shrink-0" />
-          <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-            {t('log.filterScope')}
-          </span>
-        </div>
-        {ALL_SCOPES.map((scope) => (
-          <IconChip
-            key={scope}
-            active={scopeFilter.has(scope)}
-            onClick={() => onToggleScope(scope)}
-            icon={SCOPE_ICONS[scope]}
-            title={scopeLabel[scope]}
-          />
-        ))}
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex shrink-0 items-center gap-1.5">
-          <Filter size={11} className="text-editorial-accent shrink-0" />
-          <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-            {t('log.filterLevel')}
-          </span>
-        </div>
-        {ALL_LEVELS.map((level) => (
-          <IconChip
-            key={level}
-            active={levelFilter.has(level)}
-            onClick={() => onToggleLevel(level)}
-            icon={LEVEL_ICONS[level]}
-            title={levelLabel[level]}
-          />
-        ))}
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex flex-1 min-w-[160px] items-center gap-2 rounded-full border border-editorial-border bg-white/40 px-3 py-1.5">
-          <Search size={11} className="shrink-0 text-editorial-muted" />
+    <div className="border-b border-terminal-line bg-terminal-bg px-4 py-2 font-mono text-xs space-y-1.5">
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setFiltersOpen((o) => !o)}
+          className="shrink-0 text-[10px] uppercase tracking-[0.22em] text-terminal-muted transition-colors hover:text-terminal-secondary focus:outline-none"
+        >
+          {filtersOpen ? '▾' : '▸'} {t('log.filters')}
+        </button>
+        <div className="flex flex-1 items-center gap-2">
+          <Search size={10} className="shrink-0 text-terminal-muted" />
           <input
             type="search"
             value={search}
-            onChange={(event) => onSearchChange(event.target.value)}
+            onChange={(e) => onSearchChange(e.target.value)}
             placeholder={t('log.search')}
-            className="w-full bg-transparent text-xs text-editorial-ink placeholder:text-editorial-muted/70 outline-none"
+            className="w-full bg-transparent text-xs text-terminal-ink placeholder:text-terminal-dim outline-none"
           />
         </div>
-        <IconChip active={grouped} onClick={onToggleGrouped} icon={<Rows3 size={11} />} title={t('log.groupBy')} />
+        <button
+          type="button"
+          onClick={onToggleGrouped}
+          aria-pressed={grouped}
+          className={`shrink-0 text-[10px] uppercase tracking-[0.18em] transition-colors focus:outline-none ${
+            grouped ? 'text-terminal-accent' : 'text-terminal-muted hover:text-terminal-secondary'
+          }`}
+        >
+          {t('log.grouped')}
+        </button>
       </div>
-    </div>
-  );
-}
 
-function IconChip({
-  active,
-  onClick,
-  icon,
-  title,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: ReactNode;
-  title: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      title={title}
-      aria-label={title}
-      className={`rounded-full border p-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-        active
-          ? 'border-editorial-accent bg-editorial-accent text-white'
-          : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent'
-      }`}
-    >
-      {icon}
-    </button>
+      {filtersOpen && (
+        <div className="space-y-1 pt-0.5">
+          <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+            {ALL_SCOPES.map((scope) => (
+              <button
+                key={scope}
+                type="button"
+                onClick={() => onToggleScope(scope)}
+                aria-pressed={scopeFilter.has(scope)}
+                className={`text-[10px] uppercase tracking-[0.18em] transition-colors focus:outline-none ${
+                  scopeFilter.has(scope) ? 'text-terminal-ink' : 'text-terminal-dim line-through'
+                }`}
+              >
+                {scopeLabel[scope]}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+            {ALL_LEVELS.map((level) => (
+              <button
+                key={level}
+                type="button"
+                onClick={() => onToggleLevel(level)}
+                aria-pressed={levelFilter.has(level)}
+                className={`text-[10px] uppercase tracking-[0.18em] transition-colors focus:outline-none ${
+                  levelFilter.has(level) ? LEVEL_COLOR[level] : 'text-terminal-dim line-through'
+                }`}
+              >
+                {levelLabel[level]}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -458,24 +404,20 @@ function GroupedView({ entries, chunks, stats }: GroupedViewProps) {
         const chunkStats = stats.byChunk.get(chunkId);
         const stageBuckets = Array.from(byStage.entries());
         return (
-          <details
-            key={chunkId}
-            open
-            className="rounded-lg border border-white/10 bg-white/[0.02]"
-          >
-            <summary className="flex cursor-pointer select-none items-center justify-between gap-3 px-3 py-2 text-[11px] uppercase tracking-[0.18em] text-[#cbd5e1]">
+          <details key={chunkId} open className="mt-3">
+            <summary className="flex cursor-pointer select-none items-center justify-between gap-2 py-1.5 text-xs uppercase tracking-[0.18em] text-terminal-secondary list-none [&::-webkit-details-marker]:hidden">
               <span>
                 {t('log.unitLabel')} {chunkIndex >= 0 ? indexPad(chunkIndex + 1) : chunkId}
               </span>
               {chunkStats && (
-                <span className="text-[10px] text-[#94a3b8]">
+                <span className="text-[10px] text-terminal-muted">
                   {chunkStats.totalInput.toLocaleString()}→{chunkStats.totalOutput.toLocaleString()} ·{' '}
                   {formatCacheHitRate(chunkStats.cacheHitRate)} ·{' '}
                   {chunkStats.totalDurationMs > 0 ? formatDurationMs(chunkStats.totalDurationMs) : '—'}
                 </span>
               )}
             </summary>
-            <div className="space-y-2 px-3 pb-3">
+            <div className="ml-3 space-y-1.5 border-l border-terminal-line pl-3 pb-2">
               {looseEntries.map((entry) => (
                 <EntryCard key={entry.id} entry={entry} chunkIndexMap={chunkIndexMap} t={t} dense />
               ))}
@@ -484,14 +426,14 @@ function GroupedView({ entries, chunks, stats }: GroupedViewProps) {
                 const stageStart = stageEntries.find((e) => e.phase === 'start');
                 const stageHeader = labelForStageGroup(stageKey, stageStart, stageEnd, t);
                 return (
-                  <details key={stageKey} open className="rounded-md border border-white/5 bg-white/[0.02]">
-                    <summary className="flex cursor-pointer select-none items-center justify-between gap-3 px-3 py-1.5 text-[11px]">
-                      <span className="font-bold uppercase tracking-[0.18em] text-[#cbd5e1]">
+                  <details key={stageKey} open className="mt-1.5">
+                    <summary className="flex cursor-pointer select-none items-center justify-between gap-2 py-0.5 text-xs list-none [&::-webkit-details-marker]:hidden">
+                      <span className="font-bold uppercase tracking-[0.18em] text-terminal-secondary">
                         {stageHeader.title}
                       </span>
-                      <span className="text-[10px] text-[#94a3b8]">{stageHeader.meta}</span>
+                      <span className="text-[10px] text-terminal-muted">{stageHeader.meta}</span>
                     </summary>
-                    <div className="space-y-2 px-3 pb-2">
+                    <div className="ml-2 space-y-1.5 border-l border-terminal-line pl-2 pb-1">
                       {stageEntries.map((entry) => (
                         <EntryCard key={entry.id} entry={entry} chunkIndexMap={chunkIndexMap} t={t} dense />
                       ))}
@@ -550,6 +492,7 @@ function groupEntries(entries: OperationLogEntry[]): GroupedEntries {
 function defaultStageKeyForScope(scope: OperationLogScope): string | null {
   if (scope === 'audit') return '__audit__';
   if (scope === 'coherence') return '__coherence__';
+  if (scope === 'memory') return '__memory__';
   return null;
 }
 
@@ -562,6 +505,7 @@ function labelForStageGroup(
   let title: string;
   if (stageKey === '__audit__') title = t('log.scopeAudit');
   else if (stageKey === '__coherence__') title = t('log.scopeCoherence');
+  else if (stageKey === '__memory__') title = t('log.scopeMemory');
   else {
     title = (start?.meta?.stageName as string | undefined) ?? t('log.scopeStage');
   }
@@ -591,9 +535,9 @@ function EntryCard({ entry, chunkIndexMap, t, dense = false }: EntryCardProps) {
   if (entry.meta?.runBoundary === true) {
     return (
       <div className="flex items-center gap-3 py-1.5">
-        <div className="h-px flex-1 bg-white/10" />
-        <span className="text-[10px] uppercase tracking-[0.22em] text-[#555]">{t('log.newRun')}</span>
-        <div className="h-px flex-1 bg-white/10" />
+        <div className="h-px flex-1 bg-terminal-line" />
+        <span className="text-[10px] uppercase tracking-[0.22em] text-terminal-muted">{t('log.newRun')}</span>
+        <div className="h-px flex-1 bg-terminal-line" />
       </div>
     );
   }
@@ -605,38 +549,21 @@ function EntryCard({ entry, chunkIndexMap, t, dense = false }: EntryCardProps) {
   const metaItems = formatMetaItems(entry.meta);
 
   return (
-    <div className={`rounded-[10px] border border-white/10 bg-white/[0.03] ${dense ? 'px-3 py-1.5' : 'px-3 py-2'}`}>
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[#555]">$</span>
-        <span className="text-[#666]">{entry.at.slice(11, 19)}</span>
-        <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.22em] text-[#888]">
-          {scopeLabel}
-        </span>
-        <span
-          className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.22em] ${color.border} ${color.text}`}
-        >
-          {levelLabel}
-        </span>
+    <div className={dense ? 'py-0.5' : 'py-1'}>
+      <div className="flex items-baseline gap-2 text-xs">
+        <span className="select-none text-terminal-dim">$</span>
+        <span className="tabular-nums text-terminal-secondary">{entry.at.slice(11, 19)}</span>
+        <span className="text-terminal-secondary">{scopeLabel.toLowerCase()}:{levelLabel.toLowerCase()}</span>
         {entry.durationMs != null && entry.phase === 'end' && (
-          <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] text-[#94a3b8]">
-            {formatDurationMs(entry.durationMs)}
-          </span>
+          <span className="text-terminal-muted">{formatDurationMs(entry.durationMs)}</span>
+        )}
+        {chunkIndex >= 0 && (
+          <span className="text-terminal-muted">{t('log.unitLabel')} {indexPad(chunkIndex + 1)}</span>
         )}
       </div>
-      <p className={`mt-1.5 leading-relaxed ${color.text}`}>{entry.message}</p>
-      {(chunkIndex >= 0 || metaItems.length > 0) && (
-        <div className="mt-1.5 flex flex-wrap gap-2 text-[10px]">
-          {chunkIndex >= 0 && (
-            <span className="rounded-full border border-white/10 px-2 py-0.5 text-[#888]">
-              {t('log.unitLabel')} {indexPad(chunkIndex + 1)}
-            </span>
-          )}
-          {metaItems.map((item) => (
-            <span key={item} className="rounded-full border border-white/10 px-2 py-0.5 text-[#666]">
-              {item}
-            </span>
-          ))}
-        </div>
+      <p className={`mt-0.5 pl-4 text-xs leading-relaxed ${color}`}>{entry.message}</p>
+      {metaItems.length > 0 && (
+        <p className="mt-0.5 pl-4 text-xs text-terminal-muted">{metaItems.join('  ')}</p>
       )}
       {entry.detail && <DetailBlock detail={entry.detail} kind={entry.detailKind} t={t} />}
     </div>
@@ -677,23 +604,25 @@ function DetailBlock({
   const isError = kind === 'error';
 
   return (
-    <details className="mt-2 border-t border-white/10 pt-2">
-      <summary className="flex cursor-pointer select-none items-center justify-between gap-2 text-[10px] text-[#888] hover:text-[#cbd5e1]">
+    <details className="mt-1 pl-4">
+      <summary className="flex cursor-pointer select-none items-center justify-between gap-2 text-[10px] text-terminal-muted hover:text-terminal-secondary">
         <span>▶ {summaryLabel}</span>
         <button
           type="button"
           onClick={onCopy}
           title={t('log.copy')}
           aria-label={t('log.copy')}
-          className="flex items-center gap-1 rounded-full border border-white/10 px-2 py-0.5 text-[10px] text-[#888] transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          className="flex items-center gap-1 text-[10px] text-terminal-muted transition-colors hover:text-terminal-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
         >
           <Copy size={10} />
           {t('log.copy')}
         </button>
       </summary>
       <pre
-        className={`mt-2 max-h-72 overflow-y-auto whitespace-pre-wrap text-[10px] leading-relaxed custom-scrollbar ${
-          isError ? 'text-[#fda4af] bg-[#3b0a0f]/30 rounded-md p-2 border border-[#ff6b6b]/20' : 'text-[#cbd5e1]'
+        className={`mt-1 max-h-[480px] overflow-y-auto whitespace-pre-wrap text-[10px] leading-relaxed terminal-scrollbar ${
+          isError
+            ? 'text-terminal-error/80 bg-terminal-error/[0.08] rounded-md p-2 border border-terminal-error/20'
+            : 'text-terminal-secondary'
         }`}
       >
         {detail}
@@ -712,6 +641,7 @@ function scopeLabels(t: (k: string) => string): Record<OperationLogScope, string
     stage: t('log.scopeStage'),
     audit: t('log.scopeAudit'),
     coherence: t('log.scopeCoherence'),
+    memory: t('log.scopeMemory'),
     chunk: t('log.scopeChunk'),
   };
 }

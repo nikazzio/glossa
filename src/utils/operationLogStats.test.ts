@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { aggregateEntries, formatCacheHitRate, formatDurationMs, formatUsd } from './operationLogStats';
+import {
+  aggregateEntries,
+  formatCacheHitRate,
+  formatDurationMs,
+  formatUsd,
+  summarizeChunkUsage,
+  summarizeGlobalUsage,
+} from './operationLogStats';
 import type { OperationLogEntry } from '../stores/operationLogStore';
 
 function entry(partial: Partial<OperationLogEntry>): OperationLogEntry {
@@ -120,6 +127,140 @@ describe('aggregateEntries', () => {
     );
     // 1M * 2 / 1M + 500k * 4 / 1M = 2 + 2 = 4
     expect(stats.totalUsd).toBe(4);
+  });
+
+  it('builds global summaries by category and model', () => {
+    const summary = summarizeGlobalUsage([
+      entry({
+        scope: 'stage',
+        phase: 'end',
+        stageId: 'translate',
+        message: 'Stage "Translate" completed',
+        chunkId: 'a',
+        meta: {
+          provider: 'openai',
+          model: 'gpt-5.4',
+          inputTokens: 100,
+          outputTokens: 25,
+          cachedInputTokens: 40,
+          cacheMissInputTokens: 60,
+        },
+      }),
+      entry({
+        scope: 'audit',
+        phase: 'end',
+        message: 'Audit completed',
+        chunkId: 'a',
+        meta: {
+          provider: 'openai',
+          model: 'gpt-5.4-mini',
+          inputTokens: 50,
+          outputTokens: 10,
+          cachedInputTokens: 20,
+          cacheMissInputTokens: 30,
+        },
+      }),
+      entry({
+        scope: 'coherence',
+        phase: 'end',
+        message: 'Coherence completed',
+        chunkId: 'a',
+        meta: {
+          provider: 'openai',
+          model: 'gpt-5.4-nano',
+          inputTokens: 20,
+          outputTokens: 5,
+        },
+      }),
+    ]);
+
+    expect(summary.overall.totalInput).toBe(170);
+    expect(summary.translation.totalInput).toBe(100);
+    expect(summary.audit.totalInput).toBe(50);
+    expect(summary.coherence.totalInput).toBe(20);
+    expect(summary.translationRuns).toBe(1);
+    expect(summary.auditRuns).toBe(1);
+    expect(summary.coherenceRuns).toBe(1);
+    expect(summary.modelNames).toEqual([
+      'openai / gpt-5.4',
+      'openai / gpt-5.4-mini',
+      'openai / gpt-5.4-nano',
+    ]);
+    expect(summary.modelBreakdown[0]?.modelName).toBe('openai / gpt-5.4');
+  });
+
+  it('builds chunk summaries with cumulative totals and last runs', () => {
+    const summary = summarizeChunkUsage([
+      entry({
+        at: '2026-06-06T09:00:00.000Z',
+        scope: 'stage',
+        phase: 'end',
+        stageId: 'translate',
+        chunkId: 'a',
+        message: 'Stage "Translate" completed',
+        meta: {
+          provider: 'openai',
+          model: 'gpt-5.4',
+          inputTokens: 100,
+          outputTokens: 20,
+          cachedInputTokens: 0,
+          cacheMissInputTokens: 100,
+        },
+      }),
+      entry({
+        at: '2026-06-06T10:00:00.000Z',
+        scope: 'stage',
+        phase: 'end',
+        stageId: 'refine',
+        chunkId: 'a',
+        message: 'Stage "Refine" completed',
+        meta: {
+          provider: 'openai',
+          model: 'gpt-5.4-mini',
+          inputTokens: 80,
+          outputTokens: 15,
+          cachedInputTokens: 64,
+          cacheMissInputTokens: 16,
+        },
+      }),
+      entry({
+        at: '2026-06-06T11:00:00.000Z',
+        scope: 'audit',
+        phase: 'end',
+        chunkId: 'a',
+        message: 'Audit completed',
+        meta: {
+          provider: 'openai',
+          model: 'gpt-5.4-mini',
+          inputTokens: 40,
+          outputTokens: 8,
+          cachedInputTokens: 20,
+          cacheMissInputTokens: 20,
+        },
+      }),
+      entry({
+        at: '2026-06-06T08:00:00.000Z',
+        scope: 'stage',
+        phase: 'end',
+        stageId: 'translate',
+        chunkId: 'b',
+        message: 'Stage "Translate" completed',
+        meta: {
+          provider: 'openai',
+          model: 'gpt-5.4',
+          inputTokens: 999,
+          outputTokens: 1,
+        },
+      }),
+    ], 'a');
+
+    expect(summary.total.totalInput).toBe(220);
+    expect(summary.translationRuns).toBe(2);
+    expect(summary.auditRuns).toBe(1);
+    expect(summary.lastTranslationRun?.stageName).toBe('Refine');
+    expect(summary.lastTranslationRun?.provider).toBe('openai');
+    expect(summary.lastTranslationRun?.stats.totalInput).toBe(80);
+    expect(summary.lastAuditRun?.stats.totalInput).toBe(40);
   });
 });
 

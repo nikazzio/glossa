@@ -5,8 +5,14 @@ import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useChunksStore } from '../stores/chunksStore';
 import { usePhraseMemoryStore } from '../stores/phraseMemoryStore';
 import type { PhraseMemorySearchStatus } from '../stores/phraseMemoryStore';
-import { searchPhraseMemory, searchPhraseMemoryBatch } from '../services/phraseMemoryService';
+import {
+  listPhraseMemoryEntries,
+  searchPhraseMemory,
+  searchPhraseMemoryBatch,
+} from '../services/phraseMemoryService';
+import { logOperation } from '../stores/operationLogStore';
 import { logger } from '../utils/logger';
+import type { PhraseMatch } from '../types';
 
 type UsePhraseMemoryAutoSearchOptions = {
   auto?: boolean;
@@ -14,6 +20,32 @@ type UsePhraseMemoryAutoSearchOptions = {
 
 const DEFAULT_THRESHOLD = 0.75;
 const DEFAULT_MAX_RESULTS = 10;
+
+function exactMatchFromMemoryEntry(entry: {
+  id: string;
+  sourcePhrase: string;
+  targetPhrase: string;
+  confidence: number;
+}): PhraseMatch {
+  return {
+    phraseMemoryId: entry.id,
+    sourcePhrase: entry.sourcePhrase,
+    targetPhrase: entry.targetPhrase,
+    distance: 0,
+    confidence: entry.confidence,
+  };
+}
+
+function mergePhraseMatches(primary: PhraseMatch[], secondary: PhraseMatch[]): PhraseMatch[] {
+  const seen = new Set<string>();
+  const merged: PhraseMatch[] = [];
+  for (const match of [...secondary, ...primary]) {
+    if (seen.has(match.phraseMemoryId)) continue;
+    seen.add(match.phraseMemoryId);
+    merged.push(match);
+  }
+  return merged.sort((a, b) => a.distance - b.distance || a.sourcePhrase.localeCompare(b.sourcePhrase));
+}
 
 export function usePhraseMemoryAutoSearch(
   options: UsePhraseMemoryAutoSearchOptions = {},
@@ -62,9 +94,29 @@ export function usePhraseMemoryAutoSearch(
     }
 
     setSearchStatus('searching');
+    logOperation({
+      level: 'info',
+      scope: 'memory',
+      phase: 'start',
+      message: 'Auto phrase memory search started',
+      meta: {
+        workspaceId: activeWorkspace.id,
+        chunkCount: toSearch.length,
+        threshold: config.phraseMemorySimilarityThreshold ?? DEFAULT_THRESHOLD,
+        maxResults: config.phraseMemoryMaxResults ?? DEFAULT_MAX_RESULTS,
+      },
+    });
 
     void (async () => {
       try {
+        const memoryEntries = await listPhraseMemoryEntries(activeWorkspace.id);
+        const exactMatchesByChunk = new Map<string, PhraseMatch[]>();
+        for (const entry of memoryEntries) {
+          if (!entry.chunkId) continue;
+          const current = exactMatchesByChunk.get(entry.chunkId) ?? [];
+          current.push(exactMatchFromMemoryEntry(entry));
+          exactMatchesByChunk.set(entry.chunkId, current);
+        }
         const results = await searchPhraseMemoryBatch({
           workspaceId: activeWorkspace.id,
           embeddingModel: activeWorkspace.embeddingModel,
@@ -75,13 +127,38 @@ export function usePhraseMemoryAutoSearch(
         if (requestIdRef.current !== requestId) return;
 
         const { setMatches, setSearchStatus: setLatestSearchStatus } = usePhraseMemoryStore.getState();
-        for (const [chunkId, matches] of results) {
-          setMatches(chunkId, matches);
+        for (const chunk of toSearch) {
+          const vectorMatches = results.get(chunk.id) ?? [];
+          const exactMatches = exactMatchesByChunk.get(chunk.id) ?? [];
+          setMatches(chunk.id, mergePhraseMatches(vectorMatches, exactMatches));
         }
         setLatestSearchStatus('done');
+        logOperation({
+          level: 'success',
+          scope: 'memory',
+          phase: 'end',
+          message: 'Auto phrase memory search completed',
+          meta: {
+            workspaceId: activeWorkspace.id,
+            chunkCount: toSearch.length,
+            matchedChunkCount: Array.from(results.keys()).length,
+          },
+        });
       } catch (err: unknown) {
         if (requestIdRef.current !== requestId) return;
         logger.warn('phrase memory auto-search failed', { error: String(err) });
+        logOperation({
+          level: 'error',
+          scope: 'memory',
+          phase: 'end',
+          message: 'Auto phrase memory search failed',
+          meta: {
+            workspaceId: activeWorkspace.id,
+            error: String(err),
+          },
+          detail: String(err),
+          detailKind: 'error',
+        });
         usePhraseMemoryStore.getState().setSearchStatus('error');
       }
     })();
@@ -101,8 +178,25 @@ export function usePhraseMemoryAutoSearch(
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
     setSearchStatus('searching');
+    logOperation({
+      level: 'info',
+      scope: 'memory',
+      phase: 'start',
+      message: 'Manual phrase memory search started',
+      chunkId,
+      meta: {
+        workspaceId: activeWorkspace.id,
+        queryChars: chunk.sourceProcessingText.length,
+        threshold: config.phraseMemorySimilarityThreshold ?? DEFAULT_THRESHOLD,
+        maxResults: config.phraseMemoryMaxResults ?? DEFAULT_MAX_RESULTS,
+      },
+    });
 
     try {
+      const memoryEntries = await listPhraseMemoryEntries(activeWorkspace.id);
+      const exactMatches = memoryEntries
+        .filter((entry) => entry.chunkId === chunkId)
+        .map(exactMatchFromMemoryEntry);
       const matches = await searchPhraseMemory({
         workspaceId: activeWorkspace.id,
         embeddingModel: activeWorkspace.embeddingModel,
@@ -111,11 +205,36 @@ export function usePhraseMemoryAutoSearch(
         maxResults: config.phraseMemoryMaxResults ?? DEFAULT_MAX_RESULTS,
       });
       if (requestIdRef.current !== requestId) return;
-      setMatches(chunkId, matches);
+      setMatches(chunkId, mergePhraseMatches(matches, exactMatches));
       setSearchStatus('done');
+      logOperation({
+        level: 'success',
+        scope: 'memory',
+        phase: 'end',
+        message: 'Manual phrase memory search completed',
+        chunkId,
+        meta: {
+          workspaceId: activeWorkspace.id,
+          resultCount: Math.max(matches.length, exactMatches.length),
+          exactMatchCount: exactMatches.length,
+        },
+      });
     } catch (err: unknown) {
       if (requestIdRef.current !== requestId) return;
       logger.warn('phrase memory manual search failed', { chunkId, error: String(err) });
+      logOperation({
+        level: 'error',
+        scope: 'memory',
+        phase: 'end',
+        message: 'Manual phrase memory search failed',
+        chunkId,
+        meta: {
+          workspaceId: activeWorkspace.id,
+          error: String(err),
+        },
+        detail: String(err),
+        detailKind: 'error',
+      });
       setSearchStatus('error');
       throw err;
     }

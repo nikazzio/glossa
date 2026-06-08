@@ -6,12 +6,13 @@ import { usePipelineStore } from '../stores/pipelineStore';
 import { useProjectStore } from '../stores/projectStore';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { makeTranslationChunk } from '../test/chunkFactory';
-import { searchPhraseMemory, searchPhraseMemoryBatch } from '../services/phraseMemoryService';
+import { listPhraseMemoryEntries, searchPhraseMemory, searchPhraseMemoryBatch } from '../services/phraseMemoryService';
 import { usePhraseMemoryAutoSearch } from './usePhraseMemoryAutoSearch';
 
 vi.mock('../services/phraseMemoryService', () => ({
   searchPhraseMemory: vi.fn(),
   searchPhraseMemoryBatch: vi.fn(),
+  listPhraseMemoryEntries: vi.fn(),
 }));
 
 vi.mock('../utils/logger', () => ({
@@ -20,6 +21,7 @@ vi.mock('../utils/logger', () => ({
 
 const mockSearchPhraseMemory = vi.mocked(searchPhraseMemory);
 const mockSearchPhraseMemoryBatch = vi.mocked(searchPhraseMemoryBatch);
+const mockListPhraseMemoryEntries = vi.mocked(listPhraseMemoryEntries);
 
 const workspace = {
   id: 'ws-1',
@@ -51,9 +53,10 @@ describe('usePhraseMemoryAutoSearch', () => {
         sourcePhrase: 'Mondo',
         targetPhrase: 'World',
         distance: 0.2,
-        confidence: 0.8,
-      },
+      confidence: 0.8,
+    },
     ]);
+    mockListPhraseMemoryEntries.mockResolvedValue([]);
 
     useWorkspaceStore.setState({
       activeWorkspace: workspace,
@@ -118,19 +121,43 @@ describe('usePhraseMemoryAutoSearch', () => {
       ...state,
       config: { ...state.config, autoSearchPhraseMemory: false },
     }));
+    mockListPhraseMemoryEntries.mockResolvedValueOnce([
+      {
+        id: 'pm-exact',
+        workspaceId: 'ws-1',
+        sourcePhrase: 'Ciao mondo',
+        targetPhrase: 'Hello world',
+        confidence: 0.95,
+        sourceLanguage: 'Italian',
+        targetLanguage: 'English',
+        author: null,
+        work: null,
+        domain: null,
+        tags: null,
+        notes: null,
+        chunkId: 'c1',
+        projectId: 'proj-1',
+        embeddingModel: null,
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
+    ]);
     const { result } = renderHook(() => usePhraseMemoryAutoSearch({ auto: false }));
 
     await act(async () => {
       await result.current.runSearchForChunk('c1');
     });
 
+    expect(mockListPhraseMemoryEntries).toHaveBeenCalledWith('ws-1');
     expect(mockSearchPhraseMemory).toHaveBeenCalledWith(expect.objectContaining({
       workspaceId: 'ws-1',
       queryText: 'Ciao mondo.',
       threshold: 0.75,
       maxResults: 5,
     }));
-    expect(usePhraseMemoryStore.getState().matchesByChunk.get('c1')?.matches[0].id).toBe('pm-2');
+    expect(usePhraseMemoryStore.getState().matchesByChunk.get('c1')?.matches.map((match) => match.id)).toEqual([
+      'pm-exact',
+      'pm-2',
+    ]);
   });
 
   it('does not search when Phrase Memory is disabled', () => {

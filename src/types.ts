@@ -249,6 +249,6 @@ export type PhraseMatch = {
 
 export type EmbeddingJobStatus =
   | { kind: 'idle' }
-  | { kind: 'running'; processed: number; total: number; estimatedCostUsd: number }
+  | { kind: 'running'; chunkId: string | null; processed: number; total: number; estimatedCostUsd: number }
   | { kind: 'done'; totalPhrases: number }
   | { kind: 'error'; message: string };

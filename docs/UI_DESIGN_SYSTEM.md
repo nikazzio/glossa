@@ -267,6 +267,53 @@ Dall'alto verso il basso per importanza percepita dall'utente:
 
 ---
 
+---
+
+## Console Terminal
+
+Il tab Console simula un terminale, ma usa la **versione scura della palette editoriale** — non colori neon generici. Tutti i token sono definiti in `src/index.css` nel blocco `@theme` con prefisso `--color-terminal-*`.
+
+### Token di sfondo
+
+| Token Tailwind | CSS var | Valore | Uso |
+|---|---|---|---|
+| `bg-terminal-bg` | `--color-terminal-bg` | `#0d0b09` | Sfondo principale — nero caldo |
+| `bg-terminal-chrome` | `--color-terminal-chrome` | `#131008` | Header chrome, leggermente elevato |
+| `border-terminal-border` | `--color-terminal-border` | `#2a2218` | Bordi e separatori principali |
+| `border-terminal-line` | `--color-terminal-line` | `#1e1810` | Bordi gerarchia indent interni |
+
+### Token testo
+
+| Token Tailwind | Valore | Contrasto su `bg` | Uso |
+|---|---|---|---|
+| `text-terminal-ink` | `#d8cfc5` | ~14:1 | Testo principale messaggi |
+| `text-terminal-secondary` | `#8a7a6e` | ~5.2:1 ✓ AA | Timestamp, scope, header label |
+| `text-terminal-muted` | `#908070` | ~5.2:1 ✓ AA | Meta items, stats secondari |
+| `text-terminal-dim` | `#3a3028` | decorativo | Prompt `$`, placeholder |
+
+### Token livelli log (pastello editoriale)
+
+| Token Tailwind | Valore | Derivazione |
+|---|---|---|
+| `text-terminal-error` | `#c07060` | family `editorial-accent` #C8705E, smorzato |
+| `text-terminal-warn` | `#c49b2a` | `editorial-running` — riuso esatto |
+| `text-terminal-success` | `#5a9a7a` | `editorial-success` #3A7A65, schiarito per dark bg |
+| `text-terminal-info` | `#7898aa` | family teal editoriale, smorzato |
+| `text-terminal-accent` | `#c49b2a` | amber — highlight interattivi, stato running |
+
+> **Principio fondamentale**: il terminale è la versione *scura* degli stessi toni caldi dell'app.
+> Mai usare colori neon (`#69db7c`, `#74c0fc`, `#ff6b6b`) nel Console tab.
+
+### Scrollbar
+
+Usa `.terminal-scrollbar` (definita in `index.css`) al posto di `.custom-scrollbar` in tutte le aree scroll del Console tab.
+
+### Bordo drawer
+
+Il bordo sinistro del drawer è condizionale: `border-terminal-border` con tab `operations` attivo, `border-editorial-border` altrimenti — transizione "carta candela" invece di flash stroboscopico.
+
+---
+
 ## Riferimento live
 
 `src/components/help/StyleGuide.tsx` — sezione nell'Help dell'app, mostra tutti i token CSS letti live.

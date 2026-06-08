@@ -14,6 +14,7 @@ export type OperationLogScope =
   | 'stage'
   | 'audit'
   | 'coherence'
+  | 'memory'
   | 'chunk';
 export type OperationLogPhase = 'start' | 'end' | 'retry' | 'cache';
 export type OperationLogDetailKind = 'prompt' | 'json' | 'error' | 'note';

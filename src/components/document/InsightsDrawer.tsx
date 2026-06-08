@@ -38,11 +38,16 @@ import { MemoryTab } from './MemoryTab';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { usePricingStore } from '../../stores/pricingStore';
 import { indexPad, qualityLabelKey, qualityTone, calculateCompositeQuality } from '../../utils';
-import { MODEL_PRICING } from '../../constants';
-import { estimatePipelineCost } from '../../utils/costEstimate';
-import { aggregateEntries, formatDurationMs } from '../../utils/operationLogStats';
+import {
+  formatCacheHitRate,
+  formatDurationMs,
+  formatUsd,
+  summarizeChunkUsage,
+  summarizeGlobalUsage,
+  type OperationLogRunSummary,
+  type ScopeBreakdownEntry,
+} from '../../utils/operationLogStats';
 import { useOperationLogStore } from '../../stores/operationLogStore';
-import { formatCost } from '../pipeline/CostBadge';
 import { useChunkWatchdog } from '../../hooks/useChunkWatchdog';
 import { usePipeline } from '../../hooks/usePipeline';
 import { OperationsTab } from './OperationsTab';
@@ -58,7 +63,7 @@ interface InsightsDrawerProps {
 const PANEL_WIDTH = 430;
 
 const DOC_TAB_ORDER: InsightsDrawerTab[] = ['index', 'search', 'stats', 'coherence', 'glossary'];
-const CHUNK_TAB_ORDER: ChunkDrawerTab[] = ['audit', 'notes', 'operations', 'memory'];
+const CHUNK_TAB_ORDER: ChunkDrawerTab[] = ['audit', 'notes', 'operations', 'memory', 'summary'];
 
 const DOC_TAB_BUTTON_IDS: Record<InsightsDrawerTab, string> = {
   index: 'insights-tab-button-index',
@@ -77,6 +82,7 @@ const DOC_TAB_PANEL_IDS: Record<InsightsDrawerTab, string> = {
 };
 
 const CHUNK_TAB_BUTTON_IDS: Record<ChunkDrawerTab, string> = {
+  summary: 'chunk-tab-button-summary',
   audit: 'chunk-tab-button-audit',
   notes: 'chunk-tab-button-notes',
   operations: 'chunk-tab-button-operations',
@@ -84,6 +90,7 @@ const CHUNK_TAB_BUTTON_IDS: Record<ChunkDrawerTab, string> = {
 };
 
 const CHUNK_TAB_PANEL_IDS: Record<ChunkDrawerTab, string> = {
+  summary: 'chunk-tab-panel-summary',
   audit: 'chunk-tab-panel-audit',
   notes: 'chunk-tab-panel-notes',
   operations: 'chunk-tab-panel-operations',
@@ -147,12 +154,14 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
     glossary: t('document.insightsTabGlossary'),
   };
   const CHUNK_TAB_ICON: Record<ChunkDrawerTab, React.ReactNode> = {
+    summary: <BarChart2 size={16} />,
     audit: <ShieldCheck size={16} />,
     notes: <NotebookText size={16} />,
     operations: <TerminalSquare size={16} />,
     memory: <Brain size={16} />,
   };
   const CHUNK_TAB_LABEL: Record<ChunkDrawerTab, string> = {
+    summary: t('document.insightsTabSummary'),
     audit: t('document.insightsTabAudit'),
     notes: t('document.insightsTabNotes'),
     operations: t('document.insightsTabOperations'),
@@ -234,7 +243,7 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
             animate={{ width: PANEL_WIDTH, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
             transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-            className="flex h-full overflow-hidden border-l border-editorial-border bg-editorial-bg/95"
+            className={`flex h-full overflow-hidden border-l bg-editorial-bg/95 ${chunkDrawerTab === 'operations' ? 'border-terminal-border' : 'border-editorial-border'}`}
             role="region"
             aria-label={chunkLabel}
           >
@@ -274,7 +283,7 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
                 <span className="font-display italic text-sm text-editorial-ink">{CHUNK_TAB_LABEL[chunkDrawerTab]}</span>
               </div>
 
-              <div className="flex flex-1 flex-col overflow-y-auto bg-editorial-bg/40 custom-scrollbar">
+              <div className={`flex flex-1 flex-col overflow-y-auto custom-scrollbar ${chunkDrawerTab === 'operations' ? 'bg-black' : 'bg-editorial-bg/40'}`}>
                 {chunkDrawerTab === 'audit' ? (
                   <AuditTab
                     panelId={CHUNK_TAB_PANEL_IDS.audit}
@@ -296,11 +305,12 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
                     panelId={CHUNK_TAB_PANEL_IDS.memory}
                     labelledBy={CHUNK_TAB_BUTTON_IDS.memory}
                     currentChunkId={currentChunk?.id ?? null}
-                    onRerun={(selectedMatches) => {
-                      if (currentChunk?.id) {
-                        void rerunChunkWithMemory(currentChunk.id, selectedMatches);
-                      }
-                    }}
+                  />
+                ) : chunkDrawerTab === 'summary' ? (
+                  <ChunkSummaryTab
+                    panelId={CHUNK_TAB_PANEL_IDS.summary}
+                    labelledBy={CHUNK_TAB_BUTTON_IDS.summary}
+                    currentChunk={currentChunk}
                   />
                 ) : (
                   <OperationsTab
@@ -628,15 +638,10 @@ interface StatsTabProps {
 
 function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
   const { t } = useTranslation();
-  const config = usePipelineStore((state) => state.config);
   const pricingOverrides = usePricingStore((s) => s.overrides);
   const logEntries = useOperationLogStore((s) => s.entries);
-  const costEstimate = useMemo(
-    () => estimatePipelineCost(chunks, config, pricingOverrides),
-    [chunks, config, pricingOverrides],
-  );
-  const logStats = useMemo(
-    () => aggregateEntries(logEntries, pricingOverrides),
+  const usageSummary = useMemo(
+    () => summarizeGlobalUsage(logEntries, pricingOverrides),
     [logEntries, pricingOverrides],
   );
 
@@ -653,70 +658,7 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
   const compositeQuality = calculateCompositeQuality(chunks);
   const compositeLabel = compositeQuality ? t(qualityLabelKey(compositeQuality)) : null;
   const compositeTone = qualityTone(compositeQuality);
-
-  let totalInput = 0;
-  let totalOutput = 0;
-  let totalCachedInput = 0;
-  let totalCacheMissInput = 0;
-  let translationInput = 0;
-  let translationOutput = 0;
-  let translationCachedInput = 0;
-  let translationCacheMissInput = 0;
-  let auditInput = 0;
-  let auditOutput = 0;
-  let auditCachedInput = 0;
-  let auditCacheMissInput = 0;
-  let estimatedCostUsd = 0;
-  const modelNames = new Set<string>();
-  for (const chunk of chunks) {
-    for (const [stageId, result] of Object.entries(chunk.stageResults)) {
-      const stage = config.stages.find((s) => s.id === stageId);
-      if (stage) {
-        modelNames.add(`${stage.provider} / ${stage.model}`);
-        if (result.tokenUsage) {
-          totalInput += result.tokenUsage.inputTokens ?? 0;
-          totalOutput += result.tokenUsage.outputTokens ?? 0;
-          totalCachedInput += result.tokenUsage.cachedInputTokens ?? 0;
-          totalCacheMissInput += result.tokenUsage.cacheMissInputTokens ?? 0;
-          translationInput += result.tokenUsage.inputTokens ?? 0;
-          translationOutput += result.tokenUsage.outputTokens ?? 0;
-          translationCachedInput += result.tokenUsage.cachedInputTokens ?? 0;
-          translationCacheMissInput += result.tokenUsage.cacheMissInputTokens ?? 0;
-          const pricing = MODEL_PRICING[`${stage.provider}/${stage.model}`];
-          if (pricing) estimatedCostUsd += (result.tokenUsage.inputTokens * pricing.input + result.tokenUsage.outputTokens * pricing.output) / 1_000_000;
-        }
-      }
-    }
-    if (chunk.judgeResult.tokenUsage) {
-      const ju = chunk.judgeResult.tokenUsage;
-      totalInput += ju.inputTokens ?? 0;
-      totalOutput += ju.outputTokens ?? 0;
-      totalCachedInput += ju.cachedInputTokens ?? 0;
-      totalCacheMissInput += ju.cacheMissInputTokens ?? 0;
-      auditInput += ju.inputTokens ?? 0;
-      auditOutput += ju.outputTokens ?? 0;
-      auditCachedInput += ju.cachedInputTokens ?? 0;
-      auditCacheMissInput += ju.cacheMissInputTokens ?? 0;
-      const judgePricing = MODEL_PRICING[`${config.judgeProvider}/${config.judgeModel}`];
-      if (judgePricing) estimatedCostUsd += (ju.inputTokens * judgePricing.input + ju.outputTokens * judgePricing.output) / 1_000_000;
-      modelNames.add(`${config.judgeProvider} / ${config.judgeModel}`);
-    }
-    if (chunk.coherenceResult?.tokenUsage) {
-      const cu = chunk.coherenceResult.tokenUsage;
-      totalInput += cu.inputTokens ?? 0;
-      totalOutput += cu.outputTokens ?? 0;
-      totalCachedInput += cu.cachedInputTokens ?? 0;
-      totalCacheMissInput += cu.cacheMissInputTokens ?? 0;
-      auditInput += cu.inputTokens ?? 0;
-      auditOutput += cu.outputTokens ?? 0;
-      auditCachedInput += cu.cachedInputTokens ?? 0;
-      auditCacheMissInput += cu.cacheMissInputTokens ?? 0;
-    }
-  }
-  const totalTokens = totalInput + totalOutput;
-  const cacheHitPct = totalInput > 0 ? Math.round((totalCachedInput / totalInput) * 100) : 0;
-  const translationCacheHitPct = translationInput > 0 ? Math.round((translationCachedInput / translationInput) * 100) : 0;
-  const auditCacheHitPct = auditInput > 0 ? Math.round((auditCachedInput / auditInput) * 100) : 0;
+  const totalTokens = usageSummary.overall.totalInput + usageSummary.overall.totalOutput;
 
   if (chunks.length === 0) {
     return (
@@ -774,71 +716,37 @@ function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
         <dl className="space-y-2">
           <StatRow
             label={t('header.tokenCount')}
-            value={totalTokens > 0 ? totalTokens.toLocaleString() : (() => {
-              const est = [...costEstimate.stages, ...(costEstimate.judge ? [costEstimate.judge] : [])].reduce((s, r) => s + r.inputTokens + r.outputTokens, 0);
-              return est > 0 ? `~${est.toLocaleString()}` : '—';
-            })()}
+            value={totalTokens > 0 ? totalTokens.toLocaleString() : '—'}
           />
           {totalTokens > 0 && (
             <div className="flex items-baseline gap-1 pl-3">
               <dt className="text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted/60">in</dt>
-              <dd className="font-display text-sm italic text-editorial-muted">{totalInput.toLocaleString()}</dd>
+              <dd className="font-display text-sm italic text-editorial-muted">{usageSummary.overall.totalInput.toLocaleString()}</dd>
               <dt className="ml-2 text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted/60">out</dt>
-              <dd className="font-display text-sm italic text-editorial-muted">{totalOutput.toLocaleString()}</dd>
+              <dd className="font-display text-sm italic text-editorial-muted">{usageSummary.overall.totalOutput.toLocaleString()}</dd>
             </div>
           )}
-          {totalCachedInput > 0 && (
+          {(usageSummary.overall.totalCached > 0 || usageSummary.overall.totalCacheMiss > 0) && (
             <>
-              <StatRow label={t('header.cachedInput')} value={totalCachedInput.toLocaleString()} />
-              <StatRow label={t('header.cacheHitRate')} value={`${cacheHitPct}%`} />
-              {totalCacheMissInput > 0 && (
-                <StatRow label={t('header.cacheMissInput')} value={totalCacheMissInput.toLocaleString()} />
+              <StatRow label={t('header.cachedInput')} value={usageSummary.overall.totalCached.toLocaleString()} />
+              <StatRow label={t('header.cacheHitRate')} value={formatCacheHitRate(usageSummary.overall.cacheHitRate)} />
+              {usageSummary.overall.totalCacheMiss > 0 && (
+                <StatRow label={t('header.cacheMissInput')} value={usageSummary.overall.totalCacheMiss.toLocaleString()} />
               )}
             </>
           )}
-          <StatRow
-            label={t('header.estimatedCost')}
-            value={totalTokens > 0
-              ? `$${estimatedCostUsd.toFixed(4)}`
-              : costEstimate.isFree ? t('cost.free')
-              : costEstimate.totalUsd === null ? t('cost.unknown')
-              : `~${formatCost(costEstimate.totalUsd)}`}
-          />
-          {logStats.totalDurationMs > 0 && (
-            <StatRow label={t('log.totalDuration')} value={formatDurationMs(logStats.totalDurationMs)} />
-          )}
+          <StatRow label={t('header.estimatedCost')} value={formatUsd(usageSummary.overall.totalUsd)} />
+          <StatRow label={t('log.totalDuration')} value={usageSummary.overall.totalDurationMs > 0 ? formatDurationMs(usageSummary.overall.totalDurationMs) : '—'} />
+          <StatRow label={t('document.summaryTranslationRuns')} value={usageSummary.translationRuns.toLocaleString()} />
+          <StatRow label={t('document.summaryAuditRuns')} value={usageSummary.auditRuns.toLocaleString()} />
         </dl>
-        {modelNames.size > 0 && (
+        {usageSummary.scopeBreakdown.length > 0 && (
           <div className="mt-3 space-y-1">
-            {Array.from(modelNames).map((name) => (
-              <div key={name} className="text-[10px] text-editorial-muted/70 font-mono truncate">{name}</div>
+            {usageSummary.scopeBreakdown.map((entry, i) => (
+              <ScopeBreakdownCard key={`${entry.scope}-${i}`} entry={entry} />
             ))}
           </div>
         )}
-      </section>
-
-      <section className="rounded-[20px] border border-editorial-border bg-editorial-bg px-4 py-3">
-        <div className="mb-3 flex items-center gap-1.5 text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-          <Cpu size={11} className="text-editorial-accent shrink-0" /> {t('document.translationCacheLabel')}
-        </div>
-        <dl className="space-y-2">
-          <StatRow label={t('header.tokenCount')} value={(translationInput + translationOutput).toLocaleString()} />
-          <StatRow label={t('header.cachedInput')} value={translationCachedInput.toLocaleString()} />
-          <StatRow label={t('header.cacheHitRate')} value={`${translationCacheHitPct}%`} />
-          <StatRow label={t('header.cacheMissInput')} value={translationCacheMissInput.toLocaleString()} />
-        </dl>
-      </section>
-
-      <section className="rounded-[20px] border border-editorial-border bg-editorial-bg px-4 py-3">
-        <div className="mb-3 flex items-center gap-1.5 text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-          <Cpu size={11} className="text-editorial-accent shrink-0" /> {t('document.auditCacheLabel')}
-        </div>
-        <dl className="space-y-2">
-          <StatRow label={t('header.tokenCount')} value={(auditInput + auditOutput).toLocaleString()} />
-          <StatRow label={t('header.cachedInput')} value={auditCachedInput.toLocaleString()} />
-          <StatRow label={t('header.cacheHitRate')} value={`${auditCacheHitPct}%`} />
-          <StatRow label={t('header.cacheMissInput')} value={auditCacheMissInput.toLocaleString()} />
-        </dl>
       </section>
     </div>
   );
@@ -850,6 +758,131 @@ function StatRow({ label, value }: { label: string; value: string }) {
       <dt className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">{label}</dt>
       <dd className="font-display text-sm italic text-editorial-ink">{value}</dd>
     </div>
+  );
+}
+
+const TOP_SCOPE_I18N_KEYS = new Set(['log.scopeAudit', 'log.scopeCoherence']);
+
+function ScopeBreakdownCard({ entry }: { entry: ScopeBreakdownEntry }) {
+  const { t } = useTranslation();
+  const { labelKey, model, stats } = entry;
+  const label = TOP_SCOPE_I18N_KEYS.has(labelKey) ? t(labelKey) : labelKey;
+  const totalTok = stats.totalInput + stats.totalOutput;
+  return (
+    <div className="rounded-xl border border-editorial-border/70 bg-editorial-textbox/40 px-3 py-2.5">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted shrink-0">{label}</span>
+        <span className="font-display text-sm italic text-editorial-ink shrink-0">{totalTok.toLocaleString()} tok</span>
+      </div>
+      {model && (
+        <div className="mt-0.5 truncate font-mono text-xs text-editorial-muted/70">{model}</div>
+      )}
+      <div className="mt-2 flex gap-5">
+        <div>
+          <dt className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">{t('header.cacheHitRate')}</dt>
+          <dd className="font-display text-sm italic text-editorial-ink">{formatCacheHitRate(stats.cacheHitRate)}</dd>
+        </div>
+        <div>
+          <dt className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">{t('header.estimatedCost')}</dt>
+          <dd className="font-display text-sm italic text-editorial-ink">{formatUsd(stats.totalUsd)}</dd>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface ChunkSummaryTabProps {
+  panelId: string;
+  labelledBy: string;
+  currentChunk: TranslationChunk | null;
+}
+
+function ChunkSummaryTab({ panelId, labelledBy, currentChunk }: ChunkSummaryTabProps) {
+  const { t, i18n } = useTranslation();
+  const pricingOverrides = usePricingStore((s) => s.overrides);
+  const logEntries = useOperationLogStore((s) => s.entries);
+  const chunkSummary = useMemo(
+    () => (currentChunk ? summarizeChunkUsage(logEntries, currentChunk.id, pricingOverrides) : null),
+    [currentChunk, logEntries, pricingOverrides],
+  );
+
+  if (!currentChunk || !chunkSummary) {
+    return (
+      <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="px-6 py-8 text-sm text-editorial-muted">
+        {t('document.insightsSummaryEmpty')}
+      </div>
+    );
+  }
+
+  const totalTokens = chunkSummary.total.totalInput + chunkSummary.total.totalOutput;
+
+  return (
+    <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="space-y-3 px-5 py-5">
+      <section className="rounded-[20px] border border-editorial-border bg-editorial-bg px-4 py-3">
+        <div className="mb-3 flex items-center gap-1.5 text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+          <BarChart2 size={11} className="text-editorial-accent shrink-0" /> {t('document.chunkSummaryTotals')}
+        </div>
+        <dl className="space-y-2">
+          <StatRow label={t('header.tokenCount')} value={totalTokens > 0 ? totalTokens.toLocaleString() : '—'} />
+          <StatRow label={t('header.cachedInput')} value={chunkSummary.total.totalCached.toLocaleString()} />
+          <StatRow label={t('header.cacheHitRate')} value={formatCacheHitRate(chunkSummary.total.cacheHitRate)} />
+          <StatRow label={t('header.estimatedCost')} value={formatUsd(chunkSummary.total.totalUsd)} />
+          <StatRow label={t('log.totalDuration')} value={chunkSummary.total.totalDurationMs > 0 ? formatDurationMs(chunkSummary.total.totalDurationMs) : '—'} />
+          <StatRow label={t('document.summaryTranslationRuns')} value={chunkSummary.translationRuns.toLocaleString()} />
+          <StatRow label={t('document.summaryAuditRuns')} value={chunkSummary.auditRuns.toLocaleString()} />
+        </dl>
+      </section>
+
+      <RunSummaryCard
+        title={t('document.chunkSummaryLastTranslation')}
+        emptyLabel={t('document.chunkSummaryNoTranslation')}
+        run={chunkSummary.lastTranslationRun}
+        locale={i18n.language}
+      />
+
+      <RunSummaryCard
+        title={t('document.chunkSummaryLastAudit')}
+        emptyLabel={t('document.chunkSummaryNoAudit')}
+        run={chunkSummary.lastAuditRun}
+        locale={i18n.language}
+      />
+    </div>
+  );
+}
+
+function RunSummaryCard({
+  title,
+  emptyLabel,
+  run,
+  locale,
+}: {
+  title: string;
+  emptyLabel: string;
+  run: OperationLogRunSummary | null;
+  locale: string;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <section className="rounded-[20px] border border-editorial-border bg-editorial-bg px-4 py-3">
+      <div className="mb-3 flex items-center gap-1.5 text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+        <Cpu size={11} className="text-editorial-accent shrink-0" /> {title}
+      </div>
+      {!run ? (
+        <p className="text-[11px] leading-relaxed text-editorial-muted/70">{emptyLabel}</p>
+      ) : (
+        <dl className="space-y-2">
+          <StatRow label={t('document.summaryWhen')} value={new Date(run.at).toLocaleString(locale)} />
+          {run.stageName ? <StatRow label={t('document.summaryStage')} value={run.stageName} /> : null}
+          <StatRow label={t('document.summaryModel')} value={[run.provider, run.model].filter(Boolean).join(' / ') || '—'} />
+          <StatRow label={t('document.summaryTokens')} value={(run.stats.totalInput + run.stats.totalOutput).toLocaleString()} />
+          <StatRow label={t('document.summaryCached')} value={run.stats.totalCached.toLocaleString()} />
+          <StatRow label={t('header.cacheHitRate')} value={formatCacheHitRate(run.stats.cacheHitRate)} />
+          <StatRow label={t('document.summaryMiss')} value={run.stats.totalCacheMiss.toLocaleString()} />
+          <StatRow label={t('log.totalDuration')} value={run.stats.totalDurationMs > 0 ? formatDurationMs(run.stats.totalDurationMs) : '—'} />
+        </dl>
+      )}
+    </section>
   );
 }
 

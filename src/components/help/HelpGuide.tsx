@@ -446,6 +446,9 @@ function ContextSection() {
       </div>
 
       <Tip title={t('help.context.tipTitle')}>{t('help.context.tipDesc')}</Tip>
+
+      <SubTitle>{t('help.context.cacheRetentionTitle')}</SubTitle>
+      <P>{t('help.context.cacheRetentionDesc')}</P>
     </>
   );
 }

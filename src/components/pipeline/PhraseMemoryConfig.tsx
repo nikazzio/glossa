@@ -5,7 +5,6 @@ import { SectionLabel } from '../ui';
 interface PhraseMemoryConfigValue {
   usePhraseMemory: boolean;
   autoSearchPhraseMemory: boolean;
-  phraseMemorySimilarityThreshold: number;
   phraseMemoryMaxResults: number;
 }
 
@@ -14,22 +13,15 @@ interface PhraseMemoryConfigProps extends PhraseMemoryConfigValue {
   disabled?: boolean;
 }
 
-const MIN_THRESHOLD = 0.5;
-const MAX_THRESHOLD = 1;
-const DEFAULT_THRESHOLD = 0.75;
 const DEFAULT_MAX_RESULTS = 10;
 
 export function PhraseMemoryConfig({
   usePhraseMemory,
   autoSearchPhraseMemory,
-  phraseMemorySimilarityThreshold,
   phraseMemoryMaxResults,
   onChange,
   disabled = false,
 }: PhraseMemoryConfigProps) {
-  const effectiveThreshold = Number.isFinite(phraseMemorySimilarityThreshold)
-    ? phraseMemorySimilarityThreshold
-    : DEFAULT_THRESHOLD;
   const effectiveMaxResults = Number.isFinite(phraseMemoryMaxResults)
     ? phraseMemoryMaxResults
     : DEFAULT_MAX_RESULTS;
@@ -38,7 +30,6 @@ export function PhraseMemoryConfig({
     onChange({
       usePhraseMemory,
       autoSearchPhraseMemory,
-      phraseMemorySimilarityThreshold: effectiveThreshold,
       phraseMemoryMaxResults: effectiveMaxResults,
       ...patch,
     });
@@ -65,27 +56,6 @@ export function PhraseMemoryConfig({
               disabled={disabled}
               onChange={() => emit({ autoSearchPhraseMemory: !autoSearchPhraseMemory })}
             />
-
-            <div className="space-y-1.5">
-              <label
-                htmlFor="pm-threshold"
-                className="block text-xs font-sans uppercase tracking-[0.22em] text-editorial-muted"
-              >
-                Similarity threshold - {effectiveThreshold.toFixed(2)}
-              </label>
-              <input
-                id="pm-threshold"
-                type="range"
-                min={MIN_THRESHOLD}
-                max={MAX_THRESHOLD}
-                step="0.01"
-                value={effectiveThreshold}
-                onChange={(e) => emit({ phraseMemorySimilarityThreshold: parseFloat(e.target.value) })}
-                disabled={disabled}
-                className="w-full accent-editorial-accent disabled:opacity-40"
-                aria-label="Similarity threshold"
-              />
-            </div>
 
             <div className="space-y-1.5">
               <label

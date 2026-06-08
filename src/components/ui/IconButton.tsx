@@ -52,18 +52,20 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
 }, ref) {
   return (
     <Tooltip label={title} side={tooltipSide}>
-      <button
-        ref={ref}
-        type="button"
-        onClick={onClick}
-        disabled={disabled}
-        aria-label={ariaLabel ?? title}
-        aria-pressed={ariaPressed}
-        className={iconButton({ size, tone, className })}
-        {...rest}
-      >
-        {children}
-      </button>
+      <span className="inline-flex">
+        <button
+          ref={ref}
+          type="button"
+          onClick={onClick}
+          disabled={disabled}
+          aria-label={ariaLabel ?? title}
+          aria-pressed={ariaPressed}
+          className={iconButton({ size, tone, className })}
+          {...rest}
+        >
+          {children}
+        </button>
+      </span>
     </Tooltip>
   );
 });

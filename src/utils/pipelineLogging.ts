@@ -183,7 +183,7 @@ export const pipelineLog = {
       chunkId,
       stageId,
       durationMs,
-      meta: { provider: ref.provider, model: ref.model, ...usageMeta(usage) },
+      meta: { stageName, provider: ref.provider, model: ref.model, ...usageMeta(usage) },
     });
   },
 
