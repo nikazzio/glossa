@@ -103,7 +103,7 @@ describe('buildPromptPreviewStages', () => {
     expect(stage?.blocks[6]?.body).toBe('Original text for the current chunk:\n{{SOURCE_CHUNK_TEXT}}');
     expect(stage?.blocks[7]?.body).toBe('Previous Iteration for the current chunk:\n{{PREVIOUS_STAGE_RESULT}}');
     expect(stage?.blocks[8]?.body).toBe('Refine only the current chunk according to your instructions.');
-    expect(stage?.blocks[9]?.body).toBe('Output only the refined translation.');
+    expect(stage?.blocks[9]?.body).toBe('Output the complete refined translation in full. Do not summarize, abbreviate, or output only the changed portions — rewrite the entire chunk from start to finish.');
   });
 
   it('renders format stages without glossary or persona blocks', () => {
