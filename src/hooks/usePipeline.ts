@@ -33,29 +33,20 @@ function formatReferenceChunk(chunkId: string, text: string): string {
   return `<chunk id="${escapeChunkId(chunkId)}">\n${text}\n</chunk>`;
 }
 
-function assembleBlobContext(chunks: TranslationChunk[], chunkId: string): string | undefined {
+function buildBlobContext(
+  chunks: TranslationChunk[],
+  chunkId: string,
+  selector: (c: TranslationChunk) => string | undefined,
+): string | undefined {
   const current = chunks.find((c) => c.id === chunkId);
   if (!current?.blobReferenceChunkIds?.length) return undefined;
   const byId = new Map(chunks.map((chunk) => [chunk.id, chunk]));
   const referenceChunks = current.blobReferenceChunkIds
     .map((id) => byId.get(id))
-    .filter((chunk): chunk is TranslationChunk => !!chunk && !!chunk.sourceProcessingText);
+    .filter((chunk): chunk is TranslationChunk => !!chunk && !!selector(chunk));
   if (referenceChunks.length === 0) return undefined;
   return referenceChunks
-    .map((chunk) => formatReferenceChunk(chunk.id, chunk.sourceProcessingText))
-    .join('\n\n') || undefined;
-}
-
-function assembleTranslationBlobContext(chunks: TranslationChunk[], chunkId: string): string | undefined {
-  const current = chunks.find((c) => c.id === chunkId);
-  if (!current?.blobReferenceChunkIds?.length) return undefined;
-  const byId = new Map(chunks.map((chunk) => [chunk.id, chunk]));
-  const referenceChunks = current.blobReferenceChunkIds
-    .map((id) => byId.get(id))
-    .filter((chunk): chunk is TranslationChunk => !!chunk?.translationProcessingText?.trim());
-  if (referenceChunks.length === 0) return undefined;
-  return referenceChunks
-    .map((chunk) => formatReferenceChunk(chunk.id, chunk.translationProcessingText))
+    .map((chunk) => formatReferenceChunk(chunk.id, selector(chunk)!))
     .join('\n\n') || undefined;
 }
 
@@ -225,7 +216,7 @@ export function usePipeline() {
       const liveChunks = useChunksStore.getState().chunks;
       const stageRole = stage.role ?? 'translation';
       const isFormatStage = stageRole === 'format';
-      const blobContext = isFormatStage ? undefined : assembleBlobContext(liveChunks, chunk.id);
+      const blobContext = isFormatStage ? undefined : buildBlobContext(liveChunks, chunk.id, (c) => c.sourceProcessingText || undefined);
       const effectiveConfig = {
         ...config,
         ...(!config.persona && stage.sourceLanguage ? { sourceLanguage: stage.sourceLanguage } : {}),
@@ -785,7 +776,7 @@ export function usePipeline() {
       if (!chunk.translationProcessingText?.trim()) continue;
       if (useChunksStore.getState().cancelRequested) { cancelled = true; break; }
 
-      const blobContext = assembleTranslationBlobContext(liveChunks, chunk.id);
+      const blobContext = buildBlobContext(liveChunks, chunk.id, (c) => c.translationProcessingText?.trim() ? c.translationProcessingText : undefined);
 
       updateChunkCoherence(chunk.id, { status: 'processing', issues: [] });
       const coherenceRef = { provider: config.judgeProvider, model: config.judgeModel };

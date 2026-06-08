@@ -1201,7 +1201,12 @@
     "memoryDeleteTitle": "Delete this memory?",
     "memoryDeleteMessage": "The selected memory will be removed from this workspace.",
     "memoryDeleteError": "Delete error",
-    "embeddingModel": "Embedding model"
+    "embeddingModel": "Embedding model",
+    "fromProject": "Project",
+    "fromChunk": "Chunk",
+    "addToGlossary": "Add to glossary",
+    "addedToGlossary": "Added to glossary",
+    "addToGlossaryError": "Error adding to glossary"
   },
   "cost": {
     "free": "Free",

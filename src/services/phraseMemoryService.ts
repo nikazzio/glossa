@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { select } from './dbService';
 import { logOperation } from '../stores/operationLogStore';
 import { logger } from '../utils/logger';
 import type { EmbeddingModel, ModelProvider, PhraseMatch } from '../types';
@@ -566,6 +567,24 @@ export async function savePhrasePairs(options: SavePhrasePairsOptions): Promise<
       : [];
   });
 
+  const droppedCount = extractedPairs.length - pairs.length;
+  if (droppedCount > 0 && pairs.length > 0) {
+    logger.warn('phrase_memory.save_pairs.partial_embedding_drop', {
+      workspaceId,
+      projectId,
+      chunkId,
+      candidatePairCount: extractedPairs.length,
+      droppedCount,
+    });
+    logOperation({
+      level: 'warn',
+      scope: 'memory',
+      chunkId,
+      message: `${droppedCount} pair(s) discarded — embedding unavailable`,
+      meta: { workspaceId, projectId, candidatePairCount: extractedPairs.length, droppedCount },
+    });
+  }
+
   if (pairs.length === 0) {
     logger.warn('phrase_memory.save_pairs.no_valid_embeddings', {
       workspaceId,
@@ -630,4 +649,18 @@ export async function regenerateAllEmbeddings(
   model: EmbeddingModel,
 ): Promise<number> {
   return invoke<number>('vec_regenerate_all_embeddings', { workspaceId, model });
+}
+
+export async function getChunkPositions(chunkIds: string[]): Promise<Record<string, number>> {
+  if (chunkIds.length === 0) return {};
+  const placeholders = chunkIds.map((_, i) => `$${i + 1}`).join(', ');
+  const rows = await select<{ id: string; position: number | null }>(
+    `SELECT id, position FROM translations WHERE id IN (${placeholders})`,
+    chunkIds,
+  );
+  const map: Record<string, number> = {};
+  rows.forEach((row) => {
+    if (row.position !== null) map[row.id] = row.position;
+  });
+  return map;
 }

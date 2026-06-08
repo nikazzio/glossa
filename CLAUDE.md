@@ -279,21 +279,17 @@ Overall average: **60-90% token reduction** on common development operations.
 <!-- code-review-graph MCP tools -->
 ## MCP Tools: code-review-graph
 
-**IMPORTANT: This project has a knowledge graph. ALWAYS use the
-code-review-graph MCP tools BEFORE using Grep/Glob/Read to explore
-the codebase.** The graph is faster, cheaper (fewer tokens), and gives
-you structural context (callers, dependents, test coverage) that file
-scanning cannot.
+This project has a knowledge graph built by a hook at every file change. When the `code-review-graph` MCP tools are available in session, prefer them over Grep/Glob/Read — they are faster, cheaper (fewer tokens), and give structural context (callers, dependents, test coverage) that file scanning cannot.
 
-### When to use graph tools FIRST
+**If the tools are not connected** (not listed in the available tool set), fall back to Grep/Glob/Read normally.
+
+### When to use graph tools (when available)
 
 - **Exploring code**: `semantic_search_nodes` or `query_graph` instead of Grep
 - **Understanding impact**: `get_impact_radius` instead of manually tracing imports
 - **Code review**: `detect_changes` + `get_review_context` instead of reading entire files
 - **Finding relationships**: `query_graph` with callers_of/callees_of/imports_of/tests_for
 - **Architecture questions**: `get_architecture_overview` + `list_communities`
-
-Fall back to Grep/Glob/Read **only** when the graph doesn't cover what you need.
 
 ### Key Tools
 

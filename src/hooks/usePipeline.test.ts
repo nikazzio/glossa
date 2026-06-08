@@ -727,6 +727,49 @@ describe('usePipeline', () => {
     expect(coherenceCall[0].currentChunkId).toBe('chunk-0');
   });
 
+  it('source blob assembler excludes reference chunks with empty sourceProcessingText', async () => {
+    useChunksStore.setState({
+      chunks: [
+        makeTranslationChunk({
+          id: 'chunk-0',
+          originalText: 'First',
+          sourceProcessingText: 'First',
+          status: 'ready',
+          stageResults: {},
+          judgeResult: { content: '', status: 'idle', rating: 'fair', issues: [] },
+          currentDraft: '',
+        }),
+        makeTranslationChunk({
+          id: 'chunk-1',
+          originalText: 'Second',
+          sourceProcessingText: '',
+          status: 'ready',
+          stageResults: {},
+          judgeResult: { content: '', status: 'idle', rating: 'fair', issues: [] },
+          currentDraft: '',
+        }),
+      ],
+      isProcessing: false,
+      cancelRequested: false,
+      activeStreamId: null,
+    });
+    llmMocks.computeBlobs.mockResolvedValueOnce([
+      { chunkId: 'chunk-0', blobId: 'blob-1', position: 0, referenceChunkIds: ['chunk-0', 'chunk-1'] },
+      { chunkId: 'chunk-1', blobId: 'blob-1', position: 1, referenceChunkIds: ['chunk-0', 'chunk-1'] },
+    ]);
+    llmMocks.runStage.mockResolvedValue({ content: 'Translated' });
+    llmMocks.judgeTranslation.mockResolvedValue({ content: '', rating: 'good', issues: [] });
+
+    const { result } = renderHook(() => usePipeline());
+    await act(async () => {
+      await result.current.runPipeline();
+    });
+
+    const firstStageConfig = llmMocks.runStage.mock.calls[0][2];
+    expect(firstStageConfig.blobContext).toContain('<chunk id="chunk-0">');
+    expect(firstStageConfig.blobContext).not.toContain('<chunk id="chunk-1">');
+  });
+
   it('marks chunk as error and calls toast.error on non-cancellation stage failure', async () => {
     // Use a config-class error so withRetry gives up immediately (no delay).
     llmMocks.runStage.mockRejectedValueOnce(

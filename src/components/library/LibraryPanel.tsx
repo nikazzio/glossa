@@ -13,8 +13,8 @@ import { EditorialModalShell } from '../common';
 import { IconButton } from '../ui';
 
 const TABS: { id: LibraryTab; labelKey: string }[] = [
-  { id: 'dictionaries', labelKey: 'library.tabDictionaries' },
   { id: 'templates', labelKey: 'library.tabTemplates' },
+  { id: 'dictionaries', labelKey: 'library.tabDictionaries' },
   { id: 'memories', labelKey: 'library.tabMemories' },
 ];
 
