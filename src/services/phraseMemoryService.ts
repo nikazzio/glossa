@@ -566,6 +566,24 @@ export async function savePhrasePairs(options: SavePhrasePairsOptions): Promise<
       : [];
   });
 
+  const droppedCount = extractedPairs.length - pairs.length;
+  if (droppedCount > 0 && pairs.length > 0) {
+    logger.warn('phrase_memory.save_pairs.partial_embedding_drop', {
+      workspaceId,
+      projectId,
+      chunkId,
+      candidatePairCount: extractedPairs.length,
+      droppedCount,
+    });
+    logOperation({
+      level: 'warn',
+      scope: 'memory',
+      chunkId,
+      message: `${droppedCount} pair(s) discarded — embedding unavailable`,
+      meta: { workspaceId, projectId, candidatePairCount: extractedPairs.length, droppedCount },
+    });
+  }
+
   if (pairs.length === 0) {
     logger.warn('phrase_memory.save_pairs.no_valid_embeddings', {
       workspaceId,

@@ -346,12 +346,10 @@ source_phrase_embeddings
 
 | Area | Descrizione | Priorità |
 |---|---|---|
-| `hooks/usePipeline.ts` | 3 blocchi blob assembler identici da estrarre in helper condiviso | bassa (cosmesi) |
-| `src-tauri/src/llm/providers/anthropic.rs` | Supporto reasoning da rivedere (verifica integrazione, parametri, formato risposta) | alta |
-| `src-tauri/src/llm/providers/deepseek.rs` | Supporto reasoning da rivedere (verifica integrazione, parametri, formato risposta) | alta |
-| `src-tauri/src/llm/providers/gemini.rs` | Supporto reasoning da rivedere (verifica integrazione, parametri, formato risposta) | alta |
+| `src-tauri/src/llm/providers/anthropic.rs` | Reasoning non supportato: nessun campo `thinking` nella request, parsing assume `content[0]` sia testo (corretto senza thinking). Per abilitare: aggiungere `"thinking": {"type":"enabled","budget_tokens":N}` + filtrare blocchi `"type":"thinking"` nel parsing. | alta |
+| `src-tauri/src/llm/providers/gemini.rs` | Reasoning parziale: `thinkingConfig.thinkingBudget` inviato se configurato, ma parsing usa `parts[0]` — se thinking attivo, `parts[0]` è il blocco thinking (campo `thought:true`), non il testo finale. Fix: cercare il primo part senza `thought:true`. | alta |
 | OpenAI gpt-5.x — prompt caching | Bug lato OpenAI: prefix caching non funziona in modo affidabile su tutta la famiglia gpt-5 (gpt-5, gpt-5-mini, gpt-5-nano, gpt-5.4). Su gpt-4o funziona al 100%. Thread community aperto da ott 2025, non risolto a gen 2026. Da monitorare; non fixabile lato Glossa. Ref: [community.openai.com/t/1359574](https://community.openai.com/t/caching-is-borked-for-gpt-5-models/1359574) | monitoraggio |
 
 ---
 
-*Ultimo aggiornamento: 2026-06-06 — branch feat/phrase-memory*
+*Ultimo aggiornamento: 2026-06-08 — branch chore/hardening-pre-1.0*
