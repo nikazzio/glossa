@@ -29,13 +29,13 @@ export async function runJudgeForChunk(
   actions: JudgeActions,
   effectiveConfig?: ReturnType<typeof usePipelineStore.getState>['config'],
 ): Promise<ChunkOutcome> {
-  const config = usePipelineStore.getState().config;
+  const config = effectiveConfig ?? usePipelineStore.getState().config;
   if (!textToAudit) return 'skipped';
 
   actions.updateChunkStatus(chunk.id, 'processing');
   const judgeRef = {
-    provider: (effectiveConfig ?? config).judgeProvider,
-    model: (effectiveConfig ?? config).judgeModel,
+    provider: config.judgeProvider,
+    model: config.judgeModel,
   };
   pipelineLog.auditStart(chunk.id, judgeRef);
   const auditStartedAt = Date.now();
@@ -48,7 +48,7 @@ export async function runJudgeForChunk(
       () => llmService.judgeTranslation(
         stripFootnoteMarkers(chunk.sourceProcessingText),
         textToAudit,
-        effectiveConfig ?? config,
+        config,
         (info: PromptInfo) => pipelineLog.auditPrompt(chunk.id, judgeRef, info.systemPrompt, info.userPrompt),
         (info: ResponseInfo) => pipelineLog.auditResponse(chunk.id, info.rawJson),
       ),

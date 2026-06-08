@@ -75,6 +75,9 @@ export const useConfigStore = create<ConfigState>()(
       name: 'glossa-config',
       version: 1,
       storage: createJSONStorage(() => localStorage),
+      // pipelineMode resets to 'test' on reload (intentional safe default).
+      // ollamaStatus/ollamaModels are runtime-probed state, not persisted.
+      migrate: (state) => state,
       partialize: (state) => ({
         pipelineTestChunkCount: state.pipelineTestChunkCount,
         ollamaBaseUrl: state.ollamaBaseUrl,

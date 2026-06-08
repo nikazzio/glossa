@@ -8,6 +8,7 @@ pub use docx_extract::{extract_docx_markdown_from_bytes, extract_docx_text_from_
 pub use pdf_extract::extract_pdf_text_from_bytes;
 pub(crate) use docx_export::export_markdown_docx_bytes;
 
+// exposed for integration tests in mod.rs — not public API
 #[cfg(test)]
 pub(crate) use docx_extract::read_docx_entry;
 #[cfg(test)]

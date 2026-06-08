@@ -30,5 +30,5 @@ export function buildBlobContext(
   if (referenceChunks.length === 0) return undefined;
   return referenceChunks
     .map((chunk) => formatReferenceChunk(chunk.id, selector(chunk)!))
-    .join('\n\n') || undefined;
+    .join('\n\n');
 }

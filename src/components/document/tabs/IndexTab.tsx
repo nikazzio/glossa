@@ -13,7 +13,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { useTranslation } from 'react-i18next';
 import { useRef } from 'react';
 import { usePhraseMemoryStore } from '../../../stores/phraseMemoryStore';
-import { indexPad, qualityLabelKey, qualityTone } from '../../../utils';
+import { countWords, indexPad, qualityLabelKey, qualityTone } from '../../../utils';
 import type { TranslationChunk } from '../../../types';
 
 const QUALITY_TONE_COLOR: Record<ReturnType<typeof qualityTone>, string> = {
@@ -27,13 +27,12 @@ export interface IndexTabProps {
   labelledBy: string;
   chunks: TranslationChunk[];
   currentChunkId: string | null;
-  isProcessing: boolean;
   stuckChunkIds: Set<string>;
   onSelect: (id: string) => void;
   onCancelStuck: (chunkId: string) => void;
 }
 
-export function IndexTab({ panelId, labelledBy, chunks, currentChunkId, isProcessing: _isProcessing, stuckChunkIds, onSelect, onCancelStuck }: IndexTabProps) {
+export function IndexTab({ panelId, labelledBy, chunks, currentChunkId, stuckChunkIds, onSelect, onCancelStuck }: IndexTabProps) {
   const { t } = useTranslation();
   const matchesByChunk = usePhraseMemoryStore((s) => s.matchesByChunk);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -63,7 +62,7 @@ export function IndexTab({ panelId, labelledBy, chunks, currentChunkId, isProces
           const index = virtualRow.index;
           const isActive = chunk.id === currentChunkId;
           const tone = qualityTone(chunk.judgeResult.status === 'completed' ? chunk.judgeResult.rating : null);
-          const wordCount = chunk.originalText.trim() ? chunk.originalText.trim().split(/\s+/).filter(Boolean).length : 0;
+          const wordCount = countWords(chunk.originalText);
           const isStuck = stuckChunkIds.has(chunk.id);
 
           let statusIcon: React.ReactNode;
@@ -96,21 +95,21 @@ export function IndexTab({ panelId, labelledBy, chunks, currentChunkId, isProces
                     <span className={`font-display text-sm italic ${isActive ? 'text-white' : 'text-editorial-accent'}`}>
                       {indexPad(index + 1)}
                     </span>
-                    <span className={`flex-1 line-clamp-2 text-[11px] leading-snug ${isActive ? 'text-white/80' : 'text-editorial-muted'}`}>
+                    <span className={`flex-1 line-clamp-2 text-xs leading-snug ${isActive ? 'text-white/80' : 'text-editorial-muted'}`}>
                       {chunk.originalText.replace(/\s+/g, ' ').trim()}
                     </span>
-                    <span className={`shrink-0 text-[10px] font-mono ${isActive ? 'text-white/50' : 'text-editorial-muted/60'}`}>
+                    <span className={`shrink-0 text-xs font-mono ${isActive ? 'text-white/50' : 'text-editorial-muted/60'}`}>
                       {wordCount}w
                     </span>
                   </div>
                   {chunk.judgeResult.status === 'completed' && (
-                    <div className={`mt-1.5 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.2em] ${isActive ? 'text-white/70' : QUALITY_TONE_COLOR[tone]}`}>
+                    <div className={`mt-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.2em] ${isActive ? 'text-white/70' : QUALITY_TONE_COLOR[tone]}`}>
                       <span className={`inline-block h-1.5 w-1.5 rounded-full ${tone === 'strong' ? 'bg-editorial-success' : tone === 'ok' ? 'bg-editorial-warning' : 'bg-editorial-accent'}`} />
                       {t(qualityLabelKey(chunk.judgeResult.rating))}
                     </div>
                   )}
                   {chunk.translationLocked && (
-                    <div className={`mt-1.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.18em] ${isActive ? 'text-white/80' : 'text-editorial-success'}`}>
+                    <div className={`mt-1.5 flex items-center gap-1 text-xs font-bold uppercase tracking-[0.18em] ${isActive ? 'text-white/80' : 'text-editorial-success'}`}>
                       <CheckCheck size={12} />
                       {t('document.translationLockedBadge')}
                     </div>
@@ -119,7 +118,7 @@ export function IndexTab({ panelId, labelledBy, chunks, currentChunkId, isProces
                     const matchCount = matchesByChunk.get(chunk.id)?.matches.length ?? 0;
                     if (matchCount === 0) return null;
                     return (
-                      <div className={`mt-1.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.18em] ${isActive ? 'text-white/80' : 'text-editorial-accent'}`}>
+                      <div className={`mt-1.5 flex items-center gap-1 text-xs font-bold uppercase tracking-[0.18em] ${isActive ? 'text-white/80' : 'text-editorial-accent'}`}>
                         <Brain size={11} />
                         {t('memory.matchBadge', { count: matchCount })}
                       </div>
@@ -129,7 +128,7 @@ export function IndexTab({ panelId, labelledBy, chunks, currentChunkId, isProces
 
                 {isStuck && chunk.status === 'processing' && (
                   <div className={`flex items-center justify-between gap-2 border-t px-3 py-2 ${isActive ? 'border-white/10' : 'border-editorial-border/60'}`}>
-                    <div className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] ${isActive ? 'text-orange-200' : 'text-editorial-accent'}`}>
+                    <div className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.18em] ${isActive ? 'text-orange-200' : 'text-editorial-accent'}`}>
                       <Clock size={11} />
                       {t('document.watchdogStuck')}
                     </div>
@@ -137,7 +136,7 @@ export function IndexTab({ panelId, labelledBy, chunks, currentChunkId, isProces
                       type="button"
                       onClick={(e) => { e.stopPropagation(); onCancelStuck(chunk.id); }}
                       aria-label={t('document.watchdogCancel')}
-                      className={`rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${isActive ? 'border-orange-300/40 text-orange-200 hover:bg-white/10' : 'border-editorial-accent/40 text-editorial-accent hover:bg-editorial-accent/10'}`}
+                      className={`rounded-full border px-2 py-0.5 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${isActive ? 'border-orange-300/40 text-orange-200 hover:bg-white/10' : 'border-editorial-accent/40 text-editorial-accent hover:bg-editorial-accent/10'}`}
                     >
                       {t('document.watchdogCancel')}
                     </button>

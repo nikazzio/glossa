@@ -378,7 +378,6 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
                     labelledBy={DOC_TAB_BUTTON_IDS.index}
                     chunks={chunks}
                     currentChunkId={currentChunk?.id ?? null}
-                    isProcessing={isProcessing}
                     stuckChunkIds={stuckChunkIds}
                     onSelect={(id) => setSelectedChunkId(id)}
                     onCancelStuck={cancelStuckChunk}

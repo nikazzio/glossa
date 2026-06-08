@@ -481,7 +481,7 @@ function isFootnoteDefinitionBlock(text: string): boolean {
   return /^\[\^[^\]]+\]:/.test(trimmed);
 }
 
-function countWords(text: string): number {
+export function countWords(text: string): number {
   return text.trim() ? text.trim().split(/\s+/).filter(Boolean).length : 0;
 }
 

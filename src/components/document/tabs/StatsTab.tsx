@@ -13,7 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { useMemo } from 'react';
 import { usePricingStore } from '../../../stores/pricingStore';
 import { useOperationLogStore } from '../../../stores/operationLogStore';
-import { qualityLabelKey, qualityTone, calculateCompositeQuality } from '../../../utils';
+import { countWords, qualityLabelKey, qualityTone, calculateCompositeQuality } from '../../../utils';
 import {
   formatCacheHitRate,
   formatDurationMs,
@@ -31,9 +31,6 @@ const QUALITY_TONE_COLOR: Record<ReturnType<typeof qualityTone>, string> = {
 
 const TOP_SCOPE_I18N_KEYS = new Set(['log.scopeAudit', 'log.scopeCoherence']);
 
-function countWords(text: string): number {
-  return text.trim().split(/\s+/).filter(Boolean).length;
-}
 
 function StatRow({ label, value }: { label: string; value: string }) {
   return (
@@ -184,8 +181,8 @@ export function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
         </dl>
         {usageSummary.scopeBreakdown.length > 0 && (
           <div className="mt-3 space-y-1">
-            {usageSummary.scopeBreakdown.map((entry, i) => (
-              <ScopeBreakdownCard key={`${entry.scope}-${i}`} entry={entry} />
+            {usageSummary.scopeBreakdown.map((entry) => (
+              <ScopeBreakdownCard key={`${entry.scope}-${entry.stageId ?? entry.labelKey}`} entry={entry} />
             ))}
           </div>
         )}
