@@ -382,7 +382,9 @@
     "markResolved": "Mark as resolved",
     "markUnresolved": "Remove resolved mark",
     "markRejected": "Reject suggestion",
-    "markUnrejected": "Remove rejection"
+    "markUnrejected": "Remove rejection",
+    "issuePhraseContext": "In translation",
+    "issueSourceContext": "Source"
   },
   "settings": {
     "title": "Settings",

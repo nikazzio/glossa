@@ -382,7 +382,9 @@
     "markResolved": "Segna come risolto",
     "markUnresolved": "Rimuovi marcatura risolto",
     "markRejected": "Rifiuta suggerimento",
-    "markUnrejected": "Rimuovi rifiuto"
+    "markUnrejected": "Rimuovi rifiuto",
+    "issuePhraseContext": "Nella traduzione",
+    "issueSourceContext": "Testo sorgente"
   },
   "settings": {
     "title": "Impostazioni",

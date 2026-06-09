@@ -149,6 +149,7 @@ interface ChunksState {
   restoreChunkSourceText: (chunkId: string) => void;
   toggleChunkSourceEditing: (chunkId: string) => void;
   updateChunkCoherence: (chunkId: string, result: CoherenceResult) => void;
+  toggleCoherenceIssueResolved: (chunkId: string, key: string) => void;
   resetCompletedChunks: () => void;
   resetPreviewChunks: () => void;
   resetAllChunks: () => void;
@@ -357,6 +358,17 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
         ...chunk,
         coherenceResult: result,
       })),
+    })),
+
+  toggleCoherenceIssueResolved: (chunkId, key) =>
+    set((state) => ({
+      chunks: updateSingleChunk(state.chunks, chunkId, (chunk) => {
+        const current = chunk.coherenceResult;
+        if (!current) return chunk;
+        const keys = current.resolvedIssueKeys ?? [];
+        const next = keys.includes(key) ? keys.filter((k) => k !== key) : [...keys, key];
+        return { ...chunk, coherenceResult: { ...current, resolvedIssueKeys: next } };
+      }),
     })),
 
   resetCompletedChunks: () =>

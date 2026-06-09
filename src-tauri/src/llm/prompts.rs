@@ -294,7 +294,10 @@ pub(crate) fn build_coherence_prompts(
          1. Terminology consistency — key terms translated differently than in adjacent segments\n\
          2. Narrative continuity — abrupt breaks in flow at segment boundaries\n\
          3. Glossary adherence — glossary terms used inconsistently with context\n\
-         Do NOT re-evaluate standalone translation quality.";
+         Do NOT re-evaluate standalone translation quality.\n\
+         Be exhaustive: scan ALL dimensions completely before responding. Do not stop after finding \
+         the first issue of each type. Only return an empty issues array if you are fully confident \
+         — after deliberate review of every dimension — that no problems exist.";
 
     let instructions = config
         .coherence_prompt

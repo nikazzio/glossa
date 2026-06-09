@@ -72,7 +72,13 @@ export function AuditTab({ panelId, labelledBy, currentChunk, isProcessing, onRe
           </div>
         )}
         {currentChunk.judgeResult.issues.length > 0 && (
-          <IssueList issues={currentChunk.judgeResult.issues} chunkId={currentChunk.id} onSelectChunk={onSelectChunk} onFocusIssue={onFocusIssue} />
+          <IssueList
+            issues={currentChunk.judgeResult.issues}
+            chunkId={currentChunk.id}
+            onSelectChunk={onSelectChunk}
+            onFocusIssue={onFocusIssue}
+            sourceText={currentChunk.sourceDisplayText}
+          />
         )}
       </section>
     </div>
