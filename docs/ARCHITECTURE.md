@@ -353,4 +353,18 @@ source_phrase_embeddings
 
 ---
 
-*Ultimo aggiornamento: 2026-06-08 — branch chore/hardening-pre-1.0*
+*Ultimo aggiornamento: 2026-06-09 — branch main*
+
+---
+
+## Decisioni spike
+
+### Radix UI per modali/drawer (issue #236 — NO-GO)
+
+**Data:** 2026-06-09
+
+**Proposta:** sostituire il custom `useFocusTrap` hook con `@radix-ui/react-dialog` e `@radix-ui/react-popover` per focus-trap e a11y robusti.
+
+**Decisione: NO-GO pre-1.0.**
+
+Il hook custom copre i casi d'uso attuali (5 componenti: `ImportPreviewDialog`, `ConfigDrawer`, `DashboardSidebar`, `ProjectPanel`, `ExportDialog`). Radix aggiungerebbe ~15 kb di dipendenza e richiederebbe il refactor di tutti e 5 i componenti senza benefici concreti sui bug aperti. Da rivalutare post-1.0 se emergono problemi di focus con stack modale o screen reader.

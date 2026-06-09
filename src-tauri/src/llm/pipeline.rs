@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use tauri::{AppHandle, Emitter, State};
 
 use crate::keystore::get_api_key;
@@ -18,7 +19,7 @@ use crate::llm::types::{
 #[derive(serde::Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 struct PromptEvent {
-    stream_id: String,
+    stream_id: Arc<str>,
     system_prompt: String,
     user_prompt: String,
 }
@@ -26,7 +27,7 @@ struct PromptEvent {
 #[derive(serde::Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 struct ResponseEvent {
-    stream_id: String,
+    stream_id: Arc<str>,
     kind: String,
     raw_json: String,
 }
@@ -74,6 +75,7 @@ pub async fn run_stage(
     stream_id: String,
     ollama_base_url: Option<String>,
 ) -> Result<StageResult, String> {
+    let stream_id: Arc<str> = stream_id.into();
     let provider = get_provider(&stage.provider, ollama_base_url)?;
     provider.preflight(&stage.model).await?;
     let api_key = get_api_key(&app, &stage.provider)?;
@@ -152,6 +154,7 @@ pub async fn run_stage_stream(
     stream_id: String,
     ollama_base_url: Option<String>,
 ) -> Result<String, String> {
+    let stream_id: Arc<str> = stream_id.into();
     let provider = get_provider(&stage.provider, ollama_base_url)?;
     provider.preflight(&stage.model).await?;
     let api_key = get_api_key(&app, &stage.provider)?;
@@ -227,6 +230,7 @@ pub async fn judge_translation(
     stream_id: String,
     ollama_base_url: Option<String>,
 ) -> Result<JudgeResponse, String> {
+    let stream_id: Arc<str> = stream_id.into();
     let provider = get_provider(&config.judge_provider, ollama_base_url)?;
     provider.preflight(&config.judge_model).await?;
     let api_key = get_api_key(&app, &config.judge_provider)?;
@@ -447,6 +451,7 @@ pub async fn run_coherence_for_chunk(
     stream_id: String,
     ollama_base_url: Option<String>,
 ) -> Result<CoherenceResponse, String> {
+    let stream_id: Arc<str> = stream_id.into();
     let provider = get_provider(&config.judge_provider, ollama_base_url)?;
     provider.preflight(&config.judge_model).await?;
     let api_key = get_api_key(&app, &config.judge_provider)?;
