@@ -4,7 +4,8 @@ import { usePipelineStore } from '../../../stores/pipelineStore';
 import { useChunksStore } from '../../../stores/chunksStore';
 import { useUiStore } from '../../../stores/uiStore';
 import { useConfigStore } from '../../../stores/configStore';
-import { useGlossaryHighlight, escapeHtml } from '../../../hooks/useGlossaryHighlight';
+import { useAnnotationsStore } from '../../../stores/annotationsStore';
+import { useGlossaryHighlight, escapeHtml, type AnnotationAnchor } from '../../../hooks/useGlossaryHighlight';
 import { useStageDiff } from '../../../hooks/useStageDiff';
 import { highlightSuperscriptMarkersHtml } from '../../../utils/footnoteExtractor';
 
@@ -119,6 +120,17 @@ export function useDocumentViewState() {
   const sourceEffectiveSearch = sourcePaneSearch.trim() || (highlightsEnabled ? searchQuery.trim() : '');
   const translationEffectiveSearch = translationPaneSearch.trim() || (highlightsEnabled ? searchQuery.trim() : '');
 
+  const annotationsByChunkId = useAnnotationsStore((s) => s.annotationsByChunkId);
+  const currentChunkAnnotations = currentChunk ? (annotationsByChunkId.get(currentChunk.id) ?? []) : [];
+  const annotationAnchors = useMemo<AnnotationAnchor[]>(
+    () => currentChunkAnnotations
+      .filter((a) => !!a.anchorText?.trim())
+      .map((a) => ({ text: a.anchorText!, type: a.type })),
+    // key on serialized text to avoid identity-change noise
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [currentChunkAnnotations.map((a) => `${a.id}:${a.anchorText ?? ''}`).join('|')],
+  );
+
   const sourceHighlight = useGlossaryHighlight(
     paneFocus !== 'translation' ? deferredSourceText : '',
     showHighlight && paneFocus !== 'translation' ? config.glossary : [],
@@ -132,6 +144,7 @@ export function useDocumentViewState() {
     'translation',
     translationEffectiveSearch,
     focusedIssueQuery ?? '',
+    annotationAnchors,
   );
 
   const activeDiffPair = diffPairs.find((pair) => pair.key === diffPairKey) ?? diffPairs[0] ?? null;

@@ -24,6 +24,7 @@ import { CopyButton, HighlightedText, MarkdownEditor } from '../common';
 import { IconButton, Tooltip, type IconButtonTone } from '../ui';
 import { usePhraseMemoryAutoSearch } from '../../hooks/usePhraseMemoryAutoSearch';
 import { usePanelScrollSync } from '../../hooks/usePanelScrollSync';
+import { useAnnotationsStore } from '../../stores/annotationsStore';
 import { useDocumentViewState } from './hooks/useDocumentViewState';
 import { StageTraceDialog } from './StageTraceDialog';
 import { PaneSearch } from './PaneSearch';
@@ -144,6 +145,7 @@ export function DocumentView({
   const { config } = usePipelineStore();
   const { currentProjectId, projects } = useProjectStore();
   const activeWorkspace = useWorkspaceStore((state) => state.activeWorkspace);
+  const annotationsByChunkId = useAnnotationsStore((s) => s.annotationsByChunkId);
   const {
     updateChunkDraft,
     updateChunkOriginalText,
@@ -331,6 +333,14 @@ export function DocumentView({
                   const sizeClass = chunk.translationLocked
                     ? (isCurrent ? 'h-4.5 w-4.5' : 'h-4 w-4')
                     : (isCurrent ? 'h-4 w-4' : 'h-3 w-3');
+                  const chunkAnnotations = annotationsByChunkId.get(chunk.id) ?? [];
+                  const annotDotColor = chunkAnnotations.some(a => a.type === 'problem')
+                    ? 'bg-editorial-accent'
+                    : chunkAnnotations.some(a => a.type === 'doubt')
+                      ? 'bg-editorial-warning'
+                      : chunkAnnotations.length > 0
+                        ? 'bg-editorial-charcoal/70'
+                        : null;
                   return (
                     <Tooltip key={chunk.id} label={`${idx + 1}`}>
                       <button
@@ -346,6 +356,9 @@ export function DocumentView({
                         {chunk.translationLocked ? (
                           <span className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-editorial-success" />
                         ) : null}
+                        {annotDotColor && (
+                          <span className={`absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full ${annotDotColor} ring-1 ring-editorial-bg`} />
+                        )}
                       </button>
                     </Tooltip>
                   );

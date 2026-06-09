@@ -8,11 +8,13 @@ import {
   FlaskConical,
   List,
   Loader2,
+  NotebookText,
 } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useTranslation } from 'react-i18next';
 import { useRef } from 'react';
 import { usePhraseMemoryStore } from '../../../stores/phraseMemoryStore';
+import { useAnnotationsStore } from '../../../stores/annotationsStore';
 import { countWords, indexPad, qualityLabelKey, qualityTone } from '../../../utils';
 import type { TranslationChunk } from '../../../types';
 
@@ -35,6 +37,7 @@ export interface IndexTabProps {
 export function IndexTab({ panelId, labelledBy, chunks, currentChunkId, stuckChunkIds, onSelect, onCancelStuck }: IndexTabProps) {
   const { t } = useTranslation();
   const matchesByChunk = usePhraseMemoryStore((s) => s.matchesByChunk);
+  const annotationsByChunkId = useAnnotationsStore((s) => s.annotationsByChunkId);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const virtualizer = useVirtualizer({
@@ -121,6 +124,22 @@ export function IndexTab({ panelId, labelledBy, chunks, currentChunkId, stuckChu
                       <div className={`mt-1.5 flex items-center gap-1 text-xs font-bold uppercase tracking-[0.18em] ${isActive ? 'text-white/80' : 'text-editorial-accent'}`}>
                         <Brain size={11} />
                         {t('memory.matchBadge', { count: matchCount })}
+                      </div>
+                    );
+                  })()}
+                  {(() => {
+                    const anns = annotationsByChunkId.get(chunk.id) ?? [];
+                    if (anns.length === 0) return null;
+                    const hasProblem = anns.some(a => a.type === 'problem');
+                    const hasDoubt   = anns.some(a => a.type === 'doubt');
+                    const colorClass = isActive ? 'text-white/80'
+                      : hasProblem ? 'text-editorial-accent'
+                      : hasDoubt   ? 'text-editorial-warning'
+                      : 'text-editorial-charcoal';
+                    return (
+                      <div className={`mt-1.5 flex items-center gap-1 text-xs font-bold uppercase tracking-[0.18em] ${colorClass}`}>
+                        <NotebookText size={11} />
+                        {t('annotations.badgeCount', { count: anns.length })}
                       </div>
                     );
                   })()}

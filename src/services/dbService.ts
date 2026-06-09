@@ -17,6 +17,7 @@ const RESETTABLE_OBJECTS = [
   'phrase_memory',
   'phrase_memory_presets',
   'operation_logs',
+  'annotations',
   'translations',
   'macro_blocks',
   'project_glossaries',
@@ -773,6 +774,23 @@ export async function initDatabase(): Promise<void> {
       DEFAULT_MEMORY_EXTRACTOR_PROMPT,
     ],
   );
+
+  await conn.execute(`
+    CREATE TABLE IF NOT EXISTS annotations (
+      id TEXT PRIMARY KEY,
+      chunk_id TEXT NOT NULL,
+      pipeline_id TEXT NOT NULL REFERENCES pipelines(id) ON DELETE CASCADE,
+      type TEXT NOT NULL DEFAULT 'comment',
+      content TEXT NOT NULL DEFAULT '',
+      anchor_text TEXT DEFAULT NULL,
+      sequence INTEGER NOT NULL DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await conn.execute(`
+    CREATE INDEX IF NOT EXISTS idx_annotations_chunk
+    ON annotations(pipeline_id, chunk_id)
+  `);
 
   console.log('[Glossa] Database initialized');
 }

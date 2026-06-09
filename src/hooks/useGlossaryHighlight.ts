@@ -1,6 +1,11 @@
 import { useMemo } from 'react';
-import type { GlossaryEntry } from '../types';
+import type { AnnotationType, GlossaryEntry } from '../types';
 import { useDebounce } from './useDebounce';
+
+export interface AnnotationAnchor {
+  text: string;
+  type: AnnotationType;
+}
 
 export interface HighlightResult {
   html: string;
@@ -79,7 +84,10 @@ function findSpans(
 
 // Classes that use background-color (mutually exclusive per interval).
 // Classes not in this set use text-decoration and can coexist with a background.
-const BG_CLASSES = new Set(['hl-match', 'hl-mismatch', 'hl-search', 'hl-audit']);
+const BG_CLASSES = new Set([
+  'hl-match', 'hl-mismatch', 'hl-search', 'hl-audit',
+  'hl-annot-comment', 'hl-annot-doubt', 'hl-annot-problem', 'hl-annot-approved',
+]);
 
 // Builds HTML using an interval-breakpoint approach so that non-conflicting
 // highlight properties (e.g. underline + background) can coexist on the same
@@ -122,6 +130,7 @@ export function useGlossaryHighlight(
   mode: 'source' | 'translation',
   searchQuery = '',
   auditQuery = '',
+  annotationAnchors: AnnotationAnchor[] = [],
 ): HighlightResult {
   const debouncedText = useDebounce(text, 300);
   const validEntries = useMemo(
@@ -138,6 +147,8 @@ export function useGlossaryHighlight(
       })),
     [validEntries],
   );
+
+  const anchorsKey = annotationAnchors.map((a) => `${a.type}:${a.text}`).join('|');
 
   return useMemo(() => {
     if (text !== debouncedText) {
@@ -176,10 +187,16 @@ export function useGlossaryHighlight(
       spans.push(...findSpans(debouncedText, auditRe, 'hl-audit', '', 3));
     }
 
+    for (const anchor of annotationAnchors) {
+      if (!anchor.text.trim()) continue;
+      const anchorRe = new RegExp(escapeRegex(anchor.text.trim()), 'gi');
+      spans.push(...findSpans(debouncedText, anchorRe, `hl-annot-${anchor.type}`, anchor.text, 4));
+    }
+
     const matchCount = mode === 'translation'
       ? patterns.filter(({ transRe }) => { transRe.lastIndex = 0; return transRe.test(debouncedText); }).length
       : 0;
 
     return { html: buildHtml(debouncedText, spans), matchCount, totalTerms: validEntries.length };
-  }, [text, debouncedText, patterns, mode, validEntries.length, searchQuery, auditQuery]);
+  }, [text, debouncedText, patterns, mode, validEntries.length, searchQuery, auditQuery, anchorsKey]);
 }

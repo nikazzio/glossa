@@ -1328,5 +1328,25 @@
     "notes": "Notes",
     "selectGlossary": "Select glossary",
     "noGlossarySelected": "— No glossary —"
+  },
+  "annotations": {
+    "typeComment": "Comment",
+    "typeDoubt": "Doubt",
+    "typeProblem": "Problem",
+    "typeApproved": "Approved",
+    "addButton": "Add annotation",
+    "placeholder": "Describe the issue, doubt, or observation...",
+    "anchorLabel": "Anchor to text (optional)",
+    "anchorPlaceholder": "Paste the phrase it refers to...",
+    "saveButton": "Add",
+    "updateButton": "Save",
+    "cancelButton": "Cancel",
+    "deleteButton": "Delete",
+    "editButton": "Edit",
+    "badgeCount_one": "{{count}} note",
+    "badgeCount_other": "{{count}} notes",
+    "emptyNoChunk": "No chunk selected.",
+    "emptyNoAnnotations": "No annotations for this chunk.",
+    "sourceTitle": "Source footnotes"
   }
 }
