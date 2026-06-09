@@ -1,4 +1,16 @@
 export type ModelProvider = 'gemini' | 'openai' | 'anthropic' | 'deepseek' | 'ollama';
+export type AnnotationType = 'comment' | 'doubt' | 'problem' | 'approved';
+
+export interface Annotation {
+  id: string;
+  chunkId: string;
+  pipelineId: string;
+  type: AnnotationType;
+  content: string;
+  anchorText?: string | null;
+  sequence: number;
+  createdAt: string;
+}
 export type ModelReasoningClass = 'reasoning' | 'non_reasoning' | 'optional';
 export type ModelStatus = 'stable' | 'preview' | 'deprecated';
 export type QualityRating = 'critical' | 'poor' | 'fair' | 'good' | 'excellent';

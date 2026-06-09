@@ -28,6 +28,7 @@ import { buildProjectSnapshot } from '../utils/projectSnapshot';
 import { logger } from '../utils/logger';
 import { runInTransaction } from '../services/dbService';
 import { useWorkspaceStore } from './workspaceStore';
+import { useAnnotationsStore } from './annotationsStore';
 import type { Pipeline, PipelineConfig } from '../types';
 
 let saveInFlight: Promise<void> | null = null;
@@ -182,6 +183,13 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     }
 
     useChunksStore.getState().setChunks(restoredChunks);
+
+    if (activePipelineId) {
+      const annStore = useAnnotationsStore.getState();
+      annStore.clearAll();
+      await annStore.loadAnnotations(activePipelineId);
+    }
+
     useUiStore.getState().setViewMode(
       source.viewMode ?? (restoredChunks.length === 0 && source.sourceDisplayText.trim() ? 'sandbox' : 'document'),
     );
@@ -213,6 +221,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     useChunksStore.setState({ chunks: [], isProcessing: false, cancelRequested: false, activeStreamId: null });
     usePipelineStore.getState().resetToDefaults();
     useOperationLogStore.setState({ entries: [], currentProjectId: null });
+    useAnnotationsStore.getState().clearAll();
     set({
       currentProjectId: null,
       pipelines: [],
@@ -355,6 +364,11 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     }));
 
     useChunksStore.getState().setChunks(restoreTranslations(savedTranslations));
+
+    const annStore = useAnnotationsStore.getState();
+    annStore.clearAll();
+    await annStore.loadAnnotations(pipelineId);
+
     useUiStore.getState().setSelectedChunkId(null);
 
     set({

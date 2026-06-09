@@ -1322,5 +1322,25 @@
     "notes": "Note",
     "selectGlossary": "Seleziona glossario",
     "noGlossarySelected": "— Nessun glossario —"
+  },
+  "annotations": {
+    "typeComment": "Commento",
+    "typeDoubt": "Dubbio",
+    "typeProblem": "Problema",
+    "typeApproved": "Approvato",
+    "addButton": "Aggiungi annotazione",
+    "placeholder": "Descrivi il problema, il dubbio o l'osservazione...",
+    "anchorLabel": "Ancora al testo (opzionale)",
+    "anchorPlaceholder": "Incolla la frase a cui si riferisce...",
+    "saveButton": "Aggiungi",
+    "updateButton": "Salva",
+    "cancelButton": "Annulla",
+    "deleteButton": "Elimina",
+    "editButton": "Modifica",
+    "badgeCount_one": "{{count}} nota",
+    "badgeCount_other": "{{count}} note",
+    "emptyNoChunk": "Nessun chunk selezionato.",
+    "emptyNoAnnotations": "Nessuna annotazione per questo chunk.",
+    "sourceTitle": "Note sorgente"
   }
 }
