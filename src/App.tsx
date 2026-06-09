@@ -5,6 +5,7 @@ import { ErrorBoundary, ConfirmDialog, PreflightDialog, RunResumeBanner } from '
 import { motion } from 'motion/react';
 import { usePipeline } from './hooks/usePipeline';
 import { useProjectAutosave } from './hooks/useProjectAutosave';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useUiStore } from './stores/uiStore';
 import { useConfigStore } from './stores/configStore';
 import { useProjectStore } from './stores/projectStore';
@@ -103,6 +104,7 @@ function EditorView() {
     runSingleChunk(chunkId, (!hasCompleted && mode === 'test') ? 'preview' : 'completed');
   }, [runSingleChunk]);
   useProjectAutosave();
+  useKeyboardShortcuts({ onRunPipeline: runPipeline, onDryRun: runDryRun });
   const viewMode = useUiStore((state) => state.viewMode);
   const setShowConfigDrawer = useUiStore((state) => state.setShowConfigDrawer);
   const showSettings = useUiStore((state) => state.showSettings);

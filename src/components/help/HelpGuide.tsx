@@ -614,15 +614,22 @@ function GlossarySection() {
 function ShortcutsSection() {
   const { t } = useTranslation();
 
+  const keyboardShortcuts: { label: string; keys: string[] }[] = [
+    { label: t('help.shortcuts.runPipeline'),   keys: ['Ctrl', '↵'] },
+    { label: t('help.shortcuts.saveProject'),   keys: ['Ctrl', 'S'] },
+    { label: t('help.shortcuts.exportFile'),    keys: ['Ctrl', 'E'] },
+    { label: t('help.shortcuts.openConfig'),    keys: ['Ctrl', ','] },
+    { label: t('help.shortcuts.openHelp'),      keys: ['Ctrl', 'H'] },
+    { label: t('help.shortcuts.goToChunk'),     keys: ['Ctrl', '1–9'] },
+    { label: t('help.shortcuts.closeModal'),    keys: ['Esc'] },
+  ];
+
   const toolbarItems: { label: string; icon: React.ReactNode }[] = [
     { label: t('help.shortcuts.openProjects'),  icon: <FolderOpen size={14} /> },
     { label: t('help.shortcuts.importFile'),    icon: <Upload size={14} /> },
-    { label: t('help.shortcuts.openConfig'),    icon: <SlidersHorizontal size={14} /> },
-    { label: t('help.shortcuts.saveProject'),   icon: <Save size={14} /> },
     { label: t('help.shortcuts.openLibrary'),   icon: <LibraryBig size={14} /> },
     { label: t('help.shortcuts.switchLang'),    icon: <Globe size={14} /> },
     { label: t('help.shortcuts.openSettings'),  icon: <Settings size={14} /> },
-    { label: t('help.shortcuts.openHelp'),      icon: <HelpCircle size={14} /> },
     { label: t('help.shortcuts.sandbox'),       icon: <LayoutTemplate size={14} /> },
     { label: t('help.shortcuts.openInsights'),  icon: <PanelRight size={14} /> },
     { label: t('help.shortcuts.toggleEditorTools'), icon: <PanelTopClose size={14} /> },
@@ -631,17 +638,13 @@ function ShortcutsSection() {
     { label: t('help.shortcuts.openStageTrace'), icon: <ScanLine size={14} /> },
   ];
 
-  const exportItems: { label: string; icon: React.ReactNode }[] = [
-    { label: t('help.shortcuts.exportDesc'), icon: <span className="font-mono text-[10px]">↗</span> },
-  ];
-
   const promptItems: { label: string; icon: React.ReactNode }[] = [
     { label: t('help.shortcuts.refineButton'),  icon: <Wand2 size={14} /> },
     { label: t('help.shortcuts.saveTemplate'),  icon: <BookmarkPlus size={14} /> },
     { label: t('help.shortcuts.loadTemplate'),  icon: <BookOpen size={14} /> },
   ];
 
-  const renderRow = ({ label, icon }: { label: string; icon: React.ReactNode }) => (
+  const renderIconRow = ({ label, icon }: { label: string; icon: React.ReactNode }) => (
     <div key={label} className="flex items-center justify-between py-2.5 border-b border-editorial-border last:border-0">
       <span className="text-[13px] text-editorial-ink/80">{label}</span>
       <Kbd>{icon}</Kbd>
@@ -652,14 +655,28 @@ function ShortcutsSection() {
     <>
       <SectionTitle>{t('help.shortcuts.title')}</SectionTitle>
 
-      <SubTitle>{t('help.shortcuts.toolbarTitle')}</SubTitle>
-      <div className="my-4">{toolbarItems.map(renderRow)}</div>
+      <SubTitle>{t('help.shortcuts.keyboardTitle')}</SubTitle>
+      <div className="my-4">
+        {keyboardShortcuts.map(({ label, keys }) => (
+          <div key={label} className="flex items-center justify-between py-2.5 border-b border-editorial-border last:border-0">
+            <span className="text-[13px] text-editorial-ink/80">{label}</span>
+            <span className="flex items-center gap-1">
+              {keys.map((k, i) => (
+                <span key={i} className="flex items-center gap-1">
+                  {i > 0 && <span className="text-[10px] text-editorial-muted">+</span>}
+                  <Kbd>{k}</Kbd>
+                </span>
+              ))}
+            </span>
+          </div>
+        ))}
+      </div>
 
-      <SubTitle>{t('help.shortcuts.exportTitle')}</SubTitle>
-      <div className="my-4">{exportItems.map(renderRow)}</div>
+      <SubTitle>{t('help.shortcuts.toolbarTitle')}</SubTitle>
+      <div className="my-4">{toolbarItems.map(renderIconRow)}</div>
 
       <SubTitle>{t('help.shortcuts.promptToolsTitle')}</SubTitle>
-      <div className="my-4">{promptItems.map(renderRow)}</div>
+      <div className="my-4">{promptItems.map(renderIconRow)}</div>
     </>
   );
 }

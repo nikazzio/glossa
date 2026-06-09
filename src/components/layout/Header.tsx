@@ -101,7 +101,7 @@ export function Header() {
         <div className="flex items-center gap-1 rounded-full border border-editorial-border bg-editorial-bg px-1 py-1 shadow-sm">
           <IconButton
             onClick={() => void handleSave()}
-            title={t('header.saveAll')}
+            title={`${t('header.saveAll')} (Ctrl+S)`}
             tooltipSide="bottom"
             tone={savingAll ? 'running' : 'default'}
             aria-busy={savingAll}
@@ -139,7 +139,7 @@ export function Header() {
           </Tooltip>
           <IconButton
             onClick={() => setShowHelp(true)}
-            title={t('help.title')}
+            title={`${t('help.title')} (Ctrl+H)`}
             tooltipSide="bottom"
           >
             <HelpCircle size={16} />

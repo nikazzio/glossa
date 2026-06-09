@@ -50,6 +50,8 @@ interface UiState {
   setShowSettings: (show: boolean) => void;
   setShowHelp: (show: boolean, section?: HelpSection) => void;
   setShowConfigDrawer: (show: boolean) => void;
+  showExportDialog: boolean;
+  setShowExportDialog: (show: boolean) => void;
   setShowDocumentDrawer: (show: boolean, tab?: InsightsDrawerTab) => void;
   setDocumentDrawerTab: (tab: InsightsDrawerTab) => void;
   setShowChunkDrawer: (show: boolean, tab?: ChunkDrawerTab) => void;
@@ -75,6 +77,7 @@ export const useUiStore = create<UiState>()(
       showHelp: false,
       helpSection: 'overview',
       showConfigDrawer: false,
+      showExportDialog: false,
       showDocumentDrawer: false,
       documentDrawerTab: 'index',
       showChunkDrawer: false,
@@ -135,6 +138,7 @@ export const useUiStore = create<UiState>()(
               }
             : { showHelp: false, showSettings: state.showSettings, activePanel: state.showSettings ? 'settings' as const : null },
         ),
+      setShowExportDialog: (show) => set({ showExportDialog: show }),
       setShowConfigDrawer: (show) =>
         set(() =>
           show

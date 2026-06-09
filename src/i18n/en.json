@@ -1095,6 +1095,11 @@
     },
     "shortcuts": {
       "title": "Interface reference",
+      "keyboardTitle": "Keyboard shortcuts",
+      "runPipeline": "Run pipeline",
+      "exportFile": "Open export dialog",
+      "goToChunk": "Go to chunk N",
+      "closeModal": "Close modal / cancel",
       "toolbarTitle": "Sidebar and header",
       "openProjects": "Open the Projects panel — sidebar (editor mode)",
       "importFile": "Import a source text file — sidebar (editor mode)",

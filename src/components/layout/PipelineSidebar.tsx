@@ -170,6 +170,8 @@ export function PipelineSidebar({
   const {
     showConfigDrawer,
     setShowConfigDrawer,
+    showExportDialog,
+    setShowExportDialog,
     selectedChunkId,
     documentPaneFocus,
     setDocumentPaneFocus,
@@ -188,7 +190,6 @@ export function PipelineSidebar({
 
   // ── Local state ───────────────────────────────────────────────────
   const [showCostPanel, setShowCostPanel] = useState(false);
-  const [showExportDialog, setShowExportDialog] = useState(false);
   const costButtonRef = useRef<HTMLDivElement | null>(null);
   const costPanelCloseTimer = useRef<number | null>(null);
 
@@ -417,7 +418,7 @@ export function PipelineSidebar({
                       tone="charcoal"
                       onClick={pipelineMode === 'test' ? onDryRun : onRunPipeline}
                       disabled={isProcessing || !hasDocument}
-                      title={t('pipeline.beginPipeline')}
+                      title={`${t('pipeline.beginPipeline')} (Ctrl+↵)`}
                       tooltipSide="right"
                       className="h-20 w-20 border-editorial-charcoal bg-editorial-charcoal text-white hover:bg-editorial-charcoal/85"
                     >
@@ -597,7 +598,7 @@ export function PipelineSidebar({
                   size="lg"
                   tone={showConfigDrawer ? 'accent' : 'default'}
                   onClick={() => setShowConfigDrawer(!showConfigDrawer)}
-                  title={t('pipeline.configurePipeline')}
+                  title={`${t('pipeline.configurePipeline')} (Ctrl+,)`}
                   tooltipSide="right"
                   className={`h-11 w-11 ${showConfigDrawer ? '' : 'bg-editorial-textbox'}`}
                   ariaPressed={showConfigDrawer}
@@ -676,7 +677,7 @@ export function PipelineSidebar({
               <IconButton
                 size="md"
                 onClick={() => setShowExportDialog(true)}
-                title={t('header.exportLabel')}
+                title={`${t('header.exportLabel')} (Ctrl+E)`}
               >
                 <FileOutput size={14} />
               </IconButton>
