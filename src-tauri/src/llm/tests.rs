@@ -279,7 +279,7 @@
     fn stage_prompt_without_previous() {
         let config = make_config();
         let stage = make_stage("gemini");
-        let prompt = build_stage_prompts("Hello world", &stage, &config, None);
+        let prompt = build_stage_prompts("Hello world", &stage, &config, None, None);
         let system = prompt.flatten_system();
 
         assert!(system.contains("English to Italian"));
@@ -297,7 +297,7 @@
         config.blob_current_chunk_id = Some("chunk-1".into());
         // Translation stage: blob context appears in system, no previous iteration in user
         let stage = make_stage("openai");
-        let prompt = build_stage_prompts("Hello world", &stage, &config, None);
+        let prompt = build_stage_prompts("Hello world", &stage, &config, None, None);
         let system = prompt.flatten_system();
 
         assert!(system.contains("English to Italian"));
@@ -315,7 +315,7 @@
         let mut stage = make_stage("openai");
         stage.role = Some("refine".into());
         let prev = Some("Ciao mondo".to_string());
-        let prompt = build_stage_prompts("Hello world", &stage, &config, prev.as_deref());
+        let prompt = build_stage_prompts("Hello world", &stage, &config, prev.as_deref(), None);
         let system = prompt.flatten_system();
 
         assert!(system.contains("English to Italian"));
@@ -332,7 +332,7 @@
         let mut config = make_config();
         config.glossary = vec![];
         let stage = make_stage("gemini");
-        let system = build_stage_prompts("text", &stage, &config, None).flatten_system();
+        let system = build_stage_prompts("text", &stage, &config, None, None).flatten_system();
 
         assert!(system.contains("No glossary entries were provided"));
     }
@@ -353,7 +353,7 @@
             },
         ];
         let stage = make_stage("gemini");
-        let system = build_stage_prompts("text", &stage, &config, None).flatten_system();
+        let system = build_stage_prompts("text", &stage, &config, None, None).flatten_system();
 
         assert!(system.contains("| API | API | tech |"));
         assert!(system.contains("| bug | errore |"));
@@ -371,7 +371,7 @@
         stage.role = Some("format".into());
         stage.prompt = "Fix formatting only.".into();
         let prev = Some("Previous should not appear".to_string());
-        let prompt = build_stage_prompts("Ciao **mondo", &stage, &config, prev.as_deref());
+        let prompt = build_stage_prompts("Ciao **mondo", &stage, &config, prev.as_deref(), None);
         let system = prompt.flatten_system();
 
         assert!(system.contains("deterministic text post-processor"));
@@ -394,7 +394,7 @@
         let mut config = make_config();
         config.markdown_aware = Some(true);
         let stage = make_stage("gemini");
-        let prompt = build_stage_prompts("Text with note[^1].", &stage, &config, None);
+        let prompt = build_stage_prompts("Text with note[^1].", &stage, &config, None, None);
         let system = prompt.flatten_system();
 
         assert!(system.contains("Markdown"));
@@ -658,6 +658,8 @@
             description: "Minor".into(),
             suggested_fix: None,
             phrase: None,
+            source_phrase: None,
+            confidence: None,
         };
         let json = serde_json::to_string(&issue).unwrap();
         assert!(json.contains(r#""type":"fluency"#));
@@ -1126,6 +1128,7 @@
             structured: &structured,
             api_key: "test-key",
             json_mode: false,
+            json_schema_strict: false,
             provider_options: None,
         };
         let result = prov.call(&client, &req).await;
@@ -1164,6 +1167,7 @@
             structured: &structured,
             api_key: "bad-key",
             json_mode: false,
+            json_schema_strict: false,
             provider_options: None,
         };
         let result = prov.call(&client, &req).await;
@@ -1203,6 +1207,7 @@
             structured: &structured,
             api_key: "key",
             json_mode: false,
+            json_schema_strict: false,
             provider_options: None,
         };
         let result = prov.call(&client, &req).await;
@@ -1361,6 +1366,8 @@
                     description: v["description"].as_str()?.to_string(),
                     suggested_fix: v["suggestedFix"].as_str().map(|s| s.to_string()),
                     phrase: v["phrase"].as_str().map(|s| s.to_string()),
+                    source_phrase: v["sourcePhrase"].as_str().map(|s| s.to_string()),
+                    confidence: v["confidence"].as_f64().map(|f| f as f32),
                 })
             })
             .collect();

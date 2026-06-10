@@ -323,6 +323,28 @@ function ChunkAuditCard({
                     <p className={`text-sm leading-relaxed text-editorial-ink ${isResolved ? 'line-through' : ''}`}>
                       {issue.description}
                     </p>
+                    {(issue.phrase || issue.sourcePhrase || chunk.sourceDisplayText) && (
+                      <div className="space-y-2 rounded-xl border border-editorial-border/50 bg-editorial-textbox/20 px-3 py-2">
+                        {issue.phrase && (
+                          <div>
+                            <span className="block text-[9px] font-bold uppercase tracking-widest text-editorial-accent">{t('audit.issuePhraseContext')}</span>
+                            <p className="mt-0.5 text-[11px] leading-relaxed text-editorial-ink">&ldquo;{issue.phrase}&rdquo;</p>
+                          </div>
+                        )}
+                        {issue.sourcePhrase && (
+                          <div>
+                            <span className="block text-[9px] font-bold uppercase tracking-widest text-editorial-muted">{t('audit.issueSourcePhraseContext')}</span>
+                            <p className="mt-0.5 text-xs leading-relaxed text-editorial-muted">&ldquo;{issue.sourcePhrase}&rdquo;</p>
+                          </div>
+                        )}
+                        {chunk.sourceDisplayText && (
+                          <div>
+                            <span className="block text-[9px] font-bold uppercase tracking-widest text-editorial-muted">{t('audit.issueSourceContext')}</span>
+                            <p className="mt-0.5 text-[11px] leading-relaxed text-editorial-muted line-clamp-3">{chunk.sourceDisplayText}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     {issue.suggestedFix && (
                       <div className="rounded-xl border border-editorial-border/70 bg-editorial-bg px-3 py-2 text-[11px] leading-relaxed text-editorial-muted">
                         {t('audit.fix')}: {issue.suggestedFix}

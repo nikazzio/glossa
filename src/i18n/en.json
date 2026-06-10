@@ -186,6 +186,9 @@
     "coherencePromptLabel": "Coherence Prompt",
     "coherencePromptHint": "Instructions for the cross-segment audit across the full translated document.",
     "coherencePromptPlaceholder": "Coherence audit instructions...",
+    "judgeRefineLoopSectionLabel": "Refine Loop",
+    "judgeRefineLoop": "Auto-refine based on audit findings",
+    "judgeRefineLoopMaxIter": "Max iterations",
     "providerOptions": {
       "stageTitle": "Stage runtime",
       "stageHint": "Provider-specific generation controls for this translation stage only.",
@@ -382,7 +385,10 @@
     "markResolved": "Mark as resolved",
     "markUnresolved": "Remove resolved mark",
     "markRejected": "Reject suggestion",
-    "markUnrejected": "Remove rejection"
+    "markUnrejected": "Remove rejection",
+    "issuePhraseContext": "In translation",
+    "issueSourceContext": "Source",
+    "issueSourcePhraseContext": "Source phrase"
   },
   "settings": {
     "title": "Settings",
@@ -809,12 +815,14 @@
     "operationsShellTitle": "Console",
     "operationsCurrentChunk": "Current chunk",
     "operationsRunning": "pipeline running",
+    "auditRunning": "audit running",
     "memoryRunning": "memory running",
     "operationsGoToChunk": "Go to processing chunk",
     "insightsGlossaryTitle": "Glossary",
     "insightsGlossaryEmpty": "No glossary assigned.",
     "insightsNotesEmpty": "No footnotes extracted for this chunk.",
     "insightsSummaryEmpty": "Select a chunk to see its summary.",
+    "insightsAuditProcessing": "Audit in progress…",
     "insightsAuditEmpty": "No judge result for this chunk yet.",
     "insightsAuditIssues": "Issues found",
     "insightsAuditNoIssues": "No issues raised by the judge.",

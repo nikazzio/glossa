@@ -158,6 +158,7 @@ export function DocumentView({
     setTraceStageId,
     focusedChunkId,
     focusedIssueQuery,
+    focusedSourceIssueQuery,
     focusedIssueRequestId,
   } = useUiStore();
 
@@ -403,6 +404,8 @@ export function DocumentView({
                 textClassName="text-[15px] leading-8 text-editorial-ink"
                 previewClassName="min-h-[280px] text-[15px] leading-8 text-editorial-ink"
                 highlightHtml={sourceHighlightHtml}
+                focusQuery={focusedChunkId === currentChunk.id ? focusedSourceIssueQuery : null}
+                focusRequestId={focusedChunkId === currentChunk.id ? focusedIssueRequestId : 0}
               />
             </DocumentPage>
           )}

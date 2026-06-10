@@ -22,6 +22,7 @@ export function useDocumentViewState() {
     highlightsEnabled,
     searchQuery,
     focusedIssueQuery,
+    focusedSourceIssueQuery,
   } = useUiStore();
 
   const pipelineTestChunkCount = useConfigStore((state) => state.pipelineTestChunkCount);
@@ -123,6 +124,7 @@ export function useDocumentViewState() {
     showHighlight && paneFocus !== 'translation' ? config.glossary : [],
     'source',
     sourceEffectiveSearch,
+    focusedSourceIssueQuery ?? '',
   );
   const translationHighlight = useGlossaryHighlight(
     paneFocus !== 'source' ? deferredStageContent : '',
@@ -149,10 +151,11 @@ export function useDocumentViewState() {
     const hasFootnoteMarkers = /\[[⁰¹²³⁴⁵⁶⁷⁸⁹]/.test(deferredSourceText);
     const showGlossary = showHighlight && paneFocus !== 'translation';
     const hasSearch = !!sourceEffectiveSearch && paneFocus !== 'translation';
-    if (!showGlossary && !hasSearch && !hasFootnoteMarkers) return null;
-    const base = showGlossary || hasSearch ? sourceHighlight.html : escapeHtml(deferredSourceText);
+    const hasAuditFocus = !!focusedSourceIssueQuery;
+    if (!showGlossary && !hasSearch && !hasAuditFocus && !hasFootnoteMarkers) return null;
+    const base = showGlossary || hasSearch || hasAuditFocus ? sourceHighlight.html : escapeHtml(deferredSourceText);
     return hasFootnoteMarkers ? highlightSuperscriptMarkersHtml(base) : base;
-  }, [deferredSourceText, showHighlight, sourceEffectiveSearch, paneFocus, sourceHighlight.html]);
+  }, [deferredSourceText, showHighlight, sourceEffectiveSearch, focusedSourceIssueQuery, paneFocus, sourceHighlight.html]);
 
   return {
     // Layout

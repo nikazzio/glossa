@@ -209,6 +209,7 @@ export function usePipeline() {
             }
             return llmService.runStage(
               stageText, stage, effectiveConfig, stagePrevious,
+              undefined,
               onPrompt,
               onIdleGrace,
             );

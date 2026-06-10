@@ -17,6 +17,7 @@ pub struct LlmRequest<'a> {
     pub structured: &'a StructuredPrompt,
     pub api_key: &'a str,
     pub json_mode: bool,
+    pub json_schema_strict: bool,
     pub provider_options: Option<&'a ProviderRuntimeConfig>,
 }
 

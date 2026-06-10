@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useChunksStore } from '../../stores/chunksStore';
+import { usePipelineStore } from '../../stores/pipelineStore';
 import {
   useOperationLogStore,
   type OperationLogEntry,
@@ -57,6 +58,7 @@ export function OperationsTab({
   const entries = useOperationLogStore((state) => state.entries);
   const clear = useOperationLogStore((state) => state.clear);
   const isProcessing = useChunksStore((state) => state.isProcessing);
+  const runStatus = usePipelineStore((s) => s.runStatus);
   const memoryJobStatus = usePhraseMemoryStore((s) => s.jobStatus);
   const pricingOverrides = usePricingStore((state) => state.overrides);
 
@@ -136,6 +138,7 @@ export function OperationsTab({
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex h-full flex-col bg-terminal-bg">
       <Header
         isProcessing={isProcessing}
+        isAuditOnly={isProcessing && runStatus !== 'running'}
         isMemoryRunning={isMemoryRunning}
         memoryProgress={memoryProgress}
         processingChunk={processingChunk}
@@ -181,6 +184,7 @@ export function OperationsTab({
 
 interface HeaderProps {
   isProcessing: boolean;
+  isAuditOnly: boolean;
   isMemoryRunning: boolean;
   memoryProgress: { processed: number; total: number } | null;
   processingChunk: TranslationChunk | null;
@@ -192,6 +196,7 @@ interface HeaderProps {
 
 function Header({
   isProcessing,
+  isAuditOnly,
   isMemoryRunning,
   memoryProgress,
   processingChunk,
@@ -237,7 +242,7 @@ function Header({
         <div className="mt-2.5 flex items-center gap-2" role="status" aria-live="polite">
           <Loader2 size={11} className="animate-spin shrink-0 text-terminal-accent" />
           <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-terminal-accent">
-            {t('document.operationsRunning')}
+            {isAuditOnly ? t('document.auditRunning') : t('document.operationsRunning')}
           </span>
           {processingChunkIndex >= 0 && (
             <span className="font-display text-xs italic text-terminal-accent/70">

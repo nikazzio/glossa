@@ -167,6 +167,8 @@ export interface PipelineResult {
 export interface JudgeResult extends PipelineResult {
   rating: QualityRating;
   issues: Issue[];
+  // Self-verification list from the judge model (sentences it scanned). Not displayed in UI.
+  checkedSentences?: string[];
 }
 
 export interface Issue {
@@ -175,11 +177,14 @@ export interface Issue {
   description: string;
   suggestedFix?: string;
   phrase?: string;
+  sourcePhrase?: string;
+  confidence?: number;
 }
 
 export interface CoherenceResult {
   status: 'idle' | 'processing' | 'completed' | 'error';
   issues: Issue[];
+  resolvedIssueKeys?: string[];
   error?: string;
   tokenUsage?: TokenUsage;
   promptInfo?: PromptInfo;
@@ -222,6 +227,8 @@ export interface PipelineConfig {
   // Runtime-only prompt context. Computed per invocation, never persisted.
   blobContext?: string;
   blobCurrentChunkId?: string;
+  judgeRefineLoop?: boolean;
+  judgeRefineLoopMaxIter?: number;
 }
 
 // ── Phrase Memory ────────────────────────────────────────────────────

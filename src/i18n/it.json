@@ -186,6 +186,9 @@
     "coherencePromptLabel": "Prompt Coerenza",
     "coherencePromptHint": "Istruzioni per l'audit cross-segmento dell'intero documento tradotto.",
     "coherencePromptPlaceholder": "Istruzioni per l'audit di coerenza...",
+    "judgeRefineLoopSectionLabel": "Loop di raffinamento",
+    "judgeRefineLoop": "Affina automaticamente sulla base dei risultati dell'audit",
+    "judgeRefineLoopMaxIter": "Iterazioni massime",
     "providerOptions": {
       "stageTitle": "Runtime stage",
       "stageHint": "Controlli di generazione specifici del provider per questa fase di traduzione.",
@@ -382,7 +385,10 @@
     "markResolved": "Segna come risolto",
     "markUnresolved": "Rimuovi marcatura risolto",
     "markRejected": "Rifiuta suggerimento",
-    "markUnrejected": "Rimuovi rifiuto"
+    "markUnrejected": "Rimuovi rifiuto",
+    "issuePhraseContext": "Nella traduzione",
+    "issueSourceContext": "Testo sorgente",
+    "issueSourcePhraseContext": "Frase sorgente"
   },
   "settings": {
     "title": "Impostazioni",
@@ -809,12 +815,14 @@
     "operationsShellTitle": "Console",
     "operationsCurrentChunk": "Chunk corrente",
     "operationsRunning": "pipeline in esecuzione",
+    "auditRunning": "audit in esecuzione",
     "memoryRunning": "memoria in esecuzione",
     "operationsGoToChunk": "Vai al chunk in elaborazione",
     "insightsGlossaryTitle": "Glossario",
     "insightsGlossaryEmpty": "Nessun glossario assegnato.",
     "insightsNotesEmpty": "Nessuna nota estratta per questo chunk.",
     "insightsSummaryEmpty": "Seleziona un chunk per vedere il riepilogo.",
+    "insightsAuditProcessing": "Audit in corso…",
     "insightsAuditEmpty": "Nessuna valutazione disponibile per questo chunk.",
     "insightsAuditIssues": "Problemi rilevati",
     "insightsAuditNoIssues": "Nessun problema segnalato dal giudice.",
