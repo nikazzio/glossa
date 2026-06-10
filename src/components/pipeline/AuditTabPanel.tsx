@@ -194,6 +194,45 @@ export function AuditTabPanel({
         defaultValue={DEFAULT_COHERENCE_PROMPT}
         onReset={() => setConfig((prev) => ({ ...prev, coherencePrompt: DEFAULT_COHERENCE_PROMPT }))}
       />
+
+      <div className="space-y-3 rounded-[20px] border border-editorial-border bg-editorial-bg/70 px-5 py-4">
+        <SectionLabel icon={RefreshCw} label={t('pipeline.judgeRefineLoopSectionLabel')} />
+        <label className="flex cursor-pointer items-center gap-2">
+          <input
+            type="checkbox"
+            checked={config.judgeRefineLoop ?? false}
+            onChange={(e) =>
+              setConfig((prev) => ({ ...prev, judgeRefineLoop: e.target.checked }))
+            }
+            className="h-4 w-4 shrink-0 rounded border-editorial-border accent-editorial-accent focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          />
+          <span className="text-sm text-editorial-ink">{t('pipeline.judgeRefineLoop')}</span>
+        </label>
+        {config.judgeRefineLoop && (
+          <div className="space-y-1.5">
+            <label
+              htmlFor="judge-refine-loop-max-iter"
+              className="block text-xs font-sans uppercase tracking-[0.22em] text-editorial-muted"
+            >
+              {t('pipeline.judgeRefineLoopMaxIter')}
+            </label>
+            <input
+              id="judge-refine-loop-max-iter"
+              type="number"
+              min={1}
+              max={3}
+              value={config.judgeRefineLoopMaxIter ?? 2}
+              onChange={(e) =>
+                setConfig((prev) => ({
+                  ...prev,
+                  judgeRefineLoopMaxIter: Math.max(1, Math.min(3, parseInt(e.target.value, 10) || 1)),
+                }))
+              }
+              className="w-20 rounded-[12px] border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

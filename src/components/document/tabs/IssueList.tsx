@@ -85,12 +85,18 @@ export function IssueList({ issues, chunkId, onSelectChunk, onFocusIssue, source
               </div>
             </div>
             <p className={`text-sm leading-relaxed text-editorial-ink ${isResolved ? 'line-through' : ''}`}>{issue.description}</p>
-            {(issue.phrase || sourceText) && (
+            {(issue.phrase || issue.sourcePhrase || sourceText) && (
               <div className="mt-3 space-y-2 rounded-xl border border-editorial-border/50 bg-editorial-textbox/20 px-3 py-2">
                 {issue.phrase && (
                   <div>
                     <span className="block text-[9px] font-bold uppercase tracking-widest text-editorial-accent">{t('audit.issuePhraseContext')}</span>
                     <p className="mt-0.5 text-[11px] leading-relaxed text-editorial-ink">&ldquo;{issue.phrase}&rdquo;</p>
+                  </div>
+                )}
+                {issue.sourcePhrase && (
+                  <div>
+                    <span className="block text-[9px] font-bold uppercase tracking-widest text-editorial-muted">{t('audit.issueSourcePhraseContext')}</span>
+                    <p className="mt-0.5 text-xs leading-relaxed text-editorial-muted">&ldquo;{issue.sourcePhrase}&rdquo;</p>
                   </div>
                 )}
                 {sourceText && (

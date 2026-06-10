@@ -186,6 +186,9 @@
     "coherencePromptLabel": "Prompt Coerenza",
     "coherencePromptHint": "Istruzioni per l'audit cross-segmento dell'intero documento tradotto.",
     "coherencePromptPlaceholder": "Istruzioni per l'audit di coerenza...",
+    "judgeRefineLoopSectionLabel": "Loop di raffinamento",
+    "judgeRefineLoop": "Affina automaticamente sulla base dei risultati dell'audit",
+    "judgeRefineLoopMaxIter": "Iterazioni massime",
     "providerOptions": {
       "stageTitle": "Runtime stage",
       "stageHint": "Controlli di generazione specifici del provider per questa fase di traduzione.",
@@ -384,7 +387,8 @@
     "markRejected": "Rifiuta suggerimento",
     "markUnrejected": "Rimuovi rifiuto",
     "issuePhraseContext": "Nella traduzione",
-    "issueSourceContext": "Testo sorgente"
+    "issueSourceContext": "Testo sorgente",
+    "issueSourcePhraseContext": "Frase sorgente"
   },
   "settings": {
     "title": "Impostazioni",

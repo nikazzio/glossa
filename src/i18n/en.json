@@ -186,6 +186,9 @@
     "coherencePromptLabel": "Coherence Prompt",
     "coherencePromptHint": "Instructions for the cross-segment audit across the full translated document.",
     "coherencePromptPlaceholder": "Coherence audit instructions...",
+    "judgeRefineLoopSectionLabel": "Refine Loop",
+    "judgeRefineLoop": "Auto-refine based on audit findings",
+    "judgeRefineLoopMaxIter": "Max iterations",
     "providerOptions": {
       "stageTitle": "Stage runtime",
       "stageHint": "Provider-specific generation controls for this translation stage only.",
@@ -384,7 +387,8 @@
     "markRejected": "Reject suggestion",
     "markUnrejected": "Remove rejection",
     "issuePhraseContext": "In translation",
-    "issueSourceContext": "Source"
+    "issueSourceContext": "Source",
+    "issueSourcePhraseContext": "Source phrase"
   },
   "settings": {
     "title": "Settings",
