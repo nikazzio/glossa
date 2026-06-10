@@ -826,7 +826,7 @@
         {
             let _guard = StreamGuard {
                 registry: &registry,
-                stream_id: "s-1".to_string(),
+                stream_id: Arc::from("s-1"),
             };
         } // guard drops here
           // After drop, cancelling has no effect on the registered handle

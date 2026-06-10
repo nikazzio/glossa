@@ -545,14 +545,16 @@ export async function initDatabase(): Promise<void> {
     await conn.execute(`
       UPDATE projects
       SET
-        source_display_text    = COALESCE((SELECT source_display_text    FROM pipeline_configs WHERE project_id = projects.id), ''),
-        source_processing_text = COALESCE((SELECT source_processing_text FROM pipeline_configs WHERE project_id = projects.id), ''),
-        source_footnotes       = COALESCE((SELECT source_footnotes       FROM pipeline_configs WHERE project_id = projects.id), '[]'),
-        document_format        = COALESCE((SELECT document_format        FROM pipeline_configs WHERE project_id = projects.id), 'plain'),
-        render_profile         = COALESCE((SELECT render_profile         FROM pipeline_configs WHERE project_id = projects.id), 'plain-text'),
-        markdown_aware         = COALESCE((SELECT markdown_aware         FROM pipeline_configs WHERE project_id = projects.id), 0),
-        experimental_import    =          (SELECT experimental_import    FROM pipeline_configs WHERE project_id = projects.id)
-      WHERE source_display_text IS NULL OR source_display_text = ''
+        source_display_text    = COALESCE(pc.source_display_text, ''),
+        source_processing_text = COALESCE(pc.source_processing_text, ''),
+        source_footnotes       = COALESCE(pc.source_footnotes, '[]'),
+        document_format        = COALESCE(pc.document_format, 'plain'),
+        render_profile         = COALESCE(pc.render_profile, 'plain-text'),
+        markdown_aware         = COALESCE(pc.markdown_aware, 0),
+        experimental_import    = pc.experimental_import
+      FROM pipeline_configs AS pc
+      WHERE pc.project_id = projects.id
+        AND (projects.source_display_text IS NULL OR projects.source_display_text = '')
     `);
   } catch (error) {
     console.warn('[Glossa] Source text migration to projects failed', error);
