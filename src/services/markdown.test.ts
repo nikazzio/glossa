@@ -107,4 +107,44 @@ describe('markdown service', () => {
       expect(text).toContain('Alice | 30');
     });
   });
+
+  describe('link protocol sanitization', () => {
+    it('preserves https links', () => {
+      const result = renderMarkdownToHtmlFragment('[click](https://example.com)');
+      expect(result).toContain('href="https://example.com"');
+    });
+
+    it('preserves http links', () => {
+      const result = renderMarkdownToHtmlFragment('[click](http://example.com)');
+      expect(result).toContain('href="http://example.com"');
+    });
+
+    it('preserves anchor links', () => {
+      const result = renderMarkdownToHtmlFragment('[click](#section)');
+      expect(result).toContain('href="#section"');
+    });
+
+    it('blocks javascript: protocol', () => {
+      const result = renderMarkdownToHtmlFragment('[click](javascript:alert(1))');
+      expect(result).toContain('href="#"');
+      expect(result).not.toContain('javascript:');
+    });
+
+    it('blocks data: protocol', () => {
+      const result = renderMarkdownToHtmlFragment('[click](data:text/html,<script>alert(1)</script>)');
+      expect(result).toContain('href="#"');
+      expect(result).not.toContain('data:');
+    });
+
+    it('blocks vbscript: protocol', () => {
+      const result = renderMarkdownToHtmlFragment('[click](vbscript:msgbox(1))');
+      expect(result).toContain('href="#"');
+      expect(result).not.toContain('vbscript:');
+    });
+
+    it('preserves mailto links', () => {
+      const result = renderMarkdownToHtmlFragment('[contact](mailto:info@example.com)');
+      expect(result).toContain('href="mailto:info@example.com"');
+    });
+  });
 });

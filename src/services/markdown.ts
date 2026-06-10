@@ -304,7 +304,9 @@ function parseInlineMarkdown(text: string): MarkdownInlineNode[] {
 
     const link = remaining.match(/^\[([^\]]+)\]\(([^)]+)\)/);
     if (link) {
-      nodes.push({ type: 'link', text: link[1], href: link[2] });
+      const rawHref = link[2];
+      const safeHref = /^(https?:\/\/|mailto:|#)/.test(rawHref) ? rawHref : '#';
+      nodes.push({ type: 'link', text: link[1], href: safeHref });
       index += link[0].length;
       continue;
     }
