@@ -15,7 +15,7 @@ export const DEFAULT_STAGES: PipelineStageConfig[] = [
 ];
 
 export const DEFAULT_JUDGE_PROMPT =
-  'Audit the final translation for accuracy, glossary adherence, and concrete issues.';
+  'Audit the translation exhaustively: verify accuracy against the source sentence by sentence, glossary adherence for every glossary term, grammar, and fluency. Report every concrete issue you find, however small. For recurring issues, report each occurrence separately.';
 
 export const DEFAULT_COHERENCE_PROMPT =
   'Check for terminology consistency, narrative continuity, and glossary adherence across segment boundaries.';

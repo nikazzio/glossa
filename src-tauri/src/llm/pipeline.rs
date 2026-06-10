@@ -308,6 +308,8 @@ pub async fn judge_translation(
                         description: v["description"].as_str()?.to_string(),
                         suggested_fix: v["suggestedFix"].as_str().map(|s| s.to_string()),
                         phrase: v["phrase"].as_str().map(|s| s.to_string()),
+                        source_phrase: v["sourcePhrase"].as_str().map(|s| s.to_string()),
+                        confidence: v["confidence"].as_f64().map(|f| f as f32),
                     })
                 })
                 .collect()
@@ -324,6 +326,9 @@ pub async fn judge_translation(
         cache_miss_input_tokens: usage.as_ref().and_then(|u| u.cache_miss_input),
         system_prompt: None,
         user_prompt: None,
+        checked_sentences: parsed["checkedSentences"]
+            .as_array()
+            .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect()),
     })
 }
 
@@ -519,6 +524,8 @@ pub async fn run_coherence_for_chunk(
                         description: v["description"].as_str()?.to_string(),
                         suggested_fix: v["suggestedFix"].as_str().map(|s| s.to_string()),
                         phrase: v["phrase"].as_str().map(|s| s.to_string()),
+                        source_phrase: v["sourcePhrase"].as_str().map(|s| s.to_string()),
+                        confidence: v["confidence"].as_f64().map(|f| f as f32),
                     })
                 })
                 .collect()

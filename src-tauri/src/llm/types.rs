@@ -162,6 +162,10 @@ pub struct JudgeIssue {
     pub suggested_fix: Option<String>,
     /// Exact verbatim substring copied from the target translation that contains the issue.
     pub phrase: Option<String>,
+    /// Exact verbatim substring copied from the SOURCE text corresponding to this issue.
+    pub source_phrase: Option<String>,
+    /// Model confidence for this issue (0.0–1.0). Lower values mean the model is less certain.
+    pub confidence: Option<f32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -182,6 +186,9 @@ pub struct JudgeResponse {
     pub system_prompt: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub user_prompt: Option<String>,
+    /// Sentences the model checked during the audit scan (self-verification list).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub checked_sentences: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

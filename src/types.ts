@@ -175,6 +175,8 @@ export interface Issue {
   description: string;
   suggestedFix?: string;
   phrase?: string;
+  sourcePhrase?: string;
+  confidence?: number;
 }
 
 export interface CoherenceResult {
@@ -223,6 +225,8 @@ export interface PipelineConfig {
   // Runtime-only prompt context. Computed per invocation, never persisted.
   blobContext?: string;
   blobCurrentChunkId?: string;
+  judgeRefineLoop?: boolean;
+  judgeRefineLoopMaxIter?: number;
 }
 
 // ── Phrase Memory ────────────────────────────────────────────────────
