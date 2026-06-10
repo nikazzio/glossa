@@ -103,6 +103,7 @@ export const llmService = {
     stage: PipelineStageConfig,
     config: PipelineConfig,
     previousResult: string | undefined,
+    auditContext?: string,
     onPrompt?: (info: PromptInfo) => void,
     onIdleGrace?: () => void,
   ): Promise<UsageResult & { content: string }> {
@@ -124,6 +125,7 @@ export const llmService = {
         stage,
         config,
         previousResult: previousResult || null,
+        auditContext: auditContext || null,
         streamId,
         ollamaBaseUrl: useConfigStore.getState().ollamaBaseUrl,
       });

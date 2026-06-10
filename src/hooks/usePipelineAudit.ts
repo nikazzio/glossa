@@ -9,11 +9,80 @@ import { pipelineLog } from '../utils/pipelineLogging';
 import { stripFootnoteMarkers } from '../utils/footnoteExtractor';
 import { buildBlobContext } from './pipeline/blobContext';
 import { runJudgeForChunk } from './pipeline/runJudge';
-import type { Issue, PromptInfo, ResponseInfo } from '../types';
+import type { JudgeActions } from './pipeline/runJudge';
+import type { Issue, PromptInfo, ResponseInfo, PipelineConfig, QualityRating } from '../types';
 
 type EnsureProvidersReady = (
   checks: { provider: string; model: string; label: string }[],
 ) => Promise<boolean>;
+
+const RATINGS_BELOW_GOOD: QualityRating[] = ['critical', 'poor', 'fair'];
+
+function formatAuditContext(issues: Issue[]): string {
+  return issues
+    .map((iss, i) => {
+      const fix = iss.suggestedFix ? ` → ${iss.suggestedFix}` : '';
+      return `${i + 1}. [${iss.type}/${iss.severity}] ${iss.description}${fix}`;
+    })
+    .join('\n');
+}
+
+async function runRefineLoopForChunk(
+  chunkId: string,
+  config: PipelineConfig,
+  actions: JudgeActions,
+  updateDraft: (id: string, text: string) => void,
+): Promise<boolean> {
+  const maxIter = config.judgeRefineLoopMaxIter ?? 2;
+  const lastRefineStage = [...config.stages].reverse().find(
+    (s) => s.role === 'refine' && s.enabled,
+  );
+  if (!lastRefineStage) return false;
+
+  for (let iter = 0; iter < maxIter; iter++) {
+    if (useChunksStore.getState().cancelRequested) return true;
+
+    const chunk = useChunksStore.getState().chunks.find((c) => c.id === chunkId);
+    if (!chunk) break;
+
+    const { rating, issues } = chunk.judgeResult;
+    if (!RATINGS_BELOW_GOOD.includes(rating)) break;
+    if (issues.length === 0) break;
+
+    const auditContext = formatAuditContext(issues);
+
+    let refineResult: { content: string } | undefined;
+    try {
+      refineResult = await llmService.runStage(
+        chunk.sourceProcessingText,
+        lastRefineStage,
+        config,
+        chunk.translationProcessingText,
+        auditContext,
+      );
+    } catch {
+      break;
+    }
+
+    updateDraft(chunkId, refineResult.content);
+
+    if (useChunksStore.getState().cancelRequested) return true;
+
+    const updatedChunk = useChunksStore.getState().chunks.find((c) => c.id === chunkId);
+    if (!updatedChunk) break;
+
+    const judgeOutcome = await runJudgeForChunk(
+      updatedChunk,
+      refineResult.content,
+      actions,
+      config,
+    );
+    if (judgeOutcome === 'cancelled') return true;
+    if (judgeOutcome !== 'completed') break;
+  }
+
+  return false;
+}
 
 /**
  * Audit-only operations: runAuditOnly, auditSingleChunk, runCoherenceAudit.
@@ -26,6 +95,7 @@ export function usePipelineAudit(ensureProvidersReady: EnsureProvidersReady) {
     updateChunkJudge,
     updateChunkStatus,
     updateChunkCoherence,
+    updateChunkDraft,
     setIsProcessing,
   } = useChunksStore();
   const { config } = usePipelineStore();
@@ -54,7 +124,12 @@ export function usePipelineAudit(ensureProvidersReady: EnsureProvidersReady) {
       }
       const outcome = await runJudgeForChunk(chunk, chunk.translationProcessingText, judgeActions);
       if (outcome === 'cancelled') { cancelled = true; break; }
-      if (outcome === 'failed') errorCount++;
+      if (outcome === 'failed') { errorCount++; continue; }
+
+      if (config.judgeRefineLoop) {
+        const loopCancelled = await runRefineLoopForChunk(chunk.id, config, judgeActions, updateChunkDraft);
+        if (loopCancelled) { cancelled = true; break; }
+      }
     }
 
     setIsProcessing(false);
@@ -67,7 +142,7 @@ export function usePipelineAudit(ensureProvidersReady: EnsureProvidersReady) {
       pipelineLog.auditBatchCompleted();
       toast.success(t('errors.reEvalCompleted'));
     }
-  }, [config, t, setIsProcessing, updateChunkJudge, updateChunkStatus, ensureProvidersReady]);
+  }, [config, t, setIsProcessing, updateChunkJudge, updateChunkStatus, updateChunkDraft, ensureProvidersReady]);
 
   const auditSingleChunk = useCallback(async (chunkId: string) => {
     if (useChunksStore.getState().isProcessing) return;
@@ -86,6 +161,10 @@ export function usePipelineAudit(ensureProvidersReady: EnsureProvidersReady) {
 
     const outcome = await runJudgeForChunk(chunk, chunk.translationProcessingText, judgeActions);
 
+    if (outcome === 'completed' && config.judgeRefineLoop) {
+      await runRefineLoopForChunk(chunk.id, config, judgeActions, updateChunkDraft);
+    }
+
     setIsProcessing(false);
     useChunksStore.getState().clearCancelRequest();
 
@@ -96,7 +175,7 @@ export function usePipelineAudit(ensureProvidersReady: EnsureProvidersReady) {
       pipelineLog.auditSingleCompleted(chunkId);
       toast.success(t('pipeline.singleChunkAudited'));
     }
-  }, [config, t, setIsProcessing, updateChunkJudge, updateChunkStatus, ensureProvidersReady]);
+  }, [config, t, setIsProcessing, updateChunkJudge, updateChunkStatus, updateChunkDraft, ensureProvidersReady]);
 
   const runCoherenceAudit = useCallback(async () => {
     if (useChunksStore.getState().isProcessing) return;
