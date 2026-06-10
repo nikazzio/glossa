@@ -64,6 +64,7 @@ async function runRefineLoopForChunk(
       break;
     }
 
+    if (!refineResult) break;
     updateDraft(chunkId, refineResult.content);
 
     if (useChunksStore.getState().cancelRequested) return true;

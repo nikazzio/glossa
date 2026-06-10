@@ -110,6 +110,9 @@ usePipeline.runPipeline()
       → provider.call() → HTTP stream
       → eventi stream-token → appendChunkStageContent() (batched RAF)
    c) judge() → updateChunkJudge()
+      → se judgeRefineLoop && rating < 'good': runRefineLoopForChunk()
+         → runStage(refineStage, auditContext=formattedIssues) → updateChunkDraft()
+         → judge() → updateChunkJudge() — ripete max judgeRefineLoopMaxIter (default 2)
    d) coherence() se abilitato → updateChunkCoherence()
   ↓
 5. runStatus = 'completed', saveFullState()
@@ -142,7 +145,7 @@ BLOCK 3 — stage instructions, NON CACHEABLE
 | Stage | Testo primario | Blob sorgente | previous_result | Blob traduzioni |
 |---|---|---|---|---|
 | Translation | chunk sorgente | ✅ | ❌ | ❌ |
-| Refine | chunk sorgente | ✅ | ✅ output translation | ❌ |
+| Refine | chunk sorgente | ✅ | ✅ output translation | ❌ | `audit_context` (opzionale) — findings del judge precedente, iniettato nel user turn |
 | Format | output stage prec. | ❌ **cieco** | ❌ | ❌ |
 | Judge | sorgente + traduzione | ❌ | ❌ | ❌ |
 | Coherence Audit | — | ❌ | ❌ | ✅ blob traduzioni |
@@ -207,8 +210,8 @@ flushPendingTokenBatch() → un solo setState per frame (O(1) chunk update)
 | `src-tauri/src/lib.rs` | Entry point Tauri, registrazione comandi, StreamRegistry state |
 | `src-tauri/src/llm/pipeline.rs` | Comandi Tauri: run_stage, run_stage_stream, judge_translation, run_coherence_for_chunk, preflight_pipeline, compute_blobs, extract_phrase_memory_pairs, cancel_stream |
 | `src-tauri/src/llm/blobs.rs` | Algoritmo assegnazione blob (globale vs finestre) |
-| `src-tauri/src/llm/prompts.rs` | Costruzione prompt 3-block, glossario, markdown rules, persona |
-| `src-tauri/src/llm/provider.rs` | Trait LlmProvider, struct LlmRequest |
+| `src-tauri/src/llm/prompts.rs` | Costruzione prompt 3-block, glossario, markdown rules, persona; `audit_context` iniettato nel user turn dei refine stage (cache-safe) |
+| `src-tauri/src/llm/provider.rs` | Trait LlmProvider, struct LlmRequest (`json_schema_strict: bool` per judge vs json_object per altri) |
 | `src-tauri/src/llm/providers/` | Anthropic (cache breakpoint espliciti), OpenAI (prefix), Gemini (cacheControl + thinking), DeepSeek (reasoning), Ollama (locale) |
 | `src-tauri/src/llm/stream.rs` | HTTP event stream reader, StreamGuard RAII |
 | `src-tauri/src/keystore.rs` | OS credential store per API key |
@@ -353,4 +356,4 @@ source_phrase_embeddings
 
 ---
 
-*Ultimo aggiornamento: 2026-06-08 — branch chore/hardening-pre-1.0*
+*Ultimo aggiornamento: 2026-06-10 — branch feat/issue-244-audit-results*
