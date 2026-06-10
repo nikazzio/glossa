@@ -167,6 +167,8 @@ export interface PipelineResult {
 export interface JudgeResult extends PipelineResult {
   rating: QualityRating;
   issues: Issue[];
+  // Self-verification list from the judge model (sentences it scanned). Not displayed in UI.
+  checkedSentences?: string[];
 }
 
 export interface Issue {

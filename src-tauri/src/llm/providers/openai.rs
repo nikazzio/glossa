@@ -139,11 +139,16 @@ impl OpenAiCompatibleProvider {
     }
 
     /// True when this request should use the Responses API.
-    /// OpenAI: only when reasoning is requested (otherwise Chat Completions
-    /// gives reliable cross-call prefix caching without `previous_response_id`).
+    /// GPT-5 family models only support the Responses API endpoint.
+    /// Other OpenAI models use Chat Completions when reasoning is not requested
+    /// (Chat Completions gives reliable cross-call prefix caching without
+    /// `previous_response_id`).
     /// DeepSeek and other compat providers: always false.
     fn use_responses_api_for(&self, req: &LlmRequest<'_>) -> bool {
-        self.use_responses_api && self.reasoning_requested(req)
+        if !self.use_responses_api {
+            return false;
+        }
+        req.model.starts_with("gpt-5") || self.reasoning_requested(req)
     }
 
     /// Attaches reasoning effort to the request body.
