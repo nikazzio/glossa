@@ -137,6 +137,30 @@ Non partire mai da un branch esistente non aggiornato. Ogni branch deve avere co
 
 Non aggiornare per: rinominare variabili locali, aggiungere componenti UI puri, modificare stili.
 
+`docs/UI_DESIGN_SYSTEM.md` va aggiornato quando cambiano palette, tipografia, componenti base o pattern visivi consolidati.
+
+## Help utente dell'app
+
+Ogni modifica funzionale visibile all'utente (nuova feature, cambiamento di comportamento, rimozione di funzionalità) **richiede aggiornamento dell'help in-app**. Prima di chiudere il branch verifica che i testi di aiuto riflettano il comportamento attuale.
+
+## Stato sessione
+
+`STATO_SESSIONE.md` (root del progetto) è la fonte di verità sullo stato corrente del progetto: feature completate, in corso, priorità, debito tecnico aperto.
+
+**Leggi sempre STATO_SESSIONE.md all'inizio di ogni sessione** per capire da dove riprendere.
+
+**Aggiornalo obbligatoriamente quando:**
+- Una feature viene completata o abbandonata
+- Cambia la priorità di un task
+- Emerge nuovo debito tecnico rilevante
+- Si chiude un branch significativo
+
+## Ottimizzazione token
+
+Prima di esplorare codebase grandi o poco conosciuti, usa **repomix** (`skill repomix-commands:pack-local`) per ottenere una vista compatta dell'intero progetto. Riduce drasticamente i token spesi in Grep/Read ripetuti.
+
+Usa le **skill disponibili** (es. `ecc:plan`, `ecc:code-review`, `ecc:rust-review`) ogni volta che il task lo giustifica: le skill strutturano il lavoro in modo più efficiente di un approccio ad-hoc.
+
 <!-- rtk-instructions v2 -->
 # RTK (Rust Token Killer) - Token-Optimized Commands
 
