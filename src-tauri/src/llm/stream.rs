@@ -152,7 +152,7 @@ impl StreamRegistry {
 /// even if the surrounding future is cancelled or panics.
 pub(crate) struct StreamGuard<'a> {
     pub(crate) registry: &'a StreamRegistry,
-    pub(crate) stream_id: String,
+    pub(crate) stream_id: Arc<str>,
 }
 
 impl Drop for StreamGuard<'_> {
