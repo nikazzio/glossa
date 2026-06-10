@@ -252,7 +252,14 @@ impl OpenAiCompatibleProvider {
 
         if req.json_mode {
             if req.json_schema_strict {
-                body["text"] = serde_json::json!({"format": {"type": "json_schema", "json_schema": judge_json_schema()}});
+                // Responses API: fields go directly in text.format, no "json_schema" wrapper
+                let s = judge_json_schema();
+                body["text"] = serde_json::json!({"format": {
+                    "type": "json_schema",
+                    "name": s["name"],
+                    "strict": s["strict"],
+                    "schema": s["schema"]
+                }});
             } else {
                 body["text"] = serde_json::json!({"format": {"type": "json_object"}});
             }
@@ -310,7 +317,14 @@ impl OpenAiCompatibleProvider {
         });
         if req.json_mode {
             if req.json_schema_strict {
-                body["text"] = serde_json::json!({"format": {"type": "json_schema", "json_schema": judge_json_schema()}});
+                // Responses API: fields go directly in text.format, no "json_schema" wrapper
+                let s = judge_json_schema();
+                body["text"] = serde_json::json!({"format": {
+                    "type": "json_schema",
+                    "name": s["name"],
+                    "strict": s["strict"],
+                    "schema": s["schema"]
+                }});
             } else {
                 body["text"] = serde_json::json!({"format": {"type": "json_object"}});
             }

@@ -94,7 +94,6 @@ export function CoherenceTab({ panelId, labelledBy, currentChunk, isProcessing, 
             chunkId={currentChunk.id}
             onSelectChunk={onSelectChunk}
             onFocusIssue={onFocusIssue}
-            sourceText={currentChunk.sourceDisplayText}
             resolvedKeys={resolvedKeys}
             onToggleResolved={handleToggleResolved}
           />

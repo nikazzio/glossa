@@ -37,6 +37,7 @@ interface UiState {
   searchQuery: string;
   focusedChunkId: string | null;
   focusedIssueQuery: string | null;
+  focusedSourceIssueQuery: string | null;
   focusedIssueRequestId: number;
   traceStageId: string | null;
   activePanel: ActivePanel;
@@ -58,7 +59,7 @@ interface UiState {
   setHighlightColor: (type: keyof UiState['highlightColors'], color: string) => void;
   setSearchQuery: (query: string) => void;
   setFocusedChunkId: (chunkId: string | null) => void;
-  focusIssueInChunk: (chunkId: string, query?: string | null) => void;
+  focusIssueInChunk: (chunkId: string, query?: string | null, sourceQuery?: string | null) => void;
   clearFocusedIssue: () => void;
   setActivePanel: (panel: ActivePanel, tab?: InsightsDrawerTab | ChunkDrawerTab | HelpSection) => void;
 }
@@ -90,6 +91,7 @@ export const useUiStore = create<UiState>()(
       searchQuery: '',
       focusedChunkId: null,
       focusedIssueQuery: null,
+      focusedSourceIssueQuery: null,
       focusedIssueRequestId: 0,
       traceStageId: null,
       activePanel: null,
@@ -183,13 +185,14 @@ export const useUiStore = create<UiState>()(
         set((state) => ({ highlightColors: { ...state.highlightColors, [type]: color } })),
       setSearchQuery: (query) => set({ searchQuery: query }),
       setFocusedChunkId: (chunkId) => set({ focusedChunkId: chunkId }),
-      focusIssueInChunk: (chunkId, query) =>
+      focusIssueInChunk: (chunkId, query, sourceQuery) =>
         set((state) => ({
           focusedChunkId: chunkId,
           focusedIssueQuery: query ?? null,
+          focusedSourceIssueQuery: sourceQuery ?? null,
           focusedIssueRequestId: state.focusedIssueRequestId + 1,
         })),
-      clearFocusedIssue: () => set({ focusedIssueQuery: null }),
+      clearFocusedIssue: () => set({ focusedIssueQuery: null, focusedSourceIssueQuery: null }),
       setTraceStageId: (id) => set({ traceStageId: id }),
       setActivePanel: (panel, tab) =>
         set((state) => {

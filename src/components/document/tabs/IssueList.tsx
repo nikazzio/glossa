@@ -16,13 +16,12 @@ export interface IssueListProps {
   issues: TranslationChunk['judgeResult']['issues'];
   chunkId: string;
   onSelectChunk: (id: string) => void;
-  onFocusIssue: (chunkId: string, query?: string | null) => void;
-  sourceText?: string;
+  onFocusIssue: (chunkId: string, query?: string | null, sourceQuery?: string | null) => void;
   resolvedKeys?: Set<string>;
   onToggleResolved?: (key: string) => void;
 }
 
-export function IssueList({ issues, chunkId, onSelectChunk, onFocusIssue, sourceText, resolvedKeys, onToggleResolved }: IssueListProps) {
+export function IssueList({ issues, chunkId, onSelectChunk, onFocusIssue, resolvedKeys, onToggleResolved }: IssueListProps) {
   const { t } = useTranslation();
   const focusedIssueQuery = useUiStore((s) => s.focusedIssueQuery);
   const clearFocusedIssue = useUiStore((s) => s.clearFocusedIssue);
@@ -31,9 +30,11 @@ export function IssueList({ issues, chunkId, onSelectChunk, onFocusIssue, source
       {issues.map((issue, index) => {
         const issueKey = `${issue.type}-${index}`;
         const isResolved = resolvedKeys?.has(issueKey) ?? false;
+        const isActive = !!issue.phrase && focusedIssueQuery === issue.phrase;
         return (
           <article key={issueKey} className={`rounded-2xl border border-editorial-border bg-editorial-bg/80 p-4 shadow-sm transition-opacity ${isResolved ? 'opacity-40' : ''}`}>
-            <div className="mb-3 flex items-center justify-between gap-3">
+            {/* Header */}
+            <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <span className={`rounded-full p-1 ${issue.severity === 'high' ? 'bg-editorial-accent text-white' : issue.severity === 'medium' ? 'bg-editorial-warning/80 text-white' : 'bg-editorial-border text-editorial-muted'}`}>
                   {issue.type === 'fluency' ? <MessageCircle size={11} /> :
@@ -45,28 +46,25 @@ export function IssueList({ issues, chunkId, onSelectChunk, onFocusIssue, source
                 <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-ink">{issue.type}</span>
               </div>
               <div className="flex items-center gap-1">
-                {issue.phrase && (() => {
-                  const isActive = focusedIssueQuery === issue.phrase;
-                  return (
-                    <IconButton
-                      size="sm"
-                      tone={isActive ? 'accent' : 'default'}
-                      onClick={() => {
-                        if (isActive) {
-                          clearFocusedIssue();
-                        } else {
-                          onSelectChunk(chunkId);
-                          onFocusIssue(chunkId, issue.phrase);
-                        }
-                      }}
-                      title={t('audit.locateInTextTooltip')}
-                      ariaPressed={isActive}
-                      tooltipSide="left"
-                    >
-                      <Crosshair size={13} />
-                    </IconButton>
-                  );
-                })()}
+                {issue.phrase && (
+                  <IconButton
+                    size="sm"
+                    tone={isActive ? 'accent' : 'default'}
+                    onClick={() => {
+                      if (isActive) {
+                        clearFocusedIssue();
+                      } else {
+                        onSelectChunk(chunkId);
+                        onFocusIssue(chunkId, issue.phrase, issue.sourcePhrase ?? null);
+                      }
+                    }}
+                    title={t('audit.locateInTextTooltip')}
+                    ariaPressed={isActive}
+                    tooltipSide="left"
+                  >
+                    <Crosshair size={13} />
+                  </IconButton>
+                )}
                 {onToggleResolved && (
                   <button
                     type="button"
@@ -84,32 +82,39 @@ export function IssueList({ issues, chunkId, onSelectChunk, onFocusIssue, source
                 )}
               </div>
             </div>
-            <p className={`text-sm leading-relaxed text-editorial-ink ${isResolved ? 'line-through' : ''}`}>{issue.description}</p>
-            {(issue.phrase || issue.sourcePhrase || sourceText) && (
-              <div className="mt-3 space-y-2 rounded-xl border border-editorial-border/50 bg-editorial-textbox/20 px-3 py-2">
+
+            {/* Descrizione */}
+            <p className={`mt-2 text-sm leading-relaxed text-editorial-ink ${isResolved ? 'line-through' : ''}`}>
+              {issue.description}
+            </p>
+
+            {/* Frasi di contesto */}
+            {(issue.phrase || issue.sourcePhrase) && (
+              <div className="mt-3 space-y-2 border-t border-editorial-border/30 pt-3">
                 {issue.phrase && (
                   <div>
-                    <span className="block text-[9px] font-bold uppercase tracking-widest text-editorial-accent">{t('audit.issuePhraseContext')}</span>
-                    <p className="mt-0.5 text-[11px] leading-relaxed text-editorial-ink">&ldquo;{issue.phrase}&rdquo;</p>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-accent">
+                      {t('audit.issuePhraseContext')}
+                    </span>
+                    <p className="mt-0.5 text-xs leading-relaxed text-editorial-ink">&ldquo;{issue.phrase}&rdquo;</p>
                   </div>
                 )}
                 {issue.sourcePhrase && (
                   <div>
-                    <span className="block text-[9px] font-bold uppercase tracking-widest text-editorial-muted">{t('audit.issueSourcePhraseContext')}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted">
+                      {t('audit.issueSourcePhraseContext')}
+                    </span>
                     <p className="mt-0.5 text-xs leading-relaxed text-editorial-muted">&ldquo;{issue.sourcePhrase}&rdquo;</p>
-                  </div>
-                )}
-                {sourceText && (
-                  <div>
-                    <span className="block text-[9px] font-bold uppercase tracking-widest text-editorial-muted">{t('audit.issueSourceContext')}</span>
-                    <p className="mt-0.5 text-[11px] leading-relaxed text-editorial-muted line-clamp-3">{sourceText}</p>
                   </div>
                 )}
               </div>
             )}
+
+            {/* Correzione suggerita */}
             {issue.suggestedFix && (
-              <div className="mt-3 rounded-xl border border-editorial-border/70 bg-editorial-bg px-3 py-2 text-sm leading-relaxed text-editorial-muted">
-                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-accent">{t('audit.fix')}</span>: {issue.suggestedFix}
+              <div className="mt-3 border-t border-editorial-border/30 pt-3">
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-accent">{t('audit.fix')}</span>
+                <p className="mt-0.5 text-xs leading-relaxed text-editorial-muted">{issue.suggestedFix}</p>
               </div>
             )}
           </article>

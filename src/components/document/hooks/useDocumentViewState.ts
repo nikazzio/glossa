@@ -22,6 +22,7 @@ export function useDocumentViewState() {
     highlightsEnabled,
     searchQuery,
     focusedIssueQuery,
+    focusedSourceIssueQuery,
   } = useUiStore();
 
   const pipelineTestChunkCount = useConfigStore((state) => state.pipelineTestChunkCount);
@@ -123,6 +124,7 @@ export function useDocumentViewState() {
     showHighlight && paneFocus !== 'translation' ? config.glossary : [],
     'source',
     sourceEffectiveSearch,
+    focusedSourceIssueQuery ?? '',
   );
   const translationHighlight = useGlossaryHighlight(
     paneFocus !== 'source' ? deferredStageContent : '',
