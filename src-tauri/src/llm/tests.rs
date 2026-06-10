@@ -658,6 +658,8 @@
             description: "Minor".into(),
             suggested_fix: None,
             phrase: None,
+            source_phrase: None,
+            confidence: None,
         };
         let json = serde_json::to_string(&issue).unwrap();
         assert!(json.contains(r#""type":"fluency"#));
@@ -1361,6 +1363,8 @@
                     description: v["description"].as_str()?.to_string(),
                     suggested_fix: v["suggestedFix"].as_str().map(|s| s.to_string()),
                     phrase: v["phrase"].as_str().map(|s| s.to_string()),
+                    source_phrase: v["sourcePhrase"].as_str().map(|s| s.to_string()),
+                    confidence: v["confidence"].as_f64().map(|f| f as f32),
                 })
             })
             .collect();
