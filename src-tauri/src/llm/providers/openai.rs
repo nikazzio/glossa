@@ -48,6 +48,47 @@ pub fn deepseek() -> OpenAiCompatibleProvider {
     }
 }
 
+fn judge_json_schema() -> serde_json::Value {
+    serde_json::json!({
+        "name": "translation_audit",
+        "strict": true,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "rating": {
+                    "type": "string",
+                    "enum": ["critical", "poor", "fair", "good", "excellent"]
+                },
+                "issues": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "type": {"type": "string", "enum": ["glossary", "fluency", "accuracy", "grammar"]},
+                            "severity": {"type": "string", "enum": ["low", "medium", "high"]},
+                            "description": {"type": "string"},
+                            "suggestedFix": {"type": "string"},
+                            "phrase": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+                            "sourcePhrase": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+                            "confidence": {"anyOf": [{"type": "number"}, {"type": "null"}]}
+                        },
+                        "required": ["type", "severity", "description", "suggestedFix", "phrase", "sourcePhrase", "confidence"],
+                        "additionalProperties": false
+                    }
+                },
+                "checkedSentences": {
+                    "anyOf": [
+                        {"type": "array", "items": {"type": "string"}},
+                        {"type": "null"}
+                    ]
+                }
+            },
+            "required": ["rating", "issues", "checkedSentences"],
+            "additionalProperties": false
+        }
+    })
+}
+
 impl OpenAiCompatibleProvider {
     /// Construct a provider with a custom base URL — used in tests to point
     /// at a local wiremock server without needing `&'static str`.
@@ -205,7 +246,11 @@ impl OpenAiCompatibleProvider {
         });
 
         if req.json_mode {
-            body["text"] = serde_json::json!({"format": {"type": "json_object"}});
+            if req.json_schema_strict {
+                body["text"] = serde_json::json!({"format": {"type": "json_schema", "json_schema": judge_json_schema()}});
+            } else {
+                body["text"] = serde_json::json!({"format": {"type": "json_object"}});
+            }
         }
         self.apply_reasoning_effort(req, &mut body);
 
@@ -259,7 +304,11 @@ impl OpenAiCompatibleProvider {
             "stream": true,
         });
         if req.json_mode {
-            body["text"] = serde_json::json!({"format": {"type": "json_object"}});
+            if req.json_schema_strict {
+                body["text"] = serde_json::json!({"format": {"type": "json_schema", "json_schema": judge_json_schema()}});
+            } else {
+                body["text"] = serde_json::json!({"format": {"type": "json_object"}});
+            }
         }
         self.apply_reasoning_effort(req, &mut body);
 
@@ -388,7 +437,11 @@ impl LlmProvider for OpenAiCompatibleProvider {
         });
 
         if req.json_mode {
-            body["response_format"] = serde_json::json!({"type": "json_object"});
+            if req.json_schema_strict {
+                body["response_format"] = serde_json::json!({"type": "json_schema", "json_schema": judge_json_schema()});
+            } else {
+                body["response_format"] = serde_json::json!({"type": "json_object"});
+            }
         }
         self.apply_cache_fields(req, &mut body);
         self.apply_reasoning_effort(req, &mut body);

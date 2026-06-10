@@ -71,6 +71,7 @@ pub async fn run_stage(
     stage: StageConfig,
     config: PipelineConfig,
     previous_result: Option<String>,
+    audit_context: Option<String>,
     stream_id: String,
     ollama_base_url: Option<String>,
 ) -> Result<StageResult, String> {
@@ -78,7 +79,7 @@ pub async fn run_stage(
     provider.preflight(&stage.model).await?;
     let api_key = get_api_key(&app, &stage.provider)?;
     let client = provider.http_client()?;
-    let structured = build_stage_prompts(&text, &stage, &config, previous_result.as_deref());
+    let structured = build_stage_prompts(&text, &stage, &config, previous_result.as_deref(), audit_context.as_deref());
     app.emit(
         "chunk-prompt",
         PromptEvent {
@@ -93,6 +94,7 @@ pub async fn run_stage(
         structured: &structured,
         api_key: &api_key,
         json_mode: false,
+        json_schema_strict: false,
         provider_options: stage.provider_options.as_ref(),
     };
     let cancel = registry.register(&stream_id);
@@ -156,7 +158,7 @@ pub async fn run_stage_stream(
     provider.preflight(&stage.model).await?;
     let api_key = get_api_key(&app, &stage.provider)?;
     let client = provider.streaming_client()?;
-    let structured = build_stage_prompts(&text, &stage, &config, previous_result.as_deref());
+    let structured = build_stage_prompts(&text, &stage, &config, previous_result.as_deref(), None);
     app.emit(
         "chunk-prompt",
         PromptEvent {
@@ -171,6 +173,7 @@ pub async fn run_stage_stream(
         structured: &structured,
         api_key: &api_key,
         json_mode: false,
+        json_schema_strict: false,
         provider_options: stage.provider_options.as_ref(),
     };
 
@@ -246,6 +249,7 @@ pub async fn judge_translation(
         structured: &structured,
         api_key: &api_key,
         json_mode: true,
+        json_schema_strict: true,
         provider_options: config.review_provider_options.as_ref(),
     };
 
@@ -368,6 +372,7 @@ pub async fn refine_prompt(
         structured: &structured,
         api_key: &api_key,
         json_mode: false,
+        json_schema_strict: false,
         provider_options: refine_config.review_provider_options.as_ref(),
     };
     prov.call(&client, &req).await.map(|r| r.content)
@@ -404,6 +409,7 @@ pub async fn extract_phrase_memory_pairs(
         structured: &structured,
         api_key: &api_key,
         json_mode: true,
+        json_schema_strict: false,
         provider_options: None,
     };
 
@@ -471,6 +477,7 @@ pub async fn run_coherence_for_chunk(
         structured: &structured,
         api_key: &api_key,
         json_mode: true,
+        json_schema_strict: false,
         provider_options: config.review_provider_options.as_ref(),
     };
 
@@ -579,6 +586,7 @@ pub async fn test_provider_connection(
         structured: &structured,
         api_key: &api_key,
         json_mode: false,
+        json_schema_strict: false,
         provider_options: None,
     };
 

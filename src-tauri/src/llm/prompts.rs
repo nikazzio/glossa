@@ -62,6 +62,7 @@ pub(crate) fn build_stage_prompts(
     stage: &StageConfig,
     config: &PipelineConfig,
     previous_result: Option<&str>,
+    audit_context: Option<&str>,
 ) -> StructuredPrompt {
     if stage.role.as_deref() == Some("format") {
         return build_format_stage_prompts(text, stage);
@@ -166,12 +167,17 @@ pub(crate) fn build_stage_prompts(
         .unwrap_or_default();
 
     let user = if stage.role.as_deref() == Some("refine") {
-        format!(
+        let base = format!(
             "{current_chunk_line}Original text for the current chunk:\n{text}\n\n\
              Previous Iteration for the current chunk:\n{}\n\n\
              Refine only the current chunk according to your instructions. Output the complete refined translation in full — every sentence, from start to finish. Do not abbreviate or output only the changed portions.",
             previous_result.unwrap_or_default()
-        )
+        );
+        if let Some(ctx) = audit_context.filter(|s| !s.trim().is_empty()) {
+            format!("{base}\n\n---\nPrevious audit findings to address:\n{ctx}\n---")
+        } else {
+            base
+        }
     } else {
         format!(
             "{current_chunk_line}Text to translate from the current chunk:\n{text}\n\n\
@@ -244,7 +250,13 @@ pub(crate) fn build_judge_prompts(
          Specific Audit Instructions:\n{instructions}\n\n\
          {glossary_section}\
          {markdown_rules}\
+         Scanning protocol: go through the translation sentence by sentence, checking every \
+         sentence against the source for accuracy, every glossary term for adherence, grammar \
+         for correctness, and fluency throughout. Complete the full scan before building the issues list. \
+         Report EVERY issue you find and EVERY occurrence separately — do not merge, suppress, or \
+         limit repeated issues.\n\n\
          You MUST respond with a valid JSON object containing:\n\
+         - checkedSentences: array of source sentences you verified (list them verbatim as you scanned them)\n\
          - rating: one of 'critical', 'poor', 'fair', 'good', 'excellent' \
            (semantic translation quality: critical=unusable, poor=weak, fair=usable with revision, \
            good=solid, excellent=publication-ready)\n\
@@ -253,10 +265,11 @@ pub(crate) fn build_judge_prompts(
            - severity: 'low'|'medium'|'high'\n\
            - description: string — explanation of the issue in {ui_lang}\n\
            - suggestedFix: string — how to correct it in {ui_lang}\n\
-           - phrase: string — the exact verbatim substring of the WRONG or problematic text \
-             as it actually appears in the target translation (not the source term, not the \
-             suggested correction); copy it character-for-character from the target text; \
-             if the issue recurs in multiple places, copy only the first occurrence\n\
+           - phrase: string or null — the exact verbatim substring of the WRONG or problematic text \
+             as it appears in the TARGET translation (character-for-character copy from the target text)\n\
+           - sourcePhrase: string or null — the exact verbatim substring from the SOURCE text \
+             that corresponds to this issue\n\
+           - confidence: number or null — your confidence this is a real issue (0.0–1.0)\n\
          Write description and suggestedFix in {ui_lang}. \
          Keep rating and type values as the English literals above.",
         instructions = config.judge_prompt,
@@ -402,7 +415,7 @@ pub(crate) fn minimal_pipeline_config(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::llm::types::{CoherenceChunkInput, GlossaryEntry};
+    use crate::llm::types::{CoherenceChunkInput, GlossaryEntry, StageConfig};
 
     fn en_it_config() -> PipelineConfig {
         PipelineConfig {
@@ -536,5 +549,56 @@ mod tests {
         };
         let prompt = build_coherence_prompts(&input, &en_it_config());
         assert!(!prompt.user.contains("Reference translated document block"));
+    }
+
+    // ── build_stage_prompts audit_context ─────────────────────────────
+
+    #[test]
+    fn refine_user_turn_includes_audit_context_when_provided() {
+        let config = PipelineConfig {
+            source_language: "English".to_string(),
+            target_language: "Italian".to_string(),
+            ..Default::default()
+        };
+        let stage = StageConfig {
+            id: "stg-refine".to_string(),
+            role: Some("refine".to_string()),
+            prompt: "Refine the translation.".to_string(),
+            name: "refine".to_string(),
+            provider: "test".to_string(),
+            model: "test".to_string(),
+            enabled: true,
+            provider_options: None,
+        };
+        let prompt = build_stage_prompts(
+            "Hello world",
+            &stage,
+            &config,
+            Some("Ciao mondo"),
+            Some("Missing glossary term"),
+        );
+        assert!(prompt.user.contains("Previous audit findings to address:"));
+        assert!(prompt.user.contains("Missing glossary term"));
+    }
+
+    #[test]
+    fn refine_user_turn_omits_audit_section_when_context_is_none() {
+        let config = PipelineConfig {
+            source_language: "English".to_string(),
+            target_language: "Italian".to_string(),
+            ..Default::default()
+        };
+        let stage = StageConfig {
+            id: "stg-refine".to_string(),
+            role: Some("refine".to_string()),
+            prompt: "Refine the translation.".to_string(),
+            name: "refine".to_string(),
+            provider: "test".to_string(),
+            model: "test".to_string(),
+            enabled: true,
+            provider_options: None,
+        };
+        let prompt = build_stage_prompts("Hello world", &stage, &config, Some("Ciao mondo"), None);
+        assert!(!prompt.user.contains("Previous audit findings to address:"));
     }
 }
