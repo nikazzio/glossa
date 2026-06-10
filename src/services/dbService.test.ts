@@ -135,6 +135,48 @@ describe('runInTransaction', () => {
   });
 });
 
+describe('ensureColumn definition validation', () => {
+  afterEach(() => {
+    vi.resetModules();
+    vi.clearAllMocks();
+  });
+
+  it('accepts INTEGER DEFAULT 0', async () => {
+    const { validateColumnDefinition } = await import('./dbService');
+    expect(() => validateColumnDefinition('INTEGER DEFAULT 0')).not.toThrow();
+  });
+
+  it('accepts TEXT DEFAULT NULL', async () => {
+    const { validateColumnDefinition } = await import('./dbService');
+    expect(() => validateColumnDefinition('TEXT DEFAULT NULL')).not.toThrow();
+  });
+
+  it("accepts TEXT DEFAULT ''", async () => {
+    const { validateColumnDefinition } = await import('./dbService');
+    expect(() => validateColumnDefinition("TEXT DEFAULT ''")).not.toThrow();
+  });
+
+  it("accepts TEXT DEFAULT 'value'", async () => {
+    const { validateColumnDefinition } = await import('./dbService');
+    expect(() => validateColumnDefinition("TEXT DEFAULT 'idle'")).not.toThrow();
+  });
+
+  it('rejects SQL injection in definition', async () => {
+    const { validateColumnDefinition } = await import('./dbService');
+    expect(() => validateColumnDefinition("TEXT; DROP TABLE users--")).toThrow('Invalid column definition');
+  });
+
+  it('rejects subquery in definition', async () => {
+    const { validateColumnDefinition } = await import('./dbService');
+    expect(() => validateColumnDefinition("TEXT DEFAULT (SELECT password FROM users)")).toThrow('Invalid column definition');
+  });
+
+  it('accepts INTEGER NOT NULL DEFAULT 0', async () => {
+    const { validateColumnDefinition } = await import('./dbService');
+    expect(() => validateColumnDefinition('INTEGER NOT NULL DEFAULT 0')).not.toThrow();
+  });
+});
+
 describe('ensureColumn whitelist', () => {
   afterEach(() => {
     vi.resetModules();

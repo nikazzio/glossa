@@ -118,10 +118,19 @@ const ALLOWED_MIGRATIONS = new Set([
   'pipelines.phrase_memory_max_results',
 ]);
 
+const VALID_COLUMN_DEFINITION = /^(INTEGER|TEXT|REAL|BLOB|NUMERIC)(\s+NOT\s+NULL)?(\s+DEFAULT\s+('[^']*'|NULL|-?\d+(\.\d+)?))?$/i;
+
+export function validateColumnDefinition(definition: string): void {
+  if (!VALID_COLUMN_DEFINITION.test(definition)) {
+    throw new Error(`[dbService] Invalid column definition: "${definition}"`);
+  }
+}
+
 export async function ensureColumn(table: string, column: string, definition: string): Promise<void> {
   if (!ALLOWED_MIGRATIONS.has(`${table}.${column}`)) {
     throw new Error(`[dbService] ensureColumn: migration not allowed for "${table}.${column}"`);
   }
+  validateColumnDefinition(definition);
   const conn = await getDb();
   const columns = await conn.select<Array<{ name: string }>>(`PRAGMA table_info(${table})`);
   if (columns.some((existing) => existing.name === column)) {

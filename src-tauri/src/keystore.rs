@@ -44,6 +44,25 @@ fn set_owner_only_permissions(path: &PathBuf) -> Result<(), String> {
             .map_err(|e| format!("Failed to set restrictive file permissions: {e}"))?;
     }
 
+    #[cfg(windows)]
+    {
+        use std::process::Command;
+        let path_str = path.to_string_lossy();
+        let username = std::env::var("USERNAME")
+            .map_err(|_| "Cannot determine current Windows user".to_string())?;
+        let acl_entry = format!("{}:F", username);
+        let output = Command::new("icacls")
+            .args([&*path_str, "/inheritance:r", "/grant:r", &acl_entry])
+            .output()
+            .map_err(|e| format!("icacls execution failed: {e}"))?;
+        if !output.status.success() {
+            return Err(format!(
+                "Failed to restrict keystore permissions: {}",
+                String::from_utf8_lossy(&output.stderr)
+            ));
+        }
+    }
+
     Ok(())
 }
 

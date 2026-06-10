@@ -356,4 +356,20 @@ source_phrase_embeddings
 
 ---
 
-*Ultimo aggiornamento: 2026-06-10 — branch feat/issue-244-audit-results*
+---
+
+## Note di Sicurezza (modello di minaccia: desktop single-user)
+
+### Cache in-memoria delle API key
+
+`keystore.rs` mantiene una `HashMap<String, String>` statica (`API_KEY_CACHE`) che contiene le chiavi API in chiaro per la durata del processo, per evitare accessi ripetuti al keyring di sistema. Le chiavi rimangono nella heap del processo fino alla chiusura dell'app.
+
+**Implicazione**: un attaccante con accesso locale al sistema (malware, processo con privilegi equivalenti) può recuperare le chiavi da un memory dump del processo Glossa. Questo è accettabile nel modello di minaccia dichiarato (desktop single-user, nessun attaccante remoto), ma il comportamento va tenuto presente: non estendere la cache a token o credenziali con vita breve senza rivalutare il rischio.
+
+### Logging in release e RUST_LOG
+
+In release (`!debug_assertions`) il livello di log predefinito è `Info`. `RUST_LOG` viene letto a runtime (`lib.rs`) e può sovrascrivere questo default.
+
+**Implicazione**: impostare `RUST_LOG=debug` o `RUST_LOG=trace` su una build release espone log verbosi, inclusi dettagli delle richieste LLM (provider, modello, timing). Non vengono loggati contenuti di prompt o risposte, ma provider e metadati sì. In un contesto di supporto tecnico, chiedere sempre di verificare che `RUST_LOG` non sia impostato prima di condividere i log.
+
+*Ultimo aggiornamento: 2026-06-11 — branch security/issue-254-hardening*
