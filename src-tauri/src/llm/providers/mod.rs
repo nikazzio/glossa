@@ -14,7 +14,7 @@ pub fn get_provider(
         "openai" => Ok(Box::new(openai::openai())),
         "deepseek" => Ok(Box::new(openai::deepseek())),
         "anthropic" => Ok(Box::new(anthropic::AnthropicProvider)),
-        "ollama" => Ok(Box::new(ollama::OllamaProvider::new(ollama_base_url))),
+        "ollama" => Ok(Box::new(ollama::OllamaProvider::new(ollama_base_url)?)),
         _ => Err(format!("Unknown provider: {id}")),
     }
 }
