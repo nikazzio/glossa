@@ -13,7 +13,6 @@ import {
   Wand2,
   WifiOff,
   X,
-  AlertTriangle,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -210,12 +209,6 @@ export function StageCard({
             />
           )}
         </div>
-        {translationsExist && (
-          <div className="flex items-center gap-2 text-xs text-editorial-muted">
-            <AlertTriangle size={12} className="shrink-0" />
-            <span>{t('pipeline.modelLockedHint')}</span>
-          </div>
-        )}
         {resolvedReasoning !== undefined && resolvedReasoning !== 'non_reasoning' && stage.provider !== 'ollama' && (
           <div className="flex items-center gap-2">
             <Wand2 size={11} className="text-editorial-warning shrink-0" />
