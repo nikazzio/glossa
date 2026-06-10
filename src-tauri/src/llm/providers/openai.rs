@@ -1,9 +1,6 @@
 use async_trait::async_trait;
 use reqwest::Client;
 use serde_json::Value;
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
-
 use super::{format_api_error, provider_label_from_url};
 use crate::llm::provider::{
     LlmProvider, LlmRequest, LlmResponse, StreamFormat, TokenUsage, UsageAccumulator,
@@ -48,6 +45,15 @@ pub fn deepseek() -> OpenAiCompatibleProvider {
     }
 }
 
+/// FNV-1a 64-bit hash — deterministic across runs, unlike `DefaultHasher`.
+fn stable_fnv1a(s: &str) -> u64 {
+    const FNV_PRIME: u64 = 0x00000100000001B3;
+    const FNV_OFFSET: u64 = 0xcbf29ce484222325;
+    s.as_bytes()
+        .iter()
+        .fold(FNV_OFFSET, |hash, &byte| (hash ^ byte as u64).wrapping_mul(FNV_PRIME))
+}
+
 impl OpenAiCompatibleProvider {
     /// Construct a provider with a custom base URL — used in tests to point
     /// at a local wiremock server without needing `&'static str`.
@@ -73,11 +79,16 @@ impl OpenAiCompatibleProvider {
     // ── Chat Completions helpers ──────────────────────────────────────────────
 
     fn derive_prompt_cache_key(&self, req: &LlmRequest<'_>) -> String {
-        let mut hasher = DefaultHasher::new();
-        self.id.hash(&mut hasher);
-        req.model.hash(&mut hasher);
-        req.structured.flatten_system().hash(&mut hasher);
-        format!("glossa:{:016x}", hasher.finish())
+        let cacheable_text: String = req
+            .structured
+            .system
+            .iter()
+            .filter(|b| b.cacheable)
+            .map(|b| b.text.as_str())
+            .collect::<Vec<_>>()
+            .join("\n\n");
+        let hash = stable_fnv1a(&format!("{}:{}:{}", self.id, req.model, cacheable_text));
+        format!("glossa:{hash:016x}")
     }
 
     fn openai_cache_config<'a>(&self, req: &'a LlmRequest<'_>) -> Option<&'a OpenAiCacheConfig> {
@@ -124,8 +135,8 @@ impl OpenAiCompatibleProvider {
         }
     }
 
-    /// Attaches prompt_cache_key (and optionally prompt_cache_retention) to a
-    /// Chat Completions request body. No-op for the Responses API path.
+    /// Attaches `prompt_cache_key` (and optionally `prompt_cache_retention`) to
+    /// a request body. Applies to both Chat Completions and Responses API paths.
     fn apply_cache_fields(&self, req: &LlmRequest<'_>, body: &mut Value) {
         let cfg = self.openai_cache_config(req);
         let cache_key = cfg
@@ -208,6 +219,7 @@ impl OpenAiCompatibleProvider {
             body["text"] = serde_json::json!({"format": {"type": "json_object"}});
         }
         self.apply_reasoning_effort(req, &mut body);
+        self.apply_cache_fields(req, &mut body);
 
         let resp = client
             .post(&url)
@@ -262,6 +274,7 @@ impl OpenAiCompatibleProvider {
             body["text"] = serde_json::json!({"format": {"type": "json_object"}});
         }
         self.apply_reasoning_effort(req, &mut body);
+        self.apply_cache_fields(req, &mut body);
 
         client
             .post(&url)
