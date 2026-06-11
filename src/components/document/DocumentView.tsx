@@ -13,6 +13,7 @@ import {
   Wand2,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
@@ -27,6 +28,7 @@ import { usePanelScrollSync } from '../../hooks/usePanelScrollSync';
 import { useAnnotationsStore } from '../../stores/annotationsStore';
 import { useDocumentViewState } from './hooks/useDocumentViewState';
 import { StageTraceDialog } from './StageTraceDialog';
+import { AnnotationContextMenu } from './AnnotationContextMenu';
 import { PaneSearch } from './PaneSearch';
 import { InlineStatusBadge } from './InlineStatusBadge';
 
@@ -162,7 +164,11 @@ export function DocumentView({
     focusedIssueQuery,
     focusedSourceIssueQuery,
     focusedIssueRequestId,
+    setShowChunkDrawer,
+    setPendingAnnotationAnchor,
   } = useUiStore();
+
+  const [annotationMenu, setAnnotationMenu] = useState<{ x: number; y: number; text: string; chunkId: string } | null>(null);
 
   const {
     resolvedLayout,
@@ -522,29 +528,39 @@ export function DocumentView({
                 searchLabel={t('document.searchInTranslation')}
                 scrollRef={scrollTranslationRef}
               >
-                {showDiffMode ? (
-                  <div data-scroll-sync="true" className="flex flex-col flex-1 min-h-0 overflow-y-auto custom-scrollbar">
-                    <HighlightedText
-                      html={stageDiff.html}
-                      className="text-[15px] leading-8 text-editorial-ink min-h-[280px]"
+                <div
+                  className="flex flex-col flex-1 min-h-0"
+                  onContextMenu={(e) => {
+                    const text = window.getSelection()?.toString().trim() ?? '';
+                    if (!text) return;
+                    e.preventDefault();
+                    setAnnotationMenu({ x: e.clientX, y: e.clientY, text, chunkId: currentChunk.id });
+                  }}
+                >
+                  {showDiffMode ? (
+                    <div data-scroll-sync="true" className="flex flex-col flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+                      <HighlightedText
+                        html={stageDiff.html}
+                        className="text-[15px] leading-8 text-editorial-ink min-h-[280px]"
+                      />
+                    </div>
+                  ) : (
+                    <MarkdownEditor
+                      identityKey={`${currentChunk.id}:candidate:${effectiveSelectedStageId}`}
+                      value={rawStageContent}
+                      onChange={isLastSelected ? (nextValue) => updateChunkDraft(currentChunk.id, nextValue) : NOOP_CHANGE}
+                      markdownEnabled={config.markdownAware === true}
+                      readOnly={stageReadOnly}
+                      fillHeight
+                      textClassName="text-[15px] leading-8 text-editorial-ink"
+                      previewClassName="min-h-[280px] text-[15px] leading-8 text-editorial-ink"
+                      placeholder={isLastSelected ? t('pipeline.candidatePlaceholder') : ''}
+                      highlightHtml={(showHighlight || !!translationEffectiveSearch || !!focusedIssueQuery) ? translationHighlight.html : null}
+                      focusQuery={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueQuery : null}
+                      focusRequestId={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueRequestId : 0}
                     />
-                  </div>
-                ) : (
-                  <MarkdownEditor
-                    identityKey={`${currentChunk.id}:candidate:${effectiveSelectedStageId}`}
-                    value={rawStageContent}
-                    onChange={isLastSelected ? (nextValue) => updateChunkDraft(currentChunk.id, nextValue) : NOOP_CHANGE}
-                    markdownEnabled={config.markdownAware === true}
-                    readOnly={stageReadOnly}
-                    fillHeight
-                    textClassName="text-[15px] leading-8 text-editorial-ink"
-                    previewClassName="min-h-[280px] text-[15px] leading-8 text-editorial-ink"
-                    placeholder={isLastSelected ? t('pipeline.candidatePlaceholder') : ''}
-                    highlightHtml={(showHighlight || !!translationEffectiveSearch || !!focusedIssueQuery) ? translationHighlight.html : null}
-                    focusQuery={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueQuery : null}
-                    focusRequestId={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueRequestId : 0}
-                  />
-                )}
+                  )}
+                </div>
               </DocumentPage>
             );
           })()}
@@ -557,6 +573,17 @@ export function DocumentView({
           stage={config.stages.find((entry) => entry.id === traceStageId) ?? null}
           isJudge={traceStageId === '_judge'}
           onClose={() => setTraceStageId(null)}
+        />
+      ) : null}
+      {annotationMenu ? (
+        <AnnotationContextMenu
+          x={annotationMenu.x}
+          y={annotationMenu.y}
+          onAddAnnotation={() => {
+            setPendingAnnotationAnchor({ chunkId: annotationMenu.chunkId, text: annotationMenu.text });
+            setShowChunkDrawer(true, 'notes');
+          }}
+          onClose={() => setAnnotationMenu(null)}
         />
       ) : null}
     </section>

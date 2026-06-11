@@ -41,8 +41,10 @@ interface UiState {
   focusedIssueRequestId: number;
   traceStageId: string | null;
   activePanel: ActivePanel;
+  pendingAnnotationAnchor: { chunkId: string; text: string } | null;
 
   setTraceStageId: (id: string | null) => void;
+  setPendingAnnotationAnchor: (anchor: { chunkId: string; text: string } | null) => void;
   setViewMode: (mode: ViewMode) => void;
   setDocumentLayout: (layout: DocumentLayoutPreference) => void;
   setDocumentPaneFocus: (focus: DocumentPaneFocus) => void;
@@ -95,6 +97,7 @@ export const useUiStore = create<UiState>()(
       focusedIssueRequestId: 0,
       traceStageId: null,
       activePanel: null,
+      pendingAnnotationAnchor: null,
 
       setViewMode: (mode) =>
         set((state) => ({
@@ -198,6 +201,7 @@ export const useUiStore = create<UiState>()(
         })),
       clearFocusedIssue: () => set({ focusedIssueQuery: null, focusedSourceIssueQuery: null }),
       setTraceStageId: (id) => set({ traceStageId: id }),
+      setPendingAnnotationAnchor: (anchor) => set({ pendingAnnotationAnchor: anchor }),
       setActivePanel: (panel, tab) =>
         set((state) => {
           switch (panel) {

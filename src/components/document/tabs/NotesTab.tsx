@@ -11,11 +11,12 @@ import {
   X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAnnotationsStore } from '../../../stores/annotationsStore';
 import { useProjectStore } from '../../../stores/projectStore';
-import { MarkdownEditor } from '../../common';
+import { useUiStore } from '../../../stores/uiStore';
+import { IconButton, PillButton } from '../../ui';
 import type { AnnotationType, TranslationChunk } from '../../../types';
 import type { Annotation } from '../../../types';
 
@@ -33,6 +34,43 @@ const ANNOTATION_META: Record<AnnotationType, { icon: LucideIcon; colorClass: st
 };
 
 const ANNOTATION_TYPES: AnnotationType[] = ['comment', 'doubt', 'problem', 'approved'];
+
+function TypeSelector({ selected, onSelect }: { selected: AnnotationType; onSelect: (t: AnnotationType) => void }) {
+  const { t } = useTranslation();
+  return (
+    <div className="mb-3 flex items-center gap-1">
+      {ANNOTATION_TYPES.map((type) => {
+        const meta = ANNOTATION_META[type];
+        const Icon = meta.icon;
+        return (
+          <IconButton
+            key={type}
+            size="sm"
+            tone={selected === type ? 'accent' : 'default'}
+            onClick={() => onSelect(type)}
+            title={t(meta.labelKey)}
+            ariaPressed={selected === type}
+          >
+            <Icon size={12} />
+          </IconButton>
+        );
+      })}
+      <span className="mx-1 h-3 w-px self-center bg-editorial-border/70" aria-hidden="true" />
+      <span className="font-display text-sm italic text-editorial-ink">{t(ANNOTATION_META[selected].labelKey)}</span>
+    </div>
+  );
+}
+
+function AnchorPill({ text, onClear }: { text: string; onClear: () => void }) {
+  return (
+    <div className="mt-2 flex items-center gap-1.5 rounded-xl border border-editorial-border/50 bg-editorial-textbox/40 px-3 py-1.5">
+      <span className="flex-1 truncate font-display text-sm italic text-editorial-muted">«{text}»</span>
+      <IconButton size="sm" tone="default" onClick={onClear} title="Rimuovi ancora">
+        <X size={11} />
+      </IconButton>
+    </div>
+  );
+}
 
 function AnnotationCard({
   annotation,
@@ -61,13 +99,11 @@ function AnnotationCard({
     return (
       <article className={`rounded-2xl border ${meta.borderClass} ${meta.bgClass} px-4 py-3`}>
         <TypeSelector selected={editType} onSelect={setEditType} />
-        <MarkdownEditor
+        <textarea
           value={editContent}
-          onChange={setEditContent}
-          markdownEnabled={false}
-          minHeightClassName="min-h-[72px]"
-          textClassName="text-sm leading-relaxed"
-          identityKey={`edit-${annotation.id}`}
+          onChange={(e) => setEditContent(e.target.value)}
+          rows={3}
+          className="w-full resize-none rounded-xl border border-editorial-border bg-editorial-textbox px-3 py-2 text-sm leading-relaxed text-editorial-ink placeholder:text-editorial-muted/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
         />
         <input
           type="text"
@@ -77,22 +113,16 @@ function AnnotationCard({
           className="mt-2 w-full rounded-xl border border-editorial-border bg-editorial-textbox px-3 py-1.5 text-xs text-editorial-ink placeholder:text-editorial-muted/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
         />
         <div className="mt-3 flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              onSave({ type: editType, content: editContent, anchorText: editAnchor.trim() || null });
-            }}
-            className="rounded-full border border-editorial-accent/50 bg-editorial-accent/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-editorial-accent transition-colors hover:bg-editorial-accent/20"
+          <PillButton
+            variant="accent"
+            onClick={() => onSave({ type: editType, content: editContent, anchorText: editAnchor.trim() || undefined })}
+            disabled={!editContent.trim()}
           >
             {t('annotations.updateButton')}
-          </button>
-          <button
-            type="button"
-            onClick={onCancelEdit}
-            className="rounded-full border border-editorial-border px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-editorial-muted transition-colors hover:text-editorial-ink"
-          >
+          </PillButton>
+          <PillButton variant="secondary" onClick={onCancelEdit}>
             {t('annotations.cancelButton')}
-          </button>
+          </PillButton>
         </div>
       </article>
     );
@@ -106,22 +136,12 @@ function AnnotationCard({
           {t(meta.labelKey)}
         </span>
         <div className="flex-1" />
-        <button
-          type="button"
-          onClick={onEdit}
-          aria-label={t('annotations.editButton')}
-          className="rounded-full p-1 text-editorial-muted transition-colors hover:text-editorial-ink"
-        >
+        <IconButton size="sm" tone="default" onClick={onEdit} title={t('annotations.editButton')}>
           <Pencil size={11} />
-        </button>
-        <button
-          type="button"
-          onClick={onDelete}
-          aria-label={t('annotations.deleteButton')}
-          className="rounded-full p-1 text-editorial-muted transition-colors hover:text-editorial-accent"
-        >
+        </IconButton>
+        <IconButton size="sm" tone="default" onClick={onDelete} title={t('annotations.deleteButton')}>
           <Trash2 size={11} />
-        </button>
+        </IconButton>
       </div>
       <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-editorial-ink">{annotation.content}</p>
       {annotation.anchorText && (
@@ -133,38 +153,12 @@ function AnnotationCard({
   );
 }
 
-function TypeSelector({ selected, onSelect }: { selected: AnnotationType; onSelect: (t: AnnotationType) => void }) {
-  const { t } = useTranslation();
-  return (
-    <div className="mb-3 flex flex-wrap gap-1.5">
-      {ANNOTATION_TYPES.map((type) => {
-        const meta = ANNOTATION_META[type];
-        const Icon = meta.icon;
-        const isActive = selected === type;
-        return (
-          <button
-            key={type}
-            type="button"
-            onClick={() => onSelect(type)}
-            className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] transition-colors ${
-              isActive
-                ? `${meta.borderClass} ${meta.bgClass} ${meta.colorClass}`
-                : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/30 hover:text-editorial-ink'
-            }`}
-          >
-            <Icon size={10} />
-            {t(meta.labelKey)}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
   const { t } = useTranslation();
   const activePipelineId = useProjectStore((s) => s.activePipelineId);
   const { annotationsByChunkId, addAnnotation, updateAnnotation, deleteAnnotation } = useAnnotationsStore();
+  const pendingAnnotationAnchor = useUiStore((s) => s.pendingAnnotationAnchor);
+  const setPendingAnnotationAnchor = useUiStore((s) => s.setPendingAnnotationAnchor);
 
   const [showForm, setShowForm] = useState(false);
   const [formType, setFormType] = useState<AnnotationType>('comment');
@@ -174,6 +168,16 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
 
   const footnotes = currentChunk?.footnotes ?? [];
   const annotations = currentChunk ? (annotationsByChunkId.get(currentChunk.id) ?? []) : [];
+
+  useEffect(() => {
+    if (!pendingAnnotationAnchor || !currentChunk) return;
+    if (pendingAnnotationAnchor.chunkId !== currentChunk.id) return;
+    setFormAnchor(pendingAnnotationAnchor.text);
+    setFormType('comment');
+    setFormContent('');
+    setShowForm(true);
+    setPendingAnnotationAnchor(null);
+  }, [pendingAnnotationAnchor, currentChunk, setPendingAnnotationAnchor]);
 
   if (!currentChunk) {
     return (
@@ -210,10 +214,12 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
     if (editingId === id) setEditingId(null);
   };
 
+  const closeForm = () => { setShowForm(false); setFormContent(''); setFormAnchor(''); };
+
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex flex-col gap-3 px-5 py-5">
 
-      {/* Add annotation button */}
+      {/* Add button */}
       {!showForm && (
         <button
           type="button"
@@ -232,47 +238,26 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
             <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
               {t('annotations.addButton')}
             </span>
-            <button
-              type="button"
-              onClick={() => { setShowForm(false); setFormContent(''); setFormAnchor(''); }}
-              className="rounded-full p-1 text-editorial-muted transition-colors hover:text-editorial-ink"
-            >
+            <IconButton size="sm" tone="default" onClick={closeForm} title={t('annotations.cancelButton')}>
               <X size={12} />
-            </button>
+            </IconButton>
           </div>
           <TypeSelector selected={formType} onSelect={setFormType} />
-          <MarkdownEditor
+          <textarea
             value={formContent}
-            onChange={setFormContent}
-            markdownEnabled={false}
+            onChange={(e) => setFormContent(e.target.value)}
             placeholder={t('annotations.placeholder')}
-            minHeightClassName="min-h-[72px]"
-            textClassName="text-sm leading-relaxed"
-            identityKey={`new-annotation-${currentChunk.id}`}
+            rows={3}
+            className="w-full resize-none rounded-xl border border-editorial-border bg-editorial-textbox px-3 py-2 text-sm leading-relaxed text-editorial-ink placeholder:text-editorial-muted/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
           />
-          <input
-            type="text"
-            value={formAnchor}
-            onChange={(e) => setFormAnchor(e.target.value)}
-            placeholder={t('annotations.anchorPlaceholder')}
-            className="mt-2 w-full rounded-xl border border-editorial-border bg-editorial-textbox px-3 py-1.5 text-xs text-editorial-ink placeholder:text-editorial-muted/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-          />
+          {formAnchor && <AnchorPill text={formAnchor} onClear={() => setFormAnchor('')} />}
           <div className="mt-3 flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleAdd}
-              disabled={!formContent.trim()}
-              className="rounded-full border border-editorial-accent/50 bg-editorial-accent/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-editorial-accent transition-colors hover:bg-editorial-accent/20 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
+            <PillButton variant="accent" onClick={handleAdd} disabled={!formContent.trim()}>
               {t('annotations.saveButton')}
-            </button>
-            <button
-              type="button"
-              onClick={() => { setShowForm(false); setFormContent(''); setFormAnchor(''); }}
-              className="rounded-full border border-editorial-border px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-editorial-muted transition-colors hover:text-editorial-ink"
-            >
+            </PillButton>
+            <PillButton variant="secondary" onClick={closeForm}>
               {t('annotations.cancelButton')}
-            </button>
+            </PillButton>
           </div>
         </div>
       )}
@@ -293,7 +278,7 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
         />
       ))}
 
-      {/* Source footnotes — collapsed, shown only when present */}
+      {/* Source footnotes */}
       {footnotes.length > 0 && (
         <>
           <div className="mx-0 my-1 h-px bg-editorial-border/40" />

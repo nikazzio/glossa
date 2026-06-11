@@ -1347,6 +1347,7 @@
     "badgeCount_other": "{{count}} note",
     "emptyNoChunk": "Nessun chunk selezionato.",
     "emptyNoAnnotations": "Nessuna annotazione per questo chunk.",
-    "sourceTitle": "Note sorgente"
+    "sourceTitle": "Note sorgente",
+    "contextMenuAdd": "Aggiungi annotazione"
   }
 }
