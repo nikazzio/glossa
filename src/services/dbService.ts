@@ -8,7 +8,7 @@ import {
 
 let db: Database | null = null;
 const DB_URL = 'sqlite:glossa.db';
-const CURRENT_SCHEMA_VERSION = '2026-06-11-annotation-footnote-marker';
+const CURRENT_SCHEMA_VERSION = '2026-06-06-phrase-memory-extractor';
 
 const RESETTABLE_OBJECTS = [
   'technique_tags',
