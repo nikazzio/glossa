@@ -6,7 +6,6 @@ import {
   MessageSquare,
   NotebookText,
   Pencil,
-  Plus,
   Trash2,
   X,
 } from 'lucide-react';
@@ -218,18 +217,6 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
 
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex flex-col gap-3 px-5 py-5">
-
-      {/* Add button */}
-      {!showForm && (
-        <button
-          type="button"
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 rounded-2xl border border-dashed border-editorial-border px-4 py-2.5 text-sm text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent"
-        >
-          <Plus size={14} />
-          {t('annotations.addButton')}
-        </button>
-      )}
 
       {/* Add form */}
       {showForm && (
