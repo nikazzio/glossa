@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Crosshair, ScanLine, ShieldCheck, RefreshCcw, AlertTriangle, Check, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, Crosshair, NotebookPen, ScanLine, ShieldCheck, RefreshCcw, AlertTriangle, Check, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useChunksStore } from '../../stores/chunksStore';
@@ -190,7 +190,7 @@ function ChunkAuditCard({
   resolvedKeys, rejectedKeys, onToggleResolved, onToggleRejected,
 }: ChunkAuditCardProps) {
   const { t } = useTranslation();
-  const { focusIssueInChunk, clearFocusedIssue, focusedIssueQuery, setSelectedChunkId, setViewMode } = useUiStore();
+  const { focusIssueInChunk, clearFocusedIssue, focusedIssueQuery, setSelectedChunkId, setViewMode, setPendingAnnotationAnchor, setShowChunkDrawer } = useUiStore();
   const { judgeResult } = chunk;
   const isError = judgeResult.status === 'error';
   const issues = judgeResult.issues;
@@ -297,6 +297,23 @@ function ChunkAuditCard({
                             {t('audit.locateInText')}
                           </button>
                         ) : null}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setViewMode('document');
+                            setSelectedChunkId(chunk.id);
+                            setPendingAnnotationAnchor({
+                              chunkId: chunk.id,
+                              text: issue.phrase ?? '',
+                              content: `[Audit] ${issue.description}`,
+                            });
+                            setShowChunkDrawer(true, 'notes');
+                          }}
+                          title={t('annotations.createFromIssue')}
+                          className="rounded-full border border-editorial-border p-1 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                        >
+                          <NotebookPen size={10} />
+                        </button>
                         <button
                           type="button"
                           onClick={() => {

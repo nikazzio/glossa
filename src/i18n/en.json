@@ -1348,6 +1348,7 @@
     "emptyNoChunk": "No chunk selected.",
     "emptyNoAnnotations": "No annotations for this chunk.",
     "sourceTitle": "Source footnotes",
-    "contextMenuAdd": "Add annotation"
+    "contextMenuAdd": "Add annotation",
+    "createFromIssue": "Create annotation from this issue"
   }
 }

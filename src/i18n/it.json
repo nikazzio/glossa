@@ -1348,6 +1348,7 @@
     "emptyNoChunk": "Nessun chunk selezionato.",
     "emptyNoAnnotations": "Nessuna annotazione per questo chunk.",
     "sourceTitle": "Note sorgente",
-    "contextMenuAdd": "Aggiungi annotazione"
+    "contextMenuAdd": "Aggiungi annotazione",
+    "createFromIssue": "Crea annotazione da questo problema"
   }
 }

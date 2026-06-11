@@ -173,7 +173,7 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
     if (pendingAnnotationAnchor.chunkId !== currentChunk.id) return;
     setFormAnchor(pendingAnnotationAnchor.text);
     setFormType('comment');
-    setFormContent('');
+    setFormContent(pendingAnnotationAnchor.content ?? '');
     setShowForm(true);
     setPendingAnnotationAnchor(null);
   }, [pendingAnnotationAnchor, currentChunk, setPendingAnnotationAnchor]);

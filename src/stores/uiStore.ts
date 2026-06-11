@@ -41,10 +41,10 @@ interface UiState {
   focusedIssueRequestId: number;
   traceStageId: string | null;
   activePanel: ActivePanel;
-  pendingAnnotationAnchor: { chunkId: string; text: string } | null;
+  pendingAnnotationAnchor: { chunkId: string; text: string; content?: string } | null;
 
   setTraceStageId: (id: string | null) => void;
-  setPendingAnnotationAnchor: (anchor: { chunkId: string; text: string } | null) => void;
+  setPendingAnnotationAnchor: (anchor: { chunkId: string; text: string; content?: string } | null) => void;
   setViewMode: (mode: ViewMode) => void;
   setDocumentLayout: (layout: DocumentLayoutPreference) => void;
   setDocumentPaneFocus: (focus: DocumentPaneFocus) => void;

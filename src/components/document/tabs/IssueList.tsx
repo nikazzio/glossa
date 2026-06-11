@@ -6,6 +6,7 @@ import {
   Crosshair,
   Link2,
   MessageCircle,
+  NotebookPen,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useUiStore } from '../../../stores/uiStore';
@@ -25,6 +26,8 @@ export function IssueList({ issues, chunkId, onSelectChunk, onFocusIssue, resolv
   const { t } = useTranslation();
   const focusedIssueQuery = useUiStore((s) => s.focusedIssueQuery);
   const clearFocusedIssue = useUiStore((s) => s.clearFocusedIssue);
+  const setPendingAnnotationAnchor = useUiStore((s) => s.setPendingAnnotationAnchor);
+  const setShowChunkDrawer = useUiStore((s) => s.setShowChunkDrawer);
   return (
     <div className="mt-4 space-y-3">
       {issues.map((issue, index) => {
@@ -65,6 +68,21 @@ export function IssueList({ issues, chunkId, onSelectChunk, onFocusIssue, resolv
                     <Crosshair size={13} />
                   </IconButton>
                 )}
+                <IconButton
+                  size="sm"
+                  tone="default"
+                  onClick={() => {
+                    setPendingAnnotationAnchor({
+                      chunkId,
+                      text: issue.phrase ?? '',
+                      content: `[Audit] ${issue.description}`,
+                    });
+                    setShowChunkDrawer(true, 'notes');
+                  }}
+                  title={t('annotations.createFromIssue')}
+                >
+                  <NotebookPen size={12} />
+                </IconButton>
                 {onToggleResolved && (
                   <button
                     type="button"
