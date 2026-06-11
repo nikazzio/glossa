@@ -13,6 +13,7 @@ import type { LucideIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAnnotationsStore } from '../../../stores/annotationsStore';
+import { useChunksStore } from '../../../stores/chunksStore';
 import { useProjectStore } from '../../../stores/projectStore';
 import { useUiStore } from '../../../stores/uiStore';
 import { IconButton, PillButton } from '../../ui';
@@ -101,7 +102,7 @@ function AnnotationCard({
         <textarea
           value={editContent}
           onChange={(e) => setEditContent(e.target.value)}
-          rows={3}
+          rows={5}
           className="w-full resize-none rounded-xl border border-editorial-border bg-editorial-textbox px-3 py-2 text-sm leading-relaxed text-editorial-ink placeholder:text-editorial-muted/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
         />
         <input
@@ -143,11 +144,18 @@ function AnnotationCard({
         </IconButton>
       </div>
       <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-editorial-ink">{annotation.content}</p>
-      {annotation.anchorText && (
-        <p className="mt-2 truncate rounded-lg bg-editorial-bg/60 px-2 py-1 text-[11px] italic text-editorial-muted">
-          «{annotation.anchorText}»
-        </p>
-      )}
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        {annotation.footnoteMarker && (
+          <span className="rounded-md bg-editorial-accent/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-editorial-accent">
+            {annotation.footnoteMarker}
+          </span>
+        )}
+        {annotation.anchorText && (
+          <span className="truncate rounded-lg bg-editorial-bg/60 px-2 py-0.5 text-[11px] italic text-editorial-muted">
+            «{annotation.anchorText}»
+          </span>
+        )}
+      </div>
     </article>
   );
 }
@@ -156,6 +164,7 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
   const { t } = useTranslation();
   const activePipelineId = useProjectStore((s) => s.activePipelineId);
   const { annotationsByChunkId, addAnnotation, updateAnnotation, deleteAnnotation } = useAnnotationsStore();
+  const updateChunkDraft = useChunksStore((s) => s.updateChunkDraft);
   const pendingAnnotationAnchor = useUiStore((s) => s.pendingAnnotationAnchor);
   const setPendingAnnotationAnchor = useUiStore((s) => s.setPendingAnnotationAnchor);
 
@@ -189,12 +198,27 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
 
   const handleAdd = async () => {
     if (!formContent.trim() || !activePipelineId) return;
+    const anchor = formAnchor.trim();
+    const content = formContent.trim();
+    const markerN = annotations.length + 1;
+    const footnoteMarker = anchor ? `[^a${markerN}]` : undefined;
+
+    if (anchor && footnoteMarker) {
+      const base = currentChunk.translationDisplayText;
+      const idx = base.indexOf(anchor);
+      const withMarker = idx !== -1
+        ? base.slice(0, idx + anchor.length) + footnoteMarker + base.slice(idx + anchor.length)
+        : base;
+      updateChunkDraft(currentChunk.id, `${withMarker}\n\n${footnoteMarker}: ${content}`);
+    }
+
     await addAnnotation({
       chunkId: currentChunk.id,
       pipelineId: activePipelineId,
       type: formType,
-      content: formContent.trim(),
-      anchorText: formAnchor.trim() || null,
+      content,
+      anchorText: anchor || null,
+      footnoteMarker,
       sequence: annotations.length,
     });
     setFormContent('');
