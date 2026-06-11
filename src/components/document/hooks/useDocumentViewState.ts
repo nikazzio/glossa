@@ -123,12 +123,16 @@ export function useDocumentViewState() {
   const annotationsByChunkId = useAnnotationsStore((s) => s.annotationsByChunkId);
   const currentChunkAnnotations = currentChunk ? (annotationsByChunkId.get(currentChunk.id) ?? []) : [];
   const annotationAnchors = useMemo<AnnotationAnchor[]>(
-    () => currentChunkAnnotations
-      .filter((a) => !!a.anchorText?.trim())
-      .map((a) => ({ text: a.anchorText!, type: a.type })),
-    // key on serialized text to avoid identity-change noise
+    () => [
+      ...currentChunkAnnotations
+        .filter((a) => !!a.anchorText?.trim())
+        .map((a) => ({ text: a.anchorText!, type: a.type })),
+      ...currentChunkAnnotations
+        .filter((a) => !!a.footnoteMarker)
+        .map((a) => ({ text: a.footnoteMarker!, type: a.type })),
+    ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [currentChunkAnnotations.map((a) => `${a.id}:${a.anchorText ?? ''}`).join('|')],
+    [currentChunkAnnotations.map((a) => `${a.id}:${a.anchorText ?? ''}:${a.footnoteMarker ?? ''}`).join('|')],
   );
 
   const sourceHighlight = useGlossaryHighlight(

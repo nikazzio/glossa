@@ -343,112 +343,46 @@ export function MarkdownEditor({
   return (
     <div className={fillHeight ? 'flex flex-col flex-1 min-h-0' : 'space-y-3'}>
       <div className={`sticky top-0 z-20 rounded-2xl border border-editorial-border/70 bg-[#fcfaf5]/95 px-3 py-3 shadow-sm backdrop-blur${fillHeight ? ' shrink-0' : ''}`}>
-        <div className="flex items-center justify-between gap-3">
-          <IconButton
-            size="md"
-            onClick={() => setToolbarOpen((open) => !open)}
-            title={toolbarOpen ? t('editor.hideToolbar') : t('editor.showToolbar')}
-            ariaPressed={toolbarOpen}
-            tooltipSide="bottom"
-          >
-            {toolbarOpen ? <PanelTopClose size={15} /> : <PanelTopOpen size={15} />}
+        <div className="flex items-center gap-1.5">
+          {markdownEnabled && (
+            <IconButton
+              size="md"
+              onClick={() => setToolbarOpen((open) => !open)}
+              title={toolbarOpen ? t('editor.hideToolbar') : t('editor.showToolbar')}
+              ariaPressed={toolbarOpen}
+              tooltipSide="bottom"
+            >
+              {toolbarOpen ? <PanelTopClose size={15} /> : <PanelTopOpen size={15} />}
+            </IconButton>
+          )}
+          {markdownEnabled && <span className="mx-0.5 h-4 w-px shrink-0 bg-editorial-border/50" aria-hidden="true" />}
+          <ToolbarButton active={mode === 'write'} onClick={() => setMode('write')} title={t('editor.write')} ariaLabel={t('editor.write')}>
+            <Pencil size={15} />
+          </ToolbarButton>
+          <ToolbarButton active={mode === 'preview'} onClick={() => setMode('preview')} title={t('editor.preview')} ariaLabel={t('editor.preview')}>
+            <Eye size={15} />
+          </ToolbarButton>
+          {markdownEnabled && (
+            <ToolbarButton active={mode === 'split'} onClick={() => setMode('split')} title={t('editor.split')} ariaLabel={t('editor.split')}>
+              <Columns2 size={15} />
+            </ToolbarButton>
+          )}
+          <div className="flex-1" />
+          <ToolbarButton active={false} onClick={() => setTextSizeStep((s) => Math.max(0, s - 1))} title={t('editor.textSmall')} ariaLabel={t('editor.textSmall')} disabled={textSizeStep === 0}>
+            <Minus size={15} />
+          </ToolbarButton>
+          <ToolbarButton active={textSizeStep === DEFAULT_TEXT_SIZE_STEP} onClick={() => setTextSizeStep(DEFAULT_TEXT_SIZE_STEP)} title={t('editor.textMedium')} ariaLabel={t('editor.textMedium')}>
+            <Type size={15} />
+          </ToolbarButton>
+          <ToolbarButton active={false} onClick={() => setTextSizeStep((s) => Math.min(TEXT_SIZE_STEPS.length - 1, s + 1))} title={t('editor.textLarge')} ariaLabel={t('editor.textLarge')} disabled={textSizeStep === TEXT_SIZE_STEPS.length - 1}>
+            <Plus size={15} />
+          </ToolbarButton>
+          <IconButton size="md" tone="muted" onClick={() => setShowHelp(true, 'features')} title={t('editor.markdownHelpTooltip')} tooltipSide="bottom">
+            <CircleHelp size={15} />
           </IconButton>
-          {/* Mode indicators — non-interactive, show current editor state */}
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1" aria-hidden="true">
-              <span className={`rounded-full p-1.5 transition-colors ${mode === 'write' ? 'bg-editorial-accent text-white' : 'text-editorial-border'}`}>
-                <Pencil size={11} />
-              </span>
-              <span className={`rounded-full p-1.5 transition-colors ${mode === 'preview' ? 'bg-editorial-accent text-white' : 'text-editorial-border'}`}>
-                <Eye size={11} />
-              </span>
-              {markdownEnabled ? (
-                <span className={`rounded-full p-1.5 transition-colors ${mode === 'split' ? 'bg-editorial-accent text-white' : 'text-editorial-border'}`}>
-                  <Columns2 size={11} />
-                </span>
-              ) : null}
-            </div>
-            {toolbarOpen ? (
-              <IconButton
-                size="md"
-                tone="muted"
-                onClick={() => setShowHelp(true, 'features')}
-                title={t('editor.markdownHelpTooltip')}
-                tooltipSide="bottom"
-              >
-                <CircleHelp size={15} />
-              </IconButton>
-            ) : null}
-          </div>
         </div>
-        {toolbarOpen ? (
-          <>
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-b border-editorial-border/60 pb-3">
-          <div className="flex items-center gap-2">
-            <ToolbarButton
-              active={mode === 'write'}
-              onClick={() => setMode('write')}
-              title={t('editor.write')}
-              ariaLabel={t('editor.write')}
-            >
-              <Pencil size={15} />
-            </ToolbarButton>
-            <ToolbarButton
-              active={mode === 'preview'}
-              onClick={() => setMode('preview')}
-              title={t('editor.preview')}
-              ariaLabel={t('editor.preview')}
-            >
-              <Eye size={15} />
-            </ToolbarButton>
-            {markdownEnabled && (
-              <ToolbarButton
-                active={mode === 'split'}
-                onClick={() => setMode('split')}
-                title={t('editor.split')}
-                ariaLabel={t('editor.split')}
-              >
-                <Columns2 size={15} />
-              </ToolbarButton>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-[0.24em] text-editorial-muted">
-              {t('editor.textSize')}
-            </span>
-            <div className="flex items-center gap-1">
-              <ToolbarButton
-                active={false}
-                onClick={() => setTextSizeStep((s) => Math.max(0, s - 1))}
-                title={t('editor.textSmall')}
-                ariaLabel={t('editor.textSmall')}
-                disabled={textSizeStep === 0}
-              >
-                <Minus size={15} />
-              </ToolbarButton>
-              <ToolbarButton
-                active={textSizeStep === DEFAULT_TEXT_SIZE_STEP}
-                onClick={() => setTextSizeStep(DEFAULT_TEXT_SIZE_STEP)}
-                title={t('editor.textMedium')}
-                ariaLabel={t('editor.textMedium')}
-              >
-                <Type size={15} />
-              </ToolbarButton>
-              <ToolbarButton
-                active={false}
-                onClick={() => setTextSizeStep((s) => Math.min(TEXT_SIZE_STEPS.length - 1, s + 1))}
-                title={t('editor.textLarge')}
-                ariaLabel={t('editor.textLarge')}
-                disabled={textSizeStep === TEXT_SIZE_STEPS.length - 1}
-              >
-                <Plus size={15} />
-              </ToolbarButton>
-            </div>
-          </div>
-        </div>
-
-        {markdownEnabled ? (
-          <div className="flex flex-wrap items-center gap-2 pt-3">
+        {toolbarOpen && markdownEnabled ? (
+          <div className="mt-3 flex flex-wrap items-center gap-2 pt-3 border-t border-editorial-border/60">
             <ToolbarLabel>{t('editor.inlineLabel')}</ToolbarLabel>
             <CommandButton
               active={activeCommands.bold}
@@ -535,8 +469,6 @@ export function MarkdownEditor({
               <ListOrdered size={15} />
             </CommandButton>
           </div>
-        ) : null}
-          </>
         ) : null}
       </div>
       {mode === 'write' && !readOnly && highlightHtml ? (

@@ -135,7 +135,7 @@ export function IndexTab({ panelId, labelledBy, chunks, currentChunkId, stuckChu
                     const colorClass = isActive ? 'text-white/80'
                       : hasProblem ? 'text-editorial-accent'
                       : hasDoubt   ? 'text-editorial-warning'
-                      : 'text-editorial-charcoal';
+                      : 'text-sky-500';
                     return (
                       <div className={`mt-1.5 flex items-center gap-1 text-xs font-bold uppercase tracking-[0.18em] ${colorClass}`}>
                         <NotebookText size={11} />

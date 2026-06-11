@@ -164,7 +164,7 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
   const { t } = useTranslation();
   const activePipelineId = useProjectStore((s) => s.activePipelineId);
   const { annotationsByChunkId, addAnnotation, updateAnnotation, deleteAnnotation } = useAnnotationsStore();
-  const updateChunkDraft = useChunksStore((s) => s.updateChunkDraft);
+  const updateChunkTranslationForce = useChunksStore((s) => s.updateChunkTranslationForce);
   const pendingAnnotationAnchor = useUiStore((s) => s.pendingAnnotationAnchor);
   const setPendingAnnotationAnchor = useUiStore((s) => s.setPendingAnnotationAnchor);
 
@@ -201,7 +201,7 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
     const anchor = formAnchor.trim();
     const content = formContent.trim();
     const markerN = annotations.length + 1;
-    const footnoteMarker = anchor ? `[^a${markerN}]` : undefined;
+    const footnoteMarker = anchor ? `[a${markerN}]` : undefined;
 
     if (anchor && footnoteMarker) {
       const base = currentChunk.translationDisplayText;
@@ -209,7 +209,7 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
       const withMarker = idx !== -1
         ? base.slice(0, idx + anchor.length) + footnoteMarker + base.slice(idx + anchor.length)
         : base;
-      updateChunkDraft(currentChunk.id, `${withMarker}\n\n${footnoteMarker}: ${content}`);
+      updateChunkTranslationForce(currentChunk.id, `${withMarker}\n\n---\n\n${footnoteMarker}: ${content}`);
     }
 
     await addAnnotation({

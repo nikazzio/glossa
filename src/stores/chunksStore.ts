@@ -143,6 +143,7 @@ interface ChunksState {
   setChunkStagePromptInfo: (chunkId: string, stageId: string, promptInfo: PromptInfo) => void;
   updateChunkJudge: (chunkId: string, result: JudgeResult) => void;
   updateChunkDraft: (chunkId: string, draft: string) => void;
+  updateChunkTranslationForce: (chunkId: string, draft: string) => void;
   toggleChunkTranslationLock: (chunkId: string) => void;
   updateChunkStatus: (chunkId: string, status: ChunkStatus) => void;
   updateChunkOriginalText: (chunkId: string, text: string) => void;
@@ -278,6 +279,13 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
     set((state) => ({
       chunks: updateSingleChunk(state.chunks, chunkId, (chunk) =>
         chunk.translationLocked ? chunk : updateChunkTranslationFields(chunk, draft),
+      ),
+    })),
+
+  updateChunkTranslationForce: (chunkId, draft) =>
+    set((state) => ({
+      chunks: updateSingleChunk(state.chunks, chunkId, (chunk) =>
+        updateChunkTranslationFields(chunk, draft),
       ),
     })),
 
