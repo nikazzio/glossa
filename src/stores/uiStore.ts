@@ -109,7 +109,11 @@ export const useUiStore = create<UiState>()(
       setDocumentLayout: (layout) => set({ documentLayout: layout }),
       setDocumentPaneFocus: (focus) => set({ documentPaneFocus: focus }),
       setSyncScrollEnabled: (enabled) => set({ syncScrollEnabled: enabled }),
-      setSelectedChunkId: (chunkId) => set({ selectedChunkId: chunkId }),
+      setSelectedChunkId: (chunkId) =>
+        set((state) => ({
+          selectedChunkId: chunkId,
+          ...(chunkId !== state.focusedChunkId && { focusedIssueQuery: null, focusedSourceIssueQuery: null }),
+        })),
       setShowSettings: (show) =>
         set((state) =>
           show

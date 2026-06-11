@@ -190,7 +190,7 @@ function ChunkAuditCard({
   resolvedKeys, rejectedKeys, onToggleResolved, onToggleRejected,
 }: ChunkAuditCardProps) {
   const { t } = useTranslation();
-  const { focusIssueInChunk, setSelectedChunkId, setViewMode } = useUiStore();
+  const { focusIssueInChunk, clearFocusedIssue, focusedIssueQuery, setSelectedChunkId, setViewMode } = useUiStore();
   const { judgeResult } = chunk;
   const isError = judgeResult.status === 'error';
   const issues = judgeResult.issues;
@@ -266,6 +266,7 @@ function ChunkAuditCard({
                 const issueKey = `${chunk.id}-${i}`;
                 const isResolved = resolvedKeys.has(issueKey);
                 const isRejected = rejectedKeys.has(issueKey);
+                const isActive = !!issue.phrase && focusedIssueQuery === issue.phrase;
                 return (
                   <li key={i} className={`space-y-1 transition-opacity ${isResolved || isRejected ? 'opacity-40' : ''}`}>
                     <div className="flex items-center justify-between gap-2">
@@ -281,12 +282,16 @@ function ChunkAuditCard({
                           <button
                             type="button"
                             onClick={() => {
-                              setViewMode('document');
-                              setSelectedChunkId(chunk.id);
-                              focusIssueInChunk(chunk.id, issue.phrase);
+                              if (isActive) {
+                                clearFocusedIssue();
+                              } else {
+                                setViewMode('document');
+                                setSelectedChunkId(chunk.id);
+                                focusIssueInChunk(chunk.id, issue.phrase);
+                              }
                             }}
                             title={t('audit.locateInTextTooltip')}
-                            className="flex items-center gap-1 rounded-full border border-editorial-border px-2 py-1 text-[9px] font-bold uppercase tracking-[0.18em] text-editorial-muted transition-colors hover:text-editorial-ink"
+                            className={`flex items-center gap-1 rounded-full border px-2 py-1 text-[9px] font-bold uppercase tracking-[0.18em] transition-colors ${isActive ? 'border-editorial-accent text-editorial-accent' : 'border-editorial-border text-editorial-muted hover:text-editorial-ink'}`}
                           >
                             <Crosshair size={10} />
                             {t('audit.locateInText')}
@@ -294,7 +299,10 @@ function ChunkAuditCard({
                         ) : null}
                         <button
                           type="button"
-                          onClick={() => onToggleResolved(issueKey)}
+                          onClick={() => {
+                            if (isActive) clearFocusedIssue();
+                            onToggleResolved(issueKey);
+                          }}
                           title={isResolved ? t('audit.markUnresolved') : t('audit.markResolved')}
                           aria-label={isResolved ? t('audit.markUnresolved') : t('audit.markResolved')}
                           className={`rounded-full border p-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
@@ -307,7 +315,10 @@ function ChunkAuditCard({
                         </button>
                         <button
                           type="button"
-                          onClick={() => onToggleRejected(issueKey)}
+                          onClick={() => {
+                            if (isActive) clearFocusedIssue();
+                            onToggleRejected(issueKey);
+                          }}
                           title={isRejected ? t('audit.markUnrejected') : t('audit.markRejected')}
                           aria-label={isRejected ? t('audit.markUnrejected') : t('audit.markRejected')}
                           className={`rounded-full border p-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${

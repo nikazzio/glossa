@@ -68,7 +68,10 @@ export function IssueList({ issues, chunkId, onSelectChunk, onFocusIssue, resolv
                 {onToggleResolved && (
                   <button
                     type="button"
-                    onClick={() => onToggleResolved(issueKey)}
+                    onClick={() => {
+                      if (isActive) clearFocusedIssue();
+                      onToggleResolved(issueKey);
+                    }}
                     title={isResolved ? t('audit.markUnresolved') : t('audit.markResolved')}
                     aria-label={isResolved ? t('audit.markUnresolved') : t('audit.markResolved')}
                     className={`rounded-full border p-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
