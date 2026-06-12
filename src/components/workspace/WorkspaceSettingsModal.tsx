@@ -259,7 +259,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                         onClick={() => void handleRegenerateEmbeddings()}
                         disabled={isRegenerating || !activeWorkspace || embeddingModel === activeWorkspace?.embeddingModel}
                         title={t('workspace.regenerateEmbeddings')}
-                        tooltipSide="left"
+                        tooltipSide="top"
                       >
                         {isRegenerating
                           ? <Loader2 size={13} className="animate-spin" />
