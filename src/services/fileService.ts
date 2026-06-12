@@ -143,24 +143,6 @@ export async function exportBilingual(
   return true;
 }
 
-export async function exportMarkdownTranslation(
-  chunks: TranslationChunk[],
-  annotations?: ChunkAnnotations,
-): Promise<boolean> {
-  const path = await save({
-    title: 'Export markdown translation',
-    defaultPath: 'translation.md',
-    filters: [{ name: 'Markdown', extensions: ['md'] }],
-  });
-  if (!path) return false;
-
-  const content = chunks.map((chunk) => chunkExportText(chunk, annotations)).join('\n\n');
-
-  await writeTextFile(path, content);
-  return true;
-}
-
-
 // ── Helpers ──────────────────────────────────────────────────────────
 
 function buildPlainText(chunks: TranslationChunk[], separator = '\n\n'): string {

@@ -147,14 +147,6 @@ export async function assignGlossaryToProject(
   });
 }
 
-export async function getProjectGlossaryId(projectId: string): Promise<string | null> {
-  const rows = await select<{ glossary_id: string }>(
-    'SELECT glossary_id FROM project_glossaries WHERE project_id = $1 LIMIT 1',
-    [projectId],
-  );
-  return rows[0]?.glossary_id ?? null;
-}
-
 export async function importEntriesFromCsv(
   glossaryId: string,
   csvText: string,

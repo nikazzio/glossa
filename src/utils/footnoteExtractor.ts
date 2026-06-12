@@ -32,12 +32,23 @@ function parseBracketedSuperscript(marker: string): number | null {
  * renderer can link them to their definitions. Used to feed the source pane
  * preview valid GFM (its stored display text carries superscripts, not GFM).
  * `[^id]` markers already present are left untouched.
+ *
+ * Accepts the chunk's Footnote array so the display number encoded in each
+ * marker (e.g. [¹⁰] → 10) is mapped back to the correct id regardless of
+ * how many footnotes the chunk contains. The previous Map<string,string>
+ * approach used insertion-order position (1, 2, …) which broke whenever the
+ * chunk's local count was smaller than the document-level display number.
  */
-export function restoreFootnoteMarkers(text: string, footnoteMap: Map<string, string>): string {
-  const idByNumber = new Map([...footnoteMap.keys()].map((id, index) => [index + 1, id]));
+export function restoreFootnoteMarkers(text: string, footnotes: Footnote[]): string {
+  const idByDisplayNum = new Map(
+    footnotes.flatMap((fn) => {
+      const num = parseBracketedSuperscript(fn.marker);
+      return num !== null ? ([[num, fn.id]] as [number, string][]) : [];
+    }),
+  );
   return text.replace(BRACKETED_SUPERSCRIPT_RE, (marker) => {
     const num = parseBracketedSuperscript(marker);
-    const id = num !== null ? idByNumber.get(num) : undefined;
+    const id = num !== null ? idByDisplayNum.get(num) : undefined;
     return id ? `[^${id}]` : marker;
   });
 }

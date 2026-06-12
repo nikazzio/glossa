@@ -222,8 +222,7 @@ export function DocumentView({
   const sourcePreviewValue = (() => {
     const footnotes = currentChunk?.footnotes;
     if (!footnotes?.length) return undefined;
-    const footnoteMap = new Map(footnotes.map((fn) => [fn.id, fn.text]));
-    const body = restoreFootnoteMarkers(currentChunk!.sourceDisplayText, footnoteMap);
+    const body = restoreFootnoteMarkers(currentChunk!.sourceDisplayText, footnotes);
     const defs = footnotes.map((fn) => `[^${fn.id}]: ${fn.text}`).join('\n\n');
     return `${body}\n\n${defs}`;
   })();
