@@ -421,6 +421,7 @@ export function PipelineSidebar({
                       onClick={pipelineMode === 'test' ? onDryRun : onRunPipeline}
                       disabled={isProcessing || !hasDocument}
                       title={`${t('pipeline.beginPipeline')} (Ctrl+↵)`}
+                      ariaLabel={t('pipeline.beginPipeline')}
                       tooltipSide="right"
                       className="h-20 w-20 border-editorial-charcoal bg-editorial-charcoal text-white hover:bg-editorial-charcoal/85"
                     >
@@ -601,6 +602,7 @@ export function PipelineSidebar({
                   tone={showConfigDrawer ? 'accent' : 'default'}
                   onClick={() => setShowConfigDrawer(!showConfigDrawer)}
                   title={`${t('pipeline.configurePipeline')} (Ctrl+,)`}
+                  ariaLabel={t('pipeline.configurePipeline')}
                   tooltipSide="right"
                   className={`h-11 w-11 ${showConfigDrawer ? '' : 'bg-editorial-textbox'}`}
                   ariaPressed={showConfigDrawer}
@@ -680,6 +682,7 @@ export function PipelineSidebar({
                 size="md"
                 onClick={() => setShowExportDialog(true)}
                 title={`${t('header.exportLabel')} (Ctrl+E)`}
+                ariaLabel={t('header.exportLabel')}
               >
                 <FileOutput size={14} />
               </IconButton>

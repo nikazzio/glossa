@@ -102,6 +102,7 @@ export function Header() {
           <IconButton
             onClick={() => void handleSave()}
             title={`${t('header.saveAll')} (Ctrl+S)`}
+            ariaLabel={t('header.saveAll')}
             tooltipSide="bottom"
             tone={savingAll ? 'running' : 'default'}
             aria-busy={savingAll}
@@ -140,6 +141,7 @@ export function Header() {
           <IconButton
             onClick={() => setShowHelp(true)}
             title={`${t('help.title')} (Ctrl+H)`}
+            ariaLabel={t('help.title')}
             tooltipSide="bottom"
           >
             <HelpCircle size={16} />
