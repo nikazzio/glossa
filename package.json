@@ -57,7 +57,6 @@
     "@types/papaparse": "^5.5.2",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "autoprefixer": "^10.4.21",
     "jsdom": "^29.0.2",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",

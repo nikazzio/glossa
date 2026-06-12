@@ -221,68 +221,11 @@ fn keyring_entry(provider: &str) -> Result<keyring::Entry, String> {
     keyring::Entry::new(KEYRING_SERVICE, &username).map_err(|e| format!("Keyring error: {e}"))
 }
 
-fn legacy_store_path(app: &AppHandle) -> Result<PathBuf, String> {
-    let config_dir = app
-        .path()
-        .app_config_dir()
-        .map_err(|e| format!("Failed to resolve app config directory: {e}"))?;
-    Ok(config_dir.join("api-keys.json"))
-}
-
-fn legacy_store_key(provider: &str) -> String {
-    format!("{}_API_KEY", provider.to_uppercase())
-}
-
-fn read_legacy_api_key_from_store_value(
-    value: &serde_json::Value,
-    provider: &str,
-) -> Option<String> {
-    let store_key = legacy_store_key(provider);
-    value[store_key.as_str()]
-        .as_str()
-        .map(str::trim)
-        .filter(|key| !key.is_empty())
-        .map(ToOwned::to_owned)
-}
-
-fn migrate_from_legacy_store(app: &AppHandle, provider: &str) -> Result<String, String> {
-    let store_path = legacy_store_path(app)?;
-    if !store_path.exists() {
-        return Err("Legacy store not found".into());
-    }
-
-    let contents =
-        fs::read_to_string(&store_path).map_err(|e| format!("Failed to read legacy store: {e}"))?;
-    let mut parsed: serde_json::Value = serde_json::from_str(&contents)
-        .map_err(|e| format!("Failed to parse legacy store: {e}"))?;
-
-    let key = read_legacy_api_key_from_store_value(&parsed, provider)
-        .ok_or_else(|| "Provider key not present in legacy store".to_string())?;
-
-    if let Ok(entry) = keyring_entry(provider) {
-        entry
-            .set_password(&key)
-            .map_err(|e| format!("Failed to migrate legacy key to keychain: {e}"))?;
-    }
-
-    if let Some(object) = parsed.as_object_mut() {
-        object.remove(&legacy_store_key(provider));
-        let serialized = serde_json::to_string_pretty(&parsed)
-            .map_err(|e| format!("Failed to rewrite legacy store: {e}"))?;
-        fs::write(&store_path, serialized)
-            .map_err(|e| format!("Failed to update legacy store: {e}"))?;
-    }
-
-    log::info!("Migrated {provider} API key from legacy store to OS keychain");
-    Ok(key)
-}
-
 /// Retrieve the API key for a provider, trying (in order):
 /// 1. OS keychain
 /// 2. In-memory cache
-/// 3. Legacy file store (migrates to keychain on success)
-/// 4. Encrypted local file store (used when keychain is unavailable)
-/// 5. Environment variable
+/// 3. Encrypted local file store (used when keychain is unavailable)
+/// 4. Environment variable
 pub fn get_api_key(app: &AppHandle, provider: &str) -> Result<String, String> {
     // Ollama doesn't need an API key
     if provider == "ollama" {
@@ -307,15 +250,7 @@ pub fn get_api_key(app: &AppHandle, provider: &str) -> Result<String, String> {
         }
     }
 
-    // 2. Migrate from legacy store if present
-    if let Ok(key) = migrate_from_legacy_store(app, provider) {
-        if let Ok(mut cache) = API_KEY_CACHE.lock() {
-            cache.insert(provider.to_string(), key.clone());
-        }
-        return Ok(key);
-    }
-
-    // 3. Try encrypted file store (used when keychain was unavailable on this machine)
+    // 2. Try encrypted file store (used when keychain was unavailable on this machine)
     if let Ok(key) = file_store_get(app, provider) {
         if let Ok(mut cache) = API_KEY_CACHE.lock() {
             cache.insert(provider.to_string(), key.clone());
@@ -323,7 +258,7 @@ pub fn get_api_key(app: &AppHandle, provider: &str) -> Result<String, String> {
         return Ok(key);
     }
 
-    // 4. Fallback to environment variable
+    // 3. Fallback to environment variable
     let env_key = match provider {
         "gemini" => "GEMINI_API_KEY",
         "openai" => "OPENAI_API_KEY",
@@ -409,24 +344,4 @@ mod tests {
         assert!(!should_fallback_to_file_store(&keyring::Error::NoEntry));
     }
 
-    #[test]
-    fn reads_legacy_api_key_from_store_file_contents() {
-        let value = serde_json::json!({
-            "OPENAI_API_KEY": "legacy-secret",
-            "GEMINI_API_KEY": "other-secret"
-        });
-
-        let parsed = read_legacy_api_key_from_store_value(&value, "openai");
-        assert_eq!(parsed, Some("legacy-secret".into()));
-    }
-
-    #[test]
-    fn ignores_empty_legacy_api_keys() {
-        let value = serde_json::json!({
-            "OPENAI_API_KEY": ""
-        });
-
-        let parsed = read_legacy_api_key_from_store_value(&value, "openai");
-        assert_eq!(parsed, None);
-    }
 }

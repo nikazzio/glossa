@@ -194,10 +194,6 @@ export function flattenMarkdownToText(markdown: string): string {
   return lines.join('\n').trim();
 }
 
-export function markdownToSourceText(markdown: string, markdownAware: boolean): string {
-  return markdownAware ? markdown : markdown.trim();
-}
-
 function normalizeMarkdown(markdown: string): string {
   return markdown.replace(/\r\n/g, '\n').trim();
 }
