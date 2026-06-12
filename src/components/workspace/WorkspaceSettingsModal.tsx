@@ -244,31 +244,32 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                         {t('workspace.embeddingModel')}
                       </p>
                     </div>
-                    <select
-                      value={embeddingModel}
-                      onChange={(e) => setEmbeddingModel(e.target.value as EmbeddingModel)}
-                      className="w-full rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-2 text-xs font-mono text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                    >
-                      <option value="text-embedding-3-small">text-embedding-3-small</option>
-                      <option value="text-embedding-3-large">text-embedding-3-large</option>
-                    </select>
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={embeddingModel}
+                        onChange={(e) => setEmbeddingModel(e.target.value as EmbeddingModel)}
+                        className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-2 text-xs font-mono text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                      >
+                        <option value="text-embedding-3-small">text-embedding-3-small</option>
+                        <option value="text-embedding-3-large">text-embedding-3-large</option>
+                      </select>
+                      <IconButton
+                        size="md"
+                        tone={embeddingModel !== activeWorkspace?.embeddingModel ? 'accent' : 'default'}
+                        onClick={() => void handleRegenerateEmbeddings()}
+                        disabled={isRegenerating || !activeWorkspace || embeddingModel === activeWorkspace?.embeddingModel}
+                        title={t('workspace.regenerateEmbeddings')}
+                        tooltipSide="left"
+                      >
+                        {isRegenerating
+                          ? <Loader2 size={13} className="animate-spin" />
+                          : <RefreshCcw size={13} />}
+                      </IconButton>
+                    </div>
                     {embeddingModel !== activeWorkspace?.embeddingModel && (
-                      <div className="flex items-center gap-3 rounded-lg border border-editorial-accent/30 bg-editorial-accent/8 px-3 py-2">
-                        <p className="flex-1 text-sm leading-relaxed text-editorial-accent [text-wrap:pretty]">
-                          {t('workspace.embeddingChangeWarning')}
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => void handleRegenerateEmbeddings()}
-                          disabled={isRegenerating || !activeWorkspace}
-                          className="flex shrink-0 items-center gap-1.5 rounded-full border border-editorial-accent/50 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-editorial-accent transition-colors hover:bg-editorial-accent/10 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          {isRegenerating
-                            ? <Loader2 size={11} className="animate-spin" />
-                            : <RefreshCcw size={11} />}
-                          {t('workspace.regenerateEmbeddings')}
-                        </button>
-                      </div>
+                      <p className="rounded-lg border border-editorial-accent/30 bg-editorial-accent/8 px-3 py-2 text-sm leading-relaxed text-editorial-accent [text-wrap:pretty]">
+                        {t('workspace.embeddingChangeWarning')}
+                      </p>
                     )}
                   </div>
                   <MemoryExtractorSettings
