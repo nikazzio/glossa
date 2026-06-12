@@ -40,6 +40,7 @@ interface UiState {
   focusedIssueQuery: string | null;
   focusedSourceIssueQuery: string | null;
   focusedIssueRequestId: number;
+  focusIsAnnotation: boolean;
   traceStageId: string | null;
   activePanel: ActivePanel;
   pendingAnnotationAnchor: { chunkId: string; text: string; content?: string } | null;
@@ -63,7 +64,9 @@ interface UiState {
   setSearchQuery: (query: string) => void;
   setFocusedChunkId: (chunkId: string | null) => void;
   focusIssueInChunk: (chunkId: string, query?: string | null, sourceQuery?: string | null) => void;
+  focusAnnotationInChunk: (chunkId: string, query: string) => void;
   clearFocusedIssue: () => void;
+  clearAnnotationFocus: () => void;
   setActivePanel: (panel: ActivePanel, tab?: InsightsDrawerTab | ChunkDrawerTab | HelpSection) => void;
 }
 
@@ -97,6 +100,7 @@ export const useUiStore = create<UiState>()(
       focusedIssueQuery: null,
       focusedSourceIssueQuery: null,
       focusedIssueRequestId: 0,
+      focusIsAnnotation: false,
       traceStageId: null,
       activePanel: null,
       pendingAnnotationAnchor: null,
@@ -200,8 +204,18 @@ export const useUiStore = create<UiState>()(
           focusedIssueQuery: query ?? null,
           focusedSourceIssueQuery: sourceQuery ?? null,
           focusedIssueRequestId: state.focusedIssueRequestId + 1,
+          focusIsAnnotation: false,
         })),
-      clearFocusedIssue: () => set({ focusedIssueQuery: null, focusedSourceIssueQuery: null }),
+      focusAnnotationInChunk: (chunkId, query) =>
+        set((state) => ({
+          focusedChunkId: chunkId,
+          focusedIssueQuery: query,
+          focusedSourceIssueQuery: null,
+          focusedIssueRequestId: state.focusedIssueRequestId + 1,
+          focusIsAnnotation: true,
+        })),
+      clearFocusedIssue: () => set({ focusedIssueQuery: null, focusedSourceIssueQuery: null, focusIsAnnotation: false }),
+      clearAnnotationFocus: () => set({ focusedIssueQuery: null, focusIsAnnotation: false }),
       setTraceStageId: (id) => set({ traceStageId: id }),
       setPendingAnnotationAnchor: (anchor) => set({ pendingAnnotationAnchor: anchor }),
       setActivePanel: (panel, tab) =>

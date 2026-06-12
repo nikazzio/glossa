@@ -24,6 +24,7 @@ export function useDocumentViewState() {
     searchQuery,
     focusedIssueQuery,
     focusedSourceIssueQuery,
+    focusIsAnnotation,
   } = useUiStore();
 
   const pipelineTestChunkCount = useConfigStore((state) => state.pipelineTestChunkCount);
@@ -148,7 +149,7 @@ export function useDocumentViewState() {
     showHighlight && paneFocus !== 'source' ? config.glossary : [],
     'translation',
     translationEffectiveSearch,
-    focusedIssueQuery ?? '',
+    focusIsAnnotation ? '' : (focusedIssueQuery ?? ''),
     annotationAnchors,
   );
 

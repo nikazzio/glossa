@@ -135,6 +135,13 @@ function AnnotationCard({
 
   return (
     <article className={`rounded-2xl border ${meta.borderClass} ${meta.bgClass} px-4 py-3`}>
+      {annotation.anchorText && (
+        <div className="mb-2 flex flex-wrap items-center gap-1.5">
+          <span className="truncate rounded-lg bg-editorial-bg/60 px-2 py-0.5 text-xs italic text-editorial-muted">
+            «{annotation.anchorText}»
+          </span>
+        </div>
+      )}
       <div className="mb-2 flex items-center gap-2">
         {number !== null && (
           <span className="shrink-0 font-display text-sm font-bold text-editorial-accent" title={`[^${number}]`}>
@@ -172,13 +179,6 @@ function AnnotationCard({
           </>
         )}
       </div>
-      {annotation.anchorText && (
-        <div className="mb-2 flex flex-wrap items-center gap-1.5">
-          <span className="truncate rounded-lg bg-editorial-bg/60 px-2 py-0.5 text-xs italic text-editorial-muted">
-            «{annotation.anchorText}»
-          </span>
-        </div>
-      )}
       <p className="whitespace-pre-wrap text-sm leading-relaxed text-editorial-ink">{annotation.content}</p>
     </article>
   );
@@ -190,7 +190,10 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
   const { annotationsByChunkId, addAnnotation, updateAnnotation, deleteAnnotation } = useAnnotationsStore();
   const pendingAnnotationAnchor = useUiStore((s) => s.pendingAnnotationAnchor);
   const setPendingAnnotationAnchor = useUiStore((s) => s.setPendingAnnotationAnchor);
-  const focusIssueInChunk = useUiStore((s) => s.focusIssueInChunk);
+  const focusAnnotationInChunk = useUiStore((s) => s.focusAnnotationInChunk);
+  const focusIsAnnotation = useUiStore((s) => s.focusIsAnnotation);
+  const focusedIssueQuery = useUiStore((s) => s.focusedIssueQuery);
+  const clearAnnotationFocus = useUiStore((s) => s.clearAnnotationFocus);
 
   const [showForm, setShowForm] = useState(false);
   const [formType, setFormType] = useState<AnnotationType>('comment');
@@ -258,8 +261,13 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
   };
 
   const handleDelete = async (id: string) => {
+    const ann = annotations.find((a) => a.id === id);
     await deleteAnnotation(id, currentChunk.id);
     if (editingId === id) setEditingId(null);
+    // Only clear the annotation-locate focus — never touch an active audit focus.
+    if (focusIsAnnotation && ann?.anchorText && ann.anchorText === focusedIssueQuery) {
+      clearAnnotationFocus();
+    }
   };
 
   const closeForm = () => { setShowForm(false); setFormContent(''); setFormAnchor(''); };
@@ -280,6 +288,7 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
           </div>
           <TypeSelector selected={formType} onSelect={setFormType} />
           <textarea
+            autoFocus
             value={formContent}
             onChange={(e) => setFormContent(e.target.value)}
             placeholder={t('annotations.placeholder')}
@@ -311,7 +320,7 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
           onCancelEdit={() => setEditingId(null)}
           onSave={(updates) => handleSaveEdit(ann.id, updates)}
           onDelete={() => handleDelete(ann.id)}
-          onLocate={ann.anchorText ? () => focusIssueInChunk(currentChunk.id, ann.anchorText) : null}
+          onLocate={ann.anchorText ? () => focusAnnotationInChunk(currentChunk.id, ann.anchorText!) : null}
           number={numberById.get(ann.id) ?? null}
         />
       ))}
