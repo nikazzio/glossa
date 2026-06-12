@@ -81,7 +81,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
     if (!activeWorkspace) return;
     setIsRegenerating(true);
     try {
-      const count = await regenerateAllEmbeddings(activeWorkspace.id, activeWorkspace.embeddingModel);
+      const count = await regenerateAllEmbeddings(activeWorkspace.id, embeddingModel);
       toast.success(t('workspace.embeddingsRegenerated', { count }));
     } catch (err: unknown) {
       toast.error(t('workspace.embeddingsRegenerateFailed'), {
@@ -244,14 +244,28 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                         {t('workspace.embeddingModel')}
                       </p>
                     </div>
-                    <select
-                      value={embeddingModel}
-                      onChange={(e) => setEmbeddingModel(e.target.value as EmbeddingModel)}
-                      className="w-full rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-2 text-xs font-mono text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                    >
-                      <option value="text-embedding-3-small">text-embedding-3-small</option>
-                      <option value="text-embedding-3-large">text-embedding-3-large</option>
-                    </select>
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={embeddingModel}
+                        onChange={(e) => setEmbeddingModel(e.target.value as EmbeddingModel)}
+                        className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-2 text-xs font-mono text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                      >
+                        <option value="text-embedding-3-small">text-embedding-3-small</option>
+                        <option value="text-embedding-3-large">text-embedding-3-large</option>
+                      </select>
+                      <IconButton
+                        size="md"
+                        tone="default"
+                        onClick={() => void handleRegenerateEmbeddings()}
+                        disabled={isRegenerating || !activeWorkspace || embeddingModel === activeWorkspace?.embeddingModel}
+                        title={t('workspace.regenerateEmbeddings')}
+                        tooltipSide="top"
+                      >
+                        {isRegenerating
+                          ? <Loader2 size={13} className="animate-spin" />
+                          : <RefreshCcw size={13} />}
+                      </IconButton>
+                    </div>
                     {embeddingModel !== activeWorkspace?.embeddingModel && (
                       <p className="rounded-lg border border-editorial-accent/30 bg-editorial-accent/8 px-3 py-2 text-sm leading-relaxed text-editorial-accent [text-wrap:pretty]">
                         {t('workspace.embeddingChangeWarning')}
@@ -270,32 +284,6 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                     onPromptChange={setMemoryExtractorPrompt}
                   />
 
-                  <div className="rounded-[20px] border border-editorial-border bg-editorial-bg/70 px-5 py-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1.5">
-                          <RefreshCcw size={11} className="shrink-0 text-editorial-accent" />
-                          <p className="text-xs font-sans uppercase tracking-[0.22em] text-editorial-muted">
-                            {t('workspace.regenerateEmbeddings')}
-                          </p>
-                        </div>
-                        <p className="text-xs leading-relaxed text-editorial-muted [text-wrap:pretty]">
-                          {t('workspace.regenerateEmbeddingsHint', { model: activeWorkspace?.embeddingModel })}
-                        </p>
-                      </div>
-                      <IconButton
-                        size="md"
-                        title={t('workspace.regenerateEmbeddings')}
-                        onClick={() => void handleRegenerateEmbeddings()}
-                        disabled={isRegenerating || !activeWorkspace}
-                        tooltipSide="left"
-                      >
-                        {isRegenerating
-                          ? <Loader2 size={13} className="animate-spin" />
-                          : <RefreshCcw size={13} />}
-                      </IconButton>
-                    </div>
-                  </div>
                 </div>
               )}
 

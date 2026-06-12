@@ -86,6 +86,7 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
   const selectedChunkId = useUiStore((state) => state.selectedChunkId);
   const setSelectedChunkId = useUiStore((state) => state.setSelectedChunkId);
   const focusIssueInChunk = useUiStore((state) => state.focusIssueInChunk);
+  const clearFocusedIssue = useUiStore((state) => state.clearFocusedIssue);
   const chunks = useChunksStore((state) => state.chunks);
   const isProcessing = useChunksStore((state) => state.isProcessing);
   const allChunksTranslated = chunks.length > 0 && chunks.every((c) => c.currentDraft?.trim());
@@ -104,6 +105,11 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
       setDocumentDrawerTab('index');
     }
   }, [hasGlossary, documentDrawerTab, setDocumentDrawerTab]);
+
+  // Clear audit phrase highlight when switching tabs or chunks.
+  useEffect(() => {
+    clearFocusedIssue();
+  }, [chunkDrawerTab, selectedChunkId, clearFocusedIssue]);
 
   const docTabButtonRefs = useRef<Partial<Record<InsightsDrawerTab, HTMLButtonElement | null>>>({});
   const chunkTabButtonRefs = useRef<Partial<Record<ChunkDrawerTab, HTMLButtonElement | null>>>({});

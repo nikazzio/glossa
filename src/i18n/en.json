@@ -617,7 +617,7 @@
     "descriptionLabel": "Description",
     "namePlaceholder": "Workspace name",
     "descriptionPlaceholder": "Workspace description",
-    "embeddingChangeWarning": "Changing the embedding model requires regenerating existing memory embeddings. Save only if you really want to change model.",
+    "embeddingChangeWarning": "Model changed. Regenerate embeddings to apply.",
     "regenerateEmbeddings": "Regenerate all embeddings",
     "regenerateEmbeddingsHint": "Re-embeds all memory entries with the current model ({{model}}).",
     "embeddingsRegenerated": "{{count}} entries successfully re-embedded.",
