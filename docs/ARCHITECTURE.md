@@ -27,6 +27,7 @@
 | `stores/workspaceStore.ts` | workspaces[], activeWorkspace, loading/isLoaded | Boundary traduzioni: switch/create/update workspace, un workspace attivo per volta |
 | `stores/phraseMemoryStore.ts` | matchesByChunk, enabledMatchIds, jobStatus, searchStatus | Match Phrase Memory per chunk; match trovati read-only finché non selezionati |
 | `stores/operationLogStore.ts` | entries[], currentProjectId | Max 2000 in-memory, resto in DB |
+| `stores/annotationsStore.ts` | annotationsByChunkId Map<chunkId, Annotation[]> | CRUD annotations per chunk; load/add/update/delete con persistenza SQLite immediata |
 | `stores/uiStore.ts` | selectedChunkId, highlightsEnabled, highlightColors, searchQuery, activePanel, showSettings/Help/ConfigDrawer/DocumentDrawer/ChunkDrawer | UI-only state. highlightsEnabled + highlightColors persisted. activePanel enum sincronizzato con i boolean panel. |
 | `stores/configStore.ts` | pipelineMode, pipelineTestChunkCount, ollamaStatus, ollamaModels, ollamaBaseUrl, newPipelineInit, maxPipelines, chunkPresetShort/Medium/Long | Config app. pipelineTestChunkCount, ollamaBaseUrl, newPipelineInit, maxPipelines, chunkPreset* persisted. ollamaStatus/Models transient. |
 | `stores/libraryStore.ts` | glossaries[], dictionaries[], selectedDictionary | — |
@@ -69,6 +70,8 @@
 | `components/layout/Header.tsx` | Project/pipeline selector |
 | `components/workspace/WorkspaceHome.tsx` | Dashboard workspace: switch/create/config workspace, progetti, configurazione extractor Phrase Memory |
 | `components/workspace/WorkspaceWizard.tsx` | Primo avvio: crea il primo workspace reale |
+| `components/document/AnnotationContextMenu.tsx` | Menu contestuale (clic destro sul testo della traduzione) → «Aggiungi annotazione» con anchor pre-compilato |
+| `utils/annotationMarkdown.ts` | `composeAnnotatedMarkdown()` — compone vista GFM con marcatori `[^a1]` e definizioni a piè di pagina; non modifica il draft salvato |
 
 ---
 
@@ -303,6 +306,12 @@ operation_logs
   level, scope, message, detail
   chunk_id, stage_id, meta JSON, phase, duration_ms
   idx: (project_id, at)
+
+annotations
+  id TEXT PK, chunk_id, pipeline_id FK (ON DELETE CASCADE)
+  type TEXT ('comment'|'doubt'|'problem'|'approved'), content TEXT
+  anchor_text TEXT nullable, sequence INT, created_at
+  idx: (pipeline_id, chunk_id)
 
 app_settings
   key PK, value

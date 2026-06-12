@@ -982,7 +982,12 @@
       "footnotesTitle": "Note a piè di pagina",
       "footnotesDesc": "Quando importi un documento DOCX o Markdown con note a piè di pagina, Glossa le separa completamente dal processo di traduzione. Il modello riceve solo il corpo del testo, senza il contenuto delle note e senza i marcatori inline — testo pulito. Il documento originale, visibile nell'editor, mantiene marcatori e note esattamente come apparivano. Il testo delle note viene salvato con il progetto. Dopo la traduzione dovrai gestire le note manualmente: decidere quali riportare, adattarne il testo alla lingua di destinazione e posizionarle dove ha senso nel testo tradotto, che può differire dalla posizione nell'originale.",
       "footnotesTipTitle": "Perché le note non vengono tradotte automaticamente",
-      "footnotesTipDesc": "In una traduzione, una nota a piè di pagina spesso non può essere collocata nella stessa posizione dell'originale, e il suo testo va riscritto più che tradotto letteralmente. Tenerle fuori dalla pipeline impedisce al modello di prendere decisioni arbitrarie su posizione e formulazione. Rimani tu a decidere."
+      "footnotesTipDesc": "In una traduzione, una nota a piè di pagina spesso non può essere collocata nella stessa posizione dell'originale, e il suo testo va riscritto più che tradotto letteralmente. Tenerle fuori dalla pipeline impedisce al modello di prendere decisioni arbitrarie su posizione e formulazione. Rimani tu a decidere.",
+
+      "annotationsTitle": "Annotazioni ai chunk",
+      "annotationsDesc": "La scheda Note nel pannello Insights consente di allegare note strutturate ai singoli chunk. Ogni annotazione ha un tipo (Commento, Dubbio, Problema, Approvato), un testo descrittivo e una frase ancora opzionale che la collega a un passaggio specifico della traduzione. Fai clic destro su qualsiasi testo nel pannello di traduzione e scegli «Aggiungi annotazione» per crearne una con la frase selezionata già precompilata come ancora. I problemi rilevati dall'audit hanno anche un pulsante diretto per convertirli in annotazione con ancora e contenuto già compilati. Le annotazioni sono salvate per pipeline nel database e sopravvivono al ricaricamento del progetto.",
+      "annotationsTipTitle": "Note a piè di pagina nella vista renderizzata",
+      "annotationsTipDesc": "Quando un'annotazione ha una frase ancora, Glossa inserisce dinamicamente un marcatore GFM ([^a1], [^a2], …) subito dopo quella frase nella vista renderizzata della traduzione. La definizione della nota appare in fondo al chunk. Il testo della traduzione salvato non viene mai modificato — le note esistono solo nel rendering e scompaiono se l'annotazione viene eliminata."
     },
     "context": {
       "title": "Contesto e caching",

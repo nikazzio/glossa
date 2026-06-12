@@ -350,13 +350,13 @@ function aggregateRunForCategory(
   const last = categoryEntries[categoryEntries.length - 1];
   const lastUsage = readUsage(last);
   const stats = emptyStats();
-  for (const e of categoryEntries) {
-    accumulate(stats, e, readUsage(e), pricingOverrides);
-  }
+  accumulate(stats, last, lastUsage, pricingOverrides);
   return {
     category,
     at: last.at,
     chunkId: last.chunkId,
+    stageId: last.stageId,
+    stageName: stageNameFromEntry(last),
     provider: lastUsage.provider,
     model: lastUsage.model,
     stats: finalize(stats),
