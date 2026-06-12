@@ -5,7 +5,7 @@ import type {
   FootnoteDefinition,
   TranslationChunk,
 } from '../types';
-import { assignChunkFootnotes, extractFootnotes, replaceMarkersWithSuperscripts } from './footnoteExtractor';
+import { assignChunkFootnotes, extractFootnotes } from './footnoteExtractor';
 
 export interface SourceDocumentState {
   displayText: string;
@@ -58,14 +58,12 @@ export function buildFootnoteMap(footnotes: FootnoteDefinition[]): Map<string, s
 }
 
 /**
- * Converts [^id] raw markdown footnote markers in chunk processing text to
- * bracketed superscript form ([¹], [²], …) for display. The processing text
- * (sent to the LLM) keeps the raw [^id] form; only the display text shown in
- * the editor uses superscripts, consistent with how the UI highlights them.
+ * Returns the chunk processing text for display, keeping [^id] markdown
+ * footnote markers in their original form. Both source and translation pages
+ * use the same [^id] format, highlighted identically via hl-footnote-marker.
  */
-export function deriveChunkDisplayText(processingText: string, footnotes: FootnoteDefinition[]): string {
-  if (footnotes.length === 0) return processingText;
-  return replaceMarkersWithSuperscripts(processingText, buildFootnoteMap(footnotes));
+export function deriveChunkDisplayText(processingText: string, _footnotes: FootnoteDefinition[]): string {
+  return processingText;
 }
 
 export function buildChunkFootnotes(

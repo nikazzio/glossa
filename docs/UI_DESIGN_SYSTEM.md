@@ -141,6 +141,33 @@ Non reintrodurre il pattern `<div className="flex items-center gap-1.5">` manual
 
 ---
 
+### ToggleRow — riga con toggle slide
+
+Per opzioni on/off in pannelli di configurazione, usa `ToggleRow` dentro un contenitore `rounded-[16px] border border-editorial-border/60 bg-editorial-textbox/10 px-4 py-4`. Struttura standard: `SectionLabel` sopra il box, `ToggleRow` dentro.
+
+```tsx
+import { SectionLabel, ToggleRow } from '../ui';
+
+<div className="space-y-3">
+  <SectionLabel icon={SomeIcon} label={t('chiave.sezione')} />
+  <div className="space-y-3 rounded-[16px] border border-editorial-border/60 bg-editorial-textbox/10 px-4 py-4">
+    <ToggleRow
+      icon={<SomeIcon size={13} />}
+      label={t('chiave.opzione')}
+      checked={value}
+      onChange={() => setValue(!value)}
+    />
+  </div>
+</div>
+```
+
+Regole:
+- Non usare `<input type="checkbox">` raw nei pannelli config: usa sempre `ToggleRow`.
+- Il toggle slide (`bg-editorial-accent` attivo, `bg-editorial-border` inattivo) è lo standard visivo condiviso tra tutti i pannelli.
+- `disabled` disabilita sia il click che l'aspetto visivo (opacity-40).
+
+---
+
 ### PillButton — comandi testuali compatti
 
 Usa `PillButton` per comandi testuali compatti dentro dashboard, modali e toolbar secondarie.

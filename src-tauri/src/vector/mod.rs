@@ -8,6 +8,10 @@ use tauri::Manager;
 /// Must be called once at startup before opening any connection.
 /// After registration every rusqlite::Connection will have vec_* functions available.
 pub fn register_vec_extension() {
+    // SAFETY: sqlite_vec::sqlite3_vec_init is a valid SQLite auto-extension entry point
+    // whose C signature matches what sqlite3_auto_extension expects. The *const () cast
+    // erases the type at the FFI boundary; transmute restores the concrete function pointer
+    // type required by the API. This follows the documented sqlite-vec integration pattern.
     #[allow(clippy::missing_transmute_annotations)]
     unsafe {
         sqlite3_auto_extension(Some(std::mem::transmute(

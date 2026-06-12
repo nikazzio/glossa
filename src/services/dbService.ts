@@ -17,13 +17,13 @@ const RESETTABLE_OBJECTS = [
   'phrase_memory',
   'phrase_memory_presets',
   'operation_logs',
+  'annotations',
   'translations',
   'macro_blocks',
   'project_glossaries',
   'glossary_entries',
   'glossaries',
   'pipelines',
-  'pipeline_configs',
   'prompt_templates',
   'projects',
   'workspaces',
@@ -50,16 +50,6 @@ function serializeWrite<T>(fn: () => Promise<T>): Promise<T> {
 // Whitelist of (table.column) pairs allowed to be added via migration.
 // Any call with values outside this set is rejected to prevent SQL injection.
 const ALLOWED_MIGRATIONS = new Set([
-  'pipeline_configs.words_per_chunk',
-  'pipeline_configs.source_text',
-  'pipeline_configs.source_display_text',
-  'pipeline_configs.source_processing_text',
-  'pipeline_configs.source_footnotes',
-  'pipeline_configs.document_format',
-  'pipeline_configs.render_profile',
-  'pipeline_configs.markdown_aware',
-  'pipeline_configs.experimental_import',
-  'pipeline_configs.review_provider_options',
   'projects.view_mode',
   'projects.source_display_text',
   'projects.source_processing_text',
@@ -81,21 +71,12 @@ const ALLOWED_MIGRATIONS = new Set([
   'translations.translation_processing_text',
   'translations.pipeline_id',
   'prompt_templates.context',
-  'pipeline_configs.persona',
-  'pipeline_configs.custom_source_language',
-  'pipeline_configs.custom_target_language',
-  'pipeline_configs.run_in_progress',
-  'pipeline_configs.run_status',
-  'pipeline_configs.last_run_config',
-  'pipeline_configs.blob_budget_tokens',
-  'pipeline_configs.blob_overlap',
   'translations.blob_id',
   'translations.blob_order',
   'translations.blob_reference_chunk_ids',
   'operation_logs.phase',
   'operation_logs.duration_ms',
   'operation_logs.detail_kind',
-  'pipeline_configs.pipeline_mode',
   'pipelines.pipeline_mode',
   'pipelines.use_chunking',
   'pipelines.words_per_chunk',
@@ -118,10 +99,19 @@ const ALLOWED_MIGRATIONS = new Set([
   'pipelines.phrase_memory_max_results',
 ]);
 
+const VALID_COLUMN_DEFINITION = /^(INTEGER|TEXT|REAL|BLOB|NUMERIC)(\s+NOT\s+NULL)?(\s+DEFAULT\s+('[^']*'|NULL|-?\d+(\.\d+)?))?$/i;
+
+export function validateColumnDefinition(definition: string): void {
+  if (!VALID_COLUMN_DEFINITION.test(definition)) {
+    throw new Error(`[dbService] Invalid column definition: "${definition}"`);
+  }
+}
+
 export async function ensureColumn(table: string, column: string, definition: string): Promise<void> {
   if (!ALLOWED_MIGRATIONS.has(`${table}.${column}`)) {
     throw new Error(`[dbService] ensureColumn: migration not allowed for "${table}.${column}"`);
   }
+  validateColumnDefinition(definition);
   const conn = await getDb();
   const columns = await conn.select<Array<{ name: string }>>(`PRAGMA table_info(${table})`);
   if (columns.some((existing) => existing.name === column)) {
@@ -221,43 +211,7 @@ export async function initDatabase(): Promise<void> {
     )
   `);
 
-  await conn.execute(`
-    CREATE TABLE IF NOT EXISTS pipeline_configs (
-      id TEXT PRIMARY KEY,
-      project_id TEXT REFERENCES projects(id) ON DELETE CASCADE,
-      stages TEXT NOT NULL DEFAULT '[]',
-      judge_prompt TEXT DEFAULT '',
-      judge_model TEXT DEFAULT 'gemini-3-flash-preview',
-      judge_provider TEXT DEFAULT 'gemini',
-      use_chunking INTEGER DEFAULT 1,
-      words_per_chunk INTEGER DEFAULT 0,
-      source_text TEXT DEFAULT '',
-      source_display_text TEXT DEFAULT '',
-      source_processing_text TEXT DEFAULT '',
-      source_footnotes TEXT DEFAULT '[]',
-      document_format TEXT DEFAULT 'plain',
-      render_profile TEXT DEFAULT 'plain-text',
-      markdown_aware INTEGER DEFAULT 0,
-      experimental_import TEXT DEFAULT NULL,
-      review_provider_options TEXT DEFAULT NULL,
-      run_status TEXT DEFAULT 'idle'
-    )
-  `);
-
-  await conn.execute(`
-    DELETE FROM pipeline_configs
-    WHERE rowid NOT IN (
-      SELECT MAX(rowid)
-      FROM pipeline_configs
-      GROUP BY project_id
-    )
-  `);
-  await conn.execute(`
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_pipeline_configs_project_id
-    ON pipeline_configs(project_id)
-  `);
-
-  // pipelines — replaces pipeline_configs: supports multiple pipelines per project.
+  // pipelines — supports multiple pipelines per project.
   // source_display_text / source_processing_text / source_footnotes are nullable:
   // when null the pipeline inherits the project-level source text (v1.0 behaviour).
   // Populate them only when a pipeline carries its own document (future feature).
@@ -359,19 +313,6 @@ export async function initDatabase(): Promise<void> {
     )
   `);
 
-  await ensureColumn('pipeline_configs', 'words_per_chunk', "INTEGER DEFAULT 0");
-  await ensureColumn('pipeline_configs', 'source_text', "TEXT DEFAULT ''");
-  await ensureColumn('pipeline_configs', 'source_display_text', "TEXT DEFAULT ''");
-  await ensureColumn('pipeline_configs', 'source_processing_text', "TEXT DEFAULT ''");
-  await ensureColumn('pipeline_configs', 'source_footnotes', "TEXT DEFAULT '[]'");
-  await ensureColumn('pipeline_configs', 'document_format', "TEXT DEFAULT 'plain'");
-  await ensureColumn('pipeline_configs', 'render_profile', "TEXT DEFAULT 'plain-text'");
-  await ensureColumn('pipeline_configs', 'markdown_aware', 'INTEGER DEFAULT 0');
-  await ensureColumn('pipeline_configs', 'experimental_import', 'TEXT DEFAULT NULL');
-  await ensureColumn('pipeline_configs', 'review_provider_options', 'TEXT DEFAULT NULL');
-  await ensureColumn('pipeline_configs', 'persona', 'TEXT DEFAULT NULL');
-  await ensureColumn('pipeline_configs', 'custom_source_language', 'TEXT DEFAULT NULL');
-  await ensureColumn('pipeline_configs', 'custom_target_language', 'TEXT DEFAULT NULL');
   await ensureColumn('projects', 'view_mode', 'TEXT DEFAULT NULL');
   await ensureColumn('translations', 'position', 'INTEGER DEFAULT NULL');
   await ensureColumn('translations', 'chunk_status', "TEXT DEFAULT 'ready'");
@@ -425,8 +366,6 @@ export async function initDatabase(): Promise<void> {
   await ensureColumn('translations', 'blob_id', 'TEXT DEFAULT NULL');
   await ensureColumn('translations', 'blob_order', 'INTEGER DEFAULT 0');
   await ensureColumn('translations', 'blob_reference_chunk_ids', 'TEXT DEFAULT NULL');
-  await ensureColumn('pipeline_configs', 'blob_budget_tokens', 'INTEGER DEFAULT 0');
-  await ensureColumn('pipeline_configs', 'blob_overlap', 'INTEGER DEFAULT 1');
   await ensureColumn('operation_logs', 'phase', 'TEXT DEFAULT NULL');
   await ensureColumn('operation_logs', 'duration_ms', 'INTEGER DEFAULT NULL');
   await ensureColumn('operation_logs', 'detail_kind', 'TEXT DEFAULT NULL');
@@ -441,42 +380,12 @@ export async function initDatabase(): Promise<void> {
   `);
 
   await ensureColumn('prompt_templates', 'context', "TEXT NOT NULL DEFAULT 'stage'");
-  await ensureColumn('pipeline_configs', 'run_in_progress', 'INTEGER DEFAULT 0');
-  await ensureColumn('pipeline_configs', 'run_status', "TEXT DEFAULT 'idle'");
-  await ensureColumn('pipeline_configs', 'last_run_config', 'TEXT DEFAULT NULL');
-  await ensureColumn('pipeline_configs', 'pipeline_mode', "TEXT DEFAULT 'standard'");
   // Migrate unique index from (name) to (name, context) so stage/audit can share names
   await conn.execute('DROP INDEX IF EXISTS idx_prompt_templates_name');
   await conn.execute(`
     CREATE UNIQUE INDEX IF NOT EXISTS idx_prompt_templates_name_context
     ON prompt_templates(name, context)
   `);
-
-  // Migration: rinomina i glossari legacy "Project glossary proj-xxx" con nome leggibile
-  try {
-    await conn.execute(`
-      UPDATE glossaries SET name = 'Glossario ' || p.name
-      FROM projects p
-      WHERE glossaries.id = 'glossary-' || p.id
-        AND glossaries.name LIKE 'Project glossary%'
-    `);
-  } catch (error) {
-    console.warn('[Glossa] Legacy glossary rename migration failed', error);
-  }
-
-  // Migration: rimuovi glossari fantasma auto-creati per progetto (senza voci)
-  // Questi erano creati automaticamente da saveProjectGlossary ad ogni salvataggio.
-  try {
-    await conn.execute(`
-      DELETE FROM glossaries
-      WHERE id GLOB 'glossary-proj-*'
-        AND NOT EXISTS (
-          SELECT 1 FROM glossary_entries WHERE glossary_id = glossaries.id
-        )
-    `);
-  } catch (error) {
-    console.warn('[Glossa] Ghost glossary cleanup migration failed', error);
-  }
 
   // ── Multi-pipeline migration ─────────────────────────────────────────
 
@@ -514,61 +423,6 @@ export async function initDatabase(): Promise<void> {
   await ensureColumn('pipelines', 'source_processing_text', 'TEXT DEFAULT NULL');
   await ensureColumn('pipelines', 'source_footnotes', 'TEXT DEFAULT NULL');
 
-  // Populate pipelines from pipeline_configs (one-time, idempotent via INSERT OR IGNORE).
-  try {
-    await conn.execute(`
-      INSERT OR IGNORE INTO pipelines (
-        id, project_id, name, source_language, target_language, pipeline_mode,
-        stages, judge_prompt, judge_model, judge_provider,
-        use_chunking, words_per_chunk,
-        review_provider_options, persona, custom_source_language, custom_target_language,
-        blob_budget_tokens, blob_overlap, run_status, last_run_config, run_in_progress
-      )
-      SELECT
-        pc.id, pc.project_id, 'Default', p.source_language, p.target_language,
-        COALESCE(pc.pipeline_mode, 'standard'),
-        pc.stages,
-        COALESCE(pc.judge_prompt, ''), COALESCE(pc.judge_model, ''), COALESCE(pc.judge_provider, ''),
-        COALESCE(pc.use_chunking, 1), COALESCE(pc.words_per_chunk, 0),
-        pc.review_provider_options, pc.persona, pc.custom_source_language, pc.custom_target_language,
-        COALESCE(pc.blob_budget_tokens, 0), COALESCE(pc.blob_overlap, 1),
-        COALESCE(pc.run_status, 'idle'), pc.last_run_config, COALESCE(pc.run_in_progress, 0)
-      FROM pipeline_configs pc
-      JOIN projects p ON p.id = pc.project_id
-    `);
-  } catch (error) {
-    console.warn('[Glossa] Pipeline migration from pipeline_configs failed', error);
-  }
-
-  // Copy source text from pipeline_configs to projects (only where still empty).
-  try {
-    await conn.execute(`
-      UPDATE projects
-      SET
-        source_display_text    = COALESCE((SELECT source_display_text    FROM pipeline_configs WHERE project_id = projects.id), ''),
-        source_processing_text = COALESCE((SELECT source_processing_text FROM pipeline_configs WHERE project_id = projects.id), ''),
-        source_footnotes       = COALESCE((SELECT source_footnotes       FROM pipeline_configs WHERE project_id = projects.id), '[]'),
-        document_format        = COALESCE((SELECT document_format        FROM pipeline_configs WHERE project_id = projects.id), 'plain'),
-        render_profile         = COALESCE((SELECT render_profile         FROM pipeline_configs WHERE project_id = projects.id), 'plain-text'),
-        markdown_aware         = COALESCE((SELECT markdown_aware         FROM pipeline_configs WHERE project_id = projects.id), 0),
-        experimental_import    =          (SELECT experimental_import    FROM pipeline_configs WHERE project_id = projects.id)
-      WHERE source_display_text IS NULL OR source_display_text = ''
-    `);
-  } catch (error) {
-    console.warn('[Glossa] Source text migration to projects failed', error);
-  }
-
-  // Set pipeline_id in translations from the project-to-pipeline mapping.
-  try {
-    await conn.execute(`
-      UPDATE translations
-      SET pipeline_id = (SELECT id FROM pipelines WHERE project_id = translations.project_id LIMIT 1)
-      WHERE pipeline_id IS NULL
-    `);
-  } catch (error) {
-    console.warn('[Glossa] pipeline_id migration in translations failed', error);
-  }
-
   // Unique constraint: translations are unique per (pipeline_id, chunk_id) so two pipelines
   // cannot overwrite each other's rows even if chunk IDs happen to collide.
   try {
@@ -603,19 +457,6 @@ export async function initDatabase(): Promise<void> {
     )
   `);
 
-  for (const col of [
-    "ALTER TABLE workspaces ADD COLUMN memory_extractor_provider TEXT NOT NULL DEFAULT 'openai'",
-    "ALTER TABLE workspaces ADD COLUMN memory_extractor_model TEXT NOT NULL DEFAULT 'gpt-5-nano'",
-    "ALTER TABLE workspaces ADD COLUMN memory_extractor_prompt TEXT NOT NULL DEFAULT ''",
-  ]) {
-    try {
-      await conn.execute(col);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (!msg.includes('duplicate column') && !msg.includes('already exists')) throw err;
-    }
-  }
-
   try {
     await conn.execute(
       `ALTER TABLE projects ADD COLUMN workspace_id TEXT REFERENCES workspaces(id)`
@@ -646,15 +487,6 @@ export async function initDatabase(): Promise<void> {
     )
   `);
 
-  try {
-    await conn.execute(
-      'ALTER TABLE phrase_memory ADD COLUMN confidence REAL NOT NULL DEFAULT 1.0',
-    );
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (!msg.includes('duplicate column') && !msg.includes('already exists')) throw err;
-  }
-
   await conn.execute(`
     CREATE TABLE IF NOT EXISTS source_phrase_embeddings (
       id TEXT PRIMARY KEY,
@@ -665,20 +497,6 @@ export async function initDatabase(): Promise<void> {
       created_at TEXT NOT NULL
     )
   `);
-
-  for (const col of [
-    'ALTER TABLE pipelines ADD COLUMN use_phrase_memory INTEGER NOT NULL DEFAULT 0',
-    'ALTER TABLE pipelines ADD COLUMN auto_search_phrase_memory INTEGER NOT NULL DEFAULT 1',
-    'ALTER TABLE pipelines ADD COLUMN phrase_memory_similarity_threshold REAL NOT NULL DEFAULT 0.75',
-    'ALTER TABLE pipelines ADD COLUMN phrase_memory_max_results INTEGER NOT NULL DEFAULT 10',
-  ]) {
-    try {
-      await conn.execute(col);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (!msg.includes('duplicate column') && !msg.includes('already exists')) throw err;
-    }
-  }
 
   await conn.execute(`
     CREATE TABLE IF NOT EXISTS historical_techniques (
@@ -762,6 +580,23 @@ export async function initDatabase(): Promise<void> {
       DEFAULT_MEMORY_EXTRACTOR_PROMPT,
     ],
   );
+
+  await conn.execute(`
+    CREATE TABLE IF NOT EXISTS annotations (
+      id TEXT PRIMARY KEY,
+      chunk_id TEXT NOT NULL,
+      pipeline_id TEXT NOT NULL REFERENCES pipelines(id) ON DELETE CASCADE,
+      type TEXT NOT NULL DEFAULT 'comment',
+      content TEXT NOT NULL DEFAULT '',
+      anchor_text TEXT DEFAULT NULL,
+      sequence INTEGER NOT NULL DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await conn.execute(`
+    CREATE INDEX IF NOT EXISTS idx_annotations_chunk
+    ON annotations(pipeline_id, chunk_id)
+  `);
 
   console.log('[Glossa] Database initialized');
 }

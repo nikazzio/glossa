@@ -4,9 +4,10 @@ import { usePipelineStore } from '../../../stores/pipelineStore';
 import { useChunksStore } from '../../../stores/chunksStore';
 import { useUiStore } from '../../../stores/uiStore';
 import { useConfigStore } from '../../../stores/configStore';
-import { useGlossaryHighlight, escapeHtml } from '../../../hooks/useGlossaryHighlight';
+import { useAnnotationsStore } from '../../../stores/annotationsStore';
+import { useGlossaryHighlight, escapeHtml, type AnnotationAnchor } from '../../../hooks/useGlossaryHighlight';
 import { useStageDiff } from '../../../hooks/useStageDiff';
-import { highlightSuperscriptMarkersHtml } from '../../../utils/footnoteExtractor';
+import { highlightFootnoteMarkersHtml, highlightSuperscriptMarkersHtml } from '../../../utils/footnoteExtractor';
 
 export function useDocumentViewState() {
   const { t } = useTranslation();
@@ -22,6 +23,8 @@ export function useDocumentViewState() {
     highlightsEnabled,
     searchQuery,
     focusedIssueQuery,
+    focusedSourceIssueQuery,
+    focusIsAnnotation,
   } = useUiStore();
 
   const pipelineTestChunkCount = useConfigStore((state) => state.pipelineTestChunkCount);
@@ -65,7 +68,7 @@ export function useDocumentViewState() {
   const lastStageId = enabledStages[enabledStages.length - 1]?.id ?? '';
   const isEditorialMode = enabledStages.length > 1;
 
-  const deferredSourceText = useDeferredValue(currentChunk?.sourceDisplayText ?? '');
+  const sourceDisplayText = currentChunk?.sourceDisplayText ?? '';
   const effectiveSelectedStageId = selectedStageId || lastStageId;
   const isLastSelected = effectiveSelectedStageId === lastStageId;
   const rawStageContent = isLastSelected
@@ -118,18 +121,36 @@ export function useDocumentViewState() {
   const sourceEffectiveSearch = sourcePaneSearch.trim() || (highlightsEnabled ? searchQuery.trim() : '');
   const translationEffectiveSearch = translationPaneSearch.trim() || (highlightsEnabled ? searchQuery.trim() : '');
 
+  const annotationsByChunkId = useAnnotationsStore((s) => s.annotationsByChunkId);
+  const currentChunkAnnotations = currentChunk ? (annotationsByChunkId.get(currentChunk.id) ?? []) : [];
+  // Resolve each anchor to its first occurrence, sort by reading order and
+  // number the markers [^1]..[^n] — matching the footnote numbers the preview
+  // emits, so the write marker and the rendered footnote agree.
+  const annotationAnchors = useMemo<AnnotationAnchor[]>(
+    () =>
+      currentChunkAnnotations
+        .map((a) => ({ text: a.anchorText?.trim() ?? '', index: deferredStageContent.indexOf(a.anchorText?.trim() ?? '') }))
+        .filter((a) => a.text !== '' && a.index !== -1)
+        .sort((x, y) => x.index - y.index)
+        .map((a, order) => ({ text: a.text, label: `[^${order + 1}]` })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [currentChunkAnnotations.map((a) => `${a.id}:${a.anchorText ?? ''}`).join('|'), deferredStageContent],
+  );
+
   const sourceHighlight = useGlossaryHighlight(
-    paneFocus !== 'translation' ? deferredSourceText : '',
+    paneFocus !== 'translation' ? sourceDisplayText : '',
     showHighlight && paneFocus !== 'translation' ? config.glossary : [],
     'source',
     sourceEffectiveSearch,
+    focusedSourceIssueQuery ?? '',
   );
   const translationHighlight = useGlossaryHighlight(
     paneFocus !== 'source' ? deferredStageContent : '',
     showHighlight && paneFocus !== 'source' ? config.glossary : [],
     'translation',
     translationEffectiveSearch,
-    focusedIssueQuery ?? '',
+    focusIsAnnotation ? '' : (focusedIssueQuery ?? ''),
+    annotationAnchors,
   );
 
   const activeDiffPair = diffPairs.find((pair) => pair.key === diffPairKey) ?? diffPairs[0] ?? null;
@@ -146,13 +167,25 @@ export function useDocumentViewState() {
   const stageDiff = useStageDiff(showDiffMode ? diffTextA : '', showDiffMode ? diffTextB : '');
 
   const sourceHighlightHtml = useMemo(() => {
-    const hasFootnoteMarkers = /\[[⁰¹²³⁴⁵⁶⁷⁸⁹]/.test(deferredSourceText);
+    const hasSuperscriptMarkers = /\[[⁰¹²³⁴⁵⁶⁷⁸⁹]/.test(sourceDisplayText);
+    const hasMarkdownMarkers = /(?<!\\)\[\^[^\]]+\]/.test(sourceDisplayText);
+    const hasFootnoteMarkers = hasSuperscriptMarkers || hasMarkdownMarkers;
     const showGlossary = showHighlight && paneFocus !== 'translation';
     const hasSearch = !!sourceEffectiveSearch && paneFocus !== 'translation';
-    if (!showGlossary && !hasSearch && !hasFootnoteMarkers) return null;
-    const base = showGlossary || hasSearch ? sourceHighlight.html : escapeHtml(deferredSourceText);
-    return hasFootnoteMarkers ? highlightSuperscriptMarkersHtml(base) : base;
-  }, [deferredSourceText, showHighlight, sourceEffectiveSearch, paneFocus, sourceHighlight.html]);
+    const hasAuditFocus = !!focusedSourceIssueQuery;
+    if (!showGlossary && !hasSearch && !hasAuditFocus && !hasFootnoteMarkers) return null;
+    let html = showGlossary || hasSearch || hasAuditFocus ? sourceHighlight.html : escapeHtml(sourceDisplayText);
+    if (hasSuperscriptMarkers) html = highlightSuperscriptMarkersHtml(html);
+    if (hasMarkdownMarkers) html = highlightFootnoteMarkersHtml(html);
+    return html;
+  }, [sourceDisplayText, showHighlight, sourceEffectiveSearch, focusedSourceIssueQuery, paneFocus, sourceHighlight.html]);
+
+  const translationHighlightHtml = useMemo(() => {
+    const showBase =
+      showHighlight || !!translationEffectiveSearch || !!focusedIssueQuery || annotationAnchors.length > 0;
+    if (!showBase || !translationHighlight.html) return null;
+    return translationHighlight.html;
+  }, [showHighlight, translationEffectiveSearch, focusedIssueQuery, annotationAnchors.length, translationHighlight.html]);
 
   return {
     // Layout
@@ -189,6 +222,7 @@ export function useDocumentViewState() {
     showHighlight,
     sourceHighlightHtml,
     translationHighlight,
+    translationHighlightHtml,
     translationEffectiveSearch,
     // Navigation
     setSelectedChunkId,

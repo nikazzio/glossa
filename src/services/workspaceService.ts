@@ -123,33 +123,3 @@ export async function setActiveWorkspaceId(id: string): Promise<void> {
   await setSetting('active_workspace_id', id);
 }
 
-export async function getActiveWorkspace(): Promise<Workspace | null> {
-  const id = await getActiveWorkspaceId();
-  if (!id) return null;
-  const rows = await select<{
-    id: string; name: string; description: string | null;
-    embedding_model: string;
-    memory_extractor_provider: string | null;
-    memory_extractor_model: string | null;
-    memory_extractor_prompt: string | null;
-    created_at: string;
-  }>(
-    `SELECT id, name, description, embedding_model,
-            memory_extractor_provider, memory_extractor_model, memory_extractor_prompt,
-            created_at
-     FROM workspaces WHERE id = $1`,
-    [id],
-  );
-  if (!rows[0]) return null;
-  const r = rows[0];
-  return {
-    id: r.id,
-    name: r.name,
-    description: r.description ?? undefined,
-    embeddingModel: r.embedding_model as EmbeddingModel,
-    memoryExtractorProvider: (r.memory_extractor_provider || DEFAULT_MEMORY_EXTRACTOR_PROVIDER) as ModelProvider,
-    memoryExtractorModel: r.memory_extractor_model || DEFAULT_MEMORY_EXTRACTOR_MODEL,
-    memoryExtractorPrompt: r.memory_extractor_prompt || DEFAULT_MEMORY_EXTRACTOR_PROMPT,
-    createdAt: r.created_at,
-  };
-}

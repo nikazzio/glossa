@@ -33,15 +33,20 @@ interface UiState {
     mismatchTerm: string;
     search: string;
     auditPhrase: string;
+    annotation: string;
   };
   searchQuery: string;
   focusedChunkId: string | null;
   focusedIssueQuery: string | null;
+  focusedSourceIssueQuery: string | null;
   focusedIssueRequestId: number;
+  focusIsAnnotation: boolean;
   traceStageId: string | null;
   activePanel: ActivePanel;
+  pendingAnnotationAnchor: { chunkId: string; text: string; content?: string } | null;
 
   setTraceStageId: (id: string | null) => void;
+  setPendingAnnotationAnchor: (anchor: { chunkId: string; text: string; content?: string } | null) => void;
   setViewMode: (mode: ViewMode) => void;
   setDocumentLayout: (layout: DocumentLayoutPreference) => void;
   setDocumentPaneFocus: (focus: DocumentPaneFocus) => void;
@@ -60,8 +65,10 @@ interface UiState {
   setHighlightColor: (type: keyof UiState['highlightColors'], color: string) => void;
   setSearchQuery: (query: string) => void;
   setFocusedChunkId: (chunkId: string | null) => void;
-  focusIssueInChunk: (chunkId: string, query?: string | null) => void;
+  focusIssueInChunk: (chunkId: string, query?: string | null, sourceQuery?: string | null) => void;
+  focusAnnotationInChunk: (chunkId: string, query: string) => void;
   clearFocusedIssue: () => void;
+  clearAnnotationFocus: () => void;
   setActivePanel: (panel: ActivePanel, tab?: InsightsDrawerTab | ChunkDrawerTab | HelpSection) => void;
 }
 
@@ -89,13 +96,17 @@ export const useUiStore = create<UiState>()(
         mismatchTerm: 'rgba(239,68,68,0.15)',
         search: 'rgba(234,179,8,0.25)',
         auditPhrase: 'rgba(249,115,22,0.25)',
+        annotation: 'rgba(58,122,114,0.25)',
       },
       searchQuery: '',
       focusedChunkId: null,
       focusedIssueQuery: null,
+      focusedSourceIssueQuery: null,
       focusedIssueRequestId: 0,
+      focusIsAnnotation: false,
       traceStageId: null,
       activePanel: null,
+      pendingAnnotationAnchor: null,
 
       setViewMode: (mode) =>
         set((state) => ({
@@ -110,7 +121,11 @@ export const useUiStore = create<UiState>()(
       setDocumentLayout: (layout) => set({ documentLayout: layout }),
       setDocumentPaneFocus: (focus) => set({ documentPaneFocus: focus }),
       setSyncScrollEnabled: (enabled) => set({ syncScrollEnabled: enabled }),
-      setSelectedChunkId: (chunkId) => set({ selectedChunkId: chunkId }),
+      setSelectedChunkId: (chunkId) =>
+        set((state) => ({
+          selectedChunkId: chunkId,
+          ...(chunkId !== state.focusedChunkId && { focusedIssueQuery: null, focusedSourceIssueQuery: null }),
+        })),
       setShowSettings: (show) =>
         set((state) =>
           show
@@ -187,14 +202,26 @@ export const useUiStore = create<UiState>()(
         set((state) => ({ highlightColors: { ...state.highlightColors, [type]: color } })),
       setSearchQuery: (query) => set({ searchQuery: query }),
       setFocusedChunkId: (chunkId) => set({ focusedChunkId: chunkId }),
-      focusIssueInChunk: (chunkId, query) =>
+      focusIssueInChunk: (chunkId, query, sourceQuery) =>
         set((state) => ({
           focusedChunkId: chunkId,
           focusedIssueQuery: query ?? null,
+          focusedSourceIssueQuery: sourceQuery ?? null,
           focusedIssueRequestId: state.focusedIssueRequestId + 1,
+          focusIsAnnotation: false,
         })),
-      clearFocusedIssue: () => set({ focusedIssueQuery: null }),
+      focusAnnotationInChunk: (chunkId, query) =>
+        set((state) => ({
+          focusedChunkId: chunkId,
+          focusedIssueQuery: query,
+          focusedSourceIssueQuery: null,
+          focusedIssueRequestId: state.focusedIssueRequestId + 1,
+          focusIsAnnotation: true,
+        })),
+      clearFocusedIssue: () => set({ focusedIssueQuery: null, focusedSourceIssueQuery: null, focusIsAnnotation: false }),
+      clearAnnotationFocus: () => set({ focusedIssueQuery: null, focusIsAnnotation: false }),
       setTraceStageId: (id) => set({ traceStageId: id }),
+      setPendingAnnotationAnchor: (anchor) => set({ pendingAnnotationAnchor: anchor }),
       setActivePanel: (panel, tab) =>
         set((state) => {
           switch (panel) {
@@ -238,7 +265,7 @@ export const useUiStore = create<UiState>()(
     }),
     {
       name: 'glossa-ui-prefs',
-      version: 5,
+      version: 6,
       migrate: (persisted: unknown, fromVersion: number) => {
         const s = persisted as Record<string, unknown>;
         if (fromVersion < 1) {
@@ -263,6 +290,13 @@ export const useUiStore = create<UiState>()(
         if (fromVersion < 4) {
           s.documentPaneFocus = 'both';
           s.syncScrollEnabled = false;
+        }
+        if (fromVersion < 6) {
+          // Backfill the annotation highlight colour for stores saved before it
+          // existed, so the settings colour picker does not read undefined.
+          const existing = (s.highlightColors ?? {}) as Record<string, string>;
+          if (!existing.annotation) existing.annotation = 'rgba(58,122,114,0.25)';
+          s.highlightColors = existing;
         }
         return s;
       },

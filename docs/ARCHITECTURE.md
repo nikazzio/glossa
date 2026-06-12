@@ -27,6 +27,7 @@
 | `stores/workspaceStore.ts` | workspaces[], activeWorkspace, loading/isLoaded | Boundary traduzioni: switch/create/update workspace, un workspace attivo per volta |
 | `stores/phraseMemoryStore.ts` | matchesByChunk, enabledMatchIds, jobStatus, searchStatus | Match Phrase Memory per chunk; match trovati read-only finché non selezionati |
 | `stores/operationLogStore.ts` | entries[], currentProjectId | Max 2000 in-memory, resto in DB |
+| `stores/annotationsStore.ts` | annotationsByChunkId Map<chunkId, Annotation[]> | CRUD annotations per chunk; load/add/update/delete con persistenza SQLite immediata |
 | `stores/uiStore.ts` | selectedChunkId, highlightsEnabled, highlightColors, searchQuery, activePanel, showSettings/Help/ConfigDrawer/DocumentDrawer/ChunkDrawer | UI-only state. highlightsEnabled + highlightColors persisted. activePanel enum sincronizzato con i boolean panel. |
 | `stores/configStore.ts` | pipelineMode, pipelineTestChunkCount, ollamaStatus, ollamaModels, ollamaBaseUrl, newPipelineInit, maxPipelines, chunkPresetShort/Medium/Long | Config app. pipelineTestChunkCount, ollamaBaseUrl, newPipelineInit, maxPipelines, chunkPreset* persisted. ollamaStatus/Models transient. |
 | `stores/libraryStore.ts` | glossaries[], dictionaries[], selectedDictionary | — |
@@ -69,6 +70,8 @@
 | `components/layout/Header.tsx` | Project/pipeline selector |
 | `components/workspace/WorkspaceHome.tsx` | Dashboard workspace: switch/create/config workspace, progetti, configurazione extractor Phrase Memory |
 | `components/workspace/WorkspaceWizard.tsx` | Primo avvio: crea il primo workspace reale |
+| `components/document/AnnotationContextMenu.tsx` | Menu contestuale (clic destro sul testo della traduzione) → «Aggiungi annotazione» con anchor pre-compilato |
+| `utils/annotationMarkdown.ts` | `composeAnnotatedMarkdown()` — compone vista GFM con marcatori `[^a1]` e definizioni a piè di pagina; non modifica il draft salvato |
 
 ---
 
@@ -110,6 +113,9 @@ usePipeline.runPipeline()
       → provider.call() → HTTP stream
       → eventi stream-token → appendChunkStageContent() (batched RAF)
    c) judge() → updateChunkJudge()
+      → se judgeRefineLoop && rating < 'good': runRefineLoopForChunk()
+         → runStage(refineStage, auditContext=formattedIssues) → updateChunkDraft()
+         → judge() → updateChunkJudge() — ripete max judgeRefineLoopMaxIter (default 2)
    d) coherence() se abilitato → updateChunkCoherence()
   ↓
 5. runStatus = 'completed', saveFullState()
@@ -142,7 +148,7 @@ BLOCK 3 — stage instructions, NON CACHEABLE
 | Stage | Testo primario | Blob sorgente | previous_result | Blob traduzioni |
 |---|---|---|---|---|
 | Translation | chunk sorgente | ✅ | ❌ | ❌ |
-| Refine | chunk sorgente | ✅ | ✅ output translation | ❌ |
+| Refine | chunk sorgente | ✅ | ✅ output translation | ❌ | `audit_context` (opzionale) — findings del judge precedente, iniettato nel user turn |
 | Format | output stage prec. | ❌ **cieco** | ❌ | ❌ |
 | Judge | sorgente + traduzione | ❌ | ❌ | ❌ |
 | Coherence Audit | — | ❌ | ❌ | ✅ blob traduzioni |
@@ -207,8 +213,8 @@ flushPendingTokenBatch() → un solo setState per frame (O(1) chunk update)
 | `src-tauri/src/lib.rs` | Entry point Tauri, registrazione comandi, StreamRegistry state |
 | `src-tauri/src/llm/pipeline.rs` | Comandi Tauri: run_stage, run_stage_stream, judge_translation, run_coherence_for_chunk, preflight_pipeline, compute_blobs, extract_phrase_memory_pairs, cancel_stream |
 | `src-tauri/src/llm/blobs.rs` | Algoritmo assegnazione blob (globale vs finestre) |
-| `src-tauri/src/llm/prompts.rs` | Costruzione prompt 3-block, glossario, markdown rules, persona |
-| `src-tauri/src/llm/provider.rs` | Trait LlmProvider, struct LlmRequest |
+| `src-tauri/src/llm/prompts.rs` | Costruzione prompt 3-block, glossario, markdown rules, persona; `audit_context` iniettato nel user turn dei refine stage (cache-safe) |
+| `src-tauri/src/llm/provider.rs` | Trait LlmProvider, struct LlmRequest (`json_schema_strict: bool` per judge vs json_object per altri) |
 | `src-tauri/src/llm/providers/` | Anthropic (cache breakpoint espliciti), OpenAI (prefix), Gemini (cacheControl + thinking), DeepSeek (reasoning), Ollama (locale) |
 | `src-tauri/src/llm/stream.rs` | HTTP event stream reader, StreamGuard RAII |
 | `src-tauri/src/keystore.rs` | OS credential store per API key |
@@ -301,6 +307,12 @@ operation_logs
   chunk_id, stage_id, meta JSON, phase, duration_ms
   idx: (project_id, at)
 
+annotations
+  id TEXT PK, chunk_id, pipeline_id FK (ON DELETE CASCADE)
+  type TEXT ('comment'|'doubt'|'problem'|'approved'), content TEXT
+  anchor_text TEXT nullable, sequence INT, created_at
+  idx: (pipeline_id, chunk_id)
+
 app_settings
   key PK, value
   — include 'schema_version' (int) usato da backupService per compatibilità backup
@@ -353,4 +365,20 @@ source_phrase_embeddings
 
 ---
 
-*Ultimo aggiornamento: 2026-06-08 — branch chore/hardening-pre-1.0*
+---
+
+## Note di Sicurezza (modello di minaccia: desktop single-user)
+
+### Cache in-memoria delle API key
+
+`keystore.rs` mantiene una `HashMap<String, String>` statica (`API_KEY_CACHE`) che contiene le chiavi API in chiaro per la durata del processo, per evitare accessi ripetuti al keyring di sistema. Le chiavi rimangono nella heap del processo fino alla chiusura dell'app.
+
+**Implicazione**: un attaccante con accesso locale al sistema (malware, processo con privilegi equivalenti) può recuperare le chiavi da un memory dump del processo Glossa. Questo è accettabile nel modello di minaccia dichiarato (desktop single-user, nessun attaccante remoto), ma il comportamento va tenuto presente: non estendere la cache a token o credenziali con vita breve senza rivalutare il rischio.
+
+### Logging in release e RUST_LOG
+
+In release (`!debug_assertions`) il livello di log predefinito è `Info`. `RUST_LOG` viene letto a runtime (`lib.rs`) e può sovrascrivere questo default.
+
+**Implicazione**: impostare `RUST_LOG=debug` o `RUST_LOG=trace` su una build release espone log verbosi, inclusi dettagli delle richieste LLM (provider, modello, timing). Non vengono loggati contenuti di prompt o risposte, ma provider e metadati sì. In un contesto di supporto tecnico, chiedere sempre di verificare che `RUST_LOG` non sia impostato prima di condividere i log.
+
+*Ultimo aggiornamento: 2026-06-11 — branch security/issue-254-hardening*

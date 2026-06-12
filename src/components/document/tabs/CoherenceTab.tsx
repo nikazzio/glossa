@@ -5,7 +5,9 @@ import {
   Loader2,
   ScanLine,
 } from 'lucide-react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useChunksStore } from '../../../stores/chunksStore';
 import { IconButton } from '../../ui';
 import { IssueList } from './IssueList';
 import type { TranslationChunk } from '../../../types';
@@ -25,6 +27,8 @@ export interface CoherenceTabProps {
 
 export function CoherenceTab({ panelId, labelledBy, currentChunk, isProcessing, allChunksTranslated, allChunksLocked, unlockedChunksCount, onSelectChunk, onFocusIssue, onRunCoherenceAudit }: CoherenceTabProps) {
   const { t } = useTranslation();
+  const toggleCoherenceIssueResolved = useChunksStore((s) => s.toggleCoherenceIssueResolved);
+
   const coherence = currentChunk?.coherenceResult;
   const coherenceDisabled = isProcessing || !allChunksTranslated;
   const coherenceTitle = coherenceDisabled && !isProcessing
@@ -32,6 +36,15 @@ export function CoherenceTab({ panelId, labelledBy, currentChunk, isProcessing, 
     : coherence?.status === 'completed' || coherence?.status === 'error'
       ? t('coherence.rerun')
       : t('coherence.runAudit');
+
+  const resolvedKeys = useMemo(
+    () => new Set(coherence?.resolvedIssueKeys ?? []),
+    [coherence?.resolvedIssueKeys],
+  );
+
+  const handleToggleResolved = currentChunk
+    ? (key: string) => toggleCoherenceIssueResolved(currentChunk.id, key)
+    : undefined;
 
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="px-5 py-5">
@@ -76,7 +89,14 @@ export function CoherenceTab({ panelId, labelledBy, currentChunk, isProcessing, 
             <CheckCircle2 size={14} /> {t('coherence.noIssues')}
           </div>
         ) : currentChunk ? (
-          <IssueList issues={coherence.issues} chunkId={currentChunk.id} onSelectChunk={onSelectChunk} onFocusIssue={onFocusIssue} />
+          <IssueList
+            issues={coherence.issues}
+            chunkId={currentChunk.id}
+            onSelectChunk={onSelectChunk}
+            onFocusIssue={onFocusIssue}
+            resolvedKeys={resolvedKeys}
+            onToggleResolved={handleToggleResolved}
+          />
         ) : null}
       </section>
     </div>

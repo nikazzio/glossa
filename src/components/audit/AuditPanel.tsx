@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Crosshair, ScanLine, ShieldCheck, RefreshCcw, AlertTriangle, Check, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, Crosshair, NotebookPen, ScanLine, ShieldCheck, RefreshCcw, AlertTriangle, Check, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useChunksStore } from '../../stores/chunksStore';
@@ -190,7 +190,7 @@ function ChunkAuditCard({
   resolvedKeys, rejectedKeys, onToggleResolved, onToggleRejected,
 }: ChunkAuditCardProps) {
   const { t } = useTranslation();
-  const { focusIssueInChunk, setSelectedChunkId, setViewMode } = useUiStore();
+  const { focusIssueInChunk, clearFocusedIssue, focusedIssueQuery, setSelectedChunkId, setViewMode, setPendingAnnotationAnchor, setShowChunkDrawer } = useUiStore();
   const { judgeResult } = chunk;
   const isError = judgeResult.status === 'error';
   const issues = judgeResult.issues;
@@ -266,6 +266,7 @@ function ChunkAuditCard({
                 const issueKey = `${chunk.id}-${i}`;
                 const isResolved = resolvedKeys.has(issueKey);
                 const isRejected = rejectedKeys.has(issueKey);
+                const isActive = !!issue.phrase && focusedIssueQuery === issue.phrase;
                 return (
                   <li key={i} className={`space-y-1 transition-opacity ${isResolved || isRejected ? 'opacity-40' : ''}`}>
                     <div className="flex items-center justify-between gap-2">
@@ -281,12 +282,16 @@ function ChunkAuditCard({
                           <button
                             type="button"
                             onClick={() => {
-                              setViewMode('document');
-                              setSelectedChunkId(chunk.id);
-                              focusIssueInChunk(chunk.id, issue.phrase);
+                              if (isActive) {
+                                clearFocusedIssue();
+                              } else {
+                                setViewMode('document');
+                                setSelectedChunkId(chunk.id);
+                                focusIssueInChunk(chunk.id, issue.phrase);
+                              }
                             }}
                             title={t('audit.locateInTextTooltip')}
-                            className="flex items-center gap-1 rounded-full border border-editorial-border px-2 py-1 text-[9px] font-bold uppercase tracking-[0.18em] text-editorial-muted transition-colors hover:text-editorial-ink"
+                            className={`flex items-center gap-1 rounded-full border px-2 py-1 text-[9px] font-bold uppercase tracking-[0.18em] transition-colors ${isActive ? 'border-editorial-accent text-editorial-accent' : 'border-editorial-border text-editorial-muted hover:text-editorial-ink'}`}
                           >
                             <Crosshair size={10} />
                             {t('audit.locateInText')}
@@ -294,7 +299,27 @@ function ChunkAuditCard({
                         ) : null}
                         <button
                           type="button"
-                          onClick={() => onToggleResolved(issueKey)}
+                          onClick={() => {
+                            setViewMode('document');
+                            setSelectedChunkId(chunk.id);
+                            setPendingAnnotationAnchor({
+                              chunkId: chunk.id,
+                              text: issue.phrase ?? '',
+                              content: `[Audit] ${issue.description}`,
+                            });
+                            setShowChunkDrawer(true, 'notes');
+                          }}
+                          title={t('annotations.createFromIssue')}
+                          className="rounded-full border border-editorial-border p-1 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                        >
+                          <NotebookPen size={10} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (isActive) clearFocusedIssue();
+                            onToggleResolved(issueKey);
+                          }}
                           title={isResolved ? t('audit.markUnresolved') : t('audit.markResolved')}
                           aria-label={isResolved ? t('audit.markUnresolved') : t('audit.markResolved')}
                           className={`rounded-full border p-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
@@ -307,7 +332,10 @@ function ChunkAuditCard({
                         </button>
                         <button
                           type="button"
-                          onClick={() => onToggleRejected(issueKey)}
+                          onClick={() => {
+                            if (isActive) clearFocusedIssue();
+                            onToggleRejected(issueKey);
+                          }}
                           title={isRejected ? t('audit.markUnrejected') : t('audit.markRejected')}
                           aria-label={isRejected ? t('audit.markUnrejected') : t('audit.markRejected')}
                           className={`rounded-full border p-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
@@ -323,6 +351,28 @@ function ChunkAuditCard({
                     <p className={`text-sm leading-relaxed text-editorial-ink ${isResolved ? 'line-through' : ''}`}>
                       {issue.description}
                     </p>
+                    {(issue.phrase || issue.sourcePhrase || chunk.sourceDisplayText) && (
+                      <div className="space-y-2 rounded-xl border border-editorial-border/50 bg-editorial-textbox/20 px-3 py-2">
+                        {issue.phrase && (
+                          <div>
+                            <span className="block text-[9px] font-bold uppercase tracking-widest text-editorial-accent">{t('audit.issuePhraseContext')}</span>
+                            <p className="mt-0.5 text-[11px] leading-relaxed text-editorial-ink">&ldquo;{issue.phrase}&rdquo;</p>
+                          </div>
+                        )}
+                        {issue.sourcePhrase && (
+                          <div>
+                            <span className="block text-[9px] font-bold uppercase tracking-widest text-editorial-muted">{t('audit.issueSourcePhraseContext')}</span>
+                            <p className="mt-0.5 text-xs leading-relaxed text-editorial-muted">&ldquo;{issue.sourcePhrase}&rdquo;</p>
+                          </div>
+                        )}
+                        {chunk.sourceDisplayText && (
+                          <div>
+                            <span className="block text-[9px] font-bold uppercase tracking-widest text-editorial-muted">{t('audit.issueSourceContext')}</span>
+                            <p className="mt-0.5 text-[11px] leading-relaxed text-editorial-muted line-clamp-3">{chunk.sourceDisplayText}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     {issue.suggestedFix && (
                       <div className="rounded-xl border border-editorial-border/70 bg-editorial-bg px-3 py-2 text-[11px] leading-relaxed text-editorial-muted">
                         {t('audit.fix')}: {issue.suggestedFix}

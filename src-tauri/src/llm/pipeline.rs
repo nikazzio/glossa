@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use tauri::{AppHandle, Emitter, State};
 
 use crate::keystore::get_api_key;
@@ -18,7 +19,7 @@ use crate::llm::types::{
 #[derive(serde::Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 struct PromptEvent {
-    stream_id: String,
+    stream_id: Arc<str>,
     system_prompt: String,
     user_prompt: String,
 }
@@ -26,7 +27,7 @@ struct PromptEvent {
 #[derive(serde::Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 struct ResponseEvent {
-    stream_id: String,
+    stream_id: Arc<str>,
     kind: String,
     raw_json: String,
 }
@@ -71,14 +72,16 @@ pub async fn run_stage(
     stage: StageConfig,
     config: PipelineConfig,
     previous_result: Option<String>,
+    audit_context: Option<String>,
     stream_id: String,
     ollama_base_url: Option<String>,
 ) -> Result<StageResult, String> {
+    let stream_id: Arc<str> = stream_id.into();
     let provider = get_provider(&stage.provider, ollama_base_url)?;
     provider.preflight(&stage.model).await?;
     let api_key = get_api_key(&app, &stage.provider)?;
     let client = provider.http_client()?;
-    let structured = build_stage_prompts(&text, &stage, &config, previous_result.as_deref());
+    let structured = build_stage_prompts(&text, &stage, &config, previous_result.as_deref(), audit_context.as_deref());
     app.emit(
         "chunk-prompt",
         PromptEvent {
@@ -93,6 +96,7 @@ pub async fn run_stage(
         structured: &structured,
         api_key: &api_key,
         json_mode: false,
+        json_schema_strict: false,
         provider_options: stage.provider_options.as_ref(),
     };
     let cancel = registry.register(&stream_id);
@@ -152,11 +156,12 @@ pub async fn run_stage_stream(
     stream_id: String,
     ollama_base_url: Option<String>,
 ) -> Result<String, String> {
+    let stream_id: Arc<str> = stream_id.into();
     let provider = get_provider(&stage.provider, ollama_base_url)?;
     provider.preflight(&stage.model).await?;
     let api_key = get_api_key(&app, &stage.provider)?;
     let client = provider.streaming_client()?;
-    let structured = build_stage_prompts(&text, &stage, &config, previous_result.as_deref());
+    let structured = build_stage_prompts(&text, &stage, &config, previous_result.as_deref(), None);
     app.emit(
         "chunk-prompt",
         PromptEvent {
@@ -171,6 +176,7 @@ pub async fn run_stage_stream(
         structured: &structured,
         api_key: &api_key,
         json_mode: false,
+        json_schema_strict: false,
         provider_options: stage.provider_options.as_ref(),
     };
 
@@ -227,6 +233,7 @@ pub async fn judge_translation(
     stream_id: String,
     ollama_base_url: Option<String>,
 ) -> Result<JudgeResponse, String> {
+    let stream_id: Arc<str> = stream_id.into();
     let provider = get_provider(&config.judge_provider, ollama_base_url)?;
     provider.preflight(&config.judge_model).await?;
     let api_key = get_api_key(&app, &config.judge_provider)?;
@@ -246,6 +253,7 @@ pub async fn judge_translation(
         structured: &structured,
         api_key: &api_key,
         json_mode: true,
+        json_schema_strict: true,
         provider_options: config.review_provider_options.as_ref(),
     };
 
@@ -308,6 +316,8 @@ pub async fn judge_translation(
                         description: v["description"].as_str()?.to_string(),
                         suggested_fix: v["suggestedFix"].as_str().map(|s| s.to_string()),
                         phrase: v["phrase"].as_str().map(|s| s.to_string()),
+                        source_phrase: v["sourcePhrase"].as_str().map(|s| s.to_string()),
+                        confidence: v["confidence"].as_f64().map(|f| f as f32),
                     })
                 })
                 .collect()
@@ -324,6 +334,9 @@ pub async fn judge_translation(
         cache_miss_input_tokens: usage.as_ref().and_then(|u| u.cache_miss_input),
         system_prompt: None,
         user_prompt: None,
+        checked_sentences: parsed["checkedSentences"]
+            .as_array()
+            .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect()),
     })
 }
 
@@ -363,6 +376,7 @@ pub async fn refine_prompt(
         structured: &structured,
         api_key: &api_key,
         json_mode: false,
+        json_schema_strict: false,
         provider_options: refine_config.review_provider_options.as_ref(),
     };
     prov.call(&client, &req).await.map(|r| r.content)
@@ -399,6 +413,7 @@ pub async fn extract_phrase_memory_pairs(
         structured: &structured,
         api_key: &api_key,
         json_mode: true,
+        json_schema_strict: false,
         provider_options: None,
     };
 
@@ -447,6 +462,7 @@ pub async fn run_coherence_for_chunk(
     stream_id: String,
     ollama_base_url: Option<String>,
 ) -> Result<CoherenceResponse, String> {
+    let stream_id: Arc<str> = stream_id.into();
     let provider = get_provider(&config.judge_provider, ollama_base_url)?;
     provider.preflight(&config.judge_model).await?;
     let api_key = get_api_key(&app, &config.judge_provider)?;
@@ -466,6 +482,7 @@ pub async fn run_coherence_for_chunk(
         structured: &structured,
         api_key: &api_key,
         json_mode: true,
+        json_schema_strict: false,
         provider_options: config.review_provider_options.as_ref(),
     };
 
@@ -519,6 +536,8 @@ pub async fn run_coherence_for_chunk(
                         description: v["description"].as_str()?.to_string(),
                         suggested_fix: v["suggestedFix"].as_str().map(|s| s.to_string()),
                         phrase: v["phrase"].as_str().map(|s| s.to_string()),
+                        source_phrase: v["sourcePhrase"].as_str().map(|s| s.to_string()),
+                        confidence: v["confidence"].as_f64().map(|f| f as f32),
                     })
                 })
                 .collect()
@@ -572,6 +591,7 @@ pub async fn test_provider_connection(
         structured: &structured,
         api_key: &api_key,
         json_mode: false,
+        json_schema_strict: false,
         provider_options: None,
     };
 

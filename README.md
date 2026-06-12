@@ -59,6 +59,7 @@ Translations stream token-by-token in real time. You can edit the candidate tran
 | **Test / Production mode** | Test on a single chunk before committing to a full run; config stays editable until you switch to Production |
 | **AI Judge** | LLM-as-a-judge audit with semantic quality ratings, categorized issues, and fixes |
 | **Glossary** | Keyword registry enforced across all stages and the audit |
+| **Chunk annotations** | Attach typed notes (Comment, Doubt, Problem, Approved) to any chunk; right-click selected text to anchor a note to a specific phrase; audit issues convert to annotations in one click |
 | **Import-aware segmentation** | Splits source text by paragraphs, keeps Markdown headings attached to following content, and can carry only genuinely short plain-text trailing blocks forward |
 | **Project management** | Save/load projects with full pipeline config and translations |
 | **File I/O** | Import `.txt`, `.md`, `.docx`, `.pdf`; export `.txt`, `.md`, `.html`, `.docx`, or bilingual Markdown |
@@ -222,6 +223,8 @@ If a batch is interrupted, the next run resumes and skips chunks already complet
 - **Suggested fixes** for each issue
 - Click **"Re-Evaluate Drafts"** after manual edits to get an updated quality rating
 - Lock a translation when you want to keep it out of later full-document reruns
+- Use the **Notes tab** (Insights panel) to attach typed annotations (Comment, Doubt, Problem, Approved) to a chunk — right-click any selected text in the translation to anchor an annotation to that phrase; audit issues have a one-click button to create a pre-filled annotation
+- Annotations with an anchor appear as GFM footnote markers in the rendered translation view; the stored draft is never modified
 
 **Document-level coherence** (Insights panel → Coherence tab, Document mode):
 

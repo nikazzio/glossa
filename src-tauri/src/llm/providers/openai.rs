@@ -1,9 +1,6 @@
 use async_trait::async_trait;
 use reqwest::Client;
 use serde_json::Value;
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
-
 use super::{format_api_error, provider_label_from_url};
 use crate::llm::provider::{
     LlmProvider, LlmRequest, LlmResponse, StreamFormat, TokenUsage, UsageAccumulator,
@@ -48,6 +45,56 @@ pub fn deepseek() -> OpenAiCompatibleProvider {
     }
 }
 
+fn judge_json_schema() -> serde_json::Value {
+    serde_json::json!({
+        "name": "translation_audit",
+        "strict": true,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "rating": {
+                    "type": "string",
+                    "enum": ["critical", "poor", "fair", "good", "excellent"]
+                },
+                "issues": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "type": {"type": "string", "enum": ["glossary", "fluency", "accuracy", "grammar"]},
+                            "severity": {"type": "string", "enum": ["low", "medium", "high"]},
+                            "description": {"type": "string"},
+                            "suggestedFix": {"type": "string"},
+                            "phrase": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+                            "sourcePhrase": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+                            "confidence": {"anyOf": [{"type": "number"}, {"type": "null"}]}
+                        },
+                        "required": ["type", "severity", "description", "suggestedFix", "phrase", "sourcePhrase", "confidence"],
+                        "additionalProperties": false
+                    }
+                },
+                "checkedSentences": {
+                    "anyOf": [
+                        {"type": "array", "items": {"type": "string"}},
+                        {"type": "null"}
+                    ]
+                }
+            },
+            "required": ["rating", "issues", "checkedSentences"],
+            "additionalProperties": false
+        }
+    }) 
+}
+
+/// FNV-1a 64-bit hash — deterministic across runs, unlike `DefaultHasher`.
+fn stable_fnv1a(s: &str) -> u64 {
+    const FNV_PRIME: u64 = 0x00000100000001B3;
+    const FNV_OFFSET: u64 = 0xcbf29ce484222325;
+    s.as_bytes()
+        .iter()
+        .fold(FNV_OFFSET, |hash, &byte| (hash ^ byte as u64).wrapping_mul(FNV_PRIME))
+}
+
 impl OpenAiCompatibleProvider {
     /// Construct a provider with a custom base URL — used in tests to point
     /// at a local wiremock server without needing `&'static str`.
@@ -73,11 +120,16 @@ impl OpenAiCompatibleProvider {
     // ── Chat Completions helpers ──────────────────────────────────────────────
 
     fn derive_prompt_cache_key(&self, req: &LlmRequest<'_>) -> String {
-        let mut hasher = DefaultHasher::new();
-        self.id.hash(&mut hasher);
-        req.model.hash(&mut hasher);
-        req.structured.flatten_system().hash(&mut hasher);
-        format!("glossa:{:016x}", hasher.finish())
+        let cacheable_text: String = req
+            .structured
+            .system
+            .iter()
+            .filter(|b| b.cacheable)
+            .map(|b| b.text.as_str())
+            .collect::<Vec<_>>()
+            .join("\n\n");
+        let hash = stable_fnv1a(&format!("{}:{}:{}", self.id, req.model, cacheable_text));
+        format!("glossa:{hash:016x}")
     }
 
     fn openai_cache_config<'a>(&self, req: &'a LlmRequest<'_>) -> Option<&'a OpenAiCacheConfig> {
@@ -98,11 +150,16 @@ impl OpenAiCompatibleProvider {
     }
 
     /// True when this request should use the Responses API.
-    /// OpenAI: only when reasoning is requested (otherwise Chat Completions
-    /// gives reliable cross-call prefix caching without `previous_response_id`).
+    /// GPT-5 family models only support the Responses API endpoint.
+    /// Other OpenAI models use Chat Completions when reasoning is not requested
+    /// (Chat Completions gives reliable cross-call prefix caching without
+    /// `previous_response_id`).
     /// DeepSeek and other compat providers: always false.
     fn use_responses_api_for(&self, req: &LlmRequest<'_>) -> bool {
-        self.use_responses_api && self.reasoning_requested(req)
+        if !self.use_responses_api {
+            return false;
+        }
+        req.model.starts_with("gpt-5") || self.reasoning_requested(req)
     }
 
     /// Attaches reasoning effort to the request body.
@@ -124,8 +181,8 @@ impl OpenAiCompatibleProvider {
         }
     }
 
-    /// Attaches prompt_cache_key (and optionally prompt_cache_retention) to a
-    /// Chat Completions request body. No-op for the Responses API path.
+    /// Attaches `prompt_cache_key` (and optionally `prompt_cache_retention`) to
+    /// a request body. Applies to both Chat Completions and Responses API paths.
     fn apply_cache_fields(&self, req: &LlmRequest<'_>, body: &mut Value) {
         let cfg = self.openai_cache_config(req);
         let cache_key = cfg
@@ -205,9 +262,21 @@ impl OpenAiCompatibleProvider {
         });
 
         if req.json_mode {
-            body["text"] = serde_json::json!({"format": {"type": "json_object"}});
+            if req.json_schema_strict {
+                // Responses API: fields go directly in text.format, no "json_schema" wrapper
+                let s = judge_json_schema();
+                body["text"] = serde_json::json!({"format": {
+                    "type": "json_schema",
+                    "name": s["name"],
+                    "strict": s["strict"],
+                    "schema": s["schema"]
+                }});
+            } else {
+                body["text"] = serde_json::json!({"format": {"type": "json_object"}});
+            }
         }
         self.apply_reasoning_effort(req, &mut body);
+        self.apply_cache_fields(req, &mut body);
 
         let resp = client
             .post(&url)
@@ -259,9 +328,21 @@ impl OpenAiCompatibleProvider {
             "stream": true,
         });
         if req.json_mode {
-            body["text"] = serde_json::json!({"format": {"type": "json_object"}});
+            if req.json_schema_strict {
+                // Responses API: fields go directly in text.format, no "json_schema" wrapper
+                let s = judge_json_schema();
+                body["text"] = serde_json::json!({"format": {
+                    "type": "json_schema",
+                    "name": s["name"],
+                    "strict": s["strict"],
+                    "schema": s["schema"]
+                }});
+            } else {
+                body["text"] = serde_json::json!({"format": {"type": "json_object"}});
+            }
         }
         self.apply_reasoning_effort(req, &mut body);
+        self.apply_cache_fields(req, &mut body);
 
         client
             .post(&url)
@@ -388,7 +469,11 @@ impl LlmProvider for OpenAiCompatibleProvider {
         });
 
         if req.json_mode {
-            body["response_format"] = serde_json::json!({"type": "json_object"});
+            if req.json_schema_strict {
+                body["response_format"] = serde_json::json!({"type": "json_schema", "json_schema": judge_json_schema()});
+            } else {
+                body["response_format"] = serde_json::json!({"type": "json_object"});
+            }
         }
         self.apply_cache_fields(req, &mut body);
         self.apply_reasoning_effort(req, &mut body);

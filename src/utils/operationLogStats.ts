@@ -336,28 +336,31 @@ export function summarizeGlobalUsage(
   };
 }
 
-function lastRunForCategory(
+function aggregateRunForCategory(
   entries: OperationLogEntry[],
   category: OperationUsageCategory,
   pricingOverrides: Pricing,
 ): OperationLogRunSummary | null {
-  for (let i = entries.length - 1; i >= 0; i -= 1) {
-    const entry = entries[i];
-    const usage = readUsage(entry);
-    if (entry.phase !== 'end' || !hasUsage(usage)) continue;
-    if (categoryForEntry(entry) !== category) continue;
-    return {
-      category,
-      at: entry.at,
-      chunkId: entry.chunkId,
-      stageId: entry.stageId,
-      stageName: category === 'translation' ? stageNameFromEntry(entry) : undefined,
-      provider: usage.provider,
-      model: usage.model,
-      stats: finalizeSingleEntry(entry, usage, pricingOverrides),
-    };
-  }
-  return null;
+  const categoryEntries = entries.filter((e) => {
+    const usage = readUsage(e);
+    return e.phase === 'end' && hasUsage(usage) && categoryForEntry(e) === category;
+  });
+  if (categoryEntries.length === 0) return null;
+
+  const last = categoryEntries[categoryEntries.length - 1];
+  const lastUsage = readUsage(last);
+  const stats = emptyStats();
+  accumulate(stats, last, lastUsage, pricingOverrides);
+  return {
+    category,
+    at: last.at,
+    chunkId: last.chunkId,
+    stageId: last.stageId,
+    stageName: stageNameFromEntry(last),
+    provider: lastUsage.provider,
+    model: lastUsage.model,
+    stats: finalize(stats),
+  };
 }
 
 export function summarizeChunkUsage(
@@ -384,9 +387,9 @@ export function summarizeChunkUsage(
     translationRuns,
     auditRuns,
     coherenceRuns,
-    lastTranslationRun: lastRunForCategory(chunkEntries, 'translation', pricingOverrides),
-    lastAuditRun: lastRunForCategory(chunkEntries, 'audit', pricingOverrides),
-    lastCoherenceRun: lastRunForCategory(chunkEntries, 'coherence', pricingOverrides),
+    lastTranslationRun: aggregateRunForCategory(chunkEntries, 'translation', pricingOverrides),
+    lastAuditRun: aggregateRunForCategory(chunkEntries, 'audit', pricingOverrides),
+    lastCoherenceRun: aggregateRunForCategory(chunkEntries, 'coherence', pricingOverrides),
   };
 }
 

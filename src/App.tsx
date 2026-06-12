@@ -35,6 +35,8 @@ function HighlightColorSync() {
     root.style.setProperty('--hl-mismatch-bg', highlightColors.mismatchTerm);
     root.style.setProperty('--hl-search-bg', highlightColors.search);
     root.style.setProperty('--hl-audit-bg', highlightColors.auditPhrase);
+    // Fallback for stores persisted before the annotation color existed.
+    root.style.setProperty('--hl-annot-bg', highlightColors.annotation ?? 'rgba(58,122,114,0.25)');
   }, [highlightColors]);
   return null;
 }

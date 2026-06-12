@@ -175,7 +175,7 @@ describe('exportTranslation', () => {
       '/tmp/translation.html',
       expect.stringContaining('<!doctype html>'),
     );
-    expect(writeTextFileMock.mock.calls[0]?.[1]).toContain('href="#fn-1"');
+    expect(writeTextFileMock.mock.calls[0]?.[1]).toContain('href="#user-content-fn-1"');
   });
 
   it('exports docx bytes through the native markdown exporter', async () => {

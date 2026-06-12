@@ -1,5 +1,22 @@
 use std::fs;
 
+const MAX_DOCX_BYTES: u64 = 100 * 1024 * 1024;
+const MAX_PDF_BYTES: u64 = 50 * 1024 * 1024;
+
+fn check_file_size(path: &str, limit: u64) -> Result<(), String> {
+    let size = fs::metadata(path)
+        .map_err(|e| format!("Failed to read file metadata: {e}"))?
+        .len();
+    if size > limit {
+        return Err(format!(
+            "File too large: {} bytes (limit {} MB)",
+            size,
+            limit / 1024 / 1024
+        ));
+    }
+    Ok(())
+}
+
 pub mod docx_export;
 pub mod docx_extract;
 pub mod pdf_extract;
@@ -16,6 +33,7 @@ pub(crate) use pdf_extract::normalize_pdf_text;
 
 #[tauri::command]
 pub async fn extract_docx_text(path: String) -> Result<String, String> {
+    check_file_size(&path, MAX_DOCX_BYTES)?;
     tauri::async_runtime::spawn_blocking(move || {
         let bytes = fs::read(&path).map_err(|e| format!("Failed to read file: {}", e))?;
         extract_docx_text_from_bytes(&bytes)
@@ -26,6 +44,7 @@ pub async fn extract_docx_text(path: String) -> Result<String, String> {
 
 #[tauri::command]
 pub async fn extract_docx_markdown(path: String) -> Result<String, String> {
+    check_file_size(&path, MAX_DOCX_BYTES)?;
     tauri::async_runtime::spawn_blocking(move || {
         let bytes = fs::read(&path).map_err(|e| format!("Failed to read file: {}", e))?;
         extract_docx_markdown_from_bytes(&bytes)
@@ -36,6 +55,7 @@ pub async fn extract_docx_markdown(path: String) -> Result<String, String> {
 
 #[tauri::command]
 pub async fn extract_pdf_text(path: String) -> Result<String, String> {
+    check_file_size(&path, MAX_PDF_BYTES)?;
     tauri::async_runtime::spawn_blocking(move || {
         let bytes = fs::read(&path).map_err(|e| format!("Failed to read file: {}", e))?;
         extract_pdf_text_from_bytes(&bytes)
@@ -85,6 +105,41 @@ mod tests {
             writer.finish().unwrap();
         }
         buffer
+    }
+
+    #[test]
+    fn check_file_size_accepts_file_within_limit() {
+        let path = std::env::temp_dir().join("glossa_test_size_ok.bin");
+        std::fs::write(&path, b"small content").unwrap();
+        assert!(check_file_size(path.to_str().unwrap(), MAX_DOCX_BYTES).is_ok());
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn check_file_size_rejects_file_over_limit() {
+        let path = std::env::temp_dir().join("glossa_test_size_over.bin");
+        std::fs::write(&path, b"data").unwrap();
+        let result = check_file_size(path.to_str().unwrap(), 1);
+        let _ = std::fs::remove_file(&path);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("File too large"));
+    }
+
+    #[test]
+    fn check_file_size_rejects_missing_file() {
+        let result = check_file_size("/nonexistent_glossa_test_path_xyz.docx", MAX_DOCX_BYTES);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Failed to read file metadata"));
+    }
+
+    #[test]
+    fn docx_limit_is_100mb() {
+        assert_eq!(MAX_DOCX_BYTES, 100 * 1024 * 1024);
+    }
+
+    #[test]
+    fn pdf_limit_is_50mb() {
+        assert_eq!(MAX_PDF_BYTES, 50 * 1024 * 1024);
     }
 
     #[test]

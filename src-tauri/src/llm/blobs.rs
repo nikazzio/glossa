@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
@@ -14,7 +16,7 @@ pub struct BlobAssignment {
     pub chunk_id: String,
     pub blob_id: String,
     pub position: usize,
-    pub reference_chunk_ids: Vec<String>,
+    pub reference_chunk_ids: Arc<[String]>,
 }
 
 /// Rough token estimate: ~1.33 tokens per word (works for Latin-script languages).
@@ -54,10 +56,10 @@ pub fn compute_blob_assignments(
             rand::thread_rng().gen::<u64>(),
             rand::thread_rng().gen::<u64>()
         );
-        let reference_chunk_ids = chunks
+        let reference_chunk_ids: Arc<[String]> = chunks
             .iter()
             .map(|chunk| chunk.id.clone())
-            .collect::<Vec<_>>();
+            .collect();
         return chunks
             .iter()
             .enumerate()
@@ -65,7 +67,7 @@ pub fn compute_blob_assignments(
                 chunk_id: chunk.id.clone(),
                 blob_id: blob_id.clone(),
                 position,
-                reference_chunk_ids: reference_chunk_ids.clone(),
+                reference_chunk_ids: Arc::clone(&reference_chunk_ids),
             })
             .collect();
     }
@@ -110,17 +112,17 @@ pub fn compute_blob_assignments(
             primary_end = (primary_start + 1).min(chunks.len());
         }
 
-        let reference_chunk_ids = chunks[reference_start..reference_end]
+        let reference_chunk_ids: Arc<[String]> = chunks[reference_start..reference_end]
             .iter()
             .map(|chunk| chunk.id.clone())
-            .collect::<Vec<_>>();
+            .collect();
 
         for (position, chunk) in chunks[primary_start..primary_end].iter().enumerate() {
             assignments.push(BlobAssignment {
                 chunk_id: chunk.id.clone(),
                 blob_id: blob_id.clone(),
                 position,
-                reference_chunk_ids: reference_chunk_ids.clone(),
+                reference_chunk_ids: Arc::clone(&reference_chunk_ids),
             });
         }
 
@@ -157,7 +159,7 @@ mod tests {
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].chunk_id, "c1");
         assert_eq!(result[0].position, 0);
-        assert_eq!(result[0].reference_chunk_ids, vec!["c1"]);
+        assert_eq!(result[0].reference_chunk_ids.as_ref(), &["c1".to_string()] as &[String]);
     }
 
     #[test]
@@ -206,8 +208,10 @@ mod tests {
         assert!(result
             .iter()
             .all(|entry| entry.blob_id == result[0].blob_id));
-        assert!(result.iter().all(|entry| entry.reference_chunk_ids
-            == vec!["c1".to_string(), "c2".to_string(), "c3".to_string()]));
+        let expected_refs: &[String] = &["c1".to_string(), "c2".to_string(), "c3".to_string()];
+        assert!(result
+            .iter()
+            .all(|entry| entry.reference_chunk_ids.as_ref() == expected_refs));
     }
 
     #[test]

@@ -2,11 +2,41 @@ import { describe, expect, it } from 'vitest';
 import {
   assignChunkFootnotes,
   extractFootnotes,
+  highlightFootnoteMarkersHtml,
   highlightSuperscriptMarkersHtml,
   replaceMarkersWithSuperscripts,
+  restoreFootnoteMarkers,
   stripFootnoteMarkers,
   stripSuperscriptMarkers,
 } from './footnoteExtractor';
+
+describe('restoreFootnoteMarkers', () => {
+  it('rewrites bracketed superscripts back to GFM references using marker display number', () => {
+    const footnotes = [
+      { id: 'fa', marker: '[¹]', text: 'first' },
+      { id: 'fb', marker: '[²]', text: 'second' },
+    ];
+    const result = restoreFootnoteMarkers('Alpha[¹] beta[²].', footnotes);
+    expect(result).toBe('Alpha[^fa] beta[^fb].');
+  });
+
+  it('correctly maps multi-digit display numbers (note 10+) regardless of chunk footnote count', () => {
+    // Chunk contains only note 10 — idByNumber via insertion-order would map 1→"fa",
+    // so get(10) would be undefined. The marker-based approach must resolve it correctly.
+    const footnotes = [{ id: 'fa', marker: '[¹⁰]', text: 'tenth note' }];
+    expect(restoreFootnoteMarkers('See[¹⁰] this.', footnotes)).toBe('See[^fa] this.');
+  });
+
+  it('leaves existing GFM markers and unknown numbers untouched', () => {
+    const footnotes = [{ id: 'fa', marker: '[¹]', text: 'first' }];
+    expect(restoreFootnoteMarkers('Keep[^fa] and [²] alone.', footnotes)).toBe('Keep[^fa] and [²] alone.');
+  });
+
+  it('returns text unchanged when there are no superscript markers', () => {
+    const footnotes = [{ id: 'fa', marker: '[¹]', text: 'first' }];
+    expect(restoreFootnoteMarkers('Plain text.', footnotes)).toBe('Plain text.');
+  });
+});
 
 describe('extractFootnotes', () => {
   it('separates body text from footnote definitions', () => {
@@ -88,6 +118,39 @@ describe('stripSuperscriptMarkers', () => {
 
   it('leaves normal text intact', () => {
     expect(stripSuperscriptMarkers('No markers here.')).toBe('No markers here.');
+  });
+});
+
+describe('highlightFootnoteMarkersHtml', () => {
+  it('wraps [^id] markers in a span', () => {
+    const result = highlightFootnoteMarkersHtml('Text [^1] end.');
+    expect(result).toContain('<span class="hl-footnote-marker">[^1]</span>');
+    expect(result).toContain('Text ');
+    expect(result).toContain(' end.');
+  });
+
+  it('does not inject spans into HTML tag attributes', () => {
+    const html = '<mark title="note [^1]">word</mark>';
+    const result = highlightFootnoteMarkersHtml(html);
+    expect(result).toBe('<mark title="note [^1]">word</mark>');
+  });
+
+  it('wraps markers in text nodes adjacent to HTML tags', () => {
+    const html = '<mark>text</mark> [^1]';
+    const result = highlightFootnoteMarkersHtml(html);
+    expect(result).toContain('<mark>text</mark>');
+    expect(result).toContain('<span class="hl-footnote-marker">[^1]</span>');
+  });
+
+  it('does not wrap escaped markers preceded by backslash', () => {
+    const result = highlightFootnoteMarkersHtml('Literal \\[^1] stays.');
+    expect(result).not.toContain('<span');
+    expect(result).toContain('\\[^1]');
+  });
+
+  it('handles annotation-style markers like [^a1]', () => {
+    const result = highlightFootnoteMarkersHtml('See [^a1] here.');
+    expect(result).toContain('<span class="hl-footnote-marker">[^a1]</span>');
   });
 });
 

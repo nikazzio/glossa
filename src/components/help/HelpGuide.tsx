@@ -393,6 +393,10 @@ function FeaturesSection() {
       <P>{t('help.features.footnotesDesc')}</P>
       <Tip title={t('help.features.footnotesTipTitle')}>{t('help.features.footnotesTipDesc')}</Tip>
 
+      <SubTitle>{t('help.features.annotationsTitle')}</SubTitle>
+      <P>{t('help.features.annotationsDesc')}</P>
+      <Tip title={t('help.features.annotationsTipTitle')}>{t('help.features.annotationsTipDesc')}</Tip>
+
       <div className="my-4 space-y-2">
         <FeatureRow icon={<PanelTopClose size={14} />} text={t('help.shortcuts.toggleEditorTools')} />
         <FeatureRow icon={<CheckCheck size={14} />} text={t('help.shortcuts.lockTranslation')} />

@@ -1,4 +1,4 @@
-import { FileText, RotateCcw, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, FileText, RotateCcw, ShieldCheck } from 'lucide-react';
 import type { Dispatch, SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { OllamaStatus, PipelineConfig, PipelineStageConfig, PromptTemplate } from '../../types';
@@ -150,6 +150,14 @@ export function TranslationTabPanel({
         <div className="flex items-center gap-2 text-xs text-editorial-warning">
           <ShieldCheck size={12} className="shrink-0 text-editorial-warning" />
           <span>{t('pipeline.modelContextWindowChangedHint')}</span>
+        </div>
+      )}
+
+      {/* Model locked warning */}
+      {translationsExist && (
+        <div className="flex items-center gap-2 rounded-[14px] border border-editorial-border/50 bg-editorial-bg/60 px-3 py-2 text-xs text-editorial-muted">
+          <AlertTriangle size={12} className="shrink-0" />
+          <span>{t('pipeline.modelLockedHint')}</span>
         </div>
       )}
 

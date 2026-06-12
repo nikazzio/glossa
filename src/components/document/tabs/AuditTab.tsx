@@ -1,4 +1,5 @@
-import { CheckCircle2, RefreshCcw } from 'lucide-react';
+import { CheckCircle2, Loader2, RefreshCcw } from 'lucide-react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconButton } from '../../ui';
 import { IssueList } from './IssueList';
@@ -18,11 +19,19 @@ export interface AuditTabProps {
   isProcessing: boolean;
   onReauditChunk: (chunkId: string) => void;
   onSelectChunk: (id: string) => void;
-  onFocusIssue: (chunkId: string, query?: string | null) => void;
+  onFocusIssue: (chunkId: string, query?: string | null, sourceQuery?: string | null) => void;
 }
 
 export function AuditTab({ panelId, labelledBy, currentChunk, isProcessing, onReauditChunk, onSelectChunk, onFocusIssue }: AuditTabProps) {
   const { t } = useTranslation();
+  const [resolvedKeys, setResolvedKeys] = useState<Set<string>>(new Set());
+  const handleToggleResolved = useCallback((key: string) => {
+    setResolvedKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }, []);
 
   if (!currentChunk) {
     return (
@@ -52,7 +61,7 @@ export function AuditTab({ panelId, labelledBy, currentChunk, isProcessing, onRe
             title={t('pipeline.reauditChunk')}
             tooltipSide="left"
           >
-            <RefreshCcw size={14} />
+            <RefreshCcw size={14} className={currentChunk.judgeResult.status === 'processing' ? 'animate-spin' : ''} />
           </IconButton>
         </div>
 
@@ -61,8 +70,16 @@ export function AuditTab({ panelId, labelledBy, currentChunk, isProcessing, onRe
             {currentChunk.judgeResult.error || t('audit.auditFailed')}
           </div>
         )}
-        {currentChunk.judgeResult.status !== 'error' && currentChunk.judgeResult.status !== 'completed' && (
-          <div className="mt-4 rounded-2xl border border-editorial-border bg-editorial-bg/60 p-4 text-sm text-editorial-muted">
+        {currentChunk.judgeResult.status === 'processing' && (
+          <div className="mt-4 flex items-center gap-2 text-sm text-editorial-running">
+            <Loader2 size={13} className="animate-spin shrink-0" />
+            <span>{t('document.insightsAuditProcessing')}</span>
+          </div>
+        )}
+        {currentChunk.judgeResult.status !== 'error'
+          && currentChunk.judgeResult.status !== 'completed'
+          && currentChunk.judgeResult.status !== 'processing' && (
+          <div className="mt-4 text-sm text-editorial-muted">
             {t('document.insightsAuditEmpty')}
           </div>
         )}
@@ -72,7 +89,14 @@ export function AuditTab({ panelId, labelledBy, currentChunk, isProcessing, onRe
           </div>
         )}
         {currentChunk.judgeResult.issues.length > 0 && (
-          <IssueList issues={currentChunk.judgeResult.issues} chunkId={currentChunk.id} onSelectChunk={onSelectChunk} onFocusIssue={onFocusIssue} />
+          <IssueList
+            issues={currentChunk.judgeResult.issues}
+            chunkId={currentChunk.id}
+            onSelectChunk={onSelectChunk}
+            onFocusIssue={onFocusIssue}
+            resolvedKeys={resolvedKeys}
+            onToggleResolved={handleToggleResolved}
+          />
         )}
       </section>
     </div>

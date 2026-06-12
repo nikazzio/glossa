@@ -19,6 +19,69 @@ use crate::llm::types::{OllamaConfig, OllamaPreflightStatus};
 const OLLAMA_BASE_URL: &str = "http://localhost:11434";
 const OLLAMA_PREFLIGHT_CACHE_TTL_SECS: u64 = 5;
 
+fn validate_ollama_base_url(url: &str) -> Result<(), String> {
+    // Extract host from "scheme://host:port/path" using basic string parsing.
+    // We don't add a url crate dependency — reqwest is available but Url isn't re-exported.
+    let after_scheme = url
+        .find("://")
+        .map(|i| &url[i + 3..])
+        .ok_or_else(|| format!("Invalid Ollama URL (missing scheme): {url}"))?;
+    let host = if after_scheme.starts_with('[') {
+        // IPv6 bracketed address: [::1]:port/path → extract between brackets
+        after_scheme
+            .strip_prefix('[')
+            .and_then(|s| s.split(']').next())
+            .unwrap_or("")
+    } else {
+        after_scheme
+            .split(['/', ':', '?', '#'])
+            .next()
+            .unwrap_or("")
+    };
+    let is_loopback = matches!(host, "localhost" | "127.0.0.1" | "::1");
+    if !is_loopback {
+        return Err(format!(
+            "Ollama URL must point to localhost or loopback address, got: {host}"
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod url_validation_tests {
+    use super::*;
+
+    #[test]
+    fn accepts_localhost() {
+        assert!(validate_ollama_base_url("http://localhost:11434").is_ok());
+    }
+
+    #[test]
+    fn accepts_127_0_0_1() {
+        assert!(validate_ollama_base_url("http://127.0.0.1:11434").is_ok());
+    }
+
+    #[test]
+    fn accepts_ipv6_loopback() {
+        assert!(validate_ollama_base_url("http://[::1]:11434").is_ok());
+    }
+
+    #[test]
+    fn rejects_lan_ip() {
+        assert!(validate_ollama_base_url("http://192.168.1.1:11434").is_err());
+    }
+
+    #[test]
+    fn rejects_external_host() {
+        assert!(validate_ollama_base_url("http://internal-server/api").is_err());
+    }
+
+    #[test]
+    fn rejects_url_without_scheme() {
+        assert!(validate_ollama_base_url("localhost:11434").is_err());
+    }
+}
+
 /// Strip userinfo (user:pass@) from a URL before including it in error messages.
 fn sanitize_url_for_display(url: &str) -> &str {
     if let Some(scheme_end) = url.find("://") {
@@ -46,10 +109,10 @@ pub struct OllamaProvider {
 }
 
 impl OllamaProvider {
-    pub fn new(base_url: Option<String>) -> Self {
-        OllamaProvider {
-            base_url: base_url.unwrap_or_else(|| OLLAMA_BASE_URL.to_string()),
-        }
+    pub fn new(base_url: Option<String>) -> Result<Self, String> {
+        let url = base_url.unwrap_or_else(|| OLLAMA_BASE_URL.to_string());
+        validate_ollama_base_url(&url)?;
+        Ok(OllamaProvider { base_url: url })
     }
 }
 

@@ -2,6 +2,12 @@ import { useMemo } from 'react';
 import type { GlossaryEntry } from '../types';
 import { useDebounce } from './useDebounce';
 
+export interface AnnotationAnchor {
+  text: string;
+  /** Markdown footnote marker painted after the anchored text, e.g. "[^1]". */
+  label: string;
+}
+
 export interface HighlightResult {
   html: string;
   matchCount: number;
@@ -59,6 +65,8 @@ interface MatchSpan {
   cls: string;
   tooltip: string;
   priority: number;
+  /** Footnote marker painted after the span end (annotation anchors only). */
+  label?: string;
 }
 
 function findSpans(
@@ -79,7 +87,9 @@ function findSpans(
 
 // Classes that use background-color (mutually exclusive per interval).
 // Classes not in this set use text-decoration and can coexist with a background.
-const BG_CLASSES = new Set(['hl-match', 'hl-mismatch', 'hl-search', 'hl-audit']);
+const BG_CLASSES = new Set([
+  'hl-match', 'hl-mismatch', 'hl-search', 'hl-audit', 'hl-annot',
+]);
 
 // Builds HTML using an interval-breakpoint approach so that non-conflicting
 // highlight properties (e.g. underline + background) can coexist on the same
@@ -111,6 +121,14 @@ function buildHtml(text: string, spans: MatchSpan[]): string {
     const tooltip = activeBg[0]?.tooltip || activeDeco[0]?.tooltip || '';
 
     result += `<mark class="${classes.join(' ')}"${tooltip ? ` title="${escapeHtml(tooltip)}"` : ''}>${segment}</mark>`;
+
+    // Paint the footnote marker once, right where the annotation span ends.
+    // Rendered zero-width (see .hl-annot-marker) so it never shifts the
+    // transparent-textarea overlay alignment.
+    const annotEnd = activeBg.find((s) => s.cls === 'hl-annot' && s.end === to && s.label);
+    if (annotEnd?.label) {
+      result += `<span class="hl-annot-marker">${escapeHtml(annotEnd.label)}</span>`;
+    }
   }
 
   return result;
@@ -122,6 +140,7 @@ export function useGlossaryHighlight(
   mode: 'source' | 'translation',
   searchQuery = '',
   auditQuery = '',
+  annotationAnchors: AnnotationAnchor[] = [],
 ): HighlightResult {
   const debouncedText = useDebounce(text, 300);
   const validEntries = useMemo(
@@ -138,6 +157,8 @@ export function useGlossaryHighlight(
       })),
     [validEntries],
   );
+
+  const anchorsKey = annotationAnchors.map((a) => `${a.label}:${a.text}`).join('|');
 
   return useMemo(() => {
     if (text !== debouncedText) {
@@ -176,10 +197,21 @@ export function useGlossaryHighlight(
       spans.push(...findSpans(debouncedText, auditRe, 'hl-audit', '', 3));
     }
 
+    // Highlight ONLY the first occurrence of each anchor (not every match), so
+    // annotating a common word does not light up the whole chunk. The first
+    // occurrence matches where composeAnnotatedMarkdown places the preview marker.
+    for (const anchor of annotationAnchors) {
+      const needle = anchor.text.trim();
+      if (!needle) continue;
+      const anchorRe = new RegExp(escapeRegex(needle), 'gi');
+      const [first] = findSpans(debouncedText, anchorRe, 'hl-annot', anchor.text, 4);
+      if (first) spans.push({ ...first, label: anchor.label });
+    }
+
     const matchCount = mode === 'translation'
       ? patterns.filter(({ transRe }) => { transRe.lastIndex = 0; return transRe.test(debouncedText); }).length
       : 0;
 
     return { html: buildHtml(debouncedText, spans), matchCount, totalTerms: validEntries.length };
-  }, [text, debouncedText, patterns, mode, validEntries.length, searchQuery, auditQuery]);
+  }, [text, debouncedText, patterns, mode, validEntries.length, searchQuery, auditQuery, anchorsKey]);
 }

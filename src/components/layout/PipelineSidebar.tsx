@@ -49,6 +49,7 @@ import { estimatePipelineCost } from '../../utils/costEstimate';
 import { CostBreakdownPanel } from '../pipeline/CostBadge';
 import { IconButton, SectionLabel, Tooltip } from '../ui';
 import { exportTranslation, exportBilingual } from '../../services/fileService';
+import { useAnnotationsStore } from '../../stores/annotationsStore';
 import type { ExportFormat } from '../document/ExportDialog';
 import { DashboardSidebar } from './DashboardSidebar';
 
@@ -260,10 +261,11 @@ export function PipelineSidebar({
   ) => {
     setShowExportDialog(false);
     try {
+      const annotations = useAnnotationsStore.getState().annotationsByChunkId;
       const ok =
         format === 'bilingual'
           ? await exportBilingual(chunks)
-          : await exportTranslation(chunks, format, { markdownAware, separator });
+          : await exportTranslation(chunks, format, { markdownAware, separator, annotations });
       if (ok) toast.success(t('files.exported'));
     } catch (err: unknown) {
       toast.error(t('files.exportError'), {

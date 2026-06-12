@@ -13,6 +13,7 @@ import {
   Wand2,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
@@ -22,10 +23,14 @@ import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { indexPad } from '../../utils';
 import { CopyButton, HighlightedText, MarkdownEditor } from '../common';
 import { IconButton, Tooltip, type IconButtonTone } from '../ui';
+import { composeAnnotatedMarkdown } from '../../utils/annotationMarkdown';
+import { restoreFootnoteMarkers } from '../../utils/footnoteExtractor';
 import { usePhraseMemoryAutoSearch } from '../../hooks/usePhraseMemoryAutoSearch';
 import { usePanelScrollSync } from '../../hooks/usePanelScrollSync';
+import { useAnnotationsStore } from '../../stores/annotationsStore';
 import { useDocumentViewState } from './hooks/useDocumentViewState';
 import { StageTraceDialog } from './StageTraceDialog';
+import { AnnotationContextMenu } from './AnnotationContextMenu';
 import { PaneSearch } from './PaneSearch';
 import { InlineStatusBadge } from './InlineStatusBadge';
 
@@ -144,6 +149,7 @@ export function DocumentView({
   const { config } = usePipelineStore();
   const { currentProjectId, projects } = useProjectStore();
   const activeWorkspace = useWorkspaceStore((state) => state.activeWorkspace);
+  const annotationsByChunkId = useAnnotationsStore((s) => s.annotationsByChunkId);
   const {
     updateChunkDraft,
     updateChunkOriginalText,
@@ -158,8 +164,13 @@ export function DocumentView({
     setTraceStageId,
     focusedChunkId,
     focusedIssueQuery,
+    focusedSourceIssueQuery,
     focusedIssueRequestId,
+    setShowChunkDrawer,
+    setPendingAnnotationAnchor,
   } = useUiStore();
+
+  const [annotationMenu, setAnnotationMenu] = useState<{ x: number; y: number; text: string; chunkId: string } | null>(null);
 
   const {
     resolvedLayout,
@@ -190,6 +201,7 @@ export function DocumentView({
     showHighlight,
     sourceHighlightHtml,
     translationHighlight,
+    translationHighlightHtml,
     translationEffectiveSearch,
     setSelectedChunkId,
   } = useDocumentViewState();
@@ -203,6 +215,28 @@ export function DocumentView({
   };
 
   const currentProject = projects.find((project) => project.id === currentProjectId) ?? null;
+
+  // The source display text carries bracketed superscript markers ([¹], …),
+  // which are not GFM. Restore them to `[^id]` so the renderer links them to
+  // the definitions and emits the footnote section in preview.
+  const sourcePreviewValue = (() => {
+    const footnotes = currentChunk?.footnotes;
+    if (!footnotes?.length) return undefined;
+    const body = restoreFootnoteMarkers(currentChunk!.sourceDisplayText, footnotes);
+    const defs = footnotes.map((fn) => `[^${fn.id}]: ${fn.text}`).join('\n\n');
+    return `${body}\n\n${defs}`;
+  })();
+
+  // Annotation notes are injected only at render time — the stored draft is
+  // never mutated, so it cannot be corrupted by note insertion. Applies to the
+  // final draft only (annotations anchor into the final translation).
+  const translationPreviewValue = (() => {
+    if (!currentChunk || !isLastSelected) return undefined;
+    const annotations = annotationsByChunkId.get(currentChunk.id) ?? [];
+    if (annotations.length === 0) return undefined;
+    const composed = composeAnnotatedMarkdown(rawStageContent, annotations);
+    return composed === rawStageContent ? undefined : composed;
+  })();
 
   if (!currentChunk) {
     return (
@@ -330,6 +364,14 @@ export function DocumentView({
                   const sizeClass = chunk.translationLocked
                     ? (isCurrent ? 'h-4.5 w-4.5' : 'h-4 w-4')
                     : (isCurrent ? 'h-4 w-4' : 'h-3 w-3');
+                  const chunkAnnotations = annotationsByChunkId.get(chunk.id) ?? [];
+                  const annotDotColor = chunkAnnotations.some(a => a.type === 'problem')
+                    ? 'bg-editorial-accent'
+                    : chunkAnnotations.some(a => a.type === 'doubt')
+                      ? 'bg-editorial-warning'
+                      : chunkAnnotations.length > 0
+                        ? 'bg-editorial-charcoal/70'
+                        : null;
                   return (
                     <Tooltip key={chunk.id} label={`${idx + 1}`}>
                       <button
@@ -345,6 +387,9 @@ export function DocumentView({
                         {chunk.translationLocked ? (
                           <span className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-editorial-success" />
                         ) : null}
+                        {annotDotColor && (
+                          <span className={`absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full ${annotDotColor} ring-1 ring-editorial-bg`} />
+                        )}
                       </button>
                     </Tooltip>
                   );
@@ -403,6 +448,9 @@ export function DocumentView({
                 textClassName="text-[15px] leading-8 text-editorial-ink"
                 previewClassName="min-h-[280px] text-[15px] leading-8 text-editorial-ink"
                 highlightHtml={sourceHighlightHtml}
+                previewValue={sourcePreviewValue}
+                focusQuery={focusedChunkId === currentChunk.id ? focusedSourceIssueQuery : null}
+                focusRequestId={focusedChunkId === currentChunk.id ? focusedIssueRequestId : 0}
               />
             </DocumentPage>
           )}
@@ -506,29 +554,40 @@ export function DocumentView({
                 searchLabel={t('document.searchInTranslation')}
                 scrollRef={scrollTranslationRef}
               >
-                {showDiffMode ? (
-                  <div data-scroll-sync="true" className="flex flex-col flex-1 min-h-0 overflow-y-auto custom-scrollbar">
-                    <HighlightedText
-                      html={stageDiff.html}
-                      className="text-[15px] leading-8 text-editorial-ink min-h-[280px]"
+                <div
+                  className="flex flex-col flex-1 min-h-0"
+                  onContextMenu={(e) => {
+                    const text = window.getSelection()?.toString().trim() ?? '';
+                    if (!text) return;
+                    e.preventDefault();
+                    setAnnotationMenu({ x: e.clientX, y: e.clientY, text, chunkId: currentChunk.id });
+                  }}
+                >
+                  {showDiffMode ? (
+                    <div data-scroll-sync="true" className="flex flex-col flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+                      <HighlightedText
+                        html={stageDiff.html}
+                        className="text-[15px] leading-8 text-editorial-ink min-h-[280px]"
+                      />
+                    </div>
+                  ) : (
+                    <MarkdownEditor
+                      identityKey={`${currentChunk.id}:candidate:${effectiveSelectedStageId}`}
+                      value={rawStageContent}
+                      onChange={isLastSelected ? (nextValue) => updateChunkDraft(currentChunk.id, nextValue) : NOOP_CHANGE}
+                      markdownEnabled={config.markdownAware === true}
+                      readOnly={stageReadOnly}
+                      fillHeight
+                      textClassName="text-[15px] leading-8 text-editorial-ink"
+                      previewClassName="min-h-[280px] text-[15px] leading-8 text-editorial-ink"
+                      placeholder={isLastSelected ? t('pipeline.candidatePlaceholder') : ''}
+                      highlightHtml={translationHighlightHtml}
+                      previewValue={translationPreviewValue}
+                      focusQuery={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueQuery : null}
+                      focusRequestId={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueRequestId : 0}
                     />
-                  </div>
-                ) : (
-                  <MarkdownEditor
-                    identityKey={`${currentChunk.id}:candidate:${effectiveSelectedStageId}`}
-                    value={rawStageContent}
-                    onChange={isLastSelected ? (nextValue) => updateChunkDraft(currentChunk.id, nextValue) : NOOP_CHANGE}
-                    markdownEnabled={config.markdownAware === true}
-                    readOnly={stageReadOnly}
-                    fillHeight
-                    textClassName="text-[15px] leading-8 text-editorial-ink"
-                    previewClassName="min-h-[280px] text-[15px] leading-8 text-editorial-ink"
-                    placeholder={isLastSelected ? t('pipeline.candidatePlaceholder') : ''}
-                    highlightHtml={(showHighlight || !!translationEffectiveSearch || !!focusedIssueQuery) ? translationHighlight.html : null}
-                    focusQuery={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueQuery : null}
-                    focusRequestId={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueRequestId : 0}
-                  />
-                )}
+                  )}
+                </div>
               </DocumentPage>
             );
           })()}
@@ -541,6 +600,17 @@ export function DocumentView({
           stage={config.stages.find((entry) => entry.id === traceStageId) ?? null}
           isJudge={traceStageId === '_judge'}
           onClose={() => setTraceStageId(null)}
+        />
+      ) : null}
+      {annotationMenu ? (
+        <AnnotationContextMenu
+          x={annotationMenu.x}
+          y={annotationMenu.y}
+          onAddAnnotation={() => {
+            setPendingAnnotationAnchor({ chunkId: annotationMenu.chunkId, text: annotationMenu.text });
+            setShowChunkDrawer(true, 'notes');
+          }}
+          onClose={() => setAnnotationMenu(null)}
         />
       ) : null}
     </section>

@@ -26,6 +26,10 @@ import {
 } from '../utils/documentState';
 import { stripFootnoteMarkers, stripSuperscriptMarkers } from '../utils/footnoteExtractor';
 
+function stripAllFootnoteMarkers(text: string): string {
+  return stripFootnoteMarkers(stripSuperscriptMarkers(text));
+}
+
 // --- Internal O(1) chunk index ---
 // Maps chunkId → array index. Kept as a module-level variable; never part of Zustand state.
 // Rebuilt automatically via store subscription whenever `chunks` reference changes —
@@ -143,12 +147,14 @@ interface ChunksState {
   setChunkStagePromptInfo: (chunkId: string, stageId: string, promptInfo: PromptInfo) => void;
   updateChunkJudge: (chunkId: string, result: JudgeResult) => void;
   updateChunkDraft: (chunkId: string, draft: string) => void;
+  updateChunkTranslationForce: (chunkId: string, draft: string) => void;
   toggleChunkTranslationLock: (chunkId: string) => void;
   updateChunkStatus: (chunkId: string, status: ChunkStatus) => void;
   updateChunkOriginalText: (chunkId: string, text: string) => void;
   restoreChunkSourceText: (chunkId: string) => void;
   toggleChunkSourceEditing: (chunkId: string) => void;
   updateChunkCoherence: (chunkId: string, result: CoherenceResult) => void;
+  toggleCoherenceIssueResolved: (chunkId: string, key: string) => void;
   resetCompletedChunks: () => void;
   resetPreviewChunks: () => void;
   resetAllChunks: () => void;
@@ -280,6 +286,13 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
       ),
     })),
 
+  updateChunkTranslationForce: (chunkId, draft) =>
+    set((state) => ({
+      chunks: updateSingleChunk(state.chunks, chunkId, (chunk) =>
+        updateChunkTranslationFields(chunk, draft),
+      ),
+    })),
+
   toggleChunkTranslationLock: (chunkId) =>
     set((state) => ({
       chunks: updateSingleChunk(state.chunks, chunkId, (chunk) => ({
@@ -334,7 +347,7 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
         const updated = updateChunkSourceFields(
           chunk,
           chunk.originalText,
-          stripSuperscriptMarkers(chunk.originalText),
+          stripAllFootnoteMarkers(chunk.originalText),
           chunk.footnotes,
         );
         return hasTranslation ? { ...updated, translationStale: true } : updated;
@@ -357,6 +370,17 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
         ...chunk,
         coherenceResult: result,
       })),
+    })),
+
+  toggleCoherenceIssueResolved: (chunkId, key) =>
+    set((state) => ({
+      chunks: updateSingleChunk(state.chunks, chunkId, (chunk) => {
+        const current = chunk.coherenceResult;
+        if (!current) return chunk;
+        const keys = current.resolvedIssueKeys ?? [];
+        const next = keys.includes(key) ? keys.filter((k) => k !== key) : [...keys, key];
+        return { ...chunk, coherenceResult: { ...current, resolvedIssueKeys: next } };
+      }),
     })),
 
   resetCompletedChunks: () =>

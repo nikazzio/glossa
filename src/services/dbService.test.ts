@@ -135,6 +135,48 @@ describe('runInTransaction', () => {
   });
 });
 
+describe('ensureColumn definition validation', () => {
+  afterEach(() => {
+    vi.resetModules();
+    vi.clearAllMocks();
+  });
+
+  it('accepts INTEGER DEFAULT 0', async () => {
+    const { validateColumnDefinition } = await import('./dbService');
+    expect(() => validateColumnDefinition('INTEGER DEFAULT 0')).not.toThrow();
+  });
+
+  it('accepts TEXT DEFAULT NULL', async () => {
+    const { validateColumnDefinition } = await import('./dbService');
+    expect(() => validateColumnDefinition('TEXT DEFAULT NULL')).not.toThrow();
+  });
+
+  it("accepts TEXT DEFAULT ''", async () => {
+    const { validateColumnDefinition } = await import('./dbService');
+    expect(() => validateColumnDefinition("TEXT DEFAULT ''")).not.toThrow();
+  });
+
+  it("accepts TEXT DEFAULT 'value'", async () => {
+    const { validateColumnDefinition } = await import('./dbService');
+    expect(() => validateColumnDefinition("TEXT DEFAULT 'idle'")).not.toThrow();
+  });
+
+  it('rejects SQL injection in definition', async () => {
+    const { validateColumnDefinition } = await import('./dbService');
+    expect(() => validateColumnDefinition("TEXT; DROP TABLE users--")).toThrow('Invalid column definition');
+  });
+
+  it('rejects subquery in definition', async () => {
+    const { validateColumnDefinition } = await import('./dbService');
+    expect(() => validateColumnDefinition("TEXT DEFAULT (SELECT password FROM users)")).toThrow('Invalid column definition');
+  });
+
+  it('accepts INTEGER NOT NULL DEFAULT 0', async () => {
+    const { validateColumnDefinition } = await import('./dbService');
+    expect(() => validateColumnDefinition('INTEGER NOT NULL DEFAULT 0')).not.toThrow();
+  });
+});
+
 describe('ensureColumn whitelist', () => {
   afterEach(() => {
     vi.resetModules();
@@ -194,29 +236,11 @@ describe('initDatabase migrations', () => {
     expect(dbState.db.execute).not.toHaveBeenCalledWith('DROP TABLE IF EXISTS projects');
   });
 
-  it('adds new pipeline and translation columns for existing databases', async () => {
+  it('adds new translation columns for existing databases', async () => {
     const { initDatabase } = await import('./dbService');
 
     await initDatabase();
 
-    expect(dbState.db.execute).toHaveBeenCalledWith(
-      expect.stringContaining('ALTER TABLE pipeline_configs ADD COLUMN words_per_chunk INTEGER DEFAULT 0'),
-    );
-    expect(dbState.db.execute).toHaveBeenCalledWith(
-      expect.stringContaining("ALTER TABLE pipeline_configs ADD COLUMN source_text TEXT DEFAULT ''"),
-    );
-    expect(dbState.db.execute).toHaveBeenCalledWith(
-      expect.stringContaining('ALTER TABLE pipeline_configs ADD COLUMN review_provider_options TEXT DEFAULT NULL'),
-    );
-    expect(dbState.db.execute).toHaveBeenCalledWith(
-      expect.stringContaining("ALTER TABLE pipeline_configs ADD COLUMN run_status TEXT DEFAULT 'idle'"),
-    );
-    expect(dbState.db.execute).toHaveBeenCalledWith(
-      expect.stringContaining('DELETE FROM pipeline_configs'),
-    );
-    expect(dbState.db.execute).toHaveBeenCalledWith(
-      expect.stringContaining('CREATE UNIQUE INDEX IF NOT EXISTS idx_pipeline_configs_project_id'),
-    );
     expect(dbState.db.execute).toHaveBeenCalledWith(
       expect.stringContaining("ALTER TABLE translations ADD COLUMN chunk_status TEXT DEFAULT 'ready'"),
     );
@@ -234,6 +258,9 @@ describe('initDatabase migrations', () => {
     );
     expect(dbState.db.execute).toHaveBeenCalledWith(
       expect.stringContaining('ALTER TABLE translations ADD COLUMN blob_reference_chunk_ids TEXT DEFAULT NULL'),
+    );
+    expect(dbState.db.execute).not.toHaveBeenCalledWith(
+      expect.stringContaining('ALTER TABLE pipeline_configs'),
     );
   });
 

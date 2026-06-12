@@ -1,10 +1,23 @@
 import { invoke } from '@tauri-apps/api/core';
 import { open, save } from '@tauri-apps/plugin-dialog';
 import { readTextFile, writeFile, writeTextFile } from '@tauri-apps/plugin-fs';
-import type { ExperimentalImportMode, TranslationChunk } from '../types';
+import type { Annotation, ExperimentalImportMode, TranslationChunk } from '../types';
 import { qualityExportLabel } from '../utils';
 import { buildMarkdownHtmlDocument, flattenMarkdownToText } from './markdown';
+import { composeAnnotatedMarkdown } from '../utils/annotationMarkdown';
 import { normalizeImportedText } from '../utils/textNormalization';
+
+export type ChunkAnnotations = Map<string, Annotation[]>;
+
+/**
+ * Translation text for export with annotation footnotes injected (when present).
+ * Falls back to the source text for untranslated chunks.
+ */
+function chunkExportText(chunk: TranslationChunk, annotations?: ChunkAnnotations): string {
+  const base = chunk.translationDisplayText || chunk.sourceDisplayText;
+  const chunkAnnotations = annotations?.get(chunk.id);
+  return chunkAnnotations?.length ? composeAnnotatedMarkdown(base, chunkAnnotations) : base;
+}
 
 // ── Import ───────────────────────────────────────────────────────────
 
@@ -59,7 +72,7 @@ async function readImportedText(path: string): Promise<Pick<ImportedTextFile, 't
 export async function exportTranslation(
   chunks: TranslationChunk[],
   format: 'txt' | 'md' | 'html' | 'docx' = 'txt',
-  options: { markdownAware?: boolean; separator?: string } = {},
+  options: { markdownAware?: boolean; separator?: string; annotations?: ChunkAnnotations } = {},
 ): Promise<boolean> {
   const ext = format;
   const path = await save({
@@ -72,11 +85,12 @@ export async function exportTranslation(
   if (!path) return false;
 
   const sep = options.separator ?? '\n\n';
+  const annotations = options.annotations;
   // For markdown-aware TXT, build markdown without separator then flatten,
   // then join the resulting plain-text segments with the chosen separator.
   // Passing the separator through markdown first would corrupt non-markdown
   // separators like "* * *" (parsed as a thematic break and then stripped).
-  const markdown = buildMarkdown(chunks, '\n\n');
+  const markdown = buildMarkdown(chunks, '\n\n', annotations);
 
   if (format === 'docx') {
     const bytes = await invoke<number[]>('export_markdown_docx', { markdown });
@@ -86,11 +100,11 @@ export async function exportTranslation(
 
   const content =
     format === 'md'
-      ? buildMarkdown(chunks, sep)
+      ? buildMarkdown(chunks, sep, annotations)
       : format === 'html'
         ? buildMarkdownHtmlDocument(markdown, 'Translation Export')
         : options.markdownAware
-          ? chunks.map((c) => flattenMarkdownToText(c.translationDisplayText || c.sourceDisplayText)).join(sep)
+          ? chunks.map((c) => flattenMarkdownToText(chunkExportText(c, annotations))).join(sep)
           : buildPlainText(chunks, sep);
 
   await writeTextFile(path, content);
@@ -129,25 +143,6 @@ export async function exportBilingual(
   return true;
 }
 
-export async function exportMarkdownTranslation(
-  chunks: TranslationChunk[],
-): Promise<boolean> {
-  const path = await save({
-    title: 'Export markdown translation',
-    defaultPath: 'translation.md',
-    filters: [{ name: 'Markdown', extensions: ['md'] }],
-  });
-  if (!path) return false;
-
-  const content = chunks
-    .map((chunk) => chunk.translationDisplayText || chunk.sourceDisplayText)
-    .join('\n\n');
-
-  await writeTextFile(path, content);
-  return true;
-}
-
-
 // ── Helpers ──────────────────────────────────────────────────────────
 
 function buildPlainText(chunks: TranslationChunk[], separator = '\n\n'): string {
@@ -156,9 +151,13 @@ function buildPlainText(chunks: TranslationChunk[], separator = '\n\n'): string 
     .join(separator);
 }
 
-function buildMarkdown(chunks: TranslationChunk[], separator = '\n\n'): string {
+function buildMarkdown(
+  chunks: TranslationChunk[],
+  separator = '\n\n',
+  annotations?: ChunkAnnotations,
+): string {
   return chunks
-    .map((chunk) => chunk.translationDisplayText || chunk.sourceDisplayText)
+    .map((chunk) => chunkExportText(chunk, annotations))
     .filter((chunk) => chunk.trim().length > 0)
     .join(separator);
 }

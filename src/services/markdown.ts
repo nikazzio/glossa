@@ -1,157 +1,111 @@
-export type MarkdownInlineNode =
-  | { type: 'text'; value: string }
-  | { type: 'strong'; children: MarkdownInlineNode[] }
-  | { type: 'emphasis'; children: MarkdownInlineNode[] }
-  | { type: 'link'; text: string; href: string }
-  | { type: 'footnote-ref'; id: string };
+import { unified } from 'unified';
+import remarkParse from 'remark-parse';
+import remarkGfm from 'remark-gfm';
+import remarkRehype from 'remark-rehype';
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
+import rehypeStringify from 'rehype-stringify';
 
-export type MarkdownBlock =
-  | { type: 'heading'; level: 1 | 2 | 3; children: MarkdownInlineNode[] }
-  | { type: 'paragraph'; children: MarkdownInlineNode[] }
-  | { type: 'list'; ordered: boolean; items: MarkdownInlineNode[][] }
-  | { type: 'table'; headers: MarkdownInlineNode[][]; rows: MarkdownInlineNode[][][] };
+// Footnotes are rendered via GFM (`[^id]` inline + `[^id]: text` definitions).
+// remark-gfm builds the inline `<sup>` references and the trailing
+// `<section data-footnotes>` list with backrefs automatically, so source and
+// translation panes render identically as long as they feed the same markdown.
 
-export interface MarkdownFootnote {
-  id: string;
-  text: string;
+// Allow the footnote markup (ids, classes, data-* flags) through the sanitizer.
+// The default schema already strips unsafe link protocols (javascript:, data:, …).
+const sanitizeSchema = {
+  ...defaultSchema,
+  // remark-rehype already namespaces footnote ids/hrefs with `user-content-`.
+  // Disable the sanitizer's own id clobbering so it does not double-prefix the
+  // id while leaving the matching href untouched (which would break anchors).
+  clobber: [],
+  tagNames: [...(defaultSchema.tagNames ?? []), 'section', 'sup'],
+  attributes: {
+    ...defaultSchema.attributes,
+    section: [...(defaultSchema.attributes?.section ?? []), 'className', 'dataFootnotes'],
+    a: [
+      ...(defaultSchema.attributes?.a ?? []),
+      'id',
+      'className',
+      'ariaDescribedby',
+      'dataFootnoteRef',
+      'dataFootnoteBackref',
+    ],
+    li: [...(defaultSchema.attributes?.li ?? []), 'id', 'value'],
+    sup: [...(defaultSchema.attributes?.sup ?? []), 'id'],
+    ol: [...(defaultSchema.attributes?.ol ?? []), 'className'],
+    h2: [...(defaultSchema.attributes?.h2 ?? []), 'id', 'className'],
+  },
+};
+
+const htmlProcessor = unified()
+  .use(remarkParse)
+  .use(remarkGfm)
+  .use(remarkRehype)
+  .use(rehypeSanitize, sanitizeSchema)
+  .use(rehypeStringify);
+
+const mdastProcessor = unified().use(remarkParse).use(remarkGfm);
+
+interface MdNode {
+  type: string;
+  value?: string;
+  children?: MdNode[];
+  identifier?: string;
+  ordered?: boolean;
 }
 
-export interface MarkdownDocument {
-  blocks: MarkdownBlock[];
-  footnotes: MarkdownFootnote[];
+interface RenderOptions {
+  /**
+   * Strip footnote navigation anchors (inline ref href + `↩` backrefs). Used by
+   * the in-app preview, where the scroll-jump shifted the document pane
+   * horizontally. Standalone HTML export keeps the working links (default).
+   */
+  stripFootnoteNav?: boolean;
 }
 
-export function parseMarkdownDocument(markdown: string): MarkdownDocument {
-  const normalized = normalizeMarkdown(markdown);
-  const lines = normalized.split('\n');
-  const bodyLines: string[] = [];
-  const footnotes: MarkdownFootnote[] = [];
-
-  for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index];
-    const footnoteMatch = line.match(/^\[\^([^\]]+)\]:\s*(.*)$/);
-    if (!footnoteMatch) {
-      bodyLines.push(line);
-      continue;
-    }
-
-    const continuation: string[] = [footnoteMatch[2].trim()];
-    while (index + 1 < lines.length && lines[index + 1].trim()) {
-      continuation.push(lines[index + 1].trim());
-      index += 1;
-    }
-    footnotes.push({
-      id: footnoteMatch[1],
-      text: continuation.join(' ').trim(),
-    });
-  }
-
-  const blocks: MarkdownBlock[] = [];
-  let index = 0;
-  while (index < bodyLines.length) {
-    const line = bodyLines[index].trimEnd();
-    if (!line.trim()) {
-      index += 1;
-      continue;
-    }
-
-    const headingMatch = line.match(/^(#{1,3})\s+(.+)$/);
-    if (headingMatch) {
-      blocks.push({
-        type: 'heading',
-        level: headingMatch[1].length as 1 | 2 | 3,
-        children: parseInlineMarkdown(headingMatch[2].trim()),
-      });
-      index += 1;
-      continue;
-    }
-
-    if (line.trimStart().startsWith('|')) {
-      const tableLines: string[] = [];
-      while (index < bodyLines.length && bodyLines[index].trimStart().startsWith('|')) {
-        tableLines.push(bodyLines[index]);
-        index += 1;
-      }
-      const isSeparatorRow = (row: string) => /^\|[\s|:-]+\|$/.test(row.trim());
-      const parseTableRow = (row: string): MarkdownInlineNode[][] =>
-        row
-          .split(/(?<!\\)\|/)
-          .slice(1, -1)
-          .map((cell) => parseInlineMarkdown(cell.replace(/\\\|/g, '|').trim()));
-
-      if (tableLines.some(isSeparatorRow)) {
-        const dataLines = tableLines.filter((r) => !isSeparatorRow(r));
-        const [headerLine, ...bodyTableLines] = dataLines;
-        blocks.push({
-          type: 'table',
-          headers: parseTableRow(headerLine),
-          rows: bodyTableLines.map(parseTableRow),
-        });
-      } else {
-        tableLines.forEach((tl) => {
-          blocks.push({ type: 'paragraph', children: parseInlineMarkdown(tl.trim()) });
-        });
-      }
-      continue;
-    }
-
-    const listMatch = line.match(/^(([-+*])|(\d+\.))\s+(.+)$/);
-    if (listMatch) {
-      const ordered = Boolean(listMatch[3]);
-      const items: MarkdownInlineNode[][] = [];
-      while (index < bodyLines.length) {
-        const current = bodyLines[index].trim();
-        const currentMatch = current.match(/^(([-+*])|(\d+\.))\s+(.+)$/);
-        if (!currentMatch || Boolean(currentMatch[3]) !== ordered) break;
-        items.push(parseInlineMarkdown(currentMatch[4].trim()));
-        index += 1;
-      }
-      blocks.push({ type: 'list', ordered, items });
-      continue;
-    }
-
-    const paragraphLines = [line.trim()];
-    while (index + 1 < bodyLines.length) {
-      const next = bodyLines[index + 1].trim();
-      if (!next) break;
-      if (/^(#{1,3})\s+/.test(next) || /^(([-+*])|(\d+\.))\s+/.test(next)) break;
-      paragraphLines.push(next);
-      index += 1;
-    }
-
-    blocks.push({
-      type: 'paragraph',
-      children: parseInlineMarkdown(paragraphLines.join(' ')),
-    });
-    index += 1;
-  }
-
-  return { blocks, footnotes };
+export function renderMarkdownToHtmlFragment(markdown: string, options: RenderOptions = {}): string {
+  const html = String(htmlProcessor.processSync(normalizeMarkdown(markdown)));
+  const stripped = options.stripFootnoteNav ? stripFootnoteNavigation(html) : html;
+  return restoreFootnoteDisplayNumbers(stripped);
 }
 
-export function renderMarkdownToHtmlFragment(markdown: string): string {
-  const document = parseMarkdownDocument(markdown);
-  const body = document.blocks.map(renderBlockToHtml).join('\n');
-  const footnotes =
-    document.footnotes.length > 0
-      ? [
-          '<section class="footnotes">',
-          '<h2>Notes</h2>',
-          '<ol>',
-          ...document.footnotes.map(
-            (footnote) =>
-              `<li id="fn-${escapeHtml(footnote.id)}"><p>${renderInlineToHtml(
-                parseInlineMarkdown(footnote.text),
-              )} <a class="footnote-backref" href="#fnref-${escapeHtml(
-                footnote.id,
-              )}" aria-label="Back to reference">↩</a></p></li>`,
-          ),
-          '</ol>',
-          '</section>',
-        ].join('\n')
-      : '';
+/**
+ * remark-gfm always numbers footnote references sequentially (1, 2, 3…)
+ * regardless of the GFM label. When source-pane previews use label "22" for
+ * the 22nd document-level note, GFM still renders it as "2" (if it is the
+ * second reference in the chunk). This function reads the label back from the
+ * `id` attribute and writes it as the visible counter, both in the inline
+ * superscript and in the footnote-section list items.
+ *
+ * No-op when labels are sequential (1, 2, 3…), so translation previews and
+ * exports are unaffected.
+ */
+function restoreFootnoteDisplayNumbers(html: string): string {
+  // Inline refs: <sup><a id="user-content-fnref-22" ...>2</a></sup>
+  // The id is on the <a>, not the <sup>. Replace the inner text with the label.
+  let result = html.replace(
+    /(<a\b[^>]*\bid="user-content-fnref-([^"]+)"[^>]*>)\d+(<\/a>)/g,
+    (_full, pre, label, post) => `${pre}${label}${post}`,
+  );
+  // Footnote section <li>: add value="22" so the <ol> counter shows the right number.
+  result = result.replace(
+    /<li id="(user-content-fn-(\d+))"/g,
+    '<li id="$1" value="$2"',
+  );
+  return result;
+}
 
-  return [body, footnotes].filter(Boolean).join('\n');
+/**
+ * Removes footnote navigation anchors from rendered GFM output:
+ * - drops the `↩` backref links in the footnote section entirely;
+ * - strips the `href` from inline footnote references so clicking them no
+ *   longer scroll-jumps (which shifted the document pane horizontally).
+ * The reference number stays visible and styled; it is just inert.
+ */
+function stripFootnoteNavigation(html: string): string {
+  return html
+    .replace(/<a\b[^>]*\bdata-footnote-backref\b[^>]*>[\s\S]*?<\/a>/g, '')
+    .replace(/<a\b[^>]*\bdata-footnote-ref\b[^>]*>/g, (tag) => tag.replace(/\shref="[^"]*"/, ''));
 }
 
 export function buildMarkdownHtmlDocument(markdown: string, title = 'Glossa Export'): string {
@@ -174,10 +128,11 @@ export function buildMarkdownHtmlDocument(markdown: string, title = 'Glossa Expo
     '    ul, ol { padding-left: 1.5rem; }',
     '    a { color: #744c18; }',
     '    sup { font-size: 0.75em; }',
-    '    .footnotes { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid #cdbda3; }',
+    '    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }',
+    '    .footnotes { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid #cdbda3; font-size: 0.9rem; }',
     '    .footnotes ol { padding-left: 1.25rem; }',
     '    .footnotes p { margin: 0; }',
-    '    .footnote-backref { text-decoration: none; margin-left: 0.35rem; }',
+    '    .data-footnote-backref, [data-footnote-backref] { text-decoration: none; margin-left: 0.35rem; }',
     '    table { border-collapse: collapse; width: 100%; margin: 0 0 1rem; }',
     '    th, td { border: 1px solid #cdbda3; padding: 0.4rem 0.75rem; text-align: left; }',
     '    thead { background: #ede8df; }',
@@ -191,167 +146,79 @@ export function buildMarkdownHtmlDocument(markdown: string, title = 'Glossa Expo
 }
 
 export function flattenMarkdownToText(markdown: string): string {
-  const document = parseMarkdownDocument(markdown);
+  const tree = mdastProcessor.parse(normalizeMarkdown(markdown)) as MdNode;
+
+  const numberById = new Map<string, number>();
+  const assignNumber = (id: string): number => {
+    const existing = numberById.get(id);
+    if (existing !== undefined) return existing;
+    const next = numberById.size + 1;
+    numberById.set(id, next);
+    return next;
+  };
+
+  const inlineText = (node: MdNode): string => {
+    if (node.type === 'footnoteReference') return `[${assignNumber(node.identifier ?? '')}]`;
+    if (node.type === 'break') return ' ';
+    if (node.type === 'text' || node.type === 'inlineCode') return node.value ?? '';
+    if (node.children) return node.children.map(inlineText).join('');
+    return node.value ?? '';
+  };
+
   const lines: string[] = [];
+  const definitions: MdNode[] = [];
 
-  document.blocks.forEach((block) => {
-    if (block.type === 'heading') {
-      lines.push(flattenInline(block.children).toUpperCase(), '');
-      return;
+  for (const node of tree.children ?? []) {
+    switch (node.type) {
+      case 'footnoteDefinition':
+        definitions.push(node);
+        break;
+      case 'heading':
+        lines.push(inlineText(node).toUpperCase(), '');
+        break;
+      case 'paragraph':
+      case 'blockquote':
+        lines.push(inlineText(node).trim(), '');
+        break;
+      case 'list': {
+        const ordered = node.ordered === true;
+        (node.children ?? []).forEach((item, index) => {
+          const prefix = ordered ? `${index + 1}. ` : '• ';
+          lines.push(`${prefix}${inlineText(item).trim()}`);
+        });
+        lines.push('');
+        break;
+      }
+      case 'table':
+        (node.children ?? []).forEach((row) => {
+          lines.push((row.children ?? []).map(inlineText).join(' | '));
+        });
+        lines.push('');
+        break;
+      case 'thematicBreak':
+        break;
+      default:
+        if (node.children) lines.push(inlineText(node).trim(), '');
     }
+  }
 
-    if (block.type === 'paragraph') {
-      lines.push(flattenInline(block.children), '');
-      return;
-    }
-
-    if (block.type === 'table') {
-      const allCells = [block.headers, ...block.rows]
-        .map((row) => row.map((cell) => flattenInline(cell)).join(' | '))
-        .join('\n');
-      lines.push(allCells, '');
-      return;
-    }
-
-    block.items.forEach((item, index) => {
-      const prefix = block.ordered ? `${index + 1}. ` : '• ';
-      lines.push(`${prefix}${flattenInline(item)}`);
-    });
-    lines.push('');
-  });
-
-  if (document.footnotes.length > 0) {
+  if (definitions.length > 0) {
     lines.push('Notes', '');
-    document.footnotes.forEach((footnote) => {
-      lines.push(`[${footnote.id}] ${flattenInline(parseInlineMarkdown(footnote.text))}`);
-    });
+    definitions
+      .slice()
+      .sort(
+        (a, b) =>
+          (numberById.get(a.identifier ?? '') ?? Number.MAX_SAFE_INTEGER) -
+          (numberById.get(b.identifier ?? '') ?? Number.MAX_SAFE_INTEGER),
+      )
+      .forEach((definition) => {
+        const number = assignNumber(definition.identifier ?? '');
+        lines.push(`[${number}] ${inlineText(definition).trim()}`);
+      });
     lines.push('');
   }
 
   return lines.join('\n').trim();
-}
-
-export function markdownToSourceText(markdown: string, markdownAware: boolean): string {
-  return markdownAware ? markdown : markdown.trim();
-}
-
-function renderBlockToHtml(block: MarkdownBlock): string {
-  if (block.type === 'heading') {
-    return `<h${block.level}>${renderInlineToHtml(block.children)}</h${block.level}>`;
-  }
-  if (block.type === 'paragraph') {
-    return `<p>${renderInlineToHtml(block.children)}</p>`;
-  }
-  if (block.type === 'table') {
-    const headerCells = block.headers
-      .map((cell) => `<th>${renderInlineToHtml(cell)}</th>`)
-      .join('');
-    const bodyRows = block.rows
-      .map((row) => {
-        const cells = row.map((cell) => `<td>${renderInlineToHtml(cell)}</td>`).join('');
-        return `<tr>${cells}</tr>`;
-      })
-      .join('');
-    return `<table><thead><tr>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table>`;
-  }
-  const tag = block.ordered ? 'ol' : 'ul';
-  const items = block.items
-    .map((item) => `<li>${renderInlineToHtml(item)}</li>`)
-    .join('');
-  return `<${tag}>${items}</${tag}>`;
-}
-
-function renderInlineToHtml(nodes: MarkdownInlineNode[]): string {
-  return nodes
-    .map((node) => {
-      if (node.type === 'text') return escapeHtml(node.value);
-      if (node.type === 'strong') return `<strong>${renderInlineToHtml(node.children)}</strong>`;
-      if (node.type === 'emphasis') return `<em>${renderInlineToHtml(node.children)}</em>`;
-      if (node.type === 'link') {
-        return `<a href="${escapeAttribute(node.href)}">${escapeHtml(node.text)}</a>`;
-      }
-      return `<sup id="fnref-${escapeHtml(node.id)}"><a href="#fn-${escapeHtml(
-        node.id,
-      )}">${escapeHtml(node.id)}</a></sup>`;
-    })
-    .join('');
-}
-
-function flattenInline(nodes: MarkdownInlineNode[]): string {
-  return nodes
-    .map((node) => {
-      if (node.type === 'text') return node.value;
-      if (node.type === 'strong' || node.type === 'emphasis') return flattenInline(node.children);
-      if (node.type === 'link') return node.text;
-      return `[${node.id}]`;
-    })
-    .join('');
-}
-
-function parseInlineMarkdown(text: string): MarkdownInlineNode[] {
-  const nodes: MarkdownInlineNode[] = [];
-  let index = 0;
-
-  while (index < text.length) {
-    const remaining = text.slice(index);
-
-    const footnoteRef = remaining.match(/^\[\^([^\]]+)\]/);
-    if (footnoteRef) {
-      nodes.push({ type: 'footnote-ref', id: footnoteRef[1] });
-      index += footnoteRef[0].length;
-      continue;
-    }
-
-    const link = remaining.match(/^\[([^\]]+)\]\(([^)]+)\)/);
-    if (link) {
-      nodes.push({ type: 'link', text: link[1], href: link[2] });
-      index += link[0].length;
-      continue;
-    }
-
-    if (remaining.startsWith('**')) {
-      const end = remaining.indexOf('**', 2);
-      if (end > 1) {
-        nodes.push({
-          type: 'strong',
-          children: parseInlineMarkdown(remaining.slice(2, end)),
-        });
-        index += end + 2;
-        continue;
-      }
-    }
-
-    if (remaining.startsWith('*')) {
-      const end = remaining.indexOf('*', 1);
-      if (end > 0) {
-        nodes.push({
-          type: 'emphasis',
-          children: parseInlineMarkdown(remaining.slice(1, end)),
-        });
-        index += end + 1;
-        continue;
-      }
-    }
-
-    const nextSpecial = findNextInlineMarker(remaining);
-    // nextSpecial === 0 means a special-looking char at the start matched no pattern
-    // (e.g. [¹] superscript marker). Consume 1 char to avoid an infinite loop.
-    const value =
-      nextSpecial === -1 ? remaining :
-      nextSpecial === 0  ? remaining[0] :
-      remaining.slice(0, nextSpecial);
-    nodes.push({ type: 'text', value });
-    index += value.length;
-  }
-
-  return nodes;
-}
-
-function findNextInlineMarker(text: string): number {
-  const candidates = ['[^', '[', '**', '*']
-    .map((token) => text.indexOf(token))
-    .filter((index) => index >= 0);
-  return candidates.length > 0 ? Math.min(...candidates) : -1;
 }
 
 function normalizeMarkdown(markdown: string): string {
@@ -364,8 +231,4 @@ function escapeHtml(value: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
-}
-
-function escapeAttribute(value: string): string {
-  return escapeHtml(value).replace(/'/g, '&#39;');
 }

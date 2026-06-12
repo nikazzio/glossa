@@ -76,11 +76,6 @@ export async function listProjects(workspaceId: string): Promise<Project[]> {
   );
 }
 
-export async function getProject(id: string): Promise<Project | null> {
-  const rows = await select<Project>('SELECT * FROM projects WHERE id = $1', [id]);
-  return rows[0] ?? null;
-}
-
 export async function createProject(
   name: string,
   sourceLang: string,
@@ -101,22 +96,6 @@ export async function createProject(
     [pipelineId, id, sourceLang, targetLang],
   );
   return id;
-}
-
-export async function updateProject(
-  id: string,
-  updates: Partial<Pick<Project, 'name' | 'source_language' | 'target_language'>>,
-): Promise<void> {
-  const sets: string[] = [];
-  const params: unknown[] = [];
-  let idx = 1;
-  if (updates.name !== undefined) { sets.push(`name = $${idx++}`); params.push(updates.name); }
-  if (updates.source_language !== undefined) { sets.push(`source_language = $${idx++}`); params.push(updates.source_language); }
-  if (updates.target_language !== undefined) { sets.push(`target_language = $${idx++}`); params.push(updates.target_language); }
-  if (sets.length === 0) return;
-  sets.push('updated_at = CURRENT_TIMESTAMP');
-  params.push(id);
-  await execute(`UPDATE projects SET ${sets.join(', ')} WHERE id = $${idx}`, params);
 }
 
 export async function deleteProject(id: string): Promise<void> {

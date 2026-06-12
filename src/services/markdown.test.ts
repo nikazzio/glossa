@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   buildMarkdownHtmlDocument,
   flattenMarkdownToText,
-  parseMarkdownDocument,
   renderMarkdownToHtmlFragment,
 } from './markdown';
 
@@ -18,28 +17,28 @@ describe('markdown service', () => {
     '[^1]: Footnote body',
   ].join('\n');
 
-  it('parses headings, lists, and footnotes from editorial markdown', () => {
-    const parsed = parseMarkdownDocument(sample);
-
-    expect(parsed.blocks.map((block) => block.type)).toEqual([
-      'heading',
-      'paragraph',
-      'list',
-    ]);
-    expect(parsed.footnotes).toEqual([{ id: '1', text: 'Footnote body' }]);
+  it('keeps footnote navigation anchors by default', () => {
+    const html = renderMarkdownToHtmlFragment(sample);
+    expect(html).toContain('href="#user-content-fn-1"');
+    expect(html).toContain('data-footnote-backref');
   });
 
-  it('renders html footnotes as linked superscripts with backlinks', () => {
-    const html = renderMarkdownToHtmlFragment(sample);
+  it('strips footnote navigation anchors when requested (in-app preview)', () => {
+    const html = renderMarkdownToHtmlFragment(sample, { stripFootnoteNav: true });
 
     expect(html).toContain('<h1>Title</h1>');
     expect(html).toContain('<strong>bold</strong>');
     expect(html).toContain('<em>italic</em>');
     expect(html).toContain('href="https://example.com"');
-    expect(html).toContain('id="fnref-1"');
-    expect(html).toContain('href="#fn-1"');
-    expect(html).toContain('href="#fnref-1"');
-    expect(html).toContain('<section class="footnotes"');
+    // GFM footnote inline reference is kept (styled) but made inert: no href
+    // jump-link and no `↩` backref, so clicking never scroll-shifts the pane.
+    expect(html).toContain('data-footnote-ref');
+    expect(html).toContain('id="user-content-fnref-1"');
+    expect(html).not.toContain('href="#user-content-fn-1"');
+    expect(html).not.toContain('data-footnote-backref');
+    // The footnote section itself is still rendered.
+    expect(html).toContain('data-footnotes');
+    expect(html).toContain('class="footnotes"');
   });
 
   it('flattens markdown to readable text with a final notes section', () => {
@@ -52,7 +51,7 @@ describe('markdown service', () => {
     expect(text).toContain('[1] Footnote body');
   });
 
-  it('does not infinite-loop on bracketed superscript markers like [¹]', () => {
+  it('does not break on bracketed superscript markers like [¹]', () => {
     const text = 'Text with note [¹] and another [²] marker.';
     const html = renderMarkdownToHtmlFragment(text);
     expect(html).toContain('[¹]');
@@ -75,17 +74,6 @@ describe('markdown service', () => {
       '| Bob | 25 |',
     ].join('\n');
 
-    it('parses a markdown table into AST', () => {
-      const parsed = parseMarkdownDocument(tableMd);
-      expect(parsed.blocks).toHaveLength(1);
-      const block = parsed.blocks[0];
-      expect(block.type).toBe('table');
-      if (block.type === 'table') {
-        expect(block.headers).toHaveLength(2);
-        expect(block.rows).toHaveLength(2);
-      }
-    });
-
     it('renders a table to HTML with thead and tbody', () => {
       const html = renderMarkdownToHtmlFragment(tableMd);
       expect(html).toContain('<table>');
@@ -105,6 +93,46 @@ describe('markdown service', () => {
       const text = flattenMarkdownToText(tableMd);
       expect(text).toContain('Name | Age');
       expect(text).toContain('Alice | 30');
+    });
+  });
+
+  describe('link protocol sanitization', () => {
+    it('preserves https links', () => {
+      const result = renderMarkdownToHtmlFragment('[click](https://example.com)');
+      expect(result).toContain('href="https://example.com"');
+    });
+
+    it('preserves http links', () => {
+      const result = renderMarkdownToHtmlFragment('[click](http://example.com)');
+      expect(result).toContain('href="http://example.com"');
+    });
+
+    it('preserves anchor links', () => {
+      const result = renderMarkdownToHtmlFragment('[click](#section)');
+      expect(result).toContain('href="#section"');
+    });
+
+    it('blocks javascript: protocol', () => {
+      const result = renderMarkdownToHtmlFragment('[click](javascript:alert(1))');
+      expect(result).not.toContain('javascript:');
+      expect(result).toContain('click');
+    });
+
+    it('blocks data: protocol', () => {
+      const result = renderMarkdownToHtmlFragment('[click](data:text/html,<script>alert(1)</script>)');
+      expect(result).not.toContain('data:text/html');
+      expect(result).not.toContain('<script>');
+    });
+
+    it('blocks vbscript: protocol', () => {
+      const result = renderMarkdownToHtmlFragment('[click](vbscript:msgbox(1))');
+      expect(result).not.toContain('vbscript:');
+      expect(result).toContain('click');
+    });
+
+    it('preserves mailto links', () => {
+      const result = renderMarkdownToHtmlFragment('[contact](mailto:info@example.com)');
+      expect(result).toContain('href="mailto:info@example.com"');
     });
   });
 });
