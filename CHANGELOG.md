@@ -1,5 +1,50 @@
 # Changelog
 
+## [0.11.0](https://github.com/nikazzio/glossa/compare/glossa-v0.10.0...glossa-v0.11.0) (2026-06-12)
+
+
+### ✨ Features
+
+* add localization for memories management in English and Italian ([a56be37](https://github.com/nikazzio/glossa/commit/a56be37daae7aa8d3554e56e844adbff17b4f7b2))
+* add MemoriesTab component to manage phrase memory entries ([a56be37](https://github.com/nikazzio/glossa/commit/a56be37daae7aa8d3554e56e844adbff17b4f7b2))
+* annotation context menu + NotesTab redesign ([#23](https://github.com/nikazzio/glossa/issues/23) [#263](https://github.com/nikazzio/glossa/issues/263)) ([9d284c8](https://github.com/nikazzio/glossa/commit/9d284c81e735012577565594fb7fa250dc0070b4))
+* annotation UX improvements ([713c798](https://github.com/nikazzio/glossa/commit/713c798525909e2ae40a8dedfbccccc7f260f215))
+* audit results — exhaustive judge, refine loop ([#244](https://github.com/nikazzio/glossa/issues/244) + [#259](https://github.com/nikazzio/glossa/issues/259) + [#231](https://github.com/nikazzio/glossa/issues/231)) ([#249](https://github.com/nikazzio/glossa/issues/249)) ([c06e72a](https://github.com/nikazzio/glossa/commit/c06e72a69bd5de7c7d546368a7b45c1fa226403b))
+* auto-insert markdown footnote in translation on annotation save ([c80cbb6](https://github.com/nikazzio/glossa/commit/c80cbb6a6a90cd0fc9a99e71c87be180e072aaab))
+* chunk annotations system ([#23](https://github.com/nikazzio/glossa/issues/23)) ([132e8dc](https://github.com/nikazzio/glossa/commit/132e8dc9d930f99e0b054790cace5513b9cba34d))
+* create annotation from audit issue with pre-filled anchor and content ([8e34fb2](https://github.com/nikazzio/glossa/commit/8e34fb2302f2b6671caf586e9a8f9da3fc1a022c))
+* enhance loading screen with dynamic height and width variables ([a56be37](https://github.com/nikazzio/glossa/commit/a56be37daae7aa8d3554e56e844adbff17b4f7b2))
+* implement cost panel in PipelineSidebar with improved positioning logic ([a56be37](https://github.com/nikazzio/glossa/commit/a56be37daae7aa8d3554e56e844adbff17b4f7b2))
+* integrate phrase memory management functions in phraseMemoryService ([a56be37](https://github.com/nikazzio/glossa/commit/a56be37daae7aa8d3554e56e844adbff17b4f7b2))
+* keyboard shortcuts for power users ([#10](https://github.com/nikazzio/glossa/issues/10)) ([#251](https://github.com/nikazzio/glossa/issues/251)) ([a0cc6c1](https://github.com/nikazzio/glossa/commit/a0cc6c1ef1a05c7293709a9f1af6afab3d801cde))
+* phrase memory foundation + semantic search workspace shell ([#7](https://github.com/nikazzio/glossa/issues/7)) ([#205](https://github.com/nikazzio/glossa/issues/205)) ([5c1b0c6](https://github.com/nikazzio/glossa/commit/5c1b0c6c14ae1c5f19d9d84fc39f8bc0f68c3a10))
+* remove manual add-annotation button from NotesTab — entry only via context menu ([c740234](https://github.com/nikazzio/glossa/commit/c740234d9f7e0255a1fb41dab25bd3ce19bcc5c5))
+* unify footnote rendering via remark-gfm, render annotation notes out-of-text ([5ef5fca](https://github.com/nikazzio/glossa/commit/5ef5fcaebe4015fc0d4469f4eb7bfb123fce5d81))
+
+
+### 🐛 Bug Fixes
+
+* annotation highlight as background + fix settings color crash + uniform markers ([e94f594](https://github.com/nikazzio/glossa/commit/e94f59438a288dc8a3d3ce432ea8961cd7d1e4e2))
+* **annotations:** separate annotation-locate focus from audit focus ([36d99b2](https://github.com/nikazzio/glossa/commit/36d99b253db0aa96f52481b7a159ab033de60082))
+* audit highlight stale, date format EU 24h, embedding regen UX ([#265](https://github.com/nikazzio/glossa/issues/265)) ([a77339e](https://github.com/nikazzio/glossa/commit/a77339eaaa1959ed2c4055dfb65b77eb8040fab8))
+* clear audit highlight on resolve/chunk-nav; chunk summary shows aggregated stats ([#262](https://github.com/nikazzio/glossa/issues/262) partial) ([1fc3cc3](https://github.com/nikazzio/glossa/commit/1fc3cc35c9b5bc5fad28e104dd780c8572db0602))
+* increase non-streaming request timeout 120s → 300s ([#230](https://github.com/nikazzio/glossa/issues/230)) ([9a94057](https://github.com/nikazzio/glossa/commit/9a94057240796b88a08394c07610b26a7428b91c))
+* restore footnote numbers in preview + show note number in panel + icon-only locate ([e494487](https://github.com/nikazzio/glossa/commit/e494487bf8b751b3c043d3e20910b6bde66dde21))
+* revert schema version bump — ALTER TABLE migration is sufficient for nullable column ([7aa480a](https://github.com/nikazzio/glossa/commit/7aa480a25129e6959f30adea0c8cb3cf1ebfe6c1))
+* surface memory logs in the chunk console ([#240](https://github.com/nikazzio/glossa/issues/240)) ([4224a42](https://github.com/nikazzio/glossa/commit/4224a423ed55f480f789b3b797f5ac5a827d803c))
+* unify note rendering across source/translation pages ([4233805](https://github.com/nikazzio/glossa/commit/42338050225ce049b8664542eb13afc91f45e284))
+* update libraryStore to include memories tab in state management ([a56be37](https://github.com/nikazzio/glossa/commit/a56be37daae7aa8d3554e56e844adbff17b4f7b2))
+
+
+### ⚡ Performance
+
+* abilita prompt caching OpenAI su path Responses API ([#253](https://github.com/nikazzio/glossa/issues/253)) ([#260](https://github.com/nikazzio/glossa/issues/260)) ([5d732f1](https://github.com/nikazzio/glossa/commit/5d732f155293528f8985c42b93da4284bf2e029b))
+
+
+### ♻️ Refactoring
+
+* fase 2 structural — split monoliths into focused modules ([#247](https://github.com/nikazzio/glossa/issues/247)) ([ae4acc7](https://github.com/nikazzio/glossa/commit/ae4acc7cbce833067e9ee81519f60e85a49eb849))
+
 ## [0.10.0](https://github.com/nikazzio/glossa/compare/glossa-v0.9.0...glossa-v0.10.0) (2026-06-01)
 
 
