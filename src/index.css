@@ -121,7 +121,7 @@
   --hl-mismatch-bg: rgba(239, 68, 68, 0.15);
   --hl-search-bg: rgba(234, 179, 8, 0.25);
   --hl-audit-bg: rgba(249, 115, 22, 0.25);
-  --hl-annot-underline-color: #3a7a72;
+  --hl-annot-bg: rgba(58, 122, 114, 0.25);
 }
 
 html,
@@ -179,19 +179,19 @@ mark.hl-audit {
   cursor: help;
 }
 
-/* Annotation anchor: underline only (single colour, chosen in settings). The
-   note type is distinguished in the Notes panel cards, not in the text. */
+/* Annotation anchor: background highlight, same treatment as search (single
+   colour, chosen in settings). The note type is distinguished in the Notes
+   panel cards, not in the text. */
 mark.hl-annot {
-  background: transparent;
-  text-decoration: underline;
-  text-decoration-color: var(--hl-annot-underline-color);
-  text-decoration-thickness: 2px;
-  text-underline-offset: 3px;
+  background-color: var(--hl-annot-bg);
+  border-radius: 2px;
+  padding: 0 1px;
   color: inherit;
 }
 
-/* Footnote marker after the anchored word in write mode. Rendered zero-width
-   so it never shifts the transparent-textarea overlay alignment. */
+/* Footnote marker painted after the anchored word in the translation write
+   view. Rendered zero-width so it never shifts the transparent-textarea
+   overlay alignment. Same small red superscript as the source markers. */
 .hl-annot-marker {
   display: inline-block;
   width: 0;
@@ -222,8 +222,9 @@ mark.hl-diff-rm {
 
 .hl-footnote-marker {
   color: var(--color-editorial-accent);
-  font-family: var(--font-mono);
   font-weight: 600;
+  vertical-align: super;
+  font-size: 0.7em;
 }
 
 /* Footnote refs rendered in markdown preview (GFM output) */

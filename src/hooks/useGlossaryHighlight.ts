@@ -4,7 +4,7 @@ import { useDebounce } from './useDebounce';
 
 export interface AnnotationAnchor {
   text: string;
-  /** Superscript marker shown after the anchored text, e.g. "[¹]". */
+  /** Markdown footnote marker painted after the anchored text, e.g. "[^1]". */
   label: string;
 }
 
@@ -65,7 +65,7 @@ interface MatchSpan {
   cls: string;
   tooltip: string;
   priority: number;
-  /** Footnote marker appended after the span end (annotation anchors only). */
+  /** Footnote marker painted after the span end (annotation anchors only). */
   label?: string;
 }
 
@@ -87,10 +87,8 @@ function findSpans(
 
 // Classes that use background-color (mutually exclusive per interval).
 // Classes not in this set use text-decoration and can coexist with a background.
-// `hl-annot` (annotation underline) is intentionally NOT here so it can coexist
-// with a background highlight on the same run.
 const BG_CLASSES = new Set([
-  'hl-match', 'hl-mismatch', 'hl-search', 'hl-audit',
+  'hl-match', 'hl-mismatch', 'hl-search', 'hl-audit', 'hl-annot',
 ]);
 
 // Builds HTML using an interval-breakpoint approach so that non-conflicting
@@ -124,10 +122,10 @@ function buildHtml(text: string, spans: MatchSpan[]): string {
 
     result += `<mark class="${classes.join(' ')}"${tooltip ? ` title="${escapeHtml(tooltip)}"` : ''}>${segment}</mark>`;
 
-    // Append the footnote marker once, right after the annotation span ends.
+    // Paint the footnote marker once, right where the annotation span ends.
     // Rendered zero-width (see .hl-annot-marker) so it never shifts the
-    // transparent textarea overlay alignment.
-    const annotEnd = activeDeco.find((s) => s.cls === 'hl-annot' && s.end === to && s.label);
+    // transparent-textarea overlay alignment.
+    const annotEnd = activeBg.find((s) => s.cls === 'hl-annot' && s.end === to && s.label);
     if (annotEnd?.label) {
       result += `<span class="hl-annot-marker">${escapeHtml(annotEnd.label)}</span>`;
     }
@@ -199,7 +197,7 @@ export function useGlossaryHighlight(
       spans.push(...findSpans(debouncedText, auditRe, 'hl-audit', '', 3));
     }
 
-    // Underline ONLY the first occurrence of each anchor (not every match), so
+    // Highlight ONLY the first occurrence of each anchor (not every match), so
     // annotating a common word does not light up the whole chunk. The first
     // occurrence matches where composeAnnotatedMarkdown places the preview marker.
     for (const anchor of annotationAnchors) {

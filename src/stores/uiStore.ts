@@ -90,7 +90,7 @@ export const useUiStore = create<UiState>()(
         mismatchTerm: 'rgba(239,68,68,0.15)',
         search: 'rgba(234,179,8,0.25)',
         auditPhrase: 'rgba(249,115,22,0.25)',
-        annotation: '#3a7a72',
+        annotation: 'rgba(58,122,114,0.25)',
       },
       searchQuery: '',
       focusedChunkId: null,
@@ -247,7 +247,7 @@ export const useUiStore = create<UiState>()(
     }),
     {
       name: 'glossa-ui-prefs',
-      version: 5,
+      version: 6,
       migrate: (persisted: unknown, fromVersion: number) => {
         const s = persisted as Record<string, unknown>;
         if (fromVersion < 1) {
@@ -272,6 +272,13 @@ export const useUiStore = create<UiState>()(
         if (fromVersion < 4) {
           s.documentPaneFocus = 'both';
           s.syncScrollEnabled = false;
+        }
+        if (fromVersion < 6) {
+          // Backfill the annotation highlight colour for stores saved before it
+          // existed, so the settings colour picker does not read undefined.
+          const existing = (s.highlightColors ?? {}) as Record<string, string>;
+          if (!existing.annotation) existing.annotation = 'rgba(58,122,114,0.25)';
+          s.highlightColors = existing;
         }
         return s;
       },
