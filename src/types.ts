@@ -8,7 +8,6 @@ export interface Annotation {
   type: AnnotationType;
   content: string;
   anchorText?: string | null;
-  footnoteMarker?: string;
   sequence: number;
   createdAt: string;
 }

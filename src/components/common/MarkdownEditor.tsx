@@ -49,6 +49,7 @@ interface MarkdownEditorProps {
   onFocusQueryHandled?: () => void;
   fillHeight?: boolean;
   identityKey?: string;
+  previewValue?: string;
 }
 
 export function MarkdownEditor({
@@ -67,6 +68,7 @@ export function MarkdownEditor({
   onFocusQueryHandled,
   fillHeight = false,
   identityKey = 'default',
+  previewValue,
 }: MarkdownEditorProps) {
   const { t } = useTranslation();
   const setShowHelp = useUiStore((state) => state.setShowHelp);
@@ -84,8 +86,8 @@ export function MarkdownEditor({
   const [toolbarOpen, setToolbarOpen] = useState(false);
   const previewHtml = useMemo(() => {
     if (mode === 'write' && !readOnly) return '';
-    return renderMarkdownToHtmlFragment(value);
-  }, [mode, readOnly, value]);
+    return renderMarkdownToHtmlFragment(previewValue ?? value);
+  }, [mode, readOnly, value, previewValue]);
   const textSizeStyle = TEXT_SIZE_STEPS[textSizeStep];
   const activeCommands = useMemo(() => {
     if (!markdownEnabled || mode === 'preview') {

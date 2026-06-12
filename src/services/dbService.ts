@@ -117,7 +117,6 @@ const ALLOWED_MIGRATIONS = new Set([
   'pipelines.auto_search_phrase_memory',
   'pipelines.phrase_memory_similarity_threshold',
   'pipelines.phrase_memory_max_results',
-  'annotations.footnote_marker',
 ]);
 
 const VALID_COLUMN_DEFINITION = /^(INTEGER|TEXT|REAL|BLOB|NUMERIC)(\s+NOT\s+NULL)?(\s+DEFAULT\s+('[^']*'|NULL|-?\d+(\.\d+)?))?$/i;
@@ -784,7 +783,6 @@ export async function initDatabase(): Promise<void> {
       type TEXT NOT NULL DEFAULT 'comment',
       content TEXT NOT NULL DEFAULT '',
       anchor_text TEXT DEFAULT NULL,
-      footnote_marker TEXT DEFAULT NULL,
       sequence INTEGER NOT NULL DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
@@ -793,12 +791,6 @@ export async function initDatabase(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_annotations_chunk
     ON annotations(pipeline_id, chunk_id)
   `);
-  try {
-    await conn.execute(`ALTER TABLE annotations ADD COLUMN footnote_marker TEXT DEFAULT NULL`);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (!msg.includes('duplicate column') && !msg.includes('already exists')) throw err;
-  }
 
   console.log('[Glossa] Database initialized');
 }

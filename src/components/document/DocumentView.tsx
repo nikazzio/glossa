@@ -23,6 +23,7 @@ import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { indexPad } from '../../utils';
 import { CopyButton, HighlightedText, MarkdownEditor } from '../common';
 import { IconButton, Tooltip, type IconButtonTone } from '../ui';
+import { composeAnnotatedMarkdown } from '../../utils/annotationMarkdown';
 import { usePhraseMemoryAutoSearch } from '../../hooks/usePhraseMemoryAutoSearch';
 import { usePanelScrollSync } from '../../hooks/usePanelScrollSync';
 import { useAnnotationsStore } from '../../stores/annotationsStore';
@@ -199,6 +200,7 @@ export function DocumentView({
     showHighlight,
     sourceHighlightHtml,
     translationHighlight,
+    translationHighlightHtml,
     translationEffectiveSearch,
     setSelectedChunkId,
   } = useDocumentViewState();
@@ -212,6 +214,24 @@ export function DocumentView({
   };
 
   const currentProject = projects.find((project) => project.id === currentProjectId) ?? null;
+
+  const sourcePreviewValue = (() => {
+    const footnotes = currentChunk?.footnotes;
+    if (!footnotes?.length) return undefined;
+    const defs = footnotes.map((fn) => `[^${fn.id}]: ${fn.text}`).join('\n\n');
+    return `${currentChunk!.sourceDisplayText}\n\n${defs}`;
+  })();
+
+  // Annotation notes are injected only at render time — the stored draft is
+  // never mutated, so it cannot be corrupted by note insertion. Applies to the
+  // final draft only (annotations anchor into the final translation).
+  const translationPreviewValue = (() => {
+    if (!currentChunk || !isLastSelected) return undefined;
+    const annotations = annotationsByChunkId.get(currentChunk.id) ?? [];
+    if (annotations.length === 0) return undefined;
+    const composed = composeAnnotatedMarkdown(rawStageContent, annotations);
+    return composed === rawStageContent ? undefined : composed;
+  })();
 
   if (!currentChunk) {
     return (
@@ -423,6 +443,7 @@ export function DocumentView({
                 textClassName="text-[15px] leading-8 text-editorial-ink"
                 previewClassName="min-h-[280px] text-[15px] leading-8 text-editorial-ink"
                 highlightHtml={sourceHighlightHtml}
+                previewValue={sourcePreviewValue}
                 focusQuery={focusedChunkId === currentChunk.id ? focusedSourceIssueQuery : null}
                 focusRequestId={focusedChunkId === currentChunk.id ? focusedIssueRequestId : 0}
               />
@@ -555,7 +576,8 @@ export function DocumentView({
                       textClassName="text-[15px] leading-8 text-editorial-ink"
                       previewClassName="min-h-[280px] text-[15px] leading-8 text-editorial-ink"
                       placeholder={isLastSelected ? t('pipeline.candidatePlaceholder') : ''}
-                      highlightHtml={(showHighlight || !!translationEffectiveSearch || !!focusedIssueQuery) ? translationHighlight.html : null}
+                      highlightHtml={translationHighlightHtml}
+                      previewValue={translationPreviewValue}
                       focusQuery={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueQuery : null}
                       focusRequestId={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueRequestId : 0}
                     />

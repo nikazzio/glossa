@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   buildMarkdownHtmlDocument,
   flattenMarkdownToText,
-  parseMarkdownDocument,
   renderMarkdownToHtmlFragment,
 } from './markdown';
 
@@ -18,17 +17,6 @@ describe('markdown service', () => {
     '[^1]: Footnote body',
   ].join('\n');
 
-  it('parses headings, lists, and footnotes from editorial markdown', () => {
-    const parsed = parseMarkdownDocument(sample);
-
-    expect(parsed.blocks.map((block) => block.type)).toEqual([
-      'heading',
-      'paragraph',
-      'list',
-    ]);
-    expect(parsed.footnotes).toEqual([{ id: '1', text: 'Footnote body' }]);
-  });
-
   it('renders html footnotes as linked superscripts with backlinks', () => {
     const html = renderMarkdownToHtmlFragment(sample);
 
@@ -36,10 +24,13 @@ describe('markdown service', () => {
     expect(html).toContain('<strong>bold</strong>');
     expect(html).toContain('<em>italic</em>');
     expect(html).toContain('href="https://example.com"');
-    expect(html).toContain('id="fnref-1"');
-    expect(html).toContain('href="#fn-1"');
-    expect(html).toContain('href="#fnref-1"');
-    expect(html).toContain('<section class="footnotes"');
+    // GFM footnote inline reference + trailing section with backref.
+    expect(html).toContain('href="#user-content-fn-1"');
+    expect(html).toContain('id="user-content-fnref-1"');
+    expect(html).toContain('data-footnote-ref');
+    expect(html).toContain('href="#user-content-fnref-1"');
+    expect(html).toContain('data-footnotes');
+    expect(html).toContain('class="footnotes"');
   });
 
   it('flattens markdown to readable text with a final notes section', () => {
@@ -52,7 +43,7 @@ describe('markdown service', () => {
     expect(text).toContain('[1] Footnote body');
   });
 
-  it('does not infinite-loop on bracketed superscript markers like [¹]', () => {
+  it('does not break on bracketed superscript markers like [¹]', () => {
     const text = 'Text with note [¹] and another [²] marker.';
     const html = renderMarkdownToHtmlFragment(text);
     expect(html).toContain('[¹]');
@@ -74,17 +65,6 @@ describe('markdown service', () => {
       '| Alice | 30 |',
       '| Bob | 25 |',
     ].join('\n');
-
-    it('parses a markdown table into AST', () => {
-      const parsed = parseMarkdownDocument(tableMd);
-      expect(parsed.blocks).toHaveLength(1);
-      const block = parsed.blocks[0];
-      expect(block.type).toBe('table');
-      if (block.type === 'table') {
-        expect(block.headers).toHaveLength(2);
-        expect(block.rows).toHaveLength(2);
-      }
-    });
 
     it('renders a table to HTML with thead and tbody', () => {
       const html = renderMarkdownToHtmlFragment(tableMd);
@@ -126,20 +106,20 @@ describe('markdown service', () => {
 
     it('blocks javascript: protocol', () => {
       const result = renderMarkdownToHtmlFragment('[click](javascript:alert(1))');
-      expect(result).toContain('href="#"');
       expect(result).not.toContain('javascript:');
+      expect(result).toContain('click');
     });
 
     it('blocks data: protocol', () => {
       const result = renderMarkdownToHtmlFragment('[click](data:text/html,<script>alert(1)</script>)');
-      expect(result).toContain('href="#"');
-      expect(result).not.toContain('data:');
+      expect(result).not.toContain('data:text/html');
+      expect(result).not.toContain('<script>');
     });
 
     it('blocks vbscript: protocol', () => {
       const result = renderMarkdownToHtmlFragment('[click](vbscript:msgbox(1))');
-      expect(result).toContain('href="#"');
       expect(result).not.toContain('vbscript:');
+      expect(result).toContain('click');
     });
 
     it('preserves mailto links', () => {

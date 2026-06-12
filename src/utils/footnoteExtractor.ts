@@ -113,11 +113,26 @@ export function stripSuperscriptMarkers(text: string): string {
 }
 
 /**
- * Post-processes an already HTML-escaped string, wrapping bracketed superscript
- * markers in a styled span so they render in the editorial accent colour.
- * Safe to call after escapeHtml or buildHtml — the bracket characters are not
- * HTML special chars and pass through entity-escaping unchanged.
+ * Post-processes an already HTML-escaped string, wrapping [^id] markdown
+ * footnote markers in a styled span so they render in the editorial accent
+ * colour. Safe to call after escapeHtml or buildHtml.
  */
+export function highlightFootnoteMarkersHtml(html: string): string {
+  // Split on HTML tags so the replacement only affects text nodes, not attributes.
+  return html
+    .split(/(<[^>]*>)/)
+    .map((segment, i) =>
+      i % 2 === 1
+        ? segment
+        : segment.replace(
+            /(?<!\\)\[\^[^\]]+\]/g,
+            (match) => `<span class="hl-footnote-marker">${match}</span>`,
+          ),
+    )
+    .join('');
+}
+
+/** @deprecated Use highlightFootnoteMarkersHtml for [^id] markdown markers. */
 export function highlightSuperscriptMarkersHtml(html: string): string {
   // Split on HTML tags so the replacement only affects text nodes, not attributes.
   return html

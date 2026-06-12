@@ -236,6 +236,48 @@ mark.hl-diff-rm {
   font-weight: 600;
 }
 
+/* Footnote refs rendered in markdown preview (GFM output) */
+sup.footnote-ref,
+sup.footnote-ref a,
+[data-footnotes] sup a,
+a[data-footnote-ref] {
+  color: var(--color-editorial-accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.footnotes {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-editorial-border);
+  font-size: 0.85em;
+}
+
+.footnotes h2 {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--color-editorial-muted);
+  margin-bottom: 0.75rem;
+}
+
+.footnotes ol {
+  padding-left: 1.25rem;
+}
+
+.footnotes li {
+  color: var(--color-editorial-muted);
+  margin-bottom: 0.25rem;
+}
+
+.footnote-backref,
+a[data-footnote-backref] {
+  color: var(--color-editorial-accent);
+  text-decoration: none;
+  margin-left: 0.3rem;
+}
+
 .scrollbar-hidden {
   scrollbar-width: none;
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   assignChunkFootnotes,
   extractFootnotes,
+  highlightFootnoteMarkersHtml,
   highlightSuperscriptMarkersHtml,
   replaceMarkersWithSuperscripts,
   stripFootnoteMarkers,
@@ -88,6 +89,39 @@ describe('stripSuperscriptMarkers', () => {
 
   it('leaves normal text intact', () => {
     expect(stripSuperscriptMarkers('No markers here.')).toBe('No markers here.');
+  });
+});
+
+describe('highlightFootnoteMarkersHtml', () => {
+  it('wraps [^id] markers in a span', () => {
+    const result = highlightFootnoteMarkersHtml('Text [^1] end.');
+    expect(result).toContain('<span class="hl-footnote-marker">[^1]</span>');
+    expect(result).toContain('Text ');
+    expect(result).toContain(' end.');
+  });
+
+  it('does not inject spans into HTML tag attributes', () => {
+    const html = '<mark title="note [^1]">word</mark>';
+    const result = highlightFootnoteMarkersHtml(html);
+    expect(result).toBe('<mark title="note [^1]">word</mark>');
+  });
+
+  it('wraps markers in text nodes adjacent to HTML tags', () => {
+    const html = '<mark>text</mark> [^1]';
+    const result = highlightFootnoteMarkersHtml(html);
+    expect(result).toContain('<mark>text</mark>');
+    expect(result).toContain('<span class="hl-footnote-marker">[^1]</span>');
+  });
+
+  it('does not wrap escaped markers preceded by backslash', () => {
+    const result = highlightFootnoteMarkersHtml('Literal \\[^1] stays.');
+    expect(result).not.toContain('<span');
+    expect(result).toContain('\\[^1]');
+  });
+
+  it('handles annotation-style markers like [^a1]', () => {
+    const result = highlightFootnoteMarkersHtml('See [^a1] here.');
+    expect(result).toContain('<span class="hl-footnote-marker">[^a1]</span>');
   });
 });
 

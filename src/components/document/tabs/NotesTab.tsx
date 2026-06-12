@@ -13,7 +13,6 @@ import type { LucideIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAnnotationsStore } from '../../../stores/annotationsStore';
-import { useChunksStore } from '../../../stores/chunksStore';
 import { useProjectStore } from '../../../stores/projectStore';
 import { useUiStore } from '../../../stores/uiStore';
 import { IconButton, PillButton } from '../../ui';
@@ -94,6 +93,7 @@ function AnnotationCard({
   const [editType, setEditType] = useState<AnnotationType>(annotation.type);
   const [editContent, setEditContent] = useState(annotation.content);
   const [editAnchor, setEditAnchor] = useState(annotation.anchorText ?? '');
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   if (isEditing) {
     return (
@@ -132,30 +132,39 @@ function AnnotationCard({
     <article className={`rounded-2xl border ${meta.borderClass} ${meta.bgClass} px-4 py-3`}>
       <div className="mb-2 flex items-center gap-2">
         <Icon size={13} className={`shrink-0 ${meta.colorClass}`} />
-        <span className={`text-[10px] font-bold uppercase tracking-[0.25em] ${meta.colorClass}`}>
+        <span className={`text-xs font-bold uppercase tracking-[0.25em] ${meta.colorClass}`}>
           {t(meta.labelKey)}
         </span>
         <div className="flex-1" />
-        <IconButton size="sm" tone="default" onClick={onEdit} title={t('annotations.editButton')}>
-          <Pencil size={11} />
-        </IconButton>
-        <IconButton size="sm" tone="default" onClick={onDelete} title={t('annotations.deleteButton')}>
-          <Trash2 size={11} />
-        </IconButton>
-      </div>
-      <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-editorial-ink">{annotation.content}</p>
-      <div className="mt-2 flex flex-wrap items-center gap-1.5">
-        {annotation.footnoteMarker && (
-          <span className="rounded-md bg-editorial-accent/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-editorial-accent">
-            {annotation.footnoteMarker}
-          </span>
+        {confirmingDelete ? (
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] text-editorial-accent">{t('annotations.confirmDelete')}</span>
+            <IconButton size="sm" tone="accent" onClick={onDelete} title={t('annotations.confirmDeleteYes')}>
+              <Trash2 size={11} />
+            </IconButton>
+            <IconButton size="sm" tone="default" onClick={() => setConfirmingDelete(false)} title={t('annotations.confirmDeleteNo')}>
+              <X size={11} />
+            </IconButton>
+          </div>
+        ) : (
+          <>
+            <IconButton size="sm" tone="default" onClick={onEdit} title={t('annotations.editButton')}>
+              <Pencil size={11} />
+            </IconButton>
+            <IconButton size="sm" tone="default" onClick={() => setConfirmingDelete(true)} title={t('annotations.deleteButton')}>
+              <Trash2 size={11} />
+            </IconButton>
+          </>
         )}
-        {annotation.anchorText && (
-          <span className="truncate rounded-lg bg-editorial-bg/60 px-2 py-0.5 text-[11px] italic text-editorial-muted">
+      </div>
+      <p className="whitespace-pre-wrap text-sm leading-relaxed text-editorial-ink">{annotation.content}</p>
+      {annotation.anchorText && (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <span className="truncate rounded-lg bg-editorial-bg/60 px-2 py-0.5 text-xs italic text-editorial-muted">
             «{annotation.anchorText}»
           </span>
-        )}
-      </div>
+        </div>
+      )}
     </article>
   );
 }
@@ -164,7 +173,6 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
   const { t } = useTranslation();
   const activePipelineId = useProjectStore((s) => s.activePipelineId);
   const { annotationsByChunkId, addAnnotation, updateAnnotation, deleteAnnotation } = useAnnotationsStore();
-  const updateChunkTranslationForce = useChunksStore((s) => s.updateChunkTranslationForce);
   const pendingAnnotationAnchor = useUiStore((s) => s.pendingAnnotationAnchor);
   const setPendingAnnotationAnchor = useUiStore((s) => s.setPendingAnnotationAnchor);
 
@@ -200,25 +208,15 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
     if (!formContent.trim() || !activePipelineId) return;
     const anchor = formAnchor.trim();
     const content = formContent.trim();
-    const markerN = annotations.length + 1;
-    const footnoteMarker = anchor ? `[a${markerN}]` : undefined;
 
-    if (anchor && footnoteMarker) {
-      const base = currentChunk.translationDisplayText;
-      const idx = base.indexOf(anchor);
-      const withMarker = idx !== -1
-        ? base.slice(0, idx + anchor.length) + footnoteMarker + base.slice(idx + anchor.length)
-        : base;
-      updateChunkTranslationForce(currentChunk.id, `${withMarker}\n\n---\n\n${footnoteMarker}: ${content}`);
-    }
-
+    // The draft is never mutated: the inline marker and footnote are derived
+    // from the anchor at render time (see composeAnnotatedMarkdown).
     await addAnnotation({
       chunkId: currentChunk.id,
       pipelineId: activePipelineId,
       type: formType,
       content,
       anchorText: anchor || null,
-      footnoteMarker,
       sequence: annotations.length,
     });
     setFormContent('');
@@ -246,7 +244,7 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
       {showForm && (
         <div className="rounded-2xl border border-editorial-border bg-editorial-textbox/40 px-4 py-3">
           <div className="mb-1 flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
+            <span className="text-xs font-bold uppercase tracking-[0.25em] text-editorial-muted">
               {t('annotations.addButton')}
             </span>
             <IconButton size="sm" tone="default" onClick={closeForm} title={t('annotations.cancelButton')}>

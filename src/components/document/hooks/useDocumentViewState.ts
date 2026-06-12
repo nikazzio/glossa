@@ -7,7 +7,7 @@ import { useConfigStore } from '../../../stores/configStore';
 import { useAnnotationsStore } from '../../../stores/annotationsStore';
 import { useGlossaryHighlight, escapeHtml, type AnnotationAnchor } from '../../../hooks/useGlossaryHighlight';
 import { useStageDiff } from '../../../hooks/useStageDiff';
-import { highlightSuperscriptMarkersHtml } from '../../../utils/footnoteExtractor';
+import { highlightFootnoteMarkersHtml, highlightSuperscriptMarkersHtml } from '../../../utils/footnoteExtractor';
 
 export function useDocumentViewState() {
   const { t } = useTranslation();
@@ -123,16 +123,12 @@ export function useDocumentViewState() {
   const annotationsByChunkId = useAnnotationsStore((s) => s.annotationsByChunkId);
   const currentChunkAnnotations = currentChunk ? (annotationsByChunkId.get(currentChunk.id) ?? []) : [];
   const annotationAnchors = useMemo<AnnotationAnchor[]>(
-    () => [
-      ...currentChunkAnnotations
+    () =>
+      currentChunkAnnotations
         .filter((a) => !!a.anchorText?.trim())
         .map((a) => ({ text: a.anchorText!, type: a.type })),
-      ...currentChunkAnnotations
-        .filter((a) => !!a.footnoteMarker)
-        .map((a) => ({ text: a.footnoteMarker!, type: a.type })),
-    ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [currentChunkAnnotations.map((a) => `${a.id}:${a.anchorText ?? ''}:${a.footnoteMarker ?? ''}`).join('|')],
+    [currentChunkAnnotations.map((a) => `${a.id}:${a.anchorText ?? ''}`).join('|')],
   );
 
   const sourceHighlight = useGlossaryHighlight(
@@ -165,14 +161,25 @@ export function useDocumentViewState() {
   const stageDiff = useStageDiff(showDiffMode ? diffTextA : '', showDiffMode ? diffTextB : '');
 
   const sourceHighlightHtml = useMemo(() => {
-    const hasFootnoteMarkers = /\[[⁰¹²³⁴⁵⁶⁷⁸⁹]/.test(deferredSourceText);
+    const hasSuperscriptMarkers = /\[[⁰¹²³⁴⁵⁶⁷⁸⁹]/.test(deferredSourceText);
+    const hasMarkdownMarkers = /(?<!\\)\[\^[^\]]+\]/.test(deferredSourceText);
+    const hasFootnoteMarkers = hasSuperscriptMarkers || hasMarkdownMarkers;
     const showGlossary = showHighlight && paneFocus !== 'translation';
     const hasSearch = !!sourceEffectiveSearch && paneFocus !== 'translation';
     const hasAuditFocus = !!focusedSourceIssueQuery;
     if (!showGlossary && !hasSearch && !hasAuditFocus && !hasFootnoteMarkers) return null;
-    const base = showGlossary || hasSearch || hasAuditFocus ? sourceHighlight.html : escapeHtml(deferredSourceText);
-    return hasFootnoteMarkers ? highlightSuperscriptMarkersHtml(base) : base;
+    let html = showGlossary || hasSearch || hasAuditFocus ? sourceHighlight.html : escapeHtml(deferredSourceText);
+    if (hasSuperscriptMarkers) html = highlightSuperscriptMarkersHtml(html);
+    if (hasMarkdownMarkers) html = highlightFootnoteMarkersHtml(html);
+    return html;
   }, [deferredSourceText, showHighlight, sourceEffectiveSearch, focusedSourceIssueQuery, paneFocus, sourceHighlight.html]);
+
+  const translationHighlightHtml = useMemo(() => {
+    const showBase =
+      showHighlight || !!translationEffectiveSearch || !!focusedIssueQuery || annotationAnchors.length > 0;
+    if (!showBase || !translationHighlight.html) return null;
+    return translationHighlight.html;
+  }, [showHighlight, translationEffectiveSearch, focusedIssueQuery, annotationAnchors.length, translationHighlight.html]);
 
   return {
     // Layout
@@ -209,6 +216,7 @@ export function useDocumentViewState() {
     showHighlight,
     sourceHighlightHtml,
     translationHighlight,
+    translationHighlightHtml,
     translationEffectiveSearch,
     // Navigation
     setSelectedChunkId,

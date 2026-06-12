@@ -9,7 +9,6 @@ interface DbAnnotationRow {
   type: string;
   content: string;
   anchor_text: string | null;
-  footnote_marker: string | null;
   sequence: number;
   created_at: string;
 }
@@ -22,7 +21,6 @@ function fromRow(row: DbAnnotationRow): Annotation {
     type: row.type as AnnotationType,
     content: row.content,
     anchorText: row.anchor_text ?? undefined,
-    footnoteMarker: row.footnote_marker ?? undefined,
     sequence: row.sequence,
     createdAt: row.created_at,
   };
@@ -60,9 +58,9 @@ export const useAnnotationsStore = create<AnnotationsState>((set) => ({
     const id = crypto.randomUUID();
     const createdAt = new Date().toISOString();
     await execute(
-      `INSERT INTO annotations (id, chunk_id, pipeline_id, type, content, anchor_text, footnote_marker, sequence, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [id, ann.chunkId, ann.pipelineId, ann.type, ann.content, ann.anchorText ?? null, ann.footnoteMarker ?? null, ann.sequence, createdAt],
+      `INSERT INTO annotations (id, chunk_id, pipeline_id, type, content, anchor_text, sequence, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [id, ann.chunkId, ann.pipelineId, ann.type, ann.content, ann.anchorText ?? null, ann.sequence, createdAt],
     );
     const full: Annotation = { ...ann, id, createdAt };
     set((state) => {

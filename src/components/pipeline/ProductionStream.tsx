@@ -9,7 +9,7 @@ import { StatusIndicator, ProcessingLine, CopyButton, MarkdownEditor } from '../
 import { estimateTextStats, indexPad, recommendChunkCount } from '../../utils';
 import { confirm } from '../../stores/confirmStore';
 import { escapeHtml, useGlossaryHighlight } from '../../hooks/useGlossaryHighlight';
-import { highlightSuperscriptMarkersHtml } from '../../utils/footnoteExtractor';
+import { highlightFootnoteMarkersHtml, highlightSuperscriptMarkersHtml } from '../../utils/footnoteExtractor';
 import { logger } from '../../utils/logger';
 import type { GlossaryEntry, PipelineStageConfig, TranslationChunk } from '../../types';
 
@@ -29,14 +29,18 @@ const ChunkSourceText = memo(function ChunkSourceText({
   onUpdate: (text: string) => void;
 }) {
   const { html: glossaryHtml } = useGlossaryHighlight(chunk.originalText, glossary, 'source');
-  const hasFootnotes = Boolean(chunk.footnotes?.length);
+  const hasSuperscriptMarkers = /\[[⁰¹²³⁴⁵⁶⁷⁸⁹]/.test(chunk.originalText);
+  const hasMarkdownMarkers = /(?<!\\)\[\^[^\]]+\]/.test(chunk.originalText);
+  const hasFootnotes = hasSuperscriptMarkers || hasMarkdownMarkers;
   const showGlossary = showHighlight && chunk.status !== 'completed';
 
   const highlightHtml = useMemo(() => {
     if (!showGlossary && !hasFootnotes) return null;
-    const base = showGlossary ? glossaryHtml : escapeHtml(chunk.originalText);
-    return hasFootnotes ? highlightSuperscriptMarkersHtml(base) : base;
-  }, [showGlossary, hasFootnotes, glossaryHtml, chunk.originalText]);
+    let html = showGlossary ? glossaryHtml : escapeHtml(chunk.originalText);
+    if (hasSuperscriptMarkers) html = highlightSuperscriptMarkersHtml(html);
+    if (hasMarkdownMarkers) html = highlightFootnoteMarkersHtml(html);
+    return html;
+  }, [showGlossary, hasFootnotes, hasSuperscriptMarkers, hasMarkdownMarkers, glossaryHtml, chunk.originalText]);
 
   return (
     <MarkdownEditor

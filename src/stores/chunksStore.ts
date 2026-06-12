@@ -26,6 +26,10 @@ import {
 } from '../utils/documentState';
 import { stripFootnoteMarkers, stripSuperscriptMarkers } from '../utils/footnoteExtractor';
 
+function stripAllFootnoteMarkers(text: string): string {
+  return stripFootnoteMarkers(stripSuperscriptMarkers(text));
+}
+
 // --- Internal O(1) chunk index ---
 // Maps chunkId → array index. Kept as a module-level variable; never part of Zustand state.
 // Rebuilt automatically via store subscription whenever `chunks` reference changes —
@@ -343,7 +347,7 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
         const updated = updateChunkSourceFields(
           chunk,
           chunk.originalText,
-          stripSuperscriptMarkers(chunk.originalText),
+          stripAllFootnoteMarkers(chunk.originalText),
           chunk.footnotes,
         );
         return hasTranslation ? { ...updated, translationStale: true } : updated;
