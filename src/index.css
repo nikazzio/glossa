@@ -255,9 +255,11 @@ a[data-footnote-ref] {
 
 .footnotes ol {
   padding-left: 1.25rem;
+  list-style: decimal outside;
 }
 
 .footnotes li {
+  display: list-item;
   color: var(--color-editorial-muted);
   margin-bottom: 0.25rem;
 }

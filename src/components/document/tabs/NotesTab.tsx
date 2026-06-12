@@ -11,7 +11,7 @@ import {
   X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAnnotationsStore } from '../../../stores/annotationsStore';
 import { useProjectStore } from '../../../stores/projectStore';
@@ -80,6 +80,7 @@ function AnnotationCard({
   onSave,
   onDelete,
   onLocate,
+  number,
 }: {
   annotation: Annotation;
   isEditing: boolean;
@@ -88,6 +89,7 @@ function AnnotationCard({
   onSave: (updates: Partial<Pick<Annotation, 'type' | 'content' | 'anchorText'>>) => void;
   onDelete: () => void;
   onLocate: (() => void) | null;
+  number: number | null;
 }) {
   const { t } = useTranslation();
   const meta = ANNOTATION_META[annotation.type];
@@ -134,6 +136,11 @@ function AnnotationCard({
   return (
     <article className={`rounded-2xl border ${meta.borderClass} ${meta.bgClass} px-4 py-3`}>
       <div className="mb-2 flex items-center gap-2">
+        {number !== null && (
+          <span className="shrink-0 font-display text-sm font-bold text-editorial-accent" title={`[^${number}]`}>
+            {number}
+          </span>
+        )}
         <Icon size={13} className={`shrink-0 ${meta.colorClass}`} />
         <span className={`text-xs font-bold uppercase tracking-[0.25em] ${meta.colorClass}`}>
           {t(meta.labelKey)}
@@ -152,15 +159,9 @@ function AnnotationCard({
         ) : (
           <>
             {annotation.anchorText && onLocate && (
-              <button
-                type="button"
-                onClick={onLocate}
-                title={t('annotations.locateInTextTooltip')}
-                className="flex items-center gap-1 rounded-full border border-editorial-border px-2 py-1 text-[9px] font-bold uppercase tracking-[0.18em] text-editorial-muted transition-colors hover:text-editorial-ink"
-              >
-                <Crosshair size={10} />
-                {t('annotations.locateInText')}
-              </button>
+              <IconButton size="sm" tone="default" onClick={onLocate} title={t('annotations.locateInTextTooltip')}>
+                <Crosshair size={11} />
+              </IconButton>
             )}
             <IconButton size="sm" tone="default" onClick={onEdit} title={t('annotations.editButton')}>
               <Pencil size={11} />
@@ -199,6 +200,17 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
 
   const footnotes = currentChunk?.footnotes ?? [];
   const annotations = currentChunk ? (annotationsByChunkId.get(currentChunk.id) ?? []) : [];
+
+  // Number anchored notes by reading order in the final draft — the same order
+  // the preview footnotes use — so each card shows its footnote number.
+  const draft = currentChunk?.currentDraft ?? '';
+  const numberById = useMemo(() => {
+    const placed = annotations
+      .map((a) => ({ id: a.id, index: a.anchorText?.trim() ? draft.indexOf(a.anchorText.trim()) : -1 }))
+      .filter((p) => p.index !== -1)
+      .sort((x, y) => x.index - y.index);
+    return new Map(placed.map((p, order) => [p.id, order + 1]));
+  }, [annotations, draft]);
 
   useEffect(() => {
     if (!pendingAnnotationAnchor || !currentChunk) return;
@@ -300,6 +312,7 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
           onSave={(updates) => handleSaveEdit(ann.id, updates)}
           onDelete={() => handleDelete(ann.id)}
           onLocate={ann.anchorText ? () => focusIssueInChunk(currentChunk.id, ann.anchorText) : null}
+          number={numberById.get(ann.id) ?? null}
         />
       ))}
 
