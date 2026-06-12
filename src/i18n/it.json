@@ -1109,6 +1109,11 @@
     },
     "shortcuts": {
       "title": "Riferimento interfaccia",
+      "keyboardTitle": "Scorciatoie da tastiera",
+      "runPipeline": "Avvia la pipeline",
+      "exportFile": "Apri il dialogo di esportazione",
+      "goToChunk": "Vai al chunk N",
+      "closeModal": "Chiudi modale / annulla",
       "toolbarTitle": "Barra laterale e header",
       "openProjects": "Apri il pannello Progetti — barra laterale (modalità editor)",
       "importFile": "Importa un file sorgente — barra laterale (modalità editor)",
