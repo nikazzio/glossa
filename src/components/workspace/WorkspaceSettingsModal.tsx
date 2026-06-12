@@ -255,7 +255,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                       </select>
                       <IconButton
                         size="md"
-                        tone={embeddingModel !== activeWorkspace?.embeddingModel ? 'accent' : 'default'}
+                        tone="default"
                         onClick={() => void handleRegenerateEmbeddings()}
                         disabled={isRegenerating || !activeWorkspace || embeddingModel === activeWorkspace?.embeddingModel}
                         title={t('workspace.regenerateEmbeddings')}
