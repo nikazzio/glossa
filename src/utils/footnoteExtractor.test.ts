@@ -11,23 +11,30 @@ import {
 } from './footnoteExtractor';
 
 describe('restoreFootnoteMarkers', () => {
-  it('rewrites bracketed superscripts back to GFM references by display order', () => {
-    const map = new Map([
-      ['fa', 'first'],
-      ['fb', 'second'],
-    ]);
-    const result = restoreFootnoteMarkers('Alpha[¹] beta[²].', map);
+  it('rewrites bracketed superscripts back to GFM references using marker display number', () => {
+    const footnotes = [
+      { id: 'fa', marker: '[¹]', text: 'first' },
+      { id: 'fb', marker: '[²]', text: 'second' },
+    ];
+    const result = restoreFootnoteMarkers('Alpha[¹] beta[²].', footnotes);
     expect(result).toBe('Alpha[^fa] beta[^fb].');
   });
 
+  it('correctly maps multi-digit display numbers (note 10+) regardless of chunk footnote count', () => {
+    // Chunk contains only note 10 — idByNumber via insertion-order would map 1→"fa",
+    // so get(10) would be undefined. The marker-based approach must resolve it correctly.
+    const footnotes = [{ id: 'fa', marker: '[¹⁰]', text: 'tenth note' }];
+    expect(restoreFootnoteMarkers('See[¹⁰] this.', footnotes)).toBe('See[^fa] this.');
+  });
+
   it('leaves existing GFM markers and unknown numbers untouched', () => {
-    const map = new Map([['fa', 'first']]);
-    expect(restoreFootnoteMarkers('Keep[^fa] and [²] alone.', map)).toBe('Keep[^fa] and [²] alone.');
+    const footnotes = [{ id: 'fa', marker: '[¹]', text: 'first' }];
+    expect(restoreFootnoteMarkers('Keep[^fa] and [²] alone.', footnotes)).toBe('Keep[^fa] and [²] alone.');
   });
 
   it('returns text unchanged when there are no superscript markers', () => {
-    const map = new Map([['fa', 'first']]);
-    expect(restoreFootnoteMarkers('Plain text.', map)).toBe('Plain text.');
+    const footnotes = [{ id: 'fa', marker: '[¹]', text: 'first' }];
+    expect(restoreFootnoteMarkers('Plain text.', footnotes)).toBe('Plain text.');
   });
 });
 

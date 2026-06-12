@@ -68,7 +68,7 @@ export function useDocumentViewState() {
   const lastStageId = enabledStages[enabledStages.length - 1]?.id ?? '';
   const isEditorialMode = enabledStages.length > 1;
 
-  const deferredSourceText = useDeferredValue(currentChunk?.sourceDisplayText ?? '');
+  const sourceDisplayText = currentChunk?.sourceDisplayText ?? '';
   const effectiveSelectedStageId = selectedStageId || lastStageId;
   const isLastSelected = effectiveSelectedStageId === lastStageId;
   const rawStageContent = isLastSelected
@@ -138,7 +138,7 @@ export function useDocumentViewState() {
   );
 
   const sourceHighlight = useGlossaryHighlight(
-    paneFocus !== 'translation' ? deferredSourceText : '',
+    paneFocus !== 'translation' ? sourceDisplayText : '',
     showHighlight && paneFocus !== 'translation' ? config.glossary : [],
     'source',
     sourceEffectiveSearch,
@@ -167,18 +167,18 @@ export function useDocumentViewState() {
   const stageDiff = useStageDiff(showDiffMode ? diffTextA : '', showDiffMode ? diffTextB : '');
 
   const sourceHighlightHtml = useMemo(() => {
-    const hasSuperscriptMarkers = /\[[⁰¹²³⁴⁵⁶⁷⁸⁹]/.test(deferredSourceText);
-    const hasMarkdownMarkers = /(?<!\\)\[\^[^\]]+\]/.test(deferredSourceText);
+    const hasSuperscriptMarkers = /\[[⁰¹²³⁴⁵⁶⁷⁸⁹]/.test(sourceDisplayText);
+    const hasMarkdownMarkers = /(?<!\\)\[\^[^\]]+\]/.test(sourceDisplayText);
     const hasFootnoteMarkers = hasSuperscriptMarkers || hasMarkdownMarkers;
     const showGlossary = showHighlight && paneFocus !== 'translation';
     const hasSearch = !!sourceEffectiveSearch && paneFocus !== 'translation';
     const hasAuditFocus = !!focusedSourceIssueQuery;
     if (!showGlossary && !hasSearch && !hasAuditFocus && !hasFootnoteMarkers) return null;
-    let html = showGlossary || hasSearch || hasAuditFocus ? sourceHighlight.html : escapeHtml(deferredSourceText);
+    let html = showGlossary || hasSearch || hasAuditFocus ? sourceHighlight.html : escapeHtml(sourceDisplayText);
     if (hasSuperscriptMarkers) html = highlightSuperscriptMarkersHtml(html);
     if (hasMarkdownMarkers) html = highlightFootnoteMarkersHtml(html);
     return html;
-  }, [deferredSourceText, showHighlight, sourceEffectiveSearch, focusedSourceIssueQuery, paneFocus, sourceHighlight.html]);
+  }, [sourceDisplayText, showHighlight, sourceEffectiveSearch, focusedSourceIssueQuery, paneFocus, sourceHighlight.html]);
 
   const translationHighlightHtml = useMemo(() => {
     const showBase =

@@ -30,7 +30,7 @@ const sanitizeSchema = {
       'dataFootnoteRef',
       'dataFootnoteBackref',
     ],
-    li: [...(defaultSchema.attributes?.li ?? []), 'id'],
+    li: [...(defaultSchema.attributes?.li ?? []), 'id', 'value'],
     sup: [...(defaultSchema.attributes?.sup ?? []), 'id'],
     ol: [...(defaultSchema.attributes?.ol ?? []), 'className'],
     h2: [...(defaultSchema.attributes?.h2 ?? []), 'id', 'className'],
@@ -65,7 +65,34 @@ interface RenderOptions {
 
 export function renderMarkdownToHtmlFragment(markdown: string, options: RenderOptions = {}): string {
   const html = String(htmlProcessor.processSync(normalizeMarkdown(markdown)));
-  return options.stripFootnoteNav ? stripFootnoteNavigation(html) : html;
+  const stripped = options.stripFootnoteNav ? stripFootnoteNavigation(html) : html;
+  return restoreFootnoteDisplayNumbers(stripped);
+}
+
+/**
+ * remark-gfm always numbers footnote references sequentially (1, 2, 3…)
+ * regardless of the GFM label. When source-pane previews use label "22" for
+ * the 22nd document-level note, GFM still renders it as "2" (if it is the
+ * second reference in the chunk). This function reads the label back from the
+ * `id` attribute and writes it as the visible counter, both in the inline
+ * superscript and in the footnote-section list items.
+ *
+ * No-op when labels are sequential (1, 2, 3…), so translation previews and
+ * exports are unaffected.
+ */
+function restoreFootnoteDisplayNumbers(html: string): string {
+  // Inline refs: <sup id="user-content-fnref-22">...<a ...>2</a>...</sup>
+  // → replace the inner text "2" with the label "22".
+  let result = html.replace(
+    /(<sup\b[^>]*\bid="user-content-fnref-([^"]+)"[^>]*>[\s\S]*?<a\b[^>]*>)\d+(<\/a>[\s\S]*?<\/sup>)/g,
+    (_full, pre, label, post) => `${pre}${label}${post}`,
+  );
+  // Footnote section <li>: add value="22" so the <ol> counter shows the right number.
+  result = result.replace(
+    /<li id="(user-content-fn-(\d+))"/g,
+    '<li id="$1" value="$2"',
+  );
+  return result;
 }
 
 /**
