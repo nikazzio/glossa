@@ -86,7 +86,7 @@ export function MarkdownEditor({
   const [toolbarOpen, setToolbarOpen] = useState(false);
   const previewHtml = useMemo(() => {
     if (mode === 'write' && !readOnly) return '';
-    return renderMarkdownToHtmlFragment(previewValue ?? value);
+    return renderMarkdownToHtmlFragment(previewValue ?? value, { stripFootnoteNav: true });
   }, [mode, readOnly, value, previewValue]);
   const textSizeStyle = TEXT_SIZE_STEPS[textSizeStep];
   const activeCommands = useMemo(() => {

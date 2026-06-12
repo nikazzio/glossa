@@ -17,18 +17,26 @@ describe('markdown service', () => {
     '[^1]: Footnote body',
   ].join('\n');
 
-  it('renders html footnotes as linked superscripts with backlinks', () => {
+  it('keeps footnote navigation anchors by default', () => {
     const html = renderMarkdownToHtmlFragment(sample);
+    expect(html).toContain('href="#user-content-fn-1"');
+    expect(html).toContain('data-footnote-backref');
+  });
+
+  it('strips footnote navigation anchors when requested (in-app preview)', () => {
+    const html = renderMarkdownToHtmlFragment(sample, { stripFootnoteNav: true });
 
     expect(html).toContain('<h1>Title</h1>');
     expect(html).toContain('<strong>bold</strong>');
     expect(html).toContain('<em>italic</em>');
     expect(html).toContain('href="https://example.com"');
-    // GFM footnote inline reference + trailing section with backref.
-    expect(html).toContain('href="#user-content-fn-1"');
-    expect(html).toContain('id="user-content-fnref-1"');
+    // GFM footnote inline reference is kept (styled) but made inert: no href
+    // jump-link and no `↩` backref, so clicking never scroll-shifts the pane.
     expect(html).toContain('data-footnote-ref');
-    expect(html).toContain('href="#user-content-fnref-1"');
+    expect(html).toContain('id="user-content-fnref-1"');
+    expect(html).not.toContain('href="#user-content-fn-1"');
+    expect(html).not.toContain('data-footnote-backref');
+    // The footnote section itself is still rendered.
     expect(html).toContain('data-footnotes');
     expect(html).toContain('class="footnotes"');
   });

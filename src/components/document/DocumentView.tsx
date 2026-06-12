@@ -24,6 +24,7 @@ import { indexPad } from '../../utils';
 import { CopyButton, HighlightedText, MarkdownEditor } from '../common';
 import { IconButton, Tooltip, type IconButtonTone } from '../ui';
 import { composeAnnotatedMarkdown } from '../../utils/annotationMarkdown';
+import { restoreFootnoteMarkers } from '../../utils/footnoteExtractor';
 import { usePhraseMemoryAutoSearch } from '../../hooks/usePhraseMemoryAutoSearch';
 import { usePanelScrollSync } from '../../hooks/usePanelScrollSync';
 import { useAnnotationsStore } from '../../stores/annotationsStore';
@@ -215,11 +216,16 @@ export function DocumentView({
 
   const currentProject = projects.find((project) => project.id === currentProjectId) ?? null;
 
+  // The source display text carries bracketed superscript markers ([¹], …),
+  // which are not GFM. Restore them to `[^id]` so the renderer links them to
+  // the definitions and emits the footnote section in preview.
   const sourcePreviewValue = (() => {
     const footnotes = currentChunk?.footnotes;
     if (!footnotes?.length) return undefined;
+    const footnoteMap = new Map(footnotes.map((fn) => [fn.id, fn.text]));
+    const body = restoreFootnoteMarkers(currentChunk!.sourceDisplayText, footnoteMap);
     const defs = footnotes.map((fn) => `[^${fn.id}]: ${fn.text}`).join('\n\n');
-    return `${currentChunk!.sourceDisplayText}\n\n${defs}`;
+    return `${body}\n\n${defs}`;
   })();
 
   // Annotation notes are injected only at render time — the stored draft is

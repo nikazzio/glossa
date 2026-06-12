@@ -393,6 +393,7 @@ export function SettingsModal() {
                         { key: 'mismatchTerm' as const, label: t('settings.highlightMismatchTerm') },
                         { key: 'search'       as const, label: t('settings.highlightSearch') },
                         { key: 'auditPhrase'  as const, label: t('settings.highlightAuditPhrase') },
+                        { key: 'annotation'   as const, label: t('settings.highlightAnnotation') },
                       ]).map(({ key, label }) => (
                         <label
                           key={key}

@@ -407,6 +407,7 @@
     "highlightMismatchTerm": "Missing term (translation)",
     "highlightSearch": "Search result",
     "highlightAuditPhrase": "Audit phrase",
+    "highlightAnnotation": "Note",
     "newPipelineInit": "New pipeline initialisation",
     "newPipelineInitHint": "Settings to copy when creating a new pipeline.",
     "newPipelineInitCopyFirst": "Copy first pipeline",
@@ -1357,6 +1358,8 @@
     "emptyNoAnnotations": "No annotations for this chunk.",
     "sourceTitle": "Source footnotes",
     "contextMenuAdd": "Add annotation",
-    "createFromIssue": "Create annotation from this issue"
+    "createFromIssue": "Create annotation from this issue",
+    "locateInText": "Locate",
+    "locateInTextTooltip": "Highlight the note in the text"
   }
 }

@@ -407,6 +407,7 @@
     "highlightMismatchTerm": "Termine mancante (traduzione)",
     "highlightSearch": "Risultato ricerca",
     "highlightAuditPhrase": "Frase audit",
+    "highlightAnnotation": "Nota",
     "newPipelineInit": "Inizializzazione nuova pipeline",
     "newPipelineInitHint": "Impostazioni da copiare alla creazione di una nuova pipeline.",
     "newPipelineInitCopyFirst": "Copia prima pipeline",
@@ -1357,6 +1358,8 @@
     "emptyNoAnnotations": "Nessuna annotazione per questo chunk.",
     "sourceTitle": "Note sorgente",
     "contextMenuAdd": "Aggiungi annotazione",
-    "createFromIssue": "Crea annotazione da questo problema"
+    "createFromIssue": "Crea annotazione da questo problema",
+    "locateInText": "Trova",
+    "locateInTextTooltip": "Evidenzia la nota nel testo"
   }
 }

@@ -10,11 +10,36 @@ const SUPERSCRIPT_DIGITS = '⁰¹²³⁴⁵⁶⁷⁸⁹';
 // ⁰ U+2070, ¹ U+00B9, ² U+00B2, ³ U+00B3 are not contiguous — enumerate explicitly.
 export const BRACKETED_SUPERSCRIPT_RE = /\[[⁰¹²³⁴⁵⁶⁷⁸⁹]+\]/g;
 
-function toSuperscript(n: number): string {
+export function toSuperscript(n: number): string {
   return String(n)
     .split('')
     .map((d) => SUPERSCRIPT_DIGITS[Number(d)] ?? d)
     .join('');
+}
+
+/** Parses a bracketed superscript marker like "[¹²]" back to the number 12. */
+function parseBracketedSuperscript(marker: string): number | null {
+  const digits = [...marker]
+    .map((ch) => SUPERSCRIPT_DIGITS.indexOf(ch))
+    .filter((d) => d >= 0);
+  if (digits.length === 0) return null;
+  return Number(digits.join(''));
+}
+
+/**
+ * Inverse of replaceMarkersWithSuperscripts: rewrites bracketed superscript
+ * markers ([¹], [²], …) back into GFM `[^id]` references so the markdown
+ * renderer can link them to their definitions. Used to feed the source pane
+ * preview valid GFM (its stored display text carries superscripts, not GFM).
+ * `[^id]` markers already present are left untouched.
+ */
+export function restoreFootnoteMarkers(text: string, footnoteMap: Map<string, string>): string {
+  const idByNumber = new Map([...footnoteMap.keys()].map((id, index) => [index + 1, id]));
+  return text.replace(BRACKETED_SUPERSCRIPT_RE, (marker) => {
+    const num = parseBracketedSuperscript(marker);
+    const id = num !== null ? idByNumber.get(num) : undefined;
+    return id ? `[^${id}]` : marker;
+  });
 }
 
 export function extractFootnotes(markdown: string): {

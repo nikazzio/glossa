@@ -2,6 +2,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   ChevronRight,
+  Crosshair,
   HelpCircle,
   MessageSquare,
   NotebookText,
@@ -78,6 +79,7 @@ function AnnotationCard({
   onCancelEdit,
   onSave,
   onDelete,
+  onLocate,
 }: {
   annotation: Annotation;
   isEditing: boolean;
@@ -85,6 +87,7 @@ function AnnotationCard({
   onCancelEdit: () => void;
   onSave: (updates: Partial<Pick<Annotation, 'type' | 'content' | 'anchorText'>>) => void;
   onDelete: () => void;
+  onLocate: (() => void) | null;
 }) {
   const { t } = useTranslation();
   const meta = ANNOTATION_META[annotation.type];
@@ -148,6 +151,17 @@ function AnnotationCard({
           </div>
         ) : (
           <>
+            {annotation.anchorText && onLocate && (
+              <button
+                type="button"
+                onClick={onLocate}
+                title={t('annotations.locateInTextTooltip')}
+                className="flex items-center gap-1 rounded-full border border-editorial-border px-2 py-1 text-[9px] font-bold uppercase tracking-[0.18em] text-editorial-muted transition-colors hover:text-editorial-ink"
+              >
+                <Crosshair size={10} />
+                {t('annotations.locateInText')}
+              </button>
+            )}
             <IconButton size="sm" tone="default" onClick={onEdit} title={t('annotations.editButton')}>
               <Pencil size={11} />
             </IconButton>
@@ -157,14 +171,14 @@ function AnnotationCard({
           </>
         )}
       </div>
-      <p className="whitespace-pre-wrap text-sm leading-relaxed text-editorial-ink">{annotation.content}</p>
       {annotation.anchorText && (
-        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        <div className="mb-2 flex flex-wrap items-center gap-1.5">
           <span className="truncate rounded-lg bg-editorial-bg/60 px-2 py-0.5 text-xs italic text-editorial-muted">
             «{annotation.anchorText}»
           </span>
         </div>
       )}
+      <p className="whitespace-pre-wrap text-sm leading-relaxed text-editorial-ink">{annotation.content}</p>
     </article>
   );
 }
@@ -175,6 +189,7 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
   const { annotationsByChunkId, addAnnotation, updateAnnotation, deleteAnnotation } = useAnnotationsStore();
   const pendingAnnotationAnchor = useUiStore((s) => s.pendingAnnotationAnchor);
   const setPendingAnnotationAnchor = useUiStore((s) => s.setPendingAnnotationAnchor);
+  const focusIssueInChunk = useUiStore((s) => s.focusIssueInChunk);
 
   const [showForm, setShowForm] = useState(false);
   const [formType, setFormType] = useState<AnnotationType>('comment');
@@ -284,6 +299,7 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
           onCancelEdit={() => setEditingId(null)}
           onSave={(updates) => handleSaveEdit(ann.id, updates)}
           onDelete={() => handleDelete(ann.id)}
+          onLocate={ann.anchorText ? () => focusIssueInChunk(currentChunk.id, ann.anchorText) : null}
         />
       ))}
 

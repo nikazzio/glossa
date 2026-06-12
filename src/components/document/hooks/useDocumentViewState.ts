@@ -7,7 +7,7 @@ import { useConfigStore } from '../../../stores/configStore';
 import { useAnnotationsStore } from '../../../stores/annotationsStore';
 import { useGlossaryHighlight, escapeHtml, type AnnotationAnchor } from '../../../hooks/useGlossaryHighlight';
 import { useStageDiff } from '../../../hooks/useStageDiff';
-import { highlightFootnoteMarkersHtml, highlightSuperscriptMarkersHtml } from '../../../utils/footnoteExtractor';
+import { highlightFootnoteMarkersHtml, highlightSuperscriptMarkersHtml, toSuperscript } from '../../../utils/footnoteExtractor';
 
 export function useDocumentViewState() {
   const { t } = useTranslation();
@@ -122,13 +122,18 @@ export function useDocumentViewState() {
 
   const annotationsByChunkId = useAnnotationsStore((s) => s.annotationsByChunkId);
   const currentChunkAnnotations = currentChunk ? (annotationsByChunkId.get(currentChunk.id) ?? []) : [];
+  // Resolve each anchor to its first occurrence in the translation, sort by
+  // reading order and number the markers 1..n — matching the footnote numbers
+  // composeAnnotatedMarkdown emits in preview, so write and preview agree.
   const annotationAnchors = useMemo<AnnotationAnchor[]>(
     () =>
       currentChunkAnnotations
-        .filter((a) => !!a.anchorText?.trim())
-        .map((a) => ({ text: a.anchorText!, type: a.type })),
+        .map((a) => ({ text: a.anchorText?.trim() ?? '', index: deferredStageContent.indexOf(a.anchorText?.trim() ?? '') }))
+        .filter((a) => a.text !== '' && a.index !== -1)
+        .sort((x, y) => x.index - y.index)
+        .map((a, order) => ({ text: a.text, label: `[${toSuperscript(order + 1)}]` })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [currentChunkAnnotations.map((a) => `${a.id}:${a.anchorText ?? ''}`).join('|')],
+    [currentChunkAnnotations.map((a) => `${a.id}:${a.anchorText ?? ''}`).join('|'), deferredStageContent],
   );
 
   const sourceHighlight = useGlossaryHighlight(

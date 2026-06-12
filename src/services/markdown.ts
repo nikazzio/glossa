@@ -54,8 +54,31 @@ interface MdNode {
   ordered?: boolean;
 }
 
-export function renderMarkdownToHtmlFragment(markdown: string): string {
-  return String(htmlProcessor.processSync(normalizeMarkdown(markdown)));
+interface RenderOptions {
+  /**
+   * Strip footnote navigation anchors (inline ref href + `↩` backrefs). Used by
+   * the in-app preview, where the scroll-jump shifted the document pane
+   * horizontally. Standalone HTML export keeps the working links (default).
+   */
+  stripFootnoteNav?: boolean;
+}
+
+export function renderMarkdownToHtmlFragment(markdown: string, options: RenderOptions = {}): string {
+  const html = String(htmlProcessor.processSync(normalizeMarkdown(markdown)));
+  return options.stripFootnoteNav ? stripFootnoteNavigation(html) : html;
+}
+
+/**
+ * Removes footnote navigation anchors from rendered GFM output:
+ * - drops the `↩` backref links in the footnote section entirely;
+ * - strips the `href` from inline footnote references so clicking them no
+ *   longer scroll-jumps (which shifted the document pane horizontally).
+ * The reference number stays visible and styled; it is just inert.
+ */
+function stripFootnoteNavigation(html: string): string {
+  return html
+    .replace(/<a\b[^>]*\bdata-footnote-backref\b[^>]*>[\s\S]*?<\/a>/g, '')
+    .replace(/<a\b[^>]*\bdata-footnote-ref\b[^>]*>/g, (tag) => tag.replace(/\shref="[^"]*"/, ''));
 }
 
 export function buildMarkdownHtmlDocument(markdown: string, title = 'Glossa Export'): string {

@@ -5,9 +5,31 @@ import {
   highlightFootnoteMarkersHtml,
   highlightSuperscriptMarkersHtml,
   replaceMarkersWithSuperscripts,
+  restoreFootnoteMarkers,
   stripFootnoteMarkers,
   stripSuperscriptMarkers,
 } from './footnoteExtractor';
+
+describe('restoreFootnoteMarkers', () => {
+  it('rewrites bracketed superscripts back to GFM references by display order', () => {
+    const map = new Map([
+      ['fa', 'first'],
+      ['fb', 'second'],
+    ]);
+    const result = restoreFootnoteMarkers('Alpha[¹] beta[²].', map);
+    expect(result).toBe('Alpha[^fa] beta[^fb].');
+  });
+
+  it('leaves existing GFM markers and unknown numbers untouched', () => {
+    const map = new Map([['fa', 'first']]);
+    expect(restoreFootnoteMarkers('Keep[^fa] and [²] alone.', map)).toBe('Keep[^fa] and [²] alone.');
+  });
+
+  it('returns text unchanged when there are no superscript markers', () => {
+    const map = new Map([['fa', 'first']]);
+    expect(restoreFootnoteMarkers('Plain text.', map)).toBe('Plain text.');
+  });
+});
 
 describe('extractFootnotes', () => {
   it('separates body text from footnote definitions', () => {

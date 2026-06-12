@@ -33,6 +33,7 @@ interface UiState {
     mismatchTerm: string;
     search: string;
     auditPhrase: string;
+    annotation: string;
   };
   searchQuery: string;
   focusedChunkId: string | null;
@@ -89,6 +90,7 @@ export const useUiStore = create<UiState>()(
         mismatchTerm: 'rgba(239,68,68,0.15)',
         search: 'rgba(234,179,8,0.25)',
         auditPhrase: 'rgba(249,115,22,0.25)',
+        annotation: '#3a7a72',
       },
       searchQuery: '',
       focusedChunkId: null,

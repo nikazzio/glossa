@@ -121,10 +121,7 @@
   --hl-mismatch-bg: rgba(239, 68, 68, 0.15);
   --hl-search-bg: rgba(234, 179, 8, 0.25);
   --hl-audit-bg: rgba(249, 115, 22, 0.25);
-  --hl-annot-comment-bg: rgba(58, 122, 114, 0.18);
-  --hl-annot-doubt-bg: rgba(196, 155, 42, 0.22);
-  --hl-annot-problem-bg: rgba(200, 112, 94, 0.25);
-  --hl-annot-approved-bg: rgba(58, 122, 101, 0.20);
+  --hl-annot-underline-color: #3a7a72;
 }
 
 html,
@@ -182,36 +179,29 @@ mark.hl-audit {
   cursor: help;
 }
 
-mark.hl-annot-comment {
-  background-color: var(--hl-annot-comment-bg);
-  border-radius: 2px;
-  padding: 0 1px;
+/* Annotation anchor: underline only (single colour, chosen in settings). The
+   note type is distinguished in the Notes panel cards, not in the text. */
+mark.hl-annot {
+  background: transparent;
+  text-decoration: underline;
+  text-decoration-color: var(--hl-annot-underline-color);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
   color: inherit;
-  cursor: help;
 }
 
-mark.hl-annot-doubt {
-  background-color: var(--hl-annot-doubt-bg);
-  border-radius: 2px;
-  padding: 0 1px;
-  color: inherit;
-  cursor: help;
-}
-
-mark.hl-annot-problem {
-  background-color: var(--hl-annot-problem-bg);
-  border-radius: 2px;
-  padding: 0 1px;
-  color: inherit;
-  cursor: help;
-}
-
-mark.hl-annot-approved {
-  background-color: var(--hl-annot-approved-bg);
-  border-radius: 2px;
-  padding: 0 1px;
-  color: inherit;
-  cursor: help;
+/* Footnote marker after the anchored word in write mode. Rendered zero-width
+   so it never shifts the transparent-textarea overlay alignment. */
+.hl-annot-marker {
+  display: inline-block;
+  width: 0;
+  overflow: visible;
+  white-space: nowrap;
+  color: var(--color-editorial-accent);
+  font-weight: 600;
+  vertical-align: super;
+  font-size: 0.7em;
+  pointer-events: none;
 }
 
 mark.hl-diff-add {
