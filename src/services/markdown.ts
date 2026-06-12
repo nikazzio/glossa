@@ -81,10 +81,10 @@ export function renderMarkdownToHtmlFragment(markdown: string, options: RenderOp
  * exports are unaffected.
  */
 function restoreFootnoteDisplayNumbers(html: string): string {
-  // Inline refs: <sup id="user-content-fnref-22">...<a ...>2</a>...</sup>
-  // → replace the inner text "2" with the label "22".
+  // Inline refs: <sup><a id="user-content-fnref-22" ...>2</a></sup>
+  // The id is on the <a>, not the <sup>. Replace the inner text with the label.
   let result = html.replace(
-    /(<sup\b[^>]*\bid="user-content-fnref-([^"]+)"[^>]*>[\s\S]*?<a\b[^>]*>)\d+(<\/a>[\s\S]*?<\/sup>)/g,
+    /(<a\b[^>]*\bid="user-content-fnref-([^"]+)"[^>]*>)\d+(<\/a>)/g,
     (_full, pre, label, post) => `${pre}${label}${post}`,
   );
   // Footnote section <li>: add value="22" so the <ol> counter shows the right number.
