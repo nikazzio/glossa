@@ -7,7 +7,7 @@ import { useProjectStore } from '../../stores/projectStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { confirm } from '../../stores/confirmStore';
-import { relativeDateUnit } from '../../utils';
+import { relativeDateUnit, formatDateTime } from '../../utils';
 import { EditorialModalShell } from '../common';
 import { IconButton, PillButton, SectionLabel } from '../ui';
 
@@ -234,7 +234,7 @@ export function ProjectPanel() {
                     </p>
                   ) : null}
                   {projects.map((project) => {
-                    const absoluteDate = new Date(project.updated_at).toLocaleString();
+                    const absoluteDate = formatDateTime(project.updated_at);
                     const relativeLabel = formatRelative(project.updated_at);
                     const isOpening = openingProjectId === project.id;
                     const isDimmed = openingProjectId !== null && !isOpening;

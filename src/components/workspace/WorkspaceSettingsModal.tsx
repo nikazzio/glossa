@@ -81,7 +81,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
     if (!activeWorkspace) return;
     setIsRegenerating(true);
     try {
-      const count = await regenerateAllEmbeddings(activeWorkspace.id, activeWorkspace.embeddingModel);
+      const count = await regenerateAllEmbeddings(activeWorkspace.id, embeddingModel);
       toast.success(t('workspace.embeddingsRegenerated', { count }));
     } catch (err: unknown) {
       toast.error(t('workspace.embeddingsRegenerateFailed'), {
@@ -253,9 +253,22 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                       <option value="text-embedding-3-large">text-embedding-3-large</option>
                     </select>
                     {embeddingModel !== activeWorkspace?.embeddingModel && (
-                      <p className="rounded-lg border border-editorial-accent/30 bg-editorial-accent/8 px-3 py-2 text-sm leading-relaxed text-editorial-accent [text-wrap:pretty]">
-                        {t('workspace.embeddingChangeWarning')}
-                      </p>
+                      <div className="flex items-center gap-3 rounded-lg border border-editorial-accent/30 bg-editorial-accent/8 px-3 py-2">
+                        <p className="flex-1 text-sm leading-relaxed text-editorial-accent [text-wrap:pretty]">
+                          {t('workspace.embeddingChangeWarning')}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => void handleRegenerateEmbeddings()}
+                          disabled={isRegenerating || !activeWorkspace}
+                          className="flex shrink-0 items-center gap-1.5 rounded-full border border-editorial-accent/50 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-editorial-accent transition-colors hover:bg-editorial-accent/10 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {isRegenerating
+                            ? <Loader2 size={11} className="animate-spin" />
+                            : <RefreshCcw size={11} />}
+                          {t('workspace.regenerateEmbeddings')}
+                        </button>
+                      </div>
                     )}
                   </div>
                   <MemoryExtractorSettings
@@ -270,32 +283,6 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                     onPromptChange={setMemoryExtractorPrompt}
                   />
 
-                  <div className="rounded-[20px] border border-editorial-border bg-editorial-bg/70 px-5 py-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1.5">
-                          <RefreshCcw size={11} className="shrink-0 text-editorial-accent" />
-                          <p className="text-xs font-sans uppercase tracking-[0.22em] text-editorial-muted">
-                            {t('workspace.regenerateEmbeddings')}
-                          </p>
-                        </div>
-                        <p className="text-xs leading-relaxed text-editorial-muted [text-wrap:pretty]">
-                          {t('workspace.regenerateEmbeddingsHint', { model: activeWorkspace?.embeddingModel })}
-                        </p>
-                      </div>
-                      <IconButton
-                        size="md"
-                        title={t('workspace.regenerateEmbeddings')}
-                        onClick={() => void handleRegenerateEmbeddings()}
-                        disabled={isRegenerating || !activeWorkspace}
-                        tooltipSide="left"
-                      >
-                        {isRegenerating
-                          ? <Loader2 size={13} className="animate-spin" />
-                          : <RefreshCcw size={13} />}
-                      </IconButton>
-                    </div>
-                  </div>
                 </div>
               )}
 

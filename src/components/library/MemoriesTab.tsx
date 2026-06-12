@@ -486,7 +486,8 @@ function MemoryTextarea({
 function formatDate(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString();
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${p(date.getDate())}/${p(date.getMonth() + 1)}/${date.getFullYear()} ${p(date.getHours())}:${p(date.getMinutes())}`;
 }
 
 function workspaceName(workspaceId: string, workspaces: Workspace[]) {

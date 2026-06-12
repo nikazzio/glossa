@@ -10,6 +10,7 @@ import {
   summarizeChunkUsage,
   type OperationLogRunSummary,
 } from '../../../utils/operationLogStats';
+import { formatDateTime } from '../../../utils';
 import type { TranslationChunk } from '../../../types';
 
 function StatRow({ label, value }: { label: string; value: string }) {
@@ -25,12 +26,10 @@ function RunSummaryCard({
   title,
   emptyLabel,
   run,
-  locale,
 }: {
   title: string;
   emptyLabel: string;
   run: OperationLogRunSummary | null;
-  locale: string;
 }) {
   const { t } = useTranslation();
 
@@ -43,7 +42,7 @@ function RunSummaryCard({
         <p className="text-[11px] leading-relaxed text-editorial-muted/70">{emptyLabel}</p>
       ) : (
         <dl className="space-y-2">
-          <StatRow label={t('document.summaryWhen')} value={new Date(run.at).toLocaleString(locale)} />
+          <StatRow label={t('document.summaryWhen')} value={formatDateTime(run.at)} />
           {run.stageName ? <StatRow label={t('document.summaryStage')} value={run.stageName} /> : null}
           <StatRow label={t('document.summaryModel')} value={[run.provider, run.model].filter(Boolean).join(' / ') || '—'} />
           <StatRow label={t('document.summaryTokens')} value={(run.stats.totalInput + run.stats.totalOutput).toLocaleString()} />
@@ -64,7 +63,7 @@ export interface ChunkSummaryTabProps {
 }
 
 export function ChunkSummaryTab({ panelId, labelledBy, currentChunk }: ChunkSummaryTabProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const pricingOverrides = usePricingStore((s) => s.overrides);
   const logEntries = useOperationLogStore((s) => s.entries);
   const chunkSummary = useMemo(
@@ -103,14 +102,12 @@ export function ChunkSummaryTab({ panelId, labelledBy, currentChunk }: ChunkSumm
         title={t('document.chunkSummaryLastTranslation')}
         emptyLabel={t('document.chunkSummaryNoTranslation')}
         run={chunkSummary.lastTranslationRun}
-        locale={i18n.language}
       />
 
       <RunSummaryCard
         title={t('document.chunkSummaryLastAudit')}
         emptyLabel={t('document.chunkSummaryNoAudit')}
         run={chunkSummary.lastAuditRun}
-        locale={i18n.language}
       />
     </div>
   );
