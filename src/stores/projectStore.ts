@@ -121,6 +121,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       viewMode: ui.viewMode,
     });
 
+    useOperationLogStore.getState().setProjectId(id);
     void get().loadProjects().catch(() => {});
     set({ currentProjectId: id, activePipelineId, pipelines, saveState: 'saved', lastSaveError: null, trackedSnapshot });
   },
@@ -296,6 +297,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         }
 
         logger.info('saveCurrentProject: done', { projectId: currentProjectId });
+        useOperationLogStore.getState().setProjectId(currentProjectId);
         await get().loadProjects().catch(() => {});
         set({
           currentProjectId,

@@ -68,11 +68,13 @@ describe('pipelineStore', () => {
 
   it('resetToDefaults clears text and reverts config', () => {
     usePipelineStore.getState().addStage();
-    usePipelineStore.setState({ inputText: 'some text' });
+    usePipelineStore.setState({ inputText: 'some text', runStatus: 'interrupted', lastRunOutcome: 'error' });
 
     usePipelineStore.getState().resetToDefaults();
 
     expect(usePipelineStore.getState().inputText).toBe('');
+    expect(usePipelineStore.getState().runStatus).toBe('idle');
+    expect(usePipelineStore.getState().lastRunOutcome).toBeNull();
     expect(usePipelineStore.getState().config.stages.length).toBeGreaterThan(0);
     const stageNames = usePipelineStore
       .getState()

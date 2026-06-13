@@ -60,11 +60,13 @@ function StageSwitch({
   stage,
   label,
   active,
+  controls,
   onClick,
 }: {
   stage: PromptPreviewStage;
   label: string;
   active: boolean;
+  controls: string;
   onClick: () => void;
 }) {
   const Icon = STAGE_ICON[stage.role];
@@ -75,7 +77,11 @@ function StageSwitch({
       tone={active ? 'accent' : 'default'}
       onClick={onClick}
       title={label}
-      ariaPressed={active}
+      id={`prompt-preview-tab-${stage.id}`}
+      role="tab"
+      aria-selected={active}
+      aria-controls={controls}
+      tabIndex={active ? 0 : -1}
     >
       <Icon size={14} />
     </IconButton>
@@ -100,7 +106,7 @@ export function PromptPreviewTab({ config }: PromptPreviewTabProps) {
   const activeStage = stages.find((stage) => stage.id === activeStageId) ?? stages[0] ?? null;
 
   return (
-    <div id="pconfig-panel-preview" role="tabpanel" aria-labelledby="pconfig-tab-preview" className="space-y-6">
+    <div className="space-y-6">
       <div className="space-y-2">
         <div className="flex items-center gap-1.5">
           <Eye size={11} className="text-editorial-accent shrink-0" />
@@ -114,13 +120,14 @@ export function PromptPreviewTab({ config }: PromptPreviewTabProps) {
       </div>
 
       {stages.length > 1 && (
-        <div className="flex flex-wrap gap-2">
+        <div role="tablist" aria-label={t('pipeline.promptPreviewTitle')} className="flex flex-wrap gap-2">
           {stages.map((stage) => (
             <StageSwitch
               key={stage.id}
               stage={stage}
               label={t(`pipeline.stageRole.${stage.role}`)}
               active={activeStage?.id === stage.id}
+              controls={`prompt-preview-panel-${stage.id}`}
               onClick={() => setActiveStageId(stage.id)}
             />
           ))}
@@ -128,7 +135,12 @@ export function PromptPreviewTab({ config }: PromptPreviewTabProps) {
       )}
 
       {activeStage ? (
-        <div className="space-y-4">
+        <div
+          id={`prompt-preview-panel-${activeStage.id}`}
+          role="tabpanel"
+          aria-labelledby={`prompt-preview-tab-${activeStage.id}`}
+          className="space-y-4"
+        >
           <div className="space-y-3">
             {activeStage.blocks.map((block) => (
               <PromptBlockCard key={`${activeStage.id}-${block.id}`} block={block} />

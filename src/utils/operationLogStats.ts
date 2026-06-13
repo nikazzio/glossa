@@ -363,6 +363,40 @@ function aggregateRunForCategory(
   };
 }
 
+/**
+ * All recorded steps of a category for a chunk, in execution order.
+ * Each completed entry with usage becomes one run summary — for translation
+ * this yields one entry per stage (translation, refine, format); for audit one
+ * per audit pass. Note: re-running a chunk clears its prior log entries
+ * (see usePipeline clearChunk), so this only ever reflects the latest execution.
+ */
+export function listRunsForCategory(
+  entries: OperationLogEntry[],
+  chunkId: string,
+  category: OperationUsageCategory,
+  pricingOverrides: Pricing = {},
+): OperationLogRunSummary[] {
+  return entries
+    .filter((entry) => {
+      if (entry.chunkId !== chunkId || entry.phase !== 'end') return false;
+      if (categoryForEntry(entry) !== category) return false;
+      return hasUsage(readUsage(entry));
+    })
+    .map((entry) => {
+      const usage = readUsage(entry);
+      return {
+        category,
+        at: entry.at,
+        chunkId: entry.chunkId,
+        stageId: entry.stageId,
+        stageName: stageNameFromEntry(entry),
+        provider: usage.provider,
+        model: usage.model,
+        stats: finalizeSingleEntry(entry, usage, pricingOverrides),
+      };
+    });
+}
+
 export function summarizeChunkUsage(
   entries: OperationLogEntry[],
   chunkId: string,

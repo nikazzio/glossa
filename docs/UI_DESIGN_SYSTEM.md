@@ -22,13 +22,23 @@ when-to-read: prima di creare o modificare qualsiasi componente visivo
 > `editorial-warning` (#666666) = grigio, per avvisi generici. Per lo stato *in esecuzione* usa `editorial-running` (giallo).
 
 **Font:**
-- `font-display` (Elstob variable) — heading corsivi, label attive nelle barre filtro
-- `font-sans` (Plus Jakarta Sans variable) — UI generica, etichette, body
+- `font-display` (Elstob variable) — heading corsivi, label attive nelle barre filtro. `size-adjust: 100%` (era 110%: gonfiava i valori serif).
+- `font-sans` — UI generica, etichette, body. Default **Plus Jakarta Sans**, ma è **scelto dall'utente** in Impostazioni → Tipografia (Plus Jakarta Sans / Geist / Inter / IBM Plex Sans). Override runtime di `--font-sans` su `:root` via `FontSync` (`App.tsx`), preferenza persistita in `uiStore.uiFont`. Ogni `@font-face` alternativo ha un `size-adjust` tarato per non far saltare la dimensione allo switch.
 - `font-mono` — solo codice/log
 
 **Type scale app:** `text-xs` 13px / `text-sm` 15px / `text-base` 16px / `text-lg` 18px / `text-xl` 22px / `text-2xl` 26px. I display veri usano `font-display italic` con classi responsive controllate (`text-4xl md:text-5xl` solo per titoli di vista, non per metadati o controlli).
 
-> **Dimensione minima testo contenuto:** `text-xs` (13px). Mai `text-[10px]` o `text-[11px]` per testo leggibile, label di controlli interattivi o descrizioni. `text-[10px]` è **esclusivo** delle etichette sezione uppercase con `tracking-[0.28em]`/`tracking-[0.35em]` e badge micro.
+> **Dimensione minima:** il testo leggibile (prosa, descrizioni, valori dato serif) non scende sotto `text-sm`/`text-xs`. Le **caption sans uppercase** (label stat, header) possono stare a `text-[11px]`: il sans resta leggibile compatto, e la caption non è il dato. `text-[10px]` resta solo per strip verticali collassate e badge micro decorativi.
+
+> **Gerarchia tipografica pannelli (documento/insight)** — il sans fa da caption, il serif fa da dato:
+> - **Titolo sezione** (icona accent + uppercase): `text-xs` uppercase `tracking-[0.16em]` muted. È l'header, non si tocca.
+> - **Label stat** (caption sans uppercase): `text-[11px]` `tracking-[0.1em]` muted. Sans piccolo = si legge bene anche compatto.
+> - **Valore dato** (serif italic): `font-display text-sm italic` ink. Più grande della label: il serif corsivo a corpo piccolo è meno leggibile del sans, quindi al valore serve più corpo.
+> - **Layout riga**: `flex items-baseline justify-between` — label a sinistra, valore allineato a destra (lista a due colonne scansionabile), mai label+valore ammucchiati con `gap-1`.
+> - **Hero** (metrica focale singola: %, qualità composita): `font-display text-lg italic`.
+> - Riga stat condivisa: `components/ui/StatRow.tsx`; label sezione: `components/ui/SectionLabel.tsx`. Le card breakdown seguono lo stesso schema (titolo card `text-xs`, righe metriche `justify-between` con label `text-[11px]` / valore `text-sm`).
+
+> **Scala tracking (label uppercase):** ladder calma — sezione/strip `tracking-[0.16em]`, label stat `tracking-[0.1em]`, badge `tracking-[0.1em]`. Mai `tracking-[0.28em]`/`[0.35em]` sulle superfici documento/insight.
 
 ---
 

@@ -102,3 +102,17 @@ describe('uiStore drawer mutual exclusion', () => {
     expect(state.showConfigDrawer).toBe(false);
   });
 });
+
+describe('uiStore uiFont preference', () => {
+  it('defaults the UI font to plus jakarta sans', () => {
+    expect(useUiStore.getState().uiFont).toBe('jakarta');
+  });
+
+  it('updates the UI font through setUiFont', () => {
+    useUiStore.getState().setUiFont('geist');
+    expect(useUiStore.getState().uiFont).toBe('geist');
+
+    useUiStore.getState().setUiFont('inter');
+    expect(useUiStore.getState().uiFont).toBe('inter');
+  });
+});

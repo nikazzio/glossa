@@ -347,6 +347,9 @@ function FeaturesSection() {
       <SubTitle>{t('help.features.modalsTitle')}</SubTitle>
       <P>{t('help.features.modalsDesc')}</P>
 
+      <SubTitle>{t('help.features.appearanceTitle')}</SubTitle>
+      <P>{t('help.features.appearanceDesc')}</P>
+
       <SubTitle>{t('help.features.personaTitle')}</SubTitle>
       <P>{t('help.features.personaDesc')}</P>
 

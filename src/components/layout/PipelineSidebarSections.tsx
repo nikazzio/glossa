@@ -552,8 +552,9 @@ export function PipelineSidebarPipelinesSection() {
                           void handleDeletePipeline(pipeline.id, pipeline.name);
                         }}
                         title={t('pipeline.deletePipeline')}
+                        ariaLabel={t('pipeline.deletePipeline')}
                         tooltipSide="right"
-                        className="absolute -right-1 -top-1 z-10 hidden h-4 w-4 bg-editorial-bg p-0 group-hover:flex"
+                        className="absolute -right-1 -top-1 z-10 h-5 w-5 bg-editorial-bg p-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
                       > -
                       </IconButton>
                     )}

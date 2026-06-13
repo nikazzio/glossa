@@ -424,7 +424,11 @@ export function usePipeline() {
       ? 'rerun-unlocked'
       : 'resume';
     const activePipelineId = useProjectStore.getState().activePipelineId;
-    usePipelineStore.setState({ runStatus: 'running', lastRunConfig: buildPipelineFingerprint(config) });
+    usePipelineStore.setState({
+      runStatus: 'running',
+      lastRunOutcome: null,
+      lastRunConfig: buildPipelineFingerprint(config),
+    });
     persistPipelineStatus(activePipelineId, 'running', buildPipelineFingerprint(config));
     await computeBlobAssignments(config, liveChunks);
 
@@ -447,7 +451,11 @@ export function usePipeline() {
       setIsProcessing(false);
       useChunksStore.getState().clearCancelRequest();
       const finalStatus = cancelled || errorCount > 0 ? 'interrupted' : 'completed';
-      usePipelineStore.setState({ runStatus: finalStatus, lastRunConfig: buildPipelineFingerprint(config) });
+      usePipelineStore.setState({
+        runStatus: finalStatus,
+        lastRunOutcome: cancelled ? 'cancelled' : errorCount > 0 ? 'error' : 'completed',
+        lastRunConfig: buildPipelineFingerprint(config),
+      });
       if (finalStatus === 'interrupted') {
         useProjectStore.getState().setRunInterrupted(true);
       }

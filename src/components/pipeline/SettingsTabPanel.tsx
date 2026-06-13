@@ -60,7 +60,7 @@ export function SettingsTabPanel({
       {/* Mode selector */}
       <div className="space-y-2">
         <SectionLabel icon={Layers} label={t('pipeline.modeLabel')} />
-        <div className="flex gap-2">
+        <div role="radiogroup" aria-label={t('pipeline.modeLabel')} className="flex gap-2">
           {([
             { mode: 'standard' as PipelineMode, Icon: Languages },
             { mode: 'editorial' as PipelineMode, Icon: Layers },
@@ -74,7 +74,8 @@ export function SettingsTabPanel({
                 onClick={() => setMode(m)}
                 disabled={translationsExist || isProcessing}
                 title={t(`pipeline.mode.${m}`)}
-                ariaPressed={isActive}
+                role="radio"
+                aria-checked={isActive}
               >
                 <Icon size={16} />
               </IconButton>

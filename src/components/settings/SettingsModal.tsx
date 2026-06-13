@@ -4,12 +4,13 @@ import {
   AlertCircle, Server, RefreshCw, CheckCircle2, XCircle, HelpCircle,
   Sparkles, Columns2, BookOpen, ChevronDown, ChevronUp, SlidersHorizontal,
   ChevronsLeft, Copy, RotateCcw, Scissors, Layers, LayoutTemplate, Palette,
-  LibraryBig, FileText,
+  LibraryBig, FileText, Type,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useUiStore } from '../../stores/uiStore';
+import type { UiFont } from '../../stores/uiStore';
 import { useConfigStore } from '../../stores/configStore';
 import { ApiKeyInput } from './ApiKeyInput';
 import { ollamaService } from '../../services/llmService';
@@ -98,6 +99,14 @@ const LAYOUT_OPTIONS: Array<{ value: 'auto' | 'standard' | 'book'; labelKey: str
   { value: 'book',     labelKey: 'document.layoutBook',     icon: <BookOpen size={14} /> },
 ];
 
+// Anteprima resa nel font stesso: il preview è il nome del font, mostrato nel proprio carattere.
+const UI_FONT_OPTIONS: Array<{ value: UiFont; name: string; family: string }> = [
+  { value: 'jakarta', name: 'Plus Jakarta Sans', family: '"Plus Jakarta Sans", sans-serif' },
+  { value: 'geist',   name: 'Geist',             family: '"Geist", sans-serif' },
+  { value: 'inter',   name: 'Inter',             family: '"Inter", sans-serif' },
+  { value: 'plex',    name: 'IBM Plex Sans',     family: '"IBM Plex Sans", sans-serif' },
+];
+
 const PIPELINE_INIT_OPTIONS: Array<{ value: 'copy-first' | 'copy-previous' | 'defaults'; labelKey: string; icon: ReactNode }> = [
   { value: 'copy-first',    labelKey: 'settings.newPipelineInitCopyFirst',    icon: <ChevronsLeft size={14} /> },
   { value: 'copy-previous', labelKey: 'settings.newPipelineInitCopyPrevious', icon: <Copy size={14} /> },
@@ -119,7 +128,7 @@ function NavSelector<T extends string>({
 }) {
   const active = options.find((o) => o.value === value);
   return (
-    <div role="group" aria-label={ariaLabel} className="flex items-center gap-2">
+    <div role="radiogroup" aria-label={ariaLabel} className="flex items-center gap-2">
       {options.map((opt) => {
         const isActive = value === opt.value;
         const label = getLabel(opt.labelKey);
@@ -130,7 +139,8 @@ function NavSelector<T extends string>({
             tone={isActive ? 'accent' : 'default'}
             onClick={() => onChange(opt.value)}
             title={label}
-            ariaPressed={isActive}
+            role="radio"
+            aria-checked={isActive}
           >
             {opt.icon}
           </IconButton>
@@ -152,6 +162,8 @@ export function SettingsModal() {
     setDocumentLayout,
     highlightColors,
     setHighlightColor,
+    uiFont,
+    setUiFont,
   } = useUiStore();
   const {
     ollamaStatus,
@@ -210,7 +222,7 @@ export function SettingsModal() {
   ];
 
   const tabBar = (
-    <div className="flex items-center gap-2">
+    <div role="tablist" aria-label={t('settings.panelTitle')} className="flex items-center gap-2">
       {activeTabConfig.map((tab) => {
         const isActive = activeTab === tab.id;
         return (
@@ -220,7 +232,11 @@ export function SettingsModal() {
             tone={isActive ? 'accent' : 'default'}
             onClick={() => setActiveTab(tab.id)}
             title={tab.label}
-            ariaPressed={isActive}
+            id={`settings-tab-${tab.id}`}
+            role="tab"
+            aria-selected={isActive}
+            aria-controls={`settings-panel-${tab.id}`}
+            tabIndex={isActive ? 0 : -1}
           >
             {tab.icon}
           </IconButton>
@@ -291,7 +307,12 @@ export function SettingsModal() {
             >
               {/* Tab: Traduzioni */}
               {activeTab === 'translations' && (
-                <div className="space-y-12">
+                <div
+                  id="settings-panel-translations"
+                  role="tabpanel"
+                  aria-labelledby="settings-tab-translations"
+                  className="space-y-12"
+                >
                   {/* Segmentazione */}
                   <div className="space-y-3">
                     <div className="flex items-center gap-1.5">
@@ -417,19 +438,65 @@ export function SettingsModal() {
                     </div>
                   </div>
 
+                  {/* Tipografia */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-1.5">
+                      <Type size={11} className="text-editorial-accent shrink-0" />
+                      <p className="text-[10px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
+                        {t('settings.typography')}
+                      </p>
+                    </div>
+                    <p className="text-xs leading-relaxed text-editorial-muted">{t('settings.uiFontHint')}</p>
+                    <div role="radiogroup" aria-label={t('settings.uiFont')} className="grid grid-cols-2 gap-2">
+                      {UI_FONT_OPTIONS.map((opt) => {
+                        const isActive = uiFont === opt.value;
+                        return (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            role="radio"
+                            aria-checked={isActive}
+                            onClick={() => setUiFont(opt.value)}
+                            className={`rounded-[20px] border px-4 py-3.5 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                              isActive
+                                ? 'border-editorial-accent bg-editorial-accent/10'
+                                : 'border-editorial-border bg-editorial-bg/60 hover:border-editorial-accent/40'
+                            }`}
+                          >
+                            <span className="block text-lg text-editorial-ink" style={{ fontFamily: opt.family }}>
+                              {opt.name}
+                            </span>
+                            <span className="mt-0.5 block text-xs text-editorial-muted" style={{ fontFamily: opt.family }}>
+                              AaBbCc 0123 àèéìòù
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                 </div>
               )}
 
               {/* Tab: Provider */}
               {activeTab === 'provider' && (
-                <div className="space-y-12">
+                <div
+                  id="settings-panel-provider"
+                  role="tabpanel"
+                  aria-labelledby="settings-tab-provider"
+                  className="space-y-12"
+                >
                   {/* Provider workspace */}
                   <div className="space-y-4">
                     <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
                       {t('settings.providerConfig')}
                     </p>
                     <div className="rounded-[20px] border border-editorial-border bg-editorial-textbox/20 p-6 space-y-4">
-                      <div className="flex flex-wrap gap-2">
+                      <div
+                        role="tablist"
+                        aria-label={t('settings.providerConfig')}
+                        className="flex flex-wrap gap-2"
+                      >
                         {MODEL_PROVIDER_ORDER.map((provider) => {
                           const active = provider === activeProviderTab;
                           return (
@@ -439,6 +506,11 @@ export function SettingsModal() {
                               onClick={() => setActiveProviderTab(provider)}
                               title={PROVIDER_LABELS[provider]}
                               aria-label={PROVIDER_LABELS[provider]}
+                              id={`settings-provider-tab-${provider}`}
+                              role="tab"
+                              aria-selected={active}
+                              aria-controls={`settings-provider-panel-${provider}`}
+                              tabIndex={active ? 0 : -1}
                               className={`flex h-9 w-9 items-center justify-center rounded-full border text-[11px] font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
                                 active
                                   ? 'border-editorial-accent bg-editorial-accent text-white'
@@ -451,7 +523,12 @@ export function SettingsModal() {
                         })}
                       </div>
 
-                      <div className="space-y-5 border-t border-editorial-border pt-5">
+                      <div
+                        id={`settings-provider-panel-${activeProviderTab}`}
+                        role="tabpanel"
+                        aria-labelledby={`settings-provider-tab-${activeProviderTab}`}
+                        className="space-y-5 border-t border-editorial-border pt-5"
+                      >
                         <div className="space-y-3">
                           {activeProviderTab === 'ollama' ? (
                             <div className="space-y-4 rounded-[18px] border border-editorial-border bg-editorial-bg/60 p-4">
@@ -605,7 +682,7 @@ export function SettingsModal() {
                     </button>
                     {showPricingOverrides && (
                       <div className="space-y-3 rounded-[20px] border border-editorial-border bg-editorial-textbox/15 px-5 py-5">
-                        <p className="text-[10px] text-editorial-muted italic">{t('cost.overrideHint')}</p>
+                        <p className="text-xs text-editorial-muted italic">{t('cost.overrideHint')}</p>
                         <div className="border border-editorial-border overflow-x-auto">
                           <table className="w-full text-xs font-mono">
                             <thead>
@@ -653,7 +730,7 @@ export function SettingsModal() {
                                         <button
                                           type="button"
                                           onClick={() => resetOverride(key)}
-                                          className="text-[9px] font-bold uppercase tracking-[0.35em] text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none"
+                                          className="text-xs font-bold uppercase tracking-[0.28em] text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none"
                                         >
                                           {t('cost.resetOverride')}
                                         </button>

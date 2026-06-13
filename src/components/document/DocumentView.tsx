@@ -49,6 +49,24 @@ const STAGE_TONE_MAP: Record<string, IconButtonTone> = {
   idle: 'muted',
 };
 
+function buildChunkMinimapLabel(
+  t: (key: string, options?: Record<string, unknown>) => string,
+  chunk: { status: string; translationLocked?: boolean },
+  index: number,
+  total: number,
+  isCurrent: boolean,
+  annotationCount: number,
+): string {
+  const parts = [
+    `${t('document.chunkLabel')} ${index + 1}/${total}`,
+    t(`pipeline.chunkStatus.${chunk.status}`),
+  ];
+  if (chunk.translationLocked) parts.push(t('document.translationLockedBadge'));
+  if (annotationCount > 0) parts.push(t('annotations.badgeCount', { count: annotationCount }));
+  if (isCurrent) parts.push(t('document.currentChunkBadge'));
+  return parts.join(' · ');
+}
+
 interface DocumentPageProps {
   label: string;
   eyebrow: string;
@@ -327,11 +345,11 @@ export function DocumentView({
                   <ChevronLeft size={16} />
                 </IconButton>
                 <div className="min-w-[7.5rem] text-center">
-                  <div className="text-[10px] font-bold uppercase tracking-[0.28em] text-editorial-muted/75">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.28em] text-editorial-muted">
                     {t('document.chunkLabel')}
                   </div>
                   <div className="font-display text-[1.8rem] italic leading-none text-editorial-accent">
-                    {indexPad(currentIndex + 1)}<span className="px-1 text-editorial-muted/55">/</span>{indexPad(chunks.length)}
+                    {indexPad(currentIndex + 1)}<span className="px-1 text-editorial-muted">/</span>{indexPad(chunks.length)}
                   </div>
                 </div>
                 <IconButton
@@ -361,23 +379,32 @@ export function DocumentView({
                             ? 'bg-editorial-running/24 animate-pulse shadow-[inset_0_0_0_1px_rgba(196,155,42,0.22)]'
                             : 'bg-editorial-border/40';
                   const isCurrent = idx === currentIndex;
-                  const sizeClass = chunk.translationLocked
-                    ? (isCurrent ? 'h-4.5 w-4.5' : 'h-4 w-4')
-                    : (isCurrent ? 'h-4 w-4' : 'h-3 w-3');
                   const chunkAnnotations = annotationsByChunkId.get(chunk.id) ?? [];
                   const annotDotColor = chunkAnnotations.some(a => a.type === 'problem')
                     ? 'bg-editorial-accent'
                     : chunkAnnotations.some(a => a.type === 'doubt')
                       ? 'bg-editorial-warning'
-                      : chunkAnnotations.length > 0
+                    : chunkAnnotations.length > 0
                         ? 'bg-editorial-charcoal/70'
                         : null;
+                  const buttonLabel = buildChunkMinimapLabel(
+                    t,
+                    chunk,
+                    idx,
+                    chunks.length,
+                    isCurrent,
+                    chunkAnnotations.length,
+                  );
+                  const sizeClass = chunk.translationLocked
+                    ? (isCurrent ? 'h-5 w-5' : 'h-4.5 w-4.5')
+                    : (isCurrent ? 'h-4.5 w-4.5' : 'h-4 w-4');
                   return (
-                    <Tooltip key={chunk.id} label={`${idx + 1}`}>
+                    <Tooltip key={chunk.id} label={buttonLabel}>
                       <button
                         type="button"
                         onClick={() => setSelectedChunkId(chunk.id)}
-                        aria-label={`${idx + 1}`}
+                        aria-label={buttonLabel}
+                        aria-current={isCurrent ? 'true' : undefined}
                         className={`relative shrink-0 rounded-full transition-all duration-150 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
                           isCurrent
                             ? `${sizeClass} border border-editorial-charcoal/28 ${segmentTone} shadow-[0_0_0_1px_rgba(255,255,255,0.28)]`
@@ -534,7 +561,7 @@ export function DocumentView({
                 eyebrow={t('document.rightPage')}
                 eyebrowMeta={currentChunk.status === 'preview' ? (
                   <Tooltip label={t('document.chunkPreviewBadge')}>
-                    <span aria-label={t('document.chunkPreviewBadge')} className="inline-flex items-center text-editorial-muted/70">
+                    <span aria-label={t('document.chunkPreviewBadge')} className="inline-flex items-center text-editorial-muted">
                       <FlaskConical size={11} />
                     </span>
                   </Tooltip>

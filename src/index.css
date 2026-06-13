@@ -36,6 +36,34 @@
   size-adjust: 96%;
 }
 
+/* Font UI alternativi selezionabili da Impostazioni (variable woff2, OFL).
+   size-adjust tarato per allineare l'altezza-x a Plus Jakarta Sans → niente
+   salto di dimensione allo switch. Ritoccare se un font appare più grande/piccolo. */
+@font-face {
+  font-family: "Geist";
+  src: url("/fonts/Geist.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 94%;
+}
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/Inter.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 92%;
+}
+@font-face {
+  font-family: "IBM Plex Sans";
+  src: url("/fonts/IBMPlexSans.woff2") format("woff2-variations");
+  font-weight: 100 700;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 98%;
+}
+
 @theme {
   /* ── Fonts ───────────────────────────────────────────────────────────────── */
   --font-display: "Elstob", Georgia, serif;

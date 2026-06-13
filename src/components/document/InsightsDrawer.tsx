@@ -201,7 +201,7 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
             <Tooltip label={t('document.openChunkPanel')} side="left" className="h-full w-full">
               <span className="flex h-full w-full flex-col items-center justify-center gap-3">
                 <ShieldCheck size={14} />
-                <span className="[writing-mode:vertical-lr] rotate-180 text-[9px] font-bold uppercase tracking-[0.3em]">
+                <span className="[writing-mode:vertical-lr] rotate-180 text-[10px] font-bold uppercase tracking-[0.16em]">
                   {t('document.chunkPanelTitle')}
                 </span>
               </span>
@@ -224,7 +224,7 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
           >
             <div className="flex h-full flex-col" style={{ width: PANEL_WIDTH }}>
               <div className="flex items-center justify-between gap-3 border-b border-editorial-border px-5 py-4">
-                <div className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                <div className="text-xs font-sans uppercase tracking-[0.12em] text-editorial-muted">
                   {chunkLabel}
                 </div>
                 <IconButton
@@ -319,7 +319,7 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
             <Tooltip label={t('header.openInsights')} side="left" className="h-full w-full">
               <span className="flex h-full w-full flex-col items-center justify-center gap-3">
                 <PanelRight size={14} />
-                <span className="[writing-mode:vertical-lr] rotate-180 text-[9px] font-bold uppercase tracking-[0.3em]">
+                <span className="[writing-mode:vertical-lr] rotate-180 text-[10px] font-bold uppercase tracking-[0.16em]">
                   {t('document.insightsDrawerTitle')}
                 </span>
               </span>
@@ -342,7 +342,7 @@ export function InsightsDrawer({ onReauditChunk, onRunCoherenceAudit }: Insights
           >
             <div className="flex h-full flex-col" style={{ width: PANEL_WIDTH }}>
               <div className="flex items-center justify-between gap-3 border-b border-editorial-border px-5 py-4">
-                <div className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                <div className="text-xs font-sans uppercase tracking-[0.12em] text-editorial-muted">
                   {t('document.insightsDrawerTitle')}
                 </div>
                 <IconButton

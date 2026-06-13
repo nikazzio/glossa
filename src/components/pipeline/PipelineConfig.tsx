@@ -521,7 +521,7 @@ export function PipelineConfig({
           )}
 
           {activeTab === 'preview' && (
-            <div id="pconfig-panel-preview" role="tabpanel" aria-labelledby="pconfig-tab-preview">
+            <div id="pconfig-panel-preview" role="tabpanel" aria-labelledby="pconfig-tab-preview" className="space-y-6">
               <PromptPreviewTab config={config} />
             </div>
           )}

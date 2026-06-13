@@ -28,7 +28,7 @@
 | `stores/phraseMemoryStore.ts` | matchesByChunk, enabledMatchIds, jobStatus, searchStatus | Match Phrase Memory per chunk; match trovati read-only finché non selezionati |
 | `stores/operationLogStore.ts` | entries[], currentProjectId | Max 2000 in-memory, resto in DB |
 | `stores/annotationsStore.ts` | annotationsByChunkId Map<chunkId, Annotation[]> | CRUD annotations per chunk; load/add/update/delete con persistenza SQLite immediata |
-| `stores/uiStore.ts` | selectedChunkId, highlightsEnabled, highlightColors, searchQuery, activePanel, showSettings/Help/ConfigDrawer/DocumentDrawer/ChunkDrawer | UI-only state. highlightsEnabled + highlightColors persisted. activePanel enum sincronizzato con i boolean panel. |
+| `stores/uiStore.ts` | selectedChunkId, highlightsEnabled, highlightColors, uiFont, searchQuery, activePanel, showSettings/Help/ConfigDrawer/DocumentDrawer/ChunkDrawer | UI-only state. highlightsEnabled + highlightColors + uiFont persisted (`glossa-ui-prefs` v7). activePanel enum sincronizzato con i boolean panel. `uiFont` ('jakarta'\|'geist'\|'inter'\|'plex') → `FontSync` (`App.tsx`) fa override runtime di `--font-sans` su `:root`, come `HighlightColorSync` per i colori. |
 | `stores/configStore.ts` | pipelineMode, pipelineTestChunkCount, ollamaStatus, ollamaModels, ollamaBaseUrl, newPipelineInit, maxPipelines, chunkPresetShort/Medium/Long | Config app. pipelineTestChunkCount, ollamaBaseUrl, newPipelineInit, maxPipelines, chunkPreset* persisted. ollamaStatus/Models transient. |
 | `stores/libraryStore.ts` | glossaries[], dictionaries[], selectedDictionary | — |
 | `stores/promptTemplateStore.ts` | templates[], selectedTemplate | — |

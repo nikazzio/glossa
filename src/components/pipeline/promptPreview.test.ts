@@ -1,6 +1,9 @@
+import { createElement } from 'react';
+import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { PipelineConfig } from '../../types';
 import { buildPromptPreviewStages } from './promptPreview';
+import { PromptPreviewTab } from './PromptPreviewTab';
 
 function createConfig(overrides: Partial<PipelineConfig> = {}): PipelineConfig {
   return {
@@ -222,5 +225,42 @@ describe('buildPromptPreviewStages', () => {
     const [stage] = buildPromptPreviewStages(config);
 
     expect(stage?.blocks[2]?.body).toBe('Glossary Constraints:\n- No glossary entries were provided.');
+  });
+});
+
+describe('PromptPreviewTab accessibility', () => {
+  it('uses a single tabpanel per active stage without duplicating the outer preview panel id', () => {
+    const config = createConfig({
+      stages: [
+        {
+          id: 'stg-translation',
+          name: 'Translation',
+          role: 'translation',
+          prompt: 'Translate faithfully.',
+          model: 'gpt-4o-mini',
+          provider: 'openai',
+          enabled: true,
+        },
+        {
+          id: 'stg-refine',
+          name: 'Refine',
+          role: 'refine',
+          prompt: 'Tighten the wording.',
+          model: 'gpt-4o-mini',
+          provider: 'openai',
+          enabled: true,
+        },
+      ],
+    });
+
+    const { container } = render(createElement(PromptPreviewTab, { config }));
+
+    expect(screen.getByRole('tablist', { name: 'pipeline.promptPreviewTitle' })).toBeInTheDocument();
+
+    const selectedTab = screen.getByRole('tab', { selected: true });
+    const controls = selectedTab.getAttribute('aria-controls');
+    expect(controls).toBeTruthy();
+    expect(container.querySelectorAll('#pconfig-panel-preview')).toHaveLength(0);
+    expect(controls && document.getElementById(controls)).toHaveAttribute('role', 'tabpanel');
   });
 });
