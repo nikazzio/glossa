@@ -7,20 +7,13 @@ import {
   formatCacheHitRate,
   formatDurationMs,
   formatUsd,
+  summarizeGlobalUsage,
   summarizeChunkUsage,
   type OperationLogRunSummary,
 } from '../../../utils/operationLogStats';
 import { formatDateTime } from '../../../utils';
 import type { TranslationChunk } from '../../../types';
-
-function StatRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-baseline gap-1">
-      <dt className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">{label}</dt>
-      <dd className="font-display text-sm italic text-editorial-ink">{value}</dd>
-    </div>
-  );
-}
+import { StatRow } from '../../ui/StatRow';
 
 function RunSummaryCard({
   title,
@@ -35,11 +28,11 @@ function RunSummaryCard({
 
   return (
     <section className="rounded-[20px] border border-editorial-border bg-editorial-bg px-4 py-3">
-      <div className="mb-3 flex items-center gap-1.5 text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+      <div className="mb-3 flex items-center gap-1.5 text-xs font-sans uppercase tracking-[0.16em] text-editorial-muted">
         <Cpu size={11} className="text-editorial-accent shrink-0" /> {title}
       </div>
       {!run ? (
-        <p className="text-[11px] leading-relaxed text-editorial-muted/70">{emptyLabel}</p>
+        <p className="text-xs leading-relaxed text-editorial-muted">{emptyLabel}</p>
       ) : (
         <dl className="space-y-2">
           <StatRow label={t('document.summaryWhen')} value={formatDateTime(run.at)} />
@@ -66,9 +59,17 @@ export function ChunkSummaryTab({ panelId, labelledBy, currentChunk }: ChunkSumm
   const { t } = useTranslation();
   const pricingOverrides = usePricingStore((s) => s.overrides);
   const logEntries = useOperationLogStore((s) => s.entries);
+  const chunkEntries = useMemo(
+    () => (currentChunk ? logEntries.filter((entry) => entry.chunkId === currentChunk.id) : []),
+    [currentChunk, logEntries],
+  );
   const chunkSummary = useMemo(
     () => (currentChunk ? summarizeChunkUsage(logEntries, currentChunk.id, pricingOverrides) : null),
     [currentChunk, logEntries, pricingOverrides],
+  );
+  const chunkBreakdown = useMemo(
+    () => summarizeGlobalUsage(chunkEntries, pricingOverrides).scopeBreakdown,
+    [chunkEntries, pricingOverrides],
   );
 
   if (!currentChunk || !chunkSummary) {
@@ -80,11 +81,18 @@ export function ChunkSummaryTab({ panelId, labelledBy, currentChunk }: ChunkSumm
   }
 
   const totalTokens = chunkSummary.total.totalInput + chunkSummary.total.totalOutput;
+  const hasPersistedUsage =
+    totalTokens > 0
+    || chunkSummary.total.totalCached > 0
+    || chunkSummary.total.totalDurationMs > 0
+    || chunkSummary.translationRuns > 0
+    || chunkSummary.auditRuns > 0
+    || chunkSummary.coherenceRuns > 0;
 
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="space-y-3 px-5 py-5">
       <section className="rounded-[20px] border border-editorial-border bg-editorial-bg px-4 py-3">
-        <div className="mb-3 flex items-center gap-1.5 text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+        <div className="mb-3 flex items-center gap-1.5 text-xs font-sans uppercase tracking-[0.16em] text-editorial-muted">
           <BarChart2 size={11} className="text-editorial-accent shrink-0" /> {t('document.chunkSummaryTotals')}
         </div>
         <dl className="space-y-2">
@@ -95,7 +103,49 @@ export function ChunkSummaryTab({ panelId, labelledBy, currentChunk }: ChunkSumm
           <StatRow label={t('log.totalDuration')} value={chunkSummary.total.totalDurationMs > 0 ? formatDurationMs(chunkSummary.total.totalDurationMs) : '—'} />
           <StatRow label={t('document.summaryTranslationRuns')} value={chunkSummary.translationRuns.toLocaleString()} />
           <StatRow label={t('document.summaryAuditRuns')} value={chunkSummary.auditRuns.toLocaleString()} />
+          <StatRow label={t('document.summaryCoherenceRuns')} value={chunkSummary.coherenceRuns.toLocaleString()} />
         </dl>
+        {!hasPersistedUsage && (
+          <p className="mt-3 text-xs leading-relaxed text-editorial-muted">
+            {t('document.summaryNoPersistedStats')}
+          </p>
+        )}
+        {chunkBreakdown.length > 0 && (
+          <div className="mt-4 space-y-2">
+            <div className="text-xs font-sans uppercase tracking-[0.16em] text-editorial-muted">
+              {t('document.summaryStageBreakdown')}
+            </div>
+            {chunkBreakdown.map((entry) => (
+              <div
+                key={`${entry.scope}-${entry.stageId ?? entry.labelKey}`}
+                className="rounded-xl border border-editorial-border/70 bg-editorial-textbox/40 px-3 py-2.5"
+              >
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="text-xs font-sans uppercase tracking-[0.12em] text-editorial-muted">
+                    {entry.labelKey.startsWith('log.') ? t(entry.labelKey) : entry.labelKey}
+                  </span>
+                  <span className="shrink-0 font-display text-sm italic text-editorial-ink">
+                    {(entry.stats.totalInput + entry.stats.totalOutput).toLocaleString()} tok
+                  </span>
+                </div>
+                <dl className="mt-2 space-y-1">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <dt className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">{t('header.cacheHitRate')}</dt>
+                    <dd className="shrink-0 font-display text-sm italic text-editorial-ink">{formatCacheHitRate(entry.stats.cacheHitRate)}</dd>
+                  </div>
+                  <div className="flex items-baseline justify-between gap-3">
+                    <dt className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">{t('header.estimatedCost')}</dt>
+                    <dd className="shrink-0 font-display text-sm italic text-editorial-ink">{formatUsd(entry.stats.totalUsd)}</dd>
+                  </div>
+                  <div className="flex items-baseline justify-between gap-3">
+                    <dt className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">{t('log.totalDuration')}</dt>
+                    <dd className="shrink-0 font-display text-sm italic text-editorial-ink">{entry.stats.totalDurationMs > 0 ? formatDurationMs(entry.stats.totalDurationMs) : '—'}</dd>
+                  </div>
+                </dl>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       <RunSummaryCard

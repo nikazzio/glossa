@@ -4,6 +4,7 @@ import { useChunksStore } from './chunksStore';
 import { useProjectStore } from './projectStore';
 import { useUiStore } from './uiStore';
 import { useConfigStore } from './configStore';
+import { useOperationLogStore } from './operationLogStore';
 import type { SavedTranslation } from '../services/projectService';
 import type { Pipeline } from '../types';
 import { buildProjectSnapshot } from '../utils/projectSnapshot';
@@ -342,6 +343,7 @@ describe('projectStore', () => {
       expect.any(Function),
     );
     expect(useProjectStore.getState().currentProjectId).toBe('proj-first-save');
+    expect(useOperationLogStore.getState().currentProjectId).toBe('proj-first-save');
     expect(useProjectStore.getState().saveState).toBe('saved');
   });
 
@@ -393,6 +395,7 @@ describe('projectStore', () => {
     );
     expect(useProjectStore.getState().saveState).toBe('saved');
     expect(useProjectStore.getState().trackedSnapshot).toBeTruthy();
+    expect(useOperationLogStore.getState().currentProjectId).toBe('proj-new');
     expect(projectServiceMocks.listProjects).toHaveBeenCalledTimes(1);
   });
 

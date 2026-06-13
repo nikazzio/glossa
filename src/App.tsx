@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { initLogger } from './utils/logger';
 import { Header, PipelineSidebar } from './components/layout';
 import { ErrorBoundary, ConfirmDialog, PreflightDialog, RunResumeBanner } from './components/common';
@@ -7,6 +8,7 @@ import { usePipeline } from './hooks/usePipeline';
 import { useProjectAutosave } from './hooks/useProjectAutosave';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useUiStore } from './stores/uiStore';
+import type { UiFont } from './stores/uiStore';
 import { useConfigStore } from './stores/configStore';
 import { useProjectStore } from './stores/projectStore';
 import { useLibraryStore } from './stores/libraryStore';
@@ -39,6 +41,50 @@ function HighlightColorSync() {
     root.style.setProperty('--hl-annot-bg', highlightColors.annotation ?? 'rgba(58,122,114,0.25)');
   }, [highlightColors]);
   return null;
+}
+
+const UI_FONT_STACK: Record<UiFont, string> = {
+  jakarta: '"Plus Jakarta Sans", system-ui, -apple-system, sans-serif',
+  geist: '"Geist", system-ui, -apple-system, sans-serif',
+  inter: '"Inter", system-ui, -apple-system, sans-serif',
+  plex: '"IBM Plex Sans", system-ui, -apple-system, sans-serif',
+};
+
+function FontSync() {
+  const uiFont = useUiStore((s) => s.uiFont);
+  useEffect(() => {
+    document.documentElement.style.setProperty('--font-sans', UI_FONT_STACK[uiFont]);
+  }, [uiFont]);
+  return null;
+}
+
+function RunStatusAnnouncer() {
+  const { t } = useTranslation();
+  const runStatus = usePipelineStore((state) => state.runStatus);
+  const lastRunOutcome = usePipelineStore((state) => state.lastRunOutcome);
+  const [message, setMessage] = useState('');
+  const previousStatusRef = useRef(runStatus);
+
+  useEffect(() => {
+    const previousStatus = previousStatusRef.current;
+    if (runStatus === previousStatus) return;
+
+    if (runStatus === 'running') {
+      setMessage(t('a11y.runStarted'));
+    } else if (runStatus === 'completed') {
+      setMessage(t('a11y.runCompleted'));
+    } else if (runStatus === 'interrupted') {
+      setMessage(lastRunOutcome === 'cancelled' ? t('a11y.runCancelled') : t('a11y.runFailed'));
+    }
+
+    previousStatusRef.current = runStatus;
+  }, [lastRunOutcome, runStatus, t]);
+
+  return (
+    <div className="sr-only" aria-live="polite" aria-atomic="true">
+      {message}
+    </div>
+  );
 }
 
 const PipelineConfig = lazy(() =>
@@ -385,6 +431,8 @@ export default function App() {
   return (
       <ErrorBoundary>
       <HighlightColorSync />
+      <FontSync />
+      <RunStatusAnnouncer />
       <div className="flex h-dvh min-h-[var(--app-min-height)] min-w-[var(--app-min-width)] flex-col overflow-hidden bg-editorial-bg font-sans text-editorial-ink">
         <div className="flex-shrink-0">
           <Header />

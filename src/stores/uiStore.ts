@@ -11,12 +11,14 @@ export type ChunkDrawerTab = 'summary' | 'audit' | 'notes' | 'operations' | 'mem
 export type DocumentPaneFocus = 'both' | 'source' | 'translation';
 export type HelpSection = 'overview' | 'pipeline' | 'features' | 'context' | 'audit' | 'projects' | 'providers' | 'ollama' | 'glossary' | 'shortcuts' | 'troubleshooting' | 'design';
 export type ActivePanel = 'config' | 'insights' | 'chunk' | 'settings' | 'help' | null;
+export type UiFont = 'jakarta' | 'geist' | 'inter' | 'plex';
 
 interface UiState {
   viewMode: ViewMode;
   documentLayout: DocumentLayoutPreference;
   documentPaneFocus: DocumentPaneFocus;
   syncScrollEnabled: boolean;
+  uiFont: UiFont;
   selectedChunkId: string | null;
   showSettings: boolean;
   showHelp: boolean;
@@ -51,6 +53,7 @@ interface UiState {
   setDocumentLayout: (layout: DocumentLayoutPreference) => void;
   setDocumentPaneFocus: (focus: DocumentPaneFocus) => void;
   setSyncScrollEnabled: (enabled: boolean) => void;
+  setUiFont: (font: UiFont) => void;
   setSelectedChunkId: (chunkId: string | null) => void;
   setShowSettings: (show: boolean) => void;
   setShowHelp: (show: boolean, section?: HelpSection) => void;
@@ -79,6 +82,7 @@ export const useUiStore = create<UiState>()(
       documentLayout: 'auto',
       documentPaneFocus: 'both',
       syncScrollEnabled: false,
+      uiFont: 'jakarta',
       selectedChunkId: null,
       showSettings: false,
       showHelp: false,
@@ -121,6 +125,7 @@ export const useUiStore = create<UiState>()(
       setDocumentLayout: (layout) => set({ documentLayout: layout }),
       setDocumentPaneFocus: (focus) => set({ documentPaneFocus: focus }),
       setSyncScrollEnabled: (enabled) => set({ syncScrollEnabled: enabled }),
+      setUiFont: (font) => set({ uiFont: font }),
       setSelectedChunkId: (chunkId) =>
         set((state) => ({
           selectedChunkId: chunkId,
@@ -265,7 +270,7 @@ export const useUiStore = create<UiState>()(
     }),
     {
       name: 'glossa-ui-prefs',
-      version: 6,
+      version: 7,
       migrate: (persisted: unknown, fromVersion: number) => {
         const s = persisted as Record<string, unknown>;
         if (fromVersion < 1) {
@@ -298,6 +303,9 @@ export const useUiStore = create<UiState>()(
           if (!existing.annotation) existing.annotation = 'rgba(58,122,114,0.25)';
           s.highlightColors = existing;
         }
+        if (fromVersion < 7) {
+          s.uiFont = 'jakarta';
+        }
         return s;
       },
       storage: createJSONStorage(() => localStorage),
@@ -305,6 +313,7 @@ export const useUiStore = create<UiState>()(
         documentLayout: state.documentLayout,
         documentPaneFocus: state.documentPaneFocus,
         syncScrollEnabled: state.syncScrollEnabled,
+        uiFont: state.uiFont,
         highlightsEnabled: state.highlightsEnabled,
         highlightColors: state.highlightColors,
       }),

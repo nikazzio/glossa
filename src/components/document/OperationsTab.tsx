@@ -211,7 +211,7 @@ function Header({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <TerminalSquare size={11} className="text-editorial-accent shrink-0" />
-          <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-terminal-secondary">
+          <p className="text-xs font-sans uppercase tracking-[0.12em] text-terminal-secondary">
             {t('document.operationsShellTitle')}
           </p>
         </div>
@@ -241,7 +241,7 @@ function Header({
       {isProcessing && (
         <div className="mt-2.5 flex items-center gap-2" role="status" aria-live="polite">
           <Loader2 size={11} className="animate-spin shrink-0 text-terminal-accent" />
-          <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-terminal-accent">
+          <span className="text-xs font-bold uppercase tracking-[0.1em] text-terminal-accent">
             {isAuditOnly ? t('document.auditRunning') : t('document.operationsRunning')}
           </span>
           {processingChunkIndex >= 0 && (
@@ -254,7 +254,7 @@ function Header({
       {isMemoryRunning && (
         <div className="mt-2.5 flex items-center gap-2" role="status" aria-live="polite">
           <Loader2 size={11} className="animate-spin shrink-0 text-terminal-info" />
-          <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-terminal-info">
+          <span className="text-xs font-bold uppercase tracking-[0.1em] text-terminal-info">
             {t('document.memoryRunning')}
           </span>
           {memoryProgress !== null && (
@@ -302,7 +302,7 @@ function FilterBar({
         <button
           type="button"
           onClick={() => setFiltersOpen((o) => !o)}
-          className="shrink-0 text-[10px] uppercase tracking-[0.22em] text-terminal-muted transition-colors hover:text-terminal-secondary focus:outline-none"
+          className="shrink-0 text-xs uppercase tracking-[0.1em] text-terminal-muted transition-colors hover:text-terminal-secondary focus:outline-none"
         >
           {filtersOpen ? '▾' : '▸'} {t('log.filters')}
         </button>
@@ -320,7 +320,7 @@ function FilterBar({
           type="button"
           onClick={onToggleGrouped}
           aria-pressed={grouped}
-          className={`shrink-0 text-[10px] uppercase tracking-[0.18em] transition-colors focus:outline-none ${
+          className={`shrink-0 text-xs uppercase tracking-[0.16em] transition-colors focus:outline-none ${
             grouped ? 'text-terminal-accent' : 'text-terminal-muted hover:text-terminal-secondary'
           }`}
         >
@@ -337,7 +337,7 @@ function FilterBar({
                 type="button"
                 onClick={() => onToggleScope(scope)}
                 aria-pressed={scopeFilter.has(scope)}
-                className={`text-[10px] uppercase tracking-[0.18em] transition-colors focus:outline-none ${
+                className={`text-xs uppercase tracking-[0.16em] transition-colors focus:outline-none ${
                   scopeFilter.has(scope) ? 'text-terminal-ink' : 'text-terminal-dim line-through'
                 }`}
               >
@@ -352,7 +352,7 @@ function FilterBar({
                 type="button"
                 onClick={() => onToggleLevel(level)}
                 aria-pressed={levelFilter.has(level)}
-                className={`text-[10px] uppercase tracking-[0.18em] transition-colors focus:outline-none ${
+                className={`text-xs uppercase tracking-[0.16em] transition-colors focus:outline-none ${
                   levelFilter.has(level) ? LEVEL_COLOR[level] : 'text-terminal-dim line-through'
                 }`}
               >
@@ -410,12 +410,12 @@ function GroupedView({ entries, chunks, stats }: GroupedViewProps) {
         const stageBuckets = Array.from(byStage.entries());
         return (
           <details key={chunkId} open className="mt-3">
-            <summary className="flex cursor-pointer select-none items-center justify-between gap-2 py-1.5 text-xs uppercase tracking-[0.18em] text-terminal-secondary list-none [&::-webkit-details-marker]:hidden">
+            <summary className="flex cursor-pointer select-none items-center justify-between gap-2 py-1.5 text-xs uppercase tracking-[0.1em] text-terminal-secondary list-none [&::-webkit-details-marker]:hidden">
               <span>
                 {t('log.unitLabel')} {chunkIndex >= 0 ? indexPad(chunkIndex + 1) : chunkId}
               </span>
               {chunkStats && (
-                <span className="text-[10px] text-terminal-muted">
+                <span className="text-xs text-terminal-muted">
                   {chunkStats.totalInput.toLocaleString()}→{chunkStats.totalOutput.toLocaleString()} ·{' '}
                   {formatCacheHitRate(chunkStats.cacheHitRate)} ·{' '}
                   {chunkStats.totalDurationMs > 0 ? formatDurationMs(chunkStats.totalDurationMs) : '—'}
@@ -433,10 +433,10 @@ function GroupedView({ entries, chunks, stats }: GroupedViewProps) {
                 return (
                   <details key={stageKey} open className="mt-1.5">
                     <summary className="flex cursor-pointer select-none items-center justify-between gap-2 py-0.5 text-xs list-none [&::-webkit-details-marker]:hidden">
-                      <span className="font-bold uppercase tracking-[0.18em] text-terminal-secondary">
+                      <span className="font-bold uppercase tracking-[0.1em] text-terminal-secondary">
                         {stageHeader.title}
                       </span>
-                      <span className="text-[10px] text-terminal-muted">{stageHeader.meta}</span>
+                      <span className="text-xs text-terminal-muted">{stageHeader.meta}</span>
                     </summary>
                     <div className="ml-2 space-y-1.5 border-l border-terminal-line pl-2 pb-1">
                       {stageEntries.map((entry) => (
@@ -541,7 +541,7 @@ function EntryCard({ entry, chunkIndexMap, t, dense = false }: EntryCardProps) {
     return (
       <div className="flex items-center gap-3 py-1.5">
         <div className="h-px flex-1 bg-terminal-line" />
-        <span className="text-[10px] uppercase tracking-[0.22em] text-terminal-muted">{t('log.newRun')}</span>
+        <span className="text-xs uppercase tracking-[0.1em] text-terminal-muted">{t('log.newRun')}</span>
         <div className="h-px flex-1 bg-terminal-line" />
       </div>
     );
@@ -610,21 +610,21 @@ function DetailBlock({
 
   return (
     <details className="mt-1 pl-4">
-      <summary className="flex cursor-pointer select-none items-center justify-between gap-2 text-[10px] text-terminal-muted hover:text-terminal-secondary">
+      <summary className="flex cursor-pointer select-none items-center justify-between gap-2 text-xs text-terminal-muted hover:text-terminal-secondary">
         <span>▶ {summaryLabel}</span>
         <button
           type="button"
           onClick={onCopy}
           title={t('log.copy')}
           aria-label={t('log.copy')}
-          className="flex items-center gap-1 text-[10px] text-terminal-muted transition-colors hover:text-terminal-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          className="flex items-center gap-1 text-xs text-terminal-muted transition-colors hover:text-terminal-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
         >
           <Copy size={10} />
           {t('log.copy')}
         </button>
       </summary>
       <pre
-        className={`mt-1 max-h-[480px] overflow-y-auto whitespace-pre-wrap text-[10px] leading-relaxed terminal-scrollbar ${
+        className={`mt-1 max-h-[480px] overflow-y-auto whitespace-pre-wrap text-xs leading-relaxed terminal-scrollbar ${
           isError
             ? 'text-terminal-error/80 bg-terminal-error/[0.08] rounded-md p-2 border border-terminal-error/20'
             : 'text-terminal-secondary'

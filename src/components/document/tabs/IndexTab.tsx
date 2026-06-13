@@ -52,7 +52,7 @@ export function IndexTab({ panelId, labelledBy, chunks, currentChunkId, stuckChu
       <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex flex-col items-center justify-center gap-3 px-6 py-12 text-center">
         <List size={28} className="text-editorial-border" />
         <p className="text-sm font-medium text-editorial-muted">{t('document.indexEmptyTitle')}</p>
-        <p className="text-xs leading-relaxed text-editorial-muted/70">{t('document.indexEmptyBody')}</p>
+        <p className="text-xs leading-relaxed text-editorial-muted">{t('document.indexEmptyBody')}</p>
       </div>
     );
   }
@@ -101,18 +101,18 @@ export function IndexTab({ panelId, labelledBy, chunks, currentChunkId, stuckChu
                     <span className={`flex-1 line-clamp-2 text-xs leading-snug ${isActive ? 'text-white/80' : 'text-editorial-muted'}`}>
                       {chunk.originalText.replace(/\s+/g, ' ').trim()}
                     </span>
-                    <span className={`shrink-0 text-xs font-mono ${isActive ? 'text-white/50' : 'text-editorial-muted/60'}`}>
+                    <span className={`shrink-0 text-xs font-mono ${isActive ? 'text-white/70' : 'text-editorial-muted'}`}>
                       {wordCount}w
                     </span>
                   </div>
                   {chunk.judgeResult.status === 'completed' && (
-                    <div className={`mt-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.2em] ${isActive ? 'text-white/70' : QUALITY_TONE_COLOR[tone]}`}>
+                    <div className={`mt-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.1em] ${isActive ? 'text-white/70' : QUALITY_TONE_COLOR[tone]}`}>
                       <span className={`inline-block h-1.5 w-1.5 rounded-full ${tone === 'strong' ? 'bg-editorial-success' : tone === 'ok' ? 'bg-editorial-warning' : 'bg-editorial-accent'}`} />
                       {t(qualityLabelKey(chunk.judgeResult.rating))}
                     </div>
                   )}
                   {chunk.translationLocked && (
-                    <div className={`mt-1.5 flex items-center gap-1 text-xs font-bold uppercase tracking-[0.18em] ${isActive ? 'text-white/80' : 'text-editorial-success'}`}>
+                    <div className={`mt-1.5 flex items-center gap-1 text-xs font-bold uppercase tracking-[0.1em] ${isActive ? 'text-white/80' : 'text-editorial-success'}`}>
                       <CheckCheck size={12} />
                       {t('document.translationLockedBadge')}
                     </div>
@@ -121,7 +121,7 @@ export function IndexTab({ panelId, labelledBy, chunks, currentChunkId, stuckChu
                     const matchCount = matchesByChunk.get(chunk.id)?.matches.length ?? 0;
                     if (matchCount === 0) return null;
                     return (
-                      <div className={`mt-1.5 flex items-center gap-1 text-xs font-bold uppercase tracking-[0.18em] ${isActive ? 'text-white/80' : 'text-editorial-accent'}`}>
+                      <div className={`mt-1.5 flex items-center gap-1 text-xs font-bold uppercase tracking-[0.1em] ${isActive ? 'text-white/80' : 'text-editorial-accent'}`}>
                         <Brain size={11} />
                         {t('memory.matchBadge', { count: matchCount })}
                       </div>
@@ -137,7 +137,7 @@ export function IndexTab({ panelId, labelledBy, chunks, currentChunkId, stuckChu
                       : hasDoubt   ? 'text-editorial-warning'
                       : 'text-sky-500';
                     return (
-                      <div className={`mt-1.5 flex items-center gap-1 text-xs font-bold uppercase tracking-[0.18em] ${colorClass}`}>
+                      <div className={`mt-1.5 flex items-center gap-1 text-xs font-bold uppercase tracking-[0.1em] ${colorClass}`}>
                         <NotebookText size={11} />
                         {t('annotations.badgeCount', { count: anns.length })}
                       </div>
@@ -147,7 +147,7 @@ export function IndexTab({ panelId, labelledBy, chunks, currentChunkId, stuckChu
 
                 {isStuck && chunk.status === 'processing' && (
                   <div className={`flex items-center justify-between gap-2 border-t px-3 py-2 ${isActive ? 'border-white/10' : 'border-editorial-border/60'}`}>
-                    <div className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.18em] ${isActive ? 'text-orange-200' : 'text-editorial-accent'}`}>
+                    <div className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.1em] ${isActive ? 'text-orange-200' : 'text-editorial-accent'}`}>
                       <Clock size={11} />
                       {t('document.watchdogStuck')}
                     </div>

@@ -14,6 +14,7 @@ import { deriveSourceDocumentState } from '../utils/documentState';
 
 interface PipelineState {
   runStatus: PipelineRunStatus;
+  lastRunOutcome: 'completed' | 'cancelled' | 'error' | null;
   lastRunConfig: string | null;
   inputText: string;
   inputProcessingText: string;
@@ -68,6 +69,7 @@ const DEFAULT_PIPELINE_CONFIG: PipelineConfig = {
 
 export const usePipelineStore = create<PipelineState>((set) => ({
   runStatus: 'idle',
+  lastRunOutcome: null,
   lastRunConfig: null,
   inputText: '',
   inputProcessingText: '',
@@ -123,6 +125,7 @@ export const usePipelineStore = create<PipelineState>((set) => ({
   resetToDefaults: () =>
     set({
       runStatus: 'idle',
+      lastRunOutcome: null,
       lastRunConfig: null,
       inputText: '',
       inputProcessingText: '',
