@@ -6,6 +6,7 @@ import { usePipeline } from '../../hooks/usePipeline';
 import { buildPipelineFingerprint } from '../../utils/pipelineFingerprint';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { setPipelineRunState } from '../../services/pipelineService';
+import { logger } from '../../utils/logger';
 
 export function RunResumeBanner() {
   const { t } = useTranslation();
@@ -41,7 +42,12 @@ export function RunResumeBanner() {
     clearResumeState();
     usePipelineStore.setState({ runStatus: 'idle' });
     if (activePipelineId) {
-      void setPipelineRunState(activePipelineId, 'idle').catch(() => {});
+      void setPipelineRunState(activePipelineId, 'idle').catch((error: unknown) => {
+        logger.warn('resume.dismiss.persist_failed', {
+          pipelineId: activePipelineId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
     }
   };
 

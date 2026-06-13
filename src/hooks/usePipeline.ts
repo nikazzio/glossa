@@ -23,6 +23,34 @@ import { buildBlobContext } from './pipeline/blobContext';
 import type { BatchRunMode, ChunkOutcome, FinalChunkStatus } from './pipeline/blobContext';
 import { runJudgeForChunk } from './pipeline/runJudge';
 import { usePipelineAudit } from './usePipelineAudit';
+import { logger } from '../utils/logger';
+
+type ProviderCheck = { provider: string; model: string; label: string };
+
+function buildProviderChecks(config: ReturnType<typeof usePipelineStore.getState>['config']): ProviderCheck[] {
+  return [
+    ...config.stages.filter((s) => s.enabled).map((s, i) => ({
+      provider: s.provider,
+      model: s.model,
+      label: `${s.name || `Stage ${i + 1}`} — ${s.provider} ${s.model}`,
+    })),
+    {
+      provider: config.judgeProvider,
+      model: config.judgeModel,
+      label: `Judge — ${config.judgeProvider} ${config.judgeModel}`,
+    },
+  ];
+}
+
+function appendMemoryBlock(
+  config: ReturnType<typeof usePipelineStore.getState>['config'],
+  memoryBlock?: string,
+) {
+  if (!memoryBlock) return config.stages;
+  return config.stages.map((stage) =>
+    stage.enabled ? { ...stage, prompt: `${stage.prompt}\n\n${memoryBlock}` } : stage,
+  );
+}
 
 /**
  * Hook that encapsulates pipeline execution logic.
@@ -54,8 +82,6 @@ export function usePipeline() {
   const { t } = useTranslation();
 
   const judgeActions = { updateChunkJudge, updateChunkStatus, t };
-
-  type ProviderCheck = { provider: string; model: string; label: string };
 
   /**
    * Run pre-flight checks for all providers referenced by the given list of
@@ -129,14 +155,104 @@ export function usePipeline() {
     return buildMemoryInjection(selected) ?? undefined;
   };
 
+  const warnAsyncFailure = useCallback((scope: string, error: unknown, context?: Record<string, unknown>) => {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.warn(scope, { ...context, error: message });
+  }, []);
+
+  const persistPipelineStatus = useCallback((pipelineId: string | null, status: 'running' | 'completed' | 'interrupted', fingerprint?: string) => {
+    if (!pipelineId) return;
+    void setPipelineRunState(pipelineId, status, fingerprint).catch((error: unknown) => {
+      warnAsyncFailure('pipeline.runState.persist_failed', error, { pipelineId, status });
+    });
+  }, [warnAsyncFailure]);
+
+  const persistChunkCheckpoint = useCallback((
+    projectId: string | null,
+    pipelineId: string | null,
+    chunk: TranslationChunk | undefined,
+    position: number,
+  ) => {
+    if (!projectId || !pipelineId || !chunk) return;
+    void saveChunkCheckpoint(projectId, pipelineId, chunk, position).catch((error: unknown) => {
+      warnAsyncFailure('pipeline.checkpoint.persist_failed', error, {
+        projectId,
+        pipelineId,
+        chunkId: chunk.id,
+        position,
+      });
+    });
+  }, [warnAsyncFailure]);
+
+  const computeBlobAssignments = useCallback(async (
+    pipelineConfig: ReturnType<typeof usePipelineStore.getState>['config'],
+    chunks: TranslationChunk[],
+  ) => {
+    try {
+      const budget = (pipelineConfig.blobBudgetTokens ?? 0) > 0
+        ? pipelineConfig.blobBudgetTokens!
+        : calculateBlobBudget(pipelineConfig.stages).budget;
+      const assignments = await llmService.computeBlobs(
+        chunks.map((c) => ({ id: c.id, text: c.sourceProcessingText })),
+        budget,
+        pipelineConfig.blobOverlap ?? 1,
+      );
+      setBlobAssignments(assignments);
+    } catch (error: unknown) {
+      setBlobAssignments([]);
+      const msg = error instanceof Error ? error.message : String(error);
+      pipelineLog.blobComputeFailed(msg);
+      toast.warning(t('pipeline.blobComputeFailed'), { description: msg });
+    }
+  }, [setBlobAssignments, t]);
+
+  const runChunkExecution = useCallback(async (
+    chunkId: string,
+    options?: { finalStatus?: FinalChunkStatus; memoryBlock?: string },
+  ) => {
+    const finalStatus = options?.finalStatus ?? 'completed';
+    const config = usePipelineStore.getState().config;
+    if (useChunksStore.getState().isProcessing) return;
+    const chunk = useChunksStore.getState().chunks.find((c) => c.id === chunkId);
+    if (!chunk) return;
+    useOperationLogStore.getState().clearChunk(chunkId);
+    pipelineLog.newRunMarker(chunkId);
+    pipelineLog.singlePipelineStart(chunkId);
+    if (!(await ensureProvidersReady(buildProviderChecks(config)))) return;
+    useChunksStore.getState().clearCancelRequest();
+    setIsProcessing(true);
+
+    await computeBlobAssignments(config, useChunksStore.getState().chunks);
+
+    const freshChunk = useChunksStore.getState().chunks.find((c) => c.id === chunkId) ?? chunk;
+    const outcome = await executePipelineForChunk(freshChunk, {
+      memoryBlock: options?.memoryBlock ?? getChunkMemoryBlock(chunkId),
+    });
+
+    if (outcome === 'completed' && finalStatus === 'preview') {
+      updateChunkStatus(chunkId, 'preview');
+    }
+
+    setIsProcessing(false);
+    useChunksStore.getState().clearCancelRequest();
+
+    if (outcome === 'cancelled') {
+      pipelineLog.singlePipelineCancelled(chunkId);
+      toast.message(t('pipeline.stopConfirmed'));
+    } else if (outcome === 'completed') {
+      pipelineLog.singlePipelineCompleted(chunkId);
+      toast.success(finalStatus === 'preview' ? t('pipeline.dryRunChunkCompleted') : t('pipeline.singleChunkCompleted'));
+    }
+  }, [computeBlobAssignments, ensureProvidersReady, executePipelineForChunk, setIsProcessing, t, updateChunkStatus]);
+
   /**
    * Run all enabled translation stages and the audit for a single chunk.
    * Returns an outcome so the caller can aggregate batch counters.
    */
-  const executePipelineForChunk = async (
+  async function executePipelineForChunk(
     chunk: TranslationChunk,
     options: { batchMode?: BatchRunMode; memoryBlock?: string },
-  ): Promise<ChunkOutcome> => {
+  ): Promise<ChunkOutcome> {
     const config = usePipelineStore.getState().config;
     if (useChunksStore.getState().cancelRequested) return 'cancelled';
     if (options.batchMode === 'resume' && chunk.status === 'completed' && !chunk.translationStale) return 'skipped';
@@ -154,11 +270,7 @@ export function usePipeline() {
     let producedOutput = false;
     updateChunkStatus(chunk.id, 'processing');
 
-    const stages = options.memoryBlock
-      ? config.stages.map((s) =>
-          s.enabled ? { ...s, prompt: `${s.prompt}\n\n${options.memoryBlock}` } : s
-        )
-      : config.stages;
+    const stages = appendMemoryBlock(config, options.memoryBlock);
 
     for (const stage of stages) {
       if (!stage.enabled) continue;
@@ -279,7 +391,7 @@ export function usePipeline() {
     }
 
     return 'completed';
-  };
+  }
 
   // ── Exported callables ──────────────────────────────────────────────
 
@@ -303,14 +415,7 @@ export function usePipeline() {
 
     pipelineLog.newRunMarker();
     pipelineLog.batchPipelineStart(liveChunks.length, config.stages.filter((s) => s.enabled).length);
-    if (!(await ensureProvidersReady([
-      ...config.stages.filter((s) => s.enabled).map((s, i) => ({
-        provider: s.provider,
-        model: s.model,
-        label: `${s.name || `Stage ${i + 1}`} — ${s.provider} ${s.model}`,
-      })),
-      { provider: config.judgeProvider, model: config.judgeModel, label: `Judge — ${config.judgeProvider} ${config.judgeModel}` },
-    ]))) return;
+    if (!(await ensureProvidersReady(buildProviderChecks(config)))) return;
     useChunksStore.getState().clearCancelRequest();
     setIsProcessing(true);
 
@@ -320,26 +425,8 @@ export function usePipeline() {
       : 'resume';
     const activePipelineId = useProjectStore.getState().activePipelineId;
     usePipelineStore.setState({ runStatus: 'running', lastRunConfig: buildPipelineFingerprint(config) });
-    if (activePipelineId) {
-      void setPipelineRunState(activePipelineId, 'running', buildPipelineFingerprint(config)).catch(() => {});
-    }
-
-    try {
-      const budget = (config.blobBudgetTokens ?? 0) > 0
-        ? config.blobBudgetTokens!
-        : calculateBlobBudget(config.stages).budget;
-      const assignments = await llmService.computeBlobs(
-        liveChunks.map((c) => ({ id: c.id, text: c.sourceProcessingText })),
-        budget,
-        config.blobOverlap ?? 1,
-      );
-      setBlobAssignments(assignments);
-    } catch (error: unknown) {
-      setBlobAssignments([]);
-      const msg = error instanceof Error ? error.message : String(error);
-      pipelineLog.blobComputeFailed(msg);
-      toast.warning(t('pipeline.blobComputeFailed'), { description: msg });
-    }
+    persistPipelineStatus(activePipelineId, 'running', buildPipelineFingerprint(config));
+    await computeBlobAssignments(config, liveChunks);
 
     let errorCount = 0;
     let cancelled = false;
@@ -353,9 +440,7 @@ export function usePipeline() {
           const fresh = useChunksStore.getState().chunks.find((c) => c.id === chunk.id);
           const position = liveChunks.indexOf(chunk);
           const currentProjectId = useProjectStore.getState().currentProjectId;
-          if (fresh && currentProjectId) {
-            void saveChunkCheckpoint(currentProjectId, activePipelineId, fresh, position).catch(() => {});
-          }
+          persistChunkCheckpoint(currentProjectId, activePipelineId, fresh, position);
         }
       }
     } finally {
@@ -366,9 +451,7 @@ export function usePipeline() {
       if (finalStatus === 'interrupted') {
         useProjectStore.getState().setRunInterrupted(true);
       }
-      if (activePipelineId) {
-        void setPipelineRunState(activePipelineId, finalStatus).catch(() => {});
-      }
+      persistPipelineStatus(activePipelineId, finalStatus);
     }
 
     if (cancelled) {
@@ -384,61 +467,8 @@ export function usePipeline() {
   }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureProvidersReady, setBlobAssignments]);
 
   const runSingleChunk = useCallback(async (chunkId: string, finalStatus: FinalChunkStatus = 'completed') => {
-    const config = usePipelineStore.getState().config;
-    if (useChunksStore.getState().isProcessing) return;
-    const chunk = useChunksStore.getState().chunks.find((c) => c.id === chunkId);
-    if (!chunk) return;
-    useOperationLogStore.getState().clearChunk(chunkId);
-    pipelineLog.newRunMarker(chunkId);
-    pipelineLog.singlePipelineStart(chunkId);
-    if (!(await ensureProvidersReady([
-      ...config.stages.filter((s) => s.enabled).map((s, i) => ({
-        provider: s.provider,
-        model: s.model,
-        label: `${s.name || `Stage ${i + 1}`} — ${s.provider} ${s.model}`,
-      })),
-      { provider: config.judgeProvider, model: config.judgeModel, label: `Judge — ${config.judgeProvider} ${config.judgeModel}` },
-    ]))) return;
-    useChunksStore.getState().clearCancelRequest();
-    setIsProcessing(true);
-
-    try {
-      const allChunks = useChunksStore.getState().chunks;
-      const budget = (config.blobBudgetTokens ?? 0) > 0
-        ? config.blobBudgetTokens!
-        : calculateBlobBudget(config.stages).budget;
-      const assignments = await llmService.computeBlobs(
-        allChunks.map((c) => ({ id: c.id, text: c.sourceProcessingText })),
-        budget,
-        config.blobOverlap ?? 1,
-      );
-      setBlobAssignments(assignments);
-    } catch (error: unknown) {
-      setBlobAssignments([]);
-      const msg = error instanceof Error ? error.message : String(error);
-      pipelineLog.blobComputeFailed(msg);
-      toast.warning(t('pipeline.blobComputeFailed'), { description: msg });
-    }
-
-    const freshChunk = useChunksStore.getState().chunks.find((c) => c.id === chunkId) ?? chunk;
-    const outcome = await executePipelineForChunk(freshChunk, { memoryBlock: getChunkMemoryBlock(chunkId) });
-
-    if (outcome === 'completed' && finalStatus === 'preview') {
-      updateChunkStatus(chunkId, 'preview');
-    }
-
-    setIsProcessing(false);
-    useChunksStore.getState().clearCancelRequest();
-
-    if (outcome === 'cancelled') {
-      pipelineLog.singlePipelineCancelled(chunkId);
-      toast.message(t('pipeline.stopConfirmed'));
-    } else if (outcome === 'completed') {
-      pipelineLog.singlePipelineCompleted(chunkId);
-      toast.success(finalStatus === 'preview' ? t('pipeline.dryRunChunkCompleted') : t('pipeline.singleChunkCompleted'));
-    }
-    // outcome === 'failed': toast already raised inside executePipelineForChunk
-  }, [t, setIsProcessing, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureProvidersReady, setBlobAssignments]);
+    await runChunkExecution(chunkId, { finalStatus });
+  }, [runChunkExecution]);
 
   const runDryRun = useCallback(async () => {
     if (useChunksStore.getState().isProcessing) return;
@@ -457,34 +487,11 @@ export function usePipeline() {
 
     pipelineLog.newRunMarker();
     pipelineLog.batchPipelineStart(targets.length, config.stages.filter((s) => s.enabled).length);
-    if (!(await ensureProvidersReady([
-      ...config.stages.filter((s) => s.enabled).map((s, i) => ({
-        provider: s.provider,
-        model: s.model,
-        label: `${s.name || `Stage ${i + 1}`} — ${s.provider} ${s.model}`,
-      })),
-      { provider: config.judgeProvider, model: config.judgeModel, label: `Judge — ${config.judgeProvider} ${config.judgeModel}` },
-    ]))) return;
+    if (!(await ensureProvidersReady(buildProviderChecks(config)))) return;
 
     useChunksStore.getState().clearCancelRequest();
     setIsProcessing(true);
-
-    try {
-      const budget = (config.blobBudgetTokens ?? 0) > 0
-        ? config.blobBudgetTokens!
-        : calculateBlobBudget(config.stages).budget;
-      const assignments = await llmService.computeBlobs(
-        allChunks.map((c) => ({ id: c.id, text: c.sourceProcessingText })),
-        budget,
-        config.blobOverlap ?? 1,
-      );
-      setBlobAssignments(assignments);
-    } catch (error: unknown) {
-      setBlobAssignments([]);
-      const msg = error instanceof Error ? error.message : String(error);
-      pipelineLog.blobComputeFailed(msg);
-      toast.warning(t('pipeline.blobComputeFailed'), { description: msg });
-    }
+    await computeBlobAssignments(config, allChunks);
 
     let completedPreviewCount = 0;
     let errorCount = 0;
@@ -503,7 +510,7 @@ export function usePipeline() {
         if (pipelineId && currentProjectId) {
           const saved = useChunksStore.getState().chunks.find((c) => c.id === target.id);
           const position = allChunks.indexOf(target);
-          if (saved) void saveChunkCheckpoint(currentProjectId, pipelineId, saved, position).catch(() => {});
+          persistChunkCheckpoint(currentProjectId, pipelineId, saved, position);
         }
         completedPreviewCount++;
       } else if (outcome === 'failed') {
@@ -535,50 +542,27 @@ export function usePipeline() {
           : undefined,
       );
     }
-  }, [config, t, setIsProcessing, updateChunkStatus, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, clearChunkStages, ensureProvidersReady, setBlobAssignments]);
+  }, [computeBlobAssignments, config, t, setIsProcessing, updateChunkStatus, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, clearChunkStages, ensureProvidersReady, persistChunkCheckpoint]);
 
   const cancelPipeline = useCallback(() => {
     requestCancel();
     pipelineLog.cancelRequested();
     const streamId = useChunksStore.getState().activeStreamId;
     if (streamId) {
-      llmService.cancelStream(streamId).catch(() => {});
+      void llmService.cancelStream(streamId).catch((error: unknown) => {
+        warnAsyncFailure('pipeline.cancel.backend_failed', error, { streamId });
+      });
     }
     toast.message(t('pipeline.stopRequested'));
-  }, [requestCancel, t]);
+  }, [requestCancel, t, warnAsyncFailure]);
 
   const rerunChunkWithMemory = useCallback(async (
     chunkId: string,
     selectedMatches: PhraseMemoryMatch[],
   ) => {
     const memoryBlock = buildMemoryInjection(selectedMatches);
-    if (!memoryBlock) {
-      await runSingleChunk(chunkId, 'completed');
-      return;
-    }
-    const { config: currentConfig, setConfig } = usePipelineStore.getState();
-    const originalPromptById = new Map(
-      currentConfig.stages.filter((s) => s.enabled).map((s) => [s.id, s.prompt]),
-    );
-    setConfig({
-      ...currentConfig,
-      stages: currentConfig.stages.map((s) =>
-        s.enabled ? { ...s, prompt: `${s.prompt}\n\n${memoryBlock}` } : s,
-      ),
-    });
-    try {
-      await runSingleChunk(chunkId, 'completed');
-    } finally {
-      const latestConfig = usePipelineStore.getState().config;
-      setConfig({
-        ...latestConfig,
-        stages: latestConfig.stages.map((s) => {
-          const original = originalPromptById.get(s.id);
-          return original !== undefined ? { ...s, prompt: original } : s;
-        }),
-      });
-    }
-  }, [runSingleChunk]);
+    await runChunkExecution(chunkId, { memoryBlock: memoryBlock ?? undefined });
+  }, [runChunkExecution]);
 
   return {
     runPipeline,

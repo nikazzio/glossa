@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useChunksStore } from '../stores/chunksStore';
 import { llmService } from '../services/llmService';
+import { logger } from '../utils/logger';
 
 const WATCHDOG_INTERVAL_MS = 5_000;
 const STUCK_THRESHOLD_MS = 60_000;
@@ -89,7 +90,13 @@ export function useChunkWatchdog() {
   const cancelStuckChunk = useCallback((chunkId: string) => {
     const store = useChunksStore.getState();
     if (store.activeStreamId) {
-      llmService.cancelStream(store.activeStreamId).catch(() => {});
+      void llmService.cancelStream(store.activeStreamId).catch((error: unknown) => {
+        logger.warn('chunkWatchdog.cancelStream failed', {
+          chunkId,
+          streamId: store.activeStreamId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
     }
     store.updateChunkStatus(chunkId, 'ready');
     store.clearChunkStages(chunkId);

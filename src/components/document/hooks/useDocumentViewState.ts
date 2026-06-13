@@ -1,5 +1,6 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
 import { usePipelineStore } from '../../../stores/pipelineStore';
 import { useChunksStore } from '../../../stores/chunksStore';
 import { useUiStore } from '../../../stores/uiStore';
@@ -11,21 +12,34 @@ import { highlightFootnoteMarkersHtml, highlightSuperscriptMarkersHtml } from '.
 
 export function useDocumentViewState() {
   const { t } = useTranslation();
-  const { config } = usePipelineStore();
-  const { chunks } = useChunksStore();
+  const config = usePipelineStore((state) => state.config);
+  const chunks = useChunksStore((state) => state.chunks);
 
   const {
     selectedChunkId,
     setSelectedChunkId,
     documentLayout,
-    documentPaneFocus: paneFocus,
+    paneFocus,
     syncScrollEnabled,
     highlightsEnabled,
     searchQuery,
     focusedIssueQuery,
     focusedSourceIssueQuery,
     focusIsAnnotation,
-  } = useUiStore();
+  } = useUiStore(
+    useShallow((state) => ({
+      selectedChunkId: state.selectedChunkId,
+      setSelectedChunkId: state.setSelectedChunkId,
+      documentLayout: state.documentLayout,
+      paneFocus: state.documentPaneFocus,
+      syncScrollEnabled: state.syncScrollEnabled,
+      highlightsEnabled: state.highlightsEnabled,
+      searchQuery: state.searchQuery,
+      focusedIssueQuery: state.focusedIssueQuery,
+      focusedSourceIssueQuery: state.focusedSourceIssueQuery,
+      focusIsAnnotation: state.focusIsAnnotation,
+    })),
+  );
 
   const pipelineTestChunkCount = useConfigStore((state) => state.pipelineTestChunkCount);
   const setPipelineTestChunkCount = useConfigStore((state) => state.setPipelineTestChunkCount);
