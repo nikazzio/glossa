@@ -1,10 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { X, LibraryBig, Save, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { AnimatePresence, motion } from 'motion/react';
-import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { IconButton, PillButton } from '../ui';
+import { ResizeHandle, useEdgeResize } from '../layout/useEdgeResize';
 import { PipelineConfig } from '../pipeline/PipelineConfig';
+
+const CONFIG_MIN = 420;
+const CONFIG_MAX = 760;
+const CONFIG_DISMISS_AT = 380;
 import { useUiStore } from '../../stores/uiStore';
 import { useConfigStore } from '../../stores/configStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
@@ -30,7 +35,32 @@ export function ConfigDrawer({
   const { t } = useTranslation();
   const showConfigDrawer = useUiStore((state) => state.showConfigDrawer);
   const setShowConfigDrawer = useUiStore((state) => state.setShowConfigDrawer);
-  const drawerRef = useFocusTrap(showConfigDrawer, () => setShowConfigDrawer(false));
+  const width = useUiStore((state) => state.configFlyoutWidth);
+  const setWidth = useUiStore((state) => state.setConfigFlyoutWidth);
+  const { dragging, startDrag } = useEdgeResize();
+  const drawerRef = useRef<HTMLDivElement | null>(null);
+
+  const handleResizeStart = (event: React.PointerEvent) => {
+    startDrag(event, {
+      startWidth: width,
+      min: CONFIG_MIN,
+      max: CONFIG_MAX,
+      threshold: CONFIG_DISMISS_AT,
+      mode: 'dismiss',
+      onWidth: setWidth,
+      onDismiss: () => setShowConfigDrawer(false),
+    });
+  };
+
+  // Pannello push (non modale): chiusura via Esc, nessun focus trap sul documento.
+  useEffect(() => {
+    if (!showConfigDrawer) return;
+    const onKeyDown = (e: globalThis.KeyboardEvent) => {
+      if (e.key === 'Escape') setShowConfigDrawer(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [showConfigDrawer, setShowConfigDrawer]);
   const setPipelineMode = useConfigStore((state) => state.setPipelineMode);
   const [glossaryDirty, setGlossaryDirty] = useState(false);
   const [isSavingGlossary, setIsSavingGlossary] = useState(false);
@@ -102,18 +132,18 @@ export function ConfigDrawer({
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
           <LibraryBig size={11} className="text-editorial-accent shrink-0" />
-          <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+          <span className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
             {t('library.assignedDictionary')}
           </span>
         </div>
-        <button
+        <IconButton
+          size="md"
           onClick={() => setShowLibraryPanel(true, 'dictionaries')}
           title={t('library.openLibrary')}
-          aria-label={t('library.openLibrary')}
-          className="shrink-0 text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          className="shrink-0"
         >
           <LibraryBig size={16} />
-        </button>
+        </IconButton>
       </div>
       <select
         value={config.assignedGlossaryId ?? ''}
@@ -136,48 +166,39 @@ export function ConfigDrawer({
       )}
       {glossaryDirty && config.assignedGlossaryId && (
         <div className="flex justify-end">
-          <button
+          <PillButton
+            variant="accent"
             onClick={handleSaveGlossary}
             disabled={isSavingGlossary}
-            className="flex items-center gap-1.5 rounded-full border border-editorial-ink px-4 py-2 text-xs font-bold uppercase tracking-widest text-editorial-ink hover:bg-editorial-ink hover:text-white disabled:opacity-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            className="inline-flex items-center gap-1.5"
           >
             <Save size={13} />
             {t('common.save')}
-          </button>
+          </PillButton>
         </div>
       )}
     </div>
   );
 
   return (
-    <AnimatePresence>
+    <AnimatePresence initial={false}>
       {showConfigDrawer && (
-        <>
-          <motion.div
-            key="backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="absolute top-0 bottom-0 left-0 right-0 z-30 bg-editorial-ink/20 backdrop-blur-sm"
-            onClick={() => setShowConfigDrawer(false)}
-          />
-          <motion.div
-            key="drawer"
-            ref={drawerRef}
-            initial={{ x: -680, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: -680, opacity: 0 }}
-            transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-            role="dialog"
-            aria-modal="true"
-            className="absolute top-0 bottom-0 left-0 z-40 flex w-[680px] flex-col overflow-hidden border-r border-editorial-border bg-editorial-bg shadow-xl"
-            aria-labelledby="config-drawer-title"
-          >
+        <motion.aside
+          key="config-flyout"
+          ref={drawerRef}
+          initial={{ width: 0, opacity: 0 }}
+          animate={{ width, opacity: 1 }}
+          exit={{ width: 0, opacity: 0 }}
+          transition={dragging ? { duration: 0 } : { type: 'spring', damping: 30, stiffness: 280 }}
+          role="dialog"
+          aria-labelledby="config-drawer-title"
+          className="relative flex h-full shrink-0 overflow-hidden border-r border-editorial-border bg-editorial-bg"
+        >
+          <div className="flex h-full flex-col overflow-hidden" style={{ width }}>
           {/* Header */}
           <div className="flex items-start justify-between gap-3 border-b border-editorial-border px-6 pt-4 pb-4">
             <div className="min-w-0">
-              <div className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+              <div className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
                 {t('document.configDrawerTitle')}
               </div>
               <input
@@ -198,14 +219,15 @@ export function ConfigDrawer({
                 className="mt-1 w-full bg-transparent font-display text-2xl italic tracking-tight text-editorial-ink outline-none placeholder:text-editorial-muted/40 transition-colors focus:text-editorial-accent"
               />
             </div>
-            <button
-              type="button"
+            <IconButton
+              size="md"
               onClick={() => setShowConfigDrawer(false)}
-              className="mt-1 shrink-0 rounded-full border border-editorial-border p-2.5 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              aria-label={t('header.closeDrawer')}
+              title={t('header.closeDrawer')}
+              tooltipSide="left"
+              className="mt-1 shrink-0"
             >
               <X size={16} />
-            </button>
+            </IconButton>
           </div>
 
           <PipelineConfig
@@ -219,20 +241,21 @@ export function ConfigDrawer({
           />
 
           {completedCount > 0 && (
-            <div className="shrink-0 border-t border-editorial-border/40 px-6 py-4">
-              <button
-                type="button"
+            <div className="flex shrink-0 justify-center border-t border-editorial-border/40 px-6 py-4">
+              <PillButton
+                variant="secondary"
                 onClick={handleResetAll}
                 disabled={isProcessing}
-                className="flex w-full items-center justify-center gap-2 rounded-full border border-editorial-accent/40 px-4 py-2 text-xs font-bold uppercase tracking-widest text-editorial-accent/70 transition-colors hover:border-editorial-accent hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex items-center gap-2 border-editorial-accent/40 text-editorial-accent/80 hover:border-editorial-accent hover:text-editorial-accent"
               >
                 <Trash2 size={12} />
                 {t('pipeline.resetAll')}
-              </button>
+              </PillButton>
             </div>
           )}
-          </motion.div>
-        </>
+          </div>
+          <ResizeHandle onPointerDown={handleResizeStart} dragging={dragging} label={t('projectShell.resizePanel')} />
+        </motion.aside>
       )}
     </AnimatePresence>
   );

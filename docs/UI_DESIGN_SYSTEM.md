@@ -224,23 +224,38 @@ Regole:
 
 ---
 
-## Sidebar, dashboard e pattern "linguetta"
+## Multibar shell (sidebar home e progetto)
 
-La pipeline sidebar definisce il riferimento visivo per le superfici laterali:
+Le superfici laterali (home e progetto) usano **un'unica barra** (`ShellNav`, `components/layout/ShellNav.tsx`) con sezioni e item navigabili. Niente più colonne multiple né "linguetta" flottante.
 
 ```tsx
-<div className="flex w-52 shrink-0 flex-col border-r border-editorial-border bg-editorial-bg/60" />
+<motion.nav className="flex shrink-0 flex-col border-r border-editorial-border bg-editorial-bg/60 transition-[width] duration-200 w-60" />
 
-<div className="-mr-px rounded-l-[20px] rounded-r-none border border-r-0 border-editorial-border bg-editorial-paper px-3 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.55),6px_10px_20px_rgba(74,50,17,0.04)]" />
+// item attivo = barra accent verticale + tint + testo accent (ShellNavItem)
+<ShellNavItem active icon={<Icon />} label="..." />
 ```
 
 Regole:
 - Sidebar e dashboard usano `editorial-bg/60` o `editorial-bg`, non bianco puro.
-- La superficie selezionata che deve sembrare agganciata alla pagina usa la "linguetta": `rounded-l-[20px] rounded-r-none border-r-0 bg-editorial-paper`.
-- Workspace selezionato: usare il pattern linguetta nella lista, senza ripetere il nome come titolo immediatamente sopra.
-- Dashboard/home: niente card bianche generiche. Usa `editorial-paper`, bordi `editorial-border`, icone tonde e metadati proporzionati.
-- Area nav: usa i testi `workspace.areas.<id>.title` e `workspace.areas.<id>.sidebarHint`. Non mostrare badge tipo "Attiva" sull'area Traduzioni.
-- Le aree future possono essere disabilitate, ma devono mantenere forma e gerarchia visiva coerenti.
+- **Item attivo**: barra accent verticale (`absolute left-0 w-[3px] bg-editorial-accent`) + tint `bg-editorial-accent/10` + testo `text-editorial-accent`. Niente fondo accent pieno, niente linguetta che sfora il bordo colonna.
+- **Collapse**: la barra anima la larghezza (`w-60` ↔ `w-16`), mai render condizionale `return null` (provoca scatti). Collassata = solo icone con tooltip.
+- Sezioni con `ShellNavSection` (header `SectionLabel`, tracking calmo `0.1em`). Un solo `border-r`, nessun divider duplicato.
+- Workspace/area attivi: usare `ShellNavItem active` (no titolo ripetuto sopra). Area label `labelFont="display"`.
+- **Azioni di riga**: comandi contestuali (es. modifica/elimina del workspace attivo) vanno nel `trailing` di `ShellNavItem` (wrapper div + button interno + trailing fratelli — mai button annidati), non in barre d'azione separate nel canvas.
+- Dashboard/home: niente card bianche generiche. Usa `editorial-paper`, bordi `editorial-border`, icone tonde, metadati proporzionati.
+- Area nav: testi `workspace.areas.<id>.title` e `workspace.areas.<id>.sidebarHint`. Niente badge "Attiva".
+- Le aree future possono essere disabilitate ma mantengono forma e gerarchia.
+
+### Seconda barra (fly-out progetto)
+
+Nel progetto la barra primaria contiene la nav (`Run/Pipeline/Document/Insight/Chunk`) + back arrow in cima. I pannelli **inline** (Run, Pipeline, Document) vivono dentro la barra; i pannelli **ricchi** (Insight, Chunk, Config pipeline) escono in una **seconda barra push** (`ProjectFlyout`, `ConfigDrawer`) ancorata al bordo destro della barra, che spinge il documento (niente overlay, niente backdrop). La larghezza è animata (`width 0 → N`), così l'apertura/chiusura è fluida e parte sempre dal bordo della barra.
+
+### Resize (drag) — `useEdgeResize` + `ResizeHandle`
+
+Tutte le superfici laterali sono ridimensionabili dal bordo destro (`components/layout/useEdgeResize.tsx`). Le larghezze e lo stato collapse sono persistiti in `uiStore`.
+- **Barre primarie** (home, progetto): mode `collapse` — trascinando sotto soglia collassano a icone in tempo reale (reversibile nel drag).
+- **Fly-out** (Insight, Chunk, ConfigDrawer): mode `dismiss` — trascinando sotto soglia il pannello **scompare** al rilascio (non collassa a icona).
+- Durante il drag la transizione di larghezza è disattivata (movimento 1:1); allo snap/chiusura riprende l'animazione. Niente larghezze hard-coded nei consumer: leggere da `uiStore`.
 
 ---
 

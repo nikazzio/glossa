@@ -87,6 +87,12 @@ Glossa 2.0 separa tre livelli:
 
 Il workspace attuale è specifico per l'area **Traduzioni**. Biblioteca e Trascrizioni sono future macro-aree separate; non devono condividere implicitamente la Phrase Memory delle traduzioni.
 
+### Shell UI (multibar)
+
+Home e progetto usano un'unica barra laterale (`ShellNav`). Nel progetto la barra primaria (`PipelineSidebar`) ospita la nav `Run/Pipeline/Document/Insight/Chunk` + back arrow e i pannelli **inline** Run/Pipeline/Document. I pannelli **ricchi** escono in una seconda barra push a sinistra del documento: `ProjectFlyout` (Insight → `InsightDocPanel`, Chunk → `ChunkInspectorPanel`, estratti da `InsightsDrawer.tsx`) e `ConfigDrawer` (config pipeline). Ordine layout editor: `PipelineSidebar → ConfigDrawer → ProjectFlyout → DocumentView`.
+
+`uiStore.activeProjectPanel` (`run|pipeline|document|insight|chunk`) è la source-of-truth del rail. I setter drawer (`setShowDocumentDrawer`/`setShowChunkDrawer`/`setShowConfigDrawer`) sincronizzano `activeProjectPanel`; i flag `show*` restano mutuamente esclusivi e pilotano quale fly-out è aperto. `insight`/`chunk` non sono persistiti come pannello attivo (clamp a `run`).
+
 ---
 
 ## Pipeline di traduzione (flusso end-to-end)

@@ -1,4 +1,5 @@
 import { HelpCircle, LibraryBig, Save, Settings } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
 import { lazy, Suspense, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -7,6 +8,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useLibraryStore } from '../../stores/libraryStore';
 import { useChunksStore } from '../../stores/chunksStore';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { IconButton, Tooltip } from '../ui';
 
 const HelpGuide = lazy(() =>
@@ -21,13 +23,15 @@ export function Header() {
       showHelp: state.showHelp,
     })),
   );
-  const { currentProjectId, currentProjectName, saveCurrentProject } = useProjectStore(
+  const { currentProjectId, currentProjectName, saveCurrentProject, closeProject } = useProjectStore(
     useShallow((state) => ({
       currentProjectId: state.currentProjectId,
       currentProjectName: state.projects.find((project) => project.id === state.currentProjectId)?.name ?? null,
       saveCurrentProject: state.saveCurrentProject,
+      closeProject: state.closeProject,
     })),
   );
+  const activeWorkspace = useWorkspaceStore((state) => state.activeWorkspace);
   const { dirtyIdsLength, saveAllDirty, setShowLibraryPanel } = useLibraryStore(
     useShallow((state) => ({
       dirtyIdsLength: state.dirtyIds.length,
@@ -42,9 +46,7 @@ export function Header() {
   const helpLoaded = useRef(false);
   if (showHelp) helpLoaded.current = true;
 
-  const brandCtx = currentProjectId && currentProjectName
-    ? currentProjectName
-    : t('header.brandArea');
+  const workspaceLabel = activeWorkspace?.name ?? t('header.brandArea');
 
   const toggleLang = () => {
     i18n.changeLanguage(i18n.language === 'en' ? 'it' : 'en');
@@ -103,15 +105,46 @@ export function Header() {
       <div className="flex items-center justify-between gap-4">
         <div className="min-w-0">
           <div className="flex min-w-0 items-baseline gap-2.5">
-            <span className="shrink-0 font-display text-4xl italic tracking-tight text-editorial-ink md:text-5xl">
+            <span className="shrink-0 font-display text-4xl italic text-editorial-ink md:text-5xl">
               {t('app.brand')}
             </span>
             <span className="shrink-0 font-display text-lg italic text-editorial-muted md:text-xl">
               //
             </span>
-            <span className="min-w-0 truncate font-display text-lg italic text-editorial-muted md:text-xl">
-              {brandCtx}
-            </span>
+            {currentProjectId ? (
+              <button
+                type="button"
+                onClick={closeProject}
+                disabled={isProcessing}
+                className="min-w-0 truncate font-display text-lg italic text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-55 md:text-xl"
+                title={t('sidebar.backToWorkspace')}
+              >
+                {workspaceLabel}
+              </button>
+            ) : (
+              <span className="min-w-0 truncate font-display text-lg italic text-editorial-muted md:text-xl">
+                {workspaceLabel}
+              </span>
+            )}
+            <AnimatePresence mode="popLayout">
+              {currentProjectId && currentProjectName ? (
+                <motion.span
+                  key="project-segment"
+                  initial={{ opacity: 0, x: -12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -12 }}
+                  transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                  className="flex min-w-0 items-baseline gap-2.5"
+                >
+                  <span className="shrink-0 font-display text-lg italic text-editorial-muted md:text-xl">
+                    //
+                  </span>
+                  <span className="min-w-0 truncate font-display text-lg italic text-editorial-muted md:text-xl">
+                    {currentProjectName}
+                  </span>
+                </motion.span>
+              ) : null}
+            </AnimatePresence>
           </div>
         </div>
 

@@ -1,12 +1,9 @@
 import {
-  ChevronLeft,
   Columns2,
   FileOutput,
   FlaskConical,
-  FolderOpen,
   Highlighter,
   Info,
-  LibraryBig,
   Link2,
   Link2Off,
   Loader2,
@@ -45,7 +42,6 @@ import { usePricingStore } from '../../stores/pricingStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useConfigStore } from '../../stores/configStore';
-import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { estimatePipelineCost } from '../../utils/costEstimate';
 import { CostBreakdownPanel } from '../pipeline/CostBadge';
 import { IconButton, SectionLabel, Tooltip } from '../ui';
@@ -66,11 +62,7 @@ function clamp(value: number, min: number, max: number) {
 }
 
 function SidebarSectionShell({ children }: { children: ReactNode }) {
-  return (
-    <div className="-mr-px rounded-l-[20px] rounded-r-none border border-r-0 border-editorial-border bg-editorial-paper px-3 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.55),6px_10px_20px_rgba(74,50,17,0.04)]">
-      {children}
-    </div>
-  );
+  return <div className="px-1">{children}</div>;
 }
 
 function SidebarCostPanel({
@@ -141,90 +133,17 @@ function SidebarCostPanel({
   );
 }
 
-export function PipelineSidebarWorkspaceSection({
-  onImportDocument,
-  onOpenWorkspaceSettings,
-}: {
-  onImportDocument?: () => void;
-  onOpenWorkspaceSettings?: () => void;
-}) {
-  const { t } = useTranslation();
-  const { activeWorkspace } = useWorkspaceStore(useShallow((state) => ({ activeWorkspace: state.activeWorkspace })));
-  const { setShowProjectPanel, closeProject } = useProjectStore(
-    useShallow((state) => ({
-      setShowProjectPanel: state.setShowProjectPanel,
-      closeProject: state.closeProject,
-    })),
-  );
-  const isProcessing = useChunksStore((state) => state.isProcessing);
-  const hasDocument = useChunksStore((state) => state.chunks.length > 0);
-
-  return (
-    <div className="relative z-10 pl-3 pr-0 pt-3">
-      <SidebarSectionShell>
-        <div className="flex justify-center pb-2">
-          <SectionLabel icon={LibraryBig} label={t('sidebar.workspaceSection')} />
-        </div>
-        <div className="flex items-center gap-2">
-          <IconButton
-            size="sm"
-            onClick={closeProject}
-            title={t('sidebar.backToWorkspace')}
-            disabled={isProcessing}
-            tooltipSide="right"
-            className="shrink-0"
-          >
-            <ChevronLeft size={15} />
-          </IconButton>
-          <div className="min-w-0 flex-1">
-            <span className="block truncate font-display text-base italic leading-none text-editorial-ink">
-              {activeWorkspace?.name ?? '—'}
-            </span>
-          </div>
-        </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <IconButton
-            size="md"
-            onClick={() => setShowProjectPanel(true)}
-            title={t('projects.title')}
-            tooltipSide="right"
-          >
-            <FolderOpen size={15} />
-          </IconButton>
-          <IconButton
-            size="md"
-            onClick={onOpenWorkspaceSettings}
-            title={t('workspace.configure')}
-            tooltipSide="right"
-          >
-            <Settings2 size={15} />
-          </IconButton>
-        </div>
-        {!hasDocument && (
-          <div className="mt-2 flex justify-center">
-            <IconButton
-              size="md"
-              onClick={onImportDocument}
-              title={t('files.import')}
-              tooltipSide="right"
-              className="shrink-0"
-            >
-              <Upload size={15} />
-            </IconButton>
-          </div>
-        )}
-      </SidebarSectionShell>
-    </div>
-  );
-}
-
 export function PipelineSidebarRunSection({
+  collapsed = false,
   onRunPipeline,
+  onRunAuditOnly,
   onCancelPipeline,
   onDryRun,
   onRetranslateChunk,
 }: {
+  collapsed?: boolean;
   onRunPipeline?: () => void;
+  onRunAuditOnly?: () => void;
   onCancelPipeline?: () => void;
   onDryRun?: () => void;
   onRetranslateChunk?: (chunkId: string) => void;
@@ -297,8 +216,43 @@ export function PipelineSidebarRunSection({
     };
   }, []);
 
+  if (collapsed) {
+    return (
+      <div className="flex flex-col items-center gap-2 px-1">
+        {isProcessing ? (
+          cancelRequested ? (
+            <IconButton size="lg" tone="muted" disabled title={t('pipeline.stopping')} tooltipSide="right" className="h-11 w-11 bg-editorial-bg opacity-50">
+              <Loader2 size={18} className="animate-spin" />
+            </IconButton>
+          ) : (
+            <IconButton size="lg" tone="default" onClick={onCancelPipeline} title={t('pipeline.stopPipeline')} tooltipSide="right" className="h-11 w-11 border-editorial-accent bg-editorial-bg text-editorial-accent hover:bg-editorial-accent/10">
+              <Square size={16} fill="currentColor" />
+            </IconButton>
+          )
+        ) : (
+          <IconButton size="lg" tone="charcoal" onClick={pipelineMode === 'test' ? onDryRun : onRunPipeline} disabled={isProcessing || !hasDocument} title={`${t('pipeline.beginPipeline')} (Ctrl+↵)`} ariaLabel={t('pipeline.beginPipeline')} tooltipSide="right" className="h-11 w-11 border-editorial-charcoal bg-editorial-charcoal text-white hover:bg-editorial-charcoal/85">
+            <Play size={18} fill="currentColor" />
+          </IconButton>
+        )}
+        {hasDocument ? (
+          <span className="text-[11px] font-bold tabular-nums tracking-[0.1em] text-editorial-muted">
+            {completedCount}/{pipelineMode === 'test' ? runChunkCount : totalChunks}
+          </span>
+        ) : null}
+        <IconButton size="md" onClick={onRunAuditOnly} disabled={isProcessing || !hasDocument} title={t('pipeline.runAuditOnly')} ariaLabel={t('pipeline.runAuditOnly')} tooltipSide="right" className="bg-editorial-bg">
+          <Highlighter size={14} />
+        </IconButton>
+        {currentChunk ? (
+          <IconButton size="md" tone="charcoal" onClick={() => currentChunk && onRetranslateChunk?.(currentChunk.id)} disabled={isProcessing || !currentChunk.hasOriginalText} title={pipelineMode === 'test' ? t('pipeline.retestChunk') : t('pipeline.retranslateChunk')} tooltipSide="right" className="h-10 w-10 bg-editorial-bg">
+            <RotateCcw size={13} />
+          </IconButton>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
-    <div className="relative z-10 pl-3 pr-0">
+    <div className="px-2.5">
       <SidebarSectionShell>
         <div className="flex flex-col gap-4">
           <div className="flex flex-col items-center gap-2">
@@ -407,6 +361,18 @@ export function PipelineSidebarRunSection({
                 {completedCount} / {pipelineMode === 'test' ? runChunkCount : totalChunks}
               </span>
             )}
+            <IconButton
+              size="md"
+              tone="default"
+              onClick={onRunAuditOnly}
+              disabled={isProcessing || !hasDocument}
+              title={t('pipeline.runAuditOnly')}
+              ariaLabel={t('pipeline.runAuditOnly')}
+              tooltipSide="right"
+              className="mt-1 bg-editorial-bg"
+            >
+              <Highlighter size={14} />
+            </IconButton>
           </div>
 
           <div className="flex flex-col items-center gap-1.5">
@@ -459,7 +425,7 @@ export function PipelineSidebarRunSection({
   );
 }
 
-export function PipelineSidebarPipelinesSection() {
+export function PipelineSidebarPipelinesSection({ collapsed = false }: { collapsed?: boolean }) {
   const { t } = useTranslation();
   const runStatus = usePipelineStore((state) => state.runStatus);
   const {
@@ -503,8 +469,63 @@ export function PipelineSidebarPipelinesSection() {
     await deletePipeline(pipelineId);
   }, [deletePipeline, t]);
 
+  if (collapsed) {
+    return (
+      <div className="flex flex-col items-center gap-2 px-1">
+        {pipelines.length === 0 ? (
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-editorial-accent text-xs font-black text-white opacity-55">1</span>
+        ) : (
+          pipelines.map((pipeline, index) => {
+            const isActive = pipeline.id === activePipelineId;
+            const isPipelineRunning = isActive && isRunning;
+            return (
+              <IconButton
+                key={pipeline.id}
+                size="lg"
+                tone={isActive ? 'accent' : 'default'}
+                onClick={() => switchPipeline(pipeline.id)}
+                title={pipeline.name}
+                tooltipSide="right"
+                className="h-11 w-11 text-sm font-black"
+              >
+                {isPipelineRunning ? (
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-transparent border-t-current" />
+                ) : (
+                  index + 1
+                )}
+              </IconButton>
+            );
+          })
+        )}
+        {hasProject && pipelines.length < maxPipelines ? (
+          <IconButton
+            size="md"
+            onClick={() => createNewPipeline(t('pipeline.pipelineNumber', { number: pipelines.length + 1 }))}
+            title={t('pipeline.newPipeline')}
+            tooltipSide="right"
+            className="border-dashed bg-editorial-bg"
+          >
+            <Plus size={14} />
+          </IconButton>
+        ) : null}
+        <IconButton
+          size="md"
+          tone={showConfigDrawer ? 'accent' : 'default'}
+          onClick={() => setShowConfigDrawer(!showConfigDrawer)}
+          title={`${t('pipeline.configurePipeline')} (Ctrl+,)`}
+          ariaLabel={t('pipeline.configurePipeline')}
+          ariaPressed={showConfigDrawer}
+          tooltipSide="right"
+          className={showConfigDrawer ? '' : 'bg-editorial-textbox'}
+        >
+          <Settings2 size={15} />
+        </IconButton>
+      </div>
+    );
+  }
+
   return (
-    <div className="relative z-10 pl-3 pr-0">
+    <div className="px-2.5">
       <SidebarSectionShell>
         <div className="flex flex-col gap-3">
           <div className="flex flex-col items-center gap-1">
@@ -597,7 +618,15 @@ export function PipelineSidebarPipelinesSection() {
   );
 }
 
-export function PipelineSidebarDocumentSection() {
+export function PipelineSidebarDocumentSection({
+  collapsed = false,
+  onImportDocument,
+  onOpenWorkspaceSettings,
+}: {
+  collapsed?: boolean;
+  onImportDocument?: () => void;
+  onOpenWorkspaceSettings?: () => void;
+}) {
   const { t } = useTranslation();
   const hasDocument = useChunksStore((state) => state.chunks.length > 0);
   const {
@@ -622,72 +651,133 @@ export function PipelineSidebarDocumentSection() {
     })),
   );
 
-  if (!hasDocument) return null;
-
   const syncScrollDisabled = documentPaneFocus !== 'both';
 
+  if (collapsed) {
+    return (
+      <div className="flex flex-col items-center gap-2 px-1">
+        {hasDocument ? (
+          <>
+            <IconButton size="md" tone={documentPaneFocus === 'both' ? 'accent' : 'default'} onClick={() => setDocumentPaneFocus('both')} title={t('document.focusBoth')} ariaPressed={documentPaneFocus === 'both'} tooltipSide="right">
+              <Columns2 size={14} />
+            </IconButton>
+            <IconButton size="md" tone={documentPaneFocus === 'source' ? 'accent' : 'default'} onClick={() => setDocumentPaneFocus('source')} title={t('document.focusSource')} ariaPressed={documentPaneFocus === 'source'} tooltipSide="right">
+              <PanelLeft size={14} />
+            </IconButton>
+            <IconButton size="md" tone={documentPaneFocus === 'translation' ? 'accent' : 'default'} onClick={() => setDocumentPaneFocus('translation')} title={t('document.focusTranslation')} ariaPressed={documentPaneFocus === 'translation'} tooltipSide="right">
+              <PanelRight size={14} />
+            </IconButton>
+            <IconButton size="md" tone={syncScrollEnabled && !syncScrollDisabled ? 'accent' : 'default'} onClick={() => setSyncScrollEnabled(!syncScrollEnabled)} title={syncScrollEnabled ? t('document.scrollSyncDisable') : t('document.scrollSyncEnable')} disabled={syncScrollDisabled} ariaPressed={syncScrollEnabled && !syncScrollDisabled} tooltipSide="right">
+              {syncScrollEnabled && !syncScrollDisabled ? <Link2 size={14} /> : <Link2Off size={14} />}
+            </IconButton>
+            <IconButton size="md" tone={highlightsEnabled ? 'accent' : 'default'} onClick={() => setHighlightsEnabled(!highlightsEnabled)} title={t('document.highlightsToggle')} ariaPressed={highlightsEnabled} tooltipSide="right">
+              <Highlighter size={14} />
+            </IconButton>
+            <IconButton size="md" onClick={() => setShowExportDialog(true)} title={`${t('header.exportLabel')} (Ctrl+E)`} ariaLabel={t('header.exportLabel')} tooltipSide="right">
+              <FileOutput size={14} />
+            </IconButton>
+          </>
+        ) : null}
+        <IconButton size="md" onClick={onImportDocument} title={t('files.import')} disabled={!onImportDocument} tooltipSide="right">
+          <Upload size={14} />
+        </IconButton>
+        <IconButton size="md" tone="muted" onClick={onOpenWorkspaceSettings} title={t('workspace.configure')} disabled={!onOpenWorkspaceSettings} tooltipSide="right">
+          <Settings2 size={14} />
+        </IconButton>
+        <PipelineSidebarExportDialogHost open={showExportDialog} onOpenChange={setShowExportDialog} />
+      </div>
+    );
+  }
+
   return (
-    <div className="relative z-10 pl-3 pr-0 pb-4 pt-3">
+    <div className="px-2.5">
       <SidebarSectionShell>
         <div className="flex justify-center pb-2">
           <SectionLabel icon={Columns2} label={t('document.panelsTitle')} />
         </div>
-        <div className="flex items-center justify-center gap-2">
+        {hasDocument ? (
+          <>
+            <div className="flex items-center justify-center gap-2">
+              <IconButton
+                size="md"
+                tone={documentPaneFocus === 'both' ? 'accent' : 'default'}
+                onClick={() => setDocumentPaneFocus('both')}
+                title={t('document.focusBoth')}
+                ariaPressed={documentPaneFocus === 'both'}
+              >
+                <Columns2 size={14} />
+              </IconButton>
+              <IconButton
+                size="md"
+                tone={documentPaneFocus === 'source' ? 'accent' : 'default'}
+                onClick={() => setDocumentPaneFocus('source')}
+                title={t('document.focusSource')}
+                ariaPressed={documentPaneFocus === 'source'}
+              >
+                <PanelLeft size={14} />
+              </IconButton>
+              <IconButton
+                size="md"
+                tone={documentPaneFocus === 'translation' ? 'accent' : 'default'}
+                onClick={() => setDocumentPaneFocus('translation')}
+                title={t('document.focusTranslation')}
+                ariaPressed={documentPaneFocus === 'translation'}
+              >
+                <PanelRight size={14} />
+              </IconButton>
+            </div>
+            <div className="mt-3 flex items-center justify-center gap-2 border-t border-editorial-border/40 pt-3">
+              <IconButton
+                size="md"
+                tone={syncScrollEnabled && !syncScrollDisabled ? 'accent' : 'default'}
+                onClick={() => setSyncScrollEnabled(!syncScrollEnabled)}
+                title={syncScrollEnabled ? t('document.scrollSyncDisable') : t('document.scrollSyncEnable')}
+                disabled={syncScrollDisabled}
+                ariaPressed={syncScrollEnabled && !syncScrollDisabled}
+              >
+                {syncScrollEnabled && !syncScrollDisabled ? <Link2 size={14} /> : <Link2Off size={14} />}
+              </IconButton>
+              <IconButton
+                size="md"
+                tone={highlightsEnabled ? 'accent' : 'default'}
+                onClick={() => setHighlightsEnabled(!highlightsEnabled)}
+                title={t('document.highlightsToggle')}
+                ariaPressed={highlightsEnabled}
+              >
+                <Highlighter size={14} />
+              </IconButton>
+              <IconButton
+                size="md"
+                onClick={() => setShowExportDialog(true)}
+                title={`${t('header.exportLabel')} (Ctrl+E)`}
+                ariaLabel={t('header.exportLabel')}
+              >
+                <FileOutput size={14} />
+              </IconButton>
+            </div>
+          </>
+        ) : (
+          <p className="px-1 text-center text-xs leading-relaxed text-editorial-muted [text-wrap:pretty]">
+            {t('projectShell.noDocumentHint')}
+          </p>
+        )}
+        <div className="mt-3 flex items-center justify-center gap-2 border-t border-editorial-border/50 pt-3">
           <IconButton
             size="md"
-            tone={documentPaneFocus === 'both' ? 'accent' : 'default'}
-            onClick={() => setDocumentPaneFocus('both')}
-            title={t('document.focusBoth')}
-            ariaPressed={documentPaneFocus === 'both'}
+            onClick={onImportDocument}
+            title={t('files.import')}
+            disabled={!onImportDocument}
           >
-            <Columns2 size={14} />
+            <Upload size={14} />
           </IconButton>
           <IconButton
             size="md"
-            tone={documentPaneFocus === 'source' ? 'accent' : 'default'}
-            onClick={() => setDocumentPaneFocus('source')}
-            title={t('document.focusSource')}
-            ariaPressed={documentPaneFocus === 'source'}
+            tone="muted"
+            onClick={onOpenWorkspaceSettings}
+            title={t('workspace.configure')}
+            disabled={!onOpenWorkspaceSettings}
           >
-            <PanelLeft size={14} />
-          </IconButton>
-          <IconButton
-            size="md"
-            tone={documentPaneFocus === 'translation' ? 'accent' : 'default'}
-            onClick={() => setDocumentPaneFocus('translation')}
-            title={t('document.focusTranslation')}
-            ariaPressed={documentPaneFocus === 'translation'}
-          >
-            <PanelRight size={14} />
-          </IconButton>
-        </div>
-        <div className="mt-2 flex items-center justify-center gap-2">
-          <IconButton
-            size="md"
-            tone={syncScrollEnabled && !syncScrollDisabled ? 'accent' : 'default'}
-            onClick={() => setSyncScrollEnabled(!syncScrollEnabled)}
-            title={syncScrollEnabled ? t('document.scrollSyncDisable') : t('document.scrollSyncEnable')}
-            disabled={syncScrollDisabled}
-            ariaPressed={syncScrollEnabled && !syncScrollDisabled}
-          >
-            {syncScrollEnabled && !syncScrollDisabled ? <Link2 size={14} /> : <Link2Off size={14} />}
-          </IconButton>
-          <IconButton
-            size="md"
-            tone={highlightsEnabled ? 'accent' : 'default'}
-            onClick={() => setHighlightsEnabled(!highlightsEnabled)}
-            title={t('document.highlightsToggle')}
-            ariaPressed={highlightsEnabled}
-          >
-            <Highlighter size={14} />
-          </IconButton>
-          <IconButton
-            size="md"
-            onClick={() => setShowExportDialog(true)}
-            title={`${t('header.exportLabel')} (Ctrl+E)`}
-            ariaLabel={t('header.exportLabel')}
-          >
-            <FileOutput size={14} />
+            <Settings2 size={14} />
           </IconButton>
         </div>
       </SidebarSectionShell>

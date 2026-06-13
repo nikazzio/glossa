@@ -203,6 +203,7 @@ function OverviewSection() {
       </div>
 
       <P>{t('help.overview.p3')}</P>
+      <P>{t('help.overview.nav')}</P>
       <VersionWidget />
     </>
   );
