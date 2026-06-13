@@ -314,11 +314,12 @@ describe('usePipeline', () => {
     await act(async () => {
       await result.current.rerunChunkWithMemory('chunk-1', [
         {
-          phraseMemoryId: 'pm-1',
+          id: 'pm-1',
           sourcePhrase: 'stored source',
           targetPhrase: 'stored target',
-          distance: 0.1,
+          score: 0.9,
           confidence: 0.9,
+          createdAt: '2026-06-13T00:00:00.000Z',
         },
       ]);
     });
