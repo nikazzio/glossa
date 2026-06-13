@@ -97,7 +97,12 @@ export function useProjectAutosave(delayMs = 1200) {
         projectId: currentProjectId,
         chunksCount: chunks.length,
       });
-      void useProjectStore.getState().saveCurrentProject().catch(() => {});
+      void useProjectStore.getState().saveCurrentProject().catch((error: unknown) => {
+        logger.warn('autosave: saveCurrentProject failed', {
+          projectId: currentProjectId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
     }, delayMs);
 
     return () => window.clearTimeout(timer);

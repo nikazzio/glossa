@@ -297,6 +297,36 @@ describe('usePipeline', () => {
     expect(stage.prompt).toContain('stored target');
   });
 
+  it('rerunChunkWithMemory injects memory without mutating the persisted stage prompt', async () => {
+    usePipelineStore.setState((state) => ({
+      ...state,
+      config: { ...state.config, usePhraseMemory: true },
+    }));
+    llmMocks.runStage.mockResolvedValue({ content: 'Translated with rerun memory' });
+    llmMocks.judgeTranslation.mockResolvedValue({
+      content: '',
+      rating: 'excellent',
+      issues: [],
+    });
+
+    const originalPrompt = usePipelineStore.getState().config.stages[0]!.prompt;
+    const { result } = renderHook(() => usePipeline());
+    await act(async () => {
+      await result.current.rerunChunkWithMemory('chunk-1', [
+        {
+          phraseMemoryId: 'pm-1',
+          sourcePhrase: 'stored source',
+          targetPhrase: 'stored target',
+          distance: 0.1,
+          confidence: 0.9,
+        },
+      ]);
+    });
+
+    expect(llmMocks.runStage.mock.calls[0][1].prompt).toContain('stored source');
+    expect(usePipelineStore.getState().config.stages[0]!.prompt).toBe(originalPrompt);
+  });
+
   it('re-audits only the targeted chunk', async () => {
     useChunksStore.getState().setChunks((prev) =>
       prev.map((chunk, index) => ({

@@ -2,6 +2,7 @@ import { HelpCircle, LibraryBig, Save, Settings } from 'lucide-react';
 import { lazy, Suspense, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { useShallow } from 'zustand/react/shallow';
 import { useUiStore } from '../../stores/uiStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useLibraryStore } from '../../stores/libraryStore';
@@ -13,9 +14,27 @@ const HelpGuide = lazy(() =>
 );
 
 export function Header() {
-  const { setShowSettings, setShowHelp, showHelp } = useUiStore();
-  const { currentProjectId, projects, saveCurrentProject } = useProjectStore();
-  const { dirtyIds, saveAllDirty, setShowLibraryPanel } = useLibraryStore();
+  const { setShowSettings, setShowHelp, showHelp } = useUiStore(
+    useShallow((state) => ({
+      setShowSettings: state.setShowSettings,
+      setShowHelp: state.setShowHelp,
+      showHelp: state.showHelp,
+    })),
+  );
+  const { currentProjectId, currentProjectName, saveCurrentProject } = useProjectStore(
+    useShallow((state) => ({
+      currentProjectId: state.currentProjectId,
+      currentProjectName: state.projects.find((project) => project.id === state.currentProjectId)?.name ?? null,
+      saveCurrentProject: state.saveCurrentProject,
+    })),
+  );
+  const { dirtyIdsLength, saveAllDirty, setShowLibraryPanel } = useLibraryStore(
+    useShallow((state) => ({
+      dirtyIdsLength: state.dirtyIds.length,
+      saveAllDirty: state.saveAllDirty,
+      setShowLibraryPanel: state.setShowLibraryPanel,
+    })),
+  );
   const isProcessing = useChunksStore((s) => s.isProcessing);
   const { t, i18n } = useTranslation();
   const [savingAll, setSavingAll] = useState(false);
@@ -23,9 +42,8 @@ export function Header() {
   const helpLoaded = useRef(false);
   if (showHelp) helpLoaded.current = true;
 
-  const currentProject = projects.find((p) => p.id === currentProjectId);
-  const brandCtx = currentProjectId && currentProject
-    ? currentProject.name
+  const brandCtx = currentProjectId && currentProjectName
+    ? currentProjectName
     : t('header.brandArea');
 
   const toggleLang = () => {
@@ -36,7 +54,7 @@ export function Header() {
     if (savingAll) return;
 
     const shouldSaveProject = Boolean(currentProjectId) && !isProcessing;
-    const shouldSaveLibrary = dirtyIds.length > 0;
+    const shouldSaveLibrary = dirtyIdsLength > 0;
     const projectDeferred = Boolean(currentProjectId) && isProcessing;
 
     if (!shouldSaveProject && !shouldSaveLibrary) {

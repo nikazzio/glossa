@@ -5,6 +5,7 @@ import {
   clearOperationLogs,
   type PersistedLogEntry,
 } from '../services/dbService';
+import { logger } from '../utils/logger';
 
 export type OperationLogLevel = 'info' | 'success' | 'warn' | 'error';
 export type OperationLogScope =
@@ -63,7 +64,13 @@ export const useOperationLogStore = create<OperationLogState>((set, get) => ({
     }));
     const { currentProjectId } = get();
     if (currentProjectId) {
-      saveOperationLogEntry(currentProjectId, full as PersistedLogEntry).catch(() => {});
+      void saveOperationLogEntry(currentProjectId, full as PersistedLogEntry).catch((error: unknown) => {
+        logger.warn('operationLog.persist_failed', {
+          projectId: currentProjectId,
+          entryId: full.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
     }
   },
 
@@ -85,7 +92,12 @@ export const useOperationLogStore = create<OperationLogState>((set, get) => ({
     const { currentProjectId } = get();
     set({ entries: [] });
     if (currentProjectId) {
-      clearOperationLogs(currentProjectId).catch(() => {});
+      void clearOperationLogs(currentProjectId).catch((error: unknown) => {
+        logger.warn('operationLog.clear_failed', {
+          projectId: currentProjectId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
     }
   },
 }));
