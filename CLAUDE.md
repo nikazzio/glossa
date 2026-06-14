@@ -21,8 +21,8 @@ Sviluppo attivo (pre-1.0). Priorità assoluta alla modalità documento/editorial
 - **Prefix Caching (CRITICO)**: L'ordine dei blocchi nel system prompt (`static → blob → stage-instructions`) **non si cambia mai**. L'inversione spezza la cache del provider e moltiplica i costi.
 
 ## Documentazione e Stato
-- **Architettura**: Aggiorna `docs/ARCHITECTURE.md` per modifiche ai flussi, comandi Tauri, schemi DB o store Zustand.
-- **UI**: Consulta `docs/UI_DESIGN_SYSTEM.md` prima di qualsiasi modifica visiva.
+- **Architettura**: Aggiorna `docs-dev/ARCHITECTURE.md` per modifiche ai flussi, comandi Tauri, schemi DB o store Zustand.
+- **UI**: Consulta `docs-dev/UI_DESIGN_SYSTEM.md` prima di qualsiasi modifica visiva.
 - **Avanzamento**: Leggi `STATO_SESSIONE.md` a inizio sessione e aggiornalo obbligatoriamente a fine task/feature. Aggiorna l'help in-app per modifiche funzionali.
 
 ## Git e Test

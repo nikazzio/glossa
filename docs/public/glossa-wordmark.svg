@@ -1,0 +1,14 @@
+<svg width="760" height="180" viewBox="0 0 760 180" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Glossa wordmark</title>
+  <desc id="desc">Glossa logo with circular mark and serif wordmark</desc>
+  <rect width="760" height="180" rx="28" fill="#F8F1E7"/>
+  <g transform="translate(24 26)">
+    <rect width="128" height="128" rx="24" fill="#4A7A5C"/>
+    <path d="M64 15C86.6437 15 105 33.3563 105 56C105 74.3799 92.9044 89.9347 76.2198 95.1401L71.5982 81.5242C82.7878 78.0387 90.875 67.5965 90.875 55.2649C90.875 40.0724 78.5565 27.7539 63.364 27.7539C55.9758 27.7539 49.2679 30.6674 44.3205 35.4087L34.2449 25.3331C41.7376 18.8111 52.0337 15 64 15Z" fill="#FFC33B"/>
+    <path d="M64.636 113C41.9923 113 23.636 94.6437 23.636 72C23.636 53.6201 35.7317 38.0653 52.4163 32.8599L57.0378 46.4758C45.8482 49.9613 37.761 60.4035 37.761 72.7351C37.761 87.9276 50.0795 100.246 65.272 100.246C72.6602 100.246 79.3681 97.3326 84.3155 92.5913L94.3911 102.667C86.8984 109.189 76.6023 113 64.636 113Z" fill="#39C7E6"/>
+    <circle cx="75.25" cy="48.25" r="9.75" fill="#FFC33B"/>
+    <circle cx="52.75" cy="79.75" r="9.75" fill="#39C7E6"/>
+  </g>
+  <text x="184" y="103" fill="#1F1813" font-family="Iowan Old Style, Palatino Linotype, Book Antiqua, Georgia, serif" font-size="82" font-style="italic" letter-spacing="-2.2">Glossa</text>
+  <text x="189" y="131" fill="#7F3427" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="15" font-weight="700" letter-spacing="4.2">TRANSLATION WORKFLOW</text>
+</svg>

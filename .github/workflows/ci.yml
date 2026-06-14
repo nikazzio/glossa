@@ -68,7 +68,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm audit --audit-level=moderate --package-lock-only
+      - name: Audit shipped npm dependencies only
+        run: npm audit --omit=dev --audit-level=moderate --package-lock-only
 
   cargo-audit:
     runs-on: ubuntu-latest
