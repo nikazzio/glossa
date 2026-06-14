@@ -251,14 +251,29 @@ Regole:
 
 ### Seconda barra (fly-out progetto)
 
-Nel progetto la barra primaria contiene la nav (`Run/Pipeline/Document/Insight/Chunk`) + back arrow in cima. I pannelli **inline** (Run, Pipeline, Document) vivono dentro la barra; i pannelli **ricchi** (Insight, Chunk, Config pipeline) escono in una **seconda barra push** (`ProjectFlyout`, `ConfigDrawer`) ancorata al bordo destro della barra, che spinge il documento (niente overlay, niente backdrop). La larghezza è animata (`width 0 → N`), così l'apertura/chiusura è fluida e parte sempre dal bordo della barra.
+Nel progetto la barra primaria contiene la nav (`Run/Pipeline/Document/Insight/Chunk`) + back arrow in cima. I pannelli **inline** (Run, Pipeline, Document) vivono dentro la barra; i pannelli **ricchi** (Insight, Chunk, Config pipeline) escono in una **seconda barra push** (`ProjectFlyout`, `ConfigDrawer`) ancorata al bordo destro della barra, che spinge il documento. La larghezza è animata (`width 0 → N`), così l'apertura/chiusura è fluida e parte sempre dal bordo della barra.
 
-### Resize (drag) — `useEdgeResize` + `ResizeHandle`
+**Auto-collapse non distruttivo**: aprendo Insight/Chunk la barra primaria si comprime a icone, ma la preferenza manuale dell'utente è ricordata in `uiStore.projectContextUserExpanded`. Alla chiusura del fly-out (ritorno a un pannello inline) la barra ritorna allo stato scelto dall'utente. `setProjectContextCollapsed` registra la scelta come preferenza.
+
+**Overlay su finestre strette**: sotto `FLYOUT_OVERLAY_BELOW` (1100px, `hooks/useViewportWidth.ts`) i fly-out passano da push a **overlay** (`position: absolute` con offset sinistro pari alla larghezza del rail + ombra), così il documento resta leggibile. Sopra soglia tornano push.
+
+**Caricamento documento**: `chunksStore.loadDocument` **non** apre il Chunk drawer (eviterebbe di spostare il layout di lettura); il pannello Chunk si apre solo su azione esplicita.
+
+### Resize (drag + tastiera) — `useEdgeResize` + `ResizeHandle`
 
 Tutte le superfici laterali sono ridimensionabili dal bordo destro (`components/layout/useEdgeResize.tsx`). Le larghezze e lo stato collapse sono persistiti in `uiStore`.
 - **Barre primarie** (home, progetto): mode `collapse` — trascinando sotto soglia collassano a icone in tempo reale (reversibile nel drag).
 - **Fly-out** (Insight, Chunk, ConfigDrawer): mode `dismiss` — trascinando sotto soglia il pannello **scompare** al rilascio (non collassa a icona).
+- **Accessibilità**: `ResizeHandle` è tabbabile (`role="separator"` + `aria-valuenow/min/max`); ←/→ ridimensionano a step di 16px, Home/End vanno a min/max, **doppio click = reset** alla larghezza di default (rail 240, flyout 430, config 560). Grip sottile sempre visibile (scopribilità), accentuato in hover/drag.
 - Durante il drag la transizione di larghezza è disattivata (movimento 1:1); allo snap/chiusura riprende l'animazione. Niente larghezze hard-coded nei consumer: leggere da `uiStore`.
+
+### Token di motion — `components/layout/motion.ts`
+
+Spring e curve condivise dalla shell, niente magic number duplicati: `SPRING_PANEL` (`spring 30/280`, fly-out), `EASE_EDITORIAL` (`[0.22,1,0.36,1]`, ingressi barre), `WIDTH_TRANSITION_CLASS` (`transition-[width] duration-200`).
+
+### Navigazione da tastiera del rail
+
+Il `role="tablist"` verticale del rail progetto (`PipelineSidebar`) usa roving tabindex (0 sull'attivo, -1 sugli altri): ↑/↓ (e ←/→) spostano il focus tra le voci, Home/End ai estremi; attivazione manuale con Enter/Space/click (non intrusiva sui fly-out). Stesso pattern dei tab strip di `InsightsDrawer`.
 
 ---
 

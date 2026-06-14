@@ -77,6 +77,18 @@ describe('chunksStore', () => {
     expect(useUiStore.getState().selectedChunkId).toBe(useChunksStore.getState().chunks[0].id);
   });
 
+  it('does not auto-open the chunk drawer when loading a document', () => {
+    useUiStore.setState({ showChunkDrawer: false });
+
+    useChunksStore.getState().loadDocument('Alpha.\n\nBeta.\n\nGamma.', {
+      useChunking: true,
+      targetWordsPerChunk: 1,
+    });
+
+    // Il layout di lettura resta pieno: nessuno spostamento automatico.
+    expect(useUiStore.getState().showChunkDrawer).toBe(false);
+  });
+
   it('marks existing translation stale when editing source text', () => {
     usePipelineStore.getState().setInputText('Original');
     useChunksStore.getState().generateChunks();

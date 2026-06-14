@@ -5,11 +5,16 @@ import { toast } from 'sonner';
 import { AnimatePresence, motion } from 'motion/react';
 import { IconButton, PillButton } from '../ui';
 import { ResizeHandle, useEdgeResize } from '../layout/useEdgeResize';
+import { SPRING_PANEL } from '../layout/motion';
+import { useViewportWidth, FLYOUT_OVERLAY_BELOW } from '../../hooks/useViewportWidth';
 import { PipelineConfig } from '../pipeline/PipelineConfig';
 
 const CONFIG_MIN = 420;
 const CONFIG_MAX = 760;
 const CONFIG_DISMISS_AT = 380;
+const CONFIG_DEFAULT = 560;
+/** Larghezza del rail collassato: offset sinistro dell'overlay su finestre strette. */
+const CONFIG_RAIL_COLLAPSED = 64;
 import { useUiStore } from '../../stores/uiStore';
 import { useConfigStore } from '../../stores/configStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
@@ -37,8 +42,15 @@ export function ConfigDrawer({
   const setShowConfigDrawer = useUiStore((state) => state.setShowConfigDrawer);
   const width = useUiStore((state) => state.configFlyoutWidth);
   const setWidth = useUiStore((state) => state.setConfigFlyoutWidth);
+  const projectContextCollapsed = useUiStore((state) => state.projectContextCollapsed);
+  const projectSidebarWidth = useUiStore((state) => state.projectSidebarWidth);
   const { dragging, startDrag } = useEdgeResize();
   const drawerRef = useRef<HTMLDivElement | null>(null);
+  const viewportWidth = useViewportWidth();
+
+  // Overlay sul documento su finestre strette (vedi ProjectFlyout): l'offset segue il rail.
+  const overlay = viewportWidth > 0 && viewportWidth < FLYOUT_OVERLAY_BELOW;
+  const railWidth = projectContextCollapsed ? CONFIG_RAIL_COLLAPSED : projectSidebarWidth;
 
   const handleResizeStart = (event: React.PointerEvent) => {
     startDrag(event, {
@@ -189,10 +201,13 @@ export function ConfigDrawer({
           initial={{ width: 0, opacity: 0 }}
           animate={{ width, opacity: 1 }}
           exit={{ width: 0, opacity: 0 }}
-          transition={dragging ? { duration: 0 } : { type: 'spring', damping: 30, stiffness: 280 }}
+          transition={dragging ? { duration: 0 } : SPRING_PANEL}
           role="dialog"
           aria-labelledby="config-drawer-title"
-          className="relative flex h-full shrink-0 overflow-hidden border-r border-editorial-border bg-editorial-bg"
+          style={overlay ? { left: railWidth } : undefined}
+          className={`flex h-full overflow-hidden border-r border-editorial-border bg-editorial-bg ${
+            overlay ? 'absolute inset-y-0 z-40 shadow-2xl shadow-black/25' : 'relative shrink-0'
+          }`}
         >
           <div className="flex h-full flex-col overflow-hidden" style={{ width }}>
           {/* Header */}
@@ -254,7 +269,16 @@ export function ConfigDrawer({
             </div>
           )}
           </div>
-          <ResizeHandle onPointerDown={handleResizeStart} dragging={dragging} label={t('projectShell.resizePanel')} />
+          <ResizeHandle
+            onPointerDown={handleResizeStart}
+            dragging={dragging}
+            label={t('projectShell.resizePanel')}
+            width={width}
+            min={CONFIG_MIN}
+            max={CONFIG_MAX}
+            onResize={setWidth}
+            onReset={() => setWidth(CONFIG_DEFAULT)}
+          />
         </motion.aside>
       )}
     </AnimatePresence>

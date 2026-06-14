@@ -50,8 +50,7 @@
     "chunkTab": "Chunk",
     "resizeRail": "Resize sidebar",
     "resizePanel": "Resize panel",
-    "noDocumentHint": "Import a source document to unlock reader controls, export, and synchronized panes.",
-    "insightHint": "Open the insights drawer and jump directly to document index, search, stats, coherence, or glossary."
+    "noDocumentHint": "Import a source document to unlock reader controls, export, and synchronized panes."
   },
   "a11y": {
     "runStarted": "Pipeline run started.",
@@ -940,7 +939,7 @@
       "step5": "Review and correct the candidate translation in the workspace, then re-evaluate or lock the chunk.",
       "step6": "Export in .txt, .md, .html, .docx, or bilingual .md for publication or external review.",
       "p3": "Provider and model are independent for every stage and for the judge: you can mix a fast model for translation with a stronger one for refine or audit, or stay fully local with Ollama.",
-      "nav": "Navigation: the breadcrumb at the top (Glossa // workspace // project) returns to home when you click the workspace. On the left there is a single bar: on the home it lists areas and workspaces (edit and delete of the active workspace live on its row); inside a project it holds Run, Pipeline, Document, Insight and Chunk. Run/Pipeline/Document open inside the bar; Insight, Chunk and the pipeline configuration open in a second panel alongside. Every bar resizes by dragging its right edge and collapses to icons."
+      "nav": "Navigation: the breadcrumb at the top (Glossa // workspace // project) returns to home when you click the workspace. On the left there is a single bar: on the home it lists areas and workspaces (edit and delete of the active workspace live on its row); inside a project it holds Run, Pipeline, Document, Insight and Chunk. Run/Pipeline/Document open inside the bar; Insight, Chunk and the pipeline configuration open in a second panel alongside. Every bar resizes by dragging its right edge and collapses to icons; the edge is keyboard-reachable too (←/→ to resize, double-click to reset the width) and the project entries are navigable with the arrow keys. Loading a document keeps the view full: the Chunk panel opens only when you call it."
     },
     "pipeline": {
       "title": "Translation pipeline",

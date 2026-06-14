@@ -297,7 +297,7 @@ export function SettingsModal() {
                   <button
                     type="button"
                     onClick={() => setShowSettings(false)}
-                    className="rounded-full border border-editorial-border px-5 py-3 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    className="rounded-full border border-editorial-border px-5 py-3 text-[11px] font-bold uppercase tracking-[0.16em] text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   >
                     {t('common.close')}
                   </button>
@@ -316,13 +316,13 @@ export function SettingsModal() {
                   <div className="space-y-3">
                     <div className="flex items-center gap-1.5">
                       <Scissors size={11} className="text-editorial-accent shrink-0" />
-                      <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                      <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
                         {t('settings.segmentation')}
                       </p>
                     </div>
                     <div className="grid grid-cols-3 gap-4">
                       <div className="space-y-1.5">
-                        <label className="block text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                        <label className="block text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
                           {t('settings.chunkPresetShort')}
                         </label>
                         <input
@@ -336,7 +336,7 @@ export function SettingsModal() {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="block text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                        <label className="block text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
                           {t('settings.chunkPresetMedium')}
                         </label>
                         <input
@@ -350,7 +350,7 @@ export function SettingsModal() {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="block text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                        <label className="block text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
                           {t('settings.chunkPresetLong')}
                         </label>
                         <input
@@ -369,7 +369,7 @@ export function SettingsModal() {
                   <div className="space-y-4">
                     <div className="flex items-center gap-1.5">
                       <Layers size={11} className="text-editorial-accent shrink-0" />
-                      <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                      <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
                         {t('settings.newPipelineInit')}
                       </p>
                     </div>
@@ -386,7 +386,7 @@ export function SettingsModal() {
                   <div className="space-y-4">
                     <div className="flex items-center gap-1.5">
                       <LayoutTemplate size={11} className="text-editorial-accent shrink-0" />
-                      <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                      <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
                         {t('header.readerLayout')}
                       </p>
                     </div>
@@ -403,7 +403,7 @@ export function SettingsModal() {
                   <div className="space-y-4">
                     <div className="flex items-center gap-1.5">
                       <Palette size={11} className="text-editorial-accent shrink-0" />
-                      <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                      <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
                         {t('settings.highlights')}
                       </p>
                     </div>
@@ -441,7 +441,7 @@ export function SettingsModal() {
                   <div className="space-y-4">
                     <div className="flex items-center gap-1.5">
                       <Type size={11} className="text-editorial-accent shrink-0" />
-                      <p className="text-[10px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
+                      <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
                         {t('settings.typography')}
                       </p>
                     </div>
@@ -487,7 +487,7 @@ export function SettingsModal() {
                 >
                   {/* Provider workspace */}
                   <div className="space-y-4">
-                    <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                    <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
                       {t('settings.providerConfig')}
                     </p>
                     <div className="rounded-[20px] border border-editorial-border bg-editorial-textbox/20 p-6 space-y-4">
@@ -570,7 +570,7 @@ export function SettingsModal() {
                                   onClick={() => refreshOllama()}
                                   disabled={refreshing}
                                   title={t('ollama.refresh')}
-                                  className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted hover:text-editorial-ink transition-colors disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                                  className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-editorial-muted hover:text-editorial-ink transition-colors disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                                   aria-label={t('ollama.refresh')}
                                 >
                                   <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
@@ -619,7 +619,7 @@ export function SettingsModal() {
                               {groups.map(({ label, ids }) => (
                                 <div key={label || '_all'} className="space-y-1.5">
                                   {label && (
-                                    <p className="px-1 text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                                    <p className="px-1 text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
                                       {label}
                                     </p>
                                   )}
@@ -673,7 +673,7 @@ export function SettingsModal() {
                     <button
                       type="button"
                       onClick={() => setShowPricingOverrides(!showPricingOverrides)}
-                      className="flex items-center gap-2 text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                      className="flex items-center gap-2 text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                       aria-expanded={showPricingOverrides}
                     >
                       {showPricingOverrides ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
@@ -686,9 +686,9 @@ export function SettingsModal() {
                           <table className="w-full text-xs font-mono">
                             <thead>
                               <tr className="border-b border-editorial-border bg-editorial-textbox/30">
-                                <th className="text-left px-3 py-2 font-bold uppercase tracking-[0.35em] text-editorial-muted">Model</th>
-                                <th className="text-right px-3 py-2 font-bold uppercase tracking-[0.35em] text-editorial-muted">Input $/1M</th>
-                                <th className="text-right px-3 py-2 font-bold uppercase tracking-[0.35em] text-editorial-muted">Output $/1M</th>
+                                <th className="text-left px-3 py-2 font-bold uppercase tracking-[0.16em] text-editorial-muted">Model</th>
+                                <th className="text-right px-3 py-2 font-bold uppercase tracking-[0.16em] text-editorial-muted">Input $/1M</th>
+                                <th className="text-right px-3 py-2 font-bold uppercase tracking-[0.16em] text-editorial-muted">Output $/1M</th>
                                 <th className="px-3 py-2" />
                               </tr>
                             </thead>
@@ -729,7 +729,7 @@ export function SettingsModal() {
                                         <button
                                           type="button"
                                           onClick={() => resetOverride(key)}
-                                          className="text-xs font-bold uppercase tracking-[0.28em] text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none"
+                                          className="text-xs font-bold uppercase tracking-[0.16em] text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none"
                                         >
                                           {t('cost.resetOverride')}
                                         </button>
@@ -746,7 +746,7 @@ export function SettingsModal() {
                             <button
                               type="button"
                               onClick={resetAll}
-                              className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-accent hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                              className="text-[11px] font-bold uppercase tracking-[0.16em] text-editorial-accent hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                             >
                               {t('cost.resetAll')}
                             </button>
@@ -766,7 +766,7 @@ export function SettingsModal() {
                     >
                       <div className="flex items-center gap-3">
                         <AlertCircle size={18} className="text-editorial-accent shrink-0" />
-                        <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+                        <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-editorial-muted">
                           {t('settings.securityAdvisory')}
                         </div>
                       </div>
