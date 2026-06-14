@@ -23,7 +23,7 @@ Sviluppo attivo (pre-1.0). Priorità assoluta alla modalità documento/editorial
 ## Documentazione e Stato
 - **Architettura**: Aggiorna `docs-dev/ARCHITECTURE.md` per modifiche ai flussi, comandi Tauri, schemi DB o store Zustand.
 - **UI**: Consulta `docs-dev/UI_DESIGN_SYSTEM.md` prima di qualsiasi modifica visiva.
-- **Avanzamento**: Leggi `STATO_SESSIONE.md` a inizio sessione e aggiornalo obbligatoriamente a fine task/feature. Aggiorna l'help in-app per modifiche funzionali.
+- **Avanzamento**: Leggi `STATO_SESSIONE_2.0.md` a inizio sessione e aggiornalo obbligatoriamente a fine task/feature. Aggiorna l'help in-app per modifiche funzionali.
 
 ## Git e Test
 - **Git**: Aggiorna sempre `main` prima di creare un branch (`git checkout main && git pull origin main && git checkout -b nome-branch`).
