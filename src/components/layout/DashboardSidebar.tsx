@@ -12,7 +12,7 @@ import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { EditorialModalShell } from '../common';
 import { IconButton, PillButton } from '../ui';
 import { WorkspaceSettingsModal } from '../workspace/WorkspaceSettingsModal';
-import { ShellNavItem, ShellNavSection } from './ShellNav';
+import { ShellNavFooter, ShellNavItem, ShellNavSection } from './ShellNav';
 import { ResizeHandle, useEdgeResize } from './useEdgeResize';
 
 const AREA_ITEMS = [
@@ -145,9 +145,10 @@ export function DashboardSidebar() {
       }`}
     >
       <div
-        className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden custom-scrollbar pb-4 pt-2"
+        className="flex min-h-0 flex-1 flex-col"
         style={{ width: collapsed ? SIDEBAR_COLLAPSED : undefined }}
       >
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden custom-scrollbar pb-4 pt-2">
         <ShellNavSection icon={BookOpenText} label={t('sidebar.areaLabel')} collapsed={collapsed}>
           {AREA_ITEMS.map(({ id, icon: Icon, enabled }) => (
             <ShellNavItem
@@ -236,6 +237,9 @@ export function DashboardSidebar() {
             );
           })}
         </ShellNavSection>
+        </div>
+
+        <ShellNavFooter collapsed={collapsed} />
       </div>
 
       <ResizeHandle onPointerDown={handleResizeStart} dragging={dragging} label={t('sidebar.resize')} />

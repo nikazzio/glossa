@@ -1,4 +1,4 @@
-import { HelpCircle, LibraryBig, Save, Settings } from 'lucide-react';
+import { LibraryBig, Save } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { lazy, Suspense, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,9 +16,8 @@ const HelpGuide = lazy(() =>
 );
 
 export function Header() {
-  const { setShowSettings, setShowHelp, showHelp } = useUiStore(
+  const { setShowHelp, showHelp } = useUiStore(
     useShallow((state) => ({
-      setShowSettings: state.setShowSettings,
       setShowHelp: state.setShowHelp,
       showHelp: state.showHelp,
     })),
@@ -167,13 +166,6 @@ export function Header() {
           >
             <LibraryBig size={16} />
           </IconButton>
-          <IconButton
-            onClick={() => setShowSettings(true)}
-            title={t('header.settings')}
-            tooltipSide="bottom"
-          >
-            <Settings size={16} />
-          </IconButton>
           <Tooltip
             label={`${t('language.label')} (${i18n.language === 'it' ? 'IT -> EN' : 'EN -> IT'})`}
             side="bottom"
@@ -189,14 +181,6 @@ export function Header() {
               </span>
             </button>
           </Tooltip>
-          <IconButton
-            onClick={() => setShowHelp(true)}
-            title={`${t('help.title')} (Ctrl+H)`}
-            ariaLabel={t('help.title')}
-            tooltipSide="bottom"
-          >
-            <HelpCircle size={16} />
-          </IconButton>
         </div>
       </div>
 

@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
-import type { LucideIcon } from 'lucide-react';
-import { SectionLabel, Tooltip } from '../ui';
+import { HelpCircle, Settings, type LucideIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { useUiStore } from '../../stores/uiStore';
+import { IconButton, SectionLabel, Tooltip } from '../ui';
 
 /**
  * Multibar shell — superfici di navigazione laterali (home e progetto).
@@ -33,6 +35,41 @@ export function ShellNavSection({ icon: Icon, label, action, collapsed = false, 
         </div>
       )}
       <div className="space-y-0.5">{children}</div>
+    </div>
+  );
+}
+
+/** Footer barra: azioni app-level (impostazioni, aiuto) ancorate in basso. */
+export function ShellNavFooter({ collapsed = false }: { collapsed?: boolean }) {
+  const { t } = useTranslation();
+  const setShowSettings = useUiStore((state) => state.setShowSettings);
+  const setShowHelp = useUiStore((state) => state.setShowHelp);
+
+  return (
+    <div
+      className={`mt-auto flex border-t border-editorial-border/50 ${
+        collapsed ? 'flex-col items-center gap-1.5 py-2.5' : 'items-center gap-1 px-3 py-2.5'
+      }`}
+    >
+      <IconButton
+        size="md"
+        tone="muted"
+        onClick={() => setShowSettings(true)}
+        title={t('header.settings')}
+        tooltipSide="right"
+      >
+        <Settings size={15} />
+      </IconButton>
+      <IconButton
+        size="md"
+        tone="muted"
+        onClick={() => setShowHelp(true)}
+        title={`${t('help.title')} (Ctrl+H)`}
+        ariaLabel={t('help.title')}
+        tooltipSide="right"
+      >
+        <HelpCircle size={15} />
+      </IconButton>
     </div>
   );
 }

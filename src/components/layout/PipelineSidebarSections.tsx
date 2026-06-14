@@ -226,7 +226,7 @@ export function PipelineSidebarRunSection({
             <Zap size={14} className="text-editorial-accent" aria-hidden="true" />
           )}
           <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-editorial-accent">
-            {pipelineMode === 'test' ? t('pipeline.modeTest') : t('pipeline.modeProduction')}
+            {pipelineMode === 'test' ? t('pipeline.modeTest') : t('pipeline.modeProductionShort')}
           </span>
         </div>
         {isProcessing ? (
@@ -295,9 +295,6 @@ export function PipelineSidebarRunSection({
                 <Zap size={14} />
               </IconButton>
             </div>
-            <span className="font-display text-sm italic text-editorial-accent">
-              {pipelineMode === 'test' ? t('pipeline.modeTest') : t('pipeline.modeProduction')}
-            </span>
           </div>
 
           <div className="flex flex-col items-center gap-2.5">

@@ -10,7 +10,7 @@ import {
 import { motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { DashboardSidebar } from './DashboardSidebar';
-import { ShellNavItem } from './ShellNav';
+import { ShellNavFooter, ShellNavItem } from './ShellNav';
 import { ResizeHandle, useEdgeResize } from './useEdgeResize';
 import {
   PipelineSidebarDocumentSection,
@@ -88,12 +88,10 @@ export function PipelineSidebar({
       }
       return;
     }
-    // Pannelli inline (run/pipeline/document)
-    if (collapsed) {
-      setProjectContextCollapsed(false);
-      setActiveProjectPanel(panel);
-    } else if (panel === activeProjectPanel) {
-      setProjectContextCollapsed(true);
+    // Pannelli inline (run/pipeline/document): cambiare sezione conserva lo stato
+    // collassato/espanso; solo il click sulla sezione già attiva fa da toggle.
+    if (panel === activeProjectPanel) {
+      setProjectContextCollapsed(!collapsed);
     } else {
       setActiveProjectPanel(panel);
     }
@@ -187,6 +185,8 @@ export function PipelineSidebar({
             />
           ) : null}
         </div>
+
+        <ShellNavFooter collapsed={collapsed} />
       </div>
 
       <ResizeHandle onPointerDown={handleResizeStart} dragging={dragging} label={t('projectShell.resizeRail')} />

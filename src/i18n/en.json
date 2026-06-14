@@ -186,6 +186,7 @@
     "resetPreviewDone": "Preview cleared",
     "modeTest": "Test",
     "modeProduction": "Production",
+    "modeProductionShort": "Prod",
     "modeTestHint": "Runs the pipeline on one chunk and produces a preview. Configuration stays editable.",
     "modeProductionHint": "Runs the pipeline on the entire document.",
     "modeLockedHint": "Mode locked — real translations exist. Use Full Reset to start over.",
