@@ -1,14 +1,12 @@
 <div align="center">
 
-# ✦ Glossa
-
 ```text
-   _____ _                           
-  / ____| |                          
- | |  __| | __ _ ___  ___  ___  ___  
- | | |_ | |/ _` / __|/ _ \/ __|/ _ \ 
- | |__| | | (_| \__ \  __/\__ \  __/ 
-  \_____|_|\__,_|___/\___||___/\___|
+  ██████╗ ██╗      ██████╗ ███████╗███████╗ █████╗
+ ██╔════╝ ██║     ██╔═══██╗██╔════╝██╔════╝██╔══██╗
+ ██║  ███╗██║     ██║   ██║███████╗███████╗███████║
+ ██║   ██║██║     ██║   ██║╚════██║╚════██║██╔══██║
+ ╚██████╔╝███████╗╚██████╔╝███████║███████║██║  ██║
+  ╚═════╝ ╚══════╝ ╚═════╝ ╚══════╝╚══════╝╚═╝  ╚═╝
 ```
 
 **Multi-stage AI translation pipeline for scholars**
@@ -26,6 +24,32 @@ A desktop application that chains multiple LLM passes — draft, refinement, aud
 </div>
 
 ---
+
+## Download the app
+
+Glossa is a desktop application first. If you want to use it, download a release build from GitHub instead of cloning the repository.
+
+- Windows: installer `.exe` or `.msi`
+- macOS: `.dmg`
+- Linux: `.AppImage`, `.deb`, or `.rpm`
+
+Latest release:
+
+- [GitHub Releases](https://github.com/nikazzio/glossa/releases/latest)
+- Current latest tag as of June 12, 2026: [`glossa-v0.11.0`](https://github.com/nikazzio/glossa/releases/tag/glossa-v0.11.0)
+
+Use the source repository only if you want to develop Glossa, test changes locally, or contribute code.
+
+## Develop from source
+
+If you want to hack on Glossa itself, clone the repository and run it locally:
+
+```bash
+git clone https://github.com/nikazzio/glossa.git
+cd glossa
+npm install
+npm run tauri:dev
+```
 
 ## How it works
 
@@ -121,12 +145,9 @@ Windows:
    cargo --version
    ```
 
-### Install & run
+### Install & run from source
 
 ```bash
-git clone https://github.com/nikazzio/glossa.git
-cd glossa
-npm install
 npm run tauri:dev      # development mode with hot reload
 ```
 

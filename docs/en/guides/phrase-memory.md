@@ -4,10 +4,10 @@ title: Phrase memory
 
 # Phrase memory
 
-La phrase memory aiuta Glossa a riutilizzare frammenti sorgente-target già approvati
-quando ricompare una formulazione simile.
+Phrase memory helps Glossa reuse previously approved source-target fragments
+when similar wording appears again.
 
-> Questa pagina è una panoramica rapida. Per il workflow completo, leggi [Glossario e phrase memory](./glossary-and-memory).
+> This page is a compact overview. For the full workflow, read [Glossary and phrase memory](./glossary-and-memory).
 
 ## What it stores
 

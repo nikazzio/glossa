@@ -1,13 +1,13 @@
 ---
-title: Pipeline config
+title: Configurazione pipeline
 ---
 
-# Pipeline config
+# Configurazione pipeline
 
-Glossa separates pipeline configuration from document content so you can tune
-the run before starting a batch.
+Glossa separa la configurazione della pipeline dal contenuto del documento, così puoi
+tarare la run prima di avviare un batch.
 
-## Main knobs
+## Controlli principali
 
 - Source language
 - Target language
@@ -18,18 +18,52 @@ the run before starting a batch.
 - Phrase-memory settings
 - Audit / judge settings
 
-## Pipeline modes
+## Superfici tipiche di configurazione
 
-| Mode | Description |
+| Superficie | Cosa imposti di solito |
 |---|---|
-| Standard | Single translation pass plus audit |
-| Editorial | Translation, refine, and formatting stages before audit |
+| Settings tab | Lingue, modalità run, default generali, persona |
+| Translation tab | Prompt stage, modelli, opzioni specifiche provider |
+| Audit tab | Modello judge, prompt judge, prompt coherence |
+| Area glossario | Glossario assegnato e voci terminologiche |
 
-## Execution rules
+## Cosa cambia di solito per prima cosa
 
-- Test mode processes one chunk and leaves the configuration editable.
-- Production mode processes the full document.
-- A cancelled run resumes from the already completed chunks when possible.
+Se una run non è abbastanza buona, cambia questi elementi in ordine:
+
+1. Translation prompt
+2. Provider or model
+3. Glossary entries
+4. Phrase-memory retrieval
+5. Judge prompt
+
+Lascia stare tutto il resto finché non capisci quale parte sta causando il problema.
+
+## Modalità pipeline
+
+| Modalità | Descrizione |
+|---|---|
+| Standard | Singola passata di traduzione più audit |
+| Editorial | Stage di translation, refine e format prima dell'audit |
+
+## Consigli a livello di stage
+
+- Mantieni il translation stage focalizzato su accuratezza e stile di base.
+- Usa refine per riscrivere, non per la prima traduzione.
+- Tieni il format stretto, così non altera il significato in modo silenzioso.
+- Usa il judge per segnalare problemi, non per sostituire la review umana.
+
+## Regole di esecuzione
+
+- Il Test mode processa un chunk e lascia la configurazione modificabile.
+- Il Production mode processa l'intero documento.
+- Una run cancellata riprende dai chunk già completati quando possibile.
+
+## Consigli di stabilità
+
+- Cambia una variabile importante alla volta.
+- Salva la pipeline prima delle run batch più grandi.
+- Se un progetto è stabile, clona o rinomina una pipeline prima di sperimentare.
 
 ## When to change config
 

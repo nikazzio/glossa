@@ -1,26 +1,27 @@
 ---
-title: Keyboard shortcuts
+title: Scorciatoie da tastiera
 ---
 
-# Keyboard shortcuts
+# Scorciatoie da tastiera
 
-Glossa listens for the same shortcut set on Windows, Linux, and macOS.
-On macOS, use `Cmd` where the interface shows `Ctrl`.
+Glossa usa lo stesso set di scorciatoie su Windows, Linux e macOS.
+Su macOS usa `Cmd` dove l'interfaccia mostra `Ctrl`.
 
-## Core shortcuts
+## Scorciatoie principali
 
-| Shortcut | Action |
+| Scorciatoia | Azione |
 |---|---|
-| `Ctrl + Enter` | Run the pipeline, or run a dry test if the pipeline is in Test mode |
-| `Ctrl + S` | Save the current project and any dirty library items |
-| `Ctrl + E` | Open export for the current document when chunks are available |
-| `Ctrl + ,` | Open the configuration drawer |
-| `Ctrl + H` | Open the help view on the shortcuts section |
-| `Ctrl + 1` to `Ctrl + 9` | Jump to the corresponding chunk |
-| `Esc` | Close the current modal or overlay |
+| `Ctrl + Enter` | Avvia la pipeline, oppure un test se la pipeline è in Test mode |
+| `Ctrl + S` | Salva il progetto corrente e gli elementi libreria modificati |
+| `Ctrl + E` | Apre l'export del documento corrente quando i chunk sono disponibili |
+| `Ctrl + ,` | Apre il drawer di configurazione |
+| `Ctrl + H` | Apre l'help sulla sezione scorciatoie |
+| `Ctrl + 1` fino a `Ctrl + 9` | Salta al chunk corrispondente |
+| `Esc` | Chiude la modale o l'overlay corrente |
 
-## Notes
+## Note
 
-- `Ctrl + Enter` works even when the focus is inside text inputs.
-- Chunk switching only reaches the first nine chunks directly from the keyboard.
-- Saving is deferred when a project is running and the project cannot be written yet.
+- `Ctrl + Enter` funziona anche quando il focus è dentro un input testuale.
+- Il salto diretto da tastiera raggiunge solo i primi nove chunk.
+- Il salvataggio viene rimandato se il progetto è in esecuzione e non può ancora essere scritto.
+- L'app mostra `Ctrl` nella UI; su macOS significa `Cmd`.
