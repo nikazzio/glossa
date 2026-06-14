@@ -218,33 +218,42 @@ export function PipelineSidebarRunSection({
 
   if (collapsed) {
     return (
-      <div className="flex flex-col items-center gap-2 px-1">
-        <FlaskConical size={13} className="text-editorial-muted/70" aria-hidden="true" />
+      <div className="flex flex-col items-center gap-3 px-1 pt-1">
+        <div className="flex flex-col items-center gap-1">
+          {pipelineMode === 'test' ? (
+            <FlaskConical size={14} className="text-editorial-accent" aria-hidden="true" />
+          ) : (
+            <Zap size={14} className="text-editorial-accent" aria-hidden="true" />
+          )}
+          <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-editorial-accent">
+            {pipelineMode === 'test' ? t('pipeline.modeTest') : t('pipeline.modeProduction')}
+          </span>
+        </div>
         {isProcessing ? (
           cancelRequested ? (
-            <IconButton size="lg" tone="muted" disabled title={t('pipeline.stopping')} tooltipSide="right" className="h-11 w-11 bg-editorial-bg opacity-50">
-              <Loader2 size={18} className="animate-spin" />
+            <IconButton size="md" tone="muted" disabled title={t('pipeline.stopping')} tooltipSide="right" className="h-9 w-9 bg-editorial-bg opacity-50">
+              <Loader2 size={15} className="animate-spin" />
             </IconButton>
           ) : (
-            <IconButton size="lg" tone="default" onClick={onCancelPipeline} title={t('pipeline.stopPipeline')} tooltipSide="right" className="h-11 w-11 border-editorial-accent bg-editorial-bg text-editorial-accent hover:bg-editorial-accent/10">
-              <Square size={16} fill="currentColor" />
+            <IconButton size="md" tone="default" onClick={onCancelPipeline} title={t('pipeline.stopPipeline')} tooltipSide="right" className="h-9 w-9 border-editorial-accent bg-editorial-bg text-editorial-accent hover:bg-editorial-accent/10">
+              <Square size={14} fill="currentColor" />
             </IconButton>
           )
         ) : (
-          <IconButton size="lg" tone="charcoal" onClick={pipelineMode === 'test' ? onDryRun : onRunPipeline} disabled={isProcessing || !hasDocument} title={`${t('pipeline.beginPipeline')} (Ctrl+↵)`} ariaLabel={t('pipeline.beginPipeline')} tooltipSide="right" className="h-11 w-11 border-editorial-charcoal bg-editorial-charcoal text-white hover:bg-editorial-charcoal/85">
-            <Play size={18} fill="currentColor" />
+          <IconButton size="md" tone="charcoal" onClick={pipelineMode === 'test' ? onDryRun : onRunPipeline} disabled={isProcessing || !hasDocument} title={`${t('pipeline.beginPipeline')} (Ctrl+↵)`} ariaLabel={t('pipeline.beginPipeline')} tooltipSide="right" className="h-9 w-9 border-editorial-charcoal bg-editorial-charcoal text-white hover:bg-editorial-charcoal/85">
+            <Play size={15} fill="currentColor" />
           </IconButton>
         )}
         {hasDocument ? (
-          <span className="text-[11px] font-bold tabular-nums tracking-[0.1em] text-editorial-muted">
+          <span className="text-[10px] font-bold tabular-nums tracking-[0.1em] text-editorial-muted">
             {completedCount}/{pipelineMode === 'test' ? runChunkCount : totalChunks}
           </span>
         ) : null}
-        <IconButton size="md" onClick={onRunAuditOnly} disabled={isProcessing || !hasDocument} title={t('pipeline.runAuditOnly')} ariaLabel={t('pipeline.runAuditOnly')} tooltipSide="right" className="bg-editorial-bg">
+        <IconButton size="md" onClick={onRunAuditOnly} disabled={isProcessing || !hasDocument} title={t('pipeline.runAuditOnly')} ariaLabel={t('pipeline.runAuditOnly')} tooltipSide="right" className="h-9 w-9 bg-editorial-bg">
           <Highlighter size={14} />
         </IconButton>
         {currentChunk ? (
-          <IconButton size="md" tone="charcoal" onClick={() => currentChunk && onRetranslateChunk?.(currentChunk.id)} disabled={isProcessing || !currentChunk.hasOriginalText} title={pipelineMode === 'test' ? t('pipeline.retestChunk') : t('pipeline.retranslateChunk')} tooltipSide="right" className="h-10 w-10 bg-editorial-bg">
+          <IconButton size="md" tone="charcoal" onClick={() => currentChunk && onRetranslateChunk?.(currentChunk.id)} disabled={isProcessing || !currentChunk.hasOriginalText} title={pipelineMode === 'test' ? t('pipeline.retestChunk') : t('pipeline.retranslateChunk')} tooltipSide="right" className="h-9 w-9 bg-editorial-bg">
             <RotateCcw size={13} />
           </IconButton>
         ) : null}
@@ -286,6 +295,9 @@ export function PipelineSidebarRunSection({
                 <Zap size={14} />
               </IconButton>
             </div>
+            <span className="font-display text-sm italic text-editorial-accent">
+              {pipelineMode === 'test' ? t('pipeline.modeTest') : t('pipeline.modeProduction')}
+            </span>
           </div>
 
           <div className="flex flex-col items-center gap-2.5">
@@ -472,10 +484,10 @@ export function PipelineSidebarPipelinesSection({ collapsed = false }: { collaps
 
   if (collapsed) {
     return (
-      <div className="flex flex-col items-center gap-2 px-1">
+      <div className="flex flex-col items-center gap-3 px-1 pt-1">
         <Zap size={13} className="text-editorial-muted/70" aria-hidden="true" />
         {pipelines.length === 0 ? (
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-editorial-accent text-xs font-black text-white opacity-55">1</span>
+          <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-editorial-accent text-xs font-black text-white opacity-55">1</span>
         ) : (
           pipelines.map((pipeline, index) => {
             const isActive = pipeline.id === activePipelineId;
@@ -483,12 +495,12 @@ export function PipelineSidebarPipelinesSection({ collapsed = false }: { collaps
             return (
               <IconButton
                 key={pipeline.id}
-                size="lg"
+                size="md"
                 tone={isActive ? 'accent' : 'default'}
                 onClick={() => switchPipeline(pipeline.id)}
                 title={pipeline.name}
                 tooltipSide="right"
-                className="h-11 w-11 text-sm font-black"
+                className="h-9 w-9 text-sm font-black"
               >
                 {isPipelineRunning ? (
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-transparent border-t-current" />
@@ -505,7 +517,7 @@ export function PipelineSidebarPipelinesSection({ collapsed = false }: { collaps
             onClick={() => createNewPipeline(t('pipeline.pipelineNumber', { number: pipelines.length + 1 }))}
             title={t('pipeline.newPipeline')}
             tooltipSide="right"
-            className="border-dashed bg-editorial-bg"
+            className="h-9 w-9 border-dashed bg-editorial-bg"
           >
             <Plus size={14} />
           </IconButton>
@@ -518,7 +530,7 @@ export function PipelineSidebarPipelinesSection({ collapsed = false }: { collaps
           ariaLabel={t('pipeline.configurePipeline')}
           ariaPressed={showConfigDrawer}
           tooltipSide="right"
-          className={showConfigDrawer ? '' : 'bg-editorial-textbox'}
+          className={`h-9 w-9 ${showConfigDrawer ? '' : 'bg-editorial-textbox'}`}
         >
           <Settings2 size={15} />
         </IconButton>
@@ -657,34 +669,34 @@ export function PipelineSidebarDocumentSection({
 
   if (collapsed) {
     return (
-      <div className="flex flex-col items-center gap-2 px-1">
+      <div className="flex flex-col items-center gap-3 px-1 pt-1">
         <Columns2 size={13} className="text-editorial-muted/70" aria-hidden="true" />
         {hasDocument ? (
           <>
-            <IconButton size="md" tone={documentPaneFocus === 'both' ? 'accent' : 'default'} onClick={() => setDocumentPaneFocus('both')} title={t('document.focusBoth')} ariaPressed={documentPaneFocus === 'both'} tooltipSide="right">
+            <IconButton size="md" tone={documentPaneFocus === 'both' ? 'accent' : 'default'} onClick={() => setDocumentPaneFocus('both')} title={t('document.focusBoth')} ariaPressed={documentPaneFocus === 'both'} tooltipSide="right" className="h-9 w-9">
               <Columns2 size={14} />
             </IconButton>
-            <IconButton size="md" tone={documentPaneFocus === 'source' ? 'accent' : 'default'} onClick={() => setDocumentPaneFocus('source')} title={t('document.focusSource')} ariaPressed={documentPaneFocus === 'source'} tooltipSide="right">
+            <IconButton size="md" tone={documentPaneFocus === 'source' ? 'accent' : 'default'} onClick={() => setDocumentPaneFocus('source')} title={t('document.focusSource')} ariaPressed={documentPaneFocus === 'source'} tooltipSide="right" className="h-9 w-9">
               <PanelLeft size={14} />
             </IconButton>
-            <IconButton size="md" tone={documentPaneFocus === 'translation' ? 'accent' : 'default'} onClick={() => setDocumentPaneFocus('translation')} title={t('document.focusTranslation')} ariaPressed={documentPaneFocus === 'translation'} tooltipSide="right">
+            <IconButton size="md" tone={documentPaneFocus === 'translation' ? 'accent' : 'default'} onClick={() => setDocumentPaneFocus('translation')} title={t('document.focusTranslation')} ariaPressed={documentPaneFocus === 'translation'} tooltipSide="right" className="h-9 w-9">
               <PanelRight size={14} />
             </IconButton>
-            <IconButton size="md" tone={syncScrollEnabled && !syncScrollDisabled ? 'accent' : 'default'} onClick={() => setSyncScrollEnabled(!syncScrollEnabled)} title={syncScrollEnabled ? t('document.scrollSyncDisable') : t('document.scrollSyncEnable')} disabled={syncScrollDisabled} ariaPressed={syncScrollEnabled && !syncScrollDisabled} tooltipSide="right">
+            <IconButton size="md" tone={syncScrollEnabled && !syncScrollDisabled ? 'accent' : 'default'} onClick={() => setSyncScrollEnabled(!syncScrollEnabled)} title={syncScrollEnabled ? t('document.scrollSyncDisable') : t('document.scrollSyncEnable')} disabled={syncScrollDisabled} ariaPressed={syncScrollEnabled && !syncScrollDisabled} tooltipSide="right" className="h-9 w-9">
               {syncScrollEnabled && !syncScrollDisabled ? <Link2 size={14} /> : <Link2Off size={14} />}
             </IconButton>
-            <IconButton size="md" tone={highlightsEnabled ? 'accent' : 'default'} onClick={() => setHighlightsEnabled(!highlightsEnabled)} title={t('document.highlightsToggle')} ariaPressed={highlightsEnabled} tooltipSide="right">
+            <IconButton size="md" tone={highlightsEnabled ? 'accent' : 'default'} onClick={() => setHighlightsEnabled(!highlightsEnabled)} title={t('document.highlightsToggle')} ariaPressed={highlightsEnabled} tooltipSide="right" className="h-9 w-9">
               <Highlighter size={14} />
             </IconButton>
-            <IconButton size="md" onClick={() => setShowExportDialog(true)} title={`${t('header.exportLabel')} (Ctrl+E)`} ariaLabel={t('header.exportLabel')} tooltipSide="right">
+            <IconButton size="md" onClick={() => setShowExportDialog(true)} title={`${t('header.exportLabel')} (Ctrl+E)`} ariaLabel={t('header.exportLabel')} tooltipSide="right" className="h-9 w-9">
               <FileOutput size={14} />
             </IconButton>
           </>
         ) : null}
-        <IconButton size="md" onClick={onImportDocument} title={t('files.import')} disabled={!onImportDocument} tooltipSide="right">
+        <IconButton size="md" onClick={onImportDocument} title={t('files.import')} disabled={!onImportDocument} tooltipSide="right" className="h-9 w-9">
           <Upload size={14} />
         </IconButton>
-        <IconButton size="md" tone="muted" onClick={onOpenWorkspaceSettings} title={t('workspace.configure')} disabled={!onOpenWorkspaceSettings} tooltipSide="right">
+        <IconButton size="md" tone="muted" onClick={onOpenWorkspaceSettings} title={t('workspace.configure')} disabled={!onOpenWorkspaceSettings} tooltipSide="right" className="h-9 w-9">
           <Settings2 size={14} />
         </IconButton>
         <PipelineSidebarExportDialogHost open={showExportDialog} onOpenChange={setShowExportDialog} />

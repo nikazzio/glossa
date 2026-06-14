@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { SectionLabel } from '../ui';
+import { SectionLabel, Tooltip } from '../ui';
 
 /**
  * Multibar shell — superfici di navigazione laterali (home e progetto).
@@ -26,8 +26,10 @@ export function ShellNavSection({ icon: Icon, label, action, collapsed = false, 
         </div>
       ) : (
         // Da collassata resta l'icona della sezione (header stabile): niente salto verticale.
-        <div className="flex justify-center pb-1.5 pt-3" title={label}>
-          <Icon size={13} className="text-editorial-muted/70" aria-hidden="true" />
+        <div className="flex justify-center pb-1.5 pt-3">
+          <Tooltip label={label} side="right">
+            <Icon size={13} className="text-editorial-muted/70" aria-hidden="true" />
+          </Tooltip>
         </div>
       )}
       <div className="space-y-0.5">{children}</div>
@@ -76,6 +78,32 @@ export function ShellNavItem({
       ? 'text-editorial-muted opacity-50'
       : 'text-editorial-muted hover:bg-editorial-textbox/30 hover:text-editorial-accent';
 
+  const button = (
+    <button
+      type="button"
+      id={id}
+      onClick={onClick}
+      disabled={disabled}
+      aria-current={ariaCurrent}
+      role={role}
+      aria-selected={role === 'tab' ? ariaSelected : undefined}
+      aria-controls={ariaControls}
+      className={`flex min-w-0 flex-1 items-center gap-2.5 rounded-[12px] py-2 text-left text-inherit focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+        collapsed ? 'justify-center px-0' : 'px-2.5'
+      } ${disabled ? 'cursor-not-allowed' : ''}`}
+    >
+      <span className="inline-flex shrink-0 items-center justify-center">{icon}</span>
+      {collapsed ? (
+        <span className="sr-only">{hint ? `${label} ${hint}` : label}</span>
+      ) : (
+        <span className="min-w-0 flex-1">
+          <span className={`block truncate ${labelClassName}`}>{label}</span>
+          {hint ? <span className="mt-0.5 block truncate text-[11px] text-editorial-muted">{hint}</span> : null}
+        </span>
+      )}
+    </button>
+  );
+
   return (
     <div className={`group relative flex w-full items-center rounded-[12px] transition-colors duration-150 ${toneClassName}`}>
       {active && !collapsed ? (
@@ -84,30 +112,13 @@ export function ShellNavItem({
           className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-editorial-accent"
         />
       ) : null}
-      <button
-        type="button"
-        id={id}
-        onClick={onClick}
-        disabled={disabled}
-        aria-current={ariaCurrent}
-        role={role}
-        aria-selected={role === 'tab' ? ariaSelected : undefined}
-        aria-controls={ariaControls}
-        title={collapsed ? label : undefined}
-        className={`flex min-w-0 flex-1 items-center gap-2.5 rounded-[12px] py-2 text-left text-inherit focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-          collapsed ? 'justify-center px-0' : 'px-2.5'
-        } ${disabled ? 'cursor-not-allowed' : ''}`}
-      >
-        <span className="inline-flex shrink-0 items-center justify-center">{icon}</span>
-        {collapsed ? (
-          <span className="sr-only">{hint ? `${label} ${hint}` : label}</span>
-        ) : (
-          <span className="min-w-0 flex-1">
-            <span className={`block truncate ${labelClassName}`}>{label}</span>
-            {hint ? <span className="mt-0.5 block truncate text-[11px] text-editorial-muted">{hint}</span> : null}
-          </span>
-        )}
-      </button>
+      {collapsed ? (
+        <Tooltip label={hint ? `${label} — ${hint}` : label} side="right" className="w-full">
+          {button}
+        </Tooltip>
+      ) : (
+        button
+      )}
       {!collapsed && trailing ? (
         <div className="flex shrink-0 items-center gap-0.5 pr-1.5">{trailing}</div>
       ) : null}

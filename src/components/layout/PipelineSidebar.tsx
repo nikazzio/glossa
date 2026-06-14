@@ -166,7 +166,7 @@ export function PipelineSidebar({
           id="project-context-panel"
           role="tabpanel"
           aria-labelledby={`project-rail-tab-${activeProjectPanel}`}
-          className="mt-2 min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-hidden border-t border-editorial-border/50 py-3"
+          className="mt-3 min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-hidden border-t border-editorial-border/50 pb-3 pt-5"
         >
           {activeProjectPanel === 'run' ? (
             <PipelineSidebarRunSection
