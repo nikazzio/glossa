@@ -10,6 +10,7 @@ import { useLibraryStore } from '../../stores/libraryStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { IconButton, Tooltip } from '../ui';
+import { EASE_EDITORIAL } from './motion';
 
 const HelpGuide = lazy(() =>
   import('../help/HelpGuide').then((m) => ({ default: m.HelpGuide })),
@@ -132,7 +133,7 @@ export function Header() {
                   initial={{ opacity: 0, x: -12 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -12 }}
-                  transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                  transition={{ duration: 0.28, ease: EASE_EDITORIAL }}
                   className="flex min-w-0 items-baseline gap-2.5"
                 >
                   <span className="shrink-0 font-display text-lg italic text-editorial-muted md:text-xl">

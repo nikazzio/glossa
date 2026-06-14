@@ -50,8 +50,7 @@
     "chunkTab": "Chunk",
     "resizeRail": "Ridimensiona la barra",
     "resizePanel": "Ridimensiona il pannello",
-    "noDocumentHint": "Importa un documento sorgente per abilitare controlli lettura, export e pannelli sincronizzati.",
-    "insightHint": "Apri il pannello insight e vai direttamente a indice, ricerca, statistiche, coerenza o glossario."
+    "noDocumentHint": "Importa un documento sorgente per abilitare controlli lettura, export e pannelli sincronizzati."
   },
   "a11y": {
     "runStarted": "Esecuzione della pipeline avviata.",
@@ -940,7 +939,7 @@
       "step5": "Rivedi e correggi la traduzione candidata nel workspace, poi rivaluta o blocca il chunk come definitivo.",
       "step6": "Esporti in .txt, .md, .html, .docx o .md bilingue per pubblicazione o revisione esterna.",
       "p3": "Provider e modello sono indipendenti per ogni stage e per il giudice: puoi mescolare un modello veloce per la traduzione e uno più potente per refine o audit, oppure restare in locale con Ollama.",
-      "nav": "Navigazione: in alto il breadcrumb (Glossa // workspace // progetto) riporta alla home cliccando sul workspace. A sinistra c'è un'unica barra: nella home elenca aree e workspace (modifica ed elimina del workspace attivo sono sulla sua riga); nel progetto contiene Run, Pipeline, Documento, Insight e Chunk. Run/Pipeline/Documento si aprono dentro la barra; Insight, Chunk e la configurazione pipeline escono in un secondo pannello a fianco. Tutte le barre si ridimensionano trascinando il bordo destro e si riducono a sole icone."
+      "nav": "Navigazione: in alto il breadcrumb (Glossa // workspace // progetto) riporta alla home cliccando sul workspace. A sinistra c'è un'unica barra: nella home elenca aree e workspace (modifica ed elimina del workspace attivo sono sulla sua riga); nel progetto contiene Run, Pipeline, Documento, Insight e Chunk. Run/Pipeline/Documento si aprono dentro la barra; Insight, Chunk e la configurazione pipeline escono in un secondo pannello a fianco. Tutte le barre si ridimensionano trascinando il bordo destro e si riducono a sole icone; il bordo è anche raggiungibile da tastiera (←/→ per ridimensionare, doppio click per ripristinare la larghezza) e le voci del progetto si scorrono con le frecce. Caricando un documento la vista resta piena: il pannello Chunk si apre solo quando lo richiami."
     },
     "pipeline": {
       "title": "Pipeline di traduzione",

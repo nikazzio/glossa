@@ -160,6 +160,32 @@ describe('uiStore project shell state', () => {
 
     expect(useUiStore.getState().activeProjectPanel).toBe('chunk');
   });
+
+  it('restores the manually expanded bar after closing the insight fly-out', () => {
+    // L'utente tiene la barra espansa (stato di default).
+    expect(useUiStore.getState().projectContextUserExpanded).toBe(true);
+
+    // Aprendo Insight la barra si comprime, ma la preferenza utente resta "espansa".
+    useUiStore.getState().setActiveProjectPanel('insight');
+    expect(useUiStore.getState().projectContextCollapsed).toBe(true);
+    expect(useUiStore.getState().projectContextUserExpanded).toBe(true);
+
+    // Chiudendo il fly-out (ritorno a un pannello inline) la barra torna espansa.
+    useUiStore.getState().setActiveProjectPanel('document');
+    expect(useUiStore.getState().projectContextCollapsed).toBe(false);
+  });
+
+  it('keeps the bar collapsed after closing the fly-out when the user collapsed it on purpose', () => {
+    // L'utente comprime la barra esplicitamente.
+    useUiStore.getState().setProjectContextCollapsed(true);
+    expect(useUiStore.getState().projectContextUserExpanded).toBe(false);
+
+    useUiStore.getState().setShowDocumentDrawer(true);
+    useUiStore.getState().setShowDocumentDrawer(false);
+
+    // La preferenza "collassata" viene rispettata anche dopo il fly-out.
+    expect(useUiStore.getState().projectContextCollapsed).toBe(true);
+  });
 });
 
 describe('uiStore uiFont preference', () => {

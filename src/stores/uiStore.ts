@@ -53,6 +53,8 @@ interface UiState {
   activePanel: ActivePanel;
   activeProjectPanel: ProjectPanelTab;
   projectContextCollapsed: boolean;
+  /** Scelta esplicita dell'utente: la barra primaria deve tornare espansa alla chiusura del fly-out? */
+  projectContextUserExpanded: boolean;
   dashboardSidebarCollapsed: boolean;
   dashboardSidebarWidth: number;
   projectSidebarWidth: number;
@@ -134,6 +136,7 @@ export const useUiStore = create<UiState>()(
       activePanel: null,
       activeProjectPanel: 'run',
       projectContextCollapsed: false,
+      projectContextUserExpanded: true,
       dashboardSidebarCollapsed: false,
       dashboardSidebarWidth: 240,
       projectSidebarWidth: 240,
@@ -219,7 +222,7 @@ export const useUiStore = create<UiState>()(
                 activeProjectPanel: 'insight' as const,
                 projectContextCollapsed: true,
               }
-            : { showDocumentDrawer: false, activePanel: null },
+            : { showDocumentDrawer: false, activePanel: null, projectContextCollapsed: !state.projectContextUserExpanded },
         ),
       setDocumentDrawerTab: (tab) => set({ documentDrawerTab: tab }),
       setShowChunkDrawer: (show, tab) =>
@@ -236,7 +239,7 @@ export const useUiStore = create<UiState>()(
                 activeProjectPanel: 'chunk' as const,
                 projectContextCollapsed: true,
               }
-            : { showChunkDrawer: false, activePanel: null },
+            : { showChunkDrawer: false, activePanel: null, projectContextCollapsed: !state.projectContextUserExpanded },
         ),
       setChunkDrawerTab: (tab) => set({ chunkDrawerTab: tab }),
       setHighlightsEnabled: (enabled) => set({ highlightsEnabled: enabled }),
@@ -288,15 +291,19 @@ export const useUiStore = create<UiState>()(
             };
           }
           // run / pipeline / document → contenuto inline, fly-out chiuso.
+          // Ripristina la preferenza manuale di espansione (il fly-out l'aveva forzata a collassata).
           return {
             activeProjectPanel: panel,
             showDocumentDrawer: false,
             showChunkDrawer: false,
             showConfigDrawer: false,
+            projectContextCollapsed: !state.projectContextUserExpanded,
             activePanel: state.activePanel === 'insights' || state.activePanel === 'chunk' || state.activePanel === 'config' ? null : state.activePanel,
           };
         }),
-      setProjectContextCollapsed: (collapsed) => set({ projectContextCollapsed: collapsed }),
+      // Collassare/espandere dal rail o dal resize è una scelta esplicita: memorizzala come preferenza.
+      setProjectContextCollapsed: (collapsed) =>
+        set({ projectContextCollapsed: collapsed, projectContextUserExpanded: !collapsed }),
       setDashboardSidebarCollapsed: (collapsed) => set({ dashboardSidebarCollapsed: collapsed }),
       setDashboardSidebarWidth: (width) => set({ dashboardSidebarWidth: width }),
       setProjectSidebarWidth: (width) => set({ projectSidebarWidth: width }),
@@ -346,7 +353,7 @@ export const useUiStore = create<UiState>()(
     }),
     {
       name: 'glossa-ui-prefs',
-      version: 10,
+      version: 11,
       migrate: (persisted: unknown, fromVersion: number) => {
         const s = persisted as Record<string, unknown>;
         if (fromVersion < 1) {
@@ -400,6 +407,10 @@ export const useUiStore = create<UiState>()(
           s.projectFlyoutWidth = 430;
           s.configFlyoutWidth = 560;
         }
+        if (fromVersion < 11) {
+          // La preferenza di espansione deriva dallo stato collassato salvato.
+          s.projectContextUserExpanded = !s.projectContextCollapsed;
+        }
         return s;
       },
       storage: createJSONStorage(() => localStorage),
@@ -412,6 +423,7 @@ export const useUiStore = create<UiState>()(
           ? state.activeProjectPanel
           : 'run',
         projectContextCollapsed: state.projectContextCollapsed,
+        projectContextUserExpanded: state.projectContextUserExpanded,
         dashboardSidebarCollapsed: state.dashboardSidebarCollapsed,
         dashboardSidebarWidth: state.dashboardSidebarWidth,
         projectSidebarWidth: state.projectSidebarWidth,

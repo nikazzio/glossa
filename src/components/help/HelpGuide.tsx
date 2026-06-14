@@ -74,7 +74,7 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-full border border-editorial-border px-5 py-3 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="rounded-full border border-editorial-border px-5 py-3 text-[11px] font-bold uppercase tracking-[0.16em] text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               >
                 {t('common.close')}
               </button>
@@ -161,7 +161,7 @@ function Step({ n, title, children }: { n: number; title: string; children: Reac
 function Tip({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mt-6 rounded-[20px] border border-editorial-border bg-editorial-textbox/30 px-5 py-4">
-      <h4 className="mb-2 text-[10px] font-bold uppercase tracking-[0.3em] text-editorial-accent">{title}</h4>
+      <h4 className="mb-2 text-[11px] font-bold uppercase tracking-[0.16em] text-editorial-accent">{title}</h4>
       <p className="text-[13px] leading-relaxed text-editorial-ink/70">{children}</p>
     </div>
   );
@@ -187,7 +187,7 @@ function OverviewSection() {
       <P>{t('help.overview.p2')}</P>
 
       <div className="my-8 rounded-[20px] border border-editorial-border bg-editorial-textbox/25 p-6">
-        <div className="mb-4 text-[10px] font-bold uppercase tracking-[0.3em] text-editorial-muted">
+        <div className="mb-4 text-[11px] font-bold uppercase tracking-[0.16em] text-editorial-muted">
           {t('help.overview.flowTitle')}
         </div>
         <ol className="space-y-3 border-l-2 border-editorial-accent pl-5">
@@ -472,7 +472,7 @@ function AuditSection() {
       <div className="my-6 space-y-3">
         {issueTypes.map((type) => (
           <div key={type} className="flex items-start gap-3 rounded-[20px] border border-editorial-border bg-editorial-textbox/15 px-5 py-4">
-            <span className="shrink-0 rounded-full border border-editorial-accent/40 bg-editorial-accent/12 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-accent">
+            <span className="shrink-0 rounded-full border border-editorial-accent/40 bg-editorial-accent/12 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-editorial-accent">
               {t(`help.audit.${type}Label`)}
             </span>
             <span className="text-[13px] leading-relaxed text-editorial-ink/80">

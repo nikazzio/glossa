@@ -69,4 +69,34 @@ describe('PipelineSidebar project shell', () => {
     expect(useUiStore.getState().showDocumentDrawer).toBe(true);
     expect(useUiStore.getState().projectContextCollapsed).toBe(true);
   });
+
+  it('applies a roving tabindex with only the active rail tab reachable by Tab', () => {
+    render(<PipelineSidebar />);
+
+    // Default: Run attivo → tabIndex 0, gli altri -1.
+    expect(screen.getByRole('tab', { name: 'projectShell.runTab' })).toHaveAttribute('tabindex', '0');
+    expect(screen.getByRole('tab', { name: 'projectShell.documentTab' })).toHaveAttribute('tabindex', '-1');
+  });
+
+  it('moves focus down the rail with the ArrowDown key without activating', () => {
+    render(<PipelineSidebar />);
+
+    const runTab = screen.getByRole('tab', { name: 'projectShell.runTab' });
+    runTab.focus();
+    fireEvent.keyDown(runTab, { key: 'ArrowDown' });
+
+    // Il focus si sposta su Pipeline ma il pannello attivo resta Run (attivazione manuale).
+    expect(screen.getByRole('tab', { name: 'projectShell.pipelineTab' })).toHaveFocus();
+    expect(useUiStore.getState().activeProjectPanel).toBe('run');
+  });
+
+  it('jumps focus to the last rail tab with the End key', () => {
+    render(<PipelineSidebar />);
+
+    const runTab = screen.getByRole('tab', { name: 'projectShell.runTab' });
+    runTab.focus();
+    fireEvent.keyDown(runTab, { key: 'End' });
+
+    expect(screen.getByRole('tab', { name: 'projectShell.chunkTab' })).toHaveFocus();
+  });
 });

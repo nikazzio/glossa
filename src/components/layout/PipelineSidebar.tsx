@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import type { KeyboardEvent, ReactNode } from 'react';
+import { useRef } from 'react';
 import {
   ArrowLeft,
   BarChart2,
@@ -12,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { DashboardSidebar } from './DashboardSidebar';
 import { ShellNavFooter, ShellNavItem } from './ShellNav';
 import { ResizeHandle, useEdgeResize } from './useEdgeResize';
+import { EASE_EDITORIAL, WIDTH_TRANSITION_CLASS } from './motion';
 import {
   PipelineSidebarDocumentSection,
   PipelineSidebarPipelinesSection,
@@ -46,6 +48,7 @@ const SIDEBAR_MIN = 180;
 const SIDEBAR_MAX = 320;
 const SIDEBAR_COLLAPSE_AT = 150;
 const SIDEBAR_COLLAPSED = 64;
+const SIDEBAR_DEFAULT = 240;
 
 export function PipelineSidebar({
   mode = 'editor',
@@ -69,6 +72,7 @@ export function PipelineSidebar({
   const closeProject = useProjectStore((state) => state.closeProject);
   const isProcessing = useChunksStore((state) => state.isProcessing);
   const { dragging, startDrag } = useEdgeResize();
+  const tabRefs = useRef<Partial<Record<ProjectPanelTab, HTMLButtonElement | null>>>({});
 
   if (mode === 'dashboard') {
     return <DashboardSidebar />;
@@ -97,6 +101,22 @@ export function PipelineSidebar({
     }
   };
 
+  // Rail verticale: roving focus con frecce ↑/↓ + Home/End (WAI-ARIA APG tablist).
+  // Attivazione manuale: Enter/Space sul button (gestiti nativamente) o click.
+  const handleRailKeyDown = (tabId: ProjectPanelTab, event: KeyboardEvent<HTMLButtonElement>) => {
+    const idx = PROJECT_PANEL_TABS.findIndex((tab) => tab.id === tabId);
+    let nextIdx: number | null = null;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowRight')
+      nextIdx = (idx + 1) % PROJECT_PANEL_TABS.length;
+    else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft')
+      nextIdx = (idx - 1 + PROJECT_PANEL_TABS.length) % PROJECT_PANEL_TABS.length;
+    else if (event.key === 'Home') nextIdx = 0;
+    else if (event.key === 'End') nextIdx = PROJECT_PANEL_TABS.length - 1;
+    if (nextIdx === null) return;
+    event.preventDefault();
+    tabRefs.current[PROJECT_PANEL_TABS[nextIdx].id]?.focus();
+  };
+
   const handleResizeStart = (event: React.PointerEvent) => {
     startDrag(event, {
       startWidth: collapsed ? SIDEBAR_COLLAPSED : width,
@@ -113,11 +133,11 @@ export function PipelineSidebar({
     <motion.nav
       initial={{ opacity: 0, x: -22 }}
       animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.42, ease: EASE_EDITORIAL }}
       aria-label={t('projectShell.railLabel')}
       style={{ width: collapsed ? SIDEBAR_COLLAPSED : width }}
       className={`relative flex shrink-0 flex-col border-r border-editorial-border bg-editorial-bg/60 ${
-        dragging ? '' : 'transition-[width] duration-200'
+        dragging ? '' : WIDTH_TRANSITION_CLASS
       }`}
     >
       {/* Contenuto ancorato alla larghezza collassata: niente slide orizzontale durante l'animazione. */}
@@ -141,6 +161,7 @@ export function PipelineSidebar({
 
         <div
           role="tablist"
+          aria-orientation="vertical"
           aria-label={t('projectShell.railLabel')}
           className="space-y-0.5 px-2.5 pt-2"
         >
@@ -153,7 +174,12 @@ export function PipelineSidebar({
               ariaControls="project-context-panel"
               active={activeProjectPanel === tab.id}
               collapsed={collapsed}
+              tabIndex={activeProjectPanel === tab.id ? 0 : -1}
+              buttonRef={(el) => {
+                tabRefs.current[tab.id] = el;
+              }}
               onClick={() => handleSelect(tab.id)}
+              onKeyDown={(event) => handleRailKeyDown(tab.id, event)}
               icon={tab.icon}
               label={t(tab.labelKey)}
             />
@@ -189,7 +215,22 @@ export function PipelineSidebar({
         <ShellNavFooter collapsed={collapsed} />
       </div>
 
-      <ResizeHandle onPointerDown={handleResizeStart} dragging={dragging} label={t('projectShell.resizeRail')} />
+      <ResizeHandle
+        onPointerDown={handleResizeStart}
+        dragging={dragging}
+        label={t('projectShell.resizeRail')}
+        width={collapsed ? SIDEBAR_MIN : width}
+        min={SIDEBAR_MIN}
+        max={SIDEBAR_MAX}
+        onResize={(next) => {
+          if (collapsed) setProjectContextCollapsed(false);
+          setWidth(next);
+        }}
+        onReset={() => {
+          setProjectContextCollapsed(false);
+          setWidth(SIDEBAR_DEFAULT);
+        }}
+      />
     </motion.nav>
   );
 }

@@ -220,7 +220,8 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
       renderProfile: sourceDocument.renderProfile,
     });
     ui.setViewMode('document');
-    ui.setShowChunkDrawer(true);
+    // Niente auto-apertura del Chunk drawer: con la shell multibar spingerebbe il documento.
+    // Il pannello Chunk si apre solo su azione esplicita (click su chunk/problema o rail).
     syncSelectedChunk(chunks);
     set({ chunks });
   },

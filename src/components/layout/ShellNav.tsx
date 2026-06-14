@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { KeyboardEvent, ReactNode, Ref } from 'react';
 import { HelpCircle, Settings, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useUiStore } from '../../stores/uiStore';
@@ -83,11 +83,15 @@ interface ShellNavItemProps {
   disabled?: boolean;
   collapsed?: boolean;
   onClick?: () => void;
+  onKeyDown?: (event: KeyboardEvent<HTMLButtonElement>) => void;
   ariaCurrent?: 'page';
   role?: 'tab';
   ariaSelected?: boolean;
   ariaControls?: string;
   id?: string;
+  /** Roving tabindex per i pattern tablist: 0 sull'item attivo, -1 sugli altri. */
+  tabIndex?: number;
+  buttonRef?: Ref<HTMLButtonElement>;
   trailing?: ReactNode;
 }
 
@@ -100,11 +104,14 @@ export function ShellNavItem({
   disabled = false,
   collapsed = false,
   onClick,
+  onKeyDown,
   ariaCurrent,
   role,
   ariaSelected,
   ariaControls,
   id,
+  tabIndex,
+  buttonRef,
   trailing,
 }: ShellNavItemProps) {
   const labelClassName = labelFont === 'display' ? 'font-display text-sm italic' : 'font-sans text-sm';
@@ -119,12 +126,15 @@ export function ShellNavItem({
     <button
       type="button"
       id={id}
+      ref={buttonRef}
       onClick={onClick}
+      onKeyDown={onKeyDown}
       disabled={disabled}
       aria-current={ariaCurrent}
       role={role}
       aria-selected={role === 'tab' ? ariaSelected : undefined}
       aria-controls={ariaControls}
+      tabIndex={tabIndex}
       className={`flex min-w-0 flex-1 items-center gap-2.5 rounded-[12px] py-2 text-left text-inherit focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
         collapsed ? 'justify-center px-0' : 'px-2.5'
       } ${disabled ? 'cursor-not-allowed' : ''}`}

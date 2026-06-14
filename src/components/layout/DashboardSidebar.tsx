@@ -14,6 +14,7 @@ import { IconButton, PillButton } from '../ui';
 import { WorkspaceSettingsModal } from '../workspace/WorkspaceSettingsModal';
 import { ShellNavFooter, ShellNavItem, ShellNavSection } from './ShellNav';
 import { ResizeHandle, useEdgeResize } from './useEdgeResize';
+import { EASE_EDITORIAL, WIDTH_TRANSITION_CLASS } from './motion';
 
 const AREA_ITEMS = [
   { id: 'translations', icon: BookOpenText, enabled: true },
@@ -25,6 +26,7 @@ const SIDEBAR_MIN = 180;
 const SIDEBAR_MAX = 320;
 const SIDEBAR_COLLAPSE_AT = 150;
 const SIDEBAR_COLLAPSED = 64;
+const SIDEBAR_DEFAULT = 240;
 
 export function DashboardSidebar() {
   const { t } = useTranslation();
@@ -137,11 +139,11 @@ export function DashboardSidebar() {
     <motion.nav
       initial={{ opacity: 0, x: -18 }}
       animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.4, ease: EASE_EDITORIAL }}
       aria-label={t('sidebar.areaLabel')}
       style={{ width: collapsed ? SIDEBAR_COLLAPSED : width }}
       className={`relative flex shrink-0 flex-col border-r border-editorial-border bg-editorial-bg/60 ${
-        dragging ? '' : 'transition-[width] duration-200'
+        dragging ? '' : WIDTH_TRANSITION_CLASS
       }`}
     >
       <div
@@ -242,7 +244,22 @@ export function DashboardSidebar() {
         <ShellNavFooter collapsed={collapsed} />
       </div>
 
-      <ResizeHandle onPointerDown={handleResizeStart} dragging={dragging} label={t('sidebar.resize')} />
+      <ResizeHandle
+        onPointerDown={handleResizeStart}
+        dragging={dragging}
+        label={t('sidebar.resize')}
+        width={collapsed ? SIDEBAR_MIN : width}
+        min={SIDEBAR_MIN}
+        max={SIDEBAR_MAX}
+        onResize={(next) => {
+          if (collapsed) setCollapsed(false);
+          setWidth(next);
+        }}
+        onReset={() => {
+          setCollapsed(false);
+          setWidth(SIDEBAR_DEFAULT);
+        }}
+      />
 
       <WorkspaceSettingsModal
         open={showWorkspaceSettings}
