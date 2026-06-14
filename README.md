@@ -2,9 +2,20 @@
 
 # ✦ Glossa
 
+```text
+   _____ _                           
+  / ____| |                          
+ | |  __| | __ _ ___  ___  ___  ___  
+ | | |_ | |/ _` / __|/ _ \/ __|/ _ \ 
+ | |__| | | (_| \__ \  __/\__ \  __/ 
+  \_____|_|\__,_|___/\___||___/\___|
+```
+
 **Multi-stage AI translation pipeline for scholars**
 
 A desktop application that chains multiple LLM passes — draft, refinement, audit — to produce publication-quality translations. Built for philologists, classicists, and translators who need precision over speed.
+
+[Official docs](https://nikazzio.github.io/glossa/) · [Releases](https://github.com/nikazzio/glossa/releases/latest) · [Contributing](CONTRIBUTING.md)
 
 [![Tauri v2](https://img.shields.io/badge/Tauri-v2-blue?logo=tauri)](https://v2.tauri.app)
 [![Release](https://img.shields.io/github/v/release/nikazzio/glossa?display_name=tag)](https://github.com/nikazzio/glossa/releases/latest)
@@ -67,6 +78,12 @@ Translations stream token-by-token in real time. You can edit the candidate tran
 | **Secure keys** | API keys stored in OS keychain (GNOME Keyring / macOS Keychain / Windows Credential Manager) |
 | **i18n** | English and Italian interface |
 | **Desktop native** | Tauri v2 — lightweight binaries, no browser runtime |
+
+## Documentation
+
+- Public docs: [nikazzio.github.io/glossa](https://nikazzio.github.io/glossa/)
+- Internal architecture notes: `docs-dev/ARCHITECTURE.md`
+- Internal UI design system: `docs-dev/UI_DESIGN_SYSTEM.md`
 
 ## Quick start
 
