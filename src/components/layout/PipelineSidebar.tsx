@@ -122,65 +122,71 @@ export function PipelineSidebar({
         dragging ? '' : 'transition-[width] duration-200'
       }`}
     >
-      <div className={`flex items-center pt-2 ${collapsed ? 'justify-center px-0' : 'px-3'}`}>
-        <IconButton
-          size="sm"
-          tone="muted"
-          onClick={() => closeProject()}
-          disabled={isProcessing}
-          title={t('sidebar.backToWorkspace')}
-          tooltipSide="right"
-          className="bg-editorial-textbox/25 hover:bg-editorial-textbox/45"
+      {/* Contenuto ancorato alla larghezza collassata: niente slide orizzontale durante l'animazione. */}
+      <div
+        className="flex min-h-0 flex-1 flex-col"
+        style={{ width: collapsed ? SIDEBAR_COLLAPSED : undefined }}
+      >
+        <div className={`flex items-center pt-2 ${collapsed ? 'justify-center px-0' : 'px-3'}`}>
+          <IconButton
+            size="sm"
+            tone="muted"
+            onClick={() => closeProject()}
+            disabled={isProcessing}
+            title={t('sidebar.backToWorkspace')}
+            tooltipSide="right"
+            className="bg-editorial-textbox/25 hover:bg-editorial-textbox/45"
+          >
+            <ArrowLeft size={12} />
+          </IconButton>
+        </div>
+
+        <div
+          role="tablist"
+          aria-label={t('projectShell.railLabel')}
+          className="space-y-0.5 px-2.5 pt-2"
         >
-          <ArrowLeft size={12} />
-        </IconButton>
-      </div>
+          {PROJECT_PANEL_TABS.map((tab) => (
+            <ShellNavItem
+              key={tab.id}
+              id={`project-rail-tab-${tab.id}`}
+              role="tab"
+              ariaSelected={activeProjectPanel === tab.id}
+              ariaControls="project-context-panel"
+              active={activeProjectPanel === tab.id}
+              collapsed={collapsed}
+              onClick={() => handleSelect(tab.id)}
+              icon={tab.icon}
+              label={t(tab.labelKey)}
+            />
+          ))}
+        </div>
 
-      <div
-        role="tablist"
-        aria-label={t('projectShell.railLabel')}
-        className="space-y-0.5 px-2.5 pt-2"
-      >
-        {PROJECT_PANEL_TABS.map((tab) => (
-          <ShellNavItem
-            key={tab.id}
-            id={`project-rail-tab-${tab.id}`}
-            role="tab"
-            ariaSelected={activeProjectPanel === tab.id}
-            ariaControls="project-context-panel"
-            active={activeProjectPanel === tab.id}
-            collapsed={collapsed}
-            onClick={() => handleSelect(tab.id)}
-            icon={tab.icon}
-            label={t(tab.labelKey)}
-          />
-        ))}
-      </div>
-
-      <div
-        id="project-context-panel"
-        role="tabpanel"
-        aria-labelledby={`project-rail-tab-${activeProjectPanel}`}
-        className="mt-2 min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-hidden border-t border-editorial-border/50 py-3"
-      >
-        {activeProjectPanel === 'run' ? (
-          <PipelineSidebarRunSection
-            collapsed={collapsed}
-            onRunPipeline={onRunPipeline}
-            onRunAuditOnly={onRunAuditOnly}
-            onCancelPipeline={onCancelPipeline}
-            onDryRun={onDryRun}
-            onRetranslateChunk={onRetranslateChunk}
-          />
-        ) : activeProjectPanel === 'pipeline' ? (
-          <PipelineSidebarPipelinesSection collapsed={collapsed} />
-        ) : activeProjectPanel === 'document' ? (
-          <PipelineSidebarDocumentSection
-            collapsed={collapsed}
-            onImportDocument={onImportDocument}
-            onOpenWorkspaceSettings={onOpenWorkspaceSettings}
-          />
-        ) : null}
+        <div
+          id="project-context-panel"
+          role="tabpanel"
+          aria-labelledby={`project-rail-tab-${activeProjectPanel}`}
+          className="mt-2 min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-hidden border-t border-editorial-border/50 py-3"
+        >
+          {activeProjectPanel === 'run' ? (
+            <PipelineSidebarRunSection
+              collapsed={collapsed}
+              onRunPipeline={onRunPipeline}
+              onRunAuditOnly={onRunAuditOnly}
+              onCancelPipeline={onCancelPipeline}
+              onDryRun={onDryRun}
+              onRetranslateChunk={onRetranslateChunk}
+            />
+          ) : activeProjectPanel === 'pipeline' ? (
+            <PipelineSidebarPipelinesSection collapsed={collapsed} />
+          ) : activeProjectPanel === 'document' ? (
+            <PipelineSidebarDocumentSection
+              collapsed={collapsed}
+              onImportDocument={onImportDocument}
+              onOpenWorkspaceSettings={onOpenWorkspaceSettings}
+            />
+          ) : null}
+        </div>
       </div>
 
       <ResizeHandle onPointerDown={handleResizeStart} dragging={dragging} label={t('projectShell.resizeRail')} />

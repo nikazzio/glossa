@@ -6,9 +6,10 @@ interface PaneSearchProps {
   value: string;
   onChange: (value: string) => void;
   label: string;
+  autoFocus?: boolean;
 }
 
-export function PaneSearch({ value, onChange, label }: PaneSearchProps) {
+export function PaneSearch({ value, onChange, label, autoFocus = false }: PaneSearchProps) {
   const { t } = useTranslation();
 
   return (
@@ -26,6 +27,7 @@ export function PaneSearch({ value, onChange, label }: PaneSearchProps) {
           onChange={(event) => onChange(event.target.value)}
           placeholder={t('document.searchChunkPlaceholder')}
           aria-label={label}
+          autoFocus={autoFocus}
           className="min-w-0 flex-1 bg-transparent text-xs text-editorial-ink placeholder:text-editorial-muted/55 focus:outline-none"
         />
         {value ? (

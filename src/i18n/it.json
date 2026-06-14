@@ -822,6 +822,7 @@
     "searchInSource": "Cerca nel sorgente",
     "searchInTranslation": "Cerca nella candidata",
     "clearPaneSearch": "Cancella ricerca",
+    "searchInPane": "Cerca nel testo",
     "searchEmptyTitle": "Ricerca nel documento",
     "searchEmptyBody": "Digita una parola o frase per cercare in tutti i chunk, sia nel testo originale che nella traduzione e nell'audit.",
     "searchNoResults": "Nessun risultato trovato.",

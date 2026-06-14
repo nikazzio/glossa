@@ -144,7 +144,10 @@ export function DashboardSidebar() {
         dragging ? '' : 'transition-[width] duration-200'
       }`}
     >
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto custom-scrollbar pb-4 pt-2">
+      <div
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden custom-scrollbar pb-4 pt-2"
+        style={{ width: collapsed ? SIDEBAR_COLLAPSED : undefined }}
+      >
         <ShellNavSection icon={BookOpenText} label={t('sidebar.areaLabel')} collapsed={collapsed}>
           {AREA_ITEMS.map(({ id, icon: Icon, enabled }) => (
             <ShellNavItem

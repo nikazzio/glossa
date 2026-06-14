@@ -822,6 +822,7 @@
     "searchInSource": "Search source",
     "searchInTranslation": "Search candidate",
     "clearPaneSearch": "Clear search",
+    "searchInPane": "Search this text",
     "searchEmptyTitle": "Document search",
     "searchEmptyBody": "Type a word or phrase to search across all chunks — source text, translation, and audit findings.",
     "searchNoResults": "No results found.",

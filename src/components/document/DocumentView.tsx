@@ -10,6 +10,7 @@ import {
   Pencil,
   RotateCcw,
   ScanLine,
+  Search,
   Wand2,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -104,6 +105,12 @@ function DocumentPage({
   scrollRef,
   children,
 }: DocumentPageProps) {
+  const { t } = useTranslation();
+  const searchable = Boolean(onSearchChange && searchLabel);
+  const [searchOpen, setSearchOpen] = useState(false);
+  // Il campo resta aperto finché c'è una query attiva.
+  const showSearch = searchable && (searchOpen || Boolean(searchValue));
+
   return (
     <section className={`relative rounded-[24px] bg-editorial-page px-6 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_18px_45px_rgba(74,50,17,0.08)] flex flex-col min-h-0 ${
       highlighted ? 'border border-editorial-accent ring-2 ring-editorial-accent/30' : 'border border-editorial-divider'
@@ -121,6 +128,18 @@ function DocumentPage({
             <h3 className="font-display text-[1.7rem] italic tracking-tight text-editorial-ink">
               {label}
             </h3>
+            {searchable ? (
+              <IconButton
+                size="sm"
+                tone={showSearch ? 'accent' : 'default'}
+                onClick={() => setSearchOpen((open) => !open)}
+                title={t('document.searchInPane')}
+                ariaLabel={t('document.searchInPane')}
+                ariaPressed={showSearch}
+              >
+                <Search size={13} />
+              </IconButton>
+            ) : null}
             {statusBadge}
           </div>
           {subtitle && (
@@ -141,11 +160,12 @@ function DocumentPage({
         </div>
       </div>
       <div ref={scrollRef} className={`flex flex-col flex-1 min-h-0 ${readOnly ? 'opacity-90' : ''}`}>
-        {onSearchChange && searchLabel ? (
+        {showSearch && onSearchChange && searchLabel ? (
           <PaneSearch
             value={searchValue ?? ''}
             onChange={onSearchChange}
             label={searchLabel}
+            autoFocus
           />
         ) : null}
         {children}

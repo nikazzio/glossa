@@ -16,16 +16,19 @@ interface ShellNavSectionProps {
   children: ReactNode;
 }
 
-export function ShellNavSection({ icon, label, action, collapsed = false, children }: ShellNavSectionProps) {
+export function ShellNavSection({ icon: Icon, label, action, collapsed = false, children }: ShellNavSectionProps) {
   return (
     <div className="px-2.5">
       {!collapsed ? (
         <div className="flex items-center justify-between gap-2 px-1.5 pb-1.5 pt-3">
-          <SectionLabel icon={icon} label={label} />
+          <SectionLabel icon={Icon} label={label} />
           {action}
         </div>
       ) : (
-        <div className="pt-3" />
+        // Da collassata resta l'icona della sezione (header stabile): niente salto verticale.
+        <div className="flex justify-center pb-1.5 pt-3" title={label}>
+          <Icon size={13} className="text-editorial-muted/70" aria-hidden="true" />
+        </div>
       )}
       <div className="space-y-0.5">{children}</div>
     </div>
