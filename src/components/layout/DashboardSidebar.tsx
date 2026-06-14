@@ -1,15 +1,19 @@
 import { useState } from 'react';
-import type { ReactNode } from 'react';
-import { Archive, BookOpenText, FilePen, LibraryBig, Plus } from 'lucide-react';
+import { Archive, BookOpenText, FilePen, LibraryBig, Plus, Settings2, Trash2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
-import type { EmbeddingModel, Workspace } from '../../types';
+import { useUiStore } from '../../stores/uiStore';
+import { confirm } from '../../stores/confirmStore';
+import type { Workspace } from '../../types';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { EditorialModalShell } from '../common';
-import { IconButton, PillButton, SectionLabel } from '../ui';
+import { IconButton, PillButton } from '../ui';
+import { WorkspaceSettingsModal } from '../workspace/WorkspaceSettingsModal';
+import { ShellNavFooter, ShellNavItem, ShellNavSection } from './ShellNav';
+import { ResizeHandle, useEdgeResize } from './useEdgeResize';
 
 const AREA_ITEMS = [
   { id: 'translations', icon: BookOpenText, enabled: true },
@@ -17,29 +21,31 @@ const AREA_ITEMS = [
   { id: 'transcriptions', icon: FilePen, enabled: false },
 ] as const;
 
-const ATTACHED_TAB_TRANSITION = {
-  type: 'spring',
-  stiffness: 360,
-  damping: 40,
-  mass: 0.8,
-} as const;
+const SIDEBAR_MIN = 180;
+const SIDEBAR_MAX = 320;
+const SIDEBAR_COLLAPSE_AT = 150;
+const SIDEBAR_COLLAPSED = 64;
 
 export function DashboardSidebar() {
   const { t } = useTranslation();
-  const { workspaces, activeWorkspace, createAndActivate, setActive } = useWorkspaceStore();
-  const { closeProject, loadProjects } = useProjectStore();
+  const { workspaces, activeWorkspace, createAndActivate, setActive, removeWorkspace } = useWorkspaceStore();
+  const { projects, closeProject, loadProjects } = useProjectStore();
+  const collapsed = useUiStore((state) => state.dashboardSidebarCollapsed);
+  const setCollapsed = useUiStore((state) => state.setDashboardSidebarCollapsed);
+  const width = useUiStore((state) => state.dashboardSidebarWidth);
+  const setWidth = useUiStore((state) => state.setDashboardSidebarWidth);
+  const { dragging, startDrag } = useEdgeResize();
 
+  const [showWorkspaceSettings, setShowWorkspaceSettings] = useState(false);
   const [showCreateWsForm, setShowCreateWsForm] = useState(false);
   const [newWsName, setNewWsName] = useState('');
   const [newWsDesc, setNewWsDesc] = useState('');
-  const [newWsModel, setNewWsModel] = useState<EmbeddingModel>('text-embedding-3-small');
   const [savingWs, setSavingWs] = useState(false);
 
   const closeCreateWorkspaceForm = () => {
     setShowCreateWsForm(false);
     setNewWsName('');
     setNewWsDesc('');
-    setNewWsModel('text-embedding-3-small');
   };
   const createDialogRef = useFocusTrap(showCreateWsForm, closeCreateWorkspaceForm);
 
@@ -50,6 +56,21 @@ export function DashboardSidebar() {
     await loadProjects();
   };
 
+  // Pattern activity-bar: click sul workspace attivo fa da toggle della barra.
+  const handleWorkspaceClick = (ws: Workspace) => {
+    const isActive = ws.id === activeWorkspace?.id;
+    if (collapsed) {
+      setCollapsed(false);
+      if (!isActive) void handleSwitchWorkspace(ws);
+      return;
+    }
+    if (isActive) {
+      setCollapsed(true);
+      return;
+    }
+    void handleSwitchWorkspace(ws);
+  };
+
   const handleCreateWorkspace = async () => {
     if (!newWsName.trim()) return;
     setSavingWs(true);
@@ -58,7 +79,7 @@ export function DashboardSidebar() {
       await createAndActivate({
         name: newWsName.trim(),
         description: newWsDesc.trim() || undefined,
-        embeddingModel: newWsModel,
+        embeddingModel: 'text-embedding-3-small',
       });
       await loadProjects();
       toast.success(t('workspace.created'));
@@ -72,87 +93,161 @@ export function DashboardSidebar() {
     }
   };
 
+  const handleDeleteWorkspace = async () => {
+    if (!activeWorkspace) return;
+    if (projects.length > 0) {
+      await confirm({
+        title: t('workspace.deleteBlockedTitle'),
+        message: t('workspace.deleteBlockedMessage', { count: projects.length }),
+        confirmLabel: t('common.confirm'),
+        danger: true,
+      });
+      return;
+    }
+    const ok = await confirm({
+      title: t('workspace.deleteTitle'),
+      message: t('workspace.deleteMessage', { name: activeWorkspace.name }),
+      confirmLabel: t('common.delete'),
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await removeWorkspace(activeWorkspace.id);
+      toast.success(t('workspace.deleted'));
+    } catch (err: unknown) {
+      toast.error(t('workspace.deleteFailed'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    }
+  };
+
+  const handleResizeStart = (event: React.PointerEvent) => {
+    startDrag(event, {
+      startWidth: collapsed ? SIDEBAR_COLLAPSED : width,
+      min: SIDEBAR_MIN,
+      max: SIDEBAR_MAX,
+      threshold: SIDEBAR_COLLAPSE_AT,
+      mode: 'collapse',
+      onWidth: setWidth,
+      onCollapsedChange: setCollapsed,
+    });
+  };
+
   return (
-    <motion.div
+    <motion.nav
       initial={{ opacity: 0, x: -18 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      className="relative isolate flex w-48 shrink-0 flex-col bg-editorial-bg/60 after:pointer-events-none after:absolute after:inset-y-0 after:right-0 after:z-0 after:w-px after:bg-editorial-border after:content-['']"
+      aria-label={t('sidebar.areaLabel')}
+      style={{ width: collapsed ? SIDEBAR_COLLAPSED : width }}
+      className={`relative flex shrink-0 flex-col border-r border-editorial-border bg-editorial-bg/60 ${
+        dragging ? '' : 'transition-[width] duration-200'
+      }`}
     >
-      <nav className="pt-3.5" aria-label={t('sidebar.areaLabel')}>
-        <div className="px-3">
-          <SectionLabel icon={BookOpenText} label={t('sidebar.areaLabel')} />
-        </div>
-        <div className="space-y-1.5 pb-3 pt-2.5">
-          {AREA_ITEMS.map(({ id, icon: Icon, enabled }) => {
-            const isActive = enabled;
-            return (
-              <AttachedSidebarTab
-                key={id}
-                active={isActive}
-                disabled={!enabled}
-                layoutId="dashboard-active-area-tab"
-                ariaCurrent={isActive ? 'page' : undefined}
-                size="area"
-                icon={(
-                  <span className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-colors duration-200 ${
-                    isActive
+      <div
+        className="flex min-h-0 flex-1 flex-col"
+        style={{ width: collapsed ? SIDEBAR_COLLAPSED : undefined }}
+      >
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden custom-scrollbar pb-4 pt-2">
+        <ShellNavSection icon={BookOpenText} label={t('sidebar.areaLabel')} collapsed={collapsed}>
+          {AREA_ITEMS.map(({ id, icon: Icon, enabled }) => (
+            <ShellNavItem
+              key={id}
+              active={enabled}
+              disabled={!enabled}
+              collapsed={collapsed}
+              labelFont="display"
+              onClick={enabled ? () => setCollapsed(!collapsed) : undefined}
+              ariaCurrent={enabled ? 'page' : undefined}
+              icon={(
+                <span
+                  className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-colors duration-200 ${
+                    enabled
                       ? 'border-editorial-accent/45 bg-editorial-accent/10 text-editorial-accent'
                       : 'border-editorial-border bg-editorial-textbox/30 text-editorial-muted'
-                  }`}>
-                    <Icon size={12} />
-                  </span>
-                )}
-                label={t(`workspace.areas.${id}.title`)}
-              />
-            );
-          })}
-        </div>
-      </nav>
+                  }`}
+                >
+                  <Icon size={12} />
+                </span>
+              )}
+              label={t(`workspace.areas.${id}.title`)}
+              hint={t(`workspace.areas.${id}.sidebarHint`)}
+            />
+          ))}
+        </ShellNavSection>
 
-      <div className="mx-3 mb-3 mt-1 h-px bg-editorial-border/60" aria-hidden="true" />
-
-      <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="px-3 flex items-center justify-between gap-2">
-          <SectionLabel icon={Archive} label={t('sidebar.workspaceSection')} />
-          <IconButton
-            size="sm"
-            tone="muted"
-            onClick={() => setShowCreateWsForm(true)}
-            title={t('workspace.create')}
-            tooltipSide="right"
-            className="bg-editorial-textbox/25 hover:bg-editorial-textbox/45"
-          >
-            <Plus size={11} />
-          </IconButton>
-        </div>
-
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto custom-scrollbar space-y-1.5 pb-4 pt-2.5">
+        <ShellNavSection
+          icon={Archive}
+          label={t('sidebar.workspaceSection')}
+          collapsed={collapsed}
+          action={(
+            <IconButton
+              size="sm"
+              tone="muted"
+              onClick={() => setShowCreateWsForm(true)}
+              title={t('workspace.create')}
+              tooltipSide="right"
+              className="bg-editorial-textbox/25 hover:bg-editorial-textbox/45"
+            >
+              <Plus size={11} />
+            </IconButton>
+          )}
+        >
           {workspaces.map((ws) => {
             const isActive = ws.id === activeWorkspace?.id;
             return (
-              <AttachedSidebarTab
+              <ShellNavItem
                 key={ws.id}
                 active={isActive}
-                layoutId="dashboard-active-workspace-tab"
-                onClick={() => void handleSwitchWorkspace(ws)}
+                collapsed={collapsed}
+                onClick={() => handleWorkspaceClick(ws)}
                 ariaCurrent={isActive ? 'page' : undefined}
                 icon={(
                   <span
                     className={`h-2 w-2 shrink-0 rounded-full transition-colors duration-200 ${
-                      isActive
-                        ? 'bg-editorial-accent'
-                        : 'border border-editorial-border bg-transparent'
+                      isActive ? 'bg-editorial-accent' : 'border border-editorial-border bg-transparent'
                     }`}
                     aria-hidden="true"
                   />
                 )}
                 label={ws.name}
+                trailing={isActive ? (
+                  <>
+                    <IconButton
+                      size="sm"
+                      tone="muted"
+                      onClick={() => setShowWorkspaceSettings(true)}
+                      title={t('workspace.configure')}
+                      tooltipSide="right"
+                    >
+                      <Settings2 size={12} />
+                    </IconButton>
+                    <IconButton
+                      size="sm"
+                      tone="muted"
+                      onClick={() => void handleDeleteWorkspace()}
+                      title={t('workspace.delete')}
+                      tooltipSide="right"
+                    >
+                      <Trash2 size={12} />
+                    </IconButton>
+                  </>
+                ) : undefined}
               />
             );
           })}
+        </ShellNavSection>
         </div>
-      </section>
+
+        <ShellNavFooter collapsed={collapsed} />
+      </div>
+
+      <ResizeHandle onPointerDown={handleResizeStart} dragging={dragging} label={t('sidebar.resize')} />
+
+      <WorkspaceSettingsModal
+        open={showWorkspaceSettings}
+        onClose={() => setShowWorkspaceSettings(false)}
+      />
 
       {showCreateWsForm && (
         <div
@@ -186,7 +281,7 @@ export function DashboardSidebar() {
           >
             <div className="space-y-4">
               <label className="block space-y-1.5">
-                <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-editorial-muted">
+                <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
                   {t('workspace.nameLabel')}
                 </span>
                 <input
@@ -199,7 +294,7 @@ export function DashboardSidebar() {
                 />
               </label>
               <label className="block space-y-1.5">
-                <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-editorial-muted">
+                <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
                   {t('workspace.descriptionLabel')}
                 </span>
                 <textarea
@@ -209,81 +304,10 @@ export function DashboardSidebar() {
                   className="min-h-16 w-full rounded-[14px] border border-editorial-border bg-editorial-textbox/30 px-3 py-2.5 text-sm text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 />
               </label>
-              <label className="block space-y-1.5">
-                <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-editorial-muted">
-                  {t('workspace.embeddingModel')}
-                </span>
-                <select
-                  value={newWsModel}
-                  onChange={(e) => setNewWsModel(e.target.value as EmbeddingModel)}
-                  className="w-full rounded-[14px] border border-editorial-border bg-editorial-textbox/30 px-3 py-2.5 text-sm text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                >
-                  <option value="text-embedding-3-small">text-embedding-3-small</option>
-                  <option value="text-embedding-3-large">text-embedding-3-large</option>
-                </select>
-              </label>
             </div>
           </EditorialModalShell>
         </div>
       )}
-    </motion.div>
-  );
-}
-
-interface AttachedSidebarTabProps {
-  active: boolean;
-  ariaCurrent?: 'page';
-  disabled?: boolean;
-  icon: ReactNode;
-  label: string;
-  layoutId: string;
-  onClick?: () => void;
-  size?: 'area' | 'workspace';
-}
-
-function AttachedSidebarTab({
-  active,
-  ariaCurrent,
-  disabled = false,
-  icon,
-  label,
-  layoutId,
-  onClick,
-  size = 'workspace',
-}: AttachedSidebarTabProps) {
-  const labelClassName = size === 'area'
-    ? 'font-display text-sm italic'
-    : 'font-sans text-sm';
-  const minHeightClassName = size === 'area' ? 'min-h-16' : 'min-h-[3.25rem]';
-  const sharedButtonClassName = `relative z-10 flex w-full items-center gap-2 rounded-l-[20px] rounded-r-none px-3.5 py-2.5 text-left transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${minHeightClassName}`;
-
-  return (
-    <div className={`relative pl-3 pr-0 ${active ? 'z-20' : 'z-10'}`}>
-      {active ? (
-        <motion.div
-          layoutId={layoutId}
-          transition={ATTACHED_TAB_TRANSITION}
-          className="dashboard-sidebar-tab-surface absolute inset-y-0 left-2 right-0 z-0"
-        />
-      ) : null}
-      <button
-        type="button"
-        onClick={onClick}
-        disabled={disabled}
-        aria-current={ariaCurrent}
-        className={`${sharedButtonClassName} ${
-          active
-            ? 'text-editorial-ink'
-            : disabled
-              ? 'cursor-not-allowed text-editorial-muted opacity-55'
-              : 'text-editorial-muted hover:text-editorial-accent'
-        }`}
-      >
-        {icon}
-        <span className={`min-w-0 flex-1 truncate ${labelClassName} ${active ? 'text-editorial-ink' : ''}`}>
-          {label}
-        </span>
-      </button>
-    </div>
+    </motion.nav>
   );
 }

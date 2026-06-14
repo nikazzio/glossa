@@ -204,6 +204,7 @@ export function useDocumentViewState() {
   return {
     // Layout
     resolvedLayout,
+    documentLayout,
     paneFocus,
     syncScrollEnabled,
     // Chunks

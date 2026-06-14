@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   BookOpenText,
   Database,
+  KeyRound,
   Plus,
-  Settings2,
   Trash2,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
@@ -11,15 +11,18 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useProjectStore } from '../../stores/projectStore';
 import { confirm } from '../../stores/confirmStore';
+import { useUiStore } from '../../stores/uiStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
 import { EditorialModalShell } from '../common';
 import { IconButton, PillButton, SectionLabel } from '../ui';
-import { WorkspaceSettingsModal } from './WorkspaceSettingsModal';
 
 export function WorkspaceHome() {
   const { t, i18n } = useTranslation();
-  const { activeWorkspace, workspaces, removeWorkspace } = useWorkspaceStore();
+  const { activeWorkspace } = useWorkspaceStore();
+  const setShowSettings = useUiStore((state) => state.setShowSettings);
+  const { statuses: keyStatuses, isLoading: keyStatusLoading } = useProviderKeyStatus();
   const {
     projects,
     loadProjects,
@@ -28,7 +31,6 @@ export function WorkspaceHome() {
     removeProject,
   } = useProjectStore();
 
-  const [showWorkspaceSettings, setShowWorkspaceSettings] = useState(false);
   const [showNewProjectForm, setShowNewProjectForm] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [creatingProject, setCreatingProject] = useState(false);
@@ -62,6 +64,8 @@ export function WorkspaceHome() {
       year: 'numeric',
     }).format(new Date(activeWorkspace.createdAt));
   }, [activeWorkspace?.createdAt, i18n.language]);
+  const hasRemoteProvider = Object.values(keyStatuses).some(Boolean);
+  const shouldShowProviderBanner = !keyStatusLoading && !hasRemoteProvider;
 
   const handleCreateProject = async () => {
     if (!newProjectName.trim()) return;
@@ -109,37 +113,6 @@ export function WorkspaceHome() {
     }
   };
 
-  const handleDeleteWorkspace = async () => {
-    if (!activeWorkspace) return;
-
-    if (projects.length > 0) {
-      await confirm({
-        title: t('workspace.deleteBlockedTitle'),
-        message: t('workspace.deleteBlockedMessage', { count: projects.length }),
-        confirmLabel: t('common.confirm'),
-        danger: true,
-      });
-      return;
-    }
-
-    const ok = await confirm({
-      title: t('workspace.deleteTitle'),
-      message: t('workspace.deleteMessage', { name: activeWorkspace.name }),
-      confirmLabel: t('common.delete'),
-      danger: true,
-    });
-    if (!ok) return;
-
-    try {
-      await removeWorkspace(activeWorkspace.id);
-      toast.success(t('workspace.deleted'));
-    } catch (err: unknown) {
-      toast.error(t('workspace.deleteFailed'), {
-        description: err instanceof Error ? err.message : String(err),
-      });
-    }
-  };
-
   return (
     <main className="flex flex-1 h-full min-h-0 flex-col overflow-y-auto bg-editorial-paper custom-scrollbar">
       <div className="grid w-full flex-1 min-h-0 gap-0 xl:grid-cols-[minmax(0,1fr)_22rem]">
@@ -147,7 +120,7 @@ export function WorkspaceHome() {
           <section className="min-w-0">
             <div className="flex flex-col gap-4">
               <div className="min-w-0">
-                <h1 className="font-display text-4xl italic tracking-tight text-editorial-ink md:text-5xl">
+                <h1 className="font-display text-4xl italic text-editorial-ink md:text-5xl">
                   {activeWorkspace?.name ?? t('workspace.noActive')}
                 </h1>
                 {activeWorkspace?.description ? (
@@ -166,26 +139,36 @@ export function WorkspaceHome() {
                 >
                   <Plus size={14} />
                 </IconButton>
-                <IconButton
-                  size="md"
-                  onClick={() => setShowWorkspaceSettings(true)}
-                  title={t('workspace.configure')}
-                  disabled={!activeWorkspace}
-                >
-                  <Settings2 size={14} />
-                </IconButton>
-                <IconButton
-                  size="md"
-                  tone="muted"
-                  onClick={() => void handleDeleteWorkspace()}
-                  title={t('workspace.delete')}
-                  disabled={!activeWorkspace}
-                >
-                  <Trash2 size={14} />
-                </IconButton>
               </div>
             </div>
           </section>
+
+          {shouldShowProviderBanner ? (
+            <section className="mt-5 rounded-[20px] border border-editorial-accent/35 bg-editorial-accent/8 px-5 py-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex min-w-0 items-start gap-3">
+                  <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-editorial-accent/35 bg-editorial-paper text-editorial-accent">
+                    <KeyRound size={15} />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="font-display text-xl italic text-editorial-ink">
+                      {t('workspace.providerBannerTitle')}
+                    </p>
+                    <p className="mt-1 max-w-2xl text-sm leading-relaxed text-editorial-muted [text-wrap:pretty]">
+                      {t('workspace.providerBannerBody')}
+                    </p>
+                  </div>
+                </div>
+                <PillButton
+                  variant="accent"
+                  onClick={() => setShowSettings(true, 'provider')}
+                  className="shrink-0"
+                >
+                  {t('workspace.providerBannerCta')}
+                </PillButton>
+              </div>
+            </section>
+          ) : null}
 
           <section className="mt-5 min-h-0">
             {projects.length === 0 ? (
@@ -285,7 +268,6 @@ export function WorkspaceHome() {
           <SectionLabel icon={Database} label={t('workspace.technicalSummary')} />
           <dl className="mt-4 space-y-3">
             <TechRow label={t('workspace.projectsMetric')} value={String(projects.length)} />
-            <TechRow label={t('workspace.workspacesMetric')} value={String(workspaces.length)} />
             <TechRow label={t('workspace.pipelineMetric')} value={String(projects.reduce((total, project) => total + (project.pipeline_count ?? 0), 0))} />
             <TechRow label={t('workspace.embeddingModel')} value={activeWorkspace?.embeddingModel ?? '—'} />
             <TechRow label={t('workspace.createdAt')} value={createdLabel} />
@@ -294,10 +276,6 @@ export function WorkspaceHome() {
         </aside>
       </div>
 
-      <WorkspaceSettingsModal
-        open={showWorkspaceSettings}
-        onClose={() => setShowWorkspaceSettings(false)}
-      />
       <AnimatePresence>
         {showNewProjectForm ? (
           <div
@@ -361,7 +339,7 @@ export function WorkspaceHome() {
                     {t('workspace.emptyProjectsBody')}
                   </p>
                   <label className="block space-y-1.5">
-                    <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-editorial-muted">
+                    <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
                       {t('workspace.newBookCard')}
                     </span>
                     <input
@@ -391,8 +369,8 @@ export function WorkspaceHome() {
 
 function TechRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-editorial-border/45 pb-2.5 last:border-b-0 last:pb-0">
-      <dt className="text-[10px] font-bold uppercase tracking-[0.24em] text-editorial-muted">
+    <div className="flex items-baseline justify-between gap-4 border-b border-editorial-border/45 pb-2.5 last:border-b-0 last:pb-0">
+      <dt className="text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
         {label}
       </dt>
       <dd className="max-w-[12rem] truncate text-right font-mono text-xs text-editorial-ink">

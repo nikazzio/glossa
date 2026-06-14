@@ -38,7 +38,20 @@
   "sidebar": {
     "areaLabel": "Area",
     "workspaceSection": "Workspace",
-    "backToWorkspace": "Torna al workspace"
+    "backToWorkspace": "Torna al workspace",
+    "resize": "Ridimensiona la barra"
+  },
+  "projectShell": {
+    "railLabel": "Pannelli progetto",
+    "runTab": "Run",
+    "pipelineTab": "Pipeline",
+    "documentTab": "Documento",
+    "insightTab": "Insight",
+    "chunkTab": "Chunk",
+    "resizeRail": "Ridimensiona la barra",
+    "resizePanel": "Ridimensiona il pannello",
+    "noDocumentHint": "Importa un documento sorgente per abilitare controlli lettura, export e pannelli sincronizzati.",
+    "insightHint": "Apri il pannello insight e vai direttamente a indice, ricerca, statistiche, coerenza o glossario."
   },
   "a11y": {
     "runStarted": "Esecuzione della pipeline avviata.",
@@ -173,6 +186,7 @@
     "resetPreviewDone": "Anteprima azzerata",
     "modeTest": "Test",
     "modeProduction": "Produzione",
+    "modeProductionShort": "Prod",
     "modeTestHint": "Esegue la pipeline su un solo blocco e produce un'anteprima. La configurazione rimane modificabile.",
     "modeProductionHint": "Esegue la pipeline sull'intero documento.",
     "modeLockedHint": "Modalità bloccata — esistono già traduzioni. Usa Reset completo per ricominciare.",
@@ -569,6 +583,12 @@
     "activeLabel": "Workspace traduzioni",
     "noActive": "Nessun workspace attivo",
     "translationBoundary": "Questo workspace contiene progetti di traduzione e phrase memory condivisa. Biblioteca e trascrizioni resteranno aree separate in Glossa 2.0.",
+    "wizardTitle": "Crea il tuo primo workspace",
+    "wizardBody": "Un workspace raggruppa i tuoi libri e condivide la phrase memory tra di essi.",
+    "createFirst": "Crea workspace",
+    "providerBannerTitle": "Configura un provider prima del primo run",
+    "providerBannerBody": "I run con modelli remoti richiedono almeno una API key. Ollama resta disponibile in locale, ma OpenAI, Gemini, Anthropic e DeepSeek richiedono le rispettive chiavi nelle Impostazioni.",
+    "providerBannerCta": "Apri Provider",
     "configure": "Configura workspace",
     "create": "Nuovo workspace",
     "delete": "Elimina workspace",
@@ -803,6 +823,7 @@
     "searchInSource": "Cerca nel sorgente",
     "searchInTranslation": "Cerca nella candidata",
     "clearPaneSearch": "Cancella ricerca",
+    "searchInPane": "Cerca nel testo",
     "searchEmptyTitle": "Ricerca nel documento",
     "searchEmptyBody": "Digita una parola o frase per cercare in tutti i chunk, sia nel testo originale che nella traduzione e nell'audit.",
     "searchNoResults": "Nessun risultato trovato.",
@@ -918,7 +939,8 @@
       "step4": "Il Giudice AI valuta ciascun chunk e — opzionalmente — un audit di coerenza analizza il documento intero.",
       "step5": "Rivedi e correggi la traduzione candidata nel workspace, poi rivaluta o blocca il chunk come definitivo.",
       "step6": "Esporti in .txt, .md, .html, .docx o .md bilingue per pubblicazione o revisione esterna.",
-      "p3": "Provider e modello sono indipendenti per ogni stage e per il giudice: puoi mescolare un modello veloce per la traduzione e uno più potente per refine o audit, oppure restare in locale con Ollama."
+      "p3": "Provider e modello sono indipendenti per ogni stage e per il giudice: puoi mescolare un modello veloce per la traduzione e uno più potente per refine o audit, oppure restare in locale con Ollama.",
+      "nav": "Navigazione: in alto il breadcrumb (Glossa // workspace // progetto) riporta alla home cliccando sul workspace. A sinistra c'è un'unica barra: nella home elenca aree e workspace (modifica ed elimina del workspace attivo sono sulla sua riga); nel progetto contiene Run, Pipeline, Documento, Insight e Chunk. Run/Pipeline/Documento si aprono dentro la barra; Insight, Chunk e la configurazione pipeline escono in un secondo pannello a fianco. Tutte le barre si ridimensionano trascinando il bordo destro e si riducono a sole icone."
     },
     "pipeline": {
       "title": "Pipeline di traduzione",

@@ -38,7 +38,20 @@
   "sidebar": {
     "areaLabel": "Area",
     "workspaceSection": "Workspace",
-    "backToWorkspace": "Back to workspace"
+    "backToWorkspace": "Back to workspace",
+    "resize": "Resize sidebar"
+  },
+  "projectShell": {
+    "railLabel": "Project panels",
+    "runTab": "Run",
+    "pipelineTab": "Pipeline",
+    "documentTab": "Document",
+    "insightTab": "Insight",
+    "chunkTab": "Chunk",
+    "resizeRail": "Resize sidebar",
+    "resizePanel": "Resize panel",
+    "noDocumentHint": "Import a source document to unlock reader controls, export, and synchronized panes.",
+    "insightHint": "Open the insights drawer and jump directly to document index, search, stats, coherence, or glossary."
   },
   "a11y": {
     "runStarted": "Pipeline run started.",
@@ -173,6 +186,7 @@
     "resetPreviewDone": "Preview cleared",
     "modeTest": "Test",
     "modeProduction": "Production",
+    "modeProductionShort": "Prod",
     "modeTestHint": "Runs the pipeline on one chunk and produces a preview. Configuration stays editable.",
     "modeProductionHint": "Runs the pipeline on the entire document.",
     "modeLockedHint": "Mode locked — real translations exist. Use Full Reset to start over.",
@@ -569,6 +583,12 @@
     "activeLabel": "Translation workspace",
     "noActive": "No active workspace",
     "translationBoundary": "This workspace contains translation projects and shared phrase memory. Library and transcription will remain separate areas in Glossa 2.0.",
+    "wizardTitle": "Create your first workspace",
+    "wizardBody": "A workspace groups your books and shares phrase memory across them.",
+    "createFirst": "Create workspace",
+    "providerBannerTitle": "Configure a provider before the first run",
+    "providerBannerBody": "Remote model runs need at least one API key. Ollama remains available locally, but OpenAI, Gemini, Anthropic, and DeepSeek require their keys in Settings.",
+    "providerBannerCta": "Open Provider Settings",
     "configure": "Configure workspace",
     "create": "New workspace",
     "delete": "Delete workspace",
@@ -803,6 +823,7 @@
     "searchInSource": "Search source",
     "searchInTranslation": "Search candidate",
     "clearPaneSearch": "Clear search",
+    "searchInPane": "Search this text",
     "searchEmptyTitle": "Document search",
     "searchEmptyBody": "Type a word or phrase to search across all chunks — source text, translation, and audit findings.",
     "searchNoResults": "No results found.",
@@ -918,7 +939,8 @@
       "step4": "The AI Judge evaluates each chunk; optionally, a coherence audit reviews the whole document.",
       "step5": "Review and correct the candidate translation in the workspace, then re-evaluate or lock the chunk.",
       "step6": "Export in .txt, .md, .html, .docx, or bilingual .md for publication or external review.",
-      "p3": "Provider and model are independent for every stage and for the judge: you can mix a fast model for translation with a stronger one for refine or audit, or stay fully local with Ollama."
+      "p3": "Provider and model are independent for every stage and for the judge: you can mix a fast model for translation with a stronger one for refine or audit, or stay fully local with Ollama.",
+      "nav": "Navigation: the breadcrumb at the top (Glossa // workspace // project) returns to home when you click the workspace. On the left there is a single bar: on the home it lists areas and workspaces (edit and delete of the active workspace live on its row); inside a project it holds Run, Pipeline, Document, Insight and Chunk. Run/Pipeline/Document open inside the bar; Insight, Chunk and the pipeline configuration open in a second panel alongside. Every bar resizes by dragging its right edge and collapses to icons."
     },
     "pipeline": {
       "title": "Translation pipeline",

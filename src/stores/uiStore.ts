@@ -12,6 +12,11 @@ export type DocumentPaneFocus = 'both' | 'source' | 'translation';
 export type HelpSection = 'overview' | 'pipeline' | 'features' | 'context' | 'audit' | 'projects' | 'providers' | 'ollama' | 'glossary' | 'shortcuts' | 'troubleshooting' | 'design';
 export type ActivePanel = 'config' | 'insights' | 'chunk' | 'settings' | 'help' | null;
 export type UiFont = 'jakarta' | 'geist' | 'inter' | 'plex';
+export type SettingsTab = 'translations' | 'provider';
+export type ProjectPanelTab = 'run' | 'pipeline' | 'document' | 'insight' | 'chunk';
+
+/** Pannelli che vivono inline nella barra primaria (non aprono il fly-out). */
+const INLINE_PROJECT_PANELS: ReadonlyArray<ProjectPanelTab> = ['run', 'pipeline', 'document'];
 
 interface UiState {
   viewMode: ViewMode;
@@ -21,6 +26,7 @@ interface UiState {
   uiFont: UiFont;
   selectedChunkId: string | null;
   showSettings: boolean;
+  settingsTab: SettingsTab;
   showHelp: boolean;
   helpSection: HelpSection;
   showConfigDrawer: boolean;
@@ -45,6 +51,13 @@ interface UiState {
   focusIsAnnotation: boolean;
   traceStageId: string | null;
   activePanel: ActivePanel;
+  activeProjectPanel: ProjectPanelTab;
+  projectContextCollapsed: boolean;
+  dashboardSidebarCollapsed: boolean;
+  dashboardSidebarWidth: number;
+  projectSidebarWidth: number;
+  projectFlyoutWidth: number;
+  configFlyoutWidth: number;
   pendingAnnotationAnchor: { chunkId: string; text: string; content?: string } | null;
 
   setTraceStageId: (id: string | null) => void;
@@ -55,7 +68,8 @@ interface UiState {
   setSyncScrollEnabled: (enabled: boolean) => void;
   setUiFont: (font: UiFont) => void;
   setSelectedChunkId: (chunkId: string | null) => void;
-  setShowSettings: (show: boolean) => void;
+  setShowSettings: (show: boolean, tab?: SettingsTab) => void;
+  setSettingsTab: (tab: SettingsTab) => void;
   setShowHelp: (show: boolean, section?: HelpSection) => void;
   setShowConfigDrawer: (show: boolean) => void;
   showExportDialog: boolean;
@@ -72,7 +86,14 @@ interface UiState {
   focusAnnotationInChunk: (chunkId: string, query: string) => void;
   clearFocusedIssue: () => void;
   clearAnnotationFocus: () => void;
-  setActivePanel: (panel: ActivePanel, tab?: InsightsDrawerTab | ChunkDrawerTab | HelpSection) => void;
+  setActiveProjectPanel: (panel: ProjectPanelTab) => void;
+  setProjectContextCollapsed: (collapsed: boolean) => void;
+  setDashboardSidebarCollapsed: (collapsed: boolean) => void;
+  setDashboardSidebarWidth: (width: number) => void;
+  setProjectSidebarWidth: (width: number) => void;
+  setProjectFlyoutWidth: (width: number) => void;
+  setConfigFlyoutWidth: (width: number) => void;
+  setActivePanel: (panel: ActivePanel, tab?: InsightsDrawerTab | ChunkDrawerTab | HelpSection | SettingsTab) => void;
 }
 
 export const useUiStore = create<UiState>()(
@@ -85,6 +106,7 @@ export const useUiStore = create<UiState>()(
       uiFont: 'jakarta',
       selectedChunkId: null,
       showSettings: false,
+      settingsTab: 'translations',
       showHelp: false,
       helpSection: 'overview',
       showConfigDrawer: false,
@@ -110,6 +132,13 @@ export const useUiStore = create<UiState>()(
       focusIsAnnotation: false,
       traceStageId: null,
       activePanel: null,
+      activeProjectPanel: 'run',
+      projectContextCollapsed: false,
+      dashboardSidebarCollapsed: false,
+      dashboardSidebarWidth: 240,
+      projectSidebarWidth: 240,
+      projectFlyoutWidth: 430,
+      configFlyoutWidth: 560,
       pendingAnnotationAnchor: null,
 
       setViewMode: (mode) =>
@@ -131,11 +160,12 @@ export const useUiStore = create<UiState>()(
           selectedChunkId: chunkId,
           ...(chunkId !== state.focusedChunkId && { focusedIssueQuery: null, focusedSourceIssueQuery: null }),
         })),
-      setShowSettings: (show) =>
+      setShowSettings: (show, tab) =>
         set((state) =>
           show
             ? {
                 showSettings: true,
+                settingsTab: tab ?? state.settingsTab,
                 showHelp: false,
                 showConfigDrawer: false,
                 showDocumentDrawer: false,
@@ -144,6 +174,7 @@ export const useUiStore = create<UiState>()(
               }
             : { showSettings: false, showHelp: state.showHelp, activePanel: state.showHelp ? 'help' as const : null },
         ),
+      setSettingsTab: (tab) => set({ settingsTab: tab }),
       setShowHelp: (show, section) =>
         set((state) =>
           show
@@ -169,6 +200,8 @@ export const useUiStore = create<UiState>()(
                 showSettings: false,
                 showHelp: false,
                 activePanel: 'config' as const,
+                // Config esce dal fly-out della voce Pipeline: mantieni il rail su 'pipeline'.
+                activeProjectPanel: 'pipeline' as const,
               }
             : { showConfigDrawer: false, activePanel: null },
         ),
@@ -183,6 +216,8 @@ export const useUiStore = create<UiState>()(
                 showSettings: false,
                 showHelp: false,
                 activePanel: 'insights' as const,
+                activeProjectPanel: 'insight' as const,
+                projectContextCollapsed: true,
               }
             : { showDocumentDrawer: false, activePanel: null },
         ),
@@ -198,6 +233,8 @@ export const useUiStore = create<UiState>()(
                 showSettings: false,
                 showHelp: false,
                 activePanel: 'chunk' as const,
+                activeProjectPanel: 'chunk' as const,
+                projectContextCollapsed: true,
               }
             : { showChunkDrawer: false, activePanel: null },
         ),
@@ -227,12 +264,51 @@ export const useUiStore = create<UiState>()(
       clearAnnotationFocus: () => set({ focusedIssueQuery: null, focusIsAnnotation: false }),
       setTraceStageId: (id) => set({ traceStageId: id }),
       setPendingAnnotationAnchor: (anchor) => set({ pendingAnnotationAnchor: anchor }),
+      setActiveProjectPanel: (panel) =>
+        set((state) => {
+          if (panel === 'insight') {
+            return {
+              activeProjectPanel: 'insight' as const,
+              showDocumentDrawer: true,
+              showChunkDrawer: false,
+              showConfigDrawer: false,
+              activePanel: 'insights' as const,
+              // Aprendo il fly-out la barra principale si riduce a icone.
+              projectContextCollapsed: true,
+            };
+          }
+          if (panel === 'chunk') {
+            return {
+              activeProjectPanel: 'chunk' as const,
+              showChunkDrawer: true,
+              showDocumentDrawer: false,
+              showConfigDrawer: false,
+              activePanel: 'chunk' as const,
+              projectContextCollapsed: true,
+            };
+          }
+          // run / pipeline / document → contenuto inline, fly-out chiuso.
+          return {
+            activeProjectPanel: panel,
+            showDocumentDrawer: false,
+            showChunkDrawer: false,
+            showConfigDrawer: false,
+            activePanel: state.activePanel === 'insights' || state.activePanel === 'chunk' || state.activePanel === 'config' ? null : state.activePanel,
+          };
+        }),
+      setProjectContextCollapsed: (collapsed) => set({ projectContextCollapsed: collapsed }),
+      setDashboardSidebarCollapsed: (collapsed) => set({ dashboardSidebarCollapsed: collapsed }),
+      setDashboardSidebarWidth: (width) => set({ dashboardSidebarWidth: width }),
+      setProjectSidebarWidth: (width) => set({ projectSidebarWidth: width }),
+      setProjectFlyoutWidth: (width) => set({ projectFlyoutWidth: width }),
+      setConfigFlyoutWidth: (width) => set({ configFlyoutWidth: width }),
       setActivePanel: (panel, tab) =>
         set((state) => {
           switch (panel) {
             case 'settings':
               return {
-                showSettings: true, showHelp: false, showConfigDrawer: false,
+                showSettings: true, settingsTab: (tab as SettingsTab) ?? state.settingsTab,
+                showHelp: false, showConfigDrawer: false,
                 showDocumentDrawer: false, showChunkDrawer: false, activePanel: 'settings' as const,
               };
             case 'help':
@@ -270,7 +346,7 @@ export const useUiStore = create<UiState>()(
     }),
     {
       name: 'glossa-ui-prefs',
-      version: 7,
+      version: 10,
       migrate: (persisted: unknown, fromVersion: number) => {
         const s = persisted as Record<string, unknown>;
         if (fromVersion < 1) {
@@ -306,6 +382,24 @@ export const useUiStore = create<UiState>()(
         if (fromVersion < 7) {
           s.uiFont = 'jakarta';
         }
+        if (fromVersion < 8) {
+          s.activeProjectPanel = 'run';
+          s.projectContextCollapsed = false;
+        }
+        if (fromVersion < 9) {
+          // I pannelli fly-out (insight/chunk) non sono uno stato di rail persistibile:
+          // ripristina su 'run' così la barra non resta evidenziata su un fly-out chiuso.
+          if (!INLINE_PROJECT_PANELS.includes(s.activeProjectPanel as ProjectPanelTab)) {
+            s.activeProjectPanel = 'run';
+          }
+        }
+        if (fromVersion < 10) {
+          s.dashboardSidebarCollapsed = false;
+          s.dashboardSidebarWidth = 240;
+          s.projectSidebarWidth = 240;
+          s.projectFlyoutWidth = 430;
+          s.configFlyoutWidth = 560;
+        }
         return s;
       },
       storage: createJSONStorage(() => localStorage),
@@ -314,6 +408,15 @@ export const useUiStore = create<UiState>()(
         documentPaneFocus: state.documentPaneFocus,
         syncScrollEnabled: state.syncScrollEnabled,
         uiFont: state.uiFont,
+        activeProjectPanel: INLINE_PROJECT_PANELS.includes(state.activeProjectPanel)
+          ? state.activeProjectPanel
+          : 'run',
+        projectContextCollapsed: state.projectContextCollapsed,
+        dashboardSidebarCollapsed: state.dashboardSidebarCollapsed,
+        dashboardSidebarWidth: state.dashboardSidebarWidth,
+        projectSidebarWidth: state.projectSidebarWidth,
+        projectFlyoutWidth: state.projectFlyoutWidth,
+        configFlyoutWidth: state.configFlyoutWidth,
         highlightsEnabled: state.highlightsEnabled,
         highlightColors: state.highlightColors,
       }),

@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useUiStore } from '../../stores/uiStore';
-import type { UiFont } from '../../stores/uiStore';
+import type { SettingsTab, UiFont } from '../../stores/uiStore';
 import { useConfigStore } from '../../stores/configStore';
 import { ApiKeyInput } from './ApiKeyInput';
 import { ollamaService } from '../../services/llmService';
@@ -31,8 +31,6 @@ const PROVIDER_LABELS: Record<ModelProvider, string> = {
   deepseek: 'DeepSeek',
   ollama: 'Ollama',
 };
-
-type SettingsTab = 'translations' | 'provider';
 
 function getModelGroupLabel(provider: ModelProvider, modelId: string): string {
   switch (provider) {
@@ -164,6 +162,8 @@ export function SettingsModal() {
     setHighlightColor,
     uiFont,
     setUiFont,
+    settingsTab: activeTab,
+    setSettingsTab: setActiveTab,
   } = useUiStore();
   const {
     ollamaStatus,
@@ -186,7 +186,6 @@ export function SettingsModal() {
   const [showPricingOverrides, setShowPricingOverrides] = useState(false);
   const [showSecurityAdvisory, setShowSecurityAdvisory] = useState(false);
   const [activeProviderTab, setActiveProviderTab] = useState<ModelProvider>('openai');
-  const [activeTab, setActiveTab] = useState<SettingsTab>('translations');
   const [urlDraft, setUrlDraft] = useState(ollamaBaseUrl);
   const [urlError, setUrlError] = useState<string | null>(null);
   const trapRef = useFocusTrap(showSettings, () => setShowSettings(false));

@@ -66,6 +66,14 @@ describe('uiStore drawer mutual exclusion', () => {
     expect(state.showChunkDrawer).toBe(false);
   });
 
+  it('can open settings directly on the provider tab', () => {
+    useUiStore.getState().setShowSettings(true, 'provider');
+
+    const state = useUiStore.getState();
+    expect(state.showSettings).toBe(true);
+    expect(state.settingsTab).toBe('provider');
+  });
+
   it('closing a drawer does not toggle other panels', () => {
     useUiStore.setState({ showSettings: true, showConfigDrawer: true });
 
@@ -100,6 +108,57 @@ describe('uiStore drawer mutual exclusion', () => {
     expect(state.showChunkDrawer).toBe(true);
     expect(state.chunkDrawerTab).toBe('operations');
     expect(state.showConfigDrawer).toBe(false);
+  });
+});
+
+describe('uiStore project shell state', () => {
+  it('defaults to the run panel with context expanded', () => {
+    const state = useUiStore.getState();
+    expect(state.activeProjectPanel).toBe('run');
+    expect(state.projectContextCollapsed).toBe(false);
+  });
+
+  it('updates project panel and collapse state independently', () => {
+    useUiStore.getState().setActiveProjectPanel('document');
+    useUiStore.getState().setProjectContextCollapsed(true);
+
+    const state = useUiStore.getState();
+    expect(state.activeProjectPanel).toBe('document');
+    expect(state.projectContextCollapsed).toBe(true);
+  });
+
+  it('raises the document fly-out when the insight panel is selected', () => {
+    useUiStore.getState().setActiveProjectPanel('insight');
+
+    const state = useUiStore.getState();
+    expect(state.activeProjectPanel).toBe('insight');
+    expect(state.showDocumentDrawer).toBe(true);
+    expect(state.showChunkDrawer).toBe(false);
+  });
+
+  it('raises the chunk fly-out when the chunk panel is selected', () => {
+    useUiStore.getState().setActiveProjectPanel('chunk');
+
+    const state = useUiStore.getState();
+    expect(state.activeProjectPanel).toBe('chunk');
+    expect(state.showChunkDrawer).toBe(true);
+    expect(state.showDocumentDrawer).toBe(false);
+  });
+
+  it('closes the fly-out drawers when an inline panel is selected', () => {
+    useUiStore.getState().setActiveProjectPanel('insight');
+    useUiStore.getState().setActiveProjectPanel('document');
+
+    const state = useUiStore.getState();
+    expect(state.activeProjectPanel).toBe('document');
+    expect(state.showDocumentDrawer).toBe(false);
+    expect(state.showChunkDrawer).toBe(false);
+  });
+
+  it('syncs the rail to the chunk panel when the chunk drawer is opened externally', () => {
+    useUiStore.getState().setShowChunkDrawer(true, 'audit');
+
+    expect(useUiStore.getState().activeProjectPanel).toBe('chunk');
   });
 });
 

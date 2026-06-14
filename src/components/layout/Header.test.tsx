@@ -4,6 +4,7 @@ import { Header } from './Header';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useLibraryStore } from '../../stores/libraryStore';
 import { useProjectStore } from '../../stores/projectStore';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
 
 const toastMocks = vi.hoisted(() => ({
   success: vi.fn(),
@@ -16,6 +17,7 @@ vi.mock('sonner', () => ({
 }));
 
 const originalProjectSave = useProjectStore.getState().saveCurrentProject;
+const originalCloseProject = useProjectStore.getState().closeProject;
 const originalLibrarySave = useLibraryStore.getState().saveAllDirty;
 
 describe('Header global save', () => {
@@ -26,6 +28,11 @@ describe('Header global save', () => {
       currentProjectId: null,
       projects: [],
       saveCurrentProject: originalProjectSave,
+      closeProject: originalCloseProject,
+    });
+    useWorkspaceStore.setState({
+      activeWorkspace: null,
+      workspaces: [],
     });
     useLibraryStore.setState({
       dirtyIds: [],
@@ -87,5 +94,25 @@ describe('Header global save', () => {
     await waitFor(() => expect(saveAllDirty).toHaveBeenCalledTimes(1));
     expect(saveCurrentProject).not.toHaveBeenCalled();
     expect(toastMocks.warning).toHaveBeenCalledWith('header.savedLibraryProjectDeferred');
+  });
+
+  it('renders the project breadcrumb and returns to the workspace dashboard', () => {
+    const closeProject = vi.fn();
+    useWorkspaceStore.setState({
+      activeWorkspace: { id: 'workspace-1', name: 'Scholars' } as never,
+      workspaces: [{ id: 'workspace-1', name: 'Scholars' } as never],
+    });
+    useProjectStore.setState({
+      currentProjectId: 'project-1',
+      projects: [{ id: 'project-1', name: 'Draft' } as never],
+      closeProject,
+    });
+
+    render(<Header />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Scholars' }));
+
+    expect(screen.getByText('Draft')).toBeInTheDocument();
+    expect(closeProject).toHaveBeenCalledTimes(1);
   });
 });

@@ -102,8 +102,8 @@ const ConfigDrawer = lazy(() =>
 const DocumentView = lazy(() =>
   import('./components/document').then((m) => ({ default: m.DocumentView })),
 );
-const InsightsDrawer = lazy(() =>
-  import('./components/document').then((m) => ({ default: m.InsightsDrawer })),
+const ProjectFlyout = lazy(() =>
+  import('./components/layout').then((m) => ({ default: m.ProjectFlyout })),
 );
 const SettingsModal = lazy(() =>
   import('./components/settings/SettingsModal').then((m) => ({ default: m.SettingsModal })),
@@ -136,6 +136,7 @@ interface PendingImport {
  * nella shell gating di App.
  */
 function EditorView() {
+  const { t } = useTranslation();
   const {
     runPipeline,
     runAuditOnly,
@@ -197,12 +198,12 @@ function EditorView() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg === 'pdf_no_text_layer') {
-        toast.error('PDF has no selectable text layer.');
+        toast.error(t('files.pdfScannedError'));
       } else {
-        toast.error('Import failed.', { description: msg });
+        toast.error(t('files.importError'), { description: msg });
       }
     }
-  }, [chunkPresetMedium, config]);
+  }, [chunkPresetMedium, config, t]);
 
   const handleConfirmImport = useCallback(async (
     manualChunks?: string[],
@@ -270,12 +271,12 @@ function EditorView() {
         logger.error('savePipelineConfig after import failed', {
           error: err instanceof Error ? err.message : String(err),
         });
-        toast.warning('Pipeline settings could not be fully persisted after import.');
+        toast.warning(t('files.pipelineSaveAfterImportFailed'));
       }
     }
     setPendingImport(null);
     setShowConfigDrawer(false);
-    toast.success('File imported successfully.');
+    toast.success(t('files.imported'));
   }, [
     activePipelineId,
     chunkPresetLong,
@@ -286,6 +287,7 @@ function EditorView() {
     pendingImport,
     setConfig,
     setShowConfigDrawer,
+    t,
   ]);
 
   return (
@@ -295,23 +297,24 @@ function EditorView() {
           <main className="relative flex flex-1 min-h-0 overflow-hidden">
             <PipelineSidebar
               onRunPipeline={runPipeline}
+              onRunAuditOnly={runAuditOnly}
               onCancelPipeline={cancelPipeline}
               onDryRun={runDryRun}
               onRetranslateChunk={handleRetranslateChunk}
               onImportDocument={handleImportDocument}
               onOpenWorkspaceSettings={() => setShowWorkspaceSettings(true)}
             />
+            <ConfigDrawer
+              onRunPipeline={runPipeline}
+              onRunAuditOnly={runAuditOnly}
+              onCancelPipeline={cancelPipeline}
+            />
+            <ProjectFlyout onReauditChunk={auditSingleChunk} onRunCoherenceAudit={runCoherenceAudit} />
             <div className="relative flex min-w-0 flex-1">
-              <ConfigDrawer
-                onRunPipeline={runPipeline}
-                onRunAuditOnly={runAuditOnly}
-                onCancelPipeline={cancelPipeline}
-              />
               <DocumentView
                 onRetranslateChunk={handleRetranslateChunk}
                 onImportDocument={handleImportDocument}
               />
-              <InsightsDrawer onReauditChunk={auditSingleChunk} onRunCoherenceAudit={runCoherenceAudit} />
               <PanelTransitionVeil panelKey={editorContentKey} tone="paper" variant="project" />
             </div>
           </main>
