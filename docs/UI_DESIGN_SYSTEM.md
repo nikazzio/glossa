@@ -238,7 +238,8 @@ Le superfici laterali (home e progetto) usano **un'unica barra** (`ShellNav`, `c
 Regole:
 - Sidebar e dashboard usano `editorial-bg/60` o `editorial-bg`, non bianco puro.
 - **Item attivo**: barra accent verticale (`absolute left-0 w-[3px] bg-editorial-accent`) + tint `bg-editorial-accent/10` + testo `text-editorial-accent`. Niente fondo accent pieno, niente linguetta che sfora il bordo colonna.
-- **Collapse**: la barra anima la larghezza (`w-60` ↔ `w-16`), mai render condizionale `return null` (provoca scatti). Collassata = solo icone con tooltip.
+- **Collapse**: la barra anima la larghezza, mai render condizionale `return null` (provoca scatti). Collassata = solo icone con tooltip. **Niente bottone comprimi dedicato**: il collapse segue il pattern activity-bar — click sull'item **attivo** comprime/espande; da collassata, click su qualunque item espande e seleziona. Si può anche trascinare il bordo destro (vedi Resize).
+- **Back progetto**: la barra progetto ha una freccia indietro **slim** in cima (striscia bassa, `IconButton size="sm"`), non una riga piena; il ritorno alla home resta anche dal breadcrumb dell'header.
 - Sezioni con `ShellNavSection` (header `SectionLabel`, tracking calmo `0.1em`). Un solo `border-r`, nessun divider duplicato.
 - Workspace/area attivi: usare `ShellNavItem active` (no titolo ripetuto sopra). Area label `labelFont="display"`.
 - **Azioni di riga**: comandi contestuali (es. modifica/elimina del workspace attivo) vanno nel `trailing` di `ShellNavItem` (wrapper div + button interno + trailing fratelli — mai button annidati), non in barre d'azione separate nel canvas.

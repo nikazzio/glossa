@@ -28,10 +28,11 @@ describe('PipelineSidebar project shell', () => {
     expect(screen.getByText('projectShell.noDocumentHint')).toBeInTheDocument();
   });
 
-  it('collapses the contextual column without changing the selected tab', () => {
+  it('collapses the contextual column when the active tab is clicked again', () => {
     render(<PipelineSidebar />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'projectShell.collapseContext' }));
+    // Run è il tab attivo di default: ri-cliccarlo comprime la barra.
+    fireEvent.click(screen.getByRole('tab', { name: 'projectShell.runTab' }));
 
     expect(useUiStore.getState().projectContextCollapsed).toBe(true);
     expect(useUiStore.getState().activeProjectPanel).toBe('run');

@@ -39,8 +39,6 @@
     "areaLabel": "Area",
     "workspaceSection": "Workspace",
     "backToWorkspace": "Back to workspace",
-    "collapseAreas": "Collapse areas",
-    "expandAreas": "Expand areas",
     "resize": "Resize sidebar"
   },
   "projectShell": {
@@ -50,8 +48,6 @@
     "documentTab": "Document",
     "insightTab": "Insight",
     "chunkTab": "Chunk",
-    "collapseContext": "Collapse project panel",
-    "expandContext": "Expand project panel",
     "resizeRail": "Resize sidebar",
     "resizePanel": "Resize panel",
     "noDocumentHint": "Import a source document to unlock reader controls, export, and synchronized panes.",

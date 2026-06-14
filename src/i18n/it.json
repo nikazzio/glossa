@@ -39,8 +39,6 @@
     "areaLabel": "Area",
     "workspaceSection": "Workspace",
     "backToWorkspace": "Torna al workspace",
-    "collapseAreas": "Comprimi aree",
-    "expandAreas": "Espandi aree",
     "resize": "Ridimensiona la barra"
   },
   "projectShell": {
@@ -50,8 +48,6 @@
     "documentTab": "Documento",
     "insightTab": "Insight",
     "chunkTab": "Chunk",
-    "collapseContext": "Comprimi pannello progetto",
-    "expandContext": "Espandi pannello progetto",
     "resizeRail": "Ridimensiona la barra",
     "resizePanel": "Ridimensiona il pannello",
     "noDocumentHint": "Importa un documento sorgente per abilitare controlli lettura, export e pannelli sincronizzati.",

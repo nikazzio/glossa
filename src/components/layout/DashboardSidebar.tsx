@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Archive, BookOpenText, ChevronLeft, ChevronRight, FilePen, LibraryBig, Plus, Settings2, Trash2 } from 'lucide-react';
+import { Archive, BookOpenText, FilePen, LibraryBig, Plus, Settings2, Trash2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -54,6 +54,21 @@ export function DashboardSidebar() {
     closeProject();
     await setActive(ws);
     await loadProjects();
+  };
+
+  // Pattern activity-bar: click sul workspace attivo fa da toggle della barra.
+  const handleWorkspaceClick = (ws: Workspace) => {
+    const isActive = ws.id === activeWorkspace?.id;
+    if (collapsed) {
+      setCollapsed(false);
+      if (!isActive) void handleSwitchWorkspace(ws);
+      return;
+    }
+    if (isActive) {
+      setCollapsed(true);
+      return;
+    }
+    void handleSwitchWorkspace(ws);
   };
 
   const handleCreateWorkspace = async () => {
@@ -129,21 +144,7 @@ export function DashboardSidebar() {
         dragging ? '' : 'transition-[width] duration-200'
       }`}
     >
-      <div className="flex items-center justify-end px-3 pt-3">
-        <IconButton
-          size="sm"
-          tone="muted"
-          onClick={() => setCollapsed(!collapsed)}
-          title={collapsed ? t('sidebar.expandAreas') : t('sidebar.collapseAreas')}
-          ariaPressed={collapsed}
-          tooltipSide="right"
-          className="bg-editorial-textbox/25 hover:bg-editorial-textbox/45"
-        >
-          {collapsed ? <ChevronRight size={11} /> : <ChevronLeft size={11} />}
-        </IconButton>
-      </div>
-
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto custom-scrollbar pb-4">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto custom-scrollbar pb-4 pt-2">
         <ShellNavSection icon={BookOpenText} label={t('sidebar.areaLabel')} collapsed={collapsed}>
           {AREA_ITEMS.map(({ id, icon: Icon, enabled }) => (
             <ShellNavItem
@@ -152,6 +153,7 @@ export function DashboardSidebar() {
               disabled={!enabled}
               collapsed={collapsed}
               labelFont="display"
+              onClick={enabled ? () => setCollapsed(!collapsed) : undefined}
               ariaCurrent={enabled ? 'page' : undefined}
               icon={(
                 <span
@@ -194,7 +196,7 @@ export function DashboardSidebar() {
                 key={ws.id}
                 active={isActive}
                 collapsed={collapsed}
-                onClick={() => void handleSwitchWorkspace(ws)}
+                onClick={() => handleWorkspaceClick(ws)}
                 ariaCurrent={isActive ? 'page' : undefined}
                 icon={(
                   <span

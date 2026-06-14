@@ -1,8 +1,7 @@
 import type { ReactNode } from 'react';
 import {
+  ArrowLeft,
   BarChart2,
-  ChevronLeft,
-  ChevronRight,
   FileText,
   Layers,
   Play,
@@ -20,6 +19,8 @@ import {
 } from './PipelineSidebarSections';
 import { useUiStore } from '../../stores/uiStore';
 import type { ProjectPanelTab } from '../../stores/uiStore';
+import { useProjectStore } from '../../stores/projectStore';
+import { useChunksStore } from '../../stores/chunksStore';
 import { IconButton } from '../ui';
 
 interface PipelineSidebarProps {
@@ -65,23 +66,38 @@ export function PipelineSidebar({
   const setProjectContextCollapsed = useUiStore((state) => state.setProjectContextCollapsed);
   const width = useUiStore((state) => state.projectSidebarWidth);
   const setWidth = useUiStore((state) => state.setProjectSidebarWidth);
+  const closeProject = useProjectStore((state) => state.closeProject);
+  const isProcessing = useChunksStore((state) => state.isProcessing);
   const { dragging, startDrag } = useEdgeResize();
 
   if (mode === 'dashboard') {
     return <DashboardSidebar />;
   }
 
+  const collapsed = projectContextCollapsed;
+
+  // Pattern activity-bar: l'item attivo fa da toggle del pannello.
   const handleSelect = (panel: ProjectPanelTab) => {
     const isFlyout = panel === 'insight' || panel === 'chunk';
-    const flyoutOpen = showDocumentDrawer || showChunkDrawer;
-    if (isFlyout && activeProjectPanel === panel && flyoutOpen) {
-      setActiveProjectPanel('document');
+    if (isFlyout) {
+      const flyoutOpen = showDocumentDrawer || showChunkDrawer;
+      if (activeProjectPanel === panel && flyoutOpen) {
+        setActiveProjectPanel('document');
+      } else {
+        setActiveProjectPanel(panel);
+      }
       return;
     }
-    setActiveProjectPanel(panel);
+    // Pannelli inline (run/pipeline/document)
+    if (collapsed) {
+      setProjectContextCollapsed(false);
+      setActiveProjectPanel(panel);
+    } else if (panel === activeProjectPanel) {
+      setProjectContextCollapsed(true);
+    } else {
+      setActiveProjectPanel(panel);
+    }
   };
-
-  const collapsed = projectContextCollapsed;
 
   const handleResizeStart = (event: React.PointerEvent) => {
     startDrag(event, {
@@ -106,24 +122,24 @@ export function PipelineSidebar({
         dragging ? '' : 'transition-[width] duration-200'
       }`}
     >
-      <div className={`flex items-center pt-3 ${collapsed ? 'justify-center px-0' : 'justify-end px-3'}`}>
+      <div className={`flex items-center pt-2 ${collapsed ? 'justify-center px-0' : 'px-3'}`}>
         <IconButton
           size="sm"
           tone="muted"
-          onClick={() => setProjectContextCollapsed(!collapsed)}
-          title={collapsed ? t('projectShell.expandContext') : t('projectShell.collapseContext')}
-          ariaPressed={collapsed}
+          onClick={() => closeProject()}
+          disabled={isProcessing}
+          title={t('sidebar.backToWorkspace')}
           tooltipSide="right"
           className="bg-editorial-textbox/25 hover:bg-editorial-textbox/45"
         >
-          {collapsed ? <ChevronRight size={11} /> : <ChevronLeft size={11} />}
+          <ArrowLeft size={12} />
         </IconButton>
       </div>
 
       <div
         role="tablist"
         aria-label={t('projectShell.railLabel')}
-        className="space-y-0.5 px-2.5 pt-3"
+        className="space-y-0.5 px-2.5 pt-2"
       >
         {PROJECT_PANEL_TABS.map((tab) => (
           <ShellNavItem
