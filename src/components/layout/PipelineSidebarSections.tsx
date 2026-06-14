@@ -219,6 +219,7 @@ export function PipelineSidebarRunSection({
   if (collapsed) {
     return (
       <div className="flex flex-col items-center gap-2 px-1">
+        <FlaskConical size={13} className="text-editorial-muted/70" aria-hidden="true" />
         {isProcessing ? (
           cancelRequested ? (
             <IconButton size="lg" tone="muted" disabled title={t('pipeline.stopping')} tooltipSide="right" className="h-11 w-11 bg-editorial-bg opacity-50">
@@ -472,6 +473,7 @@ export function PipelineSidebarPipelinesSection({ collapsed = false }: { collaps
   if (collapsed) {
     return (
       <div className="flex flex-col items-center gap-2 px-1">
+        <Zap size={13} className="text-editorial-muted/70" aria-hidden="true" />
         {pipelines.length === 0 ? (
           <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-editorial-accent text-xs font-black text-white opacity-55">1</span>
         ) : (
@@ -656,6 +658,7 @@ export function PipelineSidebarDocumentSection({
   if (collapsed) {
     return (
       <div className="flex flex-col items-center gap-2 px-1">
+        <Columns2 size={13} className="text-editorial-muted/70" aria-hidden="true" />
         {hasDocument ? (
           <>
             <IconButton size="md" tone={documentPaneFocus === 'both' ? 'accent' : 'default'} onClick={() => setDocumentPaneFocus('both')} title={t('document.focusBoth')} ariaPressed={documentPaneFocus === 'both'} tooltipSide="right">
