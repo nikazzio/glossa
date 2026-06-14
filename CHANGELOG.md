@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.0.0](https://github.com/nikazzio/glossa/compare/glossa-v0.11.0...glossa-v1.0.0) (2026-06-14)
+
+
+### ✨ Features
+
+* a11y gate [#255](https://github.com/nikazzio/glossa/issues/255) + typography rebalance & UI font picker ([#268](https://github.com/nikazzio/glossa/issues/268)) ([c76448a](https://github.com/nikazzio/glossa/commit/c76448aa074328e026a88a0341eb8187901cd967))
+* multibar UI shell + resizable panels ([#243](https://github.com/nikazzio/glossa/issues/243), [#252](https://github.com/nikazzio/glossa/issues/252), [#258](https://github.com/nikazzio/glossa/issues/258)) ([#271](https://github.com/nikazzio/glossa/issues/271)) ([f708bd7](https://github.com/nikazzio/glossa/commit/f708bd737f0900e741fe7a69768dba785b35caaa))
+* polish multibar shell — a11y, resize, overlay & motion ([#272](https://github.com/nikazzio/glossa/issues/272)) ([#274](https://github.com/nikazzio/glossa/issues/274)) ([f18c2e4](https://github.com/nikazzio/glossa/commit/f18c2e42e25bc40612bcec96104584e2a1f4de17))
+
+
+### ♻️ Refactoring
+
+* harden pipeline streaming path ([#267](https://github.com/nikazzio/glossa/issues/267)) ([54b4569](https://github.com/nikazzio/glossa/commit/54b45696e9da4560eebe551269943a3d9ddd6baf))
+
+
+### 🔧 Maintenance
+
+* release 1.0.0 ([#275](https://github.com/nikazzio/glossa/issues/275)) ([e75d7a5](https://github.com/nikazzio/glossa/commit/e75d7a561a6bbdfa09ddc540a670627deb930b3f))
+
 ## [0.11.0](https://github.com/nikazzio/glossa/compare/glossa-v0.10.0...glossa-v0.11.0) (2026-06-12)
 
 
