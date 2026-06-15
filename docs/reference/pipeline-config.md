@@ -70,3 +70,9 @@ Lascia stare tutto il resto finché non capisci quale parte sta causando il prob
 Cambia la configurazione prima di una run completa se hai bisogno di un provider,
 un prompt o un comportamento del glossario diverso. Se devi solo ispezionare un
 risultato, preferisci la modalità Test invece di cambiare l'intera pipeline.
+
+## Vedi anche
+
+- [Provider supportati](./provider-support) — confronto tra provider e guida alla scelta del modello
+- [Pipeline documento](../guides/document-pipeline) — come le impostazioni si applicano al workflow end-to-end
+- [Contesto e caching](../guides/context-and-caching) — come il prompt è strutturato per ottimizzare i costi

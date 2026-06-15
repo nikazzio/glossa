@@ -19,7 +19,7 @@ per ispezionare i problemi di qualità chunk per chunk.
 | Esito | Mossa successiva |
 |---|---|
 | Problemi minori di formulazione | Correggi a mano e poi rilancia l'audit |
-| Drift terminologico sistematico | Correggi glossario o selezione phrase memory |
+| Drift terminologico sistematico | Correggi [glossario o selezione phrase memory](./glossary-and-memory) |
 | Interpretazione sbagliata | Rivedi il prompt di traduzione o la scelta del provider |
 | Rumore di formattazione | Restringi il format stage invece di compensare nell'audit |
 
@@ -29,7 +29,7 @@ per ispezionare i problemi di qualità chunk per chunk.
 2. Apri l'output audit per il chunk.
 3. Leggi la lista issue confrontandola con sorgente e traduzione.
 4. Correggi a mano, rilancia uno stage oppure solo l'audit.
-5. Converti i problemi persistenti in annotazioni se richiedono tracking editoriale.
+5. Converti i problemi persistenti in [annotazioni](./annotations) se richiedono tracking editoriale.
 
 ## Quando fidarsi del judge
 
@@ -46,3 +46,9 @@ Il giudice va usato come seconda passata, non come autorità finale.
 - Usa i coherence check quando il documento dipende dalla coerenza cross-chunk.
 - Esporta solo quando l'elenco chunk non contiene più issue aperte.
 - Blocca i chunk stabili solo dopo lettura manuale e audit.
+
+## Vedi anche
+
+- [Annotazioni](./annotations) — come tracciare e ancorare issue editoriali per chunk
+- [Glossario e phrase memory](./glossary-and-memory) — per controllare il drift terminologico a monte
+- [Contesto e caching](./context-and-caching) — come Glossa mantiene coerenza tra chunk

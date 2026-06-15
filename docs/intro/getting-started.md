@@ -7,6 +7,10 @@ title: Per iniziare
 Glossa è un'app desktop Tauri. Gira in locale: configuri una pipeline di traduzione
 e processi il testo sorgente come passaggio singolo o come documento a chunk.
 
+> **Nota terminologica**: questa documentazione mantiene in inglese i termini tecnici
+> usati nell'interfaccia — *chunk*, *stage*, *batch*, *run*, *provider* — perché sono
+> i nomi effettivi che vedi nell'app. Tutte le spiegazioni sono in italiano.
+
 ## Scarica l'app
 
 Se vuoi usare Glossa, il percorso corretto è scaricare una release binaria da GitHub. Il repository serve per sviluppo e contributi, non come percorso principale per gli utenti finali.
