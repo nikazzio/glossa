@@ -7,7 +7,7 @@ title: Audit e revisione
 Glossa non si ferma alla generazione di una bozza. Esegue anche uno stage judge
 per ispezionare i problemi di qualità chunk per chunk.
 
-## Cosa restituisce il judge
+## Cosa restituisce il giudice
 
 - Valutazione complessiva di qualità
 - Issue strutturate
@@ -33,7 +33,7 @@ per ispezionare i problemi di qualità chunk per chunk.
 
 ## Quando fidarsi del judge
 
-Il judge va usato come seconda passata, non come autorità finale.
+Il giudice va usato come seconda passata, non come autorità finale.
 
 - Fidati per intercettare drift terminologici ripetuti o omissioni evidenti.
 - Verifica a mano registro, interpretazione e casi filologici sottili.

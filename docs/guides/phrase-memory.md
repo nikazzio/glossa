@@ -9,21 +9,21 @@ quando ricompare una formulazione simile.
 
 > Questa pagina è una panoramica rapida. Per il workflow completo, leggi [Glossario e phrase memory](./glossary-and-memory).
 
-## What it stores
+## Cosa memorizza
 
-- Short source phrases
-- Approved target phrases
-- Confidence values for the extracted pair
+- Frasi sorgente brevi
+- Frasi target approvate
+- Valori di confidenza della coppia estratta
 
-## How it is used
+## Come funziona
 
-1. Enable phrase memory in the workspace or pipeline settings.
-2. Let Glossa search for matching phrases automatically, or trigger a manual refresh.
-3. Review the matches that come back for the current chunk.
-4. Select only the matches you want to inject into the run.
+1. Abilita la phrase memory nelle impostazioni del workspace o della pipeline.
+2. Lascia che Glossa cerchi automaticamente le corrispondenze, oppure aggiorna manualmente.
+3. Controlla i match restituiti per il chunk corrente.
+4. Seleziona solo i match che vuoi iniettare nella run.
 
-## Good practice
+## Buone pratiche
 
-- Keep the source text stable when you want reliable phrase reuse.
-- Treat phrase memory as a helper, not an automatic replacement for editorial judgment.
-- Review the selected matches before relying on them in production.
+- Mantieni stabile il testo sorgente per ottenere un riuso affidabile delle frasi.
+- Tratta la phrase memory come un supporto, non come sostituto del giudizio editoriale.
+- Controlla i match selezionati prima di usarli in produzione.

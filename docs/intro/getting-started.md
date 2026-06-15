@@ -4,8 +4,8 @@ title: Per iniziare
 
 # Per iniziare
 
-Glossa è un'app desktop Tauri. Si esegue in locale, si configura una pipeline
-di traduzione e si processa il testo sorgente come passaggio singolo o come documento a chunk.
+Glossa è un'app desktop Tauri. Gira in locale: configuri una pipeline di traduzione
+e processi il testo sorgente come passaggio singolo o come documento a chunk.
 
 ## Scarica l'app
 
@@ -18,16 +18,22 @@ Se vuoi usare Glossa, il percorso corretto è scaricare una release binaria da G
 Link utili:
 
 - [Ultima release](https://github.com/nikazzio/glossa/releases/latest)
-- Release corrente al 12 giugno 2026: [`glossa-v0.11.0`](https://github.com/nikazzio/glossa/releases/tag/glossa-v0.11.0)
+- Release corrente al 15 giugno 2026: [`glossa-v1.0.0`](https://github.com/nikazzio/glossa/releases/tag/glossa-v1.0.0)
 
-## Prerequisiti
+## Per sviluppatori e contributori
+
+Le sezioni seguenti riguardano chi vuole modificare il codice, testare modifiche locali
+o contribuire al progetto. Se stai solo usando Glossa, salta al
+[primo percorso consigliato](#primo-percorso-consigliato).
+
+### Prerequisiti
 
 - Node.js 18 o superiore
 - Rust 1.77 o superiore
 - `npm` per le dipendenze frontend
 - Su Linux servono anche le librerie di sistema Tauri elencate nel `README.md` principale
 
-## Sviluppo da sorgente
+### Sviluppo da sorgente
 
 Clona il repository solo se vuoi sviluppare Glossa, testare modifiche locali o contribuire al codice.
 
@@ -37,7 +43,7 @@ cd glossa
 npm install
 ```
 
-## Avvia l'app desktop in sviluppo
+### Avvia l'app desktop in sviluppo
 
 ```bash
 npm run tauri:dev
@@ -45,13 +51,13 @@ npm run tauri:dev
 
 Questo comando avvia insieme il frontend Vite e la shell Tauri.
 
-## Build locale dell'app
+### Build locale dell'app
 
 ```bash
 npm run tauri:build
 ```
 
-## Avvia la documentazione in locale
+### Avvia la documentazione in locale
 
 ```bash
 npm run docs:start
@@ -62,6 +68,23 @@ Per buildare il sito statico:
 ```bash
 npm run docs:build
 ```
+
+### Check di sviluppo
+
+```bash
+npm run lint
+npm test
+npm run build
+```
+
+Controlli backend, da eseguire da `src-tauri/`:
+
+```bash
+cargo check --all-targets
+cargo test
+```
+
+---
 
 ## Primo percorso consigliato
 
@@ -78,27 +101,6 @@ npm run docs:build
 - **Modalità pipeline**: Standard per lavori più semplici, Editorial per refine multi-stage
 - **Glossario** se la terminologia è vincolante
 - **Chunking** se il testo sorgente è lungo o strutturalmente delicato
-
-## Ambito docs e codice
-
-- `docs/` contiene il sito pubblico statico
-- `docs-dev/` contiene note interne per i maintainer
-- `src/` e `src-tauri/` sono i codebase reali dell'app
-
-## Check di sviluppo
-
-```bash
-npm run lint
-npm test
-npm run build
-```
-
-Backend checks are run from `src-tauri/`:
-
-```bash
-cargo check --all-targets
-cargo test
-```
 
 ## Prossimi passi
 

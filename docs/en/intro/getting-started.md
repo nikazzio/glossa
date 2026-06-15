@@ -18,7 +18,7 @@ If you want to use Glossa, the correct path is to download a binary release from
 Useful links:
 
 - [Latest release](https://github.com/nikazzio/glossa/releases/latest)
-- Current release as of June 12, 2026: [`glossa-v0.11.0`](https://github.com/nikazzio/glossa/releases/tag/glossa-v0.11.0)
+- Current release as of June 15, 2026: [`glossa-v1.0.0`](https://github.com/nikazzio/glossa/releases/tag/glossa-v1.0.0)
 
 ## Prerequisites
 

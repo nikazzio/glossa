@@ -9,14 +9,14 @@ tarare la run prima di avviare un batch.
 
 ## Controlli principali
 
-- Source language
-- Target language
-- Provider and model per stage
-- Translation instructions
+- Lingua sorgente
+- Lingua target
+- Provider e modello per ogni stage
+- Istruzioni di traduzione
 - Persona
-- Glossary / term registry
-- Phrase-memory settings
-- Audit / judge settings
+- Glossario / registro terminologico
+- Impostazioni phrase memory
+- Impostazioni audit e giudice
 
 ## Superfici tipiche di configurazione
 
@@ -65,8 +65,8 @@ Lascia stare tutto il resto finché non capisci quale parte sta causando il prob
 - Salva la pipeline prima delle run batch più grandi.
 - Se un progetto è stabile, clona o rinomina una pipeline prima di sperimentare.
 
-## When to change config
+## Quando cambiare la configurazione
 
-Change the configuration before a full run if you need a different provider,
-prompt, or glossary behavior. If you only need to inspect a result, prefer Test
-mode over changing the whole pipeline.
+Cambia la configurazione prima di una run completa se hai bisogno di un provider,
+un prompt o un comportamento del glossario diverso. Se devi solo ispezionare un
+risultato, preferisci la modalità Test invece di cambiare l'intera pipeline.
