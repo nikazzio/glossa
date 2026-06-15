@@ -46,3 +46,9 @@ The judge is best used as a second pass, not as the final authority.
 - Use coherence checks when the document depends on cross-chunk consistency.
 - Export only after the chunk list is no longer carrying unresolved issues.
 - Lock stable chunks only after they have survived both manual reading and audit review.
+
+## See also
+
+- [Annotations](./annotations) — how to track and anchor editorial findings per chunk
+- [Glossary and phrase memory](./glossary-and-memory) — for controlling terminology drift upstream
+- [Context and caching](./context-and-caching) — how Glossa keeps consistency across chunks

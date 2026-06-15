@@ -70,3 +70,9 @@ Leave everything else alone until you know which part is causing the failure.
 Change the configuration before a full run if you need a different provider,
 prompt, or glossary behavior. If you only need to inspect a result, prefer Test
 mode over changing the whole pipeline.
+
+## See also
+
+- [Provider support](./provider-support) — provider comparison and model selection guide
+- [Document pipeline](../guides/document-pipeline) — how settings apply to the end-to-end workflow
+- [Context and caching](../guides/context-and-caching) — how the prompt is structured to optimise costs

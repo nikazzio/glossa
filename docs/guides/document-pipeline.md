@@ -48,7 +48,7 @@ quando il testo richiede struttura, continuità e storico di review.
 | Judge | Valuta il risultato e restituisce issue strutturate |
 | Coherence | Controlla la coerenza tra chunk tradotti quando attivo |
 
-La modalità Editorial espone più chiaramente questi stage. La Standard mantiene
+La modalità Editoriale espone più chiaramente questi stage. La Standard mantiene
 il workflow più leggero.
 
 ## Cosa controlli in ogni fase

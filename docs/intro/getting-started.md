@@ -102,9 +102,15 @@ cargo test
 ## Cosa configurare per prima cosa
 
 - **Chiavi provider** in Settings
-- **Modalità pipeline**: Standard per lavori più semplici, Editorial per refine multi-stage
+- **Modalità pipeline**: Standard per lavori più semplici, Editoriale per refine multi-stage
 - **Glossario** se la terminologia è vincolante
 - **Chunking** se il testo sorgente è lungo o strutturalmente delicato
+
+## Ambito docs e codice
+
+- `docs/` contiene il sito pubblico statico
+- `docs-dev/` contiene note interne per i maintainer
+- `src/` e `src-tauri/` sono i codebase reali dell'app
 
 ## Prossimi passi
 

@@ -44,7 +44,7 @@ Lascia stare tutto il resto finché non capisci quale parte sta causando il prob
 | Modalità | Descrizione |
 |---|---|
 | Standard | Singola passata di traduzione più audit |
-| Editorial | Stage di translation, refine e format prima dell'audit |
+| Editoriale | Stage di translation, refine e format prima dell'audit |
 
 ## Consigli a livello di stage
 
