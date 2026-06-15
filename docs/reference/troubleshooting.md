@@ -21,7 +21,7 @@ Questa pagina copre i problemi più comuni che puoi incontrare durante setup o r
 ## L'audit è rumoroso o incoerente
 
 - Riesegui il test su un chunk rappresentativo
-- Semplifica il prompt di traduzione prima di riscrivere quello del judge
+- Semplifica il prompt di traduzione prima di riscrivere quello del giudice
 - Rimuovi i match deboli della phrase memory
 - Controlla se il glossario è troppo vago per essere applicato con costanza
 

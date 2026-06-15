@@ -24,6 +24,7 @@ Sviluppo attivo (pre-1.0). Priorità assoluta alla modalità documento/editorial
 - **Architettura**: Aggiorna `docs-dev/ARCHITECTURE.md` per modifiche ai flussi, comandi Tauri, schemi DB o store Zustand.
 - **UI**: Consulta `docs-dev/UI_DESIGN_SYSTEM.md` prima di qualsiasi modifica visiva.
 - **Avanzamento**: Leggi `STATO_SESSIONE_2.0.md` a inizio sessione e aggiornalo obbligatoriamente a fine task/feature. Aggiorna l'help in-app per modifiche funzionali.
+- **Docs pubbliche VitePress**: Aggiorna `docs/` (IT) e `docs/en/` (EN) quando aggiungi, rimuovi o modifichi funzionalità utente, workflow o comportamento dell'interfaccia. Il sito è pubblicato su GitHub Pages. Se aggiungi una pagina aggiorna anche la sidebar in `docs/.vitepress/config.ts`.
 
 ## Git e Test
 - **Git**: Aggiorna sempre `main` prima di creare un branch (`git checkout main && git pull origin main && git checkout -b nome-branch`).

@@ -1,0 +1,77 @@
+---
+title: Context and caching
+---
+
+# Context and caching
+
+Glossa uses two mechanisms to keep translations consistent across chunks and limit
+inference costs: a document reference block that gives each chunk access to the
+source text of its neighbours, and a layered prompt structure that lets providers
+cache as much as possible between calls.
+
+## Document context per chunk
+
+When translating a chunk, Glossa automatically sends the source text of adjacent
+chunks as a reference block. The model uses it to keep terminology, names, pronouns,
+and style consistent across chunk boundaries — without having to see the full
+document at once.
+
+For short documents the block covers the entire source; for longer documents it
+covers a sliding window of adjacent chunks. The block is provided as context only:
+the model receives explicit instructions to translate only the current chunk, not
+the reference block content.
+
+## Layered prompt caching
+
+Each prompt is structured in three layers so the provider can reuse as much
+previously computed context as possible:
+
+| Layer | Content | Caching |
+|---|---|---|
+| 1 | Persona, structural rules, glossary | Cached once per run |
+| 2 | Document reference block | Cached per group of adjacent chunks |
+| 3 | Stage-specific instructions | Sent each call — the smallest part |
+
+## Stage isolation
+
+Each stage receives exactly the information it needs — nothing more. This prevents
+inadvertent re-translation and keeps each stage focused on its specific task.
+
+| Stage | Receives |
+|---|---|
+| Translation | Source text of current chunk + reference block |
+| Refine | Source text + reference block + translation output |
+| Format | Translated text only — no source, no reference block |
+| Coherence audit | Adjacent translated chunks — no source |
+
+The Format stage receives only the translation by design: if it also received the
+source, the model might re-translate instead of cleaning formatting only.
+
+## What this means in practice
+
+After the first chunk in a group is processed, subsequent chunks in the same group
+cost less because the provider reuses the already-cached layers. On long documents
+with many chunks the savings are significant, especially in Editorial mode where
+three stages run per chunk.
+
+## Cache retention by model
+
+Cache lifetime varies by provider and model. OpenAI, for example, distinguishes
+two policies:
+
+- **Full models**: extended retention up to 24 hours — subsequent chunks benefit
+  from a previous run's warm cache even across sessions.
+- **Mini/nano models**: in-memory retention — the prefix expires after 5–10 minutes
+  of inactivity.
+
+This explains why the Refine stage (typically on a mini model) may show 0% cache
+hits even with an identical prompt: if more than 10 minutes pass between chunks,
+the cache has already expired.
+
+Check your provider's documentation for the retention policy of the model you are
+using.
+
+## See also
+
+- [Pipeline config](../reference/pipeline-config) — how to configure stages and models
+- [Audit and review](./audit-review) — how the judge evaluates each chunk's output

@@ -79,4 +79,11 @@ workflow lighter.
 - Stay in **Test** until the prompt, glossary, and model choice stop moving.
 - Use **Production** only when you want the remaining document to follow the same setup.
 - If the formatting stage starts changing meaning, remove or simplify it.
-- If a chunk is difficult, annotate it instead of relying on memory alone.
+- If a chunk is difficult, [annotate it](./annotations) instead of relying on memory alone.
+
+## See also
+
+- [Annotations](./annotations) — for tracking editorial findings per chunk
+- [Audit and review](./audit-review) — detailed review loop with the judge
+- [Context and caching](./context-and-caching) — how Glossa uses context across adjacent chunks
+- [Pipeline config](../reference/pipeline-config) — full reference for all controls

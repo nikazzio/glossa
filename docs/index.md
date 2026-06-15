@@ -7,7 +7,7 @@ description: Documentazione pubblica dell'app desktop Glossa.
   <p class="docsHero__eyebrow">Documentazione ufficiale</p>
   <img class="docsHero__brand" src="./public/glossa-wordmark.svg" alt="Glossa" />
   <p class="docsHero__lead">
-    Workflow desktop di traduzione per studiosi, editor e revisione di testi lunghi.
+    Workflow desktop di traduzione per studiosi, editor professionisti e revisori di testi lunghi.
   </p>
   <p class="docsHero__text">
     Glossa unisce traduzione a stadi, gestione documenti a chunk, audit,
@@ -63,7 +63,7 @@ description: Documentazione pubblica dell'app desktop Glossa.
 ## Cosa copre Glossa
 
 - Modalità Standard per una singola traduzione più audit
-- Modalità Editorial per traduzione, refine, format e review
+- Modalità Editoriale per traduzione, refine, format e review
 - Elaborazione documenti a chunk con run di test e di produzione
 - Glossario vincolante e phrase memory riutilizzabile
 - Annotazioni tipizzate ancorate al testo tradotto

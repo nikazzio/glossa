@@ -48,7 +48,7 @@ quando il testo richiede struttura, continuità e storico di review.
 | Judge | Valuta il risultato e restituisce issue strutturate |
 | Coherence | Controlla la coerenza tra chunk tradotti quando attivo |
 
-La modalità Editorial espone più chiaramente questi stage. La Standard mantiene
+La modalità Editoriale espone più chiaramente questi stage. La Standard mantiene
 il workflow più leggero.
 
 ## Cosa controlli in ogni fase
@@ -79,4 +79,11 @@ il workflow più leggero.
 - Resta in **Test** finché prompt, glossario e modello non smettono di cambiare.
 - Usa **Production** solo quando vuoi che il resto del documento segua lo stesso setup.
 - Se il format stage inizia a cambiare il significato, semplificalo o rimuovilo.
-- Se un chunk è difficile, annotalo invece di affidarti solo alla memoria.
+- Se un chunk è difficile, [annotalo](./annotations) invece di affidarti solo alla memoria.
+
+## Vedi anche
+
+- [Annotazioni](./annotations) — per tracciare issue editoriali per chunk
+- [Audit e revisione](./audit-review) — ciclo di review dettagliato con il giudice
+- [Contesto e caching](./context-and-caching) — come Glossa usa il contesto tra chunk vicini
+- [Configurazione pipeline](../reference/pipeline-config) — riferimento completo dei controlli
