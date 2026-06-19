@@ -143,8 +143,7 @@ export function CsvImportDialog({ glossaryId, onImported, onClose }: Props) {
   const goBack = () => {
     setError(null);
     if (step === 'preview' && fileKind === 'xlsx') {
-      const detected = autoDetect(headers);
-      setStep(detected.termKey && detected.translationKey ? 'pick' : 'map');
+      setStep('map');
     } else {
       setStep('pick');
     }

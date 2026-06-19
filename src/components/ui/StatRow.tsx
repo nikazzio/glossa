@@ -14,9 +14,9 @@ export function StatRow({ label, value, info }: StatRowProps) {
         {label}
         {info && (
           <Tooltip label={info} side="right">
-            <span className="inline-flex cursor-help rounded-full p-0.5 text-editorial-muted/50 hover:text-editorial-muted">
+            <button type="button" aria-label={info} className="inline-flex cursor-help rounded-full p-0.5 text-editorial-muted/50 hover:text-editorial-muted focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent">
               <Info size={10} />
-            </span>
+            </button>
           </Tooltip>
         )}
       </dt>

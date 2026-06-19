@@ -142,11 +142,12 @@ export function DictionariesTab() {
     setExportMenuId(null);
     try {
       const entries = entriesMap[glossaryId] ?? await getGlossaryEntries(glossaryId);
+      const safeName = glossaryName.replace(/[/\\:*?"<>|]/g, '_') || 'glossary';
       if (format === 'csv') {
         const csvText = exportGlossaryToCsv(entries);
         const path = await save({
           title: t('library.exportSaveTitle'),
-          defaultPath: `${glossaryName}.csv`,
+          defaultPath: `${safeName}.csv`,
           filters: [{ name: 'CSV', extensions: ['csv'] }],
         });
         if (!path) return;
@@ -155,7 +156,7 @@ export function DictionariesTab() {
         const data = await exportGlossaryToXlsx(glossaryName, entries);
         const path = await save({
           title: t('library.exportSaveTitle'),
-          defaultPath: `${glossaryName}.xlsx`,
+          defaultPath: `${safeName}.xlsx`,
           filters: [{ name: 'Excel', extensions: ['xlsx'] }],
         });
         if (!path) return;

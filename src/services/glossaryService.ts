@@ -200,6 +200,10 @@ export async function importEntriesFromCsv(
       }
     });
   } else {
+    const [{ count: before }] = await select<{ count: number }>(
+      'SELECT COUNT(*) as count FROM glossary_entries WHERE glossary_id = $1',
+      [glossaryId],
+    );
     await runInTransaction(async (run) => {
       for (const entry of parsed) {
         await run(
@@ -210,6 +214,11 @@ export async function importEntriesFromCsv(
         );
       }
     });
+    const [{ count: after }] = await select<{ count: number }>(
+      'SELECT COUNT(*) as count FROM glossary_entries WHERE glossary_id = $1',
+      [glossaryId],
+    );
+    return after - before;
   }
 
   return parsed.length;
@@ -280,6 +289,10 @@ export async function importEntriesFromXlsx(
       }
     });
   } else {
+    const [{ count: before }] = await select<{ count: number }>(
+      'SELECT COUNT(*) as count FROM glossary_entries WHERE glossary_id = $1',
+      [glossaryId],
+    );
     await runInTransaction(async (run) => {
       for (const entry of parsed) {
         await run(
@@ -290,6 +303,11 @@ export async function importEntriesFromXlsx(
         );
       }
     });
+    const [{ count: after }] = await select<{ count: number }>(
+      'SELECT COUNT(*) as count FROM glossary_entries WHERE glossary_id = $1',
+      [glossaryId],
+    );
+    return after - before;
   }
   return parsed.length;
 }
