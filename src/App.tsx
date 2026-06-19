@@ -28,6 +28,7 @@ import type { DocumentFormat, DocumentRenderProfile } from './types';
 import type { ImportDialogPipelineConfig } from './components/document/ImportPreviewDialog';
 import { Toaster } from 'sonner';
 import { toast } from 'sonner';
+import { HL_COLORS_LIGHT, HL_COLORS_DARK } from './stores/uiStore';
 
 function HighlightColorSync() {
   const colorScheme = useUiStore((s) => s.colorScheme);
@@ -35,7 +36,8 @@ function HighlightColorSync() {
   useEffect(() => {
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const isDark = colorScheme === 'dark' || (colorScheme === 'system' && prefersDark);
-    const colors = isDark ? highlightColors.dark : highlightColors.light;
+    const colors = (isDark ? highlightColors.dark : highlightColors.light)
+      ?? (isDark ? HL_COLORS_DARK : HL_COLORS_LIGHT);
     const root = document.documentElement;
     root.style.setProperty('--hl-source-term-color', colors.sourceTerm);
     root.style.setProperty('--hl-match-bg', colors.matchTerm);
