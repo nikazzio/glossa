@@ -226,24 +226,30 @@ export async function exportGlossaryToXlsx(
   sheetName: string,
   entries: GlossaryEntry[],
 ): Promise<Uint8Array> {
-  const XLSX = await import('xlsx');
-  const ws = XLSX.utils.json_to_sheet(
-    entries.map((e) => ({ term: e.term, translation: e.translation, notes: e.notes ?? '' })),
-  );
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, sheetName.slice(0, 31));
-  return XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as Uint8Array;
+  const { default: writeXlsxFile } = await import('write-excel-file/browser');
+  const rows = [
+    ['term', 'translation', 'notes'],
+    ...entries.map((e) => [e.term, e.translation, e.notes ?? '']),
+  ];
+  const result = await writeXlsxFile(rows, { sheet: sheetName.slice(0, 31) });
+  const blob = await result.toBlob();
+  return new Uint8Array(await blob.arrayBuffer());
 }
 
 /** Read xlsx/xls file bytes and return headers + first-sheet rows. */
 export async function readXlsxSheet(
   data: Uint8Array,
 ): Promise<{ headers: string[]; rows: Record<string, string>[] }> {
-  const XLSX = await import('xlsx');
-  const wb = XLSX.read(data, { type: 'array' });
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json<Record<string, string>>(ws, { defval: '' });
-  const headers = rows.length > 0 ? Object.keys(rows[0]) : [];
+  const { readSheet } = await import('read-excel-file/browser');
+  const arrayBuffer = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
+  const allRows = await readSheet(arrayBuffer);
+  if (allRows.length === 0) return { headers: [], rows: [] };
+  const headers = allRows[0].map((cell) => String(cell ?? ''));
+  const rows = allRows.slice(1).map((row) => {
+    const record: Record<string, string> = {};
+    headers.forEach((h, i) => { record[h] = String(row[i] ?? ''); });
+    return record;
+  });
   return { headers, rows };
 }
 

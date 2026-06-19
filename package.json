@@ -39,6 +39,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-i18next": "^15.4.0",
+    "read-excel-file": "^9.2.0",
     "rehype-sanitize": "^6.0.0",
     "rehype-stringify": "^10.0.1",
     "remark-gfm": "^4.0.1",
@@ -47,7 +48,7 @@
     "sonner": "^2.0.7",
     "unified": "^11.0.5",
     "vite": "^8.0.16",
-    "xlsx": "^0.18.5",
+    "write-excel-file": "^4.1.1",
     "zustand": "^5.0.0"
   },
   "devDependencies": {
