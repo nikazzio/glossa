@@ -206,7 +206,11 @@ export function DocumentView({
     focusedIssueRequestId,
     setShowChunkDrawer,
     setPendingAnnotationAnchor,
+    documentFontSize,
   } = useUiStore();
+
+  const DOC_FONT_SIZE_STEP = { sm: 2, md: 3, lg: 4 } as const;
+  const fontSizeStep = DOC_FONT_SIZE_STEP[documentFontSize ?? 'md'];
 
   const [annotationMenu, setAnnotationMenu] = useState<{ x: number; y: number; text: string; chunkId: string } | null>(null);
 
@@ -508,6 +512,8 @@ export function DocumentView({
                 previewValue={sourcePreviewValue}
                 focusQuery={focusedChunkId === currentChunk.id ? focusedSourceIssueQuery : null}
                 focusRequestId={focusedChunkId === currentChunk.id ? focusedIssueRequestId : 0}
+                defaultTextSizeStep={fontSizeStep}
+                useDocLineHeight
               />
             </DocumentPage>
           )}
@@ -642,6 +648,8 @@ export function DocumentView({
                       previewValue={translationPreviewValue}
                       focusQuery={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueQuery : null}
                       focusRequestId={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueRequestId : 0}
+                      defaultTextSizeStep={fontSizeStep}
+                      useDocLineHeight
                     />
                   )}
                 </div>

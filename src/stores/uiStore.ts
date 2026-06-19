@@ -14,7 +14,7 @@ export type ActivePanel = 'config' | 'insights' | 'chunk' | 'settings' | 'help' 
 export type UiFont = 'jakarta' | 'geist' | 'inter' | 'plex';
 export type DocumentFontSize = 'sm' | 'md' | 'lg';
 export type DocumentLineHeight = 'tight' | 'normal' | 'relaxed';
-export type SettingsTab = 'translations' | 'provider';
+export type SettingsTab = 'translations' | 'provider' | 'typography';
 export type ProjectPanelTab = 'run' | 'pipeline' | 'document' | 'insight' | 'chunk';
 
 /** Pannelli che vivono inline nella barra primaria (non aprono il fly-out). */

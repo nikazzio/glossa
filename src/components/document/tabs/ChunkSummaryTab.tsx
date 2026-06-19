@@ -1,4 +1,4 @@
-import { BarChart2, ChevronLeft, ChevronRight, Cpu } from 'lucide-react';
+import { BarChart2, ChevronLeft, ChevronRight, Cpu, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState } from 'react';
 import { usePricingStore } from '../../../stores/pricingStore';
@@ -13,18 +13,34 @@ import {
 } from '../../../utils/operationLogStats';
 import { formatDateTime } from '../../../utils';
 import type { TranslationChunk } from '../../../types';
-import { StatRow, ScopeBreakdownCard } from '../../ui';
+import { StatRow, ScopeBreakdownCarousel, Tooltip } from '../../ui';
 
-// Carosello sugli step registrati (traduzione → refine → format, oppure i passi di audit).
-// I dati riflettono solo l'ultima esecuzione: rilanciare il chunk azzera il log precedente.
+function SectionHeader({ icon, label, info }: { icon: React.ReactNode; label: string; info?: string }) {
+  return (
+    <div className="mb-3 flex items-center gap-1.5 text-xs font-sans uppercase tracking-[0.16em] text-editorial-muted">
+      <span className="text-editorial-accent shrink-0">{icon}</span>
+      {label}
+      {info && (
+        <Tooltip label={info} side="right">
+          <span className="ml-0.5 inline-flex cursor-help rounded-full p-0.5 text-editorial-muted/60 hover:text-editorial-muted">
+            <Info size={11} />
+          </span>
+        </Tooltip>
+      )}
+    </div>
+  );
+}
+
 function RunStepsCard({
   title,
   emptyLabel,
   runs,
+  titleInfo,
 }: {
   title: string;
   emptyLabel: string;
   runs: OperationLogRunSummary[];
+  titleInfo?: string;
 }) {
   const { t } = useTranslation();
   const [index, setIndex] = useState(() => Math.max(0, runs.length - 1));
@@ -36,9 +52,7 @@ function RunStepsCard({
   return (
     <section className="rounded-[20px] border border-editorial-border bg-editorial-bg px-4 py-3">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 text-xs font-sans uppercase tracking-[0.16em] text-editorial-muted">
-          <Cpu size={11} className="text-editorial-accent shrink-0" /> {title}
-        </div>
+        <SectionHeader icon={<Cpu size={11} />} label={title} info={titleInfo} />
         {multi && (
           <div className="flex items-center gap-1.5">
             <button
@@ -75,7 +89,11 @@ function RunStepsCard({
             <StatRow label={t('document.summaryModel')} value={[run.provider, run.model].filter(Boolean).join(' / ') || '—'} />
             <StatRow label={t('document.summaryTokens')} value={(run.stats.totalInput + run.stats.totalOutput).toLocaleString()} />
             <StatRow label={t('document.summaryCached')} value={run.stats.totalCached.toLocaleString()} />
-            <StatRow label={t('header.cacheHitRate')} value={formatCacheHitRate(run.stats.cacheHitRate)} />
+            <StatRow
+              label={t('header.cacheHitRate')}
+              value={formatCacheHitRate(run.stats.cacheHitRate)}
+              info={t('stats.cacheHitRateHint')}
+            />
             <StatRow label={t('document.summaryMiss')} value={run.stats.totalCacheMiss.toLocaleString()} />
             <StatRow label={t('header.estimatedCost')} value={formatUsd(run.stats.totalUsd)} />
             <StatRow label={t('log.totalDuration')} value={run.stats.totalDurationMs > 0 ? formatDurationMs(run.stats.totalDurationMs) : '—'} />
@@ -130,13 +148,19 @@ export function ChunkSummaryTab({ panelId, labelledBy, currentChunk }: ChunkSumm
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="space-y-3 px-5 py-5">
       <section className="rounded-[20px] border border-editorial-border bg-editorial-bg px-4 py-3">
-        <div className="mb-3 flex items-center gap-1.5 text-xs font-sans uppercase tracking-[0.16em] text-editorial-muted">
-          <BarChart2 size={11} className="text-editorial-accent shrink-0" /> {t('document.chunkSummaryTotals')}
-        </div>
+        <SectionHeader
+          icon={<BarChart2 size={11} />}
+          label={t('document.chunkSummaryTotals')}
+          info={t('stats.chunkTotalsHint')}
+        />
         <dl className="space-y-2">
           <StatRow label={t('header.tokenCount')} value={totalTokens > 0 ? totalTokens.toLocaleString() : '—'} />
           <StatRow label={t('header.cachedInput')} value={chunkSummary.total.totalCached.toLocaleString()} />
-          <StatRow label={t('header.cacheHitRate')} value={formatCacheHitRate(chunkSummary.total.cacheHitRate)} />
+          <StatRow
+            label={t('header.cacheHitRate')}
+            value={formatCacheHitRate(chunkSummary.total.cacheHitRate)}
+            info={t('stats.cacheHitRateHint')}
+          />
           <StatRow label={t('header.estimatedCost')} value={formatUsd(chunkSummary.total.totalUsd)} />
           <StatRow label={t('log.totalDuration')} value={chunkSummary.total.totalDurationMs > 0 ? formatDurationMs(chunkSummary.total.totalDurationMs) : '—'} />
           <StatRow label={t('document.summaryTranslationRuns')} value={chunkSummary.translationRuns.toLocaleString()} />
@@ -148,23 +172,21 @@ export function ChunkSummaryTab({ panelId, labelledBy, currentChunk }: ChunkSumm
             {t('document.summaryNoPersistedStats')}
           </p>
         )}
-        {chunkSummary.scopeBreakdown.length > 0 && (
-          <div className="mt-4 space-y-2">
-            <div className="text-xs font-sans uppercase tracking-[0.16em] text-editorial-muted">
-              {t('document.summaryStageBreakdown')}
-            </div>
-            {chunkSummary.scopeBreakdown.map((entry) => (
-              <ScopeBreakdownCard key={`${entry.scope}-${entry.stageId ?? entry.labelKey}`} entry={entry} />
-            ))}
-          </div>
-        )}
       </section>
+
+      {chunkSummary.scopeBreakdown.length > 0 && (
+        <ScopeBreakdownCarousel
+          entries={chunkSummary.scopeBreakdown}
+          title={t('document.summaryStageBreakdown')}
+        />
+      )}
 
       <RunStepsCard
         key={`tr-${currentChunk.id}`}
         title={t('document.chunkSummaryLastTranslation')}
         emptyLabel={t('document.chunkSummaryNoTranslation')}
         runs={translationSteps}
+        titleInfo={t('stats.lastRunHint')}
       />
 
       <RunStepsCard
@@ -172,6 +194,7 @@ export function ChunkSummaryTab({ panelId, labelledBy, currentChunk }: ChunkSumm
         title={t('document.chunkSummaryLastAudit')}
         emptyLabel={t('document.chunkSummaryNoAudit')}
         runs={auditSteps}
+        titleInfo={t('stats.lastRunHint')}
       />
     </div>
   );

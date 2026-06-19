@@ -175,7 +175,7 @@ export function DictionariesTab() {
           onClick={() => setCreating(true)}
           title={t('library.newDictionary')}
           aria-label={t('library.newDictionary')}
-          className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:bg-editorial-textbox/30 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
         >
           <Plus size={13} />
         </button>
@@ -273,7 +273,7 @@ export function DictionariesTab() {
                     <button
                       onClick={() => handleAssign(g.id)}
                       title={t('library.assignToProject')}
-                      className="rounded-full border border-editorial-border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                      className="rounded-full border border-editorial-border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:bg-editorial-textbox/30 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                     >
                       {t('library.assign')}
                     </button>
@@ -282,7 +282,7 @@ export function DictionariesTab() {
                     onClick={() => { setImportTargetId(g.id); setExportMenuId(null); }}
                     title={t('library.importCsv')}
                     aria-label={t('library.importCsv')}
-                    className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:bg-editorial-textbox/30 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   >
                     <Upload size={13} />
                   </button>
@@ -291,32 +291,39 @@ export function DictionariesTab() {
                       onClick={() => setExportMenuId(exportMenuId === g.id ? null : g.id)}
                       title={t('library.exportGlossary')}
                       aria-label={t('library.exportGlossary')}
-                      className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                      className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:bg-editorial-textbox/30 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                     >
                       <Download size={13} />
                     </button>
                     {exportMenuId === g.id && (
-                      <div className="absolute right-0 top-full z-10 mt-1 flex flex-col overflow-hidden rounded-xl border border-editorial-border bg-editorial-bg shadow-lg">
-                        <button
-                          onClick={() => handleExport(g.id, g.name, 'csv')}
-                          className="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-widest text-editorial-muted hover:bg-editorial-textbox/40 hover:text-editorial-ink"
-                        >
-                          CSV
-                        </button>
-                        <button
-                          onClick={() => handleExport(g.id, g.name, 'xlsx')}
-                          className="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-widest text-editorial-muted hover:bg-editorial-textbox/40 hover:text-editorial-ink"
-                        >
-                          Excel
-                        </button>
-                      </div>
+                      <>
+                        <div
+                          className="fixed inset-0 z-[190]"
+                          onClick={() => setExportMenuId(null)}
+                          aria-hidden="true"
+                        />
+                        <div className="absolute right-0 top-full z-[200] mt-1 flex flex-col overflow-hidden rounded-xl border border-editorial-border bg-editorial-bg shadow-lg">
+                          <button
+                            onClick={() => handleExport(g.id, g.name, 'csv')}
+                            className="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-widest text-editorial-muted hover:bg-editorial-textbox/40 hover:text-editorial-ink"
+                          >
+                            CSV
+                          </button>
+                          <button
+                            onClick={() => handleExport(g.id, g.name, 'xlsx')}
+                            className="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-widest text-editorial-muted hover:bg-editorial-textbox/40 hover:text-editorial-ink"
+                          >
+                            Excel
+                          </button>
+                        </div>
+                      </>
                     )}
                   </div>
                   <button
                     onClick={() => handleFork(g.id, g.name)}
                     title={t('library.forkDictionary')}
                     aria-label={t('library.forkDictionary')}
-                    className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:bg-editorial-textbox/30 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   >
                     <Copy size={13} />
                   </button>
@@ -324,7 +331,7 @@ export function DictionariesTab() {
                     onClick={() => handleDelete(g.id, g.name)}
                     title={t('common.delete')}
                     aria-label={`${t('common.delete')}: ${g.name}`}
-                    className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:bg-editorial-textbox/30 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   >
                     <Trash2 size={13} />
                   </button>

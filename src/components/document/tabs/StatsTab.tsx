@@ -7,6 +7,7 @@ import {
   FileText,
   FlaskConical,
   Gauge,
+  Info,
   Loader2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -21,7 +22,7 @@ import {
   summarizeGlobalUsage,
 } from '../../../utils/operationLogStats';
 import type { TranslationChunk } from '../../../types';
-import { StatRow, ScopeBreakdownCard } from '../../ui';
+import { StatRow, ScopeBreakdownCarousel, Tooltip } from '../../ui';
 
 
 const QUALITY_TONE_COLOR: Record<ReturnType<typeof qualityTone>, string> = {
@@ -29,6 +30,22 @@ const QUALITY_TONE_COLOR: Record<ReturnType<typeof qualityTone>, string> = {
   ok: 'text-editorial-warning',
   weak: 'text-editorial-accent',
 };
+
+function SectionHeader({ icon, label, info }: { icon: React.ReactNode; label: string; info?: string }) {
+  return (
+    <div className="mb-3 flex items-center gap-1.5 text-xs font-sans uppercase tracking-[0.16em] text-editorial-muted">
+      <span className="text-editorial-accent shrink-0">{icon}</span>
+      {label}
+      {info && (
+        <Tooltip label={info} side="right">
+          <span className="ml-0.5 inline-flex cursor-help rounded-full p-0.5 text-editorial-muted/60 hover:text-editorial-muted">
+            <Info size={11} />
+          </span>
+        </Tooltip>
+      )}
+    </div>
+  );
+}
 
 export interface StatsTabProps {
   panelId: string;
@@ -80,9 +97,7 @@ export function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="space-y-3 px-5 py-5">
       <section className="rounded-[20px] border border-editorial-border bg-editorial-bg px-4 py-3">
-        <div className="mb-3 flex items-center gap-1.5 text-xs font-sans uppercase tracking-[0.16em] text-editorial-muted">
-          <FileText size={11} className="text-editorial-accent shrink-0" /> {t('document.infoLabel')}
-        </div>
+        <SectionHeader icon={<FileText size={11} />} label={t('document.infoLabel')} />
         <dl className="space-y-2">
           <StatRow label={t('document.infoSourceWords')} value={sourceWords.toLocaleString()} />
           <StatRow label={t('document.infoTranslatedWords')} value={`${translatedWords.toLocaleString()} (${coverageRatio}%)`} />
@@ -91,9 +106,7 @@ export function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
       </section>
 
       <section className="rounded-[20px] border border-editorial-border bg-editorial-bg px-4 py-3">
-        <div className="mb-3 flex items-center gap-1.5 text-xs font-sans uppercase tracking-[0.16em] text-editorial-muted">
-          <BarChart2 size={11} className="text-editorial-accent shrink-0" /> {t('pipeline.chunkStatus.completed')}
-        </div>
+        <SectionHeader icon={<BarChart2 size={11} />} label={t('pipeline.chunkStatus.completed')} />
         <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-editorial-border/40">
           <div className="h-full rounded-full bg-editorial-success transition-all" style={{ width: `${progressPct}%` }} />
         </div>
@@ -108,18 +121,22 @@ export function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
       </section>
 
       <section className="rounded-[20px] border border-editorial-border bg-editorial-bg px-4 py-3">
-        <div className="mb-3 flex items-center gap-1.5 text-xs font-sans uppercase tracking-[0.16em] text-editorial-muted">
-          <Gauge size={11} className="text-editorial-accent shrink-0" /> {t('document.infoQuality')}
-        </div>
+        <SectionHeader
+          icon={<Gauge size={11} />}
+          label={t('document.infoQuality')}
+          info={t('stats.qualityHint')}
+        />
         {compositeLabel
           ? <div className={`font-display text-lg italic ${QUALITY_TONE_COLOR[compositeTone]}`}>{compositeLabel}</div>
           : <div className="font-display text-lg italic text-editorial-muted/40">—</div>}
       </section>
 
       <section className="rounded-[20px] border border-editorial-border bg-editorial-bg px-4 py-3">
-        <div className="mb-3 flex items-center gap-1.5 text-xs font-sans uppercase tracking-[0.16em] text-editorial-muted">
-          <Cpu size={11} className="text-editorial-accent shrink-0" /> {t('header.tokenCount')}
-        </div>
+        <SectionHeader
+          icon={<Cpu size={11} />}
+          label={t('header.tokenCount')}
+          info={t('stats.tokenTotalsHint')}
+        />
         <dl className="space-y-2">
           <StatRow
             label={t('header.tokenCount')}
@@ -136,7 +153,11 @@ export function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
           {(usageSummary.overall.totalCached > 0 || usageSummary.overall.totalCacheMiss > 0) && (
             <>
               <StatRow label={t('header.cachedInput')} value={usageSummary.overall.totalCached.toLocaleString()} />
-              <StatRow label={t('header.cacheHitRate')} value={formatCacheHitRate(usageSummary.overall.cacheHitRate)} />
+              <StatRow
+                label={t('header.cacheHitRate')}
+                value={formatCacheHitRate(usageSummary.overall.cacheHitRate)}
+                info={t('stats.cacheHitRateHint')}
+              />
               {usageSummary.overall.totalCacheMiss > 0 && (
                 <StatRow label={t('header.cacheMissInput')} value={usageSummary.overall.totalCacheMiss.toLocaleString()} />
               )}
@@ -153,17 +174,14 @@ export function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
             {t('document.summaryNoPersistedStats')}
           </p>
         )}
-        {usageSummary.scopeBreakdown.length > 0 && (
-          <div className="mt-4 space-y-2">
-            <div className="text-xs font-sans uppercase tracking-[0.16em] text-editorial-muted">
-              {t('document.summaryStageBreakdown')}
-            </div>
-            {usageSummary.scopeBreakdown.map((entry) => (
-              <ScopeBreakdownCard key={`${entry.scope}-${entry.stageId ?? entry.labelKey}`} entry={entry} />
-            ))}
-          </div>
-        )}
       </section>
+
+      {usageSummary.scopeBreakdown.length > 0 && (
+        <ScopeBreakdownCarousel
+          entries={usageSummary.scopeBreakdown}
+          title={t('document.summaryStageBreakdown')}
+        />
+      )}
     </div>
   );
 }

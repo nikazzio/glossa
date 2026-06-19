@@ -216,6 +216,7 @@ export function SettingsModal() {
 
   const activeTabConfig: Array<{ id: SettingsTab; icon: ReactNode; label: string }> = [
     { id: 'translations', icon: <FileText size={14} />,          label: t('workspace.areas.translations.title') },
+    { id: 'typography',   icon: <Type size={14} />,              label: t('settings.typographyTab') },
     { id: 'provider',     icon: <Server size={14} />,            label: t('settings.providerTab') },
   ];
 
@@ -274,10 +275,7 @@ export function SettingsModal() {
           aria-labelledby="settings-title"
           ref={trapRef}
         >
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+          <div
             className="absolute inset-0 bg-editorial-ink/35 backdrop-blur-sm"
             onClick={() => setShowSettings(false)}
           />
@@ -441,12 +439,23 @@ export function SettingsModal() {
                     </div>
                   </div>
 
-                  {/* Tipografia */}
+                </div>
+              )}
+
+              {/* Tab: Tipografia */}
+              {activeTab === 'typography' && (
+                <div
+                  id="settings-panel-typography"
+                  role="tabpanel"
+                  aria-labelledby="settings-tab-typography"
+                  className="space-y-10"
+                >
+                  {/* Font UI */}
                   <div className="space-y-4">
                     <div className="flex items-center gap-1.5">
                       <Type size={11} className="text-editorial-accent shrink-0" />
                       <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
-                        {t('settings.typography')}
+                        {t('settings.uiFont')}
                       </p>
                     </div>
                     <p className="text-xs leading-relaxed text-editorial-muted">{t('settings.uiFontHint')}</p>
@@ -476,60 +485,69 @@ export function SettingsModal() {
                         );
                       })}
                     </div>
+                  </div>
 
-                    {/* Document font size */}
-                    <div className="space-y-2 pt-2">
-                      <p className="text-[11px] font-sans uppercase tracking-[0.14em] text-editorial-muted">{t('settings.docFontSize')}</p>
-                      <div role="radiogroup" aria-label={t('settings.docFontSize')} className="flex gap-2">
-                        {(['sm', 'md', 'lg'] as DocumentFontSize[]).map((size) => {
-                          const isActive = documentFontSize === size;
-                          return (
-                            <button
-                              key={size}
-                              type="button"
-                              role="radio"
-                              aria-checked={isActive}
-                              onClick={() => setDocumentFontSize(size)}
-                              className={`flex-1 rounded-[16px] border py-2.5 text-center text-[11px] font-bold uppercase tracking-[0.18em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                                isActive
-                                  ? 'border-editorial-accent bg-editorial-accent/10 text-editorial-accent'
-                                  : 'border-editorial-border bg-editorial-bg/60 text-editorial-muted hover:border-editorial-accent/40'
-                              }`}
-                            >
-                              {t(`settings.docFontSize_${size}`)}
-                            </button>
-                          );
-                        })}
-                      </div>
+                  {/* Dimensione testo documento */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-1.5">
+                      <Type size={11} className="text-editorial-accent shrink-0" />
+                      <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
+                        {t('settings.docFontSize')}
+                      </p>
                     </div>
-
-                    {/* Document line height */}
-                    <div className="space-y-2">
-                      <p className="text-[11px] font-sans uppercase tracking-[0.14em] text-editorial-muted">{t('settings.docLineHeight')}</p>
-                      <div role="radiogroup" aria-label={t('settings.docLineHeight')} className="flex gap-2">
-                        {(['tight', 'normal', 'relaxed'] as DocumentLineHeight[]).map((lh) => {
-                          const isActive = documentLineHeight === lh;
-                          return (
-                            <button
-                              key={lh}
-                              type="button"
-                              role="radio"
-                              aria-checked={isActive}
-                              onClick={() => setDocumentLineHeight(lh)}
-                              className={`flex-1 rounded-[16px] border py-2.5 text-center text-[11px] font-bold uppercase tracking-[0.18em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                                isActive
-                                  ? 'border-editorial-accent bg-editorial-accent/10 text-editorial-accent'
-                                  : 'border-editorial-border bg-editorial-bg/60 text-editorial-muted hover:border-editorial-accent/40'
-                              }`}
-                            >
-                              {t(`settings.docLineHeight_${lh}`)}
-                            </button>
-                          );
-                        })}
-                      </div>
+                    <div role="radiogroup" aria-label={t('settings.docFontSize')} className="flex gap-2">
+                      {(['sm', 'md', 'lg'] as DocumentFontSize[]).map((size) => {
+                        const isActive = documentFontSize === size;
+                        return (
+                          <button
+                            key={size}
+                            type="button"
+                            role="radio"
+                            aria-checked={isActive}
+                            onClick={() => setDocumentFontSize(size)}
+                            className={`flex-1 rounded-[16px] border py-2.5 text-center text-[11px] font-bold uppercase tracking-[0.18em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                              isActive
+                                ? 'border-editorial-accent bg-editorial-accent/10 text-editorial-accent'
+                                : 'border-editorial-border bg-editorial-bg/60 text-editorial-muted hover:border-editorial-accent/40'
+                            }`}
+                          >
+                            {t(`settings.docFontSize_${size}`)}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
+                  {/* Interlinea documento */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-1.5">
+                      <SlidersHorizontal size={11} className="text-editorial-accent shrink-0" />
+                      <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
+                        {t('settings.docLineHeight')}
+                      </p>
+                    </div>
+                    <div role="radiogroup" aria-label={t('settings.docLineHeight')} className="flex gap-2">
+                      {(['tight', 'normal', 'relaxed'] as DocumentLineHeight[]).map((lh) => {
+                        const isActive = documentLineHeight === lh;
+                        return (
+                          <button
+                            key={lh}
+                            type="button"
+                            role="radio"
+                            aria-checked={isActive}
+                            onClick={() => setDocumentLineHeight(lh)}
+                            className={`flex-1 rounded-[16px] border py-2.5 text-center text-[11px] font-bold uppercase tracking-[0.18em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                              isActive
+                                ? 'border-editorial-accent bg-editorial-accent/10 text-editorial-accent'
+                                : 'border-editorial-border bg-editorial-bg/60 text-editorial-muted hover:border-editorial-accent/40'
+                            }`}
+                          >
+                            {t(`settings.docLineHeight_${lh}`)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               )}
 

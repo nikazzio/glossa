@@ -428,6 +428,7 @@
     "highlightAuditPhrase": "Audit phrase",
     "highlightAnnotation": "Note",
     "typography": "Typography",
+    "typographyTab": "Typography",
     "uiFont": "Interface font",
     "uiFontHint": "Choose the typeface for the whole interface. Editorial serif values are unaffected.",
     "docFontSize": "Document font size",
@@ -1296,6 +1297,13 @@
     "addToGlossary": "Add to glossary",
     "addedToGlossary": "Added to glossary",
     "addToGlossaryError": "Error adding to glossary"
+  },
+  "stats": {
+    "cacheHitRateHint": "Percentage of tokens served from the provider cache. Higher means lower cost.",
+    "tokenTotalsHint": "Cumulative total tokens used across the whole project in this session.",
+    "chunkTotalsHint": "Sum of all runs on this chunk (translation + audit + coherence).",
+    "qualityHint": "Weighted average of quality scores from translated and evaluated chunks.",
+    "lastRunHint": "Data from the last run only. Re-running the chunk replaces these values."
   },
   "cost": {
     "free": "Free",

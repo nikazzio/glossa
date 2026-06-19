@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Upload, X, Check, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
@@ -149,19 +150,16 @@ export function CsvImportDialog({ glossaryId, onImported, onClose }: Props) {
     }
   };
 
-  return (
+  return createPortal(
     <AnimatePresence>
       <div
-        className="fixed inset-0 z-[60] flex items-center justify-center p-6"
+        className="fixed inset-0 z-[300] flex items-center justify-center p-6"
         role="dialog"
         aria-modal="true"
         aria-labelledby="csv-import-title"
         ref={trapRef}
       >
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
+        <div
           className="absolute inset-0 bg-editorial-ink/60 backdrop-blur-sm"
           onClick={onClose}
         />
@@ -329,6 +327,7 @@ export function CsvImportDialog({ glossaryId, onImported, onClose }: Props) {
           )}
         </motion.div>
       </div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
