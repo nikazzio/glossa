@@ -502,8 +502,8 @@ export function DocumentView({
                 disabled={currentChunk.status === 'processing'}
                 readOnly={sourceReadOnly}
                 fillHeight
-                textClassName="text-[15px] leading-8 text-editorial-ink"
-                previewClassName="min-h-[280px] text-[15px] leading-8 text-editorial-ink"
+                textClassName="doc-content text-editorial-ink"
+                previewClassName="min-h-[280px] doc-content text-editorial-ink"
                 highlightHtml={sourceHighlightHtml}
                 previewValue={sourcePreviewValue}
                 focusQuery={focusedChunkId === currentChunk.id ? focusedSourceIssueQuery : null}
@@ -624,7 +624,7 @@ export function DocumentView({
                     <div data-scroll-sync="true" className="flex flex-col flex-1 min-h-0 overflow-y-auto custom-scrollbar">
                       <HighlightedText
                         html={stageDiff.html}
-                        className="text-[15px] leading-8 text-editorial-ink min-h-[280px]"
+                        className="doc-content text-editorial-ink min-h-[280px]"
                       />
                     </div>
                   ) : (
@@ -635,8 +635,8 @@ export function DocumentView({
                       markdownEnabled={config.markdownAware === true}
                       readOnly={stageReadOnly}
                       fillHeight
-                      textClassName="text-[15px] leading-8 text-editorial-ink"
-                      previewClassName="min-h-[280px] text-[15px] leading-8 text-editorial-ink"
+                      textClassName="doc-content text-editorial-ink"
+                      previewClassName="min-h-[280px] doc-content text-editorial-ink"
                       placeholder={isLastSelected ? t('pipeline.candidatePlaceholder') : ''}
                       highlightHtml={translationHighlightHtml}
                       previewValue={translationPreviewValue}

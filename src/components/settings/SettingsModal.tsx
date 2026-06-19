@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useUiStore } from '../../stores/uiStore';
-import type { SettingsTab, UiFont } from '../../stores/uiStore';
+import type { SettingsTab, UiFont, DocumentFontSize, DocumentLineHeight } from '../../stores/uiStore';
 import { useConfigStore } from '../../stores/configStore';
 import { ApiKeyInput } from './ApiKeyInput';
 import { ollamaService } from '../../services/llmService';
@@ -162,6 +162,10 @@ export function SettingsModal() {
     setHighlightColor,
     uiFont,
     setUiFont,
+    documentFontSize,
+    setDocumentFontSize,
+    documentLineHeight,
+    setDocumentLineHeight,
     settingsTab: activeTab,
     setSettingsTab: setActiveTab,
   } = useUiStore();
@@ -471,6 +475,58 @@ export function SettingsModal() {
                           </button>
                         );
                       })}
+                    </div>
+
+                    {/* Document font size */}
+                    <div className="space-y-2 pt-2">
+                      <p className="text-[11px] font-sans uppercase tracking-[0.14em] text-editorial-muted">{t('settings.docFontSize')}</p>
+                      <div role="radiogroup" aria-label={t('settings.docFontSize')} className="flex gap-2">
+                        {(['sm', 'md', 'lg'] as DocumentFontSize[]).map((size) => {
+                          const isActive = documentFontSize === size;
+                          return (
+                            <button
+                              key={size}
+                              type="button"
+                              role="radio"
+                              aria-checked={isActive}
+                              onClick={() => setDocumentFontSize(size)}
+                              className={`flex-1 rounded-[16px] border py-2.5 text-center text-[11px] font-bold uppercase tracking-[0.18em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                                isActive
+                                  ? 'border-editorial-accent bg-editorial-accent/10 text-editorial-accent'
+                                  : 'border-editorial-border bg-editorial-bg/60 text-editorial-muted hover:border-editorial-accent/40'
+                              }`}
+                            >
+                              {t(`settings.docFontSize_${size}`)}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Document line height */}
+                    <div className="space-y-2">
+                      <p className="text-[11px] font-sans uppercase tracking-[0.14em] text-editorial-muted">{t('settings.docLineHeight')}</p>
+                      <div role="radiogroup" aria-label={t('settings.docLineHeight')} className="flex gap-2">
+                        {(['tight', 'normal', 'relaxed'] as DocumentLineHeight[]).map((lh) => {
+                          const isActive = documentLineHeight === lh;
+                          return (
+                            <button
+                              key={lh}
+                              type="button"
+                              role="radio"
+                              aria-checked={isActive}
+                              onClick={() => setDocumentLineHeight(lh)}
+                              className={`flex-1 rounded-[16px] border py-2.5 text-center text-[11px] font-bold uppercase tracking-[0.18em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                                isActive
+                                  ? 'border-editorial-accent bg-editorial-accent/10 text-editorial-accent'
+                                  : 'border-editorial-border bg-editorial-bg/60 text-editorial-muted hover:border-editorial-accent/40'
+                              }`}
+                            >
+                              {t(`settings.docLineHeight_${lh}`)}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
 

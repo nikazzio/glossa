@@ -19,46 +19,16 @@ import {
   formatDurationMs,
   formatUsd,
   summarizeGlobalUsage,
-  type ScopeBreakdownEntry,
 } from '../../../utils/operationLogStats';
 import type { TranslationChunk } from '../../../types';
-import { StatRow } from '../../ui/StatRow';
+import { StatRow, ScopeBreakdownCard } from '../../ui';
+
 
 const QUALITY_TONE_COLOR: Record<ReturnType<typeof qualityTone>, string> = {
   strong: 'text-editorial-success',
   ok: 'text-editorial-warning',
   weak: 'text-editorial-accent',
 };
-
-const TOP_SCOPE_I18N_KEYS = new Set(['log.scopeAudit', 'log.scopeCoherence']);
-
-function ScopeBreakdownCard({ entry }: { entry: ScopeBreakdownEntry }) {
-  const { t } = useTranslation();
-  const { labelKey, model, stats } = entry;
-  const label = TOP_SCOPE_I18N_KEYS.has(labelKey) ? t(labelKey) : labelKey;
-  const totalTok = stats.totalInput + stats.totalOutput;
-  return (
-    <div className="rounded-xl border border-editorial-border/70 bg-editorial-textbox/40 px-3 py-2.5">
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="text-xs font-sans uppercase tracking-[0.12em] text-editorial-muted">{label}</span>
-        <span className="shrink-0 font-display text-sm italic text-editorial-ink">{totalTok.toLocaleString()} tok</span>
-      </div>
-      {model && (
-        <div className="mt-0.5 truncate font-mono text-[11px] text-editorial-muted">{model}</div>
-      )}
-      <dl className="mt-2 space-y-1">
-        <div className="flex items-baseline justify-between gap-3">
-          <dt className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">{t('header.cacheHitRate')}</dt>
-          <dd className="shrink-0 font-display text-sm italic text-editorial-ink">{formatCacheHitRate(stats.cacheHitRate)}</dd>
-        </div>
-        <div className="flex items-baseline justify-between gap-3">
-          <dt className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">{t('header.estimatedCost')}</dt>
-          <dd className="shrink-0 font-display text-sm italic text-editorial-ink">{formatUsd(stats.totalUsd)}</dd>
-        </div>
-      </dl>
-    </div>
-  );
-}
 
 export interface StatsTabProps {
   panelId: string;

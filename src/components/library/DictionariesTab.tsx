@@ -1,11 +1,18 @@
 import { useState } from 'react';
-import { Plus, Trash2, Copy, Upload, ChevronDown, ChevronUp, Check, X } from 'lucide-react';
+import { Plus, Trash2, Copy, Upload, Download, ChevronDown, ChevronUp, Check, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { save } from '@tauri-apps/plugin-dialog';
+import { writeFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { useLibraryStore } from '../../stores/libraryStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useProjectStore } from '../../stores/projectStore';
-import { getGlossaryEntries, assignGlossaryToProject } from '../../services/glossaryService';
+import {
+  getGlossaryEntries,
+  assignGlossaryToProject,
+  exportGlossaryToCsv,
+  exportGlossaryToXlsx,
+} from '../../services/glossaryService';
 import { confirm } from '../../stores/confirmStore';
 import type { GlossaryEntry } from '../../types';
 import { DictionaryEntryEditor } from './DictionaryEntryEditor';
@@ -19,7 +26,6 @@ export function DictionariesTab() {
     renameGlossary,
     deleteGlossary,
     forkGlossary,
-    importCsv,
     entriesMap,
     dirtyIds,
     expandedGlossaryId,
@@ -36,7 +42,8 @@ export function DictionariesTab() {
   const [creating, setCreating] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
-  const [csvTargetId, setCsvTargetId] = useState<string | null>(null);
+  const [importTargetId, setImportTargetId] = useState<string | null>(null);
+  const [exportMenuId, setExportMenuId] = useState<string | null>(null);
 
   const handleToggle = async (id: string) => {
     if (expandedGlossaryId === id) {
@@ -122,14 +129,42 @@ export function DictionariesTab() {
     }
   };
 
-  const handleCsvImport = async (glossaryId: string, csvText: string, strategy: 'replace' | 'merge') => {
-    const count = await importCsv(glossaryId, csvText, strategy);
+  const handleImported = async (glossaryId: string, count: number) => {
     const entries = await getGlossaryEntries(glossaryId);
     setGlossaryEntries(glossaryId, entries);
     if (config.assignedGlossaryId === glossaryId) {
       await assignGlossary(glossaryId);
     }
     toast.success(t('library.csvImportSuccess', { count }));
+  };
+
+  const handleExport = async (glossaryId: string, glossaryName: string, format: 'csv' | 'xlsx') => {
+    setExportMenuId(null);
+    try {
+      const entries = entriesMap[glossaryId] ?? await getGlossaryEntries(glossaryId);
+      if (format === 'csv') {
+        const csvText = exportGlossaryToCsv(entries);
+        const path = await save({
+          title: t('library.exportSaveTitle'),
+          defaultPath: `${glossaryName}.csv`,
+          filters: [{ name: 'CSV', extensions: ['csv'] }],
+        });
+        if (!path) return;
+        await writeTextFile(path, csvText);
+      } else {
+        const data = await exportGlossaryToXlsx(glossaryName, entries);
+        const path = await save({
+          title: t('library.exportSaveTitle'),
+          defaultPath: `${glossaryName}.xlsx`,
+          filters: [{ name: 'Excel', extensions: ['xlsx'] }],
+        });
+        if (!path) return;
+        await writeFile(path, data);
+      }
+      toast.success(t('library.exportSuccess'));
+    } catch (err: unknown) {
+      toast.error(t('library.exportError'), { description: err instanceof Error ? err.message : undefined });
+    }
   };
 
   return (
@@ -244,13 +279,39 @@ export function DictionariesTab() {
                     </button>
                   )}
                   <button
-                    onClick={() => { setCsvTargetId(g.id); }}
+                    onClick={() => { setImportTargetId(g.id); setExportMenuId(null); }}
                     title={t('library.importCsv')}
                     aria-label={t('library.importCsv')}
                     className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   >
                     <Upload size={13} />
                   </button>
+                  <div className="relative">
+                    <button
+                      onClick={() => setExportMenuId(exportMenuId === g.id ? null : g.id)}
+                      title={t('library.exportGlossary')}
+                      aria-label={t('library.exportGlossary')}
+                      className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    >
+                      <Download size={13} />
+                    </button>
+                    {exportMenuId === g.id && (
+                      <div className="absolute right-0 top-full z-10 mt-1 flex flex-col overflow-hidden rounded-xl border border-editorial-border bg-editorial-bg shadow-lg">
+                        <button
+                          onClick={() => handleExport(g.id, g.name, 'csv')}
+                          className="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-widest text-editorial-muted hover:bg-editorial-textbox/40 hover:text-editorial-ink"
+                        >
+                          CSV
+                        </button>
+                        <button
+                          onClick={() => handleExport(g.id, g.name, 'xlsx')}
+                          className="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-widest text-editorial-muted hover:bg-editorial-textbox/40 hover:text-editorial-ink"
+                        >
+                          Excel
+                        </button>
+                      </div>
+                    )}
+                  </div>
                   <button
                     onClick={() => handleFork(g.id, g.name)}
                     title={t('library.forkDictionary')}
@@ -294,10 +355,11 @@ export function DictionariesTab() {
         })}
       </div>
 
-      {csvTargetId && (
+      {importTargetId && (
         <CsvImportDialog
-          onImport={(csvText, strategy) => handleCsvImport(csvTargetId, csvText, strategy)}
-          onClose={() => setCsvTargetId(null)}
+          glossaryId={importTargetId}
+          onImported={(count) => handleImported(importTargetId, count)}
+          onClose={() => setImportTargetId(null)}
         />
       )}
     </div>

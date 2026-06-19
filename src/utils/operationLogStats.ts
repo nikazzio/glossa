@@ -76,6 +76,7 @@ export interface ChunkUsageSummary {
   lastTranslationRun: OperationLogRunSummary | null;
   lastAuditRun: OperationLogRunSummary | null;
   lastCoherenceRun: OperationLogRunSummary | null;
+  scopeBreakdown: ScopeBreakdownEntry[];
 }
 
 type Pricing = Record<string, { input: number; output: number }>;
@@ -231,31 +232,19 @@ export function aggregateEntries(
   };
 }
 
-export function summarizeGlobalUsage(
+const TOP_SCOPE_LABEL_KEYS: Partial<Record<OperationLogScope, string>> = {
+  audit: 'log.scopeAudit',
+  coherence: 'log.scopeCoherence',
+};
+
+function buildScopeBreakdown(
   entries: OperationLogEntry[],
-  pricingOverrides: Pricing = {},
-): GlobalUsageSummary {
-  const overall = aggregateEntries(entries, pricingOverrides);
-  const translationEntries: OperationLogEntry[] = [];
-  const auditEntries: OperationLogEntry[] = [];
-  const coherenceEntries: OperationLogEntry[] = [];
-  const modelNames = new Set<string>();
-  const entriesByModel = new Map<string, OperationLogEntry[]>();
+  pricingOverrides: Pricing,
+): ScopeBreakdownEntry[] {
   const stageEntriesByStageId = new Map<string, OperationLogEntry[]>();
   const entriesByTopScope = new Map<OperationLogScope, OperationLogEntry[]>();
-  let translationRuns = 0;
-  let auditRuns = 0;
-  let coherenceRuns = 0;
 
   for (const entry of entries) {
-    const usage = readUsage(entry);
-    if (usage.provider && usage.model) {
-      const modelName = `${usage.provider} / ${usage.model}`;
-      modelNames.add(modelName);
-      const bucket = entriesByModel.get(modelName) ?? [];
-      bucket.push(entry);
-      entriesByModel.set(modelName, bucket);
-    }
     if (entry.scope === 'stage') {
       const key = entry.stageId ?? '__unknown__';
       const bucket = stageEntriesByStageId.get(key) ?? [];
@@ -266,22 +255,8 @@ export function summarizeGlobalUsage(
       bucket.push(entry);
       entriesByTopScope.set(entry.scope, bucket);
     }
-    const category = categoryForEntry(entry);
-    if (!category || entry.phase !== 'end' || !hasUsage(usage)) continue;
-    if (category === 'translation') {
-      translationEntries.push(entry);
-      translationRuns += 1;
-    } else if (category === 'audit') {
-      auditEntries.push(entry);
-      auditRuns += 1;
-    } else {
-      coherenceEntries.push(entry);
-      coherenceRuns += 1;
-    }
   }
 
-  // Stage entries: one breakdown row per stageId (e.g. Translation, Refine, Format)
-  // Stage name comes from the start entry's meta.stageName or from the message.
   const stageRows: ScopeBreakdownEntry[] = Array.from(stageEntriesByStageId.entries())
     .map(([stageId, stageEntries]) => {
       const startEntry = stageEntries.find((e) => e.phase === 'start');
@@ -297,11 +272,6 @@ export function summarizeGlobalUsage(
     })
     .filter((r) => r.stats.totalInput > 0 || r.stats.totalOutput > 0);
 
-  // Top-level scopes: audit, coherence
-  const TOP_SCOPE_LABEL_KEYS: Partial<Record<OperationLogScope, string>> = {
-    audit: 'log.scopeAudit',
-    coherence: 'log.scopeCoherence',
-  };
   const topScopeRows: ScopeBreakdownEntry[] = (
     ['audit', 'coherence'] as OperationLogScope[]
   )
@@ -315,7 +285,45 @@ export function summarizeGlobalUsage(
     })
     .filter((r) => r.stats.totalInput > 0 || r.stats.totalOutput > 0);
 
-  const scopeBreakdown: ScopeBreakdownEntry[] = [...stageRows, ...topScopeRows];
+  return [...stageRows, ...topScopeRows];
+}
+
+export function summarizeGlobalUsage(
+  entries: OperationLogEntry[],
+  pricingOverrides: Pricing = {},
+): GlobalUsageSummary {
+  const overall = aggregateEntries(entries, pricingOverrides);
+  const translationEntries: OperationLogEntry[] = [];
+  const auditEntries: OperationLogEntry[] = [];
+  const coherenceEntries: OperationLogEntry[] = [];
+  const modelNames = new Set<string>();
+  const entriesByModel = new Map<string, OperationLogEntry[]>();
+  let translationRuns = 0;
+  let auditRuns = 0;
+  let coherenceRuns = 0;
+
+  for (const entry of entries) {
+    const usage = readUsage(entry);
+    if (usage.provider && usage.model) {
+      const modelName = `${usage.provider} / ${usage.model}`;
+      modelNames.add(modelName);
+      const bucket = entriesByModel.get(modelName) ?? [];
+      bucket.push(entry);
+      entriesByModel.set(modelName, bucket);
+    }
+    const category = categoryForEntry(entry);
+    if (!category || entry.phase !== 'end' || !hasUsage(usage)) continue;
+    if (category === 'translation') {
+      translationEntries.push(entry);
+      translationRuns += 1;
+    } else if (category === 'audit') {
+      auditEntries.push(entry);
+      auditRuns += 1;
+    } else {
+      coherenceEntries.push(entry);
+      coherenceRuns += 1;
+    }
+  }
 
   return {
     overall,
@@ -329,14 +337,14 @@ export function summarizeGlobalUsage(
         stats: aggregateEntries(modelEntries, pricingOverrides),
       }))
       .sort((a, b) => b.stats.totalInput + b.stats.totalOutput - (a.stats.totalInput + a.stats.totalOutput)),
-    scopeBreakdown,
+    scopeBreakdown: buildScopeBreakdown(entries, pricingOverrides),
     translationRuns,
     auditRuns,
     coherenceRuns,
   };
 }
 
-function aggregateRunForCategory(
+function lastRunForCategory(
   entries: OperationLogEntry[],
   category: OperationUsageCategory,
   pricingOverrides: Pricing,
@@ -421,9 +429,10 @@ export function summarizeChunkUsage(
     translationRuns,
     auditRuns,
     coherenceRuns,
-    lastTranslationRun: aggregateRunForCategory(chunkEntries, 'translation', pricingOverrides),
-    lastAuditRun: aggregateRunForCategory(chunkEntries, 'audit', pricingOverrides),
-    lastCoherenceRun: aggregateRunForCategory(chunkEntries, 'coherence', pricingOverrides),
+    lastTranslationRun: lastRunForCategory(chunkEntries, 'translation', pricingOverrides),
+    lastAuditRun: lastRunForCategory(chunkEntries, 'audit', pricingOverrides),
+    lastCoherenceRun: lastRunForCategory(chunkEntries, 'coherence', pricingOverrides),
+    scopeBreakdown: buildScopeBreakdown(chunkEntries, pricingOverrides),
   };
 }
 

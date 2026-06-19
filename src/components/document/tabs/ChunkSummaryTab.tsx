@@ -7,14 +7,13 @@ import {
   formatCacheHitRate,
   formatDurationMs,
   formatUsd,
-  summarizeGlobalUsage,
   summarizeChunkUsage,
   listRunsForCategory,
   type OperationLogRunSummary,
 } from '../../../utils/operationLogStats';
 import { formatDateTime } from '../../../utils';
 import type { TranslationChunk } from '../../../types';
-import { StatRow } from '../../ui/StatRow';
+import { StatRow, ScopeBreakdownCard } from '../../ui';
 
 // Carosello sugli step registrati (traduzione → refine → format, oppure i passi di audit).
 // I dati riflettono solo l'ultima esecuzione: rilanciare il chunk azzera il log precedente.
@@ -98,17 +97,9 @@ export function ChunkSummaryTab({ panelId, labelledBy, currentChunk }: ChunkSumm
   const { t } = useTranslation();
   const pricingOverrides = usePricingStore((s) => s.overrides);
   const logEntries = useOperationLogStore((s) => s.entries);
-  const chunkEntries = useMemo(
-    () => (currentChunk ? logEntries.filter((entry) => entry.chunkId === currentChunk.id) : []),
-    [currentChunk, logEntries],
-  );
   const chunkSummary = useMemo(
     () => (currentChunk ? summarizeChunkUsage(logEntries, currentChunk.id, pricingOverrides) : null),
     [currentChunk, logEntries, pricingOverrides],
-  );
-  const chunkBreakdown = useMemo(
-    () => summarizeGlobalUsage(chunkEntries, pricingOverrides).scopeBreakdown,
-    [chunkEntries, pricingOverrides],
   );
   const translationSteps = useMemo(
     () => (currentChunk ? listRunsForCategory(logEntries, currentChunk.id, 'translation', pricingOverrides) : []),
@@ -157,39 +148,13 @@ export function ChunkSummaryTab({ panelId, labelledBy, currentChunk }: ChunkSumm
             {t('document.summaryNoPersistedStats')}
           </p>
         )}
-        {chunkBreakdown.length > 0 && (
+        {chunkSummary.scopeBreakdown.length > 0 && (
           <div className="mt-4 space-y-2">
             <div className="text-xs font-sans uppercase tracking-[0.16em] text-editorial-muted">
               {t('document.summaryStageBreakdown')}
             </div>
-            {chunkBreakdown.map((entry) => (
-              <div
-                key={`${entry.scope}-${entry.stageId ?? entry.labelKey}`}
-                className="rounded-xl border border-editorial-border/70 bg-editorial-textbox/40 px-3 py-2.5"
-              >
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-xs font-sans uppercase tracking-[0.12em] text-editorial-muted">
-                    {entry.labelKey.startsWith('log.') ? t(entry.labelKey) : entry.labelKey}
-                  </span>
-                  <span className="shrink-0 font-display text-sm italic text-editorial-ink">
-                    {(entry.stats.totalInput + entry.stats.totalOutput).toLocaleString()} tok
-                  </span>
-                </div>
-                <dl className="mt-2 space-y-1">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <dt className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">{t('header.cacheHitRate')}</dt>
-                    <dd className="shrink-0 font-display text-sm italic text-editorial-ink">{formatCacheHitRate(entry.stats.cacheHitRate)}</dd>
-                  </div>
-                  <div className="flex items-baseline justify-between gap-3">
-                    <dt className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">{t('header.estimatedCost')}</dt>
-                    <dd className="shrink-0 font-display text-sm italic text-editorial-ink">{formatUsd(entry.stats.totalUsd)}</dd>
-                  </div>
-                  <div className="flex items-baseline justify-between gap-3">
-                    <dt className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">{t('log.totalDuration')}</dt>
-                    <dd className="shrink-0 font-display text-sm italic text-editorial-ink">{entry.stats.totalDurationMs > 0 ? formatDurationMs(entry.stats.totalDurationMs) : '—'}</dd>
-                  </div>
-                </dl>
-              </div>
+            {chunkSummary.scopeBreakdown.map((entry) => (
+              <ScopeBreakdownCard key={`${entry.scope}-${entry.stageId ?? entry.labelKey}`} entry={entry} />
             ))}
           </div>
         )}
