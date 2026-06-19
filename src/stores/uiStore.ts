@@ -13,6 +13,7 @@ export type HelpSection = 'overview' | 'pipeline' | 'features' | 'context' | 'au
 export type ActivePanel = 'config' | 'insights' | 'chunk' | 'settings' | 'help' | null;
 export type UiFont = 'jakarta' | 'geist' | 'inter' | 'plex';
 export type DocumentFontSize = 'sm' | 'md' | 'lg';
+export type ColorScheme = 'light' | 'dark' | 'system';
 
 export const DOC_FONT_SIZE_CSS: Record<DocumentFontSize, string> = {
   sm: '0.8125rem',
@@ -32,6 +33,7 @@ interface UiState {
   documentPaneFocus: DocumentPaneFocus;
   syncScrollEnabled: boolean;
   uiFont: UiFont;
+  colorScheme: ColorScheme;
   documentFontSize: DocumentFontSize;
   documentLineHeight: DocumentLineHeight;
   selectedChunkId: string | null;
@@ -79,6 +81,7 @@ interface UiState {
   setDocumentPaneFocus: (focus: DocumentPaneFocus) => void;
   setSyncScrollEnabled: (enabled: boolean) => void;
   setUiFont: (font: UiFont) => void;
+  setColorScheme: (scheme: ColorScheme) => void;
   setDocumentFontSize: (size: DocumentFontSize) => void;
   setDocumentLineHeight: (height: DocumentLineHeight) => void;
   setSelectedChunkId: (chunkId: string | null) => void;
@@ -118,6 +121,7 @@ export const useUiStore = create<UiState>()(
       documentPaneFocus: 'both',
       syncScrollEnabled: false,
       uiFont: 'jakarta',
+      colorScheme: 'system',
       documentFontSize: 'md',
       documentLineHeight: 'normal',
       selectedChunkId: null,
@@ -172,6 +176,7 @@ export const useUiStore = create<UiState>()(
       setDocumentPaneFocus: (focus) => set({ documentPaneFocus: focus }),
       setSyncScrollEnabled: (enabled) => set({ syncScrollEnabled: enabled }),
       setUiFont: (font) => set({ uiFont: font }),
+      setColorScheme: (scheme) => set({ colorScheme: scheme }),
       setDocumentFontSize: (size) => set({ documentFontSize: size }),
       setDocumentLineHeight: (height) => set({ documentLineHeight: height }),
       setSelectedChunkId: (chunkId) =>
@@ -369,7 +374,7 @@ export const useUiStore = create<UiState>()(
     }),
     {
       name: 'glossa-ui-prefs',
-      version: 12,
+      version: 13,
       migrate: (persisted: unknown, fromVersion: number) => {
         const s = persisted as Record<string, unknown>;
         if (fromVersion < 1) {
@@ -431,6 +436,9 @@ export const useUiStore = create<UiState>()(
           s.documentFontSize = 'md';
           s.documentLineHeight = 'normal';
         }
+        if (fromVersion < 13) {
+          s.colorScheme = 'system';
+        }
         return s;
       },
       storage: createJSONStorage(() => localStorage),
@@ -439,6 +447,7 @@ export const useUiStore = create<UiState>()(
         documentPaneFocus: state.documentPaneFocus,
         syncScrollEnabled: state.syncScrollEnabled,
         uiFont: state.uiFont,
+        colorScheme: state.colorScheme,
         documentFontSize: state.documentFontSize,
         documentLineHeight: state.documentLineHeight,
         activeProjectPanel: INLINE_PROJECT_PANELS.includes(state.activeProjectPanel)
