@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useUiStore } from '../../stores/uiStore';
-import type { SettingsTab, UiFont, DocumentFontSize, DocumentLineHeight, ColorScheme } from '../../stores/uiStore';
+import type { SettingsTab, UiFont, DocumentFontSize, DocumentLineHeight, ColorScheme, HLColorSet } from '../../stores/uiStore';
 import { useConfigStore } from '../../stores/configStore';
 import { ApiKeyInput } from './ApiKeyInput';
 import { ollamaService } from '../../services/llmService';
@@ -197,6 +197,12 @@ export function SettingsModal() {
   const trapRef = useFocusTrap(showSettings, () => setShowSettings(false));
   const { overrides, setOverride, resetOverride, resetAll } = usePricingStore();
   const { statuses: keyStatuses, refresh: refreshKeyStatuses } = useProviderKeyStatus();
+  const hlMode: 'light' | 'dark' = (() => {
+    if (colorScheme === 'dark') return 'dark';
+    if (colorScheme === 'light') return 'light';
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  })();
+  const activeHlColors: HLColorSet = highlightColors[hlMode];
 
   const refreshOllama = async () => {
     setRefreshing(true);
@@ -405,11 +411,17 @@ export function SettingsModal() {
 
                   {/* Evidenziazioni */}
                   <div className="space-y-4">
-                    <div className="flex items-center gap-1.5">
-                      <Palette size={11} className="text-editorial-accent shrink-0" />
-                      <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
-                        {t('settings.highlights')}
-                      </p>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <Palette size={11} className="text-editorial-accent shrink-0" />
+                        <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
+                          {t('settings.highlights')}
+                        </p>
+                      </div>
+                      <span className="flex items-center gap-1 rounded-full border border-editorial-border px-2 py-0.5 text-[11px] font-sans text-editorial-muted">
+                        {hlMode === 'dark' ? <Moon size={10} /> : <Sun size={10} />}
+                        {t(hlMode === 'dark' ? 'colorScheme_dark' : 'colorScheme_light')}
+                      </span>
                     </div>
                     <div className="space-y-2">
                       {([
@@ -425,11 +437,11 @@ export function SettingsModal() {
                           className="flex cursor-pointer items-center gap-3 rounded-[20px] border border-editorial-border bg-editorial-bg/60 px-4 py-3.5 transition-colors hover:border-editorial-accent/40"
                         >
                           <div className="relative h-5 w-5 shrink-0 overflow-hidden rounded-full shadow-sm">
-                            <div className="absolute inset-0" style={{ backgroundColor: highlightColors[key] }} />
+                            <div className="absolute inset-0" style={{ backgroundColor: activeHlColors[key] }} />
                             <input
                               type="color"
-                              value={colorToHex(highlightColors[key])}
-                              onChange={(e) => setHighlightColor(key, applyHexToColor(highlightColors[key], e.target.value))}
+                              value={colorToHex(activeHlColors[key])}
+                              onChange={(e) => setHighlightColor(hlMode, key, applyHexToColor(activeHlColors[key], e.target.value))}
                               className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
                               aria-label={label}
                             />

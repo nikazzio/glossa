@@ -493,7 +493,7 @@ export function MarkdownEditor({
             <HighlightedText
               ref={highlightLayerRef}
               html={highlightHtml}
-              style={{ ...textSizeStyle, minHeight: 0 }}
+              style={{ ...effectiveStyle, minHeight: 0 }}
               className={`pointer-events-none absolute inset-0 overflow-y-scroll scrollbar-hidden whitespace-pre-wrap break-words select-none ${textClassName}`}
             />
             <textarea
@@ -512,7 +512,7 @@ export function MarkdownEditor({
               autoCorrect="off"
               autoCapitalize="off"
               className={`${textareaClassName} absolute inset-0 h-full w-full resize-none`}
-              style={{ ...textSizeStyle, color: 'transparent', caretColor: 'var(--color-editorial-ink)' }}
+              style={{ ...effectiveStyle, color: 'transparent', caretColor: 'var(--color-editorial-ink)' }}
             />
           </div>
         ) : (

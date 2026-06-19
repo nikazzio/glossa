@@ -22,6 +22,33 @@ export const DOC_FONT_SIZE_CSS: Record<DocumentFontSize, string> = {
 };
 export type DocumentLineHeight = 'tight' | 'normal' | 'relaxed';
 export type SettingsTab = 'translations' | 'provider' | 'typography';
+
+export interface HLColorSet {
+  sourceTerm: string;
+  matchTerm: string;
+  mismatchTerm: string;
+  search: string;
+  auditPhrase: string;
+  annotation: string;
+}
+
+export const HL_COLORS_LIGHT: HLColorSet = {
+  sourceTerm:   '#3b82f6',
+  matchTerm:    'rgba(34,197,94,0.18)',
+  mismatchTerm: 'rgba(239,68,68,0.15)',
+  search:       'rgba(234,179,8,0.25)',
+  auditPhrase:  'rgba(249,115,22,0.25)',
+  annotation:   'rgba(58,122,114,0.25)',
+};
+
+export const HL_COLORS_DARK: HLColorSet = {
+  sourceTerm:   '#60a5fa',
+  matchTerm:    'rgba(74,222,128,0.22)',
+  mismatchTerm: 'rgba(248,113,113,0.22)',
+  search:       'rgba(250,204,21,0.30)',
+  auditPhrase:  'rgba(251,146,60,0.30)',
+  annotation:   'rgba(94,195,185,0.28)',
+};
 export type ProjectPanelTab = 'run' | 'pipeline' | 'document' | 'insight' | 'chunk';
 
 /** Pannelli che vivono inline nella barra primaria (non aprono il fly-out). */
@@ -47,14 +74,7 @@ interface UiState {
   showChunkDrawer: boolean;
   chunkDrawerTab: ChunkDrawerTab;
   highlightsEnabled: boolean;
-  highlightColors: {
-    sourceTerm: string;
-    matchTerm: string;
-    mismatchTerm: string;
-    search: string;
-    auditPhrase: string;
-    annotation: string;
-  };
+  highlightColors: { light: HLColorSet; dark: HLColorSet };
   searchQuery: string;
   focusedChunkId: string | null;
   focusedIssueQuery: string | null;
@@ -96,7 +116,7 @@ interface UiState {
   setShowChunkDrawer: (show: boolean, tab?: ChunkDrawerTab) => void;
   setChunkDrawerTab: (tab: ChunkDrawerTab) => void;
   setHighlightsEnabled: (enabled: boolean) => void;
-  setHighlightColor: (type: keyof UiState['highlightColors'], color: string) => void;
+  setHighlightColor: (mode: 'light' | 'dark', type: keyof HLColorSet, color: string) => void;
   setSearchQuery: (query: string) => void;
   setFocusedChunkId: (chunkId: string | null) => void;
   focusIssueInChunk: (chunkId: string, query?: string | null, sourceQuery?: string | null) => void;
@@ -136,14 +156,7 @@ export const useUiStore = create<UiState>()(
       showChunkDrawer: false,
       chunkDrawerTab: 'summary',
       highlightsEnabled: true,
-      highlightColors: {
-        sourceTerm: '#3b82f6',
-        matchTerm: 'rgba(34,197,94,0.18)',
-        mismatchTerm: 'rgba(239,68,68,0.15)',
-        search: 'rgba(234,179,8,0.25)',
-        auditPhrase: 'rgba(249,115,22,0.25)',
-        annotation: 'rgba(58,122,114,0.25)',
-      },
+      highlightColors: { light: { ...HL_COLORS_LIGHT }, dark: { ...HL_COLORS_DARK } },
       searchQuery: '',
       focusedChunkId: null,
       focusedIssueQuery: null,
@@ -264,8 +277,13 @@ export const useUiStore = create<UiState>()(
         ),
       setChunkDrawerTab: (tab) => set({ chunkDrawerTab: tab }),
       setHighlightsEnabled: (enabled) => set({ highlightsEnabled: enabled }),
-      setHighlightColor: (type, color) =>
-        set((state) => ({ highlightColors: { ...state.highlightColors, [type]: color } })),
+      setHighlightColor: (mode, type, color) =>
+        set((state) => ({
+          highlightColors: {
+            ...state.highlightColors,
+            [mode]: { ...state.highlightColors[mode], [type]: color },
+          },
+        })),
       setSearchQuery: (query) => set({ searchQuery: query }),
       setFocusedChunkId: (chunkId) => set({ focusedChunkId: chunkId }),
       focusIssueInChunk: (chunkId, query, sourceQuery) =>
@@ -374,7 +392,7 @@ export const useUiStore = create<UiState>()(
     }),
     {
       name: 'glossa-ui-prefs',
-      version: 13,
+      version: 14,
       migrate: (persisted: unknown, fromVersion: number) => {
         const s = persisted as Record<string, unknown>;
         if (fromVersion < 1) {
@@ -438,6 +456,19 @@ export const useUiStore = create<UiState>()(
         }
         if (fromVersion < 13) {
           s.colorScheme = 'system';
+        }
+        if (fromVersion < 14) {
+          // Migrate flat highlightColors → { light, dark } structure.
+          // If the stored value is already nested (light/dark keys), leave it.
+          const stored = s.highlightColors as Record<string, unknown> | undefined;
+          const isNested = stored && typeof stored.light === 'object';
+          if (!isNested) {
+            const flat = (stored ?? {}) as Record<string, string>;
+            s.highlightColors = {
+              light: { ...HL_COLORS_LIGHT, ...flat },
+              dark: { ...HL_COLORS_DARK },
+            };
+          }
         }
         return s;
       },

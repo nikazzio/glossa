@@ -30,17 +30,20 @@ import { Toaster } from 'sonner';
 import { toast } from 'sonner';
 
 function HighlightColorSync() {
+  const colorScheme = useUiStore((s) => s.colorScheme);
   const highlightColors = useUiStore((s) => s.highlightColors);
   useEffect(() => {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark = colorScheme === 'dark' || (colorScheme === 'system' && prefersDark);
+    const colors = isDark ? highlightColors.dark : highlightColors.light;
     const root = document.documentElement;
-    root.style.setProperty('--hl-source-term-color', highlightColors.sourceTerm);
-    root.style.setProperty('--hl-match-bg', highlightColors.matchTerm);
-    root.style.setProperty('--hl-mismatch-bg', highlightColors.mismatchTerm);
-    root.style.setProperty('--hl-search-bg', highlightColors.search);
-    root.style.setProperty('--hl-audit-bg', highlightColors.auditPhrase);
-    // Fallback for stores persisted before the annotation color existed.
-    root.style.setProperty('--hl-annot-bg', highlightColors.annotation ?? 'rgba(58,122,114,0.25)');
-  }, [highlightColors]);
+    root.style.setProperty('--hl-source-term-color', colors.sourceTerm);
+    root.style.setProperty('--hl-match-bg', colors.matchTerm);
+    root.style.setProperty('--hl-mismatch-bg', colors.mismatchTerm);
+    root.style.setProperty('--hl-search-bg', colors.search);
+    root.style.setProperty('--hl-audit-bg', colors.auditPhrase);
+    root.style.setProperty('--hl-annot-bg', colors.annotation);
+  }, [colorScheme, highlightColors]);
   return null;
 }
 
