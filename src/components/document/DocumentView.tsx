@@ -112,7 +112,7 @@ function DocumentPage({
   const showSearch = searchable && (searchOpen || Boolean(searchValue));
 
   return (
-    <section className={`relative rounded-[24px] bg-editorial-page px-6 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_18px_45px_rgba(74,50,17,0.08)] flex flex-col min-h-0 ${
+    <section className={`relative rounded-[24px] bg-editorial-page px-6 py-5 shadow-[var(--inset-highlight-strong),0_18px_45px_rgba(74,50,17,0.08)] flex flex-col min-h-0 ${
       highlighted ? 'border border-editorial-accent ring-2 ring-editorial-accent/30' : 'border border-editorial-divider'
     }`}>
       {/* Header con altezza minima fissa per allineare il corpo testo tra i due pannelli */}
@@ -300,7 +300,7 @@ export function DocumentView({
             onClick={onImportDocument}
             aria-label={t('document.projectHomeImport')}
             title={t('document.projectHomeImport')}
-            className="group mt-8 flex w-full max-w-xl flex-col items-center rounded-[30px] border border-dashed border-editorial-border bg-editorial-bg/65 px-6 py-8 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] transition-colors hover:border-editorial-accent/40 hover:bg-editorial-bg focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            className="group mt-8 flex w-full max-w-xl flex-col items-center rounded-[30px] border border-dashed border-editorial-border bg-editorial-bg/65 px-6 py-8 text-center shadow-[var(--inset-highlight)] transition-colors hover:border-editorial-accent/40 hover:bg-editorial-bg focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
           >
             <span className="inline-flex h-14 w-14 items-center justify-center rounded-full border border-editorial-border bg-editorial-paper text-editorial-muted transition-colors group-hover:border-editorial-accent/45 group-hover:text-editorial-accent">
               <FileText size={22} />
@@ -440,7 +440,7 @@ export function DocumentView({
                         aria-current={isCurrent ? 'true' : undefined}
                         className={`relative shrink-0 rounded-full transition-all duration-150 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
                           isCurrent
-                            ? `${sizeClass} border border-editorial-charcoal/28 ${segmentTone} shadow-[0_0_0_1px_rgba(255,255,255,0.28)]`
+                            ? `${sizeClass} border border-editorial-charcoal/28 ${segmentTone} shadow-[var(--chunk-current-ring)]`
                             : `${sizeClass} ${segmentTone} hover:-translate-y-px hover:ring-1 hover:ring-editorial-charcoal/12`
                         }`}
                       >

@@ -86,7 +86,7 @@ export function AuditTabPanel({
             }`}
             aria-hidden="true"
           >
-            <span className="h-3.5 w-3.5 rounded-full bg-white" />
+            <span className="h-3.5 w-3.5 rounded-full bg-editorial-bg" />
           </span>
         </button>
         {config.judgeRefineLoop && (

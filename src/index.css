@@ -123,7 +123,7 @@
 html.dark {
   --color-editorial-bg:           #1c1814;
   --color-editorial-ink:          #c4d4d9;
-  --color-editorial-charcoal:     #7db5ae;
+  --color-editorial-charcoal:     #3d7068;
   --color-editorial-accent:       #d4806e;
   --color-editorial-muted:        #857d77;
   --color-editorial-border:       #352d28;
@@ -135,6 +135,17 @@ html.dark {
   --color-editorial-page:         #231f1b;
   --color-editorial-divider:      #2c2520;
   --color-editorial-divider-soft: #261f1c;
+
+  /* Gradient header */
+  --header-bg-from: #201c18;
+  --header-bg-to:   #1c1814;
+
+  /* Inset top-highlight shadows — ridotti in dark */
+  --inset-highlight-strong: inset 0 1px 0 rgba(255,255,255,0.04);
+  --inset-highlight:        inset 0 1px 0 rgba(255,255,255,0.03);
+
+  /* Ring bianco sul pallino chunk corrente */
+  --chunk-current-ring: 0 0 0 1px rgba(255,255,255,0.10);
 }
 
 /* Consistent focus-visible ring across the app */
@@ -157,6 +168,11 @@ html.dark {
 
 /* Highlight color tokens + typography vars — overridden at runtime by App.tsx */
 :root {
+  --header-bg-from: #fffdf8;
+  --header-bg-to:   #f8f3ea;
+  --inset-highlight-strong: inset 0 1px 0 rgba(255,255,255,0.85);
+  --inset-highlight:        inset 0 1px 0 rgba(255,255,255,0.45);
+  --chunk-current-ring:     0 0 0 1px rgba(255,255,255,0.28);
   --app-min-width: 1080px;
   --app-min-height: 680px;
   --doc-font-size: 0.9375rem;

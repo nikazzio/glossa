@@ -248,7 +248,7 @@ export function ProjectPanel() {
                           y: isOpening ? -1 : 0,
                         }}
                         transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-                        className={`group flex items-center gap-3 rounded-[22px] border bg-editorial-paper/65 px-4 py-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] transition-colors ${
+                        className={`group flex items-center gap-3 rounded-[22px] border bg-editorial-paper/65 px-4 py-3.5 shadow-[var(--inset-highlight)] transition-colors ${
                           isOpening || project.id === currentProjectId
                             ? 'border-editorial-accent/60 bg-editorial-accent/8'
                             : 'border-editorial-border hover:border-editorial-accent/40 hover:bg-editorial-paper'
