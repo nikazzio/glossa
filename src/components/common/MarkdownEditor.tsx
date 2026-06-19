@@ -22,14 +22,17 @@ type HistoryEntry = {
 
 const TEXT_SIZE_STEPS = [
   { fontSize: '0.75rem', lineHeight: '1.5rem' },
-  { fontSize: '0.825rem', lineHeight: '1.65rem' },
+  { fontSize: '0.8125rem', lineHeight: '1.625rem' },  // sm
   { fontSize: '0.9rem', lineHeight: '1.8rem' },
+  { fontSize: '0.9375rem', lineHeight: '1.875rem' }, // md
   { fontSize: '1rem', lineHeight: '2rem' },
+  { fontSize: '1.0625rem', lineHeight: '2.125rem' }, // lg
   { fontSize: '1.125rem', lineHeight: '2.25rem' },
   { fontSize: '1.25rem', lineHeight: '2.5rem' },
   { fontSize: '1.375rem', lineHeight: '2.75rem' },
 ] as const;
-const DEFAULT_TEXT_SIZE_STEP = 3;
+export const DOC_FONT_SIZE_STEP_INDEX = { sm: 1, md: 3, lg: 5 } as const;
+const DEFAULT_TEXT_SIZE_STEP = 3; // md
 const MAX_UNDO_ENTRIES = 100;
 const TYPING_UNDO_COALESCE_MS = 800;
 

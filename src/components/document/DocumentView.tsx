@@ -22,7 +22,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { indexPad } from '../../utils';
-import { CopyButton, HighlightedText, MarkdownEditor } from '../common';
+import { CopyButton, HighlightedText, MarkdownEditor, DOC_FONT_SIZE_STEP_INDEX } from '../common';
 import { IconButton, Tooltip, type IconButtonTone } from '../ui';
 import { composeAnnotatedMarkdown } from '../../utils/annotationMarkdown';
 import { restoreFootnoteMarkers } from '../../utils/footnoteExtractor';
@@ -209,8 +209,7 @@ export function DocumentView({
     documentFontSize,
   } = useUiStore();
 
-  const DOC_FONT_SIZE_STEP = { sm: 2, md: 3, lg: 4 } as const;
-  const fontSizeStep = DOC_FONT_SIZE_STEP[documentFontSize ?? 'md'];
+  const fontSizeStep = DOC_FONT_SIZE_STEP_INDEX[documentFontSize ?? 'md'];
 
   const [annotationMenu, setAnnotationMenu] = useState<{ x: number; y: number; text: string; chunkId: string } | null>(null);
 

@@ -231,7 +231,8 @@ export async function exportGlossaryToXlsx(
     ['term', 'translation', 'notes'],
     ...entries.map((e) => [e.term, e.translation, e.notes ?? '']),
   ];
-  const result = await writeXlsxFile(rows, { sheet: sheetName.slice(0, 31) });
+  const safeSheet = sheetName.replace(/[/\\?*[\]:]/g, '_').slice(0, 31) || 'Sheet1';
+  const result = await writeXlsxFile(rows, { sheet: safeSheet });
   const blob = await result.toBlob();
   return new Uint8Array(await blob.arrayBuffer());
 }

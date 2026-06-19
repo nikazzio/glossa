@@ -13,6 +13,12 @@ export type HelpSection = 'overview' | 'pipeline' | 'features' | 'context' | 'au
 export type ActivePanel = 'config' | 'insights' | 'chunk' | 'settings' | 'help' | null;
 export type UiFont = 'jakarta' | 'geist' | 'inter' | 'plex';
 export type DocumentFontSize = 'sm' | 'md' | 'lg';
+
+export const DOC_FONT_SIZE_CSS: Record<DocumentFontSize, string> = {
+  sm: '0.8125rem',
+  md: '0.9375rem',
+  lg: '1.0625rem',
+};
 export type DocumentLineHeight = 'tight' | 'normal' | 'relaxed';
 export type SettingsTab = 'translations' | 'provider' | 'typography';
 export type ProjectPanelTab = 'run' | 'pipeline' | 'document' | 'insight' | 'chunk';

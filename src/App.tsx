@@ -9,6 +9,7 @@ import { useProjectAutosave } from './hooks/useProjectAutosave';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useUiStore } from './stores/uiStore';
 import type { UiFont, DocumentFontSize, DocumentLineHeight } from './stores/uiStore';
+import { DOC_FONT_SIZE_CSS } from './stores/uiStore';
 import { useConfigStore } from './stores/configStore';
 import { useProjectStore } from './stores/projectStore';
 import { useLibraryStore } from './stores/libraryStore';
@@ -58,11 +59,6 @@ function FontSync() {
   return null;
 }
 
-const DOC_FONT_SIZE_VALUES: Record<DocumentFontSize, string> = {
-  sm: '0.8125rem',
-  md: '0.9375rem',
-  lg: '1.0625rem',
-};
 
 const DOC_LINE_HEIGHT_VALUES: Record<DocumentLineHeight, string> = {
   tight: '1.6',
@@ -75,7 +71,7 @@ function DocTypographySync() {
   const documentLineHeight = useUiStore((s) => s.documentLineHeight);
   useEffect(() => {
     const root = document.documentElement;
-    root.style.setProperty('--doc-font-size', DOC_FONT_SIZE_VALUES[documentFontSize]);
+    root.style.setProperty('--doc-font-size', DOC_FONT_SIZE_CSS[documentFontSize]);
     root.style.setProperty('--doc-line-height', DOC_LINE_HEIGHT_VALUES[documentLineHeight]);
   }, [documentFontSize, documentLineHeight]);
   return null;
