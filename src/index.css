@@ -145,6 +145,11 @@ html.dark {
 
   /* Ring bianco sul pallino chunk corrente */
   --chunk-current-ring: 0 0 0 1px rgba(255,255,255,0.10);
+  --shadow-modal:       0 24px 80px rgba(0,0,0,0.60);
+  --shadow-tooltip:     0 12px 28px rgba(0,0,0,0.40);
+  --shadow-warm-sm:     0 16px 50px rgba(0,0,0,0.20);
+  --shadow-warm-md:     0 8px 24px rgba(0,0,0,0.40);
+  --shadow-page-card:   0 18px 45px rgba(0,0,0,0.28);
 }
 
 /* Consistent focus-visible ring across the app */
@@ -172,6 +177,11 @@ html.dark {
   --inset-highlight-strong: inset 0 1px 0 rgba(255,255,255,0.85);
   --inset-highlight:        inset 0 1px 0 rgba(255,255,255,0.45);
   --chunk-current-ring:     0 0 0 1px rgba(255,255,255,0.28);
+  --shadow-modal:           0 24px 80px rgba(26,26,26,0.20);
+  --shadow-tooltip:         0 12px 28px rgba(26,26,26,0.12);
+  --shadow-warm-sm:         0 16px 50px rgba(26,26,26,0.05);
+  --shadow-warm-md:         0 8px 24px rgba(74,50,17,0.12);
+  --shadow-page-card:       0 18px 45px rgba(74,50,17,0.08);
   --app-min-width: 1080px;
   --app-min-height: 680px;
   --doc-font-size: 0.9375rem;

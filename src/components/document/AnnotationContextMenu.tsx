@@ -31,7 +31,7 @@ export function AnnotationContextMenu({ x, y, onAddAnnotation, onClose }: Annota
     <div
       ref={ref}
       style={{ position: 'fixed', top: y, left: x }}
-      className="z-50 min-w-[200px] rounded-2xl border border-editorial-border bg-editorial-page py-1.5 shadow-[0_8px_24px_rgba(74,50,17,0.12)]"
+      className="z-50 min-w-[200px] rounded-2xl border border-editorial-border bg-editorial-page py-1.5 shadow-[var(--shadow-warm-md)]"
     >
       <button
         type="button"

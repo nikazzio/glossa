@@ -112,7 +112,7 @@ function DocumentPage({
   const showSearch = searchable && (searchOpen || Boolean(searchValue));
 
   return (
-    <section className={`relative rounded-[24px] bg-editorial-page px-6 py-5 shadow-[var(--inset-highlight-strong),0_18px_45px_rgba(74,50,17,0.08)] flex flex-col min-h-0 ${
+    <section className={`relative rounded-[24px] bg-editorial-page px-6 py-5 shadow-[var(--inset-highlight-strong),var(--shadow-page-card)] flex flex-col min-h-0 ${
       highlighted ? 'border border-editorial-accent ring-2 ring-editorial-accent/30' : 'border border-editorial-divider'
     }`}>
       {/* Header con altezza minima fissa per allineare il corpo testo tra i due pannelli */}
@@ -337,7 +337,7 @@ export function DocumentView({
       <div className="@container mx-auto w-full max-w-[1720px] px-5 py-3 md:px-6 md:py-4 flex flex-col flex-1 min-h-0 gap-5">
         <div className="shrink-0">
           {/* Navigation bar */}
-          <div className="w-full rounded-[20px] border border-editorial-border bg-editorial-bg/90 px-4 py-3 shadow-[0_16px_50px_rgba(26,26,26,0.05)]">
+          <div className="w-full rounded-[20px] border border-editorial-border bg-editorial-bg/90 px-4 py-3 shadow-[var(--shadow-warm-sm)]">
             <div className="flex items-center gap-x-4 gap-y-2">
               <div className="flex flex-1 flex-wrap items-center gap-1.5">
                 {enabledStages.map((stage) => {

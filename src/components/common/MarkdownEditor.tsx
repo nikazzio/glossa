@@ -356,7 +356,7 @@ export function MarkdownEditor({
   );
 
   return (
-    <div className={fillHeight ? 'flex flex-col flex-1 min-h-0 gap-3' : 'space-y-3'}>
+    <div className={fillHeight ? 'flex flex-col flex-1 min-h-0 gap-5' : 'space-y-3'}>
       <div className={`sticky top-0 z-20 rounded-2xl border border-editorial-border/70 bg-editorial-page/95 px-3 py-3 shadow-sm backdrop-blur${fillHeight ? ' shrink-0' : ''}`}>
         <div className="flex items-center gap-1.5">
           {markdownEnabled && (
@@ -489,7 +489,7 @@ export function MarkdownEditor({
       {mode === 'write' && !readOnly && highlightHtml ? (
         fillHeight ? (
           // Overlay: HighlightedText behind transparent textarea — styled text visible while editing
-          <div className="relative flex-1 min-h-0">
+          <div className="relative flex-1 min-h-0" onWheel={(e) => { const ta = textareaRef.current; if (ta) { ta.scrollTop += e.deltaY; e.preventDefault(); } }}>
             <HighlightedText
               ref={highlightLayerRef}
               html={highlightHtml}

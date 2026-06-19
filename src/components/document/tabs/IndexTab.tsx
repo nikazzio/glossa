@@ -147,7 +147,7 @@ export function IndexTab({ panelId, labelledBy, chunks, currentChunkId, stuckChu
 
                 {isStuck && chunk.status === 'processing' && (
                   <div className={`flex items-center justify-between gap-2 border-t px-3 py-2 ${isActive ? 'border-white/10' : 'border-editorial-border/60'}`}>
-                    <div className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.1em] ${isActive ? 'text-orange-200' : 'text-editorial-accent'}`}>
+                    <div className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.1em] ${isActive ? 'text-editorial-running' : 'text-editorial-accent'}`}>
                       <Clock size={11} />
                       {t('document.watchdogStuck')}
                     </div>
@@ -155,7 +155,7 @@ export function IndexTab({ panelId, labelledBy, chunks, currentChunkId, stuckChu
                       type="button"
                       onClick={(e) => { e.stopPropagation(); onCancelStuck(chunk.id); }}
                       aria-label={t('document.watchdogCancel')}
-                      className={`rounded-full border px-2 py-0.5 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${isActive ? 'border-orange-300/40 text-orange-200 hover:bg-white/10' : 'border-editorial-accent/40 text-editorial-accent hover:bg-editorial-accent/10'}`}
+                      className={`rounded-full border px-2 py-0.5 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${isActive ? 'border-editorial-running/40 text-editorial-running hover:bg-editorial-ink/10' : 'border-editorial-accent/40 text-editorial-accent hover:bg-editorial-accent/10'}`}
                     >
                       {t('document.watchdogCancel')}
                     </button>

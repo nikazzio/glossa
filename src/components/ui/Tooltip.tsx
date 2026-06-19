@@ -23,7 +23,7 @@ interface TooltipProps {
 }
 
 const TOOLTIP_BOX =
-  'pointer-events-none fixed z-[140] w-max max-w-[16rem] rounded-[14px] border border-editorial-border bg-editorial-bg/98 px-3.5 py-2.5 text-center font-display text-[14px] italic leading-tight text-editorial-ink shadow-[0_12px_28px_rgba(26,26,26,0.12)]';
+  'pointer-events-none fixed z-[140] w-max max-w-[16rem] rounded-[14px] border border-editorial-border bg-editorial-bg/98 px-3.5 py-2.5 text-center font-display text-[14px] italic leading-tight text-editorial-ink shadow-[var(--shadow-tooltip)]';
 
 
 function clamp(value: number, min: number, max: number) {
