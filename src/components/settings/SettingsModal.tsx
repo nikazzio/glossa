@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useUiStore } from '../../stores/uiStore';
 import type { SettingsTab, UiFont, DocumentFontSize, DocumentLineHeight, ColorScheme, HLColorSet } from '../../stores/uiStore';
+import { HL_COLORS_LIGHT, HL_COLORS_DARK } from '../../stores/uiStore';
 import { useConfigStore } from '../../stores/configStore';
 import { ApiKeyInput } from './ApiKeyInput';
 import { ollamaService } from '../../services/llmService';
@@ -202,7 +203,8 @@ export function SettingsModal() {
     if (colorScheme === 'light') return 'light';
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   })();
-  const activeHlColors: HLColorSet = highlightColors[hlMode];
+  const activeHlColors: HLColorSet = highlightColors[hlMode]
+    ?? (hlMode === 'dark' ? HL_COLORS_DARK : HL_COLORS_LIGHT);
 
   const refreshOllama = async () => {
     setRefreshing(true);
