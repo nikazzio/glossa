@@ -119,20 +119,15 @@ export function TranslationsArea() {
             {t('workspace.areas.translations.title')}
           </h1>
           <div className="flex items-center gap-2 shrink-0">
-            <div className="flex items-center gap-0.5 rounded-[14px] border border-editorial-border bg-editorial-textbox/20 p-0.5">
+            <div className="flex items-center gap-1.5">
               {(['updatedAt', 'name'] as SortKey[]).map((key) => (
-                <button
+                <PillButton
                   key={key}
-                  type="button"
+                  variant={sortKey === key ? 'accent' : 'secondary'}
                   onClick={() => setSortKey(key)}
-                  className={`rounded-[12px] px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] transition-colors ${
-                    sortKey === key
-                      ? 'bg-editorial-paper text-editorial-ink shadow-sm'
-                      : 'text-editorial-muted hover:text-editorial-ink'
-                  }`}
                 >
                   {t(`workspace.translationsArea.sort.${key}`)}
-                </button>
+                </PillButton>
               ))}
             </div>
             <IconButton

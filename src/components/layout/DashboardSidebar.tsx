@@ -69,6 +69,10 @@ export function DashboardSidebar() {
       return;
     }
     if (isActive) {
+      if (activeWorkspaceArea !== null) {
+        setActiveWorkspaceArea(null);
+        return;
+      }
       setCollapsed(true);
       return;
     }

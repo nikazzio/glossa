@@ -59,6 +59,8 @@ describe('AppStatusBar', () => {
       runStatus: 'idle',
       completedChunks: 5,
       totalChunks: 10,
+      activePanel: null,
+      panelSubTab: null,
     });
     render(<AppStatusBar />);
     expect(screen.getByText('Progetto A')).toBeInTheDocument();
@@ -76,6 +78,8 @@ describe('AppStatusBar', () => {
       runStatus: 'idle',
       completedChunks: 0,
       totalChunks: 0,
+      activePanel: null,
+      panelSubTab: null,
     });
     render(<AppStatusBar />);
     expect(screen.getByTitle(/unsaved/i)).toBeInTheDocument();

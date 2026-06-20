@@ -6,6 +6,7 @@ import { useChunksStore } from '../stores/chunksStore';
 import { usePipelineStore } from '../stores/pipelineStore';
 import { countWords } from '../utils';
 import type { PipelineRunStatus } from '../types';
+import type { ActivePanel, InsightsDrawerTab, ChunkDrawerTab } from '../stores/uiStore';
 
 export type StatusBarContext =
   | { kind: 'idle' }
@@ -26,6 +27,8 @@ export type StatusBarContext =
       runStatus: PipelineRunStatus;
       completedChunks: number;
       totalChunks: number;
+      activePanel: ActivePanel;
+      panelSubTab: InsightsDrawerTab | ChunkDrawerTab | null;
     };
 
 export function useStatusBarData(): StatusBarContext {
@@ -39,6 +42,9 @@ export function useStatusBarData(): StatusBarContext {
   const chunks = useChunksStore((s) => s.chunks);
   const runStatus = usePipelineStore((s) => s.runStatus);
   const pipelineConfigId = usePipelineStore((s) => s.config.pipelineId);
+  const activePanel = useUiStore((s) => s.activePanel);
+  const documentDrawerTab = useUiStore((s) => s.documentDrawerTab);
+  const chunkDrawerTab = useUiStore((s) => s.chunkDrawerTab);
 
   return useMemo<StatusBarContext>(() => {
     if (!activeWorkspace) return { kind: 'idle' };
@@ -73,6 +79,8 @@ export function useStatusBarData(): StatusBarContext {
       runStatus,
       completedChunks,
       totalChunks,
+      activePanel,
+      panelSubTab: activePanel === 'insights' ? documentDrawerTab : activePanel === 'chunk' ? chunkDrawerTab : null,
     };
   }, [
     activeWorkspace,
@@ -85,5 +93,8 @@ export function useStatusBarData(): StatusBarContext {
     saveState,
     chunks,
     runStatus,
+    activePanel,
+    documentDrawerTab,
+    chunkDrawerTab,
   ]);
 }

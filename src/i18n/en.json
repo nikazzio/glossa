@@ -1468,6 +1468,31 @@
     "completed": "Completed",
     "areaTranslations": "Translations",
     "areaLibrary": "Library",
-    "areaTranscriptions": "Transcriptions"
+    "areaTranscriptions": "Transcriptions",
+    "panel": {
+      "config": "Configuration",
+      "insights": "Analysis",
+      "chunk": "Chunk",
+      "settings": "Settings",
+      "help": "Help"
+    },
+    "panelTab": {
+      "index": "Index",
+      "search": "Search",
+      "stats": "Statistics",
+      "coherence": "Coherence",
+      "glossary": "Glossary",
+      "summary": "Summary",
+      "audit": "Audit",
+      "notes": "Notes",
+      "operations": "Operations",
+      "memory": "Memory"
+    },
+    "tooltip": {
+      "sourceWords": "Words in source text",
+      "targetWords": "Words in current translation",
+      "coverage": "Coverage ratio (translation / source)",
+      "chunksProgress": "Completed segments"
+    }
   }
 }

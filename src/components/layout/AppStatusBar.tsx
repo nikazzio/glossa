@@ -1,6 +1,7 @@
 import { Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useStatusBarData } from '../../hooks/useStatusBarData';
+import { Tooltip } from '../ui';
 
 const AREA_KEY: Record<string, string> = {
   translations: 'statusBar.areaTranslations',
@@ -81,6 +82,15 @@ export function AppStatusBar() {
                 <span className="truncate">{data.pipelineName}</span>
               </>
             ) : null}
+            {data.activePanel ? (
+              <>
+                <span className="text-editorial-border">·</span>
+                <span className="text-editorial-accent">
+                  {t(`statusBar.panel.${data.activePanel}`)}
+                  {data.panelSubTab ? ` / ${t(`statusBar.panelTab.${data.panelSubTab}`)}` : ''}
+                </span>
+              </>
+            ) : null}
           </>
         )}
       </div>
@@ -89,17 +99,25 @@ export function AppStatusBar() {
       {data.kind === 'project' && (
         <div className="hidden items-center gap-3 sm:flex">
           {data.runStatus === 'running' ? (
-            <span className="flex items-center gap-1.5 text-editorial-warning">
-              <Loader2 size={10} className="animate-spin" />
-              {t('statusBar.running')} {data.completedChunks}/{data.totalChunks} {t('statusBar.chunks')}
-            </span>
+            <Tooltip label={t('statusBar.tooltip.chunksProgress')} side="top">
+              <span className="flex items-center gap-1.5 text-editorial-warning">
+                <Loader2 size={10} className="animate-spin" />
+                {t('statusBar.running')} {data.completedChunks}/{data.totalChunks} {t('statusBar.chunks')}
+              </span>
+            </Tooltip>
           ) : data.totalChunks > 0 ? (
             <>
-              <span>{data.sourceWords.toLocaleString()} {t('statusBar.sourceWords')}</span>
+              <Tooltip label={t('statusBar.tooltip.sourceWords')} side="top">
+                <span>{data.sourceWords.toLocaleString()} {t('statusBar.sourceWords')}</span>
+              </Tooltip>
               <span className="text-editorial-border">·</span>
-              <span>{data.targetWords.toLocaleString()} {t('statusBar.targetWords')}</span>
+              <Tooltip label={t('statusBar.tooltip.targetWords')} side="top">
+                <span>{data.targetWords.toLocaleString()} {t('statusBar.targetWords')}</span>
+              </Tooltip>
               <span className="text-editorial-border">·</span>
-              <span>{data.coverageRatio}% {t('statusBar.coverage')}</span>
+              <Tooltip label={t('statusBar.tooltip.coverage')} side="top">
+                <span>{data.coverageRatio}% {t('statusBar.coverage')}</span>
+              </Tooltip>
               {data.runStatus === 'completed' && (
                 <>
                   <span className="text-editorial-border">·</span>
