@@ -29,13 +29,13 @@ describe('DashboardSidebar', () => {
     useUiStore.setState({ activeWorkspaceArea: null });
   });
 
-  it('shows translations as the only enabled macroarea', () => {
+  it('shows translations and library as enabled macroareas, transcriptions as disabled', () => {
     // Set translations as the active area to verify aria-current is applied correctly.
     useUiStore.setState({ activeWorkspaceArea: 'translations' });
     render(<DashboardSidebar />);
 
     expect(screen.getByRole('button', { name: /workspace\.areas\.translations\.title/ })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('button', { name: /workspace\.areas\.library\.title/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /workspace\.areas\.library\.title/ })).not.toBeDisabled();
     expect(screen.getByRole('button', { name: /workspace\.areas\.transcriptions\.title/ })).toBeDisabled();
   });
 

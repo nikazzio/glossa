@@ -18,7 +18,7 @@ import { EASE_EDITORIAL, WIDTH_TRANSITION_CLASS } from './motion';
 
 const AREA_ITEMS = [
   { id: 'translations', icon: BookOpenText, enabled: true },
-  { id: 'library', icon: LibraryBig, enabled: false },
+  { id: 'library', icon: LibraryBig, enabled: true },
   { id: 'transcriptions', icon: FilePen, enabled: false },
 ] as const;
 

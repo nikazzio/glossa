@@ -151,8 +151,26 @@ export function WorkspaceHome() {
               </span>
             </button>
 
-            {/* Library — locked */}
-            <LockedAreaCard area="library" />
+            {/* Library — active */}
+            <button
+              type="button"
+              onClick={() => setActiveWorkspaceArea('library')}
+              className="group rounded-[24px] border border-editorial-border bg-editorial-paper/75 px-5 py-4 text-left shadow-[var(--inset-highlight)] transition-colors hover:border-editorial-accent/45 hover:bg-editorial-paper focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            >
+              <span className="flex items-start gap-3">
+                <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-editorial-border bg-editorial-bg/85 text-editorial-muted transition-colors group-hover:border-editorial-accent/45 group-hover:text-editorial-accent">
+                  <LibraryBig size={16} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-display text-lg italic text-editorial-ink">
+                    {t('workspace.areas.library.title')}
+                  </span>
+                  <span className="mt-1 block text-xs text-editorial-muted [text-wrap:pretty]">
+                    {t('workspace.areas.library.body')}
+                  </span>
+                </span>
+              </span>
+            </button>
 
             {/* Transcriptions — locked */}
             <LockedAreaCard area="transcriptions" />

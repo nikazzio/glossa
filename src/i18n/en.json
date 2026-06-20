@@ -658,7 +658,7 @@
       },
       "library": {
         "title": "Library",
-        "body": "Future area for catalogues, texts, and study material, separated from translation memory.",
+        "body": "Glossaries, Phrase Memory and prompt templates for this workspace.",
         "sidebarHint": "Texts and catalogues"
       },
       "transcriptions": {
@@ -700,6 +700,13 @@
         "updatedAt": "Recent",
         "name": "Name"
       }
+    },
+    "libraryArea": {
+      "glossariesBody": "Term dictionaries with CSV and XLSX import/export.",
+      "memoriesBody": "Vector-embedded phrase pairs for this workspace.",
+      "templatesBody": "Prompt templates for translation and transcription workflows.",
+      "backLabel": "{{name}}",
+      "backToLibrary": "Library"
     },
     "hub": {
       "recentProjects": "Recent",

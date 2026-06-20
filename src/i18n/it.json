@@ -658,7 +658,7 @@
       },
       "library": {
         "title": "Biblioteca",
-        "body": "Area futura per catalogo, testi e materiali di studio, separata dalla memoria di traduzione.",
+        "body": "Glossari, Phrase Memory e template di prompt per questo workspace.",
         "sidebarHint": "Testi e catalogo"
       },
       "transcriptions": {
@@ -700,6 +700,13 @@
         "updatedAt": "Recenti",
         "name": "Nome"
       }
+    },
+    "libraryArea": {
+      "glossariesBody": "Dizionari di termini con import ed export CSV e XLSX.",
+      "memoriesBody": "Frasi memorizzate con embedding vettoriale per questo workspace.",
+      "templatesBody": "Template di prompt per i workflow di traduzione e trascrizione.",
+      "backLabel": "{{name}}",
+      "backToLibrary": "Biblioteca"
     },
     "hub": {
       "recentProjects": "Recenti",
