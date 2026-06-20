@@ -246,7 +246,7 @@ export function MemoriesTab() {
             return (
               <article
                 key={entry.id}
-                className="rounded-[22px] border border-editorial-border bg-editorial-paper/60 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] transition-colors hover:border-editorial-accent/35"
+                className="rounded-[22px] border border-editorial-border bg-editorial-paper/60 p-4 shadow-[var(--inset-highlight)] transition-colors hover:border-editorial-accent/35"
               >
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <div className="min-w-0">

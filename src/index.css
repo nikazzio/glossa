@@ -96,11 +96,8 @@
   --color-editorial-divider: #d8cfbf;
   --color-editorial-divider-soft: #ede4d6;
 
-  /* ── Dark mode — placeholder token overrides (PR futura) ─────────────────── */
-  /* @media (prefers-color-scheme: dark) { */
-  /*   --color-editorial-bg: TBD; */
-  /*   --color-editorial-ink: TBD; */
-  /* } */
+  /* ── Dark mode — token overrides attivi su html.dark ────────────────────── */
+  /* Vedi ThemeSync in App.tsx */
 
   /* ── Terminal — versione scura della palette editoriale ──────────────────── */
   /* Sfondo: nero caldo (non freddo) che armonizza con editorial-bg #F8F5F0    */
@@ -120,6 +117,39 @@
   --color-terminal-info:      #7898aa;
 
   --color-terminal-accent:    #c49b2a;
+}
+
+/* Dark mode — warm dark palette, harmonizza con la palette editoriale */
+html.dark {
+  --color-editorial-bg:           #1c1814;
+  --color-editorial-ink:          #c4d4d9;
+  --color-editorial-charcoal:     #2e5c7a;
+  --color-editorial-muted:        #857d77;
+  --color-editorial-border:       #352d28;
+  --color-editorial-textbox:      #251f1b;
+  --color-editorial-success:      #5c9e7e;
+  --color-editorial-warning:      #857d77;
+  --color-editorial-running:      #c49b2a;
+  --color-editorial-paper:        #201c18;
+  --color-editorial-page:         #231f1b;
+  --color-editorial-divider:      #2c2520;
+  --color-editorial-divider-soft: #261f1c;
+
+  /* Gradient header */
+  --header-bg-from: #201c18;
+  --header-bg-to:   #1c1814;
+
+  /* Inset top-highlight shadows — ridotti in dark */
+  --inset-highlight-strong: inset 0 1px 0 rgba(255,255,255,0.04);
+  --inset-highlight:        inset 0 1px 0 rgba(255,255,255,0.03);
+
+  /* Ring bianco sul pallino chunk corrente */
+  --chunk-current-ring: 0 0 0 1px rgba(255,255,255,0.10);
+  --shadow-modal:       0 24px 80px rgba(0,0,0,0.60);
+  --shadow-tooltip:     0 12px 28px rgba(0,0,0,0.40);
+  --shadow-warm-sm:     0 16px 50px rgba(0,0,0,0.20);
+  --shadow-warm-md:     0 8px 24px rgba(0,0,0,0.40);
+  --shadow-page-card:   0 18px 45px rgba(0,0,0,0.28);
 }
 
 /* Consistent focus-visible ring across the app */
@@ -142,6 +172,16 @@
 
 /* Highlight color tokens + typography vars — overridden at runtime by App.tsx */
 :root {
+  --header-bg-from: #fffdf8;
+  --header-bg-to:   #f8f3ea;
+  --inset-highlight-strong: inset 0 1px 0 rgba(255,255,255,0.85);
+  --inset-highlight:        inset 0 1px 0 rgba(255,255,255,0.45);
+  --chunk-current-ring:     0 0 0 1px rgba(255,255,255,0.28);
+  --shadow-modal:           0 24px 80px rgba(26,26,26,0.20);
+  --shadow-tooltip:         0 12px 28px rgba(26,26,26,0.12);
+  --shadow-warm-sm:         0 16px 50px rgba(26,26,26,0.05);
+  --shadow-warm-md:         0 8px 24px rgba(74,50,17,0.12);
+  --shadow-page-card:       0 18px 45px rgba(74,50,17,0.08);
   --app-min-width: 1080px;
   --app-min-height: 680px;
   --doc-font-size: 0.9375rem;

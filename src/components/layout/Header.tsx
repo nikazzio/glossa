@@ -101,7 +101,7 @@ export function Header() {
   };
 
   return (
-    <header className="border-b border-editorial-border bg-[linear-gradient(180deg,#fffdf8_0%,#f8f3ea_100%)] px-5 py-4 md:px-8">
+    <header className="border-b border-editorial-border bg-[linear-gradient(180deg,var(--header-bg-from)_0%,var(--header-bg-to)_100%)] px-5 py-4 md:px-8">
       <div className="flex items-center justify-between gap-4">
         <div className="min-w-0">
           <div className="flex min-w-0 items-baseline gap-2.5">

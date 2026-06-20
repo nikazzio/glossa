@@ -4,13 +4,14 @@ import {
   AlertCircle, Server, RefreshCw, CheckCircle2, XCircle, HelpCircle,
   Sparkles, Columns2, BookOpen, ChevronDown, ChevronUp, SlidersHorizontal,
   ChevronsLeft, Copy, RotateCcw, Scissors, Layers, LayoutTemplate, Palette,
-  LibraryBig, FileText, Type,
+  LibraryBig, FileText, Type, Sun, Moon, Monitor,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useUiStore } from '../../stores/uiStore';
-import type { SettingsTab, UiFont, DocumentFontSize, DocumentLineHeight } from '../../stores/uiStore';
+import type { SettingsTab, UiFont, DocumentFontSize, DocumentLineHeight, ColorScheme, HLColorSet } from '../../stores/uiStore';
+import { HL_COLORS_LIGHT, HL_COLORS_DARK } from '../../stores/uiStore';
 import { useConfigStore } from '../../stores/configStore';
 import { ApiKeyInput } from './ApiKeyInput';
 import { ollamaService } from '../../services/llmService';
@@ -162,6 +163,8 @@ export function SettingsModal() {
     setHighlightColor,
     uiFont,
     setUiFont,
+    colorScheme,
+    setColorScheme,
     documentFontSize,
     setDocumentFontSize,
     documentLineHeight,
@@ -195,6 +198,13 @@ export function SettingsModal() {
   const trapRef = useFocusTrap(showSettings, () => setShowSettings(false));
   const { overrides, setOverride, resetOverride, resetAll } = usePricingStore();
   const { statuses: keyStatuses, refresh: refreshKeyStatuses } = useProviderKeyStatus();
+  const hlMode: 'light' | 'dark' = (() => {
+    if (colorScheme === 'dark') return 'dark';
+    if (colorScheme === 'light') return 'light';
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  })();
+  const activeHlColors: HLColorSet = highlightColors[hlMode]
+    ?? (hlMode === 'dark' ? HL_COLORS_DARK : HL_COLORS_LIGHT);
 
   const refreshOllama = async () => {
     setRefreshing(true);
@@ -403,11 +413,17 @@ export function SettingsModal() {
 
                   {/* Evidenziazioni */}
                   <div className="space-y-4">
-                    <div className="flex items-center gap-1.5">
-                      <Palette size={11} className="text-editorial-accent shrink-0" />
-                      <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
-                        {t('settings.highlights')}
-                      </p>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <Palette size={11} className="text-editorial-accent shrink-0" />
+                        <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
+                          {t('settings.highlights')}
+                        </p>
+                      </div>
+                      <span className="flex items-center gap-1 rounded-full border border-editorial-border px-2 py-0.5 text-[11px] font-sans text-editorial-muted">
+                        {hlMode === 'dark' ? <Moon size={10} /> : <Sun size={10} />}
+                        {t(hlMode === 'dark' ? 'colorScheme_dark' : 'colorScheme_light')}
+                      </span>
                     </div>
                     <div className="space-y-2">
                       {([
@@ -423,11 +439,11 @@ export function SettingsModal() {
                           className="flex cursor-pointer items-center gap-3 rounded-[20px] border border-editorial-border bg-editorial-bg/60 px-4 py-3.5 transition-colors hover:border-editorial-accent/40"
                         >
                           <div className="relative h-5 w-5 shrink-0 overflow-hidden rounded-full shadow-sm">
-                            <div className="absolute inset-0" style={{ backgroundColor: highlightColors[key] }} />
+                            <div className="absolute inset-0" style={{ backgroundColor: activeHlColors[key] }} />
                             <input
                               type="color"
-                              value={colorToHex(highlightColors[key])}
-                              onChange={(e) => setHighlightColor(key, applyHexToColor(highlightColors[key], e.target.value))}
+                              value={colorToHex(activeHlColors[key])}
+                              onChange={(e) => setHighlightColor(hlMode, key, applyHexToColor(activeHlColors[key], e.target.value))}
                               className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
                               aria-label={label}
                             />
@@ -481,6 +497,42 @@ export function SettingsModal() {
                             <span className="mt-0.5 block text-xs text-editorial-muted" style={{ fontFamily: opt.family }}>
                               AaBbCc 0123 àèéìòù
                             </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Tema colori */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-1.5">
+                      <Sun size={11} className="text-editorial-accent shrink-0" />
+                      <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
+                        {t('settings.colorScheme')}
+                      </p>
+                    </div>
+                    <div role="radiogroup" aria-label={t('settings.colorScheme')} className="flex gap-2">
+                      {([
+                        { value: 'light' as ColorScheme, icon: <Sun size={14} />, labelKey: 'settings.colorScheme_light' },
+                        { value: 'dark'  as ColorScheme, icon: <Moon size={14} />, labelKey: 'settings.colorScheme_dark' },
+                        { value: 'system' as ColorScheme, icon: <Monitor size={14} />, labelKey: 'settings.colorScheme_system' },
+                      ]).map(({ value, icon, labelKey }) => {
+                        const isActive = colorScheme === value;
+                        return (
+                          <button
+                            key={value}
+                            type="button"
+                            role="radio"
+                            aria-checked={isActive}
+                            onClick={() => setColorScheme(value)}
+                            className={`flex flex-1 items-center justify-center gap-2 rounded-[16px] border py-2.5 text-[11px] font-bold uppercase tracking-[0.18em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                              isActive
+                                ? 'border-editorial-accent bg-editorial-accent/10 text-editorial-accent'
+                                : 'border-editorial-border bg-editorial-bg/60 text-editorial-muted hover:border-editorial-accent/40'
+                            }`}
+                          >
+                            {icon}
+                            {t(labelKey)}
                           </button>
                         );
                       })}

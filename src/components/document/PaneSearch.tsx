@@ -19,7 +19,7 @@ export function PaneSearch({ value, onChange, label, autoFocus = false }: PaneSe
       onSubmit={(event) => event.preventDefault()}
     >
       <label className="sr-only">{label}</label>
-      <div className="flex items-center gap-2 rounded-full border border-editorial-divider-soft bg-editorial-bg/70 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] transition-colors focus-within:border-editorial-accent/40 focus-within:ring-2 focus-within:ring-editorial-accent/20">
+      <div className="flex items-center gap-2 rounded-full border border-editorial-divider-soft bg-editorial-bg/70 px-3 py-2 shadow-[var(--inset-highlight)] transition-colors focus-within:border-editorial-accent/40 focus-within:ring-2 focus-within:ring-editorial-accent/20">
         <Search size={13} className="shrink-0 text-editorial-muted" aria-hidden="true" />
         <input
           type="search"

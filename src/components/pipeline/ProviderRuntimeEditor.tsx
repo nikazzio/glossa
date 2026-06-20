@@ -114,7 +114,7 @@ export function ProviderRuntimeEditor({
           }`}
           aria-hidden="true"
         >
-          <span className="h-3.5 w-3.5 rounded-full bg-white" />
+          <span className="h-3.5 w-3.5 rounded-full bg-editorial-bg" />
         </span>
       </button>
 
@@ -333,7 +333,7 @@ function ToggleRow({
           }`}
           aria-hidden="true"
         >
-          <span className="h-3.5 w-3.5 rounded-full bg-white" />
+          <span className="h-3.5 w-3.5 rounded-full bg-editorial-bg" />
         </span>
         <span className="space-y-1">
           <span className="flex items-center gap-2 text-xs font-sans uppercase tracking-[0.25em] text-editorial-muted">

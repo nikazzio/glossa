@@ -28,7 +28,7 @@ export function ConfirmDialog() {
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
-            className="relative w-full max-w-md rounded-[28px] border border-editorial-border bg-editorial-bg shadow-[0_24px_80px_rgba(26,26,26,0.2)]"
+            className="relative w-full max-w-md rounded-[28px] border border-editorial-border bg-editorial-bg shadow-[var(--shadow-modal)]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}

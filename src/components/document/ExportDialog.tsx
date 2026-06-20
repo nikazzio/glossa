@@ -56,7 +56,7 @@ export function ExportDialog({ chunks, markdownAware, onConfirm, onCancel }: Exp
       aria-labelledby="export-dialog-title"
       ref={trapRef}
     >
-      <div className="flex max-h-[90vh] w-full max-w-md flex-col rounded-[28px] border border-editorial-border bg-editorial-bg shadow-[0_24px_80px_rgba(26,26,26,0.2)]">
+      <div className="flex max-h-[90vh] w-full max-w-md flex-col rounded-[28px] border border-editorial-border bg-editorial-bg shadow-[var(--shadow-modal)]">
         {/* Header */}
         <div className="shrink-0 border-b border-editorial-border px-6 py-5">
           <div className="flex items-start justify-between gap-3">

@@ -8,7 +8,7 @@ import { usePipeline } from './hooks/usePipeline';
 import { useProjectAutosave } from './hooks/useProjectAutosave';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useUiStore } from './stores/uiStore';
-import type { UiFont, DocumentFontSize, DocumentLineHeight } from './stores/uiStore';
+import type { UiFont, DocumentFontSize, DocumentLineHeight, ColorScheme } from './stores/uiStore';
 import { DOC_FONT_SIZE_CSS } from './stores/uiStore';
 import { useConfigStore } from './stores/configStore';
 import { useProjectStore } from './stores/projectStore';
@@ -28,19 +28,24 @@ import type { DocumentFormat, DocumentRenderProfile } from './types';
 import type { ImportDialogPipelineConfig } from './components/document/ImportPreviewDialog';
 import { Toaster } from 'sonner';
 import { toast } from 'sonner';
+import { HL_COLORS_LIGHT, HL_COLORS_DARK } from './stores/uiStore';
 
 function HighlightColorSync() {
+  const colorScheme = useUiStore((s) => s.colorScheme);
   const highlightColors = useUiStore((s) => s.highlightColors);
   useEffect(() => {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark = colorScheme === 'dark' || (colorScheme === 'system' && prefersDark);
+    const colors = (isDark ? highlightColors.dark : highlightColors.light)
+      ?? (isDark ? HL_COLORS_DARK : HL_COLORS_LIGHT);
     const root = document.documentElement;
-    root.style.setProperty('--hl-source-term-color', highlightColors.sourceTerm);
-    root.style.setProperty('--hl-match-bg', highlightColors.matchTerm);
-    root.style.setProperty('--hl-mismatch-bg', highlightColors.mismatchTerm);
-    root.style.setProperty('--hl-search-bg', highlightColors.search);
-    root.style.setProperty('--hl-audit-bg', highlightColors.auditPhrase);
-    // Fallback for stores persisted before the annotation color existed.
-    root.style.setProperty('--hl-annot-bg', highlightColors.annotation ?? 'rgba(58,122,114,0.25)');
-  }, [highlightColors]);
+    root.style.setProperty('--hl-source-term-color', colors.sourceTerm);
+    root.style.setProperty('--hl-match-bg', colors.matchTerm);
+    root.style.setProperty('--hl-mismatch-bg', colors.mismatchTerm);
+    root.style.setProperty('--hl-search-bg', colors.search);
+    root.style.setProperty('--hl-audit-bg', colors.auditPhrase);
+    root.style.setProperty('--hl-annot-bg', colors.annotation);
+  }, [colorScheme, highlightColors]);
   return null;
 }
 
@@ -74,6 +79,24 @@ function DocTypographySync() {
     root.style.setProperty('--doc-font-size', DOC_FONT_SIZE_CSS[documentFontSize]);
     root.style.setProperty('--doc-line-height', DOC_LINE_HEIGHT_VALUES[documentLineHeight]);
   }, [documentFontSize, documentLineHeight]);
+  return null;
+}
+
+function ThemeSync() {
+  const colorScheme = useUiStore((s) => s.colorScheme);
+  useEffect(() => {
+    const root = document.documentElement;
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const apply = (scheme: ColorScheme, prefersDark: boolean) => {
+      const dark = scheme === 'dark' || (scheme === 'system' && prefersDark);
+      root.classList.toggle('dark', dark);
+    };
+    apply(colorScheme, mq.matches);
+    if (colorScheme !== 'system') return;
+    const handler = (e: MediaQueryListEvent) => apply('system', e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, [colorScheme]);
   return null;
 }
 
@@ -455,6 +478,7 @@ export default function App() {
       <HighlightColorSync />
       <FontSync />
       <DocTypographySync />
+      <ThemeSync />
       <RunStatusAnnouncer />
       <div className="flex h-dvh min-h-[var(--app-min-height)] min-w-[var(--app-min-width)] flex-col overflow-hidden bg-editorial-bg font-sans text-editorial-ink">
         <div className="flex-shrink-0">

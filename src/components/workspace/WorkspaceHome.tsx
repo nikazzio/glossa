@@ -197,7 +197,7 @@ export function WorkspaceHome() {
                         y: isOpening ? -2 : 0,
                       }}
                       transition={{ duration: 0.18, ease: 'easeOut' }}
-                      className={`group relative overflow-hidden rounded-[26px] border bg-editorial-paper/75 px-4 py-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] transition-colors duration-150 ${
+                      className={`group relative overflow-hidden rounded-[26px] border bg-editorial-paper/75 px-4 py-3.5 shadow-[var(--inset-highlight)] transition-colors duration-150 ${
                         isOpening
                           ? 'border-editorial-accent/55 bg-editorial-paper'
                           : 'border-editorial-border hover:border-editorial-accent/45 hover:bg-editorial-paper'
@@ -264,7 +264,7 @@ export function WorkspaceHome() {
           </section>
         </div>
 
-        <aside className="border-t border-editorial-border bg-editorial-bg/55 px-4 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] xl:border-l xl:border-t-0">
+        <aside className="border-t border-editorial-border bg-editorial-bg/55 px-4 py-5 shadow-[var(--inset-highlight)] xl:border-l xl:border-t-0">
           <SectionLabel icon={Database} label={t('workspace.technicalSummary')} />
           <dl className="mt-4 space-y-3">
             <TechRow label={t('workspace.projectsMetric')} value={String(projects.length)} />
