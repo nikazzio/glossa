@@ -71,6 +71,7 @@ const ALLOWED_MIGRATIONS = new Set([
   'translations.translation_processing_text',
   'translations.pipeline_id',
   'prompt_templates.context',
+  'prompt_templates.workflow',
   'translations.blob_id',
   'translations.blob_order',
   'translations.blob_reference_chunk_ids',
@@ -380,6 +381,7 @@ export async function initDatabase(): Promise<void> {
   `);
 
   await ensureColumn('prompt_templates', 'context', "TEXT NOT NULL DEFAULT 'stage'");
+  await ensureColumn('prompt_templates', 'workflow', "TEXT NOT NULL DEFAULT 'translation'");
   // Migrate unique index from (name) to (name, context) so stage/audit can share names
   await conn.execute('DROP INDEX IF EXISTS idx_prompt_templates_name');
   await conn.execute(`

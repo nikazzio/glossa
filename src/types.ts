@@ -164,12 +164,14 @@ export interface ResponseInfo {
 }
 
 export type PromptTemplateContext = 'stage' | 'audit' | 'persona' | 'memory';
+export type PromptTemplateWorkflow = 'translation' | 'transcription';
 
 export interface PromptTemplate {
   id: string;
   name: string;
   prompt: string;
   context: PromptTemplateContext;
+  workflow: PromptTemplateWorkflow;
   defaultModel?: string;
   defaultProvider?: string;
   createdAt: string;
