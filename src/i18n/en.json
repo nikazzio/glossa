@@ -563,6 +563,7 @@
     "close": "Close project",
     "saved": "Project saved",
     "saveFailed": "Failed to save project",
+    "openFailed": "Failed to open project",
     "statusDraft": "Not saved",
     "statusDirty": "Unsaved changes",
     "statusSaving": "Saving",

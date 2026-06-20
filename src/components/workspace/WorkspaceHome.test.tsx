@@ -78,7 +78,7 @@ describe('WorkspaceHome provider onboarding', () => {
     useUiStore.setState({ setActiveWorkspaceArea: mockSetArea }, false);
 
     render(<WorkspaceHome />);
-    const translationsCard = screen.getByRole('button', { name: /traduzioni|translations/i });
+    const translationsCard = screen.getByRole('button', { name: /workspace\.areas\.translations\.title/ });
     await userEvent.click(translationsCard);
     expect(mockSetArea).toHaveBeenCalledWith('translations');
   });

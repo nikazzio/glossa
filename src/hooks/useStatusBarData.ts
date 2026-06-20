@@ -22,7 +22,7 @@ export type StatusBarContext =
       pipelineName: string | null;
       sourceWords: number;
       targetWords: number;
-      coverageRatio: number;
+      coveragePct: number;
       saveState: 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
       runStatus: PipelineRunStatus;
       completedChunks: number;
@@ -62,10 +62,15 @@ export function useStatusBarData(): StatusBarContext {
     const effectivePipelineId = pipelineConfigId || activePipelineId;
     const pipeline = pipelines.find((p) => p.id === effectivePipelineId);
 
-    const sourceWords = chunks.reduce((acc, c) => acc + countWords(c.originalText ?? ''), 0);
-    const targetWords = chunks.reduce((acc, c) => acc + countWords(c.currentDraft ?? ''), 0);
-    const coverageRatio = sourceWords > 0 ? Math.round((targetWords / sourceWords) * 100) : 0;
-    const completedChunks = chunks.filter((c) => c.status === 'completed').length;
+    const { sourceWords, targetWords, completedChunks } = chunks.reduce(
+      (acc, c) => ({
+        sourceWords: acc.sourceWords + countWords(c.originalText ?? ''),
+        targetWords: acc.targetWords + countWords(c.currentDraft ?? ''),
+        completedChunks: acc.completedChunks + (c.status === 'completed' ? 1 : 0),
+      }),
+      { sourceWords: 0, targetWords: 0, completedChunks: 0 }
+    );
+    const coveragePct = sourceWords > 0 ? Math.round((targetWords / sourceWords) * 100) : 0;
     const totalChunks = chunks.length;
 
     return {
@@ -74,7 +79,7 @@ export function useStatusBarData(): StatusBarContext {
       pipelineName: pipeline?.name ?? null,
       sourceWords,
       targetWords,
-      coverageRatio,
+      coveragePct,
       saveState,
       runStatus,
       completedChunks,

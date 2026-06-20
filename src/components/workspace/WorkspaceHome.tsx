@@ -177,7 +177,13 @@ export function WorkspaceHome() {
                 <button
                   key={project.id}
                   type="button"
-                  onClick={() => void openProject(project.id)}
+                  onClick={() => {
+                    openProject(project.id).catch((err: unknown) => {
+                      toast.error(t('projects.openFailed'), {
+                        description: err instanceof Error ? err.message : String(err),
+                      });
+                    });
+                  }}
                   className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-[16px] border border-editorial-border bg-editorial-bg/40 px-4 py-2.5 text-left transition-colors hover:border-editorial-accent/45 hover:bg-editorial-paper focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 >
                   <span className="flex items-center gap-3 min-w-0">

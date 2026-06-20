@@ -116,7 +116,7 @@ export function AppStatusBar() {
               </Tooltip>
               <span className="text-editorial-border">·</span>
               <Tooltip label={t('statusBar.tooltip.coverage')} side="top">
-                <span>{data.coverageRatio}% {t('statusBar.coverage')}</span>
+                <span>{data.coveragePct}% {t('statusBar.coverage')}</span>
               </Tooltip>
               {data.runStatus === 'completed' && (
                 <>

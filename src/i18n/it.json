@@ -563,6 +563,7 @@
     "close": "Chiudi progetto",
     "saved": "Progetto salvato",
     "saveFailed": "Salvataggio progetto fallito",
+    "openFailed": "Apertura progetto fallita",
     "statusDraft": "Non salvato",
     "statusDirty": "Modifiche non salvate",
     "statusSaving": "Salvataggio",

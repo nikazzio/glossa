@@ -1,8 +1,7 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { AppStatusBar } from './AppStatusBar';
 import * as useStatusBarDataModule from '../../hooks/useStatusBarData';
-import '../../test/i18n-mock';
 
 vi.mock('../../hooks/useStatusBarData');
 
@@ -54,7 +53,7 @@ describe('AppStatusBar', () => {
       pipelineName: 'Pipeline 1',
       sourceWords: 100,
       targetWords: 95,
-      coverageRatio: 95,
+      coveragePct: 95,
       saveState: 'saved',
       runStatus: 'idle',
       completedChunks: 5,
@@ -73,7 +72,7 @@ describe('AppStatusBar', () => {
       pipelineName: null,
       sourceWords: 0,
       targetWords: 0,
-      coverageRatio: 0,
+      coveragePct: 0,
       saveState: 'dirty',
       runStatus: 'idle',
       completedChunks: 0,

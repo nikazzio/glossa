@@ -13,7 +13,7 @@ describe('useStatusBarData', () => {
     useWorkspaceStore.setState({ activeWorkspace: null } as any);
     useUiStore.setState({ activeWorkspaceArea: null });
     useChunksStore.setState({ chunks: [] } as any);
-    usePipelineStore.setState({ runStatus: 'idle', config: { pipelineId: '' } } as any);
+    usePipelineStore.setState((s) => ({ runStatus: 'idle', config: { ...s.config, pipelineId: '' } }));
   });
 
   it('returns idle when no workspace', () => {
@@ -43,7 +43,7 @@ describe('useStatusBarData', () => {
         { status: 'ready', originalText: 'foo bar', currentDraft: '' },
       ],
     } as any);
-    usePipelineStore.setState({ runStatus: 'idle', config: { pipelineId: 'pipe1' } } as any);
+    usePipelineStore.setState((s) => ({ runStatus: 'idle', config: { ...s.config, pipelineId: 'pipe1' } }));
     const { result } = renderHook(() => useStatusBarData());
     expect(result.current.kind).toBe('project');
     if (result.current.kind === 'project') {
