@@ -63,8 +63,14 @@ export function DashboardSidebar() {
   const handleWorkspaceClick = (ws: Workspace) => {
     const isActive = ws.id === activeWorkspace?.id;
     if (collapsed) {
-      if (isActive) { setCollapsed(false); }
-      else { void handleSwitchWorkspace(ws); }
+      if (isActive) {
+        // In area → torna all'hub senza espandere; in hub → espandi
+        if (activeWorkspaceArea !== null) { setActiveWorkspaceArea(null); }
+        else { setCollapsed(false); }
+      } else {
+        // Workspace diverso → cambia, barra resta compressa
+        void handleSwitchWorkspace(ws);
+      }
       return;
     }
     if (isActive) {
