@@ -68,8 +68,7 @@ This explains why the Refine stage (typically on a mini model) may show 0% cache
 hits even with an identical prompt: if more than 10 minutes pass between chunks,
 the cache has already expired.
 
-Check your provider's documentation for the retention policy of the model you are
-using.
+The figures above (24 hours, 5–10 minutes) reflect observed behaviour and are not contractual guarantees — providers may change them without notice. Check your provider's documentation for the retention policy of the model you are using.
 
 ## See also
 

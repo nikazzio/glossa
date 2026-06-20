@@ -28,6 +28,15 @@ Glossa supporta sia provider cloud sia provider locali. L'insieme supportato nel
 | Review intensa e reasoning | Modelli hosted più grandi o un buon modello locale se l'hardware lo regge |
 | Coerenza su corpus ampi | Scelta stabile provider/modello per tutto il progetto |
 
+## Criteri di scelta del modello
+
+La scelta del modello dipende dal tipo di lavoro e dal volume:
+
+- **Volume alto, testo tecnico o ripetitivo** — usa i modelli *flash* o *mini* di ciascun provider (es. Gemini Flash, GPT-4o Mini). Sono veloci, economici e sufficientemente precisi per testi strutturati.
+- **Rifinitura letteraria o testi ad alta densità stilistica** — preferisci i modelli *flagship* o *reasoning* (es. Gemini Pro, GPT-4o, Claude Sonnet/Opus). Gestiscono meglio il tono, il registro e le sfumature.
+- **Stage Audit e giudizio qualità** — usa modelli con buone capacità di *judge* (valutazione critica), tipicamente i modelli flagship con contesto lungo. Un modello mini nell'audit tende a produrre giudizi poco calibrati.
+- **Coerenza di corpus** — non cambiare modello a metà progetto se vuoi output stilisticamente omogenei.
+
 ## Differenze operative
 
 - I provider cloud dipendono da API key e stabilità di rete.

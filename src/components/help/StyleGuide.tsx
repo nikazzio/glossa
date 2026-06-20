@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Play, Plus, Save, Settings, CircleCheck, AlertCircle, Loader2, FilePen } from 'lucide-react';
+import { IconButton, PillButton } from '../ui';
 
 function useCssVarMap(vars: readonly string[]): Record<string, string> {
   const [values, setValues] = useState<Record<string, string>>({});
@@ -110,26 +111,24 @@ function ComponentsSection() {
       <div>
         <p className="font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted mb-3">Icon buttons</p>
         <div className="flex items-center gap-3 flex-wrap">
-          <button className="rounded-full border border-editorial-border p-2 text-editorial-muted" title="Default"><Settings size={14} /></button>
-          <button className="rounded-full border border-editorial-accent/60 p-2 text-editorial-accent" title="Hover"><Save size={14} /></button>
-          <button className="rounded-full border-0 bg-editorial-ink p-2 text-white" title="Active"><Plus size={14} /></button>
-          <button className="rounded-full border border-editorial-border p-2 text-editorial-muted opacity-35 cursor-not-allowed" disabled title="Disabled"><Settings size={14} /></button>
-          <button className="rounded-full border border-dashed border-editorial-border p-2 text-editorial-muted" title="Nuovo"><Plus size={14} /></button>
-          <button className="flex items-center gap-1.5 rounded-full bg-editorial-charcoal px-4 py-2 text-[10px] font-bold uppercase tracking-[0.15em] text-white">
-            <Play size={11} fill="currentColor" /> Avvia
-          </button>
+          <IconButton title="Default"><Settings size={14} /></IconButton>
+          <IconButton title="Accent" tone="accent"><Save size={14} /></IconButton>
+          <IconButton title="Success" tone="success"><Plus size={14} /></IconButton>
+          <IconButton title="Disabled" disabled><Settings size={14} /></IconButton>
+          <IconButton title="Nuovo" className="border-dashed"><Plus size={14} /></IconButton>
+          <PillButton variant="primary"><span className="flex items-center gap-1.5"><Play size={11} className="fill-current" /> Avvia</span></PillButton>
         </div>
         <div className="mt-1.5 flex gap-6 text-[9px] text-editorial-muted font-mono">
-          <span>default</span><span>hover</span><span>active</span><span>disabled</span><span>+ nuovo</span><span>start</span>
+          <span>default</span><span>accent</span><span>success</span><span>disabled</span><span>+ nuovo</span><span>start</span>
         </div>
       </div>
 
       <div>
         <p className="font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted mb-3">Pill buttons</p>
         <div className="flex items-center gap-2 flex-wrap">
-          <button className="rounded-full bg-editorial-ink px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-white">Primary</button>
-          <button className="rounded-full border border-editorial-border px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted">Secondary</button>
-          <button className="rounded-full border border-editorial-accent px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-accent">Accent</button>
+          <PillButton variant="primary">Primary</PillButton>
+          <PillButton variant="secondary">Secondary</PillButton>
+          <PillButton variant="accent">Accent</PillButton>
         </div>
       </div>
 

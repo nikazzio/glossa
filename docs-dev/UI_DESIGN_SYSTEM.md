@@ -22,7 +22,7 @@ when-to-read: prima di creare o modificare qualsiasi componente visivo
 > `editorial-warning` (#666666) = grigio, per avvisi generici. Per lo stato *in esecuzione* usa `editorial-running` (giallo).
 
 **Font:**
-- `font-display` (Elstob variable) — heading corsivi, label attive nelle barre filtro. `size-adjust: 100%` (era 110%: gonfiava i valori serif).
+- `font-display` (Elstob variable) — heading corsivi, label attive nelle barre filtro. `size-adjust: 110%`.
 - `font-sans` — UI generica, etichette, body. Default **Plus Jakarta Sans**, ma è **scelto dall'utente** in Impostazioni → Tipografia (Plus Jakarta Sans / Geist / Inter / IBM Plex Sans). Override runtime di `--font-sans` su `:root` via `FontSync` (`App.tsx`), preferenza persistita in `uiStore.uiFont`. Ogni `@font-face` alternativo ha un `size-adjust` tarato per non far saltare la dimensione allo switch.
 - `font-mono` — solo codice/log
 
