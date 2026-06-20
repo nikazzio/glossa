@@ -277,7 +277,7 @@ export function TranslationsArea() {
                 }
               >
                 <label className="block space-y-1.5">
-                  <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
+                  <span className="text-xs font-bold uppercase tracking-[0.1em] text-editorial-muted">
                     {t('workspace.newBookCard')}
                   </span>
                   <input

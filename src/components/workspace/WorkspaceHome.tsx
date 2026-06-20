@@ -33,7 +33,7 @@ export function WorkspaceHome() {
   const setActiveWorkspaceArea = useUiStore((s) => s.setActiveWorkspaceArea);
   const setShowSettings = useUiStore((state) => state.setShowSettings);
   const { statuses: keyStatuses, isLoading: keyStatusLoading } = useProviderKeyStatus();
-  const { projects, loadProjects, createAndOpen } = useProjectStore();
+  const { projects, loadProjects, createAndOpen, openProject } = useProjectStore();
 
   const [showNewProjectForm, setShowNewProjectForm] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
@@ -174,9 +174,11 @@ export function WorkspaceHome() {
             </div>
             <div className="space-y-2">
               {recentProjects.map((project) => (
-                <div
+                <button
                   key={project.id}
-                  className="flex items-center justify-between gap-3 rounded-[16px] border border-editorial-border bg-editorial-bg/40 px-4 py-2.5"
+                  type="button"
+                  onClick={() => void openProject(project.id)}
+                  className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-[16px] border border-editorial-border bg-editorial-bg/40 px-4 py-2.5 text-left transition-colors hover:border-editorial-accent/45 hover:bg-editorial-paper focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 >
                   <span className="flex items-center gap-3 min-w-0">
                     <BookOpenText size={13} className="shrink-0 text-editorial-muted" />
@@ -187,7 +189,7 @@ export function WorkspaceHome() {
                   <span className="shrink-0 text-xs text-editorial-muted">
                     {formatSavedAt(project.updated_at)}
                   </span>
-                </div>
+                </button>
               ))}
             </div>
           </section>
