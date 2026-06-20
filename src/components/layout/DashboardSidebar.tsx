@@ -214,14 +214,14 @@ export function DashboardSidebar() {
             return (
               <ShellNavItem
                 key={ws.id}
-                active={isActive}
+                active={isActive && activeWorkspaceArea === null}
                 collapsed={collapsed}
                 onClick={() => handleWorkspaceClick(ws)}
-                ariaCurrent={isActive ? 'page' : undefined}
+                ariaCurrent={isActive && activeWorkspaceArea === null ? 'page' : undefined}
                 icon={(
                   <span
                     className={`h-2 w-2 shrink-0 rounded-full transition-colors duration-200 ${
-                      isActive ? 'bg-editorial-accent' : 'border border-editorial-border bg-transparent'
+                      isActive && activeWorkspaceArea === null ? 'bg-editorial-accent' : 'border border-editorial-border bg-transparent'
                     }`}
                     aria-hidden="true"
                   />
