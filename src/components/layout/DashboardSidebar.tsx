@@ -60,19 +60,15 @@ export function DashboardSidebar() {
     await loadProjects();
   };
 
-  // Pattern activity-bar: click sul workspace attivo fa da toggle della barra.
   const handleWorkspaceClick = (ws: Workspace) => {
     const isActive = ws.id === activeWorkspace?.id;
     if (collapsed) {
-      setCollapsed(false);
-      if (!isActive) void handleSwitchWorkspace(ws);
+      if (isActive) { setCollapsed(false); }
+      else { void handleSwitchWorkspace(ws); }
       return;
     }
     if (isActive) {
-      if (activeWorkspaceArea !== null) {
-        setActiveWorkspaceArea(null);
-        return;
-      }
+      if (activeWorkspaceArea !== null) { setActiveWorkspaceArea(null); return; }
       setCollapsed(true);
       return;
     }
@@ -166,10 +162,12 @@ export function DashboardSidebar() {
               collapsed={collapsed}
               labelFont="display"
               onClick={enabled ? () => {
-                if (activeWorkspaceArea === id) {
-                  setCollapsed(true);
+                if (collapsed) {
+                  if (activeWorkspaceArea === id) { setCollapsed(false); }
+                  else { setActiveWorkspaceArea(id); }
                 } else {
-                  setActiveWorkspaceArea(id);
+                  if (activeWorkspaceArea === id) { setCollapsed(true); }
+                  else { setActiveWorkspaceArea(id); }
                 }
               } : undefined}
               ariaCurrent={enabled && activeWorkspaceArea === id ? 'page' : undefined}
