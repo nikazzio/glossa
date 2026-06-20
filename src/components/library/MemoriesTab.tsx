@@ -40,13 +40,19 @@ export function MemoriesTab() {
   const [addingId, setAddingId] = useState<string | null>(null);
 
   const handleExportCsv = async () => {
-    const csvContent = exportPhraseMemoryToCsv(entries);
-    const path = await save({
-      filters: [{ name: 'CSV', extensions: ['csv'] }],
-      defaultPath: 'phrase-memory.csv',
-    });
-    if (path) {
-      await writeTextFile(path, csvContent);
+    try {
+      const csvContent = exportPhraseMemoryToCsv(entries);
+      const path = await save({
+        filters: [{ name: 'CSV', extensions: ['csv'] }],
+        defaultPath: 'phrase-memory.csv',
+      });
+      if (path) {
+        await writeTextFile(path, csvContent);
+      }
+    } catch (err: unknown) {
+      toast.error(t('library.exportCsvError'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
     }
   };
 

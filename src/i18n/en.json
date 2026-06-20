@@ -1347,7 +1347,8 @@
     "addToGlossary": "Add to glossary",
     "addedToGlossary": "Added to glossary",
     "addToGlossaryError": "Error adding to glossary",
-    "exportCsv": "Export CSV"
+    "exportCsv": "Export CSV",
+    "exportCsvError": "Failed to export CSV"
   },
   "stats": {
     "cacheHitRateHint": "Percentage of tokens served from the provider cache. Higher means lower cost.",
