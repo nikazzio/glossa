@@ -12,8 +12,8 @@ Supported input formats include:
 
 - `.txt`
 - `.md`
-- `.docx`
-- `.pdf`
+- `.docx` — converted to Markdown via structured extraction (experimental feature). Limit: **100 MB**.
+- `.pdf` — extracted as plain text. Limit: **50 MB**.
 
 During import, Glossa lets you review segmentation before the document becomes
 the active chunk list.
@@ -28,8 +28,8 @@ the active chunk list.
 
 Typical export targets include:
 
-- plain text
-- Markdown
+- plain text (`.txt`)
+- Markdown (`.md`)
 - HTML
 - DOCX
 - bilingual Markdown
@@ -40,7 +40,11 @@ Typical export targets include:
 - Markdown for editable text workflows
 - HTML for review or publishing pipelines
 - DOCX for office/editorial handoff
-- Bilingual Markdown for side-by-side source and translation review
+- Bilingual Markdown for side-by-side source and translation review, including quality rating and judge issues for completed chunks
+
+## Chunk separators
+
+Separators (blank line, horizontal rule `---`, asterisks `***`) are available **only for `.txt` and `.md`** exports. They do not apply to HTML, DOCX, or the bilingual format.
 
 ## Practical rules
 

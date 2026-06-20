@@ -29,6 +29,15 @@ includes:
 | Heavy review and reasoning | Larger hosted models or a strong local model if hardware allows it |
 | Corpus-scale consistency | Stable provider/model choice across the whole project |
 
+## Model selection criteria
+
+The right model depends on the type of work and expected volume:
+
+- **High volume, technical or repetitive text** — use each provider's *flash* or *mini* models (e.g. Gemini Flash, GPT-4o Mini). They are fast, cost-effective, and accurate enough for structured content.
+- **Literary refinement or stylistically dense text** — prefer *flagship* or *reasoning* models (e.g. Gemini Pro, GPT-4o, Claude Sonnet/Opus). They handle tone, register, and nuance more reliably.
+- **Audit stage and quality judgement** — use models with strong *judge* capabilities (critical evaluation), typically flagship models with a long context window. A mini model in the audit stage tends to produce poorly calibrated judgements.
+- **Corpus consistency** — avoid changing the model mid-project if you want stylistically homogeneous output.
+
 ## Operational differences
 
 - Cloud providers depend on API keys and network stability.

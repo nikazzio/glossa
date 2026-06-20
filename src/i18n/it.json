@@ -945,7 +945,7 @@
     "overview": {
       "title": "Cos'è Glossa?",
       "p1": "Glossa è un workspace di traduzione assistita da modelli linguistici, pensato per traduttori professionisti, filologi e studiosi che lavorano su testi lunghi. Il documento viene segmentato in chunk, ogni chunk attraversa una pipeline configurabile e il risultato viene controllato da un giudice automatico.",
-      "p2": "L'app è un'applicazione desktop locale: i progetti, i dizionari e i template di prompt restano sulla tua macchina. Le chiavi API dei provider remoti sono conservate nel portachiavi del sistema operativo; Ollama permette di restare completamente offline.",
+      "p2": "L'app è un'applicazione desktop locale: i progetti, i dizionari e i template di prompt restano sulla tua macchina. Le chiavi API dei provider remoti vengono salvate nel portachiavi del sistema operativo quando disponibile; se non lo è, Glossa usa un file locale cifrato. Ollama permette di restare completamente offline.",
       "flowTitle": "Flusso editoriale tipico",
       "step1": "Importi o incolli il documento sorgente e regoli la segmentazione nell'anteprima di importazione.",
       "step2": "Scegli modalità Standard o Editoriale e configuri provider, modello e prompt per ogni stage.",
@@ -958,7 +958,7 @@
     },
     "pipeline": {
       "title": "Pipeline di traduzione",
-      "intro": "La pipeline è la sequenza di stage che processa ogni chunk. Si configura nel pannello di configurazione (drawer laterale, icona ingranaggio nell'header) che ha cinque tab: Impostazioni, Traduzione, Controllo qualità, Registro Termini e Prompt Preview.",
+      "intro": "La pipeline è la sequenza di stage che processa ogni chunk. Si configura nel pannello di configurazione (icona ingranaggio nella barra laterale del progetto) che ha cinque tab: Impostazioni, Traduzione, Controllo qualità, Registro Termini e Prompt Preview.",
       "modesTitle": "Modalità Standard e Editoriale",
       "modesDesc": "La modalità della pipeline si sceglie nel tab Impostazioni e definisce quali stage vengono eseguiti su ogni chunk. La scelta è bloccata se ci sono già traduzioni in corso o completate.",
       "modeStandardName": "Standard",
@@ -990,7 +990,7 @@
       "markdownToolsTitle": "Toolbar Markdown",
       "markdownToolsDesc": "Il pulsante ? negli editor apre questa guida. La toolbar gestisce scrittura, anteprima, vista divisa, dimensione testo e formattazione Markdown essenziale.",
       "insightsTitle": "Pannello Insight",
-      "insightsDesc": "Si apre dalla destra con l'icona pannello nell'header. Ha due livelli: il pannello Documento (Indice, Cerca, Statistiche, Coerenza, Glossario) per metriche e ricerca su tutto il documento, e il pannello Chunk (Riepilogo, Audit, Note, Operazioni) per il chunk selezionato. La selezione di un chunk nell'indice apre automaticamente il livello Chunk.",
+      "insightsDesc": "Si apre cliccando Insight nel rail sinistro del progetto. Ha due livelli: il pannello Documento (Indice, Cerca, Statistiche, Coerenza, Glossario) per metriche e ricerca su tutto il documento, e il pannello Chunk (Riepilogo, Audit, Note, Operazioni) per il chunk selezionato. La selezione di un chunk nell'indice apre automaticamente il livello Chunk.",
       "statsTitle": "Statistiche di sessione",
       "statsDesc": "Il tab Statistiche aggrega token in input e output, costo stimato e cache hit rate per la sessione corrente. Il riepilogo suddivide il consumo per operazione — ogni stage della pipeline (es. Translation, Refine, Format), l'Audit e la Coerenza — mostrando il modello usato e la percentuale di token serviti dalla cache per ciascuno.",
       "operationsLogTitle": "Log operazioni strutturato",
@@ -1028,13 +1028,13 @@
       "chunkActionsTitle": "Confini chunk fissi nel workspace",
       "chunkActionsDesc": "Una volta caricato il documento, i confini dei chunk sono fissi per quell'esecuzione: non sono più presenti azioni inline per dividere o unire chunk nel workspace documento o nel drawer Insights. Per ridefinire la segmentazione, torna all'anteprima di importazione o reimporta il documento.",
       "tokenTitle": "Conteggio token e costo stimato",
-      "tokenDesc": "L'header mostra in tempo reale token totali e costo stimato della sessione, calcolato sui prezzi ufficiali dei provider. I conteggi sono separati per stage e per giudice. Per i provider Ollama il costo è zero perché l'inferenza è locale.",
+      "tokenDesc": "Il tab Statistiche nel pannello Insight mostra token totali e costo stimato della sessione in tempo reale, calcolato sui prezzi ufficiali dei provider. I conteggi sono separati per stage e per giudice. Per Ollama il costo è zero perché l'inferenza è locale.",
       "exportTitle": "Esportazione",
-      "exportDesc": "Quando ci sono chunk completati, il pulsante Esporta (↗) nell'header apre un dialog dove scegli formato (.txt, .md, .html, .docx, .md bilingue) e — per i formati testuali — il separatore tra chunk. L'export .md bilingue include sorgente, traduzione, valutazione dell'audit e problemi rilevati per ogni chunk.",
+      "exportDesc": "Quando ci sono chunk completati, il pulsante Esporta nel pannello Documento della barra laterale apre un dialog dove scegli formato (.txt, .md, .html, .docx, .md bilingue). Il separatore tra chunk (riga blank, HR o asterischi) è disponibile solo per i formati testuali (.txt e .md). L'export .md bilingue include sorgente, traduzione, valutazione dell'audit e problemi rilevati per ogni chunk.",
       "watchdogTitle": "Rilevamento chunk bloccati",
       "watchdogDesc": "Un watchdog in background monitora i chunk rimasti in stato 'in elaborazione' più del previsto. Se un chunk sembra bloccato — ad esempio un modello Ollama che lavora su un contesto molto ampio — un avviso compare nel tab Indice con un pulsante Annulla per interrompere solo quel chunk senza fermare l'intera pipeline.",
       "sandboxTitle": "Modalità Sandbox (alternativa)",
-      "sandboxDesc": "Oltre al workspace documento, esiste una modalità Sandbox più leggera per esperimenti rapidi su brevi estratti (icona Sandbox nell'header). Non ha indice, statistiche o audit di coerenza: usala per confrontare modelli o iterare velocemente su un singolo passaggio. Il lavoro serio resta nel workspace documento.",
+      "sandboxDesc": "Oltre al workspace documento, esiste una modalità Sandbox più leggera per esperimenti rapidi su brevi estratti. Si attiva dalla home del workspace o dal menu di creazione progetto. Non ha indice, statistiche o audit di coerenza: usala per confrontare modelli o iterare velocemente su un singolo passaggio. Il lavoro serio resta nel workspace documento.",
       "footnotesTitle": "Note a piè di pagina",
       "footnotesDesc": "Quando importi un documento DOCX o Markdown con note a piè di pagina, Glossa le separa completamente dal processo di traduzione. Il modello riceve solo il corpo del testo, senza il contenuto delle note e senza i marcatori inline — testo pulito. Il documento originale, visibile nell'editor, mantiene marcatori e note esattamente come apparivano. Il testo delle note viene salvato con il progetto. Dopo la traduzione dovrai gestire le note manualmente: decidere quali riportare, adattarne il testo alla lingua di destinazione e posizionarle dove ha senso nel testo tradotto, che può differire dalla posizione nell'originale.",
       "footnotesTipTitle": "Perché le note non vengono tradotte automaticamente",
@@ -1075,8 +1075,8 @@
     },
     "streaming": {
       "title": "Streaming in tempo reale",
-      "p1": "Tutti gli stage della pipeline — traduzione, refine, format, giudice, coerenza — trasmettono i token in tempo reale. Il testo appare mentre viene generato, dando feedback immediato e permettendo di individuare problemi senza attendere la risposta completa.",
-      "p2": "Lo streaming funziona su tutti i provider supportati: Gemini, OpenAI, Anthropic, DeepSeek, Ollama. Il backend Rust usa Server-Sent Events e Tauri trasmette i token al frontend. Per gli stage strutturati (giudice, coerenza) il flusso viene accumulato in un buffer e il JSON finale viene analizzato alla chiusura.",
+      "p1": "Con Ollama (inferenza locale) i token vengono trasmessi in tempo reale: il testo appare mentre viene generato, dando feedback immediato. Con i provider remoti (Gemini, OpenAI, Anthropic, DeepSeek) la risposta arriva intera al completamento — non c'è streaming token per token. In entrambi i casi la pipeline aggiorna lo stato del chunk non appena lo stage termina.",
+      "p2": "Per Ollama il backend Rust apre un canale Server-Sent Events e Tauri trasmette i token al frontend con latenza minima. Per gli stage strutturati (giudice, coerenza) — indipendentemente dal provider — il JSON viene analizzato solo dopo il completamento della risposta, sia essa streamata o completa.",
       "p3": "In caso di errore transitorio, il sistema riprova con backoff esponenziale fino a tre tentativi. I timeout non vengono ritentati: se il modello sta ancora elaborando una risposta lunga, Glossa attende invece di accodare una nuova richiesta."
     },
     "audit": {
@@ -1126,7 +1126,7 @@
       "ollamaNote": "Inferenza locale, nessuna chiave API, nessun dato fuori dalla tua macchina. Qualità dipende dal modello installato; consigliato per documenti sensibili o lavoro offline.",
       "gatingTitle": "Disponibilità delle chiavi",
       "gatingDesc": "Le funzioni che richiedono un provider remoto — rifinitura del prompt, preflight, esecuzione della pipeline su un provider non-Ollama — sono disabilitate finché la corrispondente API key non è stata configurata in Impostazioni. Lo stato della chiave compare come etichetta `provider · modello` accanto ai controlli e come avviso nel tab Impostazioni della pipeline. Ollama è sempre abilitato.",
-      "security": "Le chiavi API sono conservate nel portachiavi del sistema operativo (GNOME Keyring su Linux, Portachiavi su macOS, Gestione Credenziali su Windows), mai scritte in chiaro su disco e mai inviate altrove se non all'endpoint del provider corrispondente."
+      "security": "Le chiavi API vengono salvate nel portachiavi del sistema operativo (GNOME Keyring su Linux, Portachiavi su macOS, Gestione Credenziali su Windows) quando disponibile. Se il portachiavi non è accessibile, Glossa usa un file locale cifrato protetto da una chiave locale alla macchina. In nessun caso le chiavi vengono scritte in chiaro su disco né inviate altrove se non all'endpoint del provider corrispondente."
     },
     "ollama": {
       "title": "Usare Ollama",
@@ -1176,8 +1176,8 @@
       "saveProject": "Salva il progetto — barra laterale (modalità editor)",
       "openLibrary": "Apri la Libreria (dizionari e template) — header",
       "switchLang": "Cambia la lingua dell'interfaccia (IT / EN) — header",
-      "openSettings": "Apri Impostazioni (chiavi API, Ollama, segmentazione, pricing) — header",
-      "openHelp": "Apri questa guida — header",
+      "openSettings": "Apri Impostazioni (chiavi API, Ollama, segmentazione, pricing) — footer barra laterale",
+      "openHelp": "Apri questa guida — footer barra laterale",
       "openInsights": "Apri il pannello Insight",
       "toggleEditorTools": "Mostra / nasconde la toolbar degli editor",
       "markdownHelp": "Punto interrogativo — apre la guida della toolbar Markdown",

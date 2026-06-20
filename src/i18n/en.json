@@ -945,7 +945,7 @@
     "overview": {
       "title": "What is Glossa?",
       "p1": "Glossa is an LLM-assisted translation workspace built for professional translators, philologists, and scholars working on long texts. The document is segmented into chunks, each chunk goes through a configurable pipeline, and the result is reviewed by an automatic judge.",
-      "p2": "The app is a local desktop application: projects, dictionaries, and prompt templates stay on your machine. Remote provider API keys are stored in the operating system keychain; Ollama lets you stay fully offline.",
+      "p2": "The app is a local desktop application: projects, dictionaries, and prompt templates stay on your machine. Remote provider API keys are stored in the operating system keychain when available; if the keychain is inaccessible, Glossa uses an encrypted local file instead. Ollama lets you stay fully offline.",
       "flowTitle": "Typical editorial workflow",
       "step1": "Import or paste the source document and tune segmentation in the import preview.",
       "step2": "Pick Standard or Editorial mode and configure provider, model, and prompt for each stage.",
@@ -958,7 +958,7 @@
     },
     "pipeline": {
       "title": "Translation pipeline",
-      "intro": "The pipeline is the sequence of stages applied to each chunk. You configure it in the configuration panel (side drawer, gear icon in the header), which has five tabs: Settings, Translation, Quality Control, Term Registry, and Prompt Preview.",
+      "intro": "The pipeline is the sequence of stages applied to each chunk. You configure it in the configuration panel (gear icon in the project sidebar), which has five tabs: Settings, Translation, Quality Control, Term Registry, and Prompt Preview.",
       "modesTitle": "Standard and Editorial modes",
       "modesDesc": "Pipeline mode is chosen in the Settings tab and defines which stages run on every chunk. The choice is locked once translations are in progress or complete.",
       "modeStandardName": "Standard",
@@ -990,7 +990,7 @@
       "markdownToolsTitle": "Markdown toolbar",
       "markdownToolsDesc": "The ? button in the editors opens this guide. The toolbar handles writing, preview, split view, text size, and essential Markdown formatting.",
       "insightsTitle": "Insights panel",
-      "insightsDesc": "Slides in from the right via the panel icon in the header. Two levels: the Document panel (Index, Search, Stats, Coherence, Glossary) for whole-document metrics and search, and the Chunk panel (Summary, Audit, Notes, Operations) for the selected chunk. Selecting a chunk in the index automatically opens the Chunk level.",
+      "insightsDesc": "Opens by clicking Insight in the project's left rail. Two levels: the Document panel (Index, Search, Stats, Coherence, Glossary) for whole-document metrics and search, and the Chunk panel (Summary, Audit, Notes, Operations) for the selected chunk. Selecting a chunk in the index automatically opens the Chunk level.",
       "statsTitle": "Session stats",
       "statsDesc": "The Stats tab aggregates input and output tokens, estimated cost, and cache hit rate for the current session. The breakdown is per operation — each pipeline stage (e.g. Translation, Refine, Format), Audit, and Coherence — showing the model used and the percentage of tokens served from cache for each.",
       "operationsLogTitle": "Structured operations log",
@@ -1028,13 +1028,13 @@
       "chunkActionsTitle": "Chunk boundaries are fixed in the workspace",
       "chunkActionsDesc": "Once the document is loaded, chunk boundaries are fixed for that run: there are no inline split or merge actions in the document workspace or the Insights drawer. To redefine segmentation, go back to the import preview or reimport the document.",
       "tokenTitle": "Token count and estimated cost",
-      "tokenDesc": "The header shows total tokens and estimated session cost in real time, computed against official provider pricing. Counts are separated per stage and per judge. For Ollama providers the cost is zero because inference is local.",
+      "tokenDesc": "The Statistics tab in the Insight panel shows total tokens and estimated session cost in real time, computed against official provider pricing. Counts are separated per stage and per judge. For Ollama the cost is zero because inference is local.",
       "exportTitle": "Export",
-      "exportDesc": "When there are completed chunks, the Export button (↗) in the header opens a dialog where you pick format (.txt, .md, .html, .docx, bilingual .md) and — for text formats — the chunk separator. The bilingual .md export includes source, translation, audit rating, and flagged issues for every chunk.",
+      "exportDesc": "When there are completed chunks, the Export button in the Document panel of the sidebar opens a dialog where you pick format (.txt, .md, .html, .docx, bilingual .md). The chunk separator (blank line, HR, or asterisks) is available only for text formats (.txt and .md). The bilingual .md export includes source, translation, audit rating, and flagged issues for every chunk.",
       "watchdogTitle": "Stuck-chunk detection",
       "watchdogDesc": "A background watchdog monitors chunks that linger in the 'processing' state longer than expected. If a chunk appears stuck — for example an Ollama model working on a very long context — a warning appears in the Index tab with a Cancel button to abort just that chunk without stopping the whole pipeline.",
       "sandboxTitle": "Sandbox mode (alternative)",
-      "sandboxDesc": "Alongside the document workspace there's a lighter Sandbox mode for quick experiments on short snippets (Sandbox icon in the header). It has no index, no stats, no coherence audit: use it to compare models or iterate fast on a single pass. Serious work stays in the document workspace.",
+      "sandboxDesc": "Alongside the document workspace there's a lighter Sandbox mode for quick experiments on short snippets. It is accessible from the workspace home or the new-project menu. It has no index, no stats, no coherence audit: use it to compare models or iterate fast on a single pass. Serious work stays in the document workspace.",
       "footnotesTitle": "Footnotes",
       "footnotesDesc": "When you import a DOCX or Markdown document with footnotes, Glossa separates them entirely from the translation process. Both the note text and the inline position markers are removed from what the model receives — the model sees clean body text only. The original document, shown in the editor, retains markers and notes exactly as they appeared. The note content is saved with the project. After translation you will need to handle footnotes manually: decide which notes to carry over, adapt their text to the target language, and place them where they make sense in the translated text — which may differ from their position in the original.",
       "footnotesTipTitle": "Why notes are not translated automatically",
@@ -1075,8 +1075,8 @@
     },
     "streaming": {
       "title": "Real-time streaming",
-      "p1": "Every pipeline stage — translation, refine, format, judge, coherence — streams tokens in real time. Text appears as it is generated, giving immediate feedback and letting you spot issues without waiting for the full response.",
-      "p2": "Streaming works on every supported provider: Gemini, OpenAI, Anthropic, DeepSeek, Ollama. The Rust backend uses Server-Sent Events and Tauri relays tokens to the frontend. For structured stages (judge, coherence) the stream is buffered and the final JSON is parsed on close.",
+      "p1": "With Ollama (local inference) tokens are streamed in real time: text appears as it is generated, giving immediate feedback. With remote providers (Gemini, OpenAI, Anthropic, DeepSeek) the response arrives in full once complete — there is no token-by-token streaming. In both cases the pipeline updates the chunk status as soon as the stage finishes.",
+      "p2": "For Ollama the Rust backend opens a Server-Sent Events channel and Tauri relays tokens to the frontend with minimal latency. For structured stages (judge, coherence) — regardless of provider — the JSON is parsed only after the full response is received, whether streamed or not.",
       "p3": "On transient errors the system retries with exponential backoff up to three attempts. Timeouts are not retried: if the model is still computing a long response, Glossa waits rather than queuing a new request."
     },
     "audit": {
@@ -1126,7 +1126,7 @@
       "ollamaNote": "Local inference, no API key, no data leaves the machine. Quality depends on the installed model; recommended for sensitive documents or offline work.",
       "gatingTitle": "Key availability",
       "gatingDesc": "Features that require a remote provider — prompt refinement, preflight checks, running the pipeline on a non-Ollama provider — are disabled until the corresponding API key is configured in Settings. Key status appears as a `provider · model` label next to controls and as an inline notice in the pipeline Settings tab. Ollama is always enabled.",
-      "security": "API keys are stored in the operating system keychain (GNOME Keyring on Linux, Keychain on macOS, Credential Manager on Windows), never written to disk in plain text, and never sent anywhere except the corresponding provider endpoint."
+      "security": "API keys are stored in the operating system keychain (GNOME Keyring on Linux, Keychain on macOS, Credential Manager on Windows) when available. If the keychain is not accessible, Glossa uses an encrypted local file protected by a machine-local key. Keys are never written to disk in plain text, and never sent anywhere except the corresponding provider endpoint."
     },
     "ollama": {
       "title": "Using Ollama",
@@ -1176,8 +1176,8 @@
       "saveProject": "Save the current project — sidebar (editor mode)",
       "openLibrary": "Open the Library (dictionaries and templates) — header",
       "switchLang": "Switch interface language (IT / EN) — header",
-      "openSettings": "Open Settings (API keys, Ollama, segmentation, pricing) — header",
-      "openHelp": "Open this guide — header",
+      "openSettings": "Open Settings (API keys, Ollama, segmentation, pricing) — sidebar footer",
+      "openHelp": "Open this guide — sidebar footer",
       "openInsights": "Open the Insights panel",
       "toggleEditorTools": "Show / hide the editor toolbars",
       "markdownHelp": "Question mark — opens the Markdown toolbar guide",

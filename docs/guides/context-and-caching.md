@@ -69,8 +69,7 @@ Questo spiega perché il stage Refine (tipicamente su un modello mini) può most
 0% di cache hit anche con prompt identico: se sono passati più di 10 minuti tra
 un chunk e il successivo, la cache è già scaduta.
 
-Controlla la documentazione del tuo provider per la politica di retention del modello
-che stai usando.
+I valori indicati (24 ore, 5–10 minuti) riflettono il comportamento osservato e non costituiscono garanzie contrattuali — i provider possono modificarli senza preavviso. Controlla la documentazione del tuo provider per la politica di retention del modello che stai usando.
 
 ## Vedi anche
 

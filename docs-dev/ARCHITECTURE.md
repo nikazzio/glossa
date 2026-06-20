@@ -53,7 +53,8 @@
 |---|---|
 | `services/llmService.ts` | runStage, runStageStream, judgeTranslation, runCoherence, preflightPipeline, computeBlobs. Listener eventi: `stream-token`, `chunk-prompt`, `stream-alive`. |
 | `services/pipelineService.ts` | CRUD pipeline, saveChunkCheckpoint, setPipelineRunState, computeBlobs, loadTranslations, restoreTranslations |
-| `services/projectService.ts` | CRUD project, import DOCX/PDF, export |
+| `services/projectService.ts` | CRUD project, persistenza sorgente (path, metadata) |
+| `services/fileService.ts` | Import DOCX/PDF (estrazione testo), export bilingue/monolingua |
 | `services/dbService.ts` | SQLite wrapper: execute, select, executeTransaction, initDatabase, ensureColumn |
 
 ---
@@ -67,7 +68,7 @@
 | `components/pipeline/PipelineActions.tsx` | Run / Cancel / Audit buttons |
 | `components/pipeline/StageCard.tsx` | Visualizza singolo stage (token, retry info) |
 | `components/document/ConfigDrawer.tsx` | Drawer config pipeline: mode, lingue, stage, persona, glossary |
-| `components/layout/Header.tsx` | Project/pipeline selector |
+| `components/layout/Header.tsx` | Breadcrumb navigazione + azioni globali (Salva, Libreria, Lingua) |
 | `components/workspace/WorkspaceHome.tsx` | Dashboard workspace: switch/create/config workspace, progetti, configurazione extractor Phrase Memory |
 | `components/workspace/WorkspaceWizard.tsx` | Primo avvio: crea il primo workspace reale |
 | `components/document/AnnotationContextMenu.tsx` | Menu contestuale (clic destro sul testo della traduzione) → «Aggiungi annotazione» con anchor pre-compilato |
@@ -89,7 +90,7 @@ Il workspace attuale è specifico per l'area **Traduzioni**. Biblioteca e Trascr
 
 ### Shell UI (multibar)
 
-Home e progetto usano un'unica barra laterale (`ShellNav`). Nel progetto la barra primaria (`PipelineSidebar`) ospita la nav `Run/Pipeline/Document/Insight/Chunk` + back arrow e i pannelli **inline** Run/Pipeline/Document. I pannelli **ricchi** escono in una seconda barra push a sinistra del documento: `ProjectFlyout` (Insight → `InsightDocPanel`, Chunk → `ChunkInspectorPanel`, estratti da `InsightsDrawer.tsx`) e `ConfigDrawer` (config pipeline). Ordine layout editor: `PipelineSidebar → ConfigDrawer → ProjectFlyout → DocumentView`.
+Home e progetto usano un'unica barra laterale (`ShellNav`). Nel progetto la barra primaria (`PipelineSidebar`) ospita la nav `Run/Pipeline/Document/Insight/Chunk` + back arrow e i pannelli **inline** Run/Pipeline/Document. I pannelli **ricchi** escono in una seconda barra push a sinistra del documento: `ProjectFlyout` (Insight → `InsightDocPanel`, Chunk → `ChunkInspectorPanel`, estratti da `InsightsDrawer.tsx`) e `ConfigDrawer` (config pipeline). Ordine layout editor: `PipelineSidebar → ConfigDrawer → ProjectFlyout → DocumentView`. Il footer della barra laterale (`ShellNavFooter`) ospita i link Impostazioni e Aiuto (non sono nell'header).
 
 `uiStore.activeProjectPanel` (`run|pipeline|document|insight|chunk`) è la source-of-truth del rail. I setter drawer (`setShowDocumentDrawer`/`setShowChunkDrawer`/`setShowConfigDrawer`) sincronizzano `activeProjectPanel`; i flag `show*` restano mutuamente esclusivi e pilotano quale fly-out è aperto. `insight`/`chunk` non sono persistiti come pannello attivo (clamp a `run`).
 
