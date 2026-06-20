@@ -1189,8 +1189,8 @@
       "thinkDesc": "Alcuni modelli Ollama supportano un passaggio di ragionamento esteso prima di rispondere. Nella sezione Ollama delle Impostazioni puoi impostare il livello Think: off, basso, medio o alto. Un livello più alto può migliorare la qualità a costo di tempo e token. Abilitalo solo per modelli che supportano esplicitamente il thinking — su modelli standard non ha effetto."
     },
     "glossary": {
-      "title": "Libreria: dizionari e template",
-      "intro": "La Libreria è un pannello globale (icona libreria nell'header) condiviso tra tutti i progetti. Contiene due tab: Dizionari, dove gestisci raccolte riusabili di termine→traduzione, e Modelli Prompt, dove gestisci la collezione globale di template di prompt.",
+      "title": "Area Biblioteca",
+      "intro": "La Biblioteca è un'area del workspace (icona libreria nell'header o card nella schermata hub) condivisa tra tutti i progetti. Contiene tre sezioni: Dizionari (raccolte riusabili di termine→traduzione), Memorie (coppie phrase memory del workspace) e Modelli Prompt (template globali per pipeline e trascrizioni).",
       "libraryTitle": "Dizionari globali",
       "libraryDesc": "Nel tab Dizionari puoi creare nuovi dizionari, rinominarli con doppio clic, duplicarli (Crea copia), eliminarli, importare termini da CSV/TSV e modificare le voci inline espandendo il dizionario. Un dizionario può essere assegnato come glossario attivo del progetto corrente con il pulsante Assegna.",
       "csvTitle": "Importa da CSV/TSV",
@@ -1203,8 +1203,10 @@
       "searchDesc": "Il tab Cerca nel pannello Insight permette di cercare una parola o frase in tutti i chunk contemporaneamente: nel testo sorgente, nella traduzione e nei risultati dell'audit. Ogni risultato mostra un badge con il tipo di match (sorgente / traduzione / audit) e uno snippet con il testo evidenziato in grassetto. Cliccando un risultato il workspace si porta al chunk corrispondente, dove il termine cercato appare anche evidenziato in giallo nel testo.",
       "auditTitle": "Audit e glossario",
       "auditDesc": "Il Giudice AI verifica esplicitamente l'aderenza al dizionario assegnato e segnala come problema di categoria 'glossario' ogni deviazione, con severità e correzione suggerita. Particolarmente utile per testi tecnici, giuridici o accademici dove la terminologia deve essere stabile.",
-      "templatesTitle": "Modelli di prompt",
-      "templatesDesc": "Nel tab Modelli Prompt della Libreria gestisci la raccolta globale dei template, divisi per contesto: Stage (per prompt di traduzione, refine, format), Audit (per giudice e coerenza), Persona (per opener del system prompt). Crea un template specificando nome, contesto e testo; usa la bacchetta nella form di creazione per rifinire il testo con un modello LLM. I template salvati sono richiamabili nei pulsanti segnalibro accanto a ogni prompt corrispondente."
+      "templatesTitle": "Modelli di prompt e filtro workflow",
+      "templatesDesc": "Nel tab Modelli Prompt della Biblioteca gestisci la raccolta globale dei template, filtrabili per workflow (Traduzione o Trascrizione) e per contesto: Stage (prompt di traduzione, refine, format), Audit (giudice e coerenza), Persona (opener del system prompt), Memory (estrattore phrase memory). Il filtro workflow isola i template rilevanti per l'area di lavoro corrente. Usa la bacchetta nella form di creazione per rifinire il testo con un modello LLM. I template salvati sono richiamabili dai pulsanti segnalibro accanto a ogni prompt corrispondente.",
+      "memoryExportTitle": "Esporta phrase memory in CSV",
+      "memoryExportDesc": "Nella sezione Memorie della Biblioteca trovi il pulsante Esporta CSV: scarica tutte le coppie sorgente-target memorizzate per il workspace corrente in un file CSV, utile per revisioni editoriali o backup."
     },
     "shortcuts": {
       "title": "Riferimento interfaccia",

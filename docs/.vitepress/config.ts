@@ -10,6 +10,7 @@ const sidebarIt = [
     items: [
       { text: 'Pipeline documento', link: '/guides/document-pipeline' },
       { text: 'Progetti e workspace', link: '/guides/projects-and-workspace' },
+      { text: 'Area Biblioteca', link: '/guides/library-area' },
       { text: 'Glossario e phrase memory', link: '/guides/glossary-and-memory' },
       { text: 'Phrase memory', link: '/guides/phrase-memory' },
       { text: 'Audit e revisione', link: '/guides/audit-review' },
@@ -43,6 +44,7 @@ const sidebarEn = [
     items: [
       { text: 'Document pipeline', link: '/en/guides/document-pipeline' },
       { text: 'Projects and workspace', link: '/en/guides/projects-and-workspace' },
+      { text: 'Library area', link: '/en/guides/library-area' },
       { text: 'Glossary and phrase memory', link: '/en/guides/glossary-and-memory' },
       { text: 'Phrase memory', link: '/en/guides/phrase-memory' },
       { text: 'Audit and review', link: '/en/guides/audit-review' },

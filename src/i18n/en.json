@@ -1189,8 +1189,8 @@
       "thinkDesc": "Some Ollama models support an extended reasoning step before responding. In the Ollama section of Settings you can set the Think level: off, low, medium, or high. Higher levels can improve quality at the cost of time and tokens. Only enable it for models that explicitly support thinking — on standard models it has no effect."
     },
     "glossary": {
-      "title": "Library: dictionaries and templates",
-      "intro": "The Library is a global panel (library icon in the header) shared across all projects. It has two tabs: Dictionaries, where you manage reusable term→translation collections, and Prompt Templates, where you manage the global collection of prompt templates.",
+      "title": "Library area",
+      "intro": "The Library is a workspace area (library icon in the header, or the Library card on the hub screen) shared across all projects. It has three sections: Dictionaries (reusable term→translation collections), Memories (phrase-memory pairs for the workspace), and Prompt Templates (global templates for translation and transcription workflows).",
       "libraryTitle": "Global dictionaries",
       "libraryDesc": "In the Dictionaries tab you can create new dictionaries, rename them with double-click, duplicate (Fork), delete, import terms from CSV/TSV, and edit entries inline by expanding a dictionary. A dictionary can be assigned as the active glossary of the current project with the Assign button.",
       "csvTitle": "Import from CSV/TSV",
@@ -1203,8 +1203,10 @@
       "searchDesc": "The Search tab in the Insights panel lets you search for a word or phrase across all chunks at once — in the source text, translation, and audit findings. Each result shows a badge indicating where the match was found (source / translation / audit) and a snippet with the matched text in bold. Clicking a result jumps the workspace to that chunk, where the search term also appears highlighted in yellow.",
       "auditTitle": "Audit and glossary",
       "auditDesc": "The AI Judge explicitly checks adherence to the assigned dictionary and flags every deviation as a 'glossary' category issue, with severity and suggested fix. Particularly useful for technical, legal, or academic texts where terminology must remain stable.",
-      "templatesTitle": "Prompt templates",
-      "templatesDesc": "In the Prompt Templates tab of the Library you manage the global collection of templates, scoped by context: Stage (for translation, refine, format prompts), Audit (for judge and coherence), Persona (for system prompt openers). Create a template by setting name, context, and text; use the wand in the creation form to refine the text with an LLM. Saved templates are recallable via the bookmark buttons next to each matching prompt."
+      "templatesTitle": "Prompt templates and workflow filter",
+      "templatesDesc": "In the Prompt Templates tab of the Library you manage the global collection of templates, filterable by workflow (Translation or Transcription) and by context: Stage (translation, refine, format prompts), Audit (judge and coherence), Persona (system prompt openers), Memory (workspace phrase-memory extractor). The workflow filter isolates templates relevant to your current working area. Use the wand in the creation form to refine the text with an LLM. Saved templates are recallable via the bookmark buttons next to each matching prompt.",
+      "memoryExportTitle": "Export phrase memory to CSV",
+      "memoryExportDesc": "In the Memories section of the Library, the Export CSV button downloads all source-target pairs stored for the current workspace as a CSV file — useful for editorial review or backup."
     },
     "shortcuts": {
       "title": "Interface reference",
