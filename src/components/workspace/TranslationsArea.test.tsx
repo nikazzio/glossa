@@ -39,7 +39,7 @@ describe('TranslationsArea', () => {
 
   it('back button calls setActiveWorkspaceArea(null)', async () => {
     render(<TranslationsArea />);
-    const backBtn = screen.getByRole('button', { name: /test workspace/i });
+    const backBtn = screen.getByRole('button', { name: /back|backLabel|test workspace/i });
     await userEvent.click(backBtn);
     expect(mockSetActiveWorkspaceArea).toHaveBeenCalledWith(null);
   });

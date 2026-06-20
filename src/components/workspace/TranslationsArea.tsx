@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowLeft, BookOpenText, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, ArrowUpAZ, BookOpenText, Clock, Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useProjectStore } from '../../stores/projectStore';
@@ -96,21 +96,17 @@ export function TranslationsArea() {
   return (
     <main className="flex flex-1 h-full min-h-0 flex-col overflow-y-auto bg-editorial-paper custom-scrollbar">
       <div className="px-5 py-5 md:px-6">
-        {/* Breadcrumb */}
-        <div className="mb-4 flex items-center gap-2">
+        {/* Back nav */}
+        <div className="mb-4">
           <button
             type="button"
             onClick={() => setActiveWorkspaceArea(null)}
-            aria-label={activeWorkspace?.name ?? t('workspace.noActive')}
+            aria-label={t('workspace.translationsArea.backLabel', { name: activeWorkspace?.name ?? '' })}
             className="flex items-center gap-1.5 text-xs text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent rounded-md"
           >
             <ArrowLeft size={11} />
-            {activeWorkspace?.name ?? t('workspace.noActive')}
+            <span>{activeWorkspace?.name ?? t('workspace.noActive')}</span>
           </button>
-          <span className="text-xs text-editorial-border" aria-hidden="true">/</span>
-          <span className="text-xs font-bold uppercase tracking-[0.1em] text-editorial-ink">
-            {t('workspace.areas.translations.title')}
-          </span>
         </div>
 
         {/* Header */}
@@ -119,112 +115,118 @@ export function TranslationsArea() {
             {t('workspace.areas.translations.title')}
           </h1>
           <div className="flex items-center gap-2 shrink-0">
-            <div className="flex items-center gap-1.5">
-              {(['updatedAt', 'name'] as SortKey[]).map((key) => (
-                <PillButton
+            <div className="flex items-center gap-2">
+              {([
+                { key: 'updatedAt' as SortKey, icon: Clock },
+                { key: 'name' as SortKey, icon: ArrowUpAZ },
+              ]).map(({ key, icon: Icon }) => (
+                <IconButton
                   key={key}
-                  variant={sortKey === key ? 'accent' : 'secondary'}
+                  size="md"
+                  tone={sortKey === key ? 'accent' : 'default'}
                   onClick={() => setSortKey(key)}
+                  title={t(`workspace.translationsArea.sort.${key}`)}
+                  ariaPressed={sortKey === key}
                 >
-                  {t(`workspace.translationsArea.sort.${key}`)}
-                </PillButton>
+                  <Icon size={14} />
+                </IconButton>
               ))}
+              <span className="mx-1 h-4 w-px self-center bg-editorial-border/70" aria-hidden="true" />
+              <span className="self-center font-display text-sm italic text-editorial-ink">
+                {t(`workspace.translationsArea.sort.${sortKey}`)}
+              </span>
             </div>
-            <IconButton
-              size="md"
-              onClick={() => setShowNewProjectForm(true)}
-              title={t('workspace.newBookCard')}
-              disabled={!activeWorkspace || showNewProjectForm}
-              className="bg-editorial-textbox/25 hover:bg-editorial-textbox/45"
-            >
-              <Plus size={14} />
-            </IconButton>
           </div>
         </div>
 
-        {/* Grid */}
-        {sortedProjects.length === 0 ? (
-          <div className="rounded-[24px] border border-dashed border-editorial-border bg-editorial-paper/55 px-6 py-10 text-center">
-            <p className="font-display text-3xl italic text-editorial-ink [text-wrap:balance]">
-              {t('workspace.emptyProjectsTitle')}
-            </p>
-            <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-editorial-muted [text-wrap:pretty]">
-              {t('workspace.emptyProjectsBody')}
-            </p>
-          </div>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
-            {sortedProjects.map((project) => {
-              const isOpening = openingProjectId === project.id;
-              const isDimmed = openingProjectId !== null && !isOpening;
-              return (
-                <motion.article
-                  key={project.id}
-                  layout
-                  initial={false}
-                  animate={{ opacity: isDimmed ? 0.42 : 1, scale: isOpening ? 0.985 : 1, y: isOpening ? -2 : 0 }}
-                  transition={{ duration: 0.18, ease: 'easeOut' }}
-                  className={`group relative overflow-hidden rounded-[26px] border bg-editorial-paper/75 px-4 py-3.5 shadow-[var(--inset-highlight)] transition-colors duration-150 ${
-                    isOpening
-                      ? 'border-editorial-accent/55 bg-editorial-paper'
-                      : 'border-editorial-border hover:border-editorial-accent/45 hover:bg-editorial-paper'
-                  }`}
-                >
-                  <AnimatePresence>
-                    {isOpening ? (
-                      <motion.span
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        transition={{ duration: 0.12, ease: 'easeOut' }}
-                        className="pointer-events-none absolute inset-0 bg-editorial-accent/8"
-                        aria-hidden="true"
-                      />
-                    ) : null}
-                  </AnimatePresence>
-                  <div className="relative z-10 flex items-start gap-3">
-                    <button
-                      type="button"
-                      onClick={() => void handleOpenProject(project.id)}
-                      disabled={openingProjectId !== null}
-                      aria-busy={isOpening}
-                      className="min-w-0 flex-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-wait"
-                    >
-                      <span className="flex items-start gap-3">
-                        <span className={`mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-editorial-bg/85 transition-colors ${
-                          isOpening
-                            ? 'border-editorial-accent/45 text-editorial-accent'
-                            : 'border-editorial-border text-editorial-muted group-hover:border-editorial-accent/45 group-hover:text-editorial-accent'
-                        }`}>
-                          <BookOpenText size={17} />
+        {/* Grid — always shown, new project card always last */}
+        <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
+          {sortedProjects.map((project) => {
+            const isOpening = openingProjectId === project.id;
+            const isDimmed = openingProjectId !== null && !isOpening;
+            return (
+              <motion.article
+                key={project.id}
+                layout
+                initial={false}
+                animate={{ opacity: isDimmed ? 0.42 : 1, scale: isOpening ? 0.985 : 1, y: isOpening ? -2 : 0 }}
+                transition={{ duration: 0.18, ease: 'easeOut' }}
+                className={`group relative overflow-hidden rounded-[26px] border bg-editorial-paper/75 px-4 py-3.5 shadow-[var(--inset-highlight)] transition-colors duration-150 ${
+                  isOpening
+                    ? 'border-editorial-accent/55 bg-editorial-paper'
+                    : 'border-editorial-border hover:border-editorial-accent/45 hover:bg-editorial-paper'
+                }`}
+              >
+                <AnimatePresence>
+                  {isOpening ? (
+                    <motion.span
+                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                      transition={{ duration: 0.12, ease: 'easeOut' }}
+                      className="pointer-events-none absolute inset-0 bg-editorial-accent/8"
+                      aria-hidden="true"
+                    />
+                  ) : null}
+                </AnimatePresence>
+                <div className="relative z-10 flex items-start gap-3">
+                  <button
+                    type="button"
+                    onClick={() => void handleOpenProject(project.id)}
+                    disabled={openingProjectId !== null}
+                    aria-busy={isOpening}
+                    className="min-w-0 flex-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-wait"
+                  >
+                    <span className="flex items-start gap-3">
+                      <span className={`mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-editorial-bg/85 transition-colors ${
+                        isOpening
+                          ? 'border-editorial-accent/45 text-editorial-accent'
+                          : 'border-editorial-border text-editorial-muted group-hover:border-editorial-accent/45 group-hover:text-editorial-accent'
+                      }`}>
+                        <BookOpenText size={17} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-display text-xl italic text-editorial-ink">
+                          {project.name}
                         </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate font-display text-xl italic text-editorial-ink">
-                            {project.name}
-                          </span>
-                          <span className="mt-1 block text-xs text-editorial-muted">
-                            {formatSavedAt(project.updated_at)}
-                          </span>
-                          <span className="mt-2 block text-xs text-editorial-ink">
-                            {t('workspace.pipelineBadge', { count: project.pipeline_count })}
-                          </span>
+                        <span className="mt-1 block text-xs text-editorial-muted">
+                          {formatSavedAt(project.updated_at)}
+                        </span>
+                        <span className="mt-2 block text-xs text-editorial-ink">
+                          {t('workspace.pipelineBadge', { count: project.pipeline_count })}
                         </span>
                       </span>
-                    </button>
-                    <IconButton
-                      size="sm" tone="muted"
-                      onClick={() => void handleDeleteProject(project)}
-                      title={`${t('projects.delete')} ${project.name}`}
-                      disabled={openingProjectId !== null}
-                      ariaLabel={`${t('projects.delete')} ${project.name}`}
-                      className="shrink-0 opacity-70 transition-opacity group-hover:opacity-100"
-                    >
-                      <Trash2 size={12} />
-                    </IconButton>
-                  </div>
-                </motion.article>
-              );
-            })}
-          </div>
-        )}
+                    </span>
+                  </button>
+                  <IconButton
+                    size="sm" tone="muted"
+                    onClick={() => void handleDeleteProject(project)}
+                    title={`${t('projects.delete')} ${project.name}`}
+                    disabled={openingProjectId !== null}
+                    ariaLabel={`${t('projects.delete')} ${project.name}`}
+                    className="shrink-0 opacity-70 transition-opacity group-hover:opacity-100"
+                  >
+                    <Trash2 size={12} />
+                  </IconButton>
+                </div>
+              </motion.article>
+            );
+          })}
+          {/* New project card */}
+          <motion.button
+            type="button"
+            layout
+            onClick={() => setShowNewProjectForm(true)}
+            disabled={!activeWorkspace || showNewProjectForm}
+            className="group flex min-h-[100px] w-full items-center justify-center gap-3 rounded-[26px] border border-dashed border-editorial-border bg-transparent transition-colors hover:border-editorial-accent/45 hover:bg-editorial-paper/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
+            aria-label={t('workspace.newBookCard')}
+          >
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-editorial-border text-editorial-muted transition-colors group-hover:border-editorial-accent/45 group-hover:text-editorial-accent">
+              <Plus size={16} />
+            </span>
+            <span className="font-display text-lg italic text-editorial-muted transition-colors group-hover:text-editorial-ink">
+              {t('workspace.newBookCard')}
+            </span>
+          </motion.button>
+        </div>
       </div>
 
       {/* New project dialog */}

@@ -4,6 +4,7 @@ import { vi } from 'vitest';
 // Imported as a side-effect in tests that assert on human-readable i18n values
 // rather than translation keys.
 const EN_TRANSLATIONS: Record<string, string> = {
+  'workspace.translationsArea.backLabel': 'Back to {{name}}',
   'workspace.translationsArea.sort.updatedAt': 'Recent',
   'workspace.translationsArea.sort.name': 'Name',
   'statusBar.saved': 'Saved',

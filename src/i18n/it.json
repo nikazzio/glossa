@@ -673,6 +673,7 @@
       "backupTab": "Backup"
     },
     "translationsArea": {
+      "backLabel": "Torna a {{name}}",
       "sort": {
         "updatedAt": "Recenti",
         "name": "Nome"

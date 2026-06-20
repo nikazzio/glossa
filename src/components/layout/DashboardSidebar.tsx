@@ -166,9 +166,7 @@ export function DashboardSidebar() {
               collapsed={collapsed}
               labelFont="display"
               onClick={enabled ? () => {
-                if (activeWorkspaceArea === id) {
-                  setActiveWorkspaceArea(null);
-                } else {
+                if (activeWorkspaceArea !== id) {
                   setActiveWorkspaceArea(id);
                 }
               } : undefined}
