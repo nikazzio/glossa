@@ -1,5 +1,5 @@
 import { useState, useEffect, type ReactNode } from 'react';
-import { Plus, Trash2, CheckCircle2, Loader2, Wifi, Key } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, Loader2, Wifi, Key, X, Save } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useCustomProviderStore } from '../../stores/customProviderStore';
@@ -8,7 +8,7 @@ import {
   deleteCustomProviderProfile,
   testCustomProviderConnection,
 } from '../../services/customProviderService';
-import { IconButton, PillButton, ToggleRow } from '../ui';
+import { IconButton, ToggleRow } from '../ui';
 import type { CustomProviderProfile } from '../../types';
 
 interface ProfileFormState {
@@ -165,33 +165,36 @@ function ProfileForm({
             placeholder="llama3.2"
             className={`${inputCls} flex-1 font-mono`}
           />
-          <PillButton
+          <IconButton
+            size="md"
+            tone="default"
             onClick={handleTest}
             disabled={testing || !form.baseUrl.trim()}
-            variant="secondary"
+            title={t('settings.customProvider.test')}
           >
-            {testing ? (
-              <Loader2 size={11} className="animate-spin inline mr-1.5" />
-            ) : (
-              <Wifi size={11} className="inline mr-1.5" />
-            )}
-            {t('settings.customProvider.test')}
-          </PillButton>
+            {testing ? <Loader2 size={13} className="animate-spin" /> : <Wifi size={13} />}
+          </IconButton>
         </div>
       </FormField>
 
       <div className="flex items-center justify-end gap-2 pt-1 border-t border-editorial-border/40">
-        <PillButton onClick={onCancel} variant="secondary">
-          {t('settings.cancel')}
-        </PillButton>
-        <PillButton
+        <IconButton
+          size="md"
+          tone="default"
+          onClick={onCancel}
+          title={t('settings.cancel')}
+        >
+          <X size={13} />
+        </IconButton>
+        <IconButton
+          size="md"
+          tone="accent"
           onClick={handleSave}
           disabled={saving || !form.name.trim() || !form.baseUrl.trim()}
-          variant="accent"
+          title={t('settings.save')}
         >
-          {saving && <Loader2 size={11} className="animate-spin inline mr-1.5" />}
-          {t('settings.save')}
-        </PillButton>
+          {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+        </IconButton>
       </div>
     </div>
   );
@@ -201,11 +204,20 @@ export function CustomProviderSection() {
   const { t } = useTranslation();
   const { profiles, loadProfiles } = useCustomProviderStore();
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newProfileId] = useState(() => generateId());
+  const [newProfileId, setNewProfileId] = useState<string>(() => generateId());
 
   useEffect(() => {
-    loadProfiles();
-  }, [loadProfiles]);
+    loadProfiles().catch((err: unknown) => {
+      toast.error(t('settings.customProvider.saveFailed'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    });
+  }, [loadProfiles, t]);
+
+  const openAddForm = () => {
+    setNewProfileId(generateId());
+    setShowAddForm(true);
+  };
 
   const handleDelete = async (profile: CustomProviderProfile) => {
     try {
@@ -261,12 +273,12 @@ export function CustomProviderSection() {
             await loadProfiles();
             setShowAddForm(false);
           }}
-          onCancel={() => setShowAddForm(false)}
+          onCancel={() => { setShowAddForm(false); }}
         />
       ) : (
         <button
           type="button"
-          onClick={() => setShowAddForm(true)}
+          onClick={openAddForm}
           className="flex w-full items-center justify-center gap-2 rounded-[16px] border border-dashed border-editorial-border py-3 text-xs text-editorial-muted hover:border-editorial-accent hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
         >
           <Plus size={13} />

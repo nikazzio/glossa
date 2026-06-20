@@ -117,7 +117,7 @@ export function StageCard({
   const handleProviderChange = (newProvider: ModelProvider) => {
     if (newProvider === 'custom') {
       const firstProfile = customProfiles[0];
-      onUpdate({ provider: 'custom', customProviderId: firstProfile?.id ?? '', model: '', providerOptions: {} });
+      onUpdate({ provider: 'custom', customProviderId: firstProfile?.id, model: '', providerOptions: {} });
       return;
     }
     const models = newProvider === 'ollama' ? ollamaModels : getKnownModelIds(newProvider);
@@ -193,7 +193,7 @@ export function StageCard({
             <div className="flex flex-1 flex-col gap-1.5">
               <select
                 value={stage.customProviderId ?? ''}
-                onChange={(e) => onUpdate({ customProviderId: e.target.value })}
+                onChange={(e) => onUpdate({ customProviderId: e.target.value || undefined })}
                 disabled={translationsExist || isProcessing}
                 className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
                 aria-label={t('settings.customProvider.sectionTitle')}

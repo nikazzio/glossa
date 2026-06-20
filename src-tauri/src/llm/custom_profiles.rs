@@ -22,6 +22,8 @@ fn db_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
 fn open_db(app: &tauri::AppHandle) -> Result<Connection, String> {
     let path = db_path(app)?;
     let conn = Connection::open(&path).map_err(|e| format!("DB open error: {e}"))?;
+    conn.execute_batch("PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL;")
+        .map_err(|e| format!("PRAGMA error: {e}"))?;
     ensure_schema(&conn)?;
     Ok(conn)
 }
