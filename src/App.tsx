@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next';
 import { initLogger } from './utils/logger';
 import { Header, PipelineSidebar } from './components/layout';
+import { AppStatusBar } from './components/layout/AppStatusBar';
 import { ErrorBoundary, ConfirmDialog, PreflightDialog, RunResumeBanner } from './components/common';
 import { motion } from 'motion/react';
 import { usePipeline } from './hooks/usePipeline';
@@ -18,6 +19,7 @@ import { usePipelineStore } from './stores/pipelineStore';
 import { useWorkspaceStore } from './stores/workspaceStore';
 import { WorkspaceWizard } from './components/workspace/WorkspaceWizard';
 import { WorkspaceHome } from './components/workspace/WorkspaceHome';
+import { TranslationsArea } from './components/workspace/TranslationsArea';
 import { WorkspaceSettingsModal } from './components/workspace/WorkspaceSettingsModal';
 import { importTextFile } from './services/fileService';
 import { savePipelineConfig } from './services/pipelineService';
@@ -445,6 +447,13 @@ export default function App() {
   const currentProjectId = useProjectStore((s) => s.currentProjectId);
   const isWorkspaceHome = Boolean(activeWorkspace && !currentProjectId);
 
+  const activeWorkspaceArea = useUiStore((s) => s.activeWorkspaceArea);
+  const setActiveWorkspaceArea = useUiStore((s) => s.setActiveWorkspaceArea);
+
+  useEffect(() => {
+    setActiveWorkspaceArea(null);
+  }, [activeWorkspace?.id, setActiveWorkspaceArea]);
+
   useEffect(() => {
     loadWorkspaces().catch((err: unknown) => console.error('[App] loadWorkspaces failed:', err));
   }, [loadWorkspaces]);
@@ -488,9 +497,13 @@ export default function App() {
           <div className="flex flex-1 min-h-0">
             <PipelineSidebar mode="dashboard" />
             <div className="relative flex min-w-0 flex-1">
-              <WorkspaceHome />
+              {activeWorkspaceArea === 'translations' ? (
+                <TranslationsArea />
+              ) : (
+                <WorkspaceHome />
+              )}
               <PanelTransitionVeil
-                panelKey={`workspace-home-${activeWorkspace?.id ?? 'none'}`}
+                panelKey={activeWorkspaceArea === 'translations' ? 'area-translations' : `workspace-home-${activeWorkspace?.id ?? 'none'}`}
                 tone="paper"
                 variant="workspace"
               />
@@ -508,6 +521,7 @@ export default function App() {
             <LibraryPanel />
           </Suspense>
         ) : null}
+        <AppStatusBar />
         <ConfirmDialog />
       </div>
       <Toaster

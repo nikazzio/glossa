@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useProjectStore } from '../../stores/projectStore';
 import { useUiStore } from '../../stores/uiStore';
@@ -70,5 +71,15 @@ describe('WorkspaceHome provider onboarding', () => {
     const state = useUiStore.getState();
     expect(state.showSettings).toBe(true);
     expect(state.settingsTab).toBe('provider');
+  });
+
+  it('clicking Translations area card calls setActiveWorkspaceArea("translations")', async () => {
+    const mockSetArea = vi.fn();
+    useUiStore.setState({ setActiveWorkspaceArea: mockSetArea }, false);
+
+    render(<WorkspaceHome />);
+    const translationsCard = screen.getByRole('button', { name: /workspace\.areas\.translations\.title/ });
+    await userEvent.click(translationsCard);
+    expect(mockSetArea).toHaveBeenCalledWith('translations');
   });
 });

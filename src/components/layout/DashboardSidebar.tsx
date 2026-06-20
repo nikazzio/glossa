@@ -36,6 +36,8 @@ export function DashboardSidebar() {
   const setCollapsed = useUiStore((state) => state.setDashboardSidebarCollapsed);
   const width = useUiStore((state) => state.dashboardSidebarWidth);
   const setWidth = useUiStore((state) => state.setDashboardSidebarWidth);
+  const activeWorkspaceArea = useUiStore((state) => state.activeWorkspaceArea);
+  const setActiveWorkspaceArea = useUiStore((state) => state.setActiveWorkspaceArea);
   const { dragging, startDrag } = useEdgeResize();
 
   const [showWorkspaceSettings, setShowWorkspaceSettings] = useState(false);
@@ -58,15 +60,21 @@ export function DashboardSidebar() {
     await loadProjects();
   };
 
-  // Pattern activity-bar: click sul workspace attivo fa da toggle della barra.
   const handleWorkspaceClick = (ws: Workspace) => {
     const isActive = ws.id === activeWorkspace?.id;
     if (collapsed) {
-      setCollapsed(false);
-      if (!isActive) void handleSwitchWorkspace(ws);
+      if (isActive) {
+        // In area → torna all'hub senza espandere; in hub → espandi
+        if (activeWorkspaceArea !== null) { setActiveWorkspaceArea(null); }
+        else { setCollapsed(false); }
+      } else {
+        // Workspace diverso → cambia, barra resta compressa
+        void handleSwitchWorkspace(ws);
+      }
       return;
     }
     if (isActive) {
+      if (activeWorkspaceArea !== null) { setActiveWorkspaceArea(null); return; }
       setCollapsed(true);
       return;
     }
@@ -155,18 +163,28 @@ export function DashboardSidebar() {
           {AREA_ITEMS.map(({ id, icon: Icon, enabled }) => (
             <ShellNavItem
               key={id}
-              active={enabled}
+              active={enabled && activeWorkspaceArea === id}
               disabled={!enabled}
               collapsed={collapsed}
               labelFont="display"
-              onClick={enabled ? () => setCollapsed(!collapsed) : undefined}
-              ariaCurrent={enabled ? 'page' : undefined}
+              onClick={enabled ? () => {
+                if (collapsed) {
+                  if (activeWorkspaceArea === id) { setCollapsed(false); }
+                  else { setActiveWorkspaceArea(id); }
+                } else {
+                  if (activeWorkspaceArea === id) { setCollapsed(true); }
+                  else { setActiveWorkspaceArea(id); }
+                }
+              } : undefined}
+              ariaCurrent={enabled && activeWorkspaceArea === id ? 'page' : undefined}
               icon={(
                 <span
                   className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-colors duration-200 ${
-                    enabled
+                    enabled && activeWorkspaceArea === id
                       ? 'border-editorial-accent/45 bg-editorial-accent/10 text-editorial-accent'
-                      : 'border-editorial-border bg-editorial-textbox/30 text-editorial-muted'
+                      : enabled
+                        ? 'border-editorial-border bg-editorial-textbox/30 text-editorial-muted hover:border-editorial-accent/30 hover:text-editorial-accent'
+                        : 'border-editorial-border bg-editorial-textbox/30 text-editorial-muted'
                   }`}
                 >
                   <Icon size={12} />
@@ -200,14 +218,14 @@ export function DashboardSidebar() {
             return (
               <ShellNavItem
                 key={ws.id}
-                active={isActive}
+                active={isActive && activeWorkspaceArea === null}
                 collapsed={collapsed}
                 onClick={() => handleWorkspaceClick(ws)}
-                ariaCurrent={isActive ? 'page' : undefined}
+                ariaCurrent={isActive && activeWorkspaceArea === null ? 'page' : undefined}
                 icon={(
                   <span
                     className={`h-2 w-2 shrink-0 rounded-full transition-colors duration-200 ${
-                      isActive ? 'bg-editorial-accent' : 'border border-editorial-border bg-transparent'
+                      isActive && activeWorkspaceArea === null ? 'bg-editorial-accent' : 'border border-editorial-border bg-transparent'
                     }`}
                     aria-hidden="true"
                   />

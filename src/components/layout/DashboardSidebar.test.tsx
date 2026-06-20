@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { useUiStore } from '../../stores/uiStore';
 import { DashboardSidebar } from './DashboardSidebar';
 
 const originalProjectState = useProjectStore.getState();
@@ -25,9 +26,12 @@ describe('DashboardSidebar', () => {
       createAndActivate: vi.fn().mockResolvedValue({ id: 'workspace-3', name: 'New' }),
       setActive: vi.fn().mockResolvedValue(undefined),
     });
+    useUiStore.setState({ activeWorkspaceArea: null });
   });
 
   it('shows translations as the only enabled macroarea', () => {
+    // Set translations as the active area to verify aria-current is applied correctly.
+    useUiStore.setState({ activeWorkspaceArea: 'translations' });
     render(<DashboardSidebar />);
 
     expect(screen.getByRole('button', { name: /workspace\.areas\.translations\.title/ })).toHaveAttribute('aria-current', 'page');

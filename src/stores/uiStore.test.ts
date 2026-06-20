@@ -201,3 +201,24 @@ describe('uiStore uiFont preference', () => {
     expect(useUiStore.getState().uiFont).toBe('inter');
   });
 });
+
+describe('uiStore — activeWorkspaceArea', () => {
+  beforeEach(() => {
+    useUiStore.setState({ activeWorkspaceArea: null });
+  });
+
+  it('defaults to null', () => {
+    expect(useUiStore.getState().activeWorkspaceArea).toBeNull();
+  });
+
+  it('setActiveWorkspaceArea sets the area', () => {
+    useUiStore.getState().setActiveWorkspaceArea('translations');
+    expect(useUiStore.getState().activeWorkspaceArea).toBe('translations');
+  });
+
+  it('setActiveWorkspaceArea(null) resets to hub', () => {
+    useUiStore.getState().setActiveWorkspaceArea('translations');
+    useUiStore.getState().setActiveWorkspaceArea(null);
+    expect(useUiStore.getState().activeWorkspaceArea).toBeNull();
+  });
+});
