@@ -43,9 +43,9 @@ export function LibraryArea() {
   const [activeSection, setActiveSection] = useState<LibrarySection>(null);
 
   const sectionTitle =
-    activeSection === 'glossaries' ? t('library.tabs.dictionaries')
-    : activeSection === 'memories' ? t('library.tabs.memories')
-    : activeSection === 'templates' ? t('library.tabs.templates')
+    activeSection === 'glossaries' ? t('library.tabDictionaries')
+    : activeSection === 'memories' ? t('library.tabMemories')
+    : activeSection === 'templates' ? t('library.tabTemplates')
     : t('workspace.areas.library.title');
 
   return (
@@ -88,19 +88,19 @@ export function LibraryArea() {
           <div className="grid gap-3 sm:grid-cols-3">
             <SectionCard
               icon={BookMarked}
-              title={t('library.tabs.dictionaries')}
+              title={t('library.tabDictionaries')}
               body={t('workspace.libraryArea.glossariesBody')}
               onClick={() => setActiveSection('glossaries')}
             />
             <SectionCard
               icon={Brain}
-              title={t('library.tabs.memories')}
+              title={t('library.tabMemories')}
               body={t('workspace.libraryArea.memoriesBody')}
               onClick={() => setActiveSection('memories')}
             />
             <SectionCard
               icon={LibraryBig}
-              title={t('library.tabs.templates')}
+              title={t('library.tabTemplates')}
               body={t('workspace.libraryArea.templatesBody')}
               onClick={() => setActiveSection('templates')}
             />
