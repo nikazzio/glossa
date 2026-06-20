@@ -17,10 +17,11 @@ const HelpGuide = lazy(() =>
 );
 
 export function Header() {
-  const { setShowHelp, showHelp } = useUiStore(
+  const { setShowHelp, showHelp, setActiveWorkspaceArea } = useUiStore(
     useShallow((state) => ({
       setShowHelp: state.setShowHelp,
       showHelp: state.showHelp,
+      setActiveWorkspaceArea: state.setActiveWorkspaceArea,
     })),
   );
   const { currentProjectId, currentProjectName, saveCurrentProject, closeProject } = useProjectStore(
@@ -32,11 +33,10 @@ export function Header() {
     })),
   );
   const activeWorkspace = useWorkspaceStore((state) => state.activeWorkspace);
-  const { dirtyIdsLength, saveAllDirty, setShowLibraryPanel } = useLibraryStore(
+  const { dirtyIdsLength, saveAllDirty } = useLibraryStore(
     useShallow((state) => ({
       dirtyIdsLength: state.dirtyIds.length,
       saveAllDirty: state.saveAllDirty,
-      setShowLibraryPanel: state.setShowLibraryPanel,
     })),
   );
   const isProcessing = useChunksStore((s) => s.isProcessing);
@@ -161,7 +161,10 @@ export function Header() {
             <Save size={16} />
           </IconButton>
           <IconButton
-            onClick={() => setShowLibraryPanel(true)}
+            onClick={() => {
+              closeProject();
+              setActiveWorkspaceArea('library');
+            }}
             title={t('library.openLibrary')}
             tooltipSide="bottom"
           >
