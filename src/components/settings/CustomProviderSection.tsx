@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Plus, Trash2, CheckCircle2, Loader2, Wifi, X, Save } from 'lucide-react';
+import { useState, useEffect, type ReactNode } from 'react';
+import { Plus, Trash2, CheckCircle2, Loader2, Wifi, Key } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useCustomProviderStore } from '../../stores/customProviderStore';
@@ -8,6 +8,7 @@ import {
   deleteCustomProviderProfile,
   testCustomProviderConnection,
 } from '../../services/customProviderService';
+import { IconButton, PillButton, ToggleRow } from '../ui';
 import type { CustomProviderProfile } from '../../types';
 
 interface ProfileFormState {
@@ -28,6 +29,21 @@ const EMPTY_FORM: ProfileFormState = {
 
 function generateId(): string {
   return `custom-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+function FieldLabel({ children }: { children: ReactNode }) {
+  return (
+    <p className="text-[11px] uppercase tracking-[0.1em] text-editorial-muted">{children}</p>
+  );
+}
+
+function FormField({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="space-y-1.5">
+      <FieldLabel>{label}</FieldLabel>
+      {children}
+    </div>
+  );
 }
 
 function ProfileForm({
@@ -77,7 +93,6 @@ function ProfileForm({
     }
     setTesting(true);
     try {
-      // Save first so the key is in the keystore
       await saveCustomProviderProfile(
         profileId,
         form.name.trim() || profileId,
@@ -96,105 +111,87 @@ function ProfileForm({
     }
   };
 
+  const inputCls = 'w-full rounded-[12px] border border-editorial-border bg-editorial-textbox px-3 py-2 text-xs outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent';
+
   return (
-    <div className="space-y-3 rounded-[12px] border border-editorial-border bg-editorial-bg/40 p-4">
-      <div className="space-y-1">
-        <label className="text-[10px] font-bold uppercase tracking-wide text-editorial-muted">
-          {t('settings.customProvider.name')}
-        </label>
+    <div className="space-y-4 rounded-[18px] border border-editorial-border bg-editorial-bg/60 p-4">
+      <FormField label={t('settings.customProvider.name')}>
         <input
           type="text"
           value={form.name}
           onChange={(e) => set({ name: e.target.value })}
           placeholder={t('settings.customProvider.namePlaceholder')}
-          className="w-full bg-editorial-textbox px-3 py-2 text-xs outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          className={inputCls}
         />
-      </div>
+      </FormField>
 
-      <div className="space-y-1">
-        <label className="text-[10px] font-bold uppercase tracking-wide text-editorial-muted">
-          {t('settings.customProvider.baseUrl')}
-        </label>
+      <FormField label={t('settings.customProvider.baseUrl')}>
         <input
           type="url"
           value={form.baseUrl}
           onChange={(e) => set({ baseUrl: e.target.value })}
-          placeholder="https://openrouter.ai/api/v1"
-          className="w-full bg-editorial-textbox px-3 py-2 font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          placeholder={t('settings.customProvider.baseUrlPlaceholder')}
+          className={`${inputCls} font-mono`}
         />
-      </div>
+      </FormField>
 
-      <div className="flex items-center gap-2">
-        <input
-          id={`req-key-${profileId}`}
-          type="checkbox"
+      <div className="rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/10 px-4 py-3">
+        <ToggleRow
+          icon={<Key size={12} />}
+          label={t('settings.customProvider.requiresApiKey')}
           checked={form.requiresApiKey}
-          onChange={(e) => set({ requiresApiKey: e.target.checked })}
-          className="accent-editorial-accent"
+          onChange={() => set({ requiresApiKey: !form.requiresApiKey })}
         />
-        <label htmlFor={`req-key-${profileId}`} className="text-xs text-editorial-ink">
-          {t('settings.customProvider.requiresApiKey')}
-        </label>
       </div>
 
       {form.requiresApiKey && (
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold uppercase tracking-wide text-editorial-muted">
-            {t('settings.customProvider.apiKey')}
-          </label>
+        <FormField label={t('settings.customProvider.apiKey')}>
           <input
             type="password"
             value={form.apiKey}
             onChange={(e) => set({ apiKey: e.target.value })}
             placeholder={t('settings.pasteApiKey')}
-            className="w-full bg-editorial-textbox px-3 py-2 font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            className={`${inputCls} font-mono`}
           />
-        </div>
+        </FormField>
       )}
 
-      <div className="space-y-1">
-        <label className="text-[10px] font-bold uppercase tracking-wide text-editorial-muted">
-          {t('settings.customProvider.testModel')}
-        </label>
+      <FormField label={t('settings.customProvider.testModel')}>
         <div className="flex gap-2">
           <input
             type="text"
             value={form.testModel}
             onChange={(e) => set({ testModel: e.target.value })}
-            placeholder="gpt-4o-mini"
-            className="flex-1 bg-editorial-textbox px-3 py-2 font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            placeholder="llama3.2"
+            className={`${inputCls} flex-1 font-mono`}
           />
-          <button
-            type="button"
+          <PillButton
             onClick={handleTest}
             disabled={testing || !form.baseUrl.trim()}
-            title={t('settings.customProvider.test')}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs border border-editorial-border text-editorial-ink hover:border-editorial-accent hover:text-editorial-accent disabled:opacity-40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            variant="secondary"
           >
-            {testing ? <Loader2 size={12} className="animate-spin" /> : <Wifi size={12} />}
+            {testing ? (
+              <Loader2 size={11} className="animate-spin inline mr-1.5" />
+            ) : (
+              <Wifi size={11} className="inline mr-1.5" />
+            )}
             {t('settings.customProvider.test')}
-          </button>
+          </PillButton>
         </div>
-      </div>
+      </FormField>
 
-      <div className="flex justify-end gap-2 pt-1">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-        >
-          <X size={12} />
+      <div className="flex items-center justify-end gap-2 pt-1 border-t border-editorial-border/40">
+        <PillButton onClick={onCancel} variant="secondary">
           {t('settings.cancel')}
-        </button>
-        <button
-          type="button"
+        </PillButton>
+        <PillButton
           onClick={handleSave}
           disabled={saving || !form.name.trim() || !form.baseUrl.trim()}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-editorial-accent text-editorial-accent hover:bg-editorial-accent hover:text-white disabled:opacity-40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          variant="accent"
         >
-          {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+          {saving && <Loader2 size={11} className="animate-spin inline mr-1.5" />}
           {t('settings.save')}
-        </button>
+        </PillButton>
       </div>
     </div>
   );
@@ -227,33 +224,32 @@ export function CustomProviderSection() {
       {profiles.map((profile) => (
         <div
           key={profile.id}
-          className="flex items-center justify-between gap-3 rounded-[10px] border border-editorial-border bg-editorial-bg/40 px-4 py-3"
+          className="flex items-center justify-between gap-3 rounded-[16px] border border-editorial-border bg-editorial-bg/60 px-4 py-3"
         >
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-editorial-ink">{profile.name}</span>
-              {!profile.requiresApiKey && (
-                <span className="text-[10px] uppercase tracking-wide text-editorial-muted">
+              {profile.requiresApiKey ? (
+                <CheckCircle2 size={11} className="text-editorial-success shrink-0" />
+              ) : (
+                <span className="text-[10px] uppercase tracking-[0.1em] text-editorial-muted">
                   {t('settings.customProvider.noAuth')}
                 </span>
               )}
-              {profile.requiresApiKey && (
-                <CheckCircle2 size={11} className="text-editorial-accent" />
-              )}
             </div>
-            <div className="truncate font-mono text-[11px] text-editorial-muted">
+            <div className="truncate font-mono text-[11px] text-editorial-muted mt-0.5">
               {profile.baseUrl}
             </div>
           </div>
-          <button
-            type="button"
+          <IconButton
+            size="sm"
+            tone="default"
             onClick={() => handleDelete(profile)}
             title={t('settings.customProvider.delete')}
-            aria-label={t('settings.customProvider.delete')}
-            className="shrink-0 p-1.5 text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            className="shrink-0"
           >
-            <Trash2 size={14} />
-          </button>
+            <Trash2 size={13} />
+          </IconButton>
         </div>
       ))}
 
@@ -271,7 +267,7 @@ export function CustomProviderSection() {
         <button
           type="button"
           onClick={() => setShowAddForm(true)}
-          className="flex w-full items-center justify-center gap-2 rounded-[10px] border border-dashed border-editorial-border py-3 text-xs text-editorial-muted hover:border-editorial-accent hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          className="flex w-full items-center justify-center gap-2 rounded-[16px] border border-dashed border-editorial-border py-3 text-xs text-editorial-muted hover:border-editorial-accent hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
         >
           <Plus size={13} />
           {t('settings.customProvider.add')}
