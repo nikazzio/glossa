@@ -676,6 +676,12 @@
         "updatedAt": "Recenti",
         "name": "Nome"
       }
+    },
+    "hub": {
+      "recentProjects": "Recenti",
+      "allProjects": "Tutti i progetti",
+      "lockedArea": "In arrivo nella versione 2.0",
+      "goToArea": "Vai all'area"
     }
   },
   "files": {

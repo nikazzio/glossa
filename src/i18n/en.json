@@ -676,6 +676,12 @@
         "updatedAt": "Recent",
         "name": "Name"
       }
+    },
+    "hub": {
+      "recentProjects": "Recent",
+      "allProjects": "All projects",
+      "lockedArea": "Coming in version 2.0",
+      "goToArea": "Go to area"
     }
   },
   "files": {
