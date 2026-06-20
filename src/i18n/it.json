@@ -1526,5 +1526,9 @@
       "coverage": "Rapporto di copertura (traduzione / sorgente)",
       "chunksProgress": "Segmenti completati"
     }
+  },
+  "workflow": {
+    "translation": "Traduzione",
+    "transcription": "Trascrizione"
   }
 }

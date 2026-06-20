@@ -1526,5 +1526,9 @@
       "coverage": "Coverage ratio (translation / source)",
       "chunksProgress": "Completed segments"
     }
+  },
+  "workflow": {
+    "translation": "Translation",
+    "transcription": "Transcription"
   }
 }
