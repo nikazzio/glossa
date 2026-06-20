@@ -1344,7 +1344,8 @@
     "fromChunk": "Chunk",
     "addToGlossary": "Aggiungi a glossario",
     "addedToGlossary": "Aggiunto al glossario",
-    "addToGlossaryError": "Errore nell'aggiunta al glossario"
+    "addToGlossaryError": "Errore nell'aggiunta al glossario",
+    "exportCsv": "Esporta CSV"
   },
   "stats": {
     "cacheHitRateHint": "Percentuale di token serviti dalla cache del provider. Più è alta, minore il costo.",
