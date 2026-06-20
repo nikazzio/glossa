@@ -27,7 +27,7 @@ describe('promptTemplateStore', () => {
     );
   });
 
-  it('saveTemplate defaults workflow to translation', async () => {
+  it("saveTemplate passes 'translation' workflow to service", async () => {
     vi.mocked(getPromptTemplates).mockResolvedValue([]);
     await usePromptTemplateStore.getState().saveTemplate(
       'T', 'p', 'stage', 'translation',

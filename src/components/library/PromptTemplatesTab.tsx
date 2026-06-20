@@ -107,7 +107,7 @@ export function PromptTemplatesTab() {
   const handleSave = async () => {
     if (!newName.trim() || !newPrompt.trim()) return;
     try {
-      await saveTemplate(newName.trim(), newPrompt.trim(), newContext, refineModel, refineProvider);
+      await saveTemplate(newName.trim(), newPrompt.trim(), newContext, 'translation', refineModel, refineProvider);
       toast.success(t('pipeline.templates.saved'));
       setNewName('');
       setNewPrompt('');

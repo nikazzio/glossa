@@ -70,7 +70,7 @@ export function AuditPromptEditor({
     const name = templateName.trim();
     if (!name) return;
     try {
-      await saveTemplate(name, value, 'audit', defaultModel, defaultProvider);
+      await saveTemplate(name, value, 'audit', 'translation', defaultModel, defaultProvider);
       toast.success(t('pipeline.templates.saved'));
       setTemplateName('');
       setShowSaveName(false);
