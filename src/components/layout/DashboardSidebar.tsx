@@ -36,6 +36,8 @@ export function DashboardSidebar() {
   const setCollapsed = useUiStore((state) => state.setDashboardSidebarCollapsed);
   const width = useUiStore((state) => state.dashboardSidebarWidth);
   const setWidth = useUiStore((state) => state.setDashboardSidebarWidth);
+  const activeWorkspaceArea = useUiStore((state) => state.activeWorkspaceArea);
+  const setActiveWorkspaceArea = useUiStore((state) => state.setActiveWorkspaceArea);
   const { dragging, startDrag } = useEdgeResize();
 
   const [showWorkspaceSettings, setShowWorkspaceSettings] = useState(false);
@@ -155,18 +157,26 @@ export function DashboardSidebar() {
           {AREA_ITEMS.map(({ id, icon: Icon, enabled }) => (
             <ShellNavItem
               key={id}
-              active={enabled}
+              active={enabled && activeWorkspaceArea === id}
               disabled={!enabled}
               collapsed={collapsed}
               labelFont="display"
-              onClick={enabled ? () => setCollapsed(!collapsed) : undefined}
-              ariaCurrent={enabled ? 'page' : undefined}
+              onClick={enabled ? () => {
+                if (activeWorkspaceArea === id) {
+                  setActiveWorkspaceArea(null);
+                } else {
+                  setActiveWorkspaceArea(id);
+                }
+              } : undefined}
+              ariaCurrent={enabled && activeWorkspaceArea === id ? 'page' : undefined}
               icon={(
                 <span
                   className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-colors duration-200 ${
-                    enabled
+                    enabled && activeWorkspaceArea === id
                       ? 'border-editorial-accent/45 bg-editorial-accent/10 text-editorial-accent'
-                      : 'border-editorial-border bg-editorial-textbox/30 text-editorial-muted'
+                      : enabled
+                        ? 'border-editorial-border bg-editorial-textbox/30 text-editorial-muted hover:border-editorial-accent/30 hover:text-editorial-accent'
+                        : 'border-editorial-border bg-editorial-textbox/30 text-editorial-muted'
                   }`}
                 >
                   <Icon size={12} />
