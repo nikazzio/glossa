@@ -3,18 +3,47 @@ use tauri::{AppHandle, Emitter, State};
 
 use crate::keystore::get_api_key;
 use crate::llm::blobs::{compute_blob_assignments, BlobAssignment, ChunkForBlob};
+use crate::llm::custom_profiles;
 use crate::llm::prompts::{
     build_coherence_prompts, build_judge_prompts, build_stage_prompts, minimal_pipeline_config,
     parse_judge_rating, sanitize_llm_json_output, REFINE_AUDIT_SYSTEM_PROMPT,
     REFINE_STAGE_SYSTEM_PROMPT,
 };
-use crate::llm::provider::LlmRequest;
+use crate::llm::provider::{LlmProvider, LlmRequest};
 use crate::llm::providers::get_provider;
 use crate::llm::stream::{stream_response, StreamGuard, StreamRegistry, STREAM_CANCELLED_ERROR};
 use crate::llm::types::{
     CoherenceChunkInput, CoherenceResponse, JudgeIssue, JudgeResponse, PipelineConfig,
     PreflightCheckInput, PreflightCheckResult, ProviderRuntimeConfig, StageConfig,
 };
+
+/// Resolves provider + api_key for a given provider id. Handles both built-in providers
+/// and custom endpoint profiles (provider == "custom", custom_provider_id set).
+fn resolve_provider(
+    app: &AppHandle,
+    provider_id: &str,
+    custom_profile_id: Option<&str>,
+    ollama_base_url: Option<String>,
+) -> Result<(Box<dyn LlmProvider>, String), String> {
+    if provider_id == "custom" {
+        let profile_id = custom_profile_id
+            .ok_or("customProviderId is required when provider is 'custom'")?;
+        let profile = custom_profiles::get_profile(app, profile_id)?;
+        let api_key = if profile.requires_api_key {
+            let keystore_id = format!("custom:{profile_id}");
+            get_api_key(app, &keystore_id)?
+        } else {
+            String::new()
+        };
+        let provider: Box<dyn LlmProvider> =
+            Box::new(crate::llm::providers::openai::custom_endpoint(profile.base_url));
+        Ok((provider, api_key))
+    } else {
+        let provider = get_provider(provider_id, ollama_base_url)?;
+        let api_key = get_api_key(app, provider_id)?;
+        Ok((provider, api_key))
+    }
+}
 
 #[derive(serde::Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -77,9 +106,13 @@ pub async fn run_stage(
     ollama_base_url: Option<String>,
 ) -> Result<StageResult, String> {
     let stream_id: Arc<str> = stream_id.into();
-    let provider = get_provider(&stage.provider, ollama_base_url)?;
+    let (provider, api_key) = resolve_provider(
+        &app,
+        &stage.provider,
+        stage.custom_provider_id.as_deref(),
+        ollama_base_url,
+    )?;
     provider.preflight(&stage.model).await?;
-    let api_key = get_api_key(&app, &stage.provider)?;
     let client = provider.http_client()?;
     let structured = build_stage_prompts(&text, &stage, &config, previous_result.as_deref(), audit_context.as_deref());
     app.emit(
@@ -157,9 +190,13 @@ pub async fn run_stage_stream(
     ollama_base_url: Option<String>,
 ) -> Result<String, String> {
     let stream_id: Arc<str> = stream_id.into();
-    let provider = get_provider(&stage.provider, ollama_base_url)?;
+    let (provider, api_key) = resolve_provider(
+        &app,
+        &stage.provider,
+        stage.custom_provider_id.as_deref(),
+        ollama_base_url,
+    )?;
     provider.preflight(&stage.model).await?;
-    let api_key = get_api_key(&app, &stage.provider)?;
     let client = provider.streaming_client()?;
     let structured = build_stage_prompts(&text, &stage, &config, previous_result.as_deref(), None);
     app.emit(

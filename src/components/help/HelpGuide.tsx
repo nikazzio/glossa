@@ -525,6 +525,7 @@ function ProvidersSection() {
     { name: 'Anthropic', modelsKey: 'help.providers.anthropicModels', noteKey: 'help.providers.anthropicNote' },
     { name: 'DeepSeek',  modelsKey: 'help.providers.deepseekModels',  noteKey: 'help.providers.deepseekNote' },
     { name: 'Ollama',    modelsKey: 'help.providers.ollamaModels',    noteKey: 'help.providers.ollamaNote' },
+    { name: 'Custom',    modelsKey: 'help.providers.customModels',    noteKey: 'help.providers.customNote' },
   ];
   return (
     <>

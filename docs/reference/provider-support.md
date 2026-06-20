@@ -4,20 +4,33 @@ title: Provider supportati
 
 # Provider supportati
 
-Glossa supporta sia provider cloud sia provider locali. L'insieme supportato nell'app include:
+Glossa supporta provider cloud, inferenza locale ed endpoint OpenAI-compatibili personalizzati. L'insieme supportato nell'app include:
 
 - Gemini
 - OpenAI
 - Anthropic
 - DeepSeek
 - Ollama
+- Endpoint custom (qualsiasi API OpenAI-compatibile)
 
-## Locale contro cloud
+## Locale contro cloud contro custom
 
 | Tipo provider | Note |
 |---|---|
 | Cloud | Ideale quando vuoi API gestite, capacità remota e meno setup macchina |
 | Ollama | Opzione locale per workflow offline o privati sul tuo hardware |
+| Custom | Endpoint OpenAI-compatibili di terze parti o auto-ospitati (OpenRouter, Groq, LM Studio, vLLM, proxy aziendali) |
+
+## Endpoint custom
+
+Tramite **Impostazioni → Custom** puoi definire profili endpoint arbitrari. Ogni profilo ha:
+
+- **Nome** — etichetta identificativa del profilo
+- **URL base** — radice dell'endpoint OpenAI-compatibile (es. `https://openrouter.ai/api/v1`)
+- **Richiede API key** — toggle; se attivo la chiave viene salvata nel portachiavi OS
+- **Test connessione** — verifica la raggiungibilità dell'endpoint con un modello di tua scelta
+
+Nello stage della pipeline, selezionando il provider *Custom* appare un secondo menu a tendina per scegliere il profilo e un campo di testo libero per il nome del modello.
 
 ## Guida alla scelta del provider
 

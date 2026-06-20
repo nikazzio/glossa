@@ -141,7 +141,7 @@ export function MemoryExtractorSettings({
             aria-label={t('models.provider')}
           >
             {MODEL_PROVIDER_ORDER.map((entry) => (
-              <option key={entry} value={entry} disabled={entry !== 'ollama' && keyStatuses[entry] === false}>
+              <option key={entry} value={entry} disabled={entry !== 'ollama' && (keyStatuses as Partial<Record<string, boolean>>)[entry] === false}>
                 {entry}
               </option>
             ))}

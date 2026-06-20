@@ -45,6 +45,17 @@ pub fn deepseek() -> OpenAiCompatibleProvider {
     }
 }
 
+pub fn custom_endpoint(base_url: String) -> OpenAiCompatibleProvider {
+    OpenAiCompatibleProvider {
+        id: "custom",
+        display_name: "Custom",
+        base_url,
+        env_var: "",
+        test_model: "",
+        use_responses_api: false,
+    }
+}
+
 fn judge_json_schema() -> serde_json::Value {
     serde_json::json!({
         "name": "translation_audit",

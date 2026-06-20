@@ -13,7 +13,8 @@ export function canRefineWithProvider(
   provider: string,
   statuses: ProviderKeyStatusMap,
 ): boolean {
-  return provider === 'ollama' || !!statuses[provider as keyof ProviderKeyStatusMap];
+  if (provider === 'ollama' || provider === 'custom') return true;
+  return !!statuses[provider as keyof ProviderKeyStatusMap];
 }
 
 export function formatProviderModelLabel(provider: string, model: string): string {

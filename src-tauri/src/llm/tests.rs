@@ -188,6 +188,7 @@
             provider: provider.into(),
             enabled: true,
             provider_options: None,
+            custom_provider_id: None,
         }
     }
 

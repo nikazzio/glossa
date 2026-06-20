@@ -4,7 +4,7 @@ import {
   AlertCircle, Server, RefreshCw, CheckCircle2, XCircle, HelpCircle,
   Sparkles, Columns2, BookOpen, ChevronDown, ChevronUp, SlidersHorizontal,
   ChevronsLeft, Copy, RotateCcw, Scissors, Layers, LayoutTemplate, Palette,
-  LibraryBig, FileText, Type, Sun, Moon, Monitor,
+  LibraryBig, FileText, Type, Sun, Moon, Monitor, Globe,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
@@ -14,6 +14,7 @@ import type { SettingsTab, UiFont, DocumentFontSize, DocumentLineHeight, ColorSc
 import { HL_COLORS_LIGHT, HL_COLORS_DARK } from '../../stores/uiStore';
 import { useConfigStore } from '../../stores/configStore';
 import { ApiKeyInput } from './ApiKeyInput';
+import { CustomProviderSection } from './CustomProviderSection';
 import { ollamaService } from '../../services/llmService';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { getKnownModelIds, getModelEntry, MODEL_CATALOG, MODEL_PROVIDER_ORDER } from '../../models/catalog';
@@ -31,6 +32,7 @@ const PROVIDER_LABELS: Record<ModelProvider, string> = {
   anthropic: 'Anthropic',
   deepseek: 'DeepSeek',
   ollama: 'Ollama',
+  custom: 'Custom',
 };
 
 function getModelGroupLabel(provider: ModelProvider, modelId: string): string {
@@ -646,6 +648,27 @@ export function SettingsModal() {
                             </button>
                           );
                         })}
+
+                        {/* Separatore + tab Custom */}
+                        <span className="mx-1 self-center w-px h-5 bg-editorial-border/60" aria-hidden="true" />
+                        <button
+                          type="button"
+                          onClick={() => setActiveProviderTab('custom')}
+                          title={PROVIDER_LABELS['custom']}
+                          aria-label={PROVIDER_LABELS['custom']}
+                          id="settings-provider-tab-custom"
+                          role="tab"
+                          aria-selected={activeProviderTab === 'custom'}
+                          aria-controls="settings-provider-panel-custom"
+                          tabIndex={activeProviderTab === 'custom' ? 0 : -1}
+                          className={`flex h-9 w-9 items-center justify-center rounded-full border text-[11px] font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                            activeProviderTab === 'custom'
+                              ? 'border-editorial-accent bg-editorial-accent text-white'
+                              : 'border-editorial-border bg-editorial-textbox/30 text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent'
+                          }`}
+                        >
+                          <Globe size={16} />
+                        </button>
                       </div>
 
                       <div
@@ -655,7 +678,9 @@ export function SettingsModal() {
                         className="space-y-5 border-t border-editorial-border pt-5"
                       >
                         <div className="space-y-3">
-                          {activeProviderTab === 'ollama' ? (
+                          {activeProviderTab === 'custom' ? (
+                            <CustomProviderSection />
+                          ) : activeProviderTab === 'ollama' ? (
                             <div className="space-y-4 rounded-[18px] border border-editorial-border bg-editorial-bg/60 p-4">
                               <div className="flex flex-wrap items-center justify-between gap-3">
                                 <div className="flex items-center gap-3">
@@ -730,15 +755,15 @@ export function SettingsModal() {
                             </div>
                           )}
 
-                          {activeProviderTab !== 'ollama' && !keyStatuses[activeProviderTab] && (
+                          {activeProviderTab !== 'ollama' && activeProviderTab !== 'custom' && !(keyStatuses as Partial<Record<string, boolean>>)[activeProviderTab] && (
                             <p className="text-xs text-editorial-muted italic">
                               {t('settings.configureKeyToUse')}
                             </p>
                           )}
                         </div>
 
-                        {activeProviderTab !== 'ollama' && (() => {
-                          const hasKey = !!keyStatuses[activeProviderTab];
+                        {activeProviderTab !== 'ollama' && activeProviderTab !== 'custom' && (() => {
+                          const hasKey = !!(keyStatuses as Partial<Record<string, boolean>>)[activeProviderTab];
                           const groups = groupModelIds(activeProviderTab, getKnownModelIds(activeProviderTab));
                           return (
                             <div className="space-y-3">

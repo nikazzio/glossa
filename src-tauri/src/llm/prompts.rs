@@ -569,6 +569,7 @@ mod tests {
             model: "test".to_string(),
             enabled: true,
             provider_options: None,
+            custom_provider_id: None,
         };
         let prompt = build_stage_prompts(
             "Hello world",
@@ -597,6 +598,7 @@ mod tests {
             model: "test".to_string(),
             enabled: true,
             provider_options: None,
+            custom_provider_id: None,
         };
         let prompt = build_stage_prompts("Hello world", &stage, &config, Some("Ciao mondo"), None);
         assert!(!prompt.user.contains("Previous audit findings to address:"));

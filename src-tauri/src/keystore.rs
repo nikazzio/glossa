@@ -258,7 +258,13 @@ pub fn get_api_key(app: &AppHandle, provider: &str) -> Result<String, String> {
         return Ok(key);
     }
 
-    // 3. Fallback to environment variable
+    // 3. Fallback to environment variable (custom: providers never have env vars)
+    if provider.starts_with("custom:") {
+        return Err(format!(
+            "API key for custom endpoint '{}' is not configured. Add it in Settings.",
+            &provider["custom:".len()..]
+        ));
+    }
     let env_key = match provider {
         "gemini" => "GEMINI_API_KEY",
         "openai" => "OPENAI_API_KEY",
@@ -268,6 +274,41 @@ pub fn get_api_key(app: &AppHandle, provider: &str) -> Result<String, String> {
     };
 
     std::env::var(env_key).map_err(|_| format!("{env_key} is not configured. Set it in Settings."))
+}
+
+/// Sync helper for saving an API key — same logic as the Tauri command.
+pub fn save_api_key_sync(app: &AppHandle, provider: &str, key: &str) -> Result<String, String> {
+    let entry = keyring_entry(provider)?;
+    match entry.set_password(key) {
+        Ok(()) => {
+            file_store_remove(app, provider);
+            if let Ok(mut cache) = API_KEY_CACHE.lock() {
+                cache.insert(provider.to_string(), key.to_string());
+            }
+            return Ok("keychain".to_string());
+        }
+        Err(error) if !should_fallback_to_file_store(&error) => {
+            return Err(format!("Failed to save to keychain: {error}"));
+        }
+        Err(_) => {}
+    }
+    file_store_set(app, provider, key)?;
+    if let Ok(mut cache) = API_KEY_CACHE.lock() {
+        cache.insert(provider.to_string(), key.to_string());
+    }
+    Ok("file".to_string())
+}
+
+/// Sync helper for deleting an API key — same logic as the Tauri command.
+pub fn delete_api_key_sync(app: &AppHandle, provider: &str) -> Result<(), String> {
+    if let Ok(entry) = keyring_entry(provider) {
+        let _ = entry.delete_credential();
+    }
+    file_store_remove(app, provider);
+    if let Ok(mut cache) = API_KEY_CACHE.lock() {
+        cache.remove(provider);
+    }
+    Ok(())
 }
 
 #[tauri::command]

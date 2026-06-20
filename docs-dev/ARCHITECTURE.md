@@ -32,6 +32,7 @@
 | `stores/configStore.ts` | pipelineMode, pipelineTestChunkCount, ollamaStatus, ollamaModels, ollamaBaseUrl, newPipelineInit, maxPipelines, chunkPresetShort/Medium/Long | Config app. pipelineTestChunkCount, ollamaBaseUrl, newPipelineInit, maxPipelines, chunkPreset* persisted. ollamaStatus/Models transient. |
 | `stores/libraryStore.ts` | glossaries[], dictionaries[], selectedDictionary | — |
 | `stores/promptTemplateStore.ts` | templates[], selectedTemplate | — |
+| `stores/customProviderStore.ts` | profiles: CustomProviderProfile[] | Lista profili endpoint custom; caricata da DB on demand (Settings + StageCard). Non persistita in LocalStorage — source of truth è SQLite. |
 
 ---
 
@@ -56,6 +57,7 @@
 | `services/projectService.ts` | CRUD project, persistenza sorgente (path, metadata) |
 | `services/fileService.ts` | Import DOCX/PDF (estrazione testo), export bilingue/monolingua |
 | `services/dbService.ts` | SQLite wrapper: execute, select, executeTransaction, initDatabase, ensureColumn |
+| `services/customProviderService.ts` | Tauri invoke wrapper per i comandi custom provider (list, save, delete, test_connection) |
 
 ---
 
@@ -224,7 +226,8 @@ flushPendingTokenBatch() → un solo setState per frame (O(1) chunk update)
 | `src-tauri/src/llm/provider.rs` | Trait LlmProvider, struct LlmRequest (`json_schema_strict: bool` per judge vs json_object per altri) |
 | `src-tauri/src/llm/providers/` | Anthropic (cache breakpoint espliciti), OpenAI (prefix), Gemini (cacheControl + thinking), DeepSeek (reasoning), Ollama (locale) |
 | `src-tauri/src/llm/stream.rs` | HTTP event stream reader, StreamGuard RAII |
-| `src-tauri/src/keystore.rs` | OS credential store per API key |
+| `src-tauri/src/llm/custom_profiles.rs` | CRUD profili endpoint custom su `custom_providers` (rusqlite diretto); comandi: list_custom_provider_profiles, save_custom_provider_profile, delete_custom_provider_profile, test_custom_provider_connection. resolve_provider() in pipeline.rs usa questo modulo per istanziare OpenAiCompatibleProvider::custom_endpoint(base_url) al runtime |
+| `src-tauri/src/keystore.rs` | OS credential store per API key; chiave custom: `custom:<profile_id>`; helper sync save_api_key_sync/delete_api_key_sync per operazioni sincrone nei comandi |
 | `src-tauri/src/db.rs` | execute_transaction wrapper SQLite |
 | `src-tauri/src/documents.rs` | Extract/export DOCX, PDF |
 
@@ -331,6 +334,12 @@ phrase_memory
 
 source_phrase_embeddings
   id, project_id, chunk_id, source_phrase, embedding, created_at
+
+custom_providers
+  id TEXT PK, name TEXT, base_url TEXT, requires_api_key INTEGER (0|1)
+  created_at TEXT (ISO datetime)
+  — gestita da src-tauri/src/llm/custom_profiles.rs via rusqlite diretto
+  — API key salvata nel keystore con chiave "custom:<id>", non in questa tabella
 ```
 
 **Persistito vs in-memory:**

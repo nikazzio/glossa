@@ -474,7 +474,28 @@
     "backupImportConfirmTitle": "Restore workspace?",
     "backupImportConfirmMessage": "This will overwrite all current projects, pipelines, translations, glossaries and settings. The operation cannot be undone.",
     "backupImportConfirm": "Restore",
-    "phraseMemoryTab": "Phrase Memory"
+    "phraseMemoryTab": "Phrase Memory",
+    "customProvider": {
+      "sectionTitle": "Custom Endpoints",
+      "add": "Add custom endpoint",
+      "name": "Profile name",
+      "namePlaceholder": "OpenRouter",
+      "baseUrl": "Base URL",
+      "baseUrlPlaceholder": "https://api.example.com/v1",
+      "requiresApiKey": "Requires API key",
+      "apiKey": "API Key",
+      "testModel": "Test with model",
+      "test": "Test",
+      "noAuth": "No auth",
+      "delete": "Delete profile",
+      "saved": "{{name}} saved",
+      "saveFailed": "Failed to save profile",
+      "deleted": "{{name}} deleted",
+      "deleteFailed": "Failed to delete profile",
+      "testOk": "Connection successful",
+      "testFailed": "Connection failed",
+      "testModelRequired": "Enter a model name to test"
+    }
   },
   "ollama": {
     "title": "Ollama (Local Models)",
@@ -1127,19 +1148,21 @@
     },
     "providers": {
       "title": "LLM providers",
-      "intro": "Glossa supports five providers. Each stage and the judge can use an independent provider and model. API keys are configured in the Settings panel.",
+      "intro": "Glossa supports cloud providers, local inference, and user-defined OpenAI-compatible endpoints. Each stage and the judge can use an independent provider and model. API keys are configured in the Settings panel.",
       "geminiModels": "Gemini family",
       "openaiModels": "GPT family",
       "anthropicModels": "Claude family",
       "deepseekModels": "DeepSeek family",
       "ollamaModels": "Any local installed model",
+      "customModels": "Free-text model name",
       "geminiNote": "Google models. High throughput, low cost, solid quality on European languages. Great for high-volume translation and fast refine.",
       "openaiNote": "OpenAI models. Elegant and versatile, good handling of stylistic nuance. Suited as a literary refine pass or a strict judge.",
       "anthropicNote": "Claude models. Excellent on nuanced, literary text and less-common languages; tend to preserve tone and register. Strong refine and judge.",
       "deepseekNote": "Chinese AI lab. Very competitive pricing, good multilingual support. A solid alternative to Gemini for volume translation.",
       "ollamaNote": "Local inference, no API key, no data leaves the machine. Quality depends on the installed model; recommended for sensitive documents or offline work.",
+      "customNote": "User-defined OpenAI-compatible endpoints: OpenRouter, Groq, LM Studio, vLLM, corporate proxies, and similar. Configure them in Settings → Custom. The model name is entered freely per stage; the API key (if required) is stored in the OS keychain.",
       "gatingTitle": "Key availability",
-      "gatingDesc": "Features that require a remote provider — prompt refinement, preflight checks, running the pipeline on a non-Ollama provider — are disabled until the corresponding API key is configured in Settings. Key status appears as a `provider · model` label next to controls and as an inline notice in the pipeline Settings tab. Ollama is always enabled.",
+      "gatingDesc": "Features that require a remote provider — prompt refinement, preflight checks, running the pipeline on a non-Ollama provider — are disabled until the corresponding API key is configured in Settings. Key status appears as a `provider · model` label next to controls and as an inline notice in the pipeline Settings tab. Ollama and custom endpoints with no authentication are always enabled.",
       "security": "API keys are stored in the operating system keychain (GNOME Keyring on Linux, Keychain on macOS, Credential Manager on Windows) when available. If the keychain is not accessible, Glossa uses an encrypted local file protected by a machine-local key. Keys are never written to disk in plain text, and never sent anywhere except the corresponding provider endpoint."
     },
     "ollama": {
