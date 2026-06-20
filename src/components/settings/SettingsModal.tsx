@@ -14,6 +14,7 @@ import type { SettingsTab, UiFont, DocumentFontSize, DocumentLineHeight, ColorSc
 import { HL_COLORS_LIGHT, HL_COLORS_DARK } from '../../stores/uiStore';
 import { useConfigStore } from '../../stores/configStore';
 import { ApiKeyInput } from './ApiKeyInput';
+import { CustomProviderSection } from './CustomProviderSection';
 import { ollamaService } from '../../services/llmService';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { getKnownModelIds, getModelEntry, MODEL_CATALOG, MODEL_PROVIDER_ORDER } from '../../models/catalog';
@@ -31,6 +32,7 @@ const PROVIDER_LABELS: Record<ModelProvider, string> = {
   anthropic: 'Anthropic',
   deepseek: 'DeepSeek',
   ollama: 'Ollama',
+  custom: 'Custom',
 };
 
 function getModelGroupLabel(provider: ModelProvider, modelId: string): string {
@@ -730,15 +732,15 @@ export function SettingsModal() {
                             </div>
                           )}
 
-                          {activeProviderTab !== 'ollama' && !keyStatuses[activeProviderTab] && (
+                          {activeProviderTab !== 'ollama' && activeProviderTab !== 'custom' && !(keyStatuses as Partial<Record<string, boolean>>)[activeProviderTab] && (
                             <p className="text-xs text-editorial-muted italic">
                               {t('settings.configureKeyToUse')}
                             </p>
                           )}
                         </div>
 
-                        {activeProviderTab !== 'ollama' && (() => {
-                          const hasKey = !!keyStatuses[activeProviderTab];
+                        {activeProviderTab !== 'ollama' && activeProviderTab !== 'custom' && (() => {
+                          const hasKey = !!(keyStatuses as Partial<Record<string, boolean>>)[activeProviderTab];
                           const groups = groupModelIds(activeProviderTab, getKnownModelIds(activeProviderTab));
                           return (
                             <div className="space-y-3">
@@ -792,6 +794,14 @@ export function SettingsModal() {
                         })()}
                       </div>
                     </div>
+                  </div>
+
+                  {/* Custom Endpoints */}
+                  <div className="space-y-4">
+                    <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
+                      {t('settings.customProvider.sectionTitle')}
+                    </p>
+                    <CustomProviderSection />
                   </div>
 
                   {/* Pricing Overrides */}

@@ -125,7 +125,7 @@ export function AuditTabPanel({
             aria-label={t('models.provider')}
           >
             {MODEL_PROVIDER_ORDER.map((p) => (
-              <option key={p} value={p} disabled={p !== 'ollama' && keyStatuses[p] === false}>{p}</option>
+              <option key={p} value={p} disabled={p !== 'ollama' && (keyStatuses as Partial<Record<string, boolean>>)[p] === false}>{p}</option>
             ))}
           </select>
           {judgeModels.length > 0 ? (

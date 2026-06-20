@@ -24,6 +24,7 @@ import { ReasoningPicker } from '../models/ReasoningPicker';
 import { ProviderRuntimeEditor } from './ProviderRuntimeEditor';
 import { canRefineWithProvider, formatProviderModelLabel, type ProviderKeyStatusMap } from '../../hooks/useProviderKeyStatus';
 import { useConfigStore } from '../../stores/configStore';
+import { useCustomProviderStore } from '../../stores/customProviderStore';
 import { STAGE_TEMPLATES } from '../../pipeline/pipelineModes';
 
 interface StageCardProps {
@@ -67,6 +68,7 @@ export function StageCard({
 }: StageCardProps) {
   const { t } = useTranslation();
   const ollamaModels = useConfigStore((s) => s.ollamaModels);
+  const customProfiles = useCustomProviderStore((s) => s.profiles);
   const [isEditingPrompt, setIsEditingPrompt] = useState(false);
   const [showSaveName, setShowSaveName] = useState(false);
   const [templateName, setTemplateName] = useState('');
@@ -113,8 +115,13 @@ export function StageCard({
   );
 
   const handleProviderChange = (newProvider: ModelProvider) => {
+    if (newProvider === 'custom') {
+      const firstProfile = customProfiles[0];
+      onUpdate({ provider: 'custom', customProviderId: firstProfile?.id ?? '', model: '', providerOptions: {} });
+      return;
+    }
     const models = newProvider === 'ollama' ? ollamaModels : getKnownModelIds(newProvider);
-    onUpdate({ provider: newProvider, model: models[0] || '', providerOptions: {} });
+    onUpdate({ provider: newProvider, model: models[0] || '', providerOptions: {}, customProviderId: undefined });
   };
 
   const handleModelChange = (newModel: string) => {
@@ -178,10 +185,36 @@ export function StageCard({
             aria-label={t('models.provider')}
           >
             {MODEL_PROVIDER_ORDER.map((p) => (
-              <option key={p} value={p} disabled={p !== 'ollama' && keyStatuses[p] === false}>{p}</option>
+              <option key={p} value={p} disabled={p !== 'ollama' && (keyStatuses as Partial<Record<string, boolean>>)[p] === false}>{p}</option>
             ))}
+            <option key="custom" value="custom">custom</option>
           </select>
-          {modelOptions.length > 0 ? (
+          {stage.provider === 'custom' ? (
+            <div className="flex flex-1 flex-col gap-1.5">
+              <select
+                value={stage.customProviderId ?? ''}
+                onChange={(e) => onUpdate({ customProviderId: e.target.value })}
+                disabled={translationsExist || isProcessing}
+                className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
+                aria-label={t('settings.customProvider.sectionTitle')}
+              >
+                {customProfiles.length === 0 && (
+                  <option value="">{t('settings.customProvider.add')}</option>
+                )}
+                {customProfiles.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+              <input
+                value={stage.model}
+                onChange={(e) => handleModelChange(e.target.value)}
+                disabled={translationsExist || isProcessing}
+                placeholder={t('ollama.modelPlaceholder')}
+                className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
+                aria-label={t('pipeline.stageModelLabel')}
+              />
+            </div>
+          ) : modelOptions.length > 0 ? (
             <div className="flex flex-1 items-center gap-1.5">
               <select
                 value={stage.model}

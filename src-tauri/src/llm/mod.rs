@@ -1,4 +1,5 @@
 pub mod blobs;
+pub mod custom_profiles;
 pub mod pipeline;
 pub mod prompts;
 pub mod provider;

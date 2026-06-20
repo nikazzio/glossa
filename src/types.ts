@@ -1,4 +1,11 @@
-export type ModelProvider = 'gemini' | 'openai' | 'anthropic' | 'deepseek' | 'ollama';
+export type ModelProvider = 'gemini' | 'openai' | 'anthropic' | 'deepseek' | 'ollama' | 'custom';
+
+export interface CustomProviderProfile {
+  id: string;
+  name: string;
+  baseUrl: string;
+  requiresApiKey: boolean;
+}
 export type AnnotationType = 'comment' | 'doubt' | 'problem' | 'approved';
 
 export interface Annotation {
@@ -103,6 +110,7 @@ export interface PipelineStageConfig {
   sourceLanguage?: string;
   targetLanguage?: string;
   providerOptions?: ProviderRuntimeConfig;
+  customProviderId?: string;
 }
 
 export interface Footnote {

@@ -88,6 +88,8 @@ pub struct StageConfig {
     pub provider: String,
     pub enabled: bool,
     pub provider_options: Option<ProviderRuntimeConfig>,
+    #[serde(default)]
+    pub custom_provider_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

@@ -474,7 +474,27 @@
     "backupImportConfirmTitle": "Restore workspace?",
     "backupImportConfirmMessage": "This will overwrite all current projects, pipelines, translations, glossaries and settings. The operation cannot be undone.",
     "backupImportConfirm": "Restore",
-    "phraseMemoryTab": "Phrase Memory"
+    "phraseMemoryTab": "Phrase Memory",
+    "customProvider": {
+      "sectionTitle": "Custom Endpoints",
+      "add": "Add custom endpoint",
+      "name": "Profile name",
+      "namePlaceholder": "OpenRouter",
+      "baseUrl": "Base URL",
+      "requiresApiKey": "Requires API key",
+      "apiKey": "API Key",
+      "testModel": "Test with model",
+      "test": "Test",
+      "noAuth": "No auth",
+      "delete": "Delete profile",
+      "saved": "{{name}} saved",
+      "saveFailed": "Failed to save profile",
+      "deleted": "{{name}} deleted",
+      "deleteFailed": "Failed to delete profile",
+      "testOk": "Connection successful",
+      "testFailed": "Connection failed",
+      "testModelRequired": "Enter a model name to test"
+    }
   },
   "ollama": {
     "title": "Ollama (Local Models)",
