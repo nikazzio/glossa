@@ -22,7 +22,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { indexPad } from '../../utils';
-import { CopyButton, HighlightedText, MarkdownEditor } from '../common';
+import { CopyButton, HighlightedText, MarkdownEditor, DOC_FONT_SIZE_STEP_INDEX } from '../common';
 import { IconButton, Tooltip, type IconButtonTone } from '../ui';
 import { composeAnnotatedMarkdown } from '../../utils/annotationMarkdown';
 import { restoreFootnoteMarkers } from '../../utils/footnoteExtractor';
@@ -206,7 +206,10 @@ export function DocumentView({
     focusedIssueRequestId,
     setShowChunkDrawer,
     setPendingAnnotationAnchor,
+    documentFontSize,
   } = useUiStore();
+
+  const fontSizeStep = DOC_FONT_SIZE_STEP_INDEX[documentFontSize ?? 'md'];
 
   const [annotationMenu, setAnnotationMenu] = useState<{ x: number; y: number; text: string; chunkId: string } | null>(null);
 
@@ -502,12 +505,14 @@ export function DocumentView({
                 disabled={currentChunk.status === 'processing'}
                 readOnly={sourceReadOnly}
                 fillHeight
-                textClassName="text-[15px] leading-8 text-editorial-ink"
-                previewClassName="min-h-[280px] text-[15px] leading-8 text-editorial-ink"
+                textClassName="doc-content text-editorial-ink"
+                previewClassName="min-h-[280px] doc-content text-editorial-ink"
                 highlightHtml={sourceHighlightHtml}
                 previewValue={sourcePreviewValue}
                 focusQuery={focusedChunkId === currentChunk.id ? focusedSourceIssueQuery : null}
                 focusRequestId={focusedChunkId === currentChunk.id ? focusedIssueRequestId : 0}
+                defaultTextSizeStep={fontSizeStep}
+                useDocLineHeight
               />
             </DocumentPage>
           )}
@@ -624,7 +629,7 @@ export function DocumentView({
                     <div data-scroll-sync="true" className="flex flex-col flex-1 min-h-0 overflow-y-auto custom-scrollbar">
                       <HighlightedText
                         html={stageDiff.html}
-                        className="text-[15px] leading-8 text-editorial-ink min-h-[280px]"
+                        className="doc-content text-editorial-ink min-h-[280px]"
                       />
                     </div>
                   ) : (
@@ -635,13 +640,15 @@ export function DocumentView({
                       markdownEnabled={config.markdownAware === true}
                       readOnly={stageReadOnly}
                       fillHeight
-                      textClassName="text-[15px] leading-8 text-editorial-ink"
-                      previewClassName="min-h-[280px] text-[15px] leading-8 text-editorial-ink"
+                      textClassName="doc-content text-editorial-ink"
+                      previewClassName="min-h-[280px] doc-content text-editorial-ink"
                       placeholder={isLastSelected ? t('pipeline.candidatePlaceholder') : ''}
                       highlightHtml={translationHighlightHtml}
                       previewValue={translationPreviewValue}
                       focusQuery={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueQuery : null}
                       focusRequestId={isLastSelected && focusedChunkId === currentChunk.id ? focusedIssueRequestId : 0}
+                      defaultTextSizeStep={fontSizeStep}
+                      useDocLineHeight
                     />
                   )}
                 </div>

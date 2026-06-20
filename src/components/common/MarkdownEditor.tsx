@@ -22,14 +22,17 @@ type HistoryEntry = {
 
 const TEXT_SIZE_STEPS = [
   { fontSize: '0.75rem', lineHeight: '1.5rem' },
-  { fontSize: '0.825rem', lineHeight: '1.65rem' },
+  { fontSize: '0.8125rem', lineHeight: '1.625rem' },  // sm
   { fontSize: '0.9rem', lineHeight: '1.8rem' },
+  { fontSize: '0.9375rem', lineHeight: '1.875rem' }, // md
   { fontSize: '1rem', lineHeight: '2rem' },
+  { fontSize: '1.0625rem', lineHeight: '2.125rem' }, // lg
   { fontSize: '1.125rem', lineHeight: '2.25rem' },
   { fontSize: '1.25rem', lineHeight: '2.5rem' },
   { fontSize: '1.375rem', lineHeight: '2.75rem' },
 ] as const;
-const DEFAULT_TEXT_SIZE_STEP = 3;
+export const DOC_FONT_SIZE_STEP_INDEX = { sm: 1, md: 3, lg: 5 } as const;
+const DEFAULT_TEXT_SIZE_STEP = 3; // md
 const MAX_UNDO_ENTRIES = 100;
 const TYPING_UNDO_COALESCE_MS = 800;
 
@@ -50,6 +53,8 @@ interface MarkdownEditorProps {
   fillHeight?: boolean;
   identityKey?: string;
   previewValue?: string;
+  defaultTextSizeStep?: number;
+  useDocLineHeight?: boolean;
 }
 
 export function MarkdownEditor({
@@ -62,6 +67,8 @@ export function MarkdownEditor({
   minHeightClassName = 'min-h-[220px]',
   textClassName = 'text-sm leading-relaxed',
   previewClassName = 'prose prose-sm max-w-none',
+  defaultTextSizeStep,
+  useDocLineHeight = false,
   highlightHtml,
   focusQuery = null,
   focusRequestId = 0,
@@ -81,7 +88,10 @@ export function MarkdownEditor({
   const lastTypingChangeAtRef = useRef(0);
   const previousIdentityRef = useRef(identityKey);
   const [mode, setMode] = useState<EditorMode>('write');
-  const [textSizeStep, setTextSizeStep] = useState(DEFAULT_TEXT_SIZE_STEP);
+  const [textSizeStep, setTextSizeStep] = useState(defaultTextSizeStep ?? DEFAULT_TEXT_SIZE_STEP);
+  useEffect(() => {
+    if (defaultTextSizeStep !== undefined) setTextSizeStep(defaultTextSizeStep);
+  }, [defaultTextSizeStep]);
   const [selection, setSelection] = useState({ start: 0, end: 0 });
   const [toolbarOpen, setToolbarOpen] = useState(false);
   const previewHtml = useMemo(() => {
@@ -89,6 +99,9 @@ export function MarkdownEditor({
     return renderMarkdownToHtmlFragment(previewValue ?? value, { stripFootnoteNav: true });
   }, [mode, readOnly, value, previewValue]);
   const textSizeStyle = TEXT_SIZE_STEPS[textSizeStep];
+  const effectiveStyle = useDocLineHeight
+    ? { ...textSizeStyle, lineHeight: 'var(--doc-line-height)' }
+    : textSizeStyle;
   const activeCommands = useMemo(() => {
     if (!markdownEnabled || mode === 'preview') {
       return {
@@ -309,7 +322,7 @@ export function MarkdownEditor({
       autoCorrect="off"
       autoCapitalize="off"
       className={textareaClassName}
-      style={textSizeStyle}
+      style={effectiveStyle}
     />
   );
 
@@ -318,7 +331,7 @@ export function MarkdownEditor({
       ref={readOnlyHighlightRef}
       data-scroll-sync="true"
       className={`${fillHeight ? 'flex-1 min-h-0 overflow-y-auto custom-scrollbar' : minHeightClassName} w-full whitespace-pre-wrap break-words ${textClassName}`}
-      style={textSizeStyle}
+      style={effectiveStyle}
     >
       {value || (
         <span className="text-editorial-muted">
@@ -332,7 +345,7 @@ export function MarkdownEditor({
     <div
       data-scroll-sync="true"
       className={`${fillHeight ? 'flex-1 min-h-0 overflow-y-auto custom-scrollbar' : minHeightClassName} rounded-2xl border border-editorial-border bg-editorial-textbox/60 p-4 ${previewClassName}`}
-      style={textSizeStyle}
+      style={effectiveStyle}
     >
       {value.trim() ? (
         <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
@@ -505,7 +518,7 @@ export function MarkdownEditor({
         ) : (
           <div className="space-y-2">
             {textarea}
-            <HighlightedText html={highlightHtml} style={textSizeStyle} className={`${minHeightClassName} ${textClassName}`} />
+            <HighlightedText html={highlightHtml} style={effectiveStyle} className={`${minHeightClassName} ${textClassName}`} />
           </div>
         )
       ) : null}
@@ -514,7 +527,7 @@ export function MarkdownEditor({
           ref={readOnlyHighlightRef}
           data-scroll-sync="true"
           html={highlightHtml}
-          style={textSizeStyle}
+          style={effectiveStyle}
           className={fillHeight ? `flex-1 min-h-0 overflow-y-auto custom-scrollbar ${textClassName}` : `${minHeightClassName} ${textClassName}`}
         />
       ) : null}
@@ -540,7 +553,7 @@ export function MarkdownEditor({
                 autoCorrect="off"
                 autoCapitalize="off"
                 className={`h-full resize-none w-full bg-transparent outline-none custom-scrollbar ${textClassName} disabled:opacity-70`}
-                style={textSizeStyle}
+                style={effectiveStyle}
               />
             )}
             {preview}

@@ -8,7 +8,8 @@ import { usePipeline } from './hooks/usePipeline';
 import { useProjectAutosave } from './hooks/useProjectAutosave';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useUiStore } from './stores/uiStore';
-import type { UiFont } from './stores/uiStore';
+import type { UiFont, DocumentFontSize, DocumentLineHeight } from './stores/uiStore';
+import { DOC_FONT_SIZE_CSS } from './stores/uiStore';
 import { useConfigStore } from './stores/configStore';
 import { useProjectStore } from './stores/projectStore';
 import { useLibraryStore } from './stores/libraryStore';
@@ -55,6 +56,24 @@ function FontSync() {
   useEffect(() => {
     document.documentElement.style.setProperty('--font-sans', UI_FONT_STACK[uiFont]);
   }, [uiFont]);
+  return null;
+}
+
+
+const DOC_LINE_HEIGHT_VALUES: Record<DocumentLineHeight, string> = {
+  tight: '1.6',
+  normal: '2',
+  relaxed: '2.4',
+};
+
+function DocTypographySync() {
+  const documentFontSize = useUiStore((s) => s.documentFontSize);
+  const documentLineHeight = useUiStore((s) => s.documentLineHeight);
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty('--doc-font-size', DOC_FONT_SIZE_CSS[documentFontSize]);
+    root.style.setProperty('--doc-line-height', DOC_LINE_HEIGHT_VALUES[documentLineHeight]);
+  }, [documentFontSize, documentLineHeight]);
   return null;
 }
 
@@ -435,6 +454,7 @@ export default function App() {
       <ErrorBoundary>
       <HighlightColorSync />
       <FontSync />
+      <DocTypographySync />
       <RunStatusAnnouncer />
       <div className="flex h-dvh min-h-[var(--app-min-height)] min-w-[var(--app-min-width)] flex-col overflow-hidden bg-editorial-bg font-sans text-editorial-ink">
         <div className="flex-shrink-0">

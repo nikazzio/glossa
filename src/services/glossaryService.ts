@@ -3,6 +3,12 @@ import { select, execute, runInTransaction } from './dbService';
 import type { Glossary, GlossaryEntry } from '../types';
 import { generateId } from '../utils';
 
+export interface XlsxColumnMap {
+  termKey: string;
+  translationKey: string;
+  notesKey?: string;
+}
+
 interface GlossaryRow {
   id: string;
   name: string;
@@ -194,6 +200,10 @@ export async function importEntriesFromCsv(
       }
     });
   } else {
+    const [{ count: before }] = await select<{ count: number }>(
+      'SELECT COUNT(*) as count FROM glossary_entries WHERE glossary_id = $1',
+      [glossaryId],
+    );
     await runInTransaction(async (run) => {
       for (const entry of parsed) {
         await run(
@@ -204,8 +214,101 @@ export async function importEntriesFromCsv(
         );
       }
     });
+    const [{ count: after }] = await select<{ count: number }>(
+      'SELECT COUNT(*) as count FROM glossary_entries WHERE glossary_id = $1',
+      [glossaryId],
+    );
+    return after - before;
   }
 
+  return parsed.length;
+}
+
+export function exportGlossaryToCsv(entries: GlossaryEntry[]): string {
+  return Papa.unparse(
+    entries.map((e) => ({ term: e.term, translation: e.translation, notes: e.notes ?? '' })),
+    { header: true },
+  );
+}
+
+export async function exportGlossaryToXlsx(
+  sheetName: string,
+  entries: GlossaryEntry[],
+): Promise<Uint8Array> {
+  const { default: writeXlsxFile } = await import('write-excel-file/browser');
+  const rows = [
+    ['term', 'translation', 'notes'],
+    ...entries.map((e) => [e.term, e.translation, e.notes ?? '']),
+  ];
+  const safeSheet = sheetName.replace(/[/\\?*[\]:]/g, '_').slice(0, 31) || 'Sheet1';
+  const result = await writeXlsxFile(rows, { sheet: safeSheet });
+  const blob = await result.toBlob();
+  return new Uint8Array(await blob.arrayBuffer());
+}
+
+/** Read xlsx/xls file bytes and return headers + first-sheet rows. */
+export async function readXlsxSheet(
+  data: Uint8Array,
+): Promise<{ headers: string[]; rows: Record<string, string>[] }> {
+  const { readSheet } = await import('read-excel-file/browser');
+  const arrayBuffer = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
+  const allRows = await readSheet(arrayBuffer);
+  if (allRows.length === 0) return { headers: [], rows: [] };
+  const headers = allRows[0].map((cell) => String(cell ?? ''));
+  const rows = allRows.slice(1).map((row) => {
+    const record: Record<string, string> = {};
+    headers.forEach((h, i) => { record[h] = String(row[i] ?? ''); });
+    return record;
+  });
+  return { headers, rows };
+}
+
+export async function importEntriesFromXlsx(
+  glossaryId: string,
+  rows: Record<string, string>[],
+  columnMap: XlsxColumnMap,
+  strategy: 'replace' | 'merge',
+): Promise<number> {
+  const parsed: GlossaryEntry[] = rows
+    .filter((row) => String(row[columnMap.termKey] ?? '').trim() && String(row[columnMap.translationKey] ?? '').trim())
+    .map((row) => ({
+      id: generateId('gle'),
+      term: String(row[columnMap.termKey]).trim(),
+      translation: String(row[columnMap.translationKey]).trim(),
+      notes: columnMap.notesKey ? (String(row[columnMap.notesKey]).trim() || undefined) : undefined,
+    }));
+
+  if (strategy === 'replace') {
+    await runInTransaction(async (run) => {
+      await run('DELETE FROM glossary_entries WHERE glossary_id = $1', [glossaryId]);
+      for (const entry of parsed) {
+        await run(
+          'INSERT INTO glossary_entries (id, glossary_id, term, translation, notes) VALUES ($1, $2, $3, $4, $5)',
+          [entry.id, glossaryId, entry.term, entry.translation, entry.notes ?? ''],
+        );
+      }
+    });
+  } else {
+    const [{ count: before }] = await select<{ count: number }>(
+      'SELECT COUNT(*) as count FROM glossary_entries WHERE glossary_id = $1',
+      [glossaryId],
+    );
+    await runInTransaction(async (run) => {
+      for (const entry of parsed) {
+        await run(
+          `INSERT INTO glossary_entries (id, glossary_id, term, translation, notes)
+           VALUES ($1, $2, $3, $4, $5)
+           ON CONFLICT(glossary_id, term) DO NOTHING`,
+          [entry.id, glossaryId, entry.term, entry.translation, entry.notes ?? ''],
+        );
+      }
+    });
+    const [{ count: after }] = await select<{ count: number }>(
+      'SELECT COUNT(*) as count FROM glossary_entries WHERE glossary_id = $1',
+      [glossaryId],
+    );
+    return after - before;
+  }
   return parsed.length;
 }
 

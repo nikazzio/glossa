@@ -1,28 +1,50 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Upload, X, Check, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { open } from '@tauri-apps/plugin-dialog';
-import { readTextFile } from '@tauri-apps/plugin-fs';
+import { readTextFile, readFile } from '@tauri-apps/plugin-fs';
 import Papa from 'papaparse';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import {
+  importEntriesFromCsv,
+  importEntriesFromXlsx,
+  readXlsxSheet,
+  type XlsxColumnMap,
+} from '../../services/glossaryService';
 
 interface Props {
-  onImport: (csvText: string, strategy: 'replace' | 'merge') => Promise<void>;
+  glossaryId: string;
+  onImported: (count: number) => void;
   onClose: () => void;
 }
 
-type Step = 'pick' | 'preview' | 'confirm';
+type FileKind = 'csv' | 'xlsx';
+type Step = 'pick' | 'map' | 'preview' | 'confirm';
 type MergeStrategy = 'replace' | 'merge';
 
 const PREVIEW_ROWS = 5;
+const TERM_KEYS = ['term', 'source', 'from', 'termine', 'sorgente'];
+const TRANS_KEYS = ['translation', 'target', 'to', 'traduzione', 'destinazione'];
+const NOTES_KEYS = ['notes', 'note'];
 
-export function CsvImportDialog({ onImport, onClose }: Props) {
+function autoDetect(headers: string[]): Partial<XlsxColumnMap> {
+  const lower = headers.map((h) => h.toLowerCase());
+  const find = (keys: string[]) => headers[lower.findIndex((l) => keys.includes(l))] ?? undefined;
+  return { termKey: find(TERM_KEYS), translationKey: find(TRANS_KEYS), notesKey: find(NOTES_KEYS) };
+}
+
+export function CsvImportDialog({ glossaryId, onImported, onClose }: Props) {
   const { t } = useTranslation();
   const [step, setStep] = useState<Step>('pick');
+  const [fileKind, setFileKind] = useState<FileKind>('csv');
   const [csvText, setCsvText] = useState('');
+  const [xlsxRows, setXlsxRows] = useState<Record<string, string>[]>([]);
+  const [headers, setHeaders] = useState<string[]>([]);
   const [previewRows, setPreviewRows] = useState<string[][]>([]);
   const [previewHeaders, setPreviewHeaders] = useState<string[]>([]);
+  const [columnMap, setColumnMap] = useState<XlsxColumnMap>({ termKey: '', translationKey: '' });
   const [strategy, setStrategy] = useState<MergeStrategy>('merge');
   const [totalRows, setTotalRows] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -32,53 +54,111 @@ export function CsvImportDialog({ onImport, onClose }: Props) {
   const handlePickFile = async () => {
     setError(null);
     const path = await open({
-      title: t('library.csvPickTitle'),
-      filters: [{ name: 'CSV/TSV', extensions: ['csv', 'tsv', 'txt'] }],
+      title: t('library.importPickTitle'),
+      filters: [{ name: 'CSV / Excel', extensions: ['csv', 'tsv', 'txt', 'xlsx', 'xls'] }],
       multiple: false,
     });
     if (!path) return;
+    const ext = (path as string).split('.').pop()?.toLowerCase() ?? '';
+    const isXlsx = ext === 'xlsx' || ext === 'xls';
     try {
-      const text = await readTextFile(path as string);
-      const result = Papa.parse<string[]>(text, { skipEmptyLines: true });
-      if (!result.data || result.data.length < 2) {
-        setError(t('library.csvEmptyError'));
-        return;
+      if (isXlsx) {
+        const bytes = await readFile(path as string);
+        const { headers: xlsxHeaders, rows } = await readXlsxSheet(bytes);
+        if (rows.length === 0) { setError(t('library.csvEmptyError')); return; }
+        setFileKind('xlsx');
+        setXlsxRows(rows);
+        setHeaders(xlsxHeaders);
+        setTotalRows(rows.length);
+        const detected = autoDetect(xlsxHeaders);
+        const map: XlsxColumnMap = {
+          termKey: detected.termKey ?? xlsxHeaders[0] ?? '',
+          translationKey: detected.translationKey ?? xlsxHeaders[1] ?? '',
+          notesKey: detected.notesKey,
+        };
+        setColumnMap(map);
+        if (detected.termKey && detected.translationKey) {
+          // Auto-detected — go straight to preview
+          buildXlsxPreview(rows, xlsxHeaders, map);
+          setStep('preview');
+        } else {
+          setStep('map');
+        }
+      } else {
+        const text = await readTextFile(path as string);
+        const result = Papa.parse<string[]>(text, { skipEmptyLines: true });
+        if (!result.data || result.data.length < 2) { setError(t('library.csvEmptyError')); return; }
+        const [hdrs, ...rows] = result.data as string[][];
+        setFileKind('csv');
+        setCsvText(text);
+        setPreviewHeaders(hdrs);
+        setPreviewRows(rows.slice(0, PREVIEW_ROWS));
+        setTotalRows(rows.length);
+        setStep('preview');
       }
-      const [headers, ...rows] = result.data as string[][];
-      setPreviewHeaders(headers);
-      setPreviewRows(rows.slice(0, PREVIEW_ROWS));
-      setTotalRows(rows.length);
-      setCsvText(text);
-      setStep('preview');
-    } catch (err: any) {
-      setError(err?.message ?? t('library.csvReadError'));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : t('library.csvReadError'));
     }
+  };
+
+  const buildXlsxPreview = (
+    rows: Record<string, string>[],
+    hdrs: string[],
+    map: XlsxColumnMap,
+  ) => {
+    const cols = [map.termKey, map.translationKey, ...(map.notesKey ? [map.notesKey] : [])];
+    setPreviewHeaders(cols.filter(Boolean));
+    setPreviewRows(
+      rows.slice(0, PREVIEW_ROWS).map((row) => cols.filter(Boolean).map((c) => String(row[c] ?? ''))),
+    );
+  };
+
+  const handleMapContinue = () => {
+    if (!columnMap.termKey || !columnMap.translationKey) {
+      setError(t('library.xlsxMapRequired'));
+      return;
+    }
+    setError(null);
+    buildXlsxPreview(xlsxRows, headers, columnMap);
+    setStep('preview');
   };
 
   const handleConfirm = async () => {
     setLoading(true);
     try {
-      await onImport(csvText, strategy);
+      let count: number;
+      if (fileKind === 'xlsx') {
+        count = await importEntriesFromXlsx(glossaryId, xlsxRows, columnMap, strategy);
+      } else {
+        count = await importEntriesFromCsv(glossaryId, csvText, strategy);
+      }
+      onImported(count);
       onClose();
-    } catch (err: any) {
-      setError(err?.message ?? t('library.csvImportError'));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : t('library.csvImportError'));
       setLoading(false);
     }
   };
 
-  return (
+  const goBack = () => {
+    setError(null);
+    if (step === 'preview' && fileKind === 'xlsx') {
+      setStep('map');
+    } else {
+      setStep('pick');
+    }
+  };
+
+  return createPortal(
     <AnimatePresence>
       <div
-        className="fixed inset-0 z-[60] flex items-center justify-center p-6"
+        className="fixed inset-0 z-[300] flex items-center justify-center p-6"
         role="dialog"
         aria-modal="true"
         aria-labelledby="csv-import-title"
         ref={trapRef}
       >
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
+        <div
           className="absolute inset-0 bg-editorial-ink/60 backdrop-blur-sm"
           onClick={onClose}
         />
@@ -99,7 +179,7 @@ export function CsvImportDialog({ onImport, onClose }: Props) {
 
           <h3 id="csv-import-title" className="font-display text-xl italic tracking-tight mb-6 flex items-center gap-2">
             <Upload size={20} className="text-editorial-accent" />
-            {t('library.csvImportTitle')}
+            {t('library.importTitle')}
           </h3>
 
           {error && (
@@ -112,14 +192,59 @@ export function CsvImportDialog({ onImport, onClose }: Props) {
           {step === 'pick' && (
             <div className="space-y-4">
               <p className="text-[12px] text-editorial-muted leading-relaxed">
-                {t('library.csvPickDesc')}
+                {t('library.importPickDesc')}
               </p>
               <button
                 onClick={handlePickFile}
                 className="w-full rounded border border-dashed border-editorial-border/60 py-6 text-[11px] font-bold uppercase tracking-widest text-editorial-muted hover:border-editorial-accent hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               >
-                {t('library.csvPickButton')}
+                {t('library.importPickButton')}
               </button>
+            </div>
+          )}
+
+          {step === 'map' && (
+            <div className="space-y-4">
+              <p className="text-[11px] text-editorial-muted leading-relaxed">
+                {t('library.xlsxMapDesc')}
+              </p>
+              <div className="space-y-3">
+                {([
+                  { key: 'termKey', label: t('library.xlsxTermCol'), required: true },
+                  { key: 'translationKey', label: t('library.xlsxTransCol'), required: true },
+                  { key: 'notesKey', label: t('library.xlsxNotesCol'), required: false },
+                ] as const).map(({ key, label, required }) => (
+                  <div key={key} className="flex items-center gap-3">
+                    <label className="w-36 shrink-0 text-[11px] font-bold uppercase tracking-widest text-editorial-muted">
+                      {label}
+                    </label>
+                    <select
+                      value={columnMap[key] ?? ''}
+                      onChange={(e) => setColumnMap((m) => ({ ...m, [key]: e.target.value || undefined }))}
+                      className="flex-1 rounded border border-editorial-border bg-editorial-bg px-3 py-2 text-[12px] text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    >
+                      {!required && <option value="">{t('library.xlsxNoneOption')}</option>}
+                      {headers.map((h) => (
+                        <option key={h} value={h}>{h}</option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2 justify-end pt-2">
+                <button
+                  onClick={() => { setStep('pick'); setError(null); }}
+                  className="px-4 py-2 text-[11px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                >
+                  {t('common.back')}
+                </button>
+                <button
+                  onClick={handleMapContinue}
+                  className="flex items-center gap-1.5 px-4 py-2 text-[11px] font-bold uppercase tracking-widest bg-editorial-ink text-white hover:bg-editorial-ink/80 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                >
+                  {t('common.next')}
+                </button>
+              </div>
             </div>
           )}
 
@@ -183,7 +308,7 @@ export function CsvImportDialog({ onImport, onClose }: Props) {
 
               <div className="flex gap-2 justify-end pt-2">
                 <button
-                  onClick={() => { setStep('pick'); setError(null); }}
+                  onClick={goBack}
                   className="px-4 py-2 text-[11px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 >
                   {t('common.back')}
@@ -201,6 +326,7 @@ export function CsvImportDialog({ onImport, onClose }: Props) {
           )}
         </motion.div>
       </div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

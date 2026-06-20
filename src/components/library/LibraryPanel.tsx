@@ -70,10 +70,7 @@ export function LibraryPanel() {
           aria-labelledby="library-panel-title"
           ref={trapRef}
         >
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+          <div
             className="absolute inset-0 bg-editorial-ink/60 backdrop-blur-sm"
             onClick={handleClose}
           />
