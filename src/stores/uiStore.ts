@@ -22,6 +22,7 @@ export const DOC_FONT_SIZE_CSS: Record<DocumentFontSize, string> = {
 };
 export type DocumentLineHeight = 'tight' | 'normal' | 'relaxed';
 export type SettingsTab = 'translations' | 'provider' | 'typography';
+export type WorkspaceArea = 'translations' | 'library' | 'transcriptions';
 
 export interface HLColorSet {
   sourceTerm: string;
@@ -93,8 +94,10 @@ interface UiState {
   projectFlyoutWidth: number;
   configFlyoutWidth: number;
   pendingAnnotationAnchor: { chunkId: string; text: string; content?: string } | null;
+  activeWorkspaceArea: WorkspaceArea | null;
 
   setTraceStageId: (id: string | null) => void;
+  setActiveWorkspaceArea: (area: WorkspaceArea | null) => void;
   setPendingAnnotationAnchor: (anchor: { chunkId: string; text: string; content?: string } | null) => void;
   setViewMode: (mode: ViewMode) => void;
   setDocumentLayout: (layout: DocumentLayoutPreference) => void;
@@ -174,6 +177,7 @@ export const useUiStore = create<UiState>()(
       projectFlyoutWidth: 430,
       configFlyoutWidth: 560,
       pendingAnnotationAnchor: null,
+      activeWorkspaceArea: null,
 
       setViewMode: (mode) =>
         set((state) => ({
@@ -306,6 +310,7 @@ export const useUiStore = create<UiState>()(
       clearAnnotationFocus: () => set({ focusedIssueQuery: null, focusIsAnnotation: false }),
       setTraceStageId: (id) => set({ traceStageId: id }),
       setPendingAnnotationAnchor: (anchor) => set({ pendingAnnotationAnchor: anchor }),
+      setActiveWorkspaceArea: (area) => set({ activeWorkspaceArea: area }),
       setActiveProjectPanel: (panel) =>
         set((state) => {
           if (panel === 'insight') {
