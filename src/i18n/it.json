@@ -670,6 +670,12 @@
       "generalTab": "Generale",
       "memoryTab": "Phrase Memory",
       "backupTab": "Backup"
+    },
+    "translationsArea": {
+      "sort": {
+        "updatedAt": "Recenti",
+        "name": "Nome"
+      }
     }
   },
   "files": {
