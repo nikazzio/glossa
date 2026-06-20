@@ -17,7 +17,7 @@ function SaveIndicator({ state }: { state: 'idle' | 'dirty' | 'saving' | 'saved'
     return (
       <span title={t('statusBar.saving')} className="flex items-center gap-1 text-editorial-muted">
         <Loader2 size={10} className="animate-spin" />
-        <span className="text-[11px]">{t('statusBar.saving')}</span>
+        <span className="text-xs">{t('statusBar.saving')}</span>
       </span>
     );
   }
@@ -39,7 +39,7 @@ function SaveIndicator({ state }: { state: 'idle' | 'dirty' | 'saving' | 'saved'
   return (
     <span title={label} className="flex items-center gap-1.5">
       <span className={`h-1.5 w-1.5 rounded-full ${dot}`} aria-hidden="true" />
-      <span className="text-[11px] text-editorial-muted">{label}</span>
+      <span className="text-xs text-editorial-muted">{label}</span>
     </span>
   );
 }
@@ -54,7 +54,7 @@ export function AppStatusBar() {
     <div
       role="status"
       aria-live="polite"
-      className="flex h-7 shrink-0 items-center justify-between gap-4 border-t border-editorial-border/60 bg-editorial-bg px-4 text-[11px] text-editorial-muted"
+      className="flex h-7 shrink-0 items-center justify-between gap-4 border-t border-editorial-border/60 bg-editorial-bg px-4 text-xs text-editorial-muted"
     >
       {/* Left: context breadcrumb */}
       <div className="flex min-w-0 items-center gap-2 overflow-hidden">
