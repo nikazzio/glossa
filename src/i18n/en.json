@@ -69,18 +69,21 @@
     "modeLabel": "Mode",
     "mode": {
       "standard": "Standard",
-      "editorial": "Editorial"
+      "editorial": "Editorial",
+      "deepl-hybrid": "DeepL Hybrid"
     },
     "modeDesc": {
       "standard": "One translation stage + quality audit.",
       "editorial": "Three stages: translation → refine → format, then quality audit."
     },
     "stageRole": {
+      "deepl-translation": "DeepL Translation",
       "translation": "Translation",
       "refine": "Refine",
       "format": "Format"
     },
     "stageRoleHint": {
+      "deepl-translation": "",
       "refine": "Reviews and improves the translation by comparing it against the original source.",
       "format": "Applies formatting corrections without seeing the source text (blind stage). Cannot retranslate."
     },

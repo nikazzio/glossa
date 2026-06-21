@@ -1,4 +1,5 @@
 import type { ModelProvider, PipelineMode, PipelineStageConfig, StageRole } from '../types';
+import { DEFAULT_DEEPL_STAGE_OPTIONS } from '../constants';
 
 interface StageTemplate {
   id: string;
@@ -45,6 +46,11 @@ const MODE_SEQUENCES: Record<PipelineMode, StageRole[]> = {
 };
 
 function buildStage(template: StageTemplate, existing?: PipelineStageConfig): PipelineStageConfig {
+  const baseOptions = existing?.providerOptions ?? {};
+  const providerOptions = template.defaultProvider === 'deepl'
+    ? { ...baseOptions, deepl: baseOptions.deepl ?? DEFAULT_DEEPL_STAGE_OPTIONS }
+    : baseOptions;
+
   return {
     id: existing?.id ?? template.id,
     name: template.name,
@@ -53,7 +59,7 @@ function buildStage(template: StageTemplate, existing?: PipelineStageConfig): Pi
     model: existing?.model ?? (template.defaultProvider === 'deepl' ? '' : 'gpt-5-nano'),
     provider: existing?.provider ?? (template.defaultProvider ?? 'openai'),
     enabled: true,
-    providerOptions: existing?.providerOptions,
+    providerOptions,
   };
 }
 

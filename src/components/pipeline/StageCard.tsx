@@ -172,7 +172,7 @@ export function StageCard({
   return (
     <div className="space-y-4">
       {/* Role hint for non-translation stages */}
-      {(stage.role ?? 'translation') !== 'translation' && (
+      {(stage.role ?? 'translation') !== 'translation' && (stage.role ?? 'translation') !== 'deepl-translation' && (
         <p className="text-[10px] leading-relaxed text-editorial-muted/70">
           {t(`pipeline.stageRoleHint.${stage.role ?? 'translation'}`)}
         </p>
