@@ -1,8 +1,7 @@
-import { createPortal } from 'react-dom';
-import { AlertTriangle, X } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { Dialog } from '../ui';
 import type { TranslationChunk } from '../../types';
 
 export type ExportFormat = 'txt' | 'md' | 'html' | 'docx' | 'bilingual';
@@ -30,7 +29,6 @@ interface ExportDialogProps {
 
 export function ExportDialog({ chunks, markdownAware, onConfirm, onCancel }: ExportDialogProps) {
   const { t } = useTranslation();
-  const trapRef = useFocusTrap(true, onCancel);
   const [format, setFormat] = useState<ExportFormat>('txt');
   const [separatorKey, setSeparatorKey] = useState<'blank' | 'hr' | 'asterisk'>('blank');
 
@@ -46,44 +44,37 @@ export function ExportDialog({ chunks, markdownAware, onConfirm, onCancel }: Exp
     { key: 'bilingual', label: t('files.exportBilingual') },
   ];
 
-  if (typeof document === 'undefined') return null;
-
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[300] flex items-center justify-center bg-editorial-ink/35 p-4 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="export-dialog-title"
-      ref={trapRef}
-    >
-      <div className="flex max-h-[90vh] w-full max-w-md flex-col rounded-[28px] border border-editorial-border bg-editorial-bg shadow-[var(--shadow-modal)]">
-        {/* Header */}
-        <div className="shrink-0 border-b border-editorial-border px-6 py-5">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-                {t('header.exportLabel')}
-              </div>
-              <h3
-                id="export-dialog-title"
-                className="mt-1 font-display text-2xl italic tracking-tight text-editorial-ink"
-              >
-                {t('files.exportDialogTitle')}
-              </h3>
-            </div>
-            <button
-              type="button"
-              onClick={onCancel}
-              className="shrink-0 rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              aria-label={t('common.close')}
-            >
-              <X size={16} />
-            </button>
-          </div>
+  return (
+    <Dialog
+      open
+      onOpenChange={(o) => {
+        if (!o) onCancel();
+      }}
+      eyebrow={t('header.exportLabel')}
+      title={t('files.exportDialogTitle')}
+      closeLabel={t('common.close')}
+      widthClassName="max-w-md"
+      bodyClassName="px-6 py-5"
+      footer={
+        <div className="flex items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-full border border-editorial-border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          >
+            {t('common.cancel')}
+          </button>
+          <button
+            type="button"
+            onClick={() => onConfirm(format, separatorValue, markdownAware)}
+            className="rounded-full bg-editorial-ink px-5 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-white transition-colors hover:bg-editorial-ink/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          >
+            {t('files.exportConfirm')}
+          </button>
         </div>
-
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6 custom-scrollbar">
+      }
+    >
+      <div className="space-y-6">
           {/* Warning chunk mancanti */}
           {missingCount > 0 && (
             <div className="flex items-start gap-3 rounded-2xl border border-editorial-warning/50 bg-editorial-warning/8 px-4 py-3">
@@ -154,27 +145,7 @@ export function ExportDialog({ chunks, markdownAware, onConfirm, onCancel }: Exp
               </div>
             </div>
           )}
-        </div>
-
-        {/* Footer */}
-        <div className="shrink-0 flex items-center justify-end gap-3 border-t border-editorial-border px-6 py-4">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="rounded-full border border-editorial-border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-          >
-            {t('common.cancel')}
-          </button>
-          <button
-            type="button"
-            onClick={() => onConfirm(format, separatorValue, markdownAware)}
-            className="rounded-full bg-editorial-ink px-5 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-white transition-colors hover:bg-editorial-ink/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-          >
-            {t('files.exportConfirm')}
-          </button>
-        </div>
       </div>
-    </div>,
-    document.body,
+    </Dialog>
   );
 }
