@@ -702,10 +702,12 @@
       }
     },
     "hub": {
-      "recentProjects": "Recenti",
-      "allProjects": "Tutti i progetti",
       "lockedArea": "In arrivo nella versione 2.0",
-      "goToArea": "Vai all'area"
+      "goToArea": "Vai all'area",
+      "projects": "Progetti",
+      "colName": "Nome",
+      "colModified": "Modificato",
+      "noProjects": "Nessun progetto in questo workspace."
     }
   },
   "files": {
