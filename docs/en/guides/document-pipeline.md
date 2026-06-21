@@ -21,6 +21,24 @@ Glossa is built around a four-phase document workflow:
 Use Sandbox when you want fast iteration on a sample. Use Document mode when
 the text needs structure, continuity, and review history.
 
+## DeepL Hybrid Mode
+
+The **DeepL Hybrid** mode combines the speed and precision of the DeepL API with the contextual refinement of an LLM:
+
+| Stage | Provider | Role |
+|---|---|---|
+| Stage 1 | DeepL API | Main translation |
+| Stage 2 | LLM (optional) | Style and register refinement |
+| Judge | LLM | Quality audit (unchanged) |
+
+**Requirements:** DeepL API key configured in Settings → provider section.
+
+**When to use it:** Texts that require high terminological fidelity and speed, where an LLM alone would need too much context or elaborate prompts.
+
+**Formality:** For languages that support it (German, Italian, etc.), you can set the formal/informal register directly in the DeepL stage.
+
+**DeepL Glossaries:** You can build a DeepL glossary from the terms in your Glossa glossary assigned to the pipeline, so DeepL automatically respects your terminology.
+
 ## Standard document flow
 
 1. Import a document.
