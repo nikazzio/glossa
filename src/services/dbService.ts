@@ -98,6 +98,7 @@ const ALLOWED_MIGRATIONS = new Set([
   'pipelines.auto_search_phrase_memory',
   'pipelines.phrase_memory_similarity_threshold',
   'pipelines.phrase_memory_max_results',
+  'glossaries.workspace_id',
 ]);
 
 const VALID_COLUMN_DEFINITION = /^(INTEGER|TEXT|REAL|BLOB|NUMERIC)(\s+NOT\s+NULL)?(\s+DEFAULT\s+('[^']*'|NULL|-?\d+(\.\d+)?))?$/i;
@@ -382,6 +383,7 @@ export async function initDatabase(): Promise<void> {
 
   await ensureColumn('prompt_templates', 'context', "TEXT NOT NULL DEFAULT 'stage'");
   await ensureColumn('prompt_templates', 'workflow', "TEXT NOT NULL DEFAULT 'translation'");
+  await ensureColumn('glossaries', 'workspace_id', 'TEXT DEFAULT NULL');
   // Migrate unique index from (name) to (name, context) so stage/audit can share names
   await conn.execute('DROP INDEX IF EXISTS idx_prompt_templates_name');
   await conn.execute(`

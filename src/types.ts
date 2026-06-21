@@ -97,6 +97,7 @@ export interface Glossary {
   sourceLanguage: string;
   targetLanguage: string;
   createdAt: string;
+  workspaceId?: string;
 }
 
 export interface PipelineStageConfig {

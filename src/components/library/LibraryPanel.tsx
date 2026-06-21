@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useLibraryStore, type LibraryTab } from '../../stores/libraryStore';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { confirm } from '../../stores/confirmStore';
 import { DictionariesTab } from './DictionariesTab';
@@ -34,6 +35,7 @@ export function LibraryPanel() {
     dirtyIds,
     saveAllDirty,
   } = useLibraryStore();
+  const { activeWorkspace } = useWorkspaceStore();
 
   const handleClose = async () => {
     if (dirtyIds.length > 0) {
@@ -57,8 +59,12 @@ export function LibraryPanel() {
   const trapRef = useFocusTrap(showLibraryPanel, handleClose);
 
   useEffect(() => {
-    if (showLibraryPanel) loadGlossaries();
-  }, [showLibraryPanel, loadGlossaries]);
+    if (showLibraryPanel) loadGlossaries(activeWorkspace?.id ?? null);
+  }, [showLibraryPanel, activeWorkspace?.id, loadGlossaries]);
+
+  const panelTitle = activeWorkspace
+    ? `${t('library.title')} — ${activeWorkspace.name}`
+    : t('library.title');
 
   return (
     <AnimatePresence>
@@ -82,7 +88,7 @@ export function LibraryPanel() {
           >
             <EditorialModalShell
               titleId="library-panel-title"
-              title={t('library.title')}
+              title={panelTitle}
               closeLabel={t('settings.close')}
               onClose={handleClose}
               icon={<BookMarked size={22} />}
@@ -103,7 +109,7 @@ export function LibraryPanel() {
             >
               <div className="flex h-full flex-col">
                 <div className="border-b border-editorial-border px-6 py-3 md:px-8">
-                  <div className="flex gap-2" role="tablist" aria-label={t('library.title')}>
+                  <div className="flex gap-2" role="tablist" aria-label={panelTitle}>
                     {TABS.map((tab) => (
                       <IconButton
                         key={tab.id}

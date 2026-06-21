@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { save } from '@tauri-apps/plugin-dialog';
 import { writeFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { useLibraryStore } from '../../stores/libraryStore';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useProjectStore } from '../../stores/projectStore';
 import {
@@ -37,6 +38,7 @@ export function DictionariesTab() {
   } = useLibraryStore();
   const { config, assignGlossary } = usePipelineStore();
   const { currentProjectId } = useProjectStore();
+  const { activeWorkspace } = useWorkspaceStore();
 
   const [newName, setNewName] = useState('');
   const [creating, setCreating] = useState(false);
@@ -74,7 +76,7 @@ export function DictionariesTab() {
   const handleCreate = async () => {
     if (!newName.trim()) return;
     try {
-      await createGlossary(newName.trim());
+      await createGlossary(newName.trim(), undefined, undefined, undefined, activeWorkspace?.id ?? null);
       setNewName('');
       setCreating(false);
     } catch (err: any) {
