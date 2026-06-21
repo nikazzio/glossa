@@ -11,7 +11,7 @@ Glossa separates application settings, workspace resources, and per-project pipe
 | Level | What lives there |
 |---|---|
 | App | API keys, Ollama connection, interface preferences, defaults |
-| Workspace | Shared phrase-memory resources and translation area context |
+| Workspace | Phrase memory, Library glossaries, translation area context |
 | Project / pipeline | Languages, stages, prompts, glossary assignment, chunks, outputs |
 
 ## Practical meaning
@@ -36,7 +36,8 @@ Glossa separates application settings, workspace resources, and per-project pipe
 | API keys | App-wide |
 | Interface preferences | App-wide |
 | Phrase-memory storage | Workspace |
-| Active glossary assignment | Project / pipeline |
+| Library glossaries | Workspace |
+| Glossary assigned to pipeline | Project / pipeline |
 | Chunks, drafts, audit output, notes | Project / pipeline |
 
 ## Naming advice

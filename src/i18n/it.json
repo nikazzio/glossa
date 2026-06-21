@@ -1183,8 +1183,8 @@
     },
     "glossary": {
       "title": "Libreria: dizionari e template",
-      "intro": "La Libreria è un pannello globale (icona libreria nell'header) condiviso tra tutti i progetti. Contiene due tab: Dizionari, dove gestisci raccolte riusabili di termine→traduzione, e Modelli Prompt, dove gestisci la collezione globale di template di prompt.",
-      "libraryTitle": "Dizionari globali",
+      "intro": "La Libreria (icona nell'header) è un pannello del workspace attivo: il titolo mostra il nome del workspace corrente. Contiene tre tab: Dizionari (glossari scoped al workspace), Modelli Prompt (template globali filtrabili per workflow) e Frasi (phrase memory del workspace).",
+      "libraryTitle": "Dizionari del workspace",
       "libraryDesc": "Nel tab Dizionari puoi creare nuovi dizionari, rinominarli con doppio clic, duplicarli (Crea copia), eliminarli, importare termini da CSV/TSV e modificare le voci inline espandendo il dizionario. Un dizionario può essere assegnato come glossario attivo del progetto corrente con il pulsante Assegna.",
       "csvTitle": "Importa da CSV/TSV",
       "csvDesc": "Il pulsante Upload accanto a ogni dizionario apre un wizard che mostra l'anteprima delle prime righe e chiede la strategia: 'Aggiungi/aggiorna' integra senza toccare i termini esistenti, 'Sostituisci tutto' cancella e reimporta. Le intestazioni riconosciute sono termine/source/from per il termine sorgente, traduzione/target/to per la traduzione (case-insensitive); la colonna notes è opzionale.",

@@ -1183,8 +1183,8 @@
     },
     "glossary": {
       "title": "Library: dictionaries and templates",
-      "intro": "The Library is a global panel (library icon in the header) shared across all projects. It has two tabs: Dictionaries, where you manage reusable term→translation collections, and Prompt Templates, where you manage the global collection of prompt templates.",
-      "libraryTitle": "Global dictionaries",
+      "intro": "The Library (header icon) is a workspace panel: the title shows the active workspace name. It has three tabs: Dictionaries (glossaries scoped to the workspace), Prompt Templates (global templates filterable by workflow), and Phrases (workspace phrase memory).",
+      "libraryTitle": "Workspace dictionaries",
       "libraryDesc": "In the Dictionaries tab you can create new dictionaries, rename them with double-click, duplicate (Fork), delete, import terms from CSV/TSV, and edit entries inline by expanding a dictionary. A dictionary can be assigned as the active glossary of the current project with the Assign button.",
       "csvTitle": "Import from CSV/TSV",
       "csvDesc": "The Upload button next to each dictionary opens a wizard that previews the first rows and asks for a strategy: 'Add/update' merges without touching existing terms, 'Replace all' wipes and reimports. Recognised headers: term/source/from for the source term, translation/target/to for the translation (case-insensitive); the notes column is optional.",
