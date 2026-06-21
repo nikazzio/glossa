@@ -194,6 +194,60 @@ Regole:
 
 ---
 
+### Finestre / overlay — `Dialog` e `AlertDialog` (OBBLIGATORIO)
+
+Tutte le finestre modali poggiano su **Radix UI**. Comportamento (focus trap, Escape, ripristino focus, scroll-lock, portale, `aria-modal`) è gestito dalla libreria: **non** si reimplementa a mano. Vietato `fixed inset-0` + backdrop manuale, `useFocusTrap`, `EditorialModalShell` (rimossi).
+
+- **`Dialog`** — finestra generica con chrome editoriale (eyebrow, icona accent, titolo `font-display` italic, descrizione, body scrollabile, footer, X in alto a destra).
+
+```tsx
+import { Dialog } from '../ui';
+
+<Dialog
+  open={open}
+  onOpenChange={(o) => { if (!o) onClose(); }}
+  title={t('...')}
+  closeLabel={t('common.close')}
+  eyebrow={t('...')}            // opz.
+  icon={<SomeIcon size={20} />} // opz.
+  widthClassName="max-w-lg"     // default max-w-3xl
+  panelClassName="h-[85vh]"     // opz. altezza fissa
+  footer={/* pulsanti */}
+>
+  {/* corpo */}
+</Dialog>
+```
+
+- **`AlertDialog`** — solo conferme (azione + annulla). Focus iniziale sul pulsante sicuro, non si chiude con click esterno.
+
+```tsx
+<AlertDialog open={open} onOpenChange={...} title={...}
+  confirmLabel={...} cancelLabel={...} onConfirm={...}
+  tone="danger" />   // 'danger' = conferma rossa per azioni distruttive
+```
+
+Regole:
+- Finestra che si apre **sopra** un pannello/overlay app: lo z-index delle primitive è `z-[200]`, sopra gli overlay app (Libreria `z-[160]`). Non serve override.
+- Header bespoke (es. Anteprima import): usare le primitive Radix dirette (`RadixDialog.Root/Portal/Overlay/Content`) con `RadixDialog.Title asChild` sul titolo, mantenendo lo z-index `z-[200]`.
+
+### Pulsanti finestra — `DialogConfirmButton` / `DialogCancelButton` (OBBLIGATORIO)
+
+Pulsanti base di ogni footer finestra. Uniformi ovunque.
+
+```tsx
+import { DialogConfirmButton, DialogCancelButton } from '../ui';
+
+<DialogCancelButton onClick={onClose}>{t('common.cancel')}</DialogCancelButton>
+<DialogConfirmButton onClick={onConfirm} disabled={!canConfirm}>{t('common.confirm')}</DialogConfirmButton>
+```
+
+- **Conferma/Accetta**: pieno color **inchiostro** (`bg-editorial-ink text-white`), `text-sm`, frase normale (no maiuscolo), pillola arrotondata.
+- **Annulla/Chiudi/Indietro**: bordo sobrio, testo muted; all'hover sfondo `editorial-textbox/50` + testo/bordo ink.
+- Eccezione: conferme **distruttive** usano `AlertDialog tone="danger"` (pulsante rosso accento come segnale di pericolo).
+- Non creare pulsanti footer raw: usa sempre queste due primitive.
+
+---
+
 ### Barra navigazione filtri (pattern LibraryPanel — OBBLIGATORIO)
 
 Ogni gruppo di filtri/tab usa `<IconButton>` con separatore e label corsiva:
