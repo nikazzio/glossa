@@ -8,6 +8,7 @@ import {
   Link2Off,
   Loader2,
   Minus,
+  Network,
   PanelLeft,
   PanelRight,
   Play,
@@ -506,11 +507,8 @@ export function PipelineSidebarPipelinesSection({ collapsed = false }: { collaps
                   )}
                 </IconButton>
                 {pipeline.mode === 'deepl-hybrid' && (
-                  <span
-                    className="absolute -top-1 -right-1 rounded-full bg-editorial-accent px-1 text-[9px] font-bold text-white leading-tight pointer-events-none"
-                    title="Pipeline DeepL Hybrid"
-                  >
-                    D
+                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-editorial-accent text-white pointer-events-none z-10" title="Pipeline DeepL Hybrid">
+                    <Network size={9} />
                   </span>
                 )}
               </div>
@@ -586,11 +584,8 @@ export function PipelineSidebarPipelinesSection({ collapsed = false }: { collaps
                       )}
                     </IconButton>
                     {pipeline.mode === 'deepl-hybrid' && (
-                      <span
-                        className="absolute -top-1 -right-1 rounded-full bg-editorial-accent px-1 text-[9px] font-bold text-white leading-tight pointer-events-none z-10"
-                        title="Pipeline DeepL Hybrid"
-                      >
-                        D
+                      <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-editorial-accent text-white pointer-events-none z-10" title="Pipeline DeepL Hybrid">
+                        <Network size={9} />
                       </span>
                     )}
                     {pipelines.length > 1 && !isPipelineRunning && (
