@@ -113,3 +113,27 @@ describe('buildStagesForMode', () => {
     });
   });
 });
+
+describe('buildStagesForMode — deepl-hybrid', () => {
+  it('produce 2 stage: deepl-translation + refine', () => {
+    const stages = buildStagesForMode('deepl-hybrid', []);
+    expect(stages).toHaveLength(2);
+    expect(stages[0].role).toBe('deepl-translation');
+    expect(stages[0].provider).toBe('deepl');
+    expect(stages[1].role).toBe('refine');
+    expect(stages[1].provider).not.toBe('deepl');
+  });
+
+  it('preserva il prompt dello stage refine esistente', () => {
+    const existing: PipelineStageConfig[] = [
+      { id: 'stg-refine', role: 'refine', name: 'Refine', prompt: 'custom refine', model: 'gpt-5-nano', provider: 'openai', enabled: true },
+    ];
+    const stages = buildStagesForMode('deepl-hybrid', existing);
+    expect(stages[1].prompt).toBe('custom refine');
+  });
+
+  it('lo stage deepl non ha prompt LLM', () => {
+    const stages = buildStagesForMode('deepl-hybrid', []);
+    expect(stages[0].prompt).toBe('');
+  });
+});

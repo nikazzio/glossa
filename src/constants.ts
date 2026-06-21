@@ -46,6 +46,12 @@ export function defaultPersonaText(source: string, target: string): string {
   return `You are an expert translator and linguist specialized in ${source} to ${target} translation.`;
 }
 
+export const DEFAULT_DEEPL_STAGE_OPTIONS = {
+  modelType: 'prefer_quality_optimized' as const,
+  preserveFormatting: true,
+  showBilledCharacters: true,
+} satisfies import('./types').DeeplConfig;
+
 export const LANGUAGES = [
   'English',
   'Italian',
