@@ -25,7 +25,7 @@ export function DialogCancelButton({ children, className = '', type = 'button', 
   return (
     <button
       type={type}
-      className={`${BASE} border border-editorial-border text-editorial-muted hover:border-editorial-ink/40 hover:text-editorial-ink ${className}`.trim()}
+      className={`${BASE} border border-editorial-border text-editorial-muted hover:border-editorial-ink/40 hover:bg-editorial-textbox/50 hover:text-editorial-ink ${className}`.trim()}
       {...rest}
     >
       {children}

@@ -52,7 +52,7 @@ export function AlertDialog({
               <button
                 type="button"
                 disabled={busy}
-                className="rounded-full border border-editorial-border px-5 py-2 text-sm text-editorial-muted transition-colors hover:border-editorial-ink/40 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
+                className="rounded-full border border-editorial-border px-5 py-2 text-sm text-editorial-muted transition-colors hover:border-editorial-ink/40 hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {cancelLabel}
               </button>
