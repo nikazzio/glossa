@@ -64,3 +64,42 @@ export const LANGUAGES = [
   'Korean',
   'Russian',
 ];
+
+export const LANGUAGE_TO_DEEPL_CODE: Record<string, string> = {
+  'Italian': 'IT',
+  'English': 'EN',
+  'French': 'FR',
+  'German': 'DE',
+  'Spanish': 'ES',
+  'Portuguese': 'PT',
+  'Dutch': 'NL',
+  'Polish': 'PL',
+  'Russian': 'RU',
+  'Japanese': 'JA',
+  'Chinese (Simplified)': 'ZH',
+  'Chinese (Traditional)': 'ZH',
+  'Korean': 'KO',
+  'Arabic': 'AR',
+  'Turkish': 'TR',
+  'Swedish': 'SV',
+  'Danish': 'DA',
+  'Norwegian': 'NB',
+  'Finnish': 'FI',
+  'Czech': 'CS',
+  'Slovak': 'SK',
+  'Hungarian': 'HU',
+  'Romanian': 'RO',
+  'Bulgarian': 'BG',
+  'Croatian': 'HR',
+  'Slovenian': 'SL',
+  'Greek': 'EL',
+  'Ukrainian': 'UK',
+  'Indonesian': 'ID',
+  'Latvian': 'LV',
+  'Lithuanian': 'LT',
+  'Estonian': 'ET',
+};
+
+export function toDeeplCode(languageName: string): string {
+  return LANGUAGE_TO_DEEPL_CODE[languageName] ?? languageName.slice(0, 2).toUpperCase();
+}

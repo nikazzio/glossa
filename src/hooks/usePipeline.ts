@@ -19,6 +19,7 @@ import { getChunksWithAllMatchesDisabled } from '../utils/memoryPreLaunchCheck';
 import { saveChunkCheckpoint, setPipelineRunState } from '../services/pipelineService';
 import { buildPipelineFingerprint } from '../utils/pipelineFingerprint';
 import { calculateBlobBudget } from '../models/catalog';
+import { toDeeplCode } from '../constants';
 import { stripFootnoteMarkers } from '../utils/footnoteExtractor';
 import { buildBlobContext } from './pipeline/blobContext';
 import type { BatchRunMode, ChunkOutcome, FinalChunkStatus } from './pipeline/blobContext';
@@ -317,8 +318,8 @@ export function usePipeline() {
             if (stage.provider === 'deepl') {
               const deeplResult = await deeplService.runDeeplStage({
                 text: stageText,
-                sourceLang: effectiveConfig.sourceLanguage || undefined,
-                targetLang: effectiveConfig.targetLanguage,
+                sourceLang: effectiveConfig.sourceLanguage ? toDeeplCode(effectiveConfig.sourceLanguage) : undefined,
+                targetLang: toDeeplCode(effectiveConfig.targetLanguage),
                 deeplConfig: stage.providerOptions?.deepl,
               });
               capturedBilledCharacters = deeplResult.billedCharacters;

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { deeplService } from '../../services/deeplService';
 import type { DeeplConfig, DeeplLanguageInfo, GlossaryEntry } from '../../types';
 import type { DeeplGlossaryInfo } from '../../services/deeplService';
-import { DEFAULT_DEEPL_STAGE_OPTIONS } from '../../constants';
+import { DEFAULT_DEEPL_STAGE_OPTIONS, toDeeplCode } from '../../constants';
 
 interface DeeplStageConfigProps {
   value?: DeeplConfig;
@@ -27,11 +27,12 @@ export function DeeplStageConfig({
   const [glossaries, setGlossaries] = useState<DeeplGlossaryInfo[]>([]);
   const [glossariesLoading, setGlossariesLoading] = useState(false);
   const [isCreatingGlossary, setIsCreatingGlossary] = useState(false);
+  const [glossaryError, setGlossaryError] = useState<string | null>(null);
 
   const config = { ...DEFAULT_DEEPL_STAGE_OPTIONS, ...value };
 
-  const targetLang = targetLanguage.toUpperCase().split('-')[0];
-  const normalizedSourceLang = sourceLang.toUpperCase().split('-')[0];
+  const targetLang = toDeeplCode(targetLanguage);
+  const normalizedSourceLang = toDeeplCode(sourceLang);
   const targetInfo = languages.find((l) => l.language === targetLang);
   const supportsFormality = targetInfo?.supportsFormality ?? false;
 
@@ -62,6 +63,7 @@ export function DeeplStageConfig({
   const handleCreateFromGlossa = async () => {
     if (glossaryEntries.length === 0) return;
     setIsCreatingGlossary(true);
+    setGlossaryError(null);
     try {
       const created = await deeplService.createGlossary({
         name: glossaryName || 'Glossa',
@@ -71,8 +73,8 @@ export function DeeplStageConfig({
       });
       update({ glossaryId: created.glossaryId });
       reloadGlossaries();
-    } catch {
-      // silent — user sees no glossary selected, can retry
+    } catch (e) {
+      setGlossaryError(e instanceof Error ? e.message : 'Creazione glossario DeepL fallita');
     } finally {
       setIsCreatingGlossary(false);
     }
@@ -159,7 +161,10 @@ export function DeeplStageConfig({
               type="button"
               className="rounded border border-border px-2 py-1 text-xs text-destructive hover:bg-destructive/10"
               onClick={() =>
-                deeplService.deleteGlossary(config.glossaryId!).then(reloadGlossaries)
+                deeplService
+                  .deleteGlossary(config.glossaryId!)
+                  .then(reloadGlossaries)
+                  .catch((e) => setGlossaryError(e instanceof Error ? e.message : 'Eliminazione glossario DeepL fallita'))
               }
               title={t('pipeline.deepl.deleteGlossary', 'Elimina glossario DeepL')}
             >
@@ -178,6 +183,9 @@ export function DeeplStageConfig({
               ? t('pipeline.deepl.creatingGlossary', 'Creazione…')
               : t('pipeline.deepl.createFromGlossa', '+ Crea glossario DeepL dai termini Glossa')}
           </button>
+        )}
+        {glossaryError && (
+          <p className="text-xs text-destructive mt-1">{glossaryError}</p>
         )}
       </div>
 
