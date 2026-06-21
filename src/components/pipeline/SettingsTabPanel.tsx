@@ -1,6 +1,8 @@
-import { ArrowRightLeft, FileText, Globe, KeyRound, Languages, Layers, ShieldCheck, Wand2 } from 'lucide-react';
+import { ArrowRightLeft, FileText, Globe, KeyRound, Languages, Layers, Network, ShieldCheck, Wand2 } from 'lucide-react';
 import type { Dispatch, SetStateAction } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { invoke } from '@tauri-apps/api/core';
 import type { PipelineConfig, PipelineMode, PromptTemplate } from '../../types';
 import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
 import { LANGUAGES } from '../../constants';
@@ -55,6 +57,13 @@ export function SettingsTabPanel({
 }: SettingsTabPanelProps) {
   const { t } = useTranslation();
 
+  const [deeplKeyConfigured, setDeeplKeyConfigured] = useState(false);
+  useEffect(() => {
+    invoke<boolean>('get_api_key_status', { provider: 'deepl' })
+      .then(setDeeplKeyConfigured)
+      .catch(() => setDeeplKeyConfigured(false));
+  }, []);
+
   return (
     <div id="pconfig-panel-settings" role="tabpanel" aria-labelledby="pconfig-tab-settings" className="space-y-6">
       {/* Mode selector */}
@@ -81,6 +90,27 @@ export function SettingsTabPanel({
               </IconButton>
             );
           })}
+          {(() => {
+            const isActive = config.mode === 'deepl-hybrid';
+            return (
+              <IconButton
+                size="lg"
+                tone={isActive ? 'accent' : 'default'}
+                onClick={() => deeplKeyConfigured && setMode('deepl-hybrid')}
+                disabled={!deeplKeyConfigured || translationsExist || isProcessing}
+                title={
+                  !deeplKeyConfigured
+                    ? t('pipeline.deepl.keyRequired', 'Richiede API key DeepL (Impostazioni)')
+                    : t('pipeline.mode.deepl-hybrid', 'DeepL Hybrid')
+                }
+                role="radio"
+                aria-checked={isActive}
+                className={!deeplKeyConfigured ? 'opacity-40 cursor-not-allowed' : undefined}
+              >
+                <Network size={16} />
+              </IconButton>
+            );
+          })()}
         </div>
         <div className="rounded-[14px] border border-editorial-border/40 bg-editorial-textbox/20 px-3 py-3 space-y-2.5">
           {([
@@ -97,6 +127,14 @@ export function SettingsTabPanel({
                 { role: 'translation', Icon: Languages, labelKey: 'pipeline.stageRole.translation' },
                 { role: 'refine', Icon: Wand2, labelKey: 'pipeline.stageRole.refine' },
                 { role: 'format', Icon: FileText, labelKey: 'pipeline.stageRole.format' },
+                { role: 'audit', Icon: ShieldCheck, labelKey: 'pipeline.tabAudit' },
+              ],
+            },
+            {
+              mode: 'deepl-hybrid' as PipelineMode,
+              stages: [
+                { role: 'deepl', Icon: Network, labelKey: 'pipeline.stageRole.deepl-translation' },
+                { role: 'refine', Icon: Wand2, labelKey: 'pipeline.stageRole.refine' },
                 { role: 'audit', Icon: ShieldCheck, labelKey: 'pipeline.tabAudit' },
               ],
             },
@@ -201,13 +239,15 @@ export function SettingsTabPanel({
           </p>
         )}
       </div>
-      <PhraseMemoryConfig
-        usePhraseMemory={usePhraseMemory ?? false}
-        autoSearchPhraseMemory={autoSearchPhraseMemory}
-        phraseMemoryMaxResults={phraseMemoryMaxResults}
-        onChange={onPhraseMemoryChange}
-        disabled={isProcessing}
-      />
+      {config.mode !== 'deepl-hybrid' && (
+        <PhraseMemoryConfig
+          usePhraseMemory={usePhraseMemory ?? false}
+          autoSearchPhraseMemory={autoSearchPhraseMemory}
+          phraseMemoryMaxResults={phraseMemoryMaxResults}
+          onChange={onPhraseMemoryChange}
+          disabled={isProcessing}
+        />
+      )}
     </div>
   );
 }

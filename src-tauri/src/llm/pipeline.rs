@@ -26,8 +26,8 @@ fn resolve_provider(
     ollama_base_url: Option<String>,
 ) -> Result<(Box<dyn LlmProvider>, String), String> {
     if provider_id == "custom" {
-        let profile_id = custom_profile_id
-            .ok_or("customProviderId is required when provider is 'custom'")?;
+        let profile_id =
+            custom_profile_id.ok_or("customProviderId is required when provider is 'custom'")?;
         let profile = custom_profiles::get_profile(app, profile_id)?;
         let api_key = if profile.requires_api_key {
             let keystore_id = format!("custom:{profile_id}");
@@ -35,8 +35,9 @@ fn resolve_provider(
         } else {
             String::new()
         };
-        let provider: Box<dyn LlmProvider> =
-            Box::new(crate::llm::providers::openai::custom_endpoint(profile.base_url));
+        let provider: Box<dyn LlmProvider> = Box::new(
+            crate::llm::providers::openai::custom_endpoint(profile.base_url),
+        );
         Ok((provider, api_key))
     } else {
         let provider = get_provider(provider_id, ollama_base_url)?;
@@ -114,7 +115,13 @@ pub async fn run_stage(
     )?;
     provider.preflight(&stage.model).await?;
     let client = provider.http_client()?;
-    let structured = build_stage_prompts(&text, &stage, &config, previous_result.as_deref(), audit_context.as_deref());
+    let structured = build_stage_prompts(
+        &text,
+        &stage,
+        &config,
+        previous_result.as_deref(),
+        audit_context.as_deref(),
+    );
     app.emit(
         "chunk-prompt",
         PromptEvent {
@@ -144,7 +151,10 @@ pub async fn run_stage(
 
     log::info!(
         "LLM call starting provider={} model={} stage={} stream_id={}",
-        stage.provider, stage.model, stage.name, stream_id
+        stage.provider,
+        stage.model,
+        stage.name,
+        stream_id
     );
     // Non-streaming providers still run over HTTP. Race the request against
     // the shared cancel token so "Stop" drops the in-flight request here too.
@@ -229,7 +239,10 @@ pub async fn run_stage_stream(
 
     log::info!(
         "LLM stream starting provider={} model={} stage={} stream_id={}",
-        stage.provider, stage.model, stage.name, stream_id
+        stage.provider,
+        stage.model,
+        stage.name,
+        stream_id
     );
     let resp = provider.build_streaming_request(&client, &req).await?;
     let status = resp.status();
@@ -332,7 +345,11 @@ pub async fn judge_translation(
             #[cfg(debug_assertions)]
             {
                 let preview: String = result_text.chars().take(500).collect();
-                let truncated = if result_text.chars().nth(500).is_some() { "…" } else { "" };
+                let truncated = if result_text.chars().nth(500).is_some() {
+                    "…"
+                } else {
+                    ""
+                };
                 log::warn!("Failed to parse judge JSON: {e}. Preview: {preview}{truncated}");
             }
             #[cfg(not(debug_assertions))]
@@ -371,9 +388,11 @@ pub async fn judge_translation(
         cache_miss_input_tokens: usage.as_ref().and_then(|u| u.cache_miss_input),
         system_prompt: None,
         user_prompt: None,
-        checked_sentences: parsed["checkedSentences"]
-            .as_array()
-            .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect()),
+        checked_sentences: parsed["checkedSentences"].as_array().map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                .collect()
+        }),
     })
 }
 
@@ -400,6 +419,7 @@ pub async fn refine_prompt(
         openai: None,
         deepseek: None,
         gemini: None,
+        deepl: None,
     }));
     let structured = crate::llm::types::StructuredPrompt {
         system: vec![crate::llm::types::PromptBlock {

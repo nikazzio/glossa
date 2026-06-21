@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Archive, BookOpenText, FilePen, LibraryBig, Plus, Settings2, Trash2 } from 'lucide-react';
+import { Archive, BookOpenText, FilePen, LibraryBig, Plus } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -158,7 +158,7 @@ export function DashboardSidebar() {
         className="flex min-h-0 flex-1 flex-col"
         style={{ width: collapsed ? SIDEBAR_COLLAPSED : undefined }}
       >
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden custom-scrollbar pb-4 pt-2">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden custom-scrollbar pb-4 pt-2 pr-2">
         <ShellNavSection icon={BookOpenText} label={t('sidebar.areaLabel')} collapsed={collapsed}>
           {AREA_ITEMS.map(({ id, icon: Icon, enabled }) => (
             <ShellNavItem
@@ -231,28 +231,6 @@ export function DashboardSidebar() {
                   />
                 )}
                 label={ws.name}
-                trailing={isActive ? (
-                  <>
-                    <IconButton
-                      size="sm"
-                      tone="muted"
-                      onClick={() => setShowWorkspaceSettings(true)}
-                      title={t('workspace.configure')}
-                      tooltipSide="right"
-                    >
-                      <Settings2 size={12} />
-                    </IconButton>
-                    <IconButton
-                      size="sm"
-                      tone="muted"
-                      onClick={() => void handleDeleteWorkspace()}
-                      title={t('workspace.delete')}
-                      tooltipSide="right"
-                    >
-                      <Trash2 size={12} />
-                    </IconButton>
-                  </>
-                ) : undefined}
               />
             );
           })}

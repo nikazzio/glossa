@@ -70,15 +70,14 @@ fn extract_text_from_document_xml(xml: &str) -> Result<String, String> {
                     paragraphs.push(std::mem::take(&mut current));
                 }
             }
-            Ok(Event::Text(event))
-                if inside_text => {
-                    let decoded = event
-                        .decode()
-                        .map_err(|e| format!("Failed to decode docx text: {}", e))?;
-                    let text = quick_xml::escape::unescape(&decoded)
-                        .map_err(|e| format!("Failed to unescape docx text: {}", e))?;
-                    current.push_str(&text);
-                }
+            Ok(Event::Text(event)) if inside_text => {
+                let decoded = event
+                    .decode()
+                    .map_err(|e| format!("Failed to decode docx text: {}", e))?;
+                let text = quick_xml::escape::unescape(&decoded)
+                    .map_err(|e| format!("Failed to unescape docx text: {}", e))?;
+                current.push_str(&text);
+            }
             Ok(Event::Empty(element)) => {
                 let name = element.name();
                 let local = name.as_ref();
@@ -221,9 +220,7 @@ fn build_markdown_from_document_xml(
                 } else if local.ends_with(b":pStyle") || local == b"pStyle" {
                     paragraph_style = extract_attr_value(&element, reader.decoder(), b"val")?;
                 } else if local.ends_with(b":footnoteReference") || local == b"footnoteReference" {
-                    if let Some(old_id) =
-                        extract_attr_value(&element, reader.decoder(), b"id")?
-                    {
+                    if let Some(old_id) = extract_attr_value(&element, reader.decoder(), b"id")? {
                         let number = match footnote_number_by_id.get(&old_id) {
                             Some(existing) => *existing,
                             None => {
@@ -432,15 +429,14 @@ fn parse_footnotes_xml(xml: &str) -> Result<BTreeMap<String, String>, String> {
                     current_blocks.clear();
                 }
             }
-            Ok(Event::Text(event))
-                if inside_text => {
-                    let decoded = event
-                        .decode()
-                        .map_err(|e| format!("Failed to decode footnote text: {}", e))?;
-                    let text = quick_xml::escape::unescape(&decoded)
-                        .map_err(|e| format!("Failed to unescape footnote text: {}", e))?;
-                    current_run.push_str(&text);
-                }
+            Ok(Event::Text(event)) if inside_text => {
+                let decoded = event
+                    .decode()
+                    .map_err(|e| format!("Failed to decode footnote text: {}", e))?;
+                let text = quick_xml::escape::unescape(&decoded)
+                    .map_err(|e| format!("Failed to unescape footnote text: {}", e))?;
+                current_run.push_str(&text);
+            }
             Ok(Event::Eof) => break,
             Err(error) => return Err(format!("Failed to parse docx footnotes.xml: {}", error)),
             _ => {}

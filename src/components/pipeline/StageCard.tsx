@@ -16,8 +16,8 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import type { ModelProvider, OllamaStatus, PipelineStageConfig, PromptTemplate, PromptTemplateWorkflow } from '../../types';
-import { getKnownModelIds, getModelStatus, getResolvedModelReasoning, MODEL_PROVIDER_ORDER } from '../../models/catalog';
+import type { GlossaryEntry, ModelProvider, OllamaStatus, PipelineStageConfig, PromptTemplate, PromptTemplateWorkflow } from '../../types';
+import { getKnownModelIds, getModelStatus, getResolvedModelReasoning, LLM_PROVIDER_ORDER } from '../../models/catalog';
 import type { ReasoningEffortLevel } from '../../types';
 import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
 import { ReasoningPicker } from '../models/ReasoningPicker';
@@ -26,6 +26,7 @@ import { canRefineWithProvider, formatProviderModelLabel, type ProviderKeyStatus
 import { useConfigStore } from '../../stores/configStore';
 import { useCustomProviderStore } from '../../stores/customProviderStore';
 import { STAGE_TEMPLATES } from '../../pipeline/pipelineModes';
+import { DeeplStageConfig } from './DeeplStageConfig';
 
 interface StageCardProps {
   stage: PipelineStageConfig;
@@ -37,6 +38,10 @@ interface StageCardProps {
   isRefreshingOllama: boolean;
   modelOptions: string[];
   keyStatuses: ProviderKeyStatusMap;
+  sourceLanguage: string;
+  targetLanguage: string;
+  glossaryEntries: GlossaryEntry[];
+  glossaryName: string;
   onUpdate: (updates: Partial<PipelineStageConfig>) => void;
   onRefinePrompt: () => void;
   onRefreshOllama: () => void;
@@ -61,6 +66,10 @@ export function StageCard({
   isRefreshingOllama,
   modelOptions,
   keyStatuses,
+  sourceLanguage,
+  targetLanguage,
+  glossaryEntries,
+  glossaryName,
   onUpdate,
   onRefinePrompt,
   onRefreshOllama,
@@ -163,12 +172,25 @@ export function StageCard({
   return (
     <div className="space-y-4">
       {/* Role hint for non-translation stages */}
-      {(stage.role ?? 'translation') !== 'translation' && (
+      {(stage.role ?? 'translation') !== 'translation' && (stage.role ?? 'translation') !== 'deepl-translation' && (
         <p className="text-[10px] leading-relaxed text-editorial-muted/70">
           {t(`pipeline.stageRoleHint.${stage.role ?? 'translation'}`)}
         </p>
       )}
 
+      {stage.provider === 'deepl' ? (
+        <DeeplStageConfig
+          value={stage.providerOptions?.deepl}
+          sourceLang={sourceLanguage}
+          targetLanguage={targetLanguage}
+          glossaryEntries={glossaryEntries}
+          glossaryName={glossaryName}
+          onChange={(deepl) =>
+            onUpdate({ providerOptions: { ...stage.providerOptions, deepl } })
+          }
+        />
+      ) : (
+      <>
       {/* Model + provider card */}
       <div className="space-y-3 rounded-[20px] border border-editorial-border bg-editorial-bg/70 px-5 py-4">
         <div className="flex items-center gap-1.5">
@@ -185,7 +207,7 @@ export function StageCard({
             className="rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
             aria-label={t('models.provider')}
           >
-            {MODEL_PROVIDER_ORDER.map((p) => (
+            {LLM_PROVIDER_ORDER.map((p) => (
               <option key={p} value={p} disabled={p !== 'ollama' && (keyStatuses as Partial<Record<string, boolean>>)[p] === false}>{p}</option>
             ))}
             <option key="custom" value="custom">custom</option>
@@ -463,6 +485,8 @@ export function StageCard({
           }`}
         />
       </div>
+      </>
+      )}
     </div>
   );
 }

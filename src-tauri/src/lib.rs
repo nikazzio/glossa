@@ -1,4 +1,5 @@
 mod db;
+mod deepl;
 mod documents;
 mod keystore;
 mod llm;
@@ -96,6 +97,11 @@ pub fn run() {
             vector::embedding::vec_search_phrase_memory,
             vector::embedding::vec_save_locked_phrases,
             vector::embedding::vec_regenerate_all_embeddings,
+            deepl::commands::run_deepl_stage,
+            deepl::commands::get_deepl_languages,
+            deepl::commands::list_deepl_glossaries,
+            deepl::commands::create_deepl_glossary,
+            deepl::commands::delete_deepl_glossary,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

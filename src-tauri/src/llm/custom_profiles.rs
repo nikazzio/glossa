@@ -115,11 +115,8 @@ pub fn save_custom_provider_profile(
 #[tauri::command]
 pub fn delete_custom_provider_profile(app: tauri::AppHandle, id: String) -> Result<(), String> {
     let conn = open_db(&app)?;
-    conn.execute(
-        "DELETE FROM custom_providers WHERE id = ?1",
-        params![id],
-    )
-    .map_err(|e| format!("Delete error: {e}"))?;
+    conn.execute("DELETE FROM custom_providers WHERE id = ?1", params![id])
+        .map_err(|e| format!("Delete error: {e}"))?;
 
     let keystore_id = format!("custom:{id}");
     // Best-effort key removal — ignore errors (key may not exist)

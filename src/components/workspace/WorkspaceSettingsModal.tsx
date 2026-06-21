@@ -283,7 +283,6 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                     onModelChange={setMemoryExtractorModel}
                     onPromptChange={setMemoryExtractorPrompt}
                   />
-
                 </div>
               )}
 

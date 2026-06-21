@@ -8,6 +8,7 @@ import {
   Link2Off,
   Loader2,
   Minus,
+  Network,
   PanelLeft,
   PanelRight,
   Play,
@@ -490,21 +491,27 @@ export function PipelineSidebarPipelinesSection({ collapsed = false }: { collaps
             const isActive = pipeline.id === activePipelineId;
             const isPipelineRunning = isActive && isRunning;
             return (
-              <IconButton
-                key={pipeline.id}
-                size="md"
-                tone={isActive ? 'accent' : 'default'}
-                onClick={() => switchPipeline(pipeline.id)}
-                title={pipeline.name}
-                tooltipSide="right"
-                className="h-9 w-9 text-sm font-black"
-              >
-                {isPipelineRunning ? (
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-transparent border-t-current" />
-                ) : (
-                  index + 1
+              <div key={pipeline.id} className="relative">
+                <IconButton
+                  size="md"
+                  tone={isActive ? 'accent' : 'default'}
+                  onClick={() => switchPipeline(pipeline.id)}
+                  title={pipeline.name}
+                  tooltipSide="right"
+                  className="h-9 w-9 text-sm font-black"
+                >
+                  {isPipelineRunning ? (
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-transparent border-t-current" />
+                  ) : (
+                    index + 1
+                  )}
+                </IconButton>
+                {pipeline.mode === 'deepl-hybrid' && (
+                  <span className="absolute -top-1 -left-1 flex h-4 w-4 items-center justify-center rounded-full bg-editorial-accent text-white pointer-events-none z-10" title="Pipeline DeepL Hybrid">
+                    <Network size={9} />
+                  </span>
                 )}
-              </IconButton>
+              </div>
             );
           })
         )}
@@ -576,6 +583,11 @@ export function PipelineSidebarPipelinesSection({ collapsed = false }: { collaps
                         index + 1
                       )}
                     </IconButton>
+                    {pipeline.mode === 'deepl-hybrid' && (
+                      <span className="absolute -top-1 -left-1 flex h-4 w-4 items-center justify-center rounded-full bg-editorial-accent text-white pointer-events-none z-10" title="Pipeline DeepL Hybrid">
+                        <Network size={9} />
+                      </span>
+                    )}
                     {pipelines.length > 1 && !isPipelineRunning && (
                       <IconButton
                         size="sm"
@@ -632,11 +644,9 @@ export function PipelineSidebarPipelinesSection({ collapsed = false }: { collaps
 export function PipelineSidebarDocumentSection({
   collapsed = false,
   onImportDocument,
-  onOpenWorkspaceSettings,
 }: {
   collapsed?: boolean;
   onImportDocument?: () => void;
-  onOpenWorkspaceSettings?: () => void;
 }) {
   const { t } = useTranslation();
   const hasDocument = useChunksStore((state) => state.chunks.length > 0);
@@ -692,9 +702,6 @@ export function PipelineSidebarDocumentSection({
         ) : null}
         <IconButton size="md" onClick={onImportDocument} title={t('files.import')} disabled={!onImportDocument} tooltipSide="right" className="h-9 w-9">
           <Upload size={14} />
-        </IconButton>
-        <IconButton size="md" tone="muted" onClick={onOpenWorkspaceSettings} title={t('workspace.configure')} disabled={!onOpenWorkspaceSettings} tooltipSide="right" className="h-9 w-9">
-          <Settings2 size={14} />
         </IconButton>
         <PipelineSidebarExportDialogHost open={showExportDialog} onOpenChange={setShowExportDialog} />
       </div>
@@ -781,15 +788,6 @@ export function PipelineSidebarDocumentSection({
             disabled={!onImportDocument}
           >
             <Upload size={14} />
-          </IconButton>
-          <IconButton
-            size="md"
-            tone="muted"
-            onClick={onOpenWorkspaceSettings}
-            title={t('workspace.configure')}
-            disabled={!onOpenWorkspaceSettings}
-          >
-            <Settings2 size={14} />
           </IconButton>
         </div>
       </SidebarSectionShell>

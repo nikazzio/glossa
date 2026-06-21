@@ -1,4 +1,4 @@
-import { ArrowRightLeft, BookOpen, Eye, Globe, Languages, Loader2, Play, RotateCcw, Settings, ShieldCheck } from 'lucide-react';
+import { ArrowRightLeft, BookOpen, Eye, Globe, Languages, Loader2, Play, RotateCcw, Settings, ShieldCheck, Upload } from 'lucide-react';
 import { useMemo, useState, useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -14,6 +14,8 @@ import { CostBadge } from './CostBadge';
 import { estimatePipelineCost } from '../../utils/costEstimate';
 import { usePricingStore } from '../../stores/pricingStore';
 import { llmService, ollamaService } from '../../services/llmService';
+import { deeplService } from '../../services/deeplService';
+import { toDeeplCode } from '../../constants';
 import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
 import { useOperationLogStore } from '../../stores/operationLogStore';
 import { PromptPreviewTab } from './PromptPreviewTab';
@@ -71,6 +73,7 @@ export function PipelineConfig({
   const [isRefreshingOllama, setIsRefreshingOllama] = useState(false);
   const [isRefiningPersona, setIsRefiningPersona] = useState(false);
   const [refiningStageId, setRefiningStageId] = useState<string | null>(null);
+  const [isUploadingGlossaryToDeepL, setIsUploadingGlossaryToDeepL] = useState(false);
   const [isRefiningJudge, setIsRefiningJudge] = useState(false);
   const [isRefiningCoherence, setIsRefiningCoherence] = useState(false);
   const [activeTab, setActiveTab] = useState<ConfigSection>(visibleSection ?? 'translation');
@@ -269,6 +272,26 @@ export function PipelineConfig({
       toast.message(t('ollama.uncheckedHint'));
     } else if (newProvider === 'ollama' && useConfigStore.getState().ollamaStatus === 'disconnected') {
       toast.warning(t('ollama.selectedButOffline'));
+    }
+  };
+
+  const handleUploadGlossaryToDeepL = async () => {
+    if (!config.glossary || config.glossary.length === 0) return;
+    setIsUploadingGlossaryToDeepL(true);
+    try {
+      await deeplService.createGlossary({
+        name: config.assignedGlossaryId ?? 'Glossa',
+        sourceLang: toDeeplCode(config.sourceLanguage),
+        targetLang: toDeeplCode(config.targetLanguage),
+        entries: config.glossary.map((e) => ({ source: e.term, target: e.translation })),
+      });
+      toast.success(t('pipeline.deepl.glossaryUploaded', 'Glossario caricato su DeepL'));
+    } catch (err: unknown) {
+      toast.error(t('pipeline.deepl.glossaryUploadFailed', 'Caricamento glossario DeepL fallito'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setIsUploadingGlossaryToDeepL(false);
     }
   };
 
@@ -515,6 +538,25 @@ export function PipelineConfig({
                   <p className="text-sm text-editorial-muted/70">
                     {t('pipeline.glossaryOpenProject')}
                   </p>
+                </div>
+              )}
+              {config.mode === 'deepl-hybrid' && (config.glossary?.length ?? 0) > 0 && (
+                <div className="flex items-center gap-2 pt-2">
+                  <IconButton
+                    size="md"
+                    tone={isUploadingGlossaryToDeepL ? 'muted' : 'default'}
+                    onClick={handleUploadGlossaryToDeepL}
+                    disabled={isUploadingGlossaryToDeepL}
+                    title={t('pipeline.deepl.uploadGlossaryTooltip', 'Carica glossario Glossa su DeepL')}
+                    className="shrink-0"
+                  >
+                    {isUploadingGlossaryToDeepL
+                      ? <Loader2 size={13} className="animate-spin" />
+                      : <Upload size={13} />}
+                  </IconButton>
+                  <span className="text-xs font-sans text-editorial-muted">
+                    {t('pipeline.deepl.uploadGlossaryLabel', 'Carica su DeepL')}
+                  </span>
                 </div>
               )}
             </div>

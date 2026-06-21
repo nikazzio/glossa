@@ -69,18 +69,21 @@
     "modeLabel": "Modalità",
     "mode": {
       "standard": "Standard",
-      "editorial": "Editoriale"
+      "editorial": "Editoriale",
+      "deepl-hybrid": "DeepL"
     },
     "modeDesc": {
       "standard": "Uno stage di traduzione + audit qualità.",
       "editorial": "Tre stage: traduzione → refine → format, poi audit qualità."
     },
     "stageRole": {
+      "deepl-translation": "Traduzione DeepL",
       "translation": "Traduzione",
       "refine": "Refine",
       "format": "Format"
     },
     "stageRoleHint": {
+      "deepl-translation": "",
       "refine": "Rivede e migliora la traduzione confrontandola con il testo originale.",
       "format": "Applica correzioni di formattazione senza vedere il testo sorgente (stage cieco). Non può ritradurre."
     },
@@ -1005,6 +1008,9 @@
       "modeEditorialName": "Editoriale",
       "modeEditorialStages": "traduzione → refine → format → audit",
       "modeEditorialDesc": "Pipeline a tre passaggi: una prima traduzione, un refine che migliora resa e fluidità, un format che applica solo pulizia tecnica (punteggiatura, spazi, markdown) senza vedere glossario o persona. Pensato per testi letterari o accademici dove la qualità conta più del costo.",
+      "modeDeeplName": "DeepL Hybrid",
+      "modeDeeplStages": "DeepL → LLM Refine → Judge",
+      "modeDeeplDesc": "Stage 1 traduce con DeepL API (veloce e preciso). Stage 2 LLM opzionale raffina lo stile. Richiede API key DeepL nelle Impostazioni.",
       "configTitle": "Coppia linguistica e persona",
       "configDesc": "Nel tab Impostazioni scegli lingue sorgente e destinazione (pulsante di scambio per invertire) e — opzionalmente — una persona, un opener libero del system prompt che descrive voce, dominio e stile del traduttore. Quando la persona è attiva, la coppia linguistica viene letta dalla persona stessa.",
       "stagesTitle": "Stage di traduzione e audit",

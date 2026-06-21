@@ -73,6 +73,13 @@ describe('WorkspaceHome provider onboarding', () => {
     expect(state.settingsTab).toBe('provider');
   });
 
+  it('exposes configure and delete actions on the workspace header', () => {
+    render(<WorkspaceHome />);
+
+    expect(screen.getByRole('button', { name: 'workspace.configure' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'workspace.delete' })).toBeInTheDocument();
+  });
+
   it('clicking Translations area card calls setActiveWorkspaceArea("translations")', async () => {
     const mockSetArea = vi.fn();
     useUiStore.setState({ setActiveWorkspaceArea: mockSetArea }, false);

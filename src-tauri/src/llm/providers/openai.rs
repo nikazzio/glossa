@@ -1,12 +1,12 @@
-use async_trait::async_trait;
-use reqwest::Client;
-use serde_json::Value;
 use super::{format_api_error, provider_label_from_url};
 use crate::llm::provider::{
     LlmProvider, LlmRequest, LlmResponse, StreamFormat, TokenUsage, UsageAccumulator,
 };
 use crate::llm::stream::{build_default_http_client, default_stream_timeouts, StreamTimeouts};
 use crate::llm::types::OpenAiCacheConfig;
+use async_trait::async_trait;
+use reqwest::Client;
+use serde_json::Value;
 
 /// OpenAI-compatible provider.
 ///
@@ -94,16 +94,16 @@ fn judge_json_schema() -> serde_json::Value {
             "required": ["rating", "issues", "checkedSentences"],
             "additionalProperties": false
         }
-    }) 
+    })
 }
 
 /// FNV-1a 64-bit hash — deterministic across runs, unlike `DefaultHasher`.
 fn stable_fnv1a(s: &str) -> u64 {
     const FNV_PRIME: u64 = 0x00000100000001B3;
     const FNV_OFFSET: u64 = 0xcbf29ce484222325;
-    s.as_bytes()
-        .iter()
-        .fold(FNV_OFFSET, |hash, &byte| (hash ^ byte as u64).wrapping_mul(FNV_PRIME))
+    s.as_bytes().iter().fold(FNV_OFFSET, |hash, &byte| {
+        (hash ^ byte as u64).wrapping_mul(FNV_PRIME)
+    })
 }
 
 impl OpenAiCompatibleProvider {
@@ -249,8 +249,7 @@ impl OpenAiCompatibleProvider {
         let cached_input = json["usage"]["input_tokens_details"]["cached_tokens"]
             .as_u64()
             .map(|value| value as u32);
-        let cache_miss_input =
-            cached_input.map(|cached| (input as u32).saturating_sub(cached));
+        let cache_miss_input = cached_input.map(|cached| (input as u32).saturating_sub(cached));
         Some(TokenUsage {
             input: input as u32,
             output: output as u32,
@@ -363,7 +362,6 @@ impl OpenAiCompatibleProvider {
             .await
             .map_err(|e| format!("API request failed: {e}"))
     }
-
 }
 
 #[async_trait]
@@ -481,7 +479,8 @@ impl LlmProvider for OpenAiCompatibleProvider {
 
         if req.json_mode {
             if req.json_schema_strict {
-                body["response_format"] = serde_json::json!({"type": "json_schema", "json_schema": judge_json_schema()});
+                body["response_format"] =
+                    serde_json::json!({"type": "json_schema", "json_schema": judge_json_schema()});
             } else {
                 body["response_format"] = serde_json::json!({"type": "json_object"});
             }
@@ -559,5 +558,4 @@ impl LlmProvider for OpenAiCompatibleProvider {
             .await
             .map_err(|e| format!("API request failed: {e}"))
     }
-
 }

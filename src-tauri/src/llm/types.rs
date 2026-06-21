@@ -74,6 +74,7 @@ pub struct ProviderRuntimeConfig {
     pub openai: Option<OpenAiCacheConfig>,
     pub deepseek: Option<OpenAiCacheConfig>,
     pub gemini: Option<GeminiCacheConfig>,
+    pub deepl: Option<crate::deepl::types::DeeplConfig>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -143,7 +144,6 @@ pub struct PreflightCheckResult {
     /// "model not installed" without parsing the error string.
     pub reachable: Option<bool>,
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

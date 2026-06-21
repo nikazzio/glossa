@@ -21,7 +21,7 @@
 
 | File | Stato chiave | Note |
 |---|---|---|
-| `stores/pipelineStore.ts` | config pipeline, inputText, sourceFootnotes, runStatus, mode | Config immutabile per run |
+| `stores/pipelineStore.ts` | config pipeline, inputText, sourceFootnotes, runStatus, mode, provider | Config immutabile per run; mode: 'standard'\|'deepl-hybrid'; provider: 'openai'\|'anthropic'\|'gemini'\|'deepseek'\|'ollama'\|'deepl' |
 | `stores/chunksStore.ts` | chunks[], isProcessing, cancelRequested, activeStreamId | RAF batching per token stream; Map O(1) per chunk lookup |
 | `stores/projectStore.ts` | projects[], currentProjectId, pipelines[], activePipelineId | Multi-pipeline per progetto |
 | `stores/workspaceStore.ts` | workspaces[], activeWorkspace, loading/isLoaded | Boundary traduzioni: switch/create/update workspace, un workspace attivo per volta |
@@ -130,6 +130,10 @@ usePipeline.runPipeline()
 5. runStatus = 'completed', saveFullState()
 ```
 
+### DeepL Hybrid — bypass preflight
+
+Il provider `deepl` bypassa il preflight LLM e `llmService.runStage()`. In `usePipeline.ts → executePipelineForChunk`, il branch `provider === 'deepl'` chiama `deeplService.runDeeplStage()` → Tauri `run_deepl_stage` → HTTP POST `/v2/translate` verso l'API DeepL.
+
 ---
 
 ## Struttura del prompt (INVARIANTE — non modificare l'ordine)
@@ -227,6 +231,7 @@ flushPendingTokenBatch() → un solo setState per frame (O(1) chunk update)
 | `src-tauri/src/llm/providers/` | Anthropic (cache breakpoint espliciti), OpenAI (prefix), Gemini (cacheControl + thinking), DeepSeek (reasoning), Ollama (locale) |
 | `src-tauri/src/llm/stream.rs` | HTTP event stream reader, StreamGuard RAII |
 | `src-tauri/src/llm/custom_profiles.rs` | CRUD profili endpoint custom su `custom_providers` (rusqlite diretto); comandi: list_custom_provider_profiles, save_custom_provider_profile, delete_custom_provider_profile, test_custom_provider_connection. resolve_provider() in pipeline.rs usa questo modulo per istanziare OpenAiCompatibleProvider::custom_endpoint(base_url) al runtime |
+| `src-tauri/src/deepl/` | Client HTTP DeepL con comandi Tauri: run_deepl_stage, get_deepl_languages, list_deepl_glossaries, create_deepl_glossary, delete_deepl_glossary |
 | `src-tauri/src/keystore.rs` | OS credential store per API key; chiave custom: `custom:<profile_id>`; helper sync save_api_key_sync/delete_api_key_sync per operazioni sincrone nei comandi |
 | `src-tauri/src/db.rs` | execute_transaction wrapper SQLite |
 | `src-tauri/src/documents.rs` | Extract/export DOCX, PDF |

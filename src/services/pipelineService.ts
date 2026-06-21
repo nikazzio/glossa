@@ -68,6 +68,11 @@ function toPipelineRunStatus(raw: string | null): PipelineRunStatus {
   return 'idle';
 }
 
+function toPipelineMode(raw: string | null): PipelineMode {
+  if (raw === 'standard' || raw === 'editorial' || raw === 'deepl-hybrid') return raw;
+  return 'standard';
+}
+
 function rowToPipeline(row: DbPipeline): Pipeline {
   return {
     id: row.id,
@@ -75,7 +80,7 @@ function rowToPipeline(row: DbPipeline): Pipeline {
     name: row.name,
     sourceLanguage: row.source_language,
     targetLanguage: row.target_language,
-    mode: (row.pipeline_mode === 'editorial' ? 'editorial' : 'standard') as PipelineMode,
+    mode: toPipelineMode(row.pipeline_mode),
     runStatus: toPipelineRunStatus(row.run_status),
     lastRunConfig: row.last_run_config ?? null,
     createdAt: row.created_at,
@@ -88,7 +93,7 @@ function rowToPipelineConfig(row: DbPipeline, glossary: GlossaryEntry[], assigne
     pipelineId: row.id,
     sourceLanguage: row.source_language,
     targetLanguage: row.target_language,
-    mode: (row.pipeline_mode === 'editorial' ? 'editorial' : 'standard') as PipelineMode,
+    mode: toPipelineMode(row.pipeline_mode),
     stages: parseJson<PipelineStageConfig[]>(row.stages, []),
     judgePrompt: row.judge_prompt,
     judgeModel: row.judge_model,

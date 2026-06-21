@@ -16,7 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { DEFAULT_MEMORY_EXTRACTOR_MODEL, DEFAULT_MEMORY_EXTRACTOR_PROMPT, DEFAULT_MEMORY_EXTRACTOR_PROVIDER } from '../../constants';
 import { useProviderKeyStatus, canRefineWithProvider, formatProviderModelLabel } from '../../hooks/useProviderKeyStatus';
-import { getModelStatus, getSelectableModelIds, MODEL_PROVIDER_ORDER } from '../../models/catalog';
+import { getModelStatus, getSelectableModelIds, LLM_PROVIDER_ORDER } from '../../models/catalog';
 import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
 import { llmService } from '../../services/llmService';
 import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
@@ -140,7 +140,7 @@ export function MemoryExtractorSettings({
             className="rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-bold uppercase text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             aria-label={t('models.provider')}
           >
-            {MODEL_PROVIDER_ORDER.map((entry) => (
+            {LLM_PROVIDER_ORDER.map((entry) => (
               <option key={entry} value={entry} disabled={entry !== 'ollama' && (keyStatuses as Partial<Record<string, boolean>>)[entry] === false}>
                 {entry}
               </option>

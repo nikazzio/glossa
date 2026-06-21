@@ -21,6 +21,24 @@ Glossa ruota attorno a un workflow documento in quattro fasi:
 Usa Sandbox quando vuoi iterare velocemente su un campione. Usa Document mode
 quando il testo richiede struttura, continuità e storico di review.
 
+## Modalità DeepL Hybrid
+
+La modalità **DeepL Hybrid** combina la velocità e la precisione dell'API DeepL con il raffinamento contestuale di un LLM:
+
+| Stage | Provider | Ruolo |
+|---|---|---|
+| Stage 1 | DeepL API | Traduzione principale |
+| Stage 2 | LLM (opzionale) | Raffinamento stile e registro |
+| Judge | LLM | Audit qualità (invariato) |
+
+**Requisiti:** API key DeepL configurata in Impostazioni → sezione provider.
+
+**Quando usarla:** Testi che richiedono alta fedeltà terminologica e velocità, dove un LLM da solo richiederebbe troppo contesto o prompt elaborati.
+
+**Formality:** Per le lingue che lo supportano (tedesco, italiano, ecc.), puoi configurare il registro formale/informale direttamente nello stage DeepL.
+
+**Glossari DeepL:** Puoi creare un glossario DeepL dai termini del glossario Glossa assegnato alla pipeline, così DeepL rispetta automaticamente la tua terminologia.
+
 ## Flusso documento standard
 
 1. Importa un documento.

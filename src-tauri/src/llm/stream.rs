@@ -416,7 +416,9 @@ where
     }
 
     acc.finish(provider, stream_id, &mut emit);
-    Ok(StreamResult { content: acc.full_text })
+    Ok(StreamResult {
+        content: acc.full_text,
+    })
 }
 
 /// Read an SSE stream, emit tokens via Tauri events, return the full text.

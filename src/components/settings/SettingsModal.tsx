@@ -31,6 +31,7 @@ const PROVIDER_LABELS: Record<ModelProvider, string> = {
   openai: 'OpenAI',
   anthropic: 'Anthropic',
   deepseek: 'DeepSeek',
+  deepl: 'DeepL',
   ollama: 'Ollama',
   custom: 'Custom',
 };

@@ -1,4 +1,4 @@
-import { Eye, FileText, Info, Languages, Wand2 } from 'lucide-react';
+import { Eye, FileText, Info, Languages, Network, Wand2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PipelineConfig, StageRole } from '../../types';
@@ -10,6 +10,7 @@ interface PromptPreviewTabProps {
 }
 
 const STAGE_ICON: Record<StageRole, typeof Languages> = {
+  'deepl-translation': Network,
   translation: Languages,
   refine: Wand2,
   format: FileText,

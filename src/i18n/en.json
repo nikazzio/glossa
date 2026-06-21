@@ -69,18 +69,21 @@
     "modeLabel": "Mode",
     "mode": {
       "standard": "Standard",
-      "editorial": "Editorial"
+      "editorial": "Editorial",
+      "deepl-hybrid": "DeepL"
     },
     "modeDesc": {
       "standard": "One translation stage + quality audit.",
       "editorial": "Three stages: translation → refine → format, then quality audit."
     },
     "stageRole": {
+      "deepl-translation": "DeepL Translation",
       "translation": "Translation",
       "refine": "Refine",
       "format": "Format"
     },
     "stageRoleHint": {
+      "deepl-translation": "",
       "refine": "Reviews and improves the translation by comparing it against the original source.",
       "format": "Applies formatting corrections without seeing the source text (blind stage). Cannot retranslate."
     },
@@ -1005,6 +1008,9 @@
       "modeEditorialName": "Editorial",
       "modeEditorialStages": "translation → refine → format → audit",
       "modeEditorialDesc": "Three-pass pipeline: an initial translation, a refine that improves rendering and fluency, and a format pass that only applies technical cleanup (punctuation, spacing, markdown) without seeing glossary or persona. Designed for literary or academic texts where quality matters more than cost.",
+      "modeDeeplName": "DeepL Hybrid",
+      "modeDeeplStages": "DeepL → LLM Refine → Judge",
+      "modeDeeplDesc": "Stage 1 translates with DeepL API (fast and accurate). Optional LLM Stage 2 refines style. Requires a DeepL API key in Settings.",
       "configTitle": "Language pair and persona",
       "configDesc": "In the Settings tab you pick source and target languages (swap button to reverse) and — optionally — a persona, a free-form system prompt opener describing voice, domain, and style of the translator. When the persona is active, the language pair is read from the persona itself.",
       "stagesTitle": "Translation and audit stages",

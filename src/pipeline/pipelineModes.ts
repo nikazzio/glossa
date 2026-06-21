@@ -1,13 +1,22 @@
-import type { PipelineMode, PipelineStageConfig, StageRole } from '../types';
+import type { ModelProvider, PipelineMode, PipelineStageConfig, StageRole } from '../types';
+import { DEFAULT_DEEPL_STAGE_OPTIONS } from '../constants';
 
 interface StageTemplate {
   id: string;
   role: StageRole;
   name: string;
   defaultPrompt: string;
+  defaultProvider?: ModelProvider;
 }
 
 export const STAGE_TEMPLATES: Record<StageRole, StageTemplate> = {
+  'deepl-translation': {
+    id: 'stg-deepl',
+    role: 'deepl-translation',
+    name: 'DeepL Translation',
+    defaultPrompt: '',
+    defaultProvider: 'deepl',
+  },
   translation: {
     id: 'stg-translation',
     role: 'translation',
@@ -33,18 +42,24 @@ export const STAGE_TEMPLATES: Record<StageRole, StageTemplate> = {
 const MODE_SEQUENCES: Record<PipelineMode, StageRole[]> = {
   standard: ['translation'],
   editorial: ['translation', 'refine', 'format'],
+  'deepl-hybrid': ['deepl-translation', 'refine'],
 };
 
 function buildStage(template: StageTemplate, existing?: PipelineStageConfig): PipelineStageConfig {
+  const baseOptions = existing?.providerOptions ?? {};
+  const providerOptions = template.defaultProvider === 'deepl'
+    ? { ...baseOptions, deepl: baseOptions.deepl ?? DEFAULT_DEEPL_STAGE_OPTIONS }
+    : baseOptions;
+
   return {
     id: existing?.id ?? template.id,
     name: template.name,
     role: template.role,
     prompt: existing?.prompt ?? template.defaultPrompt,
-    model: existing?.model ?? 'gpt-5-nano',
-    provider: existing?.provider ?? 'openai',
+    model: existing?.model ?? (template.defaultProvider === 'deepl' ? '' : 'gpt-5-nano'),
+    provider: existing?.provider ?? (template.defaultProvider ?? 'openai'),
     enabled: true,
-    providerOptions: existing?.providerOptions,
+    providerOptions,
   };
 }
 
