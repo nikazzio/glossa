@@ -28,7 +28,6 @@ export function DeeplStageConfig({
   const [languages, setLanguages] = useState<DeeplLanguageInfo[]>([]);
   const [glossaries, setGlossaries] = useState<DeeplGlossaryInfo[]>([]);
   const [glossariesLoading, setGlossariesLoading] = useState(false);
-  const [isCreatingGlossary, setIsCreatingGlossary] = useState(false);
   const [glossaryError, setGlossaryError] = useState<string | null>(null);
 
   const config = { ...DEFAULT_DEEPL_STAGE_OPTIONS, ...value };
@@ -61,26 +60,6 @@ export function DeeplStageConfig({
   function update(patch: Partial<DeeplConfig>) {
     onChange({ ...config, ...patch });
   }
-
-  const handleCreateFromGlossa = async () => {
-    if (glossaryEntries.length === 0) return;
-    setIsCreatingGlossary(true);
-    setGlossaryError(null);
-    try {
-      const created = await deeplService.createGlossary({
-        name: glossaryName || 'Glossa',
-        sourceLang: normalizedSourceLang,
-        targetLang,
-        entries: glossaryEntries.map((e) => ({ source: e.term, target: e.translation })),
-      });
-      update({ glossaryId: created.glossaryId });
-      reloadGlossaries();
-    } catch (e) {
-      setGlossaryError(e instanceof Error ? e.message : 'Creazione glossario DeepL fallita');
-    } finally {
-      setIsCreatingGlossary(false);
-    }
-  };
 
   const filteredGlossaries = glossaries.filter(
     (g) =>
@@ -171,19 +150,6 @@ export function DeeplStageConfig({
             )}
           </div>
 
-          {glossaryEntries.length > 0 && (
-            <button
-              type="button"
-              disabled={isCreatingGlossary}
-              onClick={handleCreateFromGlossa}
-              className="text-xs font-sans text-editorial-accent underline decoration-editorial-accent/40 hover:decoration-editorial-accent transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {isCreatingGlossary
-                ? t('pipeline.deepl.creatingGlossary', 'Creazione…')
-                : t('pipeline.deepl.createFromGlossa', '+ Carica glossario Glossa su DeepL')}
-            </button>
-          )}
-
           {glossaryError && (
             <p className="text-xs font-sans text-editorial-accent mt-1">{glossaryError}</p>
           )}
@@ -206,6 +172,21 @@ export function DeeplStageConfig({
             onChange={() => update({ showBilledCharacters: !(config.showBilledCharacters ?? true) })}
           />
         </div>
+      </div>
+
+      {/* Contesto traduzione */}
+      <div className="space-y-2">
+        <label className="text-xs font-sans uppercase tracking-[0.1em] text-editorial-muted">
+          {t('pipeline.deepl.context', 'Contesto traduzione')}
+        </label>
+        <textarea
+          value={config.context ?? ''}
+          onChange={(e) => update({ context: e.target.value || undefined })}
+          placeholder={t('pipeline.deepl.contextPlaceholder', 'Testo opzionale che aiuta DeepL a contestualizzare la traduzione…')}
+          rows={3}
+          maxLength={512}
+          className="w-full rounded-[12px] border border-editorial-border bg-editorial-textbox px-2 py-1.5 text-xs font-sans text-editorial-ink outline-none resize-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+        />
       </div>
     </div>
   );

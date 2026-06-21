@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { Ban, Zap, BrainCircuit } from 'lucide-react';
 import { Tooltip } from '../ui';
 import type { ReasoningEffortLevel } from '../../types';
 
@@ -39,7 +40,15 @@ export function ReasoningPicker({ value, showNone, disabled, onChange }: Reasoni
                 : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent'
             }`}
           >
-            {effort[0].toUpperCase()}
+            {effort === 'none' ? (
+              <Ban size={11} />
+            ) : effort === 'high' ? (
+              <Zap size={11} />
+            ) : effort === 'xhigh' ? (
+              <BrainCircuit size={11} />
+            ) : (
+              effort[0].toUpperCase()
+            )}
           </button>
         </Tooltip>
       ))}
