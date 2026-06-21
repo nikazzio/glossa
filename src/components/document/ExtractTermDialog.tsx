@@ -1,7 +1,7 @@
-import { X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { Dialog } from '../ui';
 import { listGlossaries, addGlossaryEntry } from '../../services/glossaryService';
 import { extractTermFromPhrase } from '../../services/llmService';
 import { usePipelineStore } from '../../stores/pipelineStore';
@@ -76,25 +76,32 @@ export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSucce
   };
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="extract-term-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-    >
-      <div className="w-full max-w-md rounded-3xl border border-editorial-border bg-editorial-bg shadow-2xl">
-        <div className="flex items-center justify-between border-b border-editorial-border px-6 py-4">
-          <h2 id="extract-term-title" className="font-display text-base italic text-editorial-ink">
-            {t('memory.extractTermTitle')}
-          </h2>
-          <button type="button" onClick={onClose} aria-label={t('common.close')}
-            className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent">
-            <X size={16} />
+    <Dialog
+      open
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+      title={t('memory.extractTermTitle')}
+      closeLabel={t('common.close')}
+      widthClassName="max-w-md"
+      bodyClassName="px-6 py-5"
+      footer={
+        <div className="flex items-center justify-end gap-3">
+          <button type="button" onClick={onClose} aria-label={t('common.cancel')}
+            className="rounded-full border border-editorial-border px-4 py-2 text-sm text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent">
+            {t('common.cancel')}
+          </button>
+          <button type="button" onClick={handleConfirm}
+            disabled={!selectedGlossaryId || !term.trim() || isSaving}
+            aria-label={t('common.confirm')}
+            className="rounded-full border border-editorial-accent bg-editorial-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-editorial-accent/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40">
+            {isSaving ? '…' : t('common.confirm')}
           </button>
         </div>
-
-        <div className="space-y-4 px-6 py-5">
-          <div>
+      }
+    >
+      <div className="space-y-4">
+        <div>
             <label className="mb-1 block text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
               {t('memory.sourcePhraseLabel')}
             </label>
@@ -147,21 +154,7 @@ export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSucce
               {glossaries.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
             </select>
           </div>
-        </div>
-
-        <div className="flex items-center justify-end gap-3 border-t border-editorial-border px-6 py-4">
-          <button type="button" onClick={onClose} aria-label={t('common.cancel')}
-            className="rounded-full border border-editorial-border px-4 py-2 text-sm text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent">
-            {t('common.cancel')}
-          </button>
-          <button type="button" onClick={handleConfirm}
-            disabled={!selectedGlossaryId || !term.trim() || isSaving}
-            aria-label={t('common.confirm')}
-            className="rounded-full border border-editorial-accent bg-editorial-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-editorial-accent/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40">
-            {isSaving ? '…' : t('common.confirm')}
-          </button>
-        </div>
       </div>
-    </div>
+    </Dialog>
   );
 }
