@@ -1,3 +1,4 @@
+export { AlertDialog } from './AlertDialog';
 export { Dialog } from './Dialog';
 export { IconButton, type IconButtonTone, type IconButtonSize } from './IconButton';
 export { PillButton } from './PillButton';
