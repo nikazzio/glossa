@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import type { ModelProvider, OllamaStatus, PipelineStageConfig, PromptTemplate, PromptTemplateWorkflow } from '../../types';
+import type { GlossaryEntry, ModelProvider, OllamaStatus, PipelineStageConfig, PromptTemplate, PromptTemplateWorkflow } from '../../types';
 import { getKnownModelIds, getModelStatus, getResolvedModelReasoning, MODEL_PROVIDER_ORDER } from '../../models/catalog';
 import type { ReasoningEffortLevel } from '../../types';
 import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
@@ -26,6 +26,7 @@ import { canRefineWithProvider, formatProviderModelLabel, type ProviderKeyStatus
 import { useConfigStore } from '../../stores/configStore';
 import { useCustomProviderStore } from '../../stores/customProviderStore';
 import { STAGE_TEMPLATES } from '../../pipeline/pipelineModes';
+import { DeeplStageConfig } from './DeeplStageConfig';
 
 interface StageCardProps {
   stage: PipelineStageConfig;
@@ -37,6 +38,10 @@ interface StageCardProps {
   isRefreshingOllama: boolean;
   modelOptions: string[];
   keyStatuses: ProviderKeyStatusMap;
+  sourceLanguage: string;
+  targetLanguage: string;
+  glossaryEntries: GlossaryEntry[];
+  glossaryName: string;
   onUpdate: (updates: Partial<PipelineStageConfig>) => void;
   onRefinePrompt: () => void;
   onRefreshOllama: () => void;
@@ -61,6 +66,10 @@ export function StageCard({
   isRefreshingOllama,
   modelOptions,
   keyStatuses,
+  sourceLanguage,
+  targetLanguage,
+  glossaryEntries,
+  glossaryName,
   onUpdate,
   onRefinePrompt,
   onRefreshOllama,
@@ -169,6 +178,19 @@ export function StageCard({
         </p>
       )}
 
+      {stage.provider === 'deepl' ? (
+        <DeeplStageConfig
+          value={stage.providerOptions?.deepl}
+          sourceLang={sourceLanguage}
+          targetLanguage={targetLanguage}
+          glossaryEntries={glossaryEntries}
+          glossaryName={glossaryName}
+          onChange={(deepl) =>
+            onUpdate({ providerOptions: { ...stage.providerOptions, deepl } })
+          }
+        />
+      ) : (
+      <>
       {/* Model + provider card */}
       <div className="space-y-3 rounded-[20px] border border-editorial-border bg-editorial-bg/70 px-5 py-4">
         <div className="flex items-center gap-1.5">
@@ -463,6 +485,8 @@ export function StageCard({
           }`}
         />
       </div>
+      </>
+      )}
     </div>
   );
 }

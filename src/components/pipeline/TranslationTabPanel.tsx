@@ -182,6 +182,10 @@ export function TranslationTabPanel({
               isRefreshingOllama={isRefreshingOllama}
               modelOptions={stageModelOptions}
               keyStatuses={keyStatuses}
+              sourceLanguage={config.sourceLanguage}
+              targetLanguage={config.targetLanguage}
+              glossaryEntries={config.glossary}
+              glossaryName={config.assignedGlossaryId ?? ''}
               onUpdate={(updates) => updateStage(stage.id, updates)}
               onRefinePrompt={() => handleRefineStagePrompt(stage.id)}
               onRefreshOllama={handleRefreshOllama}
