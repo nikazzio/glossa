@@ -3,9 +3,12 @@ import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ExtractTermDialog } from './ExtractTermDialog';
 
+import { createGlossary, addGlossaryEntry } from '../../services/glossaryService';
+
 vi.mock('../../services/glossaryService', () => ({
   listGlossaries: vi.fn(() => Promise.resolve([])),
   addGlossaryEntry: vi.fn(() => Promise.resolve()),
+  createGlossary: vi.fn(() => Promise.resolve('new-gls-id')),
 }));
 
 vi.mock('../../services/llmService', () => ({
@@ -51,5 +54,33 @@ describe('ExtractTermDialog', () => {
     );
     await user.click(await screen.findByRole('button', { name: 'common.cancel' }));
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it('crea un nuovo dizionario al volo e vi aggiunge il termine', async () => {
+    const user = userEvent.setup();
+    render(
+      <ExtractTermDialog
+        sourcePhrase="lorem ipsum"
+        targetPhrase="dolor sit"
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+    );
+    await screen.findByRole('dialog');
+    // term precompilato dal suggerimento mockato ('lex')
+    await user.selectOptions(
+      screen.getByLabelText('glossary.selectGlossary'),
+      '__create_new__',
+    );
+    await user.type(
+      screen.getByLabelText('glossary.newGlossaryNamePlaceholder'),
+      'Mio dizionario',
+    );
+    await user.click(screen.getByRole('button', { name: 'common.confirm' }));
+    expect(createGlossary).toHaveBeenCalledWith('Mio dizionario', '', '', '', null);
+    expect(addGlossaryEntry).toHaveBeenCalledWith(
+      'new-gls-id',
+      expect.objectContaining({ term: 'lex' }),
+    );
   });
 });

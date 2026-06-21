@@ -1437,6 +1437,7 @@
     "extractTermButton": "Add to glossary",
     "extractTermTitle": "Extract term",
     "sourcePhraseShort": "Source",
+    "sourcePhraseLabel": "Source phrase",
     "termLabel": "Term",
     "termExtracted": "Term added to glossary",
     "prelaunchWarning": "{{count}} chunks have memory matches found but not selected",
@@ -1461,7 +1462,9 @@
     "translation": "Translation",
     "notes": "Notes",
     "selectGlossary": "Select glossary",
-    "noGlossarySelected": "— No glossary —"
+    "noGlossarySelected": "— No glossary —",
+    "createNewInline": "+ New dictionary",
+    "newGlossaryNamePlaceholder": "New dictionary name"
   },
   "annotations": {
     "typeComment": "Comment",
