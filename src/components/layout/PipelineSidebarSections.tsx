@@ -490,21 +490,30 @@ export function PipelineSidebarPipelinesSection({ collapsed = false }: { collaps
             const isActive = pipeline.id === activePipelineId;
             const isPipelineRunning = isActive && isRunning;
             return (
-              <IconButton
-                key={pipeline.id}
-                size="md"
-                tone={isActive ? 'accent' : 'default'}
-                onClick={() => switchPipeline(pipeline.id)}
-                title={pipeline.name}
-                tooltipSide="right"
-                className="h-9 w-9 text-sm font-black"
-              >
-                {isPipelineRunning ? (
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-transparent border-t-current" />
-                ) : (
-                  index + 1
+              <div key={pipeline.id} className="relative">
+                <IconButton
+                  size="md"
+                  tone={isActive ? 'accent' : 'default'}
+                  onClick={() => switchPipeline(pipeline.id)}
+                  title={pipeline.name}
+                  tooltipSide="right"
+                  className="h-9 w-9 text-sm font-black"
+                >
+                  {isPipelineRunning ? (
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-transparent border-t-current" />
+                  ) : (
+                    index + 1
+                  )}
+                </IconButton>
+                {pipeline.mode === 'deepl-hybrid' && (
+                  <span
+                    className="absolute -top-1 -right-1 rounded-full bg-editorial-accent px-1 text-[9px] font-bold text-white leading-tight pointer-events-none"
+                    title="Pipeline DeepL Hybrid"
+                  >
+                    D
+                  </span>
                 )}
-              </IconButton>
+              </div>
             );
           })
         )}
@@ -576,6 +585,14 @@ export function PipelineSidebarPipelinesSection({ collapsed = false }: { collaps
                         index + 1
                       )}
                     </IconButton>
+                    {pipeline.mode === 'deepl-hybrid' && (
+                      <span
+                        className="absolute -top-1 -right-1 rounded-full bg-editorial-accent px-1 text-[9px] font-bold text-white leading-tight pointer-events-none z-10"
+                        title="Pipeline DeepL Hybrid"
+                      >
+                        D
+                      </span>
+                    )}
                     {pipelines.length > 1 && !isPipelineRunning && (
                       <IconButton
                         size="sm"
