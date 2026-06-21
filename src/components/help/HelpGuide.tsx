@@ -275,6 +275,11 @@ function PipelineSection() {
           stages={t('help.pipeline.modeEditorialStages')}
           desc={t('help.pipeline.modeEditorialDesc')}
         />
+        <ModeRow
+          name={t('help.pipeline.modeDeeplName')}
+          stages={t('help.pipeline.modeDeeplStages')}
+          desc={t('help.pipeline.modeDeeplDesc')}
+        />
       </div>
 
       <Step n={1} title={t('help.pipeline.configTitle')}>
