@@ -1,7 +1,13 @@
 import type { KeyboardEvent, ReactNode, Ref } from 'react';
-import { HelpCircle, Settings, type LucideIcon } from 'lucide-react';
+import { useState } from 'react';
+import { HelpCircle, Save, Settings, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import { useShallow } from 'zustand/react/shallow';
 import { useUiStore } from '../../stores/uiStore';
+import { useProjectStore } from '../../stores/projectStore';
+import { useLibraryStore } from '../../stores/libraryStore';
+import { useChunksStore } from '../../stores/chunksStore';
 import { IconButton, SectionLabel, Tooltip } from '../ui';
 
 /**
@@ -41,9 +47,52 @@ export function ShellNavSection({ icon: Icon, label, action, collapsed = false, 
 
 /** Footer barra: azioni app-level (impostazioni, aiuto) ancorate in basso. */
 export function ShellNavFooter({ collapsed = false }: { collapsed?: boolean }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const setShowSettings = useUiStore((state) => state.setShowSettings);
   const setShowHelp = useUiStore((state) => state.setShowHelp);
+  const { currentProjectId, saveCurrentProject } = useProjectStore(
+    useShallow((s) => ({ currentProjectId: s.currentProjectId, saveCurrentProject: s.saveCurrentProject })),
+  );
+  const { dirtyIdsLength, saveAllDirty } = useLibraryStore(
+    useShallow((s) => ({ dirtyIdsLength: s.dirtyIds.length, saveAllDirty: s.saveAllDirty })),
+  );
+  const isProcessing = useChunksStore((s) => s.isProcessing);
+  const [savingAll, setSavingAll] = useState(false);
+
+  const handleSave = async () => {
+    if (savingAll) return;
+    const shouldSaveProject = Boolean(currentProjectId) && !isProcessing;
+    const shouldSaveLibrary = dirtyIdsLength > 0;
+    const projectDeferred = Boolean(currentProjectId) && isProcessing;
+    if (!shouldSaveProject && !shouldSaveLibrary) {
+      toast[projectDeferred ? 'warning' : 'success'](
+        t(projectDeferred ? 'header.projectSaveDeferred' : 'header.nothingToSave'),
+      );
+      return;
+    }
+    setSavingAll(true);
+    const errors: unknown[] = [];
+    try {
+      if (shouldSaveProject) {
+        try { await saveCurrentProject(); } catch (err) { errors.push(err); }
+      }
+      if (shouldSaveLibrary) {
+        try { await saveAllDirty(); } catch (err) { errors.push(err); }
+      }
+      if (errors.length > 0) throw errors[0];
+      toast[projectDeferred ? 'warning' : 'success'](
+        t(projectDeferred ? 'header.savedLibraryProjectDeferred' : 'header.savedAll'),
+      );
+    } catch (err) {
+      toast.error(t('header.globalSaveFailed'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setSavingAll(false);
+    }
+  };
+
+  const toggleLang = () => i18n.changeLanguage(i18n.language === 'en' ? 'it' : 'en');
 
   return (
     <div
@@ -51,6 +100,17 @@ export function ShellNavFooter({ collapsed = false }: { collapsed?: boolean }) {
         collapsed ? 'flex-col items-center gap-1.5 py-2.5' : 'items-center gap-1 px-3 py-2.5'
       }`}
     >
+      <IconButton
+        size="md"
+        tone={savingAll ? 'running' : 'muted'}
+        onClick={() => void handleSave()}
+        title={`${t('header.saveAll')} (Ctrl+S)`}
+        ariaLabel={t('header.saveAll')}
+        tooltipSide="right"
+        aria-busy={savingAll}
+      >
+        <Save size={15} />
+      </IconButton>
       <IconButton
         size="md"
         tone="muted"
@@ -70,6 +130,18 @@ export function ShellNavFooter({ collapsed = false }: { collapsed?: boolean }) {
       >
         <HelpCircle size={15} />
       </IconButton>
+      <Tooltip label={`${t('language.label')} (${i18n.language === 'it' ? 'IT → EN' : 'EN → IT'})`} side="right">
+        <button
+          type="button"
+          onClick={toggleLang}
+          aria-label={t('language.label')}
+          className="inline-flex h-[30px] w-[30px] flex-none items-center justify-center rounded-full border border-editorial-border text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+        >
+          <span className="select-none font-mono text-[10px] font-bold leading-none">
+            {i18n.language.toUpperCase()}
+          </span>
+        </button>
+      </Tooltip>
     </div>
   );
 }

@@ -343,7 +343,7 @@ export function PipelineConfig({
             refineLabel={personaRefineLabel}
             onChange={(value) => setConfig((prev) => ({ ...prev, persona: value }))}
             onRefine={handleRefinePersona}
-            onSaveTemplate={(name, prompt) => saveTemplate(name, prompt, 'persona')}
+            onSaveTemplate={(name, prompt) => saveTemplate(name, prompt, 'persona', 'translation')}
             onDeleteTemplate={deleteTemplate}
           />
         </div>

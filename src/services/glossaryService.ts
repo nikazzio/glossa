@@ -16,6 +16,7 @@ interface GlossaryRow {
   source_language: string;
   target_language: string;
   created_at: string;
+  workspace_id?: string | null;
 }
 
 interface GlossaryEntryRow {
@@ -34,6 +35,7 @@ function rowToGlossary(row: GlossaryRow): Glossary {
     sourceLanguage: row.source_language,
     targetLanguage: row.target_language,
     createdAt: row.created_at,
+    workspaceId: row.workspace_id ?? undefined,
   };
 }
 
@@ -46,10 +48,15 @@ function rowToEntry(row: GlossaryEntryRow): GlossaryEntry {
   };
 }
 
-export async function listGlossaries(): Promise<Glossary[]> {
-  const rows = await select<GlossaryRow>(
-    'SELECT id, name, description, source_language, target_language, created_at FROM glossaries ORDER BY name ASC',
-  );
+export async function listGlossaries(workspaceId?: string | null): Promise<Glossary[]> {
+  const rows = workspaceId
+    ? await select<GlossaryRow>(
+        'SELECT id, name, description, source_language, target_language, created_at, workspace_id FROM glossaries WHERE workspace_id = $1 OR workspace_id IS NULL ORDER BY name ASC',
+        [workspaceId],
+      )
+    : await select<GlossaryRow>(
+        'SELECT id, name, description, source_language, target_language, created_at, workspace_id FROM glossaries ORDER BY name ASC',
+      );
   return rows.map(rowToGlossary);
 }
 
@@ -58,11 +65,12 @@ export async function createGlossary(
   description = '',
   sourceLang = '',
   targetLang = '',
+  workspaceId?: string | null,
 ): Promise<string> {
   const id = generateId('gls');
   await execute(
-    'INSERT INTO glossaries (id, name, description, source_language, target_language) VALUES ($1, $2, $3, $4, $5)',
-    [id, name, description, sourceLang, targetLang],
+    'INSERT INTO glossaries (id, name, description, source_language, target_language, workspace_id) VALUES ($1, $2, $3, $4, $5, $6)',
+    [id, name, description, sourceLang, targetLang, workspaceId ?? null],
   );
   return id;
 }
@@ -120,8 +128,8 @@ export async function forkGlossary(id: string, newName: string): Promise<string>
   const newId = generateId('gls');
   await runInTransaction(async (run) => {
     await run(
-      `INSERT INTO glossaries (id, name, description, source_language, target_language)
-       SELECT $1, $2, description, source_language, target_language FROM glossaries WHERE id = $3`,
+      `INSERT INTO glossaries (id, name, description, source_language, target_language, workspace_id)
+       SELECT $1, $2, description, source_language, target_language, workspace_id FROM glossaries WHERE id = $3`,
       [newId, newName, id],
     );
     const entries = await select<GlossaryEntryRow>(

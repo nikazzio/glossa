@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { PromptTemplate, PromptTemplateContext } from '../types';
+import type { PromptTemplate, PromptTemplateContext, PromptTemplateWorkflow } from '../types';
 import {
   getPromptTemplates,
   savePromptTemplate,
@@ -10,6 +10,7 @@ export type SaveTemplateFn = (
   name: string,
   prompt: string,
   context: PromptTemplateContext,
+  workflow: PromptTemplateWorkflow,
   defaultModel?: string,
   defaultProvider?: string,
 ) => Promise<void>;
@@ -22,6 +23,7 @@ interface PromptTemplateState {
     name: string,
     prompt: string,
     context: PromptTemplateContext,
+    workflow: PromptTemplateWorkflow,
     defaultModel?: string,
     defaultProvider?: string,
   ) => Promise<void>;
@@ -38,8 +40,8 @@ export const usePromptTemplateStore = create<PromptTemplateState>((set, get) => 
     set({ templates, isLoaded: true });
   },
 
-  saveTemplate: async (name, prompt, context, defaultModel, defaultProvider) => {
-    await savePromptTemplate({ name, prompt, context, defaultModel, defaultProvider });
+  saveTemplate: async (name, prompt, context, workflow, defaultModel, defaultProvider) => {
+    await savePromptTemplate({ name, prompt, context, workflow, defaultModel, defaultProvider });
     const templates = await getPromptTemplates();
     set({ templates });
   },

@@ -92,7 +92,7 @@ export function MemoryExtractorSettings({
     const name = templateName.trim();
     if (!name || !prompt.trim()) return;
     try {
-      await saveTemplate(name, prompt, 'memory', model, provider);
+      await saveTemplate(name, prompt, 'memory', 'translation', model, provider);
       setTemplateName('');
       setShowSaveName(false);
       toast.success(t('pipeline.templates.saved'));

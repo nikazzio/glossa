@@ -702,10 +702,12 @@
       }
     },
     "hub": {
-      "recentProjects": "Recenti",
-      "allProjects": "Tutti i progetti",
       "lockedArea": "In arrivo nella versione 2.0",
-      "goToArea": "Vai all'area"
+      "goToArea": "Vai all'area",
+      "projects": "Progetti",
+      "colName": "Nome",
+      "colModified": "Modificato",
+      "noProjects": "Nessun progetto in questo workspace."
     }
   },
   "files": {
@@ -1183,8 +1185,8 @@
     },
     "glossary": {
       "title": "Libreria: dizionari e template",
-      "intro": "La Libreria è un pannello globale (icona libreria nell'header) condiviso tra tutti i progetti. Contiene due tab: Dizionari, dove gestisci raccolte riusabili di termine→traduzione, e Modelli Prompt, dove gestisci la collezione globale di template di prompt.",
-      "libraryTitle": "Dizionari globali",
+      "intro": "La Libreria (pulsante nella barra del workspace) è un pannello del workspace attivo: il titolo mostra il nome del workspace corrente. Contiene tre tab: Dizionari (glossari scoped al workspace), Modelli Prompt (template globali filtrabili per workflow) e Frasi (phrase memory del workspace).",
+      "libraryTitle": "Dizionari del workspace",
       "libraryDesc": "Nel tab Dizionari puoi creare nuovi dizionari, rinominarli con doppio clic, duplicarli (Crea copia), eliminarli, importare termini da CSV/TSV e modificare le voci inline espandendo il dizionario. Un dizionario può essere assegnato come glossario attivo del progetto corrente con il pulsante Assegna.",
       "csvTitle": "Importa da CSV/TSV",
       "csvDesc": "Il pulsante Upload accanto a ogni dizionario apre un wizard che mostra l'anteprima delle prime righe e chiede la strategia: 'Aggiungi/aggiorna' integra senza toccare i termini esistenti, 'Sostituisci tutto' cancella e reimporta. Le intestazioni riconosciute sono termine/source/from per il termine sorgente, traduzione/target/to per la traduzione (case-insensitive); la colonna notes è opzionale.",
@@ -1206,13 +1208,13 @@
       "exportFile": "Apri il dialogo di esportazione",
       "goToChunk": "Vai al chunk N",
       "closeModal": "Chiudi modale / annulla",
-      "toolbarTitle": "Barra laterale e header",
+      "toolbarTitle": "Barra laterale, workspace e editor",
       "openProjects": "Apri il pannello Progetti — barra laterale (modalità editor)",
       "importFile": "Importa un file sorgente — barra laterale (modalità editor)",
       "openConfig": "Apri il pannello di configurazione della pipeline",
       "saveProject": "Salva il progetto — barra laterale (modalità editor)",
-      "openLibrary": "Apri la Libreria (dizionari e template) — header",
-      "switchLang": "Cambia la lingua dell'interfaccia (IT / EN) — header",
+      "openLibrary": "Apri la Libreria (dizionari e template) — hub workspace",
+      "switchLang": "Cambia la lingua dell'interfaccia (IT / EN) — barra laterale",
       "openSettings": "Apri Impostazioni (chiavi API, Ollama, segmentazione, pricing) — footer barra laterale",
       "openHelp": "Apri questa guida — footer barra laterale",
       "openInsights": "Apri il pannello Insight",
@@ -1337,7 +1339,9 @@
     "fromChunk": "Chunk",
     "addToGlossary": "Aggiungi a glossario",
     "addedToGlossary": "Aggiunto al glossario",
-    "addToGlossaryError": "Errore nell'aggiunta al glossario"
+    "addToGlossaryError": "Errore nell'aggiunta al glossario",
+    "exportCsv": "Esporta CSV",
+    "exportCsvError": "Errore durante l'esportazione CSV"
   },
   "stats": {
     "cacheHitRateHint": "Percentuale di token serviti dalla cache del provider. Più è alta, minore il costo.",
@@ -1519,5 +1523,9 @@
       "coverage": "Rapporto di copertura (traduzione / sorgente)",
       "chunksProgress": "Segmenti completati"
     }
+  },
+  "workflow": {
+    "translation": "Traduzione",
+    "transcription": "Trascrizione"
   }
 }

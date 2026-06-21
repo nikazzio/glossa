@@ -71,6 +71,7 @@ const ALLOWED_MIGRATIONS = new Set([
   'translations.translation_processing_text',
   'translations.pipeline_id',
   'prompt_templates.context',
+  'prompt_templates.workflow',
   'translations.blob_id',
   'translations.blob_order',
   'translations.blob_reference_chunk_ids',
@@ -97,6 +98,7 @@ const ALLOWED_MIGRATIONS = new Set([
   'pipelines.auto_search_phrase_memory',
   'pipelines.phrase_memory_similarity_threshold',
   'pipelines.phrase_memory_max_results',
+  'glossaries.workspace_id',
 ]);
 
 const VALID_COLUMN_DEFINITION = /^(INTEGER|TEXT|REAL|BLOB|NUMERIC)(\s+NOT\s+NULL)?(\s+DEFAULT\s+('[^']*'|NULL|-?\d+(\.\d+)?))?$/i;
@@ -380,11 +382,14 @@ export async function initDatabase(): Promise<void> {
   `);
 
   await ensureColumn('prompt_templates', 'context', "TEXT NOT NULL DEFAULT 'stage'");
-  // Migrate unique index from (name) to (name, context) so stage/audit can share names
+  await ensureColumn('prompt_templates', 'workflow', "TEXT NOT NULL DEFAULT 'translation'");
+  await ensureColumn('glossaries', 'workspace_id', 'TEXT DEFAULT NULL');
+  // Migrate unique index: (name) → (name, context) → (name, context, workflow)
   await conn.execute('DROP INDEX IF EXISTS idx_prompt_templates_name');
+  await conn.execute('DROP INDEX IF EXISTS idx_prompt_templates_name_context');
   await conn.execute(`
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_prompt_templates_name_context
-    ON prompt_templates(name, context)
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_prompt_templates_name_context_workflow
+    ON prompt_templates(name, context, workflow)
   `);
 
   // ── Multi-pipeline migration ─────────────────────────────────────────

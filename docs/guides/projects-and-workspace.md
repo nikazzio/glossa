@@ -11,7 +11,7 @@ Glossa separa impostazioni applicative, risorse del workspace e configurazione d
 | Livello | Cosa contiene |
 |---|---|
 | App | API key, connessione Ollama, preferenze interfaccia, default |
-| Workspace | Risorse condivise di phrase memory e contesto area traduzioni |
+| Workspace | Phrase memory, glossari della Libreria, contesto area traduzioni |
 | Progetto / pipeline | Lingue, stage, prompt, glossario assegnato, chunk, output |
 
 ## Significato pratico
@@ -36,7 +36,8 @@ Glossa separa impostazioni applicative, risorse del workspace e configurazione d
 | API key | App |
 | Preferenze interfaccia | App |
 | Storage phrase memory | Workspace |
-| Glossario attivo | Progetto / pipeline |
+| Glossari della Libreria | Workspace |
+| Glossario assegnato alla pipeline | Progetto / pipeline |
 | Chunk, bozze, audit, note | Progetto / pipeline |
 
 ## Consigli sui nomi

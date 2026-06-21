@@ -7,11 +7,14 @@ import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useConfigStore } from '../../stores/configStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
-import type { ModelProvider, PromptTemplateContext } from '../../types';
+import type { ModelProvider, PromptTemplateContext, PromptTemplateWorkflow } from '../../types';
 import { llmService } from '../../services/llmService';
 import { getSelectableModelIds, MODEL_PROVIDER_ORDER } from '../../models/catalog';
 import { canRefineWithProvider, formatProviderModelLabel, useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
 import { IconButton } from '../ui';
+
+const WORKFLOW_OPTIONS = ['translation', 'transcription'] as const;
+type WorkflowFilter = (typeof WORKFLOW_OPTIONS)[number];
 
 const FILTER_OPTIONS = ['all', 'stage', 'audit', 'persona', 'memory'] as const;
 type FilterValue = (typeof FILTER_OPTIONS)[number];
@@ -34,6 +37,8 @@ export function PromptTemplatesTab() {
   const [newContext, setNewContext] = useState<PromptTemplateContext>('stage');
   const [creating, setCreating] = useState(false);
   const [filterContext, setFilterContext] = useState<FilterValue>('all');
+  const [filterWorkflow, setFilterWorkflow] = useState<WorkflowFilter>('translation');
+  const [newWorkflow, setNewWorkflow] = useState<PromptTemplateWorkflow>('translation');
   const [isRefining, setIsRefining] = useState(false);
   const { statuses: keyStatuses } = useProviderKeyStatus();
   const getProviderModels = (provider: ModelProvider) => getSelectableModelIds(provider, ollamaModels);
@@ -100,14 +105,16 @@ export function PromptTemplatesTab() {
     setRefineModel(stageDefaultModel);
   }, [newContext, auditDefaultProvider, auditDefaultModel, stageDefaultProvider, stageDefaultModel]);
 
-  const filtered = templates.filter(
-    (tmpl) => filterContext === 'all' || tmpl.context === filterContext,
-  );
+  const filtered = templates.filter((tmpl) => {
+    const matchesWorkflow = tmpl.workflow === filterWorkflow;
+    const matchesContext = filterContext === 'all' || tmpl.context === filterContext;
+    return matchesWorkflow && matchesContext;
+  });
 
   const handleSave = async () => {
     if (!newName.trim() || !newPrompt.trim()) return;
     try {
-      await saveTemplate(newName.trim(), newPrompt.trim(), newContext, refineModel, refineProvider);
+      await saveTemplate(newName.trim(), newPrompt.trim(), newContext, newWorkflow, refineModel, refineProvider);
       toast.success(t('pipeline.templates.saved'));
       setNewName('');
       setNewPrompt('');
@@ -135,6 +142,24 @@ export function PromptTemplatesTab() {
 
   return (
     <div className="space-y-6">
+      {/* Workflow tabs */}
+      <div className="flex gap-1 rounded-full border border-editorial-border bg-editorial-bg/60 p-0.5 w-fit">
+        {WORKFLOW_OPTIONS.map((w) => (
+          <button
+            key={w}
+            type="button"
+            onClick={() => setFilterWorkflow(w)}
+            className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+              filterWorkflow === w
+                ? 'bg-editorial-paper text-editorial-ink shadow-sm'
+                : 'text-editorial-muted hover:text-editorial-ink'
+            }`}
+          >
+            {w === 'translation' ? t('workflow.translation') : t('workflow.transcription')}
+          </button>
+        ))}
+      </div>
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           {FILTER_OPTIONS.map((ctx) => {
@@ -168,7 +193,7 @@ export function PromptTemplatesTab() {
 
       {creating && (
         <div className="space-y-4 rounded-[20px] border border-editorial-border bg-editorial-textbox/15 p-5">
-          <div className="grid gap-3 sm:grid-cols-[2fr_1fr]">
+          <div className="grid gap-3 sm:grid-cols-[2fr_1fr_1fr]">
             <input
               autoFocus
               value={newName}
@@ -185,6 +210,17 @@ export function PromptTemplatesTab() {
               <option value="audit">{t('pipeline.tabAudit')}</option>
               <option value="persona">{t('pipeline.tabPersona')}</option>
               <option value="memory">{t('workspace.settings.memoryTab')}</option>
+            </select>
+            <select
+              value={newWorkflow}
+              onChange={(e) => setNewWorkflow(e.target.value as PromptTemplateWorkflow)}
+              className="rounded-[16px] border border-editorial-border bg-editorial-bg/80 px-3 py-2.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            >
+              {WORKFLOW_OPTIONS.map((w) => (
+                <option key={w} value={w}>
+                  {w === 'translation' ? t('workflow.translation') : t('workflow.transcription')}
+                </option>
+              ))}
             </select>
           </div>
           <p className="text-xs leading-relaxed text-editorial-muted">

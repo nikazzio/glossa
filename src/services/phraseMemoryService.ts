@@ -1,3 +1,4 @@
+import Papa from 'papaparse';
 import { invoke } from '@tauri-apps/api/core';
 import { select } from './dbService';
 import { logOperation } from '../stores/operationLogStore';
@@ -663,4 +664,29 @@ export async function getChunkPositions(chunkIds: string[]): Promise<Record<stri
     if (row.position !== null) map[row.id] = row.position;
   });
   return map;
+}
+
+const PHRASE_MEMORY_CSV_FIELDS = [
+  'source_phrase',
+  'target_phrase',
+  'confidence',
+  'source_language',
+  'target_language',
+  'domain',
+  'notes',
+  'created_at',
+] as const;
+
+export function exportPhraseMemoryToCsv(entries: PhraseMemoryEntry[]): string {
+  const rows = entries.map((e) => ({
+    source_phrase: e.sourcePhrase,
+    target_phrase: e.targetPhrase,
+    confidence: String(e.confidence),
+    source_language: e.sourceLanguage,
+    target_language: e.targetLanguage,
+    domain: e.domain ?? '',
+    notes: e.notes ?? '',
+    created_at: e.createdAt,
+  }));
+  return Papa.unparse({ fields: [...PHRASE_MEMORY_CSV_FIELDS], data: rows });
 }

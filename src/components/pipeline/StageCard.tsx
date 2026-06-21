@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import type { ModelProvider, OllamaStatus, PipelineStageConfig, PromptTemplate } from '../../types';
+import type { ModelProvider, OllamaStatus, PipelineStageConfig, PromptTemplate, PromptTemplateWorkflow } from '../../types';
 import { getKnownModelIds, getModelStatus, getResolvedModelReasoning, MODEL_PROVIDER_ORDER } from '../../models/catalog';
 import type { ReasoningEffortLevel } from '../../types';
 import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
@@ -44,6 +44,7 @@ interface StageCardProps {
     name: string,
     prompt: string,
     context: 'stage' | 'audit',
+    workflow: PromptTemplateWorkflow,
     defaultModel?: string,
     defaultProvider?: string,
   ) => Promise<void>;
@@ -137,7 +138,7 @@ export function StageCard({
     const name = templateName.trim();
     if (!name) return;
     try {
-      await saveTemplate(name, stage.prompt, 'stage', stage.model, stage.provider);
+      await saveTemplate(name, stage.prompt, 'stage', 'translation', stage.model, stage.provider);
       toast.success(t('pipeline.templates.saved'));
       setTemplateName('');
       setShowSaveName(false);

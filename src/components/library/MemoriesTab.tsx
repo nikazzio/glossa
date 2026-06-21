@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { BookMarked, Brain, Check, Loader2, Pencil, RefreshCcw, Trash2, X } from 'lucide-react';
+import { BookMarked, Brain, Check, Download, Loader2, Pencil, RefreshCcw, Trash2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { save } from '@tauri-apps/plugin-dialog';
+import { writeTextFile } from '@tauri-apps/plugin-fs';
 import {
   deletePhraseMemoryEntry,
+  exportPhraseMemoryToCsv,
   getChunkPositions,
   listPhraseMemoryEntries,
   updatePhraseMemoryEntry,
@@ -35,6 +38,23 @@ export function MemoriesTab() {
   const [pickerOpenId, setPickerOpenId] = useState<string | null>(null);
   const [pickerGlossaryId, setPickerGlossaryId] = useState<string>('');
   const [addingId, setAddingId] = useState<string | null>(null);
+
+  const handleExportCsv = async () => {
+    try {
+      const csvContent = exportPhraseMemoryToCsv(entries);
+      const path = await save({
+        filters: [{ name: 'CSV', extensions: ['csv'] }],
+        defaultPath: 'phrase-memory.csv',
+      });
+      if (path) {
+        await writeTextFile(path, csvContent);
+      }
+    } catch (err: unknown) {
+      toast.error(t('library.exportCsvError'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    }
+  };
 
   const loadEntries = useCallback(async () => {
     if (workspaces.length === 0) {
@@ -198,6 +218,14 @@ export function MemoriesTab() {
               ))}
             </select>
           </label>
+          <IconButton
+            size="md"
+            onClick={() => { void handleExportCsv(); }}
+            title={t('library.exportCsv')}
+            disabled={isLoading}
+          >
+            <Download size={14} />
+          </IconButton>
           <IconButton
             size="md"
             onClick={() => void loadEntries()}

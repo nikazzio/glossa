@@ -59,7 +59,7 @@ describe('promptTemplateService', () => {
 
   describe('savePromptTemplate', () => {
     it('inserts a new template with a generated id', async () => {
-      await savePromptTemplate({ name: 'My prompt', prompt: 'Translate carefully', context: 'stage' });
+      await savePromptTemplate({ name: 'My prompt', prompt: 'Translate carefully', context: 'stage', workflow: 'translation' });
 
       expect(dbMocks.execute).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO prompt_templates'),
@@ -68,26 +68,26 @@ describe('promptTemplateService', () => {
     });
 
     it('uses ON CONFLICT upsert on name+context collision', async () => {
-      await savePromptTemplate({ name: 'Existing', prompt: 'Updated content', context: 'stage' });
+      await savePromptTemplate({ name: 'Existing', prompt: 'Updated content', context: 'stage', workflow: 'translation' });
 
       expect(dbMocks.execute).toHaveBeenCalledWith(
-        expect.stringContaining('ON CONFLICT(name, context) DO UPDATE SET'),
+        expect.stringContaining('ON CONFLICT(name, context, workflow) DO UPDATE SET'),
         expect.any(Array),
       );
     });
 
     it('returns void (does not return the id)', async () => {
-      const result = await savePromptTemplate({ name: 'Test', prompt: 'Test prompt', context: 'stage' });
+      const result = await savePromptTemplate({ name: 'Test', prompt: 'Test prompt', context: 'stage', workflow: 'translation' });
       expect(result).toBeUndefined();
     });
 
     it('stores empty strings for missing optional fields', async () => {
-      await savePromptTemplate({ name: 'Minimal', prompt: 'Min prompt', context: 'stage' });
+      await savePromptTemplate({ name: 'Minimal', prompt: 'Min prompt', context: 'stage', workflow: 'translation' });
 
       const callArgs = dbMocks.execute.mock.calls[0][1] as unknown[];
-      // callArgs: [id, name, prompt, context, defaultModel, defaultProvider]
-      expect(callArgs[4]).toBe('');
+      // callArgs: [id, name, prompt, context, workflow, defaultModel, defaultProvider]
       expect(callArgs[5]).toBe('');
+      expect(callArgs[6]).toBe('');
     });
 
     it('stores provided model and provider', async () => {
@@ -95,13 +95,14 @@ describe('promptTemplateService', () => {
         name: 'Full',
         prompt: 'Full prompt',
         context: 'stage',
+        workflow: 'translation',
         defaultModel: 'claude-3-5-sonnet-latest',
         defaultProvider: 'anthropic',
       });
 
       const callArgs = dbMocks.execute.mock.calls[0][1] as unknown[];
-      expect(callArgs[4]).toBe('claude-3-5-sonnet-latest');
-      expect(callArgs[5]).toBe('anthropic');
+      expect(callArgs[5]).toBe('claude-3-5-sonnet-latest');
+      expect(callArgs[6]).toBe('anthropic');
     });
   });
 

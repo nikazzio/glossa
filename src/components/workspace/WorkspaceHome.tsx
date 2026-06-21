@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   BookOpenText,
-  Database,
   FilePen,
   KeyRound,
   LibraryBig,
@@ -12,9 +11,9 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useProjectStore } from '../../stores/projectStore';
-import { confirm } from '../../stores/confirmStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { useLibraryStore } from '../../stores/libraryStore';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
 import { EditorialModalShell } from '../common';
@@ -32,6 +31,7 @@ export function WorkspaceHome() {
   const { activeWorkspace } = useWorkspaceStore();
   const setActiveWorkspaceArea = useUiStore((s) => s.setActiveWorkspaceArea);
   const setShowSettings = useUiStore((state) => state.setShowSettings);
+  const setShowLibraryPanel = useLibraryStore((s) => s.setShowLibraryPanel);
   const { statuses: keyStatuses, isLoading: keyStatusLoading } = useProviderKeyStatus();
   const { projects, loadProjects, createAndOpen, openProject } = useProjectStore();
 
@@ -46,17 +46,8 @@ export function WorkspaceHome() {
 
   useEffect(() => { void loadProjects(); }, [activeWorkspace?.id, loadProjects]);
 
-  const createdLabel = useMemo(() => {
-    if (!activeWorkspace?.createdAt) return '—';
-    return new Intl.DateTimeFormat(i18n.language, {
-      day: '2-digit', month: 'short', year: 'numeric',
-    }).format(new Date(activeWorkspace.createdAt));
-  }, [activeWorkspace?.createdAt, i18n.language]);
-
-  const recentProjects = useMemo(
-    () => [...projects]
-      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
-      .slice(0, 3),
+  const sortedProjects = useMemo(
+    () => [...projects].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()),
     [projects],
   );
 
@@ -90,14 +81,40 @@ export function WorkspaceHome() {
 
         {/* Header */}
         <section>
-          <h1 className="font-display text-4xl italic text-editorial-ink md:text-5xl">
-            {activeWorkspace?.name ?? t('workspace.noActive')}
-          </h1>
-          {activeWorkspace?.description ? (
-            <p className="mt-2 max-w-xl text-sm leading-relaxed text-editorial-muted [text-wrap:pretty]">
-              {activeWorkspace.description}
-            </p>
-          ) : null}
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <h1 className="font-display text-4xl italic text-editorial-ink md:text-5xl">
+                {activeWorkspace?.name ?? t('workspace.noActive')}
+              </h1>
+              {activeWorkspace?.description ? (
+                <p className="mt-2 max-w-xl text-sm leading-relaxed text-editorial-muted [text-wrap:pretty]">
+                  {activeWorkspace.description}
+                </p>
+              ) : null}
+            </div>
+            <div className="flex shrink-0 items-center gap-1 pt-1">
+              <IconButton
+                size="md"
+                tone="muted"
+                onClick={() => setShowLibraryPanel(true)}
+                title={t('library.openLibrary')}
+                tooltipSide="bottom"
+                disabled={!activeWorkspace}
+              >
+                <LibraryBig size={15} />
+              </IconButton>
+              <IconButton
+                size="md"
+                tone="muted"
+                onClick={() => setShowNewProjectForm(true)}
+                title={t('workspace.newBookCard')}
+                tooltipSide="bottom"
+                disabled={!activeWorkspace || showNewProjectForm}
+              >
+                <Plus size={15} />
+              </IconButton>
+            </div>
+          </div>
         </section>
 
         {/* Provider banner */}
@@ -159,59 +176,54 @@ export function WorkspaceHome() {
           </div>
         </section>
 
-        {/* Recent projects */}
-        {recentProjects.length > 0 ? (
-          <section className="mt-6">
-            <div className="mb-3 flex items-center justify-between">
-              <SectionLabel icon={Database} label={t('workspace.hub.recentProjects')} />
-              <button
-                type="button"
-                onClick={() => setActiveWorkspaceArea('translations')}
-                className="text-xs text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent rounded-md"
-              >
-                {t('workspace.hub.allProjects')} →
-              </button>
-            </div>
-            <div className="space-y-2">
-              {recentProjects.map((project) => (
-                <button
-                  key={project.id}
-                  type="button"
-                  onClick={() => {
-                    openProject(project.id).catch((err: unknown) => {
-                      toast.error(t('projects.openFailed'), {
-                        description: err instanceof Error ? err.message : String(err),
+        {/* Project list */}
+        <section className="mt-6">
+          <div className="mb-2 px-1">
+            <SectionLabel icon={BookOpenText} label={t('workspace.hub.projects')} />
+          </div>
+          {sortedProjects.length > 0 ? (
+            <>
+              {/* Column headers */}
+              <div className="mb-1 flex items-center justify-between px-4">
+                <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
+                  {t('workspace.hub.colName')}
+                </span>
+                <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
+                  {t('workspace.hub.colModified')}
+                </span>
+              </div>
+              <div className="space-y-1.5">
+                {sortedProjects.map((project) => (
+                  <button
+                    key={project.id}
+                    type="button"
+                    onClick={() => {
+                      openProject(project.id).catch((err: unknown) => {
+                        toast.error(t('projects.openFailed'), {
+                          description: err instanceof Error ? err.message : String(err),
+                        });
                       });
-                    });
-                  }}
-                  className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-[16px] border border-editorial-border bg-editorial-bg/40 px-4 py-2.5 text-left transition-colors hover:border-editorial-accent/45 hover:bg-editorial-paper focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                >
-                  <span className="flex items-center gap-3 min-w-0">
-                    <BookOpenText size={13} className="shrink-0 text-editorial-muted" />
-                    <span className="truncate font-display text-base italic text-editorial-ink">
-                      {project.name}
+                    }}
+                    className="flex w-full cursor-pointer items-center justify-between gap-4 rounded-[16px] border border-editorial-border bg-editorial-bg/40 px-4 py-3 text-left transition-colors hover:border-editorial-accent/45 hover:bg-editorial-paper focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  >
+                    <span className="flex min-w-0 items-center gap-3">
+                      <BookOpenText size={14} className="shrink-0 text-editorial-muted" />
+                      <span className="truncate font-display text-base italic text-editorial-ink">
+                        {project.name}
+                      </span>
                     </span>
-                  </span>
-                  <span className="shrink-0 text-xs text-editorial-muted">
-                    {formatSavedAt(project.updated_at)}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        {/* Quick action */}
-        <section className="mt-5">
-          <IconButton
-            size="md"
-            onClick={() => setShowNewProjectForm(true)}
-            title={t('workspace.newBookCard')}
-            disabled={!activeWorkspace || showNewProjectForm}
-            className="bg-editorial-textbox/25 hover:bg-editorial-textbox/45"
-          >
-            <Plus size={14} />
-          </IconButton>
+                    <span className="shrink-0 text-xs text-editorial-muted">
+                      {formatSavedAt(project.updated_at)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="px-1 text-sm text-editorial-muted">
+              {t('workspace.hub.noProjects')}
+            </p>
+          )}
         </section>
       </div>
 

@@ -20,6 +20,7 @@ import { useConfigStore } from '../../stores/configStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useLibraryStore } from '../../stores/libraryStore';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { assignGlossaryToProject } from '../../services/glossaryService';
 import { upsertGlossaryEntries } from '../../services/glossaryService';
@@ -79,6 +80,7 @@ export function ConfigDrawer({
   const { config, setConfig, assignGlossary } = usePipelineStore();
   const { chunks, resetAllChunks, isProcessing } = useChunksStore();
   const { glossaries, setShowLibraryPanel, loadGlossaries, isLoaded } = useLibraryStore();
+  const { activeWorkspace } = useWorkspaceStore();
   const { currentProjectId, pipelines, activePipelineId, renamePipeline } = useProjectStore();
   const activePipeline = pipelines.find((p) => p.id === activePipelineId);
   const [nameValue, setNameValue] = useState(activePipeline?.name ?? '');
@@ -103,8 +105,8 @@ export function ConfigDrawer({
   };
 
   useEffect(() => {
-    if (showConfigDrawer && !isLoaded) loadGlossaries();
-  }, [showConfigDrawer, isLoaded, loadGlossaries]);
+    if (showConfigDrawer) loadGlossaries(activeWorkspace?.id ?? null);
+  }, [showConfigDrawer, activeWorkspace?.id, loadGlossaries]);
 
   useEffect(() => {
     setGlossaryDirty(false);

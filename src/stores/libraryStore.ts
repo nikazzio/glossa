@@ -18,6 +18,7 @@ interface LibraryState {
   activeTab: LibraryTab;
   glossaries: Glossary[];
   isLoaded: boolean;
+  loadedForWorkspaceId: string | null;
 
   // Entries state lifted from DictionariesTab to survive panel close/reopen
   entriesMap: Record<string, GlossaryEntry[]>;
@@ -25,9 +26,9 @@ interface LibraryState {
   expandedGlossaryId: string | null;
 
   setShowLibraryPanel: (show: boolean, tab?: LibraryTab) => void;
-  loadGlossaries: () => Promise<void>;
-  reloadGlossaries: () => Promise<void>;
-  createGlossary: (name: string, description?: string, sourceLang?: string, targetLang?: string) => Promise<string>;
+  loadGlossaries: (workspaceId: string | null) => Promise<void>;
+  reloadGlossaries: (workspaceId: string | null) => Promise<void>;
+  createGlossary: (name: string, description?: string, sourceLang?: string, targetLang?: string, workspaceId?: string | null) => Promise<string>;
   renameGlossary: (id: string, name: string) => Promise<void>;
   deleteGlossary: (id: string) => Promise<void>;
   forkGlossary: (id: string, newName: string) => Promise<string>;
@@ -48,31 +49,30 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   activeTab: 'dictionaries',
   glossaries: [],
   isLoaded: false,
+  loadedForWorkspaceId: null,
   entriesMap: {},
   dirtyIds: [],
   expandedGlossaryId: null,
 
   setShowLibraryPanel: (show, tab) => {
     set({ showLibraryPanel: show, ...(tab ? { activeTab: tab } : {}) });
-    if (show && !get().isLoaded) {
-      get().loadGlossaries();
-    }
   },
 
-  loadGlossaries: async () => {
-    if (get().isLoaded) return;
-    const glossaries = await listGlossaries();
-    set({ glossaries, isLoaded: true });
+  loadGlossaries: async (workspaceId) => {
+    const state = get();
+    if (state.isLoaded && state.loadedForWorkspaceId === workspaceId) return;
+    const glossaries = await listGlossaries(workspaceId);
+    set({ glossaries, isLoaded: true, loadedForWorkspaceId: workspaceId });
   },
 
-  reloadGlossaries: async () => {
-    const glossaries = await listGlossaries();
-    set({ glossaries });
+  reloadGlossaries: async (workspaceId) => {
+    const glossaries = await listGlossaries(workspaceId);
+    set({ glossaries, loadedForWorkspaceId: workspaceId });
   },
 
-  createGlossary: async (name, description, sourceLang, targetLang) => {
-    const id = await createGlossary(name, description, sourceLang, targetLang);
-    await get().reloadGlossaries();
+  createGlossary: async (name, description, sourceLang, targetLang, workspaceId) => {
+    const id = await createGlossary(name, description, sourceLang, targetLang, workspaceId);
+    await get().reloadGlossaries(workspaceId ?? null);
     return id;
   },
 
@@ -98,7 +98,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
   forkGlossary: async (id, newName) => {
     const newId = await forkGlossary(id, newName);
-    await get().reloadGlossaries();
+    await get().reloadGlossaries(get().loadedForWorkspaceId);
     return newId;
   },
 
