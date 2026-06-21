@@ -70,8 +70,8 @@
 | `components/pipeline/PipelineActions.tsx` | Run / Cancel / Audit buttons |
 | `components/pipeline/StageCard.tsx` | Visualizza singolo stage (token, retry info) |
 | `components/document/ConfigDrawer.tsx` | Drawer config pipeline: mode, lingue, stage, persona, glossary |
-| `components/layout/Header.tsx` | Breadcrumb navigazione + azioni globali (Salva, Libreria, Lingua) |
-| `components/workspace/WorkspaceHome.tsx` | Dashboard workspace: switch/create/config workspace, progetti, configurazione extractor Phrase Memory |
+| `components/layout/Header.tsx` | Solo breadcrumb navigazione (Glossa // workspace // progetto); non contiene più pulsanti d'azione |
+| `components/workspace/WorkspaceHome.tsx` | Hub workspace: titolo + pulsanti azione (Libreria, Nuovo progetto) in alto a destra; lista completa progetti in stile filesystem (colonne Nome / Modificato, senza limite); area cards; banner provider |
 | `components/workspace/WorkspaceWizard.tsx` | Primo avvio: crea il primo workspace reale |
 | `components/document/AnnotationContextMenu.tsx` | Menu contestuale (clic destro sul testo della traduzione) → «Aggiungi annotazione» con anchor pre-compilato |
 | `utils/annotationMarkdown.ts` | `composeAnnotatedMarkdown()` — compone vista GFM con marcatori `[^a1]` e definizioni a piè di pagina; non modifica il draft salvato |
@@ -92,7 +92,7 @@ Il workspace attuale è specifico per l'area **Traduzioni**. Biblioteca e Trascr
 
 ### Shell UI (multibar)
 
-Home e progetto usano un'unica barra laterale (`ShellNav`). Nel progetto la barra primaria (`PipelineSidebar`) ospita la nav `Run/Pipeline/Document/Insight/Chunk` + back arrow e i pannelli **inline** Run/Pipeline/Document. I pannelli **ricchi** escono in una seconda barra push a sinistra del documento: `ProjectFlyout` (Insight → `InsightDocPanel`, Chunk → `ChunkInspectorPanel`, estratti da `InsightsDrawer.tsx`) e `ConfigDrawer` (config pipeline). Ordine layout editor: `PipelineSidebar → ConfigDrawer → ProjectFlyout → DocumentView`. Il footer della barra laterale (`ShellNavFooter`) ospita i link Impostazioni e Aiuto (non sono nell'header).
+Home e progetto usano un'unica barra laterale (`ShellNav`). Nel progetto la barra primaria (`PipelineSidebar`) ospita la nav `Run/Pipeline/Document/Insight/Chunk` + back arrow e i pannelli **inline** Run/Pipeline/Document. I pannelli **ricchi** escono in una seconda barra push a sinistra del documento: `ProjectFlyout` (Insight → `InsightDocPanel`, Chunk → `ChunkInspectorPanel`, estratti da `InsightsDrawer.tsx`) e `ConfigDrawer` (config pipeline). Ordine layout editor: `PipelineSidebar → ConfigDrawer → ProjectFlyout → DocumentView`. Il footer della barra laterale (`ShellNavFooter`) ospita Salva (Ctrl+S), Impostazioni, Aiuto e il toggle Lingua IT/EN. L'header non contiene più pulsanti d'azione.
 
 `uiStore.activeProjectPanel` (`run|pipeline|document|insight|chunk`) è la source-of-truth del rail. I setter drawer (`setShowDocumentDrawer`/`setShowChunkDrawer`/`setShowConfigDrawer`) sincronizzano `activeProjectPanel`; i flag `show*` restano mutuamente esclusivi e pilotano quale fly-out è aperto. `insight`/`chunk` non sono persistiti come pannello attivo (clamp a `run`).
 

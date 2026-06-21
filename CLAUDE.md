@@ -26,6 +26,13 @@ Sviluppo attivo (pre-1.0). Priorità assoluta alla modalità documento/editorial
 - **Avanzamento**: Leggi `STATO_SESSIONE_2.0.md` a inizio sessione e aggiornalo obbligatoriamente a fine task/feature. Aggiorna l'help in-app per modifiche funzionali.
 - **Docs pubbliche VitePress**: Aggiorna `docs/` (IT) e `docs/en/` (EN) quando aggiungi, rimuovi o modifichi funzionalità utente, workflow o comportamento dell'interfaccia. Il sito è pubblicato su GitHub Pages. Se aggiungi una pagina aggiorna anche la sidebar in `docs/.vitepress/config.ts`.
 
+## Comunicazione con l'utente (CRITICO)
+Niki non scrive codice e non riconosce nomi tecnici. Nelle spiegazioni rivolte all'utente:
+- **Mai** citare nomi di file, funzioni, variabili, hook o componenti
+- **Sempre** descrivere comportamenti visibili: cosa l'utente vede, clicca o ottiene
+- **Giusto**: "la finestra della Libreria ora mostra il nome del workspace nel titolo"
+- **Sbagliato**: "LibraryPanel usa panelTitle derivato da activeWorkspace?.name"
+
 ## Git e Test
 - **Git**: Aggiorna sempre `main` prima di creare un branch (`git checkout main && git pull origin main && git checkout -b nome-branch`).
 - **Test**: Approccio TDD. Copertura minima 80%. Nomi dei test descrittivi sul comportamento atteso. Mai sopprimere gli errori in silenzio.
