@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
-import { Dialog } from '../ui';
+import { Dialog, DialogCancelButton } from '../ui';
 import { ProcessingLine } from '../common';
 import type { TranslationChunk } from '../../types';
 
@@ -34,13 +34,7 @@ export function StageTraceDialog({
       widthClassName="max-w-4xl"
       footer={
         <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full border border-editorial-border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink"
-          >
-            {t('common.close')}
-          </button>
+          <DialogCancelButton onClick={onClose}>{t('common.close')}</DialogCancelButton>
         </div>
       }
     >

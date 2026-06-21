@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { open } from '@tauri-apps/plugin-dialog';
 import { readTextFile, readFile } from '@tauri-apps/plugin-fs';
 import Papa from 'papaparse';
-import { Dialog } from '../ui';
+import { Dialog, DialogConfirmButton, DialogCancelButton } from '../ui';
 import {
   importEntriesFromCsv,
   importEntriesFromXlsx,
@@ -208,18 +208,12 @@ export function CsvImportDialog({ glossaryId, onImported, onClose }: Props) {
                 ))}
               </div>
               <div className="flex gap-2 justify-end pt-2">
-                <button
-                  onClick={() => { setStep('pick'); setError(null); }}
-                  className="px-4 py-2 text-[11px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                >
+                <DialogCancelButton onClick={() => { setStep('pick'); setError(null); }}>
                   {t('common.back')}
-                </button>
-                <button
-                  onClick={handleMapContinue}
-                  className="flex items-center gap-1.5 px-4 py-2 text-[11px] font-bold uppercase tracking-widest bg-editorial-ink text-white hover:bg-editorial-ink/80 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                >
+                </DialogCancelButton>
+                <DialogConfirmButton onClick={handleMapContinue}>
                   {t('common.next')}
-                </button>
+                </DialogConfirmButton>
               </div>
             </div>
           )}
@@ -283,20 +277,11 @@ export function CsvImportDialog({ glossaryId, onImported, onClose }: Props) {
               </div>
 
               <div className="flex gap-2 justify-end pt-2">
-                <button
-                  onClick={goBack}
-                  className="px-4 py-2 text-[11px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                >
-                  {t('common.back')}
-                </button>
-                <button
-                  onClick={handleConfirm}
-                  disabled={loading}
-                  className="flex items-center gap-1.5 px-4 py-2 text-[11px] font-bold uppercase tracking-widest bg-editorial-ink text-white hover:bg-editorial-ink/80 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
-                >
+                <DialogCancelButton onClick={goBack}>{t('common.back')}</DialogCancelButton>
+                <DialogConfirmButton onClick={handleConfirm} disabled={loading}>
                   <Check size={13} />
                   {loading ? t('common.loading') : t('library.csvConfirm')}
-                </button>
+                </DialogConfirmButton>
               </div>
             </div>
           )}

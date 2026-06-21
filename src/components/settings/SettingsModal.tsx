@@ -19,7 +19,7 @@ import { getKnownModelIds, getModelEntry, MODEL_CATALOG, MODEL_PROVIDER_ORDER } 
 import { MODEL_PRICING } from '../../constants';
 import { usePricingStore } from '../../stores/pricingStore';
 import { ProviderLogo } from '../common';
-import { Dialog, IconButton } from '../ui';
+import { Dialog, IconButton, DialogCancelButton } from '../ui';
 import type { ModelProvider } from '../../types';
 import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
 import { useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
@@ -289,13 +289,7 @@ export function SettingsModal() {
       tabBar={tabBar}
       footer={
         <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={() => setShowSettings(false)}
-            className="rounded-full border border-editorial-border px-5 py-3 text-[11px] font-bold uppercase tracking-[0.16em] text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-          >
-            {t('common.close')}
-          </button>
+          <DialogCancelButton onClick={() => setShowSettings(false)}>{t('common.close')}</DialogCancelButton>
         </div>
       }
     >

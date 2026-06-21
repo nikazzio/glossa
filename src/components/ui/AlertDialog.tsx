@@ -17,10 +17,8 @@ interface AlertDialogProps {
 }
 
 const CONFIRM_CLASS: Record<AlertTone, string> = {
-  default:
-    'border border-editorial-border bg-editorial-textbox text-editorial-ink hover:border-editorial-accent/40 hover:text-editorial-accent',
-  danger:
-    'border border-editorial-accent bg-editorial-accent text-editorial-bg hover:bg-editorial-accent/90',
+  default: 'bg-editorial-ink text-white hover:bg-editorial-ink/90',
+  danger: 'bg-editorial-accent text-white hover:bg-editorial-accent/90',
 };
 
 export function AlertDialog({
@@ -54,7 +52,7 @@ export function AlertDialog({
               <button
                 type="button"
                 disabled={busy}
-                className="rounded-full border border-editorial-border px-4 py-2 text-sm text-editorial-ink transition-colors hover:bg-editorial-textbox/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
+                className="rounded-full border border-editorial-border px-5 py-2 text-sm text-editorial-muted transition-colors hover:border-editorial-ink/40 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {cancelLabel}
               </button>
@@ -64,7 +62,7 @@ export function AlertDialog({
                 type="button"
                 disabled={busy}
                 onClick={onConfirm}
-                className={`rounded-full px-4 py-2 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40 ${CONFIRM_CLASS[tone]}`}
+                className={`rounded-full px-5 py-2 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40 ${CONFIRM_CLASS[tone]}`}
               >
                 {confirmLabel}
               </button>

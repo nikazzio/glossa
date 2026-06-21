@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Dialog } from '../ui';
+import { Dialog, DialogConfirmButton, DialogCancelButton } from '../ui';
 import { listGlossaries, addGlossaryEntry, createGlossary } from '../../services/glossaryService';
 import { extractTermFromPhrase } from '../../services/llmService';
 import { usePipelineStore } from '../../stores/pipelineStore';
@@ -100,16 +100,12 @@ export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSucce
       bodyClassName="px-6 py-5"
       footer={
         <div className="flex items-center justify-end gap-3">
-          <button type="button" onClick={onClose} aria-label={t('common.cancel')}
-            className="rounded-full border border-editorial-border px-4 py-2 text-sm text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent">
+          <DialogCancelButton onClick={onClose} aria-label={t('common.cancel')}>
             {t('common.cancel')}
-          </button>
-          <button type="button" onClick={handleConfirm}
-            disabled={!canConfirm || isSaving}
-            aria-label={t('common.confirm')}
-            className="rounded-full border border-editorial-accent bg-editorial-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-editorial-accent/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40">
+          </DialogCancelButton>
+          <DialogConfirmButton onClick={handleConfirm} disabled={!canConfirm || isSaving} aria-label={t('common.confirm')}>
             {isSaving ? '…' : t('common.confirm')}
-          </button>
+          </DialogConfirmButton>
         </div>
       }
     >

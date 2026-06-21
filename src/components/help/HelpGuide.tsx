@@ -12,7 +12,7 @@ import { StyleGuide } from './StyleGuide';
 import { appLogDir } from '@tauri-apps/api/path';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Dialog } from '../ui';
+import { Dialog, DialogCancelButton } from '../ui';
 import { useUiStore, type HelpSection } from '../../stores/uiStore';
 
 interface HelpGuideProps {
@@ -61,13 +61,7 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
       bodyClassName="p-0"
       footer={
         <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full border border-editorial-border px-5 py-3 text-[11px] font-bold uppercase tracking-[0.16em] text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-          >
-            {t('common.close')}
-          </button>
+          <DialogCancelButton onClick={onClose}>{t('common.close')}</DialogCancelButton>
         </div>
       }
     >

@@ -1,7 +1,7 @@
 import { AlertTriangle } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dialog } from '../ui';
+import { Dialog, DialogConfirmButton, DialogCancelButton } from '../ui';
 import type { TranslationChunk } from '../../types';
 
 export type ExportFormat = 'txt' | 'md' | 'html' | 'docx' | 'bilingual';
@@ -57,20 +57,10 @@ export function ExportDialog({ chunks, markdownAware, onConfirm, onCancel }: Exp
       bodyClassName="px-6 py-5"
       footer={
         <div className="flex items-center justify-end gap-3">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="rounded-full border border-editorial-border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-          >
-            {t('common.cancel')}
-          </button>
-          <button
-            type="button"
-            onClick={() => onConfirm(format, separatorValue, markdownAware)}
-            className="rounded-full bg-editorial-ink px-5 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-white transition-colors hover:bg-editorial-ink/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-          >
+          <DialogCancelButton onClick={onCancel}>{t('common.cancel')}</DialogCancelButton>
+          <DialogConfirmButton onClick={() => onConfirm(format, separatorValue, markdownAware)}>
             {t('files.exportConfirm')}
-          </button>
+          </DialogConfirmButton>
         </div>
       }
     >

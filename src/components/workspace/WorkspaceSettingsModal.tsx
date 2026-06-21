@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { exportWorkspace, importWorkspace } from '../../services/backupService';
 import { regenerateAllEmbeddings } from '../../services/phraseMemoryService';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
-import { Dialog, IconButton, PillButton } from '../ui';
+import { Dialog, IconButton, DialogConfirmButton } from '../ui';
 import { MemoryExtractorSettings } from './MemoryExtractorSettings';
 import type { EmbeddingModel, ModelProvider } from '../../types';
 
@@ -171,14 +171,12 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
       footer={
         activeTab === 'general' || activeTab === 'memory' ? (
           <div className="flex justify-end">
-            <PillButton
+            <DialogConfirmButton
               onClick={() => void handleSave()}
               disabled={!name.trim() || saving || (activeTab === 'memory' && (!memoryExtractorModel.trim() || !memoryExtractorPrompt.trim()))}
-              variant="accent"
-              className="px-5 py-3"
             >
               {saving ? t('workspace.saving') : t('common.save')}
-            </PillButton>
+            </DialogConfirmButton>
           </div>
         ) : null
       }

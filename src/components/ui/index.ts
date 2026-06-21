@@ -1,5 +1,6 @@
 export { AlertDialog } from './AlertDialog';
 export { Dialog } from './Dialog';
+export { DialogConfirmButton, DialogCancelButton } from './DialogButtons';
 export { IconButton, type IconButtonTone, type IconButtonSize } from './IconButton';
 export { PillButton } from './PillButton';
 export { SectionLabel } from './SectionLabel';

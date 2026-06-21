@@ -2,7 +2,7 @@ import { CheckCircle2, XCircle, Settings } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { usePreflightStore } from '../../stores/preflightStore';
 import { useUiStore } from '../../stores/uiStore';
-import { Dialog } from '../ui';
+import { Dialog, DialogConfirmButton, DialogCancelButton } from '../ui';
 
 export function PreflightDialog() {
   const { t } = useTranslation();
@@ -24,24 +24,18 @@ export function PreflightDialog() {
       footer={
         hasFailures ? (
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-            <button
-              type="button"
+            <DialogCancelButton
               onClick={() => {
                 resolve(false);
                 setShowSettings(true);
               }}
-              className="flex items-center justify-center gap-2 rounded-full border border-editorial-border px-5 py-3 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink hover:bg-editorial-textbox/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             >
-              <Settings size={12} aria-hidden="true" />
+              <Settings size={14} aria-hidden="true" />
               {t('preflight.openSettings')}
-            </button>
-            <button
-              type="button"
-              onClick={() => resolve(true)}
-              className="rounded-full border border-editorial-accent px-5 py-3 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-accent transition-colors hover:bg-editorial-accent/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            >
+            </DialogCancelButton>
+            <DialogConfirmButton onClick={() => resolve(true)}>
               {t('preflight.proceedAnyway')}
-            </button>
+            </DialogConfirmButton>
           </div>
         ) : null
       }

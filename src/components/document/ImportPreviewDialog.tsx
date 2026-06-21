@@ -32,7 +32,7 @@ import { getSelectableModelIds, LLM_PROVIDER_ORDER } from '../../models/catalog'
 import { useUiStore } from '../../stores/uiStore';
 import { useConfigStore } from '../../stores/configStore';
 import type { ModelProvider } from '../../types';
-import { IconButton } from '../ui';
+import { IconButton, DialogConfirmButton, DialogCancelButton } from '../ui';
 import { ChunkCard, BoundaryDivider, SegmentEditor } from './ChunkEditor';
 import { type ParagraphChunks, toParagraphChunks, countWords, toFlatModel, fromFlatModel } from '../../utils/paragraphChunks';
 
@@ -410,7 +410,7 @@ export function ImportPreviewDialog({
                 onClick={onCancel}
                 title={t('common.close')}
                 aria-label={t('common.close')}
-                className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                className="shrink-0 rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               >
                 <X size={16} />
               </button>
@@ -691,20 +691,8 @@ export function ImportPreviewDialog({
               </div>
             )}
             <div className="flex flex-col-reverse gap-2 sm:flex-row">
-              <button
-                type="button"
-                onClick={onCancel}
-                className="rounded-full border border-editorial-border px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink"
-              >
-                {t('common.cancel')}
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirm}
-                className="rounded-full bg-editorial-ink px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.25em] text-white transition-colors hover:bg-editorial-accent"
-              >
-                {t('files.importConfirm')}
-              </button>
+              <DialogCancelButton onClick={onCancel}>{t('common.cancel')}</DialogCancelButton>
+              <DialogConfirmButton onClick={handleConfirm}>{t('files.importConfirm')}</DialogConfirmButton>
             </div>
           </div>
         </div>
