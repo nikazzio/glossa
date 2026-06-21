@@ -1,4 +1,4 @@
-export type ModelProvider = 'gemini' | 'openai' | 'anthropic' | 'deepseek' | 'ollama' | 'custom';
+export type ModelProvider = 'gemini' | 'openai' | 'anthropic' | 'deepseek' | 'ollama' | 'custom' | 'deepl';
 
 export interface CustomProviderProfile {
   id: string;
@@ -30,8 +30,8 @@ export type DocumentRenderProfile = 'plain-text' | 'markdown';
 export type ExperimentalImportMode = 'docx-markdown';
 export type OllamaThinkLevel = boolean | 'low' | 'medium' | 'high';
 export type ReasoningEffortLevel = 'none' | 'low' | 'medium' | 'high' | 'xhigh';
-export type StageRole = 'translation' | 'refine' | 'format';
-export type PipelineMode = 'standard' | 'editorial';
+export type StageRole = 'translation' | 'refine' | 'format' | 'deepl-translation';
+export type PipelineMode = 'standard' | 'editorial' | 'deepl-hybrid';
 export type PipelineRunStatus = 'idle' | 'running' | 'completed' | 'interrupted';
 
 /** A translation pipeline entity as stored in the DB. */
@@ -76,11 +76,21 @@ export interface GeminiCacheConfig {
   thinkingBudget?: number | null; // 0 = disabled, null = provider default
 }
 
+export interface DeeplConfig {
+  modelType?: 'latency_optimized' | 'quality_optimized' | 'prefer_quality_optimized';
+  formality?: 'default' | 'more' | 'less' | 'prefer_more' | 'prefer_less';
+  context?: string;
+  preserveFormatting?: boolean;
+  glossaryId?: string;
+  showBilledCharacters?: boolean;
+}
+
 export interface ProviderRuntimeConfig {
   ollama?: OllamaConfig;
   openai?: OpenAICacheConfig;
   deepseek?: DeepSeekConfig;
   gemini?: GeminiCacheConfig;
+  deepl?: DeeplConfig;
 }
 
 export interface GlossaryEntry {
@@ -183,6 +193,7 @@ export interface PipelineResult {
   status: 'idle' | 'processing' | 'completed' | 'error' | 'retrying';
   error?: string;
   tokenUsage?: TokenUsage;
+  billedCharacters?: number;
   promptInfo?: PromptInfo;
   retryInfo?: { attempt: number; total: number; delayMs: number };
 }
