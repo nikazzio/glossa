@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Archive, BookOpenText, FilePen, LibraryBig, Plus, Settings2, Trash2 } from 'lucide-react';
+import { Archive, BookOpenText, FilePen, LibraryBig, Plus } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -201,40 +201,16 @@ export function DashboardSidebar() {
           label={t('sidebar.workspaceSection')}
           collapsed={collapsed}
           action={(
-            <div className="flex items-center gap-0.5">
-              {activeWorkspace && (
-                <>
-                  <IconButton
-                    size="sm"
-                    tone="muted"
-                    onClick={() => setShowWorkspaceSettings(true)}
-                    title={t('workspace.configure')}
-                    tooltipSide="right"
-                  >
-                    <Settings2 size={11} />
-                  </IconButton>
-                  <IconButton
-                    size="sm"
-                    tone="muted"
-                    onClick={() => void handleDeleteWorkspace()}
-                    title={t('workspace.delete')}
-                    tooltipSide="right"
-                  >
-                    <Trash2 size={11} />
-                  </IconButton>
-                </>
-              )}
-              <IconButton
-                size="sm"
-                tone="muted"
-                onClick={() => setShowCreateWsForm(true)}
-                title={t('workspace.create')}
-                tooltipSide="right"
-                className="bg-editorial-textbox/25 hover:bg-editorial-textbox/45"
-              >
-                <Plus size={11} />
-              </IconButton>
-            </div>
+            <IconButton
+              size="sm"
+              tone="muted"
+              onClick={() => setShowCreateWsForm(true)}
+              title={t('workspace.create')}
+              tooltipSide="right"
+              className="bg-editorial-textbox/25 hover:bg-editorial-textbox/45"
+            >
+              <Plus size={11} />
+            </IconButton>
           )}
         >
           {workspaces.map((ws) => {

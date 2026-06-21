@@ -6,6 +6,8 @@ import {
   LibraryBig,
   Lock,
   Plus,
+  Settings2,
+  Trash2,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
@@ -14,6 +16,8 @@ import { useProjectStore } from '../../stores/projectStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useLibraryStore } from '../../stores/libraryStore';
+import { WorkspaceSettingsModal } from '../workspace/WorkspaceSettingsModal';
+import { confirm } from '../../stores/confirmStore';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
 import { EditorialModalShell } from '../common';
@@ -28,7 +32,7 @@ const AREA_ICONS: Record<WorkspaceArea, React.ComponentType<{ size?: number }>> 
 
 export function WorkspaceHome() {
   const { t, i18n } = useTranslation();
-  const { activeWorkspace } = useWorkspaceStore();
+  const { activeWorkspace, removeWorkspace } = useWorkspaceStore();
   const setActiveWorkspaceArea = useUiStore((s) => s.setActiveWorkspaceArea);
   const setShowSettings = useUiStore((state) => state.setShowSettings);
   const setShowLibraryPanel = useLibraryStore((s) => s.setShowLibraryPanel);
@@ -38,6 +42,7 @@ export function WorkspaceHome() {
   const [showNewProjectForm, setShowNewProjectForm] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [creatingProject, setCreatingProject] = useState(false);
+  const [showWorkspaceSettings, setShowWorkspaceSettings] = useState(false);
 
   const createProjectDialogRef = useFocusTrap(showNewProjectForm, () => {
     setShowNewProjectForm(false);
@@ -68,6 +73,18 @@ export function WorkspaceHome() {
     } finally {
       setCreatingProject(false);
     }
+  };
+
+  const handleDeleteWorkspace = async () => {
+    if (!activeWorkspace) return;
+    const ok = await confirm({
+      title: t('workspace.deleteTitle'),
+      message: t('workspace.deleteMessage', { name: activeWorkspace.name }),
+      confirmLabel: t('common.delete'),
+      danger: true,
+    });
+    if (!ok) return;
+    await removeWorkspace(activeWorkspace.id);
   };
 
   const formatSavedAt = (updatedAt: string) =>
@@ -102,6 +119,26 @@ export function WorkspaceHome() {
                 disabled={!activeWorkspace}
               >
                 <LibraryBig size={15} />
+              </IconButton>
+              <IconButton
+                size="md"
+                tone="muted"
+                onClick={() => setShowWorkspaceSettings(true)}
+                title={t('workspace.configure')}
+                tooltipSide="bottom"
+                disabled={!activeWorkspace}
+              >
+                <Settings2 size={15} />
+              </IconButton>
+              <IconButton
+                size="md"
+                tone="muted"
+                onClick={() => void handleDeleteWorkspace()}
+                title={t('workspace.delete')}
+                tooltipSide="bottom"
+                disabled={!activeWorkspace}
+              >
+                <Trash2 size={15} />
               </IconButton>
               <IconButton
                 size="md"
@@ -292,6 +329,7 @@ export function WorkspaceHome() {
           </div>
         ) : null}
       </AnimatePresence>
+      <WorkspaceSettingsModal open={showWorkspaceSettings} onClose={() => setShowWorkspaceSettings(false)} />
     </main>
   );
 }
