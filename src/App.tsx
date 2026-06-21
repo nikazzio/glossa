@@ -20,7 +20,6 @@ import { useWorkspaceStore } from './stores/workspaceStore';
 import { WorkspaceWizard } from './components/workspace/WorkspaceWizard';
 import { WorkspaceHome } from './components/workspace/WorkspaceHome';
 import { TranslationsArea } from './components/workspace/TranslationsArea';
-import { LibraryArea } from './components/workspace/LibraryArea';
 import { WorkspaceSettingsModal } from './components/workspace/WorkspaceSettingsModal';
 import { importTextFile } from './services/fileService';
 import { savePipelineConfig } from './services/pipelineService';
@@ -500,17 +499,11 @@ export default function App() {
             <div className="relative flex min-w-0 flex-1">
               {activeWorkspaceArea === 'translations' ? (
                 <TranslationsArea />
-              ) : activeWorkspaceArea === 'library' ? (
-                <LibraryArea />
               ) : (
                 <WorkspaceHome />
               )}
               <PanelTransitionVeil
-                panelKey={
-                  activeWorkspaceArea === 'translations' ? 'area-translations'
-                  : activeWorkspaceArea === 'library' ? 'area-library'
-                  : `workspace-home-${activeWorkspace?.id ?? 'none'}`
-                }
+                panelKey={activeWorkspaceArea === 'translations' ? 'area-translations' : `workspace-home-${activeWorkspace?.id ?? 'none'}`}
                 tone="paper"
                 variant="workspace"
               />

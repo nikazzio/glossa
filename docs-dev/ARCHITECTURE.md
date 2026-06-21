@@ -70,11 +70,9 @@
 | `components/pipeline/PipelineActions.tsx` | Run / Cancel / Audit buttons |
 | `components/pipeline/StageCard.tsx` | Visualizza singolo stage (token, retry info) |
 | `components/document/ConfigDrawer.tsx` | Drawer config pipeline: mode, lingue, stage, persona, glossary |
-| `components/layout/Header.tsx` | Breadcrumb navigazione + azioni globali (Salva, Libreria, Lingua). Il pulsante Libreria chiama `closeProject()` + `setActiveWorkspaceArea('library')` → naviga alla LibraryArea senza aprire modal. |
-| `components/workspace/WorkspaceHome.tsx` | Dashboard workspace: hub card per le aree (Traduzioni, Biblioteca, Trascrizioni), switch/create/config workspace, progetti recenti, configurazione extractor Phrase Memory |
+| `components/layout/Header.tsx` | Breadcrumb navigazione + azioni globali (Salva, Libreria, Lingua) |
+| `components/workspace/WorkspaceHome.tsx` | Dashboard workspace: switch/create/config workspace, progetti, configurazione extractor Phrase Memory |
 | `components/workspace/WorkspaceWizard.tsx` | Primo avvio: crea il primo workspace reale |
-| `components/workspace/TranslationsArea.tsx` | Area Traduzioni: lista progetti, creazione, ordinamento, eliminazione |
-| `components/workspace/LibraryArea.tsx` | Area Biblioteca: hub interno con tre sezioni (`LibrarySection = 'glossaries' \| 'memories' \| 'templates' \| null`). Il back arrow torna all'hub Biblioteca; il secondo livello torna al workspace hub (`setActiveWorkspaceArea(null)`). Render: `activeSection === null` → SectionCard grid; `'glossaries'` → `DictionariesTab`; `'memories'` → `MemoriesTab`; `'templates'` → `PromptTemplatesTab`. |
 | `components/document/AnnotationContextMenu.tsx` | Menu contestuale (clic destro sul testo della traduzione) → «Aggiungi annotazione» con anchor pre-compilato |
 | `utils/annotationMarkdown.ts` | `composeAnnotatedMarkdown()` — compone vista GFM con marcatori `[^a1]` e definizioni a piè di pagina; non modifica il draft salvato |
 
@@ -91,21 +89,6 @@ Glossa 2.0 separa tre livelli:
 | Pipeline/progetto | `ConfigDrawer` | Lingue, persona, stage, prompt, glossario assegnato, toggle/search Phrase Memory |
 
 Il workspace attuale è specifico per l'area **Traduzioni**. Biblioteca e Trascrizioni sono future macro-aree separate; non devono condividere implicitamente la Phrase Memory delle traduzioni.
-
-### Workspace areas (routing)
-
-`uiStore.activeWorkspaceArea` (`'translations' | 'library' | 'transcriptions' | null`) controlla quale area viene renderizzata al posto del workspace hub (`WorkspaceHome`):
-
-| Valore | Componente renderizzato |
-|---|---|
-| `null` | `WorkspaceHome` (hub con card per ogni area) |
-| `'translations'` | `TranslationsArea` |
-| `'library'` | `LibraryArea` |
-| `'transcriptions'` | (area futura, non implementata) |
-
-Navigazione in entrata: clic su una hub card in `WorkspaceHome` → `setActiveWorkspaceArea(area)`. Il pulsante Libreria in `Header.tsx` chiama `closeProject()` poi `setActiveWorkspaceArea('library')` per raggiungere la libreria anche da dentro un progetto aperto.
-
-Navigazione in uscita: ogni area ha un back button che chiama `setActiveWorkspaceArea(null)` per tornare all'hub.
 
 ### Shell UI (multibar)
 
@@ -326,7 +309,6 @@ glossaries / glossary_entries / project_glossaries
 
 prompt_templates
   id, name, prompt, context ('stage'|'audit'|'persona'|'memory')
-  workflow ('translation'|'transcription')   ← filtra i template per area di workflow
   default_model, default_provider
 
 operation_logs
