@@ -70,7 +70,7 @@
     "mode": {
       "standard": "Standard",
       "editorial": "Editoriale",
-      "deepl-hybrid": "DeepL Hybrid"
+      "deepl-hybrid": "DeepL"
     },
     "modeDesc": {
       "standard": "Uno stage di traduzione + audit qualità.",

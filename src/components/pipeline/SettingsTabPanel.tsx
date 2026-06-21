@@ -239,13 +239,15 @@ export function SettingsTabPanel({
           </p>
         )}
       </div>
-      <PhraseMemoryConfig
-        usePhraseMemory={usePhraseMemory ?? false}
-        autoSearchPhraseMemory={autoSearchPhraseMemory}
-        phraseMemoryMaxResults={phraseMemoryMaxResults}
-        onChange={onPhraseMemoryChange}
-        disabled={isProcessing}
-      />
+      {config.mode !== 'deepl-hybrid' && (
+        <PhraseMemoryConfig
+          usePhraseMemory={usePhraseMemory ?? false}
+          autoSearchPhraseMemory={autoSearchPhraseMemory}
+          phraseMemoryMaxResults={phraseMemoryMaxResults}
+          onChange={onPhraseMemoryChange}
+          disabled={isProcessing}
+        />
+      )}
     </div>
   );
 }

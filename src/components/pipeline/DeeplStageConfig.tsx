@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { BookOpen, Network, Trash2 } from 'lucide-react';
 import { deeplService } from '../../services/deeplService';
 import type { DeeplConfig, DeeplLanguageInfo, GlossaryEntry } from '../../types';
 import type { DeeplGlossaryInfo } from '../../services/deeplService';
 import { DEFAULT_DEEPL_STAGE_OPTIONS, toDeeplCode } from '../../constants';
+import { IconButton, SectionLabel, ToggleRow } from '../ui';
 
 interface DeeplStageConfigProps {
   value?: DeeplConfig;
@@ -80,132 +82,130 @@ export function DeeplStageConfig({
     }
   };
 
-  return (
-    <div className="flex flex-col gap-3">
-      <div>
-        <label className="text-xs text-muted-foreground uppercase tracking-wide">
-          {t('pipeline.deepl.modelType', 'Modalità traduzione')}
-        </label>
-        <select
-          className="mt-1 w-full rounded border border-border bg-background px-2 py-1 text-sm"
-          value={config.modelType ?? 'prefer_quality_optimized'}
-          onChange={(e) => update({ modelType: e.target.value as DeeplConfig['modelType'] })}
-        >
-          <option value="prefer_quality_optimized">{t('pipeline.deepl.preferQuality', 'Qualità (raccomandato)')}</option>
-          <option value="quality_optimized">{t('pipeline.deepl.qualityOnly', 'Solo qualità')}</option>
-          <option value="latency_optimized">{t('pipeline.deepl.latency', 'Velocità')}</option>
-        </select>
-      </div>
+  const filteredGlossaries = glossaries.filter(
+    (g) =>
+      g.sourceLang.toUpperCase() === normalizedSourceLang &&
+      g.targetLang.toUpperCase() === targetLang,
+  );
 
-      {supportsFormality && (
-        <div>
-          <label className="text-xs text-muted-foreground uppercase tracking-wide">
-            {t('pipeline.deepl.formality', 'Registro')}
+  const showGlossarySection = filteredGlossaries.length > 0 || glossariesLoading || glossaryEntries.length > 0;
+
+  return (
+    <div className="flex flex-col gap-5">
+      {/* Sezione traduzione */}
+      <div className="space-y-3">
+        <SectionLabel icon={Network} label={t('pipeline.deepl.sectionTranslation', 'Traduzione DeepL')} />
+        <div className="space-y-2">
+          <label className="text-xs font-sans uppercase tracking-[0.1em] text-editorial-muted">
+            {t('pipeline.deepl.modelType', 'Modalità traduzione')}
           </label>
           <select
-            className="mt-1 w-full rounded border border-border bg-background px-2 py-1 text-sm"
-            value={config.formality ?? 'default'}
-            onChange={(e) => update({ formality: e.target.value as DeeplConfig['formality'] })}
+            className="w-full rounded-[12px] border border-editorial-border bg-editorial-textbox px-2 py-1.5 text-xs font-sans text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            value={config.modelType ?? 'prefer_quality_optimized'}
+            onChange={(e) => update({ modelType: e.target.value as DeeplConfig['modelType'] })}
           >
-            <option value="default">{t('pipeline.deepl.formalityDefault', 'Predefinito')}</option>
-            <option value="prefer_more">{t('pipeline.deepl.formalityPreferMore', 'Formale (se supportato)')}</option>
-            <option value="more">{t('pipeline.deepl.formalityMore', 'Formale')}</option>
-            <option value="prefer_less">{t('pipeline.deepl.formalityPreferLess', 'Informale (se supportato)')}</option>
-            <option value="less">{t('pipeline.deepl.formalityLess', 'Informale')}</option>
+            <option value="prefer_quality_optimized">{t('pipeline.deepl.preferQuality', 'Qualità (raccomandato)')}</option>
+            <option value="quality_optimized">{t('pipeline.deepl.qualityOnly', 'Solo qualità')}</option>
+            <option value="latency_optimized">{t('pipeline.deepl.latency', 'Velocità')}</option>
           </select>
         </div>
-      )}
 
-      <div>
-        <label className="text-xs text-muted-foreground uppercase tracking-wide">
-          {t('pipeline.deepl.context', 'Contesto')}
-        </label>
-        <textarea
-          className="mt-1 w-full rounded border border-border bg-background px-2 py-1 text-sm"
-          rows={2}
-          placeholder={t('pipeline.deepl.contextPlaceholder', 'Testo di contesto (non fatturato, migliora qualità)')}
-          value={config.context ?? ''}
-          onChange={(e) => update({ context: e.target.value || undefined })}
-        />
+        {supportsFormality && (
+          <div className="space-y-2">
+            <label className="text-xs font-sans uppercase tracking-[0.1em] text-editorial-muted">
+              {t('pipeline.deepl.formality', 'Registro')}
+            </label>
+            <select
+              className="w-full rounded-[12px] border border-editorial-border bg-editorial-textbox px-2 py-1.5 text-xs font-sans text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              value={config.formality ?? 'default'}
+              onChange={(e) => update({ formality: e.target.value as DeeplConfig['formality'] })}
+            >
+              <option value="default">{t('pipeline.deepl.formalityDefault', 'Predefinito')}</option>
+              <option value="prefer_more">{t('pipeline.deepl.formalityPreferMore', 'Formale (se supportato)')}</option>
+              <option value="more">{t('pipeline.deepl.formalityMore', 'Formale')}</option>
+              <option value="prefer_less">{t('pipeline.deepl.formalityPreferLess', 'Informale (se supportato)')}</option>
+              <option value="less">{t('pipeline.deepl.formalityLess', 'Informale')}</option>
+            </select>
+          </div>
+        )}
       </div>
 
-      <div>
-        <label className="text-xs text-muted-foreground uppercase tracking-wide">
-          {t('pipeline.deepl.glossary', 'Glossario DeepL')}
-        </label>
-        <div className="mt-1 flex gap-2">
-          <select
-            className="flex-1 rounded border border-border bg-background px-2 py-1 text-sm"
-            value={config.glossaryId ?? ''}
-            onChange={(e) => update({ glossaryId: e.target.value || undefined })}
-          >
-            <option value="">
-              {glossariesLoading
-                ? t('common.loading', 'Caricamento…')
-                : t('pipeline.deepl.noGlossary', 'Nessun glossario')}
-            </option>
-            {glossaries
-              .filter(
-                (g) =>
-                  g.sourceLang.toUpperCase() === normalizedSourceLang &&
-                  g.targetLang.toUpperCase() === targetLang,
-              )
-              .map((g) => (
+      {/* Sezione glossario DeepL */}
+      {showGlossarySection && (
+        <div className="space-y-3">
+          <SectionLabel icon={BookOpen} label={t('pipeline.deepl.glossary', 'Glossario DeepL')} />
+          <div className="flex items-center gap-2">
+            <select
+              className="flex-1 rounded-[12px] border border-editorial-border bg-editorial-textbox px-2 py-1.5 text-xs font-sans text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              value={config.glossaryId ?? ''}
+              onChange={(e) => update({ glossaryId: e.target.value || undefined })}
+            >
+              <option value="">
+                {glossariesLoading
+                  ? t('common.loading', 'Caricamento…')
+                  : t('pipeline.deepl.noGlossary', 'Nessun glossario')}
+              </option>
+              {filteredGlossaries.map((g) => (
                 <option key={g.glossaryId} value={g.glossaryId}>
                   {g.name} ({g.entryCount} termini)
                 </option>
               ))}
-          </select>
-          {config.glossaryId && (
+            </select>
+            {config.glossaryId && (
+              <IconButton
+                size="sm"
+                tone="default"
+                className="shrink-0"
+                onClick={() =>
+                  deeplService
+                    .deleteGlossary(config.glossaryId!)
+                    .then(reloadGlossaries)
+                    .catch((e: unknown) =>
+                      setGlossaryError(e instanceof Error ? e.message : 'Eliminazione glossario DeepL fallita'),
+                    )
+                }
+                title={t('pipeline.deepl.deleteGlossary', 'Elimina glossario DeepL')}
+              >
+                <Trash2 size={12} />
+              </IconButton>
+            )}
+          </div>
+
+          {glossaryEntries.length > 0 && (
             <button
               type="button"
-              className="rounded border border-border px-2 py-1 text-xs text-destructive hover:bg-destructive/10"
-              onClick={() =>
-                deeplService
-                  .deleteGlossary(config.glossaryId!)
-                  .then(reloadGlossaries)
-                  .catch((e) => setGlossaryError(e instanceof Error ? e.message : 'Eliminazione glossario DeepL fallita'))
-              }
-              title={t('pipeline.deepl.deleteGlossary', 'Elimina glossario DeepL')}
+              disabled={isCreatingGlossary}
+              onClick={handleCreateFromGlossa}
+              className="text-xs font-sans text-editorial-accent underline decoration-editorial-accent/40 hover:decoration-editorial-accent transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              ✕
+              {isCreatingGlossary
+                ? t('pipeline.deepl.creatingGlossary', 'Creazione…')
+                : t('pipeline.deepl.createFromGlossa', '+ Carica glossario Glossa su DeepL')}
             </button>
           )}
-        </div>
-        {glossaryEntries.length > 0 && (
-          <button
-            type="button"
-            className="mt-2 text-xs text-accent underline"
-            onClick={handleCreateFromGlossa}
-            disabled={isCreatingGlossary}
-          >
-            {isCreatingGlossary
-              ? t('pipeline.deepl.creatingGlossary', 'Creazione…')
-              : t('pipeline.deepl.createFromGlossa', '+ Crea glossario DeepL dai termini Glossa')}
-          </button>
-        )}
-        {glossaryError && (
-          <p className="text-xs text-destructive mt-1">{glossaryError}</p>
-        )}
-      </div>
 
-      <div className="flex flex-col gap-1">
-        <label className="flex items-center gap-2 text-sm cursor-pointer">
-          <input
-            type="checkbox"
+          {glossaryError && (
+            <p className="text-xs font-sans text-editorial-accent mt-1">{glossaryError}</p>
+          )}
+        </div>
+      )}
+
+      {/* Opzioni */}
+      <div className="space-y-3">
+        <div className="space-y-3 rounded-[16px] border border-editorial-border/60 bg-editorial-textbox/10 px-4 py-4">
+          <ToggleRow
+            icon={null}
+            label={t('pipeline.deepl.preserveFormatting', 'Mantieni formattazione')}
             checked={config.preserveFormatting ?? true}
-            onChange={(e) => update({ preserveFormatting: e.target.checked })}
+            onChange={() => update({ preserveFormatting: !(config.preserveFormatting ?? true) })}
           />
-          {t('pipeline.deepl.preserveFormatting', 'Mantieni formattazione')}
-        </label>
-        <label className="flex items-center gap-2 text-sm cursor-pointer">
-          <input
-            type="checkbox"
+          <ToggleRow
+            icon={null}
+            label={t('pipeline.deepl.showBilledCharacters', 'Mostra caratteri fatturati')}
             checked={config.showBilledCharacters ?? true}
-            onChange={(e) => update({ showBilledCharacters: e.target.checked })}
+            onChange={() => update({ showBilledCharacters: !(config.showBilledCharacters ?? true) })}
           />
-          {t('pipeline.deepl.showBilledCharacters', 'Mostra caratteri fatturati')}
-        </label>
+        </div>
       </div>
     </div>
   );
