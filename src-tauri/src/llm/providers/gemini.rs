@@ -201,7 +201,6 @@ impl LlmProvider for GeminiProvider {
             .await
             .map_err(|e| format!("Gemini request failed: {e}"))
     }
-
 }
 
 fn gemini_cache_config<'a>(req: &'a LlmRequest<'_>) -> Option<&'a GeminiCacheConfig> {

@@ -384,5 +384,4 @@ mod tests {
         assert!(should_fallback_to_file_store(&platform_failure));
         assert!(!should_fallback_to_file_store(&keyring::Error::NoEntry));
     }
-
 }

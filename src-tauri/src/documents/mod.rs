@@ -21,9 +21,9 @@ pub mod docx_export;
 pub mod docx_extract;
 pub mod pdf_extract;
 
+pub(crate) use docx_export::export_markdown_docx_bytes;
 pub use docx_extract::{extract_docx_markdown_from_bytes, extract_docx_text_from_bytes};
 pub use pdf_extract::extract_pdf_text_from_bytes;
-pub(crate) use docx_export::export_markdown_docx_bytes;
 
 // exposed for integration tests in mod.rs — not public API
 #[cfg(test)]
@@ -86,7 +86,9 @@ mod tests {
                 SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
             writer.start_file("word/document.xml", options).unwrap();
             writer.write_all(document_xml.as_bytes()).unwrap();
-            writer.start_file("word/_rels/document.xml.rels", options).unwrap();
+            writer
+                .start_file("word/_rels/document.xml.rels", options)
+                .unwrap();
             writer.write_all(rels_xml.as_bytes()).unwrap();
             writer.finish().unwrap();
         }
@@ -256,7 +258,10 @@ mod tests {
 </w:document>"#;
         let buffer = build_docx(xml);
         let extracted = extract_docx_markdown_from_bytes(&buffer).expect("expected markdown");
-        assert!(extracted.contains("- Top level"), "top-level list item missing");
+        assert!(
+            extracted.contains("- Top level"),
+            "top-level list item missing"
+        );
         assert!(extracted.contains("- Nested"), "nested list item missing");
     }
 
@@ -312,7 +317,10 @@ mod tests {
         let normalized = normalize_pdf_text(text);
         assert!(normalized.contains("Page one."), "page one missing");
         assert!(normalized.contains("Page two."), "page two missing");
-        assert!(normalized.contains("---"), "page break marker expected between pages");
+        assert!(
+            normalized.contains("---"),
+            "page break marker expected between pages"
+        );
     }
 
     #[test]

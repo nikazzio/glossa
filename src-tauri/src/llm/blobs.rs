@@ -56,10 +56,8 @@ pub fn compute_blob_assignments(
             rand::thread_rng().gen::<u64>(),
             rand::thread_rng().gen::<u64>()
         );
-        let reference_chunk_ids: Arc<[String]> = chunks
-            .iter()
-            .map(|chunk| chunk.id.clone())
-            .collect();
+        let reference_chunk_ids: Arc<[String]> =
+            chunks.iter().map(|chunk| chunk.id.clone()).collect();
         return chunks
             .iter()
             .enumerate()
@@ -159,7 +157,10 @@ mod tests {
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].chunk_id, "c1");
         assert_eq!(result[0].position, 0);
-        assert_eq!(result[0].reference_chunk_ids.as_ref(), &["c1".to_string()] as &[String]);
+        assert_eq!(
+            result[0].reference_chunk_ids.as_ref(),
+            &["c1".to_string()] as &[String]
+        );
     }
 
     #[test]

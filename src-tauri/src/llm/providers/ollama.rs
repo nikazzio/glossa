@@ -285,7 +285,6 @@ impl LlmProvider for OllamaProvider {
         )
         .await
     }
-
 }
 
 // ── Ollama config helpers ─────────────────────────────────────────────
@@ -464,7 +463,9 @@ async fn ensure_ollama_preflight(
     base_url: &str,
 ) -> Result<OllamaPreflightStatus, String> {
     let cached = {
-        let guard = OLLAMA_PREFLIGHT_CACHE.lock().unwrap_or_else(|p| p.into_inner());
+        let guard = OLLAMA_PREFLIGHT_CACHE
+            .lock()
+            .unwrap_or_else(|p| p.into_inner());
         guard.as_ref().and_then(|entry| {
             (entry.fetched_at.elapsed() < Duration::from_secs(OLLAMA_PREFLIGHT_CACHE_TTL_SECS)
                 && entry.base_url == base_url)
@@ -487,7 +488,9 @@ async fn ensure_ollama_preflight(
                 models,
                 base_url: base_url.to_string(),
             };
-            let mut guard = OLLAMA_PREFLIGHT_CACHE.lock().unwrap_or_else(|p| p.into_inner());
+            let mut guard = OLLAMA_PREFLIGHT_CACHE
+                .lock()
+                .unwrap_or_else(|p| p.into_inner());
             *guard = Some(entry.clone());
             entry
         }

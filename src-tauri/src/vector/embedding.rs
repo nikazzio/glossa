@@ -574,7 +574,9 @@ pub async fn vec_regenerate_all_embeddings(
     };
 
     if entries.is_empty() {
-        log::debug!("phrase_memory.vec_regenerate_all_embeddings.empty workspace_id={workspace_id}");
+        log::debug!(
+            "phrase_memory.vec_regenerate_all_embeddings.empty workspace_id={workspace_id}"
+        );
         return Ok(0);
     }
 
