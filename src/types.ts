@@ -85,6 +85,12 @@ export interface DeeplConfig {
   showBilledCharacters?: boolean;
 }
 
+export interface DeeplLanguageInfo {
+  language: string;
+  name: string;
+  supportsFormality?: boolean;
+}
+
 export interface ProviderRuntimeConfig {
   ollama?: OllamaConfig;
   openai?: OpenAICacheConfig;

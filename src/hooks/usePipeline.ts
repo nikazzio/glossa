@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../stores/pipelineStore';
 import { useChunksStore } from '../stores/chunksStore';
 import { llmService, isStreamCancelledError } from '../services/llmService';
+import { deeplService } from '../services/deeplService';
 import { useConfigStore } from '../stores/configStore';
 import { showPreflightDialog } from '../stores/preflightStore';
 import { withRetry, friendlyError, is429Error } from '../utils/retry';
@@ -29,11 +30,13 @@ type ProviderCheck = { provider: string; model: string; label: string };
 
 function buildProviderChecks(config: ReturnType<typeof usePipelineStore.getState>['config']): ProviderCheck[] {
   return [
-    ...config.stages.filter((s) => s.enabled).map((s, i) => ({
-      provider: s.provider,
-      model: s.model,
-      label: `${s.name || `Stage ${i + 1}`} — ${s.provider} ${s.model}`,
-    })),
+    ...config.stages
+      .filter((s) => s.enabled && s.provider !== 'deepl') // DeepL non usa preflight LLM
+      .map((s, i) => ({
+        provider: s.provider,
+        model: s.model,
+        label: `${s.name || `Stage ${i + 1}`} — ${s.provider} ${s.model}`,
+      })),
     {
       provider: config.judgeProvider,
       model: config.judgeModel,
@@ -305,10 +308,22 @@ export function usePipeline() {
 
       try {
         let capturedUsage: TokenUsage | undefined;
+        let capturedBilledCharacters: number | undefined;
         const stageResult = await withRetry(
           async () => {
             capturedUsage = undefined;
+            capturedBilledCharacters = undefined;
             updateChunkStage(chunk.id, stage.id, { content: '', status: 'processing' });
+            if (stage.provider === 'deepl') {
+              const deeplResult = await deeplService.runDeeplStage({
+                text: stageText,
+                sourceLang: effectiveConfig.sourceLanguage || undefined,
+                targetLang: effectiveConfig.targetLanguage,
+                deeplConfig: stage.providerOptions?.deepl,
+              });
+              capturedBilledCharacters = deeplResult.billedCharacters;
+              return { content: deeplResult.content };
+            }
             if (stage.provider === 'ollama') {
               const text = await llmService.runStageStream(
                 stageText, stage, effectiveConfig, stagePrevious,
@@ -357,6 +372,7 @@ export function usePipeline() {
           content: result,
           status: 'completed',
           ...(capturedUsage ? { tokenUsage: capturedUsage } : {}),
+          ...(capturedBilledCharacters !== undefined ? { billedCharacters: capturedBilledCharacters } : {}),
         });
         pipelineLog.stageEnd(chunk.id, stage.id, stage.name, stageRef, Date.now() - stageStartedAt, capturedUsage);
       } catch (error: unknown) {
