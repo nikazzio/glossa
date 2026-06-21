@@ -306,7 +306,7 @@ translations  ← chunks
 
 glossaries / glossary_entries / project_glossaries
   CRUD standard, many-to-many project↔glossary
-  workspace_id TEXT NULL → FK verso workspaces(id); NULL = legacy globale (visibile ovunque)
+  workspace_id TEXT NULL → riferimento logico a workspaces(id), non enforced da SQLite (ALTER TABLE non supporta ADD FOREIGN KEY); NULL = legacy globale (visibile ovunque)
   Nuovi glossari creati dalla Libreria ereditano workspace_id del workspace attivo.
 
 prompt_templates

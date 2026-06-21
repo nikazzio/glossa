@@ -1185,7 +1185,7 @@
     },
     "glossary": {
       "title": "Library: dictionaries and templates",
-      "intro": "The Library (header icon) is a workspace panel: the title shows the active workspace name. It has three tabs: Dictionaries (glossaries scoped to the workspace), Prompt Templates (global templates filterable by workflow), and Phrases (workspace phrase memory).",
+      "intro": "The Library (workspace bar button) is a workspace panel: the title shows the active workspace name. It has three tabs: Dictionaries (glossaries scoped to the workspace), Prompt Templates (global templates filterable by workflow), and Phrases (workspace phrase memory).",
       "libraryTitle": "Workspace dictionaries",
       "libraryDesc": "In the Dictionaries tab you can create new dictionaries, rename them with double-click, duplicate (Fork), delete, import terms from CSV/TSV, and edit entries inline by expanding a dictionary. A dictionary can be assigned as the active glossary of the current project with the Assign button.",
       "csvTitle": "Import from CSV/TSV",

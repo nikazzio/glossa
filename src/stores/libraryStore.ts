@@ -72,7 +72,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
   createGlossary: async (name, description, sourceLang, targetLang, workspaceId) => {
     const id = await createGlossary(name, description, sourceLang, targetLang, workspaceId);
-    await get().reloadGlossaries(get().loadedForWorkspaceId);
+    await get().reloadGlossaries(workspaceId ?? null);
     return id;
   },
 

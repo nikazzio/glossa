@@ -128,8 +128,8 @@ export async function forkGlossary(id: string, newName: string): Promise<string>
   const newId = generateId('gls');
   await runInTransaction(async (run) => {
     await run(
-      `INSERT INTO glossaries (id, name, description, source_language, target_language)
-       SELECT $1, $2, description, source_language, target_language FROM glossaries WHERE id = $3`,
+      `INSERT INTO glossaries (id, name, description, source_language, target_language, workspace_id)
+       SELECT $1, $2, description, source_language, target_language, workspace_id FROM glossaries WHERE id = $3`,
       [newId, newName, id],
     );
     const entries = await select<GlossaryEntryRow>(

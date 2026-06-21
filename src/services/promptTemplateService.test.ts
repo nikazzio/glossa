@@ -71,7 +71,7 @@ describe('promptTemplateService', () => {
       await savePromptTemplate({ name: 'Existing', prompt: 'Updated content', context: 'stage', workflow: 'translation' });
 
       expect(dbMocks.execute).toHaveBeenCalledWith(
-        expect.stringContaining('ON CONFLICT(name, context) DO UPDATE SET'),
+        expect.stringContaining('ON CONFLICT(name, context, workflow) DO UPDATE SET'),
         expect.any(Array),
       );
     });

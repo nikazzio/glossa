@@ -1185,7 +1185,7 @@
     },
     "glossary": {
       "title": "Libreria: dizionari e template",
-      "intro": "La Libreria (icona nell'header) è un pannello del workspace attivo: il titolo mostra il nome del workspace corrente. Contiene tre tab: Dizionari (glossari scoped al workspace), Modelli Prompt (template globali filtrabili per workflow) e Frasi (phrase memory del workspace).",
+      "intro": "La Libreria (pulsante nella barra del workspace) è un pannello del workspace attivo: il titolo mostra il nome del workspace corrente. Contiene tre tab: Dizionari (glossari scoped al workspace), Modelli Prompt (template globali filtrabili per workflow) e Frasi (phrase memory del workspace).",
       "libraryTitle": "Dizionari del workspace",
       "libraryDesc": "Nel tab Dizionari puoi creare nuovi dizionari, rinominarli con doppio clic, duplicarli (Crea copia), eliminarli, importare termini da CSV/TSV e modificare le voci inline espandendo il dizionario. Un dizionario può essere assegnato come glossario attivo del progetto corrente con il pulsante Assegna.",
       "csvTitle": "Importa da CSV/TSV",

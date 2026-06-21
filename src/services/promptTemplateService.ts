@@ -51,7 +51,7 @@ export async function savePromptTemplate(
   await execute(
     `INSERT INTO prompt_templates (id, name, prompt, context, workflow, default_model, default_provider)
      VALUES ($1, $2, $3, $4, $5, $6, $7)
-     ON CONFLICT(name, context) DO UPDATE SET
+     ON CONFLICT(name, context, workflow) DO UPDATE SET
        prompt = excluded.prompt,
        workflow = excluded.workflow,
        default_model = excluded.default_model,
