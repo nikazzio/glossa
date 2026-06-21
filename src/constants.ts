@@ -76,6 +76,7 @@ export const LANGUAGE_TO_DEEPL_CODE: Record<string, string> = {
   'Polish': 'PL',
   'Russian': 'RU',
   'Japanese': 'JA',
+  'Chinese': 'ZH',
   'Chinese (Simplified)': 'ZH',
   'Chinese (Traditional)': 'ZH',
   'Korean': 'KO',

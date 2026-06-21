@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import type { ModelProvider, PipelineConfig, PromptTemplate, ReasoningEffortLevel } from '../../types';
 import type { ProviderKeyStatusMap } from '../../hooks/useProviderKeyStatus';
 import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
-import { getKnownModelIds, getModelStatus, getResolvedModelReasoning, MODEL_PROVIDER_ORDER } from '../../models/catalog';
+import { getKnownModelIds, getModelStatus, getResolvedModelReasoning, LLM_PROVIDER_ORDER } from '../../models/catalog';
 import { DEFAULT_COHERENCE_PROMPT, DEFAULT_JUDGE_PROMPT } from '../../constants';
 import { SectionLabel } from '../ui';
 import { ReasoningPicker } from '../models/ReasoningPicker';
@@ -124,7 +124,7 @@ export function AuditTabPanel({
             className="rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             aria-label={t('models.provider')}
           >
-            {MODEL_PROVIDER_ORDER.map((p) => (
+            {LLM_PROVIDER_ORDER.map((p) => (
               <option key={p} value={p} disabled={p !== 'ollama' && (keyStatuses as Partial<Record<string, boolean>>)[p] === false}>{p}</option>
             ))}
           </select>

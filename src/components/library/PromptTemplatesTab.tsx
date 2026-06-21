@@ -9,7 +9,7 @@ import { useConfigStore } from '../../stores/configStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import type { ModelProvider, PromptTemplateContext, PromptTemplateWorkflow } from '../../types';
 import { llmService } from '../../services/llmService';
-import { getSelectableModelIds, MODEL_PROVIDER_ORDER } from '../../models/catalog';
+import { getSelectableModelIds, LLM_PROVIDER_ORDER } from '../../models/catalog';
 import { canRefineWithProvider, formatProviderModelLabel, useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
 import { IconButton } from '../ui';
 
@@ -248,7 +248,7 @@ export function PromptTemplatesTab() {
                   }}
                   className="rounded-full border border-editorial-border bg-editorial-bg px-3 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 >
-                  {MODEL_PROVIDER_ORDER.map((p) => (
+                  {LLM_PROVIDER_ORDER.map((p) => (
                     <option key={p} value={p}>{p}</option>
                   ))}
                 </select>

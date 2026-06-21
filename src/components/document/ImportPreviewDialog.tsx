@@ -28,7 +28,7 @@ import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { checkContextOverflow, estimateCharTokens } from '../../utils/tokenEstimate';
 import { LANGUAGES } from '../../constants';
-import { getSelectableModelIds, MODEL_PROVIDER_ORDER } from '../../models/catalog';
+import { getSelectableModelIds, LLM_PROVIDER_ORDER } from '../../models/catalog';
 import { useUiStore } from '../../stores/uiStore';
 import { useConfigStore } from '../../stores/configStore';
 import type { ModelProvider } from '../../types';
@@ -595,7 +595,7 @@ export function ImportPreviewDialog({
                   className="w-24 rounded-[10px] border border-editorial-border bg-editorial-bg px-2 py-1.5 text-xs font-bold uppercase outline-none focus:border-editorial-ink/40 appearance-none"
                   aria-label={t('pipeline.source')}
                 >
-                  {MODEL_PROVIDER_ORDER.map((p) => (
+                  {LLM_PROVIDER_ORDER.map((p) => (
                     <option key={p} value={p}>{p}</option>
                   ))}
                 </select>

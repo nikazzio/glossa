@@ -133,7 +133,7 @@ export function SettingsTabPanel({
             {
               mode: 'deepl-hybrid' as PipelineMode,
               stages: [
-                { role: 'deepl', Icon: Network, labelKey: 'pipeline.stageRole.deepl' },
+                { role: 'deepl', Icon: Network, labelKey: 'pipeline.stageRole.deepl-translation' },
                 { role: 'refine', Icon: Wand2, labelKey: 'pipeline.stageRole.refine' },
                 { role: 'audit', Icon: ShieldCheck, labelKey: 'pipeline.tabAudit' },
               ],

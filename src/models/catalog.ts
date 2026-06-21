@@ -9,6 +9,8 @@ import type { ModelReasoningClass, ModelStatus } from '../types';
 export type ModelUseCase = StageRole | 'judge' | 'coherence';
 export type ModelUseCaseFit = 'preferred' | 'discouraged' | 'neutral';
 
+// Providers shown in settings (API-key management). DeepL needs its own key,
+// so it belongs here even though it is not an LLM.
 export const MODEL_PROVIDER_ORDER: ModelProvider[] = [
   'gemini',
   'openai',
@@ -17,6 +19,13 @@ export const MODEL_PROVIDER_ORDER: ModelProvider[] = [
   'deepl',
   'ollama',
 ];
+
+// LLM-only providers for model/judge/extractor pickers. Excludes 'deepl':
+// those code paths assume a model list, preflight, and judge/coherence calls,
+// and the backend get_provider() does not support DeepL as an LLM.
+export const LLM_PROVIDER_ORDER: ModelProvider[] = MODEL_PROVIDER_ORDER.filter(
+  (provider) => provider !== 'deepl',
+);
 
 export interface ModelEntry {
   id: string;

@@ -17,7 +17,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { GlossaryEntry, ModelProvider, OllamaStatus, PipelineStageConfig, PromptTemplate, PromptTemplateWorkflow } from '../../types';
-import { getKnownModelIds, getModelStatus, getResolvedModelReasoning, MODEL_PROVIDER_ORDER } from '../../models/catalog';
+import { getKnownModelIds, getModelStatus, getResolvedModelReasoning, LLM_PROVIDER_ORDER } from '../../models/catalog';
 import type { ReasoningEffortLevel } from '../../types';
 import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
 import { ReasoningPicker } from '../models/ReasoningPicker';
@@ -207,7 +207,7 @@ export function StageCard({
             className="rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
             aria-label={t('models.provider')}
           >
-            {MODEL_PROVIDER_ORDER.map((p) => (
+            {LLM_PROVIDER_ORDER.map((p) => (
               <option key={p} value={p} disabled={p !== 'ollama' && (keyStatuses as Partial<Record<string, boolean>>)[p] === false}>{p}</option>
             ))}
             <option key="custom" value="custom">custom</option>

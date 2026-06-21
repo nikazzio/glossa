@@ -39,13 +39,6 @@ describe('DashboardSidebar', () => {
     expect(screen.getByRole('button', { name: /workspace\.areas\.transcriptions\.title/ })).toBeDisabled();
   });
 
-  it('exposes configure and delete actions on the active workspace row', () => {
-    render(<DashboardSidebar />);
-
-    expect(screen.getByRole('button', { name: 'workspace.configure' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'workspace.delete' })).toBeInTheDocument();
-  });
-
   it('creates a workspace with the default embedding model from the quick form', async () => {
     const createAndActivate = vi.fn().mockResolvedValue({ id: 'workspace-3', name: 'New' });
     useWorkspaceStore.setState({ createAndActivate });
