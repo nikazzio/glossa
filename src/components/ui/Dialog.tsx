@@ -16,6 +16,7 @@ interface DialogProps {
   tabBar?: ReactNode;
   widthClassName?: string;
   bodyClassName?: string;
+  panelClassName?: string;
   closeDisabled?: boolean;
 }
 
@@ -33,6 +34,7 @@ export function Dialog({
   tabBar,
   widthClassName = 'max-w-3xl',
   bodyClassName = 'px-6 py-6 md:px-8',
+  panelClassName = '',
   closeDisabled = false,
 }: DialogProps) {
   // closeDisabled: blocca Esc, click overlay e tasto X (es. durante operazioni in corso).
@@ -48,7 +50,7 @@ export function Dialog({
           onEscapeKeyDown={guardClose}
           onPointerDownOutside={guardClose}
           onInteractOutside={guardClose}
-          className={`fixed left-1/2 top-1/2 z-50 flex max-h-[90vh] w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[28px] border border-editorial-border bg-editorial-bg shadow-[var(--shadow-modal)] ${widthClassName}`}
+          className={`fixed left-1/2 top-1/2 z-50 flex max-h-[90vh] w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[28px] border border-editorial-border bg-editorial-bg shadow-[var(--shadow-modal)] ${widthClassName} ${panelClassName}`.trim()}
         >
           <div className="shrink-0 border-b border-editorial-border px-6 py-5 md:px-8 md:py-6">
             <div className="flex items-start justify-between gap-4">
