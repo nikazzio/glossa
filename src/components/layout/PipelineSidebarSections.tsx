@@ -649,11 +649,9 @@ export function PipelineSidebarPipelinesSection({ collapsed = false }: { collaps
 export function PipelineSidebarDocumentSection({
   collapsed = false,
   onImportDocument,
-  onOpenWorkspaceSettings,
 }: {
   collapsed?: boolean;
   onImportDocument?: () => void;
-  onOpenWorkspaceSettings?: () => void;
 }) {
   const { t } = useTranslation();
   const hasDocument = useChunksStore((state) => state.chunks.length > 0);
@@ -709,9 +707,6 @@ export function PipelineSidebarDocumentSection({
         ) : null}
         <IconButton size="md" onClick={onImportDocument} title={t('files.import')} disabled={!onImportDocument} tooltipSide="right" className="h-9 w-9">
           <Upload size={14} />
-        </IconButton>
-        <IconButton size="md" tone="muted" onClick={onOpenWorkspaceSettings} title={t('workspace.configure')} disabled={!onOpenWorkspaceSettings} tooltipSide="right" className="h-9 w-9">
-          <Settings2 size={14} />
         </IconButton>
         <PipelineSidebarExportDialogHost open={showExportDialog} onOpenChange={setShowExportDialog} />
       </div>
@@ -798,15 +793,6 @@ export function PipelineSidebarDocumentSection({
             disabled={!onImportDocument}
           >
             <Upload size={14} />
-          </IconButton>
-          <IconButton
-            size="md"
-            tone="muted"
-            onClick={onOpenWorkspaceSettings}
-            title={t('workspace.configure')}
-            disabled={!onOpenWorkspaceSettings}
-          >
-            <Settings2 size={14} />
           </IconButton>
         </div>
       </SidebarSectionShell>

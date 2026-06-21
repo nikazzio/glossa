@@ -5,7 +5,9 @@ import {
   BarChart2,
   FileText,
   Layers,
+  LibraryBig,
   Play,
+  Settings2,
   Zap,
 } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -23,6 +25,7 @@ import { useUiStore } from '../../stores/uiStore';
 import type { ProjectPanelTab } from '../../stores/uiStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useChunksStore } from '../../stores/chunksStore';
+import { useLibraryStore } from '../../stores/libraryStore';
 import { IconButton } from '../ui';
 
 interface PipelineSidebarProps {
@@ -71,6 +74,7 @@ export function PipelineSidebar({
   const setWidth = useUiStore((state) => state.setProjectSidebarWidth);
   const closeProject = useProjectStore((state) => state.closeProject);
   const isProcessing = useChunksStore((state) => state.isProcessing);
+  const setShowLibraryPanel = useLibraryStore((state) => state.setShowLibraryPanel);
   const { dragging, startDrag } = useEdgeResize();
   const tabRefs = useRef<Partial<Record<ProjectPanelTab, HTMLButtonElement | null>>>({});
 
@@ -145,7 +149,7 @@ export function PipelineSidebar({
         className="flex min-h-0 flex-1 flex-col"
         style={{ width: collapsed ? SIDEBAR_COLLAPSED : undefined }}
       >
-        <div className={`flex items-center pt-2 ${collapsed ? 'justify-center px-0' : 'px-3'}`}>
+        <div className={`flex items-center pt-2 gap-1 ${collapsed ? 'justify-center px-0' : 'px-2'}`}>
           <IconButton
             size="sm"
             tone="muted"
@@ -153,10 +157,34 @@ export function PipelineSidebar({
             disabled={isProcessing}
             title={t('sidebar.backToWorkspace')}
             tooltipSide="right"
-            className="bg-editorial-textbox/25 hover:bg-editorial-textbox/45"
+            className="bg-editorial-textbox/25 hover:bg-editorial-textbox/45 shrink-0"
           >
             <ArrowLeft size={12} />
           </IconButton>
+          {!collapsed && (
+            <>
+              <div className="flex-1" />
+              <IconButton
+                size="sm"
+                tone="muted"
+                onClick={() => setShowLibraryPanel(true)}
+                title={t('library.openLibrary')}
+                tooltipSide="right"
+              >
+                <LibraryBig size={12} />
+              </IconButton>
+              <IconButton
+                size="sm"
+                tone="muted"
+                onClick={onOpenWorkspaceSettings}
+                disabled={!onOpenWorkspaceSettings}
+                title={t('workspace.configure')}
+                tooltipSide="right"
+              >
+                <Settings2 size={12} />
+              </IconButton>
+            </>
+          )}
         </div>
 
         <div
@@ -207,7 +235,6 @@ export function PipelineSidebar({
             <PipelineSidebarDocumentSection
               collapsed={collapsed}
               onImportDocument={onImportDocument}
-              onOpenWorkspaceSettings={onOpenWorkspaceSettings}
             />
           ) : null}
         </div>
