@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { Tooltip } from '../ui';
 import type { ReasoningEffortLevel } from '../../types';
 
 const ALL_EFFORTS: ReasoningEffortLevel[] = ['none', 'low', 'medium', 'high', 'xhigh'];
@@ -25,20 +26,22 @@ export function ReasoningPicker({ value, showNone, disabled, onChange }: Reasoni
   return (
     <div className="flex gap-1" role="group" aria-label={t('pipeline.reasoningEffort')}>
       {options.map((effort) => (
-        <button
-          key={effort}
-          type="button"
-          disabled={disabled}
-          onClick={() => onChange(effort)}
-          aria-pressed={value === effort}
-          className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40 ${
-            value === effort
-              ? 'border-editorial-accent bg-editorial-accent text-white'
-              : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent'
-          }`}
-        >
-          {t(EFFORT_I18N_KEY[effort])}
-        </button>
+        <Tooltip key={effort} label={t(EFFORT_I18N_KEY[effort])} side="top">
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => onChange(effort)}
+            aria-pressed={value === effort}
+            aria-label={t(EFFORT_I18N_KEY[effort])}
+            className={`h-6 w-6 rounded-full border text-[10px] font-bold uppercase transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40 flex items-center justify-center ${
+              value === effort
+                ? 'border-editorial-accent bg-editorial-accent text-white'
+                : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent'
+            }`}
+          >
+            {effort[0].toUpperCase()}
+          </button>
+        </Tooltip>
       ))}
     </div>
   );
