@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BookOpen, Network, Trash2 } from 'lucide-react';
+import { BookOpen, MessageSquare, Network, SlidersHorizontal, Trash2 } from 'lucide-react';
 import { deeplService } from '../../services/deeplService';
 import type { DeeplConfig, DeeplLanguageInfo, GlossaryEntry } from '../../types';
 import type { DeeplGlossaryInfo } from '../../services/deeplService';
@@ -71,7 +71,26 @@ export function DeeplStageConfig({
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Sezione traduzione */}
+      {/* 1. Opzioni (toggle) */}
+      <div className="space-y-3">
+        <SectionLabel icon={SlidersHorizontal} label={t('pipeline.deepl.optionsTitle', 'Opzioni')} />
+        <div className="space-y-3 rounded-[16px] border border-editorial-border/60 bg-editorial-textbox/10 px-4 py-4">
+          <ToggleRow
+            icon={null}
+            label={t('pipeline.deepl.preserveFormatting', 'Mantieni formattazione')}
+            checked={config.preserveFormatting ?? true}
+            onChange={() => update({ preserveFormatting: !(config.preserveFormatting ?? true) })}
+          />
+          <ToggleRow
+            icon={null}
+            label={t('pipeline.deepl.showBilledCharacters', 'Mostra caratteri fatturati')}
+            checked={config.showBilledCharacters ?? true}
+            onChange={() => update({ showBilledCharacters: !(config.showBilledCharacters ?? true) })}
+          />
+        </div>
+      </div>
+
+      {/* 2. Modalità traduzione */}
       <div className="space-y-3">
         <SectionLabel icon={Network} label={t('pipeline.deepl.sectionTranslation', 'Traduzione DeepL')} />
         <div className="space-y-2">
@@ -89,6 +108,7 @@ export function DeeplStageConfig({
           </select>
         </div>
 
+        {/* 3. Registro formalità (condizionale) */}
         {supportsFormality && (
           <div className="space-y-2">
             <label className="text-xs font-sans uppercase tracking-[0.1em] text-editorial-muted">
@@ -109,7 +129,7 @@ export function DeeplStageConfig({
         )}
       </div>
 
-      {/* Sezione glossario DeepL */}
+      {/* 4. Glossario DeepL */}
       {showGlossarySection && (
         <div className="space-y-3">
           <SectionLabel icon={BookOpen} label={t('pipeline.deepl.glossary', 'Glossario DeepL')} />
@@ -156,29 +176,9 @@ export function DeeplStageConfig({
         </div>
       )}
 
-      {/* Opzioni */}
+      {/* 5. Contesto traduzione */}
       <div className="space-y-3">
-        <div className="space-y-3 rounded-[16px] border border-editorial-border/60 bg-editorial-textbox/10 px-4 py-4">
-          <ToggleRow
-            icon={null}
-            label={t('pipeline.deepl.preserveFormatting', 'Mantieni formattazione')}
-            checked={config.preserveFormatting ?? true}
-            onChange={() => update({ preserveFormatting: !(config.preserveFormatting ?? true) })}
-          />
-          <ToggleRow
-            icon={null}
-            label={t('pipeline.deepl.showBilledCharacters', 'Mostra caratteri fatturati')}
-            checked={config.showBilledCharacters ?? true}
-            onChange={() => update({ showBilledCharacters: !(config.showBilledCharacters ?? true) })}
-          />
-        </div>
-      </div>
-
-      {/* Contesto traduzione */}
-      <div className="space-y-2">
-        <label className="text-xs font-sans uppercase tracking-[0.1em] text-editorial-muted">
-          {t('pipeline.deepl.context', 'Contesto traduzione')}
-        </label>
+        <SectionLabel icon={MessageSquare} label={t('pipeline.deepl.context', 'Contesto traduzione')} />
         <textarea
           value={config.context ?? ''}
           onChange={(e) => update({ context: e.target.value || undefined })}

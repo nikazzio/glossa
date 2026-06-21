@@ -48,6 +48,97 @@ export function TranslationTabPanel({
   const isOverride = (config.blobBudgetTokens ?? 0) > 0;
   const auto = calculateBlobBudget(config.stages);
 
+  const blobContextCard = (
+    <div className="space-y-3 rounded-[20px] border border-editorial-border bg-editorial-bg/70 px-5 py-4">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={isOverride}
+        disabled={translationsExist}
+        onClick={() => setConfig((prev) => ({
+          ...prev,
+          blobBudgetTokens: isOverride ? 0 : auto.budget,
+        }))}
+        className={`flex w-full items-center justify-between text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed ${
+          isOverride ? '' : 'opacity-80 hover:opacity-100'
+        }`}
+      >
+        <span className="space-y-0.5">
+          <span className="flex items-center gap-1.5">
+            <FileText size={11} className="text-editorial-accent shrink-0" />
+            <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+              {t('pipeline.blobContext')}
+            </span>
+          </span>
+          {!isOverride && (
+            <span className="block pl-4 text-xs text-editorial-muted/70">
+              {t('pipeline.blobContextAutoDesc', { tokens: auto.budget.toLocaleString(), model: auto.modelId || 'ollama' })}
+            </span>
+          )}
+        </span>
+        <span
+          className={`flex h-5 w-9 items-center rounded-full border px-0.5 transition-colors shrink-0 ${
+            isOverride
+              ? 'border-editorial-ink bg-editorial-ink justify-end'
+              : 'border-editorial-border bg-editorial-textbox/60 justify-start'
+          }`}
+          aria-hidden="true"
+        >
+          <span className="h-3.5 w-3.5 rounded-full bg-editorial-bg" />
+        </span>
+      </button>
+
+      {isOverride && (
+        <div className="space-y-3 pt-1">
+          <div className="flex flex-wrap gap-4 items-center">
+            <div className="flex items-center gap-2">
+              <label className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                {t('pipeline.blobBudgetTokens')}
+              </label>
+              <input
+                type="number"
+                min={1}
+                value={config.blobBudgetTokens ?? auto.budget}
+                onChange={(e) => setConfig((prev) => ({
+                  ...prev,
+                  blobBudgetTokens: Math.max(1, Number(e.target.value) || 1),
+                }))}
+                className="w-24 rounded-[10px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                aria-label={t('pipeline.blobBudgetTokens')}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+                {t('pipeline.blobOverlap')}
+              </label>
+              <input
+                type="number"
+                min={0}
+                value={config.blobOverlap ?? 1}
+                onChange={(e) => setConfig((prev) => ({
+                  ...prev,
+                  blobOverlap: Math.max(0, Number(e.target.value) || 0),
+                }))}
+                className="w-16 rounded-[10px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                aria-label={t('pipeline.blobOverlap')}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setConfig((prev) => ({ ...prev, blobBudgetTokens: 0 }))}
+              title={t('pipeline.blobContextReset')}
+              aria-label={t('pipeline.blobContextReset')}
+              className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            >
+              <RotateCcw size={12} />
+            </button>
+          </div>
+          <p className="text-[10px] text-editorial-muted/70">{t('pipeline.blobOverlapHint')}</p>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div
       id="pconfig-panel-translation"
@@ -55,95 +146,8 @@ export function TranslationTabPanel({
       aria-labelledby="pconfig-tab-translation"
       className="space-y-6"
     >
-      {/* Context memory card */}
-      <div className="space-y-3 rounded-[20px] border border-editorial-border bg-editorial-bg/70 px-5 py-4">
-        <button
-          type="button"
-          role="switch"
-          aria-checked={isOverride}
-          disabled={translationsExist}
-          onClick={() => setConfig((prev) => ({
-            ...prev,
-            blobBudgetTokens: isOverride ? 0 : auto.budget,
-          }))}
-          className={`flex w-full items-center justify-between text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed ${
-            isOverride ? '' : 'opacity-80 hover:opacity-100'
-          }`}
-        >
-          <span className="space-y-0.5">
-            <span className="flex items-center gap-1.5">
-              <FileText size={11} className="text-editorial-accent shrink-0" />
-              <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-                {t('pipeline.blobContext')}
-              </span>
-            </span>
-            {!isOverride && (
-              <span className="block pl-4 text-xs text-editorial-muted/70">
-                {t('pipeline.blobContextAutoDesc', { tokens: auto.budget.toLocaleString(), model: auto.modelId || 'ollama' })}
-              </span>
-            )}
-          </span>
-          <span
-            className={`flex h-5 w-9 items-center rounded-full border px-0.5 transition-colors shrink-0 ${
-              isOverride
-                ? 'border-editorial-ink bg-editorial-ink justify-end'
-                : 'border-editorial-border bg-editorial-textbox/60 justify-start'
-            }`}
-            aria-hidden="true"
-          >
-            <span className="h-3.5 w-3.5 rounded-full bg-editorial-bg" />
-          </span>
-        </button>
-
-        {isOverride && (
-          <div className="space-y-3 pt-1">
-            <div className="flex flex-wrap gap-4 items-center">
-              <div className="flex items-center gap-2">
-                <label className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-                  {t('pipeline.blobBudgetTokens')}
-                </label>
-                <input
-                  type="number"
-                  min={1}
-                  value={config.blobBudgetTokens ?? auto.budget}
-                  onChange={(e) => setConfig((prev) => ({
-                    ...prev,
-                    blobBudgetTokens: Math.max(1, Number(e.target.value) || 1),
-                  }))}
-                  className="w-24 rounded-[10px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  aria-label={t('pipeline.blobBudgetTokens')}
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-                  {t('pipeline.blobOverlap')}
-                </label>
-                <input
-                  type="number"
-                  min={0}
-                  value={config.blobOverlap ?? 1}
-                  onChange={(e) => setConfig((prev) => ({
-                    ...prev,
-                    blobOverlap: Math.max(0, Number(e.target.value) || 0),
-                  }))}
-                  className="w-16 rounded-[10px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  aria-label={t('pipeline.blobOverlap')}
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() => setConfig((prev) => ({ ...prev, blobBudgetTokens: 0 }))}
-                title={t('pipeline.blobContextReset')}
-                aria-label={t('pipeline.blobContextReset')}
-                className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              >
-                <RotateCcw size={12} />
-              </button>
-            </div>
-            <p className="text-[10px] text-editorial-muted/70">{t('pipeline.blobOverlapHint')}</p>
-          </div>
-        )}
-      </div>
+      {/* Context memory card — shown at top for standard/editorial modes */}
+      {config.mode !== 'deepl-hybrid' && blobContextCard}
 
       {/* Context window warning */}
       {contextWindowChanged && (
@@ -195,6 +199,13 @@ export function TranslationTabPanel({
           </div>
         );
       })}
+
+      {/* Context memory card — shown at bottom for deepl-hybrid mode */}
+      {config.mode === 'deepl-hybrid' && (
+        <div className="mt-2">
+          {blobContextCard}
+        </div>
+      )}
     </div>
   );
 }
