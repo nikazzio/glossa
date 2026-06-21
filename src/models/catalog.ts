@@ -14,6 +14,7 @@ export const MODEL_PROVIDER_ORDER: ModelProvider[] = [
   'openai',
   'anthropic',
   'deepseek',
+  'deepl',
   'ollama',
 ];
 
