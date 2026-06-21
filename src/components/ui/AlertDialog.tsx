@@ -38,8 +38,8 @@ export function AlertDialog({
   return (
     <RadixAlert.Root open={open} onOpenChange={onOpenChange}>
       <RadixAlert.Portal>
-        <RadixAlert.Overlay className="fixed inset-0 z-50 bg-editorial-ink/30 backdrop-blur-sm" />
-        <RadixAlert.Content className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-[28px] border border-editorial-border bg-editorial-bg p-6 shadow-[var(--shadow-modal)] md:p-8">
+        <RadixAlert.Overlay className="fixed inset-0 z-[200] bg-editorial-ink/30 backdrop-blur-sm" />
+        <RadixAlert.Content className="fixed left-1/2 top-1/2 z-[200] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-[28px] border border-editorial-border bg-editorial-bg p-6 shadow-[var(--shadow-modal)] md:p-8">
           <RadixAlert.Title className="font-display text-2xl italic tracking-tight text-editorial-ink">
             {title}
           </RadixAlert.Title>
