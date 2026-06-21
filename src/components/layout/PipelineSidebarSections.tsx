@@ -507,7 +507,7 @@ export function PipelineSidebarPipelinesSection({ collapsed = false }: { collaps
                   )}
                 </IconButton>
                 {pipeline.mode === 'deepl-hybrid' && (
-                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-editorial-accent text-white pointer-events-none z-10" title="Pipeline DeepL Hybrid">
+                  <span className="absolute -top-1 -left-1 flex h-4 w-4 items-center justify-center rounded-full bg-editorial-accent text-white pointer-events-none z-10" title="Pipeline DeepL Hybrid">
                     <Network size={9} />
                   </span>
                 )}
@@ -584,7 +584,7 @@ export function PipelineSidebarPipelinesSection({ collapsed = false }: { collaps
                       )}
                     </IconButton>
                     {pipeline.mode === 'deepl-hybrid' && (
-                      <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-editorial-accent text-white pointer-events-none z-10" title="Pipeline DeepL Hybrid">
+                      <span className="absolute -top-1 -left-1 flex h-4 w-4 items-center justify-center rounded-full bg-editorial-accent text-white pointer-events-none z-10" title="Pipeline DeepL Hybrid">
                         <Network size={9} />
                       </span>
                     )}
