@@ -21,7 +21,7 @@ pub async fn run_deepl_stage(
     input: DeeplStageInput,
 ) -> Result<DeeplStageOutput, String> {
     let api_key = keystore::get_api_key(&app, "deepl")
-        .map_err(|_| "API key DeepL non configurata. Aggiungila nelle Impostazioni.".to_string())?;
+        .map_err(|_| "API key DeepL non configurata. Set it in Settings".to_string())?;
     let http = deepl_client()?;
     client::translate(&http, &api_key, &input).await
 }
@@ -32,7 +32,7 @@ pub async fn get_deepl_languages(
     lang_type: String,
 ) -> Result<Vec<DeeplLanguageInfo>, String> {
     let api_key = keystore::get_api_key(&app, "deepl")
-        .map_err(|_| "API key DeepL non configurata.".to_string())?;
+        .map_err(|_| "API key DeepL non configurata. Set it in Settings".to_string())?;
     let http = deepl_client()?;
     client::get_languages(&http, &api_key, &lang_type).await
 }
@@ -40,7 +40,7 @@ pub async fn get_deepl_languages(
 #[tauri::command]
 pub async fn list_deepl_glossaries(app: AppHandle) -> Result<Vec<DeeplGlossaryInfo>, String> {
     let api_key = keystore::get_api_key(&app, "deepl")
-        .map_err(|_| "API key DeepL non configurata.".to_string())?;
+        .map_err(|_| "API key DeepL non configurata. Set it in Settings".to_string())?;
     let http = deepl_client()?;
     client::list_glossaries(&http, &api_key).await
 }
@@ -51,7 +51,7 @@ pub async fn create_deepl_glossary(
     input: CreateDeeplGlossaryInput,
 ) -> Result<DeeplGlossaryInfo, String> {
     let api_key = keystore::get_api_key(&app, "deepl")
-        .map_err(|_| "API key DeepL non configurata.".to_string())?;
+        .map_err(|_| "API key DeepL non configurata. Set it in Settings".to_string())?;
     let http = deepl_client()?;
     client::create_glossary(&http, &api_key, &input).await
 }
@@ -59,7 +59,7 @@ pub async fn create_deepl_glossary(
 #[tauri::command]
 pub async fn delete_deepl_glossary(app: AppHandle, glossary_id: String) -> Result<(), String> {
     let api_key = keystore::get_api_key(&app, "deepl")
-        .map_err(|_| "API key DeepL non configurata.".to_string())?;
+        .map_err(|_| "API key DeepL non configurata. Set it in Settings".to_string())?;
     let http = deepl_client()?;
     client::delete_glossary(&http, &api_key, &glossary_id).await
 }

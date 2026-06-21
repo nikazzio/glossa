@@ -159,7 +159,11 @@ pub async fn create_glossary(
     let tsv = input
         .entries
         .iter()
-        .map(|e| format!("{}\t{}", e.source, e.target))
+        .map(|e| {
+            let src = e.source.replace(['\t', '\r', '\n'], " ");
+            let tgt = e.target.replace(['\t', '\r', '\n'], " ");
+            format!("{src}\t{tgt}")
+        })
         .collect::<Vec<_>>()
         .join("\n");
 
