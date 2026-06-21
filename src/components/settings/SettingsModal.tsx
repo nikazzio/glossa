@@ -6,7 +6,6 @@ import {
   ChevronsLeft, Copy, RotateCcw, Scissors, Layers, LayoutTemplate, Palette,
   LibraryBig, FileText, Type, Sun, Moon, Monitor, Globe,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useUiStore } from '../../stores/uiStore';
@@ -16,12 +15,11 @@ import { useConfigStore } from '../../stores/configStore';
 import { ApiKeyInput } from './ApiKeyInput';
 import { CustomProviderSection } from './CustomProviderSection';
 import { ollamaService } from '../../services/llmService';
-import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { getKnownModelIds, getModelEntry, MODEL_CATALOG, MODEL_PROVIDER_ORDER } from '../../models/catalog';
 import { MODEL_PRICING } from '../../constants';
 import { usePricingStore } from '../../stores/pricingStore';
-import { EditorialModalShell, ProviderLogo } from '../common';
-import { IconButton } from '../ui';
+import { ProviderLogo } from '../common';
+import { Dialog, IconButton } from '../ui';
 import type { ModelProvider } from '../../types';
 import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
 import { useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
@@ -198,7 +196,6 @@ export function SettingsModal() {
   const [activeProviderTab, setActiveProviderTab] = useState<ModelProvider>('openai');
   const [urlDraft, setUrlDraft] = useState(ollamaBaseUrl);
   const [urlError, setUrlError] = useState<string | null>(null);
-  const trapRef = useFocusTrap(showSettings, () => setShowSettings(false));
   const { overrides, setOverride, resetOverride, resetAll } = usePricingStore();
   const { statuses: keyStatuses, refresh: refreshKeyStatuses } = useProviderKeyStatus();
   const hlMode: 'light' | 'dark' = (() => {
@@ -279,46 +276,29 @@ export function SettingsModal() {
   );
 
   return (
-    <AnimatePresence>
-      {showSettings && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="settings-title"
-          ref={trapRef}
-        >
-          <div
-            className="absolute inset-0 bg-editorial-ink/35 backdrop-blur-sm"
+    <Dialog
+      open={showSettings}
+      onOpenChange={(o) => {
+        if (!o) setShowSettings(false);
+      }}
+      title={t('settings.panelTitle')}
+      closeLabel={t('settings.close')}
+      widthClassName="max-w-3xl"
+      bodyClassName="px-6 py-6 md:px-8"
+      panelClassName="h-[85vh]"
+      tabBar={tabBar}
+      footer={
+        <div className="flex justify-end">
+          <button
+            type="button"
             onClick={() => setShowSettings(false)}
-          />
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
-            className="relative w-full max-w-3xl"
+            className="rounded-full border border-editorial-border px-5 py-3 text-[11px] font-bold uppercase tracking-[0.16em] text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
           >
-            <EditorialModalShell
-              titleId="settings-title"
-              title={t('settings.panelTitle')}
-              closeLabel={t('settings.close')}
-              onClose={() => setShowSettings(false)}
-              widthClassName="max-w-3xl"
-              bodyClassName="px-6 py-6 md:px-8"
-              panelClassName="h-[85vh]"
-              tabBar={tabBar}
-              footer={
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setShowSettings(false)}
-                    className="rounded-full border border-editorial-border px-5 py-3 text-[11px] font-bold uppercase tracking-[0.16em] text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  >
-                    {t('common.close')}
-                  </button>
-                </div>
-              }
-            >
+            {t('common.close')}
+          </button>
+        </div>
+      }
+    >
               {/* Tab: Traduzioni */}
               {activeTab === 'translations' && (
                 <div
@@ -934,10 +914,6 @@ export function SettingsModal() {
                   </div>
                 </div>
               )}
-            </EditorialModalShell>
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
+    </Dialog>
   );
 }
