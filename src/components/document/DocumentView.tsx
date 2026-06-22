@@ -6,7 +6,6 @@ import {
   FileText,
   FlaskConical,
   GitCompare,
-  Highlighter,
   Languages,
   Lock,
   PanelLeft,
@@ -221,8 +220,6 @@ export function DocumentView({
     documentFontSize,
     useNewShell,
     setDocumentPaneFocus,
-    highlightsEnabled,
-    setHighlightsEnabled,
   } = useUiStore();
 
   const fontSizeStep = DOC_FONT_SIZE_STEP_INDEX[documentFontSize ?? 'md'];
@@ -348,13 +345,70 @@ export function DocumentView({
     currentChunk.sourceEditable !== true;
   const sourceEditDisabled = currentChunk.status === 'processing';
 
+  // Pallini minimap dei frammenti, estratti per poterli mettere in linea fra le frecce
+  // (shell nuova, barra di navigazione stretta) o su una riga sotto (shell vecchia).
+  const chunkMinimapDots =
+    chunks.length > 1
+      ? chunks.map((chunk, idx) => {
+          const segmentTone =
+            chunk.status === 'completed'
+              ? 'bg-editorial-success/18 shadow-[inset_0_0_0_1px_rgba(58,122,101,0.16)]'
+              : chunk.status === 'preview'
+                ? 'bg-editorial-charcoal/22 shadow-[inset_0_0_0_1px_rgba(58,122,114,0.12)]'
+                : chunk.status === 'error'
+                  ? 'bg-editorial-accent/22 shadow-[inset_0_0_0_1px_rgba(200,112,94,0.18)]'
+                  : chunk.status === 'processing'
+                    ? 'bg-editorial-running/24 animate-pulse shadow-[inset_0_0_0_1px_rgba(196,155,42,0.22)]'
+                    : 'bg-editorial-border/40';
+          const isCurrent = idx === currentIndex;
+          const chunkAnnotations = annotationsByChunkId.get(chunk.id) ?? [];
+          const annotDotColor = chunkAnnotations.some((a) => a.type === 'problem')
+            ? 'bg-editorial-accent'
+            : chunkAnnotations.some((a) => a.type === 'doubt')
+              ? 'bg-editorial-warning'
+              : chunkAnnotations.length > 0
+                ? 'bg-editorial-charcoal/70'
+                : null;
+          const buttonLabel = buildChunkMinimapLabel(t, chunk, idx, chunks.length, isCurrent, chunkAnnotations.length);
+          const sizeClass = chunk.translationLocked
+            ? isCurrent
+              ? 'h-5 w-5'
+              : 'h-4.5 w-4.5'
+            : isCurrent
+              ? 'h-4.5 w-4.5'
+              : 'h-4 w-4';
+          return (
+            <Tooltip key={chunk.id} label={buttonLabel}>
+              <button
+                type="button"
+                onClick={() => setSelectedChunkId(chunk.id)}
+                aria-label={buttonLabel}
+                aria-current={isCurrent ? 'true' : undefined}
+                className={`relative shrink-0 rounded-full transition-all duration-150 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                  isCurrent
+                    ? `${sizeClass} border border-editorial-charcoal/28 ${segmentTone} shadow-[var(--chunk-current-ring)]`
+                    : `${sizeClass} ${segmentTone} hover:-translate-y-px hover:ring-1 hover:ring-editorial-charcoal/12`
+                }`}
+              >
+                {chunk.translationLocked ? (
+                  <span className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-editorial-success" />
+                ) : null}
+                {annotDotColor && (
+                  <span className={`absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full ${annotDotColor} ring-1 ring-editorial-bg`} />
+                )}
+              </button>
+            </Tooltip>
+          );
+        })
+      : null;
+
   return (
     <section className="w-full bg-editorial-paper overflow-y-auto min-h-0 h-full custom-scrollbar flex flex-col">
       <div className={`@container mx-auto w-full flex flex-col flex-1 min-h-0 ${useNewShell ? '' : 'max-w-[1720px] px-5 py-3 md:px-6 md:py-4 gap-5'}`}>
         <div className="shrink-0">
           {/* Navigation bar — shell nuova: a filo (border-b, niente card flottante) */}
           <div className={useNewShell
-            ? 'w-full border-b border-editorial-border bg-editorial-bg/90 px-4 py-2.5'
+            ? 'w-full border-b border-editorial-border px-4 py-2.5'
             : 'w-full rounded-[20px] border border-editorial-border bg-editorial-bg/90 px-4 py-3 shadow-[var(--shadow-warm-sm)]'}>
             <div className="flex items-center gap-x-4 gap-y-2">
               <div className="flex flex-1 flex-wrap items-center gap-1.5">
@@ -386,137 +440,104 @@ export function DocumentView({
                 </IconButton>
               </div>
 
-              <div className="flex shrink-0 items-center gap-3">
-                <IconButton
-                  size="lg"
-                  onClick={() => prevChunk && setSelectedChunkId(prevChunk.id)}
-                  title={t('document.previousChunk')}
-                  disabled={!prevChunk}
-                >
-                  <ChevronLeft size={16} />
-                </IconButton>
-                <div className="min-w-[7.5rem] text-center">
-                  <div className="text-[10px] font-bold uppercase tracking-[0.28em] text-editorial-muted">
-                    {t('document.chunkLabel')}
-                  </div>
-                  <div className="font-display text-[1.8rem] italic leading-none text-editorial-accent">
-                    {indexPad(currentIndex + 1)}<span className="px-1 text-editorial-muted">/</span>{indexPad(chunks.length)}
-                  </div>
+              {useNewShell ? (
+                // Barra di navigazione stretta: frecce + pallini al centro + conteggio compatto in linea.
+                <div className="flex flex-1 min-w-0 items-center justify-center gap-2">
+                  <IconButton
+                    size="md"
+                    onClick={() => prevChunk && setSelectedChunkId(prevChunk.id)}
+                    title={t('document.previousChunk')}
+                    disabled={!prevChunk}
+                  >
+                    <ChevronLeft size={15} />
+                  </IconButton>
+                  {chunkMinimapDots ? (
+                    <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar">{chunkMinimapDots}</div>
+                  ) : null}
+                  <IconButton
+                    size="md"
+                    onClick={() => nextChunk && setSelectedChunkId(nextChunk.id)}
+                    title={t('document.nextChunk')}
+                    disabled={!nextChunk}
+                  >
+                    <ChevronRight size={15} />
+                  </IconButton>
+                  <span className="ml-1 shrink-0 font-mono text-xs font-bold tabular-nums text-editorial-muted">
+                    {indexPad(currentIndex + 1)} / {indexPad(chunks.length)}
+                  </span>
                 </div>
-                <IconButton
-                  size="lg"
-                  onClick={() => nextChunk && setSelectedChunkId(nextChunk.id)}
-                  title={t('document.nextChunk')}
-                  disabled={!nextChunk}
-                >
-                  <ChevronRight size={16} />
-                </IconButton>
-              </div>
-              <div className="flex-1" />
+              ) : (
+                <>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <IconButton
+                      size="lg"
+                      onClick={() => prevChunk && setSelectedChunkId(prevChunk.id)}
+                      title={t('document.previousChunk')}
+                      disabled={!prevChunk}
+                    >
+                      <ChevronLeft size={16} />
+                    </IconButton>
+                    <div className="min-w-[7.5rem] text-center">
+                      <div className="text-[10px] font-bold uppercase tracking-[0.28em] text-editorial-muted">
+                        {t('document.chunkLabel')}
+                      </div>
+                      <div className="font-display text-[1.8rem] italic leading-none text-editorial-accent">
+                        {indexPad(currentIndex + 1)}<span className="px-1 text-editorial-muted">/</span>{indexPad(chunks.length)}
+                      </div>
+                    </div>
+                    <IconButton
+                      size="lg"
+                      onClick={() => nextChunk && setSelectedChunkId(nextChunk.id)}
+                      title={t('document.nextChunk')}
+                      disabled={!nextChunk}
+                    >
+                      <ChevronRight size={16} />
+                    </IconButton>
+                  </div>
+                  <div className="flex-1" />
+                </>
+              )}
 
               {/* Shell nuova (#291): gruppo Vista — fuoco pannelli + evidenziazioni + scroll.
                   Nella shell vecchia questi controlli vivono nella barra sinistra. */}
               {useNewShell && (
                 <div className="flex shrink-0 items-center gap-1">
                   <IconButton
-                    size="sm"
+                    size="md"
                     tone={paneFocus === 'both' ? 'accent' : 'default'}
                     onClick={() => setDocumentPaneFocus('both')}
                     title={t('document.focusBoth')}
                     ariaPressed={paneFocus === 'both'}
                   >
-                    <Columns2 size={13} />
+                    <Columns2 size={14} />
                   </IconButton>
                   <IconButton
-                    size="sm"
+                    size="md"
                     tone={paneFocus === 'source' ? 'accent' : 'default'}
                     onClick={() => setDocumentPaneFocus('source')}
                     title={t('document.focusSource')}
                     ariaPressed={paneFocus === 'source'}
                   >
-                    <PanelLeft size={13} />
+                    <PanelLeft size={14} />
                   </IconButton>
                   <IconButton
-                    size="sm"
+                    size="md"
                     tone={paneFocus === 'translation' ? 'accent' : 'default'}
                     onClick={() => setDocumentPaneFocus('translation')}
                     title={t('document.focusTranslation')}
                     ariaPressed={paneFocus === 'translation'}
                   >
-                    <PanelRight size={13} />
-                  </IconButton>
-                  <span className="mx-0.5 h-4 w-px bg-editorial-border/70" aria-hidden="true" />
-                  <IconButton
-                    size="sm"
-                    tone={highlightsEnabled ? 'accent' : 'default'}
-                    onClick={() => setHighlightsEnabled(!highlightsEnabled)}
-                    title={t('document.highlightsToggle')}
-                    ariaPressed={highlightsEnabled}
-                  >
-                    <Highlighter size={13} />
+                    <PanelRight size={14} />
                   </IconButton>
                 </div>
               )}
             </div>
 
-            {chunks.length > 1 && (
+            {!useNewShell && chunkMinimapDots ? (
               <div className="mt-2 flex items-center gap-1.5 overflow-x-auto py-1 custom-scrollbar">
-                {chunks.map((chunk, idx) => {
-                  const segmentTone =
-                    chunk.status === 'completed'
-                      ? 'bg-editorial-success/18 shadow-[inset_0_0_0_1px_rgba(58,122,101,0.16)]'
-                      : chunk.status === 'preview'
-                        ? 'bg-editorial-charcoal/22 shadow-[inset_0_0_0_1px_rgba(58,122,114,0.12)]'
-                        : chunk.status === 'error'
-                          ? 'bg-editorial-accent/22 shadow-[inset_0_0_0_1px_rgba(200,112,94,0.18)]'
-                          : chunk.status === 'processing'
-                            ? 'bg-editorial-running/24 animate-pulse shadow-[inset_0_0_0_1px_rgba(196,155,42,0.22)]'
-                            : 'bg-editorial-border/40';
-                  const isCurrent = idx === currentIndex;
-                  const chunkAnnotations = annotationsByChunkId.get(chunk.id) ?? [];
-                  const annotDotColor = chunkAnnotations.some(a => a.type === 'problem')
-                    ? 'bg-editorial-accent'
-                    : chunkAnnotations.some(a => a.type === 'doubt')
-                      ? 'bg-editorial-warning'
-                    : chunkAnnotations.length > 0
-                        ? 'bg-editorial-charcoal/70'
-                        : null;
-                  const buttonLabel = buildChunkMinimapLabel(
-                    t,
-                    chunk,
-                    idx,
-                    chunks.length,
-                    isCurrent,
-                    chunkAnnotations.length,
-                  );
-                  const sizeClass = chunk.translationLocked
-                    ? (isCurrent ? 'h-5 w-5' : 'h-4.5 w-4.5')
-                    : (isCurrent ? 'h-4.5 w-4.5' : 'h-4 w-4');
-                  return (
-                    <Tooltip key={chunk.id} label={buttonLabel}>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedChunkId(chunk.id)}
-                        aria-label={buttonLabel}
-                        aria-current={isCurrent ? 'true' : undefined}
-                        className={`relative shrink-0 rounded-full transition-all duration-150 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                          isCurrent
-                            ? `${sizeClass} border border-editorial-charcoal/28 ${segmentTone} shadow-[var(--chunk-current-ring)]`
-                            : `${sizeClass} ${segmentTone} hover:-translate-y-px hover:ring-1 hover:ring-editorial-charcoal/12`
-                        }`}
-                      >
-                        {chunk.translationLocked ? (
-                          <span className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-editorial-success" />
-                        ) : null}
-                        {annotDotColor && (
-                          <span className={`absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full ${annotDotColor} ring-1 ring-editorial-bg`} />
-                        )}
-                      </button>
-                    </Tooltip>
-                  );
-                })}
+                {chunkMinimapDots}
               </div>
-            )}
+            ) : null}
           </div>
         </div>
 

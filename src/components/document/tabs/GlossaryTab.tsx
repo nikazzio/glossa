@@ -1,4 +1,7 @@
+import { Highlighter } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useUiStore } from '../../../stores/uiStore';
+import { IconButton } from '../../ui';
 
 export interface GlossaryTabProps {
   panelId: string;
@@ -8,6 +11,8 @@ export interface GlossaryTabProps {
 
 export function GlossaryTab({ panelId, labelledBy, glossary }: GlossaryTabProps) {
   const { t } = useTranslation();
+  const highlightsEnabled = useUiStore((state) => state.highlightsEnabled);
+  const setHighlightsEnabled = useUiStore((state) => state.setHighlightsEnabled);
   return (
     <div
       id={panelId}
@@ -15,8 +20,17 @@ export function GlossaryTab({ panelId, labelledBy, glossary }: GlossaryTabProps)
       aria-labelledby={labelledBy}
       className="flex flex-1 flex-col"
     >
-      <div className="border-b border-editorial-border px-5 py-3">
+      <div className="flex items-center justify-between gap-3 border-b border-editorial-border px-5 py-3">
         <span className="text-xs font-mono text-editorial-muted">{glossary.length} {t('document.insightsTabGlossary').toLowerCase()}</span>
+        <IconButton
+          size="sm"
+          tone={highlightsEnabled ? 'accent' : 'default'}
+          onClick={() => setHighlightsEnabled(!highlightsEnabled)}
+          title={t('document.highlightsToggle')}
+          ariaPressed={highlightsEnabled}
+        >
+          <Highlighter size={13} />
+        </IconButton>
       </div>
       <div className="flex-1 overflow-y-auto custom-scrollbar px-4 py-2">
         <table className="w-full text-sm">

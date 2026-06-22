@@ -2,7 +2,7 @@ import { Link2, Link2Off, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useStatusBarData } from '../../hooks/useStatusBarData';
 import { useUiStore } from '../../stores/uiStore';
-import { IconButton, Tooltip } from '../ui';
+import { Tooltip } from '../ui';
 
 const AREA_KEY: Record<string, string> = {
   translations: 'statusBar.areaTranslations',
@@ -109,6 +109,24 @@ export function AppStatusBar() {
       {/* Center: stats (project only) */}
       {data.kind === 'project' && (
         <div className="hidden items-center gap-3 sm:flex">
+          {showScrollLock ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setSyncScrollEnabled(!syncScrollEnabled)}
+                disabled={syncDisabled}
+                aria-pressed={syncOn}
+                title={syncOn ? t('document.scrollSyncDisable') : t('document.scrollSyncEnable')}
+                className={`flex items-center gap-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 ${
+                  syncOn ? 'text-editorial-accent' : 'text-editorial-muted hover:text-editorial-accent'
+                }`}
+              >
+                {syncOn ? <Link2 size={12} /> : <Link2Off size={12} />}
+                <span>{t('statusBar.scrollLinked')}</span>
+              </button>
+              <span className="text-editorial-border">·</span>
+            </>
+          ) : null}
           {data.runStatus === 'running' ? (
             <Tooltip label={t('statusBar.tooltip.chunksProgress')} side="top">
               <span className="flex items-center gap-1.5 text-editorial-warning">
@@ -140,25 +158,8 @@ export function AppStatusBar() {
         </div>
       )}
 
-      {/* Right: scroll lock (shell nuova) + save indicator (project only) */}
-      <div className="flex shrink-0 items-center gap-2">
-        {showScrollLock ? (
-          <span className="flex items-center gap-1.5">
-            <IconButton
-              size="sm"
-              tone={syncOn ? 'accent' : 'default'}
-              onClick={() => setSyncScrollEnabled(!syncScrollEnabled)}
-              disabled={syncDisabled}
-              title={syncOn ? t('document.scrollSyncDisable') : t('document.scrollSyncEnable')}
-              ariaLabel={t('document.scrollSyncEnable')}
-              ariaPressed={syncOn}
-              tooltipSide="top"
-            >
-              {syncOn ? <Link2 size={12} /> : <Link2Off size={12} />}
-            </IconButton>
-            <span className="hidden text-xs text-editorial-muted md:inline">{t('statusBar.scrollLinked')}</span>
-          </span>
-        ) : null}
+      {/* Right: save indicator (project only) */}
+      <div className="shrink-0">
         {data.kind === 'project' && <SaveIndicator state={data.saveState} />}
       </div>
     </div>
