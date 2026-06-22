@@ -2,11 +2,17 @@ import {
   AlertTriangle,
   ChevronLeft,
   ChevronRight,
+  Columns2,
   FileText,
   FlaskConical,
   GitCompare,
+  Highlighter,
   Languages,
+  Link2,
+  Link2Off,
   Lock,
+  PanelLeft,
+  PanelRight,
   Pencil,
   RotateCcw,
   ScanLine,
@@ -207,6 +213,11 @@ export function DocumentView({
     setShowChunkDrawer,
     setPendingAnnotationAnchor,
     documentFontSize,
+    useNewShell,
+    setDocumentPaneFocus,
+    highlightsEnabled,
+    setHighlightsEnabled,
+    setSyncScrollEnabled,
   } = useUiStore();
 
   const fontSizeStep = DOC_FONT_SIZE_STEP_INDEX[documentFontSize ?? 'md'];
@@ -396,6 +407,59 @@ export function DocumentView({
               </div>
               <div className="flex-1" />
 
+              {/* Shell nuova (#291): gruppo Vista — fuoco pannelli + evidenziazioni + scroll.
+                  Nella shell vecchia questi controlli vivono nella barra sinistra. */}
+              {useNewShell && (
+                <div className="flex shrink-0 items-center gap-1 rounded-full border border-editorial-border bg-editorial-bg px-1.5 py-1">
+                  <IconButton
+                    size="sm"
+                    tone={paneFocus === 'both' ? 'accent' : 'default'}
+                    onClick={() => setDocumentPaneFocus('both')}
+                    title={t('document.focusBoth')}
+                    ariaPressed={paneFocus === 'both'}
+                  >
+                    <Columns2 size={13} />
+                  </IconButton>
+                  <IconButton
+                    size="sm"
+                    tone={paneFocus === 'source' ? 'accent' : 'default'}
+                    onClick={() => setDocumentPaneFocus('source')}
+                    title={t('document.focusSource')}
+                    ariaPressed={paneFocus === 'source'}
+                  >
+                    <PanelLeft size={13} />
+                  </IconButton>
+                  <IconButton
+                    size="sm"
+                    tone={paneFocus === 'translation' ? 'accent' : 'default'}
+                    onClick={() => setDocumentPaneFocus('translation')}
+                    title={t('document.focusTranslation')}
+                    ariaPressed={paneFocus === 'translation'}
+                  >
+                    <PanelRight size={13} />
+                  </IconButton>
+                  <span className="mx-0.5 h-4 w-px bg-editorial-border/70" aria-hidden="true" />
+                  <IconButton
+                    size="sm"
+                    tone={highlightsEnabled ? 'accent' : 'default'}
+                    onClick={() => setHighlightsEnabled(!highlightsEnabled)}
+                    title={t('document.highlightsToggle')}
+                    ariaPressed={highlightsEnabled}
+                  >
+                    <Highlighter size={13} />
+                  </IconButton>
+                  <IconButton
+                    size="sm"
+                    tone={syncScrollEnabled && paneFocus === 'both' ? 'accent' : 'default'}
+                    onClick={() => setSyncScrollEnabled(!syncScrollEnabled)}
+                    disabled={paneFocus !== 'both'}
+                    title={syncScrollEnabled ? t('document.scrollSyncDisable') : t('document.scrollSyncEnable')}
+                    ariaPressed={syncScrollEnabled && paneFocus === 'both'}
+                  >
+                    {syncScrollEnabled && paneFocus === 'both' ? <Link2 size={13} /> : <Link2Off size={13} />}
+                  </IconButton>
+                </div>
+              )}
             </div>
 
             {chunks.length > 1 && (

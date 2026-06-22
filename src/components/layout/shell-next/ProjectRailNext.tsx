@@ -1,29 +1,28 @@
-import type { KeyboardEvent, ReactNode } from 'react';
-import { useRef } from 'react';
-import { ArrowLeft, FileText, LibraryBig, Settings2, Zap } from 'lucide-react';
+import { ArrowLeft, FileOutput, LibraryBig, Settings2, Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { ShellNavFooter, ShellNavItem } from '../ShellNav';
+import { ShellNavFooter } from '../ShellNav';
 import {
-  PipelineSidebarDocumentSection,
+  PipelineSidebarExportDialogHost,
   PipelineSidebarPipelinesSection,
   PipelineSidebarRunSection,
 } from '../PipelineSidebarSections';
 import { useUiStore } from '../../../stores/uiStore';
-import type { ProjectPanelTab } from '../../../stores/uiStore';
 import { useProjectStore } from '../../../stores/projectStore';
 import { useChunksStore } from '../../../stores/chunksStore';
 import { useLibraryStore } from '../../../stores/libraryStore';
 import { IconButton } from '../../ui';
 
 /**
- * Shell nuova (#291) — contenuto del rail progetto.
- * A differenza di PipelineSidebar non gestisce larghezza/resize/collasso: quelli
- * vivono nel Panel di react-resizable-panels (ShellNext). Qui `collapsed` arriva
- * dal panel e `onToggleCollapse` comanda collapse/expand del panel.
+ * Shell nuova (#291) — barra del progetto, struttura del mock approvato.
+ * Niente più voci/tab di sezione: solo una fila di azioni di progetto in cima
+ * (back · libreria · workspace · importa · esporta) e la colonna operativa
+ * (selettore pipeline + comandi Esegui) sempre visibile. Le impostazioni di
+ * vista del documento sono uscite dalla barra (vivono nella barra alto del
+ * documento). Larghezza/collasso sono gestiti dal Panel di ShellNext;
+ * `collapsed` arriva dal panel e mostra la colonna in versione icone.
  */
 export interface ProjectRailNextProps {
   collapsed: boolean;
-  onToggleCollapse: () => void;
   onRunPipeline?: () => void;
   onRunAuditOnly?: () => void;
   onCancelPipeline?: () => void;
@@ -33,16 +32,8 @@ export interface ProjectRailNextProps {
   onOpenWorkspaceSettings?: () => void;
 }
 
-// Colonna operativa unica (selettore pipeline + comandi Esegui) + Documento.
-// Approfondimenti/Frammento vivono ora nell'ispettore destro.
-const PROJECT_PANEL_TABS: Array<{ id: ProjectPanelTab; icon: ReactNode; labelKey: string }> = [
-  { id: 'pipeline', icon: <Zap size={15} />, labelKey: 'projectShell.pipelineTab' },
-  { id: 'document', icon: <FileText size={15} />, labelKey: 'projectShell.documentTab' },
-];
-
 export function ProjectRailNext({
   collapsed,
-  onToggleCollapse,
   onRunPipeline,
   onRunAuditOnly,
   onCancelPipeline,
@@ -52,44 +43,17 @@ export function ProjectRailNext({
   onOpenWorkspaceSettings,
 }: ProjectRailNextProps) {
   const { t } = useTranslation();
-  const activeProjectPanel = useUiStore((state) => state.activeProjectPanel);
-  const setActiveProjectPanel = useUiStore((state) => state.setActiveProjectPanel);
   const closeProject = useProjectStore((state) => state.closeProject);
   const isProcessing = useChunksStore((state) => state.isProcessing);
+  const hasDocument = useChunksStore((state) => state.chunks.length > 0);
   const setShowLibraryPanel = useLibraryStore((state) => state.setShowLibraryPanel);
-  const tabRefs = useRef<Partial<Record<ProjectPanelTab, HTMLButtonElement | null>>>({});
-
-  // 'run' e 'pipeline' sono lo stesso pannello operativo (selettore + comandi Esegui).
-  const isOperative = activeProjectPanel === 'run' || activeProjectPanel === 'pipeline';
-  const tabIsActive = (id: ProjectPanelTab) => (id === 'pipeline' ? isOperative : activeProjectPanel === id);
-
-  // Pattern activity-bar: click sulla sezione già attiva → collassa/espande il panel.
-  const handleSelect = (panel: ProjectPanelTab) => {
-    if (tabIsActive(panel)) {
-      onToggleCollapse();
-    } else {
-      setActiveProjectPanel(panel);
-    }
-  };
-
-  // Rail verticale: roving focus con frecce ↑/↓ + Home/End (WAI-ARIA APG tablist).
-  const handleRailKeyDown = (tabId: ProjectPanelTab, event: KeyboardEvent<HTMLButtonElement>) => {
-    const idx = PROJECT_PANEL_TABS.findIndex((tab) => tab.id === tabId);
-    let nextIdx: number | null = null;
-    if (event.key === 'ArrowDown' || event.key === 'ArrowRight')
-      nextIdx = (idx + 1) % PROJECT_PANEL_TABS.length;
-    else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft')
-      nextIdx = (idx - 1 + PROJECT_PANEL_TABS.length) % PROJECT_PANEL_TABS.length;
-    else if (event.key === 'Home') nextIdx = 0;
-    else if (event.key === 'End') nextIdx = PROJECT_PANEL_TABS.length - 1;
-    if (nextIdx === null) return;
-    event.preventDefault();
-    tabRefs.current[PROJECT_PANEL_TABS[nextIdx].id]?.focus();
-  };
+  const showExportDialog = useUiStore((state) => state.showExportDialog);
+  const setShowExportDialog = useUiStore((state) => state.setShowExportDialog);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className={`flex items-center pt-2 gap-1 ${collapsed ? 'justify-center px-0' : 'px-2'}`}>
+      {/* Azioni di progetto: back · libreria · workspace · importa · esporta (ambito file/progetto). */}
+      <div className={`flex items-center gap-1 pt-2 ${collapsed ? 'flex-col px-0' : 'flex-wrap px-2'}`}>
         <IconButton
           size="sm"
           tone="muted"
@@ -103,7 +67,6 @@ export function ProjectRailNext({
         </IconButton>
         {!collapsed && (
           <>
-            <div className="flex-1" />
             <IconButton
               size="sm"
               tone="muted"
@@ -123,64 +86,48 @@ export function ProjectRailNext({
             >
               <Settings2 size={12} />
             </IconButton>
+            <span className="mx-0.5 h-4 w-px self-center bg-editorial-border/70" aria-hidden="true" />
+            <IconButton
+              size="sm"
+              tone="muted"
+              onClick={onImportDocument}
+              disabled={!onImportDocument}
+              title={t('files.import')}
+              tooltipSide="right"
+            >
+              <Upload size={12} />
+            </IconButton>
+            <IconButton
+              size="sm"
+              tone="muted"
+              onClick={() => setShowExportDialog(true)}
+              disabled={!hasDocument}
+              title={`${t('header.exportLabel')} (Ctrl+E)`}
+              ariaLabel={t('header.exportLabel')}
+              tooltipSide="right"
+            >
+              <FileOutput size={12} />
+            </IconButton>
           </>
         )}
       </div>
 
-      <div
-        role="tablist"
-        aria-orientation="vertical"
-        aria-label={t('projectShell.railLabel')}
-        className="space-y-0.5 px-2.5 pt-2"
-      >
-        {PROJECT_PANEL_TABS.map((tab) => {
-          const isActive = tabIsActive(tab.id);
-          return (
-            <ShellNavItem
-              key={tab.id}
-              id={`project-rail-tab-${tab.id}`}
-              role="tab"
-              ariaSelected={isActive}
-              ariaControls="project-context-panel"
-              active={isActive}
-              collapsed={collapsed}
-              tabIndex={isActive ? 0 : -1}
-              buttonRef={(el) => {
-                tabRefs.current[tab.id] = el;
-              }}
-              onClick={() => handleSelect(tab.id)}
-              onKeyDown={(event) => handleRailKeyDown(tab.id, event)}
-              icon={tab.icon}
-              label={t(tab.labelKey)}
-            />
-          );
-        })}
-      </div>
-
-      <div
-        id="project-context-panel"
-        role="tabpanel"
-        aria-labelledby={`project-rail-tab-${isOperative ? 'pipeline' : activeProjectPanel}`}
-        className="mt-3 min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-hidden border-t border-editorial-border/50 pb-3 pt-5"
-      >
-        {isOperative ? (
-          <div className="flex flex-col gap-3">
-            <PipelineSidebarPipelinesSection collapsed={collapsed} configTrigger="circle" />
-            <PipelineSidebarRunSection
-              collapsed={collapsed}
-              onRunPipeline={onRunPipeline}
-              onRunAuditOnly={onRunAuditOnly}
-              onCancelPipeline={onCancelPipeline}
-              onDryRun={onDryRun}
-              onRetranslateChunk={onRetranslateChunk}
-            />
-          </div>
-        ) : activeProjectPanel === 'document' ? (
-          <PipelineSidebarDocumentSection collapsed={collapsed} onImportDocument={onImportDocument} />
-        ) : null}
+      <div className="mt-3 min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-hidden border-t border-editorial-border/50 pb-3 pt-5">
+        <div className="flex flex-col gap-3">
+          <PipelineSidebarPipelinesSection collapsed={collapsed} configTrigger="circle" />
+          <PipelineSidebarRunSection
+            collapsed={collapsed}
+            onRunPipeline={onRunPipeline}
+            onRunAuditOnly={onRunAuditOnly}
+            onCancelPipeline={onCancelPipeline}
+            onDryRun={onDryRun}
+            onRetranslateChunk={onRetranslateChunk}
+          />
+        </div>
       </div>
 
       <ShellNavFooter collapsed={collapsed} />
+      <PipelineSidebarExportDialogHost open={showExportDialog} onOpenChange={setShowExportDialog} />
     </div>
   );
 }

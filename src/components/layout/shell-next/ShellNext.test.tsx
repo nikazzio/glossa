@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useChunksStore } from '../../../stores/chunksStore';
 import { useProjectStore } from '../../../stores/projectStore';
@@ -26,26 +26,23 @@ describe('ShellNext (#291)', () => {
   it('renders the operative rail, content, and right inspector without crashing', () => {
     renderShell();
 
-    // Colonna operativa unica + Documento (run/pipeline fusi; insight/chunk spostati a destra).
-    expect(screen.getByRole('tab', { name: 'projectShell.pipelineTab' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'projectShell.documentTab' })).toBeInTheDocument();
-    expect(screen.queryByRole('tab', { name: 'projectShell.runTab' })).not.toBeInTheDocument();
+    // La barra del progetto ha solo azioni di progetto + colonna operativa: niente tab di sezione.
+    expect(screen.getByRole('button', { name: 'sidebar.backToWorkspace' })).toBeInTheDocument();
     expect(screen.getByText('document-content')).toBeInTheDocument();
   });
 
-  it('switches the contextual column to Document', () => {
+  it('no longer renders section navigation tabs (operative-only column)', () => {
     renderShell();
 
-    fireEvent.click(screen.getByRole('tab', { name: 'projectShell.documentTab' }));
-
-    expect(useUiStore.getState().activeProjectPanel).toBe('document');
-    expect(screen.getByText('projectShell.noDocumentHint')).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'projectShell.pipelineTab' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'projectShell.documentTab' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
   });
 
-  it('keeps the operative tab active by default (run state maps to pipeline tab)', () => {
+  it('exposes project-scope import and export actions in the rail', () => {
     renderShell();
 
-    expect(screen.getByRole('tab', { name: 'projectShell.pipelineTab' })).toHaveAttribute('tabindex', '0');
-    expect(screen.getByRole('tab', { name: 'projectShell.documentTab' })).toHaveAttribute('tabindex', '-1');
+    expect(screen.getByRole('button', { name: 'files.import' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'header.exportLabel' })).toBeInTheDocument();
   });
 });

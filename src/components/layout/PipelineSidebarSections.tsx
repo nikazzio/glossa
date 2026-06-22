@@ -835,7 +835,7 @@ export function PipelineSidebarDocumentSection({
   );
 }
 
-function PipelineSidebarExportDialogHost({
+export function PipelineSidebarExportDialogHost({
   open,
   onOpenChange,
 }: {

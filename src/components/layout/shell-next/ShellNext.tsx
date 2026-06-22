@@ -23,7 +23,7 @@ const INSPECTOR_MIN = 300;
 const INSPECTOR_MAX = 620;
 const INSPECTOR_COLLAPSED = 56;
 
-type RailForwardedProps = Omit<ProjectRailNextProps, 'collapsed' | 'onToggleCollapse'>;
+type RailForwardedProps = Omit<ProjectRailNextProps, 'collapsed'>;
 
 interface ShellNextProps extends RailForwardedProps {
   children: ReactNode;
@@ -114,13 +114,6 @@ export function ShellNext({
     }
   };
 
-  const toggleRailCollapse = () => {
-    const panel = railRef.current;
-    if (!panel) return;
-    if (panel.isCollapsed()) panel.expand();
-    else panel.collapse();
-  };
-
   const railSeparator = (
     <Separator
       onPointerDown={() => setDragging(true)}
@@ -152,7 +145,7 @@ export function ShellNext({
           dragging ? '' : 'transition-[flex-grow,flex-basis] duration-200 ease-out'
         }`}
       >
-        <ProjectRailNext collapsed={collapsed} onToggleCollapse={toggleRailCollapse} {...railProps} />
+        <ProjectRailNext collapsed={collapsed} {...railProps} />
       </Panel>
 
       {railSeparator}
