@@ -1,7 +1,8 @@
-import { Loader2 } from 'lucide-react';
+import { Link2, Link2Off, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useStatusBarData } from '../../hooks/useStatusBarData';
-import { Tooltip } from '../ui';
+import { useUiStore } from '../../stores/uiStore';
+import { IconButton, Tooltip } from '../ui';
 
 const AREA_KEY: Record<string, string> = {
   translations: 'statusBar.areaTranslations',
@@ -48,8 +49,18 @@ function SaveIndicator({ state }: { state: 'idle' | 'dirty' | 'saving' | 'saved'
 export function AppStatusBar() {
   const { t } = useTranslation();
   const data = useStatusBarData();
+  // Shell nuova (#291): lo scorrimento agganciato — quasi sempre attivo — vive qui
+  // come interruttore discreto, non più nella barra alto del documento.
+  const useNewShell = useUiStore((state) => state.useNewShell);
+  const syncScrollEnabled = useUiStore((state) => state.syncScrollEnabled);
+  const setSyncScrollEnabled = useUiStore((state) => state.setSyncScrollEnabled);
+  const documentPaneFocus = useUiStore((state) => state.documentPaneFocus);
 
   if (data.kind === 'idle') return null;
+
+  const showScrollLock = useNewShell && data.kind === 'project' && data.totalChunks > 0;
+  const syncDisabled = documentPaneFocus !== 'both';
+  const syncOn = syncScrollEnabled && !syncDisabled;
 
   return (
     <div
@@ -129,8 +140,25 @@ export function AppStatusBar() {
         </div>
       )}
 
-      {/* Right: save indicator (project only) */}
-      <div className="shrink-0">
+      {/* Right: scroll lock (shell nuova) + save indicator (project only) */}
+      <div className="flex shrink-0 items-center gap-2">
+        {showScrollLock ? (
+          <span className="flex items-center gap-1.5">
+            <IconButton
+              size="sm"
+              tone={syncOn ? 'accent' : 'default'}
+              onClick={() => setSyncScrollEnabled(!syncScrollEnabled)}
+              disabled={syncDisabled}
+              title={syncOn ? t('document.scrollSyncDisable') : t('document.scrollSyncEnable')}
+              ariaLabel={t('document.scrollSyncEnable')}
+              ariaPressed={syncOn}
+              tooltipSide="top"
+            >
+              {syncOn ? <Link2 size={12} /> : <Link2Off size={12} />}
+            </IconButton>
+            <span className="hidden text-xs text-editorial-muted md:inline">{t('statusBar.scrollLinked')}</span>
+          </span>
+        ) : null}
         {data.kind === 'project' && <SaveIndicator state={data.saveState} />}
       </div>
     </div>

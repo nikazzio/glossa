@@ -8,8 +8,6 @@ import {
   GitCompare,
   Highlighter,
   Languages,
-  Link2,
-  Link2Off,
   Lock,
   PanelLeft,
   PanelRight,
@@ -82,6 +80,9 @@ interface DocumentPageProps {
   subtitleAction?: React.ReactNode;
   readOnly?: boolean;
   highlighted?: boolean;
+  // Shell nuova (#291): pannello "a filo" — niente cornice arrotondata/ombra/beige,
+  // riempie l'altezza; i due pannelli diventano bianchi adiacenti con un solo divisorio.
+  flush?: boolean;
   titleMeta?: React.ReactNode;
   statusBadge?: React.ReactNode;
   actions?: React.ReactNode | null;
@@ -101,6 +102,7 @@ function DocumentPage({
   subtitleAction,
   readOnly = false,
   highlighted = false,
+  flush = false,
   titleMeta,
   statusBadge,
   actions,
@@ -118,9 +120,13 @@ function DocumentPage({
   const showSearch = searchable && (searchOpen || Boolean(searchValue));
 
   return (
-    <section className={`relative rounded-[24px] bg-editorial-page px-6 py-5 shadow-[var(--inset-highlight-strong),var(--shadow-page-card)] flex flex-col min-h-0 ${
-      highlighted ? 'border border-editorial-accent ring-2 ring-editorial-accent/30' : 'border border-editorial-divider'
-    }`}>
+    <section className={
+      flush
+        ? `relative bg-editorial-page px-6 py-5 flex flex-col flex-1 min-h-0 ${highlighted ? 'ring-2 ring-inset ring-editorial-accent/40' : ''}`
+        : `relative rounded-[24px] bg-editorial-page px-6 py-5 shadow-[var(--inset-highlight-strong),var(--shadow-page-card)] flex flex-col min-h-0 ${
+            highlighted ? 'border border-editorial-accent ring-2 ring-editorial-accent/30' : 'border border-editorial-divider'
+          }`
+    }>
       {/* Header con altezza minima fissa per allineare il corpo testo tra i due pannelli */}
       <div className="mb-4 shrink-0 flex items-start justify-between gap-4 border-b border-editorial-divider-soft pb-3">
         <div className="min-w-0">
@@ -217,7 +223,6 @@ export function DocumentView({
     setDocumentPaneFocus,
     highlightsEnabled,
     setHighlightsEnabled,
-    setSyncScrollEnabled,
   } = useUiStore();
 
   const fontSizeStep = DOC_FONT_SIZE_STEP_INDEX[documentFontSize ?? 'md'];
@@ -345,10 +350,12 @@ export function DocumentView({
 
   return (
     <section className="w-full bg-editorial-paper overflow-y-auto min-h-0 h-full custom-scrollbar flex flex-col">
-      <div className="@container mx-auto w-full max-w-[1720px] px-5 py-3 md:px-6 md:py-4 flex flex-col flex-1 min-h-0 gap-5">
+      <div className={`@container mx-auto w-full flex flex-col flex-1 min-h-0 ${useNewShell ? '' : 'max-w-[1720px] px-5 py-3 md:px-6 md:py-4 gap-5'}`}>
         <div className="shrink-0">
-          {/* Navigation bar */}
-          <div className="w-full rounded-[20px] border border-editorial-border bg-editorial-bg/90 px-4 py-3 shadow-[var(--shadow-warm-sm)]">
+          {/* Navigation bar — shell nuova: a filo (border-b, niente card flottante) */}
+          <div className={useNewShell
+            ? 'w-full border-b border-editorial-border bg-editorial-bg/90 px-4 py-2.5'
+            : 'w-full rounded-[20px] border border-editorial-border bg-editorial-bg/90 px-4 py-3 shadow-[var(--shadow-warm-sm)]'}>
             <div className="flex items-center gap-x-4 gap-y-2">
               <div className="flex flex-1 flex-wrap items-center gap-1.5">
                 {enabledStages.map((stage) => {
@@ -410,7 +417,7 @@ export function DocumentView({
               {/* Shell nuova (#291): gruppo Vista — fuoco pannelli + evidenziazioni + scroll.
                   Nella shell vecchia questi controlli vivono nella barra sinistra. */}
               {useNewShell && (
-                <div className="flex shrink-0 items-center gap-1 rounded-full border border-editorial-border bg-editorial-bg px-1.5 py-1">
+                <div className="flex shrink-0 items-center gap-1">
                   <IconButton
                     size="sm"
                     tone={paneFocus === 'both' ? 'accent' : 'default'}
@@ -447,16 +454,6 @@ export function DocumentView({
                     ariaPressed={highlightsEnabled}
                   >
                     <Highlighter size={13} />
-                  </IconButton>
-                  <IconButton
-                    size="sm"
-                    tone={syncScrollEnabled && paneFocus === 'both' ? 'accent' : 'default'}
-                    onClick={() => setSyncScrollEnabled(!syncScrollEnabled)}
-                    disabled={paneFocus !== 'both'}
-                    title={syncScrollEnabled ? t('document.scrollSyncDisable') : t('document.scrollSyncEnable')}
-                    ariaPressed={syncScrollEnabled && paneFocus === 'both'}
-                  >
-                    {syncScrollEnabled && paneFocus === 'both' ? <Link2 size={13} /> : <Link2Off size={13} />}
                   </IconButton>
                 </div>
               )}
@@ -523,11 +520,16 @@ export function DocumentView({
           </div>
         </div>
 
-        <div className={`grid gap-5 flex-1 min-h-0 auto-rows-fr ${bothColumnsClass}`}>
+        <div className={
+          useNewShell
+            ? 'flex flex-1 min-h-0 divide-x divide-editorial-border'
+            : `grid gap-5 flex-1 min-h-0 auto-rows-fr ${bothColumnsClass}`
+        }>
           {paneFocus !== 'translation' && (
             <DocumentPage
               label={t('pipeline.originalSource')}
               eyebrow={t('document.leftPage')}
+              flush={useNewShell}
               readOnly={sourceReadOnly}
               statusBadge={sourceReadOnly && currentChunk.status !== 'processing' ? (
                 <InlineStatusBadge tone="amber" icon={<Lock size={13} />} ariaLabel={t('document.sourceLockedTitle')} />
@@ -658,6 +660,7 @@ export function DocumentView({
               <DocumentPage
                 label={t('pipeline.candidateTranslation')}
                 eyebrow={t('document.rightPage')}
+                flush={useNewShell}
                 eyebrowMeta={currentChunk.status === 'preview' ? (
                   <Tooltip label={t('document.chunkPreviewBadge')}>
                     <span aria-label={t('document.chunkPreviewBadge')} className="inline-flex items-center text-editorial-muted">

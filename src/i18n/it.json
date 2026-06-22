@@ -1495,6 +1495,7 @@
   },
   "statusBar": {
     "saved": "Salvato",
+    "scrollLinked": "Scorrimento agganciato",
     "saving": "Salvataggio…",
     "dirty": "Modifiche non salvate",
     "saveError": "Errore salvataggio",
