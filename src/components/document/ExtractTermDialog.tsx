@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Dialog, DialogConfirmButton, DialogCancelButton } from '../ui';
@@ -33,6 +33,9 @@ export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSucce
   const [glossaries, setGlossaries] = useState<Glossary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  // Glossario creato inline: memorizzato per riusarlo se l'inserimento del termine
+  // fallisce e l'utente ritenta — evita di creare dizionari vuoti duplicati.
+  const createdGlossaryIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -68,9 +71,14 @@ export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSucce
     if (!canConfirm) return;
     setIsSaving(true);
     try {
-      const targetGlossaryId = isCreatingNew
-        ? await createGlossary(newGlossaryName.trim(), '', '', '', activeWorkspace?.id ?? null)
-        : selectedGlossaryId;
+      let targetGlossaryId = selectedGlossaryId;
+      if (isCreatingNew) {
+        // Riusa il glossario di un tentativo precedente fallito invece di ricrearlo.
+        targetGlossaryId =
+          createdGlossaryIdRef.current ??
+          (await createGlossary(newGlossaryName.trim(), '', '', '', activeWorkspace?.id ?? null));
+        createdGlossaryIdRef.current = targetGlossaryId;
+      }
       if (!targetGlossaryId) return;
       await addGlossaryEntry(targetGlossaryId, {
         id: generateId('gle'),

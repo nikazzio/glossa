@@ -83,4 +83,31 @@ describe('ExtractTermDialog', () => {
       expect.objectContaining({ term: 'lex' }),
     );
   });
+
+  it('al retry dopo un inserimento fallito non ricrea il dizionario', async () => {
+    vi.mocked(addGlossaryEntry)
+      .mockRejectedValueOnce(new Error('db'))
+      .mockResolvedValueOnce(undefined);
+    const user = userEvent.setup();
+    render(
+      <ExtractTermDialog
+        sourcePhrase="lorem ipsum"
+        targetPhrase="dolor sit"
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+    );
+    await screen.findByRole('dialog');
+    await user.selectOptions(screen.getByLabelText('glossary.selectGlossary'), '__create_new__');
+    await user.type(screen.getByLabelText('glossary.newGlossaryNamePlaceholder'), 'Mio dizionario');
+
+    // primo tentativo: createGlossary ok, addGlossaryEntry fallisce
+    await user.click(screen.getByRole('button', { name: 'common.confirm' }));
+    // retry: deve riusare lo stesso glossario, non crearne uno nuovo
+    await user.click(screen.getByRole('button', { name: 'common.confirm' }));
+
+    expect(createGlossary).toHaveBeenCalledTimes(1);
+    expect(addGlossaryEntry).toHaveBeenCalledTimes(2);
+    expect(addGlossaryEntry).toHaveBeenNthCalledWith(2, 'new-gls-id', expect.objectContaining({ term: 'lex' }));
+  });
 });
