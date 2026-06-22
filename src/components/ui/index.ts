@@ -6,7 +6,7 @@ export { PillButton } from './PillButton';
 export { SectionLabel } from './SectionLabel';
 export { StatusDot, STATUS_TONE, type PipelineStatus } from './StatusDot';
 export { ToggleRow } from './ToggleRow';
-export { Tooltip } from './Tooltip';
+export { Tooltip, type TooltipSide } from './Tooltip';
 export { ScopeBreakdownCard } from './ScopeBreakdownCard';
 export { ScopeBreakdownCarousel } from './ScopeBreakdownCarousel';
 export { StatRow } from './StatRow';
