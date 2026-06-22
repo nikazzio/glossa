@@ -117,7 +117,30 @@ import { Tooltip } from '../ui';
 </Tooltip>
 ```
 
-**Non usare** l'attributo HTML `title` per tooltip visivi sui controlli interattivi. `title` è accettabile solo per elementi non interattivi dove il tooltip nativo è sufficiente.
+**Non usare** l'attributo HTML `title` per tooltip visivi sui controlli interattivi (genera il tooltip nativo del sistema, fuori stile). Per un pulsante icon-only usa `IconButton` (il suo prop `title` diventa tooltip editoriale); per altri controlli avvolgi in `<Tooltip label>`. `title` è accettabile solo su elementi **non** interattivi.
+
+Implementazione su **Radix Tooltip** (posizionamento automatico con flip ai bordi, Provider interno al componente — nessun setup a livello App). Box invariato (`font-display` italic), z-index `z-[210]` (sopra le finestre `z-[200]`). API invariata: `label`, `side`, `offset`.
+
+---
+
+### Menu — menu contestuale / a tendina (Radix)
+
+Menu su **Radix DropdownMenu**: `role="menu"`, navigazione frecce/Home/End, type-ahead, Esc, focus management — gratis. Per menu a coordinate (es. tasto destro / selezione testo) usa l'ancora virtuale `anchorRect`.
+
+```tsx
+import { Menu } from '../ui';
+
+<Menu
+  open={open}
+  onOpenChange={(o) => { if (!o) onClose(); }}
+  anchorRect={{ x, y }}
+  items={[{ id: 'add', label: t('...'), icon: <Icon size={13} />, onSelect: handleAdd }]}
+/>
+```
+
+Regole:
+- Voci sempre via `items` (`MenuItem`): niente `<button>` raw posizionati a mano.
+- z-index `z-[210]` (sopra le finestre). La voce evidenziata usa `data-[highlighted]`.
 
 ---
 
