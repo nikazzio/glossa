@@ -24,7 +24,7 @@ import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { assignGlossaryToProject } from '../../services/glossaryService';
 import { upsertGlossaryEntries } from '../../services/glossaryService';
-import { DictionaryEntryEditor } from '../library';
+import { DictionaryEntryEditor } from '../library/DictionaryEntryEditor';
 import { confirm } from '../../stores/confirmStore';
 
 interface ConfigDrawerProps {

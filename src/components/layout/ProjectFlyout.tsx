@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { useUiStore } from '../../stores/uiStore';
-import { ChunkInspectorPanel, InsightDocPanel } from '../document';
+import { ChunkInspectorPanel, InsightDocPanel } from '../document/InsightsDrawer';
 import { ResizeHandle, useEdgeResize } from './useEdgeResize';
 import { SPRING_PANEL } from './motion';
 import { useViewportWidth, FLYOUT_OVERLAY_BELOW } from '../../hooks/useViewportWidth';

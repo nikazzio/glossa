@@ -95,7 +95,13 @@ interface UiState {
   configFlyoutWidth: number;
   pendingAnnotationAnchor: { chunkId: string; text: string; content?: string } | null;
   activeWorkspaceArea: WorkspaceArea | null;
+  /**
+   * Toggle dev (#291): commuta la shell sinistra nuova (react-resizable-panels + Radix)
+   * vs quella legacy. Non persistito: si resetta a riavvio. Da rimuovere al gate di chiusura.
+   */
+  useNewShell: boolean;
 
+  toggleNewShell: () => void;
   setTraceStageId: (id: string | null) => void;
   setActiveWorkspaceArea: (area: WorkspaceArea | null) => void;
   setPendingAnnotationAnchor: (anchor: { chunkId: string; text: string; content?: string } | null) => void;
@@ -178,7 +184,9 @@ export const useUiStore = create<UiState>()(
       configFlyoutWidth: 560,
       pendingAnnotationAnchor: null,
       activeWorkspaceArea: null,
+      useNewShell: false,
 
+      toggleNewShell: () => set((state) => ({ useNewShell: !state.useNewShell })),
       setViewMode: (mode) =>
         set((state) => ({
           viewMode: mode,

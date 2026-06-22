@@ -29,6 +29,16 @@ export function useKeyboardShortcuts({ onRunPipeline, onDryRun }: Options) {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      // Toggle dev (#291): Alt+N commuta shell nuova/legacy. Va prima del guard su Ctrl
+      // (non richiede Ctrl) e usa e.code per indipendenza dal layout di tastiera.
+      if (e.altKey && e.code === 'KeyN') {
+        e.preventDefault();
+        useUiStore.getState().toggleNewShell();
+        const next = useUiStore.getState().useNewShell;
+        toast.info(next ? 'Shell nuova (#291)' : 'Shell legacy');
+        return;
+      }
+
       const ctrl = e.ctrlKey || e.metaKey;
       if (!ctrl) return;
 
