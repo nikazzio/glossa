@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useProjectStore } from '../../stores/projectStore';
 import { useConfigStore } from '../../stores/configStore';
@@ -7,7 +7,7 @@ import { PipelineSidebarPipelinesSection } from './PipelineSidebarSections';
 
 const initialUiState = useUiStore.getState();
 
-const switchPipeline = vi.fn();
+const switchPipeline = vi.fn().mockResolvedValue(undefined);
 
 function seedPipelines() {
   useProjectStore.setState({
@@ -38,7 +38,7 @@ describe('PipelineSidebarPipelinesSection — trigger configurazione (#291)', ()
     expect(screen.getAllByRole('button', { name: 'pipeline.configurePipeline' })).toHaveLength(2);
   });
 
-  it("attiva la pipeline e apre la finestra di configurazione cliccando l'ingranaggio del cerchio", () => {
+  it("attiva la pipeline (e attende il caricamento) prima di aprire la configurazione", async () => {
     render(<PipelineSidebarPipelinesSection configTrigger="circle" />);
 
     const gears = screen.getAllByRole('button', { name: 'pipeline.configurePipeline' });
@@ -46,7 +46,8 @@ describe('PipelineSidebarPipelinesSection — trigger configurazione (#291)', ()
     fireEvent.click(gears[1]);
 
     expect(switchPipeline).toHaveBeenCalledWith('p2');
-    expect(useUiStore.getState().showConfigDrawer).toBe(true);
+    // La finestra si apre solo dopo che switchPipeline ha caricato la config (await).
+    await waitFor(() => expect(useUiStore.getState().showConfigDrawer).toBe(true));
   });
 
   it("in modalità 'bottom' (shell vecchia) resta un solo pulsante config in fondo", () => {

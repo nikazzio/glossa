@@ -488,9 +488,11 @@ export function PipelineSidebarPipelinesSection({
     await deletePipeline(pipelineId);
   }, [deletePipeline, t]);
 
-  // Gear-on-circle: configura quella pipeline (la attiva se non lo è già, poi apre la finestra).
-  const handleConfigurePipeline = useCallback((pipelineId: string) => {
-    if (pipelineId !== activePipelineId) switchPipeline(pipelineId);
+  // Gear-on-circle: configura quella pipeline. switchPipeline è async (carica la config
+  // dal DB): attendiamo che sia caricata PRIMA di aprire la finestra, altrimenti la modale
+  // appare con la config della pipeline precedente e poi cambia.
+  const handleConfigurePipeline = useCallback(async (pipelineId: string) => {
+    if (pipelineId !== activePipelineId) await switchPipeline(pipelineId);
     setShowConfigDrawer(true);
   }, [activePipelineId, switchPipeline, setShowConfigDrawer]);
 
@@ -581,7 +583,7 @@ export function PipelineSidebarPipelinesSection({
               </div>
             </Tooltip>
           ) : (
-            <div className="flex flex-col items-center gap-2">
+            <div className="flex flex-col items-center gap-3.5">
               {pipelines.map((pipeline, index) => {
                 const isActive = pipeline.id === activePipelineId;
                 const isPipelineRunning = isActive && isRunning;
@@ -593,7 +595,7 @@ export function PipelineSidebarPipelinesSection({
                       onClick={() => switchPipeline(pipeline.id)}
                       title={pipeline.name}
                       tooltipSide="right"
-                      className="h-[3.25rem] w-[3.25rem] text-sm font-black"
+                      className="h-14 w-14 text-base font-black"
                     >
                       {isPipelineRunning ? (
                         <span className="h-4 w-4 animate-spin rounded-full border-2 border-transparent border-t-current" />
@@ -616,21 +618,24 @@ export function PipelineSidebarPipelinesSection({
                         title={t('pipeline.deletePipeline')}
                         ariaLabel={t('pipeline.deletePipeline')}
                         tooltipSide="right"
-                        className="absolute -right-1 -top-1 z-10 h-5 w-5 bg-editorial-bg p-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
-                      > -
+                        className="absolute -right-1 -top-1 z-10 h-6 w-6 bg-editorial-bg p-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
+                      >
+                        <Minus size={13} />
                       </IconButton>
                     )}
                     {configTrigger === 'circle' && (
                       <IconButton
                         size="sm"
                         tone={isActive && showConfigDrawer ? 'accent' : 'muted'}
-                        onClick={() => handleConfigurePipeline(pipeline.id)}
+                        onClick={() => {
+                          void handleConfigurePipeline(pipeline.id);
+                        }}
                         title={`${t('pipeline.configurePipeline')} (Ctrl+,)`}
                         ariaLabel={t('pipeline.configurePipeline')}
                         tooltipSide="right"
-                        className="absolute -bottom-1 -right-1 z-10 h-5 w-5 bg-editorial-bg p-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
+                        className="absolute -bottom-1 -right-1 z-10 h-6 w-6 bg-editorial-bg p-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
                       >
-                        <Settings2 size={11} />
+                        <Settings2 size={13} />
                       </IconButton>
                     )}
                   </div>
