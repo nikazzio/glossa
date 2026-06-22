@@ -1,12 +1,10 @@
 import { useState } from 'react';
-import { createPortal } from 'react-dom';
-import { Upload, X, Check, AlertCircle } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { Upload, Check, AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { open } from '@tauri-apps/plugin-dialog';
 import { readTextFile, readFile } from '@tauri-apps/plugin-fs';
 import Papa from 'papaparse';
-import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { Dialog, DialogConfirmButton, DialogCancelButton } from '../ui';
 import {
   importEntriesFromCsv,
   importEntriesFromXlsx,
@@ -49,7 +47,6 @@ export function CsvImportDialog({ glossaryId, onImported, onClose }: Props) {
   const [totalRows, setTotalRows] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const trapRef = useFocusTrap(true, onClose);
 
   const handlePickFile = async () => {
     setError(null);
@@ -149,39 +146,18 @@ export function CsvImportDialog({ glossaryId, onImported, onClose }: Props) {
     }
   };
 
-  return createPortal(
-    <AnimatePresence>
-      <div
-        className="fixed inset-0 z-[300] flex items-center justify-center p-6"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="csv-import-title"
-        ref={trapRef}
-      >
-        <div
-          className="absolute inset-0 bg-editorial-ink/60 backdrop-blur-sm"
-          onClick={onClose}
-        />
-        <motion.div
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.95, opacity: 0 }}
-          className="relative bg-editorial-bg w-full max-w-lg p-8 shadow-2xl border border-editorial-border"
-        >
-          <button
-            onClick={onClose}
-            title={t('settings.close')}
-            className="absolute top-5 right-5 text-editorial-muted hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            aria-label={t('settings.close')}
-          >
-            <X size={18} />
-          </button>
-
-          <h3 id="csv-import-title" className="font-display text-xl italic tracking-tight mb-6 flex items-center gap-2">
-            <Upload size={20} className="text-editorial-accent" />
-            {t('library.importTitle')}
-          </h3>
-
+  return (
+    <Dialog
+      open
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+      title={t('library.importTitle')}
+      icon={<Upload size={20} />}
+      closeLabel={t('settings.close')}
+      widthClassName="max-w-lg"
+    >
+      <div>
           {error && (
             <div className="mb-4 flex items-start gap-2 rounded border border-editorial-warning/60 bg-editorial-warning/10 p-3 text-[11px] text-editorial-warning">
               <AlertCircle size={14} className="mt-0.5 shrink-0" />
@@ -232,18 +208,12 @@ export function CsvImportDialog({ glossaryId, onImported, onClose }: Props) {
                 ))}
               </div>
               <div className="flex gap-2 justify-end pt-2">
-                <button
-                  onClick={() => { setStep('pick'); setError(null); }}
-                  className="px-4 py-2 text-[11px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                >
+                <DialogCancelButton onClick={() => { setStep('pick'); setError(null); }}>
                   {t('common.back')}
-                </button>
-                <button
-                  onClick={handleMapContinue}
-                  className="flex items-center gap-1.5 px-4 py-2 text-[11px] font-bold uppercase tracking-widest bg-editorial-ink text-white hover:bg-editorial-ink/80 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                >
+                </DialogCancelButton>
+                <DialogConfirmButton onClick={handleMapContinue}>
                   {t('common.next')}
-                </button>
+                </DialogConfirmButton>
               </div>
             </div>
           )}
@@ -307,26 +277,15 @@ export function CsvImportDialog({ glossaryId, onImported, onClose }: Props) {
               </div>
 
               <div className="flex gap-2 justify-end pt-2">
-                <button
-                  onClick={goBack}
-                  className="px-4 py-2 text-[11px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                >
-                  {t('common.back')}
-                </button>
-                <button
-                  onClick={handleConfirm}
-                  disabled={loading}
-                  className="flex items-center gap-1.5 px-4 py-2 text-[11px] font-bold uppercase tracking-widest bg-editorial-ink text-white hover:bg-editorial-ink/80 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
-                >
+                <DialogCancelButton onClick={goBack}>{t('common.back')}</DialogCancelButton>
+                <DialogConfirmButton onClick={handleConfirm} disabled={loading}>
                   <Check size={13} />
                   {loading ? t('common.loading') : t('library.csvConfirm')}
-                </button>
+                </DialogConfirmButton>
               </div>
             </div>
           )}
-        </motion.div>
       </div>
-    </AnimatePresence>,
-    document.body
+    </Dialog>
   );
 }

@@ -1437,6 +1437,7 @@
     "extractTermButton": "Aggiungi al glossario",
     "extractTermTitle": "Estrai termine",
     "sourcePhraseShort": "Sorgente",
+    "sourcePhraseLabel": "Frase sorgente",
     "termLabel": "Termine",
     "termExtracted": "Termine aggiunto al glossario",
     "prelaunchWarning": "{{count}} chunk hanno match di memoria trovati ma non selezionati",
@@ -1461,7 +1462,9 @@
     "translation": "Traduzione",
     "notes": "Note",
     "selectGlossary": "Seleziona glossario",
-    "noGlossarySelected": "— Nessun glossario —"
+    "noGlossarySelected": "— Nessun glossario —",
+    "createNewInline": "+ Nuovo dizionario",
+    "newGlossaryNamePlaceholder": "Nome del nuovo dizionario"
   },
   "annotations": {
     "typeComment": "Commento",

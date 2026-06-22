@@ -12,9 +12,8 @@ import { StyleGuide } from './StyleGuide';
 import { appLogDir } from '@tauri-apps/api/path';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { Dialog, DialogCancelButton } from '../ui';
 import { useUiStore, type HelpSection } from '../../stores/uiStore';
-import { EditorialModalShell } from '../common';
 
 interface HelpGuideProps {
   open: boolean;
@@ -26,7 +25,6 @@ type Section = HelpSection;
 export function HelpGuide({ open, onClose }: HelpGuideProps) {
   const [activeSection, setActiveSection] = useState<Section>('overview');
   const { t } = useTranslation();
-  const trapRef = useFocusTrap(open, onClose);
   const requestedSection = useUiStore((state) => state.helpSection);
 
   useEffect(() => {
@@ -48,39 +46,25 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
     { id: 'design',          label: t('help.sections.design') },
   ];
 
-  if (!open) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-editorial-ink/35 p-4 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="help-title"
-      ref={trapRef}
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+      title={t('help.title')}
+      closeLabel={t('settings.close')}
+      icon={<HelpCircle size={22} />}
+      eyebrow={t('help.eyebrow')}
+      widthClassName="max-w-4xl"
+      panelClassName="h-[88vh]"
+      bodyClassName="p-0"
+      footer={
+        <div className="flex justify-end">
+          <DialogCancelButton onClick={onClose}>{t('common.close')}</DialogCancelButton>
+        </div>
+      }
     >
-      <div className="relative flex h-[88vh] w-full max-w-4xl">
-        <EditorialModalShell
-          titleId="help-title"
-          title={t('help.title')}
-          closeLabel={t('settings.close')}
-          onClose={onClose}
-          icon={<HelpCircle size={22} />}
-          eyebrow={t('help.eyebrow')}
-          widthClassName="max-w-4xl"
-          panelClassName="h-[88vh]"
-          bodyClassName="p-0"
-          footer={
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded-full border border-editorial-border px-5 py-3 text-[11px] font-bold uppercase tracking-[0.16em] text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              >
-                {t('common.close')}
-              </button>
-            </div>
-          }
-        >
           <div className="flex h-full min-h-0 overflow-hidden">
             <nav className="flex w-60 shrink-0 flex-col overflow-hidden border-r border-editorial-border bg-editorial-textbox/30">
               <ul className="flex-1 space-y-0.5 overflow-y-auto p-3 custom-scrollbar">
@@ -118,9 +102,7 @@ export function HelpGuide({ open, onClose }: HelpGuideProps) {
               {activeSection === 'design'          && <StyleGuide />}
             </div>
           </div>
-        </EditorialModalShell>
-      </div>
-    </div>
+    </Dialog>
   );
 }
 

@@ -6,7 +6,6 @@ import {
   ChevronsLeft, Copy, RotateCcw, Scissors, Layers, LayoutTemplate, Palette,
   LibraryBig, FileText, Type, Sun, Moon, Monitor, Globe,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useUiStore } from '../../stores/uiStore';
@@ -16,12 +15,11 @@ import { useConfigStore } from '../../stores/configStore';
 import { ApiKeyInput } from './ApiKeyInput';
 import { CustomProviderSection } from './CustomProviderSection';
 import { ollamaService } from '../../services/llmService';
-import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { getKnownModelIds, getModelEntry, MODEL_CATALOG, MODEL_PROVIDER_ORDER } from '../../models/catalog';
 import { MODEL_PRICING } from '../../constants';
 import { usePricingStore } from '../../stores/pricingStore';
-import { EditorialModalShell, ProviderLogo } from '../common';
-import { IconButton } from '../ui';
+import { ProviderLogo } from '../common';
+import { Dialog, IconButton, DialogCancelButton, Tooltip } from '../ui';
 import type { ModelProvider } from '../../types';
 import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
 import { useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
@@ -198,7 +196,6 @@ export function SettingsModal() {
   const [activeProviderTab, setActiveProviderTab] = useState<ModelProvider>('openai');
   const [urlDraft, setUrlDraft] = useState(ollamaBaseUrl);
   const [urlError, setUrlError] = useState<string | null>(null);
-  const trapRef = useFocusTrap(showSettings, () => setShowSettings(false));
   const { overrides, setOverride, resetOverride, resetAll } = usePricingStore();
   const { statuses: keyStatuses, refresh: refreshKeyStatuses } = useProviderKeyStatus();
   const hlMode: 'light' | 'dark' = (() => {
@@ -279,46 +276,23 @@ export function SettingsModal() {
   );
 
   return (
-    <AnimatePresence>
-      {showSettings && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="settings-title"
-          ref={trapRef}
-        >
-          <div
-            className="absolute inset-0 bg-editorial-ink/35 backdrop-blur-sm"
-            onClick={() => setShowSettings(false)}
-          />
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
-            className="relative w-full max-w-3xl"
-          >
-            <EditorialModalShell
-              titleId="settings-title"
-              title={t('settings.panelTitle')}
-              closeLabel={t('settings.close')}
-              onClose={() => setShowSettings(false)}
-              widthClassName="max-w-3xl"
-              bodyClassName="px-6 py-6 md:px-8"
-              panelClassName="h-[85vh]"
-              tabBar={tabBar}
-              footer={
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setShowSettings(false)}
-                    className="rounded-full border border-editorial-border px-5 py-3 text-[11px] font-bold uppercase tracking-[0.16em] text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  >
-                    {t('common.close')}
-                  </button>
-                </div>
-              }
-            >
+    <Dialog
+      open={showSettings}
+      onOpenChange={(o) => {
+        if (!o) setShowSettings(false);
+      }}
+      title={t('settings.panelTitle')}
+      closeLabel={t('settings.close')}
+      widthClassName="max-w-3xl"
+      bodyClassName="px-6 py-6 md:px-8"
+      panelClassName="h-[85vh]"
+      tabBar={tabBar}
+      footer={
+        <div className="flex justify-end">
+          <DialogCancelButton onClick={() => setShowSettings(false)}>{t('common.close')}</DialogCancelButton>
+        </div>
+      }
+    >
               {/* Tab: Traduzioni */}
               {activeTab === 'translations' && (
                 <div
@@ -628,11 +602,10 @@ export function SettingsModal() {
                         {MODEL_PROVIDER_ORDER.map((provider) => {
                           const active = provider === activeProviderTab;
                           return (
+                            <Tooltip key={provider} label={PROVIDER_LABELS[provider]}>
                             <button
-                              key={provider}
                               type="button"
                               onClick={() => setActiveProviderTab(provider)}
-                              title={PROVIDER_LABELS[provider]}
                               aria-label={PROVIDER_LABELS[provider]}
                               id={`settings-provider-tab-${provider}`}
                               role="tab"
@@ -647,15 +620,16 @@ export function SettingsModal() {
                             >
                               <ProviderLogo provider={provider} size={18} />
                             </button>
+                            </Tooltip>
                           );
                         })}
 
                         {/* Separatore + tab Custom */}
                         <span className="mx-1 self-center w-px h-5 bg-editorial-border/60" aria-hidden="true" />
+                        <Tooltip label={PROVIDER_LABELS['custom']}>
                         <button
                           type="button"
                           onClick={() => setActiveProviderTab('custom')}
-                          title={PROVIDER_LABELS['custom']}
                           aria-label={PROVIDER_LABELS['custom']}
                           id="settings-provider-tab-custom"
                           role="tab"
@@ -670,6 +644,7 @@ export function SettingsModal() {
                         >
                           <Globe size={16} />
                         </button>
+                        </Tooltip>
                       </div>
 
                       <div
@@ -721,7 +696,6 @@ export function SettingsModal() {
                                 <button
                                   onClick={() => refreshOllama()}
                                   disabled={refreshing}
-                                  title={t('ollama.refresh')}
                                   className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-editorial-muted hover:text-editorial-ink transition-colors disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                                   aria-label={t('ollama.refresh')}
                                 >
@@ -934,10 +908,6 @@ export function SettingsModal() {
                   </div>
                 </div>
               )}
-            </EditorialModalShell>
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
+    </Dialog>
   );
 }

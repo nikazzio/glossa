@@ -1,15 +1,12 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Brain, Cpu, Download, HardDrive, Loader2, RefreshCcw, Settings2, Upload } from 'lucide-react';
-import { AnimatePresence, motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { exportWorkspace, importWorkspace } from '../../services/backupService';
 import { regenerateAllEmbeddings } from '../../services/phraseMemoryService';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
-import { useFocusTrap } from '../../hooks/useFocusTrap';
-import { EditorialModalShell } from '../common';
-import { IconButton, PillButton } from '../ui';
+import { Dialog, IconButton, DialogConfirmButton } from '../ui';
 import { MemoryExtractorSettings } from './MemoryExtractorSettings';
 import type { EmbeddingModel, ModelProvider } from '../../types';
 
@@ -23,7 +20,6 @@ interface Props {
 export function WorkspaceSettingsModal({ open, onClose }: Props) {
   const { t } = useTranslation();
   const { activeWorkspace, updateActiveWorkspace } = useWorkspaceStore();
-  const trapRef = useFocusTrap(open, onClose);
 
   const [activeTab, setActiveTab] = useState<WorkspaceSettingsTab>('general');
   const [name, setName] = useState('');
@@ -160,54 +156,32 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
   );
 
   return (
-    <AnimatePresence>
-      {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="workspace-settings-title"
-          ref={trapRef}
-        >
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-editorial-ink/35 backdrop-blur-sm"
-            onClick={onClose}
-          />
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
-            className="relative w-full max-w-xl"
-          >
-            <EditorialModalShell
-              titleId="workspace-settings-title"
-              title={activeWorkspace?.name ?? t('workspace.noActive')}
-              eyebrow={t('workspace.settings.eyebrow')}
-              closeLabel={t('settings.close')}
-              onClose={onClose}
-              widthClassName="max-w-xl"
-              bodyClassName="px-6 py-6 md:px-8"
-              panelClassName="h-[80vh]"
-              tabBar={tabBar}
-              footer={
-                activeTab === 'general' || activeTab === 'memory' ? (
-                  <div className="flex justify-end">
-                    <PillButton
-                      onClick={() => void handleSave()}
-                      disabled={!name.trim() || saving || (activeTab === 'memory' && (!memoryExtractorModel.trim() || !memoryExtractorPrompt.trim()))}
-                      variant="accent"
-                      className="px-5 py-3"
-                    >
-                      {saving ? t('workspace.saving') : t('common.save')}
-                    </PillButton>
-                  </div>
-                ) : null
-              }
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+      title={activeWorkspace?.name ?? t('workspace.noActive')}
+      eyebrow={t('workspace.settings.eyebrow')}
+      closeLabel={t('settings.close')}
+      widthClassName="max-w-xl"
+      bodyClassName="px-6 py-6 md:px-8"
+      panelClassName="h-[80vh]"
+      tabBar={tabBar}
+      footer={
+        activeTab === 'general' || activeTab === 'memory' ? (
+          <div className="flex justify-end">
+            <DialogConfirmButton
+              onClick={() => void handleSave()}
+              disabled={!name.trim() || saving || (activeTab === 'memory' && (!memoryExtractorModel.trim() || !memoryExtractorPrompt.trim()))}
             >
-              {activeTab === 'general' && (
+              {saving ? t('workspace.saving') : t('common.save')}
+            </DialogConfirmButton>
+          </div>
+        ) : null
+      }
+    >
+      {activeTab === 'general' && (
                 <div
                   id="workspace-settings-panel-general"
                   role="tabpanel"
@@ -323,10 +297,6 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                   </div>
                 </div>
               )}
-            </EditorialModalShell>
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
+    </Dialog>
   );
 }

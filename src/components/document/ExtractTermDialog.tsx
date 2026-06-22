@@ -1,12 +1,15 @@
-import { X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { listGlossaries, addGlossaryEntry } from '../../services/glossaryService';
+import { Dialog, DialogConfirmButton, DialogCancelButton } from '../ui';
+import { listGlossaries, addGlossaryEntry, createGlossary } from '../../services/glossaryService';
 import { extractTermFromPhrase } from '../../services/llmService';
 import { usePipelineStore } from '../../stores/pipelineStore';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
 import type { Glossary } from '../../types';
 import { generateId } from '../../utils';
+
+const CREATE_NEW_GLOSSARY = '__create_new__';
 
 interface ExtractTermDialogProps {
   sourcePhrase: string;
@@ -20,14 +23,19 @@ export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSucce
   const stageProvider = usePipelineStore((s) => s.config.stages[0]?.provider ?? 'openai');
   const stageModel = usePipelineStore((s) => s.config.stages[0]?.model ?? 'gpt-4o');
   const assignedGlossaryId = usePipelineStore((s) => s.config.assignedGlossaryId);
+  const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace);
 
   const [term, setTerm] = useState('');
   const [translation, setTranslation] = useState(targetPhrase);
   const [notes, setNotes] = useState('');
   const [selectedGlossaryId, setSelectedGlossaryId] = useState<string | null>(null);
+  const [newGlossaryName, setNewGlossaryName] = useState('');
   const [glossaries, setGlossaries] = useState<Glossary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  // Glossario creato inline: memorizzato per riusarlo se l'inserimento del termine
+  // fallisce e l'utente ritenta — evita di creare dizionari vuoti duplicati.
+  const createdGlossaryIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,11 +63,24 @@ export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSucce
     return () => { cancelled = true; };
   }, [sourcePhrase, stageProvider, stageModel, assignedGlossaryId, t]);
 
+  const isCreatingNew = selectedGlossaryId === CREATE_NEW_GLOSSARY;
+  const canConfirm = term.trim() !== '' &&
+    (isCreatingNew ? newGlossaryName.trim() !== '' : selectedGlossaryId !== null);
+
   const handleConfirm = async () => {
-    if (!selectedGlossaryId || !term.trim()) return;
+    if (!canConfirm) return;
     setIsSaving(true);
     try {
-      await addGlossaryEntry(selectedGlossaryId, {
+      let targetGlossaryId = selectedGlossaryId;
+      if (isCreatingNew) {
+        // Riusa il glossario di un tentativo precedente fallito invece di ricrearlo.
+        targetGlossaryId =
+          createdGlossaryIdRef.current ??
+          (await createGlossary(newGlossaryName.trim(), '', '', '', activeWorkspace?.id ?? null));
+        createdGlossaryIdRef.current = targetGlossaryId;
+      }
+      if (!targetGlossaryId) return;
+      await addGlossaryEntry(targetGlossaryId, {
         id: generateId('gle'),
         term: term.trim(),
         translation: translation.trim(),
@@ -76,26 +97,29 @@ export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSucce
   };
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="extract-term-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-    >
-      <div className="w-full max-w-md rounded-3xl border border-editorial-border bg-editorial-bg shadow-2xl">
-        <div className="flex items-center justify-between border-b border-editorial-border px-6 py-4">
-          <h2 id="extract-term-title" className="font-display text-base italic text-editorial-ink">
-            {t('memory.extractTermTitle')}
-          </h2>
-          <button type="button" onClick={onClose} aria-label={t('common.close')}
-            className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent">
-            <X size={16} />
-          </button>
+    <Dialog
+      open
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+      title={t('memory.extractTermTitle')}
+      closeLabel={t('common.close')}
+      widthClassName="max-w-md"
+      bodyClassName="px-6 py-5"
+      footer={
+        <div className="flex items-center justify-end gap-3">
+          <DialogCancelButton onClick={onClose} aria-label={t('common.cancel')}>
+            {t('common.cancel')}
+          </DialogCancelButton>
+          <DialogConfirmButton onClick={handleConfirm} disabled={!canConfirm || isSaving} aria-label={t('common.confirm')}>
+            {isSaving ? '…' : t('common.confirm')}
+          </DialogConfirmButton>
         </div>
-
-        <div className="space-y-4 px-6 py-5">
-          <div>
-            <label className="mb-1 block text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+      }
+    >
+      <div className="space-y-4">
+        <div>
+            <label className="mb-1 block text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
               {t('memory.sourcePhraseLabel')}
             </label>
             <div className="rounded-xl bg-editorial-textbox/40 px-3 py-2 text-xs text-editorial-muted font-mono leading-relaxed">
@@ -105,7 +129,7 @@ export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSucce
 
           <div>
             <label htmlFor="extract-term-input"
-              className="mb-1 block text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+              className="mb-1 block text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
               {t('memory.termLabel')}
             </label>
             <input id="extract-term-input" type="text" value={isLoading ? '…' : term}
@@ -116,7 +140,7 @@ export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSucce
 
           <div>
             <label htmlFor="extract-translation-input"
-              className="mb-1 block text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+              className="mb-1 block text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
               {t('glossary.translation')}
             </label>
             <input id="extract-translation-input" type="text" value={translation}
@@ -126,7 +150,7 @@ export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSucce
 
           <div>
             <label htmlFor="extract-notes-input"
-              className="mb-1 block text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+              className="mb-1 block text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
               {t('glossary.notes')} ({t('common.optional')})
             </label>
             <input id="extract-notes-input" type="text" value={notes}
@@ -136,7 +160,7 @@ export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSucce
 
           <div>
             <label htmlFor="extract-glossary-select"
-              className="mb-1 block text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+              className="mb-1 block text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
               {t('glossary.selectGlossary')}
             </label>
             <select id="extract-glossary-select" value={selectedGlossaryId ?? ''}
@@ -145,23 +169,18 @@ export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSucce
               className="w-full rounded-xl border border-editorial-border bg-editorial-textbox/60 px-3 py-2 text-sm text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent">
               <option value="">{t('glossary.noGlossarySelected')}</option>
               {glossaries.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+              <option value={CREATE_NEW_GLOSSARY}>{t('glossary.createNewInline')}</option>
             </select>
+            {isCreatingNew && (
+              <input type="text" value={newGlossaryName}
+                onChange={(e) => setNewGlossaryName(e.target.value)}
+                placeholder={t('glossary.newGlossaryNamePlaceholder')}
+                aria-label={t('glossary.newGlossaryNamePlaceholder')}
+                autoFocus
+                className="mt-2 w-full rounded-xl border border-editorial-border bg-editorial-textbox/60 px-3 py-2 text-sm text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent" />
+            )}
           </div>
-        </div>
-
-        <div className="flex items-center justify-end gap-3 border-t border-editorial-border px-6 py-4">
-          <button type="button" onClick={onClose} aria-label={t('common.cancel')}
-            className="rounded-full border border-editorial-border px-4 py-2 text-sm text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent">
-            {t('common.cancel')}
-          </button>
-          <button type="button" onClick={handleConfirm}
-            disabled={!selectedGlossaryId || !term.trim() || isSaving}
-            aria-label={t('common.confirm')}
-            className="rounded-full border border-editorial-accent bg-editorial-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-editorial-accent/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40">
-            {isSaving ? '…' : t('common.confirm')}
-          </button>
-        </div>
       </div>
-    </div>
+    </Dialog>
   );
 }

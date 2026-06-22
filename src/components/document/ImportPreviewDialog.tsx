@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { buildImportPreview } from '../../utils/documentWorkflow';
 import { findBestSplitIndex, trimSplitFragment } from '../../utils';
-import { useFocusTrap } from '../../hooks/useFocusTrap';
+import * as RadixDialog from '@radix-ui/react-dialog';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { checkContextOverflow, estimateCharTokens } from '../../utils/tokenEstimate';
 import { LANGUAGES } from '../../constants';
@@ -32,7 +32,7 @@ import { getSelectableModelIds, LLM_PROVIDER_ORDER } from '../../models/catalog'
 import { useUiStore } from '../../stores/uiStore';
 import { useConfigStore } from '../../stores/configStore';
 import type { ModelProvider } from '../../types';
-import { IconButton } from '../ui';
+import { IconButton, DialogConfirmButton, DialogCancelButton } from '../ui';
 import { ChunkCard, BoundaryDivider, SegmentEditor } from './ChunkEditor';
 import { type ParagraphChunks, toParagraphChunks, countWords, toFlatModel, fromFlatModel } from '../../utils/paragraphChunks';
 
@@ -85,7 +85,6 @@ export function ImportPreviewDialog({
   onConfirm,
 }: ImportPreviewDialogProps) {
   const { t } = useTranslation();
-  const trapRef = useFocusTrap(true, onCancel);
   const [editorMode, setEditorMode] = useState<EditorMode>('cards');
   const { config } = usePipelineStore();
   const ollamaModels = useConfigStore((s) => s.ollamaModels);
@@ -366,14 +365,12 @@ export function ImportPreviewDialog({
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-editorial-ink/35 p-4 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="import-preview-title"
-      ref={trapRef}
-    >
-      <div className="relative flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-[28px] border border-editorial-border bg-editorial-bg shadow-[var(--shadow-modal)]">
+    <RadixDialog.Root open onOpenChange={(o) => { if (!o) onCancel(); }}>
+      <RadixDialog.Portal>
+        <RadixDialog.Overlay className="fixed inset-0 z-[200] bg-editorial-ink/35 backdrop-blur-sm" />
+        <RadixDialog.Content
+          aria-labelledby="import-preview-title"
+          className="fixed left-1/2 top-1/2 z-[200] flex max-h-[92vh] w-[calc(100%-2rem)] max-w-4xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[28px] border border-editorial-border bg-editorial-bg shadow-[var(--shadow-modal)]">
 
         {/* ── Unified header (filename + title + stats + controls) ───────── */}
         <div className="shrink-0 border-b border-editorial-border px-6 pb-4 pt-5">
@@ -413,7 +410,7 @@ export function ImportPreviewDialog({
                 onClick={onCancel}
                 title={t('common.close')}
                 aria-label={t('common.close')}
-                className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                className="shrink-0 rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               >
                 <X size={16} />
               </button>
@@ -421,12 +418,14 @@ export function ImportPreviewDialog({
           </div>
 
           {/* Row 2: title */}
-          <h2
-            id="import-preview-title"
-            className="mb-2 font-display text-2xl italic tracking-tight text-editorial-ink"
-          >
-            {t('files.importPreviewTitle')}
-          </h2>
+          <RadixDialog.Title asChild>
+            <h2
+              id="import-preview-title"
+              className="mb-2 font-display text-2xl italic tracking-tight text-editorial-ink"
+            >
+              {t('files.importPreviewTitle')}
+            </h2>
+          </RadixDialog.Title>
 
           {/* Row 3: stats */}
           <p className="mb-4 text-xs font-mono text-editorial-muted whitespace-nowrap">
@@ -692,24 +691,13 @@ export function ImportPreviewDialog({
               </div>
             )}
             <div className="flex flex-col-reverse gap-2 sm:flex-row">
-              <button
-                type="button"
-                onClick={onCancel}
-                className="rounded-full border border-editorial-border px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink"
-              >
-                {t('common.cancel')}
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirm}
-                className="rounded-full bg-editorial-ink px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.25em] text-white transition-colors hover:bg-editorial-accent"
-              >
-                {t('files.importConfirm')}
-              </button>
+              <DialogCancelButton onClick={onCancel}>{t('common.cancel')}</DialogCancelButton>
+              <DialogConfirmButton onClick={handleConfirm}>{t('files.importConfirm')}</DialogConfirmButton>
             </div>
           </div>
         </div>
-      </div>
-    </div>
+        </RadixDialog.Content>
+      </RadixDialog.Portal>
+    </RadixDialog.Root>
   );
 }
