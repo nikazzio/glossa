@@ -76,6 +76,20 @@
 | `components/document/AnnotationContextMenu.tsx` | Menu contestuale (clic destro sul testo della traduzione) → «Aggiungi annotazione» con anchor pre-compilato |
 | `utils/annotationMarkdown.ts` | `composeAnnotatedMarkdown()` — compone vista GFM con marcatori `[^a1]` e definizioni a piè di pagina; non modifica il draft salvato |
 
+### Primitive overlay (Radix UI)
+
+Le finestre modali, i tooltip e i menu poggiano su **Radix UI** (`@radix-ui/react-dialog`, `react-alert-dialog`, `react-tooltip`, `react-dropdown-menu`). Comportamento (focus trap, Escape, scroll-lock, portale, ARIA, navigazione tastiera) delegato alla libreria — non si reimplementa a mano.
+
+| Primitiva (`components/ui/`) | Uso |
+|---|---|
+| `Dialog` | Finestra modale generica (chrome editoriale, X in alto a destra). z-index `z-[200]`. |
+| `AlertDialog` | Conferme (azione + annulla); `tone="danger"` per azioni distruttive. |
+| `DialogConfirmButton` / `DialogCancelButton` | Pulsanti footer uniformi (conferma inchiostro, annulla bordo). |
+| `Tooltip` | Tooltip editoriale su Radix (Provider interno, `z-[210]`). |
+| `Menu` | Menu contestuale/a tendina su Radix DropdownMenu (ancora virtuale `anchorRect`). |
+
+> **Pendente (issue shell):** `EditorialModalShell` e `useFocusTrap` sono ancora usati dai pannelli shell (`LibraryPanel`, `ProjectPanel`, `WorkspaceHome`, `TranslationsArea`, `DashboardSidebar`) e dal popover badge costi della sidebar. Verranno rimossi quando la shell sinistra migrerà (`react-resizable-panels` + Radix Collapsible).
+
 ---
 
 ## Boundary prodotto: App / Workspace / Pipeline
