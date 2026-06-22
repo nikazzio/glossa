@@ -19,7 +19,7 @@ import { getKnownModelIds, getModelEntry, MODEL_CATALOG, MODEL_PROVIDER_ORDER } 
 import { MODEL_PRICING } from '../../constants';
 import { usePricingStore } from '../../stores/pricingStore';
 import { ProviderLogo } from '../common';
-import { Dialog, IconButton, DialogCancelButton } from '../ui';
+import { Dialog, IconButton, DialogCancelButton, Tooltip } from '../ui';
 import type { ModelProvider } from '../../types';
 import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
 import { useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
@@ -602,11 +602,10 @@ export function SettingsModal() {
                         {MODEL_PROVIDER_ORDER.map((provider) => {
                           const active = provider === activeProviderTab;
                           return (
+                            <Tooltip key={provider} label={PROVIDER_LABELS[provider]}>
                             <button
-                              key={provider}
                               type="button"
                               onClick={() => setActiveProviderTab(provider)}
-                              title={PROVIDER_LABELS[provider]}
                               aria-label={PROVIDER_LABELS[provider]}
                               id={`settings-provider-tab-${provider}`}
                               role="tab"
@@ -621,15 +620,16 @@ export function SettingsModal() {
                             >
                               <ProviderLogo provider={provider} size={18} />
                             </button>
+                            </Tooltip>
                           );
                         })}
 
                         {/* Separatore + tab Custom */}
                         <span className="mx-1 self-center w-px h-5 bg-editorial-border/60" aria-hidden="true" />
+                        <Tooltip label={PROVIDER_LABELS['custom']}>
                         <button
                           type="button"
                           onClick={() => setActiveProviderTab('custom')}
-                          title={PROVIDER_LABELS['custom']}
                           aria-label={PROVIDER_LABELS['custom']}
                           id="settings-provider-tab-custom"
                           role="tab"
@@ -644,6 +644,7 @@ export function SettingsModal() {
                         >
                           <Globe size={16} />
                         </button>
+                        </Tooltip>
                       </div>
 
                       <div
@@ -695,7 +696,6 @@ export function SettingsModal() {
                                 <button
                                   onClick={() => refreshOllama()}
                                   disabled={refreshing}
-                                  title={t('ollama.refresh')}
                                   className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-editorial-muted hover:text-editorial-ink transition-colors disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                                   aria-label={t('ollama.refresh')}
                                 >

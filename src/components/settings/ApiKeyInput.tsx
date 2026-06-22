@@ -3,6 +3,7 @@ import { Key, CheckCircle2, Save, Loader2, Trash2, Shield, X } from 'lucide-reac
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { settingsService } from '../../services/llmService';
+import { Tooltip } from '../ui';
 
 interface ApiKeyInputProps {
   label: string;
@@ -76,23 +77,25 @@ export function ApiKeyInput({ label, provider, onKeyChange }: ApiKeyInputProps) 
             }}
             autoFocus
           />
-          <button
-            onClick={handleSave}
-            disabled={saving || !keyValue.trim()}
-            title={t('settings.save')}
-            className="p-1.5 text-editorial-ink hover:text-editorial-accent disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            aria-label={t('settings.save')}
-          >
-            {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-          </button>
-          <button
-            onClick={() => { setEditing(false); setKeyValue(''); }}
-            title={t('settings.cancel')}
-            aria-label={t('settings.cancel')}
-            className="p-1.5 text-editorial-muted hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-          >
-            <X size={14} />
-          </button>
+          <Tooltip label={t('settings.save')}>
+            <button
+              onClick={handleSave}
+              disabled={saving || !keyValue.trim()}
+              className="p-1.5 text-editorial-ink hover:text-editorial-accent disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              aria-label={t('settings.save')}
+            >
+              {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+            </button>
+          </Tooltip>
+          <Tooltip label={t('settings.cancel')}>
+            <button
+              onClick={() => { setEditing(false); setKeyValue(''); }}
+              aria-label={t('settings.cancel')}
+              className="p-1.5 text-editorial-muted hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            >
+              <X size={14} />
+            </button>
+          </Tooltip>
         </div>
       </div>
     );
@@ -107,7 +110,7 @@ export function ApiKeyInput({ label, provider, onKeyChange }: ApiKeyInputProps) 
       <div className="flex items-center gap-2">
         <button
           onClick={() => setEditing(true)}
-          title={isConfigured ? t('settings.save') : t('settings.clickToConfigure')}
+          aria-label={isConfigured ? t('settings.save') : t('settings.clickToConfigure')}
           className="flex items-center gap-3 bg-editorial-textbox px-3 py-2 flex-1 text-left hover:bg-editorial-textbox/80 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
         >
           <Key size={14} className={isConfigured ? 'text-editorial-accent' : 'text-editorial-muted opacity-20'} />
@@ -117,14 +120,15 @@ export function ApiKeyInput({ label, provider, onKeyChange }: ApiKeyInputProps) 
           {isConfigured && <CheckCircle2 size={12} className="text-editorial-ink" />}
         </button>
         {isConfigured && (
-          <button
-            onClick={handleDelete}
-            title={t('settings.removeFromKeychain')}
-            className="p-1.5 text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            aria-label={t('settings.removeFromKeychain')}
-          >
-            <Trash2 size={14} />
-          </button>
+          <Tooltip label={t('settings.removeFromKeychain')}>
+            <button
+              onClick={handleDelete}
+              className="p-1.5 text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              aria-label={t('settings.removeFromKeychain')}
+            >
+              <Trash2 size={14} />
+            </button>
+          </Tooltip>
         )}
       </div>
     </div>
