@@ -45,8 +45,19 @@ export function ShellNavSection({ icon: Icon, label, action, collapsed = false, 
   );
 }
 
-/** Footer barra: azioni app-level (impostazioni, aiuto) ancorate in basso. */
-export function ShellNavFooter({ collapsed = false }: { collapsed?: boolean }) {
+/**
+ * Footer barra: azioni app-level (salva, impostazioni, lingua, aiuto).
+ * `variant='bar'` (default): ancorato in fondo alla barra laterale (shell vecchia).
+ * `variant='header'` (#291, shell nuova): cluster orizzontale in alto a destra,
+ * senza bordo/mt-auto perché vive dentro l'header.
+ */
+export function ShellNavFooter({
+  collapsed = false,
+  variant = 'bar',
+}: {
+  collapsed?: boolean;
+  variant?: 'bar' | 'header';
+}) {
   const { t, i18n } = useTranslation();
   const setShowSettings = useUiStore((state) => state.setShowSettings);
   const setShowHelp = useUiStore((state) => state.setShowHelp);
@@ -96,9 +107,13 @@ export function ShellNavFooter({ collapsed = false }: { collapsed?: boolean }) {
 
   return (
     <div
-      className={`mt-auto flex border-t border-editorial-border/50 ${
-        collapsed ? 'flex-col items-center gap-1.5 py-2.5' : 'items-center gap-1 px-3 py-2.5'
-      }`}
+      className={
+        variant === 'header'
+          ? 'flex items-center gap-1'
+          : `mt-auto flex border-t border-editorial-border/50 ${
+              collapsed ? 'flex-col items-center gap-1.5 py-2.5' : 'items-center gap-1 px-3 py-2.5'
+            }`
+      }
     >
       <IconButton
         size="md"

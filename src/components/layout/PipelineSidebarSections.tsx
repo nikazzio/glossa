@@ -141,6 +141,7 @@ export function PipelineSidebarRunSection({
   onCancelPipeline,
   onDryRun,
   onRetranslateChunk,
+  showAuditOnly = true,
 }: {
   collapsed?: boolean;
   onRunPipeline?: () => void;
@@ -148,6 +149,8 @@ export function PipelineSidebarRunSection({
   onCancelPipeline?: () => void;
   onDryRun?: () => void;
   onRetranslateChunk?: (chunkId: string) => void;
+  // Shell nuova (#291): "Solo audit" vive nel pannello Frammento → qui si nasconde.
+  showAuditOnly?: boolean;
 }) {
   const { t } = useTranslation();
   const config = usePipelineStore((state) => state.config);
@@ -250,9 +253,11 @@ export function PipelineSidebarRunSection({
             {completedCount}/{pipelineMode === 'test' ? runChunkCount : totalChunks}
           </span>
         ) : null}
-        <IconButton size="md" onClick={onRunAuditOnly} disabled={isProcessing || !hasDocument} title={t('pipeline.runAuditOnly')} ariaLabel={t('pipeline.runAuditOnly')} tooltipSide="right" className="h-9 w-9 bg-editorial-bg">
-          <Highlighter size={14} />
-        </IconButton>
+        {showAuditOnly ? (
+          <IconButton size="md" onClick={onRunAuditOnly} disabled={isProcessing || !hasDocument} title={t('pipeline.runAuditOnly')} ariaLabel={t('pipeline.runAuditOnly')} tooltipSide="right" className="h-9 w-9 bg-editorial-bg">
+            <Highlighter size={14} />
+          </IconButton>
+        ) : null}
         {currentChunk ? (
           <IconButton size="md" tone="charcoal" onClick={() => currentChunk && onRetranslateChunk?.(currentChunk.id)} disabled={isProcessing || !currentChunk.hasOriginalText} title={pipelineMode === 'test' ? t('pipeline.retestChunk') : t('pipeline.retranslateChunk')} tooltipSide="right" className="h-9 w-9 bg-editorial-bg">
             <RotateCcw size={13} />
@@ -372,18 +377,20 @@ export function PipelineSidebarRunSection({
                 {completedCount} / {pipelineMode === 'test' ? runChunkCount : totalChunks}
               </span>
             )}
-            <IconButton
-              size="md"
-              tone="default"
-              onClick={onRunAuditOnly}
-              disabled={isProcessing || !hasDocument}
-              title={t('pipeline.runAuditOnly')}
-              ariaLabel={t('pipeline.runAuditOnly')}
-              tooltipSide="right"
-              className="mt-1 bg-editorial-bg"
-            >
-              <Highlighter size={14} />
-            </IconButton>
+            {showAuditOnly ? (
+              <IconButton
+                size="md"
+                tone="default"
+                onClick={onRunAuditOnly}
+                disabled={isProcessing || !hasDocument}
+                title={t('pipeline.runAuditOnly')}
+                ariaLabel={t('pipeline.runAuditOnly')}
+                tooltipSide="right"
+                className="mt-1 bg-editorial-bg"
+              >
+                <Highlighter size={14} />
+              </IconButton>
+            ) : null}
           </div>
 
           <div className="flex flex-col items-center gap-1.5">

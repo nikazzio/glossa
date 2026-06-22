@@ -1,6 +1,5 @@
 import { ArrowLeft, FileOutput, LibraryBig, Settings2, Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { ShellNavFooter } from '../ShellNav';
 import {
   PipelineSidebarExportDialogHost,
   PipelineSidebarPipelinesSection,
@@ -53,7 +52,7 @@ export function ProjectRailNext({
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* Azioni di progetto: back · libreria · workspace · importa · esporta (ambito file/progetto). */}
-      <div className={`flex items-center gap-1 pt-2 ${collapsed ? 'flex-col px-0' : 'flex-wrap px-2'}`}>
+      <div className={`flex items-center gap-1 pt-2 ${collapsed ? 'flex-col px-0' : 'flex-nowrap px-2'}`}>
         <IconButton
           size="sm"
           tone="muted"
@@ -122,11 +121,11 @@ export function ProjectRailNext({
             onCancelPipeline={onCancelPipeline}
             onDryRun={onDryRun}
             onRetranslateChunk={onRetranslateChunk}
+            showAuditOnly={false}
           />
         </div>
       </div>
 
-      <ShellNavFooter collapsed={collapsed} />
       <PipelineSidebarExportDialogHost open={showExportDialog} onOpenChange={setShowExportDialog} />
     </div>
   );
