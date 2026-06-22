@@ -354,6 +354,7 @@ function EditorView() {
                 onRunCoherenceAudit={runCoherenceAudit}
               >
                 <ConfigDrawer
+                  variant="modal"
                   onRunPipeline={runPipeline}
                   onRunAuditOnly={runAuditOnly}
                   onCancelPipeline={cancelPipeline}

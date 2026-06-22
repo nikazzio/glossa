@@ -3,7 +3,7 @@ import { X, LibraryBig, Save, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { AnimatePresence, motion } from 'motion/react';
-import { IconButton, PillButton } from '../ui';
+import { Dialog, DialogCancelButton, IconButton, PillButton } from '../ui';
 import { ResizeHandle, useEdgeResize } from '../layout/useEdgeResize';
 import { SPRING_PANEL } from '../layout/motion';
 import { useViewportWidth, FLYOUT_OVERLAY_BELOW } from '../../hooks/useViewportWidth';
@@ -31,12 +31,15 @@ interface ConfigDrawerProps {
   onRunPipeline: () => void;
   onRunAuditOnly: () => void;
   onCancelPipeline: () => void;
+  /** 'drawer' = pannello laterale legacy; 'modal' = finestra (shell nuova #291). */
+  variant?: 'drawer' | 'modal';
 }
 
 export function ConfigDrawer({
   onRunPipeline,
   onRunAuditOnly,
   onCancelPipeline,
+  variant = 'drawer',
 }: ConfigDrawerProps) {
   const { t } = useTranslation();
   const showConfigDrawer = useUiStore((state) => state.showConfigDrawer);
@@ -65,15 +68,15 @@ export function ConfigDrawer({
     });
   };
 
-  // Pannello push (non modale): chiusura via Esc, nessun focus trap sul documento.
+  // Pannello push (non modale): chiusura via Esc. La modale usa l'Esc nativo di Radix.
   useEffect(() => {
-    if (!showConfigDrawer) return;
+    if (variant !== 'drawer' || !showConfigDrawer) return;
     const onKeyDown = (e: globalThis.KeyboardEvent) => {
       if (e.key === 'Escape') setShowConfigDrawer(false);
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [showConfigDrawer, setShowConfigDrawer]);
+  }, [variant, showConfigDrawer, setShowConfigDrawer]);
   const setPipelineMode = useConfigStore((state) => state.setPipelineMode);
   const [glossaryDirty, setGlossaryDirty] = useState(false);
   const [isSavingGlossary, setIsSavingGlossary] = useState(false);
@@ -194,6 +197,84 @@ export function ConfigDrawer({
     </div>
   );
 
+  // ---- Contenuto condiviso fra drawer (legacy) e modale (shell nuova) ----
+  const nameInput = (
+    <input
+      id="config-drawer-title"
+      type="text"
+      value={nameValue}
+      onChange={(e) => setNameValue(e.target.value)}
+      onBlur={() => {
+        const trimmed = nameValue.trim();
+        if (!trimmed) { setNameValue(activePipeline?.name ?? t('pipeline.globalSetup')); return; }
+        if (activePipelineId && activePipeline && trimmed !== activePipeline.name) {
+          void renamePipeline(activePipelineId, trimmed);
+        }
+      }}
+      onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+      placeholder={t('pipeline.globalSetup')}
+      aria-label={t('pipeline.pipelineNameLabel')}
+      className="w-full bg-transparent font-display text-2xl italic tracking-tight text-editorial-ink outline-none placeholder:text-editorial-muted/40 transition-colors focus:text-editorial-accent"
+    />
+  );
+
+  const configForm = (
+    <PipelineConfig
+      onRunPipeline={onRunPipeline}
+      onRunAuditOnly={onRunAuditOnly}
+      onCancelPipeline={onCancelPipeline}
+      showActions={false}
+      showOnlyGlobalDefaults={false}
+      libraryGlossarySection={libraryGlossarySection}
+      className="flex flex-1 flex-col bg-editorial-bg/40 min-h-0"
+    />
+  );
+
+  const resetButton = completedCount > 0 ? (
+    <PillButton
+      variant="secondary"
+      onClick={handleResetAll}
+      disabled={isProcessing}
+      className="inline-flex items-center gap-2 border-editorial-accent/40 text-editorial-accent/80 hover:border-editorial-accent hover:text-editorial-accent"
+    >
+      <Trash2 size={12} />
+      {t('pipeline.resetAll')}
+    </PillButton>
+  ) : null;
+
+  // ---- Variante modale (shell nuova): finestra Radix, niente resize/overlay ----
+  if (variant === 'modal') {
+    return (
+      <Dialog
+        open={showConfigDrawer}
+        onOpenChange={(open) => { if (!open) setShowConfigDrawer(false); }}
+        title={t('pipeline.configurePipeline')}
+        eyebrow={t('document.configDrawerTitle')}
+        closeLabel={t('common.close')}
+        closeDisabled={isProcessing}
+        widthClassName="max-w-3xl"
+        panelClassName="h-[85vh]"
+        bodyClassName="p-0"
+        footer={
+          <div className="flex justify-end">
+            <DialogCancelButton onClick={() => setShowConfigDrawer(false)} disabled={isProcessing}>
+              {t('common.close')}
+            </DialogCancelButton>
+          </div>
+        }
+      >
+        <div className="flex h-full min-h-0 flex-col">
+          <div className="shrink-0 border-b border-editorial-border px-6 py-4">{nameInput}</div>
+          {configForm}
+          {resetButton ? (
+            <div className="flex shrink-0 justify-center border-t border-editorial-border/40 px-6 py-4">{resetButton}</div>
+          ) : null}
+        </div>
+      </Dialog>
+    );
+  }
+
+  // ---- Variante drawer (legacy): pannello laterale ridimensionabile ----
   return (
     <AnimatePresence initial={false}>
       {showConfigDrawer && (
@@ -212,64 +293,29 @@ export function ConfigDrawer({
           }`}
         >
           <div className="flex h-full flex-col overflow-hidden" style={{ width }}>
-          {/* Header */}
-          <div className="flex items-start justify-between gap-3 border-b border-editorial-border px-6 pt-4 pb-4">
-            <div className="min-w-0">
-              <div className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
-                {t('document.configDrawerTitle')}
+            <div className="flex items-start justify-between gap-3 border-b border-editorial-border px-6 pt-4 pb-4">
+              <div className="min-w-0">
+                <div className="text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
+                  {t('document.configDrawerTitle')}
+                </div>
+                <div className="mt-1">{nameInput}</div>
               </div>
-              <input
-                id="config-drawer-title"
-                type="text"
-                value={nameValue}
-                onChange={(e) => setNameValue(e.target.value)}
-                onBlur={() => {
-                  const trimmed = nameValue.trim();
-                  if (!trimmed) { setNameValue(activePipeline?.name ?? t('pipeline.globalSetup')); return; }
-                  if (activePipelineId && activePipeline && trimmed !== activePipeline.name) {
-                    void renamePipeline(activePipelineId, trimmed);
-                  }
-                }}
-                onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
-                placeholder={t('pipeline.globalSetup')}
-                aria-label={t('pipeline.pipelineNameLabel')}
-                className="mt-1 w-full bg-transparent font-display text-2xl italic tracking-tight text-editorial-ink outline-none placeholder:text-editorial-muted/40 transition-colors focus:text-editorial-accent"
-              />
-            </div>
-            <IconButton
-              size="md"
-              onClick={() => setShowConfigDrawer(false)}
-              title={t('header.closeDrawer')}
-              tooltipSide="left"
-              className="mt-1 shrink-0"
-            >
-              <X size={16} />
-            </IconButton>
-          </div>
-
-          <PipelineConfig
-            onRunPipeline={onRunPipeline}
-            onRunAuditOnly={onRunAuditOnly}
-            onCancelPipeline={onCancelPipeline}
-            showActions={false}
-            showOnlyGlobalDefaults={false}
-            libraryGlossarySection={libraryGlossarySection}
-            className="flex flex-1 flex-col bg-editorial-bg/40 min-h-0"
-          />
-
-          {completedCount > 0 && (
-            <div className="flex shrink-0 justify-center border-t border-editorial-border/40 px-6 py-4">
-              <PillButton
-                variant="secondary"
-                onClick={handleResetAll}
-                disabled={isProcessing}
-                className="inline-flex items-center gap-2 border-editorial-accent/40 text-editorial-accent/80 hover:border-editorial-accent hover:text-editorial-accent"
+              <IconButton
+                size="md"
+                onClick={() => setShowConfigDrawer(false)}
+                title={t('header.closeDrawer')}
+                tooltipSide="left"
+                className="mt-1 shrink-0"
               >
-                <Trash2 size={12} />
-                {t('pipeline.resetAll')}
-              </PillButton>
+                <X size={16} />
+              </IconButton>
             </div>
-          )}
+
+            {configForm}
+
+            {resetButton ? (
+              <div className="flex shrink-0 justify-center border-t border-editorial-border/40 px-6 py-4">{resetButton}</div>
+            ) : null}
           </div>
           <ResizeHandle
             onPointerDown={handleResizeStart}
