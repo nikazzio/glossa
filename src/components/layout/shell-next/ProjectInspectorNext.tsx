@@ -64,18 +64,18 @@ export function ProjectInspectorNext({
     >
       <Tabs.List
         aria-label="Rivedi"
-        className="flex shrink-0 border-b border-editorial-border"
+        className="flex h-12 shrink-0 items-center border-b border-editorial-border"
       >
         <Tabs.Trigger
           value="insight"
-          className="flex flex-1 items-center justify-center gap-2 py-2.5 text-sm text-editorial-muted outline-none transition-colors hover:text-editorial-accent focus-visible:ring-2 focus-visible:ring-editorial-accent data-[state=active]:border-b-2 data-[state=active]:border-editorial-accent data-[state=active]:font-semibold data-[state=active]:text-editorial-accent"
+          className="flex flex-1 items-center justify-center gap-2 h-full text-sm text-editorial-muted outline-none transition-colors hover:text-editorial-accent focus-visible:ring-2 focus-visible:ring-editorial-accent data-[state=active]:border-b-2 data-[state=active]:border-editorial-accent data-[state=active]:font-semibold data-[state=active]:text-editorial-accent"
         >
           <BarChart2 size={15} />
           {t('projectShell.insightTab')}
         </Tabs.Trigger>
         <Tabs.Trigger
           value="chunk"
-          className="flex flex-1 items-center justify-center gap-2 py-2.5 text-sm text-editorial-muted outline-none transition-colors hover:text-editorial-accent focus-visible:ring-2 focus-visible:ring-editorial-accent data-[state=active]:border-b-2 data-[state=active]:border-editorial-accent data-[state=active]:font-semibold data-[state=active]:text-editorial-accent"
+          className="flex flex-1 items-center justify-center gap-2 h-full text-sm text-editorial-muted outline-none transition-colors hover:text-editorial-accent focus-visible:ring-2 focus-visible:ring-editorial-accent data-[state=active]:border-b-2 data-[state=active]:border-editorial-accent data-[state=active]:font-semibold data-[state=active]:text-editorial-accent"
         >
           <Layers size={15} />
           {t('projectShell.chunkTab')}

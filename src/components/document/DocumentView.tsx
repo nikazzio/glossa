@@ -403,14 +403,14 @@ export function DocumentView({
       : null;
 
   return (
-    <section className="w-full bg-editorial-paper overflow-y-auto min-h-0 h-full custom-scrollbar flex flex-col">
+    <section className={`w-full overflow-y-auto min-h-0 h-full custom-scrollbar flex flex-col ${useNewShell ? 'bg-editorial-page' : 'bg-editorial-paper'}`}>
       <div className={`@container mx-auto w-full flex flex-col flex-1 min-h-0 ${useNewShell ? '' : 'max-w-[1720px] px-5 py-3 md:px-6 md:py-4 gap-5'}`}>
         <div className="shrink-0">
           {/* Navigation bar — shell nuova: a filo (border-b, niente card flottante) */}
           <div className={useNewShell
-            ? 'w-full border-b border-editorial-border px-4 py-2.5'
+            ? 'w-full h-12 flex items-center border-b border-editorial-border bg-editorial-page px-4'
             : 'w-full rounded-[20px] border border-editorial-border bg-editorial-bg/90 px-4 py-3 shadow-[var(--shadow-warm-sm)]'}>
-            <div className="flex items-center gap-x-4 gap-y-2">
+            <div className="flex w-full items-center gap-x-4 gap-y-2">
               <div className="flex flex-1 flex-wrap items-center gap-1.5">
                 {enabledStages.map((stage) => {
                   const Icon: LucideIcon =
@@ -442,7 +442,7 @@ export function DocumentView({
 
               {useNewShell ? (
                 // Barra di navigazione stretta: frecce + pallini al centro + conteggio compatto in linea.
-                <div className="flex flex-1 min-w-0 items-center justify-center gap-2">
+                <div className="flex shrink-0 items-center justify-center gap-2">
                   <IconButton
                     size="md"
                     onClick={() => prevChunk && setSelectedChunkId(prevChunk.id)}
@@ -501,7 +501,7 @@ export function DocumentView({
               {/* Shell nuova (#291): gruppo Vista — fuoco pannelli + evidenziazioni + scroll.
                   Nella shell vecchia questi controlli vivono nella barra sinistra. */}
               {useNewShell && (
-                <div className="flex shrink-0 items-center gap-1">
+                <div className="flex flex-1 items-center justify-end gap-1">
                   <IconButton
                     size="md"
                     tone={paneFocus === 'both' ? 'accent' : 'default'}

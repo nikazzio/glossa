@@ -52,9 +52,9 @@ export function ProjectRailNext({
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* Azioni di progetto: back · libreria · workspace · importa · esporta (ambito file/progetto). */}
-      <div className={`flex items-center gap-1 pt-2 ${collapsed ? 'flex-col px-0' : 'flex-nowrap px-2'}`}>
+      <div className={`flex h-12 shrink-0 items-center gap-1 border-b border-editorial-border ${collapsed ? 'justify-center px-0' : 'flex-nowrap px-2'}`}>
         <IconButton
-          size="sm"
+          size="md"
           tone="muted"
           onClick={() => closeProject()}
           disabled={isProcessing}
@@ -62,42 +62,42 @@ export function ProjectRailNext({
           tooltipSide="right"
           className="bg-editorial-textbox/25 hover:bg-editorial-textbox/45 shrink-0"
         >
-          <ArrowLeft size={12} />
+          <ArrowLeft size={14} />
         </IconButton>
         {!collapsed && (
           <>
             <IconButton
-              size="sm"
+              size="md"
               tone="muted"
               onClick={() => setShowLibraryPanel(true)}
               title={t('library.openLibrary')}
               tooltipSide="right"
             >
-              <LibraryBig size={12} />
+              <LibraryBig size={14} />
             </IconButton>
             <IconButton
-              size="sm"
+              size="md"
               tone="muted"
               onClick={onOpenWorkspaceSettings}
               disabled={!onOpenWorkspaceSettings}
               title={t('workspace.configure')}
               tooltipSide="right"
             >
-              <Settings2 size={12} />
+              <Settings2 size={14} />
             </IconButton>
             <span className="mx-0.5 h-4 w-px self-center bg-editorial-border/70" aria-hidden="true" />
             <IconButton
-              size="sm"
+              size="md"
               tone="muted"
               onClick={onImportDocument}
               disabled={!onImportDocument}
               title={t('files.import')}
               tooltipSide="right"
             >
-              <Upload size={12} />
+              <Upload size={14} />
             </IconButton>
             <IconButton
-              size="sm"
+              size="md"
               tone="muted"
               onClick={() => setShowExportDialog(true)}
               disabled={!hasDocument}
@@ -105,13 +105,13 @@ export function ProjectRailNext({
               ariaLabel={t('header.exportLabel')}
               tooltipSide="right"
             >
-              <FileOutput size={12} />
+              <FileOutput size={14} />
             </IconButton>
           </>
         )}
       </div>
 
-      <div className="mt-3 min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-hidden border-t border-editorial-border/50 pb-3 pt-5">
+      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-hidden pb-3 pt-4">
         <div className="flex flex-col gap-3">
           <PipelineSidebarPipelinesSection collapsed={collapsed} configTrigger="circle" />
           <PipelineSidebarRunSection

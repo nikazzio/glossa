@@ -141,7 +141,7 @@ export function ShellNext({
         defaultSize={initialWidth.current}
         panelRef={railRef}
         onResize={syncRailFlag}
-        className={`border-r border-editorial-border bg-editorial-bg/60 ${
+        className={`border-r border-editorial-border bg-editorial-page ${
           dragging ? '' : 'transition-[flex-grow,flex-basis] duration-200 ease-out'
         }`}
       >
@@ -165,7 +165,7 @@ export function ShellNext({
         defaultSize={initialInspectorWidth.current}
         panelRef={inspectorRef}
         onResize={syncInspectorFlag}
-        className={`border-l border-editorial-border bg-editorial-bg/95 ${
+        className={`border-l border-editorial-border bg-editorial-page ${
           dragging ? '' : 'transition-[flex-grow,flex-basis] duration-200 ease-out'
         }`}
       >
