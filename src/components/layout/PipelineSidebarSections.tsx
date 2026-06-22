@@ -436,7 +436,15 @@ export function PipelineSidebarRunSection({
   );
 }
 
-export function PipelineSidebarPipelinesSection({ collapsed = false }: { collapsed?: boolean }) {
+export function PipelineSidebarPipelinesSection({
+  collapsed = false,
+  configTrigger = 'bottom',
+}: {
+  collapsed?: boolean;
+  // 'bottom' (shell vecchia): un solo pulsante Configura in fondo alla sezione.
+  // 'circle' (shell nuova #291): ⚙ sul singolo cerchio — la config è proprietà della pipeline.
+  configTrigger?: 'bottom' | 'circle';
+}) {
   const { t } = useTranslation();
   const runStatus = usePipelineStore((state) => state.runStatus);
   const {
@@ -479,6 +487,16 @@ export function PipelineSidebarPipelinesSection({ collapsed = false }: { collaps
     if (!ok) return;
     await deletePipeline(pipelineId);
   }, [deletePipeline, t]);
+
+  // Gear-on-circle: configura quella pipeline (la attiva se non lo è già, poi apre la finestra).
+  const handleConfigurePipeline = useCallback((pipelineId: string) => {
+    if (pipelineId !== activePipelineId) switchPipeline(pipelineId);
+    setShowConfigDrawer(true);
+  }, [activePipelineId, switchPipeline, setShowConfigDrawer]);
+
+  // In modalità 'circle' il bottone in fondo serve solo come fallback quando non c'è
+  // ancora un cerchio reale su cui mostrare l'ingranaggio.
+  const showBottomConfig = configTrigger === 'bottom' || pipelines.length === 0;
 
   if (collapsed) {
     return (
@@ -602,6 +620,19 @@ export function PipelineSidebarPipelinesSection({ collapsed = false }: { collaps
                       > -
                       </IconButton>
                     )}
+                    {configTrigger === 'circle' && (
+                      <IconButton
+                        size="sm"
+                        tone={isActive && showConfigDrawer ? 'accent' : 'muted'}
+                        onClick={() => handleConfigurePipeline(pipeline.id)}
+                        title={`${t('pipeline.configurePipeline')} (Ctrl+,)`}
+                        ariaLabel={t('pipeline.configurePipeline')}
+                        tooltipSide="right"
+                        className="absolute -bottom-1 -right-1 z-10 h-5 w-5 bg-editorial-bg p-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
+                      >
+                        <Settings2 size={11} />
+                      </IconButton>
+                    )}
                   </div>
                 );
               })}
@@ -621,20 +652,22 @@ export function PipelineSidebarPipelinesSection({ collapsed = false }: { collaps
               </IconButton>
             </div>
           )}
-          <div className="flex items-center justify-center">
-            <IconButton
-              size="lg"
-              tone={showConfigDrawer ? 'accent' : 'default'}
-              onClick={() => setShowConfigDrawer(!showConfigDrawer)}
-              title={`${t('pipeline.configurePipeline')} (Ctrl+,)`}
-              ariaLabel={t('pipeline.configurePipeline')}
-              tooltipSide="right"
-              className={`h-11 w-11 ${showConfigDrawer ? '' : 'bg-editorial-textbox'}`}
-              ariaPressed={showConfigDrawer}
-            >
-              <Settings2 size={15} />
-            </IconButton>
-          </div>
+          {showBottomConfig && (
+            <div className="flex items-center justify-center">
+              <IconButton
+                size="lg"
+                tone={showConfigDrawer ? 'accent' : 'default'}
+                onClick={() => setShowConfigDrawer(!showConfigDrawer)}
+                title={`${t('pipeline.configurePipeline')} (Ctrl+,)`}
+                ariaLabel={t('pipeline.configurePipeline')}
+                tooltipSide="right"
+                className={`h-11 w-11 ${showConfigDrawer ? '' : 'bg-editorial-textbox'}`}
+                ariaPressed={showConfigDrawer}
+              >
+                <Settings2 size={15} />
+              </IconButton>
+            </div>
+          )}
         </div>
       </SidebarSectionShell>
     </div>

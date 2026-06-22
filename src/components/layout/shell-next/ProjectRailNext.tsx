@@ -165,7 +165,7 @@ export function ProjectRailNext({
       >
         {isOperative ? (
           <div className="flex flex-col gap-3">
-            <PipelineSidebarPipelinesSection collapsed={collapsed} />
+            <PipelineSidebarPipelinesSection collapsed={collapsed} configTrigger="circle" />
             <PipelineSidebarRunSection
               collapsed={collapsed}
               onRunPipeline={onRunPipeline}
