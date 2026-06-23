@@ -95,7 +95,6 @@ interface UiState {
   configFlyoutWidth: number;
   pendingAnnotationAnchor: { chunkId: string; text: string; content?: string } | null;
   activeWorkspaceArea: WorkspaceArea | null;
-
   setTraceStageId: (id: string | null) => void;
   setActiveWorkspaceArea: (area: WorkspaceArea | null) => void;
   setPendingAnnotationAnchor: (anchor: { chunkId: string; text: string; content?: string } | null) => void;
@@ -178,7 +177,6 @@ export const useUiStore = create<UiState>()(
       configFlyoutWidth: 560,
       pendingAnnotationAnchor: null,
       activeWorkspaceArea: null,
-
       setViewMode: (mode) =>
         set((state) => ({
           viewMode: mode,

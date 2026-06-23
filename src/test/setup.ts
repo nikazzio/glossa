@@ -1,6 +1,15 @@
 import '@testing-library/jest-dom/vitest';
 import { vi } from 'vitest';
 
+// react-resizable-panels (shell #291) misura via ResizeObserver: jsdom non lo fornisce.
+if (!('ResizeObserver' in globalThis)) {
+  globalThis.ResizeObserver = class {
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  } as unknown as typeof ResizeObserver;
+}
+
 // Mock Tauri APIs globally
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn(),

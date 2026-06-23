@@ -7,6 +7,7 @@ import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { EASE_EDITORIAL } from './motion';
+import { ShellNavFooter } from './ShellNav';
 
 const HelpGuide = lazy(() =>
   import('../help/HelpGuide').then((m) => ({ default: m.HelpGuide })),
@@ -83,6 +84,7 @@ export function Header() {
           </div>
         </div>
 
+        {currentProjectId ? <ShellNavFooter variant="header" /> : null}
       </div>
 
       {helpLoaded.current && (

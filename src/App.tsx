@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next';
 import { initLogger } from './utils/logger';
 import { Header, PipelineSidebar } from './components/layout';
+import { ShellNext } from './components/layout/shell-next/ShellNext';
 import { AppStatusBar } from './components/layout/AppStatusBar';
 import { ErrorBoundary, ConfirmDialog, PreflightDialog, RunResumeBanner } from './components/common';
 import { motion } from 'motion/react';
@@ -141,13 +142,10 @@ const AuditPanel = lazy(() =>
   import('./components/audit').then((m) => ({ default: m.AuditPanel })),
 );
 const ConfigDrawer = lazy(() =>
-  import('./components/document').then((m) => ({ default: m.ConfigDrawer })),
+  import('./components/document/ConfigDrawer').then((m) => ({ default: m.ConfigDrawer })),
 );
 const DocumentView = lazy(() =>
-  import('./components/document').then((m) => ({ default: m.DocumentView })),
-);
-const ProjectFlyout = lazy(() =>
-  import('./components/layout').then((m) => ({ default: m.ProjectFlyout })),
+  import('./components/document/DocumentView').then((m) => ({ default: m.DocumentView })),
 );
 const SettingsModal = lazy(() =>
   import('./components/settings/SettingsModal').then((m) => ({ default: m.SettingsModal })),
@@ -339,7 +337,7 @@ function EditorView() {
       {viewMode === 'document' ? (
         <Suspense fallback={null}>
           <main className="relative flex flex-1 min-h-0 overflow-hidden">
-            <PipelineSidebar
+            <ShellNext
               onRunPipeline={runPipeline}
               onRunAuditOnly={runAuditOnly}
               onCancelPipeline={cancelPipeline}
@@ -347,20 +345,23 @@ function EditorView() {
               onRetranslateChunk={handleRetranslateChunk}
               onImportDocument={handleImportDocument}
               onOpenWorkspaceSettings={() => setShowWorkspaceSettings(true)}
-            />
-            <ConfigDrawer
-              onRunPipeline={runPipeline}
-              onRunAuditOnly={runAuditOnly}
-              onCancelPipeline={cancelPipeline}
-            />
-            <ProjectFlyout onReauditChunk={auditSingleChunk} onRunCoherenceAudit={runCoherenceAudit} />
-            <div className="relative flex min-w-0 flex-1">
-              <DocumentView
-                onRetranslateChunk={handleRetranslateChunk}
-                onImportDocument={handleImportDocument}
+              onReauditChunk={auditSingleChunk}
+              onRunCoherenceAudit={runCoherenceAudit}
+            >
+              <ConfigDrawer
+                variant="modal"
+                onRunPipeline={runPipeline}
+                onRunAuditOnly={runAuditOnly}
+                onCancelPipeline={cancelPipeline}
               />
-              <PanelTransitionVeil panelKey={editorContentKey} tone="paper" variant="project" />
-            </div>
+              <div className="relative flex min-w-0 flex-1">
+                <DocumentView
+                  onRetranslateChunk={handleRetranslateChunk}
+                  onImportDocument={handleImportDocument}
+                />
+                <PanelTransitionVeil panelKey={editorContentKey} tone="paper" variant="project" />
+              </div>
+            </ShellNext>
           </main>
         </Suspense>
       ) : (

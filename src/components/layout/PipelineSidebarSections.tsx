@@ -141,6 +141,8 @@ export function PipelineSidebarRunSection({
   onCancelPipeline,
   onDryRun,
   onRetranslateChunk,
+  showAuditOnly = true,
+  playFirst = false,
 }: {
   collapsed?: boolean;
   onRunPipeline?: () => void;
@@ -148,6 +150,11 @@ export function PipelineSidebarRunSection({
   onCancelPipeline?: () => void;
   onDryRun?: () => void;
   onRetranslateChunk?: (chunkId: string) => void;
+  // Shell nuova (#291): "Solo audit" vive nel pannello Frammento → qui si nasconde.
+  showAuditOnly?: boolean;
+  // Shell nuova (#291): gerarchia "esegui → opzioni" — play focale in cima,
+  // modalità e conteggio chunk come opzioni subordinate sotto.
+  playFirst?: boolean;
 }) {
   const { t } = useTranslation();
   const config = usePipelineStore((state) => state.config);
@@ -250,9 +257,11 @@ export function PipelineSidebarRunSection({
             {completedCount}/{pipelineMode === 'test' ? runChunkCount : totalChunks}
           </span>
         ) : null}
-        <IconButton size="md" onClick={onRunAuditOnly} disabled={isProcessing || !hasDocument} title={t('pipeline.runAuditOnly')} ariaLabel={t('pipeline.runAuditOnly')} tooltipSide="right" className="h-9 w-9 bg-editorial-bg">
-          <Highlighter size={14} />
-        </IconButton>
+        {showAuditOnly ? (
+          <IconButton size="md" onClick={onRunAuditOnly} disabled={isProcessing || !hasDocument} title={t('pipeline.runAuditOnly')} ariaLabel={t('pipeline.runAuditOnly')} tooltipSide="right" className="h-9 w-9 bg-editorial-bg">
+            <Highlighter size={14} />
+          </IconButton>
+        ) : null}
         {currentChunk ? (
           <IconButton size="md" tone="charcoal" onClick={() => currentChunk && onRetranslateChunk?.(currentChunk.id)} disabled={isProcessing || !currentChunk.hasOriginalText} title={pipelineMode === 'test' ? t('pipeline.retestChunk') : t('pipeline.retranslateChunk')} tooltipSide="right" className="h-9 w-9 bg-editorial-bg">
             <RotateCcw size={13} />
@@ -266,7 +275,7 @@ export function PipelineSidebarRunSection({
     <div className="px-2.5">
       <SidebarSectionShell>
         <div className="flex flex-col gap-4">
-          <div className="flex flex-col items-center gap-2">
+          <div className={`flex flex-col items-center gap-2 ${playFirst ? 'order-2 mt-1 w-full border-t border-editorial-border/40 pt-4' : ''}`}>
             <SectionLabel icon={FlaskConical} label={t('pipeline.modeLabel')} />
             <div className="flex items-center justify-center gap-2">
               <IconButton
@@ -298,7 +307,7 @@ export function PipelineSidebarRunSection({
             </div>
           </div>
 
-          <div className="flex flex-col items-center gap-2.5">
+          <div className={`flex flex-col items-center gap-2.5 ${playFirst ? 'order-1' : ''}`}>
             <div className="relative">
               {isProcessing ? (
                 cancelRequested ? (
@@ -372,21 +381,23 @@ export function PipelineSidebarRunSection({
                 {completedCount} / {pipelineMode === 'test' ? runChunkCount : totalChunks}
               </span>
             )}
-            <IconButton
-              size="md"
-              tone="default"
-              onClick={onRunAuditOnly}
-              disabled={isProcessing || !hasDocument}
-              title={t('pipeline.runAuditOnly')}
-              ariaLabel={t('pipeline.runAuditOnly')}
-              tooltipSide="right"
-              className="mt-1 bg-editorial-bg"
-            >
-              <Highlighter size={14} />
-            </IconButton>
+            {showAuditOnly ? (
+              <IconButton
+                size="md"
+                tone="default"
+                onClick={onRunAuditOnly}
+                disabled={isProcessing || !hasDocument}
+                title={t('pipeline.runAuditOnly')}
+                ariaLabel={t('pipeline.runAuditOnly')}
+                tooltipSide="right"
+                className="mt-1 bg-editorial-bg"
+              >
+                <Highlighter size={14} />
+              </IconButton>
+            ) : null}
           </div>
 
-          <div className="flex flex-col items-center gap-1.5">
+          <div className={`flex flex-col items-center gap-1.5 ${playFirst ? 'order-3' : ''}`}>
             <div className="flex items-center justify-center gap-1">
               <IconButton
                 size="md"
@@ -436,7 +447,15 @@ export function PipelineSidebarRunSection({
   );
 }
 
-export function PipelineSidebarPipelinesSection({ collapsed = false }: { collapsed?: boolean }) {
+export function PipelineSidebarPipelinesSection({
+  collapsed = false,
+  configTrigger = 'bottom',
+}: {
+  collapsed?: boolean;
+  // 'bottom' (shell vecchia): un solo pulsante Configura in fondo alla sezione.
+  // 'circle' (shell nuova #291): ⚙ sul singolo cerchio — la config è proprietà della pipeline.
+  configTrigger?: 'bottom' | 'circle';
+}) {
   const { t } = useTranslation();
   const runStatus = usePipelineStore((state) => state.runStatus);
   const {
@@ -479,6 +498,18 @@ export function PipelineSidebarPipelinesSection({ collapsed = false }: { collaps
     if (!ok) return;
     await deletePipeline(pipelineId);
   }, [deletePipeline, t]);
+
+  // Gear-on-circle: configura quella pipeline. switchPipeline è async (carica la config
+  // dal DB): attendiamo che sia caricata PRIMA di aprire la finestra, altrimenti la modale
+  // appare con la config della pipeline precedente e poi cambia.
+  const handleConfigurePipeline = useCallback(async (pipelineId: string) => {
+    if (pipelineId !== activePipelineId) await switchPipeline(pipelineId);
+    setShowConfigDrawer(true);
+  }, [activePipelineId, switchPipeline, setShowConfigDrawer]);
+
+  // In modalità 'circle' il bottone in fondo serve solo come fallback quando non c'è
+  // ancora un cerchio reale su cui mostrare l'ingranaggio.
+  const showBottomConfig = configTrigger === 'bottom' || pipelines.length === 0;
 
   if (collapsed) {
     return (
@@ -563,7 +594,7 @@ export function PipelineSidebarPipelinesSection({ collapsed = false }: { collaps
               </div>
             </Tooltip>
           ) : (
-            <div className="flex flex-col items-center gap-2">
+            <div className={configTrigger === 'circle' ? 'flex flex-row flex-wrap items-center justify-center gap-2.5' : 'flex flex-col items-center gap-3.5'}>
               {pipelines.map((pipeline, index) => {
                 const isActive = pipeline.id === activePipelineId;
                 const isPipelineRunning = isActive && isRunning;
@@ -575,7 +606,7 @@ export function PipelineSidebarPipelinesSection({ collapsed = false }: { collaps
                       onClick={() => switchPipeline(pipeline.id)}
                       title={pipeline.name}
                       tooltipSide="right"
-                      className="h-[3.25rem] w-[3.25rem] text-sm font-black"
+                      className={configTrigger === 'circle' ? 'h-11 w-11 text-sm font-black' : 'h-14 w-14 text-base font-black'}
                     >
                       {isPipelineRunning ? (
                         <span className="h-4 w-4 animate-spin rounded-full border-2 border-transparent border-t-current" />
@@ -598,8 +629,24 @@ export function PipelineSidebarPipelinesSection({ collapsed = false }: { collaps
                         title={t('pipeline.deletePipeline')}
                         ariaLabel={t('pipeline.deletePipeline')}
                         tooltipSide="right"
-                        className="absolute -right-1 -top-1 z-10 h-5 w-5 bg-editorial-bg p-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
-                      > -
+                        className="absolute -right-1 -top-1 z-10 h-6 w-6 bg-editorial-bg p-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
+                      >
+                        <Minus size={13} />
+                      </IconButton>
+                    )}
+                    {configTrigger === 'circle' && (
+                      <IconButton
+                        size="sm"
+                        tone={isActive && showConfigDrawer ? 'accent' : 'muted'}
+                        onClick={() => {
+                          void handleConfigurePipeline(pipeline.id);
+                        }}
+                        title={`${t('pipeline.configurePipeline')} (Ctrl+,)`}
+                        ariaLabel={t('pipeline.configurePipeline')}
+                        tooltipSide="right"
+                        className="absolute -bottom-1 -right-1 z-10 h-6 w-6 bg-editorial-bg p-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
+                      >
+                        <Settings2 size={13} />
                       </IconButton>
                     )}
                   </div>
@@ -621,20 +668,22 @@ export function PipelineSidebarPipelinesSection({ collapsed = false }: { collaps
               </IconButton>
             </div>
           )}
-          <div className="flex items-center justify-center">
-            <IconButton
-              size="lg"
-              tone={showConfigDrawer ? 'accent' : 'default'}
-              onClick={() => setShowConfigDrawer(!showConfigDrawer)}
-              title={`${t('pipeline.configurePipeline')} (Ctrl+,)`}
-              ariaLabel={t('pipeline.configurePipeline')}
-              tooltipSide="right"
-              className={`h-11 w-11 ${showConfigDrawer ? '' : 'bg-editorial-textbox'}`}
-              ariaPressed={showConfigDrawer}
-            >
-              <Settings2 size={15} />
-            </IconButton>
-          </div>
+          {showBottomConfig && (
+            <div className="flex items-center justify-center">
+              <IconButton
+                size="lg"
+                tone={showConfigDrawer ? 'accent' : 'default'}
+                onClick={() => setShowConfigDrawer(!showConfigDrawer)}
+                title={`${t('pipeline.configurePipeline')} (Ctrl+,)`}
+                ariaLabel={t('pipeline.configurePipeline')}
+                tooltipSide="right"
+                className={`h-11 w-11 ${showConfigDrawer ? '' : 'bg-editorial-textbox'}`}
+                ariaPressed={showConfigDrawer}
+              >
+                <Settings2 size={15} />
+              </IconButton>
+            </div>
+          )}
         </div>
       </SidebarSectionShell>
     </div>
@@ -797,7 +846,7 @@ export function PipelineSidebarDocumentSection({
   );
 }
 
-function PipelineSidebarExportDialogHost({
+export function PipelineSidebarExportDialogHost({
   open,
   onOpenChange,
 }: {

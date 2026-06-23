@@ -94,7 +94,7 @@ import { IconButton } from '../ui';
 ```
 
 **Varianti tone:** `default | accent | success | charcoal | muted | running`
-**Varianti size:** `sm | md | lg`
+**Varianti size:** `xs | sm | md | lg` (`xs` = `p-1`, per barre molto compatte come la barra di stato)
 
 Regole:
 - Usa `ariaPressed` per toggle (on/off). Usa `aria-selected` per tab ARIA.

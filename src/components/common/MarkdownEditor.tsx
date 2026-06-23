@@ -10,6 +10,7 @@ import {
   type MarkdownCommand,
 } from './markdownEditorUtils';
 import { HighlightedText } from './HighlightedText';
+import { CopyButton } from './CopyButton';
 import { IconButton } from '../ui';
 
 type EditorMode = 'write' | 'preview' | 'split';
@@ -55,6 +56,17 @@ interface MarkdownEditorProps {
   previewValue?: string;
   defaultTextSizeStep?: number;
   useDocLineHeight?: boolean;
+  // Shell nuova (#291): toolbar a filo (niente cornice arrotondata/ombra/rilievo),
+  // coerente coi pannelli flush. Senza prop resta la pillola classica della shell vecchia.
+  flatToolbar?: boolean;
+  // Shell nuova (#291): menu controllato dall'esterno. Quando il contenitore fornisce
+  // questi prop, l'editor non disegna più la propria barra di controlli: il pulsante che
+  // apre il menu vive nell'header della pagina, e qui resta solo il pannello a scomparsa
+  // (modalità + dimensione testo + formattazione + copia) mostrato quando menuOpen è true.
+  menuOpen?: boolean;
+  onMenuOpenChange?: (open: boolean) => void;
+  // Testo da copiare dentro il menu (es. la traduzione). Se assente, nessun pulsante copia.
+  copyText?: string;
 }
 
 export function MarkdownEditor({
@@ -76,8 +88,14 @@ export function MarkdownEditor({
   fillHeight = false,
   identityKey = 'default',
   previewValue,
+  flatToolbar = false,
+  menuOpen,
+  onMenuOpenChange,
+  copyText,
 }: MarkdownEditorProps) {
   const { t } = useTranslation();
+  // Menu controllato dall'esterno (header pagina) vs barra interna classica.
+  const externalMenu = flatToolbar && onMenuOpenChange !== undefined;
   const setShowHelp = useUiStore((state) => state.setShowHelp);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const highlightLayerRef = useRef<HTMLDivElement | null>(null);
@@ -355,137 +373,139 @@ export function MarkdownEditor({
     </div>
   );
 
+  // Controlli testo riusabili fra barra interna (shell vecchia) e menu esterno (shell nuova).
+  const modeControls = (
+    <>
+      <ToolbarButton active={mode === 'write'} onClick={() => setMode('write')} title={t('editor.write')} ariaLabel={t('editor.write')}>
+        <Pencil size={15} />
+      </ToolbarButton>
+      <ToolbarButton active={mode === 'preview'} onClick={() => setMode('preview')} title={t('editor.preview')} ariaLabel={t('editor.preview')}>
+        <Eye size={15} />
+      </ToolbarButton>
+      {markdownEnabled && (
+        <ToolbarButton active={mode === 'split'} onClick={() => setMode('split')} title={t('editor.split')} ariaLabel={t('editor.split')}>
+          <Columns2 size={15} />
+        </ToolbarButton>
+      )}
+    </>
+  );
+
+  const fontControls = (
+    <>
+      <ToolbarButton active={false} onClick={() => setTextSizeStep((s) => Math.max(0, s - 1))} title={t('editor.textSmall')} ariaLabel={t('editor.textSmall')} disabled={textSizeStep === 0}>
+        <Minus size={15} />
+      </ToolbarButton>
+      <ToolbarButton active={textSizeStep === DEFAULT_TEXT_SIZE_STEP} onClick={() => setTextSizeStep(DEFAULT_TEXT_SIZE_STEP)} title={t('editor.textMedium')} ariaLabel={t('editor.textMedium')}>
+        <Type size={15} />
+      </ToolbarButton>
+      <ToolbarButton active={false} onClick={() => setTextSizeStep((s) => Math.min(TEXT_SIZE_STEPS.length - 1, s + 1))} title={t('editor.textLarge')} ariaLabel={t('editor.textLarge')} disabled={textSizeStep === TEXT_SIZE_STEPS.length - 1}>
+        <Plus size={15} />
+      </ToolbarButton>
+    </>
+  );
+
+  const helpButton = (
+    <IconButton size="md" tone="muted" onClick={() => setShowHelp(true, 'features')} title={t('editor.markdownHelpTooltip')} tooltipSide="bottom">
+      <CircleHelp size={15} />
+    </IconButton>
+  );
+
+  const formattingControls = (
+    <>
+      <ToolbarLabel>{t('editor.inlineLabel')}</ToolbarLabel>
+      <CommandButton active={activeCommands.bold} onClick={() => applyCommand('bold')} title={t('editor.bold')} ariaLabel={t('editor.bold')} disabled={commandEditingDisabled}>
+        <Bold size={15} />
+      </CommandButton>
+      <CommandButton active={activeCommands.italic} onClick={() => applyCommand('italic')} title={t('editor.italic')} ariaLabel={t('editor.italic')} disabled={commandEditingDisabled}>
+        <Italic size={15} />
+      </CommandButton>
+      <CommandButton active={activeCommands.link} onClick={() => applyCommand('link')} title={t('editor.link')} ariaLabel={t('editor.link')} disabled={commandEditingDisabled}>
+        <Link2 size={15} />
+      </CommandButton>
+      <CommandButton active={activeCommands.footnote} onClick={() => applyCommand('footnote')} title={t('editor.footnote')} ariaLabel={t('editor.footnote')} disabled={commandEditingDisabled}>
+        <Pilcrow size={15} />
+      </CommandButton>
+      <ToolbarSeparator />
+      <ToolbarLabel>{t('editor.structureLabel')}</ToolbarLabel>
+      <CommandButton active={activeCommands['heading-1']} onClick={() => applyCommand('heading-1')} title={t('editor.heading1')} ariaLabel={t('editor.heading1')} disabled={commandEditingDisabled}>
+        <Heading1 size={15} />
+      </CommandButton>
+      <CommandButton active={activeCommands['heading-2']} onClick={() => applyCommand('heading-2')} title={t('editor.heading2')} ariaLabel={t('editor.heading2')} disabled={commandEditingDisabled}>
+        <Heading2 size={15} />
+      </CommandButton>
+      <CommandButton active={activeCommands['heading-3']} onClick={() => applyCommand('heading-3')} title={t('editor.heading3')} ariaLabel={t('editor.heading3')} disabled={commandEditingDisabled}>
+        <Heading3 size={15} />
+      </CommandButton>
+      <CommandButton active={activeCommands['unordered-list']} onClick={() => applyCommand('unordered-list')} title={t('editor.unorderedList')} ariaLabel={t('editor.unorderedList')} disabled={commandEditingDisabled}>
+        <List size={15} />
+      </CommandButton>
+      <CommandButton active={activeCommands['ordered-list']} onClick={() => applyCommand('ordered-list')} title={t('editor.orderedList')} ariaLabel={t('editor.orderedList')} disabled={commandEditingDisabled}>
+        <ListOrdered size={15} />
+      </CommandButton>
+    </>
+  );
+
+  // Menu esterno (shell nuova): pannello a scomparsa unico con tutti i controlli testo.
+  // Il pulsante che lo apre vive nell'header della pagina, non qui.
+  const textMenuPanel = (
+    <div className="flex flex-col gap-3 border-b border-editorial-border/60 px-1 py-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <ToolbarLabel>{t('editor.viewLabel')}</ToolbarLabel>
+        {modeControls}
+        <ToolbarSeparator />
+        <ToolbarLabel>{t('editor.textSize')}</ToolbarLabel>
+        {fontControls}
+        <div className="flex-1" />
+        {copyText !== undefined ? <CopyButton text={copyText} /> : null}
+        {helpButton}
+      </div>
+      {markdownEnabled ? (
+        <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-editorial-border/60">
+          {formattingControls}
+        </div>
+      ) : null}
+    </div>
+  );
+
   return (
     <div className={fillHeight ? 'flex flex-col flex-1 min-h-0 gap-5' : 'space-y-3'}>
-      <div className={`sticky top-0 z-20 rounded-2xl border border-editorial-border/70 bg-editorial-page/95 px-3 py-3 shadow-sm backdrop-blur${fillHeight ? ' shrink-0' : ''}`}>
-        <div className="flex items-center gap-1.5">
-          {markdownEnabled && (
-            <IconButton
-              size="md"
-              onClick={() => setToolbarOpen((open) => !open)}
-              title={toolbarOpen ? t('editor.hideToolbar') : t('editor.showToolbar')}
-              ariaPressed={toolbarOpen}
-              tooltipSide="bottom"
-            >
-              {toolbarOpen ? <PanelTopClose size={15} /> : <PanelTopOpen size={15} />}
-            </IconButton>
-          )}
-          {markdownEnabled && <span className="mx-0.5 h-4 w-px shrink-0 bg-editorial-border/50" aria-hidden="true" />}
-          <ToolbarButton active={mode === 'write'} onClick={() => setMode('write')} title={t('editor.write')} ariaLabel={t('editor.write')}>
-            <Pencil size={15} />
-          </ToolbarButton>
-          <ToolbarButton active={mode === 'preview'} onClick={() => setMode('preview')} title={t('editor.preview')} ariaLabel={t('editor.preview')}>
-            <Eye size={15} />
-          </ToolbarButton>
-          {markdownEnabled && (
-            <ToolbarButton active={mode === 'split'} onClick={() => setMode('split')} title={t('editor.split')} ariaLabel={t('editor.split')}>
-              <Columns2 size={15} />
-            </ToolbarButton>
-          )}
-          <div className="flex-1" />
-          <ToolbarButton active={false} onClick={() => setTextSizeStep((s) => Math.max(0, s - 1))} title={t('editor.textSmall')} ariaLabel={t('editor.textSmall')} disabled={textSizeStep === 0}>
-            <Minus size={15} />
-          </ToolbarButton>
-          <ToolbarButton active={textSizeStep === DEFAULT_TEXT_SIZE_STEP} onClick={() => setTextSizeStep(DEFAULT_TEXT_SIZE_STEP)} title={t('editor.textMedium')} ariaLabel={t('editor.textMedium')}>
-            <Type size={15} />
-          </ToolbarButton>
-          <ToolbarButton active={false} onClick={() => setTextSizeStep((s) => Math.min(TEXT_SIZE_STEPS.length - 1, s + 1))} title={t('editor.textLarge')} ariaLabel={t('editor.textLarge')} disabled={textSizeStep === TEXT_SIZE_STEPS.length - 1}>
-            <Plus size={15} />
-          </ToolbarButton>
-          <IconButton size="md" tone="muted" onClick={() => setShowHelp(true, 'features')} title={t('editor.markdownHelpTooltip')} tooltipSide="bottom">
-            <CircleHelp size={15} />
-          </IconButton>
-        </div>
-        {toolbarOpen && markdownEnabled ? (
-          <div className="mt-3 flex flex-wrap items-center gap-2 pt-3 border-t border-editorial-border/60">
-            <ToolbarLabel>{t('editor.inlineLabel')}</ToolbarLabel>
-            <CommandButton
-              active={activeCommands.bold}
-              onClick={() => applyCommand('bold')}
-              title={t('editor.bold')}
-              ariaLabel={t('editor.bold')}
-              disabled={commandEditingDisabled}
-            >
-              <Bold size={15} />
-            </CommandButton>
-            <CommandButton
-              active={activeCommands.italic}
-              onClick={() => applyCommand('italic')}
-              title={t('editor.italic')}
-              ariaLabel={t('editor.italic')}
-              disabled={commandEditingDisabled}
-            >
-              <Italic size={15} />
-            </CommandButton>
-            <CommandButton
-              active={activeCommands.link}
-              onClick={() => applyCommand('link')}
-              title={t('editor.link')}
-              ariaLabel={t('editor.link')}
-              disabled={commandEditingDisabled}
-            >
-              <Link2 size={15} />
-            </CommandButton>
-            <CommandButton
-              active={activeCommands.footnote}
-              onClick={() => applyCommand('footnote')}
-              title={t('editor.footnote')}
-              ariaLabel={t('editor.footnote')}
-              disabled={commandEditingDisabled}
-            >
-              <Pilcrow size={15} />
-            </CommandButton>
-
-            <ToolbarSeparator />
-            <ToolbarLabel>{t('editor.structureLabel')}</ToolbarLabel>
-            <CommandButton
-              active={activeCommands['heading-1']}
-              onClick={() => applyCommand('heading-1')}
-              title={t('editor.heading1')}
-              ariaLabel={t('editor.heading1')}
-              disabled={commandEditingDisabled}
-            >
-              <Heading1 size={15} />
-            </CommandButton>
-            <CommandButton
-              active={activeCommands['heading-2']}
-              onClick={() => applyCommand('heading-2')}
-              title={t('editor.heading2')}
-              ariaLabel={t('editor.heading2')}
-              disabled={commandEditingDisabled}
-            >
-              <Heading2 size={15} />
-            </CommandButton>
-            <CommandButton
-              active={activeCommands['heading-3']}
-              onClick={() => applyCommand('heading-3')}
-              title={t('editor.heading3')}
-              ariaLabel={t('editor.heading3')}
-              disabled={commandEditingDisabled}
-            >
-              <Heading3 size={15} />
-            </CommandButton>
-            <CommandButton
-              active={activeCommands['unordered-list']}
-              onClick={() => applyCommand('unordered-list')}
-              title={t('editor.unorderedList')}
-              ariaLabel={t('editor.unorderedList')}
-              disabled={commandEditingDisabled}
-            >
-              <List size={15} />
-            </CommandButton>
-            <CommandButton
-              active={activeCommands['ordered-list']}
-              onClick={() => applyCommand('ordered-list')}
-              title={t('editor.orderedList')}
-              ariaLabel={t('editor.orderedList')}
-              disabled={commandEditingDisabled}
-            >
-              <ListOrdered size={15} />
-            </CommandButton>
+      {externalMenu ? (
+        menuOpen ? (
+          <div className={`sticky top-0 z-20 bg-editorial-page/95 backdrop-blur${fillHeight ? ' shrink-0' : ''}`}>
+            {textMenuPanel}
           </div>
-        ) : null}
-      </div>
+        ) : null
+      ) : (
+        <div className={`sticky top-0 z-20 bg-editorial-page/95 backdrop-blur${fillHeight ? ' shrink-0' : ''}${
+          flatToolbar
+            ? ' border-b border-editorial-border/60 px-1 py-2'
+            : ' rounded-2xl border border-editorial-border/70 px-3 py-3 shadow-sm'
+        }`}>
+          <div className="flex items-center gap-1.5">
+            {markdownEnabled && (
+              <IconButton
+                size="md"
+                onClick={() => setToolbarOpen((open) => !open)}
+                title={toolbarOpen ? t('editor.hideToolbar') : t('editor.showToolbar')}
+                ariaPressed={toolbarOpen}
+                tooltipSide="bottom"
+              >
+                {toolbarOpen ? <PanelTopClose size={15} /> : <PanelTopOpen size={15} />}
+              </IconButton>
+            )}
+            {markdownEnabled && <span className="mx-0.5 h-4 w-px shrink-0 bg-editorial-border/50" aria-hidden="true" />}
+            {modeControls}
+            <div className="flex-1" />
+            {fontControls}
+            {helpButton}
+          </div>
+          {toolbarOpen && markdownEnabled ? (
+            <div className="mt-3 flex flex-wrap items-center gap-2 pt-3 border-t border-editorial-border/60">
+              {formattingControls}
+            </div>
+          ) : null}
+        </div>
+      )}
       {mode === 'write' && !readOnly && highlightHtml ? (
         fillHeight ? (
           // Overlay: HighlightedText behind transparent textarea — styled text visible while editing

@@ -11,6 +11,7 @@ import {
   RotateCcw,
   ScanLine,
   Search,
+  SlidersHorizontal,
   Wand2,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -22,7 +23,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { indexPad } from '../../utils';
-import { CopyButton, HighlightedText, MarkdownEditor, DOC_FONT_SIZE_STEP_INDEX } from '../common';
+import { HighlightedText, MarkdownEditor, DOC_FONT_SIZE_STEP_INDEX } from '../common';
 import { IconButton, Tooltip, type IconButtonTone } from '../ui';
 import { composeAnnotatedMarkdown } from '../../utils/annotationMarkdown';
 import { restoreFootnoteMarkers } from '../../utils/footnoteExtractor';
@@ -76,9 +77,10 @@ interface DocumentPageProps {
   subtitleAction?: React.ReactNode;
   readOnly?: boolean;
   highlighted?: boolean;
-  titleMeta?: React.ReactNode;
   statusBadge?: React.ReactNode;
   actions?: React.ReactNode | null;
+  // Pulsante che apre il menu controlli testo, in fila con le azioni pagina.
+  textMenuButton?: React.ReactNode;
   footer?: React.ReactNode;
   searchValue?: string;
   onSearchChange?: (value: string) => void;
@@ -95,9 +97,9 @@ function DocumentPage({
   subtitleAction,
   readOnly = false,
   highlighted = false,
-  titleMeta,
   statusBadge,
   actions,
+  textMenuButton,
   footer,
   searchValue,
   onSearchChange,
@@ -111,53 +113,55 @@ function DocumentPage({
   // Il campo resta aperto finché c'è una query attiva.
   const showSearch = searchable && (searchOpen || Boolean(searchValue));
 
+  const searchToggle = searchable ? (
+    <IconButton
+      size="sm"
+      tone={showSearch ? 'accent' : 'default'}
+      onClick={() => setSearchOpen((open) => !open)}
+      title={t('document.searchInPane')}
+      ariaLabel={t('document.searchInPane')}
+      ariaPressed={showSearch}
+    >
+      <Search size={13} />
+    </IconButton>
+  ) : null;
+
   return (
-    <section className={`relative rounded-[24px] bg-editorial-page px-6 py-5 shadow-[var(--inset-highlight-strong),var(--shadow-page-card)] flex flex-col min-h-0 ${
-      highlighted ? 'border border-editorial-accent ring-2 ring-editorial-accent/30' : 'border border-editorial-divider'
+    <section className={`relative bg-editorial-page px-12 py-8 flex flex-col flex-1 min-h-0 ${
+      highlighted ? 'ring-2 ring-inset ring-editorial-accent/40' : ''
     }`}>
-      {/* Header con altezza minima fissa per allineare il corpo testo tra i due pannelli */}
-      <div className="mb-4 shrink-0 flex items-start justify-between gap-4 border-b border-editorial-divider-soft pb-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-              {eyebrow}
-            </div>
-            {eyebrowMeta}
+      {/* Header: riga unica allineata al titolo — controlli pagina + pulsante menu testo a destra. */}
+      <div className="shrink-0 mb-6 border-b border-editorial-divider-soft pb-4">
+        <div className="flex items-center gap-2">
+          <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-editorial-muted">
+            {eyebrow}
           </div>
-          <div className="mt-1.5 flex flex-wrap items-center gap-2">
-            <h3 className="font-display text-[1.7rem] italic tracking-tight text-editorial-ink">
+          {eyebrowMeta}
+        </div>
+        <div className="mt-1.5 flex items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-2">
+            <h3 className="truncate font-display text-[1.7rem] italic tracking-tight text-editorial-ink">
               {label}
             </h3>
-            {searchable ? (
-              <IconButton
-                size="sm"
-                tone={showSearch ? 'accent' : 'default'}
-                onClick={() => setSearchOpen((open) => !open)}
-                title={t('document.searchInPane')}
-                ariaLabel={t('document.searchInPane')}
-                ariaPressed={showSearch}
-              >
-                <Search size={13} />
-              </IconButton>
-            ) : null}
             {statusBadge}
           </div>
-          {subtitle && (
-            <div className="mt-0.5 flex items-center gap-2">
-              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-accent">
-                {subtitle}
-              </p>
-              {subtitleAction}
-            </div>
-          )}
+          <div className="shrink-0 flex items-center gap-2">
+            {searchToggle}
+            {actions}
+            {(searchToggle || actions) && textMenuButton && (
+              <span className="h-4 w-px bg-editorial-border/60" aria-hidden="true" />
+            )}
+            {textMenuButton}
+          </div>
         </div>
-        <div className="shrink-0 flex items-center gap-2 pt-1 ml-6">
-          {titleMeta}
-          {titleMeta && actions && (
-            <span className="h-4 w-px bg-editorial-border/60" aria-hidden="true" />
-          )}
-          {actions}
-        </div>
+        {subtitle && (
+          <div className="mt-0.5 flex items-center gap-2">
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-editorial-accent">
+              {subtitle}
+            </p>
+            {subtitleAction}
+          </div>
+        )}
       </div>
       <div ref={scrollRef} className={`flex flex-col flex-1 min-h-0 ${readOnly ? 'opacity-90' : ''}`}>
         {showSearch && onSearchChange && searchLabel ? (
@@ -207,14 +211,17 @@ export function DocumentView({
     setShowChunkDrawer,
     setPendingAnnotationAnchor,
     documentFontSize,
+    setDocumentPaneFocus,
   } = useUiStore();
 
   const fontSizeStep = DOC_FONT_SIZE_STEP_INDEX[documentFontSize ?? 'md'];
 
   const [annotationMenu, setAnnotationMenu] = useState<{ x: number; y: number; text: string; chunkId: string } | null>(null);
+  // Shell nuova (#291): menu controlli testo, uno per pannello (sorgente / traduzione).
+  const [sourceMenuOpen, setSourceMenuOpen] = useState(false);
+  const [translationMenuOpen, setTranslationMenuOpen] = useState(false);
 
   const {
-    documentLayout,
     paneFocus,
     syncScrollEnabled,
     chunks,
@@ -314,17 +321,6 @@ export function DocumentView({
     );
   }
 
-  // Colonne in modalità "entrambi": la scelta layout comanda (book = affiancate,
-  // standard = impilate); 'auto' affianca solo quando lo spazio REALE del documento
-  // lo consente (container query, non viewport — la barra/fly-out riducono lo spazio).
-  const bothColumnsClass =
-    paneFocus !== 'both'
-      ? 'grid-cols-1'
-      : documentLayout === 'standard'
-        ? 'grid-cols-1'
-        : documentLayout === 'book'
-          ? 'grid-cols-2'
-          : '@[820px]:grid-cols-2';
   const prevChunk = chunks[currentIndex - 1];
   const nextChunk = chunks[currentIndex + 1];
   const sourceReadOnly =
@@ -332,134 +328,157 @@ export function DocumentView({
     currentChunk.sourceEditable !== true;
   const sourceEditDisabled = currentChunk.status === 'processing';
 
+  // Pallini minimap dei frammenti, estratti per poterli mettere in linea fra le frecce
+  // (shell nuova, barra di navigazione stretta) o su una riga sotto (shell vecchia).
+  const chunkMinimapDots =
+    chunks.length > 1
+      ? chunks.map((chunk, idx) => {
+          const segmentTone =
+            chunk.status === 'completed'
+              ? 'bg-editorial-success/18 shadow-[inset_0_0_0_1px_rgba(58,122,101,0.16)]'
+              : chunk.status === 'preview'
+                ? 'bg-editorial-charcoal/22 shadow-[inset_0_0_0_1px_rgba(58,122,114,0.12)]'
+                : chunk.status === 'error'
+                  ? 'bg-editorial-accent/22 shadow-[inset_0_0_0_1px_rgba(200,112,94,0.18)]'
+                  : chunk.status === 'processing'
+                    ? 'bg-editorial-running/24 animate-pulse shadow-[inset_0_0_0_1px_rgba(196,155,42,0.22)]'
+                    : 'bg-editorial-border/40';
+          const isCurrent = idx === currentIndex;
+          const chunkAnnotations = annotationsByChunkId.get(chunk.id) ?? [];
+          const annotDotColor = chunkAnnotations.some((a) => a.type === 'problem')
+            ? 'bg-editorial-accent'
+            : chunkAnnotations.some((a) => a.type === 'doubt')
+              ? 'bg-editorial-warning'
+              : chunkAnnotations.length > 0
+                ? 'bg-editorial-charcoal/70'
+                : null;
+          const buttonLabel = buildChunkMinimapLabel(t, chunk, idx, chunks.length, isCurrent, chunkAnnotations.length);
+          const sizeClass = chunk.translationLocked
+            ? isCurrent
+              ? 'h-5 w-5'
+              : 'h-4.5 w-4.5'
+            : isCurrent
+              ? 'h-4.5 w-4.5'
+              : 'h-4 w-4';
+          return (
+            <Tooltip key={chunk.id} label={buttonLabel}>
+              <button
+                type="button"
+                onClick={() => setSelectedChunkId(chunk.id)}
+                aria-label={buttonLabel}
+                aria-current={isCurrent ? 'true' : undefined}
+                className={`relative shrink-0 rounded-full transition-all duration-150 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                  isCurrent
+                    ? `${sizeClass} border border-editorial-charcoal/28 ${segmentTone} shadow-[var(--chunk-current-ring)]`
+                    : `${sizeClass} ${segmentTone} hover:-translate-y-px hover:ring-1 hover:ring-editorial-charcoal/12`
+                }`}
+              >
+                {chunk.translationLocked ? (
+                  <span className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-editorial-success" />
+                ) : null}
+                {annotDotColor && (
+                  <span className={`absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full ${annotDotColor} ring-1 ring-editorial-bg`} />
+                )}
+              </button>
+            </Tooltip>
+          );
+        })
+      : null;
+
+  // Stati pipeline (icone con tone di stato) — condivisi fra shell vecchia e nuova.
+  const stageStatusButtons = (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {enabledStages.map((stage) => {
+        const Icon: LucideIcon =
+          stage.role === 'refine' ? Pencil
+          : stage.role === 'format' ? FileText
+          : Languages;
+        const stageTone = STAGE_TONE_MAP[currentChunk.stageResults[stage.id]?.status ?? 'idle'] ?? 'muted';
+        return (
+          <IconButton
+            key={stage.id}
+            size="md"
+            tone={stageTone}
+            title={stage.name}
+            onClick={() => setTraceStageId(traceStageId === stage.id ? null : stage.id)}
+          >
+            <Icon size={12} strokeWidth={1.9} />
+          </IconButton>
+        );
+      })}
+      <IconButton
+        size="md"
+        tone={STAGE_TONE_MAP[currentChunk.judgeResult.status ?? 'idle'] ?? 'muted'}
+        title={t('pipeline.audit')}
+        onClick={() => setTraceStageId(traceStageId === '_judge' ? null : '_judge')}
+      >
+        <ScanLine size={12} strokeWidth={1.9} />
+      </IconButton>
+    </div>
+  );
+
+  // Navigazione frammenti (shell nuova): solo frecce + contatore m/n. È un comando a sé,
+  // distinto dai pallini minimap (che vivono su una riga propria, non fra le frecce).
+  const chunkNavControls = (
+    <>
+      <IconButton
+        size="md"
+        onClick={() => prevChunk && setSelectedChunkId(prevChunk.id)}
+        title={t('document.previousChunk')}
+        disabled={!prevChunk}
+      >
+        <ChevronLeft size={16} />
+      </IconButton>
+      <span className="shrink-0 font-display text-lg italic leading-none text-editorial-ink">
+        {indexPad(currentIndex + 1)}<span className="px-0.5 text-editorial-muted">/</span>{indexPad(chunks.length)}
+      </span>
+      <IconButton
+        size="md"
+        onClick={() => nextChunk && setSelectedChunkId(nextChunk.id)}
+        title={t('document.nextChunk')}
+        disabled={!nextChunk}
+      >
+        <ChevronRight size={16} />
+      </IconButton>
+    </>
+  );
+
+  // Pulsante unico che apre il menu controlli testo, in fila con le azioni pagina.
+  const renderTextMenuButton = (open: boolean, toggle: () => void) => (
+    <IconButton
+      size="lg"
+      tone={open ? 'accent' : 'default'}
+      onClick={toggle}
+      title={t('editor.textMenu')}
+      ariaPressed={open}
+    >
+      <SlidersHorizontal size={14} />
+    </IconButton>
+  );
+
   return (
-    <section className="w-full bg-editorial-paper overflow-y-auto min-h-0 h-full custom-scrollbar flex flex-col">
-      <div className="@container mx-auto w-full max-w-[1720px] px-5 py-3 md:px-6 md:py-4 flex flex-col flex-1 min-h-0 gap-5">
+    <section className="w-full overflow-y-auto min-h-0 h-full custom-scrollbar flex flex-col bg-editorial-page">
+      <div className="@container mx-auto w-full flex flex-col flex-1 min-h-0">
         <div className="shrink-0">
-          {/* Navigation bar */}
-          <div className="w-full rounded-[20px] border border-editorial-border bg-editorial-bg/90 px-4 py-3 shadow-[var(--shadow-warm-sm)]">
-            <div className="flex items-center gap-x-4 gap-y-2">
-              <div className="flex flex-1 flex-wrap items-center gap-1.5">
-                {enabledStages.map((stage) => {
-                  const Icon: LucideIcon =
-                    stage.role === 'refine' ? Pencil
-                    : stage.role === 'format' ? FileText
-                    : Languages;
-                  const stageTone = STAGE_TONE_MAP[currentChunk.stageResults[stage.id]?.status ?? 'idle'] ?? 'muted';
-                  return (
-                    <IconButton
-                      key={stage.id}
-                      size="md"
-                      tone={stageTone}
-                      title={stage.name}
-                      onClick={() => setTraceStageId(traceStageId === stage.id ? null : stage.id)}
-                    >
-                      <Icon size={12} strokeWidth={1.9} />
-                    </IconButton>
-                  );
-                })}
-                <IconButton
-                  size="md"
-                  tone={STAGE_TONE_MAP[currentChunk.judgeResult.status ?? 'idle'] ?? 'muted'}
-                  title={t('pipeline.audit')}
-                  onClick={() => setTraceStageId(traceStageId === '_judge' ? null : '_judge')}
-                >
-                  <ScanLine size={12} strokeWidth={1.9} />
-                </IconButton>
-              </div>
-
-              <div className="flex shrink-0 items-center gap-3">
-                <IconButton
-                  size="lg"
-                  onClick={() => prevChunk && setSelectedChunkId(prevChunk.id)}
-                  title={t('document.previousChunk')}
-                  disabled={!prevChunk}
-                >
-                  <ChevronLeft size={16} />
-                </IconButton>
-                <div className="min-w-[7.5rem] text-center">
-                  <div className="text-[10px] font-bold uppercase tracking-[0.28em] text-editorial-muted">
-                    {t('document.chunkLabel')}
-                  </div>
-                  <div className="font-display text-[1.8rem] italic leading-none text-editorial-accent">
-                    {indexPad(currentIndex + 1)}<span className="px-1 text-editorial-muted">/</span>{indexPad(chunks.length)}
-                  </div>
+          {/* Barra di navigazione a filo (border-b, allineata alle testate dei pannelli
+              laterali). Colonna sinistra a due righe (stati del chunk sopra, minimap pallini
+              sotto); colonna destra con frecce + m/n centrate sullo spazio delle due righe. */}
+          <div className="w-full h-20 flex items-stretch gap-4 border-b border-editorial-border bg-editorial-page px-6 py-2">
+            <div className="flex min-w-0 flex-1 flex-col justify-center gap-2">
+              {stageStatusButtons}
+              {chunkMinimapDots ? (
+                <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-0.5">
+                  {chunkMinimapDots}
                 </div>
-                <IconButton
-                  size="lg"
-                  onClick={() => nextChunk && setSelectedChunkId(nextChunk.id)}
-                  title={t('document.nextChunk')}
-                  disabled={!nextChunk}
-                >
-                  <ChevronRight size={16} />
-                </IconButton>
-              </div>
-              <div className="flex-1" />
-
+              ) : null}
             </div>
-
-            {chunks.length > 1 && (
-              <div className="mt-2 flex items-center gap-1.5 overflow-x-auto py-1 custom-scrollbar">
-                {chunks.map((chunk, idx) => {
-                  const segmentTone =
-                    chunk.status === 'completed'
-                      ? 'bg-editorial-success/18 shadow-[inset_0_0_0_1px_rgba(58,122,101,0.16)]'
-                      : chunk.status === 'preview'
-                        ? 'bg-editorial-charcoal/22 shadow-[inset_0_0_0_1px_rgba(58,122,114,0.12)]'
-                        : chunk.status === 'error'
-                          ? 'bg-editorial-accent/22 shadow-[inset_0_0_0_1px_rgba(200,112,94,0.18)]'
-                          : chunk.status === 'processing'
-                            ? 'bg-editorial-running/24 animate-pulse shadow-[inset_0_0_0_1px_rgba(196,155,42,0.22)]'
-                            : 'bg-editorial-border/40';
-                  const isCurrent = idx === currentIndex;
-                  const chunkAnnotations = annotationsByChunkId.get(chunk.id) ?? [];
-                  const annotDotColor = chunkAnnotations.some(a => a.type === 'problem')
-                    ? 'bg-editorial-accent'
-                    : chunkAnnotations.some(a => a.type === 'doubt')
-                      ? 'bg-editorial-warning'
-                    : chunkAnnotations.length > 0
-                        ? 'bg-editorial-charcoal/70'
-                        : null;
-                  const buttonLabel = buildChunkMinimapLabel(
-                    t,
-                    chunk,
-                    idx,
-                    chunks.length,
-                    isCurrent,
-                    chunkAnnotations.length,
-                  );
-                  const sizeClass = chunk.translationLocked
-                    ? (isCurrent ? 'h-5 w-5' : 'h-4.5 w-4.5')
-                    : (isCurrent ? 'h-4.5 w-4.5' : 'h-4 w-4');
-                  return (
-                    <Tooltip key={chunk.id} label={buttonLabel}>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedChunkId(chunk.id)}
-                        aria-label={buttonLabel}
-                        aria-current={isCurrent ? 'true' : undefined}
-                        className={`relative shrink-0 rounded-full transition-all duration-150 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                          isCurrent
-                            ? `${sizeClass} border border-editorial-charcoal/28 ${segmentTone} shadow-[var(--chunk-current-ring)]`
-                            : `${sizeClass} ${segmentTone} hover:-translate-y-px hover:ring-1 hover:ring-editorial-charcoal/12`
-                        }`}
-                      >
-                        {chunk.translationLocked ? (
-                          <span className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-editorial-success" />
-                        ) : null}
-                        {annotDotColor && (
-                          <span className={`absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full ${annotDotColor} ring-1 ring-editorial-bg`} />
-                        )}
-                      </button>
-                    </Tooltip>
-                  );
-                })}
-              </div>
-            )}
+            <div className="flex shrink-0 items-center gap-2 border-l border-editorial-border/50 pl-4">
+              {chunkNavControls}
+            </div>
           </div>
         </div>
 
-        <div className={`grid gap-5 flex-1 min-h-0 auto-rows-fr ${bothColumnsClass}`}>
+        <div className="flex flex-1 min-h-0 divide-x divide-editorial-border">
           {paneFocus !== 'translation' && (
             <DocumentPage
               label={t('pipeline.originalSource')}
@@ -495,10 +514,14 @@ export function DocumentView({
               searchValue={sourcePaneSearch}
               onSearchChange={setSourcePaneSearch}
               searchLabel={t('document.searchInSource')}
+              textMenuButton={renderTextMenuButton(sourceMenuOpen, () => setSourceMenuOpen((open) => !open))}
               scrollRef={scrollSourceRef}
             >
               <MarkdownEditor
                 identityKey={`${currentChunk.id}:source`}
+                flatToolbar
+                menuOpen={sourceMenuOpen}
+                onMenuOpenChange={setSourceMenuOpen}
                 value={currentChunk.sourceDisplayText}
                 onChange={(nextValue) => updateChunkOriginalText(currentChunk.id, nextValue)}
                 markdownEnabled={config.markdownAware === true}
@@ -577,12 +600,17 @@ export function DocumentView({
                   size="lg"
                   tone={showDiffMode ? 'accent' : 'default'}
                   onClick={() => {
-                    if (paneFocus !== 'translation') return;
+                    // Il confronto richiede la sola traduzione (spazio pieno): se siamo su
+                    // entrambi/sorgente, ci porta lì e accende il diff in un colpo solo.
+                    if (paneFocus !== 'translation') {
+                      setDocumentPaneFocus('translation');
+                      setShowDiffMode(true);
+                      return;
+                    }
                     setShowDiffMode(!showDiffMode);
                   }}
                   title={showDiffMode ? t('document.diffModeDisable') : t('document.diffModeEnable')}
                   ariaPressed={showDiffMode}
-                  disabled={paneFocus !== 'translation'}
                 >
                   <GitCompare size={14} />
                 </IconButton>
@@ -606,8 +634,8 @@ export function DocumentView({
                     ? `${activeDiffPair.fromName} → ${activeDiffPair.toName}`
                     : undefined
                 }
-                titleMeta={rawStageContent ? <CopyButton text={rawStageContent} /> : null}
                 actions={stageActions}
+                textMenuButton={!showDiffMode ? renderTextMenuButton(translationMenuOpen, () => setTranslationMenuOpen((open) => !open)) : null}
                 statusBadge={currentChunk.translationStale ? (
                   <InlineStatusBadge tone="amber" icon={<AlertTriangle size={13} />} label={t('document.translationStaleBadge')} />
                 ) : lockToggle}
@@ -635,6 +663,10 @@ export function DocumentView({
                   ) : (
                     <MarkdownEditor
                       identityKey={`${currentChunk.id}:candidate:${effectiveSelectedStageId}`}
+                      flatToolbar
+                      menuOpen={translationMenuOpen}
+                      onMenuOpenChange={setTranslationMenuOpen}
+                      copyText={rawStageContent}
                       value={rawStageContent}
                       onChange={isLastSelected ? (nextValue) => updateChunkDraft(currentChunk.id, nextValue) : NOOP_CHANGE}
                       markdownEnabled={config.markdownAware === true}
