@@ -51,7 +51,6 @@ export function AppStatusBar() {
   const data = useStatusBarData();
   // Shell nuova (#291): lo scorrimento agganciato — quasi sempre attivo — vive qui
   // come interruttore discreto, non più nella barra alto del documento.
-  const useNewShell = useUiStore((state) => state.useNewShell);
   const syncScrollEnabled = useUiStore((state) => state.syncScrollEnabled);
   const setSyncScrollEnabled = useUiStore((state) => state.setSyncScrollEnabled);
   const documentPaneFocus = useUiStore((state) => state.documentPaneFocus);
@@ -59,9 +58,9 @@ export function AppStatusBar() {
 
   if (data.kind === 'idle') return null;
 
-  // Shell nuova (#291): i controlli di vista del documento (fuoco pannelli + scroll
-  // agganciato) sono una pulsantiera icone qui in basso, non nella barra alto.
-  const showPaneControls = useNewShell && data.kind === 'project' && data.totalChunks > 0;
+  // I controlli di vista del documento (fuoco pannelli + scroll agganciato) sono una
+  // pulsantiera icone qui in basso, non nella barra alto del documento.
+  const showPaneControls = data.kind === 'project' && data.totalChunks > 0;
   const syncDisabled = documentPaneFocus !== 'both';
   const syncOn = syncScrollEnabled && !syncDisabled;
 
@@ -149,38 +148,38 @@ export function AppStatusBar() {
           <>
             <div className="flex items-center gap-1">
               <IconButton
-                size="sm"
+                size="xs"
                 tone={documentPaneFocus === 'both' ? 'accent' : 'default'}
                 onClick={() => setDocumentPaneFocus('both')}
                 title={t('document.focusBoth')}
                 ariaPressed={documentPaneFocus === 'both'}
                 tooltipSide="top"
               >
-                <Columns2 size={13} />
+                <Columns2 size={11} />
               </IconButton>
               <IconButton
-                size="sm"
+                size="xs"
                 tone={documentPaneFocus === 'source' ? 'accent' : 'default'}
                 onClick={() => setDocumentPaneFocus('source')}
                 title={t('document.focusSource')}
                 ariaPressed={documentPaneFocus === 'source'}
                 tooltipSide="top"
               >
-                <PanelLeft size={13} />
+                <PanelLeft size={11} />
               </IconButton>
               <IconButton
-                size="sm"
+                size="xs"
                 tone={documentPaneFocus === 'translation' ? 'accent' : 'default'}
                 onClick={() => setDocumentPaneFocus('translation')}
                 title={t('document.focusTranslation')}
                 ariaPressed={documentPaneFocus === 'translation'}
                 tooltipSide="top"
               >
-                <PanelRight size={13} />
+                <PanelRight size={11} />
               </IconButton>
               <span className="mx-0.5 h-3.5 w-px bg-editorial-border/60" aria-hidden="true" />
               <IconButton
-                size="sm"
+                size="xs"
                 tone={syncOn ? 'accent' : 'default'}
                 onClick={() => setSyncScrollEnabled(!syncScrollEnabled)}
                 disabled={syncDisabled}
@@ -188,7 +187,7 @@ export function AppStatusBar() {
                 ariaPressed={syncOn}
                 tooltipSide="top"
               >
-                {syncOn ? <Link2 size={13} /> : <Link2Off size={13} />}
+                {syncOn ? <Link2 size={11} /> : <Link2Off size={11} />}
               </IconButton>
             </div>
             {data.kind === 'project' && (

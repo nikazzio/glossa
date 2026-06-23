@@ -7,6 +7,7 @@ const iconButton = cva(
   {
     variants: {
       size: {
+        xs: 'p-1',
         sm: 'p-1.5',
         md: 'p-2',
         lg: 'p-2.5',

@@ -28,7 +28,7 @@
 | `stores/phraseMemoryStore.ts` | matchesByChunk, enabledMatchIds, jobStatus, searchStatus | Match Phrase Memory per chunk; match trovati read-only finché non selezionati |
 | `stores/operationLogStore.ts` | entries[], currentProjectId | Max 2000 in-memory, resto in DB |
 | `stores/annotationsStore.ts` | annotationsByChunkId Map<chunkId, Annotation[]> | CRUD annotations per chunk; load/add/update/delete con persistenza SQLite immediata |
-| `stores/uiStore.ts` | selectedChunkId, highlightsEnabled, highlightColors, uiFont, searchQuery, activePanel, showSettings/Help/ConfigDrawer/DocumentDrawer/ChunkDrawer | UI-only state. highlightsEnabled + highlightColors + uiFont persisted (`glossa-ui-prefs` v7). activePanel enum sincronizzato con i boolean panel. `uiFont` ('jakarta'\|'geist'\|'inter'\|'plex') → `FontSync` (`App.tsx`) fa override runtime di `--font-sans` su `:root`, come `HighlightColorSync` per i colori. |
+| `stores/uiStore.ts` | selectedChunkId, highlightsEnabled, highlightColors, uiFont, searchQuery, activePanel, showSettings/Help/ConfigDrawer/DocumentDrawer/ChunkDrawer | UI-only state. highlightsEnabled + highlightColors + uiFont persisted (`glossa-ui-prefs` v14). activePanel enum sincronizzato con i boolean panel. `uiFont` ('jakarta'\|'geist'\|'inter'\|'plex') → `FontSync` (`App.tsx`) fa override runtime di `--font-sans` su `:root`, come `HighlightColorSync` per i colori. |
 | `stores/configStore.ts` | pipelineMode, pipelineTestChunkCount, ollamaStatus, ollamaModels, ollamaBaseUrl, newPipelineInit, maxPipelines, chunkPresetShort/Medium/Long | Config app. pipelineTestChunkCount, ollamaBaseUrl, newPipelineInit, maxPipelines, chunkPreset* persisted. ollamaStatus/Models transient. |
 | `stores/libraryStore.ts` | glossaries[], loadedForWorkspaceId, isLoaded | Glossari filtrati per workspace attivo. `loadGlossaries(workspaceId)` e `reloadGlossaries(workspaceId)` accettano `string\|null`; skip se già caricato per lo stesso workspace. |
 | `stores/promptTemplateStore.ts` | templates[], selectedTemplate | — |
@@ -65,12 +65,16 @@
 
 | Componente | Responsabilità |
 |---|---|
-| `components/document/DocumentView.tsx` | Layout principale — chunk grid, sidebar, toggle source/translation |
+| `components/document/DocumentView.tsx` | Layout principale documento con barra navigazione fissa in alto (`h-16`): sinistra (indicatori stadi + minimap pallini frammenti), destra (frecce prev/next + contatore m/n). Due pannelli bianchi a filo (Originale/Candidata) con header titolo + separatore; controlli testo in menu unico a scomparsa (non barra sempre visibile) aperto da pulsante nell'header pagina. Shell nuova (#291). |
+| `components/layout/shell-next/ShellNext.tsx` | Layout tre colonne shell nuova (#291): `ProjectRailNext` sinistra (azioni + selettore pipeline + Esegui) · documento centro · `ProjectInspectorNext` destra (schede Approfondimenti/Frammento). Collasso e larghezze persistiti su uiStore. |
+| `components/layout/shell-next/ProjectRailNext.tsx` | Barra sinistra nuova: navigazione inline (Run/Pipeline/Document), azioni progetto, selettore pipeline, pulsante Esegui. Collasso riduce a icone. |
+| `components/layout/shell-next/ProjectInspectorNext.tsx` | Pannello destro collassabile: schede Approfondimenti (index/search/stats/glossary/coherence) e Frammento. |
 | `components/pipeline/ProductionStream.tsx` | Riga chunk — editor sorgente, risultati stage, judge issues, draft editor |
 | `components/pipeline/PipelineActions.tsx` | Run / Cancel / Audit buttons |
 | `components/pipeline/StageCard.tsx` | Visualizza singolo stage (token, retry info) |
 | `components/document/ConfigDrawer.tsx` | Drawer config pipeline: mode, lingue, stage, persona, glossary |
 | `components/layout/Header.tsx` | Solo breadcrumb navigazione (Glossa // workspace // progetto); non contiene più pulsanti d'azione |
+| `components/layout/AppStatusBar.tsx` | Barra di stato in basso (h-8): context breadcrumb (sx), stats (centro), controlli vista documento — fuoco pannelli (sola-sorgente/sola-traduzione/entrambi) + scorrimento agganciato (sh) — + indicatore salvataggio (destra). Shell nuova (#291). |
 | `components/workspace/WorkspaceHome.tsx` | Hub workspace: titolo + pulsanti azione (Libreria, Nuovo progetto) in alto a destra; lista completa progetti in stile filesystem (colonne Nome / Modificato, senza limite); area cards; banner provider |
 | `components/workspace/WorkspaceWizard.tsx` | Primo avvio: crea il primo workspace reale |
 | `components/document/AnnotationContextMenu.tsx` | Menu contestuale (clic destro sul testo della traduzione) → «Aggiungi annotazione» con anchor pre-compilato |
@@ -87,6 +91,7 @@ Le finestre modali, i tooltip e i menu poggiano su **Radix UI** (`@radix-ui/reac
 | `DialogConfirmButton` / `DialogCancelButton` | Pulsanti footer uniformi (conferma inchiostro, annulla bordo). |
 | `Tooltip` | Tooltip editoriale su Radix (Provider interno, `z-[210]`). |
 | `Menu` | Menu contestuale/a tendina su Radix DropdownMenu (ancora virtuale `anchorRect`). |
+| `IconButton` | Pulsante icona con tipp. CVA: size (`xs`/`sm`/`md`/`lg`), tone (`default`/`accent`/`success`/`charcoal`/`muted`/`running`). **Shell nuova (#291)**: taglia `xs` (`p-1`) per barre compatte (AppStatusBar). |
 
 > **Pendente (issue shell):** `EditorialModalShell` e `useFocusTrap` sono ancora usati dai pannelli shell (`LibraryPanel`, `ProjectPanel`, `WorkspaceHome`, `TranslationsArea`, `DashboardSidebar`) e dal popover badge costi della sidebar. Verranno rimossi quando la shell sinistra migrerà (`react-resizable-panels` + Radix Collapsible).
 
@@ -104,11 +109,33 @@ Glossa 2.0 separa tre livelli:
 
 Il workspace attuale è specifico per l'area **Traduzioni**. Biblioteca e Trascrizioni sono future macro-aree separate; non devono condividere implicitamente la Phrase Memory delle traduzioni.
 
-### Shell UI (multibar)
+### Shell UI — Layout Progetto
 
-Home e progetto usano un'unica barra laterale (`ShellNav`). Nel progetto la barra primaria (`PipelineSidebar`) ospita la nav `Run/Pipeline/Document/Insight/Chunk` + back arrow e i pannelli **inline** Run/Pipeline/Document. I pannelli **ricchi** escono in una seconda barra push a sinistra del documento: `ProjectFlyout` (Insight → `InsightDocPanel`, Chunk → `ChunkInspectorPanel`, estratti da `InsightsDrawer.tsx`) e `ConfigDrawer` (config pipeline). Ordine layout editor: `PipelineSidebar → ConfigDrawer → ProjectFlyout → DocumentView`. Il footer della barra laterale (`ShellNavFooter`) ospita Salva (Ctrl+S), Impostazioni, Aiuto e il toggle Lingua IT/EN. L'header non contiene più pulsanti d'azione.
+Layout a tre colonne (#291) — `ShellNext` con `react-resizable-panels`:
+- **Colonna sinistra (`ProjectRailNext`)**: Rail operativo con nav inline (Run/Pipeline/Document) + selettore pipeline + pulsante Esegui. Collasso riduce a icone. Larghezze (default 240px, collassato 64px, min 180px, max 320px) e stato collapse sincronizzati con `uiStore.projectSidebarWidth` e `useUiStore.projectContextCollapsed`.
+- **Colonna centro**: Vista documento (`DocumentView`) — barra navigazione fissa in alto (h-20, due righe sinistra + frecce/contatore destra), due pannelli bianchi a filo (Originale/Candidata).
+- **Colonna destra (`ProjectInspectorNext`)**: Pannello collapsabile con schede Approfondimenti (index/search/stats/coherence/glossary) e Frammento. Aperto quando `showDocumentDrawer` o `showChunkDrawer`. Larghezze (default 430px, min 300px, max 620px, collassato 56px) sincronizzate con `uiStore.projectFlyoutWidth`.
 
-`uiStore.activeProjectPanel` (`run|pipeline|document|insight|chunk`) è la source-of-truth del rail. I setter drawer (`setShowDocumentDrawer`/`setShowChunkDrawer`/`setShowConfigDrawer`) sincronizzano `activeProjectPanel`; i flag `show*` restano mutuamente esclusivi e pilotano quale fly-out è aperto. `insight`/`chunk` non sono persistiti come pannello attivo (clamp a `run`).
+`uiStore.activeProjectPanel` (`run|pipeline|document|insight|chunk`) è la source-of-truth del rail. I setter drawer (`setShowDocumentDrawer`/`setShowChunkDrawer`/`setShowConfigDrawer`) sincronizzano panel e aperture flyout; i flag `show*` restano mutuamente esclusivi. `insight`/`chunk` non sono persistiti come pannello attivo (clamp a `run`).
+
+**Dashboard:** schermata workspace-home con `PipelineSidebar` in modo dashboard + `WorkspaceHome` (componenti pre-#291; migrazione alla nuova shell rinviata a issue separata). È l'unico contesto in cui `PipelineSidebar` è ancora montato.
+
+#### Vista Documento
+
+`DocumentView` espone due pannelli **a filo** (flush) con layout interno:
+- **Barra navigazione** (altezza fissa `h-20`, allineata alle testate dei pannelli laterali):
+  - Colonna sinistra a due righe: indicatori di stato stadi del chunk corrente (riga 1), minimap pallini frammenti (riga 2).
+  - Colonna destra: frecce prev/next + contatore m/n centrati.
+- **Pannello Originale/Candidata**:
+  - Header con titolo + separatore.
+  - `MarkdownEditor` con `flatToolbar={true}` (barra tools a filo, no arrotondamento/ombra) e `menuOpen` controllato da pulsante nell'header pagina.
+  - Menu testo unico a scomparsa (modalità scrittura/anteprima/dividi, dimensione, formattazione markdown, copia) aperto da pulsante nell'header pagina, in fila con i controlli gestione pagina (cerca, blocca, modifica sorgente, stadi, confronto).
+- **Controlli vista documento** (fuoco, scorrimento agganciato): spostati in `AppStatusBar` in basso, non più nella barra alto.
+- **Confronto stadi**: pulsante auto-attivante — porta il focus a sola-traduzione e accende il confronto. Mostra il precedente stage del chunk corrente a fianco della traduzione finale.
+
+Props nuove su `MarkdownEditor`:
+- `flatToolbar?: boolean` — toolbar a filo (no arrotondamento, coerente con pannelli flush).
+- `menuOpen?: boolean`, `onMenuOpenChange?: (open: boolean) => void`, `copyText?: string` — menu controllato da esterno (header pagina).
 
 ---
 

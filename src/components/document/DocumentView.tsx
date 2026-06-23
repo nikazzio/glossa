@@ -11,6 +11,7 @@ import {
   RotateCcw,
   ScanLine,
   Search,
+  SlidersHorizontal,
   Wand2,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -22,7 +23,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { indexPad } from '../../utils';
-import { CopyButton, HighlightedText, MarkdownEditor, DOC_FONT_SIZE_STEP_INDEX } from '../common';
+import { HighlightedText, MarkdownEditor, DOC_FONT_SIZE_STEP_INDEX } from '../common';
 import { IconButton, Tooltip, type IconButtonTone } from '../ui';
 import { composeAnnotatedMarkdown } from '../../utils/annotationMarkdown';
 import { restoreFootnoteMarkers } from '../../utils/footnoteExtractor';
@@ -76,12 +77,10 @@ interface DocumentPageProps {
   subtitleAction?: React.ReactNode;
   readOnly?: boolean;
   highlighted?: boolean;
-  // Shell nuova (#291): pannello "a filo" — niente cornice arrotondata/ombra/beige,
-  // riempie l'altezza; i due pannelli diventano bianchi adiacenti con un solo divisorio.
-  flush?: boolean;
-  titleMeta?: React.ReactNode;
   statusBadge?: React.ReactNode;
   actions?: React.ReactNode | null;
+  // Pulsante che apre il menu controlli testo, in fila con le azioni pagina.
+  textMenuButton?: React.ReactNode;
   footer?: React.ReactNode;
   searchValue?: string;
   onSearchChange?: (value: string) => void;
@@ -98,10 +97,9 @@ function DocumentPage({
   subtitleAction,
   readOnly = false,
   highlighted = false,
-  flush = false,
-  titleMeta,
   statusBadge,
   actions,
+  textMenuButton,
   footer,
   searchValue,
   onSearchChange,
@@ -115,60 +113,55 @@ function DocumentPage({
   // Il campo resta aperto finché c'è una query attiva.
   const showSearch = searchable && (searchOpen || Boolean(searchValue));
 
+  const searchToggle = searchable ? (
+    <IconButton
+      size="sm"
+      tone={showSearch ? 'accent' : 'default'}
+      onClick={() => setSearchOpen((open) => !open)}
+      title={t('document.searchInPane')}
+      ariaLabel={t('document.searchInPane')}
+      ariaPressed={showSearch}
+    >
+      <Search size={13} />
+    </IconButton>
+  ) : null;
+
   return (
-    <section className={
-      flush
-        ? `relative bg-editorial-page px-12 py-8 flex flex-col flex-1 min-h-0 ${highlighted ? 'ring-2 ring-inset ring-editorial-accent/40' : ''}`
-        : `relative rounded-[24px] bg-editorial-page px-6 py-5 shadow-[var(--inset-highlight-strong),var(--shadow-page-card)] flex flex-col min-h-0 ${
-            highlighted ? 'border border-editorial-accent ring-2 ring-editorial-accent/30' : 'border border-editorial-divider'
-          }`
-    }>
-      {/* Header: shell nuova (flush) senza riga divisoria sotto, pulsanti azione
-          allineati in alto; shell vecchia mantiene il bordo inferiore. */}
-      <div className={`shrink-0 flex items-start justify-between gap-4 ${
-        flush ? 'mb-5' : 'mb-4 border-b border-editorial-divider-soft pb-3'
-      }`}>
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
-              {eyebrow}
-            </div>
-            {eyebrowMeta}
+    <section className={`relative bg-editorial-page px-12 py-8 flex flex-col flex-1 min-h-0 ${
+      highlighted ? 'ring-2 ring-inset ring-editorial-accent/40' : ''
+    }`}>
+      {/* Header: riga unica allineata al titolo — controlli pagina + pulsante menu testo a destra. */}
+      <div className="shrink-0 mb-6 border-b border-editorial-divider-soft pb-4">
+        <div className="flex items-center gap-2">
+          <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-editorial-muted">
+            {eyebrow}
           </div>
-          <div className="mt-1.5 flex flex-wrap items-center gap-2">
-            <h3 className="font-display text-[1.7rem] italic tracking-tight text-editorial-ink">
+          {eyebrowMeta}
+        </div>
+        <div className="mt-1.5 flex items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-2">
+            <h3 className="truncate font-display text-[1.7rem] italic tracking-tight text-editorial-ink">
               {label}
             </h3>
-            {searchable ? (
-              <IconButton
-                size="sm"
-                tone={showSearch ? 'accent' : 'default'}
-                onClick={() => setSearchOpen((open) => !open)}
-                title={t('document.searchInPane')}
-                ariaLabel={t('document.searchInPane')}
-                ariaPressed={showSearch}
-              >
-                <Search size={13} />
-              </IconButton>
-            ) : null}
             {statusBadge}
           </div>
-          {subtitle && (
-            <div className="mt-0.5 flex items-center gap-2">
-              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-accent">
-                {subtitle}
-              </p>
-              {subtitleAction}
-            </div>
-          )}
+          <div className="shrink-0 flex items-center gap-2">
+            {searchToggle}
+            {actions}
+            {(searchToggle || actions) && textMenuButton && (
+              <span className="h-4 w-px bg-editorial-border/60" aria-hidden="true" />
+            )}
+            {textMenuButton}
+          </div>
         </div>
-        <div className={`shrink-0 flex items-center gap-2 ${flush ? 'self-start' : 'pt-1'} ml-6`}>
-          {titleMeta}
-          {titleMeta && actions && (
-            <span className="h-4 w-px bg-editorial-border/60" aria-hidden="true" />
-          )}
-          {actions}
-        </div>
+        {subtitle && (
+          <div className="mt-0.5 flex items-center gap-2">
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-editorial-accent">
+              {subtitle}
+            </p>
+            {subtitleAction}
+          </div>
+        )}
       </div>
       <div ref={scrollRef} className={`flex flex-col flex-1 min-h-0 ${readOnly ? 'opacity-90' : ''}`}>
         {showSearch && onSearchChange && searchLabel ? (
@@ -218,15 +211,17 @@ export function DocumentView({
     setShowChunkDrawer,
     setPendingAnnotationAnchor,
     documentFontSize,
-    useNewShell,
+    setDocumentPaneFocus,
   } = useUiStore();
 
   const fontSizeStep = DOC_FONT_SIZE_STEP_INDEX[documentFontSize ?? 'md'];
 
   const [annotationMenu, setAnnotationMenu] = useState<{ x: number; y: number; text: string; chunkId: string } | null>(null);
+  // Shell nuova (#291): menu controlli testo, uno per pannello (sorgente / traduzione).
+  const [sourceMenuOpen, setSourceMenuOpen] = useState(false);
+  const [translationMenuOpen, setTranslationMenuOpen] = useState(false);
 
   const {
-    documentLayout,
     paneFocus,
     syncScrollEnabled,
     chunks,
@@ -326,17 +321,6 @@ export function DocumentView({
     );
   }
 
-  // Colonne in modalità "entrambi": la scelta layout comanda (book = affiancate,
-  // standard = impilate); 'auto' affianca solo quando lo spazio REALE del documento
-  // lo consente (container query, non viewport — la barra/fly-out riducono lo spazio).
-  const bothColumnsClass =
-    paneFocus !== 'both'
-      ? 'grid-cols-1'
-      : documentLayout === 'standard'
-        ? 'grid-cols-1'
-        : documentLayout === 'book'
-          ? 'grid-cols-2'
-          : '@[820px]:grid-cols-2';
   const prevChunk = chunks[currentIndex - 1];
   const nextChunk = chunks[currentIndex + 1];
   const sourceReadOnly =
@@ -401,124 +385,104 @@ export function DocumentView({
         })
       : null;
 
+  // Stati pipeline (icone con tone di stato) — condivisi fra shell vecchia e nuova.
+  const stageStatusButtons = (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {enabledStages.map((stage) => {
+        const Icon: LucideIcon =
+          stage.role === 'refine' ? Pencil
+          : stage.role === 'format' ? FileText
+          : Languages;
+        const stageTone = STAGE_TONE_MAP[currentChunk.stageResults[stage.id]?.status ?? 'idle'] ?? 'muted';
+        return (
+          <IconButton
+            key={stage.id}
+            size="md"
+            tone={stageTone}
+            title={stage.name}
+            onClick={() => setTraceStageId(traceStageId === stage.id ? null : stage.id)}
+          >
+            <Icon size={12} strokeWidth={1.9} />
+          </IconButton>
+        );
+      })}
+      <IconButton
+        size="md"
+        tone={STAGE_TONE_MAP[currentChunk.judgeResult.status ?? 'idle'] ?? 'muted'}
+        title={t('pipeline.audit')}
+        onClick={() => setTraceStageId(traceStageId === '_judge' ? null : '_judge')}
+      >
+        <ScanLine size={12} strokeWidth={1.9} />
+      </IconButton>
+    </div>
+  );
+
+  // Navigazione frammenti (shell nuova): solo frecce + contatore m/n. È un comando a sé,
+  // distinto dai pallini minimap (che vivono su una riga propria, non fra le frecce).
+  const chunkNavControls = (
+    <>
+      <IconButton
+        size="md"
+        onClick={() => prevChunk && setSelectedChunkId(prevChunk.id)}
+        title={t('document.previousChunk')}
+        disabled={!prevChunk}
+      >
+        <ChevronLeft size={16} />
+      </IconButton>
+      <span className="shrink-0 font-display text-lg italic leading-none text-editorial-ink">
+        {indexPad(currentIndex + 1)}<span className="px-0.5 text-editorial-muted">/</span>{indexPad(chunks.length)}
+      </span>
+      <IconButton
+        size="md"
+        onClick={() => nextChunk && setSelectedChunkId(nextChunk.id)}
+        title={t('document.nextChunk')}
+        disabled={!nextChunk}
+      >
+        <ChevronRight size={16} />
+      </IconButton>
+    </>
+  );
+
+  // Pulsante unico che apre il menu controlli testo, in fila con le azioni pagina.
+  const renderTextMenuButton = (open: boolean, toggle: () => void) => (
+    <IconButton
+      size="lg"
+      tone={open ? 'accent' : 'default'}
+      onClick={toggle}
+      title={t('editor.textMenu')}
+      ariaPressed={open}
+    >
+      <SlidersHorizontal size={14} />
+    </IconButton>
+  );
+
   return (
-    <section className={`w-full overflow-y-auto min-h-0 h-full custom-scrollbar flex flex-col ${useNewShell ? 'bg-editorial-page' : 'bg-editorial-paper'}`}>
-      <div className={`@container mx-auto w-full flex flex-col flex-1 min-h-0 ${useNewShell ? '' : 'max-w-[1720px] px-5 py-3 md:px-6 md:py-4 gap-5'}`}>
+    <section className="w-full overflow-y-auto min-h-0 h-full custom-scrollbar flex flex-col bg-editorial-page">
+      <div className="@container mx-auto w-full flex flex-col flex-1 min-h-0">
         <div className="shrink-0">
-          {/* Navigation bar — shell nuova: a filo (border-b, niente card flottante) */}
-          <div className={useNewShell
-            ? 'w-full h-16 flex items-center border-b border-editorial-border bg-editorial-page px-6'
-            : 'w-full rounded-[20px] border border-editorial-border bg-editorial-bg/90 px-4 py-3 shadow-[var(--shadow-warm-sm)]'}>
-            <div className="flex w-full items-center gap-x-4 gap-y-2">
-              <div className="flex flex-1 flex-wrap items-center gap-1.5">
-                {enabledStages.map((stage) => {
-                  const Icon: LucideIcon =
-                    stage.role === 'refine' ? Pencil
-                    : stage.role === 'format' ? FileText
-                    : Languages;
-                  const stageTone = STAGE_TONE_MAP[currentChunk.stageResults[stage.id]?.status ?? 'idle'] ?? 'muted';
-                  return (
-                    <IconButton
-                      key={stage.id}
-                      size="md"
-                      tone={stageTone}
-                      title={stage.name}
-                      onClick={() => setTraceStageId(traceStageId === stage.id ? null : stage.id)}
-                    >
-                      <Icon size={12} strokeWidth={1.9} />
-                    </IconButton>
-                  );
-                })}
-                <IconButton
-                  size="md"
-                  tone={STAGE_TONE_MAP[currentChunk.judgeResult.status ?? 'idle'] ?? 'muted'}
-                  title={t('pipeline.audit')}
-                  onClick={() => setTraceStageId(traceStageId === '_judge' ? null : '_judge')}
-                >
-                  <ScanLine size={12} strokeWidth={1.9} />
-                </IconButton>
-              </div>
-
-              {useNewShell ? (
-                // Barra di navigazione stretta: frecce + pallini al centro + conteggio compatto in linea.
-                <div className="flex shrink-0 items-center justify-center gap-3 border-l border-editorial-border/50 pl-5">
-                  <IconButton
-                    size="md"
-                    onClick={() => prevChunk && setSelectedChunkId(prevChunk.id)}
-                    title={t('document.previousChunk')}
-                    disabled={!prevChunk}
-                  >
-                    <ChevronLeft size={16} />
-                  </IconButton>
-                  {chunkMinimapDots ? (
-                    <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar">{chunkMinimapDots}</div>
-                  ) : null}
-                  <IconButton
-                    size="md"
-                    onClick={() => nextChunk && setSelectedChunkId(nextChunk.id)}
-                    title={t('document.nextChunk')}
-                    disabled={!nextChunk}
-                  >
-                    <ChevronRight size={16} />
-                  </IconButton>
-                  <span className="ml-1 shrink-0 font-display text-lg italic leading-none text-editorial-ink">
-                    {indexPad(currentIndex + 1)}<span className="px-0.5 text-editorial-muted">/</span>{indexPad(chunks.length)}
-                  </span>
+          {/* Barra di navigazione a filo (border-b, allineata alle testate dei pannelli
+              laterali). Colonna sinistra a due righe (stati del chunk sopra, minimap pallini
+              sotto); colonna destra con frecce + m/n centrate sullo spazio delle due righe. */}
+          <div className="w-full h-20 flex items-stretch gap-4 border-b border-editorial-border bg-editorial-page px-6 py-2">
+            <div className="flex min-w-0 flex-1 flex-col justify-center gap-2">
+              {stageStatusButtons}
+              {chunkMinimapDots ? (
+                <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-0.5">
+                  {chunkMinimapDots}
                 </div>
-              ) : (
-                <>
-                  <div className="flex shrink-0 items-center gap-3">
-                    <IconButton
-                      size="lg"
-                      onClick={() => prevChunk && setSelectedChunkId(prevChunk.id)}
-                      title={t('document.previousChunk')}
-                      disabled={!prevChunk}
-                    >
-                      <ChevronLeft size={16} />
-                    </IconButton>
-                    <div className="min-w-[7.5rem] text-center">
-                      <div className="text-[10px] font-bold uppercase tracking-[0.28em] text-editorial-muted">
-                        {t('document.chunkLabel')}
-                      </div>
-                      <div className="font-display text-[1.8rem] italic leading-none text-editorial-accent">
-                        {indexPad(currentIndex + 1)}<span className="px-1 text-editorial-muted">/</span>{indexPad(chunks.length)}
-                      </div>
-                    </div>
-                    <IconButton
-                      size="lg"
-                      onClick={() => nextChunk && setSelectedChunkId(nextChunk.id)}
-                      title={t('document.nextChunk')}
-                      disabled={!nextChunk}
-                    >
-                      <ChevronRight size={16} />
-                    </IconButton>
-                  </div>
-                  <div className="flex-1" />
-                </>
-              )}
-
-              {/* Shell nuova (#291): i controlli di vista (fuoco pannelli + scroll
-                  agganciato) vivono nella barra di stato in basso, non qui. */}
+              ) : null}
             </div>
-
-            {!useNewShell && chunkMinimapDots ? (
-              <div className="mt-2 flex items-center gap-1.5 overflow-x-auto py-1 custom-scrollbar">
-                {chunkMinimapDots}
-              </div>
-            ) : null}
+            <div className="flex shrink-0 items-center gap-2 border-l border-editorial-border/50 pl-4">
+              {chunkNavControls}
+            </div>
           </div>
         </div>
 
-        <div className={
-          useNewShell
-            ? 'flex flex-1 min-h-0 divide-x divide-editorial-border'
-            : `grid gap-5 flex-1 min-h-0 auto-rows-fr ${bothColumnsClass}`
-        }>
+        <div className="flex flex-1 min-h-0 divide-x divide-editorial-border">
           {paneFocus !== 'translation' && (
             <DocumentPage
               label={t('pipeline.originalSource')}
               eyebrow={t('document.leftPage')}
-              flush={useNewShell}
               readOnly={sourceReadOnly}
               statusBadge={sourceReadOnly && currentChunk.status !== 'processing' ? (
                 <InlineStatusBadge tone="amber" icon={<Lock size={13} />} ariaLabel={t('document.sourceLockedTitle')} />
@@ -550,11 +514,14 @@ export function DocumentView({
               searchValue={sourcePaneSearch}
               onSearchChange={setSourcePaneSearch}
               searchLabel={t('document.searchInSource')}
+              textMenuButton={renderTextMenuButton(sourceMenuOpen, () => setSourceMenuOpen((open) => !open))}
               scrollRef={scrollSourceRef}
             >
               <MarkdownEditor
                 identityKey={`${currentChunk.id}:source`}
-                flatToolbar={useNewShell}
+                flatToolbar
+                menuOpen={sourceMenuOpen}
+                onMenuOpenChange={setSourceMenuOpen}
                 value={currentChunk.sourceDisplayText}
                 onChange={(nextValue) => updateChunkOriginalText(currentChunk.id, nextValue)}
                 markdownEnabled={config.markdownAware === true}
@@ -633,12 +600,17 @@ export function DocumentView({
                   size="lg"
                   tone={showDiffMode ? 'accent' : 'default'}
                   onClick={() => {
-                    if (paneFocus !== 'translation') return;
+                    // Il confronto richiede la sola traduzione (spazio pieno): se siamo su
+                    // entrambi/sorgente, ci porta lì e accende il diff in un colpo solo.
+                    if (paneFocus !== 'translation') {
+                      setDocumentPaneFocus('translation');
+                      setShowDiffMode(true);
+                      return;
+                    }
                     setShowDiffMode(!showDiffMode);
                   }}
                   title={showDiffMode ? t('document.diffModeDisable') : t('document.diffModeEnable')}
                   ariaPressed={showDiffMode}
-                  disabled={paneFocus !== 'translation'}
                 >
                   <GitCompare size={14} />
                 </IconButton>
@@ -650,7 +622,6 @@ export function DocumentView({
               <DocumentPage
                 label={t('pipeline.candidateTranslation')}
                 eyebrow={t('document.rightPage')}
-                flush={useNewShell}
                 eyebrowMeta={currentChunk.status === 'preview' ? (
                   <Tooltip label={t('document.chunkPreviewBadge')}>
                     <span aria-label={t('document.chunkPreviewBadge')} className="inline-flex items-center text-editorial-muted">
@@ -663,8 +634,8 @@ export function DocumentView({
                     ? `${activeDiffPair.fromName} → ${activeDiffPair.toName}`
                     : undefined
                 }
-                titleMeta={rawStageContent ? <CopyButton text={rawStageContent} /> : null}
                 actions={stageActions}
+                textMenuButton={!showDiffMode ? renderTextMenuButton(translationMenuOpen, () => setTranslationMenuOpen((open) => !open)) : null}
                 statusBadge={currentChunk.translationStale ? (
                   <InlineStatusBadge tone="amber" icon={<AlertTriangle size={13} />} label={t('document.translationStaleBadge')} />
                 ) : lockToggle}
@@ -692,7 +663,10 @@ export function DocumentView({
                   ) : (
                     <MarkdownEditor
                       identityKey={`${currentChunk.id}:candidate:${effectiveSelectedStageId}`}
-                      flatToolbar={useNewShell}
+                      flatToolbar
+                      menuOpen={translationMenuOpen}
+                      onMenuOpenChange={setTranslationMenuOpen}
+                      copyText={rawStageContent}
                       value={rawStageContent}
                       onChange={isLastSelected ? (nextValue) => updateChunkDraft(currentChunk.id, nextValue) : NOOP_CHANGE}
                       markdownEnabled={config.markdownAware === true}

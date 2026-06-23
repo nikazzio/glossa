@@ -29,9 +29,6 @@ export function Header() {
   );
   const activeWorkspace = useWorkspaceStore((state) => state.activeWorkspace);
   const isProcessing = useChunksStore((s) => s.isProcessing);
-  // Shell nuova (#291): le azioni app-level (salva/impostazioni/lingua/aiuto) vivono
-  // in alto a destra qui, non più nel footer della barra sinistra (che resta operativa).
-  const useNewShell = useUiStore((state) => state.useNewShell);
   const { t } = useTranslation();
 
   const helpLoaded = useRef(false);
@@ -87,7 +84,7 @@ export function Header() {
           </div>
         </div>
 
-        {useNewShell && currentProjectId ? <ShellNavFooter variant="header" /> : null}
+        {currentProjectId ? <ShellNavFooter variant="header" /> : null}
       </div>
 
       {helpLoaded.current && (

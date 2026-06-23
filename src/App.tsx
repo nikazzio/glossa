@@ -147,9 +147,6 @@ const ConfigDrawer = lazy(() =>
 const DocumentView = lazy(() =>
   import('./components/document/DocumentView').then((m) => ({ default: m.DocumentView })),
 );
-const ProjectFlyout = lazy(() =>
-  import('./components/layout/ProjectFlyout').then((m) => ({ default: m.ProjectFlyout })),
-);
 const SettingsModal = lazy(() =>
   import('./components/settings/SettingsModal').then((m) => ({ default: m.SettingsModal })),
 );
@@ -200,7 +197,6 @@ function EditorView() {
   useProjectAutosave();
   useKeyboardShortcuts({ onRunPipeline: runPipeline, onDryRun: runDryRun });
   const viewMode = useUiStore((state) => state.viewMode);
-  const useNewShell = useUiStore((state) => state.useNewShell);
   const setShowConfigDrawer = useUiStore((state) => state.setShowConfigDrawer);
   const showSettings = useUiStore((state) => state.showSettings);
   const chunkPresetMedium = useConfigStore((state) => state.chunkPresetMedium);
@@ -341,58 +337,31 @@ function EditorView() {
       {viewMode === 'document' ? (
         <Suspense fallback={null}>
           <main className="relative flex flex-1 min-h-0 overflow-hidden">
-            {useNewShell ? (
-              <ShellNext
+            <ShellNext
+              onRunPipeline={runPipeline}
+              onRunAuditOnly={runAuditOnly}
+              onCancelPipeline={cancelPipeline}
+              onDryRun={runDryRun}
+              onRetranslateChunk={handleRetranslateChunk}
+              onImportDocument={handleImportDocument}
+              onOpenWorkspaceSettings={() => setShowWorkspaceSettings(true)}
+              onReauditChunk={auditSingleChunk}
+              onRunCoherenceAudit={runCoherenceAudit}
+            >
+              <ConfigDrawer
+                variant="modal"
                 onRunPipeline={runPipeline}
                 onRunAuditOnly={runAuditOnly}
                 onCancelPipeline={cancelPipeline}
-                onDryRun={runDryRun}
-                onRetranslateChunk={handleRetranslateChunk}
-                onImportDocument={handleImportDocument}
-                onOpenWorkspaceSettings={() => setShowWorkspaceSettings(true)}
-                onReauditChunk={auditSingleChunk}
-                onRunCoherenceAudit={runCoherenceAudit}
-              >
-                <ConfigDrawer
-                  variant="modal"
-                  onRunPipeline={runPipeline}
-                  onRunAuditOnly={runAuditOnly}
-                  onCancelPipeline={cancelPipeline}
-                />
-                <div className="relative flex min-w-0 flex-1">
-                  <DocumentView
-                    onRetranslateChunk={handleRetranslateChunk}
-                    onImportDocument={handleImportDocument}
-                  />
-                  <PanelTransitionVeil panelKey={editorContentKey} tone="paper" variant="project" />
-                </div>
-              </ShellNext>
-            ) : (
-              <>
-                <PipelineSidebar
-                  onRunPipeline={runPipeline}
-                  onRunAuditOnly={runAuditOnly}
-                  onCancelPipeline={cancelPipeline}
-                  onDryRun={runDryRun}
+              />
+              <div className="relative flex min-w-0 flex-1">
+                <DocumentView
                   onRetranslateChunk={handleRetranslateChunk}
                   onImportDocument={handleImportDocument}
-                  onOpenWorkspaceSettings={() => setShowWorkspaceSettings(true)}
                 />
-                <ConfigDrawer
-                  onRunPipeline={runPipeline}
-                  onRunAuditOnly={runAuditOnly}
-                  onCancelPipeline={cancelPipeline}
-                />
-                <ProjectFlyout onReauditChunk={auditSingleChunk} onRunCoherenceAudit={runCoherenceAudit} />
-                <div className="relative flex min-w-0 flex-1">
-                  <DocumentView
-                    onRetranslateChunk={handleRetranslateChunk}
-                    onImportDocument={handleImportDocument}
-                  />
-                  <PanelTransitionVeil panelKey={editorContentKey} tone="paper" variant="project" />
-                </div>
-              </>
-            )}
+                <PanelTransitionVeil panelKey={editorContentKey} tone="paper" variant="project" />
+              </div>
+            </ShellNext>
           </main>
         </Suspense>
       ) : (

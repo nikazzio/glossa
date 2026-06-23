@@ -64,7 +64,7 @@ export function ProjectInspectorNext({
     >
       <Tabs.List
         aria-label="Rivedi"
-        className="flex h-16 shrink-0 items-center border-b border-editorial-border"
+        className="flex h-20 shrink-0 items-center border-b border-editorial-border"
       >
         <Tabs.Trigger
           value="insight"
