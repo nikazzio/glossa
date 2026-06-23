@@ -55,6 +55,9 @@ interface MarkdownEditorProps {
   previewValue?: string;
   defaultTextSizeStep?: number;
   useDocLineHeight?: boolean;
+  // Shell nuova (#291): toolbar a filo (niente cornice arrotondata/ombra/rilievo),
+  // coerente coi pannelli flush. Senza prop resta la pillola classica della shell vecchia.
+  flatToolbar?: boolean;
 }
 
 export function MarkdownEditor({
@@ -76,6 +79,7 @@ export function MarkdownEditor({
   fillHeight = false,
   identityKey = 'default',
   previewValue,
+  flatToolbar = false,
 }: MarkdownEditorProps) {
   const { t } = useTranslation();
   const setShowHelp = useUiStore((state) => state.setShowHelp);
@@ -357,7 +361,11 @@ export function MarkdownEditor({
 
   return (
     <div className={fillHeight ? 'flex flex-col flex-1 min-h-0 gap-5' : 'space-y-3'}>
-      <div className={`sticky top-0 z-20 rounded-2xl border border-editorial-border/70 bg-editorial-page/95 px-3 py-3 shadow-sm backdrop-blur${fillHeight ? ' shrink-0' : ''}`}>
+      <div className={`sticky top-0 z-20 bg-editorial-page/95 backdrop-blur${fillHeight ? ' shrink-0' : ''}${
+        flatToolbar
+          ? ' border-b border-editorial-border/60 px-1 py-2'
+          : ' rounded-2xl border border-editorial-border/70 px-3 py-3 shadow-sm'
+      }`}>
         <div className="flex items-center gap-1.5">
           {markdownEnabled && (
             <IconButton

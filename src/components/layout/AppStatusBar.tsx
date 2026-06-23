@@ -1,8 +1,8 @@
-import { Link2, Link2Off, Loader2 } from 'lucide-react';
+import { Columns2, Link2, Link2Off, Loader2, PanelLeft, PanelRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useStatusBarData } from '../../hooks/useStatusBarData';
 import { useUiStore } from '../../stores/uiStore';
-import { Tooltip } from '../ui';
+import { IconButton, Tooltip } from '../ui';
 
 const AREA_KEY: Record<string, string> = {
   translations: 'statusBar.areaTranslations',
@@ -55,10 +55,13 @@ export function AppStatusBar() {
   const syncScrollEnabled = useUiStore((state) => state.syncScrollEnabled);
   const setSyncScrollEnabled = useUiStore((state) => state.setSyncScrollEnabled);
   const documentPaneFocus = useUiStore((state) => state.documentPaneFocus);
+  const setDocumentPaneFocus = useUiStore((state) => state.setDocumentPaneFocus);
 
   if (data.kind === 'idle') return null;
 
-  const showScrollLock = useNewShell && data.kind === 'project' && data.totalChunks > 0;
+  // Shell nuova (#291): i controlli di vista del documento (fuoco pannelli + scroll
+  // agganciato) sono una pulsantiera icone qui in basso, non nella barra alto.
+  const showPaneControls = useNewShell && data.kind === 'project' && data.totalChunks > 0;
   const syncDisabled = documentPaneFocus !== 'both';
   const syncOn = syncScrollEnabled && !syncDisabled;
 
@@ -66,7 +69,7 @@ export function AppStatusBar() {
     <div
       role="status"
       aria-live="polite"
-      className="flex h-7 shrink-0 items-center justify-between gap-4 border-t border-editorial-border/60 bg-editorial-bg px-4 text-xs text-editorial-muted"
+      className="flex h-8 shrink-0 items-center justify-between gap-4 border-t border-editorial-border/60 bg-editorial-bg px-4 text-xs text-editorial-muted"
     >
       {/* Left: context breadcrumb */}
       <div className="flex min-w-0 items-center gap-2 overflow-hidden">
@@ -109,24 +112,6 @@ export function AppStatusBar() {
       {/* Center: stats (project only) */}
       {data.kind === 'project' && (
         <div className="hidden items-center gap-3 sm:flex">
-          {showScrollLock ? (
-            <>
-              <button
-                type="button"
-                onClick={() => setSyncScrollEnabled(!syncScrollEnabled)}
-                disabled={syncDisabled}
-                aria-pressed={syncOn}
-                title={syncOn ? t('document.scrollSyncDisable') : t('document.scrollSyncEnable')}
-                className={`flex items-center gap-1.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 ${
-                  syncOn ? 'text-editorial-accent' : 'text-editorial-muted hover:text-editorial-accent'
-                }`}
-              >
-                {syncOn ? <Link2 size={12} /> : <Link2Off size={12} />}
-                <span>{t('statusBar.scrollLinked')}</span>
-              </button>
-              <span className="text-editorial-border">·</span>
-            </>
-          ) : null}
           {data.runStatus === 'running' ? (
             <Tooltip label={t('statusBar.tooltip.chunksProgress')} side="top">
               <span className="flex items-center gap-1.5 text-editorial-warning">
@@ -158,8 +143,59 @@ export function AppStatusBar() {
         </div>
       )}
 
-      {/* Right: save indicator (project only) */}
-      <div className="shrink-0">
+      {/* Right: controlli di vista documento (shell nuova) + indicatore salvataggio */}
+      <div className="flex shrink-0 items-center gap-2">
+        {showPaneControls ? (
+          <>
+            <div className="flex items-center gap-1">
+              <IconButton
+                size="sm"
+                tone={documentPaneFocus === 'both' ? 'accent' : 'default'}
+                onClick={() => setDocumentPaneFocus('both')}
+                title={t('document.focusBoth')}
+                ariaPressed={documentPaneFocus === 'both'}
+                tooltipSide="top"
+              >
+                <Columns2 size={13} />
+              </IconButton>
+              <IconButton
+                size="sm"
+                tone={documentPaneFocus === 'source' ? 'accent' : 'default'}
+                onClick={() => setDocumentPaneFocus('source')}
+                title={t('document.focusSource')}
+                ariaPressed={documentPaneFocus === 'source'}
+                tooltipSide="top"
+              >
+                <PanelLeft size={13} />
+              </IconButton>
+              <IconButton
+                size="sm"
+                tone={documentPaneFocus === 'translation' ? 'accent' : 'default'}
+                onClick={() => setDocumentPaneFocus('translation')}
+                title={t('document.focusTranslation')}
+                ariaPressed={documentPaneFocus === 'translation'}
+                tooltipSide="top"
+              >
+                <PanelRight size={13} />
+              </IconButton>
+              <span className="mx-0.5 h-3.5 w-px bg-editorial-border/60" aria-hidden="true" />
+              <IconButton
+                size="sm"
+                tone={syncOn ? 'accent' : 'default'}
+                onClick={() => setSyncScrollEnabled(!syncScrollEnabled)}
+                disabled={syncDisabled}
+                title={syncOn ? t('document.scrollSyncDisable') : t('document.scrollSyncEnable')}
+                ariaPressed={syncOn}
+                tooltipSide="top"
+              >
+                {syncOn ? <Link2 size={13} /> : <Link2Off size={13} />}
+              </IconButton>
+            </div>
+            {data.kind === 'project' && (
+              <span className="h-3.5 w-px bg-editorial-border/60" aria-hidden="true" />
+            )}
+          </>
+        ) : null}
         {data.kind === 'project' && <SaveIndicator state={data.saveState} />}
       </div>
     </div>

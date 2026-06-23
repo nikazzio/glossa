@@ -2,14 +2,11 @@ import {
   AlertTriangle,
   ChevronLeft,
   ChevronRight,
-  Columns2,
   FileText,
   FlaskConical,
   GitCompare,
   Languages,
   Lock,
-  PanelLeft,
-  PanelRight,
   Pencil,
   RotateCcw,
   ScanLine,
@@ -121,13 +118,16 @@ function DocumentPage({
   return (
     <section className={
       flush
-        ? `relative bg-editorial-page px-6 py-5 flex flex-col flex-1 min-h-0 ${highlighted ? 'ring-2 ring-inset ring-editorial-accent/40' : ''}`
+        ? `relative bg-editorial-page px-12 py-8 flex flex-col flex-1 min-h-0 ${highlighted ? 'ring-2 ring-inset ring-editorial-accent/40' : ''}`
         : `relative rounded-[24px] bg-editorial-page px-6 py-5 shadow-[var(--inset-highlight-strong),var(--shadow-page-card)] flex flex-col min-h-0 ${
             highlighted ? 'border border-editorial-accent ring-2 ring-editorial-accent/30' : 'border border-editorial-divider'
           }`
     }>
-      {/* Header con altezza minima fissa per allineare il corpo testo tra i due pannelli */}
-      <div className="mb-4 shrink-0 flex items-start justify-between gap-4 border-b border-editorial-divider-soft pb-3">
+      {/* Header: shell nuova (flush) senza riga divisoria sotto, pulsanti azione
+          allineati in alto; shell vecchia mantiene il bordo inferiore. */}
+      <div className={`shrink-0 flex items-start justify-between gap-4 ${
+        flush ? 'mb-5' : 'mb-4 border-b border-editorial-divider-soft pb-3'
+      }`}>
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
@@ -162,7 +162,7 @@ function DocumentPage({
             </div>
           )}
         </div>
-        <div className="shrink-0 flex items-center gap-2 pt-1 ml-6">
+        <div className={`shrink-0 flex items-center gap-2 ${flush ? 'self-start' : 'pt-1'} ml-6`}>
           {titleMeta}
           {titleMeta && actions && (
             <span className="h-4 w-px bg-editorial-border/60" aria-hidden="true" />
@@ -219,7 +219,6 @@ export function DocumentView({
     setPendingAnnotationAnchor,
     documentFontSize,
     useNewShell,
-    setDocumentPaneFocus,
   } = useUiStore();
 
   const fontSizeStep = DOC_FONT_SIZE_STEP_INDEX[documentFontSize ?? 'md'];
@@ -408,7 +407,7 @@ export function DocumentView({
         <div className="shrink-0">
           {/* Navigation bar — shell nuova: a filo (border-b, niente card flottante) */}
           <div className={useNewShell
-            ? 'w-full h-12 flex items-center border-b border-editorial-border bg-editorial-page px-4'
+            ? 'w-full h-16 flex items-center border-b border-editorial-border bg-editorial-page px-6'
             : 'w-full rounded-[20px] border border-editorial-border bg-editorial-bg/90 px-4 py-3 shadow-[var(--shadow-warm-sm)]'}>
             <div className="flex w-full items-center gap-x-4 gap-y-2">
               <div className="flex flex-1 flex-wrap items-center gap-1.5">
@@ -442,14 +441,14 @@ export function DocumentView({
 
               {useNewShell ? (
                 // Barra di navigazione stretta: frecce + pallini al centro + conteggio compatto in linea.
-                <div className="flex shrink-0 items-center justify-center gap-2">
+                <div className="flex shrink-0 items-center justify-center gap-3 border-l border-editorial-border/50 pl-5">
                   <IconButton
                     size="md"
                     onClick={() => prevChunk && setSelectedChunkId(prevChunk.id)}
                     title={t('document.previousChunk')}
                     disabled={!prevChunk}
                   >
-                    <ChevronLeft size={15} />
+                    <ChevronLeft size={16} />
                   </IconButton>
                   {chunkMinimapDots ? (
                     <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar">{chunkMinimapDots}</div>
@@ -460,10 +459,10 @@ export function DocumentView({
                     title={t('document.nextChunk')}
                     disabled={!nextChunk}
                   >
-                    <ChevronRight size={15} />
+                    <ChevronRight size={16} />
                   </IconButton>
-                  <span className="ml-1 shrink-0 font-mono text-xs font-bold tabular-nums text-editorial-muted">
-                    {indexPad(currentIndex + 1)} / {indexPad(chunks.length)}
+                  <span className="ml-1 shrink-0 font-display text-lg italic leading-none text-editorial-ink">
+                    {indexPad(currentIndex + 1)}<span className="px-0.5 text-editorial-muted">/</span>{indexPad(chunks.length)}
                   </span>
                 </div>
               ) : (
@@ -498,39 +497,8 @@ export function DocumentView({
                 </>
               )}
 
-              {/* Shell nuova (#291): gruppo Vista — fuoco pannelli + evidenziazioni + scroll.
-                  Nella shell vecchia questi controlli vivono nella barra sinistra. */}
-              {useNewShell && (
-                <div className="flex flex-1 items-center justify-end gap-1">
-                  <IconButton
-                    size="md"
-                    tone={paneFocus === 'both' ? 'accent' : 'default'}
-                    onClick={() => setDocumentPaneFocus('both')}
-                    title={t('document.focusBoth')}
-                    ariaPressed={paneFocus === 'both'}
-                  >
-                    <Columns2 size={14} />
-                  </IconButton>
-                  <IconButton
-                    size="md"
-                    tone={paneFocus === 'source' ? 'accent' : 'default'}
-                    onClick={() => setDocumentPaneFocus('source')}
-                    title={t('document.focusSource')}
-                    ariaPressed={paneFocus === 'source'}
-                  >
-                    <PanelLeft size={14} />
-                  </IconButton>
-                  <IconButton
-                    size="md"
-                    tone={paneFocus === 'translation' ? 'accent' : 'default'}
-                    onClick={() => setDocumentPaneFocus('translation')}
-                    title={t('document.focusTranslation')}
-                    ariaPressed={paneFocus === 'translation'}
-                  >
-                    <PanelRight size={14} />
-                  </IconButton>
-                </div>
-              )}
+              {/* Shell nuova (#291): i controlli di vista (fuoco pannelli + scroll
+                  agganciato) vivono nella barra di stato in basso, non qui. */}
             </div>
 
             {!useNewShell && chunkMinimapDots ? (
@@ -586,6 +554,7 @@ export function DocumentView({
             >
               <MarkdownEditor
                 identityKey={`${currentChunk.id}:source`}
+                flatToolbar={useNewShell}
                 value={currentChunk.sourceDisplayText}
                 onChange={(nextValue) => updateChunkOriginalText(currentChunk.id, nextValue)}
                 markdownEnabled={config.markdownAware === true}
@@ -723,6 +692,7 @@ export function DocumentView({
                   ) : (
                     <MarkdownEditor
                       identityKey={`${currentChunk.id}:candidate:${effectiveSelectedStageId}`}
+                      flatToolbar={useNewShell}
                       value={rawStageContent}
                       onChange={isLastSelected ? (nextValue) => updateChunkDraft(currentChunk.id, nextValue) : NOOP_CHANGE}
                       markdownEnabled={config.markdownAware === true}

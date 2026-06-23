@@ -142,6 +142,7 @@ export function PipelineSidebarRunSection({
   onDryRun,
   onRetranslateChunk,
   showAuditOnly = true,
+  playFirst = false,
 }: {
   collapsed?: boolean;
   onRunPipeline?: () => void;
@@ -151,6 +152,9 @@ export function PipelineSidebarRunSection({
   onRetranslateChunk?: (chunkId: string) => void;
   // Shell nuova (#291): "Solo audit" vive nel pannello Frammento → qui si nasconde.
   showAuditOnly?: boolean;
+  // Shell nuova (#291): gerarchia "esegui → opzioni" — play focale in cima,
+  // modalità e conteggio chunk come opzioni subordinate sotto.
+  playFirst?: boolean;
 }) {
   const { t } = useTranslation();
   const config = usePipelineStore((state) => state.config);
@@ -271,7 +275,7 @@ export function PipelineSidebarRunSection({
     <div className="px-2.5">
       <SidebarSectionShell>
         <div className="flex flex-col gap-4">
-          <div className="flex flex-col items-center gap-2">
+          <div className={`flex flex-col items-center gap-2 ${playFirst ? 'order-2 mt-1 w-full border-t border-editorial-border/40 pt-4' : ''}`}>
             <SectionLabel icon={FlaskConical} label={t('pipeline.modeLabel')} />
             <div className="flex items-center justify-center gap-2">
               <IconButton
@@ -303,7 +307,7 @@ export function PipelineSidebarRunSection({
             </div>
           </div>
 
-          <div className="flex flex-col items-center gap-2.5">
+          <div className={`flex flex-col items-center gap-2.5 ${playFirst ? 'order-1' : ''}`}>
             <div className="relative">
               {isProcessing ? (
                 cancelRequested ? (
@@ -393,7 +397,7 @@ export function PipelineSidebarRunSection({
             ) : null}
           </div>
 
-          <div className="flex flex-col items-center gap-1.5">
+          <div className={`flex flex-col items-center gap-1.5 ${playFirst ? 'order-3' : ''}`}>
             <div className="flex items-center justify-center gap-1">
               <IconButton
                 size="md"
@@ -590,7 +594,7 @@ export function PipelineSidebarPipelinesSection({
               </div>
             </Tooltip>
           ) : (
-            <div className="flex flex-col items-center gap-3.5">
+            <div className={configTrigger === 'circle' ? 'flex flex-row flex-wrap items-center justify-center gap-2.5' : 'flex flex-col items-center gap-3.5'}>
               {pipelines.map((pipeline, index) => {
                 const isActive = pipeline.id === activePipelineId;
                 const isPipelineRunning = isActive && isRunning;
@@ -602,7 +606,7 @@ export function PipelineSidebarPipelinesSection({
                       onClick={() => switchPipeline(pipeline.id)}
                       title={pipeline.name}
                       tooltipSide="right"
-                      className="h-14 w-14 text-base font-black"
+                      className={configTrigger === 'circle' ? 'h-11 w-11 text-sm font-black' : 'h-14 w-14 text-base font-black'}
                     >
                       {isPipelineRunning ? (
                         <span className="h-4 w-4 animate-spin rounded-full border-2 border-transparent border-t-current" />

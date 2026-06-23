@@ -52,7 +52,7 @@ export function ProjectRailNext({
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* Azioni di progetto: back · libreria · workspace · importa · esporta (ambito file/progetto). */}
-      <div className={`flex h-12 shrink-0 items-center gap-1 border-b border-editorial-border ${collapsed ? 'justify-center px-0' : 'flex-nowrap px-2'}`}>
+      <div className={`flex h-16 shrink-0 items-center gap-1.5 border-b border-editorial-border ${collapsed ? 'justify-center px-0' : 'flex-nowrap px-3'}`}>
         <IconButton
           size="md"
           tone="muted"
@@ -122,6 +122,7 @@ export function ProjectRailNext({
             onDryRun={onDryRun}
             onRetranslateChunk={onRetranslateChunk}
             showAuditOnly={false}
+            playFirst
           />
         </div>
       </div>
