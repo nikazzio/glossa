@@ -326,15 +326,16 @@ Regole:
 - Area nav: testi `workspace.areas.<id>.title` e `workspace.areas.<id>.sidebarHint`. Niente badge "Attiva".
 - Le aree future possono essere disabilitate ma mantengono forma e gerarchia.
 
-### Seconda barra (fly-out progetto)
+### Colonne progetto (shell #291)
 
-Nel progetto la barra primaria contiene la nav (`Run/Pipeline/Document/Insight/Chunk`) + back arrow in cima. I pannelli **inline** (Run, Pipeline, Document) vivono dentro la barra; i pannelli **ricchi** (Insight, Chunk, Config pipeline) escono in una **seconda barra push** (`ProjectFlyout`, `ConfigDrawer`) ancorata al bordo destro della barra, che spinge il documento. La larghezza è animata (`width 0 → N`), così l'apertura/chiusura è fluida e parte sempre dal bordo della barra.
+La vista progetto è a **tre colonne** (`ShellNext`, `react-resizable-panels`):
+- **Rail sinistro** (`ProjectRailNext`): azioni di progetto in cima (testata `h-20`) + selettore pipeline + comandi Esegui. Collassabile a icone.
+- **Centro**: documento (`DocumentView`).
+- **Ispettore destro** (`ProjectInspectorNext`, testata `h-20`): pannello collassabile con schede **Approfondimenti** (documento) e **Frammento** (chunk); si apre su `showDocumentDrawer`/`showChunkDrawer`.
 
-**Auto-collapse non distruttivo**: aprendo Insight/Chunk la barra primaria si comprime a icone, ma la preferenza manuale dell'utente è ricordata in `uiStore.projectContextUserExpanded`. Alla chiusura del fly-out (ritorno a un pannello inline) la barra ritorna allo stato scelto dall'utente. `setProjectContextCollapsed` registra la scelta come preferenza.
+Le tre testate condividono `h-20` → bordi superiori coincidenti. Larghezze e stato collassato sono persistiti in `uiStore` (`projectSidebarWidth`, `projectFlyoutWidth`, `projectContextCollapsed`/`projectContextUserExpanded`). `activeProjectPanel` (`run|pipeline|document|insight|chunk`) è la source-of-truth del rail. La **config pipeline** (`ConfigDrawer`) esce come **finestra modale**, non più come fly-out push/overlay. Dettagli in `ARCHITECTURE.md`.
 
-**Overlay su finestre strette**: sotto `FLYOUT_OVERLAY_BELOW` (1100px, `hooks/useViewportWidth.ts`) i fly-out passano da push a **overlay** (`position: absolute` con offset sinistro pari alla larghezza del rail + ombra), così il documento resta leggibile. Sopra soglia tornano push.
-
-**Caricamento documento**: `chunksStore.loadDocument` **non** apre il Chunk drawer (eviterebbe di spostare il layout di lettura); il pannello Chunk si apre solo su azione esplicita.
+**Caricamento documento**: `chunksStore.loadDocument` **non** apre il pannello Frammento (eviterebbe di spostare il layout di lettura); si apre solo su azione esplicita.
 
 ### Resize (drag + tastiera) — `useEdgeResize` + `ResizeHandle`
 

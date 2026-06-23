@@ -65,7 +65,7 @@
 
 | Componente | Responsabilità |
 |---|---|
-| `components/document/DocumentView.tsx` | Layout principale documento con barra navigazione fissa in alto (`h-16`): sinistra (indicatori stadi + minimap pallini frammenti), destra (frecce prev/next + contatore m/n). Due pannelli bianchi a filo (Originale/Candidata) con header titolo + separatore; controlli testo in menu unico a scomparsa (non barra sempre visibile) aperto da pulsante nell'header pagina. Shell nuova (#291). |
+| `components/document/DocumentView.tsx` | Layout principale documento con barra navigazione fissa in alto (`h-20`, allineata alle testate dei pannelli laterali): sinistra a due righe (indicatori stadi del frammento + minimap pallini frammenti), destra (frecce prev/next + contatore m/n). Due pannelli bianchi a filo (Originale/Candidata) con header titolo + separatore; controlli testo in menu unico a scomparsa (non barra sempre visibile) aperto da pulsante nell'header pagina. |
 | `components/layout/shell-next/ShellNext.tsx` | Layout tre colonne shell nuova (#291): `ProjectRailNext` sinistra (azioni + selettore pipeline + Esegui) · documento centro · `ProjectInspectorNext` destra (schede Approfondimenti/Frammento). Collasso e larghezze persistiti su uiStore. |
 | `components/layout/shell-next/ProjectRailNext.tsx` | Barra sinistra nuova: navigazione inline (Run/Pipeline/Document), azioni progetto, selettore pipeline, pulsante Esegui. Collasso riduce a icone. |
 | `components/layout/shell-next/ProjectInspectorNext.tsx` | Pannello destro collassabile: schede Approfondimenti (index/search/stats/glossary/coherence) e Frammento. |
