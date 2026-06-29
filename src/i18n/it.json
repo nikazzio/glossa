@@ -39,7 +39,9 @@
     "areaLabel": "Area",
     "workspaceSection": "Workspace",
     "backToWorkspace": "Torna al workspace",
-    "resize": "Ridimensiona la barra"
+    "resize": "Ridimensiona la barra",
+    "collapse": "Comprimi barra",
+    "expand": "Espandi barra"
   },
   "projectShell": {
     "railLabel": "Pannelli progetto",
@@ -198,6 +200,10 @@
     "auditSkippedNoDraft": "Nessuna traduzione da valutare — traduci prima questo blocco.",
     "chunkActions": "Azioni blocco",
     "retranslateChunk": "Riesegui blocco",
+    "workModeChunk": "Chunk",
+    "workModeAll": "Tutto",
+    "translateChunk": "Traduci chunk",
+    "executeAll": "Esegui tutto",
     "retrying": "Rate limit — riprovo tra {{seconds}}s ({{attempt}}/{{total}})",
     "reauditChunk": "Ri-valuta questo blocco",
     "prompt": "Prompt",
@@ -1503,10 +1509,20 @@
     "saveError": "Errore salvataggio",
     "sourceWords": "src",
     "targetWords": "tgt",
+    "chunkWords": "w",
+    "chunkWordsTooltip": "{{count}} parole",
     "coverage": "copertura",
     "chunks": "chunk",
     "running": "In esecuzione…",
     "completed": "Completata",
+    "error": "Errore",
+    "chunkProcessing": "in elaborazione…",
+    "quality": {
+      "strong": "Qualità buona",
+      "ok": "Qualità sufficiente",
+      "weak": "Qualità bassa",
+      "tooltipPrefix": "Qualità"
+    },
     "areaTranslations": "Traduzioni",
     "areaLibrary": "Biblioteca",
     "areaTranscriptions": "Trascrizioni",
@@ -1539,5 +1555,9 @@
   "workflow": {
     "translation": "Traduzione",
     "transcription": "Trascrizione"
+  },
+  "console": {
+    "toggle": "Console log",
+    "title": "Console"
   }
 }

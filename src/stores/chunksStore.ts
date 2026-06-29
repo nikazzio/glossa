@@ -201,7 +201,6 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
 
     const ui = useUiStore.getState();
     ui.setViewMode(chunks.length > 1 ? 'document' : 'sandbox');
-    if (chunks.length > 1) ui.setShowChunkDrawer(true);
     syncSelectedChunk(chunks);
     set({ chunks });
   },

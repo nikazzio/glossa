@@ -190,7 +190,7 @@ function ChunkAuditCard({
   resolvedKeys, rejectedKeys, onToggleResolved, onToggleRejected,
 }: ChunkAuditCardProps) {
   const { t } = useTranslation();
-  const { focusIssueInChunk, clearFocusedIssue, focusedIssueQuery, setSelectedChunkId, setViewMode, setPendingAnnotationAnchor, setShowChunkDrawer } = useUiStore();
+  const { focusIssueInChunk, clearFocusedIssue, focusedIssueQuery, setSelectedChunkId, setViewMode, setPendingAnnotationAnchor, setChunkRailTab } = useUiStore();
   const { judgeResult } = chunk;
   const isError = judgeResult.status === 'error';
   const issues = judgeResult.issues;
@@ -307,7 +307,7 @@ function ChunkAuditCard({
                               text: issue.phrase ?? '',
                               content: `[Audit] ${issue.description}`,
                             });
-                            setShowChunkDrawer(true, 'notes');
+                            setChunkRailTab('notes');
                           }}
                           title={t('annotations.createFromIssue')}
                           className="rounded-full border border-editorial-border p-1 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"

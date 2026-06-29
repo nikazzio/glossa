@@ -7,30 +7,27 @@ import {
   NotebookText,
   Search,
   ShieldCheck,
-  TerminalSquare,
   X,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { type KeyboardEvent, useEffect, useRef } from 'react';
-import { useUiStore, type InsightsDrawerTab, type ChunkDrawerTab } from '../../stores/uiStore';
+import { useUiStore, type InsightsDrawerTab, type ChunkRailTab } from '../../stores/uiStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { MemoryTab } from './MemoryTab';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunkWatchdog } from '../../hooks/useChunkWatchdog';
-import { OperationsTab } from './OperationsTab';
 import { SearchTab } from './SearchTab';
 import { IconButton } from '../ui';
 import { TabButton } from './tabs/TabButton';
 import { IndexTab } from './tabs/IndexTab';
 import { StatsTab } from './tabs/StatsTab';
-import { ChunkSummaryTab } from './tabs/ChunkSummaryTab';
 import { CoherenceTab } from './tabs/CoherenceTab';
 import { AuditTab } from './tabs/AuditTab';
 import { NotesTab } from './tabs/NotesTab';
 import { GlossaryTab } from './tabs/GlossaryTab';
 
 const DOC_TAB_ORDER: InsightsDrawerTab[] = ['index', 'search', 'stats', 'coherence', 'glossary'];
-const CHUNK_TAB_ORDER: ChunkDrawerTab[] = ['audit', 'notes', 'operations', 'memory', 'summary'];
+const CHUNK_RAIL_TAB_ORDER: ChunkRailTab[] = ['audit', 'notes', 'memory'];
 
 const DOC_TAB_BUTTON_IDS: Record<InsightsDrawerTab, string> = {
   index: 'insights-tab-button-index',
@@ -48,20 +45,16 @@ const DOC_TAB_PANEL_IDS: Record<InsightsDrawerTab, string> = {
   glossary: 'insights-tab-panel-glossary',
 };
 
-const CHUNK_TAB_BUTTON_IDS: Record<ChunkDrawerTab, string> = {
-  summary: 'chunk-tab-button-summary',
-  audit: 'chunk-tab-button-audit',
-  notes: 'chunk-tab-button-notes',
-  operations: 'chunk-tab-button-operations',
-  memory: 'chunk-tab-button-memory',
+const CHUNK_RAIL_TAB_BUTTON_IDS: Record<ChunkRailTab, string> = {
+  audit: 'chunk-rail-tab-button-audit',
+  notes: 'chunk-rail-tab-button-notes',
+  memory: 'chunk-rail-tab-button-memory',
 };
 
-const CHUNK_TAB_PANEL_IDS: Record<ChunkDrawerTab, string> = {
-  summary: 'chunk-tab-panel-summary',
-  audit: 'chunk-tab-panel-audit',
-  notes: 'chunk-tab-panel-notes',
-  operations: 'chunk-tab-panel-operations',
-  memory: 'chunk-tab-panel-memory',
+const CHUNK_RAIL_TAB_PANEL_IDS: Record<ChunkRailTab, string> = {
+  audit: 'chunk-rail-tab-panel-audit',
+  notes: 'chunk-rail-tab-panel-notes',
+  memory: 'chunk-rail-tab-panel-memory',
 };
 
 /** Stato condiviso letto da entrambi i pannelli del fly-out. */
@@ -97,56 +90,51 @@ function FlyoutHeader({ title, onClose }: FlyoutHeaderProps) {
   );
 }
 
-// ── Chunk inspector ────────────────────────────────────────────────────
+// ── Chunk inspector (rail sinistra — embedded, senza close) ───────────
 
 interface ChunkInspectorPanelProps {
   onReauditChunk: (chunkId: string) => void;
-  onClose: () => void;
 }
 
-export function ChunkInspectorPanel({ onReauditChunk, onClose }: ChunkInspectorPanelProps) {
+export function ChunkInspectorPanel({ onReauditChunk }: ChunkInspectorPanelProps) {
   const { t } = useTranslation();
-  const chunkDrawerTab = useUiStore((state) => state.chunkDrawerTab);
-  const setChunkDrawerTab = useUiStore((state) => state.setChunkDrawerTab);
+  const chunkRailTab = useUiStore((state) => state.chunkRailTab);
+  const setChunkRailTab = useUiStore((state) => state.setChunkRailTab);
   const setSelectedChunkId = useUiStore((state) => state.setSelectedChunkId);
   const focusIssueInChunk = useUiStore((state) => state.focusIssueInChunk);
   const clearFocusedIssue = useUiStore((state) => state.clearFocusedIssue);
   const { chunks, isProcessing, currentChunk, currentChunkIndex } = useInsightData();
 
-  const tabButtonRefs = useRef<Partial<Record<ChunkDrawerTab, HTMLButtonElement | null>>>({});
+  const tabButtonRefs = useRef<Partial<Record<ChunkRailTab, HTMLButtonElement | null>>>({});
 
   useEffect(() => {
     clearFocusedIssue();
-  }, [chunkDrawerTab, currentChunk?.id, clearFocusedIssue]);
+  }, [chunkRailTab, currentChunk?.id, clearFocusedIssue]);
 
-  const CHUNK_TAB_ICON: Record<ChunkDrawerTab, React.ReactNode> = {
-    summary: <BarChart2 size={16} />,
+  const CHUNK_RAIL_TAB_ICON: Record<ChunkRailTab, React.ReactNode> = {
     audit: <ShieldCheck size={16} />,
     notes: <NotebookText size={16} />,
-    operations: <TerminalSquare size={16} />,
     memory: <Brain size={16} />,
   };
-  const CHUNK_TAB_LABEL: Record<ChunkDrawerTab, string> = {
-    summary: t('document.insightsTabSummary'),
+  const CHUNK_RAIL_TAB_LABEL: Record<ChunkRailTab, string> = {
     audit: t('document.insightsTabAudit'),
     notes: t('document.insightsTabNotes'),
-    operations: t('document.insightsTabOperations'),
     memory: t('document.insightsTabMemory'),
   };
 
-  const activateTab = (tab: ChunkDrawerTab) => {
-    setChunkDrawerTab(tab);
+  const activateTab = (tab: ChunkRailTab) => {
+    setChunkRailTab(tab);
     tabButtonRefs.current[tab]?.focus();
   };
-  const handleTabKeyDown = (tab: ChunkDrawerTab, event: KeyboardEvent<HTMLButtonElement>) => {
-    const idx = CHUNK_TAB_ORDER.indexOf(tab);
-    let next: ChunkDrawerTab | null = null;
+  const handleTabKeyDown = (tab: ChunkRailTab, event: KeyboardEvent<HTMLButtonElement>) => {
+    const idx = CHUNK_RAIL_TAB_ORDER.indexOf(tab);
+    let next: ChunkRailTab | null = null;
     if (event.key === 'ArrowLeft' || event.key === 'ArrowUp')
-      next = CHUNK_TAB_ORDER[(idx - 1 + CHUNK_TAB_ORDER.length) % CHUNK_TAB_ORDER.length];
+      next = CHUNK_RAIL_TAB_ORDER[(idx - 1 + CHUNK_RAIL_TAB_ORDER.length) % CHUNK_RAIL_TAB_ORDER.length];
     else if (event.key === 'ArrowRight' || event.key === 'ArrowDown')
-      next = CHUNK_TAB_ORDER[(idx + 1) % CHUNK_TAB_ORDER.length];
-    else if (event.key === 'Home') next = CHUNK_TAB_ORDER[0];
-    else if (event.key === 'End') next = CHUNK_TAB_ORDER[CHUNK_TAB_ORDER.length - 1];
+      next = CHUNK_RAIL_TAB_ORDER[(idx + 1) % CHUNK_RAIL_TAB_ORDER.length];
+    else if (event.key === 'Home') next = CHUNK_RAIL_TAB_ORDER[0];
+    else if (event.key === 'End') next = CHUNK_RAIL_TAB_ORDER[CHUNK_RAIL_TAB_ORDER.length - 1];
     if (next) { event.preventDefault(); activateTab(next); }
   };
 
@@ -155,65 +143,49 @@ export function ChunkInspectorPanel({ onReauditChunk, onClose }: ChunkInspectorP
     : t('document.chunkPanelTitle');
 
   return (
-    <div className="flex h-full flex-col" role="region" aria-label={chunkLabel}>
-      <FlyoutHeader title={chunkLabel} onClose={onClose} />
-
-      <div className="flex items-center gap-2 border-b border-editorial-border bg-editorial-bg/60 px-4 py-2">
+    <div className="flex flex-col" role="region" aria-label={chunkLabel}>
+      <div className="flex items-center gap-2 border-b border-editorial-border bg-editorial-bg/60 px-3 py-2">
         <div role="tablist" aria-orientation="horizontal" aria-label={chunkLabel} className="flex gap-1">
-          {CHUNK_TAB_ORDER.map((tab) => (
+          {CHUNK_RAIL_TAB_ORDER.map((tab) => (
             <TabButton
               key={tab}
-              buttonId={CHUNK_TAB_BUTTON_IDS[tab]}
-              active={chunkDrawerTab === tab}
+              buttonId={CHUNK_RAIL_TAB_BUTTON_IDS[tab]}
+              active={chunkRailTab === tab}
               onClick={() => activateTab(tab)}
               onKeyDown={(e) => handleTabKeyDown(tab, e)}
-              label={CHUNK_TAB_LABEL[tab]}
-              icon={CHUNK_TAB_ICON[tab]}
-              controls={CHUNK_TAB_PANEL_IDS[tab]}
+              label={CHUNK_RAIL_TAB_LABEL[tab]}
+              icon={CHUNK_RAIL_TAB_ICON[tab]}
+              controls={CHUNK_RAIL_TAB_PANEL_IDS[tab]}
               buttonRef={(el) => { tabButtonRefs.current[tab] = el; }}
             />
           ))}
         </div>
         <span className="mx-1 h-4 w-px bg-editorial-border/70" aria-hidden="true" />
-        <span className="font-display text-sm italic text-editorial-ink">{CHUNK_TAB_LABEL[chunkDrawerTab]}</span>
+        <span className="font-display text-sm italic text-editorial-ink">{CHUNK_RAIL_TAB_LABEL[chunkRailTab]}</span>
       </div>
 
-      <div className={`flex flex-1 flex-col overflow-y-auto custom-scrollbar ${chunkDrawerTab === 'operations' ? 'bg-black' : 'bg-editorial-bg/40'}`}>
-        {chunkDrawerTab === 'audit' ? (
+      <div className="flex flex-col overflow-y-auto bg-editorial-bg/40 custom-scrollbar">
+        {chunkRailTab === 'audit' ? (
           <AuditTab
-            panelId={CHUNK_TAB_PANEL_IDS.audit}
-            labelledBy={CHUNK_TAB_BUTTON_IDS.audit}
+            panelId={CHUNK_RAIL_TAB_PANEL_IDS.audit}
+            labelledBy={CHUNK_RAIL_TAB_BUTTON_IDS.audit}
             currentChunk={currentChunk}
             isProcessing={isProcessing}
             onReauditChunk={onReauditChunk}
             onSelectChunk={setSelectedChunkId}
             onFocusIssue={focusIssueInChunk}
           />
-        ) : chunkDrawerTab === 'notes' ? (
+        ) : chunkRailTab === 'notes' ? (
           <NotesTab
-            panelId={CHUNK_TAB_PANEL_IDS.notes}
-            labelledBy={CHUNK_TAB_BUTTON_IDS.notes}
-            currentChunk={currentChunk}
-          />
-        ) : chunkDrawerTab === 'memory' ? (
-          <MemoryTab
-            panelId={CHUNK_TAB_PANEL_IDS.memory}
-            labelledBy={CHUNK_TAB_BUTTON_IDS.memory}
-            currentChunkId={currentChunk?.id ?? null}
-          />
-        ) : chunkDrawerTab === 'summary' ? (
-          <ChunkSummaryTab
-            panelId={CHUNK_TAB_PANEL_IDS.summary}
-            labelledBy={CHUNK_TAB_BUTTON_IDS.summary}
+            panelId={CHUNK_RAIL_TAB_PANEL_IDS.notes}
+            labelledBy={CHUNK_RAIL_TAB_BUTTON_IDS.notes}
             currentChunk={currentChunk}
           />
         ) : (
-          <OperationsTab
-            panelId={CHUNK_TAB_PANEL_IDS.operations}
-            labelledBy={CHUNK_TAB_BUTTON_IDS.operations}
+          <MemoryTab
+            panelId={CHUNK_RAIL_TAB_PANEL_IDS.memory}
+            labelledBy={CHUNK_RAIL_TAB_BUTTON_IDS.memory}
             currentChunkId={currentChunk?.id ?? null}
-            chunks={chunks}
-            onSelectChunk={setSelectedChunkId}
           />
         )}
       </div>

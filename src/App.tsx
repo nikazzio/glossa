@@ -339,9 +339,7 @@ function EditorView() {
           <main className="relative flex flex-1 min-h-0 overflow-hidden">
             <ShellNext
               onRunPipeline={runPipeline}
-              onRunAuditOnly={runAuditOnly}
               onCancelPipeline={cancelPipeline}
-              onDryRun={runDryRun}
               onRetranslateChunk={handleRetranslateChunk}
               onImportDocument={handleImportDocument}
               onOpenWorkspaceSettings={() => setShowWorkspaceSettings(true)}

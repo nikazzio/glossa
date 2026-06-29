@@ -1,13 +1,22 @@
-import { Columns2, Link2, Link2Off, Loader2, PanelLeft, PanelRight } from 'lucide-react';
+import { CheckCircle2, AlertCircle, MinusCircle, Columns2, Link2, Link2Off, Loader2, PanelLeft, PanelRight, Terminal, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useStatusBarData } from '../../hooks/useStatusBarData';
 import { useUiStore } from '../../stores/uiStore';
+import { useChunksStore } from '../../stores/chunksStore';
 import { IconButton, Tooltip } from '../ui';
+import { countWords, qualityLabelKey, qualityTone } from '../../utils';
+import { OperationsTab } from '../document/OperationsTab';
 
 const AREA_KEY: Record<string, string> = {
   translations: 'statusBar.areaTranslations',
   library: 'statusBar.areaLibrary',
   transcriptions: 'statusBar.areaTranscriptions',
+};
+
+const QUALITY_ICON = {
+  strong: <CheckCircle2 size={11} className="text-editorial-success" />,
+  ok: <MinusCircle size={11} className="text-editorial-warning" />,
+  weak: <AlertCircle size={11} className="text-editorial-accent" />,
 };
 
 function SaveIndicator({ state }: { state: 'idle' | 'dirty' | 'saving' | 'saved' | 'error' }) {
@@ -46,31 +55,129 @@ function SaveIndicator({ state }: { state: 'idle' | 'dirty' | 'saving' | 'saved'
   );
 }
 
+function ConsoleDrawer() {
+  const { t } = useTranslation();
+  const chunks = useChunksStore((s) => s.chunks);
+  const selectedChunkId = useUiStore((s) => s.selectedChunkId);
+  const setShowConsoleDrawer = useUiStore((s) => s.setShowConsoleDrawer);
+  const setSelectedChunkId = useUiStore((s) => s.setSelectedChunkId);
+
+  return (
+    <div className="absolute bottom-full left-0 right-0 z-50 flex h-64 flex-col border-t border-editorial-border bg-black shadow-lg">
+      <div className="flex shrink-0 items-center justify-between border-b border-editorial-border/30 px-3 py-1.5">
+        <span className="flex items-center gap-1.5 text-xs font-medium text-terminal-info">
+          <Terminal size={11} />
+          {t('console.title')}
+        </span>
+        <IconButton
+          size="xs"
+          tone="muted"
+          onClick={() => setShowConsoleDrawer(false)}
+          title={t('common.close')}
+          tooltipSide="top"
+        >
+          <X size={11} />
+        </IconButton>
+      </div>
+      <div className="min-h-0 flex-1 overflow-hidden">
+        <OperationsTab
+          panelId="console-drawer-panel"
+          labelledBy="console-drawer-label"
+          currentChunkId={selectedChunkId}
+          chunks={chunks}
+          onSelectChunk={setSelectedChunkId}
+        />
+      </div>
+    </div>
+  );
+}
+
+function ChunkCenterStats() {
+  const { t } = useTranslation();
+  const chunks = useChunksStore((s) => s.chunks);
+  const isProcessing = useChunksStore((s) => s.isProcessing);
+  const selectedChunkId = useUiStore((s) => s.selectedChunkId);
+
+  const chunk = chunks.find((c) => c.id === selectedChunkId) ?? chunks[0] ?? null;
+  const chunkIndex = chunk ? chunks.findIndex((c) => c.id === chunk.id) : -1;
+
+  if (!chunk || chunkIndex < 0) return null;
+
+  const wordCount = countWords(chunk.originalText ?? '');
+  const chunkNum = chunkIndex + 1;
+  const processing = isProcessing && chunk.status === 'processing';
+
+  if (processing) {
+    return (
+      <span className="flex items-center gap-1.5 text-editorial-warning">
+        <span className="font-display italic">§ {chunkNum}</span>
+        <span className="text-editorial-border">·</span>
+        <Loader2 size={10} className="animate-spin" />
+        <span>{t('statusBar.chunkProcessing')}</span>
+      </span>
+    );
+  }
+
+  const tone = qualityTone(chunk.judgeResult?.rating ?? null);
+  const qualityIcon = QUALITY_ICON[tone];
+  const statusLabel = chunk.status === 'completed'
+    ? t('statusBar.completed')
+    : chunk.status === 'error'
+      ? t('statusBar.error')
+      : null;
+
+  return (
+    <span className="flex items-center gap-1.5">
+      <span className="font-display italic">§ {chunkNum}</span>
+      <span className="text-editorial-border">·</span>
+      <Tooltip label={t('statusBar.chunkWordsTooltip', { count: wordCount.toLocaleString() })} side="top">
+        <span>{wordCount.toLocaleString()} {t('statusBar.chunkWords')}</span>
+      </Tooltip>
+      {chunk.judgeResult?.rating && (
+        <>
+          <span className="text-editorial-border">·</span>
+          <Tooltip label={`${t('statusBar.quality.tooltipPrefix')} ${t(qualityLabelKey(chunk.judgeResult.rating)).toLowerCase()}`} side="top">
+            <span className="flex items-center">{qualityIcon}</span>
+          </Tooltip>
+        </>
+      )}
+      {statusLabel && (
+        <>
+          <span className="text-editorial-border">·</span>
+          <span className={chunk.status === 'completed' ? 'text-editorial-success' : 'text-editorial-accent'}>
+            {statusLabel}
+          </span>
+        </>
+      )}
+    </span>
+  );
+}
+
 export function AppStatusBar() {
   const { t } = useTranslation();
   const data = useStatusBarData();
-  // Shell nuova (#291): lo scorrimento agganciato — quasi sempre attivo — vive qui
-  // come interruttore discreto, non più nella barra alto del documento.
   const syncScrollEnabled = useUiStore((state) => state.syncScrollEnabled);
   const setSyncScrollEnabled = useUiStore((state) => state.setSyncScrollEnabled);
   const documentPaneFocus = useUiStore((state) => state.documentPaneFocus);
   const setDocumentPaneFocus = useUiStore((state) => state.setDocumentPaneFocus);
+  const showConsoleDrawer = useUiStore((state) => state.showConsoleDrawer);
+  const setShowConsoleDrawer = useUiStore((state) => state.setShowConsoleDrawer);
 
   if (data.kind === 'idle') return null;
 
-  // I controlli di vista del documento (fuoco pannelli + scroll agganciato) sono una
-  // pulsantiera icone qui in basso, non nella barra alto del documento.
   const showPaneControls = data.kind === 'project' && data.totalChunks > 0;
   const syncDisabled = documentPaneFocus !== 'both';
   const syncOn = syncScrollEnabled && !syncDisabled;
 
   return (
+    <div className="relative shrink-0">
+      {showConsoleDrawer && data.kind === 'project' && <ConsoleDrawer />}
     <div
       role="status"
       aria-live="polite"
-      className="flex h-8 shrink-0 items-center justify-between gap-4 border-t border-editorial-border/60 bg-editorial-bg px-4 text-xs text-editorial-muted"
+      className="flex h-8 items-center justify-between gap-4 border-t border-editorial-border/60 bg-editorial-bg px-4 text-xs text-editorial-muted"
     >
-      {/* Left: context breadcrumb */}
+      {/* Left: pannello attivo */}
       <div className="flex min-w-0 items-center gap-2 overflow-hidden">
         {data.kind === 'workspace' && (
           <>
@@ -86,66 +193,37 @@ export function AppStatusBar() {
             <span>{t('workspace.projectsMetric', { count: data.projectCount })}</span>
           </>
         )}
-        {data.kind === 'project' && (
-          <>
-            <span className="truncate font-medium text-editorial-ink">{data.projectName}</span>
-            {data.pipelineName ? (
-              <>
-                <span className="text-editorial-border">/</span>
-                <span className="truncate">{data.pipelineName}</span>
-              </>
-            ) : null}
-            {data.activePanel ? (
-              <>
-                <span className="text-editorial-border">·</span>
-                <span className="text-editorial-accent">
-                  {t(`statusBar.panel.${data.activePanel}`)}
-                  {data.panelSubTab ? ` / ${t(`statusBar.panelTab.${data.panelSubTab}`)}` : ''}
-                </span>
-              </>
-            ) : null}
-          </>
+        {data.kind === 'project' && data.activePanel && (
+          <span className="text-editorial-accent">
+            {t(`statusBar.panel.${data.activePanel}`)}
+          </span>
         )}
       </div>
 
-      {/* Center: stats (project only) */}
-      {data.kind === 'project' && (
-        <div className="hidden items-center gap-3 sm:flex">
-          {data.runStatus === 'running' ? (
-            <Tooltip label={t('statusBar.tooltip.chunksProgress')} side="top">
-              <span className="flex items-center gap-1.5 text-editorial-warning">
-                <Loader2 size={10} className="animate-spin" />
-                {t('statusBar.running')} {data.completedChunks}/{data.totalChunks} {t('statusBar.chunks')}
-              </span>
-            </Tooltip>
-          ) : data.totalChunks > 0 ? (
-            <>
-              <Tooltip label={t('statusBar.tooltip.sourceWords')} side="top">
-                <span>{data.sourceWords.toLocaleString()} {t('statusBar.sourceWords')}</span>
-              </Tooltip>
-              <span className="text-editorial-border">·</span>
-              <Tooltip label={t('statusBar.tooltip.targetWords')} side="top">
-                <span>{data.targetWords.toLocaleString()} {t('statusBar.targetWords')}</span>
-              </Tooltip>
-              <span className="text-editorial-border">·</span>
-              <Tooltip label={t('statusBar.tooltip.coverage')} side="top">
-                <span>{data.coveragePct}% {t('statusBar.coverage')}</span>
-              </Tooltip>
-              {data.runStatus === 'completed' && (
-                <>
-                  <span className="text-editorial-border">·</span>
-                  <span className="text-editorial-success">{t('statusBar.completed')}</span>
-                </>
-              )}
-            </>
-          ) : null}
+      {/* Center: stats chunk corrente */}
+      {data.kind === 'project' && data.totalChunks > 0 && (
+        <div className="hidden items-center sm:flex">
+          <ChunkCenterStats />
         </div>
       )}
 
-      {/* Right: controlli di vista documento (shell nuova) + indicatore salvataggio */}
+      {/* Right: console toggle + controlli vista + salvataggio */}
       <div className="flex shrink-0 items-center gap-2">
+        {data.kind === 'project' && (
+          <IconButton
+            size="xs"
+            tone={showConsoleDrawer ? 'accent' : 'default'}
+            onClick={() => setShowConsoleDrawer(!showConsoleDrawer)}
+            title={t('console.toggle')}
+            ariaPressed={showConsoleDrawer}
+            tooltipSide="top"
+          >
+            <Terminal size={11} />
+          </IconButton>
+        )}
         {showPaneControls ? (
           <>
+            <span className="h-3.5 w-px bg-editorial-border/60" aria-hidden="true" />
             <div className="flex items-center gap-1">
               <IconButton
                 size="xs"
@@ -190,13 +268,16 @@ export function AppStatusBar() {
                 {syncOn ? <Link2 size={11} /> : <Link2Off size={11} />}
               </IconButton>
             </div>
-            {data.kind === 'project' && (
-              <span className="h-3.5 w-px bg-editorial-border/60" aria-hidden="true" />
-            )}
           </>
         ) : null}
-        {data.kind === 'project' && <SaveIndicator state={data.saveState} />}
+        {data.kind === 'project' && (
+          <>
+            <span className="h-3.5 w-px bg-editorial-border/60" aria-hidden="true" />
+            <SaveIndicator state={data.saveState} />
+          </>
+        )}
       </div>
+    </div>
     </div>
   );
 }

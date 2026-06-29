@@ -208,7 +208,7 @@ export function DocumentView({
     focusedIssueQuery,
     focusedSourceIssueQuery,
     focusedIssueRequestId,
-    setShowChunkDrawer,
+    setChunkRailTab,
     setPendingAnnotationAnchor,
     documentFontSize,
     setDocumentPaneFocus,
@@ -704,7 +704,7 @@ export function DocumentView({
           y={annotationMenu.y}
           onAddAnnotation={() => {
             setPendingAnnotationAnchor({ chunkId: annotationMenu.chunkId, text: annotationMenu.text });
-            setShowChunkDrawer(true, 'notes');
+            setChunkRailTab('notes');
           }}
           onClose={() => setAnnotationMenu(null)}
         />

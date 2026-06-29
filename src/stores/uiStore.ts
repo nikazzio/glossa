@@ -8,6 +8,7 @@ import type {
 export type { RunPhase } from './configStore';
 export type InsightsDrawerTab = 'index' | 'search' | 'stats' | 'coherence' | 'glossary';
 export type ChunkDrawerTab = 'summary' | 'audit' | 'notes' | 'operations' | 'memory';
+export type ChunkRailTab = 'audit' | 'notes' | 'memory';
 export type DocumentPaneFocus = 'both' | 'source' | 'translation';
 export type HelpSection = 'overview' | 'pipeline' | 'features' | 'context' | 'audit' | 'projects' | 'providers' | 'ollama' | 'glossary' | 'shortcuts' | 'troubleshooting' | 'design';
 export type ActivePanel = 'config' | 'insights' | 'chunk' | 'settings' | 'help' | null;
@@ -74,6 +75,12 @@ interface UiState {
   documentDrawerTab: InsightsDrawerTab;
   showChunkDrawer: boolean;
   chunkDrawerTab: ChunkDrawerTab;
+  /** Shell nuova: pannello Insight destro espanso (sostituisce showDocumentDrawer || showChunkDrawer). */
+  showInsightPanel: boolean;
+  /** Shell nuova: tab attiva nel pannello Frammento embedded nella rail sinistra. */
+  chunkRailTab: ChunkRailTab;
+  /** Log operazioni (console) espanso come drawer sopra la barra di stato. */
+  showConsoleDrawer: boolean;
   highlightsEnabled: boolean;
   highlightColors: { light: HLColorSet; dark: HLColorSet };
   searchQuery: string;
@@ -117,6 +124,9 @@ interface UiState {
   setDocumentDrawerTab: (tab: InsightsDrawerTab) => void;
   setShowChunkDrawer: (show: boolean, tab?: ChunkDrawerTab) => void;
   setChunkDrawerTab: (tab: ChunkDrawerTab) => void;
+  setShowInsightPanel: (show: boolean) => void;
+  setChunkRailTab: (tab: ChunkRailTab) => void;
+  setShowConsoleDrawer: (show: boolean) => void;
   setHighlightsEnabled: (enabled: boolean) => void;
   setHighlightColor: (mode: 'light' | 'dark', type: keyof HLColorSet, color: string) => void;
   setSearchQuery: (query: string) => void;
@@ -157,6 +167,9 @@ export const useUiStore = create<UiState>()(
       documentDrawerTab: 'index',
       showChunkDrawer: false,
       chunkDrawerTab: 'summary',
+      showInsightPanel: false,
+      chunkRailTab: 'audit',
+      showConsoleDrawer: false,
       highlightsEnabled: true,
       highlightColors: { light: { ...HL_COLORS_LIGHT }, dark: { ...HL_COLORS_DARK } },
       searchQuery: '',
@@ -278,6 +291,9 @@ export const useUiStore = create<UiState>()(
             : { showChunkDrawer: false, activePanel: null, projectContextCollapsed: !state.projectContextUserExpanded },
         ),
       setChunkDrawerTab: (tab) => set({ chunkDrawerTab: tab }),
+      setShowInsightPanel: (show) => set({ showInsightPanel: show }),
+      setChunkRailTab: (tab) => set({ chunkRailTab: tab }),
+      setShowConsoleDrawer: (show) => set({ showConsoleDrawer: show }),
       setHighlightsEnabled: (enabled) => set({ highlightsEnabled: enabled }),
       setHighlightColor: (mode, type, color) =>
         set((state) => ({

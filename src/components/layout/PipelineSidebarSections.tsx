@@ -162,6 +162,8 @@ export function PipelineSidebarRunSection({
   const setPipelineMode = useConfigStore((state) => state.setPipelineMode);
   const pipelineTestChunkCount = useConfigStore((state) => state.pipelineTestChunkCount);
   const setPipelineTestChunkCount = useConfigStore((state) => state.setPipelineTestChunkCount);
+  const workMode = useConfigStore((state) => state.workMode);
+  const setWorkMode = useConfigStore((state) => state.setWorkMode);
   const pricingOverrides = usePricingStore((state) => state.overrides);
   const selectedChunkId = useUiStore((state) => state.selectedChunkId);
   const isProcessing = useChunksStore((state) => state.isProcessing);
@@ -225,6 +227,36 @@ export function PipelineSidebarRunSection({
   }, []);
 
   if (collapsed) {
+    if (playFirst) {
+      return (
+        <div className="flex flex-col items-center gap-2 px-1 pt-1">
+          {isProcessing ? (
+            cancelRequested ? (
+              <IconButton size="md" tone="muted" disabled title={t('pipeline.stopping')} tooltipSide="right" className="h-9 w-9 opacity-50">
+                <Loader2 size={15} className="animate-spin" />
+              </IconButton>
+            ) : (
+              <IconButton size="md" tone="default" onClick={onCancelPipeline} title={t('pipeline.stopPipeline')} tooltipSide="right" className="h-9 w-9 border-editorial-accent bg-editorial-bg text-editorial-accent hover:bg-editorial-accent/10">
+                <Square size={14} fill="currentColor" />
+              </IconButton>
+            )
+          ) : workMode === 'chunk' ? (
+            <IconButton size="md" tone="charcoal" onClick={() => currentChunk && onRetranslateChunk?.(currentChunk.id)} disabled={!currentChunk || !currentChunk.hasOriginalText} title={t('pipeline.translateChunk')} tooltipSide="right" className="h-9 w-9">
+              <RotateCcw size={13} />
+            </IconButton>
+          ) : (
+            <IconButton size="md" tone="charcoal" onClick={onRunPipeline} disabled={!hasDocument} title={t('pipeline.executeAll')} tooltipSide="right" className="h-9 w-9">
+              <Play size={15} fill="currentColor" />
+            </IconButton>
+          )}
+          {workMode === 'all' && hasDocument && (
+            <span className="text-[10px] font-bold tabular-nums tracking-[0.1em] text-editorial-muted">
+              {completedCount}/{totalChunks}
+            </span>
+          )}
+        </div>
+      );
+    }
     return (
       <div className="flex flex-col items-center gap-3 px-1 pt-1">
         <div className="flex flex-col items-center gap-1">
@@ -271,11 +303,90 @@ export function PipelineSidebarRunSection({
     );
   }
 
+  if (playFirst) {
+    const chunkLabel = currentChunk
+      ? `§ ${(useChunksStore.getState().chunks.findIndex((c) => c.id === currentChunk.id) + 1)}`
+      : null;
+
+    return (
+      <div className="px-3">
+        <div className="flex flex-col gap-3">
+          {/* Switch Chunk / Tutto */}
+          <div className="flex overflow-hidden rounded-full border border-editorial-border">
+            <button
+              onClick={() => setWorkMode('chunk')}
+              disabled={isProcessing}
+              className={`flex-1 py-1.5 text-xs font-semibold transition-colors ${workMode === 'chunk' ? 'bg-editorial-charcoal text-white' : 'bg-editorial-bg text-editorial-muted hover:text-editorial-ink'}`}
+            >
+              {t('pipeline.workModeChunk')}
+            </button>
+            <button
+              onClick={() => setWorkMode('all')}
+              disabled={isProcessing}
+              className={`flex-1 py-1.5 text-xs font-semibold transition-colors ${workMode === 'all' ? 'bg-editorial-charcoal text-white' : 'bg-editorial-bg text-editorial-muted hover:text-editorial-ink'}`}
+            >
+              {t('pipeline.workModeAll')}
+            </button>
+          </div>
+
+          {workMode === 'chunk' ? (
+            <div className="flex flex-col gap-2">
+              {chunkLabel && (
+                <span className="font-display text-xs italic text-editorial-muted">{chunkLabel}</span>
+              )}
+              <button
+                onClick={() => currentChunk && onRetranslateChunk?.(currentChunk.id)}
+                disabled={isProcessing || !currentChunk || !currentChunk.hasOriginalText}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-editorial-charcoal bg-editorial-charcoal px-3 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-editorial-charcoal/85 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <RotateCcw size={13} />
+                {t('pipeline.translateChunk')}
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-2">
+              {isProcessing ? (
+                cancelRequested ? (
+                  <button disabled className="flex w-full items-center justify-center gap-2 rounded-lg border border-editorial-border bg-editorial-bg px-3 py-2.5 text-sm font-semibold text-editorial-muted opacity-50">
+                    <Loader2 size={13} className="animate-spin" />
+                    {t('pipeline.stopping')}
+                  </button>
+                ) : (
+                  <button
+                    onClick={onCancelPipeline}
+                    className="flex w-full items-center justify-center gap-2 rounded-lg border border-editorial-accent bg-editorial-bg px-3 py-2.5 text-sm font-semibold text-editorial-accent transition-colors hover:bg-editorial-accent/10"
+                  >
+                    <Square size={13} fill="currentColor" />
+                    {t('pipeline.stopPipeline')}
+                  </button>
+                )
+              ) : (
+                <button
+                  onClick={onRunPipeline}
+                  disabled={!hasDocument}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-editorial-charcoal bg-editorial-charcoal px-3 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-editorial-charcoal/85 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Play size={13} fill="currentColor" />
+                  {t('pipeline.executeAll')}
+                </button>
+              )}
+              {hasDocument && (
+                <span className="text-xs font-bold tabular-nums tracking-[0.12em] text-editorial-muted">
+                  {completedCount} / {totalChunks}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="px-2.5">
       <SidebarSectionShell>
         <div className="flex flex-col gap-4">
-          <div className={`flex flex-col items-center gap-2 ${playFirst ? 'order-2 mt-1 w-full border-t border-editorial-border/40 pt-4' : ''}`}>
+          <div className="flex flex-col items-center gap-2">
             <SectionLabel icon={FlaskConical} label={t('pipeline.modeLabel')} />
             <div className="flex items-center justify-center gap-2">
               <IconButton

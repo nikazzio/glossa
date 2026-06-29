@@ -27,7 +27,7 @@ export function IssueList({ issues, chunkId, onSelectChunk, onFocusIssue, resolv
   const focusedIssueQuery = useUiStore((s) => s.focusedIssueQuery);
   const clearFocusedIssue = useUiStore((s) => s.clearFocusedIssue);
   const setPendingAnnotationAnchor = useUiStore((s) => s.setPendingAnnotationAnchor);
-  const setShowChunkDrawer = useUiStore((s) => s.setShowChunkDrawer);
+  const setChunkRailTab = useUiStore((s) => s.setChunkRailTab);
   return (
     <div className="mt-4 space-y-3">
       {issues.map((issue, index) => {
@@ -77,7 +77,7 @@ export function IssueList({ issues, chunkId, onSelectChunk, onFocusIssue, resolv
                       text: issue.phrase ?? '',
                       content: `[Audit] ${issue.description}`,
                     });
-                    setShowChunkDrawer(true, 'notes');
+                    setChunkRailTab('notes');
                   }}
                   title={t('annotations.createFromIssue')}
                 >

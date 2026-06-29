@@ -39,7 +39,9 @@
     "areaLabel": "Area",
     "workspaceSection": "Workspace",
     "backToWorkspace": "Back to workspace",
-    "resize": "Resize sidebar"
+    "resize": "Resize sidebar",
+    "collapse": "Collapse sidebar",
+    "expand": "Expand sidebar"
   },
   "projectShell": {
     "railLabel": "Project panels",
@@ -198,6 +200,10 @@
     "auditSkippedNoDraft": "Nothing to audit yet — translate this chunk first.",
     "chunkActions": "Chunk actions",
     "retranslateChunk": "Re-run chunk",
+    "workModeChunk": "Chunk",
+    "workModeAll": "All",
+    "translateChunk": "Translate chunk",
+    "executeAll": "Run all",
     "retrying": "Rate limit — retry in {{seconds}}s ({{attempt}}/{{total}})",
     "reauditChunk": "Re-audit this chunk",
     "prompt": "Prompt",
@@ -1503,10 +1509,20 @@
     "saveError": "Save error",
     "sourceWords": "src",
     "targetWords": "tgt",
+    "chunkWords": "w",
+    "chunkWordsTooltip": "{{count}} words",
     "coverage": "coverage",
     "chunks": "chunks",
     "running": "Running…",
     "completed": "Completed",
+    "error": "Error",
+    "chunkProcessing": "processing…",
+    "quality": {
+      "strong": "Good quality",
+      "ok": "Fair quality",
+      "weak": "Low quality",
+      "tooltipPrefix": "Quality"
+    },
     "areaTranslations": "Translations",
     "areaLibrary": "Library",
     "areaTranscriptions": "Transcriptions",
@@ -1539,5 +1555,9 @@
   "workflow": {
     "translation": "Translation",
     "transcription": "Transcription"
+  },
+  "console": {
+    "toggle": "Console log",
+    "title": "Console"
   }
 }

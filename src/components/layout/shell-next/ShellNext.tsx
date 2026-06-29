@@ -27,13 +27,11 @@ type RailForwardedProps = Omit<ProjectRailNextProps, 'collapsed'>;
 
 interface ShellNextProps extends RailForwardedProps {
   children: ReactNode;
-  onReauditChunk: (chunkId: string) => void;
   onRunCoherenceAudit: () => void;
 }
 
 export function ShellNext({
   children,
-  onReauditChunk,
   onRunCoherenceAudit,
   ...railProps
 }: ShellNextProps) {
@@ -44,7 +42,7 @@ export function ShellNext({
   const inspectorWidth = useUiStore((state) => state.projectFlyoutWidth);
   const setInspectorWidth = useUiStore((state) => state.setProjectFlyoutWidth);
   // L'ispettore è "aperto" quando una delle due schede è richiesta.
-  const inspectorOpen = useUiStore((state) => state.showDocumentDrawer || state.showChunkDrawer);
+  const inspectorOpen = useUiStore((state) => state.showInsightPanel);
 
   const railRef = usePanelRef();
   const inspectorRef = usePanelRef();
@@ -171,7 +169,6 @@ export function ShellNext({
       >
         <ProjectInspectorNext
           collapsed={inspectorCollapsed}
-          onReauditChunk={onReauditChunk}
           onRunCoherenceAudit={onRunCoherenceAudit}
         />
       </Panel>
