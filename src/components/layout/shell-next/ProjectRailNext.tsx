@@ -34,7 +34,7 @@ export interface ProjectRailNextProps {
   onOpenWorkspaceSettings?: () => void;
 }
 
-function PipelineHeaderSlot() {
+function PipelineNameSlot() {
   const { t } = useTranslation();
   const [popoverOpen, setPopoverOpen] = useState(false);
 
@@ -44,29 +44,16 @@ function PipelineHeaderSlot() {
   const createNewPipeline = useProjectStore((s) => s.createNewPipeline);
   const hasProject = useProjectStore((s) => !!s.currentProjectId);
   const maxPipelines = useConfigStore((s) => s.maxPipelines);
-  const showConfigDrawer = useUiStore((s) => s.showConfigDrawer);
-  const setShowConfigDrawer = useUiStore((s) => s.setShowConfigDrawer);
 
   const activeName =
     pipelines.find((p) => p.id === activePipelineId)?.name ??
     t('pipeline.pipelineNumber', { number: 1 });
 
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
-      <span className="min-w-0 flex-1 truncate font-display text-sm italic text-editorial-ink">
+    <div className="flex items-center gap-2 px-4 py-3">
+      <span className="min-w-0 flex-1 truncate font-display text-base italic text-editorial-ink">
         {activeName}
       </span>
-      <IconButton
-        size="sm"
-        tone={showConfigDrawer ? 'accent' : 'muted'}
-        onClick={() => setShowConfigDrawer(true)}
-        title={`${t('pipeline.configurePipeline')} (Ctrl+,)`}
-        ariaLabel={t('pipeline.configurePipeline')}
-        tooltipSide="bottom"
-        className="h-6 w-6 shrink-0 p-0"
-      >
-        <Settings2 size={12} />
-      </IconButton>
       {pipelines.length > 0 && (
         <Popover.Root open={popoverOpen} onOpenChange={setPopoverOpen}>
           <Popover.Trigger asChild>
@@ -75,7 +62,7 @@ function PipelineHeaderSlot() {
               tone={popoverOpen ? 'accent' : 'muted'}
               title={t('pipeline.changePipeline')}
               ariaLabel={t('pipeline.changePipeline')}
-              tooltipSide="bottom"
+              tooltipSide="right"
               className="h-6 w-6 shrink-0 p-0"
             >
               <ArrowLeftRight size={11} />
@@ -83,8 +70,8 @@ function PipelineHeaderSlot() {
           </Popover.Trigger>
           <Popover.Portal>
             <Popover.Content
-              side="bottom"
-              align="end"
+              side="right"
+              align="start"
               sideOffset={6}
               className="z-[150] min-w-40 overflow-hidden rounded-xl border border-editorial-border bg-editorial-bg shadow-lg"
             >
@@ -182,7 +169,7 @@ export function ProjectRailNext({
           />
         </div>
 
-        {/* Bottom fisso: 4 azioni in colonna */}
+        {/* Bottom: colonna icone */}
         <div className="flex shrink-0 flex-col items-center gap-1 border-t border-editorial-border py-2">
           <IconButton
             size="md"
@@ -193,6 +180,15 @@ export function ProjectRailNext({
             tooltipSide="right"
           >
             <ArrowLeft size={14} />
+          </IconButton>
+          <IconButton
+            size="md"
+            tone="muted"
+            onClick={() => setShowLibraryPanel(true)}
+            title={t('library.openLibrary')}
+            tooltipSide="right"
+          >
+            <LibraryBig size={14} />
           </IconButton>
           <IconButton
             size="md"
@@ -232,8 +228,8 @@ export function ProjectRailNext({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {/* Header: collassa + nome pipeline + cambia pipeline */}
-      <div className="flex h-11 shrink-0 items-center gap-2 border-b border-editorial-border px-3">
+      {/* Header: solo pulsante collassa, nessun separatore */}
+      <div className="flex h-11 shrink-0 items-center px-3">
         <IconButton
           size="md"
           tone="muted"
@@ -243,24 +239,13 @@ export function ProjectRailNext({
         >
           <PanelLeftClose size={14} />
         </IconButton>
-        <PipelineHeaderSlot />
       </div>
 
       {/* Contenuto scrollabile */}
       <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-hidden">
         <div className="flex flex-col">
-          {/* Libreria */}
-          <div className="border-b border-editorial-border/40 px-3 py-2">
-            <IconButton
-              size="md"
-              tone="muted"
-              onClick={() => setShowLibraryPanel(true)}
-              title={t('library.openLibrary')}
-              tooltipSide="right"
-            >
-              <LibraryBig size={14} />
-            </IconButton>
-          </div>
+          {/* Nome pipeline + cambia */}
+          <PipelineNameSlot />
 
           {/* Run section */}
           <div className="py-3">
@@ -279,8 +264,8 @@ export function ProjectRailNext({
         </div>
       </div>
 
-      {/* Bottom fisso: 4 azioni in riga */}
-      <div className="flex h-12 shrink-0 items-center justify-around border-t border-editorial-border px-2">
+      {/* Bottom: ArrowLeft sx, resto allineato dx */}
+      <div className="flex h-12 shrink-0 items-center justify-between border-t border-editorial-border px-2">
         <IconButton
           size="md"
           tone="muted"
@@ -291,36 +276,47 @@ export function ProjectRailNext({
         >
           <ArrowLeft size={14} />
         </IconButton>
-        <IconButton
-          size="md"
-          tone="muted"
-          onClick={() => setShowConfigDrawer(true)}
-          title={t('pipeline.configurePipeline')}
-          tooltipSide="top"
-        >
-          <Settings2 size={14} />
-        </IconButton>
-        <IconButton
-          size="md"
-          tone="muted"
-          onClick={onImportDocument}
-          disabled={!onImportDocument || hasDocument}
-          title={t('files.import')}
-          tooltipSide="top"
-        >
-          <Upload size={14} />
-        </IconButton>
-        <IconButton
-          size="md"
-          tone="muted"
-          onClick={() => setShowExportDialog(true)}
-          disabled={!hasDocument}
-          title={t('header.exportLabel')}
-          ariaLabel={t('header.exportLabel')}
-          tooltipSide="top"
-        >
-          <FileOutput size={14} />
-        </IconButton>
+        <div className="flex items-center gap-1">
+          <IconButton
+            size="md"
+            tone="muted"
+            onClick={() => setShowLibraryPanel(true)}
+            title={t('library.openLibrary')}
+            tooltipSide="top"
+          >
+            <LibraryBig size={14} />
+          </IconButton>
+          <IconButton
+            size="md"
+            tone="muted"
+            onClick={() => setShowConfigDrawer(true)}
+            title={t('pipeline.configurePipeline')}
+            tooltipSide="top"
+          >
+            <Settings2 size={14} />
+          </IconButton>
+          <IconButton
+            size="md"
+            tone="muted"
+            onClick={onImportDocument}
+            disabled={!onImportDocument || hasDocument}
+            title={t('files.import')}
+            tooltipSide="top"
+          >
+            <Upload size={14} />
+          </IconButton>
+          <IconButton
+            size="md"
+            tone="muted"
+            onClick={() => setShowExportDialog(true)}
+            disabled={!hasDocument}
+            title={t('header.exportLabel')}
+            ariaLabel={t('header.exportLabel')}
+            tooltipSide="top"
+          >
+            <FileOutput size={14} />
+          </IconButton>
+        </div>
       </div>
 
       <PipelineSidebarExportDialogHost open={showExportDialog} onOpenChange={setShowExportDialog} />
