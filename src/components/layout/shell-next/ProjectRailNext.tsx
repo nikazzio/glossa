@@ -1,14 +1,26 @@
-import { ArrowLeft, ChevronLeft, ChevronRight, FileOutput, LibraryBig, Settings2, Upload } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowLeftRight,
+  FileOutput,
+  LibraryBig,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Plus,
+  Settings2,
+  Upload,
+} from 'lucide-react';
+import * as Popover from '@radix-ui/react-popover';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   PipelineSidebarExportDialogHost,
-  PipelineSidebarPipelinesSection,
   PipelineSidebarRunSection,
 } from '../PipelineSidebarSections';
 import { useUiStore } from '../../../stores/uiStore';
 import { useProjectStore } from '../../../stores/projectStore';
 import { useChunksStore } from '../../../stores/chunksStore';
 import { useLibraryStore } from '../../../stores/libraryStore';
+import { useConfigStore } from '../../../stores/configStore';
 import { IconButton } from '../../ui';
 import { ChunkInspectorPanel } from '../../document/InsightsDrawer';
 
@@ -22,6 +34,108 @@ export interface ProjectRailNextProps {
   onOpenWorkspaceSettings?: () => void;
 }
 
+function PipelineHeaderSlot() {
+  const { t } = useTranslation();
+  const [popoverOpen, setPopoverOpen] = useState(false);
+
+  const activePipelineId = useProjectStore((s) => s.activePipelineId);
+  const pipelines = useProjectStore((s) => s.pipelines);
+  const switchPipeline = useProjectStore((s) => s.switchPipeline);
+  const createNewPipeline = useProjectStore((s) => s.createNewPipeline);
+  const hasProject = useProjectStore((s) => !!s.currentProjectId);
+  const maxPipelines = useConfigStore((s) => s.maxPipelines);
+  const showConfigDrawer = useUiStore((s) => s.showConfigDrawer);
+  const setShowConfigDrawer = useUiStore((s) => s.setShowConfigDrawer);
+
+  const activeName =
+    pipelines.find((p) => p.id === activePipelineId)?.name ??
+    t('pipeline.pipelineNumber', { number: 1 });
+
+  return (
+    <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
+      <span className="min-w-0 flex-1 truncate font-display text-sm italic text-editorial-ink">
+        {activeName}
+      </span>
+      <IconButton
+        size="sm"
+        tone={showConfigDrawer ? 'accent' : 'muted'}
+        onClick={() => setShowConfigDrawer(true)}
+        title={`${t('pipeline.configurePipeline')} (Ctrl+,)`}
+        ariaLabel={t('pipeline.configurePipeline')}
+        tooltipSide="bottom"
+        className="h-6 w-6 shrink-0 p-0"
+      >
+        <Settings2 size={12} />
+      </IconButton>
+      {pipelines.length > 0 && (
+        <Popover.Root open={popoverOpen} onOpenChange={setPopoverOpen}>
+          <Popover.Trigger asChild>
+            <IconButton
+              size="sm"
+              tone={popoverOpen ? 'accent' : 'muted'}
+              title={t('pipeline.changePipeline')}
+              ariaLabel={t('pipeline.changePipeline')}
+              tooltipSide="bottom"
+              className="h-6 w-6 shrink-0 p-0"
+            >
+              <ArrowLeftRight size={11} />
+            </IconButton>
+          </Popover.Trigger>
+          <Popover.Portal>
+            <Popover.Content
+              side="bottom"
+              align="end"
+              sideOffset={6}
+              className="z-[150] min-w-40 overflow-hidden rounded-xl border border-editorial-border bg-editorial-bg shadow-lg"
+            >
+              {pipelines.map((pipeline) => (
+                <button
+                  key={pipeline.id}
+                  onClick={() => {
+                    void switchPipeline(pipeline.id);
+                    setPopoverOpen(false);
+                  }}
+                  className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-editorial-textbox/60 ${
+                    pipeline.id === activePipelineId
+                      ? 'font-medium text-editorial-ink'
+                      : 'text-editorial-muted'
+                  }`}
+                >
+                  <span
+                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                      pipeline.id === activePipelineId
+                        ? 'bg-editorial-success'
+                        : 'bg-editorial-border'
+                    }`}
+                  />
+                  <span className="truncate">{pipeline.name}</span>
+                </button>
+              ))}
+              {hasProject && pipelines.length < maxPipelines && (
+                <>
+                  <div className="border-t border-editorial-border/60" />
+                  <button
+                    onClick={() => {
+                      void createNewPipeline(
+                        t('pipeline.pipelineNumber', { number: pipelines.length + 1 }),
+                      );
+                      setPopoverOpen(false);
+                    }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-editorial-muted transition-colors hover:bg-editorial-textbox/60 hover:text-editorial-ink"
+                  >
+                    <Plus size={12} />
+                    {t('pipeline.newPipeline')}
+                  </button>
+                </>
+              )}
+            </Popover.Content>
+          </Popover.Portal>
+        </Popover.Root>
+      )}
+    </div>
+  );
+}
+
 export function ProjectRailNext({
   collapsed,
   onRunPipeline,
@@ -29,7 +143,6 @@ export function ProjectRailNext({
   onRetranslateChunk,
   onReauditChunk,
   onImportDocument,
-  onOpenWorkspaceSettings,
 }: ProjectRailNextProps) {
   const { t } = useTranslation();
   const closeProject = useProjectStore((state) => state.closeProject);
@@ -39,12 +152,13 @@ export function ProjectRailNext({
   const showExportDialog = useUiStore((state) => state.showExportDialog);
   const setShowExportDialog = useUiStore((state) => state.setShowExportDialog);
   const setProjectContextCollapsed = useUiStore((state) => state.setProjectContextCollapsed);
+  const setShowConfigDrawer = useUiStore((state) => state.setShowConfigDrawer);
 
   if (collapsed) {
     return (
       <div className="flex h-full min-h-0 flex-col items-center">
         {/* Top: espandi */}
-        <div className="flex h-20 shrink-0 items-center justify-center border-b border-editorial-border">
+        <div className="flex h-11 shrink-0 items-center justify-center border-b border-editorial-border">
           <IconButton
             size="md"
             tone="muted"
@@ -52,7 +166,7 @@ export function ProjectRailNext({
             title={t('sidebar.expand')}
             tooltipSide="right"
           >
-            <ChevronRight size={14} />
+            <PanelLeftOpen size={14} />
           </IconButton>
         </div>
 
@@ -68,7 +182,7 @@ export function ProjectRailNext({
           />
         </div>
 
-        {/* Bottom fisso: 4 azioni */}
+        {/* Bottom fisso: 4 azioni in colonna */}
         <div className="flex shrink-0 flex-col items-center gap-1 border-t border-editorial-border py-2">
           <IconButton
             size="md"
@@ -83,9 +197,8 @@ export function ProjectRailNext({
           <IconButton
             size="md"
             tone="muted"
-            onClick={onOpenWorkspaceSettings}
-            disabled={!onOpenWorkspaceSettings}
-            title={t('workspace.configure')}
+            onClick={() => setShowConfigDrawer(true)}
+            title={t('pipeline.configurePipeline')}
             tooltipSide="right"
           >
             <Settings2 size={14} />
@@ -94,7 +207,7 @@ export function ProjectRailNext({
             size="md"
             tone="muted"
             onClick={onImportDocument}
-            disabled={!onImportDocument}
+            disabled={!onImportDocument || hasDocument}
             title={t('files.import')}
             tooltipSide="right"
           >
@@ -119,33 +232,38 @@ export function ProjectRailNext({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {/* Top: collassa + libreria */}
-      <div className="flex h-20 shrink-0 items-center gap-1.5 border-b border-editorial-border px-3">
+      {/* Header: collassa + nome pipeline + cambia pipeline */}
+      <div className="flex h-11 shrink-0 items-center gap-2 border-b border-editorial-border px-3">
         <IconButton
           size="md"
           tone="muted"
           onClick={() => setProjectContextCollapsed(true)}
           title={t('sidebar.collapse')}
-          tooltipSide="right"
+          tooltipSide="bottom"
         >
-          <ChevronLeft size={14} />
+          <PanelLeftClose size={14} />
         </IconButton>
-        <IconButton
-          size="md"
-          tone="muted"
-          onClick={() => setShowLibraryPanel(true)}
-          title={t('library.openLibrary')}
-          tooltipSide="right"
-        >
-          <LibraryBig size={14} />
-        </IconButton>
+        <PipelineHeaderSlot />
       </div>
 
       {/* Contenuto scrollabile */}
       <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-hidden">
         <div className="flex flex-col">
-          <div className="flex flex-col gap-3 px-0 pb-3 pt-4">
-            <PipelineSidebarPipelinesSection collapsed={false} configTrigger="circle" />
+          {/* Libreria */}
+          <div className="border-b border-editorial-border/40 px-3 py-2">
+            <IconButton
+              size="md"
+              tone="muted"
+              onClick={() => setShowLibraryPanel(true)}
+              title={t('library.openLibrary')}
+              tooltipSide="right"
+            >
+              <LibraryBig size={14} />
+            </IconButton>
+          </div>
+
+          {/* Run section */}
+          <div className="py-3">
             <PipelineSidebarRunSection
               collapsed={false}
               onRunPipeline={onRunPipeline}
@@ -155,13 +273,13 @@ export function ProjectRailNext({
               playFirst
             />
           </div>
-          {onReauditChunk && (
-            <ChunkInspectorPanel onReauditChunk={onReauditChunk} />
-          )}
+
+          {/* ChunkInspector embedded */}
+          {onReauditChunk && <ChunkInspectorPanel onReauditChunk={onReauditChunk} />}
         </div>
       </div>
 
-      {/* Bottom fisso */}
+      {/* Bottom fisso: 4 azioni in riga */}
       <div className="flex h-12 shrink-0 items-center justify-around border-t border-editorial-border px-2">
         <IconButton
           size="md"
@@ -169,17 +287,16 @@ export function ProjectRailNext({
           onClick={() => closeProject()}
           disabled={isProcessing}
           title={t('sidebar.backToWorkspace')}
-          tooltipSide="right"
+          tooltipSide="top"
         >
           <ArrowLeft size={14} />
         </IconButton>
         <IconButton
           size="md"
           tone="muted"
-          onClick={onOpenWorkspaceSettings}
-          disabled={!onOpenWorkspaceSettings}
-          title={t('workspace.configure')}
-          tooltipSide="right"
+          onClick={() => setShowConfigDrawer(true)}
+          title={t('pipeline.configurePipeline')}
+          tooltipSide="top"
         >
           <Settings2 size={14} />
         </IconButton>
@@ -187,9 +304,9 @@ export function ProjectRailNext({
           size="md"
           tone="muted"
           onClick={onImportDocument}
-          disabled={!onImportDocument}
+          disabled={!onImportDocument || hasDocument}
           title={t('files.import')}
-          tooltipSide="right"
+          tooltipSide="top"
         >
           <Upload size={14} />
         </IconButton>
@@ -198,9 +315,9 @@ export function ProjectRailNext({
           tone="muted"
           onClick={() => setShowExportDialog(true)}
           disabled={!hasDocument}
-          title={`${t('header.exportLabel')} (Ctrl+E)`}
+          title={t('header.exportLabel')}
           ariaLabel={t('header.exportLabel')}
-          tooltipSide="right"
+          tooltipSide="top"
         >
           <FileOutput size={14} />
         </IconButton>

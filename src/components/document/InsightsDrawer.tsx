@@ -151,6 +151,7 @@ export function ChunkInspectorPanel({ onReauditChunk }: ChunkInspectorPanelProps
               key={tab}
               buttonId={CHUNK_RAIL_TAB_BUTTON_IDS[tab]}
               active={chunkRailTab === tab}
+              activeTone="success"
               onClick={() => activateTab(tab)}
               onKeyDown={(e) => handleTabKeyDown(tab, e)}
               label={CHUNK_RAIL_TAB_LABEL[tab]}
