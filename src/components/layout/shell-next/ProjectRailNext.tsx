@@ -51,7 +51,7 @@ function PipelineNameSlot() {
 
   return (
     <div className="flex items-center gap-2 px-4 py-3">
-      <span className="min-w-0 flex-1 truncate font-display text-base italic text-editorial-ink">
+      <span className="min-w-0 flex-1 truncate font-display text-2xl italic leading-tight text-editorial-ink">
         {activeName}
       </span>
       {pipelines.length > 0 && (
