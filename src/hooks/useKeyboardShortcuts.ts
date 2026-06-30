@@ -21,10 +21,10 @@ function isInputActive(): boolean {
 
 interface Options {
   onRunPipeline: () => void;
-  onDryRun: () => void;
+  onRunSingleChunk: (chunkId: string) => void;
 }
 
-export function useKeyboardShortcuts({ onRunPipeline, onDryRun }: Options) {
+export function useKeyboardShortcuts({ onRunPipeline, onRunSingleChunk }: Options) {
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -35,9 +35,10 @@ export function useKeyboardShortcuts({ onRunPipeline, onDryRun }: Options) {
       // Ctrl+Enter: fires even inside text inputs
       if (e.key === 'Enter') {
         e.preventDefault();
-        const pipelineMode = useConfigStore.getState().pipelineMode;
-        if (pipelineMode === 'test') {
-          onDryRun();
+        const workMode = useConfigStore.getState().workMode;
+        if (workMode === 'chunk') {
+          const selectedChunkId = useUiStore.getState().selectedChunkId;
+          if (selectedChunkId) onRunSingleChunk(selectedChunkId);
         } else {
           onRunPipeline();
         }
@@ -122,5 +123,5 @@ export function useKeyboardShortcuts({ onRunPipeline, onDryRun }: Options) {
 
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [onRunPipeline, onDryRun, t]);
+  }, [onRunPipeline, onRunSingleChunk, t]);
 }

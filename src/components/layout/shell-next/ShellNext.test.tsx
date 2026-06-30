@@ -31,12 +31,13 @@ describe('ShellNext (#291)', () => {
     expect(screen.getByText('document-content')).toBeInTheDocument();
   });
 
-  it('no longer renders section navigation tabs (operative-only column)', () => {
+  it('no longer renders project-level section tabs (Pipeline / Document)', () => {
     renderShell();
 
+    // I vecchi tab di sezione progetto non esistono più.
     expect(screen.queryByRole('tab', { name: 'projectShell.pipelineTab' })).not.toBeInTheDocument();
     expect(screen.queryByRole('tab', { name: 'projectShell.documentTab' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+    // Il ChunkInspectorPanel embedded nella rail ha i propri tab (Audit/Note/Memoria): ok.
   });
 
   it('exposes project-scope import and export actions in the rail', () => {

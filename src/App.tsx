@@ -195,7 +195,7 @@ function EditorView() {
     runSingleChunk(chunkId, (!hasCompleted && mode === 'test') ? 'preview' : 'completed');
   }, [runSingleChunk]);
   useProjectAutosave();
-  useKeyboardShortcuts({ onRunPipeline: runPipeline, onDryRun: runDryRun });
+  useKeyboardShortcuts({ onRunPipeline: runPipeline, onRunSingleChunk: handleRetranslateChunk });
   const viewMode = useUiStore((state) => state.viewMode);
   const setShowConfigDrawer = useUiStore((state) => state.setShowConfigDrawer);
   const showSettings = useUiStore((state) => state.showSettings);

@@ -46,7 +46,7 @@ describe('AppStatusBar', () => {
     expect(screen.getByText('Test WS')).toBeInTheDocument();
   });
 
-  it('renders project name and save state in project context', () => {
+  it('renders console toggle and save indicator in project context', () => {
     vi.mocked(useStatusBarDataModule.useStatusBarData).mockReturnValue({
       kind: 'project',
       projectName: 'Progetto A',
@@ -62,7 +62,8 @@ describe('AppStatusBar', () => {
       panelSubTab: null,
     });
     render(<AppStatusBar />);
-    expect(screen.getByText('Progetto A')).toBeInTheDocument();
+    // Il nome progetto non compare più nella barra (rimosso breadcrumb); il toggle console è sempre presente.
+    expect(screen.getByRole('button', { name: 'console.toggle' })).toBeInTheDocument();
   });
 
   it('shows save indicator as dirty', () => {

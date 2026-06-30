@@ -385,6 +385,7 @@
     "confirmDeleteTitle": "Delete pipeline?",
     "confirmDeleteMessage": "\"{{name}}\" will be permanently removed along with all its translations.",
     "configurePipeline": "Configure pipeline",
+    "changePipeline": "Switch pipeline",
     "sectionTitle": "Pipeline"
   },
   "audit": {

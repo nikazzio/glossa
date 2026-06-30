@@ -31,22 +31,23 @@ describe('PipelineSidebarPipelinesSection — trigger configurazione (#291)', ()
     seedPipelines();
   });
 
-  it("mostra un ingranaggio per ogni cerchio e nessun pulsante config in fondo in modalità 'circle'", () => {
+  it("mostra un unico pulsante configure nella card e un pulsante Cambia in modalità 'circle'", () => {
     render(<PipelineSidebarPipelinesSection configTrigger="circle" />);
 
-    // Una sola affordance config per pipeline (nessun pulsante dedicato in fondo).
-    expect(screen.getAllByRole('button', { name: 'pipeline.configurePipeline' })).toHaveLength(2);
+    // Un solo pulsante Configura (per la pipeline attiva) — nessun gear per ogni cerchio.
+    expect(screen.getAllByRole('button', { name: 'pipeline.configurePipeline' })).toHaveLength(1);
+    // Pulsante Cambia per aprire il popover di selezione pipeline.
+    expect(screen.getByRole('button', { name: 'pipeline.changePipeline' })).toBeInTheDocument();
   });
 
-  it("attiva la pipeline (e attende il caricamento) prima di aprire la configurazione", async () => {
+  it("apre la configurazione della pipeline attiva senza chiamare switchPipeline", async () => {
     render(<PipelineSidebarPipelinesSection configTrigger="circle" />);
 
-    const gears = screen.getAllByRole('button', { name: 'pipeline.configurePipeline' });
-    // Secondo cerchio = pipeline non attiva: cliccarlo la attiva e apre la config.
-    fireEvent.click(gears[1]);
+    const gear = screen.getByRole('button', { name: 'pipeline.configurePipeline' });
+    // La pipeline attiva è p1: il gear la configura senza switchPipeline.
+    fireEvent.click(gear);
 
-    expect(switchPipeline).toHaveBeenCalledWith('p2');
-    // La finestra si apre solo dopo che switchPipeline ha caricato la config (await).
+    expect(switchPipeline).not.toHaveBeenCalled();
     await waitFor(() => expect(useUiStore.getState().showConfigDrawer).toBe(true));
   });
 
