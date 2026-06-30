@@ -252,7 +252,7 @@ export function PipelineSidebarRunSection({
             </IconButton>
           )}
           {workMode === 'all' && hasDocument && (
-            <span className="text-[10px] font-bold tabular-nums tracking-[0.1em] text-editorial-muted">
+            <span className="text-[11px] font-bold tabular-nums tracking-[0.1em] text-editorial-muted">
               {completedCount}/{totalChunks}
             </span>
           )}
@@ -267,7 +267,7 @@ export function PipelineSidebarRunSection({
           ) : (
             <Zap size={14} className="text-editorial-accent" aria-hidden="true" />
           )}
-          <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-editorial-accent">
+          <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-accent">
             {pipelineMode === 'test' ? t('pipeline.modeTest') : t('pipeline.modeProductionShort')}
           </span>
         </div>
@@ -287,7 +287,7 @@ export function PipelineSidebarRunSection({
           </IconButton>
         )}
         {hasDocument ? (
-          <span className="text-[10px] font-bold tabular-nums tracking-[0.1em] text-editorial-muted">
+          <span className="text-[11px] font-bold tabular-nums tracking-[0.1em] text-editorial-muted">
             {completedCount}/{pipelineMode === 'test' ? runChunkCount : totalChunks}
           </span>
         ) : null}
@@ -314,7 +314,7 @@ export function PipelineSidebarRunSection({
       <div className="px-3">
         <div className="flex flex-col gap-3">
           {/* Switch Chunk / Tutto */}
-          <div className="flex overflow-hidden rounded-full border border-editorial-border">
+          <div className="flex overflow-hidden rounded-md border border-editorial-border">
             <button
               onClick={() => setWorkMode('chunk')}
               disabled={isProcessing}

@@ -63,8 +63,8 @@ function ConsoleDrawer() {
   const setSelectedChunkId = useUiStore((s) => s.setSelectedChunkId);
 
   return (
-    <div className="absolute bottom-full left-0 right-0 z-50 flex h-64 flex-col border-t border-editorial-border bg-black shadow-lg">
-      <div className="flex shrink-0 items-center justify-between border-b border-editorial-border/30 px-3 py-1.5">
+    <div className="absolute bottom-full left-0 right-0 z-50 flex h-64 flex-col border-t border-terminal-border bg-terminal-bg shadow-lg">
+      <div className="flex shrink-0 items-center justify-between border-b border-terminal-border px-3 py-1.5">
         <span className="flex items-center gap-1.5 text-xs font-medium text-terminal-info">
           <Terminal size={11} />
           {t('console.title')}
