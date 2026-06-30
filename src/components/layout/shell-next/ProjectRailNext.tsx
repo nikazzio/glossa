@@ -50,7 +50,7 @@ function PipelineNameSlot() {
     t('pipeline.pipelineNumber', { number: 1 });
 
   return (
-    <div className="flex items-center gap-2 px-4 py-3">
+    <div className="flex items-center gap-2 px-4 pb-4 pt-10">
       <span className="min-w-0 flex-1 truncate font-display text-2xl italic leading-tight text-editorial-ink">
         {activeName}
       </span>
@@ -145,7 +145,7 @@ export function ProjectRailNext({
     return (
       <div className="flex h-full min-h-0 flex-col items-center">
         {/* Top: espandi */}
-        <div className="flex h-11 shrink-0 items-center justify-center border-b border-editorial-border">
+        <div className="flex h-20 shrink-0 items-center justify-center border-b border-editorial-border">
           <IconButton
             size="md"
             tone="muted"
@@ -228,8 +228,8 @@ export function ProjectRailNext({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {/* Header: solo pulsante collassa, nessun separatore */}
-      <div className="flex h-11 shrink-0 items-center px-3">
+      {/* Header: solo pulsante collassa, allineato al global header */}
+      <div className="flex h-20 shrink-0 items-center px-3">
         <IconButton
           size="md"
           tone="muted"
