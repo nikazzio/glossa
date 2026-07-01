@@ -39,8 +39,11 @@ function HighlightColorSync() {
   useEffect(() => {
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const isDark = colorScheme === 'dark' || (colorScheme === 'system' && prefersDark);
-    const colors = (isDark ? highlightColors.dark : highlightColors.light)
-      ?? (isDark ? HL_COLORS_DARK : HL_COLORS_LIGHT);
+    const fallback = isDark ? HL_COLORS_DARK : HL_COLORS_LIGHT;
+    // Merge chiave per chiave (non solo a livello di oggetto): uno stato persistito
+    // incompleto (chiavi mancanti da una migrazione precedente) non deve scrivere
+    // "undefined" come valore CSS e spegnere quell'evidenziazione.
+    const colors = { ...fallback, ...(isDark ? highlightColors.dark : highlightColors.light) };
     const root = document.documentElement;
     root.style.setProperty('--hl-source-term-color', colors.sourceTerm);
     root.style.setProperty('--hl-match-bg', colors.matchTerm);
