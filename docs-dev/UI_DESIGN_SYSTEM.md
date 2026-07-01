@@ -162,6 +162,31 @@ import { StatusDot } from '../ui';
 
 ---
 
+### Badge numerico rotondo con tooltip — conteggi compatti non interattivi
+
+Per conteggi compatti dove basta colore + numero (es. numero di note su un frammento nell'Indice), niente etichetta testuale a fianco: pallino colorato con il numero dentro, descrizione completa in `Tooltip` all'hover.
+
+```tsx
+import { Tooltip } from '../ui';
+
+<Tooltip label={t('annotations.badgeCount', { count })} side="top">
+  <span
+    className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-white ${bgClass}`}
+    aria-label={t('annotations.badgeCount', { count })}
+  >
+    {count}
+  </span>
+</Tooltip>
+```
+
+Regole:
+- `bgClass` solo da mappe canoniche esistenti (es. `ANNOTATION_META[type].bgClass` in `NotesTab.tsx`) — mai colori inventati.
+- Se il conteggio aggrega elementi di tipi/tone diversi, il colore del pallino è quello del tipo più urgente presente (stessa priorità della mappa canonica), non una media o un colore neutro a parte.
+- Diametro fisso `h-5 w-5`, testo `text-[10px] font-bold text-white` per restare leggibile anche a 1-2 cifre.
+- Non usare per conteggi che necessitano di essere cliccabili: quello è `IconButton`/`PillButton`, non questo pattern.
+
+---
+
 ### SectionLabel — intestazione sezione con icona
 
 Per intestazioni di sezione con icona + etichetta uppercase:
@@ -357,6 +382,7 @@ Regole:
 - Audit/Note item: le azioni stanno solo nella riga titolo a destra; testo principale, ancora e descrizione devono occupare tutta la larghezza sotto. Evitare una colonna azioni che restringe il contenuto.
 - Audit: la linea verticale tipo quote è ammessa **solo** nei dettagli annidati ("nella traduzione", "frase sorgente", "correzione"), non sulla riga principale del problema.
 - Note: note traduzione e note sorgente usano `editorial-danger` per marker/numeri/tono nota; nessuna linea laterale di tipo quote sulle righe principali.
+- **Indicatore note altrove nell'app** (es. badge conteggio in `IndexTab`): usa sempre la mappa canonica tipo→colore esportata da `NotesTab.tsx` (`ANNOTATION_META`: comment `editorial-charcoal`, doubt `editorial-warning`, problem `editorial-danger`, approved `editorial-success`) — non inventare colori fuori palette (es. `sky-*`) né una palette parallela. Se l'indicatore aggrega più note di tipi diversi, mostra il colore del tipo più urgente presente (ordine: problem → doubt → comment → approved).
 
 ### Resize (drag + tastiera) — pannelli progetto
 

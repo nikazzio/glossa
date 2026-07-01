@@ -175,28 +175,25 @@ export function SearchTab({ panelId, labelledBy, chunks, currentChunkId, onSelec
                   data-index={virtualRow.index}
                   ref={virtualizer.measureElement}
                   style={{ position: 'absolute', top: virtualRow.start, left: 0, right: 0 }}
-                  className="pb-2"
+                  className="border-b border-editorial-border/55"
                 >
                   <button
                     type="button"
                     onClick={() => onSelectChunk(chunk.id)}
-                    className={`w-full rounded-2xl border px-4 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                      isActive
-                        ? 'border-editorial-charcoal bg-editorial-charcoal'
-                        : 'border-editorial-border bg-editorial-bg hover:border-editorial-charcoal/40'
+                    className={`relative block w-full px-4 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                      isActive ? 'bg-editorial-charcoal/10' : 'hover:bg-editorial-textbox/40'
                     }`}
                   >
+                    {isActive && <span className="absolute left-0 top-0 h-full w-[3px] bg-editorial-charcoal" aria-hidden="true" />}
                     <div className="flex items-center gap-2 mb-1.5">
-                      <span className={`font-display text-sm italic shrink-0 ${isActive ? 'text-white' : 'text-editorial-accent'}`}>
+                      <span className={`font-display text-sm italic shrink-0 ${isActive ? 'text-editorial-charcoal' : 'text-editorial-accent'}`}>
                         {indexPad(index + 1)}
                       </span>
                       <div className="flex items-center gap-1 ml-auto">
                         {scopes.map((scope) => (
                           <span
                             key={scope}
-                            className={`flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.15em] ${
-                              isActive ? 'bg-white/15 text-white/70' : 'bg-editorial-textbox text-editorial-muted'
-                            }`}
+                            className="flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.15em] bg-editorial-textbox text-editorial-muted"
                           >
                             {SCOPE_ICON[scope]}
                             {t(`document.searchScope_${scope}`)}
@@ -205,7 +202,7 @@ export function SearchTab({ panelId, labelledBy, chunks, currentChunkId, onSelec
                       </div>
                     </div>
                     <p
-                      className={`text-xs leading-snug ${isActive ? 'text-white/75' : 'text-editorial-muted'}`}
+                      className="text-xs leading-snug text-editorial-muted"
                       // eslint-disable-next-line react/no-danger
                       dangerouslySetInnerHTML={{ __html: highlightSnippet(snippet, debouncedQuery) }}
                     />

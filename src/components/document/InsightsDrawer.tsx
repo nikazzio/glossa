@@ -7,7 +7,6 @@ import {
   NotebookText,
   Search,
   ShieldCheck,
-  X,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { type KeyboardEvent, useEffect, useRef } from 'react';
@@ -65,29 +64,6 @@ function useInsightData() {
   const currentChunk = chunks.find((c) => c.id === selectedChunkId) ?? chunks[0] ?? null;
   const currentChunkIndex = currentChunk ? chunks.findIndex((c) => c.id === currentChunk.id) : -1;
   return { chunks, isProcessing, currentChunk, currentChunkIndex };
-}
-
-interface FlyoutHeaderProps {
-  title: string;
-  onClose: () => void;
-}
-
-function FlyoutHeader({ title, onClose }: FlyoutHeaderProps) {
-  const { t } = useTranslation();
-  return (
-    <div className="flex items-center justify-between gap-3 border-b border-editorial-border px-5 py-4">
-      <div className="text-xs font-sans uppercase tracking-[0.12em] text-editorial-muted">{title}</div>
-      <IconButton
-        size="md"
-        onClick={onClose}
-        title={t('header.closeDrawer')}
-        tooltipSide="left"
-        className="shrink-0"
-      >
-        <X size={16} />
-      </IconButton>
-    </div>
-  );
 }
 
 // ── Chunk inspector (rail sinistra — embedded, senza close) ───────────
@@ -194,14 +170,16 @@ export function ChunkInspectorPanel({ onReauditChunk }: ChunkInspectorPanelProps
   );
 }
 
-// ── Insight / documento ────────────────────────────────────────────────
+// ── Tab documento del pannello Insight (rail destra) ────────────────────
+// Da non confondere con ChunkInspectorPanel sopra: quello vive nella rail
+// sinistra ed è scope-frammento (Audit/Note/Memoria); questo è scope-documento
+// (Indice/Cerca/Statistiche/Coerenza/Glossario) e vive in ProjectInspectorNext.
 
-interface InsightDocPanelProps {
+interface DocumentInsightTabsProps {
   onRunCoherenceAudit: () => void;
-  onClose: () => void;
 }
 
-export function InsightDocPanel({ onRunCoherenceAudit, onClose }: InsightDocPanelProps) {
+export function DocumentInsightTabs({ onRunCoherenceAudit }: DocumentInsightTabsProps) {
   const { t } = useTranslation();
   const documentDrawerTab = useUiStore((state) => state.documentDrawerTab);
   const setDocumentDrawerTab = useUiStore((state) => state.setDocumentDrawerTab);
@@ -259,11 +237,9 @@ export function InsightDocPanel({ onRunCoherenceAudit, onClose }: InsightDocPane
   };
 
   return (
-    <div className="flex h-full flex-col" role="region" aria-label={t('document.insightsDrawerTitle')}>
-      <FlyoutHeader title={t('document.insightsDrawerTitle')} onClose={onClose} />
-
+    <div className="flex h-full flex-col" role="region" aria-label={t('document.insightTabsLabel')}>
       <div className="flex items-center gap-2 border-b border-editorial-border bg-editorial-bg/60 px-4 py-2">
-        <div role="tablist" aria-orientation="horizontal" aria-label={t('document.insightsDrawerTitle')} className="flex gap-1">
+        <div role="tablist" aria-orientation="horizontal" aria-label={t('document.insightTabsLabel')} className="flex gap-1">
           {DOC_TAB_ORDER.map((tab) => (
             <TabButton
               key={tab}

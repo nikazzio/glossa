@@ -26,11 +26,12 @@ export interface NotesTabProps {
   currentChunk: TranslationChunk | null;
 }
 
-const ANNOTATION_META: Record<AnnotationType, { icon: LucideIcon; colorClass: string; labelKey: string }> = {
-  comment:  { icon: MessageSquare, colorClass: 'text-editorial-charcoal', labelKey: 'annotations.typeComment' },
-  doubt:    { icon: HelpCircle,    colorClass: 'text-editorial-warning',  labelKey: 'annotations.typeDoubt' },
-  problem:  { icon: AlertTriangle, colorClass: 'text-editorial-danger',   labelKey: 'annotations.typeProblem' },
-  approved: { icon: CheckCircle2,  colorClass: 'text-editorial-success',  labelKey: 'annotations.typeApproved' },
+/** Mappa canonica tipo → icona/colore/etichetta. Riusata anche altrove (es. IndexTab) per non inventare palette ad-hoc. */
+export const ANNOTATION_META: Record<AnnotationType, { icon: LucideIcon; colorClass: string; bgClass: string; labelKey: string }> = {
+  comment:  { icon: MessageSquare, colorClass: 'text-editorial-charcoal', bgClass: 'bg-editorial-charcoal', labelKey: 'annotations.typeComment' },
+  doubt:    { icon: HelpCircle,    colorClass: 'text-editorial-warning',  bgClass: 'bg-editorial-warning',  labelKey: 'annotations.typeDoubt' },
+  problem:  { icon: AlertTriangle, colorClass: 'text-editorial-danger',   bgClass: 'bg-editorial-danger',   labelKey: 'annotations.typeProblem' },
+  approved: { icon: CheckCircle2,  colorClass: 'text-editorial-success',  bgClass: 'bg-editorial-success',  labelKey: 'annotations.typeApproved' },
 };
 
 const ANNOTATION_TYPES: AnnotationType[] = ['comment', 'doubt', 'problem', 'approved'];
