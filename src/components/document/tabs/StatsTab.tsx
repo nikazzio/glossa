@@ -28,7 +28,7 @@ import { StatRow, ScopeBreakdownCarousel, Tooltip } from '../../ui';
 const QUALITY_TONE_COLOR: Record<ReturnType<typeof qualityTone>, string> = {
   strong: 'text-editorial-success',
   ok: 'text-editorial-warning',
-  weak: 'text-editorial-accent',
+  weak: 'text-editorial-danger',
 };
 
 function SectionHeader({ icon, label, info }: { icon: React.ReactNode; label: string; info?: string }) {
@@ -116,7 +116,7 @@ export function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
           {processingCount > 0 && <div className="flex items-center gap-1.5 text-xs text-editorial-warning"><Loader2 size={10} className="animate-spin" /><span className="font-bold">{processingCount}</span> {t('pipeline.chunkStatus.processing')}</div>}
           {previewCount > 0 && <div className="flex items-center gap-1.5 text-xs text-editorial-muted"><FlaskConical size={10} /><span className="font-bold">{previewCount}</span> {t('pipeline.chunkStatus.preview')}</div>}
           {completedCount > 0 && <div className="flex items-center gap-1.5 text-xs text-editorial-success"><CheckCircle2 size={10} /><span className="font-bold">{completedCount}</span> {t('pipeline.chunkStatus.completed')}</div>}
-          {errorCount > 0 && <div className="flex items-center gap-1.5 text-xs text-editorial-accent"><AlertCircle size={10} /><span className="font-bold">{errorCount}</span> {t('pipeline.chunkStatus.error')}</div>}
+          {errorCount > 0 && <div className="flex items-center gap-1.5 text-xs text-editorial-danger"><AlertCircle size={10} /><span className="font-bold">{errorCount}</span> {t('pipeline.chunkStatus.error')}</div>}
         </div>
       </section>
 

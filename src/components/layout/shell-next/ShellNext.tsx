@@ -3,6 +3,7 @@ import { Group, Panel, Separator, usePanelRef } from 'react-resizable-panels';
 import { useUiStore } from '../../../stores/uiStore';
 import { ProjectRailNext, type ProjectRailNextProps } from './ProjectRailNext';
 import { ProjectInspectorNext } from './ProjectInspectorNext';
+import { PANEL_FLEX_TRANSITION_CLASS } from '../motion';
 
 /**
  * Shell nuova (#291) — split principale del progetto in modalità documento.
@@ -12,16 +13,21 @@ import { ProjectInspectorNext } from './ProjectInspectorNext';
  */
 
 // Contratto larghezze rail progetto (vedi inventario #291).
-const SIDEBAR_DEFAULT = 240;
+const SIDEBAR_DEFAULT = 300;
 const SIDEBAR_COLLAPSED = 64;
-const SIDEBAR_MIN = 180;
-const SIDEBAR_MAX = 320;
+const SIDEBAR_MIN = 280;
+const SIDEBAR_MAX = 420;
 
 // Ispettore destro (eredita le larghezze del vecchio fly-out).
 const INSPECTOR_DEFAULT = 430;
 const INSPECTOR_MIN = 300;
 const INSPECTOR_MAX = 620;
 const INSPECTOR_COLLAPSED = 56;
+const RAIL_CONTENT_SWAP_DELAY_MS = 220;
+
+function clampPanelWidth(width: number, min: number, max: number) {
+  return Math.min(Math.max(width, min), max);
+}
 
 type RailForwardedProps = Omit<ProjectRailNextProps, 'collapsed'>;
 
@@ -50,8 +56,36 @@ export function ShellNext({
   const [inspectorCollapsed, setInspectorCollapsed] = useState(!inspectorOpen);
   // Drag attivo su una maniglia: durante il trascinamento niente transizione CSS.
   const [dragging, setDragging] = useState(false);
-  const initialWidth = useRef(storeWidth || SIDEBAR_DEFAULT);
-  const initialInspectorWidth = useRef(inspectorWidth || INSPECTOR_DEFAULT);
+  const initialWidth = useRef(
+    clampPanelWidth(storeWidth || SIDEBAR_DEFAULT, SIDEBAR_MIN, SIDEBAR_MAX),
+  );
+  const initialInspectorWidth = useRef(
+    clampPanelWidth(inspectorWidth || INSPECTOR_DEFAULT, INSPECTOR_MIN, INSPECTOR_MAX),
+  );
+  const railContentSwapTimer = useRef<number | null>(null);
+
+  const setRailContentCollapsed = (nextCollapsed: boolean, defer = false) => {
+    if (railContentSwapTimer.current !== null) {
+      window.clearTimeout(railContentSwapTimer.current);
+      railContentSwapTimer.current = null;
+    }
+    if (defer) {
+      railContentSwapTimer.current = window.setTimeout(() => {
+        setCollapsed(nextCollapsed);
+        railContentSwapTimer.current = null;
+      }, RAIL_CONTENT_SWAP_DELAY_MS);
+      return;
+    }
+    setCollapsed(nextCollapsed);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (railContentSwapTimer.current !== null) {
+        window.clearTimeout(railContentSwapTimer.current);
+      }
+    };
+  }, []);
 
   // La libreria non espone uno stato di drag: lo ricaviamo dal pointer sulle maniglie.
   useEffect(() => {
@@ -70,9 +104,15 @@ export function ShellNext({
     const panel = railRef.current;
     if (!panel) return;
     const panelCollapsed = panel.isCollapsed();
-    if (storeCollapsed && !panelCollapsed) panel.collapse();
-    else if (!storeCollapsed && panelCollapsed) panel.expand();
-    setCollapsed(storeCollapsed);
+    if (storeCollapsed && !panelCollapsed) {
+      panel.collapse();
+      setRailContentCollapsed(true, true);
+    } else if (!storeCollapsed && panelCollapsed) {
+      setRailContentCollapsed(false);
+      panel.expand();
+    } else {
+      setRailContentCollapsed(storeCollapsed);
+    }
   }, [storeCollapsed, railRef]);
 
   // Sync store → ispettore: aperto quando una scheda è attiva, altrimenti barra di icone.
@@ -87,7 +127,11 @@ export function ShellNext({
 
   const syncRailFlag = () => {
     const isCollapsed = railRef.current?.isCollapsed() ?? false;
-    setCollapsed((prev) => (prev === isCollapsed ? prev : isCollapsed));
+    if (isCollapsed) {
+      setRailContentCollapsed(true, true);
+    } else {
+      setRailContentCollapsed(false);
+    }
   };
   const syncInspectorFlag = () => {
     const isCollapsed = inspectorRef.current?.isCollapsed() ?? false;
@@ -140,7 +184,7 @@ export function ShellNext({
         panelRef={railRef}
         onResize={syncRailFlag}
         className={`border-r border-editorial-border bg-editorial-page ${
-          dragging ? '' : 'transition-[flex-grow,flex-basis] duration-200 ease-out'
+          dragging ? '' : PANEL_FLEX_TRANSITION_CLASS
         }`}
       >
         <ProjectRailNext collapsed={collapsed} {...railProps} />
@@ -164,7 +208,7 @@ export function ShellNext({
         panelRef={inspectorRef}
         onResize={syncInspectorFlag}
         className={`border-l border-editorial-border bg-editorial-page ${
-          dragging ? '' : 'transition-[flex-grow,flex-basis] duration-200 ease-out'
+          dragging ? '' : PANEL_FLEX_TRANSITION_CLASS
         }`}
       >
         <ProjectInspectorNext

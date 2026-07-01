@@ -9,7 +9,7 @@ import type { TranslationChunk } from '../../../types';
 const QUALITY_TONE_COLOR: Record<ReturnType<typeof qualityTone>, string> = {
   strong: 'text-editorial-success',
   ok: 'text-editorial-warning',
-  weak: 'text-editorial-accent',
+  weak: 'text-editorial-danger',
 };
 
 export interface AuditTabProps {
@@ -50,7 +50,7 @@ export function AuditTab({ panelId, labelledBy, currentChunk, isProcessing, onRe
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="px-4 py-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">{t('audit.title')}</div>
+          <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">{t('audit.title')}</div>
           <div className={`mt-1.5 font-display text-xl italic ${QUALITY_TONE_COLOR[tone]}`}>{qualityLabel}</div>
         </div>
         <IconButton
@@ -65,7 +65,7 @@ export function AuditTab({ panelId, labelledBy, currentChunk, isProcessing, onRe
       </div>
 
       {currentChunk.judgeResult.status === 'error' && (
-        <div className="mt-3 rounded-xl border border-editorial-accent/30 bg-editorial-textbox/40 p-3 text-sm text-editorial-accent">
+        <div className="mt-4 border-t border-editorial-danger/25 pt-3 text-sm leading-relaxed text-editorial-danger">
           {currentChunk.judgeResult.error || t('audit.auditFailed')}
         </div>
       )}

@@ -44,7 +44,7 @@ export function StageTraceDialog({
               <ProcessingLine />
             </div>
           ) : result?.status === 'error' ? (
-            <div className="rounded-[22px] border border-editorial-accent/40 bg-editorial-textbox/40 p-5 text-sm leading-relaxed text-editorial-accent">
+            <div className="rounded-[22px] border border-editorial-danger/40 bg-editorial-textbox/40 p-5 text-sm leading-relaxed text-editorial-danger">
               {result.error || t('errors.unknownError')}
             </div>
           ) : result?.content ? (

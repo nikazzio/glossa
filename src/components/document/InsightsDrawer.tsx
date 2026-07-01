@@ -143,8 +143,8 @@ export function ChunkInspectorPanel({ onReauditChunk }: ChunkInspectorPanelProps
     : t('document.chunkPanelTitle');
 
   return (
-    <div className="flex flex-col" role="region" aria-label={chunkLabel}>
-      <div className="flex items-center gap-2 border-b border-editorial-border bg-editorial-bg/60 px-3 py-2">
+    <div className="flex min-h-0 flex-1 flex-col" role="region" aria-label={chunkLabel}>
+      <div className="flex shrink-0 items-center gap-2 border-b border-editorial-border bg-editorial-bg/60 px-3 py-2">
         <div role="tablist" aria-orientation="horizontal" aria-label={chunkLabel} className="flex gap-1">
           {CHUNK_RAIL_TAB_ORDER.map((tab) => (
             <TabButton
@@ -165,7 +165,7 @@ export function ChunkInspectorPanel({ onReauditChunk }: ChunkInspectorPanelProps
         <span className="font-display text-sm italic text-editorial-ink">{CHUNK_RAIL_TAB_LABEL[chunkRailTab]}</span>
       </div>
 
-      <div className="flex flex-col overflow-y-auto bg-editorial-bg/40 custom-scrollbar">
+      <div className="min-h-0 flex-1 overflow-y-auto bg-editorial-bg/40 pb-6 custom-scrollbar">
         {chunkRailTab === 'audit' ? (
           <AuditTab
             panelId={CHUNK_RAIL_TAB_PANEL_IDS.audit}

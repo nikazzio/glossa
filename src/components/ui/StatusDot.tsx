@@ -6,7 +6,7 @@ export const STATUS_TONE: Record<PipelineStatus, string> = {
   completed: 'border-editorial-success/40 bg-editorial-success/12 text-editorial-success',
   processing: 'border-editorial-running/45 bg-editorial-running/12 text-editorial-running animate-pulse',
   retrying:   'border-editorial-running/45 bg-editorial-running/12 text-editorial-running animate-pulse',
-  error:      'border-editorial-accent/40 bg-editorial-accent/10 text-editorial-accent',
+  error:      'border-editorial-danger/40 bg-editorial-danger/10 text-editorial-danger',
   idle:       'border-editorial-border bg-editorial-bg text-editorial-muted',
 };
 

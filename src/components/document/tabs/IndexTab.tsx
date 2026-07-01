@@ -21,7 +21,7 @@ import type { TranslationChunk } from '../../../types';
 const QUALITY_TONE_COLOR: Record<ReturnType<typeof qualityTone>, string> = {
   strong: 'text-editorial-success',
   ok: 'text-editorial-warning',
-  weak: 'text-editorial-accent',
+  weak: 'text-editorial-danger',
 };
 
 export interface IndexTabProps {
@@ -78,7 +78,7 @@ export function IndexTab({ panelId, labelledBy, chunks, currentChunkId, stuckChu
           } else if (chunk.status === 'preview') {
             statusIcon = <FlaskConical size={13} className="text-editorial-muted shrink-0" />;
           } else if (chunk.status === 'error') {
-            statusIcon = <AlertCircle size={13} className="text-editorial-accent shrink-0" />;
+            statusIcon = <AlertCircle size={13} className="text-editorial-danger shrink-0" />;
           } else {
             statusIcon = <Circle size={13} className="text-editorial-border shrink-0" />;
           }
@@ -107,7 +107,7 @@ export function IndexTab({ panelId, labelledBy, chunks, currentChunkId, stuckChu
                   </div>
                   {chunk.judgeResult.status === 'completed' && (
                     <div className={`mt-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.1em] ${isActive ? 'text-white/70' : QUALITY_TONE_COLOR[tone]}`}>
-                      <span className={`inline-block h-1.5 w-1.5 rounded-full ${tone === 'strong' ? 'bg-editorial-success' : tone === 'ok' ? 'bg-editorial-warning' : 'bg-editorial-accent'}`} />
+                      <span className={`inline-block h-1.5 w-1.5 rounded-full ${tone === 'strong' ? 'bg-editorial-success' : tone === 'ok' ? 'bg-editorial-warning' : 'bg-editorial-danger'}`} />
                       {t(qualityLabelKey(chunk.judgeResult.rating))}
                     </div>
                   )}
@@ -133,7 +133,7 @@ export function IndexTab({ panelId, labelledBy, chunks, currentChunkId, stuckChu
                     const hasProblem = anns.some(a => a.type === 'problem');
                     const hasDoubt   = anns.some(a => a.type === 'doubt');
                     const colorClass = isActive ? 'text-white/80'
-                      : hasProblem ? 'text-editorial-accent'
+                      : hasProblem ? 'text-editorial-danger'
                       : hasDoubt   ? 'text-editorial-warning'
                       : 'text-sky-500';
                     return (
@@ -147,7 +147,7 @@ export function IndexTab({ panelId, labelledBy, chunks, currentChunkId, stuckChu
 
                 {isStuck && chunk.status === 'processing' && (
                   <div className={`flex items-center justify-between gap-2 border-t px-3 py-2 ${isActive ? 'border-white/10' : 'border-editorial-border/60'}`}>
-                    <div className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.1em] ${isActive ? 'text-editorial-running' : 'text-editorial-accent'}`}>
+                    <div className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.1em] ${isActive ? 'text-editorial-running' : 'text-editorial-warning'}`}>
                       <Clock size={11} />
                       {t('document.watchdogStuck')}
                     </div>
@@ -155,7 +155,7 @@ export function IndexTab({ panelId, labelledBy, chunks, currentChunkId, stuckChu
                       type="button"
                       onClick={(e) => { e.stopPropagation(); onCancelStuck(chunk.id); }}
                       aria-label={t('document.watchdogCancel')}
-                      className={`rounded-full border px-2 py-0.5 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${isActive ? 'border-editorial-running/40 text-editorial-running hover:bg-editorial-ink/10' : 'border-editorial-accent/40 text-editorial-accent hover:bg-editorial-accent/10'}`}
+                      className={`rounded-full border px-2 py-0.5 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${isActive ? 'border-editorial-running/40 text-editorial-running hover:bg-editorial-ink/10' : 'border-editorial-danger/40 text-editorial-danger hover:bg-editorial-danger/10'}`}
                     >
                       {t('document.watchdogCancel')}
                     </button>

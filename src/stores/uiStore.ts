@@ -185,7 +185,7 @@ export const useUiStore = create<UiState>()(
       projectContextUserExpanded: true,
       dashboardSidebarCollapsed: false,
       dashboardSidebarWidth: 240,
-      projectSidebarWidth: 240,
+      projectSidebarWidth: 300,
       projectFlyoutWidth: 430,
       configFlyoutWidth: 560,
       pendingAnnotationAnchor: null,
@@ -461,7 +461,7 @@ export const useUiStore = create<UiState>()(
         if (fromVersion < 10) {
           s.dashboardSidebarCollapsed = false;
           s.dashboardSidebarWidth = 240;
-          s.projectSidebarWidth = 240;
+          s.projectSidebarWidth = 300;
           s.projectFlyoutWidth = 430;
           s.configFlyoutWidth = 560;
         }

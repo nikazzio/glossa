@@ -1,7 +1,5 @@
 import {
   AlertTriangle,
-  ChevronLeft,
-  ChevronRight,
   FileText,
   FlaskConical,
   GitCompare,
@@ -22,7 +20,6 @@ import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
-import { indexPad } from '../../utils';
 import { HighlightedText, MarkdownEditor, DOC_FONT_SIZE_STEP_INDEX } from '../common';
 import { IconButton, Tooltip, type IconButtonTone } from '../ui';
 import { composeAnnotatedMarkdown } from '../../utils/annotationMarkdown';
@@ -47,7 +44,7 @@ const STAGE_TONE_MAP: Record<string, IconButtonTone> = {
   completed: 'success',
   processing: 'running',
   retrying: 'running',
-  error: 'accent',
+  error: 'danger',
   idle: 'muted',
 };
 
@@ -321,8 +318,6 @@ export function DocumentView({
     );
   }
 
-  const prevChunk = chunks[currentIndex - 1];
-  const nextChunk = chunks[currentIndex + 1];
   const sourceReadOnly =
     currentChunk.status === 'processing' ||
     currentChunk.sourceEditable !== true;
@@ -339,14 +334,14 @@ export function DocumentView({
               : chunk.status === 'preview'
                 ? 'bg-editorial-charcoal/22 shadow-[inset_0_0_0_1px_rgba(58,122,114,0.12)]'
                 : chunk.status === 'error'
-                  ? 'bg-editorial-accent/22 shadow-[inset_0_0_0_1px_rgba(200,112,94,0.18)]'
+                  ? 'bg-editorial-danger/18 shadow-[inset_0_0_0_1px_rgba(166,78,66,0.18)]'
                   : chunk.status === 'processing'
                     ? 'bg-editorial-running/24 animate-pulse shadow-[inset_0_0_0_1px_rgba(196,155,42,0.22)]'
                     : 'bg-editorial-border/40';
           const isCurrent = idx === currentIndex;
           const chunkAnnotations = annotationsByChunkId.get(chunk.id) ?? [];
           const annotDotColor = chunkAnnotations.some((a) => a.type === 'problem')
-            ? 'bg-editorial-accent'
+            ? 'bg-editorial-danger'
             : chunkAnnotations.some((a) => a.type === 'doubt')
               ? 'bg-editorial-warning'
               : chunkAnnotations.length > 0
@@ -417,32 +412,6 @@ export function DocumentView({
     </div>
   );
 
-  // Navigazione frammenti (shell nuova): solo frecce + contatore m/n. È un comando a sé,
-  // distinto dai pallini minimap (che vivono su una riga propria, non fra le frecce).
-  const chunkNavControls = (
-    <>
-      <IconButton
-        size="md"
-        onClick={() => prevChunk && setSelectedChunkId(prevChunk.id)}
-        title={t('document.previousChunk')}
-        disabled={!prevChunk}
-      >
-        <ChevronLeft size={16} />
-      </IconButton>
-      <span className="shrink-0 font-display text-lg italic leading-none text-editorial-ink">
-        {indexPad(currentIndex + 1)}<span className="px-0.5 text-editorial-muted">/</span>{indexPad(chunks.length)}
-      </span>
-      <IconButton
-        size="md"
-        onClick={() => nextChunk && setSelectedChunkId(nextChunk.id)}
-        title={t('document.nextChunk')}
-        disabled={!nextChunk}
-      >
-        <ChevronRight size={16} />
-      </IconButton>
-    </>
-  );
-
   // Pulsante unico che apre il menu controlli testo, in fila con le azioni pagina.
   const renderTextMenuButton = (open: boolean, toggle: () => void) => (
     <IconButton
@@ -461,8 +430,7 @@ export function DocumentView({
       <div className="@container mx-auto w-full flex flex-col flex-1 min-h-0">
         <div className="shrink-0">
           {/* Barra di navigazione a filo (border-b, allineata alle testate dei pannelli
-              laterali). Colonna sinistra a due righe (stati del chunk sopra, minimap pallini
-              sotto); colonna destra con frecce + m/n centrate sullo spazio delle due righe. */}
+              laterali). Stati del chunk sopra, minimap pallini sotto. */}
           <div className="w-full h-20 flex items-stretch gap-4 border-b border-editorial-border bg-editorial-page px-6 py-2">
             <div className="flex min-w-0 flex-1 flex-col justify-center gap-2">
               {stageStatusButtons}
@@ -471,9 +439,6 @@ export function DocumentView({
                   {chunkMinimapDots}
                 </div>
               ) : null}
-            </div>
-            <div className="flex shrink-0 items-center gap-2 border-l border-editorial-border/50 pl-4">
-              {chunkNavControls}
             </div>
           </div>
         </div>

@@ -16,7 +16,7 @@ const AREA_KEY: Record<string, string> = {
 const QUALITY_ICON = {
   strong: <CheckCircle2 size={11} className="text-editorial-success" />,
   ok: <MinusCircle size={11} className="text-editorial-warning" />,
-  weak: <AlertCircle size={11} className="text-editorial-accent" />,
+  weak: <AlertCircle size={11} className="text-editorial-danger" />,
 };
 
 function SaveIndicator({ state }: { state: 'idle' | 'dirty' | 'saving' | 'saved' | 'error' }) {
@@ -38,7 +38,7 @@ function SaveIndicator({ state }: { state: 'idle' | 'dirty' | 'saving' | 'saved'
       ? 'bg-editorial-success'
       : state === 'dirty'
         ? 'bg-editorial-warning'
-        : 'bg-editorial-accent';
+        : 'bg-editorial-danger';
 
   const label =
     state === 'saved'
@@ -144,7 +144,7 @@ function ChunkCenterStats() {
       {statusLabel && (
         <>
           <span className="text-editorial-border">·</span>
-          <span className={chunk.status === 'completed' ? 'text-editorial-success' : 'text-editorial-accent'}>
+          <span className={chunk.status === 'completed' ? 'text-editorial-success' : 'text-editorial-danger'}>
             {statusLabel}
           </span>
         </>

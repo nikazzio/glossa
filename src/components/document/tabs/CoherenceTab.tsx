@@ -81,7 +81,7 @@ export function CoherenceTab({ panelId, labelledBy, currentChunk, isProcessing, 
             <Loader2 size={13} className="animate-spin shrink-0" /> {t('coherence.running')}
           </div>
         ) : coherence.status === 'error' ? (
-          <div className="mt-3 rounded-2xl border border-editorial-accent/30 bg-editorial-textbox/40 p-3 text-sm text-editorial-accent">
+          <div className="mt-3 rounded-2xl border border-editorial-danger/30 bg-editorial-textbox/40 p-3 text-sm text-editorial-danger">
             {coherence.error || t('errors.coherenceFailed')}
           </div>
         ) : coherence.issues.length === 0 ? (

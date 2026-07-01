@@ -82,7 +82,8 @@
   --color-editorial-bg: #F8F5F0;
   --color-editorial-ink: #35687A;
   --color-editorial-charcoal: #3A7A72;
-  --color-editorial-accent: #C8705E;
+  --color-editorial-accent: #2F746C;
+  --color-editorial-danger: #A64E42;
   --color-editorial-muted: #666666;
   --color-editorial-border: #C2BCB4;
   --color-editorial-textbox: #EAE5DE;
@@ -124,6 +125,8 @@ html.dark {
   --color-editorial-bg:           #1c1814;
   --color-editorial-ink:          #c4d4d9;
   --color-editorial-charcoal:     #2e5c7a;
+  --color-editorial-accent:       #3A7A72;
+  --color-editorial-danger:       #C8705E;
   --color-editorial-muted:        #857d77;
   --color-editorial-border:       #352d28;
   --color-editorial-textbox:      #251f1b;
@@ -191,7 +194,7 @@ html.dark {
   --hl-mismatch-bg: rgba(239, 68, 68, 0.15);
   --hl-search-bg: rgba(234, 179, 8, 0.25);
   --hl-audit-bg: rgba(249, 115, 22, 0.25);
-  --hl-annot-bg: rgba(58, 122, 114, 0.25);
+  --hl-annot-bg: rgba(166, 78, 66, 0.16);
 }
 
 html,
@@ -259,18 +262,16 @@ mark.hl-annot {
   color: inherit;
 }
 
-/* Footnote marker painted after the anchored word in the translation write
-   view. Rendered zero-width so it never shifts the transparent-textarea
-   overlay alignment. Same small red superscript as the source markers. */
+/* Footnote marker painted after the anchored word in the translation write view. */
 .hl-annot-marker {
   display: inline-block;
-  width: 0;
-  overflow: visible;
+  margin-left: 0.08em;
   white-space: nowrap;
-  color: var(--color-editorial-accent);
+  color: var(--color-editorial-danger);
   font-weight: 600;
   vertical-align: super;
   font-size: 0.7em;
+  line-height: 0;
   pointer-events: none;
 }
 
@@ -291,7 +292,7 @@ mark.hl-diff-rm {
 }
 
 .hl-footnote-marker {
-  color: var(--color-editorial-accent);
+  color: var(--color-editorial-danger);
   font-weight: 600;
   vertical-align: super;
   font-size: 0.7em;
@@ -302,7 +303,7 @@ sup.footnote-ref,
 sup.footnote-ref a,
 [data-footnotes] sup a,
 a[data-footnote-ref] {
-  color: var(--color-editorial-accent);
+  color: var(--color-editorial-danger);
   font-weight: 600;
   text-decoration: none;
 }
@@ -336,7 +337,7 @@ a[data-footnote-ref] {
 
 .footnote-backref,
 a[data-footnote-backref] {
-  color: var(--color-editorial-accent);
+  color: var(--color-editorial-danger);
   text-decoration: none;
   margin-left: 0.3rem;
 }

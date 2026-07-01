@@ -15,7 +15,7 @@ interface AuditPanelProps {
 const QUALITY_TONE_COLOR: Record<ReturnType<typeof qualityTone>, string> = {
   strong: 'text-editorial-success',
   ok: 'text-editorial-warning',
-  weak: 'text-editorial-accent',
+  weak: 'text-editorial-danger',
 };
 
 export function AuditPanel({ onRunAuditOnly, onReauditChunk }: AuditPanelProps) {
@@ -272,7 +272,7 @@ function ChunkAuditCard({
                     <div className="flex items-center justify-between gap-2">
                       <span
                         className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-sm ${
-                          issue.severity === 'high' ? 'bg-editorial-accent text-white' : 'bg-editorial-ink text-white'
+                          issue.severity === 'high' ? 'bg-editorial-danger text-editorial-bg' : 'bg-editorial-ink text-white'
                         }`}
                       >
                         {issue.type}

@@ -1,8 +1,9 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useChunksStore } from '../../../stores/chunksStore';
 import { useProjectStore } from '../../../stores/projectStore';
 import { useUiStore } from '../../../stores/uiStore';
+import { makeTranslationChunk } from '../../../test/chunkFactory';
 import { ShellNext } from './ShellNext';
 
 const initialUiState = useUiStore.getState();
@@ -45,5 +46,22 @@ describe('ShellNext (#291)', () => {
 
     expect(screen.getByRole('button', { name: 'files.import' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'header.exportLabel' })).toBeInTheDocument();
+  });
+
+  it('moves chunk navigation into the operative rail', () => {
+    useChunksStore.setState({
+      chunks: [
+        makeTranslationChunk({ id: 'c1', originalText: 'One' }),
+        makeTranslationChunk({ id: 'c2', originalText: 'Two' }),
+        makeTranslationChunk({ id: 'c3', originalText: 'Three' }),
+      ],
+    });
+    useUiStore.setState({ selectedChunkId: 'c2' });
+
+    renderShell();
+
+    fireEvent.click(screen.getByRole('button', { name: 'document.nextChunk' }));
+    expect(useUiStore.getState().selectedChunkId).toBe('c3');
+    expect(screen.getByRole('button', { name: 'document.previousChunk' })).toBeInTheDocument();
   });
 });
