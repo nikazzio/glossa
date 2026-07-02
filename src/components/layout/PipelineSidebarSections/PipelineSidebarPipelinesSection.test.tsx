@@ -1,9 +1,9 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { useProjectStore } from '../../stores/projectStore';
-import { useConfigStore } from '../../stores/configStore';
-import { useUiStore } from '../../stores/uiStore';
-import { PipelineSidebarPipelinesSection } from './PipelineSidebarSections';
+import { useProjectStore } from '../../../stores/projectStore';
+import { useConfigStore } from '../../../stores/configStore';
+import { useUiStore } from '../../../stores/uiStore';
+import { PipelineSidebarPipelinesSection } from './PipelineSidebarPipelinesSection';
 
 const initialUiState = useUiStore.getState();
 
