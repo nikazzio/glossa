@@ -51,6 +51,7 @@ export function IssueList({ issues, chunkId, onSelectChunk, onFocusIssue, resolv
   const clearFocusedIssue = useUiStore((s) => s.clearFocusedIssue);
   const setPendingAnnotationAnchor = useUiStore((s) => s.setPendingAnnotationAnchor);
   const setChunkRailTab = useUiStore((s) => s.setChunkRailTab);
+  const setProjectContextCollapsed = useUiStore((s) => s.setProjectContextCollapsed);
   return (
     <div className="mt-4 divide-y divide-editorial-border/55">
       {issues.map((issue, index) => {
@@ -102,6 +103,8 @@ export function IssueList({ issues, chunkId, onSelectChunk, onFocusIssue, resolv
                   size="sm"
                   tone="default"
                   onClick={() => {
+                    onSelectChunk(chunkId);
+                    setProjectContextCollapsed(false);
                     setPendingAnnotationAnchor({
                       chunkId,
                       text: issue.phrase ?? '',

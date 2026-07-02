@@ -190,7 +190,7 @@ function ChunkAuditCard({
   resolvedKeys, rejectedKeys, onToggleResolved, onToggleRejected,
 }: ChunkAuditCardProps) {
   const { t } = useTranslation();
-  const { focusIssueInChunk, clearFocusedIssue, focusedIssueQuery, setSelectedChunkId, setViewMode, setPendingAnnotationAnchor, setChunkRailTab } = useUiStore();
+  const { focusIssueInChunk, clearFocusedIssue, focusedIssueQuery, setSelectedChunkId, setViewMode, setPendingAnnotationAnchor, setChunkRailTab, setProjectContextCollapsed } = useUiStore();
   const { judgeResult } = chunk;
   const isError = judgeResult.status === 'error';
   const issues = judgeResult.issues;
@@ -302,6 +302,7 @@ function ChunkAuditCard({
                           onClick={() => {
                             setViewMode('document');
                             setSelectedChunkId(chunk.id);
+                            setProjectContextCollapsed(false);
                             setPendingAnnotationAnchor({
                               chunkId: chunk.id,
                               text: issue.phrase ?? '',

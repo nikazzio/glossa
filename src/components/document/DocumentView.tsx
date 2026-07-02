@@ -211,6 +211,7 @@ export function DocumentView({
     focusedSourceIssueQuery,
     focusedIssueRequestId,
     setChunkRailTab,
+    setProjectContextCollapsed,
     setPendingAnnotationAnchor,
     documentFontSize,
     setDocumentPaneFocus,
@@ -704,6 +705,7 @@ export function DocumentView({
           x={annotationMenu.x}
           y={annotationMenu.y}
           onAddAnnotation={() => {
+            setProjectContextCollapsed(false);
             setPendingAnnotationAnchor({ chunkId: annotationMenu.chunkId, text: annotationMenu.text });
             setChunkRailTab('notes');
           }}
