@@ -1,5 +1,5 @@
 import { type KeyboardEvent } from 'react';
-import { IconButton } from '../../ui';
+import { IconButton, type IconButtonTone } from '../../ui';
 
 export interface TabButtonProps {
   buttonId: string;
@@ -11,15 +11,16 @@ export interface TabButtonProps {
   icon: React.ReactNode;
   controls: string;
   buttonRef: (element: HTMLButtonElement | null) => void;
+  activeTone?: IconButtonTone;
 }
 
-export function TabButton({ buttonId, active, disabled, onClick, onKeyDown, label, icon, controls, buttonRef }: TabButtonProps) {
+export function TabButton({ buttonId, active, disabled, onClick, onKeyDown, label, icon, controls, buttonRef, activeTone = 'accent' }: TabButtonProps) {
   return (
     <IconButton
       id={buttonId}
       ref={buttonRef}
       size="lg"
-      tone={active ? 'accent' : 'default'}
+      tone={active ? activeTone : 'default'}
       role="tab"
       aria-selected={active}
       aria-controls={controls}

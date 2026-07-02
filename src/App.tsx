@@ -21,7 +21,6 @@ import { useWorkspaceStore } from './stores/workspaceStore';
 import { WorkspaceWizard } from './components/workspace/WorkspaceWizard';
 import { WorkspaceHome } from './components/workspace/WorkspaceHome';
 import { TranslationsArea } from './components/workspace/TranslationsArea';
-import { WorkspaceSettingsModal } from './components/workspace/WorkspaceSettingsModal';
 import { importTextFile } from './services/fileService';
 import { savePipelineConfig } from './services/pipelineService';
 import { extractFootnotes } from './utils/footnoteExtractor';
@@ -39,8 +38,11 @@ function HighlightColorSync() {
   useEffect(() => {
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const isDark = colorScheme === 'dark' || (colorScheme === 'system' && prefersDark);
-    const colors = (isDark ? highlightColors.dark : highlightColors.light)
-      ?? (isDark ? HL_COLORS_DARK : HL_COLORS_LIGHT);
+    const fallback = isDark ? HL_COLORS_DARK : HL_COLORS_LIGHT;
+    // Merge chiave per chiave (non solo a livello di oggetto): uno stato persistito
+    // incompleto (chiavi mancanti da una migrazione precedente) non deve scrivere
+    // "undefined" come valore CSS e spegnere quell'evidenziazione.
+    const colors = { ...fallback, ...(isDark ? highlightColors.dark : highlightColors.light) };
     const root = document.documentElement;
     root.style.setProperty('--hl-source-term-color', colors.sourceTerm);
     root.style.setProperty('--hl-match-bg', colors.matchTerm);
@@ -195,7 +197,7 @@ function EditorView() {
     runSingleChunk(chunkId, (!hasCompleted && mode === 'test') ? 'preview' : 'completed');
   }, [runSingleChunk]);
   useProjectAutosave();
-  useKeyboardShortcuts({ onRunPipeline: runPipeline, onDryRun: runDryRun });
+  useKeyboardShortcuts({ onRunPipeline: runPipeline, onRunSingleChunk: handleRetranslateChunk });
   const viewMode = useUiStore((state) => state.viewMode);
   const setShowConfigDrawer = useUiStore((state) => state.setShowConfigDrawer);
   const showSettings = useUiStore((state) => state.showSettings);
@@ -217,7 +219,6 @@ function EditorView() {
   if (showLibraryPanel) libraryPanelLoaded.current = true;
 
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
-  const [showWorkspaceSettings, setShowWorkspaceSettings] = useState(false);
   const editorContentKey = `editor-panel-${currentProjectId ?? 'none'}-${viewMode}`;
 
   const handleImportDocument = useCallback(async () => {
@@ -339,12 +340,9 @@ function EditorView() {
           <main className="relative flex flex-1 min-h-0 overflow-hidden">
             <ShellNext
               onRunPipeline={runPipeline}
-              onRunAuditOnly={runAuditOnly}
               onCancelPipeline={cancelPipeline}
-              onDryRun={runDryRun}
               onRetranslateChunk={handleRetranslateChunk}
               onImportDocument={handleImportDocument}
-              onOpenWorkspaceSettings={() => setShowWorkspaceSettings(true)}
               onReauditChunk={auditSingleChunk}
               onRunCoherenceAudit={runCoherenceAudit}
             >
@@ -404,10 +402,6 @@ function EditorView() {
       <ConfirmDialog />
       <PreflightDialog />
       <RunResumeBanner />
-      <WorkspaceSettingsModal
-        open={showWorkspaceSettings}
-        onClose={() => setShowWorkspaceSettings(false)}
-      />
       {pendingImport && (
         <Suspense fallback={null}>
           <ImportPreviewDialog
@@ -522,7 +516,9 @@ export default function App() {
             <LibraryPanel />
           </Suspense>
         ) : null}
-        <AppStatusBar />
+        {/* In vista progetto la barra di stato vive dentro ShellNext (solo sotto rail+documento,
+            non sotto l'ispettore destro); qui resta solo per la vista workspace/home. */}
+        {isWorkspaceHome && <AppStatusBar />}
         <ConfirmDialog />
       </div>
       <Toaster

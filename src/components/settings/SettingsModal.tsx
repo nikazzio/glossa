@@ -203,8 +203,13 @@ export function SettingsModal() {
     if (colorScheme === 'light') return 'light';
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   })();
-  const activeHlColors: HLColorSet = highlightColors[hlMode]
-    ?? (hlMode === 'dark' ? HL_COLORS_DARK : HL_COLORS_LIGHT);
+  // Merge chiave per chiave: uno stato persistito incompleto (chiavi mancanti da
+  // una migrazione precedente) non deve far leggere `undefined` per un tipo di
+  // evidenziazione — altrimenti lo swatch colore risulta vuoto/nero.
+  const activeHlColors: HLColorSet = {
+    ...(hlMode === 'dark' ? HL_COLORS_DARK : HL_COLORS_LIGHT),
+    ...highlightColors[hlMode],
+  };
 
   const refreshOllama = async () => {
     setRefreshing(true);

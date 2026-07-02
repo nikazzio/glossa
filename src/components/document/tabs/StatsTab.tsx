@@ -28,7 +28,7 @@ import { StatRow, ScopeBreakdownCarousel, Tooltip } from '../../ui';
 const QUALITY_TONE_COLOR: Record<ReturnType<typeof qualityTone>, string> = {
   strong: 'text-editorial-success',
   ok: 'text-editorial-warning',
-  weak: 'text-editorial-accent',
+  weak: 'text-editorial-danger',
 };
 
 function SectionHeader({ icon, label, info }: { icon: React.ReactNode; label: string; info?: string }) {
@@ -95,8 +95,8 @@ export function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
   }
 
   return (
-    <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="space-y-3 px-5 py-5">
-      <section className="rounded-[20px] border border-editorial-border bg-editorial-bg px-4 py-3">
+    <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="divide-y divide-editorial-border/55 px-5">
+      <section className="py-4">
         <SectionHeader icon={<FileText size={11} />} label={t('document.infoLabel')} />
         <dl className="space-y-2">
           <StatRow label={t('document.infoSourceWords')} value={sourceWords.toLocaleString()} />
@@ -105,7 +105,7 @@ export function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
         </dl>
       </section>
 
-      <section className="rounded-[20px] border border-editorial-border bg-editorial-bg px-4 py-3">
+      <section className="py-4">
         <SectionHeader icon={<BarChart2 size={11} />} label={t('pipeline.chunkStatus.completed')} />
         <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-editorial-border/40">
           <div className="h-full rounded-full bg-editorial-success transition-all" style={{ width: `${progressPct}%` }} />
@@ -116,11 +116,11 @@ export function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
           {processingCount > 0 && <div className="flex items-center gap-1.5 text-xs text-editorial-warning"><Loader2 size={10} className="animate-spin" /><span className="font-bold">{processingCount}</span> {t('pipeline.chunkStatus.processing')}</div>}
           {previewCount > 0 && <div className="flex items-center gap-1.5 text-xs text-editorial-muted"><FlaskConical size={10} /><span className="font-bold">{previewCount}</span> {t('pipeline.chunkStatus.preview')}</div>}
           {completedCount > 0 && <div className="flex items-center gap-1.5 text-xs text-editorial-success"><CheckCircle2 size={10} /><span className="font-bold">{completedCount}</span> {t('pipeline.chunkStatus.completed')}</div>}
-          {errorCount > 0 && <div className="flex items-center gap-1.5 text-xs text-editorial-accent"><AlertCircle size={10} /><span className="font-bold">{errorCount}</span> {t('pipeline.chunkStatus.error')}</div>}
+          {errorCount > 0 && <div className="flex items-center gap-1.5 text-xs text-editorial-danger"><AlertCircle size={10} /><span className="font-bold">{errorCount}</span> {t('pipeline.chunkStatus.error')}</div>}
         </div>
       </section>
 
-      <section className="rounded-[20px] border border-editorial-border bg-editorial-bg px-4 py-3">
+      <section className="py-4">
         <SectionHeader
           icon={<Gauge size={11} />}
           label={t('document.infoQuality')}
@@ -131,7 +131,7 @@ export function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
           : <div className="font-display text-lg italic text-editorial-muted/40">—</div>}
       </section>
 
-      <section className="rounded-[20px] border border-editorial-border bg-editorial-bg px-4 py-3">
+      <section className="py-4">
         <SectionHeader
           icon={<Cpu size={11} />}
           label={t('header.tokenCount')}

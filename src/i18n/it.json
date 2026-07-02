@@ -39,7 +39,9 @@
     "areaLabel": "Area",
     "workspaceSection": "Workspace",
     "backToWorkspace": "Torna al workspace",
-    "resize": "Ridimensiona la barra"
+    "resize": "Ridimensiona la barra",
+    "collapse": "Comprimi barra",
+    "expand": "Espandi barra"
   },
   "projectShell": {
     "railLabel": "Pannelli progetto",
@@ -198,6 +200,10 @@
     "auditSkippedNoDraft": "Nessuna traduzione da valutare — traduci prima questo blocco.",
     "chunkActions": "Azioni blocco",
     "retranslateChunk": "Riesegui blocco",
+    "workModeChunk": "Chunk",
+    "workModeAll": "Tutto",
+    "translateChunk": "Traduci chunk",
+    "executeAll": "Esegui tutto",
     "retrying": "Rate limit — riprovo tra {{seconds}}s ({{attempt}}/{{total}})",
     "reauditChunk": "Ri-valuta questo blocco",
     "prompt": "Prompt",
@@ -379,6 +385,7 @@
     "confirmDeleteTitle": "Eliminare la pipeline?",
     "confirmDeleteMessage": "\"{{name}}\" verrà rimossa definitivamente insieme a tutte le sue traduzioni.",
     "configurePipeline": "Configura pipeline",
+    "changePipeline": "Cambia pipeline",
     "sectionTitle": "Pipeline"
   },
   "audit": {
@@ -871,7 +878,7 @@
     "translationStaleBadge": "Sorgente modificata",
     "configDrawerTitle": "Configurazione pipeline",
     "configDrawerHint": "Lingua, modelli, fasi di traduzione e glossario del progetto corrente.",
-    "insightsDrawerTitle": "Pannello insight",
+    "insightTabsLabel": "Tab documento — Indice, Cerca, Statistiche, Coerenza, Glossario",
     "insightsDrawerHint": "Indice chunk e valutazione del giudice per il chunk corrente.",
     "insightsTabIndex": "Indice",
     "insightsTabSearch": "Cerca",
@@ -890,7 +897,6 @@
     "searchScope_audit": "audit",
     "highlightsToggle": "Abilita/disabilita evidenziazioni",
     "insightsTabAudit": "Audit",
-    "insightsTabSummary": "Riepilogo",
     "insightsTabStats": "Statistiche",
     "insightsTabCoherence": "Coerenza",
     "insightsTabGlossary": "Glossario",
@@ -1036,7 +1042,7 @@
       "markdownToolsTitle": "Toolbar Markdown",
       "markdownToolsDesc": "Il pulsante menu ⋮ nella riga di controlli apre la toolbar Markdown: modalità scrittura/anteprima/affiancata (split), dimensione testo e bottoni di formattazione (grassetto, corsivo, titoli, elenchi, nota). Il pulsante ? apre questa guida. Tutti i controlli di testo sono in questo menu.",
       "insightsTitle": "Pannello Insight",
-      "insightsDesc": "È il pannello a destra del progetto, con due schede: Approfondimenti (Indice, Cerca, Statistiche, Coerenza, Glossario) per metriche e ricerca su tutto il documento, e Frammento (Riepilogo, Audit, Note, Operazioni) per il frammento selezionato. La selezione di un frammento nell'indice apre automaticamente la scheda Frammento.",
+      "insightsDesc": "È il pannello a destra del progetto: raccoglie le schede Indice, Cerca, Statistiche, Coerenza e Glossario per metriche e ricerca su tutto il documento. Le informazioni sul frammento selezionato (Audit, Note, Memoria) sono invece nella barra a sinistra, vicino ai comandi della pipeline.",
       "statsTitle": "Statistiche di sessione",
       "statsDesc": "Il tab Statistiche aggrega token in input e output, costo stimato e cache hit rate per la sessione corrente. Il riepilogo suddivide il consumo per operazione — ogni stage della pipeline (es. Translation, Refine, Format), l'Audit e la Coerenza — mostrando il modello usato e la percentuale di token serviti dalla cache per ciascuno.",
       "operationsLogTitle": "Log operazioni strutturato",
@@ -1503,10 +1509,20 @@
     "saveError": "Errore salvataggio",
     "sourceWords": "src",
     "targetWords": "tgt",
+    "chunkWords": "w",
+    "chunkWordsTooltip": "{{count}} parole",
     "coverage": "copertura",
     "chunks": "chunk",
     "running": "In esecuzione…",
     "completed": "Completata",
+    "error": "Errore",
+    "chunkProcessing": "in elaborazione…",
+    "quality": {
+      "strong": "Qualità buona",
+      "ok": "Qualità sufficiente",
+      "weak": "Qualità bassa",
+      "tooltipPrefix": "Qualità"
+    },
     "areaTranslations": "Traduzioni",
     "areaLibrary": "Biblioteca",
     "areaTranscriptions": "Trascrizioni",
@@ -1539,5 +1555,9 @@
   "workflow": {
     "translation": "Traduzione",
     "transcription": "Trascrizione"
+  },
+  "console": {
+    "toggle": "Console log",
+    "title": "Console"
   }
 }

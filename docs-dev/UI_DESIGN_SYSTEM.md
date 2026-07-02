@@ -12,7 +12,8 @@ when-to-read: prima di creare o modificare qualsiasi componente visivo
 | `editorial-bg` | #F8F5F0 | Background generale |
 | `editorial-ink` | #35687A | Testo principale (contrasto 5.7:1) |
 | `editorial-charcoal` | #3A7A72 | Testo secondario |
-| `editorial-accent` | #C8705E | Accenti, bottoni attivi, selezioni |
+| `editorial-accent` | #2F746C | Accenti, bottoni attivi, selezioni |
+| `editorial-danger` | #A64E42 | Azioni distruttive, stop, errori bloccanti |
 | `editorial-muted` | #666666 | Testo disabilitato / secondario |
 | `editorial-success` | #3A7A65 | Stato positivo |
 | `editorial-running` | #C49B2A | Step pipeline in esecuzione (dot + label gialli con `animate-pulse`) |
@@ -44,7 +45,8 @@ when-to-read: prima di creare o modificare qualsiasi componente visivo
 
 ## Regole generali
 
-- **Accenti sempre `editorial-accent`** (rosso) per bottoni di selezione, stato attivo, focus ring. Mai `editorial-ink`.
+- **Accenti sempre `editorial-accent`** (verde petrolio) per bottoni di selezione, stato attivo, focus ring. Mai `editorial-ink`.
+- **Danger sempre `editorial-danger`** per azioni distruttive, stop e segnali d'errore bloccanti. Non usare `editorial-accent` per pericolo.
 - **Hover inattivo:** `hover:border-editorial-accent/40 hover:text-editorial-accent`
 - **Disabled:** `disabled:opacity-40 disabled:cursor-not-allowed`
 - **Focus:** `focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent`
@@ -93,7 +95,7 @@ import { IconButton } from '../ui';
 </IconButton>
 ```
 
-**Varianti tone:** `default | accent | success | charcoal | muted | running`
+**Varianti tone:** `default | accent | danger | success | charcoal | muted | running`
 **Varianti size:** `xs | sm | md | lg` (`xs` = `p-1`, per barre molto compatte come la barra di stato)
 
 Regole:
@@ -157,6 +159,31 @@ import { StatusDot } from '../ui';
 ```
 
 **Tone disponibili:** gli stessi di `IconButton` — usa solo token `editorial-*`. Non usare classi Tailwind dirette come `bg-emerald-500`, `bg-amber-400`, ecc.
+
+---
+
+### Badge numerico rotondo con tooltip — conteggi compatti non interattivi
+
+Per conteggi compatti dove basta colore + numero (es. numero di note su un frammento nell'Indice), niente etichetta testuale a fianco: pallino colorato con il numero dentro, descrizione completa in `Tooltip` all'hover.
+
+```tsx
+import { Tooltip } from '../ui';
+
+<Tooltip label={t('annotations.badgeCount', { count })} side="top">
+  <span
+    className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-white ${bgClass}`}
+    aria-label={t('annotations.badgeCount', { count })}
+  >
+    {count}
+  </span>
+</Tooltip>
+```
+
+Regole:
+- `bgClass` solo da mappe canoniche esistenti (es. `ANNOTATION_META[type].bgClass` in `NotesTab.tsx`) — mai colori inventati.
+- Se il conteggio aggrega elementi di tipi/tone diversi, il colore del pallino è quello del tipo più urgente presente (stessa priorità della mappa canonica), non una media o un colore neutro a parte.
+- Diametro fisso `h-5 w-5`, testo `text-[10px] font-bold text-white` per restare leggibile anche a 1-2 cifre.
+- Non usare per conteggi che necessitano di essere cliccabili: quello è `IconButton`/`PillButton`, non questo pattern.
 
 ---
 
@@ -266,7 +293,7 @@ import { DialogConfirmButton, DialogCancelButton } from '../ui';
 
 - **Conferma/Accetta**: pieno color **inchiostro** (`bg-editorial-ink text-white`), `text-sm`, frase normale (no maiuscolo), pillola arrotondata.
 - **Annulla/Chiudi/Indietro**: bordo sobrio, testo muted; all'hover sfondo `editorial-textbox/50` + testo/bordo ink.
-- Eccezione: conferme **distruttive** usano `AlertDialog tone="danger"` (pulsante rosso accento come segnale di pericolo).
+- Eccezione: conferme **distruttive** usano `AlertDialog tone="danger"` (pulsante `editorial-danger` come segnale di pericolo).
 - Non creare pulsanti footer raw: usa sempre queste due primitive.
 
 ---
@@ -329,25 +356,45 @@ Regole:
 ### Colonne progetto (shell #291)
 
 La vista progetto è a **tre colonne** (`ShellNext`, `react-resizable-panels`):
-- **Rail sinistro** (`ProjectRailNext`): azioni di progetto in cima (testata `h-20`) + selettore pipeline + comandi Esegui. Collassabile a icone.
+- **Rail sinistro** (`ProjectRailNext`): barra operativa del progetto. In alto (`h-20`) tiene collasso + navigazione frammento; sotto tiene identità pipeline + modalità/azione primaria; poi tab del frammento (Audit / Note / Memoria); in basso azioni progetto. Collassabile a icone.
 - **Centro**: documento (`DocumentView`).
-- **Ispettore destro** (`ProjectInspectorNext`, testata `h-20`): pannello collassabile con schede **Approfondimenti** (documento) e **Frammento** (chunk); si apre su `showDocumentDrawer`/`showChunkDrawer`.
+- **Ispettore destro** (`ProjectInspectorNext`, testata `h-20`): pannello documento/approfondimenti. Il pannello frammento vive nella rail sinistra, non nel lato destro.
 
-Le tre testate condividono `h-20` → bordi superiori coincidenti. Larghezze e stato collassato sono persistiti in `uiStore` (`projectSidebarWidth`, `projectFlyoutWidth`, `projectContextCollapsed`/`projectContextUserExpanded`). `activeProjectPanel` (`run|pipeline|document|insight|chunk`) è la source-of-truth del rail. La **config pipeline** (`ConfigDrawer`) esce come **finestra modale**, non più come fly-out push/overlay. Dettagli in `ARCHITECTURE.md`.
+Le testate condividono `h-20` → bordi superiori coincidenti. Larghezze e stato collassato sono persistiti in `uiStore` (`projectSidebarWidth`, `projectFlyoutWidth`, `projectContextCollapsed`/`projectContextUserExpanded`). La **config pipeline** (`ConfigDrawer`) esce come **finestra modale**, non più come fly-out push/overlay. Dettagli in `ARCHITECTURE.md`.
 
 **Caricamento documento**: `chunksStore.loadDocument` **non** apre il pannello Frammento (eviterebbe di spostare il layout di lettura); si apre solo su azione esplicita.
 
-### Resize (drag + tastiera) — `useEdgeResize` + `ResizeHandle`
+### Rail sinistro progetto (#296)
 
-Tutte le superfici laterali sono ridimensionabili dal bordo destro (`components/layout/useEdgeResize.tsx`). Le larghezze e lo stato collapse sono persistiti in `uiStore`.
-- **Barre primarie** (home, progetto): mode `collapse` — trascinando sotto soglia collassano a icone in tempo reale (reversibile nel drag).
-- **Fly-out** (Insight, Chunk, ConfigDrawer): mode `dismiss` — trascinando sotto soglia il pannello **scompare** al rilascio (non collassa a icona).
-- **Accessibilità**: `ResizeHandle` è tabbabile (`role="separator"` + `aria-valuenow/min/max`); ←/→ ridimensionano a step di 16px, Home/End vanno a min/max, **doppio click = reset** alla larghezza di default (rail 240, flyout 430, config 560). Grip sottile sempre visibile (scopribilità), accentuato in hover/drag.
-- Durante il drag la transizione di larghezza è disattivata (movimento 1:1); allo snap/chiusura riprende l'animazione. Niente larghezze hard-coded nei consumer: leggere da `uiStore`.
+Gerarchia obbligatoria, dall'alto:
+1. **Navigazione frammento**: nella testata `h-20`, accanto al pulsante di collasso. Da rail aperta è orizzontale con contatore; da rail collassata è verticale. Non usare contenitori ovali/card attorno alle frecce.
+2. **Pipeline**: nome pipeline compatto (`font-display italic`) + cambio pipeline; sotto, modalità `Chunk/Tutto` e azione primaria. La modalità è lo scope dell'azione, quindi resta vicino al pulsante che traduce/esegue, non nella testata alta.
+3. **Tab frammento**: Audit / Note / Memoria, con `IconButton` tab + label corsiva secondo il pattern tab/filter. La tabbar resta fissa.
+4. **Contenuto tab**: solo il contenuto basso scorre (`overflow-y-auto`); testata pipeline e tabbar restano ferme.
+5. **Footer progetto**: azioni globali ancorate in basso (workspace, libreria, config, import/export).
+
+Regole:
+- Rail aperta: default 300px, minimo 280px, massimo 420px. Le larghezze salvate vanno clamped in questo intervallo.
+- Rail collassata: solo icone con tooltip; nessuna label visibile, tranne micro valori necessari (es. contatore frammento).
+- Comandi icon-only: sempre `IconButton`, tooltip obbligatorio, `ariaPressed` solo per toggle (`Chunk/Tutto`), `aria-selected` solo per tab.
+- Stop/errori/distruttive: `editorial-danger`; accento attivo/selezione: `editorial-accent`.
+- Audit e Note: niente card rettangolari per singolo item. Usa righe editoriali con separatori orizzontali sottili.
+- Audit/Note item: le azioni stanno solo nella riga titolo a destra; testo principale, ancora e descrizione devono occupare tutta la larghezza sotto. Evitare una colonna azioni che restringe il contenuto.
+- Audit: la linea verticale tipo quote è ammessa **solo** nei dettagli annidati ("nella traduzione", "frase sorgente", "correzione"), non sulla riga principale del problema.
+- Note: note traduzione e note sorgente usano `editorial-danger` per marker/numeri/tono nota; nessuna linea laterale di tipo quote sulle righe principali.
+- **Indicatore note altrove nell'app** (es. badge conteggio in `IndexTab`): usa sempre la mappa canonica tipo→colore esportata da `NotesTab.tsx` (`ANNOTATION_META`: comment `editorial-charcoal`, doubt `editorial-warning`, problem `editorial-danger`, approved `editorial-success`) — non inventare colori fuori palette (es. `sky-*`) né una palette parallela. Se l'indicatore aggrega più note di tipi diversi, mostra il colore del tipo più urgente presente (ordine: problem → doubt → comment → approved).
+
+### Resize (drag + tastiera) — pannelli progetto
+
+La vista progetto usa `react-resizable-panels`. Le larghezze e lo stato collapse sono persistiti in `uiStore`.
+- Rail sinistra: default 300px, collapsed 64px, min 280px, max 420px.
+- Ispettore destro: default 430px, collapsed 56px, min 300px, max 620px.
+- Durante il drag la transizione è disattivata (movimento 1:1); allo snap/chiusura riprende l'animazione tramite token motion condiviso.
+- Grip sottile sempre visibile, accentuato in hover/drag/focus. Niente larghezze hard-coded nei consumer: leggere da `uiStore`.
 
 ### Token di motion — `components/layout/motion.ts`
 
-Spring e curve condivise dalla shell, niente magic number duplicati: `SPRING_PANEL` (`spring 30/280`, fly-out), `EASE_EDITORIAL` (`[0.22,1,0.36,1]`, ingressi barre), `WIDTH_TRANSITION_CLASS` (`transition-[width] duration-200`).
+Spring e curve condivise dalla shell, niente magic number duplicati: `SPRING_PANEL` (`spring 30/280`, fly-out), `EASE_EDITORIAL` (`[0.22,1,0.36,1]`, ingressi barre), `WIDTH_TRANSITION_CLASS` (`transition-[width] duration-200`), `PANEL_FLEX_TRANSITION_CLASS` (`transition-[flex] duration-300`, pannelli `react-resizable-panels`).
 
 ### Navigazione da tastiera del rail
 
@@ -443,7 +490,7 @@ Il tab Console simula un terminale, ma usa la **versione scura della palette edi
 
 | Token Tailwind | Valore | Derivazione |
 |---|---|---|
-| `text-terminal-error` | `#c07060` | family `editorial-accent` #C8705E, smorzato |
+| `text-terminal-error` | `#c07060` | family `editorial-danger`, smorzato |
 | `text-terminal-warn` | `#c49b2a` | `editorial-running` — riuso esatto |
 | `text-terminal-success` | `#5a9a7a` | `editorial-success` #3A7A65, schiarito per dark bg |
 | `text-terminal-info` | `#7898aa` | family teal editoriale, smorzato |
@@ -459,6 +506,16 @@ Usa `.terminal-scrollbar` (definita in `index.css`) al posto di `.custom-scrollb
 ### Bordo drawer
 
 Il bordo sinistro del drawer è condizionale: `border-terminal-border` con tab `operations` attivo, `border-editorial-border` altrimenti — transizione "carta candela" invece di flash stroboscopico.
+
+### Header del drawer Console (#296)
+
+Un solo header a due righe con ruoli distinti, non due header sovrapposti:
+- **Riga chrome** (`bg-terminal-chrome`): icona + titolo + pill di stato live inline (elaborazione/memoria in corso, con `Loader2` animato) + pulsante chiudi. Niente righe di stato separate sotto.
+- **Riga toolbar** (`bg-terminal-bg`, sotto la chrome): ricerca sempre visibile + toggle raggruppato + trigger filtri a scomparsa (i chip scope/livello restano dietro un accordion — sono troppi per stare sempre visibili senza affollare) + vai al frammento + pulisci.
+
+**Colori (CRITICO):** dentro il drawer Console usa **solo** token `terminal-*` (`terminal-accent`, `terminal-secondary`, ecc.), mai `editorial-*`. Il terminale ha una palette scura dedicata apposta per restare "la versione scura degli stessi toni" — infiltrare l'accento dell'interfaccia chiara (verde) rompe quel principio.
+
+**Ridimensionabile:** maniglia orizzontale in cima al drawer (`cursor-ns-resize`, trascinabile), altezza persistita in `uiStore.consoleDrawerHeight` (default 256px, min 160, max 520).
 
 ---
 

@@ -18,7 +18,7 @@ interface AlertDialogProps {
 
 const CONFIRM_CLASS: Record<AlertTone, string> = {
   default: 'bg-editorial-ink text-white hover:bg-editorial-ink/90',
-  danger: 'bg-editorial-accent text-white hover:bg-editorial-accent/90',
+  danger: 'bg-editorial-danger text-editorial-bg hover:bg-editorial-danger/90',
 };
 
 export function AlertDialog({

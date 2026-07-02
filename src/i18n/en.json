@@ -39,7 +39,9 @@
     "areaLabel": "Area",
     "workspaceSection": "Workspace",
     "backToWorkspace": "Back to workspace",
-    "resize": "Resize sidebar"
+    "resize": "Resize sidebar",
+    "collapse": "Collapse sidebar",
+    "expand": "Expand sidebar"
   },
   "projectShell": {
     "railLabel": "Project panels",
@@ -198,6 +200,10 @@
     "auditSkippedNoDraft": "Nothing to audit yet — translate this chunk first.",
     "chunkActions": "Chunk actions",
     "retranslateChunk": "Re-run chunk",
+    "workModeChunk": "Chunk",
+    "workModeAll": "All",
+    "translateChunk": "Translate chunk",
+    "executeAll": "Run all",
     "retrying": "Rate limit — retry in {{seconds}}s ({{attempt}}/{{total}})",
     "reauditChunk": "Re-audit this chunk",
     "prompt": "Prompt",
@@ -379,6 +385,7 @@
     "confirmDeleteTitle": "Delete pipeline?",
     "confirmDeleteMessage": "\"{{name}}\" will be permanently removed along with all its translations.",
     "configurePipeline": "Configure pipeline",
+    "changePipeline": "Switch pipeline",
     "sectionTitle": "Pipeline"
   },
   "audit": {
@@ -871,7 +878,7 @@
     "translationStaleBadge": "Source changed",
     "configDrawerTitle": "Pipeline configuration",
     "configDrawerHint": "Language, models, translation stages and glossary for the current project.",
-    "insightsDrawerTitle": "Insights panel",
+    "insightTabsLabel": "Document tabs — Index, Search, Stats, Coherence, Glossary",
     "insightsDrawerHint": "Chunk index and judge findings for the current chunk.",
     "insightsTabIndex": "Index",
     "insightsTabSearch": "Search",
@@ -890,7 +897,6 @@
     "searchScope_audit": "audit",
     "highlightsToggle": "Toggle highlights",
     "insightsTabAudit": "Audit",
-    "insightsTabSummary": "Summary",
     "insightsTabStats": "Stats",
     "insightsTabCoherence": "Coherence",
     "insightsTabGlossary": "Glossary",
@@ -1036,7 +1042,7 @@
       "markdownToolsTitle": "Markdown toolbar",
       "markdownToolsDesc": "The menu button ⋮ in the controls row opens the Markdown toolbar: write/preview/split modes, text size, and formatting buttons (bold, italic, headings, lists, note). The ? button opens this guide. All text controls are in this menu.",
       "insightsTitle": "Insights panel",
-      "insightsDesc": "The panel on the right of the project, with two tabs: Insights (Index, Search, Stats, Coherence, Glossary) for whole-document metrics and search, and Fragment (Summary, Audit, Notes, Operations) for the selected fragment. Selecting a fragment in the index automatically opens the Fragment tab.",
+      "insightsDesc": "The panel on the right of the project: gathers the Index, Search, Stats, Coherence, and Glossary tabs for whole-document metrics and search. Information about the selected fragment (Audit, Notes, Memory) lives instead in the left rail, next to the pipeline controls.",
       "statsTitle": "Session stats",
       "statsDesc": "The Stats tab aggregates input and output tokens, estimated cost, and cache hit rate for the current session. The breakdown is per operation — each pipeline stage (e.g. Translation, Refine, Format), Audit, and Coherence — showing the model used and the percentage of tokens served from cache for each.",
       "operationsLogTitle": "Structured operations log",
@@ -1503,10 +1509,20 @@
     "saveError": "Save error",
     "sourceWords": "src",
     "targetWords": "tgt",
+    "chunkWords": "w",
+    "chunkWordsTooltip": "{{count}} words",
     "coverage": "coverage",
     "chunks": "chunks",
     "running": "Running…",
     "completed": "Completed",
+    "error": "Error",
+    "chunkProcessing": "processing…",
+    "quality": {
+      "strong": "Good quality",
+      "ok": "Fair quality",
+      "weak": "Low quality",
+      "tooltipPrefix": "Quality"
+    },
     "areaTranslations": "Translations",
     "areaLibrary": "Library",
     "areaTranscriptions": "Transcriptions",
@@ -1539,5 +1555,9 @@
   "workflow": {
     "translation": "Translation",
     "transcription": "Transcription"
+  },
+  "console": {
+    "toggle": "Console log",
+    "title": "Console"
   }
 }

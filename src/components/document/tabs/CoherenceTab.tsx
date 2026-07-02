@@ -48,57 +48,55 @@ export function CoherenceTab({ panelId, labelledBy, currentChunk, isProcessing, 
 
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="px-5 py-5">
-      <section className="rounded-[20px] border border-editorial-border bg-editorial-bg p-5">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
-            <Link2 size={11} className="text-editorial-accent shrink-0" /> {t('coherence.title')}
-          </div>
-          <IconButton
-            size="md"
-            onClick={onRunCoherenceAudit}
-            disabled={coherenceDisabled}
-            title={coherenceTitle}
-            ariaLabel={t('coherence.runAudit')}
-            tooltipSide="left"
-          >
-            {coherence?.status === 'processing' ? <Loader2 size={14} className="animate-spin" /> : <ScanLine size={14} />}
-          </IconButton>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+          <Link2 size={11} className="text-editorial-accent shrink-0" /> {t('coherence.title')}
         </div>
+        <IconButton
+          size="md"
+          onClick={onRunCoherenceAudit}
+          disabled={coherenceDisabled}
+          title={coherenceTitle}
+          ariaLabel={t('coherence.runAudit')}
+          tooltipSide="left"
+        >
+          {coherence?.status === 'processing' ? <Loader2 size={14} className="animate-spin" /> : <ScanLine size={14} />}
+        </IconButton>
+      </div>
 
-        {allChunksTranslated && !allChunksLocked && (
-          <div className="mt-3 flex items-start gap-2 rounded-2xl border border-editorial-warning/30 bg-editorial-warning/10 p-3 text-sm text-editorial-warning">
-            <AlertTriangle size={14} className="mt-0.5 shrink-0" />
-            <span>{t('coherence.unlockedWarning', { count: unlockedChunksCount })}</span>
-          </div>
-        )}
+      {allChunksTranslated && !allChunksLocked && (
+        <div className="mt-3 flex items-start gap-2 border-t border-editorial-warning/30 pt-3 text-sm text-editorial-warning">
+          <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+          <span>{t('coherence.unlockedWarning', { count: unlockedChunksCount })}</span>
+        </div>
+      )}
 
-        {!coherence || coherence.status === 'idle' ? (
-          <p className="mt-3 text-[11px] text-editorial-muted/70 leading-relaxed">
-            {!allChunksTranslated ? t('coherence.translationsRequired') : t('coherence.idle')}
-          </p>
-        ) : coherence.status === 'processing' ? (
-          <div className="mt-3 flex items-center gap-2 text-sm text-editorial-muted">
-            <Loader2 size={13} className="animate-spin shrink-0" /> {t('coherence.running')}
-          </div>
-        ) : coherence.status === 'error' ? (
-          <div className="mt-3 rounded-2xl border border-editorial-accent/30 bg-editorial-textbox/40 p-3 text-sm text-editorial-accent">
-            {coherence.error || t('errors.coherenceFailed')}
-          </div>
-        ) : coherence.issues.length === 0 ? (
-          <div className="mt-3 flex items-center gap-2 text-sm text-editorial-success">
-            <CheckCircle2 size={14} /> {t('coherence.noIssues')}
-          </div>
-        ) : currentChunk ? (
-          <IssueList
-            issues={coherence.issues}
-            chunkId={currentChunk.id}
-            onSelectChunk={onSelectChunk}
-            onFocusIssue={onFocusIssue}
-            resolvedKeys={resolvedKeys}
-            onToggleResolved={handleToggleResolved}
-          />
-        ) : null}
-      </section>
+      {!coherence || coherence.status === 'idle' ? (
+        <p className="mt-3 text-[11px] text-editorial-muted/70 leading-relaxed">
+          {!allChunksTranslated ? t('coherence.translationsRequired') : t('coherence.idle')}
+        </p>
+      ) : coherence.status === 'processing' ? (
+        <div className="mt-3 flex items-center gap-2 text-sm text-editorial-muted">
+          <Loader2 size={13} className="animate-spin shrink-0" /> {t('coherence.running')}
+        </div>
+      ) : coherence.status === 'error' ? (
+        <div className="mt-3 border-t border-editorial-danger/30 pt-3 text-sm text-editorial-danger">
+          {coherence.error || t('errors.coherenceFailed')}
+        </div>
+      ) : coherence.issues.length === 0 ? (
+        <div className="mt-3 flex items-center gap-2 text-sm text-editorial-success">
+          <CheckCircle2 size={14} /> {t('coherence.noIssues')}
+        </div>
+      ) : currentChunk ? (
+        <IssueList
+          issues={coherence.issues}
+          chunkId={currentChunk.id}
+          onSelectChunk={onSelectChunk}
+          onFocusIssue={onFocusIssue}
+          resolvedKeys={resolvedKeys}
+          onToggleResolved={handleToggleResolved}
+        />
+      ) : null}
     </div>
   );
 }

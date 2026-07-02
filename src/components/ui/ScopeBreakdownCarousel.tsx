@@ -19,7 +19,7 @@ export function ScopeBreakdownCarousel({ entries, title }: Props) {
   if (!entry) return null;
 
   return (
-    <section className="rounded-[20px] border border-editorial-border bg-editorial-bg px-4 py-3">
+    <section className="py-4">
       <div className="mb-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 text-xs font-sans uppercase tracking-[0.16em] text-editorial-muted">
           <Layers size={11} className="text-editorial-accent shrink-0" />

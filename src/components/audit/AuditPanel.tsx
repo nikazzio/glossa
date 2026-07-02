@@ -15,7 +15,7 @@ interface AuditPanelProps {
 const QUALITY_TONE_COLOR: Record<ReturnType<typeof qualityTone>, string> = {
   strong: 'text-editorial-success',
   ok: 'text-editorial-warning',
-  weak: 'text-editorial-accent',
+  weak: 'text-editorial-danger',
 };
 
 export function AuditPanel({ onRunAuditOnly, onReauditChunk }: AuditPanelProps) {
@@ -190,7 +190,7 @@ function ChunkAuditCard({
   resolvedKeys, rejectedKeys, onToggleResolved, onToggleRejected,
 }: ChunkAuditCardProps) {
   const { t } = useTranslation();
-  const { focusIssueInChunk, clearFocusedIssue, focusedIssueQuery, setSelectedChunkId, setViewMode, setPendingAnnotationAnchor, setShowChunkDrawer } = useUiStore();
+  const { focusIssueInChunk, clearFocusedIssue, focusedIssueQuery, setSelectedChunkId, setViewMode, setPendingAnnotationAnchor, setChunkRailTab, setProjectContextCollapsed } = useUiStore();
   const { judgeResult } = chunk;
   const isError = judgeResult.status === 'error';
   const issues = judgeResult.issues;
@@ -272,7 +272,7 @@ function ChunkAuditCard({
                     <div className="flex items-center justify-between gap-2">
                       <span
                         className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-sm ${
-                          issue.severity === 'high' ? 'bg-editorial-accent text-white' : 'bg-editorial-ink text-white'
+                          issue.severity === 'high' ? 'bg-editorial-danger text-editorial-bg' : 'bg-editorial-ink text-white'
                         }`}
                       >
                         {issue.type}
@@ -302,12 +302,13 @@ function ChunkAuditCard({
                           onClick={() => {
                             setViewMode('document');
                             setSelectedChunkId(chunk.id);
+                            setProjectContextCollapsed(false);
                             setPendingAnnotationAnchor({
                               chunkId: chunk.id,
                               text: issue.phrase ?? '',
                               content: `[Audit] ${issue.description}`,
                             });
-                            setShowChunkDrawer(true, 'notes');
+                            setChunkRailTab('notes');
                           }}
                           title={t('annotations.createFromIssue')}
                           className="rounded-full border border-editorial-border p-1 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"

@@ -13,3 +13,7 @@ export const SPRING_PANEL: Transition = { type: 'spring', damping: 30, stiffness
 
 /** Transizione larghezza Tailwind condivisa dalle barre primarie (rail, dashboard). */
 export const WIDTH_TRANSITION_CLASS = 'transition-[width] duration-200';
+
+/** Transizione flex dei pannelli react-resizable-panels nella shell progetto. */
+export const PANEL_FLEX_TRANSITION_CLASS =
+  'transition-[flex] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none';

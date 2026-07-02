@@ -1,9 +1,13 @@
 import {
+  ArrowLeftRight,
   Columns2,
+  Files,
+  FileText,
   FileOutput,
   FlaskConical,
   Highlighter,
   Info,
+  Languages,
   Link2,
   Link2Off,
   Loader2,
@@ -19,6 +23,7 @@ import {
   Upload,
   Zap,
 } from 'lucide-react';
+import * as Popover from '@radix-ui/react-popover';
 import {
   lazy,
   Suspense,
@@ -162,6 +167,8 @@ export function PipelineSidebarRunSection({
   const setPipelineMode = useConfigStore((state) => state.setPipelineMode);
   const pipelineTestChunkCount = useConfigStore((state) => state.pipelineTestChunkCount);
   const setPipelineTestChunkCount = useConfigStore((state) => state.setPipelineTestChunkCount);
+  const workMode = useConfigStore((state) => state.workMode);
+  const setWorkMode = useConfigStore((state) => state.setWorkMode);
   const pricingOverrides = usePricingStore((state) => state.overrides);
   const selectedChunkId = useUiStore((state) => state.selectedChunkId);
   const isProcessing = useChunksStore((state) => state.isProcessing);
@@ -225,6 +232,36 @@ export function PipelineSidebarRunSection({
   }, []);
 
   if (collapsed) {
+    if (playFirst) {
+      return (
+        <div className="flex flex-col items-center gap-2 px-1 pt-1">
+          {isProcessing ? (
+            cancelRequested ? (
+              <IconButton size="md" tone="muted" disabled title={t('pipeline.stopping')} tooltipSide="right" className="h-9 w-9 opacity-50">
+                <Loader2 size={15} className="animate-spin" />
+              </IconButton>
+            ) : (
+              <IconButton size="md" tone="default" onClick={onCancelPipeline} title={t('pipeline.stopPipeline')} tooltipSide="right" className="h-9 w-9 border-editorial-danger bg-editorial-bg text-editorial-danger hover:bg-editorial-danger/10">
+                <Square size={14} fill="currentColor" />
+              </IconButton>
+            )
+          ) : workMode === 'chunk' ? (
+            <IconButton size="md" tone="charcoal" onClick={() => currentChunk && onRetranslateChunk?.(currentChunk.id)} disabled={!currentChunk || !currentChunk.hasOriginalText} title={t('pipeline.translateChunk')} tooltipSide="right" className="h-10 w-10">
+              <Languages size={15} />
+            </IconButton>
+          ) : (
+            <IconButton size="md" tone="charcoal" onClick={onRunPipeline} disabled={!hasDocument} title={t('pipeline.executeAll')} tooltipSide="right" className="h-10 w-10">
+              <Play size={15} fill="currentColor" />
+            </IconButton>
+          )}
+          {workMode === 'all' && hasDocument && (
+            <span className="text-[11px] font-bold tabular-nums tracking-[0.1em] text-editorial-muted">
+              {completedCount}/{totalChunks}
+            </span>
+          )}
+        </div>
+      );
+    }
     return (
       <div className="flex flex-col items-center gap-3 px-1 pt-1">
         <div className="flex flex-col items-center gap-1">
@@ -233,7 +270,7 @@ export function PipelineSidebarRunSection({
           ) : (
             <Zap size={14} className="text-editorial-accent" aria-hidden="true" />
           )}
-          <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-editorial-accent">
+          <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-accent">
             {pipelineMode === 'test' ? t('pipeline.modeTest') : t('pipeline.modeProductionShort')}
           </span>
         </div>
@@ -243,7 +280,7 @@ export function PipelineSidebarRunSection({
               <Loader2 size={15} className="animate-spin" />
             </IconButton>
           ) : (
-            <IconButton size="md" tone="default" onClick={onCancelPipeline} title={t('pipeline.stopPipeline')} tooltipSide="right" className="h-9 w-9 border-editorial-accent bg-editorial-bg text-editorial-accent hover:bg-editorial-accent/10">
+            <IconButton size="md" tone="default" onClick={onCancelPipeline} title={t('pipeline.stopPipeline')} tooltipSide="right" className="h-9 w-9 border-editorial-danger bg-editorial-bg text-editorial-danger hover:bg-editorial-danger/10">
               <Square size={14} fill="currentColor" />
             </IconButton>
           )
@@ -253,7 +290,7 @@ export function PipelineSidebarRunSection({
           </IconButton>
         )}
         {hasDocument ? (
-          <span className="text-[10px] font-bold tabular-nums tracking-[0.1em] text-editorial-muted">
+          <span className="text-[11px] font-bold tabular-nums tracking-[0.1em] text-editorial-muted">
             {completedCount}/{pipelineMode === 'test' ? runChunkCount : totalChunks}
           </span>
         ) : null}
@@ -271,11 +308,113 @@ export function PipelineSidebarRunSection({
     );
   }
 
+  if (playFirst) {
+    return (
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <div className="flex items-center gap-1">
+            <IconButton
+              size="md"
+              tone="muted"
+              onClick={() => setWorkMode('chunk')}
+              disabled={isProcessing}
+              title={t('pipeline.workModeChunk')}
+              ariaLabel={t('pipeline.workModeChunk')}
+              ariaPressed={workMode === 'chunk'}
+              tooltipSide="bottom"
+              className={`h-9 w-9 ${
+                workMode === 'chunk'
+                  ? 'border-editorial-accent/55 bg-editorial-accent/10 text-editorial-accent'
+                  : 'bg-editorial-bg'
+              }`}
+            >
+              <FileText size={14} />
+            </IconButton>
+            <IconButton
+              size="md"
+              tone="muted"
+              onClick={() => setWorkMode('all')}
+              disabled={isProcessing}
+              title={t('pipeline.workModeAll')}
+              ariaLabel={t('pipeline.workModeAll')}
+              ariaPressed={workMode === 'all'}
+              tooltipSide="bottom"
+              className={`h-9 w-9 ${
+                workMode === 'all'
+                  ? 'border-editorial-accent/55 bg-editorial-accent/10 text-editorial-accent'
+                  : 'bg-editorial-bg'
+              }`}
+            >
+              <Files size={14} />
+            </IconButton>
+          </div>
+          {workMode === 'all' && hasDocument ? (
+            <span className="ml-auto shrink-0 text-[11px] font-semibold tabular-nums tracking-[0.08em] text-editorial-muted">
+              {completedCount}/{totalChunks}
+            </span>
+          ) : null}
+        </div>
+        {workMode === 'chunk' ? (
+          <IconButton
+            size="md"
+            tone="charcoal"
+            onClick={() => currentChunk && onRetranslateChunk?.(currentChunk.id)}
+            disabled={isProcessing || !currentChunk || !currentChunk.hasOriginalText}
+            title={t('pipeline.translateChunk')}
+            ariaLabel={t('pipeline.translateChunk')}
+            tooltipSide="bottom"
+            className="h-10 w-10 shrink-0 border-editorial-charcoal/40 bg-editorial-bg hover:border-editorial-charcoal/65 hover:bg-editorial-textbox/70"
+          >
+            <Languages size={16} />
+          </IconButton>
+        ) : isProcessing ? (
+          cancelRequested ? (
+            <IconButton
+              size="md"
+              tone="muted"
+              disabled
+              title={t('pipeline.stopping')}
+              tooltipSide="bottom"
+              className="h-10 w-10 shrink-0 bg-editorial-bg opacity-50"
+            >
+              <Loader2 size={15} className="animate-spin" />
+            </IconButton>
+          ) : (
+            <IconButton
+              size="md"
+              tone="danger"
+              onClick={onCancelPipeline}
+              title={t('pipeline.stopPipeline')}
+              ariaLabel={t('pipeline.stopPipeline')}
+              tooltipSide="bottom"
+              className="h-10 w-10 shrink-0 bg-editorial-bg"
+            >
+              <Square size={15} fill="currentColor" />
+            </IconButton>
+          )
+        ) : (
+          <IconButton
+            size="md"
+            tone="charcoal"
+            onClick={onRunPipeline}
+            disabled={!hasDocument}
+            title={t('pipeline.executeAll')}
+            ariaLabel={t('pipeline.executeAll')}
+            tooltipSide="bottom"
+            className="h-10 w-10 shrink-0 border-editorial-charcoal/40 bg-editorial-bg hover:border-editorial-charcoal/65 hover:bg-editorial-textbox/70"
+          >
+            <Play size={16} fill="currentColor" />
+          </IconButton>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="px-2.5">
       <SidebarSectionShell>
         <div className="flex flex-col gap-4">
-          <div className={`flex flex-col items-center gap-2 ${playFirst ? 'order-2 mt-1 w-full border-t border-editorial-border/40 pt-4' : ''}`}>
+          <div className="flex flex-col items-center gap-2">
             <SectionLabel icon={FlaskConical} label={t('pipeline.modeLabel')} />
             <div className="flex items-center justify-center gap-2">
               <IconButton
@@ -328,7 +467,7 @@ export function PipelineSidebarRunSection({
                     onClick={onCancelPipeline}
                     title={t('pipeline.stopPipeline')}
                     tooltipSide="right"
-                    className="h-20 w-20 border-editorial-accent bg-editorial-bg text-editorial-accent hover:bg-editorial-accent/10"
+                    className="h-20 w-20 border-editorial-danger bg-editorial-bg text-editorial-danger hover:bg-editorial-danger/10"
                   >
                     <Square size={26} fill="currentColor" />
                   </IconButton>
@@ -507,6 +646,8 @@ export function PipelineSidebarPipelinesSection({
     setShowConfigDrawer(true);
   }, [activePipelineId, switchPipeline, setShowConfigDrawer]);
 
+  const [changePopoverOpen, setChangePopoverOpen] = useState(false);
+
   // In modalità 'circle' il bottone in fondo serve solo come fallback quando non c'è
   // ancora un cerchio reale su cui mostrare l'ingranaggio.
   const showBottomConfig = configTrigger === 'bottom' || pipelines.length === 0;
@@ -579,94 +720,155 @@ export function PipelineSidebarPipelinesSection({
         <div className="flex flex-col gap-3">
           <div className="flex flex-col items-center gap-1">
             <SectionLabel icon={Zap} label={t('pipeline.sectionTitle')} />
-            {activePipelineName && (
+            {activePipelineName && configTrigger !== 'circle' && (
               <span className="max-w-full truncate text-center text-xs text-editorial-muted">
                 {activePipelineName}
               </span>
             )}
           </div>
-          {pipelines.length === 0 ? (
-            <Tooltip label={t('pipeline.pipelineNumber', { number: 1 })} side="right">
-              <div className="flex items-center justify-center">
-                <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-editorial-accent text-xs font-black text-white opacity-55">
-                  1
-                </span>
-              </div>
-            </Tooltip>
-          ) : (
-            <div className={configTrigger === 'circle' ? 'flex flex-row flex-wrap items-center justify-center gap-2.5' : 'flex flex-col items-center gap-3.5'}>
-              {pipelines.map((pipeline, index) => {
-                const isActive = pipeline.id === activePipelineId;
-                const isPipelineRunning = isActive && isRunning;
-                return (
-                  <div key={pipeline.id} className="group relative">
-                    <IconButton
-                      size="lg"
-                      tone={isActive ? 'accent' : 'default'}
-                      onClick={() => switchPipeline(pipeline.id)}
-                      title={pipeline.name}
-                      tooltipSide="right"
-                      className={configTrigger === 'circle' ? 'h-11 w-11 text-sm font-black' : 'h-14 w-14 text-base font-black'}
-                    >
-                      {isPipelineRunning ? (
-                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-transparent border-t-current" />
-                      ) : (
-                        index + 1
-                      )}
-                    </IconButton>
-                    {pipeline.mode === 'deepl-hybrid' && (
-                      <span className="absolute -top-1 -left-1 flex h-4 w-4 items-center justify-center rounded-full bg-editorial-accent text-white pointer-events-none z-10" title="Pipeline DeepL Hybrid">
-                        <Network size={9} />
-                      </span>
-                    )}
-                    {pipelines.length > 1 && !isPipelineRunning && (
-                      <IconButton
-                        size="sm"
-                        tone="muted"
-                        onClick={() => {
-                          void handleDeletePipeline(pipeline.id, pipeline.name);
-                        }}
-                        title={t('pipeline.deletePipeline')}
-                        ariaLabel={t('pipeline.deletePipeline')}
-                        tooltipSide="right"
-                        className="absolute -right-1 -top-1 z-10 h-6 w-6 bg-editorial-bg p-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
-                      >
-                        <Minus size={13} />
-                      </IconButton>
-                    )}
-                    {configTrigger === 'circle' && (
-                      <IconButton
-                        size="sm"
-                        tone={isActive && showConfigDrawer ? 'accent' : 'muted'}
-                        onClick={() => {
-                          void handleConfigurePipeline(pipeline.id);
-                        }}
-                        title={`${t('pipeline.configurePipeline')} (Ctrl+,)`}
-                        ariaLabel={t('pipeline.configurePipeline')}
-                        tooltipSide="right"
-                        className="absolute -bottom-1 -right-1 z-10 h-6 w-6 bg-editorial-bg p-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
-                      >
-                        <Settings2 size={13} />
-                      </IconButton>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          {hasProject && pipelines.length < maxPipelines && (
-            <div className="flex items-center justify-center pt-1">
+          {configTrigger === 'circle' && pipelines.length > 0 ? (
+            <div className="flex items-center gap-1 rounded-md border border-editorial-border bg-editorial-textbox px-2 py-1.5">
+              <span className="min-w-0 flex-1 truncate text-xs font-medium text-editorial-ink">
+                {activePipelineName ?? t('pipeline.pipelineNumber', { number: 1 })}
+              </span>
               <IconButton
-                size="lg"
-                tone="default"
-                onClick={() => createNewPipeline(t('pipeline.pipelineNumber', { number: pipelines.length + 1 }))}
-                title={t('pipeline.newPipeline')}
+                size="sm"
+                tone={showConfigDrawer ? 'accent' : 'muted'}
+                onClick={() => activePipelineId && void handleConfigurePipeline(activePipelineId)}
+                title={`${t('pipeline.configurePipeline')} (Ctrl+,)`}
+                ariaLabel={t('pipeline.configurePipeline')}
                 tooltipSide="right"
-                className="h-11 w-11 border-dashed bg-editorial-bg"
+                className="h-6 w-6 shrink-0 p-0"
               >
-                <Plus size={14} />
+                <Settings2 size={12} />
               </IconButton>
+              <Popover.Root open={changePopoverOpen} onOpenChange={setChangePopoverOpen}>
+                <Popover.Trigger asChild>
+                  <IconButton
+                    size="sm"
+                    tone={changePopoverOpen ? 'accent' : 'muted'}
+                    title={t('pipeline.changePipeline')}
+                    ariaLabel={t('pipeline.changePipeline')}
+                    tooltipSide="right"
+                    className="h-6 w-6 shrink-0 p-0"
+                  >
+                    <ArrowLeftRight size={11} />
+                  </IconButton>
+                </Popover.Trigger>
+                <Popover.Portal>
+                  <Popover.Content
+                    side="right"
+                    align="start"
+                    sideOffset={8}
+                    className="z-[150] flex min-w-40 flex-col gap-0.5 rounded-md border border-editorial-border bg-editorial-bg p-1 shadow-md"
+                  >
+                    {pipelines.map((pipeline) => (
+                      <button
+                        key={pipeline.id}
+                        onClick={() => {
+                          void switchPipeline(pipeline.id);
+                          setChangePopoverOpen(false);
+                        }}
+                        className={`flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs transition-colors ${
+                          pipeline.id === activePipelineId
+                            ? 'bg-editorial-accent/10 font-medium text-editorial-accent'
+                            : 'text-editorial-ink hover:bg-editorial-textbox/60'
+                        }`}
+                      >
+                        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${pipeline.id === activePipelineId ? 'bg-editorial-accent' : 'bg-transparent'}`} />
+                        <span className="truncate">{pipeline.name}</span>
+                      </button>
+                    ))}
+                    {hasProject && pipelines.length < maxPipelines && (
+                      <>
+                        <div className="my-0.5 border-t border-editorial-border" />
+                        <button
+                          onClick={() => {
+                            void createNewPipeline(t('pipeline.pipelineNumber', { number: pipelines.length + 1 }));
+                            setChangePopoverOpen(false);
+                          }}
+                          className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-editorial-muted hover:bg-editorial-textbox/60"
+                        >
+                          <Plus size={11} />
+                          {t('pipeline.newPipeline')}
+                        </button>
+                      </>
+                    )}
+                  </Popover.Content>
+                </Popover.Portal>
+              </Popover.Root>
             </div>
+          ) : (
+            <>
+              {pipelines.length === 0 ? (
+                <Tooltip label={t('pipeline.pipelineNumber', { number: 1 })} side="right">
+                  <div className="flex items-center justify-center">
+                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-editorial-accent text-xs font-black text-white opacity-55">
+                      1
+                    </span>
+                  </div>
+                </Tooltip>
+              ) : (
+                <div className="flex flex-col items-center gap-3.5">
+                  {pipelines.map((pipeline, index) => {
+                    const isActive = pipeline.id === activePipelineId;
+                    const isPipelineRunning = isActive && isRunning;
+                    return (
+                      <div key={pipeline.id} className="group relative">
+                        <IconButton
+                          size="lg"
+                          tone={isActive ? 'accent' : 'default'}
+                          onClick={() => switchPipeline(pipeline.id)}
+                          title={pipeline.name}
+                          tooltipSide="right"
+                          className="h-14 w-14 text-base font-black"
+                        >
+                          {isPipelineRunning ? (
+                            <span className="h-4 w-4 animate-spin rounded-full border-2 border-transparent border-t-current" />
+                          ) : (
+                            index + 1
+                          )}
+                        </IconButton>
+                        {pipeline.mode === 'deepl-hybrid' && (
+                          <span className="absolute -top-1 -left-1 flex h-4 w-4 items-center justify-center rounded-full bg-editorial-accent text-white pointer-events-none z-10" title="Pipeline DeepL Hybrid">
+                            <Network size={9} />
+                          </span>
+                        )}
+                        {pipelines.length > 1 && !isPipelineRunning && (
+                          <IconButton
+                            size="sm"
+                            tone="muted"
+                            onClick={() => {
+                              void handleDeletePipeline(pipeline.id, pipeline.name);
+                            }}
+                            title={t('pipeline.deletePipeline')}
+                            ariaLabel={t('pipeline.deletePipeline')}
+                            tooltipSide="right"
+                            className="absolute -right-1 -top-1 z-10 h-6 w-6 bg-editorial-bg p-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
+                          >
+                            <Minus size={13} />
+                          </IconButton>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {hasProject && pipelines.length < maxPipelines && (
+                <div className="flex items-center justify-center pt-1">
+                  <IconButton
+                    size="lg"
+                    tone="default"
+                    onClick={() => createNewPipeline(t('pipeline.pipelineNumber', { number: pipelines.length + 1 }))}
+                    title={t('pipeline.newPipeline')}
+                    tooltipSide="right"
+                    className="h-11 w-11 border-dashed bg-editorial-bg"
+                  >
+                    <Plus size={14} />
+                  </IconButton>
+                </div>
+              )}
+            </>
           )}
           {showBottomConfig && (
             <div className="flex items-center justify-center">

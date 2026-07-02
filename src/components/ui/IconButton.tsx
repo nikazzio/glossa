@@ -15,6 +15,7 @@ const iconButton = cva(
       tone: {
         default:  'border-editorial-border text-editorial-muted hover:border-editorial-accent/40 hover:text-editorial-accent',
         accent:   'border-editorial-accent bg-editorial-accent text-white',
+        danger:   'border-editorial-danger/50 bg-editorial-danger/10 text-editorial-danger hover:border-editorial-danger/70 hover:bg-editorial-danger/15',
         success:  'border-editorial-success/50 bg-editorial-success/10 text-editorial-success',
         charcoal: 'border-editorial-border text-editorial-muted hover:border-editorial-charcoal/60 hover:text-editorial-charcoal',
         muted:    'border-editorial-border/60 text-editorial-muted/50 hover:border-editorial-accent/40 hover:text-editorial-accent',

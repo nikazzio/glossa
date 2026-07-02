@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach } from 'vitest';
-import { useUiStore } from './uiStore';
+import { useUiStore, migrateUiStorePersistedState, HL_COLORS_LIGHT, HL_COLORS_DARK } from './uiStore';
 import { useConfigStore } from './configStore';
 
 const initial = useUiStore.getState();
@@ -220,5 +220,48 @@ describe('uiStore — activeWorkspaceArea', () => {
     useUiStore.getState().setActiveWorkspaceArea('translations');
     useUiStore.getState().setActiveWorkspaceArea(null);
     expect(useUiStore.getState().activeWorkspaceArea).toBeNull();
+  });
+});
+
+describe('migrateUiStorePersistedState — highlightColors repair (regressione)', () => {
+  it('backfills missing highlight-type keys when a v14 store was already nested but incomplete', () => {
+    // Riproduce lo stato rotto osservato in produzione: un salvataggio "nested"
+    // (light/dark) che conteneva solo la chiave `annotation`, con le altre 5
+    // chiavi mai scritte — la v14 lo lasciava intoccato perché "già nested".
+    const broken = {
+      highlightColors: {
+        light: { annotation: 'rgba(58,122,114,0.25)' },
+        dark: { annotation: 'rgba(94,195,185,0.28)' },
+      },
+    };
+
+    const migrated = migrateUiStorePersistedState(broken, 14) as {
+      highlightColors: { light: Record<string, string>; dark: Record<string, string> };
+    };
+
+    expect(migrated.highlightColors.light.sourceTerm).toBe(HL_COLORS_LIGHT.sourceTerm);
+    expect(migrated.highlightColors.light.matchTerm).toBe(HL_COLORS_LIGHT.matchTerm);
+    expect(migrated.highlightColors.light.mismatchTerm).toBe(HL_COLORS_LIGHT.mismatchTerm);
+    expect(migrated.highlightColors.light.search).toBe(HL_COLORS_LIGHT.search);
+    expect(migrated.highlightColors.light.auditPhrase).toBe(HL_COLORS_LIGHT.auditPhrase);
+    // Il colore personalizzato dall'utente per `annotation` va preservato, non sovrascritto col default.
+    expect(migrated.highlightColors.light.annotation).toBe('rgba(58,122,114,0.25)');
+    expect(migrated.highlightColors.dark.annotation).toBe('rgba(94,195,185,0.28)');
+    expect(migrated.highlightColors.dark.sourceTerm).toBe(HL_COLORS_DARK.sourceTerm);
+  });
+
+  it('leaves a fully-populated v15 store untouched', () => {
+    const complete = {
+      highlightColors: {
+        light: { ...HL_COLORS_LIGHT, sourceTerm: '#ff0000' },
+        dark: { ...HL_COLORS_DARK },
+      },
+    };
+
+    const migrated = migrateUiStorePersistedState(complete, 15) as {
+      highlightColors: { light: Record<string, string> };
+    };
+
+    expect(migrated.highlightColors.light.sourceTerm).toBe('#ff0000');
   });
 });

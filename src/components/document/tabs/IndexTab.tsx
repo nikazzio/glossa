@@ -8,7 +8,6 @@ import {
   FlaskConical,
   List,
   Loader2,
-  NotebookText,
 } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useTranslation } from 'react-i18next';
@@ -16,13 +15,18 @@ import { useRef } from 'react';
 import { usePhraseMemoryStore } from '../../../stores/phraseMemoryStore';
 import { useAnnotationsStore } from '../../../stores/annotationsStore';
 import { countWords, indexPad, qualityLabelKey, qualityTone } from '../../../utils';
-import type { TranslationChunk } from '../../../types';
+import { ANNOTATION_META } from './NotesTab';
+import { Tooltip } from '../../ui';
+import type { TranslationChunk, AnnotationType } from '../../../types';
 
 const QUALITY_TONE_COLOR: Record<ReturnType<typeof qualityTone>, string> = {
   strong: 'text-editorial-success',
   ok: 'text-editorial-warning',
-  weak: 'text-editorial-accent',
+  weak: 'text-editorial-danger',
 };
+
+// Ordine di gravità decrescente: determina l'ordine di visualizzazione dei pallini nota per tipo.
+const ANNOTATION_PRIORITY: AnnotationType[] = ['problem', 'doubt', 'comment', 'approved'];
 
 export interface IndexTabProps {
   panelId: string;
@@ -68,19 +72,29 @@ export function IndexTab({ panelId, labelledBy, chunks, currentChunkId, stuckChu
           const wordCount = countWords(chunk.originalText);
           const isStuck = stuckChunkIds.has(chunk.id);
 
+          const annotationCountsByType = (annotationsByChunkId.get(chunk.id) ?? []).reduce(
+            (acc, a) => { acc[a.type] = (acc[a.type] ?? 0) + 1; return acc; },
+            {} as Partial<Record<AnnotationType, number>>,
+          );
+          const notePills = ANNOTATION_PRIORITY
+            .filter((type) => annotationCountsByType[type])
+            .map((type) => ({ type, count: annotationCountsByType[type]! }));
+          const matchCount = matchesByChunk.get(chunk.id)?.matches.length ?? 0;
+          const hasMetaRow = chunk.judgeResult.status === 'completed' || chunk.translationLocked || matchCount > 0 || notePills.length > 0;
+
           let statusIcon: React.ReactNode;
           if (chunk.status === 'processing') {
             statusIcon = isStuck
-              ? <Clock size={13} className="text-editorial-accent shrink-0" />
-              : <Loader2 size={13} className="animate-spin text-editorial-warning shrink-0" />;
+              ? <Clock size={15} className="text-editorial-accent shrink-0" />
+              : <Loader2 size={15} className="animate-spin text-editorial-warning shrink-0" />;
           } else if (chunk.status === 'completed') {
-            statusIcon = <CheckCircle2 size={13} className="text-editorial-success shrink-0" />;
+            statusIcon = <CheckCircle2 size={15} className="text-editorial-success shrink-0" />;
           } else if (chunk.status === 'preview') {
-            statusIcon = <FlaskConical size={13} className="text-editorial-muted shrink-0" />;
+            statusIcon = <FlaskConical size={15} className="text-editorial-muted shrink-0" />;
           } else if (chunk.status === 'error') {
-            statusIcon = <AlertCircle size={13} className="text-editorial-accent shrink-0" />;
+            statusIcon = <AlertCircle size={15} className="text-editorial-danger shrink-0" />;
           } else {
-            statusIcon = <Circle size={13} className="text-editorial-border shrink-0" />;
+            statusIcon = <Circle size={15} className="text-editorial-border shrink-0" />;
           }
 
           return (
@@ -89,79 +103,74 @@ export function IndexTab({ panelId, labelledBy, chunks, currentChunkId, stuckChu
               data-index={virtualRow.index}
               ref={virtualizer.measureElement}
               style={{ position: 'absolute', top: virtualRow.start, left: 0, right: 0 }}
-              className="pb-2"
+              className={`relative border-b border-editorial-border/55 ${isActive ? 'bg-editorial-charcoal/10' : ''}`}
             >
-              <div className={`rounded-2xl border transition-colors ${isActive ? 'border-editorial-charcoal bg-editorial-charcoal' : 'border-editorial-border bg-editorial-bg hover:border-editorial-charcoal/40'}`}>
-                <button type="button" onClick={() => onSelect(chunk.id)} className="w-full px-4 pt-3 pb-2 text-left">
-                  <div className="flex items-center gap-2">
-                    {statusIcon}
-                    <span className={`font-display text-sm italic ${isActive ? 'text-white' : 'text-editorial-accent'}`}>
-                      {indexPad(index + 1)}
-                    </span>
-                    <span className={`flex-1 line-clamp-2 text-xs leading-snug ${isActive ? 'text-white/80' : 'text-editorial-muted'}`}>
-                      {chunk.originalText.replace(/\s+/g, ' ').trim()}
-                    </span>
-                    <span className={`shrink-0 text-xs font-mono ${isActive ? 'text-white/70' : 'text-editorial-muted'}`}>
-                      {wordCount}w
-                    </span>
-                  </div>
-                  {chunk.judgeResult.status === 'completed' && (
-                    <div className={`mt-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.1em] ${isActive ? 'text-white/70' : QUALITY_TONE_COLOR[tone]}`}>
-                      <span className={`inline-block h-1.5 w-1.5 rounded-full ${tone === 'strong' ? 'bg-editorial-success' : tone === 'ok' ? 'bg-editorial-warning' : 'bg-editorial-accent'}`} />
-                      {t(qualityLabelKey(chunk.judgeResult.rating))}
+              {isActive && <span className="absolute left-0 top-0 h-full w-[3px] bg-editorial-charcoal" aria-hidden="true" />}
+              <button type="button" onClick={() => onSelect(chunk.id)} className="w-full px-4 pt-3 pb-2 text-left">
+                <div className="flex items-center gap-2">
+                  {statusIcon}
+                  <span className={`font-display text-sm italic ${isActive ? 'text-editorial-charcoal' : 'text-editorial-accent'}`}>
+                    {indexPad(index + 1)}
+                  </span>
+                  <span className="flex-1 line-clamp-2 text-xs leading-snug text-editorial-muted">
+                    {chunk.originalText.replace(/\s+/g, ' ').trim()}
+                  </span>
+                  <span className="shrink-0 text-xs font-mono text-editorial-muted">
+                    {wordCount}w
+                  </span>
+                </div>
+                {hasMetaRow && (
+                  <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {notePills.map(({ type, count }) => (
+                        <Tooltip key={type} label={`${count} × ${t(ANNOTATION_META[type].labelKey)}`} side="top">
+                          <span
+                            className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-white ${ANNOTATION_META[type].bgClass}`}
+                            aria-label={`${count} × ${t(ANNOTATION_META[type].labelKey)}`}
+                          >
+                            {count}
+                          </span>
+                        </Tooltip>
+                      ))}
                     </div>
-                  )}
-                  {chunk.translationLocked && (
-                    <div className={`mt-1.5 flex items-center gap-1 text-xs font-bold uppercase tracking-[0.1em] ${isActive ? 'text-white/80' : 'text-editorial-success'}`}>
-                      <CheckCheck size={12} />
-                      {t('document.translationLockedBadge')}
+                    <div className="flex flex-wrap items-center gap-2">
+                      {chunk.judgeResult.status === 'completed' && (
+                        <span className={`text-xs font-bold uppercase tracking-[0.1em] ${QUALITY_TONE_COLOR[tone]}`}>
+                          {t(qualityLabelKey(chunk.judgeResult.rating))}
+                        </span>
+                      )}
+                      {chunk.translationLocked && (
+                        <Tooltip label={t('document.translationLockedBadge')} side="top">
+                          <CheckCheck size={13} className="text-editorial-success" aria-label={t('document.translationLockedBadge')} />
+                        </Tooltip>
+                      )}
+                      {matchCount > 0 && (
+                        <span className="flex items-center gap-1 text-xs font-bold uppercase tracking-[0.1em] text-editorial-accent">
+                          <Brain size={11} />
+                          {t('memory.matchBadge', { count: matchCount })}
+                        </span>
+                      )}
                     </div>
-                  )}
-                  {(() => {
-                    const matchCount = matchesByChunk.get(chunk.id)?.matches.length ?? 0;
-                    if (matchCount === 0) return null;
-                    return (
-                      <div className={`mt-1.5 flex items-center gap-1 text-xs font-bold uppercase tracking-[0.1em] ${isActive ? 'text-white/80' : 'text-editorial-accent'}`}>
-                        <Brain size={11} />
-                        {t('memory.matchBadge', { count: matchCount })}
-                      </div>
-                    );
-                  })()}
-                  {(() => {
-                    const anns = annotationsByChunkId.get(chunk.id) ?? [];
-                    if (anns.length === 0) return null;
-                    const hasProblem = anns.some(a => a.type === 'problem');
-                    const hasDoubt   = anns.some(a => a.type === 'doubt');
-                    const colorClass = isActive ? 'text-white/80'
-                      : hasProblem ? 'text-editorial-accent'
-                      : hasDoubt   ? 'text-editorial-warning'
-                      : 'text-sky-500';
-                    return (
-                      <div className={`mt-1.5 flex items-center gap-1 text-xs font-bold uppercase tracking-[0.1em] ${colorClass}`}>
-                        <NotebookText size={11} />
-                        {t('annotations.badgeCount', { count: anns.length })}
-                      </div>
-                    );
-                  })()}
-                </button>
-
-                {isStuck && chunk.status === 'processing' && (
-                  <div className={`flex items-center justify-between gap-2 border-t px-3 py-2 ${isActive ? 'border-white/10' : 'border-editorial-border/60'}`}>
-                    <div className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.1em] ${isActive ? 'text-editorial-running' : 'text-editorial-accent'}`}>
-                      <Clock size={11} />
-                      {t('document.watchdogStuck')}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); onCancelStuck(chunk.id); }}
-                      aria-label={t('document.watchdogCancel')}
-                      className={`rounded-full border px-2 py-0.5 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${isActive ? 'border-editorial-running/40 text-editorial-running hover:bg-editorial-ink/10' : 'border-editorial-accent/40 text-editorial-accent hover:bg-editorial-accent/10'}`}
-                    >
-                      {t('document.watchdogCancel')}
-                    </button>
                   </div>
                 )}
-              </div>
+              </button>
+
+              {isStuck && chunk.status === 'processing' && (
+                <div className="flex items-center justify-between gap-2 border-t border-editorial-border/60 px-3 py-2">
+                  <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.1em] text-editorial-warning">
+                    <Clock size={11} />
+                    {t('document.watchdogStuck')}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onCancelStuck(chunk.id); }}
+                    aria-label={t('document.watchdogCancel')}
+                    className="rounded-full border border-editorial-danger/40 px-2 py-0.5 text-xs font-medium text-editorial-danger transition-colors hover:bg-editorial-danger/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  >
+                    {t('document.watchdogCancel')}
+                  </button>
+                </div>
+              )}
             </li>
           );
         })}

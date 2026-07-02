@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import type { OllamaStatus } from '../types';
 
 export type RunPhase = 'test' | 'production';
+export type WorkMode = 'chunk' | 'all';
 
 interface ConfigState {
   pipelineMode: RunPhase;
@@ -10,6 +11,9 @@ interface ConfigState {
 
   pipelineTestChunkCount: number;
   setPipelineTestChunkCount: (count: number) => void;
+
+  workMode: WorkMode;
+  setWorkMode: (mode: WorkMode) => void;
 
   ollamaStatus: OllamaStatus;
   setOllamaStatus: (status: OllamaStatus) => void;
@@ -39,6 +43,9 @@ export const useConfigStore = create<ConfigState>()(
     (set) => ({
       pipelineMode: 'test',
       setPipelineMode: (mode) => set({ pipelineMode: mode }),
+
+      workMode: 'chunk',
+      setWorkMode: (mode) => set({ workMode: mode }),
 
       pipelineTestChunkCount: 3,
       setPipelineTestChunkCount: (count) => {

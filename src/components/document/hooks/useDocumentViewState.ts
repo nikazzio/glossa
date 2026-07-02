@@ -131,9 +131,12 @@ export function useDocumentViewState() {
   }, [diffPairs]);
 
   const hasGlossary = config.glossary.length > 0;
+  // `highlightsEnabled` è lo switch del solo Glossario (GlossaryTab): deve
+  // condizionare unicamente le corrispondenze glossario passate a
+  // useGlossaryHighlight, non la ricerca — quella resta sempre attiva.
   const showHighlight = highlightsEnabled && hasGlossary;
-  const sourceEffectiveSearch = sourcePaneSearch.trim() || (highlightsEnabled ? searchQuery.trim() : '');
-  const translationEffectiveSearch = translationPaneSearch.trim() || (highlightsEnabled ? searchQuery.trim() : '');
+  const sourceEffectiveSearch = sourcePaneSearch.trim() || searchQuery.trim();
+  const translationEffectiveSearch = translationPaneSearch.trim() || searchQuery.trim();
 
   const annotationsByChunkId = useAnnotationsStore((s) => s.annotationsByChunkId);
   const currentChunkAnnotations = currentChunk ? (annotationsByChunkId.get(currentChunk.id) ?? []) : [];

@@ -78,6 +78,7 @@ export function ConfigDrawer({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [variant, showConfigDrawer, setShowConfigDrawer]);
   const setPipelineMode = useConfigStore((state) => state.setPipelineMode);
+  const setWorkMode = useConfigStore((state) => state.setWorkMode);
   const [glossaryDirty, setGlossaryDirty] = useState(false);
   const [isSavingGlossary, setIsSavingGlossary] = useState(false);
   const { config, setConfig, assignGlossary } = usePipelineStore();
@@ -104,6 +105,7 @@ export function ConfigDrawer({
     if (!ok) return;
     resetAllChunks();
     setPipelineMode('test');
+    setWorkMode('chunk');
     toast.success(t('pipeline.resetAllDone'));
   };
 

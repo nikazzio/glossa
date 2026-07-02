@@ -16,8 +16,8 @@ const STATUS_TONE = {
     label: 'text-editorial-running',
   },
   error: {
-    dot: 'bg-editorial-accent ring-editorial-accent/30',
-    label: 'text-editorial-accent',
+    dot: 'bg-editorial-danger ring-editorial-danger/30',
+    label: 'text-editorial-danger',
   },
   retrying: {
     dot: 'bg-editorial-running ring-editorial-running/30 animate-pulse',

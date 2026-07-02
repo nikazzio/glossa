@@ -26,11 +26,12 @@ export interface NotesTabProps {
   currentChunk: TranslationChunk | null;
 }
 
-const ANNOTATION_META: Record<AnnotationType, { icon: LucideIcon; colorClass: string; bgClass: string; borderClass: string; labelKey: string }> = {
-  comment:  { icon: MessageSquare, colorClass: 'text-editorial-charcoal', bgClass: 'bg-editorial-charcoal/8', borderClass: 'border-editorial-charcoal/25', labelKey: 'annotations.typeComment' },
-  doubt:    { icon: HelpCircle,    colorClass: 'text-editorial-warning',  bgClass: 'bg-editorial-warning/8',  borderClass: 'border-editorial-warning/30',  labelKey: 'annotations.typeDoubt' },
-  problem:  { icon: AlertTriangle, colorClass: 'text-editorial-accent',   bgClass: 'bg-editorial-accent/8',   borderClass: 'border-editorial-accent/25',   labelKey: 'annotations.typeProblem' },
-  approved: { icon: CheckCircle2,  colorClass: 'text-editorial-success',  bgClass: 'bg-editorial-success/8',  borderClass: 'border-editorial-success/25',  labelKey: 'annotations.typeApproved' },
+/** Mappa canonica tipo → icona/colore/etichetta. Riusata anche altrove (es. IndexTab) per non inventare palette ad-hoc. */
+export const ANNOTATION_META: Record<AnnotationType, { icon: LucideIcon; colorClass: string; bgClass: string; labelKey: string }> = {
+  comment:  { icon: MessageSquare, colorClass: 'text-editorial-charcoal', bgClass: 'bg-editorial-charcoal', labelKey: 'annotations.typeComment' },
+  doubt:    { icon: HelpCircle,    colorClass: 'text-editorial-warning',  bgClass: 'bg-editorial-warning',  labelKey: 'annotations.typeDoubt' },
+  problem:  { icon: AlertTriangle, colorClass: 'text-editorial-danger',   bgClass: 'bg-editorial-danger',   labelKey: 'annotations.typeProblem' },
+  approved: { icon: CheckCircle2,  colorClass: 'text-editorial-success',  bgClass: 'bg-editorial-success',  labelKey: 'annotations.typeApproved' },
 };
 
 const ANNOTATION_TYPES: AnnotationType[] = ['comment', 'doubt', 'problem', 'approved'];
@@ -102,7 +103,7 @@ function AnnotationCard({
 
   if (isEditing) {
     return (
-      <article className={`rounded-2xl border ${meta.borderClass} ${meta.bgClass} px-4 py-3`}>
+      <article className="py-3">
         <TypeSelector selected={editType} onSelect={setEditType} />
         <textarea
           value={editContent}
@@ -134,52 +135,55 @@ function AnnotationCard({
   }
 
   return (
-    <article className={`rounded-2xl border ${meta.borderClass} ${meta.bgClass} px-4 py-3`}>
+    <article className="group py-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-2">
+            {number !== null && (
+              <span className="shrink-0 font-display text-sm font-bold text-editorial-danger" title={`[^${number}]`}>
+                {number}
+              </span>
+            )}
+            <Icon size={13} className={`shrink-0 ${meta.colorClass}`} />
+            <span className={`truncate text-[11px] font-bold uppercase tracking-[0.14em] ${meta.colorClass}`}>
+              {t(meta.labelKey)}
+            </span>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-1 opacity-70 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+          {confirmingDelete ? (
+            <>
+              <span className="text-[10px] text-editorial-danger">{t('annotations.confirmDelete')}</span>
+              <IconButton size="sm" tone="danger" onClick={onDelete} title={t('annotations.confirmDeleteYes')}>
+                <Trash2 size={11} />
+              </IconButton>
+              <IconButton size="sm" tone="default" onClick={() => setConfirmingDelete(false)} title={t('annotations.confirmDeleteNo')}>
+                <X size={11} />
+              </IconButton>
+            </>
+          ) : (
+            <>
+              {annotation.anchorText && onLocate && (
+                <IconButton size="sm" tone="default" onClick={onLocate} title={t('annotations.locateInTextTooltip')}>
+                  <Crosshair size={11} />
+                </IconButton>
+              )}
+              <IconButton size="sm" tone="default" onClick={onEdit} title={t('annotations.editButton')}>
+                <Pencil size={11} />
+              </IconButton>
+              <IconButton size="sm" tone="default" onClick={() => setConfirmingDelete(true)} title={t('annotations.deleteButton')}>
+                <Trash2 size={11} />
+              </IconButton>
+            </>
+          )}
+        </div>
+      </div>
       {annotation.anchorText && (
-        <div className="mb-2 flex flex-wrap items-center gap-1.5">
-          <span className="truncate rounded-lg bg-editorial-bg/60 px-2 py-0.5 text-xs italic text-editorial-muted">
-            «{annotation.anchorText}»
-          </span>
+        <div className="mt-1.5 w-full font-display text-sm italic leading-snug text-editorial-muted">
+          «{annotation.anchorText}»
         </div>
       )}
-      <div className="mb-2 flex items-center gap-2">
-        {number !== null && (
-          <span className="shrink-0 font-display text-sm font-bold text-editorial-accent" title={`[^${number}]`}>
-            {number}
-          </span>
-        )}
-        <Icon size={13} className={`shrink-0 ${meta.colorClass}`} />
-        <span className={`text-xs font-bold uppercase tracking-[0.25em] ${meta.colorClass}`}>
-          {t(meta.labelKey)}
-        </span>
-        <div className="flex-1" />
-        {confirmingDelete ? (
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] text-editorial-accent">{t('annotations.confirmDelete')}</span>
-            <IconButton size="sm" tone="accent" onClick={onDelete} title={t('annotations.confirmDeleteYes')}>
-              <Trash2 size={11} />
-            </IconButton>
-            <IconButton size="sm" tone="default" onClick={() => setConfirmingDelete(false)} title={t('annotations.confirmDeleteNo')}>
-              <X size={11} />
-            </IconButton>
-          </div>
-        ) : (
-          <>
-            {annotation.anchorText && onLocate && (
-              <IconButton size="sm" tone="default" onClick={onLocate} title={t('annotations.locateInTextTooltip')}>
-                <Crosshair size={11} />
-              </IconButton>
-            )}
-            <IconButton size="sm" tone="default" onClick={onEdit} title={t('annotations.editButton')}>
-              <Pencil size={11} />
-            </IconButton>
-            <IconButton size="sm" tone="default" onClick={() => setConfirmingDelete(true)} title={t('annotations.deleteButton')}>
-              <Trash2 size={11} />
-            </IconButton>
-          </>
-        )}
-      </div>
-      <p className="whitespace-pre-wrap text-sm leading-relaxed text-editorial-ink">{annotation.content}</p>
+      <p className="mt-1.5 w-full whitespace-pre-wrap text-sm leading-relaxed text-editorial-ink">{annotation.content}</p>
     </article>
   );
 }
@@ -273,11 +277,11 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
   const closeForm = () => { setShowForm(false); setFormContent(''); setFormAnchor(''); };
 
   return (
-    <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex flex-col gap-3 px-5 py-5">
+    <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex flex-col gap-4 px-5 py-5">
 
       {/* Add form */}
       {showForm && (
-        <div className="rounded-2xl border border-editorial-border bg-editorial-textbox/40 px-4 py-3">
+        <div className="border-y border-editorial-border/55 py-3">
           <div className="mb-1 flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-[0.25em] text-editorial-muted">
               {t('annotations.addButton')}
@@ -311,34 +315,38 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
       {annotations.length === 0 && !showForm && (
         <p className="px-1 text-xs text-editorial-muted">{t('annotations.emptyNoAnnotations')}</p>
       )}
-      {annotations.map((ann) => (
-        <AnnotationCard
-          key={ann.id}
-          annotation={ann}
-          isEditing={editingId === ann.id}
-          onEdit={() => setEditingId(ann.id)}
-          onCancelEdit={() => setEditingId(null)}
-          onSave={(updates) => handleSaveEdit(ann.id, updates)}
-          onDelete={() => handleDelete(ann.id)}
-          onLocate={ann.anchorText ? () => focusAnnotationInChunk(currentChunk.id, ann.anchorText!) : null}
-          number={numberById.get(ann.id) ?? null}
-        />
-      ))}
+      {annotations.length > 0 && (
+        <div className="divide-y divide-editorial-border/55">
+          {annotations.map((ann) => (
+            <AnnotationCard
+              key={ann.id}
+              annotation={ann}
+              isEditing={editingId === ann.id}
+              onEdit={() => setEditingId(ann.id)}
+              onCancelEdit={() => setEditingId(null)}
+              onSave={(updates) => handleSaveEdit(ann.id, updates)}
+              onDelete={() => handleDelete(ann.id)}
+              onLocate={ann.anchorText ? () => focusAnnotationInChunk(currentChunk.id, ann.anchorText!) : null}
+              number={numberById.get(ann.id) ?? null}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Source footnotes */}
       {footnotes.length > 0 && (
         <>
           <div className="mx-0 my-1 h-px bg-editorial-border/40" />
           <details className="group">
-            <summary className="flex cursor-pointer list-none items-center gap-1.5 py-0.5 text-[10px] font-sans font-bold uppercase tracking-[0.3em] text-editorial-muted/70 transition-colors hover:text-editorial-muted">
-              <ChevronRight size={11} className="shrink-0 text-editorial-accent/60 transition-transform group-open:rotate-90" />
+            <summary className="flex cursor-pointer list-none items-center gap-1.5 py-0.5 text-[10px] font-sans font-bold uppercase tracking-[0.16em] text-editorial-danger/80 transition-colors hover:text-editorial-danger">
+              <ChevronRight size={11} className="shrink-0 text-editorial-danger/70 transition-transform group-open:rotate-90" />
               {t('annotations.sourceTitle')}
             </summary>
-            <div className="mt-3 space-y-2">
+            <div className="mt-3 divide-y divide-editorial-danger/25">
               {footnotes.map((note) => (
-                <article key={note.id} className="rounded-2xl border border-editorial-border bg-editorial-bg px-4 py-3">
-                  <div className="mb-1.5 font-display text-sm italic text-editorial-accent">{note.marker}</div>
-                  <p className="text-[12px] leading-relaxed text-editorial-ink">{note.text}</p>
+                <article key={note.id} className="py-2">
+                  <div className="mb-1 font-display text-sm italic text-editorial-danger">{note.marker}</div>
+                  <p className="text-[12px] leading-relaxed text-editorial-danger/90">{note.text}</p>
                 </article>
               ))}
             </div>

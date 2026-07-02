@@ -8,6 +8,7 @@ import type {
 export type { RunPhase } from './configStore';
 export type InsightsDrawerTab = 'index' | 'search' | 'stats' | 'coherence' | 'glossary';
 export type ChunkDrawerTab = 'summary' | 'audit' | 'notes' | 'operations' | 'memory';
+export type ChunkRailTab = 'audit' | 'notes' | 'memory';
 export type DocumentPaneFocus = 'both' | 'source' | 'translation';
 export type HelpSection = 'overview' | 'pipeline' | 'features' | 'context' | 'audit' | 'projects' | 'providers' | 'ollama' | 'glossary' | 'shortcuts' | 'troubleshooting' | 'design';
 export type ActivePanel = 'config' | 'insights' | 'chunk' | 'settings' | 'help' | null;
@@ -74,6 +75,14 @@ interface UiState {
   documentDrawerTab: InsightsDrawerTab;
   showChunkDrawer: boolean;
   chunkDrawerTab: ChunkDrawerTab;
+  /** Shell nuova: pannello Insight destro espanso (sostituisce showDocumentDrawer || showChunkDrawer). */
+  showInsightPanel: boolean;
+  /** Shell nuova: tab attiva nel pannello Frammento embedded nella rail sinistra. */
+  chunkRailTab: ChunkRailTab;
+  /** Log operazioni (console) espanso come drawer sopra la barra di stato. */
+  showConsoleDrawer: boolean;
+  /** Altezza in px del drawer Operazioni, ridimensionabile dall'utente (trascina il bordo superiore). */
+  consoleDrawerHeight: number;
   highlightsEnabled: boolean;
   highlightColors: { light: HLColorSet; dark: HLColorSet };
   searchQuery: string;
@@ -117,6 +126,10 @@ interface UiState {
   setDocumentDrawerTab: (tab: InsightsDrawerTab) => void;
   setShowChunkDrawer: (show: boolean, tab?: ChunkDrawerTab) => void;
   setChunkDrawerTab: (tab: ChunkDrawerTab) => void;
+  setShowInsightPanel: (show: boolean) => void;
+  setChunkRailTab: (tab: ChunkRailTab) => void;
+  setShowConsoleDrawer: (show: boolean) => void;
+  setConsoleDrawerHeight: (height: number) => void;
   setHighlightsEnabled: (enabled: boolean) => void;
   setHighlightColor: (mode: 'light' | 'dark', type: keyof HLColorSet, color: string) => void;
   setSearchQuery: (query: string) => void;
@@ -133,6 +146,98 @@ interface UiState {
   setProjectFlyoutWidth: (width: number) => void;
   setConfigFlyoutWidth: (width: number) => void;
   setActivePanel: (panel: ActivePanel, tab?: InsightsDrawerTab | ChunkDrawerTab | HelpSection | SettingsTab) => void;
+}
+
+/** Esportata per test di regressione sulle migrazioni dello stato persistito. */
+export function migrateUiStorePersistedState(persisted: unknown, fromVersion: number): Record<string, unknown> {
+  const s = persisted as Record<string, unknown>;
+  if (fromVersion < 1) {
+    if ('glossaryHighlightEnabled' in s) {
+      s.highlightsEnabled = s.glossaryHighlightEnabled;
+    }
+  }
+  if (fromVersion < 2) {
+    const defaults: Record<string, string> = {
+      sourceTerm: '#3b82f6',
+      matchTerm: 'rgba(34,197,94,0.18)',
+      mismatchTerm: 'rgba(239,68,68,0.15)',
+      search: 'rgba(234,179,8,0.25)',
+      auditPhrase: 'rgba(249,115,22,0.25)',
+    };
+    const existing = (s.highlightColors ?? {}) as Record<string, string>;
+    s.highlightColors = { ...defaults, ...existing };
+  }
+  if (fromVersion < 3) {
+    s.maxPipelines = 5;
+  }
+  if (fromVersion < 4) {
+    s.documentPaneFocus = 'both';
+    s.syncScrollEnabled = false;
+  }
+  if (fromVersion < 6) {
+    // Backfill the annotation highlight colour for stores saved before it
+    // existed, so the settings colour picker does not read undefined.
+    const existing = (s.highlightColors ?? {}) as Record<string, string>;
+    if (!existing.annotation) existing.annotation = 'rgba(58,122,114,0.25)';
+    s.highlightColors = existing;
+  }
+  if (fromVersion < 7) {
+    s.uiFont = 'jakarta';
+  }
+  if (fromVersion < 8) {
+    s.activeProjectPanel = 'run';
+    s.projectContextCollapsed = false;
+  }
+  if (fromVersion < 9) {
+    // I pannelli fly-out (insight/chunk) non sono uno stato di rail persistibile:
+    // ripristina su 'run' così la barra non resta evidenziata su un fly-out chiuso.
+    if (!INLINE_PROJECT_PANELS.includes(s.activeProjectPanel as ProjectPanelTab)) {
+      s.activeProjectPanel = 'run';
+    }
+  }
+  if (fromVersion < 10) {
+    s.dashboardSidebarCollapsed = false;
+    s.dashboardSidebarWidth = 240;
+    s.projectSidebarWidth = 300;
+    s.projectFlyoutWidth = 430;
+    s.configFlyoutWidth = 560;
+  }
+  if (fromVersion < 11) {
+    // La preferenza di espansione deriva dallo stato collassato salvato.
+    s.projectContextUserExpanded = !s.projectContextCollapsed;
+  }
+  if (fromVersion < 12) {
+    s.documentFontSize = 'md';
+    s.documentLineHeight = 'normal';
+  }
+  if (fromVersion < 13) {
+    s.colorScheme = 'system';
+  }
+  if (fromVersion < 14) {
+    // Migrate flat highlightColors → { light, dark } structure.
+    // If the stored value is already nested (light/dark keys), leave it.
+    const stored = s.highlightColors as Record<string, unknown> | undefined;
+    const isNested = stored && typeof stored.light === 'object';
+    if (!isNested) {
+      const flat = (stored ?? {}) as Record<string, string>;
+      s.highlightColors = {
+        light: { ...HL_COLORS_LIGHT, ...flat },
+        dark: { ...HL_COLORS_DARK },
+      };
+    }
+  }
+  if (fromVersion < 15) {
+    // Riparazione: la v14 lasciava intoccato un highlightColors già "nested"
+    // anche se incompleto (mancavano chiavi di tipi di evidenziazione aggiunti
+    // dopo la prima migrazione), lasciandole undefined per sempre. Backfill
+    // per chiave, senza perdere i colori già personalizzati dall'utente.
+    const stored = (s.highlightColors ?? {}) as { light?: Record<string, string>; dark?: Record<string, string> };
+    s.highlightColors = {
+      light: { ...HL_COLORS_LIGHT, ...(stored.light ?? {}) },
+      dark: { ...HL_COLORS_DARK, ...(stored.dark ?? {}) },
+    };
+  }
+  return s;
 }
 
 export const useUiStore = create<UiState>()(
@@ -157,6 +262,10 @@ export const useUiStore = create<UiState>()(
       documentDrawerTab: 'index',
       showChunkDrawer: false,
       chunkDrawerTab: 'summary',
+      showInsightPanel: false,
+      chunkRailTab: 'audit',
+      showConsoleDrawer: false,
+      consoleDrawerHeight: 256,
       highlightsEnabled: true,
       highlightColors: { light: { ...HL_COLORS_LIGHT }, dark: { ...HL_COLORS_DARK } },
       searchQuery: '',
@@ -172,7 +281,7 @@ export const useUiStore = create<UiState>()(
       projectContextUserExpanded: true,
       dashboardSidebarCollapsed: false,
       dashboardSidebarWidth: 240,
-      projectSidebarWidth: 240,
+      projectSidebarWidth: 300,
       projectFlyoutWidth: 430,
       configFlyoutWidth: 560,
       pendingAnnotationAnchor: null,
@@ -278,6 +387,10 @@ export const useUiStore = create<UiState>()(
             : { showChunkDrawer: false, activePanel: null, projectContextCollapsed: !state.projectContextUserExpanded },
         ),
       setChunkDrawerTab: (tab) => set({ chunkDrawerTab: tab }),
+      setShowInsightPanel: (show) => set({ showInsightPanel: show }),
+      setChunkRailTab: (tab) => set({ chunkRailTab: tab }),
+      setShowConsoleDrawer: (show) => set({ showConsoleDrawer: show }),
+      setConsoleDrawerHeight: (height) => set({ consoleDrawerHeight: Math.min(520, Math.max(160, height)) }),
       setHighlightsEnabled: (enabled) => set({ highlightsEnabled: enabled }),
       setHighlightColor: (mode, type, color) =>
         set((state) => ({
@@ -395,86 +508,8 @@ export const useUiStore = create<UiState>()(
     }),
     {
       name: 'glossa-ui-prefs',
-      version: 14,
-      migrate: (persisted: unknown, fromVersion: number) => {
-        const s = persisted as Record<string, unknown>;
-        if (fromVersion < 1) {
-          if ('glossaryHighlightEnabled' in s) {
-            s.highlightsEnabled = s.glossaryHighlightEnabled;
-          }
-        }
-        if (fromVersion < 2) {
-          const defaults: Record<string, string> = {
-            sourceTerm: '#3b82f6',
-            matchTerm: 'rgba(34,197,94,0.18)',
-            mismatchTerm: 'rgba(239,68,68,0.15)',
-            search: 'rgba(234,179,8,0.25)',
-            auditPhrase: 'rgba(249,115,22,0.25)',
-          };
-          const existing = (s.highlightColors ?? {}) as Record<string, string>;
-          s.highlightColors = { ...defaults, ...existing };
-        }
-        if (fromVersion < 3) {
-          s.maxPipelines = 5;
-        }
-        if (fromVersion < 4) {
-          s.documentPaneFocus = 'both';
-          s.syncScrollEnabled = false;
-        }
-        if (fromVersion < 6) {
-          // Backfill the annotation highlight colour for stores saved before it
-          // existed, so the settings colour picker does not read undefined.
-          const existing = (s.highlightColors ?? {}) as Record<string, string>;
-          if (!existing.annotation) existing.annotation = 'rgba(58,122,114,0.25)';
-          s.highlightColors = existing;
-        }
-        if (fromVersion < 7) {
-          s.uiFont = 'jakarta';
-        }
-        if (fromVersion < 8) {
-          s.activeProjectPanel = 'run';
-          s.projectContextCollapsed = false;
-        }
-        if (fromVersion < 9) {
-          // I pannelli fly-out (insight/chunk) non sono uno stato di rail persistibile:
-          // ripristina su 'run' così la barra non resta evidenziata su un fly-out chiuso.
-          if (!INLINE_PROJECT_PANELS.includes(s.activeProjectPanel as ProjectPanelTab)) {
-            s.activeProjectPanel = 'run';
-          }
-        }
-        if (fromVersion < 10) {
-          s.dashboardSidebarCollapsed = false;
-          s.dashboardSidebarWidth = 240;
-          s.projectSidebarWidth = 240;
-          s.projectFlyoutWidth = 430;
-          s.configFlyoutWidth = 560;
-        }
-        if (fromVersion < 11) {
-          // La preferenza di espansione deriva dallo stato collassato salvato.
-          s.projectContextUserExpanded = !s.projectContextCollapsed;
-        }
-        if (fromVersion < 12) {
-          s.documentFontSize = 'md';
-          s.documentLineHeight = 'normal';
-        }
-        if (fromVersion < 13) {
-          s.colorScheme = 'system';
-        }
-        if (fromVersion < 14) {
-          // Migrate flat highlightColors → { light, dark } structure.
-          // If the stored value is already nested (light/dark keys), leave it.
-          const stored = s.highlightColors as Record<string, unknown> | undefined;
-          const isNested = stored && typeof stored.light === 'object';
-          if (!isNested) {
-            const flat = (stored ?? {}) as Record<string, string>;
-            s.highlightColors = {
-              light: { ...HL_COLORS_LIGHT, ...flat },
-              dark: { ...HL_COLORS_DARK },
-            };
-          }
-        }
-        return s;
-      },
+      version: 15,
+      migrate: migrateUiStorePersistedState,
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         documentLayout: state.documentLayout,
@@ -494,6 +529,7 @@ export const useUiStore = create<UiState>()(
         projectSidebarWidth: state.projectSidebarWidth,
         projectFlyoutWidth: state.projectFlyoutWidth,
         configFlyoutWidth: state.configFlyoutWidth,
+        consoleDrawerHeight: state.consoleDrawerHeight,
         highlightsEnabled: state.highlightsEnabled,
         highlightColors: state.highlightColors,
       }),
