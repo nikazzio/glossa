@@ -19,11 +19,10 @@ import { getKnownModelIds, getModelEntry, MODEL_CATALOG, MODEL_PROVIDER_ORDER } 
 import { MODEL_PRICING } from '../../constants';
 import { usePricingStore } from '../../stores/pricingStore';
 import { ProviderLogo } from '../common';
-import { Dialog, IconButton, DialogCancelButton, Tooltip } from '../ui';
+import { Dialog, IconButton, DialogCancelButton, Tooltip, ContrastBadge } from '../ui';
 import type { ModelProvider } from '../../types';
 import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
 import { useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
-import { contrastRatio } from '../../utils/contrastRatio';
 
 /** Sfondo editoriale di riferimento per il controllo contrasto AA dell'accento. */
 const ACCENT_CONTRAST_BG: Record<'light' | 'dark', string> = {
@@ -413,7 +412,7 @@ export function SettingsModal() {
                       </div>
                       <span className="flex items-center gap-1 rounded-full border border-editorial-border px-2 py-0.5 text-[11px] font-sans text-editorial-muted">
                         {hlMode === 'dark' ? <Moon size={10} /> : <Sun size={10} />}
-                        {t(hlMode === 'dark' ? 'colorScheme_dark' : 'colorScheme_light')}
+                        {t(hlMode === 'dark' ? 'settings.colorScheme_dark' : 'settings.colorScheme_light')}
                       </span>
                     </div>
                     <div className="space-y-2">
@@ -540,38 +539,25 @@ export function SettingsModal() {
                     </div>
                     <p className="text-xs leading-relaxed text-editorial-muted">{t('settings.accentColorHint')}</p>
                     <div className="flex gap-2">
-                      {(['light', 'dark'] as const).map((mode) => {
-                        const ratio = contrastRatio(editorialAccentColor[mode], ACCENT_CONTRAST_BG[mode]);
-                        const passesAA = ratio >= 4.5;
-                        return (
-                          <label
-                            key={mode}
-                            className="flex flex-1 cursor-pointer items-center gap-3 rounded-[20px] border border-editorial-border bg-editorial-bg/60 px-4 py-3.5 transition-colors hover:border-editorial-accent/40"
-                          >
-                            <div className="relative h-5 w-5 shrink-0 overflow-hidden rounded-full shadow-sm">
-                              <div className="absolute inset-0" style={{ backgroundColor: editorialAccentColor[mode] }} />
-                              <input
-                                type="color"
-                                value={editorialAccentColor[mode]}
-                                onChange={(e) => setEditorialAccentColor(mode, e.target.value)}
-                                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                                aria-label={t(mode === 'dark' ? 'colorScheme_dark' : 'colorScheme_light')}
-                              />
-                            </div>
-                            <span className="mx-0.5 h-5 w-px shrink-0 bg-editorial-border/70" aria-hidden="true" />
-                            <span className="flex flex-1 flex-col">
-                              <span className="font-display text-lg italic text-editorial-ink">
-                                {t(mode === 'dark' ? 'colorScheme_dark' : 'colorScheme_light')}
-                              </span>
-                              <span
-                                className={`font-mono text-[10px] ${passesAA ? 'text-editorial-success' : 'text-editorial-danger'}`}
-                              >
-                                {ratio.toFixed(1)}:1 {passesAA ? '✓ AA' : '✗ AA'}
-                              </span>
-                            </span>
-                          </label>
-                        );
-                      })}
+                      {(['light', 'dark'] as const).map((mode) => (
+                        <label
+                          key={mode}
+                          className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-[16px] border border-editorial-border bg-editorial-bg/60 py-2.5 text-[11px] font-bold uppercase tracking-[0.18em] text-editorial-muted transition-colors hover:border-editorial-accent/40"
+                        >
+                          <span className="relative h-3.5 w-3.5 shrink-0 overflow-hidden rounded-full">
+                            <span className="absolute inset-0" style={{ backgroundColor: editorialAccentColor[mode] }} />
+                            <input
+                              type="color"
+                              value={editorialAccentColor[mode]}
+                              onChange={(e) => setEditorialAccentColor(mode, e.target.value)}
+                              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                              aria-label={t(mode === 'dark' ? 'settings.colorScheme_dark' : 'settings.colorScheme_light')}
+                            />
+                          </span>
+                          {t(mode === 'dark' ? 'settings.colorScheme_dark' : 'settings.colorScheme_light')}
+                          <ContrastBadge fg={editorialAccentColor[mode]} bg={ACCENT_CONTRAST_BG[mode]} />
+                        </label>
+                      ))}
                     </div>
                   </div>
 

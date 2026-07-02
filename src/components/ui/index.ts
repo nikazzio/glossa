@@ -11,3 +11,4 @@ export { Tooltip, type TooltipSide } from './Tooltip';
 export { ScopeBreakdownCard } from './ScopeBreakdownCard';
 export { ScopeBreakdownCarousel } from './ScopeBreakdownCarousel';
 export { StatRow } from './StatRow';
+export { ContrastBadge } from './ContrastBadge';
