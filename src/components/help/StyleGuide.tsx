@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Play, Plus, Save, Settings, CircleCheck, AlertCircle, Loader2, FilePen } from 'lucide-react';
-import { IconButton, PillButton } from '../ui';
-import { contrastRatio } from '../../utils/contrastRatio';
+import { IconButton, PillButton, ContrastBadge } from '../ui';
 
 function useCssVarMap(vars: readonly string[]): Record<string, string> {
   const [values, setValues] = useState<Record<string, string>>({});
@@ -14,21 +13,6 @@ function useCssVarMap(vars: readonly string[]): Record<string, string> {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return values;
-}
-
-function ContrastBadge({ fg, bg }: { fg: string; bg: string }) {
-  const ratio = contrastRatio(fg, bg);
-  const pass = ratio >= 4.5;
-  const large = ratio >= 3 && ratio < 4.5;
-  return (
-    <span className={`font-mono text-[9px] px-1.5 py-0.5 rounded border ${
-      pass  ? 'bg-editorial-success/10 text-editorial-success border-editorial-success/30' :
-      large ? 'bg-editorial-warning/10 text-editorial-warning border-editorial-warning/30' :
-              'bg-editorial-accent/10 text-editorial-accent border-editorial-accent/30'
-    }`}>
-      {ratio.toFixed(1)}:1 {pass ? '✓' : large ? '△' : '✗'}
-    </span>
-  );
 }
 
 const COLOR_TOKENS = [
