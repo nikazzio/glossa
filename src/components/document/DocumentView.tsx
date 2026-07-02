@@ -13,17 +13,20 @@ import {
   Wand2,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { usePricingStore } from '../../stores/pricingStore';
+import { useOperationLogStore } from '../../stores/operationLogStore';
 import { HighlightedText, MarkdownEditor, DOC_FONT_SIZE_STEP_INDEX } from '../common';
 import { IconButton, Tooltip, type IconButtonTone } from '../ui';
 import { composeAnnotatedMarkdown } from '../../utils/annotationMarkdown';
 import { restoreFootnoteMarkers } from '../../utils/footnoteExtractor';
+import { summarizeChunkUsage, formatUsd } from '../../utils/operationLogStats';
 import { usePhraseMemoryAutoSearch } from '../../hooks/usePhraseMemoryAutoSearch';
 import { usePanelScrollSync } from '../../hooks/usePanelScrollSync';
 import { useAnnotationsStore } from '../../stores/annotationsStore';
@@ -189,6 +192,8 @@ export function DocumentView({
   const { currentProjectId, projects } = useProjectStore();
   const activeWorkspace = useWorkspaceStore((state) => state.activeWorkspace);
   const annotationsByChunkId = useAnnotationsStore((s) => s.annotationsByChunkId);
+  const pricingOverrides = usePricingStore((s) => s.overrides);
+  const operationLogEntries = useOperationLogStore((s) => s.entries);
   const {
     updateChunkDraft,
     updateChunkOriginalText,
@@ -217,6 +222,10 @@ export function DocumentView({
   // Shell nuova (#291): menu controlli testo, uno per pannello (sorgente / traduzione).
   const [sourceMenuOpen, setSourceMenuOpen] = useState(false);
   const [translationMenuOpen, setTranslationMenuOpen] = useState(false);
+
+  // Minimap frammenti: tiene sempre in vista il pallino del frammento corrente,
+  // anche quando la riga è scrollata altrove o il documento ha molti frammenti.
+  const currentDotRef = useRef<HTMLButtonElement | null>(null);
 
   const {
     paneFocus,
@@ -254,6 +263,10 @@ export function DocumentView({
   const { sourceRef: scrollSourceRef, translationRef: scrollTranslationRef } = usePanelScrollSync(
     paneFocus === 'both' && syncScrollEnabled,
   );
+
+  useEffect(() => {
+    currentDotRef.current?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }, [currentChunk?.id]);
 
   const handleLockToggle = (chunk: typeof currentChunk) => {
     if (chunk) toggleChunkTranslationLock(chunk.id);
@@ -348,25 +361,15 @@ export function DocumentView({
                 ? 'bg-editorial-charcoal/70'
                 : null;
           const buttonLabel = buildChunkMinimapLabel(t, chunk, idx, chunks.length, isCurrent, chunkAnnotations.length);
-          const sizeClass = chunk.translationLocked
-            ? isCurrent
-              ? 'h-5 w-5'
-              : 'h-4.5 w-4.5'
-            : isCurrent
-              ? 'h-4.5 w-4.5'
-              : 'h-4 w-4';
           return (
             <Tooltip key={chunk.id} label={buttonLabel}>
               <button
                 type="button"
+                ref={isCurrent ? currentDotRef : undefined}
                 onClick={() => setSelectedChunkId(chunk.id)}
                 aria-label={buttonLabel}
                 aria-current={isCurrent ? 'true' : undefined}
-                className={`relative shrink-0 rounded-full transition-all duration-150 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                  isCurrent
-                    ? `${sizeClass} border border-editorial-charcoal/28 ${segmentTone} shadow-[var(--chunk-current-ring)]`
-                    : `${sizeClass} ${segmentTone} hover:-translate-y-px hover:ring-1 hover:ring-editorial-charcoal/12`
-                }`}
+                className={`relative h-4 w-4 shrink-0 rounded-full transition-transform duration-150 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${segmentTone} hover:-translate-y-px`}
               >
                 {chunk.translationLocked ? (
                   <span className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-editorial-success" />
@@ -374,11 +377,23 @@ export function DocumentView({
                 {annotDotColor && (
                   <span className={`absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full ${annotDotColor} ring-1 ring-editorial-bg`} />
                 )}
+                {isCurrent && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute -bottom-2 left-1/2 h-0 w-0 -translate-x-1/2 border-x-[3.5px] border-t-[4.5px] border-x-transparent border-t-editorial-ink"
+                  />
+                )}
               </button>
             </Tooltip>
           );
         })
       : null;
+
+  // Token/costo del frammento corrente, sommati su tutti gli stage/passaggi —
+  // niente nome modello: la pipeline può usarne più di uno per lo stesso frammento.
+  const currentChunkUsage = summarizeChunkUsage(operationLogEntries, currentChunk.id, pricingOverrides);
+  const currentChunkTokens = currentChunkUsage.total.totalInput + currentChunkUsage.total.totalOutput;
+  const hasCurrentChunkUsage = currentChunkTokens > 0 || currentChunkUsage.total.totalUsd !== null;
 
   // Stati pipeline (icone con tone di stato) — condivisi fra shell vecchia e nuova.
   const stageStatusButtons = (
@@ -430,16 +445,37 @@ export function DocumentView({
       <div className="@container mx-auto w-full flex flex-col flex-1 min-h-0">
         <div className="shrink-0">
           {/* Barra di navigazione a filo (border-b, allineata alle testate dei pannelli
-              laterali). Stati del chunk sopra, minimap pallini sotto. */}
-          <div className="w-full h-20 flex items-stretch gap-4 border-b border-editorial-border bg-editorial-page px-6 py-2">
-            <div className="flex min-w-0 flex-1 flex-col justify-center gap-2">
+              laterali). Stati del chunk sopra, minimap pallini sotto; a destra token/costo
+              del frammento corrente (spazio altrimenti vuoto — #296 follow-up). */}
+          <div className="w-full h-24 flex items-stretch gap-5 border-b border-editorial-border bg-editorial-page px-6 py-3">
+            <div className="flex min-w-0 flex-1 flex-col justify-center gap-2.5">
               {stageStatusButtons}
               {chunkMinimapDots ? (
-                <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-0.5">
+                <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar pb-2.5">
                   {chunkMinimapDots}
                 </div>
               ) : null}
             </div>
+            {hasCurrentChunkUsage && (
+              <div className="flex shrink-0 items-center gap-6 border-l border-editorial-border pl-5">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
+                    {t('header.tokenCount')}
+                  </span>
+                  <span className="font-display text-base italic text-editorial-ink tabular-nums">
+                    {currentChunkTokens.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
+                    {t('header.estimatedCost')}
+                  </span>
+                  <span className="font-display text-base italic text-editorial-accent tabular-nums">
+                    {formatUsd(currentChunkUsage.total.totalUsd)}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
