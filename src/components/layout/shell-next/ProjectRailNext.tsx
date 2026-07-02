@@ -36,7 +36,6 @@ export interface ProjectRailNextProps {
   onRetranslateChunk?: (chunkId: string) => void;
   onReauditChunk?: (chunkId: string) => void;
   onImportDocument?: () => void;
-  onOpenWorkspaceSettings?: () => void;
 }
 
 function PipelineNameSlot({ children }: { children?: ReactNode }) {
@@ -214,6 +213,86 @@ function ChunkRailNavigator({ collapsed }: { collapsed: boolean }) {
   );
 }
 
+interface RailBottomActionsProps {
+  tooltipSide: 'right' | 'top';
+  includeBack?: boolean;
+  closeProject: () => void;
+  isProcessing: boolean;
+  setShowLibraryPanel: (show: boolean) => void;
+  setShowConfigDrawer: (show: boolean) => void;
+  onImportDocument?: () => void;
+  hasDocument: boolean;
+  setShowExportDialog: (show: boolean) => void;
+}
+
+function RailBottomActions({
+  tooltipSide,
+  includeBack,
+  closeProject,
+  isProcessing,
+  setShowLibraryPanel,
+  setShowConfigDrawer,
+  onImportDocument,
+  hasDocument,
+  setShowExportDialog,
+}: RailBottomActionsProps) {
+  const { t } = useTranslation();
+  return (
+    <>
+      {includeBack && (
+        <IconButton
+          size="md"
+          tone="muted"
+          onClick={() => closeProject()}
+          disabled={isProcessing}
+          title={t('sidebar.backToWorkspace')}
+          tooltipSide={tooltipSide}
+        >
+          <ArrowLeft size={14} />
+        </IconButton>
+      )}
+      <IconButton
+        size="md"
+        tone="muted"
+        onClick={() => setShowLibraryPanel(true)}
+        title={t('library.openLibrary')}
+        tooltipSide={tooltipSide}
+      >
+        <LibraryBig size={14} />
+      </IconButton>
+      <IconButton
+        size="md"
+        tone="muted"
+        onClick={() => setShowConfigDrawer(true)}
+        title={t('pipeline.configurePipeline')}
+        tooltipSide={tooltipSide}
+      >
+        <Settings2 size={14} />
+      </IconButton>
+      <IconButton
+        size="md"
+        tone="muted"
+        onClick={onImportDocument}
+        disabled={!onImportDocument || hasDocument}
+        title={t('files.import')}
+        tooltipSide={tooltipSide}
+      >
+        <Upload size={14} />
+      </IconButton>
+      <IconButton
+        size="md"
+        tone="muted"
+        onClick={() => setShowExportDialog(true)}
+        disabled={!hasDocument}
+        title={t('header.exportLabel')}
+        tooltipSide={tooltipSide}
+      >
+        <FileOutput size={14} />
+      </IconButton>
+    </>
+  );
+}
+
 export function ProjectRailNext({
   collapsed,
   onRunPipeline,
@@ -263,54 +342,17 @@ export function ProjectRailNext({
 
         {/* Bottom: colonna icone */}
         <div className="flex shrink-0 flex-col items-center gap-1 border-t border-editorial-border py-2">
-          <IconButton
-            size="md"
-            tone="muted"
-            onClick={() => closeProject()}
-            disabled={isProcessing}
-            title={t('sidebar.backToWorkspace')}
+          <RailBottomActions
             tooltipSide="right"
-          >
-            <ArrowLeft size={14} />
-          </IconButton>
-          <IconButton
-            size="md"
-            tone="muted"
-            onClick={() => setShowLibraryPanel(true)}
-            title={t('library.openLibrary')}
-            tooltipSide="right"
-          >
-            <LibraryBig size={14} />
-          </IconButton>
-          <IconButton
-            size="md"
-            tone="muted"
-            onClick={() => setShowConfigDrawer(true)}
-            title={t('pipeline.configurePipeline')}
-            tooltipSide="right"
-          >
-            <Settings2 size={14} />
-          </IconButton>
-          <IconButton
-            size="md"
-            tone="muted"
-            onClick={onImportDocument}
-            disabled={!onImportDocument || hasDocument}
-            title={t('files.import')}
-            tooltipSide="right"
-          >
-            <Upload size={14} />
-          </IconButton>
-          <IconButton
-            size="md"
-            tone="muted"
-            onClick={() => setShowExportDialog(true)}
-            disabled={!hasDocument}
-            title={t('header.exportLabel')}
-            tooltipSide="right"
-          >
-            <FileOutput size={14} />
-          </IconButton>
+            includeBack
+            closeProject={closeProject}
+            isProcessing={isProcessing}
+            setShowLibraryPanel={setShowLibraryPanel}
+            setShowConfigDrawer={setShowConfigDrawer}
+            onImportDocument={onImportDocument}
+            hasDocument={hasDocument}
+            setShowExportDialog={setShowExportDialog}
+          />
         </div>
 
         <PipelineSidebarExportDialogHost open={showExportDialog} onOpenChange={setShowExportDialog} />
@@ -363,45 +405,16 @@ export function ProjectRailNext({
           <ArrowLeft size={14} />
         </IconButton>
         <div className="flex items-center gap-1">
-          <IconButton
-            size="md"
-            tone="muted"
-            onClick={() => setShowLibraryPanel(true)}
-            title={t('library.openLibrary')}
+          <RailBottomActions
             tooltipSide="top"
-          >
-            <LibraryBig size={14} />
-          </IconButton>
-          <IconButton
-            size="md"
-            tone="muted"
-            onClick={() => setShowConfigDrawer(true)}
-            title={t('pipeline.configurePipeline')}
-            tooltipSide="top"
-          >
-            <Settings2 size={14} />
-          </IconButton>
-          <IconButton
-            size="md"
-            tone="muted"
-            onClick={onImportDocument}
-            disabled={!onImportDocument || hasDocument}
-            title={t('files.import')}
-            tooltipSide="top"
-          >
-            <Upload size={14} />
-          </IconButton>
-          <IconButton
-            size="md"
-            tone="muted"
-            onClick={() => setShowExportDialog(true)}
-            disabled={!hasDocument}
-            title={t('header.exportLabel')}
-            ariaLabel={t('header.exportLabel')}
-            tooltipSide="top"
-          >
-            <FileOutput size={14} />
-          </IconButton>
+            closeProject={closeProject}
+            isProcessing={isProcessing}
+            setShowLibraryPanel={setShowLibraryPanel}
+            setShowConfigDrawer={setShowConfigDrawer}
+            onImportDocument={onImportDocument}
+            hasDocument={hasDocument}
+            setShowExportDialog={setShowExportDialog}
+          />
         </div>
       </div>
 

@@ -21,7 +21,6 @@ import { useWorkspaceStore } from './stores/workspaceStore';
 import { WorkspaceWizard } from './components/workspace/WorkspaceWizard';
 import { WorkspaceHome } from './components/workspace/WorkspaceHome';
 import { TranslationsArea } from './components/workspace/TranslationsArea';
-import { WorkspaceSettingsModal } from './components/workspace/WorkspaceSettingsModal';
 import { importTextFile } from './services/fileService';
 import { savePipelineConfig } from './services/pipelineService';
 import { extractFootnotes } from './utils/footnoteExtractor';
@@ -220,7 +219,6 @@ function EditorView() {
   if (showLibraryPanel) libraryPanelLoaded.current = true;
 
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
-  const [showWorkspaceSettings, setShowWorkspaceSettings] = useState(false);
   const editorContentKey = `editor-panel-${currentProjectId ?? 'none'}-${viewMode}`;
 
   const handleImportDocument = useCallback(async () => {
@@ -345,7 +343,6 @@ function EditorView() {
               onCancelPipeline={cancelPipeline}
               onRetranslateChunk={handleRetranslateChunk}
               onImportDocument={handleImportDocument}
-              onOpenWorkspaceSettings={() => setShowWorkspaceSettings(true)}
               onReauditChunk={auditSingleChunk}
               onRunCoherenceAudit={runCoherenceAudit}
             >
@@ -405,10 +402,6 @@ function EditorView() {
       <ConfirmDialog />
       <PreflightDialog />
       <RunResumeBanner />
-      <WorkspaceSettingsModal
-        open={showWorkspaceSettings}
-        onClose={() => setShowWorkspaceSettings(false)}
-      />
       {pendingImport && (
         <Suspense fallback={null}>
           <ImportPreviewDialog

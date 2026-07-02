@@ -89,6 +89,7 @@ function ConsoleDrawer() {
         onPointerDown={onGripPointerDown}
         onPointerMove={onGripPointerMove}
         onPointerUp={onGripPointerUp}
+        onPointerCancel={onGripPointerUp}
         className="group flex h-2.5 shrink-0 cursor-ns-resize items-center justify-center bg-terminal-chrome"
       >
         <span className="h-[3px] w-8 rounded-full bg-terminal-dim transition-colors group-hover:bg-terminal-accent" />
@@ -212,112 +213,112 @@ export function AppStatusBar() {
   return (
     <div className="relative shrink-0">
       {showConsoleDrawer && data.kind === 'project' && <ConsoleDrawer />}
-    <div
-      role="status"
-      aria-live="polite"
-      className="flex h-8 items-center justify-between gap-4 border-t border-editorial-border/60 bg-editorial-bg px-4 text-xs text-editorial-muted"
-    >
-      {/* Left: pannello attivo */}
-      <div className="flex min-w-0 items-center gap-2 overflow-hidden">
-        {data.kind === 'workspace' && (
-          <>
-            <span className="truncate font-medium text-editorial-ink">{data.workspaceName}</span>
-            {data.areaName ? (
-              <>
-                <span className="text-editorial-border">/</span>
-                <span className="truncate">{t(AREA_KEY[data.areaName] ?? data.areaName)}</span>
-              </>
-            ) : (
-              <span className="text-editorial-border">·</span>
-            )}
-            <span>{t('workspace.projectsMetric', { count: data.projectCount })}</span>
-          </>
-        )}
-        {data.kind === 'project' && data.activePanel && (
-          <span className="text-editorial-accent">
-            {t(`statusBar.panel.${data.activePanel}`)}
-          </span>
-        )}
-      </div>
-
-      {/* Center: stats chunk corrente */}
-      {data.kind === 'project' && data.totalChunks > 0 && (
-        <div className="hidden items-center sm:flex">
-          <ChunkCenterStats />
+      <div
+        role="status"
+        aria-live="polite"
+        className="flex h-8 items-center justify-between gap-4 border-t border-editorial-border/60 bg-editorial-bg px-4 text-xs text-editorial-muted"
+      >
+        {/* Left: pannello attivo */}
+        <div className="flex min-w-0 items-center gap-2 overflow-hidden">
+          {data.kind === 'workspace' && (
+            <>
+              <span className="truncate font-medium text-editorial-ink">{data.workspaceName}</span>
+              {data.areaName ? (
+                <>
+                  <span className="text-editorial-border">/</span>
+                  <span className="truncate">{t(AREA_KEY[data.areaName] ?? data.areaName)}</span>
+                </>
+              ) : (
+                <span className="text-editorial-border">·</span>
+              )}
+              <span>{t('workspace.projectsMetric', { count: data.projectCount })}</span>
+            </>
+          )}
+          {data.kind === 'project' && data.activePanel && (
+            <span className="text-editorial-accent">
+              {t(`statusBar.panel.${data.activePanel}`)}
+            </span>
+          )}
         </div>
-      )}
 
-      {/* Right: console toggle + controlli vista + salvataggio */}
-      <div className="flex shrink-0 items-center gap-2">
-        {data.kind === 'project' && (
-          <IconButton
-            size="xs"
-            tone={showConsoleDrawer ? 'accent' : 'default'}
-            onClick={() => setShowConsoleDrawer(!showConsoleDrawer)}
-            title={t('console.toggle')}
-            ariaPressed={showConsoleDrawer}
-            tooltipSide="top"
-          >
-            <Terminal size={11} />
-          </IconButton>
+        {/* Center: stats chunk corrente */}
+        {data.kind === 'project' && data.totalChunks > 0 && (
+          <div className="hidden items-center sm:flex">
+            <ChunkCenterStats />
+          </div>
         )}
-        {showPaneControls ? (
-          <>
-            <span className="h-3.5 w-px bg-editorial-border/60" aria-hidden="true" />
-            <div className="flex items-center gap-1">
-              <IconButton
-                size="xs"
-                tone={documentPaneFocus === 'both' ? 'accent' : 'default'}
-                onClick={() => setDocumentPaneFocus('both')}
-                title={t('document.focusBoth')}
-                ariaPressed={documentPaneFocus === 'both'}
-                tooltipSide="top"
-              >
-                <Columns2 size={11} />
-              </IconButton>
-              <IconButton
-                size="xs"
-                tone={documentPaneFocus === 'source' ? 'accent' : 'default'}
-                onClick={() => setDocumentPaneFocus('source')}
-                title={t('document.focusSource')}
-                ariaPressed={documentPaneFocus === 'source'}
-                tooltipSide="top"
-              >
-                <PanelLeft size={11} />
-              </IconButton>
-              <IconButton
-                size="xs"
-                tone={documentPaneFocus === 'translation' ? 'accent' : 'default'}
-                onClick={() => setDocumentPaneFocus('translation')}
-                title={t('document.focusTranslation')}
-                ariaPressed={documentPaneFocus === 'translation'}
-                tooltipSide="top"
-              >
-                <PanelRight size={11} />
-              </IconButton>
-              <span className="mx-0.5 h-3.5 w-px bg-editorial-border/60" aria-hidden="true" />
-              <IconButton
-                size="xs"
-                tone={syncOn ? 'accent' : 'default'}
-                onClick={() => setSyncScrollEnabled(!syncScrollEnabled)}
-                disabled={syncDisabled}
-                title={syncOn ? t('document.scrollSyncDisable') : t('document.scrollSyncEnable')}
-                ariaPressed={syncOn}
-                tooltipSide="top"
-              >
-                {syncOn ? <Link2 size={11} /> : <Link2Off size={11} />}
-              </IconButton>
-            </div>
-          </>
-        ) : null}
-        {data.kind === 'project' && (
-          <>
-            <span className="h-3.5 w-px bg-editorial-border/60" aria-hidden="true" />
-            <SaveIndicator state={data.saveState} />
-          </>
-        )}
+
+        {/* Right: console toggle + controlli vista + salvataggio */}
+        <div className="flex shrink-0 items-center gap-2">
+          {data.kind === 'project' && (
+            <IconButton
+              size="xs"
+              tone={showConsoleDrawer ? 'accent' : 'default'}
+              onClick={() => setShowConsoleDrawer(!showConsoleDrawer)}
+              title={t('console.toggle')}
+              ariaPressed={showConsoleDrawer}
+              tooltipSide="top"
+            >
+              <Terminal size={11} />
+            </IconButton>
+          )}
+          {showPaneControls ? (
+            <>
+              <span className="h-3.5 w-px bg-editorial-border/60" aria-hidden="true" />
+              <div className="flex items-center gap-1">
+                <IconButton
+                  size="xs"
+                  tone={documentPaneFocus === 'both' ? 'accent' : 'default'}
+                  onClick={() => setDocumentPaneFocus('both')}
+                  title={t('document.focusBoth')}
+                  ariaPressed={documentPaneFocus === 'both'}
+                  tooltipSide="top"
+                >
+                  <Columns2 size={11} />
+                </IconButton>
+                <IconButton
+                  size="xs"
+                  tone={documentPaneFocus === 'source' ? 'accent' : 'default'}
+                  onClick={() => setDocumentPaneFocus('source')}
+                  title={t('document.focusSource')}
+                  ariaPressed={documentPaneFocus === 'source'}
+                  tooltipSide="top"
+                >
+                  <PanelLeft size={11} />
+                </IconButton>
+                <IconButton
+                  size="xs"
+                  tone={documentPaneFocus === 'translation' ? 'accent' : 'default'}
+                  onClick={() => setDocumentPaneFocus('translation')}
+                  title={t('document.focusTranslation')}
+                  ariaPressed={documentPaneFocus === 'translation'}
+                  tooltipSide="top"
+                >
+                  <PanelRight size={11} />
+                </IconButton>
+                <span className="mx-0.5 h-3.5 w-px bg-editorial-border/60" aria-hidden="true" />
+                <IconButton
+                  size="xs"
+                  tone={syncOn ? 'accent' : 'default'}
+                  onClick={() => setSyncScrollEnabled(!syncScrollEnabled)}
+                  disabled={syncDisabled}
+                  title={syncOn ? t('document.scrollSyncDisable') : t('document.scrollSyncEnable')}
+                  ariaPressed={syncOn}
+                  tooltipSide="top"
+                >
+                  {syncOn ? <Link2 size={11} /> : <Link2Off size={11} />}
+                </IconButton>
+              </div>
+            </>
+          ) : null}
+          {data.kind === 'project' && (
+            <>
+              <span className="h-3.5 w-px bg-editorial-border/60" aria-hidden="true" />
+              <SaveIndicator state={data.saveState} />
+            </>
+          )}
+        </div>
       </div>
-    </div>
     </div>
   );
 }

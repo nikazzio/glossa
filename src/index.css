@@ -262,10 +262,16 @@ mark.hl-annot {
   color: inherit;
 }
 
-/* Footnote marker painted after the anchored word in the translation write view. */
+/* Footnote marker painted after the anchored word in the translation write
+   view. Zero-width (width: 0 + overflow: visible) so it never shifts the
+   transparent-textarea overlay alignment; offset visually via `left`
+   instead of margin. */
 .hl-annot-marker {
   display: inline-block;
-  margin-left: 0.08em;
+  width: 0;
+  overflow: visible;
+  position: relative;
+  left: 0.08em;
   white-space: nowrap;
   color: var(--color-editorial-danger);
   font-weight: 600;
