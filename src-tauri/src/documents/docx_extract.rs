@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::io::{Cursor, Read, Seek};
 
 use quick_xml::events::Event;
-use quick_xml::Reader;
+use quick_xml::{Reader, XmlVersion};
 
 pub fn extract_docx_text_from_bytes(bytes: &[u8]) -> Result<String, String> {
     let cursor = Cursor::new(bytes);
@@ -362,14 +362,20 @@ fn parse_footnotes_xml(xml: &str) -> Result<BTreeMap<String, String>, String> {
                     for attr in element.attributes().flatten() {
                         if attr.key.as_ref().ends_with(b":id") || attr.key.as_ref() == b"id" {
                             current_id = Some(
-                                attr.decode_and_unescape_value(reader.decoder())
-                                    .map_err(|e| format!("Failed to decode footnote id: {}", e))?
-                                    .to_string(),
+                                attr.decoded_and_normalized_value(
+                                    XmlVersion::Implicit1_0,
+                                    reader.decoder(),
+                                )
+                                .map_err(|e| format!("Failed to decode footnote id: {}", e))?
+                                .to_string(),
                             );
                         }
                         if attr.key.as_ref().ends_with(b":type") || attr.key.as_ref() == b"type" {
                             let kind = attr
-                                .decode_and_unescape_value(reader.decoder())
+                                .decoded_and_normalized_value(
+                                    XmlVersion::Implicit1_0,
+                                    reader.decoder(),
+                                )
                                 .map_err(|e| format!("Failed to decode footnote type: {}", e))?;
                             if kind == "separator" || kind == "continuationSeparator" {
                                 skip_current = true;
@@ -463,16 +469,25 @@ fn parse_relationships_xml(xml: &str) -> HashMap<String, String> {
                         let key = attr.key.as_ref();
                         if key == b"Id" {
                             id = attr
-                                .decode_and_unescape_value(reader.decoder())
+                                .decoded_and_normalized_value(
+                                    XmlVersion::Implicit1_0,
+                                    reader.decoder(),
+                                )
                                 .ok()
                                 .map(|v| v.to_string());
                         } else if key == b"Target" {
                             target = attr
-                                .decode_and_unescape_value(reader.decoder())
+                                .decoded_and_normalized_value(
+                                    XmlVersion::Implicit1_0,
+                                    reader.decoder(),
+                                )
                                 .ok()
                                 .map(|v| v.to_string());
                         } else if key == b"Type" {
-                            if let Ok(t) = attr.decode_and_unescape_value(reader.decoder()) {
+                            if let Ok(t) = attr.decoded_and_normalized_value(
+                                XmlVersion::Implicit1_0,
+                                reader.decoder(),
+                            ) {
                                 if t.contains("hyperlink") {
                                     is_hyperlink = true;
                                 }
@@ -529,7 +544,7 @@ fn extract_attr_value(
     for attr in element.attributes().flatten() {
         if attr.key.as_ref().ends_with(attr_name) || attr.key.as_ref() == attr_name {
             return Ok(Some(
-                attr.decode_and_unescape_value(decoder)
+                attr.decoded_and_normalized_value(XmlVersion::Implicit1_0, decoder)
                     .map_err(|e| format!("Failed to decode attribute value: {}", e))?
                     .to_string(),
             ));

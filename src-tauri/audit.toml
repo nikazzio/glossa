@@ -2,4 +2,11 @@
 # rsa 0.9.10 - RUSTSEC-2023-0071 (Marvin Attack timing sidechannel)
 # Transitive dep via tauri-plugin-sql -> sqlx-mysql -> rsa.
 # No fixed version available upstream; ignored until sqlx or tauri-plugin-sql drops rsa.
-ignore = ["RUSTSEC-2023-0071"]
+#
+# quick-xml 0.38.4 - RUSTSEC-2026-0194 / RUSTSEC-2026-0195 (quadratic parsing /
+# memory-exhaustion DoS). Transitive dep via tauri -> plist (macOS Info.plist
+# parsing at build/bundle time, not attacker-controlled input). plist 1.9.0
+# (latest) still pins quick-xml 0.39; no release fixes this yet. Our own
+# quick-xml usage (docx/pptx extraction) is already on the patched 0.41.
+# Ignored until plist or tauri bumps past quick-xml 0.41.
+ignore = ["RUSTSEC-2023-0071", "RUSTSEC-2026-0194", "RUSTSEC-2026-0195"]
