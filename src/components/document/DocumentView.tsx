@@ -380,7 +380,7 @@ export function DocumentView({
                 {isCurrent && (
                   <span
                     aria-hidden="true"
-                    className="absolute -bottom-2 left-1/2 h-0 w-0 -translate-x-1/2 border-x-[3.5px] border-t-[4.5px] border-x-transparent border-t-editorial-ink"
+                    className="absolute -bottom-2 left-1/2 h-0 w-0 -translate-x-1/2 border-x-[3.5px] border-b-[4.5px] border-x-transparent border-b-editorial-ink"
                   />
                 )}
               </button>
@@ -451,7 +451,7 @@ export function DocumentView({
             <div className="flex min-w-0 flex-1 flex-col justify-center gap-2.5">
               {stageStatusButtons}
               {chunkMinimapDots ? (
-                <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar pb-2.5">
+                <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar pt-1 pb-2.5">
                   {chunkMinimapDots}
                 </div>
               ) : null}
