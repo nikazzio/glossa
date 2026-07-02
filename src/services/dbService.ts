@@ -78,6 +78,7 @@ const ALLOWED_MIGRATIONS = new Set([
   'operation_logs.phase',
   'operation_logs.duration_ms',
   'operation_logs.detail_kind',
+  'operation_logs.pipeline_id',
   'pipelines.pipeline_mode',
   'pipelines.use_chunking',
   'pipelines.words_per_chunk',
@@ -371,6 +372,30 @@ export async function initDatabase(): Promise<void> {
   await ensureColumn('operation_logs', 'phase', 'TEXT DEFAULT NULL');
   await ensureColumn('operation_logs', 'duration_ms', 'INTEGER DEFAULT NULL');
   await ensureColumn('operation_logs', 'detail_kind', 'TEXT DEFAULT NULL');
+
+  const operationLogColumns = await conn.select<Array<{ name: string }>>('PRAGMA table_info(operation_logs)');
+  const hadPipelineIdColumn = operationLogColumns.some((column) => column.name === 'pipeline_id');
+  await ensureColumn('operation_logs', 'pipeline_id', 'TEXT DEFAULT NULL');
+  if (!hadPipelineIdColumn) {
+    // One-time backfill: entries logged before pipeline scoping existed had no
+    // pipeline_id, which would otherwise make them invisible to the new scoped
+    // queries. Best-effort attribution to the project's oldest pipeline keeps
+    // pre-existing history visible instead of silently disappearing.
+    await conn.execute(`
+      UPDATE operation_logs
+      SET pipeline_id = (
+        SELECT id FROM pipelines
+        WHERE pipelines.project_id = operation_logs.project_id
+        ORDER BY created_at ASC
+        LIMIT 1
+      )
+      WHERE pipeline_id IS NULL
+    `);
+  }
+  await conn.execute(`
+    CREATE INDEX IF NOT EXISTS idx_operation_logs_pipeline_id
+    ON operation_logs(project_id, pipeline_id, at)
+  `);
 
   await conn.execute(`
     CREATE TABLE IF NOT EXISTS macro_blocks (
@@ -669,6 +694,7 @@ const VALID_DETAIL_KINDS = new Set(['prompt', 'json', 'error', 'note']);
 interface DbOperationLogRow {
   id: string;
   project_id: string;
+  pipeline_id: string;
   at: string;
   level: string;
   scope: string;
@@ -697,14 +723,19 @@ export interface PersistedLogEntry {
   detailKind?: string;
 }
 
-export async function saveOperationLogEntry(projectId: string, entry: PersistedLogEntry): Promise<void> {
+export async function saveOperationLogEntry(
+  projectId: string,
+  pipelineId: string,
+  entry: PersistedLogEntry,
+): Promise<void> {
   await execute(
     `INSERT OR IGNORE INTO operation_logs
-       (id, project_id, at, level, scope, message, chunk_id, stage_id, meta, detail, phase, duration_ms, detail_kind)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+       (id, project_id, pipeline_id, at, level, scope, message, chunk_id, stage_id, meta, detail, phase, duration_ms, detail_kind)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
     [
       entry.id,
       projectId,
+      pipelineId,
       entry.at,
       entry.level,
       entry.scope,
@@ -721,31 +752,35 @@ export async function saveOperationLogEntry(projectId: string, entry: PersistedL
   await execute(
     `DELETE FROM operation_logs
      WHERE project_id = $1
+       AND pipeline_id = $2
        AND id NOT IN (
          SELECT id FROM operation_logs
          WHERE project_id = $1
+           AND pipeline_id = $2
          ORDER BY at DESC
-         LIMIT $2
+         LIMIT $3
        )`,
-    [projectId, MAX_OPERATION_LOG_ENTRIES],
+    [projectId, pipelineId, MAX_OPERATION_LOG_ENTRIES],
   );
 }
 
-export async function loadOperationLogs(projectId: string): Promise<PersistedLogEntry[]> {
+export async function loadOperationLogs(projectId: string, pipelineId: string): Promise<PersistedLogEntry[]> {
   await execute(
     `DELETE FROM operation_logs
      WHERE project_id = $1
+       AND pipeline_id = $2
        AND id NOT IN (
          SELECT id FROM operation_logs
          WHERE project_id = $1
+           AND pipeline_id = $2
          ORDER BY at DESC
-         LIMIT $2
+         LIMIT $3
        )`,
-    [projectId, MAX_OPERATION_LOG_ENTRIES],
+    [projectId, pipelineId, MAX_OPERATION_LOG_ENTRIES],
   );
   const rows = await select<DbOperationLogRow>(
-    `SELECT * FROM operation_logs WHERE project_id = $1 ORDER BY at ASC`,
-    [projectId],
+    `SELECT * FROM operation_logs WHERE project_id = $1 AND pipeline_id = $2 ORDER BY at ASC`,
+    [projectId, pipelineId],
   );
   return rows.map((row) => ({
     id: row.id,
@@ -763,6 +798,6 @@ export async function loadOperationLogs(projectId: string): Promise<PersistedLog
   }));
 }
 
-export async function clearOperationLogs(projectId: string): Promise<void> {
-  await execute('DELETE FROM operation_logs WHERE project_id = $1', [projectId]);
+export async function clearOperationLogs(projectId: string, pipelineId: string): Promise<void> {
+  await execute('DELETE FROM operation_logs WHERE project_id = $1 AND pipeline_id = $2', [projectId, pipelineId]);
 }

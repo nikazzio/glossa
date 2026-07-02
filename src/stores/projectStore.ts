@@ -121,7 +121,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       viewMode: ui.viewMode,
     });
 
-    useOperationLogStore.getState().setProjectId(id);
+    useOperationLogStore.getState().setContext(id, activePipelineId);
     void get().loadProjects().catch(() => {});
     set({ currentProjectId: id, activePipelineId, pipelines, saveState: 'saved', lastSaveError: null, trackedSnapshot });
   },
@@ -146,7 +146,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         loadTranslations(activePipelineId),
       ]);
 
-      await useOperationLogStore.getState().loadFromDb(id);
+      await useOperationLogStore.getState().loadFromDb(id, activePipelineId);
 
       restoredChunks = restoreTranslations(savedTranslations);
 
@@ -221,7 +221,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     useUiStore.getState().setViewMode('document');
     useChunksStore.setState({ chunks: [], isProcessing: false, cancelRequested: false, activeStreamId: null });
     usePipelineStore.getState().resetToDefaults();
-    useOperationLogStore.setState({ entries: [], currentProjectId: null });
+    useOperationLogStore.setState({ entries: [], currentProjectId: null, currentPipelineId: null });
     useAnnotationsStore.getState().clearAll();
     set({
       currentProjectId: null,
@@ -297,7 +297,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         }
 
         logger.info('saveCurrentProject: done', { projectId: currentProjectId });
-        useOperationLogStore.getState().setProjectId(currentProjectId);
+        useOperationLogStore.getState().setContext(currentProjectId, activePipelineId);
         await get().loadProjects().catch(() => {});
         set({
           currentProjectId,
@@ -371,6 +371,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     annStore.clearAll();
     await annStore.loadAnnotations(pipelineId);
 
+    await useOperationLogStore.getState().loadFromDb(currentProjectId, pipelineId);
+
     useUiStore.getState().setSelectedChunkId(null);
 
     set({
@@ -412,8 +414,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         useChunksStore.getState().generateChunks();
       }
 
-      // New pipeline starts with a clean operation log
-      useOperationLogStore.getState().clear();
+      // switchPipeline (above) already loaded the new pipeline's (empty)
+      // operation log — no separate clear/reload needed here, which also
+      // means other pipelines' history in the project stays untouched.
     })();
     createPipelineInFlight = op.finally(() => { createPipelineInFlight = null; });
     return createPipelineInFlight;

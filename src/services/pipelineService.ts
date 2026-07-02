@@ -223,6 +223,7 @@ export async function duplicatePipeline(sourcePipelineId: string, newName: strin
 
 export async function deletePipeline(pipelineId: string): Promise<void> {
   await execute('DELETE FROM translations WHERE pipeline_id = $1', [pipelineId]);
+  await execute('DELETE FROM operation_logs WHERE pipeline_id = $1', [pipelineId]);
   await execute('DELETE FROM pipelines WHERE id = $1', [pipelineId]);
 }
 

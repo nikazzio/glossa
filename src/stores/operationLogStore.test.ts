@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const dbMocks = vi.hoisted(() => ({
   saveOperationLogEntry: vi.fn().mockResolvedValue(undefined),
+  loadOperationLogs: vi.fn().mockResolvedValue([]),
+  clearOperationLogs: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('../services/dbService', async () => {
@@ -13,8 +15,10 @@ vi.mock('../services/dbService', async () => {
 import { logOperation, useOperationLogStore } from './operationLogStore';
 
 beforeEach(() => {
-  useOperationLogStore.setState({ entries: [], currentProjectId: null });
+  useOperationLogStore.setState({ entries: [], currentProjectId: null, currentPipelineId: null });
   dbMocks.saveOperationLogEntry.mockClear();
+  dbMocks.loadOperationLogs.mockClear().mockResolvedValue([]);
+  dbMocks.clearOperationLogs.mockClear();
 });
 
 describe('operationLogStore', () => {
@@ -57,34 +61,114 @@ describe('operationLogStore', () => {
     expect(entry.detail).toBe('{"foo":"bar"}');
   });
 
-  it('backfills entries logged before the project had an id once it gets one', async () => {
-    logOperation({ level: 'info', scope: 'pipeline', message: 'run started' });
-    logOperation({ level: 'success', scope: 'stage', message: 'stage done' });
-    expect(dbMocks.saveOperationLogEntry).not.toHaveBeenCalled();
+  describe('persistence scoping (project + pipeline)', () => {
+    it('does not persist entries until both project and pipeline ids are known', () => {
+      logOperation({ level: 'info', scope: 'pipeline', message: 'no project yet' });
+      expect(dbMocks.saveOperationLogEntry).not.toHaveBeenCalled();
 
-    useOperationLogStore.getState().setProjectId('proj-1');
-    await Promise.resolve();
+      useOperationLogStore.setState({ currentProjectId: 'proj-1' });
+      logOperation({ level: 'info', scope: 'pipeline', message: 'project but no pipeline' });
+      expect(dbMocks.saveOperationLogEntry).not.toHaveBeenCalled();
+    });
 
-    expect(dbMocks.saveOperationLogEntry).toHaveBeenCalledTimes(2);
-    expect(dbMocks.saveOperationLogEntry).toHaveBeenCalledWith(
-      'proj-1',
-      expect.objectContaining({ message: 'run started' }),
-    );
-    expect(dbMocks.saveOperationLogEntry).toHaveBeenCalledWith(
-      'proj-1',
-      expect.objectContaining({ message: 'stage done' }),
-    );
+    it('persists new entries once both ids are set', () => {
+      useOperationLogStore.getState().setContext('proj-1', 'pipe-1');
+      logOperation({ level: 'info', scope: 'pipeline', message: 'run started' });
+
+      expect(dbMocks.saveOperationLogEntry).toHaveBeenCalledWith(
+        'proj-1',
+        'pipe-1',
+        expect.objectContaining({ message: 'run started' }),
+      );
+    });
+
+    it('backfills entries logged before the project/pipeline had ids once they are set', async () => {
+      logOperation({ level: 'info', scope: 'pipeline', message: 'run started' });
+      logOperation({ level: 'success', scope: 'stage', message: 'stage done' });
+      expect(dbMocks.saveOperationLogEntry).not.toHaveBeenCalled();
+
+      useOperationLogStore.getState().setContext('proj-1', 'pipe-1');
+      await Promise.resolve();
+
+      expect(dbMocks.saveOperationLogEntry).toHaveBeenCalledTimes(2);
+      expect(dbMocks.saveOperationLogEntry).toHaveBeenCalledWith(
+        'proj-1',
+        'pipe-1',
+        expect.objectContaining({ message: 'run started' }),
+      );
+      expect(dbMocks.saveOperationLogEntry).toHaveBeenCalledWith(
+        'proj-1',
+        'pipe-1',
+        expect.objectContaining({ message: 'stage done' }),
+      );
+    });
+
+    it('backfills entries sequentially rather than firing them all at once', async () => {
+      let resolveFirst: () => void = () => {};
+      const firstSave = new Promise<void>((resolve) => {
+        resolveFirst = resolve;
+      });
+      dbMocks.saveOperationLogEntry.mockImplementationOnce(() => firstSave);
+
+      logOperation({ level: 'info', scope: 'pipeline', message: 'first' });
+      logOperation({ level: 'info', scope: 'pipeline', message: 'second' });
+
+      useOperationLogStore.getState().setContext('proj-1', 'pipe-1');
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(dbMocks.saveOperationLogEntry).toHaveBeenCalledTimes(1);
+
+      resolveFirst();
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(dbMocks.saveOperationLogEntry).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not re-backfill already-persisted entries on a later setContext call', async () => {
+      useOperationLogStore.getState().setContext('proj-1', 'pipe-1');
+      logOperation({ level: 'info', scope: 'pipeline', message: 'already persisted' });
+      await Promise.resolve();
+      dbMocks.saveOperationLogEntry.mockClear();
+
+      useOperationLogStore.getState().setContext('proj-1', 'pipe-1');
+      await Promise.resolve();
+
+      expect(dbMocks.saveOperationLogEntry).not.toHaveBeenCalled();
+    });
   });
 
-  it('does not re-backfill already-persisted entries on a later setProjectId call', async () => {
-    useOperationLogStore.getState().setProjectId('proj-1');
-    logOperation({ level: 'info', scope: 'pipeline', message: 'already persisted' });
-    await Promise.resolve();
-    dbMocks.saveOperationLogEntry.mockClear();
+  describe('loadFromDb', () => {
+    it('loads entries scoped to the given project and pipeline', async () => {
+      dbMocks.loadOperationLogs.mockResolvedValueOnce([
+        { id: 'op-1', at: '2026-01-01T00:00:00.000Z', level: 'info', scope: 'pipeline', message: 'restored' },
+      ]);
 
-    useOperationLogStore.getState().setProjectId('proj-1');
-    await Promise.resolve();
+      await useOperationLogStore.getState().loadFromDb('proj-1', 'pipe-1');
 
-    expect(dbMocks.saveOperationLogEntry).not.toHaveBeenCalled();
+      expect(dbMocks.loadOperationLogs).toHaveBeenCalledWith('proj-1', 'pipe-1');
+      const state = useOperationLogStore.getState();
+      expect(state.currentProjectId).toBe('proj-1');
+      expect(state.currentPipelineId).toBe('pipe-1');
+      expect(state.entries).toHaveLength(1);
+      expect(state.entries[0].message).toBe('restored');
+    });
+  });
+
+  describe('clear', () => {
+    it('clears only the current project + pipeline scope in the db', () => {
+      useOperationLogStore.getState().setContext('proj-1', 'pipe-1');
+      useOperationLogStore.getState().clear();
+
+      expect(dbMocks.clearOperationLogs).toHaveBeenCalledWith('proj-1', 'pipe-1');
+      expect(useOperationLogStore.getState().entries).toEqual([]);
+    });
+
+    it('does not hit the db when no full context is set', () => {
+      useOperationLogStore.getState().clear();
+      expect(dbMocks.clearOperationLogs).not.toHaveBeenCalled();
+    });
   });
 });

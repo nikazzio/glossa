@@ -204,6 +204,7 @@ describe('initDatabase migrations', () => {
     dbState.columnsByTable.set('pipeline_configs', ['id', 'project_id', 'stages', 'judge_prompt', 'judge_model', 'judge_provider', 'use_chunking']);
     dbState.columnsByTable.set('translations', ['id', 'project_id', 'original_text', 'final_translation', 'stage_results', 'judge_issues', 'created_at']);
     dbState.columnsByTable.set('prompt_templates', []);
+    dbState.columnsByTable.set('operation_logs', []);
   });
 
   it('backs up and resets a beta database with an old schema version', async () => {
@@ -328,6 +329,90 @@ describe('initDatabase migrations', () => {
     );
     expect(dbState.db.execute).toHaveBeenCalledWith(
       expect.stringContaining("SET value = 'ws_default'"),
+    );
+  });
+
+  it('adds a pipeline_id column to operation_logs for existing databases', async () => {
+    const { initDatabase } = await import('./dbService');
+
+    await initDatabase();
+
+    expect(dbState.db.execute).toHaveBeenCalledWith(
+      expect.stringContaining('ALTER TABLE operation_logs ADD COLUMN pipeline_id TEXT DEFAULT NULL'),
+    );
+  });
+
+  it('backfills pipeline_id on existing operation_logs rows the first time the column is added', async () => {
+    const { initDatabase } = await import('./dbService');
+
+    await initDatabase();
+
+    expect(dbState.db.execute).toHaveBeenCalledWith(
+      expect.stringContaining('UPDATE operation_logs'),
+    );
+  });
+
+  it('does not re-run the pipeline_id backfill once the column already exists', async () => {
+    dbState.columnsByTable.set('operation_logs', ['id', 'project_id', 'pipeline_id', 'at', 'level', 'scope', 'message']);
+    const { initDatabase } = await import('./dbService');
+
+    await initDatabase();
+
+    expect(dbState.db.execute).not.toHaveBeenCalledWith(
+      expect.stringContaining('UPDATE operation_logs'),
+    );
+  });
+});
+
+describe('operation log pipeline scoping', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.clearAllMocks();
+    dbState.setExistingObjects([]);
+    dbState.setSchemaVersion(null);
+    dbState.setWorkspaceCount(0);
+  });
+
+  it('scopes saveOperationLogEntry writes to project and pipeline', async () => {
+    const { saveOperationLogEntry } = await import('./dbService');
+
+    await saveOperationLogEntry('proj-1', 'pipe-1', {
+      id: 'op-1',
+      at: '2026-01-01T00:00:00.000Z',
+      level: 'info',
+      scope: 'pipeline',
+      message: 'hello',
+    });
+
+    expect(dbState.db.execute).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT OR IGNORE INTO operation_logs'),
+      ['op-1', 'proj-1', 'pipe-1', '2026-01-01T00:00:00.000Z', 'info', 'pipeline', 'hello', null, null, null, null, null, null, null],
+    );
+    expect(dbState.db.execute).toHaveBeenCalledWith(
+      expect.stringContaining('DELETE FROM operation_logs'),
+      ['proj-1', 'pipe-1', 2000],
+    );
+  });
+
+  it('scopes loadOperationLogs reads to project and pipeline', async () => {
+    const { loadOperationLogs } = await import('./dbService');
+
+    await loadOperationLogs('proj-1', 'pipe-1');
+
+    expect(dbState.db.select).toHaveBeenCalledWith(
+      expect.stringContaining('SELECT * FROM operation_logs WHERE project_id = $1 AND pipeline_id = $2'),
+      ['proj-1', 'pipe-1'],
+    );
+  });
+
+  it('scopes clearOperationLogs deletes to project and pipeline', async () => {
+    const { clearOperationLogs } = await import('./dbService');
+
+    await clearOperationLogs('proj-1', 'pipe-1');
+
+    expect(dbState.db.execute).toHaveBeenCalledWith(
+      'DELETE FROM operation_logs WHERE project_id = $1 AND pipeline_id = $2',
+      ['proj-1', 'pipe-1'],
     );
   });
 });
