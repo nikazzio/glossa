@@ -1,4 +1,5 @@
-import { CheckCircle2, AlertCircle, MinusCircle, Columns2, Link2, Link2Off, Loader2, NotebookText, PanelLeft, PanelRight, ShieldAlert, Terminal, X } from 'lucide-react';
+import { CheckCircle2, AlertCircle, MinusCircle, Columns2, Link2, Link2Off, Loader2, NotebookText, PanelLeft, PanelRight, ShieldAlert, Terminal } from 'lucide-react';
+import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useStatusBarData } from '../../hooks/useStatusBarData';
 import { useUiStore } from '../../stores/uiStore';
@@ -57,28 +58,40 @@ function SaveIndicator({ state }: { state: 'idle' | 'dirty' | 'saving' | 'saved'
 }
 
 function ConsoleDrawer() {
-  const { t } = useTranslation();
   const chunks = useChunksStore((s) => s.chunks);
   const selectedChunkId = useUiStore((s) => s.selectedChunkId);
   const setShowConsoleDrawer = useUiStore((s) => s.setShowConsoleDrawer);
   const setSelectedChunkId = useUiStore((s) => s.setSelectedChunkId);
+  const height = useUiStore((s) => s.consoleDrawerHeight);
+  const setHeight = useUiStore((s) => s.setConsoleDrawerHeight);
+
+  const dragRef = useRef<{ startY: number; startHeight: number } | null>(null);
+
+  const onGripPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    dragRef.current = { startY: event.clientY, startHeight: height };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+  const onGripPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragRef.current) return;
+    setHeight(dragRef.current.startHeight + (dragRef.current.startY - event.clientY));
+  };
+  const onGripPointerUp = () => {
+    dragRef.current = null;
+  };
 
   return (
-    <div className="absolute bottom-full left-0 right-0 z-50 flex h-64 flex-col border-t border-terminal-border bg-terminal-bg shadow-lg">
-      <div className="flex shrink-0 items-center justify-between border-b border-terminal-border px-3 py-1.5">
-        <span className="flex items-center gap-1.5 text-xs font-medium text-terminal-info">
-          <Terminal size={11} />
-          {t('console.title')}
-        </span>
-        <IconButton
-          size="xs"
-          tone="muted"
-          onClick={() => setShowConsoleDrawer(false)}
-          title={t('common.close')}
-          tooltipSide="top"
-        >
-          <X size={11} />
-        </IconButton>
+    <div
+      className="absolute bottom-full left-0 right-0 z-50 flex flex-col border-t border-terminal-border bg-terminal-bg shadow-lg"
+      style={{ height }}
+    >
+      {/* Maniglia di resize: trascina per cambiare l'altezza, persistita in uiStore. */}
+      <div
+        onPointerDown={onGripPointerDown}
+        onPointerMove={onGripPointerMove}
+        onPointerUp={onGripPointerUp}
+        className="group flex h-2.5 shrink-0 cursor-ns-resize items-center justify-center bg-terminal-chrome"
+      >
+        <span className="h-[3px] w-8 rounded-full bg-terminal-dim transition-colors group-hover:bg-terminal-accent" />
       </div>
       <div className="min-h-0 flex-1 overflow-hidden">
         <OperationsTab
@@ -87,6 +100,7 @@ function ConsoleDrawer() {
           currentChunkId={selectedChunkId}
           chunks={chunks}
           onSelectChunk={setSelectedChunkId}
+          onClose={() => setShowConsoleDrawer(false)}
         />
       </div>
     </div>

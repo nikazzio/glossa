@@ -1,4 +1,4 @@
-import { Copy, ExternalLink, Loader2, Search, TerminalSquare, Trash2 } from 'lucide-react';
+import { Copy, ExternalLink, Loader2, Search, TerminalSquare, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -26,6 +26,8 @@ interface OperationsTabProps {
   currentChunkId: string | null;
   chunks: TranslationChunk[];
   onSelectChunk: (id: string) => void;
+  /** Shell nuova: il drawer non ha più un header proprio — la X vive qui. */
+  onClose?: () => void;
 }
 
 const ALL_SCOPES: OperationLogScope[] = [
@@ -53,6 +55,7 @@ export function OperationsTab({
   currentChunkId,
   chunks,
   onSelectChunk,
+  onClose,
 }: OperationsTabProps) {
   const { t } = useTranslation();
   const entries = useOperationLogStore((state) => state.entries);
@@ -136,19 +139,17 @@ export function OperationsTab({
 
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex h-full flex-col bg-terminal-bg">
-      <Header
+      <ConsoleChrome
         isProcessing={isProcessing}
         isAuditOnly={isProcessing && runStatus !== 'running'}
         isMemoryRunning={isMemoryRunning}
         memoryProgress={memoryProgress}
-        processingChunk={processingChunk}
         processingChunkIndex={processingChunkIndex}
         chunksCount={chunks.length}
-        onGoToChunk={() => processingChunk && onSelectChunk(processingChunk.id)}
-        onClear={clear}
+        onClose={onClose}
       />
 
-      <FilterBar
+      <ConsoleToolbar
         scopeFilter={scopeFilter}
         levelFilter={levelFilter}
         search={search}
@@ -157,6 +158,9 @@ export function OperationsTab({
         onToggleLevel={toggleLevel}
         onSearchChange={setSearch}
         onToggleGrouped={() => setGrouped((g) => !g)}
+        showGoToChunk={isProcessing && processingChunk !== null}
+        onGoToChunk={() => processingChunk && onSelectChunk(processingChunk.id)}
+        onClear={clear}
       />
 
       {filteredEntries.length === 0 ? (
@@ -180,97 +184,78 @@ export function OperationsTab({
   );
 }
 
-// ── Header ────────────────────────────────────────────────────────────────
+// ── Chrome: titolo + stato live + chiudi (unico header, #296 follow-up) ─────
 
-interface HeaderProps {
+interface ConsoleChromeProps {
   isProcessing: boolean;
   isAuditOnly: boolean;
   isMemoryRunning: boolean;
   memoryProgress: { processed: number; total: number } | null;
-  processingChunk: TranslationChunk | null;
   processingChunkIndex: number;
   chunksCount: number;
-  onGoToChunk: () => void;
-  onClear: () => void;
+  onClose?: () => void;
 }
 
-function Header({
+function StatusPill({ tone, label, progress }: { tone: 'accent' | 'info'; label: string; progress?: string }) {
+  const color = tone === 'accent' ? 'text-terminal-accent bg-terminal-accent/12' : 'text-terminal-info bg-terminal-info/12';
+  return (
+    <span className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.08em] ${color}`}>
+      <Loader2 size={10} className="animate-spin shrink-0" />
+      {label}
+      {progress && <span className="font-display text-xs italic normal-case tracking-normal opacity-80">{progress}</span>}
+    </span>
+  );
+}
+
+function ConsoleChrome({
   isProcessing,
   isAuditOnly,
   isMemoryRunning,
   memoryProgress,
-  processingChunk,
   processingChunkIndex,
   chunksCount,
-  onGoToChunk,
-  onClear,
-}: HeaderProps) {
+  onClose,
+}: ConsoleChromeProps) {
   const { t } = useTranslation();
   return (
-    <div className="bg-terminal-chrome px-5 py-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <TerminalSquare size={11} className="text-editorial-accent shrink-0" />
-          <p className="text-xs font-sans uppercase tracking-[0.12em] text-terminal-secondary">
-            {t('document.operationsShellTitle')}
-          </p>
-        </div>
-        <div className="flex items-center gap-1">
-          {isProcessing && processingChunk && (
-            <button
-              type="button"
-              onClick={onGoToChunk}
-              title={t('document.operationsGoToChunk')}
-              aria-label={t('document.operationsGoToChunk')}
-              className="rounded-full border border-terminal-border p-2 text-terminal-secondary transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            >
-              <ExternalLink size={14} />
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={onClear}
-            title={t('document.operationsClear')}
-            aria-label={t('document.operationsClear')}
-            className="rounded-full border border-terminal-border p-2 text-terminal-secondary transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-          >
-            <Trash2 size={14} />
-          </button>
-        </div>
+    <div className="flex shrink-0 items-center gap-3 border-b border-terminal-border bg-terminal-chrome px-4 py-2.5">
+      <div className="flex items-center gap-1.5 text-terminal-ink">
+        <TerminalSquare size={13} className="text-terminal-accent shrink-0" />
+        <span className="text-xs font-bold uppercase tracking-[0.1em]">{t('document.operationsShellTitle')}</span>
       </div>
       {isProcessing && (
-        <div className="mt-2.5 flex items-center gap-2" role="status" aria-live="polite">
-          <Loader2 size={11} className="animate-spin shrink-0 text-terminal-accent" />
-          <span className="text-xs font-bold uppercase tracking-[0.1em] text-terminal-accent">
-            {isAuditOnly ? t('document.auditRunning') : t('document.operationsRunning')}
-          </span>
-          {processingChunkIndex >= 0 && (
-            <span className="font-display text-xs italic text-terminal-accent/70">
-              {indexPad(processingChunkIndex + 1)}/{indexPad(chunksCount)}
-            </span>
-          )}
-        </div>
+        <StatusPill
+          tone="accent"
+          label={isAuditOnly ? t('document.auditRunning') : t('document.operationsRunning')}
+          progress={processingChunkIndex >= 0 ? `${indexPad(processingChunkIndex + 1)}/${indexPad(chunksCount)}` : undefined}
+        />
       )}
       {isMemoryRunning && (
-        <div className="mt-2.5 flex items-center gap-2" role="status" aria-live="polite">
-          <Loader2 size={11} className="animate-spin shrink-0 text-terminal-info" />
-          <span className="text-xs font-bold uppercase tracking-[0.1em] text-terminal-info">
-            {t('document.memoryRunning')}
-          </span>
-          {memoryProgress !== null && (
-            <span className="font-display text-xs italic text-terminal-info/70">
-              {indexPad(memoryProgress.processed + 1)}/{indexPad(memoryProgress.total)}
-            </span>
-          )}
-        </div>
+        <StatusPill
+          tone="info"
+          label={t('document.memoryRunning')}
+          progress={memoryProgress ? `${indexPad(memoryProgress.processed + 1)}/${indexPad(memoryProgress.total)}` : undefined}
+        />
+      )}
+      <div className="flex-1" />
+      {onClose && (
+        <button
+          type="button"
+          onClick={onClose}
+          title={t('common.close')}
+          aria-label={t('common.close')}
+          className="flex h-6.5 w-6.5 items-center justify-center rounded-full border border-terminal-border text-terminal-secondary transition-colors hover:border-terminal-accent/60 hover:text-terminal-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-terminal-accent"
+        >
+          <X size={12} />
+        </button>
       )}
     </div>
   );
 }
 
-// ── Filter bar ────────────────────────────────────────────────────────────
+// ── Toolbar: ricerca + filtri + azioni (seconda riga della stessa testata) ──
 
-interface FilterBarProps {
+interface ConsoleToolbarProps {
   scopeFilter: Set<OperationLogScope>;
   levelFilter: Set<OperationLogLevel>;
   search: string;
@@ -279,9 +264,12 @@ interface FilterBarProps {
   onToggleLevel: (level: OperationLogLevel) => void;
   onSearchChange: (value: string) => void;
   onToggleGrouped: () => void;
+  showGoToChunk: boolean;
+  onGoToChunk: () => void;
+  onClear: () => void;
 }
 
-function FilterBar({
+function ConsoleToolbar({
   scopeFilter,
   levelFilter,
   search,
@@ -290,24 +278,20 @@ function FilterBar({
   onToggleLevel,
   onSearchChange,
   onToggleGrouped,
-}: FilterBarProps) {
+  showGoToChunk,
+  onGoToChunk,
+  onClear,
+}: ConsoleToolbarProps) {
   const { t } = useTranslation();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const scopeLabel = scopeLabels(t);
   const levelLabel = levelLabels(t);
 
   return (
-    <div className="border-b border-terminal-line bg-terminal-bg px-4 py-2 font-mono text-xs space-y-1.5">
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => setFiltersOpen((o) => !o)}
-          className="shrink-0 text-xs uppercase tracking-[0.1em] text-terminal-muted transition-colors hover:text-terminal-secondary focus:outline-none"
-        >
-          {filtersOpen ? '▾' : '▸'} {t('log.filters')}
-        </button>
-        <div className="flex flex-1 items-center gap-2">
-          <Search size={10} className="shrink-0 text-terminal-muted" />
+    <div className="shrink-0 border-b border-terminal-line bg-terminal-bg font-mono text-xs">
+      <div className="flex items-center gap-3 px-4 py-2">
+        <div className="flex flex-1 items-center gap-2 text-terminal-muted">
+          <Search size={11} className="shrink-0" />
           <input
             type="search"
             value={search}
@@ -320,16 +304,47 @@ function FilterBar({
           type="button"
           onClick={onToggleGrouped}
           aria-pressed={grouped}
-          className={`shrink-0 text-xs uppercase tracking-[0.16em] transition-colors focus:outline-none ${
+          className={`shrink-0 text-xs uppercase tracking-[0.14em] transition-colors focus:outline-none ${
             grouped ? 'text-terminal-accent' : 'text-terminal-muted hover:text-terminal-secondary'
           }`}
         >
           {t('log.grouped')}
         </button>
+        <button
+          type="button"
+          onClick={() => setFiltersOpen((o) => !o)}
+          aria-pressed={filtersOpen}
+          className={`shrink-0 text-xs uppercase tracking-[0.14em] transition-colors focus:outline-none ${
+            filtersOpen ? 'text-terminal-accent' : 'text-terminal-muted hover:text-terminal-secondary'
+          }`}
+        >
+          {filtersOpen ? '▾' : '▸'} {t('log.filters')}
+        </button>
+        <span className="h-3.5 w-px shrink-0 bg-terminal-line" aria-hidden="true" />
+        {showGoToChunk && (
+          <button
+            type="button"
+            onClick={onGoToChunk}
+            title={t('document.operationsGoToChunk')}
+            aria-label={t('document.operationsGoToChunk')}
+            className="shrink-0 text-terminal-secondary transition-colors hover:text-terminal-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-terminal-accent"
+          >
+            <ExternalLink size={14} />
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onClear}
+          title={t('document.operationsClear')}
+          aria-label={t('document.operationsClear')}
+          className="shrink-0 text-terminal-secondary transition-colors hover:text-terminal-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-terminal-accent"
+        >
+          <Trash2 size={14} />
+        </button>
       </div>
 
       {filtersOpen && (
-        <div className="space-y-1 pt-0.5">
+        <div className="space-y-1 px-4 pb-2 pt-0.5">
           <div className="flex flex-wrap gap-x-3 gap-y-0.5">
             {ALL_SCOPES.map((scope) => (
               <button

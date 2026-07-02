@@ -81,6 +81,8 @@ interface UiState {
   chunkRailTab: ChunkRailTab;
   /** Log operazioni (console) espanso come drawer sopra la barra di stato. */
   showConsoleDrawer: boolean;
+  /** Altezza in px del drawer Operazioni, ridimensionabile dall'utente (trascina il bordo superiore). */
+  consoleDrawerHeight: number;
   highlightsEnabled: boolean;
   highlightColors: { light: HLColorSet; dark: HLColorSet };
   searchQuery: string;
@@ -127,6 +129,7 @@ interface UiState {
   setShowInsightPanel: (show: boolean) => void;
   setChunkRailTab: (tab: ChunkRailTab) => void;
   setShowConsoleDrawer: (show: boolean) => void;
+  setConsoleDrawerHeight: (height: number) => void;
   setHighlightsEnabled: (enabled: boolean) => void;
   setHighlightColor: (mode: 'light' | 'dark', type: keyof HLColorSet, color: string) => void;
   setSearchQuery: (query: string) => void;
@@ -262,6 +265,7 @@ export const useUiStore = create<UiState>()(
       showInsightPanel: false,
       chunkRailTab: 'audit',
       showConsoleDrawer: false,
+      consoleDrawerHeight: 256,
       highlightsEnabled: true,
       highlightColors: { light: { ...HL_COLORS_LIGHT }, dark: { ...HL_COLORS_DARK } },
       searchQuery: '',
@@ -386,6 +390,7 @@ export const useUiStore = create<UiState>()(
       setShowInsightPanel: (show) => set({ showInsightPanel: show }),
       setChunkRailTab: (tab) => set({ chunkRailTab: tab }),
       setShowConsoleDrawer: (show) => set({ showConsoleDrawer: show }),
+      setConsoleDrawerHeight: (height) => set({ consoleDrawerHeight: Math.min(520, Math.max(160, height)) }),
       setHighlightsEnabled: (enabled) => set({ highlightsEnabled: enabled }),
       setHighlightColor: (mode, type, color) =>
         set((state) => ({
@@ -524,6 +529,7 @@ export const useUiStore = create<UiState>()(
         projectSidebarWidth: state.projectSidebarWidth,
         projectFlyoutWidth: state.projectFlyoutWidth,
         configFlyoutWidth: state.configFlyoutWidth,
+        consoleDrawerHeight: state.consoleDrawerHeight,
         highlightsEnabled: state.highlightsEnabled,
         highlightColors: state.highlightColors,
       }),

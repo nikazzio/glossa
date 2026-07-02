@@ -507,6 +507,16 @@ Usa `.terminal-scrollbar` (definita in `index.css`) al posto di `.custom-scrollb
 
 Il bordo sinistro del drawer è condizionale: `border-terminal-border` con tab `operations` attivo, `border-editorial-border` altrimenti — transizione "carta candela" invece di flash stroboscopico.
 
+### Header del drawer Console (#296)
+
+Un solo header a due righe con ruoli distinti, non due header sovrapposti:
+- **Riga chrome** (`bg-terminal-chrome`): icona + titolo + pill di stato live inline (elaborazione/memoria in corso, con `Loader2` animato) + pulsante chiudi. Niente righe di stato separate sotto.
+- **Riga toolbar** (`bg-terminal-bg`, sotto la chrome): ricerca sempre visibile + toggle raggruppato + trigger filtri a scomparsa (i chip scope/livello restano dietro un accordion — sono troppi per stare sempre visibili senza affollare) + vai al frammento + pulisci.
+
+**Colori (CRITICO):** dentro il drawer Console usa **solo** token `terminal-*` (`terminal-accent`, `terminal-secondary`, ecc.), mai `editorial-*`. Il terminale ha una palette scura dedicata apposta per restare "la versione scura degli stessi toni" — infiltrare l'accento dell'interfaccia chiara (verde) rompe quel principio.
+
+**Ridimensionabile:** maniglia orizzontale in cima al drawer (`cursor-ns-resize`, trascinabile), altezza persistita in `uiStore.consoleDrawerHeight` (default 256px, min 160, max 520).
+
 ---
 
 ## Riferimento live
