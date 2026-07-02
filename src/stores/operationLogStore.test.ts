@@ -103,6 +103,30 @@ describe('operationLogStore', () => {
       );
     });
 
+    it('backfills entries sequentially rather than firing them all at once', async () => {
+      let resolveFirst: () => void = () => {};
+      const firstSave = new Promise<void>((resolve) => {
+        resolveFirst = resolve;
+      });
+      dbMocks.saveOperationLogEntry.mockImplementationOnce(() => firstSave);
+
+      logOperation({ level: 'info', scope: 'pipeline', message: 'first' });
+      logOperation({ level: 'info', scope: 'pipeline', message: 'second' });
+
+      useOperationLogStore.getState().setContext('proj-1', 'pipe-1');
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(dbMocks.saveOperationLogEntry).toHaveBeenCalledTimes(1);
+
+      resolveFirst();
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(dbMocks.saveOperationLogEntry).toHaveBeenCalledTimes(2);
+    });
+
     it('does not re-backfill already-persisted entries on a later setContext call', async () => {
       useOperationLogStore.getState().setContext('proj-1', 'pipe-1');
       logOperation({ level: 'info', scope: 'pipeline', message: 'already persisted' });

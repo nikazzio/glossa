@@ -16,6 +16,7 @@ const {
   saveFullState,
   loadTranslations,
   restoreTranslations,
+  deletePipeline,
 } = await import('./pipelineService');
 
 const basePipelineRow = {
@@ -427,6 +428,18 @@ describe('pipelineService', () => {
       expect(restored[0]?.blobId).toBe('blob-1');
       expect(restored[0]?.blobOrder).toBe(2);
       expect(restored[0]?.blobReferenceChunkIds).toEqual(['chunk-0', 'chunk-1', 'chunk-2']);
+    });
+  });
+
+  // ── deletePipeline ───────────────────────────────────────────────────
+
+  describe('deletePipeline', () => {
+    it('deletes translations and operation logs before the pipeline row, since neither has an FK cascade', async () => {
+      await deletePipeline('pipeline-1');
+
+      expect(dbMocks.execute).toHaveBeenCalledWith('DELETE FROM translations WHERE pipeline_id = $1', ['pipeline-1']);
+      expect(dbMocks.execute).toHaveBeenCalledWith('DELETE FROM operation_logs WHERE pipeline_id = $1', ['pipeline-1']);
+      expect(dbMocks.execute).toHaveBeenCalledWith('DELETE FROM pipelines WHERE id = $1', ['pipeline-1']);
     });
   });
 });

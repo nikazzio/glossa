@@ -414,9 +414,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         useChunksStore.getState().generateChunks();
       }
 
-      // New pipeline has no log entries of its own yet — load its (empty) history
-      // instead of clearing, so other pipelines' history in the project is untouched.
-      await useOperationLogStore.getState().loadFromDb(currentProjectId, newId);
+      // switchPipeline (above) already loaded the new pipeline's (empty)
+      // operation log — no separate clear/reload needed here, which also
+      // means other pipelines' history in the project stays untouched.
     })();
     createPipelineInFlight = op.finally(() => { createPipelineInFlight = null; });
     return createPipelineInFlight;

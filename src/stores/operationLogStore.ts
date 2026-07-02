@@ -61,18 +61,24 @@ export const useOperationLogStore = create<OperationLogState>((set, get) => ({
     // First save of a fresh project/pipeline: entries logged while running
     // without a saved id yet were never persisted — backfill them now.
     if (hasFullContext && !hadFullContext) {
-      for (const entry of get().entries) {
-        void saveOperationLogEntry(projectId as string, pipelineId as string, entry as PersistedLogEntry).catch(
-          (error: unknown) => {
+      const entriesToBackfill = get().entries;
+      void (async () => {
+        // Sequential on purpose: up to MAX_ENTRIES saves, each already doing
+        // 2 serialized DB writes — firing them all concurrently would queue
+        // thousands of writes at once and stall the DB write queue.
+        for (const entry of entriesToBackfill) {
+          try {
+            await saveOperationLogEntry(projectId as string, pipelineId as string, entry as PersistedLogEntry);
+          } catch (error: unknown) {
             logger.warn('operationLog.backfill_failed', {
               projectId,
               pipelineId,
               entryId: entry.id,
               error: error instanceof Error ? error.message : String(error),
             });
-          },
-        );
-      }
+          }
+        }
+      })();
     }
   },
 
