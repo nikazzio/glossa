@@ -38,9 +38,10 @@ export interface OperationLogEntry {
 interface OperationLogState {
   entries: OperationLogEntry[];
   currentProjectId: string | null;
-  setProjectId: (id: string | null) => void;
+  currentPipelineId: string | null;
+  setContext: (projectId: string | null, pipelineId: string | null) => void;
   append: (entry: Omit<OperationLogEntry, 'id' | 'at'>) => void;
-  loadFromDb: (projectId: string) => Promise<void>;
+  loadFromDb: (projectId: string, pipelineId: string) => Promise<void>;
   clearChunk: (chunkId: string) => void;
   clear: () => void;
 }
@@ -50,8 +51,30 @@ const MAX_ENTRIES = 2000;
 export const useOperationLogStore = create<OperationLogState>((set, get) => ({
   entries: [],
   currentProjectId: null,
+  currentPipelineId: null,
 
-  setProjectId: (id) => set({ currentProjectId: id }),
+  setContext: (projectId, pipelineId) => {
+    const { currentProjectId: previousProjectId, currentPipelineId: previousPipelineId } = get();
+    set({ currentProjectId: projectId, currentPipelineId: pipelineId });
+    const hadFullContext = Boolean(previousProjectId && previousPipelineId);
+    const hasFullContext = Boolean(projectId && pipelineId);
+    // First save of a fresh project/pipeline: entries logged while running
+    // without a saved id yet were never persisted — backfill them now.
+    if (hasFullContext && !hadFullContext) {
+      for (const entry of get().entries) {
+        void saveOperationLogEntry(projectId as string, pipelineId as string, entry as PersistedLogEntry).catch(
+          (error: unknown) => {
+            logger.warn('operationLog.backfill_failed', {
+              projectId,
+              pipelineId,
+              entryId: entry.id,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          },
+        );
+      }
+    }
+  },
 
   append: (entry) => {
     const full: OperationLogEntry = {
@@ -62,23 +85,27 @@ export const useOperationLogStore = create<OperationLogState>((set, get) => ({
     set((state) => ({
       entries: [...state.entries, full].slice(-MAX_ENTRIES),
     }));
-    const { currentProjectId } = get();
-    if (currentProjectId) {
-      void saveOperationLogEntry(currentProjectId, full as PersistedLogEntry).catch((error: unknown) => {
-        logger.warn('operationLog.persist_failed', {
-          projectId: currentProjectId,
-          entryId: full.id,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      });
+    const { currentProjectId, currentPipelineId } = get();
+    if (currentProjectId && currentPipelineId) {
+      void saveOperationLogEntry(currentProjectId, currentPipelineId, full as PersistedLogEntry).catch(
+        (error: unknown) => {
+          logger.warn('operationLog.persist_failed', {
+            projectId: currentProjectId,
+            pipelineId: currentPipelineId,
+            entryId: full.id,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        },
+      );
     }
   },
 
-  loadFromDb: async (projectId) => {
-    const rows = await loadOperationLogs(projectId);
+  loadFromDb: async (projectId, pipelineId) => {
+    const rows = await loadOperationLogs(projectId, pipelineId);
     set({
       entries: rows as OperationLogEntry[],
       currentProjectId: projectId,
+      currentPipelineId: pipelineId,
     });
   },
 
@@ -89,12 +116,13 @@ export const useOperationLogStore = create<OperationLogState>((set, get) => ({
   },
 
   clear: () => {
-    const { currentProjectId } = get();
+    const { currentProjectId, currentPipelineId } = get();
     set({ entries: [] });
-    if (currentProjectId) {
-      void clearOperationLogs(currentProjectId).catch((error: unknown) => {
+    if (currentProjectId && currentPipelineId) {
+      void clearOperationLogs(currentProjectId, currentPipelineId).catch((error: unknown) => {
         logger.warn('operationLog.clear_failed', {
           projectId: currentProjectId,
+          pipelineId: currentPipelineId,
           error: error instanceof Error ? error.message : String(error),
         });
       });
