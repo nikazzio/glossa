@@ -51,7 +51,23 @@ export const useOperationLogStore = create<OperationLogState>((set, get) => ({
   entries: [],
   currentProjectId: null,
 
-  setProjectId: (id) => set({ currentProjectId: id }),
+  setProjectId: (id) => {
+    const previousProjectId = get().currentProjectId;
+    set({ currentProjectId: id });
+    // First save of a fresh project: entries logged while running without a
+    // saved project id yet were never persisted — backfill them now.
+    if (id && !previousProjectId) {
+      for (const entry of get().entries) {
+        void saveOperationLogEntry(id, entry as PersistedLogEntry).catch((error: unknown) => {
+          logger.warn('operationLog.backfill_failed', {
+            projectId: id,
+            entryId: entry.id,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
+      }
+    }
+  },
 
   append: (entry) => {
     const full: OperationLogEntry = {
