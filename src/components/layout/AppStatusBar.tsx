@@ -1,8 +1,9 @@
-import { CheckCircle2, AlertCircle, MinusCircle, Columns2, Link2, Link2Off, Loader2, PanelLeft, PanelRight, Terminal, X } from 'lucide-react';
+import { CheckCircle2, AlertCircle, MinusCircle, Columns2, Link2, Link2Off, Loader2, NotebookText, PanelLeft, PanelRight, ShieldAlert, Terminal, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useStatusBarData } from '../../hooks/useStatusBarData';
 import { useUiStore } from '../../stores/uiStore';
 import { useChunksStore } from '../../stores/chunksStore';
+import { useAnnotationsStore } from '../../stores/annotationsStore';
 import { IconButton, Tooltip } from '../ui';
 import { countWords, qualityLabelKey, qualityTone } from '../../utils';
 import { OperationsTab } from '../document/OperationsTab';
@@ -97,6 +98,7 @@ function ChunkCenterStats() {
   const chunks = useChunksStore((s) => s.chunks);
   const isProcessing = useChunksStore((s) => s.isProcessing);
   const selectedChunkId = useUiStore((s) => s.selectedChunkId);
+  const annotationsByChunkId = useAnnotationsStore((s) => s.annotationsByChunkId);
 
   const chunk = chunks.find((c) => c.id === selectedChunkId) ?? chunks[0] ?? null;
   const chunkIndex = chunk ? chunks.findIndex((c) => c.id === chunk.id) : -1;
@@ -125,6 +127,8 @@ function ChunkCenterStats() {
     : chunk.status === 'error'
       ? t('statusBar.error')
       : null;
+  const issueCount = chunk.judgeResult?.status === 'completed' ? chunk.judgeResult.issues.length : 0;
+  const noteCount = annotationsByChunkId.get(chunk.id)?.length ?? 0;
 
   return (
     <span className="flex items-center gap-1.5">
@@ -133,7 +137,7 @@ function ChunkCenterStats() {
       <Tooltip label={t('statusBar.chunkWordsTooltip', { count: wordCount.toLocaleString() })} side="top">
         <span>{wordCount.toLocaleString()} {t('statusBar.chunkWords')}</span>
       </Tooltip>
-      {chunk.judgeResult?.rating && (
+      {chunk.judgeResult?.status === 'completed' && (
         <>
           <span className="text-editorial-border">·</span>
           <Tooltip label={`${t('statusBar.quality.tooltipPrefix')} ${t(qualityLabelKey(chunk.judgeResult.rating)).toLowerCase()}`} side="top">
@@ -147,6 +151,28 @@ function ChunkCenterStats() {
           <span className={chunk.status === 'completed' ? 'text-editorial-success' : 'text-editorial-danger'}>
             {statusLabel}
           </span>
+        </>
+      )}
+      {issueCount > 0 && (
+        <>
+          <span className="text-editorial-border">·</span>
+          <Tooltip label={t('audit.issuesCount', { count: issueCount })} side="top">
+            <span className="flex items-center gap-1 text-editorial-danger">
+              <ShieldAlert size={11} />
+              {issueCount}
+            </span>
+          </Tooltip>
+        </>
+      )}
+      {noteCount > 0 && (
+        <>
+          <span className="text-editorial-border">·</span>
+          <Tooltip label={t('annotations.badgeCount', { count: noteCount })} side="top">
+            <span className="flex items-center gap-1">
+              <NotebookText size={11} />
+              {noteCount}
+            </span>
+          </Tooltip>
         </>
       )}
     </span>

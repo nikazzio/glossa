@@ -3,6 +3,7 @@ import { Group, Panel, Separator, usePanelRef } from 'react-resizable-panels';
 import { useUiStore } from '../../../stores/uiStore';
 import { ProjectRailNext, type ProjectRailNextProps } from './ProjectRailNext';
 import { ProjectInspectorNext } from './ProjectInspectorNext';
+import { AppStatusBar } from '../AppStatusBar';
 import { PANEL_FLEX_TRANSITION_CLASS } from '../motion';
 
 /**
@@ -174,26 +175,33 @@ export function ShellNext({
 
   return (
     <Group orientation="horizontal" className="flex min-h-0 flex-1" onLayoutChanged={persistLayout}>
-      <Panel
-        id="project-rail"
-        collapsible
-        collapsedSize={SIDEBAR_COLLAPSED}
-        minSize={SIDEBAR_MIN}
-        maxSize={SIDEBAR_MAX}
-        defaultSize={initialWidth.current}
-        panelRef={railRef}
-        onResize={syncRailFlag}
-        className={`border-r border-editorial-border bg-editorial-page ${
-          dragging ? '' : PANEL_FLEX_TRANSITION_CLASS
-        }`}
-      >
-        <ProjectRailNext collapsed={collapsed} {...railProps} />
-      </Panel>
+      {/* Rail + documento + barra di stato: la barra vive solo sotto queste due colonne,
+          non sotto l'ispettore destro — rende chiaro che i comandi lì appartengono al testo. */}
+      <Panel id="project-main" className="flex min-w-0 flex-col">
+        <Group orientation="horizontal" className="flex min-h-0 flex-1" onLayoutChanged={persistLayout}>
+          <Panel
+            id="project-rail"
+            collapsible
+            collapsedSize={SIDEBAR_COLLAPSED}
+            minSize={SIDEBAR_MIN}
+            maxSize={SIDEBAR_MAX}
+            defaultSize={initialWidth.current}
+            panelRef={railRef}
+            onResize={syncRailFlag}
+            className={`border-r border-editorial-border bg-editorial-page ${
+              dragging ? '' : PANEL_FLEX_TRANSITION_CLASS
+            }`}
+          >
+            <ProjectRailNext collapsed={collapsed} {...railProps} />
+          </Panel>
 
-      {railSeparator}
+          {railSeparator}
 
-      <Panel id="project-content" className="relative flex min-w-0">
-        {children}
+          <Panel id="project-content" className="relative flex min-w-0">
+            {children}
+          </Panel>
+        </Group>
+        <AppStatusBar />
       </Panel>
 
       {railSeparator}

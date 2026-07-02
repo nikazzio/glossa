@@ -523,7 +523,9 @@ export default function App() {
             <LibraryPanel />
           </Suspense>
         ) : null}
-        <AppStatusBar />
+        {/* In vista progetto la barra di stato vive dentro ShellNext (solo sotto rail+documento,
+            non sotto l'ispettore destro); qui resta solo per la vista workspace/home. */}
+        {isWorkspaceHome && <AppStatusBar />}
         <ConfirmDialog />
       </div>
       <Toaster
