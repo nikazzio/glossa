@@ -54,6 +54,18 @@ function HighlightColorSync() {
   return null;
 }
 
+function AccentColorSync() {
+  const colorScheme = useUiStore((s) => s.colorScheme);
+  const editorialAccentColor = useUiStore((s) => s.editorialAccentColor);
+  useEffect(() => {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark = colorScheme === 'dark' || (colorScheme === 'system' && prefersDark);
+    const color = isDark ? editorialAccentColor.dark : editorialAccentColor.light;
+    document.documentElement.style.setProperty('--color-editorial-accent', color);
+  }, [colorScheme, editorialAccentColor]);
+  return null;
+}
+
 const UI_FONT_STACK: Record<UiFont, string> = {
   jakarta: '"Plus Jakarta Sans", system-ui, -apple-system, sans-serif',
   geist: '"Geist", system-ui, -apple-system, sans-serif',
@@ -480,6 +492,7 @@ export default function App() {
   return (
       <ErrorBoundary>
       <HighlightColorSync />
+      <AccentColorSync />
       <FontSync />
       <DocTypographySync />
       <ThemeSync />

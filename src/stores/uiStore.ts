@@ -51,6 +51,9 @@ export const HL_COLORS_DARK: HLColorSet = {
   auditPhrase:  'rgba(251,146,60,0.30)',
   annotation:   'rgba(94,195,185,0.28)',
 };
+
+export const EDITORIAL_ACCENT_LIGHT = '#2F746C';
+export const EDITORIAL_ACCENT_DARK = '#3A7A72';
 export type ProjectPanelTab = 'run' | 'pipeline' | 'document' | 'insight' | 'chunk';
 
 /** Pannelli che vivono inline nella barra primaria (non aprono il fly-out). */
@@ -85,6 +88,7 @@ interface UiState {
   consoleDrawerHeight: number;
   highlightsEnabled: boolean;
   highlightColors: { light: HLColorSet; dark: HLColorSet };
+  editorialAccentColor: { light: string; dark: string };
   searchQuery: string;
   focusedChunkId: string | null;
   focusedIssueQuery: string | null;
@@ -132,6 +136,7 @@ interface UiState {
   setConsoleDrawerHeight: (height: number) => void;
   setHighlightsEnabled: (enabled: boolean) => void;
   setHighlightColor: (mode: 'light' | 'dark', type: keyof HLColorSet, color: string) => void;
+  setEditorialAccentColor: (mode: 'light' | 'dark', color: string) => void;
   setSearchQuery: (query: string) => void;
   setFocusedChunkId: (chunkId: string | null) => void;
   focusIssueInChunk: (chunkId: string, query?: string | null, sourceQuery?: string | null) => void;
@@ -237,6 +242,9 @@ export function migrateUiStorePersistedState(persisted: unknown, fromVersion: nu
       dark: { ...HL_COLORS_DARK, ...(stored.dark ?? {}) },
     };
   }
+  if (fromVersion < 16) {
+    s.editorialAccentColor = { light: EDITORIAL_ACCENT_LIGHT, dark: EDITORIAL_ACCENT_DARK };
+  }
   return s;
 }
 
@@ -268,6 +276,7 @@ export const useUiStore = create<UiState>()(
       consoleDrawerHeight: 256,
       highlightsEnabled: true,
       highlightColors: { light: { ...HL_COLORS_LIGHT }, dark: { ...HL_COLORS_DARK } },
+      editorialAccentColor: { light: EDITORIAL_ACCENT_LIGHT, dark: EDITORIAL_ACCENT_DARK },
       searchQuery: '',
       focusedChunkId: null,
       focusedIssueQuery: null,
@@ -399,6 +408,10 @@ export const useUiStore = create<UiState>()(
             [mode]: { ...state.highlightColors[mode], [type]: color },
           },
         })),
+      setEditorialAccentColor: (mode, color) =>
+        set((state) => ({
+          editorialAccentColor: { ...state.editorialAccentColor, [mode]: color },
+        })),
       setSearchQuery: (query) => set({ searchQuery: query }),
       setFocusedChunkId: (chunkId) => set({ focusedChunkId: chunkId }),
       focusIssueInChunk: (chunkId, query, sourceQuery) =>
@@ -508,7 +521,7 @@ export const useUiStore = create<UiState>()(
     }),
     {
       name: 'glossa-ui-prefs',
-      version: 15,
+      version: 16,
       migrate: migrateUiStorePersistedState,
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
@@ -532,6 +545,7 @@ export const useUiStore = create<UiState>()(
         consoleDrawerHeight: state.consoleDrawerHeight,
         highlightsEnabled: state.highlightsEnabled,
         highlightColors: state.highlightColors,
+        editorialAccentColor: state.editorialAccentColor,
       }),
     },
   ),
