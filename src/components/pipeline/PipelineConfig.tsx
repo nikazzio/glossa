@@ -147,7 +147,7 @@ export function PipelineConfig({
 
   const pricingOverrides = usePricingStore((s) => s.overrides);
   const costEstimate = useMemo(
-    () => estimatePipelineCost(chunks, config, pricingOverrides),
+    () => estimatePipelineCost(chunks, config, pricingOverrides, { includeCoherence: true }),
     [chunks, config, pricingOverrides],
   );
 

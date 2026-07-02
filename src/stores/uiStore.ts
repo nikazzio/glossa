@@ -105,7 +105,6 @@ interface UiState {
   dashboardSidebarWidth: number;
   projectSidebarWidth: number;
   projectFlyoutWidth: number;
-  configFlyoutWidth: number;
   pendingAnnotationAnchor: { chunkId: string; text: string; content?: string } | null;
   activeWorkspaceArea: WorkspaceArea | null;
   setTraceStageId: (id: string | null) => void;
@@ -149,7 +148,6 @@ interface UiState {
   setDashboardSidebarWidth: (width: number) => void;
   setProjectSidebarWidth: (width: number) => void;
   setProjectFlyoutWidth: (width: number) => void;
-  setConfigFlyoutWidth: (width: number) => void;
   setActivePanel: (panel: ActivePanel, tab?: InsightsDrawerTab | ChunkDrawerTab | HelpSection | SettingsTab) => void;
 }
 
@@ -205,7 +203,6 @@ export function migrateUiStorePersistedState(persisted: unknown, fromVersion: nu
     s.dashboardSidebarWidth = 240;
     s.projectSidebarWidth = 300;
     s.projectFlyoutWidth = 430;
-    s.configFlyoutWidth = 560;
   }
   if (fromVersion < 11) {
     // La preferenza di espansione deriva dallo stato collassato salvato.
@@ -292,7 +289,6 @@ export const useUiStore = create<UiState>()(
       dashboardSidebarWidth: 240,
       projectSidebarWidth: 300,
       projectFlyoutWidth: 430,
-      configFlyoutWidth: 560,
       pendingAnnotationAnchor: null,
       activeWorkspaceArea: null,
       setViewMode: (mode) =>
@@ -476,7 +472,6 @@ export const useUiStore = create<UiState>()(
       setDashboardSidebarWidth: (width) => set({ dashboardSidebarWidth: width }),
       setProjectSidebarWidth: (width) => set({ projectSidebarWidth: width }),
       setProjectFlyoutWidth: (width) => set({ projectFlyoutWidth: width }),
-      setConfigFlyoutWidth: (width) => set({ configFlyoutWidth: width }),
       setActivePanel: (panel, tab) =>
         set((state) => {
           switch (panel) {
@@ -541,7 +536,6 @@ export const useUiStore = create<UiState>()(
         dashboardSidebarWidth: state.dashboardSidebarWidth,
         projectSidebarWidth: state.projectSidebarWidth,
         projectFlyoutWidth: state.projectFlyoutWidth,
-        configFlyoutWidth: state.configFlyoutWidth,
         consoleDrawerHeight: state.consoleDrawerHeight,
         highlightsEnabled: state.highlightsEnabled,
         highlightColors: state.highlightColors,

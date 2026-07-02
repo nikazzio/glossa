@@ -71,6 +71,14 @@ Change the configuration before a full run if you need a different provider,
 prompt, or glossary behavior. If you only need to inspect a result, prefer Test
 mode over changing the whole pipeline.
 
+## Cost estimate
+
+Hovering over the info icon next to the estimated cost (in the pipeline settings panel, and next to the translate/run button in the document view) shows a per-stage breakdown with the approximate cost in dollars.
+
+- In the pipeline settings panel the estimate always covers **the whole document**, including the coherence check if configured.
+- Next to the run button in the document view, the estimate follows whatever is about to happen: in "translate chunk" mode it covers only the selected chunk, in "run all" mode it covers the whole document.
+- This is an approximation based on word count and the chosen model's per-token price: the real cost may vary slightly.
+
 ## See also
 
 - [Provider support](./provider-support) — provider comparison and model selection guide

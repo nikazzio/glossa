@@ -17,7 +17,11 @@ const TOOLTIP_ID = 'cost-badge-tooltip';
 
 export function CostBreakdownPanel({ estimate }: { estimate: PipelineCostEstimate }) {
   const { t } = useTranslation();
-  const allRows = estimate.judge ? [...estimate.stages, estimate.judge] : estimate.stages;
+  const allRows = [
+    ...estimate.stages,
+    ...(estimate.judge ? [estimate.judge] : []),
+    ...(estimate.coherence ? [estimate.coherence] : []),
+  ];
 
   if (allRows.length === 0) return null;
 

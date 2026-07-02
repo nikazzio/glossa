@@ -20,8 +20,9 @@ export interface StageCostEstimate {
 export interface PipelineCostEstimate {
   stages: StageCostEstimate[];
   judge: StageCostEstimate | null;
+  coherence: StageCostEstimate | null;
   totalUsd: number | null; // null if any stage has unknown pricing; 0 for fully free pipelines
-  isFree: boolean; // true if all stages + judge are free (all ollama)
+  isFree: boolean; // true if all stages + judge (+ coherence, se incluso) sono gratuiti (tutti ollama)
 }
 
 function stageEstimate(
@@ -48,14 +49,24 @@ function stageEstimate(
   return { stageId, stageName, provider, model, inputTokens, outputTokens, costUsd };
 }
 
+export interface EstimatePipelineCostOptions {
+  /** Include la passata di verifica coerenza (azione separata, lanciata a parte dall'esecuzione della pipeline). */
+  includeCoherence?: boolean;
+}
+
 export function estimatePipelineCost(
   chunks: { originalText: string }[],
   config: PipelineConfig,
   pricingOverrides: Record<string, { input: number; output: number }> = {},
+  options: EstimatePipelineCostOptions = {},
 ): PipelineCostEstimate {
   if (chunks.length === 0) {
-    return { stages: [], judge: null, totalUsd: 0, isFree: false };
+    return { stages: [], judge: null, coherence: null, totalUsd: 0, isFree: false };
   }
+
+  // Ogni chunk è una chiamata separata al modello: il costo fisso del prompt di sistema
+  // si paga una volta per chunk, non una volta sola per l'intero documento.
+  const numChunks = chunks.length;
 
   const totalWords = chunks.reduce(
     (sum, c) => sum + c.originalText.trim().split(/\s+/).filter(Boolean).length,
@@ -66,7 +77,7 @@ export function estimatePipelineCost(
   const enabledStages = config.stages.filter((s) => s.enabled);
 
   const stageEstimates = enabledStages.map((stage) => {
-    const promptTokens = estimateTokens(stage.prompt);
+    const promptTokens = estimateTokens(stage.prompt) * numChunks;
     return stageEstimate(
       stage.id,
       stage.name,
@@ -88,14 +99,35 @@ export function estimatePipelineCost(
           config.judgeProvider,
           config.judgeModel,
           docTokens * 2,
-          estimateTokens(config.judgePrompt),
+          estimateTokens(config.judgePrompt) * numChunks,
           docTokens,
           0.3,
           pricingOverrides,
         )
       : null;
 
-  const allEstimates = judgeEstimate ? [...stageEstimates, judgeEstimate] : stageEstimates;
+  // La verifica di coerenza gira comunque un chunk alla volta (con il contesto dei chunk vicini),
+  // non come un'unica passata sull'intero documento: paga anche lei il prompt per ogni chunk.
+  const coherenceEstimate =
+    options.includeCoherence && config.coherencePrompt?.trim() && config.judgeModel && config.judgeProvider
+      ? stageEstimate(
+          'coherence',
+          'Coherence',
+          config.judgeProvider,
+          config.judgeModel,
+          docTokens * 2,
+          estimateTokens(config.coherencePrompt) * numChunks,
+          docTokens,
+          0.3,
+          pricingOverrides,
+        )
+      : null;
+
+  const allEstimates = [
+    ...stageEstimates,
+    ...(judgeEstimate ? [judgeEstimate] : []),
+    ...(coherenceEstimate ? [coherenceEstimate] : []),
+  ];
 
   const isFree = allEstimates.every((e) => e.provider === 'ollama');
 
@@ -107,5 +139,5 @@ export function estimatePipelineCost(
       ? null
       : allEstimates.reduce((sum, e) => sum + (e.costUsd ?? 0), 0);
 
-  return { stages: stageEstimates, judge: judgeEstimate, totalUsd, isFree };
+  return { stages: stageEstimates, judge: judgeEstimate, coherence: coherenceEstimate, totalUsd, isFree };
 }

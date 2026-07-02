@@ -1148,7 +1148,7 @@
       "reeval": "Dopo aver corretto manualmente una traduzione candidata, clicca 'Rivaluta' nel pannello audit per rilanciare il giudice solo su quel chunk. Permette di iterare fino alla qualità desiderata senza rieseguire l'intera pipeline.",
       "issuesNav": "Le schede problema nell'audit aprono direttamente il chunk interessato e — quando il giudice fornisce informazioni testuali — provano a focalizzare la frase rilevante con un'euristica di ricerca.",
       "coherenceTitle": "Audit di coerenza (livello documento)",
-      "coherenceDesc": "L'audit di coerenza è un passaggio separato che analizza l'intero documento contemporaneamente, non chunk per chunk. Usa il Prompt Coerenza dal tab Controllo qualità e va lanciato manualmente dopo il completamento di tutti i chunk. Il risultato appare nel tab Coerenza del pannello Insight e identifica incoerenze terminologiche o stilistiche tra chunk diversi — ad esempio lo stesso termine reso in modi diversi in punti diversi del documento."
+      "coherenceDesc": "L'audit di coerenza è un passaggio separato, lanciato manualmente dopo il completamento di tutti i chunk. Analizza un chunk alla volta (con il contesto dei chunk vicini per non perdere la visione d'insieme), non l'intero documento in un'unica soluzione. Usa il Prompt Coerenza dal tab Controllo qualità. Il risultato appare nel tab Coerenza del pannello Insight e identifica incoerenze terminologiche o stilistiche tra chunk diversi — ad esempio lo stesso termine reso in modi diversi in punti diversi del documento."
     },
     "projects": {
       "title": "Progetti",

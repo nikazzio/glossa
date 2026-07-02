@@ -46,6 +46,8 @@
 | `hooks/useProjectAutosave.ts` | Autosave con debounce |
 | `hooks/useChunkWatchdog.ts` | Timeout detection per chunk inattivi |
 
+> **INVARIANTE — `utils/costEstimate.ts` (corretto 2026-07-02)**: `executePipelineForChunk` e `runCoherenceAudit` girano **una chiamata reale per chunk** (loop `for (const chunk of liveChunks)`), non un'unica chiamata sull'intero documento. `estimatePipelineCost` somma i token di contenuto sull'intero documento (corretto, il contenuto non si duplica) ma moltiplica il costo fisso del prompt di sistema per `chunks.length` — se si cambia questa funzione, non tornare a "un prompt pagato una volta sola", altrimenti il preventivo torna a sottostimare drasticamente i documenti con molti chunk. La passata di coerenza (`includeCoherence`) è **esclusa di default**: è un'azione separata dal pulsante "esegui", inclusa solo nel preventivo generale di `PipelineConfig` (badge nel pannello impostazioni pipeline), non nel badge accanto al pulsante di esecuzione in `PipelineSidebarRunSection`.
+
 ---
 
 ## Service layer (bridge Tauri)
@@ -72,7 +74,7 @@
 | `components/pipeline/ProductionStream.tsx` | Riga chunk — editor sorgente, risultati stage, judge issues, draft editor |
 | `components/pipeline/PipelineActions.tsx` | Run / Cancel / Audit buttons |
 | `components/pipeline/StageCard.tsx` | Visualizza singolo stage (token, retry info) |
-| `components/document/ConfigDrawer.tsx` | Drawer config pipeline: mode, lingue, stage, persona, glossary |
+| `components/document/ConfigDrawer.tsx` | Finestra (Radix `Dialog`) config pipeline: mode, lingue, stage, persona, glossary. La variante drawer laterale legacy (`variant='drawer'`) è stata rimossa: nessun chiamante la usava più dopo la migrazione alla shell nuova (#291), restava solo `variant='modal'`. |
 | `components/layout/Header.tsx` | Solo breadcrumb navigazione (Glossa // workspace // progetto); non contiene più pulsanti d'azione |
 | `components/layout/AppStatusBar.tsx` | Barra di stato in basso. Shell nuova (#291), ridisegnata #296: sinistra solo pannello attivo (rimosso breadcrumb progetto/pipeline); centro `ChunkCenterStats` (§ N · X w · icona qualità reale via `qualityLabelKey` · stato, con tooltip su parole e qualità); destra console toggle (`Terminal`) + separatore + controlli vista documento + indicatore salvataggio. |
 | `components/layout/ConsoleDrawer` (in `AppStatusBar.tsx`) | Drawer Operazioni (`OperationsTab` embedded) aperto da `showConsoleDrawer`, posizionato `absolute bottom-full` sopra la status bar, altezza `h-64`. #296. |
@@ -94,7 +96,11 @@ Le finestre modali, i tooltip e i menu poggiano su **Radix UI** (`@radix-ui/reac
 | `Menu` | Menu contestuale/a tendina su Radix DropdownMenu (ancora virtuale `anchorRect`). |
 | `IconButton` | Pulsante icona con tipp. CVA: size (`xs`/`sm`/`md`/`lg`), tone (`default`/`accent`/`success`/`charcoal`/`muted`/`running`). **Shell nuova (#291)**: taglia `xs` (`p-1`) per barre compatte (AppStatusBar). |
 
-> **Pendente (issue shell):** `EditorialModalShell` e `useFocusTrap` sono ancora usati dai pannelli shell (`LibraryPanel`, `ProjectPanel`, `WorkspaceHome`, `TranslationsArea`, `DashboardSidebar`) e dal popover badge costi della sidebar. Verranno rimossi quando la shell sinistra migrerà (`react-resizable-panels` + Radix Collapsible).
+> **Pendente (issue shell):** `EditorialModalShell` e `useFocusTrap` sono ancora usati dai pannelli shell (`LibraryPanel`, `ProjectPanel`, `WorkspaceHome`, `TranslationsArea`, `DashboardSidebar`). Verranno rimossi quando la dashboard/workspace-home migrerà alla shell nuova (issue separata, vedi sezione Dashboard sotto).
+
+> **Audit modali pipeline (2026-07-02):** `ImportPreviewDialog` e `ExportDialog`/`StageTraceDialog`/`ExtractTermDialog`/`PreflightDialog`/`ConfirmDialog` sono tutti allineati al chrome di `Dialog`/`AlertDialog` (stesso overlay `bg-editorial-ink/30 backdrop-blur-sm`, stesso `max-h-[90vh]`). `ImportPreviewDialog` costruisce il proprio `RadixDialog.Content` invece di usare il wrapper `Dialog` perché l'header multi-riga (nome file, toggle vista, statistiche, preset, lingue/modello) non entra negli slot generici del wrapper — le classi overlay/contenuto sono tenute manualmente identiche a `Dialog` per coerenza visiva.
+
+Il popover del badge costi nella sidebar (`SidebarCostPanel` in `PipelineSidebarRunSection.tsx`) è un pannello autonomo via `createPortal`, non basato su `EditorialModalShell` né su `Dialog`.
 
 ---
 
@@ -113,13 +119,15 @@ Il workspace attuale è specifico per l'area **Traduzioni**. Biblioteca e Trascr
 ### Shell UI — Layout Progetto
 
 Layout a tre colonne (#291, rail ridisegnata #296) — `ShellNext` con `react-resizable-panels`:
-- **Colonna sinistra (`ProjectRailNext`)**: header fisso `h-20` (collassa + Libreria) · corpo scrollabile con selezione/config pipeline, comandi run (switch Chunk/Tutto + azione primaria icon-only, guidati da `configStore.workMode`) e `ChunkInspectorPanel` annidato (tab Audit/Note/Memoria, scroll confinato al contenuto tab) · bottom fisso `h-12` (Workspace/Impostazioni/Importa/Esporta). Collassata: stesse 4 icone in colonna + azione primaria pipeline. Larghezze (default 240px, collassato 64px, min 180px, max 320px) e stato collapse sincronizzati con `uiStore.projectSidebarWidth` e `useUiStore.projectContextCollapsed`.
+- **Colonna sinistra (`ProjectRailNext`)**: header fisso `h-20` (collassa + Libreria) · corpo scrollabile con selezione/config pipeline, comandi run (switch Chunk/Tutto + azione primaria icon-only, guidati da `configStore.workMode`) e `ChunkInspectorPanel` annidato (tab Audit/Note/Memoria, scroll confinato al contenuto tab) · bottom fisso `h-12` (Workspace/Impostazioni/Importa/Esporta). Collassata: stesse 4 icone in colonna + azione primaria pipeline. Larghezze (default 240px, collassato 64px, min 180px, max 320px) e stato collapse sincronizzati con `uiStore.projectSidebarWidth` e `useUiStore.projectContextCollapsed`. L'azione primaria (Traduci chunk / Esegui tutto) porta un badge preventivo costi opzionale (`SidebarCostPanel`, visibile solo se `estimatePipelineCost` produce almeno uno stage con prezzo noto): in `workMode='chunk'` stima il solo chunk selezionato, in `workMode='all'` l'intera pipeline (2026-07-02, era un badge unico non distinto per scope).
 - **Colonna centro**: Vista documento (`DocumentView`) — barra navigazione fissa in alto (h-24, indicatori stadi + minimap frammenti a sinistra, token/costo del frammento corrente a destra); i controlli frammento precedente/successivo sono stati spostati nella testata della rail sinistra (#296), non più nella testata centrale. Minimap: pallino "sei qui" segnalato da una freccetta sotto (non più da dimensione/anello, per non sovrapporsi al colore di stato); la riga si centra da sola sul frammento corrente ad ogni cambio. Token/costo somma tutti gli stage/passaggi del frammento, senza indicare un modello (la pipeline può usarne più di uno). Due pannelli bianchi a filo (Originale/Candidata).
 - **Colonna destra (`ProjectInspectorNext`)**: Pannello collapsabile, solo schede Approfondimenti (index/search/stats/coherence/glossary). Tab Frammento rimossa (#296): il frammento vive in `ChunkInspectorPanel` nella rail sinistra. Aperto quando `showInsightPanel` è `true`. Larghezze (default 430px, min 300px, max 620px, collassato 56px) sincronizzate con `uiStore.projectFlyoutWidth`.
 
 `uiStore.activeProjectPanel` (`run|pipeline|document|insight|chunk`) è la source-of-truth del rail. Il setter `setShowInsightPanel` (#296) sostituisce `setShowDocumentDrawer`/`setShowChunkDrawer` come driver di apertura del pannello destro; `chunkRailTab`/`setChunkRailTab` selezionano la scheda di `ChunkInspectorPanel` nella rail sinistra. `insight`/`chunk` non sono persistiti come pannello attivo (clamp a `run`).
 
 **Dashboard:** schermata workspace-home con `PipelineSidebar` in modo dashboard + `WorkspaceHome` (componenti pre-#291; migrazione alla nuova shell rinviata a issue separata). È l'unico contesto in cui `PipelineSidebar` è ancora montato.
+
+**Sandbox (`viewMode='sandbox'`, legacy, non raggiungibile da menu):** fallback di layout automatico — griglia `md:grid-cols-12` con `PipelineConfig`/`ProductionStream`/`AuditPanel` al posto di `ShellNext`. Non è una sezione con un suo pulsante: `EditorView` (`App.tsx`) sceglie questo ramo quando `uiStore.viewMode === 'sandbox'`, valore derivato in `projectStore.ts` al caricamento di un progetto **senza chunk generati** (testo importato senza chunking, o progetto salvato in quello stato). Congelata di proposito (vedi `CLAUDE.md`: "la UI sandbox si tocca solo per regressioni bloccanti"). Tracciata da issue #309 per verificare se il percorso "documento senza chunking" è ancora un caso d'uso reale prima di decidere se rimuoverla.
 
 #### Vista Documento
 
