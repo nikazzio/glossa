@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Play, Plus, Save, Settings, CircleCheck, AlertCircle, Loader2, FilePen } from 'lucide-react';
 import { IconButton, PillButton } from '../ui';
+import { contrastRatio } from '../../utils/contrastRatio';
 
 function useCssVarMap(vars: readonly string[]): Record<string, string> {
   const [values, setValues] = useState<Record<string, string>>({});
@@ -13,21 +14,6 @@ function useCssVarMap(vars: readonly string[]): Record<string, string> {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return values;
-}
-
-function hexToLuminance(hex: string): number {
-  if (!hex || hex.length < 7) return 0;
-  const r = parseInt(hex.slice(1, 3), 16) / 255;
-  const g = parseInt(hex.slice(3, 5), 16) / 255;
-  const b = parseInt(hex.slice(5, 7), 16) / 255;
-  const lin = (c: number) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
-  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
-}
-
-function contrastRatio(fg: string, bg: string): number {
-  const l1 = hexToLuminance(fg);
-  const l2 = hexToLuminance(bg);
-  return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
 }
 
 function ContrastBadge({ fg, bg }: { fg: string; bg: string }) {

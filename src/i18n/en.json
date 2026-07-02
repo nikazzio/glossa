@@ -441,6 +441,8 @@
     "typographyTab": "Typography",
     "uiFont": "Interface font",
     "uiFontHint": "Choose the typeface for the whole interface. Editorial serif values are unaffected.",
+    "accentColor": "Accent color",
+    "accentColorHint": "Customize the active state, selection, and focus color. Outcome colors (success/warning/error) stay unchanged.",
     "docFontSize": "Document font size",
     "docFontSize_sm": "Small",
     "docFontSize_md": "Medium",

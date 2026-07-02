@@ -1,5 +1,12 @@
 import { describe, expect, it, beforeEach } from 'vitest';
-import { useUiStore, migrateUiStorePersistedState, HL_COLORS_LIGHT, HL_COLORS_DARK } from './uiStore';
+import {
+  useUiStore,
+  migrateUiStorePersistedState,
+  HL_COLORS_LIGHT,
+  HL_COLORS_DARK,
+  EDITORIAL_ACCENT_LIGHT,
+  EDITORIAL_ACCENT_DARK,
+} from './uiStore';
 import { useConfigStore } from './configStore';
 
 const initial = useUiStore.getState();
@@ -263,5 +270,43 @@ describe('migrateUiStorePersistedState — highlightColors repair (regressione)'
     };
 
     expect(migrated.highlightColors.light.sourceTerm).toBe('#ff0000');
+  });
+});
+
+describe('uiStore editorialAccentColor preference', () => {
+  it('defaults to the Sage Teal palette for light and dark', () => {
+    const state = useUiStore.getState().editorialAccentColor;
+    expect(state.light).toBe(EDITORIAL_ACCENT_LIGHT);
+    expect(state.dark).toBe(EDITORIAL_ACCENT_DARK);
+  });
+
+  it('updates only the given mode through setEditorialAccentColor', () => {
+    useUiStore.getState().setEditorialAccentColor('light', '#123456');
+    const state = useUiStore.getState().editorialAccentColor;
+    expect(state.light).toBe('#123456');
+    expect(state.dark).toBe(EDITORIAL_ACCENT_DARK);
+  });
+});
+
+describe('migrateUiStorePersistedState — editorialAccentColor', () => {
+  it('backfills the accent default for stores saved before it existed', () => {
+    const migrated = migrateUiStorePersistedState({}, 15) as {
+      editorialAccentColor: { light: string; dark: string };
+    };
+
+    expect(migrated.editorialAccentColor).toEqual({
+      light: EDITORIAL_ACCENT_LIGHT,
+      dark: EDITORIAL_ACCENT_DARK,
+    });
+  });
+
+  it('leaves an already-migrated v16 store untouched', () => {
+    const complete = { editorialAccentColor: { light: '#abcdef', dark: '#fedcba' } };
+
+    const migrated = migrateUiStorePersistedState(complete, 16) as {
+      editorialAccentColor: { light: string; dark: string };
+    };
+
+    expect(migrated.editorialAccentColor).toEqual({ light: '#abcdef', dark: '#fedcba' });
   });
 });
