@@ -1,7 +1,7 @@
 # Glossa — Istruzioni per lo sviluppo
 
 ## Stato del progetto
-Sviluppo attivo (pre-1.0). Priorità assoluta alla modalità documento/editoriale. La UI sandbox si tocca solo per regressioni bloccanti.
+Sviluppo attivo (pre-1.0). Priorità assoluta modalità documento/editoriale. UI sandbox tocca solo regressioni bloccanti.
 
 ## Stack
 - **Frontend**: React 19, TypeScript, Tailwind CSS v4, Zustand, Vite
@@ -9,59 +9,59 @@ Sviluppo attivo (pre-1.0). Priorità assoluta alla modalità documento/editorial
 - **Test**: Vitest + Testing Library (Frontend), tokio-test + wiremock (Backend)
 
 ## Principi Fondamentali
-- **Semplicità**: Codice minimo necessario. Nessuna feature speculativa per il futuro.
-- **Leggibilità**: Nomi descrittivi. Commenti riservati a logiche non ovvie, vincoli nascosti o workaround.
-- **Immutabilità**: Non mutare oggetti esistenti (preferisci `let` a `let mut`, usa spread operator e metodi funzionali in JS).
-- **File**: Max 400-800 righe. Organizzazione per dominio/feature, non per tipo di file.
-- **TypeScript**: Tipi espliciti (mai `any`), costanti nominate. Gestione esplicita di `null`/`undefined`. Validazione rigorosa degli input esterni.
-- **Rust**: Nessun `.unwrap()` in produzione. Uso sistematico di `?` e `thiserror`. Formattazione e linting rigorosi (`cargo fmt`, zero warning `clippy`). Evita `clone()` inutili.
-- **Architettura**: Handler backend snelli (logica nei moduli di dominio). Frontend con hook custom; Zustand riservato allo stato globale reale.
+- **Semplicità**: Codice minimo. No feature speculative future.
+- **Leggibilità**: Nomi descrittivi. Commenti solo per logiche non ovvie, vincoli nascosti, workaround.
+- **Immutabilità**: No mutare oggetti esistenti (preferisci `let` a `let mut`, usa spread operator e metodi funzionali in JS).
+- **File**: Max 400-800 righe. Organizza per dominio/feature, non per tipo file.
+- **TypeScript**: Tipi espliciti (mai `any`), costanti nominate. Gestione esplicita `null`/`undefined`. Validazione rigorosa input esterni.
+- **Rust**: No `.unwrap()` in produzione. Uso sistematico `?` e `thiserror`. Formattazione/linting rigorosi (`cargo fmt`, zero warning `clippy`). Evita `clone()` inutili.
+- **Architettura**: Handler backend snelli (logica in moduli dominio). Frontend con hook custom; Zustand solo per stato globale reale.
 
 ## Invarianti della Pipeline
-- **Prefix Caching (CRITICO)**: L'ordine dei blocchi nel system prompt (`static → blob → stage-instructions`) **non si cambia mai**. L'inversione spezza la cache del provider e moltiplica i costi.
+- **Prefix Caching (CRITICO)**: Ordine blocchi system prompt (`static → blob → stage-instructions`) **mai cambia**. Inversione spezza cache provider, moltiplica costi.
 
 ## Documentazione e Stato
-- **Architettura**: Aggiorna `docs-dev/ARCHITECTURE.md` per modifiche ai flussi, comandi Tauri, schemi DB o store Zustand.
-- **UI**: Consulta `docs-dev/UI_DESIGN_SYSTEM.md` prima di qualsiasi modifica visiva.
-- **Avanzamento**: Leggi `STATO_SESSIONE_2.0.md` a inizio sessione e aggiornalo obbligatoriamente a fine task/feature. Aggiorna l'help in-app per modifiche funzionali.
-- **Docs pubbliche VitePress**: Aggiorna `docs/` (IT) e `docs/en/` (EN) quando aggiungi, rimuovi o modifichi funzionalità utente, workflow o comportamento dell'interfaccia. Il sito è pubblicato su GitHub Pages. Se aggiungi una pagina aggiorna anche la sidebar in `docs/.vitepress/config.ts`.
+- **Architettura**: Aggiorna `docs-dev/ARCHITECTURE.md` per modifiche flussi, comandi Tauri, schemi DB, store Zustand.
+- **UI**: Consulta `docs-dev/UI_DESIGN_SYSTEM.md` prima di ogni modifica visiva.
+- **Avanzamento**: Leggi `STATO_SESSIONE_2.0.md` inizio sessione, aggiorna obbligatorio fine task/feature. Aggiorna help in-app per modifiche funzionali.
+- **Docs pubbliche VitePress**: Aggiorna `docs/` (IT) e `docs/en/` (EN) quando aggiungi/rimuovi/modifichi funzionalità utente, workflow, comportamento interfaccia. Sito pubblicato su GitHub Pages. Se aggiungi pagina, aggiorna sidebar in `docs/.vitepress/config.ts`.
 
 ## Comunicazione con l'utente (CRITICO)
-Niki non scrive codice e non riconosce nomi tecnici. Nelle spiegazioni rivolte all'utente:
-- **Mai** citare nomi di file, funzioni, variabili, hook o componenti
-- **Sempre** descrivere comportamenti visibili: cosa l'utente vede, clicca o ottiene
+Niki non scrive codice, non riconosce nomi tecnici. Spiegazioni utente:
+- **Mai** citare nomi file, funzioni, variabili, hook, componenti
+- **Sempre** descrivere comportamenti visibili: cosa utente vede, clicca, ottiene
 - **Giusto**: "la finestra della Libreria ora mostra il nome del workspace nel titolo"
 - **Sbagliato**: "LibraryPanel usa panelTitle derivato da activeWorkspace?.name"
 
 ## Git e Test
-- **Git**: Aggiorna sempre `main` prima di creare un branch (`git checkout main && git pull origin main && git checkout -b nome-branch`).
-- **Test**: Approccio TDD. Copertura minima 80%. Nomi dei test descrittivi sul comportamento atteso. Mai sopprimere gli errori in silenzio.
+- **Git**: Aggiorna sempre `main` prima creare branch (`git checkout main && git pull origin main && git checkout -b nome-branch`).
+- **Test**: Approccio TDD. Copertura minima 80%. Nomi test descrittivi su comportamento atteso. Mai sopprimere errori in silenzio.
 
 ---
 
 ## Strumenti e Ottimizzazione Token
 
 ### Repomix (Esplorazione Iniziale)
-Prima di analizzare porzioni di codebase estese o poco conosciute, usa **repomix** (`skill repomix-commands:pack-local`).
-- **Scopo**: Ottenere una vista compatta e indicizzata dell'intero progetto in un'unica operazione, azzerando le costose catene esplorative di file system e risparmiando token.
+Prima di analizzare porzioni codebase estese o poco conosciute, usa **repomix** (`skill repomix-commands:pack-local`).
+- **Scopo**: Vista compatta e indicizzata intero progetto in un'unica operazione, azzera catene esplorative costose filesystem, risparmia token.
 
 ### RTK (Rust Token Killer) - Filtro Output CLI
-Per prevenire l'esaurimento della finestra di contesto, **ogni comando da terminale deve iniziare con `rtk`**. 
+Per prevenire esaurimento finestra contesto, **ogni comando terminale deve iniziare con `rtk`**.
 
-`rtk` intercetta l'output, filtra la verbosità e restituisce formati iper-compatti, risparmiando dal 60% al 90% dei token.
+`rtk` intercetta output, filtra verbosità, restituisce formati iper-compatti, risparmia 60-90% token.
 - **Uso corretto**: `rtk cargo test`, `rtk grep pattern`, `rtk read file.ts`
-- **Catene**: Anche con `&&`, applica a ogni step: `rtk git add . && rtk git commit -m "msg" && rtk git push`
+- **Catene**: Anche con `&&`, applica ogni step: `rtk git add . && rtk git commit -m "msg" && rtk git push`
 
 ### MCP Tools: code-review-graph
 ⚠️ **REGOLA DI INGAGGIO (OTTIMIZZAZIONE TOKEN):**
-Gli strumenti del grafo consumano elevati token per esecuzione e aumentano la latenza. Il loro uso NON è il default.
+Strumenti grafo consumano molti token per esecuzione, aumentano latenza. Uso NON default.
 
-1. **Usa gli strumenti MCP (es. `query_graph`, `get_impact_radius`) SOLO se:**
-   - L'utente chiede un'analisi architetturale o un report di impatto cross-file.
-   - Devi mappare dipendenze complesse per un refactoring strutturale profondo.
-   - Stai esplorando una parte completamente sconosciuta e interconnessa del progetto.
+1. **Usa strumenti MCP (es. `query_graph`, `get_impact_radius`) SOLO se:**
+   - Utente chiede analisi architetturale o report impatto cross-file.
+   - Devi mappare dipendenze complesse per refactoring strutturale profondo.
+   - Stai esplorando parte completamente sconosciuta e interconnessa progetto.
 
-2. **Usa i comandi CLI standard (`rtk grep`, `rtk read`, `rtk ls`) o repomix come DEFAULT per:**
-   - Fix locali, aggiunta di componenti isolati o logica circoscritta.
-   - Interventi all'interno di file già noti.
-   - Lettura di firme di funzioni o ispezione di file di configurazione.
+2. **Usa comandi CLI standard (`rtk grep`, `rtk read`, `rtk ls`) o repomix come DEFAULT per:**
+   - Fix locali, aggiunta componenti isolati o logica circoscritta.
+   - Interventi dentro file già noti.
+   - Lettura firme funzioni o ispezione file configurazione.

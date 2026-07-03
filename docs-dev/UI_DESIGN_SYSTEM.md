@@ -2,7 +2,6 @@
 scope: ui-components
 when-to-read: prima di creare o modificare qualsiasi componente visivo
 ---
-
 # Glossa — Design System
 
 ## Palette e tipografia
@@ -20,38 +19,38 @@ when-to-read: prima di creare o modificare qualsiasi componente visivo
 | `editorial-border` | #C2BCB4 | Bordi e separatori |
 | `editorial-textbox` | #EAE5DE | Background input |
 
-> `editorial-warning` (#666666) = grigio, per avvisi generici. Per lo stato *in esecuzione* usa `editorial-running` (giallo).
+> `editorial-warning` (#666666) = grigio, avvisi generici. Stato *in esecuzione* usa `editorial-running` (giallo).
 
 **Font:**
-- `font-display` (Elstob variable) — heading corsivi, label attive nelle barre filtro. `size-adjust: 110%`.
-- `font-sans` — UI generica, etichette, body. Default **Plus Jakarta Sans**, ma è **scelto dall'utente** in Impostazioni → Tipografia (Plus Jakarta Sans / Geist / Inter / IBM Plex Sans). Override runtime di `--font-sans` su `:root` via `FontSync` (`App.tsx`), preferenza persistita in `uiStore.uiFont`. Ogni `@font-face` alternativo ha un `size-adjust` tarato per non far saltare la dimensione allo switch.
+- `font-display` (Elstob variable) — heading corsivi, label attive barre filtro. `size-adjust: 110%`.
+- `font-sans` — UI generica, etichette, body. Default **Plus Jakarta Sans**, **scelto dall'utente** in Impostazioni → Tipografia (Plus Jakarta Sans / Geist / Inter / IBM Plex Sans). Override runtime `--font-sans` su `:root` via `FontSync` (`App.tsx`), preferenza persistita in `uiStore.uiFont`. Ogni `@font-face` alternativo ha `size-adjust` tarato, no salto dimensione allo switch.
 - `font-mono` — solo codice/log
 
-**Type scale app:** `text-xs` 13px / `text-sm` 15px / `text-base` 16px / `text-lg` 18px / `text-xl` 22px / `text-2xl` 26px. I display veri usano `font-display italic` con classi responsive controllate (`text-4xl md:text-5xl` solo per titoli di vista, non per metadati o controlli).
+**Type scale app:** `text-xs` 13px / `text-sm` 15px / `text-base` 16px / `text-lg` 18px / `text-xl` 22px / `text-2xl` 26px. Display veri usano `font-display italic` con classi responsive controllate (`text-4xl md:text-5xl` solo titoli vista, non metadati/controlli).
 
-> **Dimensione minima:** il testo leggibile (prosa, descrizioni, valori dato serif) non scende sotto `text-sm`/`text-xs`. Le **caption sans uppercase** (label stat, header) possono stare a `text-[11px]`: il sans resta leggibile compatto, e la caption non è il dato. `text-[10px]` resta solo per strip verticali collassate e badge micro decorativi.
+> **Dimensione minima:** testo leggibile (prosa, descrizioni, valori dato serif) non scende sotto `text-sm`/`text-xs`. **Caption sans uppercase** (label stat, header) possono stare a `text-[11px]`: sans resta leggibile compatto, caption non è dato. `text-[10px]` solo strip verticali collassate e badge micro decorativi.
 
-> **Gerarchia tipografica pannelli (documento/insight)** — il sans fa da caption, il serif fa da dato:
-> - **Titolo sezione** (icona accent + uppercase): `text-xs` uppercase `tracking-[0.16em]` muted. È l'header, non si tocca.
-> - **Label stat** (caption sans uppercase): `text-[11px]` `tracking-[0.1em]` muted. Sans piccolo = si legge bene anche compatto.
-> - **Valore dato** (serif italic): `font-display text-sm italic` ink. Più grande della label: il serif corsivo a corpo piccolo è meno leggibile del sans, quindi al valore serve più corpo.
-> - **Layout riga**: `flex items-baseline justify-between` — label a sinistra, valore allineato a destra (lista a due colonne scansionabile), mai label+valore ammucchiati con `gap-1`.
+> **Gerarchia tipografica pannelli (documento/insight)** — sans fa da caption, serif fa da dato:
+> - **Titolo sezione** (icona accent + uppercase): `text-xs` uppercase `tracking-[0.16em]` muted. Header, non si tocca.
+> - **Label stat** (caption sans uppercase): `text-[11px]` `tracking-[0.1em]` muted. Sans piccolo = legge bene anche compatto.
+> - **Valore dato** (serif italic): `font-display text-sm italic` ink. Più grande della label: serif corsivo corpo piccolo meno leggibile del sans, quindi valore serve più corpo.
+> - **Layout riga**: `flex items-baseline justify-between` — label sinistra, valore allineato destra (lista due colonne scansionabile), mai label+valore ammucchiati con `gap-1`.
 > - **Hero** (metrica focale singola: %, qualità composita): `font-display text-lg italic`.
-> - Riga stat condivisa: `components/ui/StatRow.tsx`; label sezione: `components/ui/SectionLabel.tsx`. Le card breakdown seguono lo stesso schema (titolo card `text-xs`, righe metriche `justify-between` con label `text-[11px]` / valore `text-sm`).
+> - Riga stat condivisa: `components/ui/StatRow.tsx`; label sezione: `components/ui/SectionLabel.tsx`. Card breakdown stesso schema (titolo card `text-xs`, righe metriche `justify-between` label `text-[11px]` / valore `text-sm`).
 
-> **Scala tracking (label uppercase):** ladder calma — sezione/strip `tracking-[0.16em]`, label stat `tracking-[0.1em]`, badge `tracking-[0.1em]`. Mai `tracking-[0.28em]`/`[0.35em]` sulle superfici documento/insight.
+> **Scala tracking (label uppercase):** ladder calma — sezione/strip `tracking-[0.16em]`, label stat `tracking-[0.1em]`, badge `tracking-[0.1em]`. Mai `tracking-[0.28em]`/`[0.35em]` su superfici documento/insight.
 
 ---
 
 ## Regole generali
 
-- **Accenti sempre `editorial-accent`** (verde petrolio) per bottoni di selezione, stato attivo, focus ring. Mai `editorial-ink`.
-- **Danger sempre `editorial-danger`** per azioni distruttive, stop e segnali d'errore bloccanti. Non usare `editorial-accent` per pericolo.
+- **Accenti sempre `editorial-accent`** (verde petrolio) per bottoni selezione, stato attivo, focus ring. Mai `editorial-ink`.
+- **Danger sempre `editorial-danger`** per azioni distruttive, stop, segnali errore bloccanti. No `editorial-accent` per pericolo.
 - **Hover inattivo:** `hover:border-editorial-accent/40 hover:text-editorial-accent`
 - **Disabled:** `disabled:opacity-40 disabled:cursor-not-allowed`
 - **Focus:** `focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent`
-- **Tooltip obbligatorio:** ogni pulsante icon-only usa `<IconButton>` — il tooltip è incluso automaticamente.
-- **Nessuna variante locale:** i componenti feature non devono reintrodurre button/dot/label custom. Usa sempre le primitive condivise.
+- **Tooltip obbligatorio:** ogni pulsante icon-only usa `<IconButton>` — tooltip incluso automatico.
+- **Nessuna variante locale:** componenti feature non reintroducono button/dot/label custom. Usa sempre primitive condivise.
 
 ---
 
@@ -59,7 +58,7 @@ when-to-read: prima di creare o modificare qualsiasi componente visivo
 
 ### IconButton — pulsanti icon-only (OBBLIGATORIO)
 
-Ogni controllo icon-only **deve** usare `<IconButton>`. Non usare `<button>` raw per controlli visivi nell'app.
+Ogni controllo icon-only **deve** usare `<IconButton>`. No `<button>` raw per controlli visivi app.
 
 ```tsx
 import { IconButton } from '../ui';
@@ -96,20 +95,20 @@ import { IconButton } from '../ui';
 ```
 
 **Varianti tone:** `default | accent | danger | success | charcoal | muted | running`
-**Varianti size:** `xs | sm | md | lg` (`xs` = `p-1`, per barre molto compatte come la barra di stato)
+**Varianti size:** `xs | sm | md | lg` (`xs` = `p-1`, barre molto compatte tipo barra stato)
 
 Regole:
-- Usa `ariaPressed` per toggle (on/off). Usa `aria-selected` per tab ARIA.
-- Non usare `ariaPressed` e `aria-selected` insieme sullo stesso pulsante.
-- Aggiungi `className="shrink-0"` se il button è in una flex row con elementi `w-full`.
+- `ariaPressed` per toggle (on/off). `aria-selected` per tab ARIA.
+- Non usare `ariaPressed` e `aria-selected` insieme stesso pulsante.
+- `className="shrink-0"` se button in flex row con elementi `w-full`.
 
 ---
 
 ### Tooltip — tooltip canonico (OBBLIGATORIO per controlli icon-only)
 
-`IconButton` integra già `<Tooltip>` internamente — non aggiungere tooltip separati sui pulsanti.
+`IconButton` integra già `<Tooltip>` internamente — no tooltip separati sui pulsanti.
 
-Per tooltip su altri elementi (testo troncato, badge, etichette):
+Tooltip su altri elementi (testo troncato, badge, etichette):
 
 ```tsx
 import { Tooltip } from '../ui';
@@ -119,15 +118,15 @@ import { Tooltip } from '../ui';
 </Tooltip>
 ```
 
-**Non usare** l'attributo HTML `title` per tooltip visivi sui controlli interattivi (genera il tooltip nativo del sistema, fuori stile). Per un pulsante icon-only usa `IconButton` (il suo prop `title` diventa tooltip editoriale); per altri controlli avvolgi in `<Tooltip label>`. `title` è accettabile solo su elementi **non** interattivi.
+**Non usare** attributo HTML `title` per tooltip visivi su controlli interattivi (genera tooltip nativo sistema, fuori stile). Pulsante icon-only usa `IconButton` (prop `title` diventa tooltip editoriale); altri controlli avvolgi in `<Tooltip label>`. `title` accettabile solo su elementi **non** interattivi.
 
-Implementazione su **Radix Tooltip** (posizionamento automatico con flip ai bordi, Provider interno al componente — nessun setup a livello App). Box invariato (`font-display` italic), z-index `z-[210]` (sopra le finestre `z-[200]`). API invariata: `label`, `side`, `offset`.
+Implementazione su **Radix Tooltip** (posizionamento automatico con flip ai bordi, Provider interno al componente — no setup a livello App). Box invariato (`font-display` italic), z-index `z-[210]` (sopra finestre `z-[200]`). API invariata: `label`, `side`, `offset`.
 
 ---
 
 ### Menu — menu contestuale / a tendina (Radix)
 
-Menu su **Radix DropdownMenu**: `role="menu"`, navigazione frecce/Home/End, type-ahead, Esc, focus management — gratis. Per menu a coordinate (es. tasto destro / selezione testo) usa l'ancora virtuale `anchorRect`.
+Menu su **Radix DropdownMenu**: `role="menu"`, navigazione frecce/Home/End, type-ahead, Esc, focus management — gratis. Per menu a coordinate (es. tasto destro / selezione testo) usa ancora virtuale `anchorRect`.
 
 ```tsx
 import { Menu } from '../ui';
@@ -141,14 +140,14 @@ import { Menu } from '../ui';
 ```
 
 Regole:
-- Voci sempre via `items` (`MenuItem`): niente `<button>` raw posizionati a mano.
-- z-index `z-[210]` (sopra le finestre). La voce evidenziata usa `data-[highlighted]`.
+- Voci sempre via `items` (`MenuItem`): no `<button>` raw posizionati a mano.
+- z-index `z-[210]` (sopra finestre). Voce evidenziata usa `data-[highlighted]`.
 
 ---
 
 ### StatusDot — indicatore stato compatto
 
-Per indicatori di stato non interattivi (stage pipeline, stato chunk, ecc.):
+Indicatori stato non interattivi (stage pipeline, stato chunk, ecc.):
 
 ```tsx
 import { StatusDot } from '../ui';
@@ -158,13 +157,13 @@ import { StatusDot } from '../ui';
 <StatusDot tone="accent" />
 ```
 
-**Tone disponibili:** gli stessi di `IconButton` — usa solo token `editorial-*`. Non usare classi Tailwind dirette come `bg-emerald-500`, `bg-amber-400`, ecc.
+**Tone disponibili:** stessi di `IconButton` — solo token `editorial-*`. No classi Tailwind dirette tipo `bg-emerald-500`, `bg-amber-400`, ecc.
 
 ---
 
 ### Badge numerico rotondo con tooltip — conteggi compatti non interattivi
 
-Per conteggi compatti dove basta colore + numero (es. numero di note su un frammento nell'Indice), niente etichetta testuale a fianco: pallino colorato con il numero dentro, descrizione completa in `Tooltip` all'hover.
+Conteggi compatti dove basta colore + numero (es. numero note su frammento nell'Indice), no etichetta testuale a fianco: pallino colorato con numero dentro, descrizione completa in `Tooltip` all'hover.
 
 ```tsx
 import { Tooltip } from '../ui';
@@ -181,15 +180,15 @@ import { Tooltip } from '../ui';
 
 Regole:
 - `bgClass` solo da mappe canoniche esistenti (es. `ANNOTATION_META[type].bgClass` in `NotesTab.tsx`) — mai colori inventati.
-- Se il conteggio aggrega elementi di tipi/tone diversi, il colore del pallino è quello del tipo più urgente presente (stessa priorità della mappa canonica), non una media o un colore neutro a parte.
+- Se conteggio aggrega elementi di tipi/tone diversi, colore pallino è quello del tipo più urgente presente (stessa priorità mappa canonica), non media o colore neutro a parte.
 - Diametro fisso `h-5 w-5`, testo `text-[10px] font-bold text-white` per restare leggibile anche a 1-2 cifre.
-- Non usare per conteggi che necessitano di essere cliccabili: quello è `IconButton`/`PillButton`, non questo pattern.
+- Non usare per conteggi che devono essere cliccabili: quello è `IconButton`/`PillButton`, non questo pattern.
 
 ---
 
 ### SectionLabel — intestazione sezione con icona
 
-Per intestazioni di sezione con icona + etichetta uppercase:
+Intestazioni sezione con icona + etichetta uppercase:
 
 ```tsx
 import { SectionLabel } from '../ui';
@@ -197,13 +196,13 @@ import { SectionLabel } from '../ui';
 <SectionLabel icon={SomeIcon} label={t('chiave.sezione')} />
 ```
 
-Non reintrodurre il pattern `<div className="flex items-center gap-1.5">` manuale dove `SectionLabel` è sufficiente.
+No reintrodurre pattern `<div className="flex items-center gap-1.5">` manuale dove `SectionLabel` basta.
 
 ---
 
 ### ToggleRow — riga con toggle slide
 
-Per opzioni on/off in pannelli di configurazione, usa `ToggleRow` dentro un contenitore `rounded-[16px] border border-editorial-border/60 bg-editorial-textbox/10 px-4 py-4`. Struttura standard: `SectionLabel` sopra il box, `ToggleRow` dentro.
+Opzioni on/off in pannelli config, usa `ToggleRow` dentro contenitore `rounded-[16px] border border-editorial-border/60 bg-editorial-textbox/10 px-4 py-4`. Struttura standard: `SectionLabel` sopra box, `ToggleRow` dentro.
 
 ```tsx
 import { SectionLabel, ToggleRow } from '../ui';
@@ -222,15 +221,15 @@ import { SectionLabel, ToggleRow } from '../ui';
 ```
 
 Regole:
-- Non usare `<input type="checkbox">` raw nei pannelli config: usa sempre `ToggleRow`.
-- Il toggle slide (`bg-editorial-accent` attivo, `bg-editorial-border` inattivo) è lo standard visivo condiviso tra tutti i pannelli.
-- `disabled` disabilita sia il click che l'aspetto visivo (opacity-40).
+- No `<input type="checkbox">` raw nei pannelli config: usa sempre `ToggleRow`.
+- Toggle slide (`bg-editorial-accent` attivo, `bg-editorial-border` inattivo) standard visivo condiviso tra tutti pannelli.
+- `disabled` disabilita click e aspetto visivo (opacity-40).
 
 ---
 
 ### PillButton — comandi testuali compatti
 
-Usa `PillButton` per comandi testuali compatti dentro dashboard, modali e toolbar secondarie.
+Usa `PillButton` per comandi testuali compatti dentro dashboard, modali, toolbar secondarie.
 
 ```tsx
 <PillButton variant="secondary">{t('common.cancel')}</PillButton>
@@ -238,15 +237,15 @@ Usa `PillButton` per comandi testuali compatti dentro dashboard, modali e toolba
 ```
 
 Regole:
-- `accent` è pieno: `bg-editorial-accent text-white`. Usalo per l'azione primaria locale.
-- `secondary` è neutro e deve restare meno evidente dell'azione primaria.
-- Non creare pill locali con `button` raw se `PillButton` basta.
+- `accent` è pieno: `bg-editorial-accent text-white`. Azione primaria locale.
+- `secondary` neutro, deve restare meno evidente dell'azione primaria.
+- No pill locali con `button` raw se `PillButton` basta.
 
 ---
 
 ### Finestre / overlay — `Dialog` e `AlertDialog` (OBBLIGATORIO)
 
-Tutte le finestre modali poggiano su **Radix UI**. Comportamento (focus trap, Escape, ripristino focus, scroll-lock, portale, `aria-modal`) è gestito dalla libreria: **non** si reimplementa a mano. Vietato `fixed inset-0` + backdrop manuale, `useFocusTrap`, `EditorialModalShell` (rimossi).
+Tutte le finestre modali poggiano su **Radix UI**. Comportamento (focus trap, Escape, ripristino focus, scroll-lock, portale, `aria-modal`) gestito dalla libreria: **non** si reimplementa a mano. Vietato `fixed inset-0` + backdrop manuale, `useFocusTrap`, `EditorialModalShell` (rimossi).
 
 - **`Dialog`** — finestra generica con chrome editoriale (eyebrow, icona accent, titolo `font-display` italic, descrizione, body scrollabile, footer, X in alto a destra).
 
@@ -268,7 +267,7 @@ import { Dialog } from '../ui';
 </Dialog>
 ```
 
-- **`AlertDialog`** — solo conferme (azione + annulla). Focus iniziale sul pulsante sicuro, non si chiude con click esterno.
+- **`AlertDialog`** — solo conferme (azione + annulla). Focus iniziale sul pulsante sicuro, no chiusura con click esterno.
 
 ```tsx
 <AlertDialog open={open} onOpenChange={...} title={...}
@@ -277,15 +276,15 @@ import { Dialog } from '../ui';
 ```
 
 Regole:
-- Finestra che si apre **sopra** un pannello/overlay app: lo z-index delle primitive è `z-[200]`, sopra gli overlay app legacy. Non serve override.
-- Header bespoke (es. Anteprima import): usare le primitive Radix dirette (`RadixDialog.Root/Portal/Overlay/Content`) con `RadixDialog.Title asChild` sul titolo, mantenendo lo z-index `z-[200]`.
-- Corpo finestra: evitare card interne con grossi angoli smussati. Per sezioni e liste usare blocchi piatti (`border-y`, eventuale `border-l-4` tonale, sfondo leggero) e separatori (`divide-y`/righe). Gli item devono restare distinguibili a colpo d'occhio anche senza riquadro arrotondato.
-- Prompt/testi lunghi dentro modali: usare textarea o preview leggibili (`font-mono`, `text-[13px]`, `leading-6`, `border-2`, `rounded-md` al massimo). Le azioni prompt restano icone con tooltip; i template/listati usano righe o blocchi con barra laterale, non card morbide.
-- Sono ammessi raggi piccoli sui campi (`rounded-md`) e controlli intrinsecamente circolari (switch, icone, indicatori). Non reintrodurre contenitori `rounded-xl/2xl/3xl` nelle modali.
+- Finestra apre **sopra** pannello/overlay app: z-index primitive è `z-[200]`, sopra overlay app legacy. No override serve.
+- Header bespoke (es. Anteprima import): usa primitive Radix dirette (`RadixDialog.Root/Portal/Overlay/Content`) con `RadixDialog.Title asChild` sul titolo, mantenendo z-index `z-[200]`.
+- Corpo finestra: evitare card interne con grossi angoli smussati. Sezioni/liste: blocchi piatti (`border-y`, eventuale `border-l-4` tonale, sfondo leggero) e separatori (`divide-y`/righe). Item devono restare distinguibili a colpo d'occhio anche senza riquadro arrotondato.
+- Prompt/testi lunghi dentro modali: textarea o preview leggibili (`font-mono`, `text-[13px]`, `leading-6`, `border-2`, `rounded-md` al massimo). Azioni prompt restano icone con tooltip; template/listati usano righe o blocchi con barra laterale, non card morbide.
+- Ammessi raggi piccoli sui campi (`rounded-md`) e controlli intrinsecamente circolari (switch, icone, indicatori). No reintrodurre contenitori `rounded-xl/2xl/3xl` nelle modali.
 
 ### Pulsanti finestra — `DialogConfirmButton` / `DialogCancelButton` (OBBLIGATORIO)
 
-Pulsanti base di ogni footer finestra. Uniformi ovunque.
+Pulsanti base ogni footer finestra. Uniformi ovunque.
 
 ```tsx
 import { DialogConfirmButton, DialogCancelButton } from '../ui';
@@ -295,15 +294,15 @@ import { DialogConfirmButton, DialogCancelButton } from '../ui';
 ```
 
 - **Conferma/Accetta**: pieno color **inchiostro** (`bg-editorial-ink text-white`), `text-sm`, frase normale (no maiuscolo), pillola arrotondata.
-- **Annulla/Chiudi/Indietro**: bordo sobrio, testo muted; all'hover sfondo `editorial-textbox/50` + testo/bordo ink.
-- Eccezione: conferme **distruttive** usano `AlertDialog tone="danger"` (pulsante `editorial-danger` come segnale di pericolo).
-- Non creare pulsanti footer raw: usa sempre queste due primitive.
+- **Annulla/Chiudi/Indietro**: bordo sobrio, testo muted; hover sfondo `editorial-textbox/50` + testo/bordo ink.
+- Eccezione: conferme **distruttive** usano `AlertDialog tone="danger"` (pulsante `editorial-danger` come segnale pericolo).
+- No pulsanti footer raw: usa sempre queste due primitive.
 
 ---
 
 ### Barra navigazione filtri (pattern LibraryPanel — OBBLIGATORIO)
 
-Ogni gruppo di filtri/tab usa `<IconButton>` con separatore e label corsiva:
+Ogni gruppo filtri/tab usa `<IconButton>` con separatore e label corsiva:
 
 ```tsx
 <div className="flex items-center gap-2">
@@ -327,13 +326,13 @@ Ogni gruppo di filtri/tab usa `<IconButton>` con separatore e label corsiva:
 Regole:
 - Separatore: `span w-px h-4 bg-editorial-border/70`
 - Label corsiva: `font-display text-sm italic text-editorial-ink`
-- Hover inattivo: `hover:border-editorial-accent/40` (non `/60`) — gestito dal tone `default` di `IconButton`
+- Hover inattivo: `hover:border-editorial-accent/40` (non `/60`) — gestito da tone `default` di `IconButton`
 
 ---
 
 ## Multibar shell (sidebar home e progetto)
 
-Le superfici laterali (home e progetto) usano **un'unica barra** (`ShellNav`, `components/layout/ShellNav.tsx`) con sezioni e item navigabili. Niente più colonne multiple né "linguetta" flottante.
+Superfici laterali (home e progetto) usano **un'unica barra** (`ShellNav`, `components/layout/ShellNav.tsx`) con sezioni e item navigabili. No più colonne multiple né "linguetta" flottante.
 
 ```tsx
 <motion.nav className="flex shrink-0 flex-col border-r border-editorial-border bg-editorial-bg/60 transition-[width] duration-200 w-60" />
@@ -344,70 +343,70 @@ Le superfici laterali (home e progetto) usano **un'unica barra** (`ShellNav`, `c
 
 Regole:
 - Sidebar e dashboard usano `editorial-bg/60` o `editorial-bg`, non bianco puro.
-- **Item attivo**: barra accent verticale (`absolute left-0 w-[3px] bg-editorial-accent`) + tint `bg-editorial-accent/10` + testo `text-editorial-accent`. Niente fondo accent pieno, niente linguetta che sfora il bordo colonna.
-- **Collapse**: la barra anima la larghezza, mai render condizionale `return null` (provoca scatti). Collassata = solo icone con `Tooltip` (mai `title` nativo), contenuto ancorato alla larghezza collassata (niente slide). **Niente bottone comprimi dedicato** (pattern activity-bar): click sull'item **attivo** comprime/espande; cambiare sezione **conserva** lo stato collassato/espanso (non riapre la barra). Anche il drag del bordo destro collassa/ridimensiona.
-- **Footer barra** (`ShellNavFooter`): azioni app-level (Impostazioni, Aiuto) ancorate in fondo alla barra (home e progetto), non nell'header. L'header tiene solo Salva / Libreria / Lingua.
-- **Back progetto**: la barra progetto ha una freccia indietro **slim** in cima (striscia bassa, `IconButton size="sm"`), non una riga piena; il ritorno alla home resta anche dal breadcrumb dell'header.
-- **Pannelli inline collassati**: icone uniformi (`h-9 w-9`), con icona di sezione in cima; le label testuali (es. modalità Test/Prod del Run) compaiono **solo da collassato**.
-- Sezioni con `ShellNavSection` (header `SectionLabel`, tracking calmo `0.1em`). Un solo `border-r`, nessun divider duplicato.
-- Workspace/area attivi: usare `ShellNavItem active` (no titolo ripetuto sopra). Area label `labelFont="display"`.
-- **Azioni di riga**: comandi contestuali (es. modifica/elimina del workspace attivo) vanno nel `trailing` di `ShellNavItem` (wrapper div + button interno + trailing fratelli — mai button annidati), non in barre d'azione separate nel canvas.
-- Dashboard/home: niente card bianche generiche. Usa `editorial-paper`, bordi `editorial-border`, icone tonde, metadati proporzionati.
-- Area nav: testi `workspace.areas.<id>.title` e `workspace.areas.<id>.sidebarHint`. Niente badge "Attiva".
-- Le aree future possono essere disabilitate ma mantengono forma e gerarchia.
+- **Item attivo**: barra accent verticale (`absolute left-0 w-[3px] bg-editorial-accent`) + tint `bg-editorial-accent/10` + testo `text-editorial-accent`. No fondo accent pieno, no linguetta che sfora bordo colonna.
+- **Collapse**: barra anima larghezza, mai render condizionale `return null` (provoca scatti). Collassata = solo icone con `Tooltip` (mai `title` nativo), contenuto ancorato alla larghezza collassata (no slide). **Niente bottone comprimi dedicato** (pattern activity-bar): click su item **attivo** comprime/espande; cambiare sezione **conserva** stato collassato/espanso (no riapertura barra). Drag bordo destro collassa/ridimensiona pure.
+- **Footer barra** (`ShellNavFooter`): azioni app-level (Impostazioni, Aiuto) ancorate in fondo alla barra (home e progetto), non nell'header. Header tiene solo Salva / Libreria / Lingua.
+- **Back progetto**: barra progetto ha freccia indietro **slim** in cima (striscia bassa, `IconButton size="sm"`), non riga piena; ritorno alla home resta anche da breadcrumb dell'header.
+- **Pannelli inline collassati**: icone uniformi (`h-9 w-9`), icona di sezione in cima; label testuali (es. modalità Test/Prod del Run) compaiono **solo da collassato**.
+- Sezioni con `ShellNavSection` (header `SectionLabel`, tracking calmo `0.1em`). Un solo `border-r`, no divider duplicato.
+- Workspace/area attivi: usa `ShellNavItem active` (no titolo ripetuto sopra). Area label `labelFont="display"`.
+- **Azioni di riga**: comandi contestuali (es. modifica/elimina workspace attivo) vanno nel `trailing` di `ShellNavItem` (wrapper div + button interno + trailing fratelli — mai button annidati), non in barre azione separate nel canvas.
+- Dashboard/home: no card bianche generiche. Usa `editorial-paper`, bordi `editorial-border`, icone tonde, metadati proporzionati.
+- Area nav: testi `workspace.areas.<id>.title` e `workspace.areas.<id>.sidebarHint`. No badge "Attiva".
+- Aree future possono essere disabilitate ma mantengono forma e gerarchia.
 
 ### Colonne progetto (shell #291)
 
-La vista progetto è a **tre colonne** (`ShellNext`, `react-resizable-panels`):
-- **Rail sinistro** (`ProjectRailNext`): barra operativa del progetto. In alto (`h-20`) tiene collasso + navigazione frammento; sotto tiene identità pipeline + modalità/azione primaria; poi tab del frammento (Audit / Note / Memoria); in basso azioni progetto. Collassabile a icone.
+Vista progetto a **tre colonne** (`ShellNext`, `react-resizable-panels`):
+- **Rail sinistro** (`ProjectRailNext`): barra operativa progetto. In alto (`h-20`) tiene collasso + navigazione frammento; sotto tiene identità pipeline + modalità/azione primaria; poi tab del frammento (Audit / Note / Memoria); in basso azioni progetto. Collassabile a icone.
 - **Centro**: documento (`DocumentView`).
-- **Ispettore destro** (`ProjectInspectorNext`, testata `h-20`): pannello documento/approfondimenti. Il pannello frammento vive nella rail sinistra, non nel lato destro.
+- **Ispettore destro** (`ProjectInspectorNext`, testata `h-20`): pannello documento/approfondimenti. Pannello frammento vive nella rail sinistra, non nel lato destro.
 
-Le testate condividono `h-20` → bordi superiori coincidenti. Larghezze e stato collassato sono persistiti in `uiStore` (`projectSidebarWidth`, `projectFlyoutWidth`, `projectContextCollapsed`/`projectContextUserExpanded`). La **config pipeline** (`ConfigDrawer`) esce come **finestra modale**, non più come fly-out push/overlay. Dettagli in `ARCHITECTURE.md`.
+Testate condividono `h-20` → bordi superiori coincidenti. Larghezze e stato collassato persistiti in `uiStore` (`projectSidebarWidth`, `projectFlyoutWidth`, `projectContextCollapsed`/`projectContextUserExpanded`). **Config pipeline** (`ConfigDrawer`) esce come **finestra modale**, non più fly-out push/overlay. Dettagli in `ARCHITECTURE.md`.
 
-**Caricamento documento**: `chunksStore.loadDocument` **non** apre il pannello Frammento (eviterebbe di spostare il layout di lettura); si apre solo su azione esplicita.
+**Caricamento documento**: `chunksStore.loadDocument` **non** apre pannello Frammento (eviterebbe spostare layout lettura); apre solo su azione esplicita.
 
 ### Rail sinistro progetto (#296)
 
 Gerarchia obbligatoria, dall'alto:
-1. **Navigazione frammento**: nella testata `h-20`, accanto al pulsante di collasso. Da rail aperta è orizzontale con contatore; da rail collassata è verticale. Non usare contenitori ovali/card attorno alle frecce.
-2. **Pipeline**: nome pipeline compatto (`font-display italic`) + cambio pipeline; sotto, modalità `Chunk/Tutto` e azione primaria. La modalità è lo scope dell'azione, quindi resta vicino al pulsante che traduce/esegue, non nella testata alta.
-3. **Tab frammento**: Audit / Note / Memoria, con `IconButton` tab + label corsiva secondo il pattern tab/filter. La tabbar resta fissa.
-4. **Contenuto tab**: solo il contenuto basso scorre (`overflow-y-auto`); testata pipeline e tabbar restano ferme.
+1. **Navigazione frammento**: nella testata `h-20`, accanto al pulsante di collasso. Rail aperta = orizzontale con contatore; rail collassata = verticale. No contenitori ovali/card attorno alle frecce.
+2. **Pipeline**: nome pipeline compatto (`font-display italic`) + cambio pipeline; sotto, modalità `Chunk/Tutto` e azione primaria. Modalità è scope dell'azione, resta vicino al pulsante che traduce/esegue, non nella testata alta.
+3. **Tab frammento**: Audit / Note / Memoria, con `IconButton` tab + label corsiva secondo pattern tab/filter. Tabbar resta fissa.
+4. **Contenuto tab**: solo contenuto basso scorre (`overflow-y-auto`); testata pipeline e tabbar restano ferme.
 5. **Footer progetto**: azioni globali ancorate in basso (workspace, libreria, config, import/export).
 
 Regole:
-- Rail aperta: default 300px, minimo 280px, massimo 420px. Le larghezze salvate vanno clamped in questo intervallo.
-- Rail collassata: solo icone con tooltip; nessuna label visibile, tranne micro valori necessari (es. contatore frammento).
+- Rail aperta: default 300px, minimo 280px, massimo 420px. Larghezze salvate vanno clamped in questo intervallo.
+- Rail collassata: solo icone con tooltip; no label visibile, tranne micro valori necessari (es. contatore frammento).
 - Comandi icon-only: sempre `IconButton`, tooltip obbligatorio, `ariaPressed` solo per toggle (`Chunk/Tutto`), `aria-selected` solo per tab.
 - Stop/errori/distruttive: `editorial-danger`; accento attivo/selezione: `editorial-accent`.
-- Audit e Note: niente card rettangolari per singolo item. Usa righe editoriali con separatori orizzontali sottili.
-- Audit/Note item: le azioni stanno solo nella riga titolo a destra; testo principale, ancora e descrizione devono occupare tutta la larghezza sotto. Evitare una colonna azioni che restringe il contenuto.
-- Audit: la linea verticale tipo quote è ammessa **solo** nei dettagli annidati ("nella traduzione", "frase sorgente", "correzione"), non sulla riga principale del problema.
-- Note: note traduzione e note sorgente usano `editorial-danger` per marker/numeri/tono nota; nessuna linea laterale di tipo quote sulle righe principali.
-- **Indicatore note altrove nell'app** (es. badge conteggio in `IndexTab`): usa sempre la mappa canonica tipo→colore esportata da `NotesTab.tsx` (`ANNOTATION_META`: comment `editorial-charcoal`, doubt `editorial-warning`, problem `editorial-danger`, approved `editorial-success`) — non inventare colori fuori palette (es. `sky-*`) né una palette parallela. Se l'indicatore aggrega più note di tipi diversi, mostra il colore del tipo più urgente presente (ordine: problem → doubt → comment → approved).
+- Audit e Note: no card rettangolari per singolo item. Usa righe editoriali con separatori orizzontali sottili.
+- Audit/Note item: azioni stanno solo nella riga titolo a destra; testo principale, ancora e descrizione devono occupare tutta la larghezza sotto. Evitare colonna azioni che restringe il contenuto.
+- Audit: linea verticale tipo quote ammessa **solo** nei dettagli annidati ("nella traduzione", "frase sorgente", "correzione"), non sulla riga principale del problema.
+- Note: note traduzione e note sorgente usano `editorial-danger` per marker/numeri/tono nota; no linea laterale tipo quote sulle righe principali.
+- **Indicatore note altrove nell'app** (es. badge conteggio in `IndexTab`): usa sempre mappa canonica tipo→colore esportata da `NotesTab.tsx` (`ANNOTATION_META`: comment `editorial-charcoal`, doubt `editorial-warning`, problem `editorial-danger`, approved `editorial-success`) — no colori inventati fuori palette (es. `sky-*`) né palette parallela. Se indicatore aggrega più note di tipi diversi, mostra colore del tipo più urgente presente (ordine: problem → doubt → comment → approved).
 
 ### Resize (drag + tastiera) — pannelli progetto
 
-La vista progetto usa `react-resizable-panels`. Le larghezze e lo stato collapse sono persistiti in `uiStore`.
+Vista progetto usa `react-resizable-panels`. Larghezze e stato collapse persistiti in `uiStore`.
 - Rail sinistra: default 300px, collapsed 64px, min 280px, max 420px.
 - Ispettore destro: default 430px, collapsed 56px, min 300px, max 620px.
-- Durante il drag la transizione è disattivata (movimento 1:1); allo snap/chiusura riprende l'animazione tramite token motion condiviso.
-- Grip sottile sempre visibile, accentuato in hover/drag/focus. Niente larghezze hard-coded nei consumer: leggere da `uiStore`.
+- Durante drag transizione disattivata (movimento 1:1); allo snap/chiusura riprende animazione tramite token motion condiviso.
+- Grip sottile sempre visibile, accentuato in hover/drag/focus. No larghezze hard-coded nei consumer: leggere da `uiStore`.
 
 ### Token di motion — `components/layout/motion.ts`
 
-Spring e curve condivise dalla shell, niente magic number duplicati: `SPRING_PANEL` (`spring 30/280`, fly-out), `EASE_EDITORIAL` (`[0.22,1,0.36,1]`, ingressi barre), `WIDTH_TRANSITION_CLASS` (`transition-[width] duration-200`), `PANEL_FLEX_TRANSITION_CLASS` (`transition-[flex] duration-300`, pannelli `react-resizable-panels`).
+Spring e curve condivise dalla shell, no magic number duplicati: `SPRING_PANEL` (`spring 30/280`, fly-out), `EASE_EDITORIAL` (`[0.22,1,0.36,1]`, ingressi barre), `WIDTH_TRANSITION_CLASS` (`transition-[width] duration-200`), `PANEL_FLEX_TRANSITION_CLASS` (`transition-[flex] duration-300`, pannelli `react-resizable-panels`).
 
 ### Navigazione da tastiera del rail
 
-Il `role="tablist"` verticale del rail progetto (`PipelineSidebar`) usa roving tabindex (0 sull'attivo, -1 sugli altri): ↑/↓ (e ←/→) spostano il focus tra le voci, Home/End ai estremi; attivazione manuale con Enter/Space/click (non intrusiva sui fly-out). Stesso pattern dei tab strip di `InsightsDrawer`.
+`role="tablist"` verticale del rail progetto (`PipelineSidebar`) usa roving tabindex (0 sull'attivo, -1 sugli altri): ↑/↓ (e ←/→) spostano focus tra voci, Home/End agli estremi; attivazione manuale con Enter/Space/click (non intrusiva sui fly-out). Stesso pattern dei tab strip di `InsightsDrawer`.
 
 ---
 
 ## Tab accessibili
 
-I tab visuali devono seguire WAI-ARIA APG:
+Tab visuali devono seguire WAI-ARIA APG:
 
 ```tsx
 <div role="tablist" aria-label={t('workspace.settings.eyebrow')}>
@@ -436,7 +435,7 @@ I tab visuali devono seguire WAI-ARIA APG:
 Regole:
 - Tab: `role="tab"` + `aria-selected` + `aria-controls`.
 - Panel: `role="tabpanel"` + `aria-labelledby`.
-- Non usare `ariaPressed` per tab. `ariaPressed` resta solo per toggle on/off.
+- No `ariaPressed` per tab. `ariaPressed` resta solo per toggle on/off.
 
 ---
 
@@ -444,9 +443,9 @@ Regole:
 
 **Mai introdurre varianti** di pattern già esistenti.
 
-Prima di aggiungere un nuovo pulsante, tab, o filtro:
-1. Cerca nell'app un componente analogo
-2. Usa la primitiva condivisa corrispondente (`IconButton`, `StatusDot`, `SectionLabel`, `Tooltip`)
+Prima di aggiungere nuovo pulsante, tab, o filtro:
+1. Cerca nell'app componente analogo
+2. Usa primitiva condivisa corrispondente (`IconButton`, `StatusDot`, `SectionLabel`, `Tooltip`)
 3. Deviazioni richiedono approvazione esplicita dell'utente
 
 Colori da **non usare** fuori dai componenti UI (`StyleGuide.tsx` per riferimento):
@@ -459,7 +458,7 @@ Colori da **non usare** fuori dai componenti UI (`StyleGuide.tsx` per riferiment
 
 Dall'alto verso il basso per importanza percepita dall'utente:
 
-1. Modalità di traduzione (scelta che cambia la struttura della pipeline)
+1. Modalità di traduzione (scelta che cambia struttura pipeline)
 2. Coppia linguistica
 3. Persona
 
@@ -469,7 +468,7 @@ Dall'alto verso il basso per importanza percepita dall'utente:
 
 ## Console Terminal
 
-Il tab Console simula un terminale, ma usa la **versione scura della palette editoriale** — non colori neon generici. Tutti i token sono definiti in `src/index.css` nel blocco `@theme` con prefisso `--color-terminal-*`.
+Tab Console simula terminale, usa **versione scura della palette editoriale** — non colori neon generici. Tutti token definiti in `src/index.css` nel blocco `@theme` con prefisso `--color-terminal-*`.
 
 ### Token di sfondo
 
@@ -499,24 +498,24 @@ Il tab Console simula un terminale, ma usa la **versione scura della palette edi
 | `text-terminal-info` | `#7898aa` | family teal editoriale, smorzato |
 | `text-terminal-accent` | `#c49b2a` | amber — highlight interattivi, stato running |
 
-> **Principio fondamentale**: il terminale è la versione *scura* degli stessi toni caldi dell'app.
-> Mai usare colori neon (`#69db7c`, `#74c0fc`, `#ff6b6b`) nel Console tab.
+> **Principio fondamentale**: terminale è versione *scura* degli stessi toni caldi dell'app.
+> Mai colori neon (`#69db7c`, `#74c0fc`, `#ff6b6b`) nel Console tab.
 
 ### Scrollbar
 
-Usa `.terminal-scrollbar` (definita in `index.css`) al posto di `.custom-scrollbar` in tutte le aree scroll del Console tab.
+Usa `.terminal-scrollbar` (definita in `index.css`) al posto di `.custom-scrollbar` in tutte aree scroll del Console tab.
 
 ### Bordo drawer
 
-Il bordo sinistro del drawer è condizionale: `border-terminal-border` con tab `operations` attivo, `border-editorial-border` altrimenti — transizione "carta candela" invece di flash stroboscopico.
+Bordo sinistro del drawer condizionale: `border-terminal-border` con tab `operations` attivo, `border-editorial-border` altrimenti — transizione "carta candela" invece di flash stroboscopico.
 
 ### Header del drawer Console (#296)
 
 Un solo header a due righe con ruoli distinti, non due header sovrapposti:
-- **Riga chrome** (`bg-terminal-chrome`): icona + titolo + pill di stato live inline (elaborazione/memoria in corso, con `Loader2` animato) + pulsante chiudi. Niente righe di stato separate sotto.
-- **Riga toolbar** (`bg-terminal-bg`, sotto la chrome): ricerca sempre visibile + toggle raggruppato + trigger filtri a scomparsa (i chip scope/livello restano dietro un accordion — sono troppi per stare sempre visibili senza affollare) + vai al frammento + pulisci.
+- **Riga chrome** (`bg-terminal-chrome`): icona + titolo + pill di stato live inline (elaborazione/memoria in corso, con `Loader2` animato) + pulsante chiudi. No righe di stato separate sotto.
+- **Riga toolbar** (`bg-terminal-bg`, sotto chrome): ricerca sempre visibile + toggle raggruppato + trigger filtri a scomparsa (chip scope/livello restano dietro accordion — troppi per stare sempre visibili senza affollare) + vai al frammento + pulisci.
 
-**Colori (CRITICO):** dentro il drawer Console usa **solo** token `terminal-*` (`terminal-accent`, `terminal-secondary`, ecc.), mai `editorial-*`. Il terminale ha una palette scura dedicata apposta per restare "la versione scura degli stessi toni" — infiltrare l'accento dell'interfaccia chiara (verde) rompe quel principio.
+**Colori (CRITICO):** dentro drawer Console usa **solo** token `terminal-*` (`terminal-accent`, `terminal-secondary`, ecc.), mai `editorial-*`. Terminale ha palette scura dedicata apposta per restare "versione scura degli stessi toni" — infiltrare accento interfaccia chiara (verde) rompe quel principio.
 
 **Ridimensionabile:** maniglia orizzontale in cima al drawer (`cursor-ns-resize`, trascinabile), altezza persistita in `uiStore.consoleDrawerHeight` (default 256px, min 160, max 520).
 
@@ -524,4 +523,4 @@ Un solo header a due righe con ruoli distinti, non due header sovrapposti:
 
 ## Riferimento live
 
-`src/components/help/StyleGuide.tsx` — sezione nell'Help dell'app, mostra tutti i token CSS letti live.
+`src/components/help/StyleGuide.tsx` — sezione nell'Help dell'app, mostra tutti token CSS letti live.
