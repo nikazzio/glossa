@@ -122,9 +122,8 @@ function buildHtml(text: string, spans: MatchSpan[]): string {
 
     result += `<mark class="${classes.join(' ')}"${tooltip ? ` data-tooltip="${escapeHtml(tooltip)}"` : ''}>${segment}</mark>`;
 
-    // Paint the footnote marker once, right where the annotation span ends.
-    // Rendered zero-width (see .hl-annot-marker) so it never shifts the
-    // transparent-textarea overlay alignment.
+    // Paint the footnote marker once, right where the annotation span ends
+    // (see .hl-annot-marker for the width/alignment trade-off).
     const annotEnd = activeBg.find((s) => s.cls === 'hl-annot' && s.end === to && s.label);
     if (annotEnd?.label) {
       result += `<span class="hl-annot-marker">${escapeHtml(annotEnd.label)}</span>`;

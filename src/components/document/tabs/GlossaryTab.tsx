@@ -26,7 +26,7 @@ export function GlossaryTab({ panelId, labelledBy, glossary }: GlossaryTabProps)
           size="sm"
           tone={highlightsEnabled ? 'accent' : 'default'}
           onClick={() => setHighlightsEnabled(!highlightsEnabled)}
-          title={t('document.highlightsToggle')}
+          title={t('library.glossaryHighlightToggle')}
           ariaPressed={highlightsEnabled}
         >
           <Highlighter size={13} />

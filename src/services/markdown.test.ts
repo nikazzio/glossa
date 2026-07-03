@@ -41,6 +41,34 @@ describe('markdown service', () => {
     expect(html).toContain('class="footnotes"');
   });
 
+  it('restores the real document footnote number when the GFM label is non-sequential', () => {
+    // Chunk-scoped preview: label "22" is the document-level footnote number,
+    // but it's the 2nd reference in this chunk, so GFM would render it as "2".
+    const chunkSample = [
+      'First note[^22].',
+      '',
+      '[^22]: Footnote body',
+    ].join('\n');
+    const html = renderMarkdownToHtmlFragment(chunkSample);
+    expect(html).toContain('id="user-content-fnref-22"');
+    // The restore must kick in here: visible number is the real "22", not GFM's "1".
+    expect(html.match(/id="user-content-fnref-22"[^>]*>(\d+)</)?.[1]).toBe('22');
+  });
+
+  it('does not overwrite GFM sequential numbering for letter-prefixed annotation ids', () => {
+    // composeAnnotatedMarkdown uses ids like "a1", "a2" precisely because they're
+    // already sequential in read order — GFM's own numbering (1, 2, 3…) must win.
+    const annotationSample = [
+      'A sentence with a note[^a1].',
+      '',
+      '[^a1]: Annotation body',
+    ].join('\n');
+    const html = renderMarkdownToHtmlFragment(annotationSample);
+    expect(html).toContain('id="user-content-fnref-a1"');
+    expect(html).not.toMatch(/id="user-content-fnref-a1"[^>]*>a1</);
+    expect(html).toMatch(/id="user-content-fnref-a1"[^>]*>1</);
+  });
+
   it('flattens markdown to readable text with a final notes section', () => {
     const text = flattenMarkdownToText(sample);
 

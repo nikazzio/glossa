@@ -415,34 +415,51 @@ export function SettingsModal() {
                         {t(hlMode === 'dark' ? 'settings.colorScheme_dark' : 'settings.colorScheme_light')}
                       </span>
                     </div>
-                    <div className="divide-y divide-editorial-border/70 border-y border-editorial-border/70">
-                      {([
-                        { key: 'sourceTerm'   as const, label: t('settings.highlightSourceTerm') },
-                        { key: 'matchTerm'    as const, label: t('settings.highlightMatchTerm') },
-                        { key: 'mismatchTerm' as const, label: t('settings.highlightMismatchTerm') },
-                        { key: 'search'       as const, label: t('settings.highlightSearch') },
-                        { key: 'auditPhrase'  as const, label: t('settings.highlightAuditPhrase') },
-                        { key: 'annotation'   as const, label: t('settings.highlightAnnotation') },
-                      ]).map(({ key, label }) => (
-                        <label
-                          key={key}
-                          className="flex cursor-pointer items-center gap-3 py-3.5 transition-colors hover:text-editorial-accent"
-                        >
-                          <div className="relative h-5 w-5 shrink-0 overflow-hidden rounded-full shadow-sm">
-                            <div className="absolute inset-0" style={{ backgroundColor: activeHlColors[key] }} />
-                            <input
-                              type="color"
-                              value={colorToHex(activeHlColors[key])}
-                              onChange={(e) => setHighlightColor(hlMode, key, applyHexToColor(activeHlColors[key], e.target.value))}
-                              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                              aria-label={label}
-                            />
-                          </div>
-                          <span className="mx-0.5 h-5 w-px shrink-0 bg-editorial-border/70" aria-hidden="true" />
-                          <span className="font-display text-lg italic text-editorial-ink">{label}</span>
-                        </label>
-                      ))}
-                    </div>
+                    {([
+                      {
+                        groupLabel: t('settings.highlightsGlossaryGroup'),
+                        items: [
+                          { key: 'sourceTerm'   as const, label: t('settings.highlightSourceTerm') },
+                          { key: 'matchTerm'    as const, label: t('settings.highlightMatchTerm') },
+                          { key: 'mismatchTerm' as const, label: t('settings.highlightMismatchTerm') },
+                        ],
+                      },
+                      {
+                        groupLabel: t('settings.highlightsOtherGroup'),
+                        items: [
+                          { key: 'search'       as const, label: t('settings.highlightSearch') },
+                          { key: 'auditPhrase'  as const, label: t('settings.highlightAuditPhrase') },
+                          { key: 'annotation'   as const, label: t('settings.highlightAnnotation') },
+                        ],
+                      },
+                    ]).map(({ groupLabel, items }) => (
+                      <div key={groupLabel} className="space-y-1.5">
+                        <p className="text-[10px] font-sans uppercase tracking-[0.14em] text-editorial-muted/70">
+                          {groupLabel}
+                        </p>
+                        <div className="divide-y divide-editorial-border/70 border-y border-editorial-border/70">
+                          {items.map(({ key, label }) => (
+                            <label
+                              key={key}
+                              className="flex cursor-pointer items-center gap-3 py-3.5 transition-colors hover:text-editorial-accent"
+                            >
+                              <div className="relative h-5 w-5 shrink-0 overflow-hidden rounded-full shadow-sm">
+                                <div className="absolute inset-0" style={{ backgroundColor: activeHlColors[key] }} />
+                                <input
+                                  type="color"
+                                  value={colorToHex(activeHlColors[key])}
+                                  onChange={(e) => setHighlightColor(hlMode, key, applyHexToColor(activeHlColors[key], e.target.value))}
+                                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                                  aria-label={label}
+                                />
+                              </div>
+                              <span className="mx-0.5 h-5 w-px shrink-0 bg-editorial-border/70" aria-hidden="true" />
+                              <span className="font-display text-lg italic text-editorial-ink">{label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
                   </div>
 
                 </div>

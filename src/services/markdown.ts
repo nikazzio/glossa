@@ -79,13 +79,19 @@ export function renderMarkdownToHtmlFragment(markdown: string, options: RenderOp
  *
  * No-op when labels are sequential (1, 2, 3…), so translation previews and
  * exports are unaffected.
+ *
+ * Annotation-derived footnotes (composeAnnotatedMarkdown) use a letter-prefixed
+ * id ("a1", "a2"...) precisely so they're already sequential in read order —
+ * GFM's own numbering is correct for them and must NOT be overwritten with the
+ * raw id, or the reader sees "a1" instead of "1". Only purely numeric labels
+ * (the real per-document footnote case) get restored.
  */
 function restoreFootnoteDisplayNumbers(html: string): string {
   // Inline refs: <sup><a id="user-content-fnref-22" ...>2</a></sup>
   // The id is on the <a>, not the <sup>. Replace the inner text with the label.
   let result = html.replace(
     /(<a\b[^>]*\bid="user-content-fnref-([^"]+)"[^>]*>)\d+(<\/a>)/g,
-    (_full, pre, label, post) => `${pre}${label}${post}`,
+    (full, pre, label, post) => (/^\d+$/.test(label) ? `${pre}${label}${post}` : full),
   );
   // Footnote section <li>: add value="22" so the <ol> counter shows the right number.
   result = result.replace(

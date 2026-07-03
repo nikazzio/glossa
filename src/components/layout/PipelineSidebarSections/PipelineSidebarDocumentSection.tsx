@@ -58,7 +58,7 @@ export function PipelineSidebarDocumentSection({
             <IconButton size="md" tone={syncScrollEnabled && !syncScrollDisabled ? 'accent' : 'default'} onClick={() => setSyncScrollEnabled(!syncScrollEnabled)} title={syncScrollEnabled ? t('document.scrollSyncDisable') : t('document.scrollSyncEnable')} disabled={syncScrollDisabled} ariaPressed={syncScrollEnabled && !syncScrollDisabled} tooltipSide="right" className="h-9 w-9">
               {syncScrollEnabled && !syncScrollDisabled ? <Link2 size={14} /> : <Link2Off size={14} />}
             </IconButton>
-            <IconButton size="md" tone={highlightsEnabled ? 'accent' : 'default'} onClick={() => setHighlightsEnabled(!highlightsEnabled)} title={t('document.highlightsToggle')} ariaPressed={highlightsEnabled} tooltipSide="right" className="h-9 w-9">
+            <IconButton size="md" tone={highlightsEnabled ? 'accent' : 'default'} onClick={() => setHighlightsEnabled(!highlightsEnabled)} title={t('library.glossaryHighlightToggle')} ariaPressed={highlightsEnabled} tooltipSide="right" className="h-9 w-9">
               <Highlighter size={14} />
             </IconButton>
             <IconButton size="md" onClick={() => setShowExportDialog(true)} title={`${t('header.exportLabel')} (Ctrl+E)`} ariaLabel={t('header.exportLabel')} tooltipSide="right" className="h-9 w-9">
@@ -126,7 +126,7 @@ export function PipelineSidebarDocumentSection({
                 size="md"
                 tone={highlightsEnabled ? 'accent' : 'default'}
                 onClick={() => setHighlightsEnabled(!highlightsEnabled)}
-                title={t('document.highlightsToggle')}
+                title={t('library.glossaryHighlightToggle')}
                 ariaPressed={highlightsEnabled}
               >
                 <Highlighter size={14} />

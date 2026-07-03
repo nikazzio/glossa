@@ -1,8 +1,9 @@
-import { CheckCircle2, AlertCircle, MinusCircle, Columns2, Link2, Link2Off, Loader2, NotebookText, PanelLeft, PanelRight, ShieldAlert, Terminal } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Highlighter, MinusCircle, Columns2, Link2, Link2Off, Loader2, NotebookText, PanelLeft, PanelRight, ShieldAlert, Terminal } from 'lucide-react';
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useStatusBarData } from '../../hooks/useStatusBarData';
 import { useUiStore } from '../../stores/uiStore';
+import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useAnnotationsStore } from '../../stores/annotationsStore';
 import { IconButton, Tooltip } from '../ui';
@@ -203,6 +204,9 @@ export function AppStatusBar() {
   const setDocumentPaneFocus = useUiStore((state) => state.setDocumentPaneFocus);
   const showConsoleDrawer = useUiStore((state) => state.showConsoleDrawer);
   const setShowConsoleDrawer = useUiStore((state) => state.setShowConsoleDrawer);
+  const highlightsEnabled = useUiStore((state) => state.highlightsEnabled);
+  const setHighlightsEnabled = useUiStore((state) => state.setHighlightsEnabled);
+  const hasGlossary = usePipelineStore((state) => state.config.glossary.length > 0);
 
   if (data.kind === 'idle') return null;
 
@@ -308,6 +312,21 @@ export function AppStatusBar() {
                 >
                   {syncOn ? <Link2 size={11} /> : <Link2Off size={11} />}
                 </IconButton>
+                {hasGlossary && (
+                  <>
+                    <span className="mx-0.5 h-3.5 w-px bg-editorial-border/60" aria-hidden="true" />
+                    <IconButton
+                      size="xs"
+                      tone={highlightsEnabled ? 'accent' : 'default'}
+                      onClick={() => setHighlightsEnabled(!highlightsEnabled)}
+                      title={t('library.glossaryHighlightToggle')}
+                      ariaPressed={highlightsEnabled}
+                      tooltipSide="top"
+                    >
+                      <Highlighter size={11} />
+                    </IconButton>
+                  </>
+                )}
               </div>
             </>
           ) : null}
