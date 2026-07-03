@@ -175,7 +175,7 @@ function OverviewSection() {
         <ol className="space-y-3 border-l-2 border-editorial-accent pl-5">
           {flowSteps.map((key, idx) => (
             <li key={key} className="flex items-start gap-3 text-sm leading-relaxed text-editorial-ink">
-              <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-editorial-accent/40 bg-editorial-bg text-[10px] font-bold text-editorial-accent">
+              <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-editorial-accent/40 bg-editorial-bg text-[11px] font-bold text-editorial-accent">
                 {idx + 1}
               </span>
               <span>{t(`help.overview.${key}`)}</span>
@@ -414,7 +414,7 @@ function ContextSection() {
       <div className="my-6 space-y-2">
         {(['layer1', 'layer2', 'layer3'] as const).map((key) => (
           <div key={key} className="flex items-start gap-4 border-b border-editorial-border/70 py-4">
-            <span className="mt-0.5 shrink-0 rounded-full border border-editorial-accent/40 bg-editorial-bg px-3 py-1 font-mono text-[10px] font-bold text-editorial-accent">
+            <span className="mt-0.5 shrink-0 rounded-full border border-editorial-accent/40 bg-editorial-bg px-3 py-1 font-mono text-[11px] font-bold text-editorial-accent">
               {t(`help.context.${key}Label`)}
             </span>
             <span className="text-[13px] leading-relaxed text-editorial-ink/80">
@@ -659,7 +659,7 @@ function ShortcutsSection() {
             <span className="flex items-center gap-1">
               {keys.map((k, i) => (
                 <span key={i} className="flex items-center gap-1">
-                  {i > 0 && <span className="text-[10px] text-editorial-muted">+</span>}
+                  {i > 0 && <span className="text-[11px] text-editorial-muted">+</span>}
                   <Kbd>{k}</Kbd>
                 </span>
               ))}

@@ -45,7 +45,7 @@ export function DictionariesTab() {
   const [creating, setCreating] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
-  const [importTargetId, setImportTargetId] = useState<string | null>(null);
+  const [showImport, setShowImport] = useState(false);
   const [exportTarget, setExportTarget] = useState<{ id: string; name: string } | null>(null);
 
   const handleToggle = async (id: string) => {
@@ -135,9 +135,7 @@ export function DictionariesTab() {
   const handleImported = async (glossaryId: string, count: number) => {
     const entries = await getGlossaryEntries(glossaryId);
     setGlossaryEntries(glossaryId, entries);
-    if (config.assignedGlossaryId === glossaryId) {
-      await assignGlossary(glossaryId);
-    }
+    setExpandedGlossaryId(glossaryId);
     toast.success(t('library.csvImportSuccess', { count }));
   };
 
@@ -175,14 +173,14 @@ export function DictionariesTab() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-[11px] leading-relaxed text-editorial-muted">{t('library.dictionariesDesc')}</p>
-        <button
-          onClick={() => setCreating(true)}
-          title={t('library.newDictionary')}
-          aria-label={t('library.newDictionary')}
-          className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:bg-editorial-textbox/30 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-        >
-          <Plus size={13} />
-        </button>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <IconButton onClick={() => setShowImport(true)} title={t('library.importCsv')}>
+            <Upload size={13} />
+          </IconButton>
+          <IconButton onClick={() => setCreating(true)} title={t('library.newDictionary')}>
+            <Plus size={13} />
+          </IconButton>
+        </div>
       </div>
 
       {creating && (
@@ -282,14 +280,6 @@ export function DictionariesTab() {
                     </IconButton>
                   )}
                   <button
-                    onClick={() => { setImportTargetId(g.id); setExportTarget(null); }}
-                    title={t('library.importCsv')}
-                    aria-label={t('library.importCsv')}
-                    className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:bg-editorial-textbox/30 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  >
-                    <Upload size={13} />
-                  </button>
-                  <button
                     onClick={() => setExportTarget({ id: g.id, name: g.name })}
                     title={t('library.exportGlossary')}
                     aria-label={t('library.exportGlossary')}
@@ -340,11 +330,11 @@ export function DictionariesTab() {
         })}
       </div>
 
-      {importTargetId && (
+      {showImport && (
         <CsvImportDialog
-          glossaryId={importTargetId}
-          onImported={(count) => handleImported(importTargetId, count)}
-          onClose={() => setImportTargetId(null)}
+          workspaceId={activeWorkspace?.id ?? null}
+          onImported={handleImported}
+          onClose={() => setShowImport(false)}
         />
       )}
 

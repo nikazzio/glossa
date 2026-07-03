@@ -1,7 +1,7 @@
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Download, FileText, Rows3 } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dialog, DialogConfirmButton, DialogCancelButton } from '../ui';
+import { Dialog, DialogConfirmButton, DialogCancelButton, SectionLabel } from '../ui';
 import type { TranslationChunk } from '../../types';
 
 export type ExportFormat = 'txt' | 'md' | 'html' | 'docx' | 'bilingual';
@@ -52,6 +52,7 @@ export function ExportDialog({ chunks, markdownAware, onConfirm, onCancel }: Exp
       }}
       eyebrow={t('header.exportLabel')}
       title={t('files.exportDialogTitle')}
+      icon={<Download size={20} />}
       closeLabel={t('common.close')}
       widthClassName="max-w-md"
       bodyClassName="px-6 py-5"
@@ -79,8 +80,8 @@ export function ExportDialog({ chunks, markdownAware, onConfirm, onCancel }: Exp
 
           {/* Formato */}
           <div className="border-y border-editorial-border/70 bg-editorial-bg/45 px-4 py-4">
-            <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">
-              {t('files.exportFormat')}
+            <div className="mb-2">
+              <SectionLabel icon={FileText} label={t('files.exportFormat')} />
             </div>
             <div className="space-y-1">
               {formats.map(({ key, label }) => (
@@ -104,34 +105,29 @@ export function ExportDialog({ chunks, markdownAware, onConfirm, onCancel }: Exp
           {/* Separatore */}
           {showSeparator && (
             <div className="border-y border-editorial-border/70 bg-editorial-bg/45 px-4 py-4">
-              <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">
-                {t('files.exportSeparator')}
+              <div className="mb-2">
+                <SectionLabel icon={Rows3} label={t('files.exportSeparator')} />
               </div>
               <div className="space-y-1">
                 {SEPARATOR_OPTIONS.map((opt) => (
-                  <label
+                  <button
                     key={opt.key}
-                    className={`flex cursor-pointer items-center gap-3 border-l-4 px-3 py-2.5 transition-colors ${
+                    type="button"
+                    onClick={() => setSeparatorKey(opt.key)}
+                    className={`flex w-full items-center justify-between gap-3 border-l-4 px-3 py-2.5 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
                       separatorKey === opt.key
                         ? 'border-l-editorial-accent bg-editorial-accent/8 text-editorial-accent'
                         : 'border-l-transparent text-editorial-ink hover:border-l-editorial-border hover:bg-editorial-textbox/25 hover:text-editorial-accent'
                     }`}
                   >
-                    <input
-                      type="radio"
-                      name="separator"
-                      value={opt.key}
-                      checked={separatorKey === opt.key}
-                      onChange={() => setSeparatorKey(opt.key)}
-                      className="accent-editorial-ink"
-                    />
-                    <span className="flex-1 text-sm">
-                      {t(`files.exportSeparator_${opt.key}`)}
+                    <span className="flex items-center gap-3">
+                      <span className="text-sm">{t(`files.exportSeparator_${opt.key}`)}</span>
+                      <span className="font-mono text-[11px] text-editorial-muted/70">
+                        {opt.key === 'blank' ? '↵↵' : opt.key === 'hr' ? '---' : '* * *'}
+                      </span>
                     </span>
-                    <span className="font-mono text-[10px] text-editorial-muted/70">
-                      {opt.key === 'blank' ? '↵↵' : opt.key === 'hr' ? '---' : '* * *'}
-                    </span>
-                  </label>
+                    {separatorKey === opt.key ? <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-editorial-accent" aria-hidden="true" /> : null}
+                  </button>
                 ))}
               </div>
             </div>

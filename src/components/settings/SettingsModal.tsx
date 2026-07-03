@@ -822,19 +822,19 @@ export function SettingsModal() {
                                             <span className="text-xs font-mono text-editorial-ink">{modelId}</span>
                                             <ModelCapabilityHint provider={activeProviderTab} model={modelId} iconOnly />
                                             {entry?.contextWindow && (
-                                              <span className="rounded-full border border-editorial-border px-2 py-0.5 text-[10px] font-mono text-editorial-muted">
+                                              <span className="rounded-full border border-editorial-border px-2 py-0.5 text-[11px] font-mono text-editorial-muted">
                                                 {entry.contextWindow >= 1_000_000
                                                   ? `${(entry.contextWindow / 1_000_000).toFixed(0)}M`
                                                   : `${Math.round(entry.contextWindow / 1_000)}K`}
                                               </span>
                                             )}
                                             {entry?.pricing && (
-                                              <span className="rounded-full border border-editorial-border px-2 py-0.5 text-[10px] font-mono text-editorial-muted">
+                                              <span className="rounded-full border border-editorial-border px-2 py-0.5 text-[11px] font-mono text-editorial-muted">
                                                 ${entry.pricing.input}/${entry.pricing.output}
                                               </span>
                                             )}
                                             {entry?.status === 'preview' && (
-                                              <span className="rounded-full border border-editorial-warning/40 bg-editorial-warning/10 px-2 py-0.5 text-[10px] font-mono text-editorial-warning">
+                                              <span className="rounded-full border border-editorial-warning/40 bg-editorial-warning/10 px-2 py-0.5 text-[11px] font-mono text-editorial-warning">
                                                 preview
                                               </span>
                                             )}

@@ -558,7 +558,7 @@ export function ImportPreviewDialog({
                 <select
                   value={sourceLanguage}
                   onChange={(e) => handleSourceLanguageChange(e.target.value)}
-                  className="w-32 rounded-[10px] border border-editorial-border bg-editorial-bg px-2 py-1.5 text-xs font-mono outline-none focus:border-editorial-ink/40 appearance-none"
+                  className="w-32 rounded-md border border-editorial-border bg-editorial-bg px-2 py-1.5 text-xs font-mono outline-none focus:border-editorial-ink/40 appearance-none"
                   aria-label={t('pipeline.sourceLanguage')}
                 >
                   {LANGUAGES.map((lang) => (
@@ -577,7 +577,7 @@ export function ImportPreviewDialog({
                 <select
                   value={targetLanguage}
                   onChange={(e) => handleTargetLanguageChange(e.target.value)}
-                  className="w-32 rounded-[10px] border border-editorial-border bg-editorial-bg px-2 py-1.5 text-xs font-mono outline-none focus:border-editorial-ink/40 appearance-none"
+                  className="w-32 rounded-md border border-editorial-border bg-editorial-bg px-2 py-1.5 text-xs font-mono outline-none focus:border-editorial-ink/40 appearance-none"
                   aria-label={t('pipeline.targetLanguage')}
                 >
                   {LANGUAGES.map((lang) => (
@@ -591,7 +591,7 @@ export function ImportPreviewDialog({
                 <select
                   value={selectedProvider}
                   onChange={(e) => handleProviderChange(e.target.value as ModelProvider)}
-                  className="w-24 rounded-[10px] border border-editorial-border bg-editorial-bg px-2 py-1.5 text-xs font-bold uppercase outline-none focus:border-editorial-ink/40 appearance-none"
+                  className="w-24 rounded-md border border-editorial-border bg-editorial-bg px-2 py-1.5 text-xs font-bold uppercase outline-none focus:border-editorial-ink/40 appearance-none"
                   aria-label={t('pipeline.source')}
                 >
                   {LLM_PROVIDER_ORDER.map((p) => (
@@ -602,7 +602,7 @@ export function ImportPreviewDialog({
                   value={selectedModel}
                   onChange={(e) => handleModelChange(e.target.value)}
                   disabled={availableModels.length === 0}
-                  className="flex-1 min-w-0 rounded-[10px] border border-editorial-border bg-editorial-bg px-2 py-1.5 text-xs font-mono outline-none focus:border-editorial-ink/40 appearance-none disabled:opacity-40"
+                  className="flex-1 min-w-0 rounded-md border border-editorial-border bg-editorial-bg px-2 py-1.5 text-xs font-mono outline-none focus:border-editorial-ink/40 appearance-none disabled:opacity-40"
                   aria-label={t('pipeline.stageModelLabel')}
                 >
                   {availableModels.length === 0 ? (
