@@ -84,7 +84,7 @@ export function Header() {
           </div>
         </div>
 
-        {currentProjectId ? <ShellNavFooter variant="header" /> : null}
+        {activeWorkspace ? <ShellNavFooter variant="header" /> : null}
       </div>
 
       {helpLoaded.current && (

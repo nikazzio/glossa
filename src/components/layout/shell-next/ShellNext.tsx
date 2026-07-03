@@ -5,6 +5,7 @@ import { ProjectRailNext, type ProjectRailNextProps } from './ProjectRailNext';
 import { ProjectInspectorNext } from './ProjectInspectorNext';
 import { AppStatusBar } from '../AppStatusBar';
 import { PANEL_FLEX_TRANSITION_CLASS } from '../motion';
+import { resetStrayResizeCursor } from './resetStrayResizeCursor';
 
 /**
  * Shell nuova (#291) — split principale del progetto in modalità documento.
@@ -89,6 +90,9 @@ export function ShellNext({
       if (railContentSwapTimer.current !== null) {
         window.clearTimeout(railContentSwapTimer.current);
       }
+      // Se il Group si smonta mentre un Separator era in hover/drag, la libreria
+      // lascia un cursore *, *:hover {cursor: X !important} bloccato su tutta l'app.
+      resetStrayResizeCursor();
     };
   }, []);
 

@@ -1,8 +1,9 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { initLogger } from './utils/logger';
-import { Header, PipelineSidebar } from './components/layout';
+import { Header } from './components/layout';
 import { ShellNext } from './components/layout/shell-next/ShellNext';
+import { WorkspaceShellNext } from './components/layout/shell-next/WorkspaceShellNext';
 import { AppStatusBar } from './components/layout/AppStatusBar';
 import { ErrorBoundary, ConfirmDialog, PreflightDialog, RunResumeBanner } from './components/common';
 import { motion } from 'motion/react';
@@ -10,7 +11,7 @@ import { usePipeline } from './hooks/usePipeline';
 import { useProjectAutosave } from './hooks/useProjectAutosave';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useUiStore } from './stores/uiStore';
-import type { UiFont, DocumentFontSize, DocumentLineHeight, ColorScheme } from './stores/uiStore';
+import type { UiFont, DocumentLineHeight, ColorScheme } from './stores/uiStore';
 import { DOC_FONT_SIZE_CSS } from './stores/uiStore';
 import { useConfigStore } from './stores/configStore';
 import { useProjectStore } from './stores/projectStore';
@@ -353,6 +354,7 @@ function EditorView() {
             <ShellNext
               onRunPipeline={runPipeline}
               onCancelPipeline={cancelPipeline}
+              onDryRun={runDryRun}
               onRetranslateChunk={handleRetranslateChunk}
               onImportDocument={handleImportDocument}
               onReauditChunk={auditSingleChunk}
@@ -502,19 +504,20 @@ export default function App() {
         </div>
         {isWorkspaceHome ? (
           <div className="flex flex-1 min-h-0">
-            <PipelineSidebar mode="dashboard" />
-            <div className="relative flex min-w-0 flex-1">
-              {activeWorkspaceArea === 'translations' ? (
-                <TranslationsArea />
-              ) : (
-                <WorkspaceHome />
-              )}
-              <PanelTransitionVeil
-                panelKey={activeWorkspaceArea === 'translations' ? 'area-translations' : `workspace-home-${activeWorkspace?.id ?? 'none'}`}
-                tone="paper"
-                variant="workspace"
-              />
-            </div>
+            <WorkspaceShellNext>
+              <div className="relative flex min-w-0 flex-1">
+                {activeWorkspaceArea === 'translations' ? (
+                  <TranslationsArea />
+                ) : (
+                  <WorkspaceHome />
+                )}
+                <PanelTransitionVeil
+                  panelKey={activeWorkspaceArea === 'translations' ? 'area-translations' : `workspace-home-${activeWorkspace?.id ?? 'none'}`}
+                  tone="paper"
+                  variant="workspace"
+                />
+              </div>
+            </WorkspaceShellNext>
           </div>
         ) : (
           <div className="flex min-h-0 flex-1 flex-col">
