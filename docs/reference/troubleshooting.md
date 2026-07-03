@@ -12,6 +12,12 @@ Questa pagina copre i problemi più comuni che puoi incontrare durante setup o r
 - Rilancia `npm run tauri:dev`
 - Su Linux installa i pacchetti di sistema Tauri elencati nel `README.md` principale
 
+## L'app si apre ma mostra un errore di connessione
+
+- Il dev server usa la porta dedicata `48123`; se un altro processo la occupa già, Vite si ferma con un errore leggibile invece di aprire una finestra rotta
+- Se il messaggio riguarda una porta diversa da 48123, sovrascrivi la porta con `GLOSSA_DEV_PORT=9999 npm run tauri:dev`
+- Questo riguarda solo lo sviluppo da sorgente: l'app installata (`.deb`/`.AppImage`/`.msi`/`.dmg`) non usa un dev server e non è soggetta a questo problema
+
 ## Un provider non parte
 
 - Controlla che l'API key esista in Settings

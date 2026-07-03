@@ -1,7 +1,7 @@
 # Glossa — Architecture Reference (Claude-optimized)
 
-> Aggiorna questo file ogni volta che cambia un flusso architetturale, uno store, un comando Tauri, o lo schema DB.
-> Non descrivere *cosa* fa il codice (già nei nomi) — documenta *come si connette* e *perché* certi pattern esistono.
+> Aggiorna file ogni volta cambia flusso architetturale, store, comando Tauri, o schema DB.
+> Non descrivere *cosa* fa codice (già nei nomi) — documenta *come si connette* e *perché* certi pattern esistono.
 
 ---
 
@@ -17,6 +17,17 @@
 
 ---
 
+## Dev server (porta)
+
+devUrl Tauri (`src-tauri/tauri.conf.json`) e porta Vite (`package.json` → `dev`) devono sempre puntare stessa porta: se divergono, webview naviga verso servizio diverso da atteso, mostra errore connessione generico invece errore chiaro.
+
+- Porta default: `48123` (scelta non comune, evita collisione altri progetti locali su 3000/5173/ecc.)
+- `--strictPort` su Vite: porta occupata → comando fallisce subito errore leggibile, no scivolamento silenzioso altra porta
+- Override: `GLOSSA_DEV_PORT=9999 npm run tauri:dev` — variabile letta sia da Vite (`package.json`) sia da `scripts/tauri-dev.sh`, che inietta stesso valore in `devUrl` Tauri via `tauri dev --config`
+- Meccanismo esiste solo in sviluppo: build produzione (`npm run tauri:build`) carica `frontendDist` diretto, no dev server né porta coinvolti
+
+---
+
 ## Store Zustand
 
 | File | Stato chiave | Note |
@@ -28,11 +39,11 @@
 | `stores/phraseMemoryStore.ts` | matchesByChunk, enabledMatchIds, jobStatus, searchStatus | Match Phrase Memory per chunk; match trovati read-only finché non selezionati |
 | `stores/operationLogStore.ts` | entries[], currentProjectId | Max 2000 in-memory, resto in DB |
 | `stores/annotationsStore.ts` | annotationsByChunkId Map<chunkId, Annotation[]> | CRUD annotations per chunk; load/add/update/delete con persistenza SQLite immediata |
-| `stores/uiStore.ts` | selectedChunkId, highlightsEnabled, highlightColors, uiFont, searchQuery, activePanel, showInsightPanel, chunkRailTab, showConsoleDrawer, showSettings/Help/ConfigDrawer | UI-only state. highlightsEnabled + highlightColors + uiFont persisted (`glossa-ui-prefs` v14). activePanel enum sincronizzato con i boolean panel. `uiFont` ('jakarta'\|'geist'\|'inter'\|'plex') → `FontSync` (`App.tsx`) fa override runtime di `--font-sans` su `:root`, come `HighlightColorSync` per i colori. `showInsightPanel` (#296) sostituisce `showDocumentDrawer \|\| showChunkDrawer` come driver di apertura `ProjectInspectorNext`. `chunkRailTab` (`ChunkRailTab = 'audit'\|'notes'\|'memory'`) seleziona la scheda di `ChunkInspectorPanel`, ora annidato nella rail sinistra. `showConsoleDrawer` apre/chiude il drawer Operazioni sopra `AppStatusBar`. `chunkDrawerTab`/`showChunkDrawer` mantenuti come legacy per la dashboard (pre-#291). |
-| `stores/configStore.ts` | pipelineMode, pipelineTestChunkCount, ollamaStatus, ollamaModels, ollamaBaseUrl, newPipelineInit, maxPipelines, chunkPresetShort/Medium/Long, workMode | Config app. pipelineTestChunkCount, ollamaBaseUrl, newPipelineInit, maxPipelines, chunkPreset* persisted. ollamaStatus/Models transient. `workMode` (#296, `WorkMode = 'chunk'\|'all'`, default `'chunk'`) governa il ramo `playFirst` di `PipelineSidebarRunSection`: `'chunk'` mostra § N + "Traduci chunk", `'all'` mostra Esegui tutto/Stop + progresso X/Y. Resettato a `'chunk'` da `ConfigDrawer.handleResetAll`; letto da `useKeyboardShortcuts` per instradare `Ctrl+Enter`. |
-| `stores/libraryStore.ts` | glossaries[], loadedForWorkspaceId, isLoaded | Glossari filtrati per workspace attivo. `loadGlossaries(workspaceId)` e `reloadGlossaries(workspaceId)` accettano `string\|null`; skip se già caricato per lo stesso workspace. |
+| `stores/uiStore.ts` | selectedChunkId, highlightsEnabled, highlightColors, uiFont, searchQuery, activePanel, showInsightPanel, chunkRailTab, showConsoleDrawer, showSettings/Help/ConfigDrawer | UI-only state. highlightsEnabled + highlightColors + uiFont persisted (`glossa-ui-prefs` v14). activePanel enum sincronizzato coi boolean panel. `uiFont` ('jakarta'\|'geist'\|'inter'\|'plex') → `FontSync` (`App.tsx`) override runtime `--font-sans` su `:root`, come `HighlightColorSync` per colori. `showInsightPanel` (#296) sostituisce `showDocumentDrawer \|\| showChunkDrawer` come driver apertura `ProjectInspectorNext`. `chunkRailTab` (`ChunkRailTab = 'audit'\|'notes'\|'memory'`) seleziona scheda `ChunkInspectorPanel`, ora annidato in rail sinistra. `showConsoleDrawer` apre/chiude drawer Operazioni sopra `AppStatusBar`. `chunkDrawerTab`/`showChunkDrawer` restano legacy per dashboard (pre-#291). |
+| `stores/configStore.ts` | pipelineMode, pipelineTestChunkCount, ollamaStatus, ollamaModels, ollamaBaseUrl, newPipelineInit, maxPipelines, chunkPresetShort/Medium/Long, workMode | Config app. pipelineTestChunkCount, ollamaBaseUrl, newPipelineInit, maxPipelines, chunkPreset* persisted. ollamaStatus/Models transient. `workMode` (#296, `WorkMode = 'chunk'\|'all'`, default `'chunk'`) governa ramo `playFirst` di `PipelineSidebarRunSection`: `'chunk'` mostra § N + "Traduci chunk", `'all'` mostra Esegui tutto/Stop + progresso X/Y. Reset a `'chunk'` da `ConfigDrawer.handleResetAll`; letto da `useKeyboardShortcuts` per instradare `Ctrl+Enter`. |
+| `stores/libraryStore.ts` | glossaries[], loadedForWorkspaceId, isLoaded | Glossari filtrati per workspace attivo. `loadGlossaries(workspaceId)` e `reloadGlossaries(workspaceId)` accettano `string\|null`; skip se già caricato stesso workspace. |
 | `stores/promptTemplateStore.ts` | templates[], selectedTemplate | — |
-| `stores/customProviderStore.ts` | profiles: CustomProviderProfile[] | Lista profili endpoint custom; caricata da DB on demand (Settings + StageCard). Non persistita in LocalStorage — source of truth è SQLite. |
+| `stores/customProviderStore.ts` | profiles: CustomProviderProfile[] | Lista profili endpoint custom; caricata da DB on demand (Settings + StageCard). Non persistita LocalStorage — source of truth SQLite. |
 
 ---
 
@@ -42,11 +53,11 @@
 |---|---|
 | `hooks/usePipeline.ts` | **Engine principale** — runPipeline, runSingleChunk, auditSingleChunk, cancelPipeline. 3 blocchi blob assembler duplicati (refactor pendente). |
 
-> **INVARIANTE — non toccare senza motivo esplicito**: Ollama usa `runStageStream` (streaming). Tutti gli altri provider (OpenAI, Anthropic, Gemini, DeepSeek) usano `runStage` (non-streaming). Questa separazione è intenzionale: i cloud provider hanno timeout e gestione errori diversi. Non "uniformare" i due path.
+> **INVARIANTE — non toccare senza motivo esplicito**: Ollama usa `runStageStream` (streaming). Tutti altri provider (OpenAI, Anthropic, Gemini, DeepSeek) usano `runStage` (non-streaming). Separazione intenzionale: cloud provider hanno timeout e gestione errori diversi. Non "uniformare" i due path.
 | `hooks/useProjectAutosave.ts` | Autosave con debounce |
 | `hooks/useChunkWatchdog.ts` | Timeout detection per chunk inattivi |
 
-> **INVARIANTE — `utils/costEstimate.ts` (corretto 2026-07-02)**: `executePipelineForChunk` e `runCoherenceAudit` girano **una chiamata reale per chunk** (loop `for (const chunk of liveChunks)`), non un'unica chiamata sull'intero documento. `estimatePipelineCost` somma i token di contenuto sull'intero documento (corretto, il contenuto non si duplica) ma moltiplica il costo fisso del prompt di sistema per `chunks.length` — se si cambia questa funzione, non tornare a "un prompt pagato una volta sola", altrimenti il preventivo torna a sottostimare drasticamente i documenti con molti chunk. La passata di coerenza (`includeCoherence`) è **esclusa di default**: è un'azione separata dal pulsante "esegui", inclusa solo nel preventivo generale di `PipelineConfig` (badge nel pannello impostazioni pipeline), non nel badge accanto al pulsante di esecuzione in `PipelineSidebarRunSection`.
+> **INVARIANTE — `utils/costEstimate.ts` (corretto 2026-07-02)**: `executePipelineForChunk` e `runCoherenceAudit` girano **una chiamata reale per chunk** (loop `for (const chunk of liveChunks)`), non unica chiamata su intero documento. `estimatePipelineCost` somma token contenuto su intero documento (corretto, contenuto non si duplica) ma moltiplica costo fisso prompt sistema per `chunks.length` — se cambia funzione, non tornare a "prompt pagato una volta sola", altrimenti preventivo torna sottostimare drasticamente documenti con molti chunk. Passata coerenza (`includeCoherence`) **esclusa di default**: azione separata dal pulsante "esegui", inclusa solo nel preventivo generale di `PipelineConfig` (badge pannello impostazioni pipeline), non nel badge accanto pulsante esecuzione in `PipelineSidebarRunSection`.
 
 ---
 
@@ -59,7 +70,7 @@
 | `services/projectService.ts` | CRUD project, persistenza sorgente (path, metadata) |
 | `services/fileService.ts` | Import DOCX/PDF (estrazione testo), export bilingue/monolingua |
 | `services/dbService.ts` | SQLite wrapper: execute, select, executeTransaction, initDatabase, ensureColumn |
-| `services/customProviderService.ts` | Tauri invoke wrapper per i comandi custom provider (list, save, delete, test_connection) |
+| `services/customProviderService.ts` | Tauri invoke wrapper per comandi custom provider (list, save, delete, test_connection) |
 
 ---
 
@@ -67,40 +78,40 @@
 
 | Componente | Responsabilità |
 |---|---|
-| `components/document/DocumentView.tsx` | Layout principale documento con barra navigazione fissa in alto (`h-20`, allineata alle testate dei pannelli laterali): sinistra a due righe (indicatori stadi del frammento + minimap pallini frammenti), destra (frecce prev/next + contatore m/n). Due pannelli bianchi a filo (Originale/Candidata) con header titolo + separatore; controlli testo in menu unico a scomparsa (non barra sempre visibile) aperto da pulsante nell'header pagina. |
+| `components/document/DocumentView.tsx` | Layout principale documento con barra navigazione fissa in alto (`h-20`, allineata testate pannelli laterali): sinistra due righe (indicatori stadi frammento + minimap pallini frammenti), destra (frecce prev/next + contatore m/n). Due pannelli bianchi a filo (Originale/Candidata) con header titolo + separatore; controlli testo in menu unico a scomparsa (non barra sempre visibile) aperto da pulsante header pagina. |
 | `components/layout/shell-next/ShellNext.tsx` | Layout tre colonne shell nuova (#291): `ProjectRailNext` sinistra · documento centro · `ProjectInspectorNext` destra (solo Approfondimenti, #296). `inspectorOpen` guidato da `showInsightPanel` (era `showDocumentDrawer \|\| showChunkDrawer`). Collasso e larghezze persistiti su uiStore. |
-| `components/layout/shell-next/ProjectRailNext.tsx` | Redesign #296. Header fisso `h-20`: collassa (ChevronLeft/Right) + Libreria. Corpo scrollabile: selezione/config pipeline (`PipelineSidebarPipelinesSection`) + comandi run (`PipelineSidebarRunSection`) + `ChunkInspectorPanel` annidato (Audit/Note/Memoria). Bottom fisso `h-12`: Workspace / Impostazioni / Importa / Esporta. Collassata: azione primaria per `workMode` + le 4 icone bottom in colonna. Non riceve più `onDryRun`/`onRunAuditOnly`; riceve `onReauditChunk`. |
-| `components/layout/shell-next/ProjectInspectorNext.tsx` | Pannello destro collassabile: solo `DocumentInsightTabs` (schede Approfondimenti index/search/stats/glossary/coherence). Tab Frammento rimossa (#296) — il frammento vive ora in `ChunkInspectorPanel` dentro la rail sinistra. Header unico fisso `h-20` (icona + collassa con `PanelRightClose`/`PanelRightOpen`), speculare a `ProjectRailNext`; `DocumentInsightTabs` non ha più header/close proprio (rimosso il doppio header, #296). |
+| `components/layout/shell-next/ProjectRailNext.tsx` | Redesign #296. Header fisso `h-20`: collassa (ChevronLeft/Right) + Libreria. Corpo scrollabile: selezione/config pipeline (`PipelineSidebarPipelinesSection`) + comandi run (`PipelineSidebarRunSection`) + `ChunkInspectorPanel` annidato (Audit/Note/Memoria). Bottom fisso `h-12`: Workspace / Impostazioni / Importa / Esporta. Collassata: azione primaria per `workMode` + 4 icone bottom in colonna. Non riceve più `onDryRun`/`onRunAuditOnly`; riceve `onReauditChunk`. |
+| `components/layout/shell-next/ProjectInspectorNext.tsx` | Pannello destro collassabile: solo `DocumentInsightTabs` (schede Approfondimenti index/search/stats/glossary/coherence). Tab Frammento rimossa (#296) — frammento vive ora in `ChunkInspectorPanel` dentro rail sinistra. Header unico fisso `h-20` (icona + collassa con `PanelRightClose`/`PanelRightOpen`), speculare a `ProjectRailNext`; `DocumentInsightTabs` non ha più header/close proprio (rimosso doppio header, #296). |
 | `components/pipeline/ProductionStream.tsx` | Riga chunk — editor sorgente, risultati stage, judge issues, draft editor |
 | `components/pipeline/PipelineActions.tsx` | Run / Cancel / Audit buttons |
 | `components/pipeline/StageCard.tsx` | Visualizza singolo stage (token, retry info) |
-| `components/document/ConfigDrawer.tsx` | Finestra (Radix `Dialog`) config pipeline: mode, lingue, stage, persona, glossary. La variante drawer laterale legacy (`variant='drawer'`) è stata rimossa: nessun chiamante la usava più dopo la migrazione alla shell nuova (#291), restava solo `variant='modal'`. |
-| `components/layout/Header.tsx` | Solo breadcrumb navigazione (Glossa // workspace // progetto); non contiene più pulsanti d'azione |
-| `components/layout/AppStatusBar.tsx` | Barra di stato in basso. Shell nuova (#291), ridisegnata #296: sinistra solo pannello attivo (rimosso breadcrumb progetto/pipeline); centro `ChunkCenterStats` (§ N · X w · icona qualità reale via `qualityLabelKey` · stato, con tooltip su parole e qualità); destra console toggle (`Terminal`) + separatore + controlli vista documento + indicatore salvataggio. |
-| `components/layout/ConsoleDrawer` (in `AppStatusBar.tsx`) | Drawer Operazioni (`OperationsTab` embedded) aperto da `showConsoleDrawer`, posizionato `absolute bottom-full` sopra la status bar, altezza `h-64`. #296. |
-| `components/workspace/WorkspaceHome.tsx` | Hub workspace: titolo + pulsanti azione (Libreria, Nuovo progetto) in alto a destra; lista completa progetti in stile filesystem (colonne Nome / Modificato, senza limite); area cards; banner provider |
-| `components/workspace/WorkspaceWizard.tsx` | Primo avvio: crea il primo workspace reale |
-| `components/document/AnnotationContextMenu.tsx` | Menu contestuale (clic destro sul testo della traduzione) → «Aggiungi annotazione» con anchor pre-compilato |
-| `utils/annotationMarkdown.ts` | `composeAnnotatedMarkdown()` — compone vista GFM con marcatori `[^a1]` e definizioni a piè di pagina; non modifica il draft salvato |
+| `components/document/ConfigDrawer.tsx` | Finestra (Radix `Dialog`) config pipeline: mode, lingue, stage, persona, glossary. Variante drawer laterale legacy (`variant='drawer'`) rimossa: nessun chiamante la usava più dopo migrazione shell nuova (#291), restava solo `variant='modal'`. |
+| `components/layout/Header.tsx` | Solo breadcrumb navigazione (Glossa // workspace // progetto); non contiene più pulsanti azione |
+| `components/layout/AppStatusBar.tsx` | Barra stato basso. Shell nuova (#291), ridisegnata #296: sinistra solo pannello attivo (rimosso breadcrumb progetto/pipeline); centro `ChunkCenterStats` (§ N · X w · icona qualità reale via `qualityLabelKey` · stato, con tooltip su parole e qualità); destra console toggle (`Terminal`) + separatore + controlli vista documento + indicatore salvataggio. |
+| `components/layout/ConsoleDrawer` (in `AppStatusBar.tsx`) | Drawer Operazioni (`OperationsTab` embedded) aperto da `showConsoleDrawer`, posizionato `absolute bottom-full` sopra status bar, altezza `h-64`. #296. |
+| `components/workspace/WorkspaceHome.tsx` | Hub workspace: titolo + pulsanti azione (Libreria, Nuovo progetto) alto destra; lista completa progetti stile filesystem (colonne Nome / Modificato, senza limite); area cards; banner provider |
+| `components/workspace/WorkspaceWizard.tsx` | Primo avvio: crea primo workspace reale |
+| `components/document/AnnotationContextMenu.tsx` | Menu contestuale (clic destro su testo traduzione) → «Aggiungi annotazione» con anchor pre-compilato |
+| `utils/annotationMarkdown.ts` | `composeAnnotatedMarkdown()` — compone vista GFM con marcatori `[^a1]` e definizioni piè pagina; non modifica draft salvato |
 
 ### Primitive overlay (Radix UI)
 
-Le finestre modali, i tooltip e i menu poggiano su **Radix UI** (`@radix-ui/react-dialog`, `react-alert-dialog`, `react-tooltip`, `react-dropdown-menu`). Comportamento (focus trap, Escape, scroll-lock, portale, ARIA, navigazione tastiera) delegato alla libreria — non si reimplementa a mano.
+Finestre modali, tooltip, menu poggiano su **Radix UI** (`@radix-ui/react-dialog`, `react-alert-dialog`, `react-tooltip`, `react-dropdown-menu`). Comportamento (focus trap, Escape, scroll-lock, portale, ARIA, navigazione tastiera) delegato a libreria — non si reimplementa a mano.
 
 | Primitiva (`components/ui/`) | Uso |
 |---|---|
-| `Dialog` | Finestra modale generica (chrome editoriale, X in alto a destra). z-index `z-[200]`. |
+| `Dialog` | Finestra modale generica (chrome editoriale, X alto destra). z-index `z-[200]`. |
 | `AlertDialog` | Conferme (azione + annulla); `tone="danger"` per azioni distruttive. |
 | `DialogConfirmButton` / `DialogCancelButton` | Pulsanti footer uniformi (conferma inchiostro, annulla bordo). |
 | `Tooltip` | Tooltip editoriale su Radix (Provider interno, `z-[210]`). |
-| `Menu` | Menu contestuale/a tendina su Radix DropdownMenu (ancora virtuale `anchorRect`). |
+| `Menu` | Menu contestuale/tendina su Radix DropdownMenu (ancora virtuale `anchorRect`). |
 | `IconButton` | Pulsante icona con tipp. CVA: size (`xs`/`sm`/`md`/`lg`), tone (`default`/`accent`/`success`/`charcoal`/`muted`/`running`). **Shell nuova (#291)**: taglia `xs` (`p-1`) per barre compatte (AppStatusBar). |
 
-> **Stato 2026-07-03:** `EditorialModalShell` e `useFocusTrap` sono stati rimossi. `LibraryPanel`, `ProjectPanel`, `WorkspaceHome`, `TranslationsArea` e `DashboardSidebar` usano `Dialog`; le conferme usano `AlertDialog`.
+> **Stato 2026-07-03:** `EditorialModalShell` e `useFocusTrap` rimossi. `LibraryPanel`, `ProjectPanel`, `WorkspaceHome`, `TranslationsArea` e `DashboardSidebar` usano `Dialog`; conferme usano `AlertDialog`.
 
-> **Audit modali pipeline (2026-07-03):** `ImportPreviewDialog` e `ExportDialog`/`StageTraceDialog`/`ExtractTermDialog`/`PreflightDialog`/`ConfirmDialog` sono tutti allineati al chrome di `Dialog`/`AlertDialog` (stesso overlay `bg-editorial-ink/30 backdrop-blur-sm`, stesso `max-h-[90vh]`). `ImportPreviewDialog` costruisce il proprio `RadixDialog.Content` invece di usare il wrapper `Dialog` perché l'header multi-riga (nome file, toggle vista, statistiche, preset, lingue/modello) non entra negli slot generici del wrapper — le classi overlay/contenuto sono tenute manualmente identiche a `Dialog` per coerenza visiva. Lo stile interno delle modali evita card arrotondate: sezioni piatte con `border-y`, barre laterali tonali e prompt ad alta leggibilità.
+> **Audit modali pipeline (2026-07-03):** `ImportPreviewDialog` e `ExportDialog`/`StageTraceDialog`/`ExtractTermDialog`/`PreflightDialog`/`ConfirmDialog` tutti allineati chrome `Dialog`/`AlertDialog` (stesso overlay `bg-editorial-ink/30 backdrop-blur-sm`, stesso `max-h-[90vh]`). `ImportPreviewDialog` costruisce proprio `RadixDialog.Content` invece usare wrapper `Dialog` perché header multi-riga (nome file, toggle vista, statistiche, preset, lingue/modello) non entra negli slot generici wrapper — classi overlay/contenuto tenute manualmente identiche a `Dialog` per coerenza visiva. Stile interno modali evita card arrotondate: sezioni piatte con `border-y`, barre laterali tonali e prompt alta leggibilità.
 
-Il popover del badge costi nella sidebar (`SidebarCostPanel` in `PipelineSidebarRunSection.tsx`) è un pannello autonomo via `createPortal`, non basato su `EditorialModalShell` né su `Dialog`: resta popover non bloccante perché è un dettaglio contestuale al passaggio/focus, non una finestra di lavoro.
+Popover badge costi sidebar (`SidebarCostPanel` in `PipelineSidebarRunSection.tsx`) è pannello autonomo via `createPortal`, non basato su `EditorialModalShell` né `Dialog`: resta popover non bloccante perché dettaglio contestuale al passaggio/focus, non finestra di lavoro.
 
 ---
 
@@ -111,36 +122,36 @@ Glossa 2.0 separa tre livelli:
 | Livello | Dove si configura | Cosa contiene |
 |---|---|---|
 | App | `SettingsModal` | Provider/API key, Ollama, segmentazione default, layout, backup/pricing |
-| Workspace traduzioni | `WorkspaceHome` | Progetti di traduzione, modello embedding, extractor Phrase Memory, memoria condivisa |
+| Workspace traduzioni | `WorkspaceHome` | Progetti traduzione, modello embedding, extractor Phrase Memory, memoria condivisa |
 | Pipeline/progetto | `ConfigDrawer` | Lingue, persona, stage, prompt, glossario assegnato, toggle/search Phrase Memory |
 
-Il workspace attuale è specifico per l'area **Traduzioni**. Biblioteca e Trascrizioni sono future macro-aree separate; non devono condividere implicitamente la Phrase Memory delle traduzioni.
+Workspace attuale specifico per area **Traduzioni**. Biblioteca e Trascrizioni future macro-aree separate; non devono condividere implicitamente Phrase Memory delle traduzioni.
 
 ### Shell UI — Layout Progetto
 
-Layout a tre colonne (#291, rail ridisegnata #296) — `ShellNext` con `react-resizable-panels`:
-- **Colonna sinistra (`ProjectRailNext`)**: header fisso `h-20` (collassa + Libreria) · corpo scrollabile con selezione/config pipeline, comandi run (switch Chunk/Tutto + azione primaria icon-only, guidati da `configStore.workMode`) e `ChunkInspectorPanel` annidato (tab Audit/Note/Memoria, scroll confinato al contenuto tab) · bottom fisso `h-12` (Workspace/Impostazioni/Importa/Esporta). Collassata: stesse 4 icone in colonna + azione primaria pipeline. Larghezze (default 240px, collassato 64px, min 180px, max 320px) e stato collapse sincronizzati con `uiStore.projectSidebarWidth` e `useUiStore.projectContextCollapsed`. L'azione primaria (Traduci chunk / Esegui tutto) porta un badge preventivo costi opzionale (`SidebarCostPanel`, visibile solo se `estimatePipelineCost` produce almeno uno stage con prezzo noto): in `workMode='chunk'` stima il solo chunk selezionato, in `workMode='all'` l'intera pipeline (2026-07-02, era un badge unico non distinto per scope).
-- **Colonna centro**: Vista documento (`DocumentView`) — barra navigazione fissa in alto (h-24, indicatori stadi + minimap frammenti a sinistra, token/costo del frammento corrente a destra); i controlli frammento precedente/successivo sono stati spostati nella testata della rail sinistra (#296), non più nella testata centrale. Minimap: pallino "sei qui" segnalato da una freccetta sotto (non più da dimensione/anello, per non sovrapporsi al colore di stato); la riga si centra da sola sul frammento corrente ad ogni cambio. Token/costo somma tutti gli stage/passaggi del frammento, senza indicare un modello (la pipeline può usarne più di uno). Due pannelli bianchi a filo (Originale/Candidata).
-- **Colonna destra (`ProjectInspectorNext`)**: Pannello collapsabile, solo schede Approfondimenti (index/search/stats/coherence/glossary). Tab Frammento rimossa (#296): il frammento vive in `ChunkInspectorPanel` nella rail sinistra. Aperto quando `showInsightPanel` è `true`. Larghezze (default 430px, min 300px, max 620px, collassato 56px) sincronizzate con `uiStore.projectFlyoutWidth`.
+Layout tre colonne (#291, rail ridisegnata #296) — `ShellNext` con `react-resizable-panels`:
+- **Colonna sinistra (`ProjectRailNext`)**: header fisso `h-20` (collassa + Libreria) · corpo scrollabile con selezione/config pipeline, comandi run (switch Chunk/Tutto + azione primaria icon-only, guidati da `configStore.workMode`) e `ChunkInspectorPanel` annidato (tab Audit/Note/Memoria, scroll confinato al contenuto tab) · bottom fisso `h-12` (Workspace/Impostazioni/Importa/Esporta). Collassata: stesse 4 icone in colonna + azione primaria pipeline. Larghezze (default 240px, collassato 64px, min 180px, max 320px) e stato collapse sincronizzati con `uiStore.projectSidebarWidth` e `useUiStore.projectContextCollapsed`. Azione primaria (Traduci chunk / Esegui tutto) porta badge preventivo costi opzionale (`SidebarCostPanel`, visibile solo se `estimatePipelineCost` produce almeno uno stage con prezzo noto): in `workMode='chunk'` stima solo chunk selezionato, in `workMode='all'` intera pipeline (2026-07-02, era badge unico non distinto per scope).
+- **Colonna centro**: Vista documento (`DocumentView`) — barra navigazione fissa in alto (h-24, indicatori stadi + minimap frammenti sinistra, token/costo frammento corrente destra); controlli frammento precedente/successivo spostati in testata rail sinistra (#296), non più testata centrale. Minimap: pallino "sei qui" segnalato da freccetta sotto (non più da dimensione/anello, per non sovrapporsi colore stato); riga si centra da sola su frammento corrente ogni cambio. Token/costo somma tutti stage/passaggi del frammento, senza indicare modello (pipeline può usarne più di uno). Due pannelli bianchi a filo (Originale/Candidata).
+- **Colonna destra (`ProjectInspectorNext`)**: Pannello collapsabile, solo schede Approfondimenti (index/search/stats/coherence/glossary). Tab Frammento rimossa (#296): frammento vive in `ChunkInspectorPanel` in rail sinistra. Aperto quando `showInsightPanel` è `true`. Larghezze (default 430px, min 300px, max 620px, collassato 56px) sincronizzate con `uiStore.projectFlyoutWidth`.
 
-`uiStore.activeProjectPanel` (`run|pipeline|document|insight|chunk`) è la source-of-truth del rail. Il setter `setShowInsightPanel` (#296) sostituisce `setShowDocumentDrawer`/`setShowChunkDrawer` come driver di apertura del pannello destro; `chunkRailTab`/`setChunkRailTab` selezionano la scheda di `ChunkInspectorPanel` nella rail sinistra. `insight`/`chunk` non sono persistiti come pannello attivo (clamp a `run`).
+`uiStore.activeProjectPanel` (`run|pipeline|document|insight|chunk`) è source-of-truth del rail. Setter `setShowInsightPanel` (#296) sostituisce `setShowDocumentDrawer`/`setShowChunkDrawer` come driver apertura pannello destro; `chunkRailTab`/`setChunkRailTab` selezionano scheda `ChunkInspectorPanel` in rail sinistra. `insight`/`chunk` non persistiti come pannello attivo (clamp a `run`).
 
-**Dashboard:** schermata workspace-home con `PipelineSidebar` in modo dashboard + `WorkspaceHome` (componenti pre-#291; migrazione alla nuova shell rinviata a issue separata). È l'unico contesto in cui `PipelineSidebar` è ancora montato.
+**Dashboard:** schermata workspace-home con `PipelineSidebar` in modo dashboard + `WorkspaceHome` (componenti pre-#291; migrazione shell nuova rinviata issue separata). Unico contesto dove `PipelineSidebar` ancora montato.
 
-**Sandbox (`viewMode='sandbox'`, legacy, non raggiungibile da menu):** fallback di layout automatico — griglia `md:grid-cols-12` con `PipelineConfig`/`ProductionStream`/`AuditPanel` al posto di `ShellNext`. Non è una sezione con un suo pulsante: `EditorView` (`App.tsx`) sceglie questo ramo quando `uiStore.viewMode === 'sandbox'`, valore derivato in `projectStore.ts` al caricamento di un progetto **senza chunk generati** (testo importato senza chunking, o progetto salvato in quello stato). Congelata di proposito (vedi `CLAUDE.md`: "la UI sandbox si tocca solo per regressioni bloccanti"). Tracciata da issue #309 per verificare se il percorso "documento senza chunking" è ancora un caso d'uso reale prima di decidere se rimuoverla.
+**Sandbox (`viewMode='sandbox'`, legacy, non raggiungibile da menu):** fallback layout automatico — griglia `md:grid-cols-12` con `PipelineConfig`/`ProductionStream`/`AuditPanel` al posto `ShellNext`. Non sezione con suo pulsante: `EditorView` (`App.tsx`) sceglie ramo quando `uiStore.viewMode === 'sandbox'`, valore derivato in `projectStore.ts` al caricamento progetto **senza chunk generati** (testo importato senza chunking, o progetto salvato in stato). Congelata di proposito (vedi `CLAUDE.md`: "UI sandbox si tocca solo per regressioni bloccanti"). Tracciata da issue #309 per verificare se percorso "documento senza chunking" ancora caso d'uso reale prima decidere rimozione.
 
 #### Vista Documento
 
 `DocumentView` espone due pannelli **a filo** (flush) con layout interno:
-- **Barra navigazione** (altezza fissa `h-20`, allineata alle testate dei pannelli laterali):
-  - Colonna sinistra a due righe: indicatori di stato stadi del chunk corrente (riga 1), minimap pallini frammenti (riga 2).
+- **Barra navigazione** (altezza fissa `h-20`, allineata testate pannelli laterali):
+  - Colonna sinistra due righe: indicatori stato stadi chunk corrente (riga 1), minimap pallini frammenti (riga 2).
   - Colonna destra: frecce prev/next + contatore m/n centrati.
 - **Pannello Originale/Candidata**:
   - Header con titolo + separatore.
-  - `MarkdownEditor` con `flatToolbar={true}` (barra tools a filo, no arrotondamento/ombra) e `menuOpen` controllato da pulsante nell'header pagina.
-  - Menu testo unico a scomparsa (modalità scrittura/anteprima/dividi, dimensione, formattazione markdown, copia) aperto da pulsante nell'header pagina, in fila con i controlli gestione pagina (cerca, blocca, modifica sorgente, stadi, confronto).
-- **Controlli vista documento** (fuoco, scorrimento agganciato): spostati in `AppStatusBar` in basso, non più nella barra alto.
-- **Confronto stadi**: pulsante auto-attivante — porta il focus a sola-traduzione e accende il confronto. Mostra il precedente stage del chunk corrente a fianco della traduzione finale.
+  - `MarkdownEditor` con `flatToolbar={true}` (barra tools a filo, no arrotondamento/ombra) e `menuOpen` controllato da pulsante header pagina.
+  - Menu testo unico a scomparsa (modalità scrittura/anteprima/dividi, dimensione, formattazione markdown, copia) aperto da pulsante header pagina, in fila con controlli gestione pagina (cerca, blocca, modifica sorgente, stadi, confronto).
+- **Controlli vista documento** (fuoco, scorrimento agganciato): spostati in `AppStatusBar` in basso, non più barra alta.
+- **Confronto stadi**: pulsante auto-attivante — porta focus a sola-traduzione, accende confronto. Mostra precedente stage chunk corrente a fianco traduzione finale.
 
 Props nuove su `MarkdownEditor`:
 - `flatToolbar?: boolean` — toolbar a filo (no arrotondamento, coerente con pannelli flush).
@@ -182,11 +193,11 @@ usePipeline.runPipeline()
 
 ### DeepL Hybrid — bypass preflight
 
-Il provider `deepl` bypassa il preflight LLM e `llmService.runStage()`. In `usePipeline.ts → executePipelineForChunk`, il branch `provider === 'deepl'` chiama `deeplService.runDeeplStage()` → Tauri `run_deepl_stage` → HTTP POST `/v2/translate` verso l'API DeepL.
+Provider `deepl` bypassa preflight LLM e `llmService.runStage()`. In `usePipeline.ts → executePipelineForChunk`, branch `provider === 'deepl'` chiama `deeplService.runDeeplStage()` → Tauri `run_deepl_stage` → HTTP POST `/v2/translate` verso API DeepL.
 
 ---
 
-## Struttura del prompt (INVARIANTE — non modificare l'ordine)
+## Struttura del prompt (INVARIANTE — non modificare ordine)
 
 ```
 BLOCK 1 — statico, CACHEABLE
@@ -202,7 +213,7 @@ BLOCK 3 — stage instructions, NON CACHEABLE
   (varia per stage — è il blocco più piccolo)
 ```
 
-**Perché questo ordine:** Anthropic (breakpoint espliciti), OpenAI, Gemini (prefix caching automatico) cacheano il prefisso comune più lungo. Qualsiasi inversione spezza il caching e moltiplica i costi su documenti lunghi.
+**Perché quest'ordine:** Anthropic (breakpoint espliciti), OpenAI, Gemini (prefix caching automatico) cacheano prefisso comune più lungo. Qualsiasi inversione spezza caching, moltiplica costi su documenti lunghi.
 
 ---
 
@@ -216,8 +227,8 @@ BLOCK 3 — stage instructions, NON CACHEABLE
 | Judge | sorgente + traduzione | ❌ | ❌ | ❌ |
 | Coherence Audit | — | ❌ | ❌ | ✅ blob traduzioni |
 
-**Format è volutamente cieco:** non vede sorgente né blob. Previene retraduzione.
-**Coherence usa blob di traduzioni** (non sorgente): confronta coerenza terminologica tra chunk già tradotti.
+**Format volutamente cieco:** non vede sorgente né blob. Previene retraduzione.
+**Coherence usa blob traduzioni** (non sorgente): confronta coerenza terminologica tra chunk già tradotti.
 
 ---
 
@@ -311,12 +322,12 @@ Embedding solo su sourcePhrase
 vec_save_locked_phrases(..., confidence)
 ```
 
-Non esiste fallback locale: se extractor, JSON parsing o validazione falliscono, il chunk non salva coppie. Le coppie vecchie e i preset vengono purgati dal bump schema perché il formato precedente non è compatibile.
+No fallback locale: se extractor, JSON parsing o validazione falliscono, chunk non salva coppie. Coppie vecchie e preset purgati dal bump schema perché formato precedente non compatibile.
 
 **Ricerca memoria:**
-- Auto-search parte solo se `usePhraseMemory` è attivo e `autoSearchPhraseMemory !== false`.
-- Il tab Memory può sempre lanciare refresh manuale per il chunk corrente quando la memoria è abilitata.
-- La query embedding usa solo il testo sorgente del chunk; i match selezionati sono gli unici iniettati nel prompt di run/rerun.
+- Auto-search parte solo se `usePhraseMemory` attivo e `autoSearchPhraseMemory !== false`.
+- Tab Memory può sempre lanciare refresh manuale per chunk corrente quando memoria abilitata.
+- Query embedding usa solo testo sorgente del chunk; match selezionati sono unici iniettati nel prompt di run/rerun.
 
 ---
 
@@ -425,7 +436,7 @@ custom_providers
 }
 ```
 
-**Cache hit su OpenAI Responses API**: la Responses API non supporta prefix caching cross-call indipendenti senza `previous_response_id`. Per cache hit reali su gpt-5.x, considerare di passare al path Chat Completions (già usato da DeepSeek) con `prompt_cache_key` esplicito.
+**Cache hit su OpenAI Responses API**: Responses API non supporta prefix caching cross-call indipendenti senza `previous_response_id`. Per cache hit reali su gpt-5.x, considerare passaggio a path Chat Completions (già usato da DeepSeek) con `prompt_cache_key` esplicito.
 
 ---
 
@@ -434,8 +445,8 @@ custom_providers
 | Area | Descrizione | Priorità |
 |---|---|---|
 | `src-tauri/src/llm/providers/anthropic.rs` | Reasoning non supportato: nessun campo `thinking` nella request, parsing assume `content[0]` sia testo (corretto senza thinking). Per abilitare: aggiungere `"thinking": {"type":"enabled","budget_tokens":N}` + filtrare blocchi `"type":"thinking"` nel parsing. | alta |
-| `src-tauri/src/llm/providers/gemini.rs` | Reasoning parziale: `thinkingConfig.thinkingBudget` inviato se configurato, ma parsing usa `parts[0]` — se thinking attivo, `parts[0]` è il blocco thinking (campo `thought:true`), non il testo finale. Fix: cercare il primo part senza `thought:true`. | alta |
-| OpenAI gpt-5.x — prompt caching | Bug lato OpenAI: prefix caching non funziona in modo affidabile su tutta la famiglia gpt-5 (gpt-5, gpt-5-mini, gpt-5-nano, gpt-5.4). Su gpt-4o funziona al 100%. Thread community aperto da ott 2025, non risolto a gen 2026. Da monitorare; non fixabile lato Glossa. Ref: [community.openai.com/t/1359574](https://community.openai.com/t/caching-is-borked-for-gpt-5-models/1359574) | monitoraggio |
+| `src-tauri/src/llm/providers/gemini.rs` | Reasoning parziale: `thinkingConfig.thinkingBudget` inviato se configurato, ma parsing usa `parts[0]` — se thinking attivo, `parts[0]` è blocco thinking (campo `thought:true`), non testo finale. Fix: cercare primo part senza `thought:true`. | alta |
+| OpenAI gpt-5.x — prompt caching | Bug lato OpenAI: prefix caching non funziona in modo affidabile su tutta famiglia gpt-5 (gpt-5, gpt-5-mini, gpt-5-nano, gpt-5.4). Su gpt-4o funziona 100%. Thread community aperto da ott 2025, non risolto a gen 2026. Da monitorare; non fixabile lato Glossa. Ref: [community.openai.com/t/1359574](https://community.openai.com/t/caching-is-borked-for-gpt-5-models/1359574) | monitoraggio |
 
 ---
 
@@ -445,14 +456,14 @@ custom_providers
 
 ### Cache in-memoria delle API key
 
-`keystore.rs` mantiene una `HashMap<String, String>` statica (`API_KEY_CACHE`) che contiene le chiavi API in chiaro per la durata del processo, per evitare accessi ripetuti al keyring di sistema. Le chiavi rimangono nella heap del processo fino alla chiusura dell'app.
+`keystore.rs` mantiene `HashMap<String, String>` statica (`API_KEY_CACHE`) contenente chiavi API in chiaro per durata processo, evita accessi ripetuti al keyring sistema. Chiavi restano nella heap del processo fino chiusura app.
 
-**Implicazione**: un attaccante con accesso locale al sistema (malware, processo con privilegi equivalenti) può recuperare le chiavi da un memory dump del processo Glossa. Questo è accettabile nel modello di minaccia dichiarato (desktop single-user, nessun attaccante remoto), ma il comportamento va tenuto presente: non estendere la cache a token o credenziali con vita breve senza rivalutare il rischio.
+**Implicazione**: attaccante con accesso locale al sistema (malware, processo con privilegi equivalenti) può recuperare chiavi da memory dump processo Glossa. Accettabile nel modello minaccia dichiarato (desktop single-user, no attaccante remoto), ma comportamento va tenuto presente: non estendere cache a token o credenziali vita breve senza rivalutare rischio.
 
 ### Logging in release e RUST_LOG
 
-In release (`!debug_assertions`) il livello di log predefinito è `Info`. `RUST_LOG` viene letto a runtime (`lib.rs`) e può sovrascrivere questo default.
+In release (`!debug_assertions`) livello log predefinito è `Info`. `RUST_LOG` letto a runtime (`lib.rs`) può sovrascrivere questo default.
 
-**Implicazione**: impostare `RUST_LOG=debug` o `RUST_LOG=trace` su una build release espone log verbosi, inclusi dettagli delle richieste LLM (provider, modello, timing). Non vengono loggati contenuti di prompt o risposte, ma provider e metadati sì. In un contesto di supporto tecnico, chiedere sempre di verificare che `RUST_LOG` non sia impostato prima di condividere i log.
+**Implicazione**: impostare `RUST_LOG=debug` o `RUST_LOG=trace` su build release espone log verbosi, inclusi dettagli richieste LLM (provider, modello, timing). Non loggati contenuti prompt o risposte, ma provider e metadati sì. In contesto supporto tecnico, chiedere sempre verificare che `RUST_LOG` non sia impostato prima condividere log.
 
 *Ultimo aggiornamento: 2026-06-11 — branch security/issue-254-hardening*
