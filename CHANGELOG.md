@@ -1,5 +1,32 @@
 # Changelog
 
+## [1.1.0](https://github.com/nikazzio/glossa/compare/glossa-v1.0.0...glossa-v1.1.0) (2026-07-03)
+
+
+### ✨ Features
+
+* **#11:** dark mode — light/dark/system ([#278](https://github.com/nikazzio/glossa/issues/278)) ([4390ce8](https://github.com/nikazzio/glossa/commit/4390ce880bb56206258dabc1dddd6e0509ec3ef8))
+* **#13:** custom OpenAI-compatible provider profiles ([#284](https://github.com/nikazzio/glossa/issues/284)) ([d745c83](https://github.com/nikazzio/glossa/commit/d745c83200e9720508d4773caab867eb931c6cd3))
+* **#22:** workspace shell redesign — hub navigation, status bar, area views ([#282](https://github.com/nikazzio/glossa/issues/282)) ([caa5453](https://github.com/nikazzio/glossa/commit/caa5453a0794f0b92d9a4c427bfa7b5c7ae4063d))
+* **#283:** libreria workspace-scoped — glossari filtrati per workspace attivo ([#286](https://github.com/nikazzio/glossa/issues/286)) ([c5d35f1](https://github.com/nikazzio/glossa/commit/c5d35f16a593b221624e153cff3694b8ac3a00e5))
+* **#289:** migrazione UI a Radix — finestre, tooltip, menu ([#290](https://github.com/nikazzio/glossa/issues/290)) ([5cec1d1](https://github.com/nikazzio/glossa/commit/5cec1d1853859c59905efb0fcb9d04a0d65fe0e5))
+* **#291:** migrazione shell sinistra → shell nuova a tre colonne ([#293](https://github.com/nikazzio/glossa/issues/293)) ([88e842c](https://github.com/nikazzio/glossa/commit/88e842c5f74d77a235897d5dd936a546f11ff3f8))
+* **#295:** override runtime del colore accento da Impostazioni ([#306](https://github.com/nikazzio/glossa/issues/306)) ([49d8a82](https://github.com/nikazzio/glossa/commit/49d8a82400ef85a261418fbbf39a2fff8694febc))
+* **#68:** pipeline ibrida DeepL-first ([#288](https://github.com/nikazzio/glossa/issues/288)) ([af825b3](https://github.com/nikazzio/glossa/commit/af825b3e2f4414ae499c2fbebfc5e824f2cfc85f))
+* **v1.1:** Phase A — Core translator productivity ([#277](https://github.com/nikazzio/glossa/issues/277)) ([9b74b7f](https://github.com/nikazzio/glossa/commit/9b74b7f612dada3904917812503795cc79e4a9e3))
+
+
+### 🐛 Bug Fixes
+
+* **#301:** persistere le voci del Riepilogo/Operazioni generate prima del primo salvataggio ([#303](https://github.com/nikazzio/glossa/issues/303)) ([61248b0](https://github.com/nikazzio/glossa/commit/61248b0e9112dc7a8c430ed97a4f2e47ac79e560))
+* **#304:** scopare la cronologia Operazioni/statistiche per pipeline ([#305](https://github.com/nikazzio/glossa/issues/305)) ([4d938b1](https://github.com/nikazzio/glossa/commit/4d938b191c7c544dc655fe136514e13f0329a725))
+
+
+### ♻️ Refactoring
+
+* **#295:** estrae ContrastBadge condiviso e corregge chiavi i18n ([#307](https://github.com/nikazzio/glossa/issues/307)) ([826b424](https://github.com/nikazzio/glossa/commit/826b424ce6647fcd453e7e6c45a4248b0e169ab3))
+* **#302:** spezza PipelineSidebarSections.tsx in moduli per dominio ([#308](https://github.com/nikazzio/glossa/issues/308)) ([a2cb8c6](https://github.com/nikazzio/glossa/commit/a2cb8c683666a77369243c3af5b2294be94a60ac))
+
 ## [1.0.0](https://github.com/nikazzio/glossa/compare/glossa-v0.11.0...glossa-v1.0.0) (2026-06-14)
 
 
