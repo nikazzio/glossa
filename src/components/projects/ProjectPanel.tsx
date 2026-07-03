@@ -5,11 +5,9 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useProjectStore } from '../../stores/projectStore';
 import { useChunksStore } from '../../stores/chunksStore';
-import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { confirm } from '../../stores/confirmStore';
 import { relativeDateUnit, formatDateTime } from '../../utils';
-import { EditorialModalShell } from '../common';
-import { IconButton, PillButton, SectionLabel } from '../ui';
+import { Dialog, DialogCancelButton, IconButton, PillButton, SectionLabel } from '../ui';
 
 export function ProjectPanel() {
   const { t } = useTranslation();
@@ -35,7 +33,6 @@ export function ProjectPanel() {
     setNewName('');
     setOpeningProjectId(null);
   };
-  const trapRef = useFocusTrap(showProjectPanel, closePanel);
 
   useEffect(() => {
     if (showProjectPanel) loadProjects();
@@ -110,60 +107,38 @@ export function ProjectPanel() {
     : t('projects.title');
 
   return (
-    <AnimatePresence>
-      {showProjectPanel && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="project-title"
-          ref={trapRef}
-        >
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="absolute inset-0 bg-editorial-ink/45 backdrop-blur-sm"
-            onClick={closePanel}
-          />
-          <motion.div
-            initial={{ y: 14, scale: 0.985, opacity: 0 }}
-            animate={{ y: 0, scale: 1, opacity: 1 }}
-            exit={{ y: 10, scale: 0.99, opacity: 0 }}
-            transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-            className="relative w-full max-w-3xl"
+    <Dialog
+      open={showProjectPanel}
+      onOpenChange={(open) => {
+        if (!open) closePanel();
+      }}
+      title={modalTitle}
+      closeLabel={t('common.close')}
+      icon={<FolderOpen size={22} />}
+      widthClassName="max-w-3xl"
+      bodyClassName="px-5 py-5 md:px-6"
+      headerActions={
+        currentProjectId ? (
+          <IconButton
+            size="md"
+            onClick={handleSave}
+            title={t('projects.save')}
+            disabled={isProcessing}
           >
-            <EditorialModalShell
-              titleId="project-title"
-              title={modalTitle}
-              closeLabel={t('common.close')}
-              onClose={closePanel}
-              icon={<FolderOpen size={22} />}
-              widthClassName="max-w-3xl"
-              bodyClassName="px-5 py-5 md:px-6"
-              headerActions={
-                currentProjectId ? (
-                  <IconButton
-                    size="md"
-                    onClick={handleSave}
-                    title={t('projects.save')}
-                    disabled={isProcessing}
-                  >
-                    <Save size={14} />
-                  </IconButton>
-                ) : null
-              }
-              footer={
-                <div className="flex justify-end gap-2">
-                  <PillButton onClick={closePanel}>
-                    {t('common.close')}
-                  </PillButton>
-                </div>
-              }
-            >
+            <Save size={14} />
+          </IconButton>
+        ) : null
+      }
+      footer={
+        <div className="flex justify-end gap-2">
+          <DialogCancelButton onClick={closePanel}>
+            {t('common.close')}
+          </DialogCancelButton>
+        </div>
+      }
+    >
               <div className="space-y-5">
-                <section className="rounded-[24px] border border-editorial-border bg-editorial-paper/55 p-4">
+                <section className="border-y border-editorial-border/70 py-4">
                   <div className="flex items-center justify-between gap-3">
                     <SectionLabel icon={FolderOpen} label={t('projects.title')} />
                     <IconButton
@@ -184,10 +159,10 @@ export function ProjectPanel() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -4 }}
                         transition={{ duration: 0.18, ease: 'easeOut' }}
-                        className="mt-4 space-y-3 rounded-[20px] border border-editorial-border bg-editorial-textbox/25 px-4 py-4"
+                        className="mt-4 space-y-3 border-t border-editorial-border/60 pt-4"
                       >
                         <label className="block space-y-1.5">
-                          <span className="text-[10px] font-bold uppercase tracking-[0.28em] text-editorial-muted">
+                          <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">
                             {t('projects.create')}
                           </span>
                           <input
@@ -201,7 +176,7 @@ export function ProjectPanel() {
                               }
                             }}
                             placeholder={t('projects.namePlaceholder')}
-                            className="w-full rounded-[18px] border border-editorial-border bg-editorial-bg/80 px-4 py-3 text-sm text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                            className="w-full rounded-md border border-editorial-border bg-editorial-bg/80 px-4 py-3 text-sm text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                             autoFocus
                           />
                         </label>
@@ -229,7 +204,7 @@ export function ProjectPanel() {
 
                 <section className="space-y-3">
                   {projects.length === 0 && !creating ? (
-                    <p className="rounded-[22px] border border-dashed border-editorial-border bg-editorial-paper/45 px-4 py-8 text-center font-display text-xl italic text-editorial-muted">
+                    <p className="border-y border-dashed border-editorial-border/70 py-8 text-center font-display text-xl italic text-editorial-muted">
                       {t('projects.empty')}
                     </p>
                   ) : null}
@@ -248,10 +223,10 @@ export function ProjectPanel() {
                           y: isOpening ? -1 : 0,
                         }}
                         transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-                        className={`group flex items-center gap-3 rounded-[22px] border bg-editorial-paper/65 px-4 py-3.5 shadow-[var(--inset-highlight)] transition-colors ${
+                        className={`group flex items-center gap-3 border-b border-editorial-border/70 px-1 py-3.5 transition-colors ${
                           isOpening || project.id === currentProjectId
-                            ? 'border-editorial-accent/60 bg-editorial-accent/8'
-                            : 'border-editorial-border hover:border-editorial-accent/40 hover:bg-editorial-paper'
+                            ? 'text-editorial-accent'
+                            : 'hover:text-editorial-accent'
                         }`}
                       >
                         <button
@@ -300,10 +275,6 @@ export function ProjectPanel() {
                   })}
                 </section>
               </div>
-            </EditorialModalShell>
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
+    </Dialog>
   );
 }

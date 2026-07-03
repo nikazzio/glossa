@@ -9,7 +9,6 @@ import {
   Settings2,
   Trash2,
 } from 'lucide-react';
-import { AnimatePresence, motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useProjectStore } from '../../stores/projectStore';
@@ -18,10 +17,8 @@ import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useLibraryStore } from '../../stores/libraryStore';
 import { WorkspaceSettingsModal } from '../workspace/WorkspaceSettingsModal';
 import { confirm } from '../../stores/confirmStore';
-import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
-import { EditorialModalShell } from '../common';
-import { IconButton, PillButton, SectionLabel } from '../ui';
+import { Dialog, DialogCancelButton, DialogConfirmButton, IconButton, PillButton, SectionLabel } from '../ui';
 import type { WorkspaceArea } from '../../stores/uiStore';
 
 const AREA_ICONS: Record<WorkspaceArea, React.ComponentType<{ size?: number }>> = {
@@ -44,10 +41,10 @@ export function WorkspaceHome() {
   const [creatingProject, setCreatingProject] = useState(false);
   const [showWorkspaceSettings, setShowWorkspaceSettings] = useState(false);
 
-  const createProjectDialogRef = useFocusTrap(showNewProjectForm, () => {
+  const closeNewProjectForm = () => {
     setShowNewProjectForm(false);
     setNewProjectName('');
-  });
+  };
 
   useEffect(() => { void loadProjects(); }, [activeWorkspace?.id, loadProjects]);
 
@@ -264,71 +261,48 @@ export function WorkspaceHome() {
         </section>
       </div>
 
-      {/* New project dialog */}
-      <AnimatePresence>
-        {showNewProjectForm ? (
-          <div
-            ref={createProjectDialogRef}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            role="dialog" aria-modal="true" aria-labelledby="create-project-title"
-          >
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-editorial-ink/35 backdrop-blur-sm"
-              onClick={() => { setShowNewProjectForm(false); setNewProjectName(''); }}
-            />
-            <motion.div
-              initial={{ opacity: 0, y: 10, scale: 0.985 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 8, scale: 0.99 }}
-              transition={{ duration: 0.18, ease: 'easeOut' }}
-              className="relative w-full max-w-lg"
+      <Dialog
+        open={showNewProjectForm}
+        onOpenChange={(open) => {
+          if (!open) closeNewProjectForm();
+        }}
+        title={t('projects.create')}
+        eyebrow={activeWorkspace?.name ?? t('workspace.noActive')}
+        closeLabel={t('common.cancel')}
+        icon={<BookOpenText size={22} />}
+        widthClassName="max-w-lg"
+        bodyClassName="px-6 py-6 md:px-8"
+        footer={
+          <div className="flex justify-end gap-2">
+            <DialogCancelButton onClick={closeNewProjectForm}>
+              {t('common.cancel')}
+            </DialogCancelButton>
+            <DialogConfirmButton
+              onClick={() => void handleCreateProject()}
+              disabled={!newProjectName.trim() || creatingProject}
             >
-              <EditorialModalShell
-                titleId="create-project-title"
-                title={t('projects.create')}
-                eyebrow={activeWorkspace?.name ?? t('workspace.noActive')}
-                closeLabel={t('common.cancel')}
-                onClose={() => { setShowNewProjectForm(false); setNewProjectName(''); }}
-                icon={<BookOpenText size={22} />}
-                widthClassName="max-w-lg"
-                bodyClassName="px-6 py-6 md:px-8"
-                footer={
-                  <div className="flex justify-end gap-2">
-                    <PillButton onClick={() => { setShowNewProjectForm(false); setNewProjectName(''); }}>
-                      {t('common.cancel')}
-                    </PillButton>
-                    <PillButton
-                      variant="accent"
-                      onClick={() => void handleCreateProject()}
-                      disabled={!newProjectName.trim() || creatingProject}
-                    >
-                      {creatingProject ? t('workspace.saving') : t('projects.create')}
-                    </PillButton>
-                  </div>
-                }
-              >
-                <label className="block space-y-1.5">
-                  <span className="text-xs font-bold uppercase tracking-[0.1em] text-editorial-muted">
-                    {t('workspace.newBookCard')}
-                  </span>
-                  <input
-                    value={newProjectName}
-                    onChange={(e) => setNewProjectName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') void handleCreateProject();
-                      if (e.key === 'Escape') { setShowNewProjectForm(false); setNewProjectName(''); }
-                    }}
-                    placeholder={t('projects.namePlaceholder')}
-                    className="w-full rounded-[18px] border border-editorial-border bg-editorial-textbox/30 px-4 py-3 text-sm text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                    autoFocus
-                  />
-                </label>
-              </EditorialModalShell>
-            </motion.div>
+              {creatingProject ? t('workspace.saving') : t('projects.create')}
+            </DialogConfirmButton>
           </div>
-        ) : null}
-      </AnimatePresence>
+        }
+      >
+        <label className="block space-y-1.5">
+          <span className="text-xs font-bold uppercase tracking-[0.1em] text-editorial-muted">
+            {t('workspace.newBookCard')}
+          </span>
+          <input
+            value={newProjectName}
+            onChange={(e) => setNewProjectName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') void handleCreateProject();
+              if (e.key === 'Escape') closeNewProjectForm();
+            }}
+            placeholder={t('projects.namePlaceholder')}
+            className="w-full rounded-md border border-editorial-border bg-editorial-textbox/30 px-4 py-3 text-sm text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            autoFocus
+          />
+        </label>
+      </Dialog>
       <WorkspaceSettingsModal open={showWorkspaceSettings} onClose={() => setShowWorkspaceSettings(false)} />
     </main>
   );

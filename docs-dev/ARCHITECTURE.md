@@ -96,11 +96,11 @@ Le finestre modali, i tooltip e i menu poggiano su **Radix UI** (`@radix-ui/reac
 | `Menu` | Menu contestuale/a tendina su Radix DropdownMenu (ancora virtuale `anchorRect`). |
 | `IconButton` | Pulsante icona con tipp. CVA: size (`xs`/`sm`/`md`/`lg`), tone (`default`/`accent`/`success`/`charcoal`/`muted`/`running`). **Shell nuova (#291)**: taglia `xs` (`p-1`) per barre compatte (AppStatusBar). |
 
-> **Pendente (issue shell):** `EditorialModalShell` e `useFocusTrap` sono ancora usati dai pannelli shell (`LibraryPanel`, `ProjectPanel`, `WorkspaceHome`, `TranslationsArea`, `DashboardSidebar`). Verranno rimossi quando la dashboard/workspace-home migrerà alla shell nuova (issue separata, vedi sezione Dashboard sotto).
+> **Stato 2026-07-03:** `EditorialModalShell` e `useFocusTrap` sono stati rimossi. `LibraryPanel`, `ProjectPanel`, `WorkspaceHome`, `TranslationsArea` e `DashboardSidebar` usano `Dialog`; le conferme usano `AlertDialog`.
 
-> **Audit modali pipeline (2026-07-02):** `ImportPreviewDialog` e `ExportDialog`/`StageTraceDialog`/`ExtractTermDialog`/`PreflightDialog`/`ConfirmDialog` sono tutti allineati al chrome di `Dialog`/`AlertDialog` (stesso overlay `bg-editorial-ink/30 backdrop-blur-sm`, stesso `max-h-[90vh]`). `ImportPreviewDialog` costruisce il proprio `RadixDialog.Content` invece di usare il wrapper `Dialog` perché l'header multi-riga (nome file, toggle vista, statistiche, preset, lingue/modello) non entra negli slot generici del wrapper — le classi overlay/contenuto sono tenute manualmente identiche a `Dialog` per coerenza visiva.
+> **Audit modali pipeline (2026-07-03):** `ImportPreviewDialog` e `ExportDialog`/`StageTraceDialog`/`ExtractTermDialog`/`PreflightDialog`/`ConfirmDialog` sono tutti allineati al chrome di `Dialog`/`AlertDialog` (stesso overlay `bg-editorial-ink/30 backdrop-blur-sm`, stesso `max-h-[90vh]`). `ImportPreviewDialog` costruisce il proprio `RadixDialog.Content` invece di usare il wrapper `Dialog` perché l'header multi-riga (nome file, toggle vista, statistiche, preset, lingue/modello) non entra negli slot generici del wrapper — le classi overlay/contenuto sono tenute manualmente identiche a `Dialog` per coerenza visiva. Lo stile interno delle modali evita card arrotondate: sezioni piatte con `border-y`, barre laterali tonali e prompt ad alta leggibilità.
 
-Il popover del badge costi nella sidebar (`SidebarCostPanel` in `PipelineSidebarRunSection.tsx`) è un pannello autonomo via `createPortal`, non basato su `EditorialModalShell` né su `Dialog`.
+Il popover del badge costi nella sidebar (`SidebarCostPanel` in `PipelineSidebarRunSection.tsx`) è un pannello autonomo via `createPortal`, non basato su `EditorialModalShell` né su `Dialog`: resta popover non bloccante perché è un dettaglio contestuale al passaggio/focus, non una finestra di lavoro.
 
 ---
 

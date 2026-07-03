@@ -315,7 +315,7 @@ export function PipelineConfig({
               <select
                 value={config.sourceLanguage}
                 onChange={(e) => setConfig((prev) => ({ ...prev, sourceLanguage: e.target.value }))}
-                className="w-full rounded-[14px] border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
+                className="w-full rounded-md border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
                 aria-label={t('pipeline.sourceLanguage')}
                 disabled={!!config.persona}
               >
@@ -341,7 +341,7 @@ export function PipelineConfig({
               <select
                 value={config.targetLanguage}
                 onChange={(e) => setConfig((prev) => ({ ...prev, targetLanguage: e.target.value }))}
-                className="w-full rounded-[14px] border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
+                className="w-full rounded-md border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
                 aria-label={t('pipeline.targetLanguage')}
                 disabled={!!config.persona}
               >
@@ -533,7 +533,7 @@ export function PipelineConfig({
               className="space-y-6"
             >
               {libraryGlossarySection ?? (
-                <div className="flex flex-col items-center gap-3 rounded-[20px] border border-dashed border-editorial-border/60 px-6 py-10 text-center">
+                <div className="flex flex-col items-center gap-3 border-y border-dashed border-editorial-border/60 px-6 py-10 text-center">
                   <BookOpen size={20} className="text-editorial-muted/40" />
                   <p className="text-sm text-editorial-muted/70">
                     {t('pipeline.glossaryOpenProject')}

@@ -37,7 +37,7 @@ export function PhraseMemoryConfig({
     <div className="space-y-3">
       <SectionLabel icon={Brain} label="Phrase Memory" />
 
-      <div className="space-y-3 rounded-[16px] border border-editorial-border/60 bg-editorial-textbox/10 px-4 py-4">
+      <div className="space-y-3 border-l-4 border-l-editorial-success/35 border-y border-editorial-border/70 bg-editorial-bg/65 px-5 py-4">
         <ToggleRow
           icon={<Brain size={13} />}
           label="Memory"
@@ -73,12 +73,12 @@ export function PhraseMemoryConfig({
                   emit({ phraseMemoryMaxResults: Math.max(1, parseInt(e.target.value, 10) || 1) })
                 }
                 disabled={disabled}
-                className="w-32 rounded-[12px] border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
+                className="w-32 rounded-md border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
               />
             </div>
 
             {!autoSearchPhraseMemory && (
-              <div className="flex items-center gap-2 rounded-[14px] border border-editorial-border/50 bg-editorial-bg/60 px-3 py-2 text-xs leading-relaxed text-editorial-muted">
+              <div className="flex items-center gap-2 border-l-4 border-l-editorial-accent/35 border-y border-editorial-border/50 bg-editorial-bg/60 px-3 py-2 text-xs leading-relaxed text-editorial-muted">
                 <RefreshCcw size={13} className="shrink-0 text-editorial-accent" />
                 <span>Manual refresh remains available in the chunk Memory panel.</span>
               </div>
@@ -89,4 +89,3 @@ export function PhraseMemoryConfig({
     </div>
   );
 }
-

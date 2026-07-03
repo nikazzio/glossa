@@ -277,8 +277,11 @@ import { Dialog } from '../ui';
 ```
 
 Regole:
-- Finestra che si apre **sopra** un pannello/overlay app: lo z-index delle primitive è `z-[200]`, sopra gli overlay app (Libreria `z-[160]`). Non serve override.
+- Finestra che si apre **sopra** un pannello/overlay app: lo z-index delle primitive è `z-[200]`, sopra gli overlay app legacy. Non serve override.
 - Header bespoke (es. Anteprima import): usare le primitive Radix dirette (`RadixDialog.Root/Portal/Overlay/Content`) con `RadixDialog.Title asChild` sul titolo, mantenendo lo z-index `z-[200]`.
+- Corpo finestra: evitare card interne con grossi angoli smussati. Per sezioni e liste usare blocchi piatti (`border-y`, eventuale `border-l-4` tonale, sfondo leggero) e separatori (`divide-y`/righe). Gli item devono restare distinguibili a colpo d'occhio anche senza riquadro arrotondato.
+- Prompt/testi lunghi dentro modali: usare textarea o preview leggibili (`font-mono`, `text-[13px]`, `leading-6`, `border-2`, `rounded-md` al massimo). Le azioni prompt restano icone con tooltip; i template/listati usano righe o blocchi con barra laterale, non card morbide.
+- Sono ammessi raggi piccoli sui campi (`rounded-md`) e controlli intrinsecamente circolari (switch, icone, indicatori). Non reintrodurre contenitori `rounded-xl/2xl/3xl` nelle modali.
 
 ### Pulsanti finestra — `DialogConfirmButton` / `DialogCancelButton` (OBBLIGATORIO)
 

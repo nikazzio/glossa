@@ -370,7 +370,7 @@ export function ImportPreviewDialog({
         <RadixDialog.Overlay className="fixed inset-0 z-[200] bg-editorial-ink/30 backdrop-blur-sm" />
         <RadixDialog.Content
           aria-labelledby="import-preview-title"
-          className="fixed left-1/2 top-1/2 z-[200] flex max-h-[90vh] w-[calc(100%-2rem)] max-w-4xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[28px] border border-editorial-border bg-editorial-bg shadow-[var(--shadow-modal)]">
+          className="fixed left-1/2 top-1/2 z-[200] flex max-h-[90vh] w-[calc(100%-2rem)] max-w-4xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg border border-editorial-border bg-editorial-bg shadow-[var(--shadow-modal)]">
 
         {/* ── Unified header (filename + title + stats + controls) ───────── */}
         <div className="shrink-0 border-b border-editorial-border px-6 pb-4 pt-5">
@@ -619,7 +619,7 @@ export function ImportPreviewDialog({
         {/* ── Context overflow warning ──────────────────────────────────────── */}
         {contextWarning && (
           <div className="shrink-0 px-6 pb-2">
-            <div className="flex items-start gap-2 rounded-lg border border-editorial-warning/40 bg-editorial-warning/10 p-3 text-xs text-editorial-warning">
+            <div className="flex items-start gap-2 border-y border-editorial-warning/40 bg-editorial-warning/10 py-3 text-xs text-editorial-warning">
               <AlertTriangle size={14} className="mt-0.5 shrink-0 text-editorial-warning" />
               <span>
                 {t('pipeline.contextOverflowWarning', {

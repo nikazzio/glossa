@@ -100,7 +100,7 @@ export function ConfigDrawer({
   };
 
   const libraryGlossarySection = (
-    <div className="space-y-3 rounded-[20px] border border-editorial-border/60 bg-editorial-textbox/20 px-5 py-4">
+    <div className="space-y-3 border-y border-editorial-border/70 py-4">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
           <LibraryBig size={11} className="text-editorial-accent shrink-0" />
@@ -120,7 +120,7 @@ export function ConfigDrawer({
       <select
         value={config.assignedGlossaryId ?? ''}
         onChange={(e) => handleDictChange(e.target.value)}
-        className="w-full rounded-[12px] border border-editorial-border/60 bg-editorial-bg px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent text-editorial-ink"
+        className="w-full rounded-md border border-editorial-border/60 bg-editorial-bg px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent text-editorial-ink"
       >
         <option value="">{t('library.noDictionaryAssigned')}</option>
         {glossaries.map((g) => (
@@ -204,8 +204,8 @@ export function ConfigDrawer({
       eyebrow={t('document.configDrawerTitle')}
       closeLabel={t('common.close')}
       closeDisabled={isProcessing}
-      widthClassName="max-w-3xl"
-      panelClassName="h-[85vh]"
+      widthClassName="max-w-4xl"
+      panelClassName="h-[88vh]"
       bodyClassName="p-0"
       footer={
         <div className="flex justify-end">

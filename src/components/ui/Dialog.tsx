@@ -50,13 +50,13 @@ export function Dialog({
           onEscapeKeyDown={guardClose}
           onPointerDownOutside={guardClose}
           onInteractOutside={guardClose}
-          className={`fixed left-1/2 top-1/2 z-[200] flex max-h-[90vh] w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[28px] border border-editorial-border bg-editorial-bg shadow-[var(--shadow-modal)] ${widthClassName} ${panelClassName}`.trim()}
+          className={`fixed left-1/2 top-1/2 z-[200] flex max-h-[90vh] w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg border border-editorial-border bg-editorial-bg shadow-[var(--shadow-modal)] ${widthClassName} ${panelClassName}`.trim()}
         >
           <div className="shrink-0 border-b border-editorial-border px-6 py-5 md:px-8 md:py-6">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0 space-y-2">
                 {eyebrow ? (
-                  <div className="text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted">
+                  <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-editorial-muted">
                     {eyebrow}
                   </div>
                 ) : null}

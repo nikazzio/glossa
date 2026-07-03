@@ -159,7 +159,7 @@ export function CsvImportDialog({ glossaryId, onImported, onClose }: Props) {
     >
       <div>
           {error && (
-            <div className="mb-4 flex items-start gap-2 rounded border border-editorial-warning/60 bg-editorial-warning/10 p-3 text-[11px] text-editorial-warning">
+            <div className="mb-4 flex items-start gap-2 border-y border-editorial-warning/60 bg-editorial-warning/10 py-3 text-[11px] text-editorial-warning">
               <AlertCircle size={14} className="mt-0.5 shrink-0" />
               <span>{error}</span>
             </div>
@@ -172,7 +172,7 @@ export function CsvImportDialog({ glossaryId, onImported, onClose }: Props) {
               </p>
               <button
                 onClick={handlePickFile}
-                className="w-full rounded border border-dashed border-editorial-border/60 py-6 text-[11px] font-bold uppercase tracking-widest text-editorial-muted hover:border-editorial-accent hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="w-full border-y border-dashed border-editorial-border/60 py-6 text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted hover:border-editorial-accent hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               >
                 {t('library.importPickButton')}
               </button>
@@ -191,13 +191,13 @@ export function CsvImportDialog({ glossaryId, onImported, onClose }: Props) {
                   { key: 'notesKey', label: t('library.xlsxNotesCol'), required: false },
                 ] as const).map(({ key, label, required }) => (
                   <div key={key} className="flex items-center gap-3">
-                    <label className="w-36 shrink-0 text-[11px] font-bold uppercase tracking-widest text-editorial-muted">
+                    <label className="w-36 shrink-0 text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">
                       {label}
                     </label>
                     <select
                       value={columnMap[key] ?? ''}
                       onChange={(e) => setColumnMap((m) => ({ ...m, [key]: e.target.value || undefined }))}
-                      className="flex-1 rounded border border-editorial-border bg-editorial-bg px-3 py-2 text-[12px] text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                      className="flex-1 rounded-md border border-editorial-border bg-editorial-bg px-3 py-2 text-[12px] text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                     >
                       {!required && <option value="">{t('library.xlsxNoneOption')}</option>}
                       {headers.map((h) => (
@@ -223,12 +223,12 @@ export function CsvImportDialog({ glossaryId, onImported, onClose }: Props) {
               <p className="text-[11px] text-editorial-muted">
                 {t('library.csvPreviewDesc', { count: totalRows })}
               </p>
-              <div className="overflow-x-auto border border-editorial-border/40 rounded">
+              <div className="overflow-x-auto border-y border-editorial-border/70">
                 <table className="w-full text-[10px] font-mono">
                   <thead className="bg-editorial-textbox/30">
                     <tr>
                       {previewHeaders.map((h, i) => (
-                        <th key={i} className="px-2 py-1.5 text-left text-editorial-muted font-bold uppercase tracking-wider truncate max-w-[120px]">
+                        <th key={i} className="px-2 py-1.5 text-left text-editorial-muted font-bold uppercase tracking-[0.14em] truncate max-w-[120px]">
                           {h}
                         </th>
                       ))}
@@ -254,7 +254,7 @@ export function CsvImportDialog({ glossaryId, onImported, onClose }: Props) {
               )}
 
               <div className="space-y-2">
-                <p className="text-[11px] font-bold uppercase tracking-widest text-editorial-muted">
+                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">
                   {t('library.csvStrategy')}
                 </p>
                 {(['merge', 'replace'] as MergeStrategy[]).map((s) => (

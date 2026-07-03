@@ -93,14 +93,14 @@ export function AuditPromptEditor({
   };
 
   return (
-    <div className="rounded-[20px] border border-editorial-border bg-editorial-bg/70 px-5 py-4 space-y-3">
+    <div className="border-l-4 border-l-editorial-warning/45 border-y border-editorial-border/70 bg-editorial-bg/85 px-5 py-4 space-y-3">
       <div className="space-y-1">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-1.5">
             {icon && <span className="text-editorial-accent shrink-0">{icon}</span>}
-            <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">{label}</span>
+            <span className="text-[11px] font-sans font-bold uppercase tracking-[0.14em] text-editorial-muted">{label}</span>
             {isCustomPrompt && (
-              <span className="rounded-full bg-editorial-accent/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-editorial-accent">
+              <span className="border-l-2 border-l-editorial-accent bg-editorial-accent/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] text-editorial-accent">
                 {t('pipeline.promptCustomBadge')}
               </span>
             )}
@@ -188,7 +188,7 @@ export function AuditPromptEditor({
             }}
             placeholder={t('pipeline.templates.namePlaceholder')}
             autoFocus
-            className="flex-1 rounded bg-editorial-textbox/60 border border-editorial-border/60 px-2 py-1 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            className="flex-1 rounded-md bg-editorial-textbox/60 border border-editorial-border/60 px-2 py-1 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
           />
           <button
             type="button"
@@ -211,17 +211,17 @@ export function AuditPromptEditor({
       )}
 
       {showTemplateList && (
-        <div className="rounded-lg border border-editorial-border bg-editorial-bg shadow-lg overflow-hidden">
+        <div className="border-y border-editorial-border bg-editorial-bg shadow-lg overflow-hidden">
           <div className="p-2 border-b border-editorial-border/60">
             <input
               value={templateSearch}
               onChange={(e) => setTemplateSearch(e.target.value)}
               placeholder={t('pipeline.templates.searchPlaceholder')}
               autoFocus
-              className="w-full rounded bg-editorial-textbox/60 border border-editorial-border/40 px-2 py-1 text-sm font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+              className="w-full rounded-md bg-editorial-textbox/60 border border-editorial-border/40 px-2 py-1 text-sm font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
             />
           </div>
-          <ul className="max-h-48 overflow-y-auto custom-scrollbar">
+          <ul className="max-h-48 overflow-y-auto custom-scrollbar divide-y divide-editorial-border/60">
             {filteredTemplates.length === 0 ? (
               <li className="px-3 py-4 text-xs text-editorial-muted text-center">
                 {t('pipeline.templates.empty')}
@@ -265,10 +265,10 @@ export function AuditPromptEditor({
         placeholder={placeholder}
         disabled={!isEditing}
         rows={isEditing ? 12 : 4}
-        className={`w-full rounded-[16px] border p-4 text-sm font-mono outline-none leading-relaxed resize-y min-h-[10rem] ${
+        className={`w-full rounded-md border-2 p-4 text-[13px] font-mono outline-none leading-6 resize-y min-h-[12rem] ${
           isEditing
-            ? 'bg-editorial-textbox/40 border-editorial-border/60 focus-visible:ring-2 focus-visible:ring-editorial-accent'
-            : 'bg-editorial-textbox/10 border-editorial-border/30 text-editorial-muted/60 cursor-default'
+            ? 'bg-editorial-paper border-editorial-warning/25 focus-visible:ring-2 focus-visible:ring-editorial-accent'
+            : 'bg-editorial-textbox/12 border-editorial-border/40 text-editorial-muted/70 cursor-default'
         }`}
       />
     </div>

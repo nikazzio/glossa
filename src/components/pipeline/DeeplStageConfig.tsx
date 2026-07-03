@@ -74,7 +74,7 @@ export function DeeplStageConfig({
       {/* 1. Opzioni (toggle) */}
       <div className="space-y-3">
         <SectionLabel icon={SlidersHorizontal} label={t('pipeline.deepl.optionsTitle', 'Opzioni')} />
-        <div className="space-y-3 rounded-[16px] border border-editorial-border/60 bg-editorial-textbox/10 px-4 py-4">
+        <div className="space-y-3 border-l-4 border-l-editorial-charcoal/30 border-y border-editorial-border/70 bg-editorial-bg/65 px-5 py-4">
           <ToggleRow
             icon={null}
             label={t('pipeline.deepl.preserveFormatting', 'Mantieni formattazione')}
@@ -98,7 +98,7 @@ export function DeeplStageConfig({
             {t('pipeline.deepl.modelType', 'Modalità traduzione')}
           </label>
           <select
-            className="w-full rounded-[12px] border border-editorial-border bg-editorial-textbox px-2 py-1.5 text-xs font-sans text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            className="w-full rounded-md border border-editorial-border bg-editorial-textbox px-2 py-1.5 text-xs font-sans text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             value={config.modelType ?? 'prefer_quality_optimized'}
             onChange={(e) => update({ modelType: e.target.value as DeeplConfig['modelType'] })}
           >
@@ -115,7 +115,7 @@ export function DeeplStageConfig({
               {t('pipeline.deepl.formality', 'Registro')}
             </label>
             <select
-              className="w-full rounded-[12px] border border-editorial-border bg-editorial-textbox px-2 py-1.5 text-xs font-sans text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="w-full rounded-md border border-editorial-border bg-editorial-textbox px-2 py-1.5 text-xs font-sans text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               value={config.formality ?? 'default'}
               onChange={(e) => update({ formality: e.target.value as DeeplConfig['formality'] })}
             >
@@ -135,7 +135,7 @@ export function DeeplStageConfig({
           <SectionLabel icon={BookOpen} label={t('pipeline.deepl.glossary', 'Glossario DeepL')} />
           <div className="flex items-center gap-2">
             <select
-              className="flex-1 rounded-[12px] border border-editorial-border bg-editorial-textbox px-2 py-1.5 text-xs font-sans text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="flex-1 rounded-md border border-editorial-border bg-editorial-textbox px-2 py-1.5 text-xs font-sans text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               value={config.glossaryId ?? ''}
               onChange={(e) => update({ glossaryId: e.target.value || undefined })}
             >
@@ -185,7 +185,7 @@ export function DeeplStageConfig({
           placeholder={t('pipeline.deepl.contextPlaceholder', 'Testo opzionale che aiuta DeepL a contestualizzare la traduzione…')}
           rows={3}
           maxLength={512}
-          className="w-full rounded-[12px] border border-editorial-border bg-editorial-textbox px-2 py-1.5 text-xs font-sans text-editorial-ink outline-none resize-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          className="w-full rounded-md border-2 border-editorial-border bg-editorial-textbox px-3 py-2 text-sm font-sans text-editorial-ink outline-none resize-none leading-relaxed focus-visible:ring-2 focus-visible:ring-editorial-accent"
         />
       </div>
     </div>

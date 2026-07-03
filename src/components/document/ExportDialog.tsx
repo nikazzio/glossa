@@ -67,7 +67,7 @@ export function ExportDialog({ chunks, markdownAware, onConfirm, onCancel }: Exp
       <div className="space-y-6">
           {/* Warning chunk mancanti */}
           {missingCount > 0 && (
-            <div className="flex items-start gap-3 rounded-2xl border border-editorial-warning/50 bg-editorial-warning/8 px-4 py-3">
+            <div className="flex items-start gap-3 border-l-4 border-l-editorial-warning border-y border-editorial-warning/40 bg-editorial-warning/8 px-4 py-3">
               <AlertTriangle size={15} className="mt-0.5 shrink-0 text-editorial-warning" />
               <p className="text-sm leading-relaxed text-editorial-ink">
                 {format === 'bilingual'
@@ -78,23 +78,24 @@ export function ExportDialog({ chunks, markdownAware, onConfirm, onCancel }: Exp
           )}
 
           {/* Formato */}
-          <div>
-            <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
+          <div className="border-y border-editorial-border/70 bg-editorial-bg/45 px-4 py-4">
+            <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">
               {t('files.exportFormat')}
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
               {formats.map(({ key, label }) => (
                 <button
                   key={key}
                   type="button"
                   onClick={() => setFormat(key)}
-                  className={`rounded-2xl border px-4 py-2.5 text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                  className={`flex w-full items-center justify-between border-l-4 px-3 py-2.5 text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
                     format === key
-                      ? 'border-editorial-ink bg-editorial-ink text-white'
-                      : 'border-editorial-border bg-editorial-bg text-editorial-ink hover:border-editorial-ink/40'
+                      ? 'border-l-editorial-accent bg-editorial-accent/8 text-editorial-accent'
+                      : 'border-l-transparent text-editorial-ink hover:border-l-editorial-border hover:bg-editorial-textbox/25 hover:text-editorial-accent'
                   }`}
                 >
-                  {label}
+                  <span>{label}</span>
+                  {format === key ? <span className="h-1.5 w-1.5 rounded-full bg-editorial-accent" aria-hidden="true" /> : null}
                 </button>
               ))}
             </div>
@@ -102,18 +103,18 @@ export function ExportDialog({ chunks, markdownAware, onConfirm, onCancel }: Exp
 
           {/* Separatore */}
           {showSeparator && (
-            <div>
-              <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
+            <div className="border-y border-editorial-border/70 bg-editorial-bg/45 px-4 py-4">
+              <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">
                 {t('files.exportSeparator')}
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1">
                 {SEPARATOR_OPTIONS.map((opt) => (
                   <label
                     key={opt.key}
-                    className={`flex cursor-pointer items-center gap-3 rounded-2xl border px-4 py-2.5 transition-colors ${
+                    className={`flex cursor-pointer items-center gap-3 border-l-4 px-3 py-2.5 transition-colors ${
                       separatorKey === opt.key
-                        ? 'border-editorial-ink bg-editorial-ink/5'
-                        : 'border-editorial-border hover:border-editorial-ink/40'
+                        ? 'border-l-editorial-accent bg-editorial-accent/8 text-editorial-accent'
+                        : 'border-l-transparent text-editorial-ink hover:border-l-editorial-border hover:bg-editorial-textbox/25 hover:text-editorial-accent'
                     }`}
                   >
                     <input
@@ -124,7 +125,7 @@ export function ExportDialog({ chunks, markdownAware, onConfirm, onCancel }: Exp
                       onChange={() => setSeparatorKey(opt.key)}
                       className="accent-editorial-ink"
                     />
-                    <span className="flex-1 text-sm text-editorial-ink">
+                    <span className="flex-1 text-sm">
                       {t(`files.exportSeparator_${opt.key}`)}
                     </span>
                     <span className="font-mono text-[10px] text-editorial-muted/70">

@@ -192,14 +192,14 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder={t('workspace.namePlaceholder')}
-                    className="w-full rounded-[18px] border border-editorial-border bg-editorial-textbox/30 px-4 py-3 text-sm text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    className="w-full rounded-md border border-editorial-border bg-editorial-textbox/30 px-4 py-3 text-sm text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                     autoFocus
                   />
                   <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder={t('workspace.descriptionPlaceholder')}
-                    className="min-h-24 w-full rounded-[18px] border border-editorial-border bg-editorial-textbox/30 px-4 py-3 text-sm text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    className="min-h-24 w-full rounded-md border border-editorial-border bg-editorial-textbox/30 px-4 py-3 text-sm text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   />
                 </div>
               )}
@@ -211,10 +211,10 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                   aria-labelledby="workspace-settings-tab-memory"
                   className="space-y-4"
                 >
-                  <div className="space-y-3 rounded-[20px] border border-editorial-border bg-editorial-bg/70 px-5 py-4">
+                  <div className="space-y-3 border-y border-editorial-border/70 py-4">
                     <div className="flex items-center gap-1.5">
                       <Cpu size={11} className="shrink-0 text-editorial-accent" />
-                      <p className="text-xs font-sans uppercase tracking-[0.22em] text-editorial-muted">
+                      <p className="text-[11px] font-sans font-bold uppercase tracking-[0.14em] text-editorial-muted">
                         {t('workspace.embeddingModel')}
                       </p>
                     </div>
@@ -222,7 +222,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                       <select
                         value={embeddingModel}
                         onChange={(e) => setEmbeddingModel(e.target.value as EmbeddingModel)}
-                        className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-2 text-xs font-mono text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                        className="flex-1 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-2 text-xs font-mono text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                       >
                         <option value="text-embedding-3-small">text-embedding-3-small</option>
                         <option value="text-embedding-3-large">text-embedding-3-large</option>
@@ -241,7 +241,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                       </IconButton>
                     </div>
                     {embeddingModel !== activeWorkspace?.embeddingModel && (
-                      <p className="rounded-lg border border-editorial-accent/30 bg-editorial-accent/8 px-3 py-2 text-sm leading-relaxed text-editorial-accent [text-wrap:pretty]">
+                      <p className="border-y border-editorial-accent/30 bg-editorial-accent/8 py-2 text-sm leading-relaxed text-editorial-accent [text-wrap:pretty]">
                         {t('workspace.embeddingChangeWarning')}
                       </p>
                     )}
@@ -268,7 +268,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                   className="space-y-6"
                 >
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.3em] text-editorial-muted">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">
                       {t('settings.backup')}
                     </p>
                     <p className="mt-2 text-sm leading-relaxed text-editorial-muted [text-wrap:pretty]">
@@ -280,7 +280,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                       type="button"
                       onClick={() => void handleExportBackup()}
                       disabled={isBackupBusy}
-                      className="flex items-center gap-2 rounded-full border border-editorial-border px-4 py-2 text-xs font-bold uppercase tracking-widest text-editorial-muted transition-colors duration-150 hover:border-editorial-ink/60 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
+                      className="flex items-center gap-2 rounded-full border border-editorial-border px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-editorial-muted transition-colors duration-150 hover:border-editorial-ink/60 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       <Download size={13} />
                       {t('settings.backupExport')}
@@ -289,7 +289,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                       type="button"
                       onClick={() => void handleImportBackup()}
                       disabled={isBackupBusy}
-                      className="flex items-center gap-2 rounded-full border border-editorial-border px-4 py-2 text-xs font-bold uppercase tracking-widest text-editorial-muted transition-colors duration-150 hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
+                      className="flex items-center gap-2 rounded-full border border-editorial-border px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-editorial-muted transition-colors duration-150 hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       <Upload size={13} />
                       {t('settings.backupImport')}

@@ -49,7 +49,7 @@ export function TranslationTabPanel({
   const auto = calculateBlobBudget(config.stages);
 
   const blobContextCard = (
-    <div className="space-y-3 rounded-[20px] border border-editorial-border bg-editorial-bg/70 px-5 py-4">
+    <div className="space-y-3 border-l-4 border-l-editorial-charcoal/30 border-y border-editorial-border/70 bg-editorial-bg/65 px-5 py-4">
       <button
         type="button"
         role="switch"
@@ -66,7 +66,7 @@ export function TranslationTabPanel({
         <span className="space-y-0.5">
           <span className="flex items-center gap-1.5">
             <FileText size={11} className="text-editorial-accent shrink-0" />
-            <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+            <span className="text-[11px] font-sans font-bold uppercase tracking-[0.14em] text-editorial-muted">
               {t('pipeline.blobContext')}
             </span>
           </span>
@@ -92,7 +92,7 @@ export function TranslationTabPanel({
         <div className="space-y-3 pt-1">
           <div className="flex flex-wrap gap-4 items-center">
             <div className="flex items-center gap-2">
-              <label className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+              <label className="text-[11px] font-sans font-bold uppercase tracking-[0.14em] text-editorial-muted">
                 {t('pipeline.blobBudgetTokens')}
               </label>
               <input
@@ -103,12 +103,12 @@ export function TranslationTabPanel({
                   ...prev,
                   blobBudgetTokens: Math.max(1, Number(e.target.value) || 1),
                 }))}
-                className="w-24 rounded-[10px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="w-24 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 aria-label={t('pipeline.blobBudgetTokens')}
               />
             </div>
             <div className="flex items-center gap-2">
-              <label className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+              <label className="text-[11px] font-sans font-bold uppercase tracking-[0.14em] text-editorial-muted">
                 {t('pipeline.blobOverlap')}
               </label>
               <input
@@ -119,7 +119,7 @@ export function TranslationTabPanel({
                   ...prev,
                   blobOverlap: Math.max(0, Number(e.target.value) || 0),
                 }))}
-                className="w-16 rounded-[10px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="w-16 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 aria-label={t('pipeline.blobOverlap')}
               />
             </div>
@@ -159,7 +159,7 @@ export function TranslationTabPanel({
 
       {/* Model locked warning */}
       {translationsExist && (
-        <div className="flex items-center gap-2 rounded-[14px] border border-editorial-border/50 bg-editorial-bg/60 px-3 py-2 text-xs text-editorial-muted">
+        <div className="flex items-center gap-2 border-l-4 border-l-editorial-warning/60 border-y border-editorial-warning/30 bg-editorial-warning/8 px-3 py-2 text-xs text-editorial-muted">
           <AlertTriangle size={12} className="shrink-0" />
           <span>{t('pipeline.modelLockedHint')}</span>
         </div>
@@ -171,7 +171,7 @@ export function TranslationTabPanel({
         return (
           <div key={stage.id} className="space-y-3">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-ink font-bold">
+              <span className="text-[11px] font-sans uppercase tracking-[0.14em] text-editorial-ink font-bold">
                 {t(`pipeline.stageRole.${stage.role ?? 'translation'}`)}
               </span>
               <span className="h-px flex-1 bg-editorial-border/60" aria-hidden="true" />

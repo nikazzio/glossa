@@ -112,7 +112,7 @@ export function SettingsTabPanel({
             );
           })()}
         </div>
-        <div className="rounded-[14px] border border-editorial-border/40 bg-editorial-textbox/20 px-3 py-3 space-y-2.5">
+        <div className="border-l-4 border-l-editorial-charcoal/30 border-y border-editorial-border/60 bg-editorial-bg/65 px-4 py-4 space-y-2.5">
           {([
             {
               mode: 'standard' as PipelineMode,
@@ -172,7 +172,7 @@ export function SettingsTabPanel({
           <select
             value={config.sourceLanguage}
             onChange={(e) => setConfig((prev) => ({ ...prev, sourceLanguage: e.target.value }))}
-            className="w-full rounded-[14px] border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
+            className="w-full rounded-md border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
             aria-label={t('pipeline.sourceLanguage')}
             disabled={!!config.persona}
           >
@@ -198,7 +198,7 @@ export function SettingsTabPanel({
           <select
             value={config.targetLanguage}
             onChange={(e) => setConfig((prev) => ({ ...prev, targetLanguage: e.target.value }))}
-            className="w-full rounded-[14px] border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
+            className="w-full rounded-md border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
             aria-label={t('pipeline.targetLanguage')}
             disabled={!!config.persona}
           >

@@ -82,7 +82,7 @@ export function ProviderRuntimeEditor({
   };
 
   return (
-    <section className="rounded-[18px] border border-editorial-border/70 bg-editorial-textbox/20 overflow-hidden">
+    <section className="border-l-4 border-l-editorial-charcoal/25 border-y border-editorial-border/70 bg-editorial-textbox/18 overflow-hidden">
       {/* Header / toggle row — always visible */}
       <button
         type="button"
@@ -98,7 +98,7 @@ export function ProviderRuntimeEditor({
         <span className="flex items-center gap-2.5">
           <SlidersHorizontal size={13} className={overrideEnabled ? 'text-editorial-ink' : 'text-editorial-muted'} />
           <span className="space-y-0.5">
-            <span className="block text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+            <span className="block text-[10px] font-sans uppercase tracking-[0.14em] text-editorial-muted">
               {title}
             </span>
             {!overrideEnabled && (
@@ -141,7 +141,7 @@ export function ProviderRuntimeEditor({
                       if (parsed !== undefined) patchOllama({ temperature: parsed });
                     }}
                     disabled={advancedEnabled}
-                    className="w-full rounded-[12px] border border-editorial-border/60 bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
+                    className="w-full rounded-md border border-editorial-border/60 bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
                   />
                 </LabeledField>
                 <LabeledField label={t('pipeline.providerOptions.topP')}>
@@ -154,7 +154,7 @@ export function ProviderRuntimeEditor({
                       if (parsed !== undefined) patchOllama({ topP: parsed });
                     }}
                     disabled={advancedEnabled}
-                    className="w-full rounded-[12px] border border-editorial-border/60 bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
+                    className="w-full rounded-md border border-editorial-border/60 bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
                   />
                 </LabeledField>
                 <LabeledField label={t('pipeline.providerOptions.seed')}>
@@ -167,7 +167,7 @@ export function ProviderRuntimeEditor({
                     }}
                     disabled={advancedEnabled}
                     placeholder={t('pipeline.providerOptions.optional')}
-                    className="w-full rounded-[12px] border border-editorial-border/60 bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
+                    className="w-full rounded-md border border-editorial-border/60 bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
                   />
                 </LabeledField>
                 <LabeledField label={t('pipeline.providerOptions.keepAlive')}>
@@ -175,7 +175,7 @@ export function ProviderRuntimeEditor({
                     type="text"
                     value={String(ollama.keepAlive ?? '')}
                     onChange={(e) => patchOllama({ keepAlive: e.target.value })}
-                    className="w-full rounded-[12px] border border-editorial-border/60 bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    className="w-full rounded-md border border-editorial-border/60 bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   />
                 </LabeledField>
                 <LabeledField label={t('pipeline.providerOptions.numCtx')}>
@@ -188,7 +188,7 @@ export function ProviderRuntimeEditor({
                     }}
                     disabled={advancedEnabled}
                     placeholder={t('pipeline.providerOptions.optional')}
-                    className="w-full rounded-[12px] border border-editorial-border/60 bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
+                    className="w-full rounded-md border border-editorial-border/60 bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
                   />
                 </LabeledField>
                 <LabeledField label={t('pipeline.providerOptions.numPredict')}>
@@ -201,7 +201,7 @@ export function ProviderRuntimeEditor({
                     }}
                     disabled={advancedEnabled}
                     placeholder={t('pipeline.providerOptions.optional')}
-                    className="w-full rounded-[12px] border border-editorial-border/60 bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
+                    className="w-full rounded-md border border-editorial-border/60 bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
                   />
                 </LabeledField>
               </div>
@@ -220,7 +220,7 @@ export function ProviderRuntimeEditor({
                             : next as 'low' | 'medium' | 'high',
                       });
                     }}
-                    className="w-full rounded-[12px] border border-editorial-border/60 bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    className="w-full rounded-md border border-editorial-border/60 bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   >
                     <option value="false">{t('pipeline.providerOptions.thinkDisabled')}</option>
                     <option value="true">{t('pipeline.providerOptions.thinkEnabled')}</option>
@@ -260,7 +260,7 @@ export function ProviderRuntimeEditor({
                   disabled={!advancedEnabled}
                   rows={6}
                   spellCheck={false}
-                  className="w-full rounded-[16px] border border-editorial-border/60 bg-editorial-bg/80 px-3 py-3 text-sm font-mono outline-none resize-y leading-relaxed focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
+                  className="w-full rounded-md border-2 border-editorial-border/60 bg-editorial-bg/80 px-3 py-3 text-sm font-mono outline-none resize-y leading-relaxed focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
                 />
                 {jsonError ? (
                   <div className="flex items-center gap-2 text-xs text-editorial-accent">
@@ -318,10 +318,10 @@ function ToggleRow({
       role="switch"
       aria-checked={checked}
       onClick={onChange}
-      className={`flex w-full items-center justify-between rounded-[14px] border px-3 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+      className={`flex w-full items-center justify-between border-l-4 border-y px-3 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
         checked
-          ? 'border-editorial-ink bg-editorial-bg/90'
-          : 'border-editorial-border/60 bg-editorial-bg/50 hover:bg-editorial-textbox/30'
+          ? 'border-l-editorial-ink border-y-editorial-border/70 bg-editorial-bg/90'
+          : 'border-l-editorial-border/70 border-y-editorial-border/60 bg-editorial-bg/50 hover:bg-editorial-textbox/30'
       }`}
     >
       <span className="flex items-start gap-3">
@@ -336,7 +336,7 @@ function ToggleRow({
           <span className="h-3.5 w-3.5 rounded-full bg-editorial-bg" />
         </span>
         <span className="space-y-1">
-          <span className="flex items-center gap-2 text-xs font-sans uppercase tracking-[0.25em] text-editorial-muted">
+          <span className="flex items-center gap-2 text-xs font-sans uppercase tracking-[0.14em] text-editorial-muted">
             {icon}
             {label}
           </span>

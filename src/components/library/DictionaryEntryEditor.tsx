@@ -42,7 +42,7 @@ export function DictionaryEntryEditor({ entries, onChange, readOnly = false }: P
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
+        <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">
           {t('pipeline.keywordRegistry')}
           {entries.length > 0 && (
             <span className="ml-2 font-mono font-normal normal-case tracking-normal text-editorial-muted/60">
@@ -63,17 +63,17 @@ export function DictionaryEntryEditor({ entries, onChange, readOnly = false }: P
       </div>
 
       {entries.length === 0 ? (
-        <p className="rounded-[14px] border border-dashed border-editorial-border/60 py-6 text-center text-[11px] italic text-editorial-muted/60">
+        <p className="border-y border-dashed border-editorial-border/70 py-6 text-center text-[11px] italic text-editorial-muted/60">
           {t('pipeline.glossaryEmpty')}
         </p>
       ) : (
-        <div className="overflow-y-auto custom-scrollbar max-h-[420px] rounded-[14px] border border-editorial-border bg-editorial-bg pr-2">
+        <div className="overflow-y-auto custom-scrollbar max-h-[420px] border-y border-editorial-border bg-editorial-bg pr-2">
           {/* Intestazioni colonne (sticky) */}
           <div className="sticky top-0 z-10 grid grid-cols-[1fr_1fr_auto] border-b border-editorial-border bg-editorial-textbox/80 px-3 py-2">
-            <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">
               {t('pipeline.source')}
             </span>
-            <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-editorial-muted">
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">
               {t('pipeline.target')}
             </span>
             <span className="w-7" />
@@ -131,7 +131,7 @@ export function DictionaryEntryEditor({ entries, onChange, readOnly = false }: P
                 />
                 {isDuplicate && (
                   <div className="border-t border-editorial-warning/30 bg-editorial-warning/8 px-3 py-1">
-                    <span className="text-[9px] font-bold uppercase tracking-widest text-editorial-warning">
+                    <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-warning">
                       {t('pipeline.duplicateTerm')}
                     </span>
                   </div>
