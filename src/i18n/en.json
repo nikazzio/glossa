@@ -354,7 +354,9 @@
       "deleted": "Template deleted",
       "saveFailed": "Failed to save template",
       "deleteFailed": "Failed to delete template",
-      "loadFailed": "Failed to load templates"
+      "loadFailed": "Failed to load templates",
+      "deleteConfirmTitle": "Delete template",
+      "deleteConfirmMessage": "Delete template \"{{name}}\"? This action is irreversible."
     },
     "editPrompt": "Edit prompt",
     "promptCustomBadge": "Custom",

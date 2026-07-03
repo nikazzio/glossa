@@ -25,8 +25,10 @@ import { ProviderRuntimeEditor } from './ProviderRuntimeEditor';
 import { canRefineWithProvider, formatProviderModelLabel, type ProviderKeyStatusMap } from '../../hooks/useProviderKeyStatus';
 import { useConfigStore } from '../../stores/configStore';
 import { useCustomProviderStore } from '../../stores/customProviderStore';
+import { confirm } from '../../stores/confirmStore';
 import { STAGE_TEMPLATES } from '../../pipeline/pipelineModes';
 import { DeeplStageConfig } from './DeeplStageConfig';
+import { IconButton } from '../ui';
 
 interface StageCardProps {
   stage: PipelineStageConfig;
@@ -158,7 +160,14 @@ export function StageCard({
     }
   };
 
-  const handleDeleteTemplate = async (id: string) => {
+  const handleDeleteTemplate = async (id: string, name: string) => {
+    const ok = await confirm({
+      title: t('pipeline.templates.deleteConfirmTitle'),
+      message: t('pipeline.templates.deleteConfirmMessage', { name }),
+      confirmLabel: t('common.delete'),
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await deleteTemplate(id);
       toast.success(t('pipeline.templates.deleted'));
@@ -322,68 +331,56 @@ export function StageCard({
           <div className="flex items-center gap-1.5">
             {isEditingPrompt ? (
               <>
-                <button
-                  type="button"
+                <IconButton
                   onClick={onRefinePrompt}
                   disabled={isRefining || !stage.prompt.trim() || !canRefine}
                   title={t('pipeline.refinePromptWithModel', { model: refineLabel })}
-                  aria-label={t('pipeline.refinePromptWithModel', { model: refineLabel })}
-                  className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40"
+                  size="sm"
                 >
                   {isRefining ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
-                </button>
-                <button
-                  type="button"
+                </IconButton>
+                <IconButton
                   onClick={() => { setShowSaveName(!showSaveName); setShowTemplateList(false); }}
                   title={t('pipeline.templates.save')}
-                  aria-label={t('pipeline.templates.save')}
-                  className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                  size="sm"
                 >
                   <BookmarkPlus size={16} />
-                </button>
-                <button
-                  type="button"
+                </IconButton>
+                <IconButton
                   onClick={() => { setShowTemplateList(!showTemplateList); setShowSaveName(false); }}
                   title={t('pipeline.templates.load')}
-                  aria-label={t('pipeline.templates.load')}
-                  className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                  size="sm"
                 >
                   <BookOpen size={16} />
-                </button>
-                <button
-                  type="button"
+                </IconButton>
+                <IconButton
                   onClick={() => { setIsEditingPrompt(false); setShowSaveName(false); setShowTemplateList(false); }}
                   title={t('common.close')}
-                  aria-label={t('common.close')}
-                  className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                  size="sm"
                 >
                   <X size={16} />
-                </button>
+                </IconButton>
               </>
             ) : (
               <>
                 {isCustomPrompt && (
-                  <button
-                    type="button"
+                  <IconButton
                     onClick={() => onUpdate({ prompt: STAGE_TEMPLATES[role].defaultPrompt })}
                     disabled={translationsExist || isProcessing}
                     title={t('pipeline.promptReset')}
-                    aria-label={t('pipeline.promptReset')}
-                    className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
+                    size="sm"
                   >
                     <RotateCcw size={16} />
-                  </button>
+                  </IconButton>
                 )}
-                <button
-                  type="button"
+                <IconButton
                   onClick={() => setIsEditingPrompt(true)}
                   disabled={translationsExist || isProcessing}
                   title={t('pipeline.editPrompt')}
-                  aria-label={t('pipeline.editPrompt')}
-                  className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
+                  size="sm"
                 >
                   <Pencil size={16} />
-                </button>
+                </IconButton>
               </>
             )}
           </div>
@@ -402,23 +399,21 @@ export function StageCard({
               autoFocus
               className="flex-1 rounded-md bg-editorial-textbox/60 border border-editorial-border/60 px-2 py-1 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             />
-            <button
-              type="button"
+            <IconButton
               onClick={handleSaveTemplate}
               disabled={!templateName.trim()}
-              className="text-editorial-ink hover:text-editorial-accent transition-colors disabled:opacity-40 focus:outline-none"
-              aria-label={t('common.confirm')}
+              title={t('common.confirm')}
+              size="sm"
             >
               <Check size={16} />
-            </button>
-            <button
-              type="button"
+            </IconButton>
+            <IconButton
               onClick={() => { setShowSaveName(false); setTemplateName(''); }}
-              className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none"
-              aria-label={t('common.cancel')}
+              title={t('common.cancel')}
+              size="sm"
             >
               <X size={16} />
-            </button>
+            </IconButton>
           </div>
         )}
 
@@ -459,7 +454,7 @@ export function StageCard({
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleDeleteTemplate(tmpl.id)}
+                      onClick={() => handleDeleteTemplate(tmpl.id, tmpl.name)}
                       className="shrink-0 text-editorial-muted/40 hover:text-editorial-accent transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 focus:outline-none mt-0.5"
                       aria-label={t('common.delete')}
                     >

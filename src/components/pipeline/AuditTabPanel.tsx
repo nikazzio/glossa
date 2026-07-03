@@ -6,7 +6,7 @@ import type { ProviderKeyStatusMap } from '../../hooks/useProviderKeyStatus';
 import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
 import { getKnownModelIds, getModelStatus, getResolvedModelReasoning, LLM_PROVIDER_ORDER } from '../../models/catalog';
 import { DEFAULT_COHERENCE_PROMPT, DEFAULT_JUDGE_PROMPT } from '../../constants';
-import { SectionLabel } from '../ui';
+import { SectionLabel, ToggleRow } from '../ui';
 import { ReasoningPicker } from '../models/ReasoningPicker';
 import { ProviderRuntimeEditor } from './ProviderRuntimeEditor';
 import { AuditPromptEditor } from './AuditPromptEditor';
@@ -63,32 +63,14 @@ export function AuditTabPanel({
       className="space-y-6"
     >
       <div className="space-y-3 border-l-4 border-l-editorial-warning/45 border-y border-editorial-border/70 bg-editorial-bg/65 px-5 py-4">
-        <button
-          type="button"
-          role="switch"
-          aria-checked={config.judgeRefineLoop ?? false}
-          onClick={() =>
+        <ToggleRow
+          icon={<RefreshCw size={13} />}
+          label={t('pipeline.judgeRefineLoopSectionLabel')}
+          checked={config.judgeRefineLoop ?? false}
+          onChange={() =>
             setConfig((prev) => ({ ...prev, judgeRefineLoop: !(prev.judgeRefineLoop ?? false) }))
           }
-          className={`flex w-full items-center justify-between text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${config.judgeRefineLoop ? '' : 'opacity-80 hover:opacity-100'}`}
-        >
-          <span className="flex items-center gap-1.5">
-            <RefreshCw size={11} className="text-editorial-accent shrink-0" />
-            <span className="text-[11px] font-sans font-bold uppercase tracking-[0.14em] text-editorial-muted">
-              {t('pipeline.judgeRefineLoopSectionLabel')}
-            </span>
-          </span>
-          <span
-            className={`flex h-5 w-9 items-center rounded-full border px-0.5 transition-colors shrink-0 ${
-              (config.judgeRefineLoop ?? false)
-                ? 'border-editorial-ink bg-editorial-ink justify-end'
-                : 'border-editorial-border bg-editorial-textbox/60 justify-start'
-            }`}
-            aria-hidden="true"
-          >
-            <span className="h-3.5 w-3.5 rounded-full bg-editorial-bg" />
-          </span>
-        </button>
+        />
         {config.judgeRefineLoop && (
           <div className="space-y-1.5 pt-1">
             <label

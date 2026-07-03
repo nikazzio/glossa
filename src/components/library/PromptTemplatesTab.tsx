@@ -13,7 +13,6 @@ import { canRefineWithProvider, formatProviderModelLabel, useProviderKeyStatus }
 import { IconButton } from '../ui';
 
 const WORKFLOW_OPTIONS = ['translation', 'transcription'] as const;
-type WorkflowFilter = (typeof WORKFLOW_OPTIONS)[number];
 
 const FILTER_OPTIONS = ['all', 'stage', 'audit', 'persona', 'memory'] as const;
 type FilterValue = (typeof FILTER_OPTIONS)[number];
@@ -36,7 +35,6 @@ export function PromptTemplatesTab() {
   const [newContext, setNewContext] = useState<PromptTemplateContext>('stage');
   const [creating, setCreating] = useState(false);
   const [filterContext, setFilterContext] = useState<FilterValue>('all');
-  const [filterWorkflow, setFilterWorkflow] = useState<WorkflowFilter>('translation');
   const [newWorkflow, setNewWorkflow] = useState<PromptTemplateWorkflow>('translation');
   const [isRefining, setIsRefining] = useState(false);
   const { statuses: keyStatuses } = useProviderKeyStatus();
@@ -105,9 +103,7 @@ export function PromptTemplatesTab() {
   }, [newContext, auditDefaultProvider, auditDefaultModel, stageDefaultProvider, stageDefaultModel]);
 
   const filtered = templates.filter((tmpl) => {
-    const matchesWorkflow = tmpl.workflow === filterWorkflow;
-    const matchesContext = filterContext === 'all' || tmpl.context === filterContext;
-    return matchesWorkflow && matchesContext;
+    return filterContext === 'all' || tmpl.context === filterContext;
   });
 
   const handleSave = async () => {
@@ -141,24 +137,6 @@ export function PromptTemplatesTab() {
 
   return (
     <div className="space-y-6">
-      {/* Workflow tabs */}
-      <div className="flex w-fit gap-1 border-y border-editorial-border bg-editorial-bg/60 px-1 py-1">
-        {WORKFLOW_OPTIONS.map((w) => (
-          <button
-            key={w}
-            type="button"
-            onClick={() => setFilterWorkflow(w)}
-            className={`border-l-4 px-3 py-1 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-              filterWorkflow === w
-                ? 'border-l-editorial-accent bg-editorial-paper text-editorial-ink'
-                : 'border-l-transparent text-editorial-muted hover:border-l-editorial-border hover:text-editorial-ink'
-            }`}
-          >
-            {w === 'translation' ? t('workflow.translation') : t('workflow.transcription')}
-          </button>
-        ))}
-      </div>
-
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           {FILTER_OPTIONS.map((ctx) => {
@@ -260,15 +238,14 @@ export function PromptTemplatesTab() {
                     <option key={m} value={m}>{m}</option>
                   ))}
                 </select>
-                <button
+                <IconButton
                   onClick={handleRefine}
                   disabled={isRefining || !newPrompt.trim() || !canRefine}
                   title={t('pipeline.refinePromptWithModel', { model: refineLabel })}
-                  aria-label={t('pipeline.refinePromptWithModel', { model: refineLabel })}
-                  className="rounded-md border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
+                  size="sm"
                 >
-                  {isRefining ? <Loader2 size={13} className="animate-spin" /> : <Wand2 size={13} />}
-                </button>
+                  {isRefining ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
+                </IconButton>
               </div>
             </div>
             <textarea
@@ -310,23 +287,23 @@ export function PromptTemplatesTab() {
             key={tmpl.id}
             className="space-y-3 border-l-4 border-l-editorial-accent/30 border-y border-editorial-border/70 bg-editorial-bg/55 px-4 py-4 transition-colors hover:border-l-editorial-accent"
           >
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <span className="font-display text-base italic text-editorial-ink">{tmpl.name}</span>
-                <span className={`border-l-2 px-3 py-0.5 text-xs font-bold uppercase tracking-[0.14em] ${contextBadgeClass(tmpl.context)}`}>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="space-y-1">
+                <span className={`inline-block border-l-2 px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.14em] ${contextBadgeClass(tmpl.context)}`}>
                   {contextLabel(tmpl.context)}
                 </span>
+                <div className="font-display text-base italic text-editorial-ink">{tmpl.name}</div>
               </div>
-              <button
+              <IconButton
                 onClick={() => handleDelete(tmpl.id, tmpl.name)}
                 title={t('common.delete')}
-                aria-label={`${t('common.delete')}: ${tmpl.name}`}
-                className="rounded-md border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                ariaLabel={`${t('common.delete')}: ${tmpl.name}`}
+                size="sm"
               >
-                <Trash2 size={13} />
-              </button>
+                <Trash2 size={16} />
+              </IconButton>
             </div>
-            <pre className="max-h-40 overflow-y-auto whitespace-pre-wrap border-l border-editorial-border/70 bg-editorial-textbox/20 px-4 py-3 text-[12px] leading-relaxed font-mono text-editorial-ink/80 custom-scrollbar">
+            <pre className="max-h-40 overflow-y-auto whitespace-pre-wrap bg-editorial-textbox/20 px-4 py-3 text-[12px] leading-relaxed font-mono text-editorial-ink/80 custom-scrollbar">
               {tmpl.prompt}
             </pre>
           </div>

@@ -743,15 +743,14 @@ export function SettingsModal() {
                                     <HelpCircle size={12} className="text-editorial-muted" aria-label={t('ollama.unchecked')} />
                                   )}
                                 </div>
-                                <button
+                                <IconButton
                                   onClick={() => refreshOllama()}
                                   disabled={refreshing}
-                                  className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-editorial-muted hover:text-editorial-ink transition-colors disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                                  aria-label={t('ollama.refresh')}
+                                  title={t('ollama.refresh')}
+                                  size="sm"
                                 >
-                                  <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
-                                  {t('ollama.refresh')}
-                                </button>
+                                  <RefreshCw size={13} className={refreshing ? 'animate-spin' : ''} />
+                                </IconButton>
                               </div>
 
                               {ollamaStatus === 'disconnected' && (
@@ -768,6 +767,18 @@ export function SettingsModal() {
                                 <p className="text-xs text-editorial-muted italic">
                                   {t('ollama.noModels')}
                                 </p>
+                              )}
+                              {ollamaStatus === 'connected' && ollamaModels.length > 0 && (
+                                <div className="space-y-1.5">
+                                  {ollamaModels.map((modelId) => (
+                                    <div
+                                      key={modelId}
+                                      className="flex items-center gap-2 border-b border-editorial-border/60 py-2"
+                                    >
+                                      <span className="text-xs font-mono text-editorial-ink">{modelId}</span>
+                                    </div>
+                                  ))}
+                                </div>
                               )}
                             </div>
                           ) : (

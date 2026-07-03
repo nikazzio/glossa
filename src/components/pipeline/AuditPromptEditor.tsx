@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { PromptTemplate } from '../../types';
 import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
+import { confirm } from '../../stores/confirmStore';
+import { IconButton } from '../ui';
 
 export interface AuditPromptEditorProps {
   label: string;
@@ -81,7 +83,14 @@ export function AuditPromptEditor({
     }
   };
 
-  const handleDeleteTemplate = async (id: string) => {
+  const handleDeleteTemplate = async (id: string, name: string) => {
+    const ok = await confirm({
+      title: t('pipeline.templates.deleteConfirmTitle'),
+      message: t('pipeline.templates.deleteConfirmMessage', { name }),
+      confirmLabel: t('common.delete'),
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await onDeleteTemplate(id);
       toast.success(t('pipeline.templates.deleted'));
@@ -100,7 +109,7 @@ export function AuditPromptEditor({
             {icon && <span className="text-editorial-accent shrink-0">{icon}</span>}
             <span className="text-[11px] font-sans font-bold uppercase tracking-[0.14em] text-editorial-muted">{label}</span>
             {isCustomPrompt && (
-              <span className="border-l-2 border-l-editorial-accent bg-editorial-accent/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] text-editorial-accent">
+              <span className="border-l-2 border-l-editorial-accent bg-editorial-accent/10 px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-accent">
                 {t('pipeline.promptCustomBadge')}
               </span>
             )}
@@ -108,66 +117,54 @@ export function AuditPromptEditor({
           <div className="flex items-center gap-1.5">
             {isEditing ? (
               <>
-                <button
-                  type="button"
+                <IconButton
                   onClick={onRefine}
                   disabled={isRefining || !value.trim() || !canRefine}
                   title={t('pipeline.refinePromptWithModel', { model: refineLabel })}
-                  aria-label={`${t('pipeline.refinePromptWithModel', { model: refineLabel })}: ${label}`}
-                  className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40"
+                  size="sm"
                 >
                   {isRefining ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
-                </button>
-                <button
-                  type="button"
+                </IconButton>
+                <IconButton
                   onClick={() => { setShowSaveName(!showSaveName); setShowTemplateList(false); }}
                   title={t('pipeline.templates.save')}
-                  aria-label={`${t('pipeline.templates.save')}: ${label}`}
-                  className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                  size="sm"
                 >
                   <BookmarkPlus size={16} />
-                </button>
-                <button
-                  type="button"
+                </IconButton>
+                <IconButton
                   onClick={() => { setShowTemplateList(!showTemplateList); setShowSaveName(false); }}
                   title={t('pipeline.templates.load')}
-                  aria-label={`${t('pipeline.templates.load')}: ${label}`}
-                  className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                  size="sm"
                 >
                   <BookOpen size={16} />
-                </button>
-                <button
-                  type="button"
+                </IconButton>
+                <IconButton
                   onClick={handleCloseEdit}
                   title={t('common.close')}
-                  aria-label={`${t('common.close')}: ${label}`}
-                  className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                  size="sm"
                 >
                   <X size={16} />
-                </button>
+                </IconButton>
               </>
             ) : (
               <>
                 {isCustomPrompt && onReset && (
-                  <button
-                    type="button"
+                  <IconButton
                     onClick={onReset}
                     title={t('pipeline.promptReset')}
-                    aria-label={`${t('pipeline.promptReset')}: ${label}`}
-                    className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                    size="sm"
                   >
                     <RotateCcw size={16} />
-                  </button>
+                  </IconButton>
                 )}
-                <button
-                  type="button"
+                <IconButton
                   onClick={() => setIsEditing(true)}
                   title={t('pipeline.editPrompt')}
-                  aria-label={`${t('pipeline.editPrompt')}: ${label}`}
-                  className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                  size="sm"
                 >
                   <Pencil size={16} />
-                </button>
+                </IconButton>
               </>
             )}
           </div>
@@ -190,23 +187,21 @@ export function AuditPromptEditor({
             autoFocus
             className="flex-1 rounded-md bg-editorial-textbox/60 border border-editorial-border/60 px-2 py-1 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
           />
-          <button
-            type="button"
+          <IconButton
             onClick={handleSaveTemplate}
             disabled={!templateName.trim()}
-            className="text-editorial-ink hover:text-editorial-accent transition-colors disabled:opacity-40 focus:outline-none"
-            aria-label={t('common.confirm')}
+            title={t('common.confirm')}
+            size="sm"
           >
             <Check size={16} />
-          </button>
-          <button
-            type="button"
+          </IconButton>
+          <IconButton
             onClick={() => { setShowSaveName(false); setTemplateName(''); }}
-            className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none"
-            aria-label={t('common.cancel')}
+            title={t('common.cancel')}
+            size="sm"
           >
             <X size={16} />
-          </button>
+          </IconButton>
         </div>
       )}
 
@@ -244,14 +239,14 @@ export function AuditPromptEditor({
                     <div className="text-sm font-bold text-editorial-ink truncate">{tmpl.name}</div>
                     <div className="text-xs text-editorial-muted truncate mt-0.5 font-mono">{tmpl.prompt}</div>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteTemplate(tmpl.id)}
-                    className="shrink-0 text-editorial-muted/40 hover:text-editorial-accent transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 focus:outline-none mt-0.5"
-                    aria-label={t('common.delete')}
+                  <IconButton
+                    onClick={() => handleDeleteTemplate(tmpl.id, tmpl.name)}
+                    title={t('common.delete')}
+                    size="sm"
+                    className="shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 mt-0.5"
                   >
                     <Trash2 size={14} />
-                  </button>
+                  </IconButton>
                 </li>
               ))
             )}

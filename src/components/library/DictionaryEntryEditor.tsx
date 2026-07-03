@@ -3,6 +3,7 @@ import { Plus, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { GlossaryEntry } from '../../types';
 import { generateId } from '../../utils';
+import { IconButton } from '../ui';
 
 interface Props {
   entries: GlossaryEntry[];
@@ -51,14 +52,9 @@ export function DictionaryEntryEditor({ entries, onChange, readOnly = false }: P
           )}
         </span>
         {!readOnly && (
-          <button
-            onClick={addEntry}
-            title={t('pipeline.addGlossaryEntry')}
-            aria-label={t('pipeline.addGlossaryEntry')}
-            className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-          >
-            <Plus size={13} />
-          </button>
+          <IconButton onClick={addEntry} title={t('pipeline.addGlossaryEntry')} size="xs">
+            <Plus size={16} />
+          </IconButton>
         )}
       </div>
 
@@ -67,7 +63,7 @@ export function DictionaryEntryEditor({ entries, onChange, readOnly = false }: P
           {t('pipeline.glossaryEmpty')}
         </p>
       ) : (
-        <div className="overflow-y-auto custom-scrollbar max-h-[420px] border-y border-editorial-border bg-editorial-bg pr-2">
+        <div className="overflow-y-auto custom-scrollbar max-h-[420px] pr-2">
           {/* Intestazioni colonne (sticky) */}
           <div className="sticky top-0 z-10 grid grid-cols-[1fr_1fr_auto] border-b border-editorial-border bg-editorial-textbox/80 px-3 py-2">
             <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">
@@ -108,14 +104,14 @@ export function DictionaryEntryEditor({ entries, onChange, readOnly = false }: P
                     className="bg-transparent px-3 py-2 text-[12px] font-mono text-editorial-ink outline-none placeholder:text-editorial-muted/35 focus:bg-editorial-accent/5 read-only:opacity-60"
                   />
                   {!readOnly ? (
-                    <button
+                    <IconButton
                       onClick={() => g.id && removeEntry(g.id)}
                       title={removeLabel}
-                      aria-label={removeLabel}
-                      className="flex w-7 items-center justify-center text-editorial-muted/25 transition-colors hover:text-editorial-accent focus:outline-none group-hover:text-editorial-muted/50"
+                      size="xs"
+                      className="border-transparent text-editorial-muted/25 hover:border-transparent hover:text-editorial-accent group-hover:text-editorial-muted/50"
                     >
-                      <X size={12} />
-                    </button>
+                      <X size={16} />
+                    </IconButton>
                   ) : (
                     <span className="w-7" />
                   )}

@@ -354,7 +354,9 @@
       "deleted": "Template eliminato",
       "saveFailed": "Salvataggio template fallito",
       "deleteFailed": "Eliminazione template fallita",
-      "loadFailed": "Caricamento template fallito"
+      "loadFailed": "Caricamento template fallito",
+      "deleteConfirmTitle": "Elimina template",
+      "deleteConfirmMessage": "Elimina il template \"{{name}}\"? Questa azione è irreversibile."
     },
     "editPrompt": "Modifica prompt",
     "promptCustomBadge": "Personalizzato",

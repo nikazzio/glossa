@@ -6,6 +6,7 @@ import type { DeeplConfig, DeeplLanguageInfo, GlossaryEntry } from '../../types'
 import type { DeeplGlossaryInfo } from '../../services/deeplService';
 import { DEFAULT_DEEPL_STAGE_OPTIONS, toDeeplCode } from '../../constants';
 import { IconButton, SectionLabel, ToggleRow } from '../ui';
+import { confirm } from '../../stores/confirmStore';
 
 interface DeeplStageConfigProps {
   value?: DeeplConfig;
@@ -68,6 +69,28 @@ export function DeeplStageConfig({
   );
 
   const showGlossarySection = filteredGlossaries.length > 0 || glossariesLoading || glossaryEntries.length > 0;
+
+  const handleDeleteGlossary = async () => {
+    if (!config.glossaryId) return;
+    const selected = filteredGlossaries.find((g) => g.glossaryId === config.glossaryId);
+    const ok = await confirm({
+      title: t('pipeline.deepl.confirmDeleteGlossaryTitle', 'Eliminare il glossario DeepL?'),
+      message: t(
+        'pipeline.deepl.confirmDeleteGlossaryMessage',
+        'Il glossario "{{name}}" verrà eliminato definitivamente da DeepL. L\'azione non è reversibile.',
+        { name: selected?.name ?? '' },
+      ),
+      confirmLabel: t('common.delete', 'Elimina'),
+      danger: true,
+    });
+    if (!ok) return;
+    deeplService
+      .deleteGlossary(config.glossaryId)
+      .then(reloadGlossaries)
+      .catch((e: unknown) =>
+        setGlossaryError(e instanceof Error ? e.message : 'Eliminazione glossario DeepL fallita'),
+      );
+  };
 
   return (
     <div className="flex flex-col gap-5">
@@ -155,14 +178,7 @@ export function DeeplStageConfig({
                 size="sm"
                 tone="default"
                 className="shrink-0"
-                onClick={() =>
-                  deeplService
-                    .deleteGlossary(config.glossaryId!)
-                    .then(reloadGlossaries)
-                    .catch((e: unknown) =>
-                      setGlossaryError(e instanceof Error ? e.message : 'Eliminazione glossario DeepL fallita'),
-                    )
-                }
+                onClick={handleDeleteGlossary}
                 title={t('pipeline.deepl.deleteGlossary', 'Elimina glossario DeepL')}
               >
                 <Trash2 size={12} />

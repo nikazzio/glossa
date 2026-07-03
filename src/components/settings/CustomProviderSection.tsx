@@ -3,6 +3,7 @@ import { Plus, Trash2, CheckCircle2, Loader2, Wifi, Key, X, Save } from 'lucide-
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useCustomProviderStore } from '../../stores/customProviderStore';
+import { confirm } from '../../stores/confirmStore';
 import {
   saveCustomProviderProfile,
   deleteCustomProviderProfile,
@@ -220,6 +221,13 @@ export function CustomProviderSection() {
   };
 
   const handleDelete = async (profile: CustomProviderProfile) => {
+    const ok = await confirm({
+      title: t('settings.customProvider.confirmDeleteTitle'),
+      message: t('settings.customProvider.confirmDeleteMessage', { name: profile.name }),
+      confirmLabel: t('common.delete'),
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await deleteCustomProviderProfile(profile.id);
       await loadProfiles();
@@ -244,7 +252,7 @@ export function CustomProviderSection() {
               {profile.requiresApiKey ? (
                 <CheckCircle2 size={11} className="text-editorial-success shrink-0" />
               ) : (
-                <span className="text-[10px] uppercase tracking-[0.1em] text-editorial-muted">
+                <span className="text-[11px] uppercase tracking-[0.1em] text-editorial-muted">
                   {t('settings.customProvider.noAuth')}
                 </span>
               )}

@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PipelineConfig, StageRole } from '../../types';
 import { buildPromptPreviewStages, type PromptPreviewBlock, type PromptPreviewStage } from './promptPreview';
-import { IconButton, Tooltip } from '../ui';
+import { IconButton } from '../ui';
 
 interface PromptPreviewTabProps {
   config: PipelineConfig;
@@ -29,23 +29,17 @@ function PromptBlockCard({ block }: { block: PromptPreviewBlock }) {
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-1.5">
-          <span className="text-[10px] font-sans uppercase tracking-[0.14em] text-editorial-muted">
+          <span className="text-[11px] font-sans uppercase tracking-[0.14em] text-editorial-muted">
             {title}
           </span>
           {hint && (
-            <Tooltip label={hint} side="bottom">
-              <button
-                type="button"
-                aria-label={hint}
-                className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border border-editorial-muted/40 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
-              >
-                <Info size={8} aria-hidden />
-              </button>
-            </Tooltip>
+            <IconButton size="xs" title={hint} tooltipSide="bottom">
+              <Info size={8} aria-hidden />
+            </IconButton>
           )}
         </div>
         <span
-          className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest ${
+          className={`rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-widest ${
             block.kind === 'static'
               ? 'bg-editorial-success/10 text-editorial-success'
               : 'bg-editorial-accent/10 text-editorial-accent'
@@ -115,7 +109,7 @@ export function PromptPreviewTab({ config }: PromptPreviewTabProps) {
       <div className="space-y-2">
         <div className="flex items-center gap-1.5">
           <Eye size={11} className="text-editorial-accent shrink-0" />
-          <p className="text-[10px] font-sans uppercase tracking-[0.14em] text-editorial-muted">
+          <p className="text-[11px] font-sans uppercase tracking-[0.14em] text-editorial-muted">
             {t('pipeline.promptPreviewTitle')}
           </p>
         </div>

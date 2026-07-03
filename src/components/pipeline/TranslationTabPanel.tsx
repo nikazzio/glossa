@@ -5,6 +5,7 @@ import type { OllamaStatus, PipelineConfig, PipelineStageConfig, PromptTemplate 
 import type { ProviderKeyStatusMap } from '../../hooks/useProviderKeyStatus';
 import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
 import { calculateBlobBudget, getSelectableModelIds } from '../../models/catalog';
+import { IconButton, ToggleRow } from '../ui';
 import { StageCard } from './StageCard';
 
 interface TranslationTabPanelProps {
@@ -50,43 +51,21 @@ export function TranslationTabPanel({
 
   const blobContextCard = (
     <div className="space-y-3 border-l-4 border-l-editorial-charcoal/30 border-y border-editorial-border/70 bg-editorial-bg/65 px-5 py-4">
-      <button
-        type="button"
-        role="switch"
-        aria-checked={isOverride}
+      <ToggleRow
+        icon={<FileText size={13} />}
+        label={t('pipeline.blobContext')}
+        checked={isOverride}
         disabled={translationsExist}
-        onClick={() => setConfig((prev) => ({
+        onChange={() => setConfig((prev) => ({
           ...prev,
           blobBudgetTokens: isOverride ? 0 : auto.budget,
         }))}
-        className={`flex w-full items-center justify-between text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed ${
-          isOverride ? '' : 'opacity-80 hover:opacity-100'
-        }`}
-      >
-        <span className="space-y-0.5">
-          <span className="flex items-center gap-1.5">
-            <FileText size={11} className="text-editorial-accent shrink-0" />
-            <span className="text-[11px] font-sans font-bold uppercase tracking-[0.14em] text-editorial-muted">
-              {t('pipeline.blobContext')}
-            </span>
-          </span>
-          {!isOverride && (
-            <span className="block pl-4 text-xs text-editorial-muted/70">
-              {t('pipeline.blobContextAutoDesc', { tokens: auto.budget.toLocaleString(), model: auto.modelId || 'ollama' })}
-            </span>
-          )}
+      />
+      {!isOverride && (
+        <span className="block pl-4 text-xs text-editorial-muted/70">
+          {t('pipeline.blobContextAutoDesc', { tokens: auto.budget.toLocaleString(), model: auto.modelId || 'ollama' })}
         </span>
-        <span
-          className={`flex h-5 w-9 items-center rounded-full border px-0.5 transition-colors shrink-0 ${
-            isOverride
-              ? 'border-editorial-ink bg-editorial-ink justify-end'
-              : 'border-editorial-border bg-editorial-textbox/60 justify-start'
-          }`}
-          aria-hidden="true"
-        >
-          <span className="h-3.5 w-3.5 rounded-full bg-editorial-bg" />
-        </span>
-      </button>
+      )}
 
       {isOverride && (
         <div className="space-y-3 pt-1">
@@ -123,17 +102,15 @@ export function TranslationTabPanel({
                 aria-label={t('pipeline.blobOverlap')}
               />
             </div>
-            <button
-              type="button"
+            <IconButton
               onClick={() => setConfig((prev) => ({ ...prev, blobBudgetTokens: 0 }))}
               title={t('pipeline.blobContextReset')}
-              aria-label={t('pipeline.blobContextReset')}
-              className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              size="sm"
             >
               <RotateCcw size={12} />
-            </button>
+            </IconButton>
           </div>
-          <p className="text-[10px] text-editorial-muted/70">{t('pipeline.blobOverlapHint')}</p>
+          <p className="text-[11px] text-editorial-muted/70">{t('pipeline.blobOverlapHint')}</p>
         </div>
       )}
     </div>

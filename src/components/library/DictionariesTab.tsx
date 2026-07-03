@@ -18,7 +18,7 @@ import { confirm } from '../../stores/confirmStore';
 import type { GlossaryEntry } from '../../types';
 import { DictionaryEntryEditor } from './DictionaryEntryEditor';
 import { CsvImportDialog } from './CsvImportDialog';
-import { Dialog, DialogCancelButton } from '../ui';
+import { Dialog, DialogCancelButton, IconButton } from '../ui';
 
 export function DictionariesTab() {
   const { t } = useTranslation();
@@ -274,13 +274,12 @@ export function DictionariesTab() {
 
                 <div className="flex shrink-0 items-center gap-1.5">
                   {!isAssigned && (
-                    <button
+                    <IconButton
                       onClick={() => handleAssign(g.id)}
                       title={t('library.assignToProject')}
-                      className="rounded-full border border-editorial-border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:bg-editorial-textbox/30 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                     >
-                      {t('library.assign')}
-                    </button>
+                      <Check size={13} />
+                    </IconButton>
                   )}
                   <button
                     onClick={() => { setImportTargetId(g.id); setExportTarget(null); }}

@@ -374,13 +374,13 @@ export function MemoriesTab() {
                       <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">
                         {t('memory.sourcePhraseLabel')}
                       </div>
-                      <p className="text-sm leading-relaxed text-editorial-ink">{entry.sourcePhrase}</p>
+                      <p className="text-sm italic leading-relaxed text-editorial-ink">{entry.sourcePhrase}</p>
                     </div>
                     <div className="border-l border-editorial-success/45 bg-editorial-success/5 px-4 py-3">
                       <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-success">
                         {t('glossary.translation')}
                       </div>
-                      <p className="text-sm leading-relaxed text-editorial-ink">{entry.targetPhrase}</p>
+                      <p className="text-sm italic leading-relaxed text-editorial-ink">{entry.targetPhrase}</p>
                     </div>
                   </div>
                 )}
@@ -435,7 +435,7 @@ function OriginLine({
 
   const stale = entry.embeddingModel !== workspaceEmbeddingModel;
   return (
-    <p className={`mt-1 font-mono text-[10px] ${stale ? 'text-editorial-accent/80' : 'text-editorial-muted/50'}`}>
+    <p className={`mt-1 font-mono text-[11px] ${stale ? 'text-editorial-accent/80' : 'text-editorial-muted/50'}`}>
       {parts.join(' · ')}
     </p>
   );

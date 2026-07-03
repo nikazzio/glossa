@@ -142,7 +142,7 @@ export function SettingsTabPanel({
             const isActive = (config.mode ?? 'standard') === m;
             return (
               <div key={m} className={`flex items-center gap-2.5 transition-opacity ${isActive ? '' : 'opacity-25'}`}>
-                <span className={`shrink-0 w-[68px] text-[10px] font-bold uppercase tracking-widest ${isActive ? 'text-editorial-accent' : 'text-editorial-muted'}`}>
+                <span className={`shrink-0 w-[68px] text-[11px] font-bold uppercase tracking-widest ${isActive ? 'text-editorial-accent' : 'text-editorial-muted'}`}>
                   {t(`pipeline.mode.${m}`)}
                 </span>
                 <div className="flex items-center gap-1.5">

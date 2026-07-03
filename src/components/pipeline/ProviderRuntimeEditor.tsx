@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import type { ModelProvider, OllamaConfig, ProviderRuntimeConfig } from '../../types';
 import { defaultOllamaConfig } from '../../utils/providerOptions';
+import { ToggleRow } from '../ui';
 
 interface ProviderRuntimeEditorProps {
   provider: ModelProvider;
@@ -84,39 +85,23 @@ export function ProviderRuntimeEditor({
   return (
     <section className="border-l-4 border-l-editorial-charcoal/25 border-y border-editorial-border/70 bg-editorial-textbox/18 overflow-hidden">
       {/* Header / toggle row — always visible */}
-      <button
-        type="button"
-        role="switch"
-        aria-checked={overrideEnabled}
-        onClick={() => setOverrideEnabled(!overrideEnabled)}
-        className={`flex w-full items-center justify-between px-4 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-editorial-accent ${
+      <div
+        className={`px-4 py-3 transition-colors ${
           overrideEnabled
             ? 'bg-editorial-ink/5 border-b border-editorial-border/50'
             : 'hover:bg-editorial-textbox/30'
         }`}
       >
-        <span className="flex items-center gap-2.5">
-          <SlidersHorizontal size={13} className={overrideEnabled ? 'text-editorial-ink' : 'text-editorial-muted'} />
-          <span className="space-y-0.5">
-            <span className="block text-[10px] font-sans uppercase tracking-[0.14em] text-editorial-muted">
-              {title}
-            </span>
-            {!overrideEnabled && (
-              <span className="block text-xs leading-relaxed text-editorial-muted/70">{hint}</span>
-            )}
-          </span>
-        </span>
-        <span
-          className={`flex h-5 w-9 items-center rounded-full border px-0.5 transition-colors shrink-0 ${
-            overrideEnabled
-              ? 'border-editorial-ink bg-editorial-ink justify-end'
-              : 'border-editorial-border bg-editorial-textbox/60 justify-start'
-          }`}
-          aria-hidden="true"
-        >
-          <span className="h-3.5 w-3.5 rounded-full bg-editorial-bg" />
-        </span>
-      </button>
+        <ToggleRow
+          icon={<SlidersHorizontal size={13} className={overrideEnabled ? 'text-editorial-ink' : 'text-editorial-muted'} />}
+          label={title}
+          checked={overrideEnabled}
+          onChange={() => setOverrideEnabled(!overrideEnabled)}
+        />
+        {!overrideEnabled && (
+          <p className="mt-1 pl-[21px] text-xs leading-relaxed text-editorial-muted/70">{hint}</p>
+        )}
+      </div>
 
       {/* Collapsible fields — only when override is enabled */}
       <AnimatePresence initial={false}>
@@ -231,16 +216,26 @@ export function ProviderRuntimeEditor({
                 </LabeledField>
               </div>
 
-              <ToggleRow
-                checked={advancedEnabled}
-                icon={<Braces size={13} />}
-                label={t('pipeline.providerOptions.enableAdvanced')}
-                hint={t('pipeline.providerOptions.enableAdvancedHint')}
-                onChange={() => patchOllama({ useAdvancedOptions: !advancedEnabled })}
-              />
+              <div
+                className={`space-y-1.5 border-l-4 border-y px-3 py-3 transition-colors ${
+                  advancedEnabled
+                    ? 'border-l-editorial-ink border-y-editorial-border/70 bg-editorial-bg/90'
+                    : 'border-l-editorial-border/70 border-y-editorial-border/60 bg-editorial-bg/50'
+                }`}
+              >
+                <ToggleRow
+                  checked={advancedEnabled}
+                  icon={<Braces size={13} />}
+                  label={t('pipeline.providerOptions.enableAdvanced')}
+                  onChange={() => patchOllama({ useAdvancedOptions: !advancedEnabled })}
+                />
+                <p className="text-xs leading-relaxed text-editorial-muted">
+                  {t('pipeline.providerOptions.enableAdvancedHint')}
+                </p>
+              </div>
 
               <div className="space-y-2">
-                <label htmlFor={textareaId} className="block text-[10px] font-sans uppercase tracking-[0.28em] text-editorial-muted">
+                <label htmlFor={textareaId} className="block text-[11px] font-sans uppercase tracking-[0.28em] text-editorial-muted">
                   {t('pipeline.providerOptions.advancedJson')}
                 </label>
                 <textarea
@@ -291,58 +286,10 @@ function LabeledField({
 }) {
   return (
     <label className="space-y-1.5">
-      <span className="block text-[10px] font-sans uppercase tracking-[0.28em] text-editorial-muted">
+      <span className="block text-[11px] font-sans uppercase tracking-[0.28em] text-editorial-muted">
         {label}
       </span>
       {children}
     </label>
-  );
-}
-
-function ToggleRow({
-  checked,
-  label,
-  hint,
-  onChange,
-  icon,
-}: {
-  checked: boolean;
-  label: string;
-  hint: string;
-  onChange: () => void;
-  icon?: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      onClick={onChange}
-      className={`flex w-full items-center justify-between border-l-4 border-y px-3 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-        checked
-          ? 'border-l-editorial-ink border-y-editorial-border/70 bg-editorial-bg/90'
-          : 'border-l-editorial-border/70 border-y-editorial-border/60 bg-editorial-bg/50 hover:bg-editorial-textbox/30'
-      }`}
-    >
-      <span className="flex items-start gap-3">
-        <span
-          className={`mt-0.5 flex h-5 w-9 items-center rounded-full border px-0.5 transition-colors ${
-            checked
-              ? 'border-editorial-ink bg-editorial-ink justify-end'
-              : 'border-editorial-border bg-editorial-textbox/60 justify-start'
-          }`}
-          aria-hidden="true"
-        >
-          <span className="h-3.5 w-3.5 rounded-full bg-editorial-bg" />
-        </span>
-        <span className="space-y-1">
-          <span className="flex items-center gap-2 text-xs font-sans uppercase tracking-[0.14em] text-editorial-muted">
-            {icon}
-            {label}
-          </span>
-          <span className="block text-xs leading-relaxed text-editorial-muted">{hint}</span>
-        </span>
-      </span>
-    </button>
   );
 }
