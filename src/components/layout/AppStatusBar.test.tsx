@@ -82,6 +82,6 @@ describe('AppStatusBar', () => {
       panelSubTab: null,
     });
     render(<AppStatusBar />);
-    expect(screen.getByTitle(/unsaved/i)).toBeInTheDocument();
+    expect(screen.getByText(/unsaved/i)).toBeInTheDocument();
   });
 });

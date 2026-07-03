@@ -25,8 +25,10 @@ import { ProviderRuntimeEditor } from './ProviderRuntimeEditor';
 import { canRefineWithProvider, formatProviderModelLabel, type ProviderKeyStatusMap } from '../../hooks/useProviderKeyStatus';
 import { useConfigStore } from '../../stores/configStore';
 import { useCustomProviderStore } from '../../stores/customProviderStore';
+import { confirm } from '../../stores/confirmStore';
 import { STAGE_TEMPLATES } from '../../pipeline/pipelineModes';
 import { DeeplStageConfig } from './DeeplStageConfig';
+import { IconButton } from '../ui';
 
 interface StageCardProps {
   stage: PipelineStageConfig;
@@ -158,7 +160,14 @@ export function StageCard({
     }
   };
 
-  const handleDeleteTemplate = async (id: string) => {
+  const handleDeleteTemplate = async (id: string, name: string) => {
+    const ok = await confirm({
+      title: t('pipeline.templates.deleteConfirmTitle'),
+      message: t('pipeline.templates.deleteConfirmMessage', { name }),
+      confirmLabel: t('common.delete'),
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await deleteTemplate(id);
       toast.success(t('pipeline.templates.deleted'));
@@ -192,10 +201,10 @@ export function StageCard({
       ) : (
       <>
       {/* Model + provider card */}
-      <div className="space-y-3 rounded-[20px] border border-editorial-border bg-editorial-bg/70 px-5 py-4">
+      <div className="space-y-3 border-l-4 border-l-editorial-charcoal/30 border-y border-editorial-border/70 bg-editorial-bg/65 px-5 py-4">
         <div className="flex items-center gap-1.5">
           <Cpu size={11} className="text-editorial-accent shrink-0" />
-          <p className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+          <p className="text-[11px] font-sans font-bold uppercase tracking-[0.14em] text-editorial-muted">
             {t('pipeline.stageModelLabel')}
           </p>
         </div>
@@ -204,7 +213,7 @@ export function StageCard({
             value={stage.provider}
             onChange={(e) => handleProviderChange(e.target.value as ModelProvider)}
             disabled={translationsExist || isProcessing}
-            className="rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
+            className="rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
             aria-label={t('models.provider')}
           >
             {LLM_PROVIDER_ORDER.map((p) => (
@@ -218,7 +227,7 @@ export function StageCard({
                 value={stage.customProviderId ?? ''}
                 onChange={(e) => onUpdate({ customProviderId: e.target.value || undefined })}
                 disabled={translationsExist || isProcessing}
-                className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex-1 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
                 aria-label={t('settings.customProvider.sectionTitle')}
               >
                 {customProfiles.length === 0 && (
@@ -233,7 +242,7 @@ export function StageCard({
                 onChange={(e) => handleModelChange(e.target.value)}
                 disabled={translationsExist || isProcessing}
                 placeholder={t('ollama.modelPlaceholder')}
-                className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex-1 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
                 aria-label={t('pipeline.stageModelLabel')}
               />
             </div>
@@ -243,7 +252,7 @@ export function StageCard({
                 value={stage.model}
                 onChange={(e) => handleModelChange(e.target.value)}
                 disabled={translationsExist || isProcessing}
-                className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex-1 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
                 aria-label={t('pipeline.stageModelLabel')}
               >
                 {modelOptions.map((m) => (
@@ -260,7 +269,7 @@ export function StageCard({
               onChange={(e) => handleModelChange(e.target.value)}
               disabled={translationsExist || isProcessing}
               placeholder={t('ollama.modelPlaceholder')}
-              className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex-1 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
               aria-label={t('pipeline.stageModelLabel')}
             />
           )}
@@ -268,7 +277,7 @@ export function StageCard({
         {resolvedReasoning !== undefined && resolvedReasoning !== 'non_reasoning' && stage.provider !== 'ollama' && (
           <div className="flex items-center gap-2">
             <Wand2 size={11} className="text-editorial-warning shrink-0" />
-            <span className="text-[10px] font-sans uppercase tracking-[0.3em] text-editorial-muted">
+            <span className="text-[11px] font-sans font-bold uppercase tracking-[0.14em] text-editorial-muted">
               {t('pipeline.reasoningEffort')}
             </span>
             <ReasoningPicker
@@ -289,7 +298,7 @@ export function StageCard({
               type="button"
               onClick={onRefreshOllama}
               disabled={isRefreshingOllama}
-              className="flex items-center gap-1.5 rounded-full border border-editorial-accent/60 px-3 py-1 text-xs text-editorial-accent transition-colors hover:bg-editorial-accent hover:text-white disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="flex items-center gap-1.5 rounded-md border border-editorial-accent/60 px-3 py-1 text-xs text-editorial-accent transition-colors hover:bg-editorial-accent hover:text-white disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             >
               {isRefreshingOllama ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
               {t('ollama.loadModels')}
@@ -306,15 +315,15 @@ export function StageCard({
       </div>
 
       {/* Prompt editor */}
-      <div className="rounded-[20px] border border-editorial-border bg-editorial-bg/70 px-5 py-4 space-y-3">
+      <div className="border-l-4 border-l-editorial-accent/40 border-y border-editorial-border/70 bg-editorial-bg/85 px-5 py-4 space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-1.5">
             <FileText size={11} className="text-editorial-accent shrink-0" />
-            <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+            <span className="text-[11px] font-sans font-bold uppercase tracking-[0.14em] text-editorial-muted">
               {t('pipeline.prompt')}
             </span>
             {isCustomPrompt && !isEditingPrompt && (
-              <span className="rounded-full bg-editorial-accent/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-editorial-accent">
+              <span className="rounded-full bg-editorial-accent/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] text-editorial-accent">
                 {t('pipeline.promptCustomBadge')}
               </span>
             )}
@@ -322,68 +331,56 @@ export function StageCard({
           <div className="flex items-center gap-1.5">
             {isEditingPrompt ? (
               <>
-                <button
-                  type="button"
+                <IconButton
                   onClick={onRefinePrompt}
                   disabled={isRefining || !stage.prompt.trim() || !canRefine}
                   title={t('pipeline.refinePromptWithModel', { model: refineLabel })}
-                  aria-label={t('pipeline.refinePromptWithModel', { model: refineLabel })}
-                  className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40"
+                  size="sm"
                 >
                   {isRefining ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
-                </button>
-                <button
-                  type="button"
+                </IconButton>
+                <IconButton
                   onClick={() => { setShowSaveName(!showSaveName); setShowTemplateList(false); }}
                   title={t('pipeline.templates.save')}
-                  aria-label={t('pipeline.templates.save')}
-                  className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                  size="sm"
                 >
                   <BookmarkPlus size={16} />
-                </button>
-                <button
-                  type="button"
+                </IconButton>
+                <IconButton
                   onClick={() => { setShowTemplateList(!showTemplateList); setShowSaveName(false); }}
                   title={t('pipeline.templates.load')}
-                  aria-label={t('pipeline.templates.load')}
-                  className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                  size="sm"
                 >
                   <BookOpen size={16} />
-                </button>
-                <button
-                  type="button"
+                </IconButton>
+                <IconButton
                   onClick={() => { setIsEditingPrompt(false); setShowSaveName(false); setShowTemplateList(false); }}
                   title={t('common.close')}
-                  aria-label={t('common.close')}
-                  className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                  size="sm"
                 >
                   <X size={16} />
-                </button>
+                </IconButton>
               </>
             ) : (
               <>
                 {isCustomPrompt && (
-                  <button
-                    type="button"
+                  <IconButton
                     onClick={() => onUpdate({ prompt: STAGE_TEMPLATES[role].defaultPrompt })}
                     disabled={translationsExist || isProcessing}
                     title={t('pipeline.promptReset')}
-                    aria-label={t('pipeline.promptReset')}
-                    className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
+                    size="sm"
                   >
                     <RotateCcw size={16} />
-                  </button>
+                  </IconButton>
                 )}
-                <button
-                  type="button"
+                <IconButton
                   onClick={() => setIsEditingPrompt(true)}
                   disabled={translationsExist || isProcessing}
                   title={t('pipeline.editPrompt')}
-                  aria-label={t('pipeline.editPrompt')}
-                  className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
+                  size="sm"
                 >
                   <Pencil size={16} />
-                </button>
+                </IconButton>
               </>
             )}
           </div>
@@ -400,40 +397,38 @@ export function StageCard({
               }}
               placeholder={t('pipeline.templates.namePlaceholder')}
               autoFocus
-              className="flex-1 rounded bg-editorial-textbox/60 border border-editorial-border/60 px-2 py-1 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="flex-1 rounded-md bg-editorial-textbox/60 border border-editorial-border/60 px-2 py-1 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             />
-            <button
-              type="button"
+            <IconButton
               onClick={handleSaveTemplate}
               disabled={!templateName.trim()}
-              className="text-editorial-ink hover:text-editorial-accent transition-colors disabled:opacity-40 focus:outline-none"
-              aria-label={t('common.confirm')}
+              title={t('common.confirm')}
+              size="sm"
             >
               <Check size={16} />
-            </button>
-            <button
-              type="button"
+            </IconButton>
+            <IconButton
               onClick={() => { setShowSaveName(false); setTemplateName(''); }}
-              className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none"
-              aria-label={t('common.cancel')}
+              title={t('common.cancel')}
+              size="sm"
             >
               <X size={16} />
-            </button>
+            </IconButton>
           </div>
         )}
 
         {isEditingPrompt && showTemplateList && (
-          <div className="rounded-lg border border-editorial-border bg-editorial-bg shadow-lg overflow-hidden">
+          <div className="border-y border-editorial-border bg-editorial-bg shadow-lg overflow-hidden">
             <div className="p-2 border-b border-editorial-border/60">
               <input
                 value={templateSearch}
                 onChange={(e) => setTemplateSearch(e.target.value)}
                 placeholder={t('pipeline.templates.searchPlaceholder')}
                 autoFocus
-                className="w-full rounded bg-editorial-textbox/60 border border-editorial-border/40 px-2 py-1 text-sm font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
-              />
-            </div>
-            <ul className="max-h-48 overflow-y-auto custom-scrollbar">
+              className="w-full rounded-md bg-editorial-textbox/60 border border-editorial-border/40 px-2 py-1 text-sm font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+            />
+          </div>
+            <ul className="max-h-48 overflow-y-auto custom-scrollbar divide-y divide-editorial-border/60">
               {filteredTemplates.length === 0 ? (
                 <li className="px-3 py-4 text-xs text-editorial-muted text-center">
                   {t('pipeline.templates.empty')}
@@ -459,7 +454,7 @@ export function StageCard({
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleDeleteTemplate(tmpl.id)}
+                      onClick={() => handleDeleteTemplate(tmpl.id, tmpl.name)}
                       className="shrink-0 text-editorial-muted/40 hover:text-editorial-accent transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 focus:outline-none mt-0.5"
                       aria-label={t('common.delete')}
                     >
@@ -478,10 +473,10 @@ export function StageCard({
           placeholder={t('pipeline.stagePromptPlaceholder')}
           disabled={!promptEditable}
           rows={12}
-          className={`w-full rounded-[16px] border p-4 text-sm font-mono outline-none leading-relaxed resize-y min-h-[10rem] ${
+          className={`w-full rounded-md border-2 p-4 text-[13px] font-mono outline-none leading-6 resize-y min-h-[12rem] ${
             promptEditable
-              ? 'bg-editorial-textbox/40 border-editorial-border/60 focus-visible:ring-2 focus-visible:ring-editorial-accent'
-              : 'bg-editorial-textbox/10 border-editorial-border/30 text-editorial-muted/60 cursor-default'
+              ? 'bg-editorial-paper border-editorial-accent/25 focus-visible:ring-2 focus-visible:ring-editorial-accent'
+              : 'bg-editorial-textbox/12 border-editorial-border/40 text-editorial-muted/70 cursor-default'
           }`}
         />
       </div>

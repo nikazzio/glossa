@@ -6,7 +6,7 @@ import type { ProviderKeyStatusMap } from '../../hooks/useProviderKeyStatus';
 import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
 import { getKnownModelIds, getModelStatus, getResolvedModelReasoning, LLM_PROVIDER_ORDER } from '../../models/catalog';
 import { DEFAULT_COHERENCE_PROMPT, DEFAULT_JUDGE_PROMPT } from '../../constants';
-import { SectionLabel } from '../ui';
+import { SectionLabel, ToggleRow } from '../ui';
 import { ReasoningPicker } from '../models/ReasoningPicker';
 import { ProviderRuntimeEditor } from './ProviderRuntimeEditor';
 import { AuditPromptEditor } from './AuditPromptEditor';
@@ -62,38 +62,20 @@ export function AuditTabPanel({
       aria-labelledby="pconfig-tab-audit"
       className="space-y-6"
     >
-      <div className="space-y-3 rounded-[20px] border border-editorial-border bg-editorial-bg/70 px-5 py-4">
-        <button
-          type="button"
-          role="switch"
-          aria-checked={config.judgeRefineLoop ?? false}
-          onClick={() =>
+      <div className="space-y-3 border-l-4 border-l-editorial-warning/45 border-y border-editorial-border/70 bg-editorial-bg/65 px-5 py-4">
+        <ToggleRow
+          icon={<RefreshCw size={13} />}
+          label={t('pipeline.judgeRefineLoopSectionLabel')}
+          checked={config.judgeRefineLoop ?? false}
+          onChange={() =>
             setConfig((prev) => ({ ...prev, judgeRefineLoop: !(prev.judgeRefineLoop ?? false) }))
           }
-          className={`flex w-full items-center justify-between text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${config.judgeRefineLoop ? '' : 'opacity-80 hover:opacity-100'}`}
-        >
-          <span className="flex items-center gap-1.5">
-            <RefreshCw size={11} className="text-editorial-accent shrink-0" />
-            <span className="text-xs font-sans uppercase tracking-[0.35em] text-editorial-muted">
-              {t('pipeline.judgeRefineLoopSectionLabel')}
-            </span>
-          </span>
-          <span
-            className={`flex h-5 w-9 items-center rounded-full border px-0.5 transition-colors shrink-0 ${
-              (config.judgeRefineLoop ?? false)
-                ? 'border-editorial-ink bg-editorial-ink justify-end'
-                : 'border-editorial-border bg-editorial-textbox/60 justify-start'
-            }`}
-            aria-hidden="true"
-          >
-            <span className="h-3.5 w-3.5 rounded-full bg-editorial-bg" />
-          </span>
-        </button>
+        />
         {config.judgeRefineLoop && (
           <div className="space-y-1.5 pt-1">
             <label
               htmlFor="judge-refine-loop-max-iter"
-              className="block text-xs font-sans uppercase tracking-[0.22em] text-editorial-muted"
+              className="block text-[11px] font-sans font-bold uppercase tracking-[0.14em] text-editorial-muted"
             >
               {t('pipeline.judgeRefineLoopMaxIter')}
             </label>
@@ -109,19 +91,19 @@ export function AuditTabPanel({
                   judgeRefineLoopMaxIter: Math.max(1, Math.min(3, parseInt(e.target.value, 10) || 1)),
                 }))
               }
-              className="w-20 rounded-[12px] border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="w-20 rounded-md border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             />
           </div>
         )}
       </div>
 
-      <div className="space-y-3 rounded-[20px] border border-editorial-border bg-editorial-bg/70 px-5 py-4">
+      <div className="space-y-3 border-l-4 border-l-editorial-charcoal/30 border-y border-editorial-border/70 bg-editorial-bg/65 px-5 py-4">
         <SectionLabel icon={Cpu} label={t('pipeline.auditModelLabel')} />
         <div className="flex gap-2">
           <select
             value={config.judgeProvider}
             onChange={(e) => handleJudgeProviderChange(e.target.value as ModelProvider)}
-            className="rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            className="rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             aria-label={t('models.provider')}
           >
             {LLM_PROVIDER_ORDER.map((p) => (
@@ -132,7 +114,7 @@ export function AuditTabPanel({
             <select
               value={config.judgeModel}
               onChange={(e) => handleJudgeModelChange(e.target.value)}
-              className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="flex-1 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               aria-label={t('pipeline.auditModelLabel')}
             >
               {judgeModels.map((m) => (
@@ -146,14 +128,14 @@ export function AuditTabPanel({
               value={config.judgeModel}
               onChange={(e) => handleJudgeModelChange(e.target.value)}
               placeholder={t('ollama.modelPlaceholder')}
-              className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="flex-1 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               aria-label={t('pipeline.auditModelLabel')}
             />
           ) : (
             <select
               value={config.judgeModel}
               onChange={(e) => handleJudgeModelChange(e.target.value)}
-              className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="flex-1 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               aria-label={t('pipeline.auditModelLabel')}
             >
               {getKnownModelIds(config.judgeProvider).map((m) => (
@@ -167,7 +149,7 @@ export function AuditTabPanel({
         {judgeResolvedReasoning !== undefined && judgeResolvedReasoning !== 'non_reasoning' && config.judgeProvider !== 'ollama' && (
           <div className="flex items-center gap-2">
             <Wand2 size={11} className="text-editorial-warning shrink-0" />
-            <span className="text-xs font-sans uppercase tracking-[0.3em] text-editorial-muted">
+            <span className="text-[11px] font-sans font-bold uppercase tracking-[0.14em] text-editorial-muted">
               {t('pipeline.reasoningEffort')}
             </span>
             <ReasoningPicker

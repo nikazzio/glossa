@@ -354,7 +354,9 @@
       "deleted": "Template deleted",
       "saveFailed": "Failed to save template",
       "deleteFailed": "Failed to delete template",
-      "loadFailed": "Failed to load templates"
+      "loadFailed": "Failed to load templates",
+      "deleteConfirmTitle": "Delete template",
+      "deleteConfirmMessage": "Delete template \"{{name}}\"? This action is irreversible."
     },
     "editPrompt": "Edit prompt",
     "promptCustomBadge": "Custom",
@@ -431,6 +433,8 @@
     "chunkPresetLong": "Long",
     "chunkPresetLongHint": "~1000 words — few large chunks, more context per call.",
     "highlights": "Highlights",
+    "highlightsGlossaryGroup": "Glossary",
+    "highlightsOtherGroup": "Other highlights",
     "highlightSourceTerm": "Source term (glossary)",
     "highlightMatchTerm": "Correct term (translation)",
     "highlightMismatchTerm": "Missing term (translation)",
@@ -500,6 +504,8 @@
       "test": "Test",
       "noAuth": "No auth",
       "delete": "Delete profile",
+      "confirmDeleteTitle": "Delete this profile?",
+      "confirmDeleteMessage": "\"{{name}}\" will be permanently removed.",
       "saved": "{{name}} saved",
       "saveFailed": "Failed to save profile",
       "deleted": "{{name}} deleted",
@@ -897,7 +903,6 @@
     "searchScope_source": "source",
     "searchScope_translation": "translation",
     "searchScope_audit": "audit",
-    "highlightsToggle": "Toggle highlights",
     "insightsTabAudit": "Audit",
     "insightsTabStats": "Stats",
     "insightsTabCoherence": "Coherence",
@@ -1148,7 +1153,7 @@
       "reeval": "After manually fixing a candidate translation, click 'Re-evaluate' in the audit panel to rerun the judge on that chunk only. Lets you iterate to the desired quality without running the full pipeline.",
       "issuesNav": "Issue cards open the affected chunk directly, and — when the judge returns textual cues — try to focus on the relevant sentence with a search heuristic.",
       "coherenceTitle": "Coherence audit (document level)",
-      "coherenceDesc": "The coherence audit is a separate pass that analyses the whole document at once, not chunk by chunk. It uses the Coherence Prompt from the Quality Control tab and is launched manually after all chunks are complete. Results appear in the Coherence tab of the Insights panel and surface terminological or stylistic inconsistencies between chunks — for example the same term rendered differently in different places."
+      "coherenceDesc": "The coherence audit is a separate pass, launched manually after all chunks are complete. It analyses one chunk at a time (with neighboring chunks as context, so it doesn't lose the bigger picture), not the whole document in a single pass. It uses the Coherence Prompt from the Quality Control tab. Results appear in the Coherence tab of the Insights panel and surface terminological or stylistic inconsistencies between chunks — for example the same term rendered differently in different places."
     },
     "projects": {
       "title": "Projects",

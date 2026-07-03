@@ -126,10 +126,10 @@ export function MemoryExtractorSettings({
 
   return (
     <div className="space-y-4">
-      <div className="space-y-3 rounded-[20px] border border-editorial-border bg-editorial-bg/70 px-5 py-4">
+      <div className="space-y-3 border-y border-editorial-border/70 py-4">
         <div className="flex items-center gap-1.5">
           <Cpu size={11} className="shrink-0 text-editorial-accent" />
-          <p className="text-xs font-sans uppercase tracking-[0.22em] text-editorial-muted">
+          <p className="text-[11px] font-sans font-bold uppercase tracking-[0.14em] text-editorial-muted">
             {t('workspace.memoryExtractorModel')}
           </p>
         </div>
@@ -137,7 +137,7 @@ export function MemoryExtractorSettings({
           <select
             value={provider}
             onChange={(e) => handleProviderChange(e.target.value as ModelProvider)}
-            className="rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-bold uppercase text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            className="rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-bold uppercase text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             aria-label={t('models.provider')}
           >
             {LLM_PROVIDER_ORDER.map((entry) => (
@@ -151,7 +151,7 @@ export function MemoryExtractorSettings({
               <select
                 value={model}
                 onChange={(e) => onModelChange(e.target.value)}
-                className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="flex-1 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 aria-label={t('workspace.memoryExtractorModel')}
               >
                 {modelOptions.map((entry) => (
@@ -167,22 +167,22 @@ export function MemoryExtractorSettings({
               value={model}
               onChange={(e) => onModelChange(e.target.value)}
               placeholder={t('ollama.modelPlaceholder')}
-              className="flex-1 rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="flex-1 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               aria-label={t('workspace.memoryExtractorModel')}
             />
           )}
         </div>
       </div>
 
-      <div className="space-y-3 rounded-[20px] border border-editorial-border bg-editorial-bg/70 px-5 py-4">
+      <div className="space-y-3 border-y border-editorial-border/70 py-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-1.5">
             <FileText size={11} className="shrink-0 text-editorial-accent" />
-            <p className="text-xs font-sans uppercase tracking-[0.22em] text-editorial-muted">
+            <p className="text-[11px] font-sans font-bold uppercase tracking-[0.14em] text-editorial-muted">
               {t('workspace.memoryExtractorPrompt')}
             </p>
             {isCustomPrompt && !isEditingPrompt && (
-              <span className="rounded-full bg-editorial-accent/15 px-2 py-0.5 text-xs font-bold uppercase tracking-[0.18em] text-editorial-accent">
+              <span className="rounded-full bg-editorial-accent/15 px-2 py-0.5 text-xs font-bold uppercase tracking-[0.14em] text-editorial-accent">
                 {t('pipeline.promptCustomBadge')}
               </span>
             )}
@@ -194,7 +194,7 @@ export function MemoryExtractorSettings({
                   type="button"
                   onClick={() => void handleRefine()}
                   disabled={isRefining || !prompt.trim() || !canRefine}
-                  title={t('pipeline.refinePromptWithModel', { model: refineLabel })}
+                  data-tooltip={t('pipeline.refinePromptWithModel', { model: refineLabel })}
                   aria-label={t('pipeline.refinePromptWithModel', { model: refineLabel })}
                   className="text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40"
                 >
@@ -203,7 +203,7 @@ export function MemoryExtractorSettings({
                 <button
                   type="button"
                   onClick={() => { setShowSaveName(!showSaveName); setShowTemplateList(false); }}
-                  title={t('pipeline.templates.save')}
+                  data-tooltip={t('pipeline.templates.save')}
                   aria-label={t('pipeline.templates.save')}
                   className="text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
                 >
@@ -212,7 +212,7 @@ export function MemoryExtractorSettings({
                 <button
                   type="button"
                   onClick={() => { setShowTemplateList(!showTemplateList); setShowSaveName(false); }}
-                  title={t('pipeline.templates.load')}
+                  data-tooltip={t('pipeline.templates.load')}
                   aria-label={t('pipeline.templates.load')}
                   className="text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
                 >
@@ -221,7 +221,7 @@ export function MemoryExtractorSettings({
                 <button
                   type="button"
                   onClick={() => { setIsEditingPrompt(false); setShowSaveName(false); setShowTemplateList(false); }}
-                  title={t('common.close')}
+                  data-tooltip={t('common.close')}
                   aria-label={t('common.close')}
                   className="text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
                 >
@@ -237,7 +237,7 @@ export function MemoryExtractorSettings({
                       onProviderChange(DEFAULT_MEMORY_EXTRACTOR_PROVIDER, DEFAULT_MEMORY_EXTRACTOR_MODEL);
                       onPromptChange(DEFAULT_MEMORY_EXTRACTOR_PROMPT);
                     }}
-                    title={t('workspace.resetMemoryExtractorPrompt')}
+                    data-tooltip={t('workspace.resetMemoryExtractorPrompt')}
                     aria-label={t('workspace.resetMemoryExtractorPrompt')}
                     className="text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
                   >
@@ -247,7 +247,7 @@ export function MemoryExtractorSettings({
                 <button
                   type="button"
                   onClick={() => setIsEditingPrompt(true)}
-                  title={t('pipeline.editPrompt')}
+                  data-tooltip={t('pipeline.editPrompt')}
                   aria-label={t('pipeline.editPrompt')}
                   className="text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
                 >
@@ -292,7 +292,7 @@ export function MemoryExtractorSettings({
         )}
 
         {isEditingPrompt && showTemplateList && (
-          <div className="overflow-hidden rounded-lg border border-editorial-border bg-editorial-bg shadow-lg">
+          <div className="overflow-hidden border-y border-editorial-border bg-editorial-bg">
             <div className="border-b border-editorial-border/60 p-2">
               <input
                 value={templateSearch}
@@ -342,7 +342,7 @@ export function MemoryExtractorSettings({
           onChange={(e) => onPromptChange(e.target.value)}
           rows={12}
           disabled={!isEditingPrompt}
-          className={`min-h-[10rem] w-full resize-y rounded-[16px] border p-4 font-mono text-sm leading-relaxed outline-none ${
+          className={`min-h-[10rem] w-full resize-y rounded-md border p-4 font-mono text-sm leading-relaxed outline-none ${
             isEditingPrompt
               ? 'border-editorial-border/60 bg-editorial-textbox/40 focus-visible:ring-2 focus-visible:ring-editorial-accent'
               : 'cursor-default border-editorial-border/30 bg-editorial-textbox/10 text-editorial-muted/60'

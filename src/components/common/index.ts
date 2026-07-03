@@ -7,5 +7,4 @@ export { PreflightDialog } from './PreflightDialog';
 export { HighlightedText } from './HighlightedText';
 export { MarkdownEditor, DOC_FONT_SIZE_STEP_INDEX } from './MarkdownEditor';
 export { RunResumeBanner } from './RunResumeBanner';
-export { EditorialModalShell } from './EditorialModalShell';
 export { ProviderLogo } from './ProviderLogo';

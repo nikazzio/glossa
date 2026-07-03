@@ -122,7 +122,7 @@ export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSucce
             <label className="mb-1 block text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
               {t('memory.sourcePhraseLabel')}
             </label>
-            <div className="rounded-xl bg-editorial-textbox/40 px-3 py-2 text-xs text-editorial-muted font-mono leading-relaxed">
+            <div className="border-y border-editorial-border/70 py-2 text-xs text-editorial-muted font-mono leading-relaxed">
               {sourcePhrase}
             </div>
           </div>
@@ -135,7 +135,7 @@ export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSucce
             <input id="extract-term-input" type="text" value={isLoading ? '…' : term}
               onChange={(e) => setTerm(e.target.value)} disabled={isLoading}
               aria-label={t('memory.termLabel')}
-              className="w-full rounded-xl border border-editorial-border bg-editorial-textbox/60 px-3 py-2 text-sm text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-50" />
+              className="w-full rounded-md border border-editorial-border bg-editorial-textbox/60 px-3 py-2 text-sm text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-50" />
           </div>
 
           <div>
@@ -145,7 +145,7 @@ export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSucce
             </label>
             <input id="extract-translation-input" type="text" value={translation}
               onChange={(e) => setTranslation(e.target.value)}
-              className="w-full rounded-xl border border-editorial-border bg-editorial-textbox/60 px-3 py-2 text-sm text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent" />
+              className="w-full rounded-md border border-editorial-border bg-editorial-textbox/60 px-3 py-2 text-sm text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent" />
           </div>
 
           <div>
@@ -155,7 +155,7 @@ export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSucce
             </label>
             <input id="extract-notes-input" type="text" value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full rounded-xl border border-editorial-border bg-editorial-textbox/60 px-3 py-2 text-sm text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent" />
+              className="w-full rounded-md border border-editorial-border bg-editorial-textbox/60 px-3 py-2 text-sm text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent" />
           </div>
 
           <div>
@@ -166,7 +166,7 @@ export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSucce
             <select id="extract-glossary-select" value={selectedGlossaryId ?? ''}
               onChange={(e) => setSelectedGlossaryId(e.target.value || null)}
               aria-label={t('glossary.selectGlossary')}
-              className="w-full rounded-xl border border-editorial-border bg-editorial-textbox/60 px-3 py-2 text-sm text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent">
+              className="w-full rounded-md border border-editorial-border bg-editorial-textbox/60 px-3 py-2 text-sm text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent">
               <option value="">{t('glossary.noGlossarySelected')}</option>
               {glossaries.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
               <option value={CREATE_NEW_GLOSSARY}>{t('glossary.createNewInline')}</option>
@@ -177,7 +177,7 @@ export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSucce
                 placeholder={t('glossary.newGlossaryNamePlaceholder')}
                 aria-label={t('glossary.newGlossaryNamePlaceholder')}
                 autoFocus
-                className="mt-2 w-full rounded-xl border border-editorial-border bg-editorial-textbox/60 px-3 py-2 text-sm text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent" />
+                className="mt-2 w-full rounded-md border border-editorial-border bg-editorial-textbox/60 px-3 py-2 text-sm text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent" />
             )}
           </div>
       </div>

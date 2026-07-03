@@ -202,13 +202,13 @@ export function MemoriesTab() {
         </div>
         <div className="flex items-center gap-2">
           <label className="flex items-center gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-[0.28em] text-editorial-muted">
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">
               {t('library.workspaceFilter')}
             </span>
             <select
               value={workspaceFilter}
               onChange={(event) => setWorkspaceFilter(event.target.value)}
-              className="max-w-[220px] rounded-full border border-editorial-border bg-editorial-bg px-3 py-2 text-xs text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="max-w-[220px] rounded-md border border-editorial-border bg-editorial-bg px-3 py-2 text-xs text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             >
               <option value="all">{t('library.allWorkspaces')}</option>
               {workspaces.map((workspace) => (
@@ -243,8 +243,8 @@ export function MemoriesTab() {
           : null;
         if (!filteredWs) return null;
         return (
-          <div className="flex items-center gap-2 rounded-[14px] border border-editorial-border/60 bg-editorial-textbox/20 px-3 py-2">
-            <span className="text-[10px] font-bold uppercase tracking-[0.28em] text-editorial-muted">
+          <div className="flex items-center gap-2 border-y border-editorial-border/70 py-2">
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">
               {t('library.embeddingModel')}
             </span>
             <span className="font-mono text-xs text-editorial-accent">{filteredWs.embeddingModel}</span>
@@ -253,12 +253,12 @@ export function MemoriesTab() {
       })()}
 
       {isLoading ? (
-        <div className="flex items-center justify-center gap-2 rounded-[20px] border border-editorial-border bg-editorial-textbox/15 px-4 py-8 text-xs text-editorial-muted">
+        <div className="flex items-center justify-center gap-2 border-y border-editorial-border/70 py-8 text-xs text-editorial-muted">
           <Loader2 size={14} className="animate-spin" />
           {t('common.loading')}
         </div>
       ) : entries.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-3 rounded-[22px] border border-dashed border-editorial-border/70 bg-editorial-paper/45 px-5 py-12 text-center">
+        <div className="flex flex-col items-center justify-center gap-3 border-y border-dashed border-editorial-border/70 py-12 text-center">
           <Brain size={28} className="text-editorial-border" />
           <p className="font-display text-lg italic text-editorial-muted">
             {t('library.noMemories')}
@@ -274,7 +274,7 @@ export function MemoriesTab() {
             return (
               <article
                 key={entry.id}
-                className="rounded-[22px] border border-editorial-border bg-editorial-paper/60 p-4 shadow-[var(--inset-highlight)] transition-colors hover:border-editorial-accent/35"
+                className="border-l-4 border-l-editorial-success/35 border-y border-editorial-border/70 bg-editorial-bg/55 px-4 py-4 transition-colors hover:border-l-editorial-success"
               >
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -370,11 +370,17 @@ export function MemoriesTab() {
                   </div>
                 ) : (
                   <div className="grid gap-3">
-                    <div className="rounded-[16px] bg-editorial-textbox/45 px-4 py-3 text-sm leading-relaxed text-editorial-ink">
-                      {entry.sourcePhrase}
+                    <div className="border-l border-editorial-border/70 bg-editorial-textbox/18 px-4 py-3">
+                      <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">
+                        {t('memory.sourcePhraseLabel')}
+                      </div>
+                      <p className="text-sm italic leading-relaxed text-editorial-ink">{entry.sourcePhrase}</p>
                     </div>
-                    <div className="rounded-[16px] border border-editorial-border/60 bg-editorial-bg/70 px-4 py-3 text-sm leading-relaxed text-editorial-ink">
-                      {entry.targetPhrase}
+                    <div className="border-l border-editorial-success/45 bg-editorial-success/5 px-4 py-3">
+                      <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-success">
+                        {t('glossary.translation')}
+                      </div>
+                      <p className="text-sm italic leading-relaxed text-editorial-ink">{entry.targetPhrase}</p>
                     </div>
                   </div>
                 )}
@@ -429,7 +435,7 @@ function OriginLine({
 
   const stale = entry.embeddingModel !== workspaceEmbeddingModel;
   return (
-    <p className={`mt-1 font-mono text-[10px] ${stale ? 'text-editorial-accent/80' : 'text-editorial-muted/50'}`}>
+    <p className={`mt-1 font-mono text-[11px] ${stale ? 'text-editorial-accent/80' : 'text-editorial-muted/50'}`}>
       {parts.join(' · ')}
     </p>
   );
@@ -449,12 +455,12 @@ interface GlossaryPickerProps {
 function GlossaryPicker({ glossaries, selectedId, isAdding, onSelect, onConfirm, onCancel }: GlossaryPickerProps) {
   const { t } = useTranslation();
   return (
-    <div className="mt-3 flex items-center gap-2 rounded-[14px] border border-editorial-accent/30 bg-editorial-textbox/20 px-3 py-2.5">
+    <div className="mt-3 flex items-center gap-2 border-t border-editorial-accent/30 pt-3">
       <select
         value={selectedId}
         onChange={(e) => onSelect(e.target.value)}
         disabled={isAdding}
-        className="min-w-0 flex-1 rounded-full border border-editorial-border bg-editorial-bg px-3 py-1.5 text-xs text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-50"
+        className="min-w-0 flex-1 rounded-md border border-editorial-border bg-editorial-bg px-3 py-1.5 text-xs text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-50"
         aria-label={t('glossary.selectGlossary')}
       >
         {glossaries.map((g) => (
@@ -497,7 +503,7 @@ function MemoryTextarea({
 }) {
   return (
     <label className="grid gap-1.5">
-      <span className="text-[10px] font-bold uppercase tracking-[0.28em] text-editorial-muted">
+      <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">
         {label}
       </span>
       <textarea
@@ -505,7 +511,7 @@ function MemoryTextarea({
         onChange={(event) => onChange(event.target.value)}
         rows={3}
         autoFocus={autoFocus}
-        className="w-full resize-y rounded-[16px] border border-editorial-border bg-editorial-bg/80 px-4 py-3 text-sm leading-relaxed text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+        className="w-full resize-y rounded-md border border-editorial-border bg-editorial-bg/80 px-4 py-3 text-sm leading-relaxed text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
       />
     </label>
   );

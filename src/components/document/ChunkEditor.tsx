@@ -61,7 +61,7 @@ export function ChunkCard({
             <span className="font-normal opacity-50"> / {total}</span>
           </span>
           {anomaly && (
-            <span title={anomalyTitle} className="shrink-0 cursor-help">
+            <span data-tooltip={anomalyTitle} className="shrink-0 cursor-help">
               <AlertTriangle size={12} className="text-editorial-warning" />
             </span>
           )}
@@ -74,7 +74,7 @@ export function ChunkCard({
             <button
               type="button"
               onClick={onSplit}
-              title={t('files.boundarySplit')}
+              data-tooltip={t('files.boundarySplit')}
               className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             >
               <Scissors size={13} />
@@ -84,7 +84,7 @@ export function ChunkCard({
             type="button"
             onClick={onToggleExpand}
             disabled={!isLong}
-            title={isExpanded ? t('files.collapseChunk') : t('files.expandChunk')}
+            data-tooltip={isExpanded ? t('files.collapseChunk') : t('files.expandChunk')}
             className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-default disabled:opacity-20"
           >
             {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
@@ -131,7 +131,7 @@ export function BoundaryDivider({ onGive, onTake, onMerge, canGive, canTake }: B
         type="button"
         onClick={onTake}
         disabled={!canTake}
-        title={t('files.boundaryTake')}
+        data-tooltip={t('files.boundaryTake')}
         className="rounded-full border border-editorial-border bg-editorial-bg p-1 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-30"
       >
         <ChevronUp size={11} />
@@ -139,7 +139,7 @@ export function BoundaryDivider({ onGive, onTake, onMerge, canGive, canTake }: B
       <button
         type="button"
         onClick={onMerge}
-        title={t('files.boundaryMerge')}
+        data-tooltip={t('files.boundaryMerge')}
         className="rounded-full border border-editorial-border bg-editorial-bg p-1 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
       >
         <Merge size={11} />
@@ -148,7 +148,7 @@ export function BoundaryDivider({ onGive, onTake, onMerge, canGive, canTake }: B
         type="button"
         onClick={onGive}
         disabled={!canGive}
-        title={t('files.boundaryGive')}
+        data-tooltip={t('files.boundaryGive')}
         className="rounded-full border border-editorial-border bg-editorial-bg p-1 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-30"
       >
         <ChevronDown size={11} />
@@ -220,7 +220,7 @@ export function SegmentEditor({
                 <div className={`h-[2px] flex-1 rounded-full ${accentLine}`} />
                 <div
                   className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] ${accentBadge} ${accentText}`}
-                  title={anomaly ? anomalyTitle : undefined}
+                  data-tooltip={anomaly ? anomalyTitle : undefined}
                 >
                   {anomaly && <AlertTriangle size={10} />}
                   {t('pipeline.unit')} {chunkIdx + 1}
@@ -230,7 +230,7 @@ export function SegmentEditor({
                 <button
                   type="button"
                   onClick={() => onRemoveBoundary(chunkStart)}
-                  title={t('files.boundaryMerge')}
+                  data-tooltip={t('files.boundaryMerge')}
                   className="absolute -right-2 rounded-full border border-editorial-border bg-editorial-bg p-1 text-editorial-muted opacity-0 transition-all group-hover:opacity-100 hover:border-editorial-warning hover:text-editorial-warning focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 >
                   <Merge size={12} />
@@ -241,7 +241,7 @@ export function SegmentEditor({
             {chunkIdx === 0 && (
               <div
                 className="mb-2 flex items-center gap-3"
-                title={anomaly ? anomalyTitle : undefined}
+                data-tooltip={anomaly ? anomalyTitle : undefined}
               >
                 <div className={`h-[2px] flex-1 rounded-full ${accentLine}`} />
                 <div className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] ${accentBadge} ${accentText}`}>
@@ -270,7 +270,7 @@ export function SegmentEditor({
                         <button
                           type="button"
                           onClick={() => onSplitParagraph(globalIdx)}
-                          title={t('files.boundarySplit')}
+                          data-tooltip={t('files.boundarySplit')}
                           className={`absolute right-0 top-2 rounded-full border border-editorial-border bg-editorial-bg p-1 text-editorial-muted transition-all hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${hoveredPara === globalIdx ? 'opacity-100' : 'opacity-0'}`}
                         >
                           <Scissors size={13} />
@@ -286,7 +286,7 @@ export function SegmentEditor({
                         onMouseLeave={() => setHoveredGap(null)}
                         onClick={() => onAddBoundary(gapIdx)}
                         aria-label={t('files.boundaryAddHere')}
-                        title={t('files.boundaryAddHere')}
+                        data-tooltip={t('files.boundaryAddHere')}
                       >
                         <div className="h-px flex-1 bg-editorial-border/60 transition-colors group-hover:bg-editorial-border" />
                         <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-dashed text-xs font-bold transition-all ${hoveredGap === gapIdx ? 'border-editorial-ink text-editorial-ink' : 'border-editorial-border text-editorial-muted'}`}>

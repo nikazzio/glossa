@@ -334,7 +334,7 @@ export function SettingsModal() {
                           step={50}
                           value={chunkPresetShort}
                           onChange={(e) => setChunkPresetShort(Number(e.target.value) || 50)}
-                          className="w-full rounded-[18px] border border-editorial-border bg-editorial-bg px-4 py-3 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                          className="w-full rounded-md border border-editorial-border bg-editorial-bg px-4 py-3 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                         />
                       </div>
                       <div className="space-y-1.5">
@@ -348,7 +348,7 @@ export function SettingsModal() {
                           step={50}
                           value={chunkPresetMedium}
                           onChange={(e) => setChunkPresetMedium(Number(e.target.value) || 50)}
-                          className="w-full rounded-[18px] border border-editorial-border bg-editorial-bg px-4 py-3 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                          className="w-full rounded-md border border-editorial-border bg-editorial-bg px-4 py-3 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                         />
                       </div>
                       <div className="space-y-1.5">
@@ -361,7 +361,7 @@ export function SettingsModal() {
                           step={50}
                           value={chunkPresetLong}
                           onChange={(e) => setChunkPresetLong(Number(e.target.value) || 50)}
-                          className="w-full rounded-[18px] border border-editorial-border bg-editorial-bg px-4 py-3 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                          className="w-full rounded-md border border-editorial-border bg-editorial-bg px-4 py-3 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                         />
                       </div>
                     </div>
@@ -415,34 +415,51 @@ export function SettingsModal() {
                         {t(hlMode === 'dark' ? 'settings.colorScheme_dark' : 'settings.colorScheme_light')}
                       </span>
                     </div>
-                    <div className="space-y-2">
-                      {([
-                        { key: 'sourceTerm'   as const, label: t('settings.highlightSourceTerm') },
-                        { key: 'matchTerm'    as const, label: t('settings.highlightMatchTerm') },
-                        { key: 'mismatchTerm' as const, label: t('settings.highlightMismatchTerm') },
-                        { key: 'search'       as const, label: t('settings.highlightSearch') },
-                        { key: 'auditPhrase'  as const, label: t('settings.highlightAuditPhrase') },
-                        { key: 'annotation'   as const, label: t('settings.highlightAnnotation') },
-                      ]).map(({ key, label }) => (
-                        <label
-                          key={key}
-                          className="flex cursor-pointer items-center gap-3 rounded-[20px] border border-editorial-border bg-editorial-bg/60 px-4 py-3.5 transition-colors hover:border-editorial-accent/40"
-                        >
-                          <div className="relative h-5 w-5 shrink-0 overflow-hidden rounded-full shadow-sm">
-                            <div className="absolute inset-0" style={{ backgroundColor: activeHlColors[key] }} />
-                            <input
-                              type="color"
-                              value={colorToHex(activeHlColors[key])}
-                              onChange={(e) => setHighlightColor(hlMode, key, applyHexToColor(activeHlColors[key], e.target.value))}
-                              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                              aria-label={label}
-                            />
-                          </div>
-                          <span className="mx-0.5 h-5 w-px shrink-0 bg-editorial-border/70" aria-hidden="true" />
-                          <span className="font-display text-lg italic text-editorial-ink">{label}</span>
-                        </label>
-                      ))}
-                    </div>
+                    {([
+                      {
+                        groupLabel: t('settings.highlightsGlossaryGroup'),
+                        items: [
+                          { key: 'sourceTerm'   as const, label: t('settings.highlightSourceTerm') },
+                          { key: 'matchTerm'    as const, label: t('settings.highlightMatchTerm') },
+                          { key: 'mismatchTerm' as const, label: t('settings.highlightMismatchTerm') },
+                        ],
+                      },
+                      {
+                        groupLabel: t('settings.highlightsOtherGroup'),
+                        items: [
+                          { key: 'search'       as const, label: t('settings.highlightSearch') },
+                          { key: 'auditPhrase'  as const, label: t('settings.highlightAuditPhrase') },
+                          { key: 'annotation'   as const, label: t('settings.highlightAnnotation') },
+                        ],
+                      },
+                    ]).map(({ groupLabel, items }) => (
+                      <div key={groupLabel} className="space-y-1.5">
+                        <p className="text-[10px] font-sans uppercase tracking-[0.14em] text-editorial-muted/70">
+                          {groupLabel}
+                        </p>
+                        <div className="divide-y divide-editorial-border/70 border-y border-editorial-border/70">
+                          {items.map(({ key, label }) => (
+                            <label
+                              key={key}
+                              className="flex cursor-pointer items-center gap-3 py-3.5 transition-colors hover:text-editorial-accent"
+                            >
+                              <div className="relative h-5 w-5 shrink-0 overflow-hidden rounded-full shadow-sm">
+                                <div className="absolute inset-0" style={{ backgroundColor: activeHlColors[key] }} />
+                                <input
+                                  type="color"
+                                  value={colorToHex(activeHlColors[key])}
+                                  onChange={(e) => setHighlightColor(hlMode, key, applyHexToColor(activeHlColors[key], e.target.value))}
+                                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                                  aria-label={label}
+                                />
+                              </div>
+                              <span className="mx-0.5 h-5 w-px shrink-0 bg-editorial-border/70" aria-hidden="true" />
+                              <span className="font-display text-lg italic text-editorial-ink">{label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
                   </div>
 
                 </div>
@@ -465,7 +482,7 @@ export function SettingsModal() {
                       </p>
                     </div>
                     <p className="text-xs leading-relaxed text-editorial-muted">{t('settings.uiFontHint')}</p>
-                    <div role="radiogroup" aria-label={t('settings.uiFont')} className="grid grid-cols-2 gap-2">
+                    <div role="radiogroup" aria-label={t('settings.uiFont')} className="grid grid-cols-2 gap-x-6 border-y border-editorial-border/70">
                       {UI_FONT_OPTIONS.map((opt) => {
                         const isActive = uiFont === opt.value;
                         return (
@@ -475,18 +492,23 @@ export function SettingsModal() {
                             role="radio"
                             aria-checked={isActive}
                             onClick={() => setUiFont(opt.value)}
-                            className={`rounded-[20px] border px-4 py-3.5 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                            className={`flex items-center justify-between gap-2 border-l-4 py-3.5 pl-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
                               isActive
-                                ? 'border-editorial-accent bg-editorial-accent/10'
-                                : 'border-editorial-border bg-editorial-bg/60 hover:border-editorial-accent/40'
+                                ? 'border-l-editorial-accent text-editorial-accent'
+                                : 'border-l-transparent text-editorial-ink hover:border-l-editorial-border hover:text-editorial-accent'
                             }`}
                           >
-                            <span className="block text-lg text-editorial-ink" style={{ fontFamily: opt.family }}>
-                              {opt.name}
+                            <span className="min-w-0">
+                              <span className="block text-lg" style={{ fontFamily: opt.family }}>
+                                {opt.name}
+                              </span>
+                              <span className="mt-0.5 block text-xs text-editorial-muted" style={{ fontFamily: opt.family }}>
+                                AaBbCc 0123 àèéìòù
+                              </span>
                             </span>
-                            <span className="mt-0.5 block text-xs text-editorial-muted" style={{ fontFamily: opt.family }}>
-                              AaBbCc 0123 àèéìòù
-                            </span>
+                            {isActive ? (
+                              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-editorial-accent" aria-hidden="true" />
+                            ) : null}
                           </button>
                         );
                       })}
@@ -515,7 +537,7 @@ export function SettingsModal() {
                             role="radio"
                             aria-checked={isActive}
                             onClick={() => setColorScheme(value)}
-                            className={`flex flex-1 items-center justify-center gap-2 rounded-[16px] border py-2.5 text-[11px] font-bold uppercase tracking-[0.18em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                            className={`flex flex-1 items-center justify-center gap-2 rounded-md border py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
                               isActive
                                 ? 'border-editorial-accent bg-editorial-accent/10 text-editorial-accent'
                                 : 'border-editorial-border bg-editorial-bg/60 text-editorial-muted hover:border-editorial-accent/40'
@@ -542,7 +564,7 @@ export function SettingsModal() {
                       {(['light', 'dark'] as const).map((mode) => (
                         <label
                           key={mode}
-                          className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-[16px] border border-editorial-border bg-editorial-bg/60 py-2.5 text-[11px] font-bold uppercase tracking-[0.18em] text-editorial-muted transition-colors hover:border-editorial-accent/40"
+                          className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md border border-editorial-border bg-editorial-bg/60 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted transition-colors hover:border-editorial-accent/40"
                         >
                           <span className="relative h-3.5 w-3.5 shrink-0 overflow-hidden rounded-full">
                             <span className="absolute inset-0" style={{ backgroundColor: editorialAccentColor[mode] }} />
@@ -579,7 +601,7 @@ export function SettingsModal() {
                             role="radio"
                             aria-checked={isActive}
                             onClick={() => setDocumentFontSize(size)}
-                            className={`flex-1 rounded-[16px] border py-2.5 text-center text-[11px] font-bold uppercase tracking-[0.18em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                            className={`flex-1 rounded-md border py-2.5 text-center text-[11px] font-bold uppercase tracking-[0.14em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
                               isActive
                                 ? 'border-editorial-accent bg-editorial-accent/10 text-editorial-accent'
                                 : 'border-editorial-border bg-editorial-bg/60 text-editorial-muted hover:border-editorial-accent/40'
@@ -610,7 +632,7 @@ export function SettingsModal() {
                             role="radio"
                             aria-checked={isActive}
                             onClick={() => setDocumentLineHeight(lh)}
-                            className={`flex-1 rounded-[16px] border py-2.5 text-center text-[11px] font-bold uppercase tracking-[0.18em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                            className={`flex-1 rounded-md border py-2.5 text-center text-[11px] font-bold uppercase tracking-[0.14em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
                               isActive
                                 ? 'border-editorial-accent bg-editorial-accent/10 text-editorial-accent'
                                 : 'border-editorial-border bg-editorial-bg/60 text-editorial-muted hover:border-editorial-accent/40'
@@ -638,7 +660,7 @@ export function SettingsModal() {
                     <p className="text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
                       {t('settings.providerConfig')}
                     </p>
-                    <div className="rounded-[20px] border border-editorial-border bg-editorial-textbox/20 p-6 space-y-4">
+                    <div className="space-y-4 border-y border-editorial-border/70 py-5">
                       <div
                         role="tablist"
                         aria-label={t('settings.providerConfig')}
@@ -702,7 +724,7 @@ export function SettingsModal() {
                           {activeProviderTab === 'custom' ? (
                             <CustomProviderSection />
                           ) : activeProviderTab === 'ollama' ? (
-                            <div className="space-y-4 rounded-[18px] border border-editorial-border bg-editorial-bg/60 p-4">
+                            <div className="space-y-4 border-y border-editorial-border/70 py-4">
                               <div className="flex flex-wrap items-center justify-between gap-3">
                                 <div className="flex items-center gap-3">
                                   <Server size={16} className="text-editorial-muted" />
@@ -738,15 +760,14 @@ export function SettingsModal() {
                                     <HelpCircle size={12} className="text-editorial-muted" aria-label={t('ollama.unchecked')} />
                                   )}
                                 </div>
-                                <button
+                                <IconButton
                                   onClick={() => refreshOllama()}
                                   disabled={refreshing}
-                                  className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-editorial-muted hover:text-editorial-ink transition-colors disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                                  aria-label={t('ollama.refresh')}
+                                  title={t('ollama.refresh')}
+                                  size="sm"
                                 >
-                                  <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
-                                  {t('ollama.refresh')}
-                                </button>
+                                  <RefreshCw size={13} className={refreshing ? 'animate-spin' : ''} />
+                                </IconButton>
                               </div>
 
                               {ollamaStatus === 'disconnected' && (
@@ -764,9 +785,21 @@ export function SettingsModal() {
                                   {t('ollama.noModels')}
                                 </p>
                               )}
+                              {ollamaStatus === 'connected' && ollamaModels.length > 0 && (
+                                <div className="space-y-1.5">
+                                  {ollamaModels.map((modelId) => (
+                                    <div
+                                      key={modelId}
+                                      className="flex items-center gap-2 border-b border-editorial-border/60 py-2"
+                                    >
+                                      <span className="text-xs font-mono text-editorial-ink">{modelId}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           ) : (
-                            <div className="rounded-[18px] border border-editorial-border bg-editorial-bg/60 p-4">
+                            <div className="border-y border-editorial-border/70 py-4">
                               <ApiKeyInput
                                 label={PROVIDER_LABELS[activeProviderTab]}
                                 provider={activeProviderTab}
@@ -799,26 +832,26 @@ export function SettingsModal() {
                                     return (
                                       <div
                                         key={modelId}
-                                        className={`flex items-start gap-3 rounded-[16px] border border-editorial-border bg-editorial-bg/60 px-4 py-2.5 transition-opacity ${!hasKey ? 'opacity-40' : ''}`}
+                                        className={`flex items-start gap-3 border-b border-editorial-border/60 py-2.5 transition-opacity ${!hasKey ? 'opacity-40' : ''}`}
                                       >
                                         <div className="min-w-0 flex-1">
                                           <div className="flex flex-wrap items-center gap-2">
                                             <span className="text-xs font-mono text-editorial-ink">{modelId}</span>
                                             <ModelCapabilityHint provider={activeProviderTab} model={modelId} iconOnly />
                                             {entry?.contextWindow && (
-                                              <span className="rounded-full border border-editorial-border px-2 py-0.5 text-[10px] font-mono text-editorial-muted">
+                                              <span className="rounded-full border border-editorial-border px-2 py-0.5 text-[11px] font-mono text-editorial-muted">
                                                 {entry.contextWindow >= 1_000_000
                                                   ? `${(entry.contextWindow / 1_000_000).toFixed(0)}M`
                                                   : `${Math.round(entry.contextWindow / 1_000)}K`}
                                               </span>
                                             )}
                                             {entry?.pricing && (
-                                              <span className="rounded-full border border-editorial-border px-2 py-0.5 text-[10px] font-mono text-editorial-muted">
+                                              <span className="rounded-full border border-editorial-border px-2 py-0.5 text-[11px] font-mono text-editorial-muted">
                                                 ${entry.pricing.input}/${entry.pricing.output}
                                               </span>
                                             )}
                                             {entry?.status === 'preview' && (
-                                              <span className="rounded-full border border-editorial-warning/40 bg-editorial-warning/10 px-2 py-0.5 text-[10px] font-mono text-editorial-warning">
+                                              <span className="rounded-full border border-editorial-warning/40 bg-editorial-warning/10 px-2 py-0.5 text-[11px] font-mono text-editorial-warning">
                                                 preview
                                               </span>
                                             )}
@@ -851,9 +884,9 @@ export function SettingsModal() {
                       {t('cost.pricingOverrides')}
                     </button>
                     {showPricingOverrides && (
-                      <div className="space-y-3 rounded-[20px] border border-editorial-border bg-editorial-textbox/15 px-5 py-5">
+                      <div className="space-y-3 border-y border-editorial-border/70 py-5">
                         <p className="text-xs text-editorial-muted italic">{t('cost.overrideHint')}</p>
-                        <div className="border border-editorial-border overflow-x-auto">
+                        <div className="border-y border-editorial-border overflow-x-auto">
                           <table className="w-full text-xs font-mono">
                             <thead>
                               <tr className="border-b border-editorial-border bg-editorial-textbox/30">
@@ -928,7 +961,7 @@ export function SettingsModal() {
                   </div>
 
                   {/* Security Advisory */}
-                  <div className="rounded-[20px] border border-editorial-border bg-editorial-textbox/20">
+                  <div className="border-y border-editorial-border/70">
                     <button
                       type="button"
                       onClick={() => setShowSecurityAdvisory((current) => !current)}

@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { confirm } from '../../stores/confirmStore';
 import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
-import { useUiStore } from '../../stores/uiStore';
 import { useConfigStore } from '../../stores/configStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import type { ModelProvider, PromptTemplateContext, PromptTemplateWorkflow } from '../../types';
@@ -14,7 +13,6 @@ import { canRefineWithProvider, formatProviderModelLabel, useProviderKeyStatus }
 import { IconButton } from '../ui';
 
 const WORKFLOW_OPTIONS = ['translation', 'transcription'] as const;
-type WorkflowFilter = (typeof WORKFLOW_OPTIONS)[number];
 
 const FILTER_OPTIONS = ['all', 'stage', 'audit', 'persona', 'memory'] as const;
 type FilterValue = (typeof FILTER_OPTIONS)[number];
@@ -37,7 +35,6 @@ export function PromptTemplatesTab() {
   const [newContext, setNewContext] = useState<PromptTemplateContext>('stage');
   const [creating, setCreating] = useState(false);
   const [filterContext, setFilterContext] = useState<FilterValue>('all');
-  const [filterWorkflow, setFilterWorkflow] = useState<WorkflowFilter>('translation');
   const [newWorkflow, setNewWorkflow] = useState<PromptTemplateWorkflow>('translation');
   const [isRefining, setIsRefining] = useState(false);
   const { statuses: keyStatuses } = useProviderKeyStatus();
@@ -71,10 +68,10 @@ export function PromptTemplatesTab() {
   };
 
   const contextBadgeClass = (context: PromptTemplateContext) => {
-    if (context === 'audit') return 'bg-editorial-warning/20 text-editorial-warning';
-    if (context === 'persona') return 'bg-editorial-textbox/60 text-editorial-muted';
-    if (context === 'memory') return 'bg-editorial-success/15 text-editorial-success';
-    return 'bg-editorial-accent/20 text-editorial-accent';
+    if (context === 'audit') return 'border-l-editorial-warning bg-editorial-warning/12 text-editorial-warning';
+    if (context === 'persona') return 'border-l-editorial-muted bg-editorial-textbox/45 text-editorial-muted';
+    if (context === 'memory') return 'border-l-editorial-success bg-editorial-success/10 text-editorial-success';
+    return 'border-l-editorial-accent bg-editorial-accent/12 text-editorial-accent';
   };
 
   const handleRefine = async () => {
@@ -106,9 +103,7 @@ export function PromptTemplatesTab() {
   }, [newContext, auditDefaultProvider, auditDefaultModel, stageDefaultProvider, stageDefaultModel]);
 
   const filtered = templates.filter((tmpl) => {
-    const matchesWorkflow = tmpl.workflow === filterWorkflow;
-    const matchesContext = filterContext === 'all' || tmpl.context === filterContext;
-    return matchesWorkflow && matchesContext;
+    return filterContext === 'all' || tmpl.context === filterContext;
   });
 
   const handleSave = async () => {
@@ -142,24 +137,6 @@ export function PromptTemplatesTab() {
 
   return (
     <div className="space-y-6">
-      {/* Workflow tabs */}
-      <div className="flex gap-1 rounded-full border border-editorial-border bg-editorial-bg/60 p-0.5 w-fit">
-        {WORKFLOW_OPTIONS.map((w) => (
-          <button
-            key={w}
-            type="button"
-            onClick={() => setFilterWorkflow(w)}
-            className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-              filterWorkflow === w
-                ? 'bg-editorial-paper text-editorial-ink shadow-sm'
-                : 'text-editorial-muted hover:text-editorial-ink'
-            }`}
-          >
-            {w === 'translation' ? t('workflow.translation') : t('workflow.transcription')}
-          </button>
-        ))}
-      </div>
-
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           {FILTER_OPTIONS.map((ctx) => {
@@ -192,19 +169,19 @@ export function PromptTemplatesTab() {
       </div>
 
       {creating && (
-        <div className="space-y-4 rounded-[20px] border border-editorial-border bg-editorial-textbox/15 p-5">
+        <div className="space-y-4 border-l-4 border-l-editorial-accent/35 border-y border-editorial-border/70 bg-editorial-bg/45 px-4 py-5">
           <div className="grid gap-3 sm:grid-cols-[2fr_1fr_1fr]">
             <input
               autoFocus
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder={t('library.templateNamePlaceholder')}
-              className="rounded-[16px] border border-editorial-border bg-editorial-bg/80 px-4 py-2.5 text-sm font-display italic text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="rounded-md border border-editorial-border bg-editorial-bg/80 px-4 py-2.5 text-sm font-display italic text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             />
             <select
               value={newContext}
               onChange={(e) => setNewContext(e.target.value as PromptTemplateContext)}
-              className="rounded-[16px] border border-editorial-border bg-editorial-bg/80 px-3 py-2.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="rounded-md border border-editorial-border bg-editorial-bg/80 px-3 py-2.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             >
               <option value="stage">{t('pipeline.tabStages')}</option>
               <option value="audit">{t('pipeline.tabAudit')}</option>
@@ -214,7 +191,7 @@ export function PromptTemplatesTab() {
             <select
               value={newWorkflow}
               onChange={(e) => setNewWorkflow(e.target.value as PromptTemplateWorkflow)}
-              className="rounded-[16px] border border-editorial-border bg-editorial-bg/80 px-3 py-2.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="rounded-md border border-editorial-border bg-editorial-bg/80 px-3 py-2.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             >
               {WORKFLOW_OPTIONS.map((w) => (
                 <option key={w} value={w}>
@@ -235,7 +212,7 @@ export function PromptTemplatesTab() {
 
           <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-xs font-bold uppercase tracking-[0.22em] text-editorial-muted">
+              <span className="text-xs font-bold uppercase tracking-[0.14em] text-editorial-muted">
                 {t('pipeline.prompt')}
               </span>
               <div className="flex flex-wrap items-center gap-2">
@@ -246,7 +223,7 @@ export function PromptTemplatesTab() {
                     setRefineProvider(p);
                     setRefineModel(getProviderModels(p)[0] ?? '');
                   }}
-                  className="rounded-full border border-editorial-border bg-editorial-bg px-3 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  className="rounded-md border border-editorial-border bg-editorial-bg px-3 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 >
                   {LLM_PROVIDER_ORDER.map((p) => (
                     <option key={p} value={p}>{p}</option>
@@ -255,21 +232,20 @@ export function PromptTemplatesTab() {
                 <select
                   value={refineModel}
                   onChange={(e) => setRefineModel(e.target.value)}
-                  className="max-w-[160px] rounded-full border border-editorial-border bg-editorial-bg px-3 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  className="max-w-[160px] rounded-md border border-editorial-border bg-editorial-bg px-3 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 >
                   {modelOptions.map((m) => (
                     <option key={m} value={m}>{m}</option>
                   ))}
                 </select>
-                <button
+                <IconButton
                   onClick={handleRefine}
                   disabled={isRefining || !newPrompt.trim() || !canRefine}
                   title={t('pipeline.refinePromptWithModel', { model: refineLabel })}
-                  aria-label={t('pipeline.refinePromptWithModel', { model: refineLabel })}
-                  className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
+                  size="sm"
                 >
-                  {isRefining ? <Loader2 size={13} className="animate-spin" /> : <Wand2 size={13} />}
-                </button>
+                  {isRefining ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
+                </IconButton>
               </div>
             </div>
             <textarea
@@ -277,21 +253,21 @@ export function PromptTemplatesTab() {
               onChange={(e) => setNewPrompt(e.target.value)}
               placeholder={t('library.templatePromptPlaceholder')}
               rows={6}
-              className="w-full resize-y rounded-[16px] border border-editorial-border bg-editorial-bg/70 px-4 py-3 text-[13px] leading-relaxed font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="w-full resize-y rounded-md border border-editorial-border bg-editorial-bg/70 px-4 py-3 text-[13px] leading-relaxed font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             />
           </div>
 
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button
               onClick={() => setCreating(false)}
-              className="flex items-center gap-2 rounded-full border border-editorial-border px-4 py-2 text-xs font-bold uppercase tracking-[0.22em] text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="flex items-center gap-2 rounded-md border border-editorial-border px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             >
               <X size={13} /> {t('common.cancel')}
             </button>
             <button
               onClick={handleSave}
               disabled={!newName.trim() || !newPrompt.trim()}
-              className="flex items-center gap-2 rounded-full bg-editorial-accent px-5 py-2 text-xs font-bold uppercase tracking-[0.22em] text-white transition-colors hover:bg-editorial-accent/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex items-center gap-2 rounded-md bg-editorial-accent px-5 py-2 text-xs font-bold uppercase tracking-[0.14em] text-white transition-colors hover:bg-editorial-accent/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Check size={13} /> {t('library.saveTemplate')}
             </button>
@@ -300,7 +276,7 @@ export function PromptTemplatesTab() {
       )}
 
       {filtered.length === 0 && !creating ? (
-        <p className="rounded-[20px] border border-dashed border-editorial-border/60 px-4 py-8 text-center text-sm italic text-editorial-muted/70">
+        <p className="border-y border-dashed border-editorial-border/70 py-8 text-center text-sm italic text-editorial-muted/70">
           {t('library.noTemplates')}
         </p>
       ) : null}
@@ -309,25 +285,25 @@ export function PromptTemplatesTab() {
         {filtered.map((tmpl) => (
           <div
             key={tmpl.id}
-            className="space-y-3 rounded-[20px] border border-editorial-border bg-editorial-textbox/15 p-5 transition-colors hover:border-editorial-accent/40"
+            className="space-y-3 border-l-4 border-l-editorial-accent/30 border-y border-editorial-border/70 bg-editorial-bg/55 px-4 py-4 transition-colors hover:border-l-editorial-accent"
           >
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <span className="font-display text-base italic text-editorial-ink">{tmpl.name}</span>
-                <span className={`rounded-full px-3 py-0.5 text-xs font-bold uppercase tracking-[0.22em] ${contextBadgeClass(tmpl.context)}`}>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="space-y-1">
+                <span className={`inline-block border-l-2 px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.14em] ${contextBadgeClass(tmpl.context)}`}>
                   {contextLabel(tmpl.context)}
                 </span>
+                <div className="font-display text-base italic text-editorial-ink">{tmpl.name}</div>
               </div>
-              <button
+              <IconButton
                 onClick={() => handleDelete(tmpl.id, tmpl.name)}
                 title={t('common.delete')}
-                aria-label={`${t('common.delete')}: ${tmpl.name}`}
-                className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                ariaLabel={`${t('common.delete')}: ${tmpl.name}`}
+                size="sm"
               >
-                <Trash2 size={13} />
-              </button>
+                <Trash2 size={16} />
+              </IconButton>
             </div>
-            <pre className="max-h-40 overflow-y-auto whitespace-pre-wrap rounded-[14px] border border-editorial-border/40 bg-editorial-bg/60 px-4 py-3 text-[12px] leading-relaxed font-mono text-editorial-ink/80 custom-scrollbar">
+            <pre className="max-h-40 overflow-y-auto whitespace-pre-wrap bg-editorial-textbox/20 px-4 py-3 text-[12px] leading-relaxed font-mono text-editorial-ink/80 custom-scrollbar">
               {tmpl.prompt}
             </pre>
           </div>

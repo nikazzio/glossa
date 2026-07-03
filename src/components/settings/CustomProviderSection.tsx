@@ -3,6 +3,7 @@ import { Plus, Trash2, CheckCircle2, Loader2, Wifi, Key, X, Save } from 'lucide-
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useCustomProviderStore } from '../../stores/customProviderStore';
+import { confirm } from '../../stores/confirmStore';
 import {
   saveCustomProviderProfile,
   deleteCustomProviderProfile,
@@ -111,10 +112,10 @@ function ProfileForm({
     }
   };
 
-  const inputCls = 'w-full rounded-[12px] border border-editorial-border bg-editorial-textbox px-3 py-2 text-xs outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent';
+  const inputCls = 'w-full rounded-md border border-editorial-border bg-editorial-textbox px-3 py-2 text-xs outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent';
 
   return (
-    <div className="space-y-4 rounded-[18px] border border-editorial-border bg-editorial-bg/60 p-4">
+    <div className="space-y-4 border-y border-editorial-border/70 py-4">
       <FormField label={t('settings.customProvider.name')}>
         <input
           type="text"
@@ -135,7 +136,7 @@ function ProfileForm({
         />
       </FormField>
 
-      <div className="rounded-[12px] border border-editorial-border/60 bg-editorial-textbox/10 px-4 py-3">
+      <div className="border-y border-editorial-border/60 py-3">
         <ToggleRow
           icon={<Key size={12} />}
           label={t('settings.customProvider.requiresApiKey')}
@@ -220,6 +221,13 @@ export function CustomProviderSection() {
   };
 
   const handleDelete = async (profile: CustomProviderProfile) => {
+    const ok = await confirm({
+      title: t('settings.customProvider.confirmDeleteTitle'),
+      message: t('settings.customProvider.confirmDeleteMessage', { name: profile.name }),
+      confirmLabel: t('common.delete'),
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await deleteCustomProviderProfile(profile.id);
       await loadProfiles();
@@ -236,7 +244,7 @@ export function CustomProviderSection() {
       {profiles.map((profile) => (
         <div
           key={profile.id}
-          className="flex items-center justify-between gap-3 rounded-[16px] border border-editorial-border bg-editorial-bg/60 px-4 py-3"
+          className="flex items-center justify-between gap-3 border-b border-editorial-border/70 py-3"
         >
           <div className="min-w-0">
             <div className="flex items-center gap-2">
@@ -244,7 +252,7 @@ export function CustomProviderSection() {
               {profile.requiresApiKey ? (
                 <CheckCircle2 size={11} className="text-editorial-success shrink-0" />
               ) : (
-                <span className="text-[10px] uppercase tracking-[0.1em] text-editorial-muted">
+                <span className="text-[11px] uppercase tracking-[0.1em] text-editorial-muted">
                   {t('settings.customProvider.noAuth')}
                 </span>
               )}
@@ -279,7 +287,7 @@ export function CustomProviderSection() {
         <button
           type="button"
           onClick={openAddForm}
-          className="flex w-full items-center justify-center gap-2 rounded-[16px] border border-dashed border-editorial-border py-3 text-xs text-editorial-muted hover:border-editorial-accent hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          className="flex w-full items-center justify-center gap-2 border-y border-dashed border-editorial-border py-3 text-xs text-editorial-muted hover:border-editorial-accent hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
         >
           <Plus size={13} />
           {t('settings.customProvider.add')}

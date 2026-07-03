@@ -131,7 +131,7 @@ export function SearchTab({ panelId, labelledBy, chunks, currentChunkId, onSelec
             <button
               type="button"
               onClick={() => { setSearchQuery(''); inputRef.current?.focus(); }}
-              title={t('common.clear')}
+              data-tooltip={t('common.clear')}
               aria-label={t('common.clear')}
               className="shrink-0 text-editorial-muted hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent rounded-full"
             >

@@ -5,6 +5,7 @@ import { open } from '@tauri-apps/plugin-dialog';
 import { readTextFile, readFile } from '@tauri-apps/plugin-fs';
 import Papa from 'papaparse';
 import { Dialog, DialogConfirmButton, DialogCancelButton } from '../ui';
+import { useLibraryStore } from '../../stores/libraryStore';
 import {
   importEntriesFromCsv,
   importEntriesFromXlsx,
@@ -13,14 +14,13 @@ import {
 } from '../../services/glossaryService';
 
 interface Props {
-  glossaryId: string;
-  onImported: (count: number) => void;
+  workspaceId: string | null;
+  onImported: (glossaryId: string, count: number) => void;
   onClose: () => void;
 }
 
 type FileKind = 'csv' | 'xlsx';
-type Step = 'pick' | 'map' | 'preview' | 'confirm';
-type MergeStrategy = 'replace' | 'merge';
+type Step = 'pick' | 'map' | 'preview';
 
 const PREVIEW_ROWS = 5;
 const TERM_KEYS = ['term', 'source', 'from', 'termine', 'sorgente'];
@@ -33,17 +33,23 @@ function autoDetect(headers: string[]): Partial<XlsxColumnMap> {
   return { termKey: find(TERM_KEYS), translationKey: find(TRANS_KEYS), notesKey: find(NOTES_KEYS) };
 }
 
-export function CsvImportDialog({ glossaryId, onImported, onClose }: Props) {
+function deriveNameFromPath(path: string): string {
+  const base = path.split(/[\\/]/).pop() ?? path;
+  return base.replace(/\.(csv|tsv|txt|xlsx|xls)$/i, '');
+}
+
+export function CsvImportDialog({ workspaceId, onImported, onClose }: Props) {
   const { t } = useTranslation();
+  const createGlossary = useLibraryStore((s) => s.createGlossary);
   const [step, setStep] = useState<Step>('pick');
   const [fileKind, setFileKind] = useState<FileKind>('csv');
+  const [pickedPath, setPickedPath] = useState('');
   const [csvText, setCsvText] = useState('');
   const [xlsxRows, setXlsxRows] = useState<Record<string, string>[]>([]);
   const [headers, setHeaders] = useState<string[]>([]);
   const [previewRows, setPreviewRows] = useState<string[][]>([]);
   const [previewHeaders, setPreviewHeaders] = useState<string[]>([]);
   const [columnMap, setColumnMap] = useState<XlsxColumnMap>({ termKey: '', translationKey: '' });
-  const [strategy, setStrategy] = useState<MergeStrategy>('merge');
   const [totalRows, setTotalRows] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,6 +62,7 @@ export function CsvImportDialog({ glossaryId, onImported, onClose }: Props) {
       multiple: false,
     });
     if (!path) return;
+    setPickedPath(path as string);
     const ext = (path as string).split('.').pop()?.toLowerCase() ?? '';
     const isXlsx = ext === 'xlsx' || ext === 'xls';
     try {
@@ -100,7 +107,7 @@ export function CsvImportDialog({ glossaryId, onImported, onClose }: Props) {
 
   const buildXlsxPreview = (
     rows: Record<string, string>[],
-    hdrs: string[],
+    _hdrs: string[],
     map: XlsxColumnMap,
   ) => {
     const cols = [map.termKey, map.translationKey, ...(map.notesKey ? [map.notesKey] : [])];
@@ -123,13 +130,15 @@ export function CsvImportDialog({ glossaryId, onImported, onClose }: Props) {
   const handleConfirm = async () => {
     setLoading(true);
     try {
+      const name = deriveNameFromPath(pickedPath) || t('library.importTitle');
+      const glossaryId = await createGlossary(name, undefined, undefined, undefined, workspaceId);
       let count: number;
       if (fileKind === 'xlsx') {
-        count = await importEntriesFromXlsx(glossaryId, xlsxRows, columnMap, strategy);
+        count = await importEntriesFromXlsx(glossaryId, xlsxRows, columnMap, 'merge');
       } else {
-        count = await importEntriesFromCsv(glossaryId, csvText, strategy);
+        count = await importEntriesFromCsv(glossaryId, csvText, 'merge');
       }
-      onImported(count);
+      onImported(glossaryId, count);
       onClose();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t('library.csvImportError'));
@@ -159,7 +168,7 @@ export function CsvImportDialog({ glossaryId, onImported, onClose }: Props) {
     >
       <div>
           {error && (
-            <div className="mb-4 flex items-start gap-2 rounded border border-editorial-warning/60 bg-editorial-warning/10 p-3 text-[11px] text-editorial-warning">
+            <div className="mb-4 flex items-start gap-2 border-y border-editorial-warning/60 bg-editorial-warning/10 py-3 text-[11px] text-editorial-warning">
               <AlertCircle size={14} className="mt-0.5 shrink-0" />
               <span>{error}</span>
             </div>
@@ -167,12 +176,12 @@ export function CsvImportDialog({ glossaryId, onImported, onClose }: Props) {
 
           {step === 'pick' && (
             <div className="space-y-4">
-              <p className="text-[12px] text-editorial-muted leading-relaxed">
+              <p className="text-xs text-editorial-muted leading-relaxed">
                 {t('library.importPickDesc')}
               </p>
               <button
                 onClick={handlePickFile}
-                className="w-full rounded border border-dashed border-editorial-border/60 py-6 text-[11px] font-bold uppercase tracking-widest text-editorial-muted hover:border-editorial-accent hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="w-full border-y border-dashed border-editorial-border/60 py-6 text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted hover:border-editorial-accent hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               >
                 {t('library.importPickButton')}
               </button>
@@ -191,13 +200,13 @@ export function CsvImportDialog({ glossaryId, onImported, onClose }: Props) {
                   { key: 'notesKey', label: t('library.xlsxNotesCol'), required: false },
                 ] as const).map(({ key, label, required }) => (
                   <div key={key} className="flex items-center gap-3">
-                    <label className="w-36 shrink-0 text-[11px] font-bold uppercase tracking-widest text-editorial-muted">
+                    <label className="w-36 shrink-0 text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">
                       {label}
                     </label>
                     <select
                       value={columnMap[key] ?? ''}
                       onChange={(e) => setColumnMap((m) => ({ ...m, [key]: e.target.value || undefined }))}
-                      className="flex-1 rounded border border-editorial-border bg-editorial-bg px-3 py-2 text-[12px] text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                      className="flex-1 rounded-md border border-editorial-border bg-editorial-bg px-3 py-2 text-xs text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                     >
                       {!required && <option value="">{t('library.xlsxNoneOption')}</option>}
                       {headers.map((h) => (
@@ -220,15 +229,15 @@ export function CsvImportDialog({ glossaryId, onImported, onClose }: Props) {
 
           {step === 'preview' && (
             <div className="space-y-4">
-              <p className="text-[11px] text-editorial-muted">
+              <p className="text-xs text-editorial-muted">
                 {t('library.csvPreviewDesc', { count: totalRows })}
               </p>
-              <div className="overflow-x-auto border border-editorial-border/40 rounded">
-                <table className="w-full text-[10px] font-mono">
+              <div className="overflow-x-auto border-y border-editorial-border/70">
+                <table className="w-full text-[11px] font-mono">
                   <thead className="bg-editorial-textbox/30">
                     <tr>
                       {previewHeaders.map((h, i) => (
-                        <th key={i} className="px-2 py-1.5 text-left text-editorial-muted font-bold uppercase tracking-wider truncate max-w-[120px]">
+                        <th key={i} className="px-2 py-1.5 text-left text-editorial-muted font-bold uppercase tracking-[0.14em] truncate max-w-[120px]">
                           {h}
                         </th>
                       ))}
@@ -248,33 +257,10 @@ export function CsvImportDialog({ glossaryId, onImported, onClose }: Props) {
                 </table>
               </div>
               {totalRows > PREVIEW_ROWS && (
-                <p className="text-[10px] text-editorial-muted/60 text-center">
+                <p className="text-[11px] text-editorial-muted/60 text-center">
                   + {totalRows - PREVIEW_ROWS} {t('library.csvMoreRows')}
                 </p>
               )}
-
-              <div className="space-y-2">
-                <p className="text-[11px] font-bold uppercase tracking-widest text-editorial-muted">
-                  {t('library.csvStrategy')}
-                </p>
-                {(['merge', 'replace'] as MergeStrategy[]).map((s) => (
-                  <label key={s} className="flex items-start gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="strategy"
-                      value={s}
-                      checked={strategy === s}
-                      onChange={() => setStrategy(s)}
-                      className="mt-0.5"
-                    />
-                    <span className="text-[11px] text-editorial-ink">
-                      <span className="font-bold">{t(`library.csvStrategy_${s}`)}</span>
-                      {' — '}
-                      {t(`library.csvStrategy_${s}_desc`)}
-                    </span>
-                  </label>
-                ))}
-              </div>
 
               <div className="flex gap-2 justify-end pt-2">
                 <DialogCancelButton onClick={goBack}>{t('common.back')}</DialogCancelButton>

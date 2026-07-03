@@ -112,7 +112,7 @@ export function SettingsTabPanel({
             );
           })()}
         </div>
-        <div className="rounded-[14px] border border-editorial-border/40 bg-editorial-textbox/20 px-3 py-3 space-y-2.5">
+        <div className="border-l-4 border-l-editorial-charcoal/30 border-y border-editorial-border/60 bg-editorial-bg/65 px-4 py-4 space-y-2.5">
           {([
             {
               mode: 'standard' as PipelineMode,
@@ -142,7 +142,7 @@ export function SettingsTabPanel({
             const isActive = (config.mode ?? 'standard') === m;
             return (
               <div key={m} className={`flex items-center gap-2.5 transition-opacity ${isActive ? '' : 'opacity-25'}`}>
-                <span className={`shrink-0 w-[68px] text-[10px] font-bold uppercase tracking-widest ${isActive ? 'text-editorial-accent' : 'text-editorial-muted'}`}>
+                <span className={`shrink-0 w-[68px] text-[11px] font-bold uppercase tracking-widest ${isActive ? 'text-editorial-accent' : 'text-editorial-muted'}`}>
                   {t(`pipeline.mode.${m}`)}
                 </span>
                 <div className="flex items-center gap-1.5">
@@ -150,7 +150,7 @@ export function SettingsTabPanel({
                     <span key={role} className="flex items-center gap-1.5">
                       {i > 0 && <span className="text-editorial-muted/40 text-xs">›</span>}
                       <span
-                        title={t(labelKey)}
+                        data-tooltip={t(labelKey)}
                         aria-label={t(labelKey)}
                         className={`inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors ${isActive ? 'border-editorial-success/40 bg-editorial-success/12 text-editorial-success' : 'border-editorial-border bg-editorial-bg text-editorial-muted'}`}
                       >
@@ -172,7 +172,7 @@ export function SettingsTabPanel({
           <select
             value={config.sourceLanguage}
             onChange={(e) => setConfig((prev) => ({ ...prev, sourceLanguage: e.target.value }))}
-            className="w-full rounded-[14px] border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
+            className="w-full rounded-md border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
             aria-label={t('pipeline.sourceLanguage')}
             disabled={!!config.persona}
           >
@@ -198,7 +198,7 @@ export function SettingsTabPanel({
           <select
             value={config.targetLanguage}
             onChange={(e) => setConfig((prev) => ({ ...prev, targetLanguage: e.target.value }))}
-            className="w-full rounded-[14px] border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
+            className="w-full rounded-md border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
             aria-label={t('pipeline.targetLanguage')}
             disabled={!!config.persona}
           >

@@ -71,6 +71,14 @@ Cambia la configurazione prima di una run completa se hai bisogno di un provider
 un prompt o un comportamento del glossario diverso. Se devi solo ispezionare un
 risultato, preferisci la modalità Test invece di cambiare l'intera pipeline.
 
+## Preventivo costi
+
+Passando il mouse sull'icona informazioni vicino al costo stimato (nel pannello impostazioni pipeline, e vicino al pulsante di traduzione/esecuzione nella vista documento) vedi un dettaglio per fase con il costo approssimativo in dollari.
+
+- Nel pannello impostazioni pipeline il preventivo copre **sempre l'intero documento**, incluso il controllo di coerenza se configurato.
+- Vicino al pulsante di esecuzione nella vista documento, il preventivo segue quello che sta per succedere: in modalità "traduci chunk" copre solo il chunk selezionato, in modalità "esegui tutto" copre l'intero documento.
+- È una stima approssimativa basata sul conteggio parole e sul prezzo per token del modello scelto: il costo reale può variare leggermente.
+
 ## Vedi anche
 
 - [Provider supportati](./provider-support) — confronto tra provider e guida alla scelta del modello

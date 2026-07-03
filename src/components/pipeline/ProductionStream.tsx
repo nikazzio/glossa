@@ -160,7 +160,7 @@ const ChunkRow = memo(function ChunkRow({
                 type="button"
                 onClick={handleRetranslate}
                 disabled={isProcessing || chunk.originalText.trim().length === 0}
-                title={t('pipeline.retranslateChunk')}
+                data-tooltip={t('pipeline.retranslateChunk')}
                 className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent flex items-center gap-1"
               >
                 <RotateCcw size={11} /> {t('pipeline.retranslateChunk')}
@@ -169,7 +169,7 @@ const ChunkRow = memo(function ChunkRow({
                 type="button"
                 onClick={handleReaudit}
                 disabled={isProcessing || !chunk.currentDraft}
-                title={chunk.currentDraft ? t('pipeline.reauditChunk') : t('pipeline.auditSkippedNoDraft')}
+                data-tooltip={chunk.currentDraft ? t('pipeline.reauditChunk') : t('pipeline.auditSkippedNoDraft')}
                 className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent flex items-center gap-1"
               >
                 <ScanLine size={11} /> {t('pipeline.reauditChunk')}
@@ -180,7 +180,7 @@ const ChunkRow = memo(function ChunkRow({
                   onClick={handleUnlock}
                   disabled={isProcessing}
                   className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent flex items-center gap-1"
-                  title={t('pipeline.unlockSourceHint')}
+                  data-tooltip={t('pipeline.unlockSourceHint')}
                 >
                   <Pencil size={11} /> {t('pipeline.unlockSource')}
                 </button>
@@ -335,7 +335,7 @@ export function ProductionStream({
               type="button"
               onClick={() => setHighlightsEnabled(!highlightsEnabled)}
               aria-pressed={highlightsEnabled}
-              title={t('library.glossaryHighlightToggle')}
+              data-tooltip={t('library.glossaryHighlightToggle')}
               className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
                 highlightsEnabled ? 'text-editorial-ink' : 'text-editorial-muted hover:text-editorial-ink'
               }`}
@@ -348,7 +348,7 @@ export function ProductionStream({
             <button
               onClick={handleClearStream}
               disabled={isProcessing}
-              title={t('pipeline.clearStream')}
+              data-tooltip={t('pipeline.clearStream')}
               className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent transition-colors flex items-center gap-1 disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             >
               <Trash2 size={12} /> {t('pipeline.clearStream')}

@@ -5,7 +5,7 @@
   "identifier": "io.github.nikazzio.glossa",
   "build": {
     "frontendDist": "../dist",
-    "devUrl": "http://localhost:3000",
+    "devUrl": "http://localhost:48123",
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build"
   },

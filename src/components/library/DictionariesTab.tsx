@@ -18,6 +18,7 @@ import { confirm } from '../../stores/confirmStore';
 import type { GlossaryEntry } from '../../types';
 import { DictionaryEntryEditor } from './DictionaryEntryEditor';
 import { CsvImportDialog } from './CsvImportDialog';
+import { Dialog, DialogCancelButton, IconButton } from '../ui';
 
 export function DictionariesTab() {
   const { t } = useTranslation();
@@ -44,8 +45,8 @@ export function DictionariesTab() {
   const [creating, setCreating] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
-  const [importTargetId, setImportTargetId] = useState<string | null>(null);
-  const [exportMenuId, setExportMenuId] = useState<string | null>(null);
+  const [showImport, setShowImport] = useState(false);
+  const [exportTarget, setExportTarget] = useState<{ id: string; name: string } | null>(null);
 
   const handleToggle = async (id: string) => {
     if (expandedGlossaryId === id) {
@@ -134,14 +135,12 @@ export function DictionariesTab() {
   const handleImported = async (glossaryId: string, count: number) => {
     const entries = await getGlossaryEntries(glossaryId);
     setGlossaryEntries(glossaryId, entries);
-    if (config.assignedGlossaryId === glossaryId) {
-      await assignGlossary(glossaryId);
-    }
+    setExpandedGlossaryId(glossaryId);
     toast.success(t('library.csvImportSuccess', { count }));
   };
 
   const handleExport = async (glossaryId: string, glossaryName: string, format: 'csv' | 'xlsx') => {
-    setExportMenuId(null);
+    setExportTarget(null);
     try {
       const entries = entriesMap[glossaryId] ?? await getGlossaryEntries(glossaryId);
       const safeName = glossaryName.replace(/[/\\:*?"<>|]/g, '_') || 'glossary';
@@ -174,30 +173,30 @@ export function DictionariesTab() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-[11px] leading-relaxed text-editorial-muted">{t('library.dictionariesDesc')}</p>
-        <button
-          onClick={() => setCreating(true)}
-          title={t('library.newDictionary')}
-          aria-label={t('library.newDictionary')}
-          className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:bg-editorial-textbox/30 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-        >
-          <Plus size={13} />
-        </button>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <IconButton onClick={() => setShowImport(true)} title={t('library.importCsv')}>
+            <Upload size={13} />
+          </IconButton>
+          <IconButton onClick={() => setCreating(true)} title={t('library.newDictionary')}>
+            <Plus size={13} />
+          </IconButton>
+        </div>
       </div>
 
       {creating && (
-        <div className="flex flex-col gap-3 rounded-[20px] border border-editorial-border bg-editorial-textbox/15 p-4 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-3 border-y border-editorial-border/70 py-4 sm:flex-row sm:items-center">
           <input
             autoFocus
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') setCreating(false); }}
             placeholder={t('library.dictionaryNamePlaceholder')}
-            className="flex-1 rounded-[16px] border border-editorial-border bg-editorial-bg/80 px-4 py-2.5 text-sm font-display italic text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            className="flex-1 rounded-md border border-editorial-border bg-editorial-bg/80 px-4 py-2.5 text-sm font-display italic text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
           />
           <div className="flex items-center justify-end gap-2">
             <button
               onClick={() => setCreating(false)}
-              title={t('common.cancel')}
+              data-tooltip={t('common.cancel')}
               aria-label={t('common.cancel')}
               className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             >
@@ -206,7 +205,7 @@ export function DictionariesTab() {
             <button
               onClick={handleCreate}
               disabled={!newName.trim()}
-              title={t('common.save')}
+              data-tooltip={t('common.save')}
               aria-label={t('common.save')}
               className="rounded-full bg-editorial-accent p-2 text-white transition-colors hover:bg-editorial-accent/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
             >
@@ -217,7 +216,7 @@ export function DictionariesTab() {
       )}
 
       {glossaries.length === 0 && !creating ? (
-        <p className="rounded-[20px] border border-dashed border-editorial-border/60 px-4 py-8 text-center text-sm italic text-editorial-muted/70">
+        <p className="border-y border-dashed border-editorial-border/70 py-8 text-center text-sm italic text-editorial-muted/70">
           {t('library.noDictionaries')}
         </p>
       ) : null}
@@ -231,10 +230,10 @@ export function DictionariesTab() {
           return (
             <div
               key={g.id}
-              className={`rounded-[20px] border transition-colors ${
+              className={`border-b border-editorial-border/70 transition-colors ${
                 isAssigned
-                  ? 'border-editorial-accent/40 bg-editorial-bg'
-                  : 'border-editorial-border bg-editorial-textbox/12 hover:border-editorial-accent/30'
+                  ? 'bg-editorial-accent/5'
+                  : 'hover:bg-editorial-textbox/15'
               }`}
             >
               <div className="flex flex-wrap items-center gap-3 px-4 py-3">
@@ -259,7 +258,7 @@ export function DictionariesTab() {
                     <span
                       className="truncate font-display text-base italic text-editorial-ink"
                       onDoubleClick={(e) => { e.stopPropagation(); setRenamingId(g.id); setRenameValue(g.name); }}
-                      title={t('library.doubleClickRename')}
+                      data-tooltip={t('library.doubleClickRename')}
                     >
                       {g.name}
                     </span>
@@ -273,58 +272,24 @@ export function DictionariesTab() {
 
                 <div className="flex shrink-0 items-center gap-1.5">
                   {!isAssigned && (
-                    <button
+                    <IconButton
                       onClick={() => handleAssign(g.id)}
                       title={t('library.assignToProject')}
-                      className="rounded-full border border-editorial-border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:bg-editorial-textbox/30 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                     >
-                      {t('library.assign')}
-                    </button>
+                      <Check size={13} />
+                    </IconButton>
                   )}
                   <button
-                    onClick={() => { setImportTargetId(g.id); setExportMenuId(null); }}
-                    title={t('library.importCsv')}
-                    aria-label={t('library.importCsv')}
+                    onClick={() => setExportTarget({ id: g.id, name: g.name })}
+                    data-tooltip={t('library.exportGlossary')}
+                    aria-label={t('library.exportGlossary')}
                     className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:bg-editorial-textbox/30 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   >
-                    <Upload size={13} />
+                    <Download size={13} />
                   </button>
-                  <div className="relative">
-                    <button
-                      onClick={() => setExportMenuId(exportMenuId === g.id ? null : g.id)}
-                      title={t('library.exportGlossary')}
-                      aria-label={t('library.exportGlossary')}
-                      className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:bg-editorial-textbox/30 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                    >
-                      <Download size={13} />
-                    </button>
-                    {exportMenuId === g.id && (
-                      <>
-                        <div
-                          className="fixed inset-0 z-[190]"
-                          onClick={() => setExportMenuId(null)}
-                          aria-hidden="true"
-                        />
-                        <div className="absolute right-0 top-full z-[200] mt-1 flex flex-col overflow-hidden rounded-xl border border-editorial-border bg-editorial-bg shadow-lg">
-                          <button
-                            onClick={() => handleExport(g.id, g.name, 'csv')}
-                            className="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-widest text-editorial-muted hover:bg-editorial-textbox/40 hover:text-editorial-ink"
-                          >
-                            CSV
-                          </button>
-                          <button
-                            onClick={() => handleExport(g.id, g.name, 'xlsx')}
-                            className="px-4 py-2.5 text-left text-[11px] font-bold uppercase tracking-widest text-editorial-muted hover:bg-editorial-textbox/40 hover:text-editorial-ink"
-                          >
-                            Excel
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
                   <button
                     onClick={() => handleFork(g.id, g.name)}
-                    title={t('library.forkDictionary')}
+                    data-tooltip={t('library.forkDictionary')}
                     aria-label={t('library.forkDictionary')}
                     className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:bg-editorial-textbox/30 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   >
@@ -332,7 +297,7 @@ export function DictionariesTab() {
                   </button>
                   <button
                     onClick={() => handleDelete(g.id, g.name)}
-                    title={t('common.delete')}
+                    data-tooltip={t('common.delete')}
                     aria-label={`${t('common.delete')}: ${g.name}`}
                     className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:bg-editorial-textbox/30 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   >
@@ -365,13 +330,50 @@ export function DictionariesTab() {
         })}
       </div>
 
-      {importTargetId && (
+      {showImport && (
         <CsvImportDialog
-          glossaryId={importTargetId}
-          onImported={(count) => handleImported(importTargetId, count)}
-          onClose={() => setImportTargetId(null)}
+          workspaceId={activeWorkspace?.id ?? null}
+          onImported={handleImported}
+          onClose={() => setShowImport(false)}
         />
       )}
+
+      <Dialog
+        open={exportTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setExportTarget(null);
+        }}
+        title={t('library.exportGlossary')}
+        closeLabel={t('common.close')}
+        widthClassName="max-w-sm"
+        bodyClassName="px-5 py-4"
+        footer={
+          <div className="flex justify-end">
+            <DialogCancelButton onClick={() => setExportTarget(null)}>
+              {t('common.cancel')}
+            </DialogCancelButton>
+          </div>
+        }
+      >
+        <div className="divide-y divide-editorial-border/70 border-y border-editorial-border/70">
+          <button
+            type="button"
+            onClick={() => exportTarget && handleExport(exportTarget.id, exportTarget.name, 'csv')}
+            className="flex w-full items-center justify-between gap-4 py-3 text-left transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          >
+            <span className="font-display text-lg italic text-editorial-ink">CSV</span>
+            <span className="text-xs text-editorial-muted">.csv</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => exportTarget && handleExport(exportTarget.id, exportTarget.name, 'xlsx')}
+            className="flex w-full items-center justify-between gap-4 py-3 text-left transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          >
+            <span className="font-display text-lg italic text-editorial-ink">Excel</span>
+            <span className="text-xs text-editorial-muted">.xlsx</span>
+          </button>
+        </div>
+      </Dialog>
     </div>
   );
 }

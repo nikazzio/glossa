@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { PromptTemplate } from '../../types';
 import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
+import { confirm } from '../../stores/confirmStore';
+import { IconButton } from '../ui';
 
 export interface AuditPromptEditorProps {
   label: string;
@@ -81,7 +83,14 @@ export function AuditPromptEditor({
     }
   };
 
-  const handleDeleteTemplate = async (id: string) => {
+  const handleDeleteTemplate = async (id: string, name: string) => {
+    const ok = await confirm({
+      title: t('pipeline.templates.deleteConfirmTitle'),
+      message: t('pipeline.templates.deleteConfirmMessage', { name }),
+      confirmLabel: t('common.delete'),
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await onDeleteTemplate(id);
       toast.success(t('pipeline.templates.deleted'));
@@ -93,14 +102,14 @@ export function AuditPromptEditor({
   };
 
   return (
-    <div className="rounded-[20px] border border-editorial-border bg-editorial-bg/70 px-5 py-4 space-y-3">
+    <div className="border-l-4 border-l-editorial-warning/45 border-y border-editorial-border/70 bg-editorial-bg/85 px-5 py-4 space-y-3">
       <div className="space-y-1">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-1.5">
             {icon && <span className="text-editorial-accent shrink-0">{icon}</span>}
-            <span className="text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">{label}</span>
+            <span className="text-[11px] font-sans font-bold uppercase tracking-[0.14em] text-editorial-muted">{label}</span>
             {isCustomPrompt && (
-              <span className="rounded-full bg-editorial-accent/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-editorial-accent">
+              <span className="border-l-2 border-l-editorial-accent bg-editorial-accent/10 px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-accent">
                 {t('pipeline.promptCustomBadge')}
               </span>
             )}
@@ -108,66 +117,54 @@ export function AuditPromptEditor({
           <div className="flex items-center gap-1.5">
             {isEditing ? (
               <>
-                <button
-                  type="button"
+                <IconButton
                   onClick={onRefine}
                   disabled={isRefining || !value.trim() || !canRefine}
                   title={t('pipeline.refinePromptWithModel', { model: refineLabel })}
-                  aria-label={`${t('pipeline.refinePromptWithModel', { model: refineLabel })}: ${label}`}
-                  className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40"
+                  size="sm"
                 >
                   {isRefining ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
-                </button>
-                <button
-                  type="button"
+                </IconButton>
+                <IconButton
                   onClick={() => { setShowSaveName(!showSaveName); setShowTemplateList(false); }}
                   title={t('pipeline.templates.save')}
-                  aria-label={`${t('pipeline.templates.save')}: ${label}`}
-                  className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                  size="sm"
                 >
                   <BookmarkPlus size={16} />
-                </button>
-                <button
-                  type="button"
+                </IconButton>
+                <IconButton
                   onClick={() => { setShowTemplateList(!showTemplateList); setShowSaveName(false); }}
                   title={t('pipeline.templates.load')}
-                  aria-label={`${t('pipeline.templates.load')}: ${label}`}
-                  className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                  size="sm"
                 >
                   <BookOpen size={16} />
-                </button>
-                <button
-                  type="button"
+                </IconButton>
+                <IconButton
                   onClick={handleCloseEdit}
                   title={t('common.close')}
-                  aria-label={`${t('common.close')}: ${label}`}
-                  className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                  size="sm"
                 >
                   <X size={16} />
-                </button>
+                </IconButton>
               </>
             ) : (
               <>
                 {isCustomPrompt && onReset && (
-                  <button
-                    type="button"
+                  <IconButton
                     onClick={onReset}
                     title={t('pipeline.promptReset')}
-                    aria-label={`${t('pipeline.promptReset')}: ${label}`}
-                    className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                    size="sm"
                   >
                     <RotateCcw size={16} />
-                  </button>
+                  </IconButton>
                 )}
-                <button
-                  type="button"
+                <IconButton
                   onClick={() => setIsEditing(true)}
                   title={t('pipeline.editPrompt')}
-                  aria-label={`${t('pipeline.editPrompt')}: ${label}`}
-                  className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                  size="sm"
                 >
                   <Pencil size={16} />
-                </button>
+                </IconButton>
               </>
             )}
           </div>
@@ -188,40 +185,38 @@ export function AuditPromptEditor({
             }}
             placeholder={t('pipeline.templates.namePlaceholder')}
             autoFocus
-            className="flex-1 rounded bg-editorial-textbox/60 border border-editorial-border/60 px-2 py-1 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            className="flex-1 rounded-md bg-editorial-textbox/60 border border-editorial-border/60 px-2 py-1 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
           />
-          <button
-            type="button"
+          <IconButton
             onClick={handleSaveTemplate}
             disabled={!templateName.trim()}
-            className="text-editorial-ink hover:text-editorial-accent transition-colors disabled:opacity-40 focus:outline-none"
-            aria-label={t('common.confirm')}
+            title={t('common.confirm')}
+            size="sm"
           >
             <Check size={16} />
-          </button>
-          <button
-            type="button"
+          </IconButton>
+          <IconButton
             onClick={() => { setShowSaveName(false); setTemplateName(''); }}
-            className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none"
-            aria-label={t('common.cancel')}
+            title={t('common.cancel')}
+            size="sm"
           >
             <X size={16} />
-          </button>
+          </IconButton>
         </div>
       )}
 
       {showTemplateList && (
-        <div className="rounded-lg border border-editorial-border bg-editorial-bg shadow-lg overflow-hidden">
+        <div className="border-y border-editorial-border bg-editorial-bg shadow-lg overflow-hidden">
           <div className="p-2 border-b border-editorial-border/60">
             <input
               value={templateSearch}
               onChange={(e) => setTemplateSearch(e.target.value)}
               placeholder={t('pipeline.templates.searchPlaceholder')}
               autoFocus
-              className="w-full rounded bg-editorial-textbox/60 border border-editorial-border/40 px-2 py-1 text-sm font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+              className="w-full rounded-md bg-editorial-textbox/60 border border-editorial-border/40 px-2 py-1 text-sm font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
             />
           </div>
-          <ul className="max-h-48 overflow-y-auto custom-scrollbar">
+          <ul className="max-h-48 overflow-y-auto custom-scrollbar divide-y divide-editorial-border/60">
             {filteredTemplates.length === 0 ? (
               <li className="px-3 py-4 text-xs text-editorial-muted text-center">
                 {t('pipeline.templates.empty')}
@@ -244,14 +239,14 @@ export function AuditPromptEditor({
                     <div className="text-sm font-bold text-editorial-ink truncate">{tmpl.name}</div>
                     <div className="text-xs text-editorial-muted truncate mt-0.5 font-mono">{tmpl.prompt}</div>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteTemplate(tmpl.id)}
-                    className="shrink-0 text-editorial-muted/40 hover:text-editorial-accent transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 focus:outline-none mt-0.5"
-                    aria-label={t('common.delete')}
+                  <IconButton
+                    onClick={() => handleDeleteTemplate(tmpl.id, tmpl.name)}
+                    title={t('common.delete')}
+                    size="sm"
+                    className="shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 mt-0.5"
                   >
                     <Trash2 size={14} />
-                  </button>
+                  </IconButton>
                 </li>
               ))
             )}
@@ -265,10 +260,10 @@ export function AuditPromptEditor({
         placeholder={placeholder}
         disabled={!isEditing}
         rows={isEditing ? 12 : 4}
-        className={`w-full rounded-[16px] border p-4 text-sm font-mono outline-none leading-relaxed resize-y min-h-[10rem] ${
+        className={`w-full rounded-md border-2 p-4 text-[13px] font-mono outline-none leading-6 resize-y min-h-[12rem] ${
           isEditing
-            ? 'bg-editorial-textbox/40 border-editorial-border/60 focus-visible:ring-2 focus-visible:ring-editorial-accent'
-            : 'bg-editorial-textbox/10 border-editorial-border/30 text-editorial-muted/60 cursor-default'
+            ? 'bg-editorial-paper border-editorial-warning/25 focus-visible:ring-2 focus-visible:ring-editorial-accent'
+            : 'bg-editorial-textbox/12 border-editorial-border/40 text-editorial-muted/70 cursor-default'
         }`}
       />
     </div>

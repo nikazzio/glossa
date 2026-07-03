@@ -3,8 +3,9 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { defaultPersonaText } from '../../constants';
+import { confirm } from '../../stores/confirmStore';
 import type { PromptTemplate } from '../../types';
-import { SectionLabel } from '../ui';
+import { IconButton, SectionLabel } from '../ui';
 
 export interface PersonaEditorProps {
   persona: string | undefined;
@@ -80,7 +81,14 @@ export function PersonaEditor({
     }
   };
 
-  const handleDeleteTemplate = async (id: string) => {
+  const handleDeleteTemplate = async (id: string, name: string) => {
+    const ok = await confirm({
+      title: t('library.templateDeleteTitle'),
+      message: t('library.templateDeleteMessage', { name }),
+      confirmLabel: t('common.delete'),
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await onDeleteTemplate(id);
       toast.success(t('pipeline.templates.deleted'));
@@ -97,7 +105,7 @@ export function PersonaEditor({
         <div className="flex items-center gap-1.5">
           <SectionLabel icon={Bot} label={t('pipeline.personaLabel')} />
           {isCustom && (
-            <span className="rounded-full bg-editorial-accent/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-editorial-accent">
+            <span className="border-l-2 border-l-editorial-accent bg-editorial-accent/10 px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-accent">
               {t('pipeline.personaCustomBadge')}
             </span>
           )}
@@ -105,66 +113,54 @@ export function PersonaEditor({
         <div className="flex items-center gap-1">
           {isEditing ? (
             <>
-              <button
-                type="button"
+              <IconButton
                 onClick={onRefine}
                 disabled={isRefining || !persona?.trim() || !canRefine}
                 title={t('pipeline.refinePromptWithModel', { model: refineLabel })}
-                aria-label={t('pipeline.refinePromptWithModel', { model: refineLabel })}
-                className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40"
+                size="sm"
               >
-                {isRefining ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
-              </button>
-              <button
-                type="button"
+                {isRefining ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
+              </IconButton>
+              <IconButton
                 onClick={() => { setShowSaveName(!showSaveName); setShowTemplateList(false); }}
                 title={t('pipeline.templates.save')}
-                aria-label={t('pipeline.templates.save')}
-                className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                size="sm"
               >
-                <BookmarkPlus size={14} />
-              </button>
-              <button
-                type="button"
+                <BookmarkPlus size={16} />
+              </IconButton>
+              <IconButton
                 onClick={() => { setShowTemplateList(!showTemplateList); setShowSaveName(false); }}
                 title={t('pipeline.templates.load')}
-                aria-label={t('pipeline.templates.load')}
-                className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                size="sm"
               >
-                <BookOpen size={14} />
-              </button>
-              <button
-                type="button"
+                <BookOpen size={16} />
+              </IconButton>
+              <IconButton
                 onClick={handleCloseEdit}
                 title={t('common.close')}
-                aria-label={t('common.close')}
-                className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                size="sm"
               >
-                <X size={14} />
-              </button>
+                <X size={16} />
+              </IconButton>
             </>
           ) : (
             <>
               {isCustom && (
-                <button
-                  type="button"
+                <IconButton
                   onClick={handleReset}
                   title={t('pipeline.promptReset')}
-                  aria-label={t('pipeline.promptReset')}
-                  className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                  size="sm"
                 >
-                  <RotateCcw size={14} />
-                </button>
+                  <RotateCcw size={16} />
+                </IconButton>
               )}
-              <button
-                type="button"
+              <IconButton
                 onClick={handleStartEdit}
                 title={t('pipeline.personaCustomize')}
-                aria-label={t('pipeline.personaCustomize')}
-                className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                size="sm"
               >
-                <Pencil size={14} />
-              </button>
+                <Pencil size={16} />
+              </IconButton>
             </>
           )}
         </div>
@@ -181,40 +177,38 @@ export function PersonaEditor({
             }}
             placeholder={t('pipeline.templates.namePlaceholder')}
             autoFocus
-            className="flex-1 rounded bg-editorial-textbox/60 border border-editorial-border/60 px-2 py-1 text-xs font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+            className="flex-1 rounded-md bg-editorial-textbox/60 border border-editorial-border/60 px-2 py-1 text-xs font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
           />
-          <button
-            type="button"
+          <IconButton
             onClick={handleSaveTemplate}
             disabled={!templateName.trim()}
-            className="text-editorial-ink hover:text-editorial-accent transition-colors disabled:opacity-40 focus:outline-none"
-            aria-label={t('common.confirm')}
+            title={t('common.confirm')}
+            size="sm"
           >
-            <Check size={14} />
-          </button>
-          <button
-            type="button"
+            <Check size={16} />
+          </IconButton>
+          <IconButton
             onClick={() => { setShowSaveName(false); setTemplateName(''); }}
-            className="text-editorial-muted hover:text-editorial-accent transition-colors focus:outline-none"
-            aria-label={t('common.cancel')}
+            title={t('common.cancel')}
+            size="sm"
           >
-            <X size={14} />
-          </button>
+            <X size={16} />
+          </IconButton>
         </div>
       )}
 
       {isEditing && showTemplateList && (
-        <div className="rounded-lg border border-editorial-border bg-editorial-bg shadow-lg overflow-hidden">
+        <div className="border-l-4 border-l-editorial-accent/35 border-y border-editorial-border bg-editorial-bg shadow-lg overflow-hidden">
           <div className="p-2 border-b border-editorial-border/60">
             <input
               value={templateSearch}
               onChange={(e) => setTemplateSearch(e.target.value)}
               placeholder={t('pipeline.templates.searchPlaceholder')}
               autoFocus
-              className="w-full rounded bg-editorial-textbox/60 border border-editorial-border/40 px-2 py-1 text-xs font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+              className="w-full rounded-md bg-editorial-textbox/60 border border-editorial-border/40 px-2 py-1 text-xs font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
             />
           </div>
-          <ul className="max-h-40 overflow-y-auto custom-scrollbar">
+          <ul className="max-h-40 overflow-y-auto custom-scrollbar divide-y divide-editorial-border/60">
             {filteredTemplates.length === 0 ? (
               <li className="px-3 py-3 text-xs text-editorial-muted text-center">
                 {t('pipeline.templates.empty')}
@@ -228,11 +222,11 @@ export function PersonaEditor({
                     className="flex-1 text-left min-w-0 focus:outline-none"
                   >
                     <div className="text-xs font-bold text-editorial-ink truncate">{tmpl.name}</div>
-                    <div className="text-[10px] text-editorial-muted truncate mt-0.5 font-mono">{tmpl.prompt}</div>
+                    <div className="text-[11px] text-editorial-muted truncate mt-0.5 font-mono">{tmpl.prompt}</div>
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleDeleteTemplate(tmpl.id)}
+                    onClick={() => handleDeleteTemplate(tmpl.id, tmpl.name)}
                     className="shrink-0 text-editorial-muted/40 hover:text-editorial-accent transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 focus:outline-none mt-0.5"
                     aria-label={t('common.delete')}
                   >
@@ -250,10 +244,10 @@ export function PersonaEditor({
         disabled={!isEditing}
         onChange={(e) => onChange(e.target.value.trim() ? e.target.value : undefined)}
         rows={isEditing ? 12 : isCustom ? 4 : 2}
-        className={`w-full rounded-[14px] border px-3 py-2 text-xs font-mono outline-none leading-relaxed resize-y ${isEditing ? 'min-h-[10rem] ' : ''}${
+        className={`w-full rounded-md border-2 px-4 py-3 text-[13px] font-mono outline-none leading-6 resize-y ${isEditing ? 'min-h-[10rem] ' : ''}${
           isEditing
-            ? 'bg-editorial-textbox/40 border-editorial-border/60 focus-visible:ring-2 focus-visible:ring-editorial-accent'
-            : 'bg-editorial-textbox/10 border-editorial-border/30 text-editorial-muted/60 cursor-default'
+            ? 'bg-editorial-paper border-editorial-accent/25 focus-visible:ring-2 focus-visible:ring-editorial-accent'
+            : 'bg-editorial-textbox/12 border-editorial-border/40 text-editorial-muted/70 cursor-default'
         }`}
       />
     </div>

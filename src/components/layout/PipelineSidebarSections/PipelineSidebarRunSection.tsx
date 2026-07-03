@@ -159,7 +159,9 @@ export function PipelineSidebarRunSection({
   const currentChunk = useChunksStore(
     useShallow((state) => {
       const chunk = state.chunks.find((entry) => entry.id === selectedChunkId);
-      return chunk ? { id: chunk.id, hasOriginalText: chunk.originalText.trim().length > 0 } : null;
+      return chunk
+        ? { id: chunk.id, hasOriginalText: chunk.originalText.trim().length > 0, originalText: chunk.originalText }
+        : null;
     }),
   );
 
@@ -173,10 +175,21 @@ export function PipelineSidebarRunSection({
       ? Math.max(1, Math.min(pipelineTestChunkCount, totalChunks || 1))
       : totalChunks;
   const testControlsDisabled = isProcessing || pipelineMode !== 'test';
-  const costEstimate = useMemo(
+  // Preventivo per l'azione "esegui l'intera pipeline" (usato dal layout legacy e, in modalità 'all', dalla barra nuova).
+  const pipelineCostEstimate = useMemo(
     () => estimatePipelineCost(costChunkTexts.map((originalText) => ({ originalText })), config, pricingOverrides),
     [costChunkTexts, config, pricingOverrides],
   );
+  // Preventivo per l'azione "traduci solo il chunk corrente" (barra nuova, modalità 'chunk').
+  const chunkCostEstimate = useMemo(
+    () => estimatePipelineCost(
+      currentChunk?.hasOriginalText ? [{ originalText: currentChunk.originalText }] : [],
+      config,
+      pricingOverrides,
+    ),
+    [currentChunk, config, pricingOverrides],
+  );
+  const runActionCostEstimate = workMode === 'chunk' ? chunkCostEstimate : pipelineCostEstimate;
 
   const openCostPanel = useCallback(() => {
     if (costPanelCloseTimer.current !== null) {
@@ -327,58 +340,88 @@ export function PipelineSidebarRunSection({
             </span>
           ) : null}
         </div>
-        {workMode === 'chunk' ? (
-          <IconButton
-            size="md"
-            tone="charcoal"
-            onClick={() => currentChunk && onRetranslateChunk?.(currentChunk.id)}
-            disabled={isProcessing || !currentChunk || !currentChunk.hasOriginalText}
-            title={t('pipeline.translateChunk')}
-            ariaLabel={t('pipeline.translateChunk')}
-            tooltipSide="bottom"
-            className="h-10 w-10 shrink-0 border-editorial-charcoal/40 bg-editorial-bg hover:border-editorial-charcoal/65 hover:bg-editorial-textbox/70"
-          >
-            <Languages size={16} />
-          </IconButton>
-        ) : isProcessing ? (
-          cancelRequested ? (
+        <div className="relative shrink-0">
+          {workMode === 'chunk' ? (
             <IconButton
               size="md"
-              tone="muted"
-              disabled
-              title={t('pipeline.stopping')}
+              tone="charcoal"
+              onClick={() => currentChunk && onRetranslateChunk?.(currentChunk.id)}
+              disabled={isProcessing || !currentChunk || !currentChunk.hasOriginalText}
+              title={t('pipeline.translateChunk')}
+              ariaLabel={t('pipeline.translateChunk')}
               tooltipSide="bottom"
-              className="h-10 w-10 shrink-0 bg-editorial-bg opacity-50"
+              className="h-10 w-10 border-editorial-charcoal/40 bg-editorial-bg hover:border-editorial-charcoal/65 hover:bg-editorial-textbox/70"
             >
-              <Loader2 size={15} className="animate-spin" />
+              <Languages size={16} />
             </IconButton>
+          ) : isProcessing ? (
+            cancelRequested ? (
+              <IconButton
+                size="md"
+                tone="muted"
+                disabled
+                title={t('pipeline.stopping')}
+                tooltipSide="bottom"
+                className="h-10 w-10 bg-editorial-bg opacity-50"
+              >
+                <Loader2 size={15} className="animate-spin" />
+              </IconButton>
+            ) : (
+              <IconButton
+                size="md"
+                tone="danger"
+                onClick={onCancelPipeline}
+                title={t('pipeline.stopPipeline')}
+                ariaLabel={t('pipeline.stopPipeline')}
+                tooltipSide="bottom"
+                className="h-10 w-10 bg-editorial-bg"
+              >
+                <Square size={15} fill="currentColor" />
+              </IconButton>
+            )
           ) : (
             <IconButton
               size="md"
-              tone="danger"
-              onClick={onCancelPipeline}
-              title={t('pipeline.stopPipeline')}
-              ariaLabel={t('pipeline.stopPipeline')}
+              tone="charcoal"
+              onClick={onRunPipeline}
+              disabled={!hasDocument}
+              title={t('pipeline.executeAll')}
+              ariaLabel={t('pipeline.executeAll')}
               tooltipSide="bottom"
-              className="h-10 w-10 shrink-0 bg-editorial-bg"
+              className="h-10 w-10 border-editorial-charcoal/40 bg-editorial-bg hover:border-editorial-charcoal/65 hover:bg-editorial-textbox/70"
             >
-              <Square size={15} fill="currentColor" />
+              <Play size={16} fill="currentColor" />
             </IconButton>
-          )
-        ) : (
-          <IconButton
-            size="md"
-            tone="charcoal"
-            onClick={onRunPipeline}
-            disabled={!hasDocument}
-            title={t('pipeline.executeAll')}
-            ariaLabel={t('pipeline.executeAll')}
-            tooltipSide="bottom"
-            className="h-10 w-10 shrink-0 border-editorial-charcoal/40 bg-editorial-bg hover:border-editorial-charcoal/65 hover:bg-editorial-textbox/70"
-          >
-            <Play size={16} fill="currentColor" />
-          </IconButton>
-        )}
+          )}
+          {runActionCostEstimate.stages.length > 0 && (
+            <div
+              ref={costButtonRef}
+              className="absolute -bottom-1 -right-1"
+              onMouseEnter={openCostPanel}
+              onMouseLeave={scheduleCloseCostPanel}
+            >
+              <IconButton
+                size="sm"
+                tone="charcoal"
+                onFocus={openCostPanel}
+                onBlur={scheduleCloseCostPanel}
+                title=""
+                ariaLabel={t('cost.breakdown')}
+                tooltipSide="bottom"
+                className="h-5 w-5 bg-editorial-bg p-0"
+              >
+                <Info size={9} />
+              </IconButton>
+            </div>
+          )}
+          <SidebarCostPanel
+            anchorRef={costButtonRef}
+            estimate={runActionCostEstimate}
+            open={showCostPanel && runActionCostEstimate.stages.length > 0}
+            onMouseEnter={openCostPanel}
+            onMouseLeave={scheduleCloseCostPanel}
+          />
+        </div>
       </div>
     );
   }
@@ -459,7 +502,7 @@ export function PipelineSidebarRunSection({
                   <Play size={28} fill="currentColor" />
                 </IconButton>
               )}
-              {costEstimate.stages.length > 0 && (
+              {pipelineCostEstimate.stages.length > 0 && (
                 <div
                   ref={costButtonRef}
                   className="absolute -bottom-1.5 -right-1.5"
@@ -482,8 +525,8 @@ export function PipelineSidebarRunSection({
               )}
               <SidebarCostPanel
                 anchorRef={costButtonRef}
-                estimate={costEstimate}
-                open={showCostPanel && costEstimate.stages.length > 0}
+                estimate={pipelineCostEstimate}
+                open={showCostPanel && pipelineCostEstimate.stages.length > 0}
                 onMouseEnter={openCostPanel}
                 onMouseLeave={scheduleCloseCostPanel}
               />

@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Group, Panel, Separator, usePanelRef } from 'react-resizable-panels';
+import { Group, Panel, Separator, usePanelCallbackRef } from 'react-resizable-panels';
 import { useUiStore } from '../../../stores/uiStore';
 import { ProjectRailNext, type ProjectRailNextProps } from './ProjectRailNext';
 import { ProjectInspectorNext } from './ProjectInspectorNext';
 import { AppStatusBar } from '../AppStatusBar';
 import { PANEL_FLEX_TRANSITION_CLASS } from '../motion';
+import { resetStrayResizeCursor } from './resetStrayResizeCursor';
 
 /**
  * Shell nuova (#291) — split principale del progetto in modalità documento.
@@ -51,8 +52,12 @@ export function ShellNext({
   // L'ispettore è "aperto" quando una delle due schede è richiesta.
   const inspectorOpen = useUiStore((state) => state.showInsightPanel);
 
-  const railRef = usePanelRef();
-  const inspectorRef = usePanelRef();
+  // Ref a callback (non useRef): il valore diventa disponibile a React solo dopo che il
+  // Panel si è registrato nel Group padre — evita letture di stato non ancora aggiornato
+  // (causa nota dell'errore "Group ... not found" con l'API imperativa, vedi issue #717
+  // upstream di react-resizable-panels).
+  const [railPanel, setRailPanel] = usePanelCallbackRef();
+  const [inspectorPanel, setInspectorPanel] = usePanelCallbackRef();
   const [collapsed, setCollapsed] = useState(storeCollapsed);
   const [inspectorCollapsed, setInspectorCollapsed] = useState(!inspectorOpen);
   // Drag attivo su una maniglia: durante il trascinamento niente transizione CSS.
@@ -85,6 +90,9 @@ export function ShellNext({
       if (railContentSwapTimer.current !== null) {
         window.clearTimeout(railContentSwapTimer.current);
       }
+      // Se il Group si smonta mentre un Separator era in hover/drag, la libreria
+      // lascia un cursore *, *:hover {cursor: X !important} bloccato su tutta l'app.
+      resetStrayResizeCursor();
     };
   }, []);
 
@@ -102,32 +110,30 @@ export function ShellNext({
 
   // Sync store → rail (collasso comandato da apertura flyout / cambio sezione / persistenza).
   useEffect(() => {
-    const panel = railRef.current;
-    if (!panel) return;
-    const panelCollapsed = panel.isCollapsed();
+    if (!railPanel) return;
+    const panelCollapsed = railPanel.isCollapsed();
     if (storeCollapsed && !panelCollapsed) {
-      panel.collapse();
+      railPanel.collapse();
       setRailContentCollapsed(true, true);
     } else if (!storeCollapsed && panelCollapsed) {
       setRailContentCollapsed(false);
-      panel.expand();
+      railPanel.expand();
     } else {
       setRailContentCollapsed(storeCollapsed);
     }
-  }, [storeCollapsed, railRef]);
+  }, [storeCollapsed, railPanel]);
 
   // Sync store → ispettore: aperto quando una scheda è attiva, altrimenti barra di icone.
   useEffect(() => {
-    const panel = inspectorRef.current;
-    if (!panel) return;
-    const panelCollapsed = panel.isCollapsed();
-    if (inspectorOpen && panelCollapsed) panel.expand();
-    else if (!inspectorOpen && !panelCollapsed) panel.collapse();
+    if (!inspectorPanel) return;
+    const panelCollapsed = inspectorPanel.isCollapsed();
+    if (inspectorOpen && panelCollapsed) inspectorPanel.expand();
+    else if (!inspectorOpen && !panelCollapsed) inspectorPanel.collapse();
     setInspectorCollapsed(!inspectorOpen);
-  }, [inspectorOpen, inspectorRef]);
+  }, [inspectorOpen, inspectorPanel]);
 
   const syncRailFlag = () => {
-    const isCollapsed = railRef.current?.isCollapsed() ?? false;
+    const isCollapsed = railPanel?.isCollapsed() ?? false;
     if (isCollapsed) {
       setRailContentCollapsed(true, true);
     } else {
@@ -135,24 +141,22 @@ export function ShellNext({
     }
   };
   const syncInspectorFlag = () => {
-    const isCollapsed = inspectorRef.current?.isCollapsed() ?? false;
+    const isCollapsed = inspectorPanel?.isCollapsed() ?? false;
     setInspectorCollapsed((prev) => (prev === isCollapsed ? prev : isCollapsed));
   };
 
   // onLayoutChanged scatta al rilascio del pointer: ideale per persistere le larghezze.
   const persistLayout = () => {
-    const rail = railRef.current;
-    if (rail) {
-      const railCollapsed = rail.isCollapsed();
+    if (railPanel) {
+      const railCollapsed = railPanel.isCollapsed();
       if (railCollapsed !== storeCollapsed) setProjectContextCollapsed(railCollapsed);
       if (!railCollapsed) {
-        const px = Math.round(rail.getSize().inPixels);
+        const px = Math.round(railPanel.getSize().inPixels);
         if (px !== storeWidth) setProjectSidebarWidth(px);
       }
     }
-    const inspector = inspectorRef.current;
-    if (inspector && !inspector.isCollapsed()) {
-      const px = Math.round(inspector.getSize().inPixels);
+    if (inspectorPanel && !inspectorPanel.isCollapsed()) {
+      const px = Math.round(inspectorPanel.getSize().inPixels);
       if (px !== inspectorWidth) setInspectorWidth(px);
     }
   };
@@ -186,7 +190,7 @@ export function ShellNext({
             minSize={SIDEBAR_MIN}
             maxSize={SIDEBAR_MAX}
             defaultSize={initialWidth.current}
-            panelRef={railRef}
+            panelRef={setRailPanel}
             onResize={syncRailFlag}
             className={`border-r border-editorial-border bg-editorial-page ${
               dragging ? '' : PANEL_FLEX_TRANSITION_CLASS
@@ -213,7 +217,7 @@ export function ShellNext({
         minSize={INSPECTOR_MIN}
         maxSize={INSPECTOR_MAX}
         defaultSize={initialInspectorWidth.current}
-        panelRef={inspectorRef}
+        panelRef={setInspectorPanel}
         onResize={syncInspectorFlag}
         className={`border-l border-editorial-border bg-editorial-page ${
           dragging ? '' : PANEL_FLEX_TRANSITION_CLASS

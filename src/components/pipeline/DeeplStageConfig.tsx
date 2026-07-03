@@ -6,6 +6,7 @@ import type { DeeplConfig, DeeplLanguageInfo, GlossaryEntry } from '../../types'
 import type { DeeplGlossaryInfo } from '../../services/deeplService';
 import { DEFAULT_DEEPL_STAGE_OPTIONS, toDeeplCode } from '../../constants';
 import { IconButton, SectionLabel, ToggleRow } from '../ui';
+import { confirm } from '../../stores/confirmStore';
 
 interface DeeplStageConfigProps {
   value?: DeeplConfig;
@@ -69,12 +70,34 @@ export function DeeplStageConfig({
 
   const showGlossarySection = filteredGlossaries.length > 0 || glossariesLoading || glossaryEntries.length > 0;
 
+  const handleDeleteGlossary = async () => {
+    if (!config.glossaryId) return;
+    const selected = filteredGlossaries.find((g) => g.glossaryId === config.glossaryId);
+    const ok = await confirm({
+      title: t('pipeline.deepl.confirmDeleteGlossaryTitle', 'Eliminare il glossario DeepL?'),
+      message: t(
+        'pipeline.deepl.confirmDeleteGlossaryMessage',
+        'Il glossario "{{name}}" verrà eliminato definitivamente da DeepL. L\'azione non è reversibile.',
+        { name: selected?.name ?? '' },
+      ),
+      confirmLabel: t('common.delete', 'Elimina'),
+      danger: true,
+    });
+    if (!ok) return;
+    deeplService
+      .deleteGlossary(config.glossaryId)
+      .then(reloadGlossaries)
+      .catch((e: unknown) =>
+        setGlossaryError(e instanceof Error ? e.message : 'Eliminazione glossario DeepL fallita'),
+      );
+  };
+
   return (
     <div className="flex flex-col gap-5">
       {/* 1. Opzioni (toggle) */}
       <div className="space-y-3">
         <SectionLabel icon={SlidersHorizontal} label={t('pipeline.deepl.optionsTitle', 'Opzioni')} />
-        <div className="space-y-3 rounded-[16px] border border-editorial-border/60 bg-editorial-textbox/10 px-4 py-4">
+        <div className="space-y-3 border-l-4 border-l-editorial-charcoal/30 border-y border-editorial-border/70 bg-editorial-bg/65 px-5 py-4">
           <ToggleRow
             icon={null}
             label={t('pipeline.deepl.preserveFormatting', 'Mantieni formattazione')}
@@ -98,7 +121,7 @@ export function DeeplStageConfig({
             {t('pipeline.deepl.modelType', 'Modalità traduzione')}
           </label>
           <select
-            className="w-full rounded-[12px] border border-editorial-border bg-editorial-textbox px-2 py-1.5 text-xs font-sans text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            className="w-full rounded-md border border-editorial-border bg-editorial-textbox px-2 py-1.5 text-xs font-sans text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             value={config.modelType ?? 'prefer_quality_optimized'}
             onChange={(e) => update({ modelType: e.target.value as DeeplConfig['modelType'] })}
           >
@@ -115,7 +138,7 @@ export function DeeplStageConfig({
               {t('pipeline.deepl.formality', 'Registro')}
             </label>
             <select
-              className="w-full rounded-[12px] border border-editorial-border bg-editorial-textbox px-2 py-1.5 text-xs font-sans text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="w-full rounded-md border border-editorial-border bg-editorial-textbox px-2 py-1.5 text-xs font-sans text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               value={config.formality ?? 'default'}
               onChange={(e) => update({ formality: e.target.value as DeeplConfig['formality'] })}
             >
@@ -135,7 +158,7 @@ export function DeeplStageConfig({
           <SectionLabel icon={BookOpen} label={t('pipeline.deepl.glossary', 'Glossario DeepL')} />
           <div className="flex items-center gap-2">
             <select
-              className="flex-1 rounded-[12px] border border-editorial-border bg-editorial-textbox px-2 py-1.5 text-xs font-sans text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="flex-1 rounded-md border border-editorial-border bg-editorial-textbox px-2 py-1.5 text-xs font-sans text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               value={config.glossaryId ?? ''}
               onChange={(e) => update({ glossaryId: e.target.value || undefined })}
             >
@@ -155,14 +178,7 @@ export function DeeplStageConfig({
                 size="sm"
                 tone="default"
                 className="shrink-0"
-                onClick={() =>
-                  deeplService
-                    .deleteGlossary(config.glossaryId!)
-                    .then(reloadGlossaries)
-                    .catch((e: unknown) =>
-                      setGlossaryError(e instanceof Error ? e.message : 'Eliminazione glossario DeepL fallita'),
-                    )
-                }
+                onClick={handleDeleteGlossary}
                 title={t('pipeline.deepl.deleteGlossary', 'Elimina glossario DeepL')}
               >
                 <Trash2 size={12} />
@@ -185,7 +201,7 @@ export function DeeplStageConfig({
           placeholder={t('pipeline.deepl.contextPlaceholder', 'Testo opzionale che aiuta DeepL a contestualizzare la traduzione…')}
           rows={3}
           maxLength={512}
-          className="w-full rounded-[12px] border border-editorial-border bg-editorial-textbox px-2 py-1.5 text-xs font-sans text-editorial-ink outline-none resize-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          className="w-full rounded-md border-2 border-editorial-border bg-editorial-textbox px-3 py-2 text-sm font-sans text-editorial-ink outline-none resize-none leading-relaxed focus-visible:ring-2 focus-visible:ring-editorial-accent"
         />
       </div>
     </div>

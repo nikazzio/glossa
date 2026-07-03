@@ -12,6 +12,12 @@ This page covers the common failures you are likely to hit while setting up or r
 - Re-run `npm run tauri:dev`
 - On Linux, install the Tauri system packages listed in the root `README.md`
 
+## The app opens but shows a connection error
+
+- The dev server uses a dedicated port (`48123`); if another process already holds it, Vite stops with a readable error instead of opening a broken window
+- If the message points to a port other than 48123, override it: `GLOSSA_DEV_PORT=9999 npm run tauri:dev` (Linux/macOS) — on Windows PowerShell `$env:GLOSSA_DEV_PORT=9999; npm run tauri:dev`, on cmd.exe `set GLOSSA_DEV_PORT=9999 && npm run tauri:dev`
+- This only applies to running from source: the installed app (`.deb`/`.AppImage`/`.msi`/`.dmg`) has no dev server and is not affected
+
 ## A provider does not run
 
 - Check that the API key exists in Settings

@@ -40,9 +40,9 @@ export function PreflightDialog() {
         ) : null
       }
     >
-      <ul className="space-y-3" aria-label={t('preflight.title')}>
+      <ul className="divide-y divide-editorial-border/70 border-y border-editorial-border/70" aria-label={t('preflight.title')}>
                 {results.map((result) => (
-                  <li key={`${result.provider}:${result.model}`} className="flex items-start gap-3 rounded-[18px] border border-editorial-border/60 bg-editorial-textbox/15 px-4 py-3">
+                  <li key={`${result.provider}:${result.model}`} className="flex items-start gap-3 py-3">
                     {result.ok ? (
                       <CheckCircle2
                         size={16}

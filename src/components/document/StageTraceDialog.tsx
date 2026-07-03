@@ -38,21 +38,21 @@ export function StageTraceDialog({
         </div>
       }
     >
-      <div>
+      <div className="border-y border-editorial-border/70">
           {result?.status === 'processing' || result?.status === 'retrying' ? (
-            <div className="rounded-[22px] border border-editorial-border bg-editorial-textbox/35 p-5">
+            <div className="py-5">
               <ProcessingLine />
             </div>
           ) : result?.status === 'error' ? (
-            <div className="rounded-[22px] border border-editorial-danger/40 bg-editorial-textbox/40 p-5 text-sm leading-relaxed text-editorial-danger">
+            <div className="bg-editorial-danger/5 py-5 text-sm leading-relaxed text-editorial-danger">
               {result.error || t('errors.unknownError')}
             </div>
           ) : result?.content ? (
-            <pre className="whitespace-pre-wrap rounded-[22px] border border-editorial-border bg-editorial-bg p-5 text-sm leading-relaxed text-editorial-ink">
+            <pre className="whitespace-pre-wrap py-5 text-sm leading-relaxed text-editorial-ink">
               {result.content}
             </pre>
           ) : (
-            <div className="rounded-[22px] border border-editorial-border bg-editorial-bg p-5 text-sm text-editorial-muted">
+            <div className="py-5 text-sm text-editorial-muted">
               {t('document.noStageTrace')}
             </div>
           )}

@@ -133,7 +133,7 @@ function Step({ n, title, children }: { n: number; title: string; children: Reac
     <div className="flex gap-4 mb-6">
       <span className="font-display italic text-2xl text-editorial-accent leading-none mt-0.5 shrink-0">{n}</span>
       <div>
-        <h4 className="text-xs font-bold uppercase tracking-widest mb-1.5 text-editorial-ink">{title}</h4>
+        <h4 className="text-xs font-bold uppercase tracking-[0.14em] mb-1.5 text-editorial-ink">{title}</h4>
         <div className="text-[13px] text-editorial-ink/70 leading-relaxed">{children}</div>
       </div>
     </div>
@@ -142,7 +142,7 @@ function Step({ n, title, children }: { n: number; title: string; children: Reac
 
 function Tip({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="mt-6 rounded-[20px] border border-editorial-border bg-editorial-textbox/30 px-5 py-4">
+    <div className="mt-6 border-y border-editorial-border/70 py-4">
       <h4 className="mb-2 text-[11px] font-bold uppercase tracking-[0.16em] text-editorial-accent">{title}</h4>
       <p className="text-[13px] leading-relaxed text-editorial-ink/70">{children}</p>
     </div>
@@ -168,14 +168,14 @@ function OverviewSection() {
       <P>{t('help.overview.p1')}</P>
       <P>{t('help.overview.p2')}</P>
 
-      <div className="my-8 rounded-[20px] border border-editorial-border bg-editorial-textbox/25 p-6">
+      <div className="my-8 border-y border-editorial-border/70 py-6">
         <div className="mb-4 text-[11px] font-bold uppercase tracking-[0.16em] text-editorial-muted">
           {t('help.overview.flowTitle')}
         </div>
         <ol className="space-y-3 border-l-2 border-editorial-accent pl-5">
           {flowSteps.map((key, idx) => (
             <li key={key} className="flex items-start gap-3 text-sm leading-relaxed text-editorial-ink">
-              <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-editorial-accent/40 bg-editorial-bg text-[10px] font-bold text-editorial-accent">
+              <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-editorial-accent/40 bg-editorial-bg text-[11px] font-bold text-editorial-accent">
                 {idx + 1}
               </span>
               <span>{t(`help.overview.${key}`)}</span>
@@ -211,13 +211,13 @@ function VersionWidget() {
   };
 
   return (
-    <div className="mt-8 flex items-center gap-3 rounded-[14px] border border-editorial-border bg-editorial-textbox/20 px-4 py-3">
+    <div className="mt-8 flex items-center gap-3 border-y border-editorial-border/70 py-3">
       <span className="font-mono text-[11px] text-editorial-muted/70">v{__APP_VERSION__}</span>
       <button
         type="button"
         onClick={checkForUpdates}
         disabled={status === 'loading'}
-        title={t('help.version.check')}
+        data-tooltip={t('help.version.check')}
         aria-label={t('help.version.check')}
         className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
       >
@@ -287,7 +287,7 @@ function PipelineSection() {
 
 function ModeRow({ name, stages, desc }: { name: string; stages: string; desc: string }) {
   return (
-    <div className="rounded-[20px] border border-editorial-border bg-editorial-textbox/15 px-5 py-4">
+    <div className="border-b border-editorial-border/70 py-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <span className="font-display text-base italic text-editorial-ink">{name}</span>
         <span className="font-mono text-[11px] text-editorial-accent">{stages}</span>
@@ -413,8 +413,8 @@ function ContextSection() {
 
       <div className="my-6 space-y-2">
         {(['layer1', 'layer2', 'layer3'] as const).map((key) => (
-          <div key={key} className="flex items-start gap-4 rounded-[20px] border border-editorial-border bg-editorial-textbox/15 px-5 py-4">
-            <span className="mt-0.5 shrink-0 rounded-full border border-editorial-accent/40 bg-editorial-bg px-3 py-1 font-mono text-[10px] font-bold text-editorial-accent">
+          <div key={key} className="flex items-start gap-4 border-b border-editorial-border/70 py-4">
+            <span className="mt-0.5 shrink-0 rounded-full border border-editorial-accent/40 bg-editorial-bg px-3 py-1 font-mono text-[11px] font-bold text-editorial-accent">
               {t(`help.context.${key}Label`)}
             </span>
             <span className="text-[13px] leading-relaxed text-editorial-ink/80">
@@ -429,7 +429,7 @@ function ContextSection() {
 
       <div className="my-6 space-y-2">
         {(['translation', 'refine', 'format', 'coherence'] as const).map((key) => (
-          <div key={key} className="flex items-start gap-4 rounded-[20px] border border-editorial-border bg-editorial-textbox/15 px-5 py-4">
+          <div key={key} className="flex items-start gap-4 border-b border-editorial-border/70 py-4">
             <span className="mt-0.5 w-20 shrink-0 font-mono text-[11px] font-bold text-editorial-accent">
               {t(`help.context.stage${key.charAt(0).toUpperCase() + key.slice(1)}`)}
             </span>
@@ -458,7 +458,7 @@ function AuditSection() {
 
       <div className="my-6 space-y-3">
         {issueTypes.map((type) => (
-          <div key={type} className="flex items-start gap-3 rounded-[20px] border border-editorial-border bg-editorial-textbox/15 px-5 py-4">
+          <div key={type} className="flex items-start gap-3 border-b border-editorial-border/70 py-4">
             <span className="shrink-0 rounded-full border border-editorial-accent/40 bg-editorial-accent/12 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-editorial-accent">
               {t(`help.audit.${type}Label`)}
             </span>
@@ -521,7 +521,7 @@ function ProvidersSection() {
 
       <div className="my-6 space-y-3">
         {rows.map((row) => (
-          <div key={row.name} className="rounded-[20px] border border-editorial-border bg-editorial-textbox/15 px-5 py-4">
+          <div key={row.name} className="border-b border-editorial-border/70 py-4">
             <div className="flex flex-wrap items-baseline justify-between gap-3">
               <span className="font-display text-base italic text-editorial-ink">{row.name}</span>
               <span className="font-mono text-[11px] text-editorial-accent">{t(row.modelsKey)}</span>
@@ -548,19 +548,19 @@ function OllamaSection() {
 
       <Step n={1} title={t('help.ollama.installTitle')}>
         <span>{t('help.ollama.installDesc')}</span>
-        <code className="mt-3 block rounded-[14px] border border-editorial-border bg-editorial-textbox px-4 py-3 text-xs font-mono text-editorial-ink">
+        <code className="mt-3 block rounded-md border border-editorial-border bg-editorial-textbox px-4 py-3 text-xs font-mono text-editorial-ink">
           curl -fsSL https://ollama.com/install.sh | sh
         </code>
       </Step>
       <Step n={2} title={t('help.ollama.pullTitle')}>
         <span>{t('help.ollama.pullDesc')}</span>
-        <code className="mt-3 block rounded-[14px] border border-editorial-border bg-editorial-textbox px-4 py-3 text-xs font-mono text-editorial-ink">
+        <code className="mt-3 block rounded-md border border-editorial-border bg-editorial-textbox px-4 py-3 text-xs font-mono text-editorial-ink">
           ollama pull llama3.2
         </code>
       </Step>
       <Step n={3} title={t('help.ollama.serveTitle')}>
         <span>{t('help.ollama.serveDesc')}</span>
-        <code className="mt-3 block rounded-[14px] border border-editorial-border bg-editorial-textbox px-4 py-3 text-xs font-mono text-editorial-ink">
+        <code className="mt-3 block rounded-md border border-editorial-border bg-editorial-textbox px-4 py-3 text-xs font-mono text-editorial-ink">
           ollama serve
         </code>
       </Step>
@@ -659,7 +659,7 @@ function ShortcutsSection() {
             <span className="flex items-center gap-1">
               {keys.map((k, i) => (
                 <span key={i} className="flex items-center gap-1">
-                  {i > 0 && <span className="text-[10px] text-editorial-muted">+</span>}
+                  {i > 0 && <span className="text-[11px] text-editorial-muted">+</span>}
                   <Kbd>{k}</Kbd>
                 </span>
               ))}
@@ -706,13 +706,13 @@ function TroubleshootingSection() {
 
       <SubTitle>{t('help.troubleshooting.logFileTitle')}</SubTitle>
       <P>{t('help.troubleshooting.logFileDesc')}</P>
-      <div className="flex items-center gap-2 rounded-[14px] border border-editorial-border bg-editorial-textbox/20 px-4 py-3 font-mono text-xs text-editorial-ink/80">
+      <div className="flex items-center gap-2 border-y border-editorial-border/70 py-3 font-mono text-xs text-editorial-ink/80">
         <span className="flex-1 break-all">{logPath ?? '…'}</span>
         <button
           type="button"
           onClick={handleCopy}
           disabled={!logPath}
-          title={t('common.copy')}
+          data-tooltip={t('common.copy')}
           aria-label={copied ? t('pipeline.copied') : t('common.copy')}
           aria-live="polite"
           className="shrink-0 rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-30"
@@ -723,7 +723,7 @@ function TroubleshootingSection() {
 
       <SubTitle>{t('help.troubleshooting.rustLogTitle')}</SubTitle>
       <P>{t('help.troubleshooting.rustLogDesc')}</P>
-      <div className="rounded-[14px] border border-editorial-border bg-editorial-textbox/20 px-4 py-3 font-mono text-xs text-editorial-ink/80">
+      <div className="border-y border-editorial-border/70 py-3 font-mono text-xs text-editorial-ink/80">
         RUST_LOG=debug
       </div>
     </>
@@ -732,7 +732,7 @@ function TroubleshootingSection() {
 
 function FeatureRow({ icon, text }: { icon: React.ReactNode; text: string }) {
   return (
-    <div className="flex items-center gap-3 rounded-[18px] border border-editorial-border bg-editorial-textbox/20 px-4 py-3">
+    <div className="flex items-center gap-3 border-b border-editorial-border/70 py-3">
       <span className="rounded-full border border-editorial-border bg-editorial-bg p-2 text-editorial-accent">
         {icon}
       </span>
