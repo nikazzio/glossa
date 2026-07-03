@@ -502,6 +502,8 @@
       "test": "Test",
       "noAuth": "No auth",
       "delete": "Delete profile",
+      "confirmDeleteTitle": "Delete this profile?",
+      "confirmDeleteMessage": "\"{{name}}\" will be permanently removed.",
       "saved": "{{name}} saved",
       "saveFailed": "Failed to save profile",
       "deleted": "{{name}} deleted",

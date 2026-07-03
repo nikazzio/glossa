@@ -23,7 +23,8 @@ devUrl Tauri (`src-tauri/tauri.conf.json`) e porta Vite (`package.json` → `dev
 
 - Porta default: `48123` (scelta non comune, evita collisione altri progetti locali su 3000/5173/ecc.)
 - `--strictPort` su Vite: porta occupata → comando fallisce subito errore leggibile, no scivolamento silenzioso altra porta
-- Override: `GLOSSA_DEV_PORT=9999 npm run tauri:dev` — variabile letta sia da Vite (`package.json`) sia da `scripts/tauri-dev.sh`, che inietta stesso valore in `devUrl` Tauri via `tauri dev --config`
+- Override: `GLOSSA_DEV_PORT=9999 npm run tauri:dev` (PowerShell: `$env:GLOSSA_DEV_PORT=9999; npm run tauri:dev`) — variabile letta sia da Vite (`scripts/dev.mjs`) sia da Tauri (`scripts/tauri-dev.mjs`, inietta stesso valore in `devUrl` via `tauri dev --config`)
+- Script Node (`scripts/dev.mjs`/`scripts/tauri-dev.mjs`), non bash: npm su Windows esegue gli script tramite cmd.exe, che non capisce `${VAR:-default}` né richiede bash disponibile
 - Meccanismo esiste solo in sviluppo: build produzione (`npm run tauri:build`) carica `frontendDist` diretto, no dev server né porta coinvolti
 
 ---

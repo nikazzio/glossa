@@ -154,7 +154,18 @@ npm run tauri:dev      # development mode with hot reload
 The dev server runs on a dedicated port (`48123`) to avoid clashing with other local projects. If that port is ever taken on your machine, override it:
 
 ```bash
+# Linux / macOS
 GLOSSA_DEV_PORT=9999 npm run tauri:dev
+```
+
+```powershell
+# Windows PowerShell
+$env:GLOSSA_DEV_PORT=9999; npm run tauri:dev
+```
+
+```cmd
+:: Windows cmd.exe
+set GLOSSA_DEV_PORT=9999 && npm run tauri:dev
 ```
 
 Vite and Tauri's dev URL both pick up the same value automatically — no file to edit by hand.
