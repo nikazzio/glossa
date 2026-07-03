@@ -140,7 +140,7 @@ function AnnotationCard({
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2">
             {number !== null && (
-              <span className="shrink-0 font-display text-sm font-bold text-editorial-danger" title={`[^${number}]`}>
+              <span className="shrink-0 font-display text-sm font-bold text-editorial-danger" data-tooltip={`[^${number}]`}>
                 {number}
               </span>
             )}

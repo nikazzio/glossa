@@ -251,7 +251,7 @@ export function ProjectPanel() {
                             </span>
                             <span
                               className="mt-1 block truncate font-mono text-xs text-editorial-muted"
-                              title={absoluteDate}
+                              data-tooltip={absoluteDate}
                             >
                               {project.source_language} → {project.target_language} · {relativeLabel}
                             </span>

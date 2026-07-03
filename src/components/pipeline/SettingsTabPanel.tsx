@@ -150,7 +150,7 @@ export function SettingsTabPanel({
                     <span key={role} className="flex items-center gap-1.5">
                       {i > 0 && <span className="text-editorial-muted/40 text-xs">›</span>}
                       <span
-                        title={t(labelKey)}
+                        data-tooltip={t(labelKey)}
                         aria-label={t(labelKey)}
                         className={`inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors ${isActive ? 'border-editorial-success/40 bg-editorial-success/12 text-editorial-success' : 'border-editorial-border bg-editorial-bg text-editorial-muted'}`}
                       >

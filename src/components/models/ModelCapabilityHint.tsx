@@ -50,7 +50,7 @@ export function ModelCapabilityHint({
     return (
       <span
         className={`inline-flex items-center justify-center rounded-full border p-1 ${reasoningMeta.className}`}
-        title={t(`pipeline.modelReasoning.${reasoning}`)}
+        data-tooltip={t(`pipeline.modelReasoning.${reasoning}`)}
       >
         <reasoningMeta.Icon size={10} />
       </span>

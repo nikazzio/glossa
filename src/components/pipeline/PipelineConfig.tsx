@@ -579,7 +579,7 @@ export function PipelineConfig({
             type="button"
             onClick={onRunPipeline}
             disabled={cannotRun}
-            title={runReason ?? t('pipeline.beginPipeline')}
+            data-tooltip={runReason ?? t('pipeline.beginPipeline')}
             className="bg-editorial-ink text-white px-6 py-4 text-sm font-bold uppercase tracking-[2px] transition-all hover:bg-editorial-ink/90 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
           >
             {isProcessing ? (
@@ -597,7 +597,7 @@ export function PipelineConfig({
             <button
               type="button"
               onClick={handleRerunAll}
-              title={t('pipeline.rerunAllHint', { count: completedCount })}
+              data-tooltip={t('pipeline.rerunAllHint', { count: completedCount })}
               className="bg-transparent border border-editorial-accent text-editorial-accent px-6 py-3 text-sm font-bold uppercase tracking-[2px] transition-all hover:bg-editorial-accent/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2 flex items-center justify-center gap-2"
             >
               <RotateCcw size={13} /> {t('pipeline.rerunAll')}
@@ -607,7 +607,7 @@ export function PipelineConfig({
             type="button"
             onClick={onRunAuditOnly}
             disabled={cannotRun}
-            title={runReason ?? t('pipeline.runAuditOnly')}
+            data-tooltip={runReason ?? t('pipeline.runAuditOnly')}
             className="bg-transparent border border-editorial-ink text-editorial-ink px-6 py-4 text-sm font-bold uppercase tracking-[2px] transition-all hover:bg-editorial-ink/5 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
           >
             {t('pipeline.runAuditOnly')}
@@ -617,7 +617,7 @@ export function PipelineConfig({
               type="button"
               onClick={onCancelPipeline}
               disabled={cancelRequested}
-              title={cancelRequested ? t('pipeline.stopping') : t('pipeline.stopPipeline')}
+              data-tooltip={cancelRequested ? t('pipeline.stopping') : t('pipeline.stopPipeline')}
               className="bg-transparent border border-editorial-accent text-editorial-accent px-6 py-4 text-sm font-bold uppercase tracking-[2px] transition-all hover:bg-editorial-accent/5 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
             >
               {cancelRequested ? t('pipeline.stopping') : t('pipeline.stopPipeline')}

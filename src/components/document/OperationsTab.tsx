@@ -242,7 +242,7 @@ function ConsoleChrome({
         <button
           type="button"
           onClick={onClose}
-          title={t('common.close')}
+          data-tooltip={t('common.close')}
           aria-label={t('common.close')}
           className="flex h-6.5 w-6.5 items-center justify-center rounded-full border border-terminal-border text-terminal-secondary transition-colors hover:border-terminal-accent/60 hover:text-terminal-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-terminal-accent"
         >
@@ -325,7 +325,7 @@ function ConsoleToolbar({
           <button
             type="button"
             onClick={onGoToChunk}
-            title={t('document.operationsGoToChunk')}
+            data-tooltip={t('document.operationsGoToChunk')}
             aria-label={t('document.operationsGoToChunk')}
             className="shrink-0 text-terminal-secondary transition-colors hover:text-terminal-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-terminal-accent"
           >
@@ -335,7 +335,7 @@ function ConsoleToolbar({
         <button
           type="button"
           onClick={onClear}
-          title={t('document.operationsClear')}
+          data-tooltip={t('document.operationsClear')}
           aria-label={t('document.operationsClear')}
           className="shrink-0 text-terminal-secondary transition-colors hover:text-terminal-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-terminal-accent"
         >
@@ -630,7 +630,7 @@ function DetailBlock({
         <button
           type="button"
           onClick={onCopy}
-          title={t('log.copy')}
+          data-tooltip={t('log.copy')}
           aria-label={t('log.copy')}
           className="flex items-center gap-1 text-xs text-terminal-muted transition-colors hover:text-terminal-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
         >

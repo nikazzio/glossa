@@ -194,7 +194,7 @@ export function MemoryExtractorSettings({
                   type="button"
                   onClick={() => void handleRefine()}
                   disabled={isRefining || !prompt.trim() || !canRefine}
-                  title={t('pipeline.refinePromptWithModel', { model: refineLabel })}
+                  data-tooltip={t('pipeline.refinePromptWithModel', { model: refineLabel })}
                   aria-label={t('pipeline.refinePromptWithModel', { model: refineLabel })}
                   className="text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40"
                 >
@@ -203,7 +203,7 @@ export function MemoryExtractorSettings({
                 <button
                   type="button"
                   onClick={() => { setShowSaveName(!showSaveName); setShowTemplateList(false); }}
-                  title={t('pipeline.templates.save')}
+                  data-tooltip={t('pipeline.templates.save')}
                   aria-label={t('pipeline.templates.save')}
                   className="text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
                 >
@@ -212,7 +212,7 @@ export function MemoryExtractorSettings({
                 <button
                   type="button"
                   onClick={() => { setShowTemplateList(!showTemplateList); setShowSaveName(false); }}
-                  title={t('pipeline.templates.load')}
+                  data-tooltip={t('pipeline.templates.load')}
                   aria-label={t('pipeline.templates.load')}
                   className="text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
                 >
@@ -221,7 +221,7 @@ export function MemoryExtractorSettings({
                 <button
                   type="button"
                   onClick={() => { setIsEditingPrompt(false); setShowSaveName(false); setShowTemplateList(false); }}
-                  title={t('common.close')}
+                  data-tooltip={t('common.close')}
                   aria-label={t('common.close')}
                   className="text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
                 >
@@ -237,7 +237,7 @@ export function MemoryExtractorSettings({
                       onProviderChange(DEFAULT_MEMORY_EXTRACTOR_PROVIDER, DEFAULT_MEMORY_EXTRACTOR_MODEL);
                       onPromptChange(DEFAULT_MEMORY_EXTRACTOR_PROMPT);
                     }}
-                    title={t('workspace.resetMemoryExtractorPrompt')}
+                    data-tooltip={t('workspace.resetMemoryExtractorPrompt')}
                     aria-label={t('workspace.resetMemoryExtractorPrompt')}
                     className="text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
                   >
@@ -247,7 +247,7 @@ export function MemoryExtractorSettings({
                 <button
                   type="button"
                   onClick={() => setIsEditingPrompt(true)}
-                  title={t('pipeline.editPrompt')}
+                  data-tooltip={t('pipeline.editPrompt')}
                   aria-label={t('pipeline.editPrompt')}
                   className="text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
                 >

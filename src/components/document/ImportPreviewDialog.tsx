@@ -381,7 +381,7 @@ export function ImportPreviewDialog({
               <FileText size={15} className="shrink-0 text-editorial-muted" />
               <span className="truncate text-sm font-mono text-editorial-muted">{fileName}</span>
               {preview.experimental && (
-                <span title={t('files.importExperimentalDocxMarkdown')} className="shrink-0 cursor-help">
+                <span data-tooltip={t('files.importExperimentalDocxMarkdown')} className="shrink-0 cursor-help">
                   <Info size={14} className="text-editorial-accent" />
                 </span>
               )}
@@ -391,7 +391,7 @@ export function ImportPreviewDialog({
                 <button
                   type="button"
                   onClick={() => setEditorMode('cards')}
-                  title={t('files.viewCards')}
+                  data-tooltip={t('files.viewCards')}
                   className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${editorMode === 'cards' ? 'bg-editorial-accent text-white' : 'text-editorial-muted hover:text-editorial-accent'}`}
                 >
                   <LayoutGrid size={16} />
@@ -399,7 +399,7 @@ export function ImportPreviewDialog({
                 <button
                   type="button"
                   onClick={() => setEditorMode('segments')}
-                  title={t('files.viewSegments')}
+                  data-tooltip={t('files.viewSegments')}
                   className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${editorMode === 'segments' ? 'bg-editorial-accent text-white' : 'text-editorial-muted hover:text-editorial-accent'}`}
                 >
                   <SplitSquareVertical size={16} />
@@ -408,7 +408,7 @@ export function ImportPreviewDialog({
               <button
                 type="button"
                 onClick={onCancel}
-                title={t('common.close')}
+                data-tooltip={t('common.close')}
                 aria-label={t('common.close')}
                 className="shrink-0 rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               >
@@ -440,7 +440,7 @@ export function ImportPreviewDialog({
               <span className="ml-2 italic text-editorial-warning">{t('files.manualEditsActive')}</span>
             )}
             {preview.warnings.length > 0 && (
-              <span className="ml-1" title={preview.warnings.map((w) => t(`files.importWarning.${w}`)).join('\n')}>
+              <span className="ml-1" data-tooltip={preview.warnings.map((w) => t(`files.importWarning.${w}`)).join('\n')}>
                 <Info size={12} className="inline align-middle text-editorial-muted/60 cursor-help" />
               </span>
             )}
@@ -515,7 +515,7 @@ export function ImportPreviewDialog({
                     key={words}
                     type="button"
                     onClick={() => handleWordsPerChunkChange(words)}
-                    title={t(titleKey)}
+                    data-tooltip={t(titleKey)}
                     className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-warning ${
                       activePresetWords === words
                         ? 'border-editorial-warning bg-editorial-warning/20 text-editorial-warning'
@@ -528,7 +528,7 @@ export function ImportPreviewDialog({
                 <button
                   type="button"
                   onClick={recalculate}
-                  title={t('files.recalculateHint')}
+                  data-tooltip={t('files.recalculateHint')}
                   className="rounded-full border border-editorial-warning bg-editorial-warning/10 p-2 text-editorial-warning transition-colors hover:bg-editorial-warning/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-warning"
                 >
                   <RotateCcw size={13} />
@@ -541,7 +541,7 @@ export function ImportPreviewDialog({
               <button
                 type="button"
                 disabled
-                title={t('files.recalculateHint')}
+                data-tooltip={t('files.recalculateHint')}
                 className="ml-auto cursor-not-allowed rounded-full border border-editorial-border p-2 text-editorial-muted opacity-25 focus:outline-none"
               >
                 <RotateCcw size={13} />
@@ -568,7 +568,7 @@ export function ImportPreviewDialog({
                 <button
                   type="button"
                   onClick={handleSwapLanguages}
-                  title={t('pipeline.swapLanguages')}
+                  data-tooltip={t('pipeline.swapLanguages')}
                   aria-label={t('pipeline.swapLanguages')}
                   className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 >

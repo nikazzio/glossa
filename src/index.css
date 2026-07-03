@@ -249,7 +249,6 @@ mark.hl-audit {
   border-radius: 2px;
   padding: 0 1px;
   color: inherit;
-  cursor: help;
 }
 
 /* Annotation anchor: background highlight, same treatment as search (single
@@ -260,6 +259,43 @@ mark.hl-annot {
   border-radius: 2px;
   padding: 0 1px;
   color: inherit;
+  cursor: help;
+}
+
+/* Tooltip CSS-only, stesso stile visivo del componente Tooltip Radix
+   (src/components/ui/Tooltip.tsx). Due usi:
+   - evidenziazioni glossario: il testo è HTML iniettato via
+     dangerouslySetInnerHTML (useGlossaryHighlight.ts), non componenti React,
+     non può montare un Tooltip Radix;
+   - elementi già Trigger di un altro primitive Radix (es. RadixDialog.Close):
+     annidare lì un secondo Tooltip Radix rompe la gestione Escape del
+     dismissable layer del primitive esterno (verificato con test regression). */
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 210;
+  width: max-content;
+  max-width: 16rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: 14px;
+  border: 1px solid var(--color-editorial-border);
+  background: var(--color-editorial-bg);
+  box-shadow: var(--shadow-tooltip);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 14px;
+  line-height: 1.25;
+  color: var(--color-editorial-ink);
+  text-align: center;
+  white-space: pre-line;
+  pointer-events: none;
 }
 
 /* Footnote marker painted after the anchored word in the translation write

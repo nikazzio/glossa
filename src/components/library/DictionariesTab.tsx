@@ -196,7 +196,7 @@ export function DictionariesTab() {
           <div className="flex items-center justify-end gap-2">
             <button
               onClick={() => setCreating(false)}
-              title={t('common.cancel')}
+              data-tooltip={t('common.cancel')}
               aria-label={t('common.cancel')}
               className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             >
@@ -205,7 +205,7 @@ export function DictionariesTab() {
             <button
               onClick={handleCreate}
               disabled={!newName.trim()}
-              title={t('common.save')}
+              data-tooltip={t('common.save')}
               aria-label={t('common.save')}
               className="rounded-full bg-editorial-accent p-2 text-white transition-colors hover:bg-editorial-accent/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
             >
@@ -258,7 +258,7 @@ export function DictionariesTab() {
                     <span
                       className="truncate font-display text-base italic text-editorial-ink"
                       onDoubleClick={(e) => { e.stopPropagation(); setRenamingId(g.id); setRenameValue(g.name); }}
-                      title={t('library.doubleClickRename')}
+                      data-tooltip={t('library.doubleClickRename')}
                     >
                       {g.name}
                     </span>
@@ -281,7 +281,7 @@ export function DictionariesTab() {
                   )}
                   <button
                     onClick={() => setExportTarget({ id: g.id, name: g.name })}
-                    title={t('library.exportGlossary')}
+                    data-tooltip={t('library.exportGlossary')}
                     aria-label={t('library.exportGlossary')}
                     className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:bg-editorial-textbox/30 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   >
@@ -289,7 +289,7 @@ export function DictionariesTab() {
                   </button>
                   <button
                     onClick={() => handleFork(g.id, g.name)}
-                    title={t('library.forkDictionary')}
+                    data-tooltip={t('library.forkDictionary')}
                     aria-label={t('library.forkDictionary')}
                     className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:bg-editorial-textbox/30 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   >
@@ -297,7 +297,7 @@ export function DictionariesTab() {
                   </button>
                   <button
                     onClick={() => handleDelete(g.id, g.name)}
-                    title={t('common.delete')}
+                    data-tooltip={t('common.delete')}
                     aria-label={`${t('common.delete')}: ${g.name}`}
                     className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:bg-editorial-textbox/30 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                   >

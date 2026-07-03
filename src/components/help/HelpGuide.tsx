@@ -217,7 +217,7 @@ function VersionWidget() {
         type="button"
         onClick={checkForUpdates}
         disabled={status === 'loading'}
-        title={t('help.version.check')}
+        data-tooltip={t('help.version.check')}
         aria-label={t('help.version.check')}
         className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
       >
@@ -712,7 +712,7 @@ function TroubleshootingSection() {
           type="button"
           onClick={handleCopy}
           disabled={!logPath}
-          title={t('common.copy')}
+          data-tooltip={t('common.copy')}
           aria-label={copied ? t('pipeline.copied') : t('common.copy')}
           aria-live="polite"
           className="shrink-0 rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-30"

@@ -317,7 +317,7 @@ export function DocumentView({
             type="button"
             onClick={onImportDocument}
             aria-label={t('document.projectHomeImport')}
-            title={t('document.projectHomeImport')}
+            data-tooltip={t('document.projectHomeImport')}
             className="group mt-8 flex w-full max-w-xl flex-col items-center rounded-[30px] border border-dashed border-editorial-border bg-editorial-bg/65 px-6 py-8 text-center shadow-[var(--inset-highlight)] transition-colors hover:border-editorial-accent/40 hover:bg-editorial-bg focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
           >
             <span className="inline-flex h-14 w-14 items-center justify-center rounded-full border border-editorial-border bg-editorial-paper text-editorial-muted transition-colors group-hover:border-editorial-accent/45 group-hover:text-editorial-accent">

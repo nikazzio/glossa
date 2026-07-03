@@ -120,7 +120,7 @@ function buildHtml(text: string, spans: MatchSpan[]): string {
     const classes = [...(bgWinner ? [bgWinner.cls] : []), ...decoClasses];
     const tooltip = activeBg[0]?.tooltip || activeDeco[0]?.tooltip || '';
 
-    result += `<mark class="${classes.join(' ')}"${tooltip ? ` title="${escapeHtml(tooltip)}"` : ''}>${segment}</mark>`;
+    result += `<mark class="${classes.join(' ')}"${tooltip ? ` data-tooltip="${escapeHtml(tooltip)}"` : ''}>${segment}</mark>`;
 
     // Paint the footnote marker once, right where the annotation span ends.
     // Rendered zero-width (see .hl-annot-marker) so it never shifts the

@@ -28,7 +28,7 @@ function SaveIndicator({ state }: { state: 'idle' | 'dirty' | 'saving' | 'saved'
 
   if (state === 'saving') {
     return (
-      <span title={t('statusBar.saving')} className="flex items-center gap-1 text-editorial-muted">
+      <span className="flex items-center gap-1 text-editorial-muted">
         <Loader2 size={10} className="animate-spin" />
         <span className="text-xs">{t('statusBar.saving')}</span>
       </span>
@@ -50,7 +50,7 @@ function SaveIndicator({ state }: { state: 'idle' | 'dirty' | 'saving' | 'saved'
         : t('statusBar.saveError');
 
   return (
-    <span title={label} className="flex items-center gap-1.5">
+    <span className="flex items-center gap-1.5">
       <span className={`h-1.5 w-1.5 rounded-full ${dot}`} aria-hidden="true" />
       <span className="text-xs text-editorial-muted">{label}</span>
     </span>

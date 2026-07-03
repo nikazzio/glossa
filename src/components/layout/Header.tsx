@@ -53,7 +53,7 @@ export function Header() {
                 onClick={closeProject}
                 disabled={isProcessing}
                 className="min-w-0 truncate font-display text-lg italic text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-55 md:text-xl"
-                title={t('sidebar.backToWorkspace')}
+                data-tooltip={t('sidebar.backToWorkspace')}
               >
                 {workspaceLabel}
               </button>

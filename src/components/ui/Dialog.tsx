@@ -74,13 +74,16 @@ export function Dialog({
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 {headerActions}
+                {/* Niente Tooltip Radix qui: annidato in RadixDialog.Close rompe la
+                    gestione Escape del dialog (verificato). Chiudere via X è
+                    auto-evidente, il title nativo basta. */}
                 <RadixDialog.Close asChild>
                   <button
                     type="button"
                     disabled={closeDisabled}
+                    title={closeLabel}
                     className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-35"
                     aria-label={closeLabel}
-                    title={closeLabel}
                   >
                     <X size={16} />
                   </button>
