@@ -7,6 +7,10 @@ title: Audit e revisione
 Glossa non si ferma alla generazione di una bozza. Esegue anche uno stage judge
 per ispezionare i problemi di qualità chunk per chunk.
 
+Il giudice è separato dalla generazione perché un modello che produce una bozza non
+dovrebbe essere l'unico controllo della propria bozza. La guida [LLM e pipeline](./llm-and-pipelines)
+spiega il principio generale.
+
 ## Cosa restituisce il giudice
 
 - Valutazione complessiva di qualità
@@ -51,4 +55,5 @@ Il giudice va usato come seconda passata, non come autorità finale.
 
 - [Annotazioni](./annotations) — come tracciare e ancorare issue editoriali per chunk
 - [Glossario e phrase memory](./glossary-and-memory) — per controllare il drift terminologico a monte
+- [LLM e pipeline](./llm-and-pipelines) — perché il judge è uno stadio separato
 - [Contesto e caching](./context-and-caching) — come Glossa mantiene coerenza tra chunk

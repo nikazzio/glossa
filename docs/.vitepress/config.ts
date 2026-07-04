@@ -9,6 +9,7 @@ const sidebarIt = [
     text: 'Guide',
     items: [
       { text: 'Pipeline documento', link: '/guides/document-pipeline' },
+      { text: 'LLM e pipeline', link: '/guides/llm-and-pipelines' },
       { text: 'Progetti e workspace', link: '/guides/projects-and-workspace' },
       { text: 'Glossario e phrase memory', link: '/guides/glossary-and-memory' },
       { text: 'Phrase memory', link: '/guides/phrase-memory' },
@@ -42,6 +43,7 @@ const sidebarEn = [
     text: 'Guides',
     items: [
       { text: 'Document pipeline', link: '/en/guides/document-pipeline' },
+      { text: 'LLMs and pipelines', link: '/en/guides/llm-and-pipelines' },
       { text: 'Projects and workspace', link: '/en/guides/projects-and-workspace' },
       { text: 'Glossary and phrase memory', link: '/en/guides/glossary-and-memory' },
       { text: 'Phrase memory', link: '/en/guides/phrase-memory' },

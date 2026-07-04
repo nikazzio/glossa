@@ -5,7 +5,10 @@ description: Documentazione pubblica dell'app desktop Glossa.
 
 <div class="docsHero">
   <p class="docsHero__eyebrow">Documentazione ufficiale</p>
-  <img class="docsHero__brand" src="./public/glossa-wordmark.svg" alt="Glossa" />
+  <div class="docsHero__identity">
+    <img class="docsHero__icon" src="./public/glossa-app-icon.png" alt="" />
+    <img class="docsHero__brand" src="./public/glossa-wordmark.svg" alt="Glossa" />
+  </div>
   <p class="docsHero__lead">
     Workflow desktop di traduzione per studiosi, editor professionisti e revisori di testi lunghi.
   </p>
@@ -55,6 +58,7 @@ description: Documentazione pubblica dell'app desktop Glossa.
 - [Scarica l'app](./intro/getting-started#scarica-lapp) per installare la release giusta per Windows, macOS o Linux
 - [Per iniziare](./intro/getting-started) per installazione, sviluppo e build locale
 - [Pipeline documento](./guides/document-pipeline) per il workflow end-to-end
+- [LLM e pipeline](./guides/llm-and-pipelines) per capire come ragionano i modelli e perché Glossa divide il lavoro in stadi
 - [Progetti e workspace](./guides/projects-and-workspace) per stato, salvataggi e risorse condivise
 - [Glossario e phrase memory](./guides/glossary-and-memory) per il controllo terminologico
 - [Audit e revisione](./guides/audit-review) per output del judge, iterazione e review loop
@@ -64,9 +68,10 @@ description: Documentazione pubblica dell'app desktop Glossa.
 
 - Modalità Standard per una singola traduzione più audit
 - Modalità Editoriale per traduzione, refine, format e review
+- Modalità DeepL Hybrid per prima passata DeepL e rifinitura LLM
 - Elaborazione documenti a chunk con run di test e di produzione
 - Glossario vincolante e phrase memory riutilizzabile
 - Annotazioni tipizzate ancorate al testo tradotto
-- Inferenza cloud e locale tramite Gemini, OpenAI, Anthropic, DeepSeek e Ollama
+- Inferenza cloud, locale e personalizzata tramite Gemini, OpenAI, Anthropic, DeepSeek, DeepL, Ollama ed endpoint OpenAI-compatibili
 
 > Questo è il sito pubblico. Le note interne di architettura e design restano in `docs-dev/`.

@@ -24,6 +24,16 @@ documento diventi la lista chunk attiva.
 - Markdown è la scelta migliore quando contano heading e formattazione.
 - DOCX e PDF sono utili per materiale editoriale reale, ma controlla sempre l'anteprima prima di avviare la pipeline.
 
+## Note a piè di pagina importate
+
+Se un DOCX o un Markdown contiene note a piè di pagina, Glossa le conserva con il
+progetto ma le tiene fuori dalla traduzione automatica. Il modello riceve il corpo
+del testo, non il contenuto delle note. Dopo la traduzione, rivedi e riposiziona le
+note manualmente: nelle traduzioni reali spesso cambiano formulazione e posizione.
+
+Vedi anche [Annotazioni](../guides/annotations) per la distinzione tra note sorgente
+importate e annotazioni create durante la revisione.
+
 ## Export
 
 I target di export tipici includono:

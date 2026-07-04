@@ -154,11 +154,26 @@ body {
   line-height: 0.98;
 }
 
+.docsHero__identity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.95rem 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.docsHero__icon {
+  width: clamp(4.8rem, 12vw, 7.25rem);
+  height: clamp(4.8rem, 12vw, 7.25rem);
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
 .docsHero__brand {
-  width: min(100%, 36rem);
+  width: min(100%, 34rem);
   height: auto;
   display: block;
-  margin-bottom: 1rem;
+  flex: 1 1 16rem;
 }
 
 .docsHero__lead {

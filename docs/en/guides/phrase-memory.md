@@ -22,6 +22,12 @@ when similar wording appears again.
 3. Review the matches that come back for the current chunk.
 4. Select only the matches you want to inject into the run.
 
+## When to avoid it
+
+Disable or ignore matches when the text changes register, narrative voice, or domain.
+Lexical similarity is not enough: a retrieved phrase must make sense in the current
+chunk and in the document you are translating.
+
 ## Good practice
 
 - Keep the source text stable when you want reliable phrase reuse.

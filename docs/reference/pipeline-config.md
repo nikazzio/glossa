@@ -7,10 +7,15 @@ title: Configurazione pipeline
 Glossa separa la configurazione della pipeline dal contenuto del documento, così puoi
 tarare la run prima di avviare un batch.
 
+Se vuoi capire perché i controlli sono divisi per stage, leggi anche
+[LLM e pipeline](../guides/llm-and-pipelines): spiega perché traduzione, refine,
+format e judge hanno responsabilità diverse.
+
 ## Controlli principali
 
 - Lingua sorgente
 - Lingua target
+- Modalità pipeline
 - Provider e modello per ogni stage
 - Istruzioni di traduzione
 - Persona
@@ -31,11 +36,11 @@ tarare la run prima di avviare un batch.
 
 Se una run non è abbastanza buona, cambia questi elementi in ordine:
 
-1. Translation prompt
-2. Provider or model
-3. Glossary entries
-4. Phrase-memory retrieval
-5. Judge prompt
+1. Prompt di traduzione
+2. Provider o modello
+3. Voci di glossario
+4. Recupero phrase memory
+5. Prompt del judge
 
 Lascia stare tutto il resto finché non capisci quale parte sta causando il problema.
 
@@ -45,10 +50,12 @@ Lascia stare tutto il resto finché non capisci quale parte sta causando il prob
 |---|---|
 | Standard | Singola passata di traduzione più audit |
 | Editoriale | Stage di translation, refine e format prima dell'audit |
+| DeepL Hybrid | Prima passata DeepL, refine LLM opzionale e audit LLM |
 
 ## Consigli a livello di stage
 
 - Mantieni il translation stage focalizzato su accuratezza e stile di base.
+- In modalità DeepL Hybrid, usa lo stage DeepL per la prima bozza e tieni prompt e modello LLM separati per refine e judge.
 - Usa refine per riscrivere, non per la prima traduzione.
 - Tieni il format stretto, così non altera il significato in modo silenzioso.
 - Usa il judge per segnalare problemi, non per sostituire la review umana.
@@ -78,9 +85,11 @@ Passando il mouse sull'icona informazioni vicino al costo stimato (nel pannello 
 - Nel pannello impostazioni pipeline il preventivo copre **sempre l'intero documento**, incluso il controllo di coerenza se configurato.
 - Vicino al pulsante di esecuzione nella vista documento, il preventivo segue quello che sta per succedere: in modalità "traduci chunk" copre solo il chunk selezionato, in modalità "esegui tutto" copre l'intero documento.
 - È una stima approssimativa basata sul conteggio parole e sul prezzo per token del modello scelto: il costo reale può variare leggermente.
+- Gli stage DeepL sono misurati in caratteri fatturati da DeepL: Glossa può mostrarli dopo la run, ma il preventivo in dollari resta basato sui provider LLM con prezzo per token.
 
 ## Vedi anche
 
 - [Provider supportati](./provider-support) — confronto tra provider e guida alla scelta del modello
+- [LLM e pipeline](../guides/llm-and-pipelines) — principi dietro la separazione degli stage
 - [Pipeline documento](../guides/document-pipeline) — come le impostazioni si applicano al workflow end-to-end
 - [Contesto e caching](../guides/context-and-caching) — come il prompt è strutturato per ottimizzare i costi

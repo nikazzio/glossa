@@ -5,7 +5,8 @@ title: Getting started
 # Getting started
 
 Glossa is a Tauri desktop app. You run it locally, configure a translation
-pipeline, and process source text either as a single passage or as a chunked document.
+pipeline, import or prepare source text, and work chunk by chunk: test one
+representative passage first, then run the full batch.
 
 ## Download the app
 
@@ -18,7 +19,7 @@ If you want to use Glossa, the correct path is to download a binary release from
 Useful links:
 
 - [Latest release](https://github.com/nikazzio/glossa/releases/latest)
-- Current release as of June 15, 2026: [`glossa-v1.0.0`](https://github.com/nikazzio/glossa/releases/tag/glossa-v1.0.0)
+- Current release as of July 4, 2026: [`glossa-v1.1.0`](https://github.com/nikazzio/glossa/releases/tag/glossa-v1.1.0)
 
 ## Prerequisites
 
@@ -69,13 +70,13 @@ npm run docs:build
 2. Create or open a workspace and then create a project.
 3. Set the source and target languages.
 4. Choose a provider and model for the first stage.
-5. Import a document or paste a short sample into Sandbox mode.
+5. Import a document. For a short trial, import or paste only a sample and use **Test** on one chunk.
 6. Run a test chunk before launching a full batch.
 
 ## What you should configure first
 
 - **Provider keys** in Settings
-- **Pipeline mode**: Standard for simpler jobs, Editorial for multi-stage refinement
+- **Pipeline mode**: Standard for simpler jobs, Editorial for multi-stage refinement, DeepL Hybrid when you want a DeepL first pass followed by LLM refinement
 - **Glossary** if terminology is non-negotiable
 - **Chunking** if the source text is long or structurally sensitive
 

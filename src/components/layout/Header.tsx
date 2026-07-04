@@ -8,6 +8,7 @@ import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { EASE_EDITORIAL } from './motion';
 import { ShellNavFooter } from './ShellNav';
+import glossaAppIcon from '../../assets/glossa-app-icon.png';
 
 const HelpGuide = lazy(() =>
   import('../help/HelpGuide').then((m) => ({ default: m.HelpGuide })),
@@ -39,48 +40,56 @@ export function Header() {
   return (
     <header className="border-b border-editorial-border bg-[linear-gradient(180deg,var(--header-bg-from)_0%,var(--header-bg-to)_100%)] px-5 py-4 md:px-8">
       <div className="flex items-center justify-between gap-4">
-        <div className="min-w-0">
-          <div className="flex min-w-0 items-baseline gap-2.5">
-            <span className="shrink-0 font-display text-4xl italic text-editorial-ink md:text-5xl">
-              {t('app.brand')}
-            </span>
-            <span className="shrink-0 font-display text-lg italic text-editorial-muted md:text-xl">
-              //
-            </span>
-            {currentProjectId ? (
-              <button
-                type="button"
-                onClick={closeProject}
-                disabled={isProcessing}
-                className="min-w-0 truncate font-display text-lg italic text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-55 md:text-xl"
-                data-tooltip={t('sidebar.backToWorkspace')}
-              >
-                {workspaceLabel}
-              </button>
-            ) : (
-              <span className="min-w-0 truncate font-display text-lg italic text-editorial-muted md:text-xl">
-                {workspaceLabel}
+        <div className="flex min-w-0 items-end gap-3">
+          <img
+            src={glossaAppIcon}
+            alt=""
+            aria-hidden="true"
+            className="mb-1.5 h-12 w-12 shrink-0 object-contain md:mb-2 md:h-14 md:w-14"
+          />
+          <div className="min-w-0">
+            <div className="flex min-w-0 items-baseline gap-2.5">
+              <span className="shrink-0 font-display text-4xl italic text-editorial-ink md:text-5xl">
+                {t('app.brand')}
               </span>
-            )}
-            <AnimatePresence mode="popLayout">
-              {currentProjectId && currentProjectName ? (
-                <motion.span
-                  key="project-segment"
-                  initial={{ opacity: 0, x: -12 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -12 }}
-                  transition={{ duration: 0.28, ease: EASE_EDITORIAL }}
-                  className="flex min-w-0 items-baseline gap-2.5"
+              <span className="shrink-0 font-display text-lg italic text-editorial-muted md:text-xl">
+                //
+              </span>
+              {currentProjectId ? (
+                <button
+                  type="button"
+                  onClick={closeProject}
+                  disabled={isProcessing}
+                  className="min-w-0 truncate font-display text-lg italic text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-55 md:text-xl"
+                  data-tooltip={t('sidebar.backToWorkspace')}
                 >
-                  <span className="shrink-0 font-display text-lg italic text-editorial-muted md:text-xl">
-                    //
-                  </span>
-                  <span className="min-w-0 truncate font-display text-lg italic text-editorial-muted md:text-xl">
-                    {currentProjectName}
-                  </span>
-                </motion.span>
-              ) : null}
-            </AnimatePresence>
+                  {workspaceLabel}
+                </button>
+              ) : (
+                <span className="min-w-0 truncate font-display text-lg italic text-editorial-muted md:text-xl">
+                  {workspaceLabel}
+                </span>
+              )}
+              <AnimatePresence mode="popLayout">
+                {currentProjectId && currentProjectName ? (
+                  <motion.span
+                    key="project-segment"
+                    initial={{ opacity: 0, x: -12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -12 }}
+                    transition={{ duration: 0.28, ease: EASE_EDITORIAL }}
+                    className="flex min-w-0 items-baseline gap-2.5"
+                  >
+                    <span className="shrink-0 font-display text-lg italic text-editorial-muted md:text-xl">
+                      //
+                    </span>
+                    <span className="min-w-0 truncate font-display text-lg italic text-editorial-muted md:text-xl">
+                      {currentProjectName}
+                    </span>
+                  </motion.span>
+                ) : null}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
 

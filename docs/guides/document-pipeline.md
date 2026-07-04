@@ -11,15 +11,22 @@ Glossa ruota attorno a un workflow documento in quattro fasi:
 3. **Traduci** il documento completo quando il setup è stabile.
 4. **Rivedi** i risultati dell'audit e itera se la qualità non basta.
 
-## Due modalità di lavoro
+Il principio di fondo è spiegato nella guida [LLM e pipeline](./llm-and-pipelines):
+un modello linguistico è potente ma probabilistico, quindi Glossa divide il lavoro
+in chunk, stadi e audit per rendere ogni passaggio controllabile.
 
-| Modalità | Ideale per | Cosa cambia |
+## Workflow documento
+
+Glossa usa il workflow documento anche per prove brevi. Il percorso resta lo stesso:
+crea o apri un progetto, importa o incolla il testo sorgente, controlla il chunking
+e usa **Test** su un chunk rappresentativo prima di avviare il batch.
+
+| Area | Cosa controlli | Quando usarla |
 |---|---|---|
-| Sandbox | Passaggi brevi, tuning prompt, esperimenti isolati | Nessun import documento, nessuna lista chunk |
-| Document | Testi reali, traduzione lunga, workflow di review | Chunking, indice, audit, note, export |
-
-Usa Sandbox quando vuoi iterare velocemente su un campione. Usa Document mode
-quando il testo richiede struttura, continuità e storico di review.
+| Import e anteprima | Testo sorgente, segmentazione, chunk iniziali | Prima di creare la lista chunk attiva |
+| Configurazione pipeline | Lingue, provider, modelli, prompt, glossario | Prima del Test e prima dei batch lunghi |
+| Vista documento | Chunk corrente, output, stati, run | Durante traduzione e revisione |
+| Pannello Insight | Audit, note, statistiche, coerenza | Durante controllo qualità e chiusura chunk |
 
 ## Modalità DeepL Hybrid
 
@@ -28,20 +35,20 @@ La modalità **DeepL Hybrid** combina la velocità e la precisione dell'API Deep
 | Stage | Provider | Ruolo |
 |---|---|---|
 | Stage 1 | DeepL API | Traduzione principale |
-| Stage 2 | LLM (opzionale) | Raffinamento stile e registro |
+| Stage 2 | LLM opzionale | Raffinamento stile e registro |
 | Judge | LLM | Audit qualità (invariato) |
 
 **Requisiti:** API key DeepL configurata in Impostazioni → sezione provider.
 
 **Quando usarla:** Testi che richiedono alta fedeltà terminologica e velocità, dove un LLM da solo richiederebbe troppo contesto o prompt elaborati.
 
-**Formality:** Per le lingue che lo supportano (tedesco, italiano, ecc.), puoi configurare il registro formale/informale direttamente nello stage DeepL.
+**Registro:** Per le lingue che lo supportano (tedesco, italiano, ecc.), puoi configurare il registro formale/informale direttamente nello stage DeepL.
 
 **Glossari DeepL:** Puoi creare un glossario DeepL dai termini del glossario Glossa assegnato alla pipeline, così DeepL rispetta automaticamente la tua terminologia.
 
 ## Flusso documento standard
 
-1. Importa un documento.
+1. Importa un documento o prepara un campione breve.
 2. Scegli il chunking e conferma l'anteprima di import.
 3. Imposta lingua sorgente e lingua target.
 4. Scegli provider e modello per ogni stage attivo.
@@ -60,6 +67,7 @@ La modalità **DeepL Hybrid** combina la velocità e la precisione dell'API Deep
 
 | Stage | Scopo |
 |---|---|
+| DeepL Translation | Produce la prima traduzione tramite API DeepL quando la modalità DeepL Hybrid è attiva |
 | Translation | Produce la prima bozza a partire dal chunk sorgente |
 | Refine | Riscrive la bozza con stile, accuratezza o terminologia migliori |
 | Format | Ripulisce il formato senza ritradurre il testo sorgente |
@@ -102,6 +110,7 @@ il workflow più leggero.
 ## Vedi anche
 
 - [Annotazioni](./annotations) — per tracciare issue editoriali per chunk
+- [LLM e pipeline](./llm-and-pipelines) — perché Glossa separa chunk, stadi e audit
 - [Audit e revisione](./audit-review) — ciclo di review dettagliato con il giudice
 - [Contesto e caching](./context-and-caching) — come Glossa usa il contesto tra chunk vicini
 - [Configurazione pipeline](../reference/pipeline-config) — riferimento completo dei controlli

@@ -5,7 +5,10 @@ description: Public documentation for the Glossa desktop app.
 
 <div class="docsHero">
   <p class="docsHero__eyebrow">Official documentation</p>
-  <img class="docsHero__brand" src="../public/glossa-wordmark.svg" alt="Glossa" />
+  <div class="docsHero__identity">
+    <img class="docsHero__icon" src="../public/glossa-app-icon.png" alt="" />
+    <img class="docsHero__brand" src="../public/glossa-wordmark.svg" alt="Glossa" />
+  </div>
   <p class="docsHero__lead">
     Desktop translation workflow for scholars, editors, and long-form review.
   </p>
@@ -55,6 +58,7 @@ description: Public documentation for the Glossa desktop app.
 - [Download the app](./intro/getting-started#download-the-app) to install the right release for Windows, macOS, or Linux
 - [Getting started](./intro/getting-started) for install, development, and local build commands
 - [Document pipeline](./guides/document-pipeline) for the end-to-end workflow
+- [LLMs and pipelines](./guides/llm-and-pipelines) for how models behave and why Glossa splits work into stages
 - [Projects and workspace](./guides/projects-and-workspace) for state, saved work, and shared resources
 - [Glossary and phrase memory](./guides/glossary-and-memory) for terminology control
 - [Audit and review](./guides/audit-review) for judge output, iteration, and review loops
@@ -64,9 +68,10 @@ description: Public documentation for the Glossa desktop app.
 
 - Standard mode for a single translation pass plus audit
 - Editorial mode for translation, refinement, formatting, and review
+- DeepL Hybrid mode for a DeepL first pass and LLM refinement
 - Chunk-based document processing with test and production runs
 - Glossary enforcement and reusable phrase memory
 - Typed annotations anchored to translated text
-- Cloud and local inference through Gemini, OpenAI, Anthropic, DeepSeek, and Ollama
+- Cloud, local, and custom provider support through Gemini, OpenAI, Anthropic, DeepSeek, DeepL, Ollama, and OpenAI-compatible endpoints
 
 > Public site only. Internal architecture notes and the UI design system stay under `docs-dev/`.

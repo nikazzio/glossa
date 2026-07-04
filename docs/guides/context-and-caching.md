@@ -9,6 +9,9 @@ i costi di inferenza: un blocco di riferimento documentale che dà a ogni chunk
 accesso al testo sorgente dei vicini, e una struttura del prompt a strati che
 permette ai provider di fare caching il più possibile tra le chiamate.
 
+Questa pagina descrive il comportamento tecnico. Per il ragionamento di prodotto
+alla base della pipeline, leggi prima [LLM e pipeline](./llm-and-pipelines).
+
 ## Contesto documentale per chunk
 
 Quando traduce un chunk, Glossa invia automaticamente il testo sorgente dei chunk
@@ -23,14 +26,18 @@ corrente, non il contenuto del blocco di riferimento.
 
 ## Caching del prompt a strati
 
-Ogni prompt è strutturato in tre strati in modo che il provider possa riusare il
-più possibile il contesto già calcolato:
+Ogni prompt contiene tre strati riutilizzabili, seguiti dal contenuto variabile del
+chunk o dall'output dello stage precedente. Questa struttura aiuta il provider a
+riusare il più possibile il contesto già calcolato:
 
 | Strato | Contenuto | Caching |
 |---|---|---|
 | 1 | Persona, regole strutturali, glossario | Cachato una volta per tutta la run |
 | 2 | Blocco di riferimento documentale | Cachato per gruppo di chunk vicini |
 | 3 | Istruzioni specifiche dello stage | Inviato di volta in volta — è la parte più piccola |
+
+Il testo del chunk corrente arriva dopo questi strati. Cambia a ogni chiamata, quindi
+non è la parte che Glossa cerca di rendere cachabile.
 
 ## Isolamento degli stage
 
@@ -74,4 +81,5 @@ I valori indicati (24 ore, 5–10 minuti) riflettono il comportamento osservato 
 ## Vedi anche
 
 - [Configurazione pipeline](../reference/pipeline-config) — come configurare stage e modelli
+- [LLM e pipeline](./llm-and-pipelines) — principi teorici dietro chunk, stadi e judge
 - [Audit e revisione](./audit-review) — come il giudice valuta l'output di ogni chunk

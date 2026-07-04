@@ -7,10 +7,15 @@ title: Pipeline config
 Glossa separates pipeline configuration from document content so you can tune
 the run before starting a batch.
 
+If you want to understand why controls are split by stage, also read
+[LLMs and pipelines](../guides/llm-and-pipelines): it explains why translation,
+refinement, formatting, and judging have different responsibilities.
+
 ## Main controls
 
 - Source language
 - Target language
+- Pipeline mode
 - Provider and model per stage
 - Translation instructions
 - Persona
@@ -45,10 +50,12 @@ Leave everything else alone until you know which part is causing the failure.
 |---|---|
 | Standard | Single translation pass plus audit |
 | Editorial | Translation, refine, and formatting stages before audit |
+| DeepL Hybrid | DeepL first pass, optional LLM refinement, and LLM audit |
 
 ## Stage-level advice
 
 - Keep the translation stage focused on accuracy and basic style.
+- In DeepL Hybrid, use the DeepL stage for the first draft and keep LLM prompts/models separate for refinement and judging.
 - Use refine for rewriting, not for first-pass translation.
 - Keep format narrow so it does not silently alter meaning.
 - Use the judge to report issues, not to replace human review.
@@ -78,9 +85,11 @@ Hovering over the info icon next to the estimated cost (in the pipeline settings
 - In the pipeline settings panel the estimate always covers **the whole document**, including the coherence check if configured.
 - Next to the run button in the document view, the estimate follows whatever is about to happen: in "translate chunk" mode it covers only the selected chunk, in "run all" mode it covers the whole document.
 - This is an approximation based on word count and the chosen model's per-token price: the real cost may vary slightly.
+- DeepL stages are measured in billed characters by DeepL: Glossa can show those after the run, but the dollar estimate remains based on token-priced LLM providers.
 
 ## See also
 
 - [Provider support](./provider-support) — provider comparison and model selection guide
+- [LLMs and pipelines](../guides/llm-and-pipelines) — principles behind stage separation
 - [Document pipeline](../guides/document-pipeline) — how settings apply to the end-to-end workflow
 - [Context and caching](../guides/context-and-caching) — how the prompt is structured to optimise costs
