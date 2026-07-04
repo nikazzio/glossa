@@ -5,7 +5,10 @@ description: Documentazione pubblica dell'app desktop Glossa.
 
 <div class="docsHero">
   <p class="docsHero__eyebrow">Documentazione ufficiale</p>
-  <img class="docsHero__brand" src="./public/glossa-wordmark.svg" alt="Glossa" />
+  <div class="docsHero__identity">
+    <img class="docsHero__icon" src="./public/glossa-app-icon.png" alt="" />
+    <img class="docsHero__brand" src="./public/glossa-wordmark.svg" alt="Glossa" />
+  </div>
   <p class="docsHero__lead">
     Workflow desktop di traduzione per studiosi, editor professionisti e revisori di testi lunghi.
   </p>
