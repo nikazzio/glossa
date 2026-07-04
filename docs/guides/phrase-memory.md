@@ -22,6 +22,12 @@ quando ricompare una formulazione simile.
 3. Controlla i match restituiti per il chunk corrente.
 4. Seleziona solo i match che vuoi iniettare nella run.
 
+## Quando evitarla
+
+Disattiva o ignora i match quando il testo cambia registro, voce narrante o dominio.
+La somiglianza lessicale non basta: una frase recuperata deve avere senso nel chunk
+corrente e nel documento che stai traducendo.
+
 ## Buone pratiche
 
 - Mantieni stabile il testo sorgente per ottenere un riuso affidabile delle frasi.

@@ -7,6 +7,10 @@ title: Audit and review
 Glossa does not stop at generating a draft. It also runs a judge stage so you
 can inspect quality issues chunk by chunk.
 
+The judge is separate from generation because the model that produced a draft should
+not be the only reviewer of that draft. [LLMs and pipelines](./llm-and-pipelines)
+explains the general principle.
+
 ## What the judge reports
 
 - Overall quality rating
@@ -51,4 +55,5 @@ The judge is best used as a second pass, not as the final authority.
 
 - [Annotations](./annotations) — how to track and anchor editorial findings per chunk
 - [Glossary and phrase memory](./glossary-and-memory) — for controlling terminology drift upstream
+- [LLMs and pipelines](./llm-and-pipelines) — why the judge is a separate stage
 - [Context and caching](./context-and-caching) — how Glossa keeps consistency across chunks

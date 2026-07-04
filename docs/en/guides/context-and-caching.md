@@ -9,6 +9,9 @@ inference costs: a document reference block that gives each chunk access to the
 source text of its neighbours, and a layered prompt structure that lets providers
 cache as much as possible between calls.
 
+This page describes the technical behavior. For the product reasoning behind the
+pipeline design, read [LLMs and pipelines](./llm-and-pipelines) first.
+
 ## Document context per chunk
 
 When translating a chunk, Glossa automatically sends the source text of adjacent
@@ -23,14 +26,18 @@ the reference block content.
 
 ## Layered prompt caching
 
-Each prompt is structured in three layers so the provider can reuse as much
-previously computed context as possible:
+Each prompt contains three reusable layers, followed by the variable current chunk
+or the output from the previous stage. This structure helps the provider reuse as
+much previously computed context as possible:
 
 | Layer | Content | Caching |
 |---|---|---|
 | 1 | Persona, structural rules, glossary | Cached once per run |
 | 2 | Document reference block | Cached per group of adjacent chunks |
 | 3 | Stage-specific instructions | Sent each call — the smallest part |
+
+The current chunk text comes after these layers. It changes on every call, so it is
+not the part Glossa tries to make cacheable.
 
 ## Stage isolation
 
@@ -73,4 +80,5 @@ The figures above (24 hours, 5–10 minutes) reflect observed behaviour and are 
 ## See also
 
 - [Pipeline config](../reference/pipeline-config) — how to configure stages and models
+- [LLMs and pipelines](./llm-and-pipelines) — theoretical principles behind chunks, stages, and the judge
 - [Audit and review](./audit-review) — how the judge evaluates each chunk's output

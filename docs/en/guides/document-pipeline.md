@@ -11,15 +11,22 @@ Glossa is built around a four-phase document workflow:
 3. **Translate** the full document once the setup is stable.
 4. **Review** the audit results and iterate if the quality needs work.
 
-## Two working modes
+The underlying reasoning is explained in [LLMs and pipelines](./llm-and-pipelines):
+a language model is powerful but probabilistic, so Glossa splits work into chunks,
+stages, and audit passes to keep each step controllable.
 
-| Mode | Best for | What changes |
+## Document workflow
+
+Glossa uses the document workflow even for short trials. The path stays the same:
+create or open a project, import or paste the source text, review chunking, and
+use **Test** on one representative chunk before starting a batch.
+
+| Area | What you control | When to use it |
 |---|---|---|
-| Sandbox | Short passages, prompt tuning, isolated experiments | No document import, no chunk list |
-| Document | Real texts, long-form translation, review workflows | Chunking, index, audit, notes, export |
-
-Use Sandbox when you want fast iteration on a sample. Use Document mode when
-the text needs structure, continuity, and review history.
+| Import and preview | Source text, segmentation, initial chunks | Before creating the active chunk list |
+| Pipeline config | Languages, providers, models, prompts, glossary | Before Test and before long batches |
+| Document view | Current chunk, output, states, runs | During translation and review |
+| Insights panel | Audit, notes, statistics, coherence | During quality control and chunk closure |
 
 ## DeepL Hybrid Mode
 
@@ -28,7 +35,7 @@ The **DeepL Hybrid** mode combines the speed and precision of the DeepL API with
 | Stage | Provider | Role |
 |---|---|---|
 | Stage 1 | DeepL API | Main translation |
-| Stage 2 | LLM (optional) | Style and register refinement |
+| Stage 2 | Optional LLM | Style and register refinement |
 | Judge | LLM | Quality audit (unchanged) |
 
 **Requirements:** DeepL API key configured in Settings → provider section.
@@ -41,7 +48,7 @@ The **DeepL Hybrid** mode combines the speed and precision of the DeepL API with
 
 ## Standard document flow
 
-1. Import a document.
+1. Import a document or prepare a short sample.
 2. Choose chunking and confirm the import preview.
 3. Set the source and target languages.
 4. Choose the provider and model for each active stage.
@@ -60,6 +67,7 @@ The **DeepL Hybrid** mode combines the speed and precision of the DeepL API with
 
 | Stage | Purpose |
 |---|---|
+| DeepL Translation | Produces the first translation through the DeepL API when DeepL Hybrid is active |
 | Translation | Produce the first candidate from the source chunk |
 | Refine | Rewrite the candidate with better style, accuracy, or terminology |
 | Format | Clean the output format without re-translating the source |
@@ -102,6 +110,7 @@ workflow lighter.
 ## See also
 
 - [Annotations](./annotations) — for tracking editorial findings per chunk
+- [LLMs and pipelines](./llm-and-pipelines) — why Glossa separates chunks, stages, and audit
 - [Audit and review](./audit-review) — detailed review loop with the judge
 - [Context and caching](./context-and-caching) — how Glossa uses context across adjacent chunks
 - [Pipeline config](../reference/pipeline-config) — full reference for all controls

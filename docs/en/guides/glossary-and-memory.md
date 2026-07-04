@@ -6,6 +6,10 @@ title: Glossary and phrase memory
 
 Glossa has two separate terminology tools. They solve different problems and work best together.
 
+The distinction matters: the glossary is a constraint, while phrase memory is
+contextual support. The first tells the model what it must respect; the second
+shows approved examples that may help when the context is similar.
+
 ## Glossary
 
 The glossary is explicit and project-facing. You define source terms, required
@@ -40,6 +44,9 @@ Use phrase memory when:
 - The glossary constrains the run up front.
 - Phrase memory suggests reusable phrasing from prior approved work.
 - The judge can still flag terminology or consistency failures after both.
+
+Do not treat phrase memory as an absolute source of truth. A retrieved match can
+be perfect in one chapter and wrong in another: it should be selected, not merely accepted.
 
 ## Recommended workflow
 

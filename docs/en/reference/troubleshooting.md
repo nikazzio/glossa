@@ -37,6 +37,13 @@ This page covers the common failures you are likely to hit while setting up or r
 - Verify the model is installed with `ollama list`
 - Use a smaller model or reduce chunk size if local inference is timing out
 
+## DeepL Hybrid does not start
+
+- Verify that the DeepL API key is configured in Settings.
+- Check DeepL character quota and plan status: quota errors stop the stage before LLM refinement.
+- If a DeepL glossary cannot be created, check that the language pair is supported by DeepL glossaries.
+- If LLM refinement works but the DeepL stage fails, debug DeepL separately: do not change prompt, judge, and LLM provider in the same attempt.
+
 ## The output quality is unstable
 
 - Move back to Test mode

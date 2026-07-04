@@ -4,8 +4,9 @@ title: Per iniziare
 
 # Per iniziare
 
-Glossa è un'app desktop Tauri. Gira in locale: configuri una pipeline di traduzione
-e processi il testo sorgente come passaggio singolo o come documento a chunk.
+Glossa è un'app desktop Tauri. Gira in locale: configuri una pipeline di traduzione,
+importi o prepari il testo sorgente e lavori per chunk, testando prima un passaggio
+rappresentativo e poi lanciando il batch completo.
 
 > **Nota terminologica**: questa documentazione mantiene in inglese i termini tecnici
 > usati nell'interfaccia — *chunk*, *stage*, *batch*, *run*, *provider* — perché sono
@@ -22,7 +23,7 @@ Se vuoi usare Glossa, il percorso corretto è scaricare una release binaria da G
 Link utili:
 
 - [Ultima release](https://github.com/nikazzio/glossa/releases/latest)
-- Release corrente al 15 giugno 2026: [`glossa-v1.0.0`](https://github.com/nikazzio/glossa/releases/tag/glossa-v1.0.0)
+- Release corrente al 4 luglio 2026: [`glossa-v1.1.0`](https://github.com/nikazzio/glossa/releases/tag/glossa-v1.1.0)
 
 ## Per sviluppatori e contributori
 
@@ -96,13 +97,13 @@ cargo test
 2. Crea o apri un workspace e poi crea un progetto.
 3. Imposta lingua sorgente e lingua target.
 4. Scegli provider e modello per il primo stage.
-5. Importa un documento oppure incolla un campione breve in Sandbox mode.
+5. Importa un documento. Per una prova breve, importa o incolla solo un campione e usa **Test** su un chunk.
 6. Esegui un chunk di test prima di lanciare un batch completo.
 
 ## Cosa configurare per prima cosa
 
 - **Chiavi provider** in Settings
-- **Modalità pipeline**: Standard per lavori più semplici, Editoriale per refine multi-stage
+- **Modalità pipeline**: Standard per lavori più semplici, Editoriale per rifinitura multi-stage, DeepL Hybrid quando vuoi una prima passata DeepL seguita da rifinitura LLM
 - **Glossario** se la terminologia è vincolante
 - **Chunking** se il testo sorgente è lungo o strutturalmente delicato
 

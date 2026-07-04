@@ -37,6 +37,13 @@ Questa pagina copre i problemi più comuni che puoi incontrare durante setup o r
 - Verifica che il modello sia installato con `ollama list`
 - Usa un modello più piccolo o riduci il chunk size se l'inferenza locale va in timeout
 
+## DeepL Hybrid non parte
+
+- Verifica che la API key DeepL sia configurata in Settings.
+- Controlla quota caratteri e piano DeepL: errori di quota bloccano lo stage prima del refine LLM.
+- Se un glossario DeepL non viene creato, controlla che la coppia linguistica sia supportata da DeepL per i glossari.
+- Se il refine LLM funziona ma lo stage DeepL no, debugga DeepL separatamente: non cambiare anche prompt, judge e provider LLM nello stesso tentativo.
+
 ## La qualità dell'output è instabile
 
 - Torna al Test mode

@@ -24,6 +24,16 @@ the active chunk list.
 - Markdown is best when headings and formatting matter.
 - DOCX and PDF are useful for real editorial material, but always review the preview before running the pipeline.
 
+## Imported footnotes
+
+If a DOCX or Markdown file contains footnotes, Glossa keeps them with the project
+but leaves them outside automatic translation. The model receives the body text,
+not the footnote content. After translation, review and place footnotes manually:
+in real translations they often need different wording and position.
+
+See also [Annotations](../guides/annotations) for the distinction between imported
+source notes and annotations created during review.
+
 ## Export
 
 Typical export targets include:

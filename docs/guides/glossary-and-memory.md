@@ -6,6 +6,10 @@ title: Glossario e phrase memory
 
 Glossa ha due strumenti terminologici separati. Risolvono problemi diversi e funzionano meglio insieme.
 
+La distinzione è importante: il glossario è un vincolo, la phrase memory è un
+supporto contestuale. Il primo dice al modello cosa deve rispettare; la seconda
+mostra esempi approvati che possono aiutare quando il contesto è simile.
+
 ## Glossario
 
 Il glossario è esplicito e orientato al progetto. Definisci termini sorgente,
@@ -40,6 +44,9 @@ Usa la phrase memory quando:
 - Il glossario vincola la run a monte.
 - La phrase memory suggerisce formulazioni riusabili da lavoro approvato precedente.
 - Il judge può comunque segnalare errori terminologici o di coerenza dopo entrambi.
+
+Non usare la phrase memory come fonte di verità assoluta. Un match recuperato può
+essere perfetto in un capitolo e sbagliato in un altro: va scelto, non solo accettato.
 
 ## Workflow consigliato
 
