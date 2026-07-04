@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.1](https://github.com/nikazzio/glossa/compare/glossa-v1.1.0...glossa-v1.1.1) (2026-07-04)
+
+
+### 🐛 Bug Fixes
+
+* correct docs theming, app icon framing and missing IT changelog ([#317](https://github.com/nikazzio/glossa/issues/317)) ([c7dc159](https://github.com/nikazzio/glossa/commit/c7dc15912f8f0e2ad53b8878507dc871d5a0a99d))
+* retry GitHub Pages deploy on transient failure ([#315](https://github.com/nikazzio/glossa/issues/315)) ([c6c86f7](https://github.com/nikazzio/glossa/commit/c6c86f7f79ebbeea44da03b1b0a82dad9ab54d7a))
+
 ## [1.1.0](https://github.com/nikazzio/glossa/compare/glossa-v1.0.0...glossa-v1.1.0) (2026-07-03)
 
 
