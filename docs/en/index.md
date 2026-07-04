@@ -1,57 +1,34 @@
 ---
+layout: home
 title: Glossa
 description: Public documentation for the Glossa desktop app.
+
+hero:
+  name: Glossa
+  text: Editorial translation for long-form text
+  tagline: Desktop translation workflow for scholars, editors, and long-form review — staged translation, chunk-aware document processing, audit, glossary, and phrase memory in one local desktop app.
+  image:
+    src: /glossa-app-icon.png
+    alt: Glossa
+  actions:
+    - theme: brand
+      text: Get started
+      link: /en/intro/getting-started
+    - theme: alt
+      text: Workflow guide
+      link: /en/guides/document-pipeline
+    - theme: alt
+      text: GitHub
+      link: https://github.com/nikazzio/glossa
+
+features:
+  - title: Workflow-first
+    details: Configure a pipeline, test one chunk, run a batch, then review the result without leaving the same document workspace.
+  - title: Editorial control
+    details: Keep provider choice, prompts, glossary entries, audit findings, and notes visible while you iterate on difficult passages.
+  - title: Long-document support
+    details: Import plain text, Markdown, DOCX, or PDF, chunk the text, and process it progressively instead of pasting the whole work into a chat box.
 ---
-
-<div class="docsHero">
-  <p class="docsHero__eyebrow">Official documentation</p>
-  <div class="docsHero__identity">
-    <img class="docsHero__icon" src="../public/glossa-app-icon.png" alt="" />
-    <img class="docsHero__brand" src="../public/glossa-wordmark.svg" alt="Glossa" />
-  </div>
-  <p class="docsHero__lead">
-    Desktop translation workflow for scholars, editors, and long-form review.
-  </p>
-  <p class="docsHero__text">
-    Glossa combines staged translation, chunk-aware document processing, audit
-    review, glossary control, annotations, and phrase memory in one local desktop app.
-  </p>
-  <div class="docsHero__actions">
-    <a class="docsButton docsButton--primary" href="./intro/getting-started">
-      Get started
-    </a>
-    <a class="docsButton docsButton--secondary" href="./guides/document-pipeline">
-      Workflow guide
-    </a>
-    <a class="docsButton docsButton--secondary" href="https://github.com/nikazzio/glossa">
-      GitHub
-    </a>
-  </div>
-</div>
-
-<div class="docsCardGrid">
-  <div class="docsCard">
-    <h2>Workflow-first</h2>
-    <p>
-      Configure a pipeline, test one chunk, run a batch, then review the result
-      without leaving the same document workspace.
-    </p>
-  </div>
-  <div class="docsCard">
-    <h2>Editorial control</h2>
-    <p>
-      Keep provider choice, prompts, glossary entries, audit findings, and notes
-      visible while you iterate on difficult passages.
-    </p>
-  </div>
-  <div class="docsCard">
-    <h2>Long-document support</h2>
-    <p>
-      Import plain text, Markdown, DOCX, or PDF, chunk the text, and process it
-      progressively instead of pasting the whole work into a chat box.
-    </p>
-  </div>
-</div>
 
 ## Read this first
 

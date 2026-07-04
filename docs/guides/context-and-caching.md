@@ -52,7 +52,7 @@ compito specifico.
 | Format | Solo il testo tradotto — non il sorgente, non il blocco di riferimento |
 | Audit coerenza | Chunk tradotti vicini — non il sorgente |
 
-Il stage Format riceve solo la traduzione per design: se ricevesse anche il sorgente,
+Lo stage Format riceve solo la traduzione per design: se ricevesse anche il sorgente,
 il modello potrebbe ritradurre invece di limitarsi alla pulizia della formattazione.
 
 ## Cosa significa in pratica
@@ -72,7 +72,7 @@ distingue due politiche:
 - **Modelli mini/nano**: in-memory retention — il prefisso scade dopo 5–10 minuti
   di inattività.
 
-Questo spiega perché il stage Refine (tipicamente su un modello mini) può mostrare
+Questo spiega perché lo stage Refine (tipicamente su un modello mini) può mostrare
 0% di cache hit anche con prompt identico: se sono passati più di 10 minuti tra
 un chunk e il successivo, la cache è già scaduta.
 
