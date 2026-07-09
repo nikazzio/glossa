@@ -8,7 +8,7 @@ import {
 
 let db: Database | null = null;
 const DB_URL = 'sqlite:glossa.db';
-const CURRENT_SCHEMA_VERSION = '2026-06-06-phrase-memory-extractor';
+const CURRENT_SCHEMA_VERSION = '2026-07-09-schema-consolidation';
 
 const RESETTABLE_OBJECTS = [
   'technique_tags',
@@ -49,58 +49,9 @@ function serializeWrite<T>(fn: () => Promise<T>): Promise<T> {
 
 // Whitelist of (table.column) pairs allowed to be added via migration.
 // Any call with values outside this set is rejected to prevent SQL injection.
-const ALLOWED_MIGRATIONS = new Set([
-  'projects.view_mode',
-  'projects.source_display_text',
-  'projects.source_processing_text',
-  'projects.source_footnotes',
-  'projects.document_format',
-  'projects.render_profile',
-  'projects.markdown_aware',
-  'projects.experimental_import',
-  'translations.position',
-  'translations.chunk_status',
-  'translations.judge_status',
-  'translations.judge_rating',
-  'translations.translation_locked',
-  'translations.coherence_result',
-  'translations.footnotes',
-  'translations.source_display_text',
-  'translations.source_processing_text',
-  'translations.translation_display_text',
-  'translations.translation_processing_text',
-  'translations.pipeline_id',
-  'prompt_templates.context',
-  'prompt_templates.workflow',
-  'translations.blob_id',
-  'translations.blob_order',
-  'translations.blob_reference_chunk_ids',
-  'operation_logs.phase',
-  'operation_logs.duration_ms',
-  'operation_logs.detail_kind',
-  'operation_logs.pipeline_id',
-  'pipelines.pipeline_mode',
-  'pipelines.use_chunking',
-  'pipelines.words_per_chunk',
-  'pipelines.review_provider_options',
-  'pipelines.persona',
-  'pipelines.custom_source_language',
-  'pipelines.custom_target_language',
-  'pipelines.blob_budget_tokens',
-  'pipelines.blob_overlap',
-  'pipelines.run_status',
-  'pipelines.last_run_config',
-  'pipelines.run_in_progress',
-  'pipelines.source_display_text',
-  'pipelines.source_processing_text',
-  'pipelines.source_footnotes',
-  'pipelines.coherence_prompt',
-  'pipelines.use_phrase_memory',
-  'pipelines.auto_search_phrase_memory',
-  'pipelines.phrase_memory_similarity_threshold',
-  'pipelines.phrase_memory_max_results',
-  'glossaries.workspace_id',
-]);
+// Columns baked into the initial CREATE TABLE statements don't need an entry here —
+// add one only when a future schema change adds a column via ensureColumn().
+const ALLOWED_MIGRATIONS = new Set<string>([]);
 
 const VALID_COLUMN_DEFINITION = /^(INTEGER|TEXT|REAL|BLOB|NUMERIC)(\s+NOT\s+NULL)?(\s+DEFAULT\s+('[^']*'|NULL|-?\d+(\.\d+)?))?$/i;
 
@@ -209,6 +160,14 @@ export async function initDatabase(): Promise<void> {
       name TEXT NOT NULL,
       source_language TEXT NOT NULL DEFAULT 'English',
       target_language TEXT NOT NULL DEFAULT 'Italian',
+      view_mode TEXT DEFAULT NULL,
+      source_display_text TEXT DEFAULT '',
+      source_processing_text TEXT DEFAULT '',
+      source_footnotes TEXT DEFAULT '[]',
+      document_format TEXT DEFAULT 'plain',
+      render_profile TEXT DEFAULT 'plain-text',
+      markdown_aware INTEGER DEFAULT 0,
+      experimental_import TEXT DEFAULT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
@@ -266,6 +225,7 @@ export async function initDatabase(): Promise<void> {
       description TEXT DEFAULT '',
       source_language TEXT DEFAULT '',
       target_language TEXT DEFAULT '',
+      workspace_id TEXT DEFAULT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
@@ -312,20 +272,15 @@ export async function initDatabase(): Promise<void> {
       judge_rating TEXT DEFAULT 'fair',
       translation_locked INTEGER DEFAULT 0,
       judge_issues TEXT DEFAULT '[]',
+      coherence_result TEXT DEFAULT NULL,
+      footnotes TEXT DEFAULT NULL,
+      blob_id TEXT DEFAULT NULL,
+      blob_order INTEGER DEFAULT 0,
+      blob_reference_chunk_ids TEXT DEFAULT NULL,
+      pipeline_id TEXT DEFAULT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
-
-  await ensureColumn('projects', 'view_mode', 'TEXT DEFAULT NULL');
-  await ensureColumn('translations', 'position', 'INTEGER DEFAULT NULL');
-  await ensureColumn('translations', 'chunk_status', "TEXT DEFAULT 'ready'");
-  await ensureColumn('translations', 'judge_status', "TEXT DEFAULT 'idle'");
-  await ensureColumn('translations', 'judge_rating', "TEXT DEFAULT 'fair'");
-  await ensureColumn('translations', 'translation_locked', 'INTEGER DEFAULT 0');
-  await ensureColumn('translations', 'source_display_text', "TEXT DEFAULT ''");
-  await ensureColumn('translations', 'source_processing_text', "TEXT DEFAULT ''");
-  await ensureColumn('translations', 'translation_display_text', "TEXT DEFAULT ''");
-  await ensureColumn('translations', 'translation_processing_text', "TEXT DEFAULT ''");
 
   await conn.execute(`
     CREATE TABLE IF NOT EXISTS app_settings (
@@ -341,15 +296,22 @@ export async function initDatabase(): Promise<void> {
       prompt TEXT NOT NULL,
       default_model TEXT DEFAULT '',
       default_provider TEXT DEFAULT '',
+      context TEXT NOT NULL DEFAULT 'stage',
+      workflow TEXT NOT NULL DEFAULT 'translation',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
+  `);
+  await conn.execute(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_prompt_templates_name_context_workflow
+    ON prompt_templates(name, context, workflow)
   `);
 
   await conn.execute(`
     CREATE TABLE IF NOT EXISTS operation_logs (
       id TEXT PRIMARY KEY,
       project_id TEXT REFERENCES projects(id) ON DELETE CASCADE,
+      pipeline_id TEXT DEFAULT NULL,
       at TEXT NOT NULL,
       level TEXT NOT NULL,
       scope TEXT NOT NULL,
@@ -357,41 +319,16 @@ export async function initDatabase(): Promise<void> {
       chunk_id TEXT DEFAULT NULL,
       stage_id TEXT DEFAULT NULL,
       meta TEXT DEFAULT NULL,
-      detail TEXT DEFAULT NULL
+      detail TEXT DEFAULT NULL,
+      phase TEXT DEFAULT NULL,
+      duration_ms INTEGER DEFAULT NULL,
+      detail_kind TEXT DEFAULT NULL
     )
   `);
   await conn.execute(`
     CREATE INDEX IF NOT EXISTS idx_operation_logs_project_id
     ON operation_logs(project_id, at)
   `);
-  await ensureColumn('translations', 'coherence_result', 'TEXT DEFAULT NULL');
-  await ensureColumn('translations', 'footnotes', 'TEXT DEFAULT NULL');
-  await ensureColumn('translations', 'blob_id', 'TEXT DEFAULT NULL');
-  await ensureColumn('translations', 'blob_order', 'INTEGER DEFAULT 0');
-  await ensureColumn('translations', 'blob_reference_chunk_ids', 'TEXT DEFAULT NULL');
-  await ensureColumn('operation_logs', 'phase', 'TEXT DEFAULT NULL');
-  await ensureColumn('operation_logs', 'duration_ms', 'INTEGER DEFAULT NULL');
-  await ensureColumn('operation_logs', 'detail_kind', 'TEXT DEFAULT NULL');
-
-  const operationLogColumns = await conn.select<Array<{ name: string }>>('PRAGMA table_info(operation_logs)');
-  const hadPipelineIdColumn = operationLogColumns.some((column) => column.name === 'pipeline_id');
-  await ensureColumn('operation_logs', 'pipeline_id', 'TEXT DEFAULT NULL');
-  if (!hadPipelineIdColumn) {
-    // One-time backfill: entries logged before pipeline scoping existed had no
-    // pipeline_id, which would otherwise make them invisible to the new scoped
-    // queries. Best-effort attribution to the project's oldest pipeline keeps
-    // pre-existing history visible instead of silently disappearing.
-    await conn.execute(`
-      UPDATE operation_logs
-      SET pipeline_id = (
-        SELECT id FROM pipelines
-        WHERE pipelines.project_id = operation_logs.project_id
-        ORDER BY created_at ASC
-        LIMIT 1
-      )
-      WHERE pipeline_id IS NULL
-    `);
-  }
   await conn.execute(`
     CREATE INDEX IF NOT EXISTS idx_operation_logs_pipeline_id
     ON operation_logs(project_id, pipeline_id, at)
@@ -405,53 +342,6 @@ export async function initDatabase(): Promise<void> {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
-
-  await ensureColumn('prompt_templates', 'context', "TEXT NOT NULL DEFAULT 'stage'");
-  await ensureColumn('prompt_templates', 'workflow', "TEXT NOT NULL DEFAULT 'translation'");
-  await ensureColumn('glossaries', 'workspace_id', 'TEXT DEFAULT NULL');
-  // Migrate unique index: (name) → (name, context) → (name, context, workflow)
-  await conn.execute('DROP INDEX IF EXISTS idx_prompt_templates_name');
-  await conn.execute('DROP INDEX IF EXISTS idx_prompt_templates_name_context');
-  await conn.execute(`
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_prompt_templates_name_context_workflow
-    ON prompt_templates(name, context, workflow)
-  `);
-
-  // ── Multi-pipeline migration ─────────────────────────────────────────
-
-  // Add source-text columns to projects (project owns the document, pipelines own the config).
-  await ensureColumn('projects', 'source_display_text', "TEXT DEFAULT ''");
-  await ensureColumn('projects', 'source_processing_text', "TEXT DEFAULT ''");
-  await ensureColumn('projects', 'source_footnotes', "TEXT DEFAULT '[]'");
-  await ensureColumn('projects', 'document_format', "TEXT DEFAULT 'plain'");
-  await ensureColumn('projects', 'render_profile', "TEXT DEFAULT 'plain-text'");
-  await ensureColumn('projects', 'markdown_aware', 'INTEGER DEFAULT 0');
-  await ensureColumn('projects', 'experimental_import', 'TEXT DEFAULT NULL');
-
-  // Add pipeline_id to translations (translations belong to a pipeline, not a project).
-  await ensureColumn('translations', 'pipeline_id', 'TEXT DEFAULT NULL');
-
-  // Ensure all optional pipelines columns exist on older DBs that predate them.
-  await ensureColumn('pipelines', 'pipeline_mode', "TEXT DEFAULT 'standard'");
-  await ensureColumn('pipelines', 'use_chunking', 'INTEGER DEFAULT 1');
-  await ensureColumn('pipelines', 'words_per_chunk', 'INTEGER DEFAULT 0');
-  await ensureColumn('pipelines', 'review_provider_options', 'TEXT DEFAULT NULL');
-  await ensureColumn('pipelines', 'persona', 'TEXT DEFAULT NULL');
-  await ensureColumn('pipelines', 'custom_source_language', 'TEXT DEFAULT NULL');
-  await ensureColumn('pipelines', 'custom_target_language', 'TEXT DEFAULT NULL');
-  await ensureColumn('pipelines', 'blob_budget_tokens', 'INTEGER DEFAULT 0');
-  await ensureColumn('pipelines', 'blob_overlap', 'INTEGER DEFAULT 1');
-  await ensureColumn('pipelines', 'coherence_prompt', 'TEXT DEFAULT NULL');
-  await ensureColumn('pipelines', 'use_phrase_memory', 'INTEGER NOT NULL DEFAULT 0');
-  await ensureColumn('pipelines', 'auto_search_phrase_memory', 'INTEGER NOT NULL DEFAULT 1');
-  await ensureColumn('pipelines', 'phrase_memory_similarity_threshold', 'REAL NOT NULL DEFAULT 0.75');
-  await ensureColumn('pipelines', 'phrase_memory_max_results', 'INTEGER NOT NULL DEFAULT 10');
-  await ensureColumn('pipelines', 'run_status', "TEXT DEFAULT 'idle'");
-  await ensureColumn('pipelines', 'last_run_config', 'TEXT DEFAULT NULL');
-  await ensureColumn('pipelines', 'run_in_progress', 'INTEGER DEFAULT 0');
-  await ensureColumn('pipelines', 'source_display_text', 'TEXT DEFAULT NULL');
-  await ensureColumn('pipelines', 'source_processing_text', 'TEXT DEFAULT NULL');
-  await ensureColumn('pipelines', 'source_footnotes', 'TEXT DEFAULT NULL');
 
   // Unique constraint: translations are unique per (pipeline_id, chunk_id) so two pipelines
   // cannot overwrite each other's rows even if chunk IDs happen to collide.

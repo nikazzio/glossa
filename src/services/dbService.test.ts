@@ -216,7 +216,7 @@ describe('initDatabase migrations', () => {
     await initDatabase();
 
     expect(invoke).toHaveBeenCalledWith('backup_database_file', {
-      reason: 'schema-1-to-2026-06-06-phrase-memory-extractor',
+      reason: 'schema-1-to-2026-07-09-schema-consolidation',
     });
     expect(dbState.db.execute).toHaveBeenCalledWith('PRAGMA wal_checkpoint(FULL)');
     expect(dbState.db.execute).toHaveBeenCalledWith('DROP TABLE IF EXISTS projects');
@@ -228,7 +228,7 @@ describe('initDatabase migrations', () => {
 
   it('does not reset a database with the current beta schema version', async () => {
     dbState.setExistingObjects(['app_settings', 'projects', 'workspaces']);
-    dbState.setSchemaVersion('2026-06-06-phrase-memory-extractor');
+    dbState.setSchemaVersion('2026-07-09-schema-consolidation');
     const { initDatabase } = await import('./dbService');
 
     await initDatabase();
@@ -237,35 +237,35 @@ describe('initDatabase migrations', () => {
     expect(dbState.db.execute).not.toHaveBeenCalledWith('DROP TABLE IF EXISTS projects');
   });
 
-  it('adds new translation columns for existing databases', async () => {
+  it('bakes translation columns directly into the CREATE TABLE statement', async () => {
     const { initDatabase } = await import('./dbService');
 
     await initDatabase();
 
     expect(dbState.db.execute).toHaveBeenCalledWith(
-      expect.stringContaining("ALTER TABLE translations ADD COLUMN chunk_status TEXT DEFAULT 'ready'"),
+      expect.stringContaining("chunk_status TEXT DEFAULT 'ready'"),
     );
     expect(dbState.db.execute).toHaveBeenCalledWith(
-      expect.stringContaining("ALTER TABLE translations ADD COLUMN judge_status TEXT DEFAULT 'idle'"),
+      expect.stringContaining("judge_status TEXT DEFAULT 'idle'"),
     );
     expect(dbState.db.execute).toHaveBeenCalledWith(
-      expect.stringContaining("ALTER TABLE translations ADD COLUMN judge_rating TEXT DEFAULT 'fair'"),
+      expect.stringContaining("judge_rating TEXT DEFAULT 'fair'"),
     );
     expect(dbState.db.execute).toHaveBeenCalledWith(
-      expect.stringContaining('ALTER TABLE translations ADD COLUMN translation_locked INTEGER DEFAULT 0'),
+      expect.stringContaining('translation_locked INTEGER DEFAULT 0'),
     );
     expect(dbState.db.execute).toHaveBeenCalledWith(
-      expect.stringContaining('ALTER TABLE translations ADD COLUMN position INTEGER DEFAULT NULL'),
+      expect.stringContaining('position INTEGER DEFAULT NULL'),
     );
     expect(dbState.db.execute).toHaveBeenCalledWith(
-      expect.stringContaining('ALTER TABLE translations ADD COLUMN blob_reference_chunk_ids TEXT DEFAULT NULL'),
+      expect.stringContaining('blob_reference_chunk_ids TEXT DEFAULT NULL'),
     );
     expect(dbState.db.execute).not.toHaveBeenCalledWith(
       expect.stringContaining('ALTER TABLE pipeline_configs'),
     );
   });
 
-  it('creates the prompt_templates table and unique index on name', async () => {
+  it('creates the prompt_templates table and unique index on name/context/workflow', async () => {
     const { initDatabase } = await import('./dbService');
 
     await initDatabase();
@@ -274,7 +274,7 @@ describe('initDatabase migrations', () => {
       expect.stringContaining('CREATE TABLE IF NOT EXISTS prompt_templates'),
     );
     expect(dbState.db.execute).toHaveBeenCalledWith(
-      expect.stringContaining('CREATE UNIQUE INDEX IF NOT EXISTS idx_prompt_templates_name_context'),
+      expect.stringContaining('CREATE UNIQUE INDEX IF NOT EXISTS idx_prompt_templates_name_context_workflow'),
     );
   });
 
@@ -332,34 +332,16 @@ describe('initDatabase migrations', () => {
     );
   });
 
-  it('adds a pipeline_id column to operation_logs for existing databases', async () => {
+  it('bakes the pipeline_id column directly into the operation_logs CREATE TABLE', async () => {
     const { initDatabase } = await import('./dbService');
 
     await initDatabase();
 
     expect(dbState.db.execute).toHaveBeenCalledWith(
-      expect.stringContaining('ALTER TABLE operation_logs ADD COLUMN pipeline_id TEXT DEFAULT NULL'),
+      expect.stringContaining('pipeline_id TEXT DEFAULT NULL'),
     );
-  });
-
-  it('backfills pipeline_id on existing operation_logs rows the first time the column is added', async () => {
-    const { initDatabase } = await import('./dbService');
-
-    await initDatabase();
-
-    expect(dbState.db.execute).toHaveBeenCalledWith(
-      expect.stringContaining('UPDATE operation_logs'),
-    );
-  });
-
-  it('does not re-run the pipeline_id backfill once the column already exists', async () => {
-    dbState.columnsByTable.set('operation_logs', ['id', 'project_id', 'pipeline_id', 'at', 'level', 'scope', 'message']);
-    const { initDatabase } = await import('./dbService');
-
-    await initDatabase();
-
     expect(dbState.db.execute).not.toHaveBeenCalledWith(
-      expect.stringContaining('UPDATE operation_logs'),
+      expect.stringContaining('ALTER TABLE operation_logs'),
     );
   });
 });
