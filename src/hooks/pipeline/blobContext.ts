@@ -2,7 +2,6 @@ import type { TranslationChunk } from '../../types';
 
 export type ChunkOutcome = 'completed' | 'failed' | 'cancelled' | 'skipped';
 export type BatchRunMode = 'resume' | 'rerun-unlocked';
-export type FinalChunkStatus = 'completed' | 'preview';
 
 export function escapeChunkId(value: string): string {
   return value

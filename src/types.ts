@@ -21,7 +21,7 @@ export interface Annotation {
 export type ModelReasoningClass = 'reasoning' | 'non_reasoning' | 'optional';
 export type ModelStatus = 'stable' | 'preview' | 'deprecated';
 export type QualityRating = 'critical' | 'poor' | 'fair' | 'good' | 'excellent';
-export type ChunkStatus = 'ready' | 'processing' | 'completed' | 'preview' | 'error';
+export type ChunkStatus = 'ready' | 'processing' | 'completed' | 'error';
 export type ViewMode = 'sandbox' | 'document';
 export type DocumentLayoutPreference = 'auto' | 'standard' | 'book';
 export type OllamaStatus = 'unknown' | 'connected' | 'disconnected';

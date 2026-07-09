@@ -156,7 +156,6 @@ interface ChunksState {
   updateChunkCoherence: (chunkId: string, result: CoherenceResult) => void;
   toggleCoherenceIssueResolved: (chunkId: string, key: string) => void;
   resetCompletedChunks: () => void;
-  resetPreviewChunks: () => void;
   resetAllChunks: () => void;
   unlockChunkForEdit: (chunkId: string) => void;
   clearChunkStages: (chunkId: string) => void;
@@ -308,7 +307,7 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
         status,
         ...(status === 'processing'
           ? { translationStale: false, sourceEditable: false }
-          : status === 'completed' || status === 'preview'
+          : status === 'completed'
             ? { sourceEditable: false }
             : {}),
       })),
@@ -387,13 +386,6 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
     set((state) => ({
       chunks: state.chunks.map((chunk) =>
         chunk.status === 'completed' ? resetChunkForSourceEdit(chunk) : chunk,
-      ),
-    })),
-
-  resetPreviewChunks: () =>
-    set((state) => ({
-      chunks: state.chunks.map((chunk) =>
-        chunk.status === 'preview' ? resetChunkForSourceEdit(chunk) : chunk,
       ),
     })),
 

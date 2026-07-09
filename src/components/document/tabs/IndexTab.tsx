@@ -5,7 +5,6 @@ import {
   CheckCircle2,
   Circle,
   Clock,
-  FlaskConical,
   List,
   Loader2,
 } from 'lucide-react';
@@ -89,8 +88,6 @@ export function IndexTab({ panelId, labelledBy, chunks, currentChunkId, stuckChu
               : <Loader2 size={15} className="animate-spin text-editorial-warning shrink-0" />;
           } else if (chunk.status === 'completed') {
             statusIcon = <CheckCircle2 size={15} className="text-editorial-success shrink-0" />;
-          } else if (chunk.status === 'preview') {
-            statusIcon = <FlaskConical size={15} className="text-editorial-muted shrink-0" />;
           } else if (chunk.status === 'error') {
             statusIcon = <AlertCircle size={15} className="text-editorial-danger shrink-0" />;
           } else {

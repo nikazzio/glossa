@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { toast } from 'sonner';
 import { usePipelineStore } from '../stores/pipelineStore';
 import { useChunksStore } from '../stores/chunksStore';
-import { useUiStore } from '../stores/uiStore';
 import { useConfigStore } from '../stores/configStore';
 import { usePhraseMemoryStore } from '../stores/phraseMemoryStore';
 import { makeTranslationChunk } from '../test/chunkFactory';
@@ -902,111 +901,8 @@ describe('usePipeline', () => {
     expect(llmMocks.judgeTranslation).not.toHaveBeenCalled();
   });
 
-  describe('runDryRun — test phase', () => {
-    it('marks the first ready chunk as preview after a successful run', async () => {
-      useConfigStore.setState({ pipelineTestChunkCount: 1 });
-      llmMocks.runStage.mockResolvedValue({ content: 'Test translation' });
-      llmMocks.judgeTranslation.mockResolvedValue({ content: '', rating: 'good', issues: [] });
-
-      const { result } = renderHook(() => usePipeline());
-      await act(async () => {
-        await result.current.runDryRun();
-      });
-
-      const chunks = useChunksStore.getState().chunks;
-      expect(chunks[0]!.status).toBe('preview');
-      expect(chunks[1]!.status).toBe('ready');
-    });
-
-    it('skips chunks already in preview and targets the next ready chunk', async () => {
-      useChunksStore.setState({
-        chunks: [
-          makeTranslationChunk({
-            id: 'chunk-0',
-            originalText: 'First',
-            status: 'preview',
-            currentDraft: 'Already tested',
-            stageResults: { 'stg-1': { content: 'Already tested', status: 'completed' } },
-            judgeResult: { content: '', status: 'completed', rating: 'good', issues: [] },
-          }),
-          makeTranslationChunk({
-            id: 'chunk-1',
-            originalText: 'Second',
-            status: 'ready',
-            stageResults: {},
-            judgeResult: { content: '', status: 'idle', rating: 'fair', issues: [] },
-            currentDraft: '',
-          }),
-        ],
-        isProcessing: false,
-        cancelRequested: false,
-        activeStreamId: null,
-      });
-
-      llmMocks.runStage.mockResolvedValue({ content: 'Second test' });
-      llmMocks.judgeTranslation.mockResolvedValue({ content: '', rating: 'good', issues: [] });
-
-      const { result } = renderHook(() => usePipeline());
-      await act(async () => {
-        await result.current.runDryRun();
-      });
-
-      const chunks = useChunksStore.getState().chunks;
-      expect(chunks[0]!.status).toBe('preview');
-      expect(chunks[1]!.status).toBe('preview');
-      expect(llmMocks.runStage).toHaveBeenCalledTimes(1);
-    });
-
-    it('shows dryRunNoTarget toast when all chunks are already completed or preview', async () => {
-      useChunksStore.setState({
-        chunks: [
-          makeTranslationChunk({
-            id: 'chunk-0',
-            originalText: 'First',
-            status: 'completed',
-            currentDraft: 'Done',
-            stageResults: {},
-            judgeResult: { content: '', status: 'completed', rating: 'good', issues: [] },
-          }),
-          makeTranslationChunk({
-            id: 'chunk-1',
-            originalText: 'Second',
-            status: 'preview',
-            currentDraft: 'Tested',
-            stageResults: {},
-            judgeResult: { content: '', status: 'completed', rating: 'good', issues: [] },
-          }),
-        ],
-        isProcessing: false,
-        cancelRequested: false,
-        activeStreamId: null,
-      });
-
-      const { result } = renderHook(() => usePipeline());
-      await act(async () => {
-        await result.current.runDryRun();
-      });
-
-      expect(llmMocks.runStage).not.toHaveBeenCalled();
-      expect(toast.message).toHaveBeenCalledWith('pipeline.dryRunNoTarget');
-    });
-  });
-
-  describe('runSingleChunk — finalStatus param', () => {
-    it('marks the chunk as preview when finalStatus is preview', async () => {
-      llmMocks.runStage.mockResolvedValue({ content: 'Preview result' });
-      llmMocks.judgeTranslation.mockResolvedValue({ content: '', rating: 'good', issues: [] });
-
-      const { result } = renderHook(() => usePipeline());
-      await act(async () => {
-        await result.current.runSingleChunk('chunk-0', 'preview');
-      });
-
-      expect(useChunksStore.getState().chunks[0]!.status).toBe('preview');
-      expect(toast.success).toHaveBeenCalledWith('pipeline.dryRunChunkCompleted');
-    });
-
-    it('marks the chunk as completed when finalStatus is completed (default)', async () => {
+  describe('runSingleChunk', () => {
+    it('marks the chunk as completed after a successful run', async () => {
       llmMocks.runStage.mockResolvedValue({ content: 'Final result' });
       llmMocks.judgeTranslation.mockResolvedValue({ content: '', rating: 'good', issues: [] });
 
