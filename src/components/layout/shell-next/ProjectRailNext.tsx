@@ -33,7 +33,6 @@ export interface ProjectRailNextProps {
   collapsed: boolean;
   onRunPipeline?: () => void;
   onCancelPipeline?: () => void;
-  onDryRun?: () => void;
   onRetranslateChunk?: (chunkId: string) => void;
   onReauditChunk?: (chunkId: string) => void;
   onImportDocument?: () => void;
@@ -298,7 +297,6 @@ export function ProjectRailNext({
   collapsed,
   onRunPipeline,
   onCancelPipeline,
-  onDryRun,
   onRetranslateChunk,
   onReauditChunk,
   onImportDocument,
@@ -336,10 +334,7 @@ export function ProjectRailNext({
             collapsed
             onRunPipeline={onRunPipeline}
             onCancelPipeline={onCancelPipeline}
-            onDryRun={onDryRun}
             onRetranslateChunk={onRetranslateChunk}
-            showAuditOnly={false}
-            playFirst
           />
         </div>
 
@@ -386,10 +381,7 @@ export function ProjectRailNext({
             collapsed={false}
             onRunPipeline={onRunPipeline}
             onCancelPipeline={onCancelPipeline}
-            onDryRun={onDryRun}
             onRetranslateChunk={onRetranslateChunk}
-            showAuditOnly={false}
-            playFirst
           />
         </PipelineNameSlot>
 
