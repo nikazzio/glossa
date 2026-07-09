@@ -168,7 +168,7 @@ export function highlightFootnoteMarkersHtml(html: string): string {
     .join('');
 }
 
-/** @deprecated Use highlightFootnoteMarkersHtml for [^id] markdown markers. */
+/** For [¹]/[²]-style superscript footnote markers (non-markdown imports). Use highlightFootnoteMarkersHtml for [^id] markdown markers instead. */
 export function highlightSuperscriptMarkersHtml(html: string): string {
   // Split on HTML tags so the replacement only affects text nodes, not attributes.
   return html
