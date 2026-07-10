@@ -194,6 +194,7 @@
     "workModeAll": "All",
     "translateChunk": "Translate chunk",
     "executeAll": "Run all",
+    "executeTestRun": "Run test ({{count}} chunks)",
     "retrying": "Rate limit — retry in {{seconds}}s ({{attempt}}/{{total}})",
     "reauditChunk": "Re-audit this chunk",
     "prompt": "Prompt",

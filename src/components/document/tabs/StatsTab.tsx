@@ -112,7 +112,7 @@ export function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
         <div className="flex flex-wrap gap-3">
           {idleCount > 0 && <div className="flex items-center gap-1.5 text-xs text-editorial-muted"><Circle size={10} className="text-editorial-muted/70" /><span className="font-bold">{idleCount}</span> {t('pipeline.chunkStatus.ready')}</div>}
           {processingCount > 0 && <div className="flex items-center gap-1.5 text-xs text-editorial-warning"><Loader2 size={10} className="animate-spin" /><span className="font-bold">{processingCount}</span> {t('pipeline.chunkStatus.processing')}</div>}
-          {completedCount > 0 &&<div className="flex items-center gap-1.5 text-xs text-editorial-success"><CheckCircle2 size={10} /><span className="font-bold">{completedCount}</span> {t('pipeline.chunkStatus.completed')}</div>}
+          {completedCount > 0 && <div className="flex items-center gap-1.5 text-xs text-editorial-success"><CheckCircle2 size={10} /><span className="font-bold">{completedCount}</span> {t('pipeline.chunkStatus.completed')}</div>}
           {errorCount > 0 && <div className="flex items-center gap-1.5 text-xs text-editorial-danger"><AlertCircle size={10} /><span className="font-bold">{errorCount}</span> {t('pipeline.chunkStatus.error')}</div>}
         </div>
       </section>

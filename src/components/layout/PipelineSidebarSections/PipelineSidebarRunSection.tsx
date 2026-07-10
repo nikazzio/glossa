@@ -125,12 +125,21 @@ export function PipelineSidebarRunSection({
   const isProcessing = useChunksStore((state) => state.isProcessing);
   const cancelRequested = useChunksStore((state) => state.cancelRequested);
   const totalChunks = useChunksStore((state) => state.chunks.length);
+  const pipelineMode = useConfigStore((state) => state.pipelineMode);
+  const pipelineTestChunkCount = useConfigStore((state) => state.pipelineTestChunkCount);
+  const isTestRun = pipelineMode === 'test';
+  // In modalità Test la pipeline elabora solo i primi N chunk: tooltip e
+  // contatore devono riflettere il run reale, non l'intero documento.
+  const runChunkCount = isTestRun ? Math.min(pipelineTestChunkCount, totalChunks) : totalChunks;
   const completedCount = useChunksStore((state) =>
-    state.chunks.reduce(
+    state.chunks.slice(0, runChunkCount).reduce(
       (count, chunk) => count + (chunk.status === 'completed' ? 1 : 0),
       0,
     ),
   );
+  const runActionLabel = isTestRun
+    ? t('pipeline.executeTestRun', { count: runChunkCount })
+    : t('pipeline.executeAll');
   const costChunkTexts = useChunksStore(
     useShallow((state) => state.chunks.map((chunk) => chunk.originalText)),
   );
@@ -208,13 +217,13 @@ export function PipelineSidebarRunSection({
             <Languages size={15} />
           </IconButton>
         ) : (
-          <IconButton size="md" tone="charcoal" onClick={onRunPipeline} disabled={!hasDocument} title={t('pipeline.executeAll')} tooltipSide="right" className="h-10 w-10">
+          <IconButton size="md" tone="charcoal" onClick={onRunPipeline} disabled={!hasDocument} title={runActionLabel} tooltipSide="right" className="h-10 w-10">
             <Play size={15} fill="currentColor" />
           </IconButton>
         )}
         {workMode === 'all' && hasDocument && (
           <span className="text-[11px] font-bold tabular-nums tracking-[0.1em] text-editorial-muted">
-            {completedCount}/{totalChunks}
+            {completedCount}/{runChunkCount}
           </span>
         )}
       </div>
@@ -262,7 +271,7 @@ export function PipelineSidebarRunSection({
           </div>
           {workMode === 'all' && hasDocument ? (
             <span className="ml-auto shrink-0 text-[11px] font-semibold tabular-nums tracking-[0.08em] text-editorial-muted">
-              {completedCount}/{totalChunks}
+              {completedCount}/{runChunkCount}
             </span>
           ) : null}
         </div>
@@ -311,8 +320,8 @@ export function PipelineSidebarRunSection({
               tone="charcoal"
               onClick={onRunPipeline}
               disabled={!hasDocument}
-              title={t('pipeline.executeAll')}
-              ariaLabel={t('pipeline.executeAll')}
+              title={runActionLabel}
+              ariaLabel={runActionLabel}
               tooltipSide="bottom"
               className="h-10 w-10 border-editorial-charcoal/40 bg-editorial-bg hover:border-editorial-charcoal/65 hover:bg-editorial-textbox/70"
             >

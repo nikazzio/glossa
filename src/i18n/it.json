@@ -194,6 +194,7 @@
     "workModeAll": "Tutto",
     "translateChunk": "Traduci chunk",
     "executeAll": "Esegui tutto",
+    "executeTestRun": "Esegui test ({{count}} blocchi)",
     "retrying": "Rate limit — riprovo tra {{seconds}}s ({{attempt}}/{{total}})",
     "reauditChunk": "Ri-valuta questo blocco",
     "prompt": "Prompt",
