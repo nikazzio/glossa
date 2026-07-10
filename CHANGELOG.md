@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.2](https://github.com/nikazzio/glossa/compare/glossa-v1.1.1...glossa-v1.1.2) (2026-07-10)
+
+
+### 🐛 Bug Fixes
+
+* pre-2.0 cleanup sweep — legacy debt removal ([#318](https://github.com/nikazzio/glossa/issues/318)) ([8d589cb](https://github.com/nikazzio/glossa/commit/8d589cb0da709850a7798173845029491e21f153))
+
 ## [1.1.1](https://github.com/nikazzio/glossa/compare/glossa-v1.1.0...glossa-v1.1.1) (2026-07-04)
 
 
