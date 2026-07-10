@@ -42,6 +42,7 @@ repomix-output.xml
 
 # AI tool configs (altri provider — gestiti separatamente)
 .agents/
+.codex/
 .gemini/
 .kiro/
 .qoder/
