@@ -216,7 +216,7 @@ describe('initDatabase migrations', () => {
     await initDatabase();
 
     expect(invoke).toHaveBeenCalledWith('backup_database_file', {
-      reason: 'schema-1-to-2026-07-09-schema-consolidation',
+      reason: 'schema-1-to-db-schema-v1',
     });
     expect(dbState.db.execute).toHaveBeenCalledWith('PRAGMA wal_checkpoint(FULL)');
     expect(dbState.db.execute).toHaveBeenCalledWith('DROP TABLE IF EXISTS projects');
@@ -228,7 +228,7 @@ describe('initDatabase migrations', () => {
 
   it('does not reset a database with the current beta schema version', async () => {
     dbState.setExistingObjects(['app_settings', 'projects', 'workspaces']);
-    dbState.setSchemaVersion('2026-07-09-schema-consolidation');
+    dbState.setSchemaVersion('db-schema-v1');
     const { initDatabase } = await import('./dbService');
 
     await initDatabase();

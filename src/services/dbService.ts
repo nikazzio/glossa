@@ -8,7 +8,7 @@ import {
 
 let db: Database | null = null;
 const DB_URL = 'sqlite:glossa.db';
-const CURRENT_SCHEMA_VERSION = '2026-07-09-schema-consolidation';
+const CURRENT_SCHEMA_VERSION = 'db-schema-v1';
 
 const RESETTABLE_OBJECTS = [
   'technique_tags',
