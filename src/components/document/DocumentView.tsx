@@ -1,7 +1,6 @@
 import {
   AlertTriangle,
   FileText,
-  FlaskConical,
   GitCompare,
   Languages,
   Lock,
@@ -345,13 +344,11 @@ export function DocumentView({
           const segmentTone =
             chunk.status === 'completed'
               ? 'bg-editorial-success/18 shadow-[inset_0_0_0_1px_rgba(58,122,101,0.16)]'
-              : chunk.status === 'preview'
-                ? 'bg-editorial-charcoal/22 shadow-[inset_0_0_0_1px_rgba(58,122,114,0.12)]'
-                : chunk.status === 'error'
-                  ? 'bg-editorial-danger/18 shadow-[inset_0_0_0_1px_rgba(166,78,66,0.18)]'
-                  : chunk.status === 'processing'
-                    ? 'bg-editorial-running/24 animate-pulse shadow-[inset_0_0_0_1px_rgba(196,155,42,0.22)]'
-                    : 'bg-editorial-border/40';
+              : chunk.status === 'error'
+                ? 'bg-editorial-danger/18 shadow-[inset_0_0_0_1px_rgba(166,78,66,0.18)]'
+                : chunk.status === 'processing'
+                  ? 'bg-editorial-running/24 animate-pulse shadow-[inset_0_0_0_1px_rgba(196,155,42,0.22)]'
+                  : 'bg-editorial-border/40';
           const isCurrent = idx === currentIndex;
           const chunkAnnotations = annotationsByChunkId.get(chunk.id) ?? [];
           const annotDotColor = chunkAnnotations.some((a) => a.type === 'problem')
@@ -624,13 +621,6 @@ export function DocumentView({
               <DocumentPage
                 label={t('pipeline.candidateTranslation')}
                 eyebrow={t('document.rightPage')}
-                eyebrowMeta={currentChunk.status === 'preview' ? (
-                  <Tooltip label={t('document.chunkPreviewBadge')}>
-                    <span aria-label={t('document.chunkPreviewBadge')} className="inline-flex items-center text-editorial-muted">
-                      <FlaskConical size={11} />
-                    </span>
-                  </Tooltip>
-                ) : null}
                 subtitle={
                   showDiffMode && activeDiffPair
                     ? `${activeDiffPair.fromName} → ${activeDiffPair.toName}`

@@ -198,16 +198,13 @@ function EditorView() {
     runPipeline,
     runAuditOnly,
     runSingleChunk,
-    runDryRun,
     auditSingleChunk,
     runCoherenceAudit,
     cancelPipeline,
   } = usePipeline();
 
   const handleRetranslateChunk = useCallback((chunkId: string) => {
-    const mode = useConfigStore.getState().pipelineMode;
-    const hasCompleted = useChunksStore.getState().chunks.some((c) => c.status === 'completed' || c.translationLocked);
-    runSingleChunk(chunkId, (!hasCompleted && mode === 'test') ? 'preview' : 'completed');
+    runSingleChunk(chunkId);
   }, [runSingleChunk]);
   useProjectAutosave();
   useKeyboardShortcuts({ onRunPipeline: runPipeline, onRunSingleChunk: handleRetranslateChunk });
@@ -354,7 +351,6 @@ function EditorView() {
             <ShellNext
               onRunPipeline={runPipeline}
               onCancelPipeline={cancelPipeline}
-              onDryRun={runDryRun}
               onRetranslateChunk={handleRetranslateChunk}
               onImportDocument={handleImportDocument}
               onReauditChunk={auditSingleChunk}

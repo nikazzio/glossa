@@ -43,11 +43,7 @@ export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSucce
       try {
         const [gl, suggested] = await Promise.all([
           listGlossaries(),
-          extractTermFromPhrase(
-            sourcePhrase,
-            stageProvider,
-            stageModel,
-          ).catch(() => ({ term: sourcePhrase.split(' ').slice(0, 3).join(' '), confidence: 0 })),
+          extractTermFromPhrase(sourcePhrase, stageProvider, stageModel),
         ]);
         if (cancelled) return;
         setGlossaries(gl);

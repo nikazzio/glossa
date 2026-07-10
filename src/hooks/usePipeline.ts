@@ -22,7 +22,7 @@ import { calculateBlobBudget } from '../models/catalog';
 import { toDeeplCode } from '../constants';
 import { stripFootnoteMarkers } from '../utils/footnoteExtractor';
 import { buildBlobContext } from './pipeline/blobContext';
-import type { BatchRunMode, ChunkOutcome, FinalChunkStatus } from './pipeline/blobContext';
+import type { BatchRunMode, ChunkOutcome } from './pipeline/blobContext';
 import { runJudgeForChunk } from './pipeline/runJudge';
 import { usePipelineAudit } from './usePipelineAudit';
 import { logger } from '../utils/logger';
@@ -64,7 +64,6 @@ function appendMemoryBlock(
  * Public surface:
  *  - runPipeline / runAuditOnly: iterate over every chunk
  *  - runSingleChunk / auditSingleChunk: same logic restricted to one chunk
- *  - runDryRun: test-mode batch run
  *  - runCoherenceAudit: coherence check across all chunks
  *  - cancelPipeline: cancel whatever is in flight
  */
@@ -212,9 +211,8 @@ export function usePipeline() {
 
   const runChunkExecution = useCallback(async (
     chunkId: string,
-    options?: { finalStatus?: FinalChunkStatus; memoryBlock?: string },
+    options?: { memoryBlock?: string },
   ) => {
-    const finalStatus = options?.finalStatus ?? 'completed';
     const config = usePipelineStore.getState().config;
     if (useChunksStore.getState().isProcessing) return;
     const chunk = useChunksStore.getState().chunks.find((c) => c.id === chunkId);
@@ -233,10 +231,6 @@ export function usePipeline() {
       memoryBlock: options?.memoryBlock ?? getChunkMemoryBlock(chunkId),
     });
 
-    if (outcome === 'completed' && finalStatus === 'preview') {
-      updateChunkStatus(chunkId, 'preview');
-    }
-
     setIsProcessing(false);
     useChunksStore.getState().clearCancelRequest();
 
@@ -245,9 +239,9 @@ export function usePipeline() {
       toast.message(t('pipeline.stopConfirmed'));
     } else if (outcome === 'completed') {
       pipelineLog.singlePipelineCompleted(chunkId);
-      toast.success(finalStatus === 'preview' ? t('pipeline.dryRunChunkCompleted') : t('pipeline.singleChunkCompleted'));
+      toast.success(t('pipeline.singleChunkCompleted'));
     }
-  }, [computeBlobAssignments, ensureProvidersReady, executePipelineForChunk, setIsProcessing, t, updateChunkStatus]);
+  }, [computeBlobAssignments, ensureProvidersReady, executePipelineForChunk, setIsProcessing, t]);
 
   /**
    * Run all enabled translation stages and the audit for a single chunk.
@@ -491,83 +485,10 @@ export function usePipeline() {
     }
   }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureProvidersReady, setBlobAssignments]);
 
-  const runSingleChunk = useCallback(async (chunkId: string, finalStatus: FinalChunkStatus = 'completed') => {
-    await runChunkExecution(chunkId, { finalStatus });
+  const runSingleChunk = useCallback(async (chunkId: string) => {
+    await runChunkExecution(chunkId);
   }, [runChunkExecution]);
 
-  const runDryRun = useCallback(async () => {
-    if (useChunksStore.getState().isProcessing) return;
-    const allChunks = useChunksStore.getState().chunks;
-    if (allChunks.length === 0) return;
-
-    const requestedTestChunks = Math.max(1, useConfigStore.getState().pipelineTestChunkCount);
-    const targets = allChunks
-      .filter((c) => c.status === 'ready')
-      .slice(0, requestedTestChunks);
-
-    if (targets.length === 0) {
-      toast.message(t('pipeline.dryRunNoTarget'));
-      return;
-    }
-
-    pipelineLog.newRunMarker();
-    pipelineLog.batchPipelineStart(targets.length, config.stages.filter((s) => s.enabled).length);
-    if (!(await ensureProvidersReady(buildProviderChecks(config)))) return;
-
-    useChunksStore.getState().clearCancelRequest();
-    setIsProcessing(true);
-    await computeBlobAssignments(config, allChunks);
-
-    let completedPreviewCount = 0;
-    let errorCount = 0;
-    let cancelled = false;
-
-    for (const target of targets) {
-      const freshTarget = useChunksStore.getState().chunks.find((c) => c.id === target.id) ?? target;
-      const outcome = await executePipelineForChunk(freshTarget, { memoryBlock: getChunkMemoryBlock(freshTarget.id) });
-
-      if (outcome === 'cancelled') { cancelled = true; break; }
-
-      if (outcome === 'completed') {
-        updateChunkStatus(target.id, 'preview');
-        const pipelineId = useProjectStore.getState().activePipelineId;
-        const currentProjectId = useProjectStore.getState().currentProjectId;
-        if (pipelineId && currentProjectId) {
-          const saved = useChunksStore.getState().chunks.find((c) => c.id === target.id);
-          const position = allChunks.indexOf(target);
-          persistChunkCheckpoint(currentProjectId, pipelineId, saved, position);
-        }
-        completedPreviewCount++;
-      } else if (outcome === 'failed') {
-        errorCount++;
-      }
-    }
-
-    setIsProcessing(false);
-    useChunksStore.getState().clearCancelRequest();
-
-    if (cancelled) {
-      pipelineLog.batchPipelineCancelled();
-      toast.message(t('pipeline.stopConfirmed'));
-    } else if (completedPreviewCount > 0 && errorCount === 0) {
-      pipelineLog.batchPipelineCompleted();
-      toast.success(
-        completedPreviewCount === 1
-          ? t('pipeline.dryRunCompleted')
-          : t('pipeline.dryRunCompletedMany', { count: completedPreviewCount }),
-      );
-    } else if (errorCount > 0) {
-      pipelineLog.batchPipelineCompletedWithErrors(errorCount);
-      toast.warning(
-        completedPreviewCount > 0
-          ? t('pipeline.dryRunCompletedMany', { count: completedPreviewCount })
-          : t('errors.pipelineCompletedWithErrors', { count: errorCount }),
-        completedPreviewCount > 0
-          ? { description: t('errors.pipelineCompletedWithErrors', { count: errorCount }) }
-          : undefined,
-      );
-    }
-  }, [computeBlobAssignments, config, t, setIsProcessing, updateChunkStatus, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, clearChunkStages, ensureProvidersReady, persistChunkCheckpoint]);
 
   const cancelPipeline = useCallback(() => {
     requestCancel();
@@ -593,7 +514,6 @@ export function usePipeline() {
     runPipeline,
     runSingleChunk,
     rerunChunkWithMemory,
-    runDryRun,
     runAuditOnly,
     auditSingleChunk,
     runCoherenceAudit,

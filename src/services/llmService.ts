@@ -350,14 +350,17 @@ export const ollamaService = {
   },
 };
 
-// TODO(piano-4): sostituire con comando Tauri extract_key_term reale
+/**
+ * Suggerisce il termine di partenza per la finestra "Aggiungi al glossario".
+ * Nessuna chiamata AI: propone l'intera frase selezionata, l'utente la
+ * accorcia o modifica a mano prima di confermare.
+ */
 export async function extractTermFromPhrase(
   sourcePhrase: string,
   _provider: string,
   _model: string,
 ): Promise<{ term: string; confidence: number }> {
-  const term = sourcePhrase.split(/\s+/).slice(0, 3).join(' ');
-  return { term, confidence: 0 };
+  return { term: sourcePhrase.trim(), confidence: 1 };
 }
 
 export type ApiKeyStorage = 'keychain' | 'file';
