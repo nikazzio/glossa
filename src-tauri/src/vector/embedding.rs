@@ -172,7 +172,8 @@ pub async fn vec_list_phrase_memory(
     database: State<'_, crate::vector::VectorDatabase>,
     workspace_id: String,
 ) -> Result<Vec<PhraseMemoryEntryResult>, EmbeddingError> {
-    run_blocking(database.connection(), move |conn| {
+    let connection = database.connection().map_err(EmbeddingError::Http)?;
+    run_blocking(connection, move |conn| {
         crate::vector::verify_phrase_memory_schema(conn).map_err(EmbeddingError::Http)?;
         let mut statement = conn
             .prepare(
@@ -208,7 +209,8 @@ pub async fn vec_delete_phrase_memory(
     phrase_memory_id: String,
 ) -> Result<u32, EmbeddingError> {
     let _write_guard = write_coordinator.lock().await;
-    run_blocking(database.connection(), move |conn| {
+    let connection = database.connection().map_err(EmbeddingError::Http)?;
+    run_blocking(connection, move |conn| {
         crate::vector::verify_phrase_memory_schema(conn).map_err(EmbeddingError::Http)?;
         conn.execute(
             "DELETE FROM phrase_memory WHERE id = ?1 AND workspace_id = ?2",
@@ -231,7 +233,8 @@ pub async fn vec_update_phrase_memory(
     embedding: Vec<f32>,
 ) -> Result<u32, EmbeddingError> {
     let _write_guard = write_coordinator.lock().await;
-    run_blocking(database.connection(), move |conn| {
+    let connection = database.connection().map_err(EmbeddingError::Http)?;
+    run_blocking(connection, move |conn| {
         crate::vector::verify_phrase_memory_schema(conn).map_err(EmbeddingError::Http)?;
         conn.execute(
             "UPDATE phrase_memory SET source_phrase = ?1, target_phrase = ?2, embedding = ?3 \
@@ -260,7 +263,8 @@ pub async fn vec_search_phrase_memory(
     embedding_model: String,
 ) -> Result<Vec<PhraseMatchResult>, EmbeddingError> {
     let blob = floats_to_blob(&query_embedding);
-    run_blocking(database.connection(), move |conn| {
+    let connection = database.connection().map_err(EmbeddingError::Http)?;
+    run_blocking(connection, move |conn| {
         crate::vector::verify_phrase_memory_schema(conn).map_err(EmbeddingError::Http)?;
         let mut statement = conn
             .prepare(
@@ -328,7 +332,8 @@ pub async fn vec_save_locked_phrases(
     }
 
     let _write_guard = write_coordinator.lock().await;
-    run_blocking(database.connection(), move |conn| {
+    let connection = database.connection().map_err(EmbeddingError::Http)?;
+    run_blocking(connection, move |conn| {
 
     crate::vector::verify_phrase_memory_schema(conn).map_err(EmbeddingError::Http)?;
 
@@ -467,7 +472,7 @@ pub async fn vec_regenerate_all_embeddings(
     );
 
     // Phase 1: collect entries without blocking the async runtime.
-    let connection = database.connection();
+    let connection = database.connection().map_err(EmbeddingError::Http)?;
     let query_workspace_id = workspace_id.clone();
     let entries: Vec<(String, String)> = run_blocking(Arc::clone(&connection), move |conn| {
         crate::vector::verify_phrase_memory_schema(conn).map_err(EmbeddingError::Http)?;

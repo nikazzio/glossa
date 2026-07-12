@@ -535,6 +535,8 @@
   "errors": {
     "somethingWentWrong": "Something went wrong",
     "unexpectedError": "An unexpected error occurred.",
+    "databaseInitTitle": "Could not open the database",
+    "databaseInitDescription": "Restart Glossa. If the problem persists, close any other running instance of the app and try again.",
     "tryAgain": "Try Again",
     "unknownError": "Unknown error",
     "stageFailed": "Stage \"{{name}}\" failed",

@@ -333,7 +333,7 @@ No fallback locale: se extractor, JSON parsing o validazione falliscono, chunk n
 - Auto-search parte solo se `usePhraseMemory` attivo e `autoSearchPhraseMemory !== false`.
 - Tab Memory può sempre lanciare refresh manuale per chunk corrente quando memoria abilitata.
 - Query embedding usa solo testo sorgente del chunk; match selezionati sono unici iniettati nel prompt di run/rerun.
-- Lo schema della memoria frasi (colonne e indici inclusi) viene creato o aggiornato una volta all'avvio dal servizio database frontend. Il backend mantiene una sola connessione SQLite con sqlite-vec per tutta la sessione, verifica soltanto lo schema già pronto e non esegue DDL durante questi comandi.
+- Lo schema della memoria frasi (colonne e indici inclusi) viene creato o aggiornato una volta all'avvio dal servizio database frontend. Il backend mantiene una sola connessione SQLite con sqlite-vec per tutta la sessione, verifica soltanto lo schema già pronto e non esegue DDL durante questi comandi. Se la connessione non è disponibile all'avvio, l'app continua ad avviarsi e i comandi memoria restituiscono il motivo originale senza ricreare connessioni.
 
 ---
 
