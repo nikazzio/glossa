@@ -211,6 +211,7 @@ describe('initDatabase migrations', () => {
     dbState.setWorkspaceCount(0);
     dbState.columnsByTable.set('pipeline_configs', ['id', 'project_id', 'stages', 'judge_prompt', 'judge_model', 'judge_provider', 'use_chunking']);
     dbState.columnsByTable.set('translations', ['id', 'project_id', 'original_text', 'final_translation', 'stage_results', 'judge_issues', 'created_at']);
+    dbState.setColumns('projects', []);
     dbState.columnsByTable.set('prompt_templates', []);
     dbState.columnsByTable.set('operation_logs', []);
     dbState.setColumns('phrase_memory', []);
