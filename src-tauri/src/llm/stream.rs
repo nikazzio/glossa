@@ -321,10 +321,27 @@ impl StreamAccumulator {
         Ok(())
     }
 
-    fn finish<E>(&mut self, provider: &dyn LlmProvider, stream_id: &str, emit: &mut E)
+    fn finish<E>(
+        &mut self,
+        provider: &dyn LlmProvider,
+        stream_id: &str,
+        emit: &mut E,
+    ) -> Result<(), String>
     where
         E: FnMut(StreamToken),
     {
+        // Newline-JSON providers can end with a complete JSON payload without a
+        // trailing newline. Check it for a terminal truncation before treating
+        // the stream as successfully finished.
+        if provider.stream_format() == StreamFormat::NewlineJson {
+            let trimmed = self.buffer.trim();
+            if has_completion_marker(trimmed) {
+                if let Some(error) = provider.streaming_completion_error(trimmed) {
+                    return Err(error);
+                }
+            }
+        }
+
         if let Some(extra) = provider.finalize_buffer(&self.buffer) {
             if !extra.is_empty() && !self.full_text.ends_with(&extra) {
                 self.full_text.push_str(&extra);
@@ -361,6 +378,7 @@ impl StreamAccumulator {
             cached_input_tokens: final_usage.as_ref().and_then(|u| u.cached_input),
             cache_miss_input_tokens: final_usage.as_ref().and_then(|u| u.cache_miss_input),
         });
+        Ok(())
     }
 }
 
@@ -432,7 +450,7 @@ where
         }
     }
 
-    acc.finish(provider, stream_id, &mut emit);
+    acc.finish(provider, stream_id, &mut emit)?;
     Ok(StreamResult {
         content: acc.full_text,
     })

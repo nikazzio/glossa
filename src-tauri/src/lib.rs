@@ -28,8 +28,7 @@ pub fn run() {
 
     builder
         .setup(|app| {
-            let vector_database =
-                vector::VectorDatabase::initialize(app.handle()).map_err(std::io::Error::other)?;
+            let vector_database = vector::VectorDatabase::initialize(app.handle());
             app.manage(vector_database);
             #[allow(unused_mut)]
             let mut log_targets: Vec<tauri_plugin_log::Target> =

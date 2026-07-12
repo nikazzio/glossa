@@ -94,6 +94,14 @@ impl LlmProvider for DelegatingTestProvider {
         self.inner.update_streaming_usage(data, state)
     }
 
+    fn streaming_completion_error(&self, data: &str) -> Option<String> {
+        self.inner.streaming_completion_error(data)
+    }
+
+    fn finalize_buffer(&self, buffer: &str) -> Option<String> {
+        self.inner.finalize_buffer(buffer)
+    }
+
     async fn call(&self, client: &Client, req: &LlmRequest<'_>) -> Result<LlmResponse, String> {
         self.inner.call(client, req).await
     }
@@ -1269,6 +1277,38 @@ async fn consume_stream_openai_sse_multi_token() {
         .collect();
     assert_eq!(content, vec!["Ciao", " mondo"]);
     assert!(tokens.last().unwrap().done);
+}
+
+#[tokio::test]
+async fn consume_stream_rejects_unterminated_ollama_truncation() {
+    let cancel = Arc::new(CancelToken::new());
+    let provider = DelegatingTestProvider::with_timeouts(
+        "ollama",
+        StreamTimeouts {
+            header: Duration::from_millis(100),
+            idle: Duration::from_millis(500),
+            total: Duration::from_millis(5000),
+        },
+    );
+    let mut source = MockChunkSource::new(vec![
+        MockChunk::Immediate(Ok(Some(Bytes::from_static(
+            br#"{"message":{"content":"ciao"},"done":true,"done_reason":"length"}"#,
+        )))),
+        MockChunk::Immediate(Ok(None)),
+    ]);
+
+    let result = consume_stream(
+        &provider,
+        "stream-ollama",
+        &cancel,
+        &mut source,
+        |_| {},
+        "test-model",
+        || {},
+    )
+    .await;
+
+    assert!(result.unwrap_err().contains("truncated"));
 }
 
 #[tokio::test]

@@ -7,20 +7,22 @@ use tauri::{AppHandle, Manager, State};
 
 #[derive(Clone)]
 pub struct VectorDatabase {
-    connection: Arc<Mutex<Connection>>,
+    connection: Result<Arc<Mutex<Connection>>, String>,
 }
 
 impl VectorDatabase {
-    pub fn initialize(app: &AppHandle) -> Result<Self, String> {
-        let db_path = get_db_path(app)?;
-        let connection = open_vec_connection(&db_path).map_err(|error| error.to_string())?;
-        Ok(Self {
-            connection: Arc::new(Mutex::new(connection)),
-        })
+    pub fn initialize(app: &AppHandle) -> Self {
+        let connection = get_db_path(app)
+            .and_then(|db_path| open_vec_connection(&db_path).map_err(|error| error.to_string()))
+            .map(|connection| Arc::new(Mutex::new(connection)));
+        Self { connection }
     }
 
-    pub fn connection(&self) -> Arc<Mutex<Connection>> {
-        Arc::clone(&self.connection)
+    pub fn connection(&self) -> Result<Arc<Mutex<Connection>>, String> {
+        self.connection
+            .as_ref()
+            .map(Arc::clone)
+            .map_err(Clone::clone)
     }
 }
 
@@ -50,7 +52,7 @@ pub fn open_vec_connection(db_path: &PathBuf) -> RusqliteResult<Connection> {
 
 #[tauri::command]
 pub fn vec_ping(database: State<'_, VectorDatabase>) -> Result<String, String> {
-    let database_connection = database.connection();
+    let database_connection = database.connection()?;
     let connection = database_connection
         .lock()
         .map_err(|_| "Vector database connection is unavailable".to_string())?;
@@ -73,13 +75,29 @@ mod tests {
     #[test]
     fn reuses_the_same_connection_handle() -> RusqliteResult<()> {
         let database = VectorDatabase {
-            connection: Arc::new(Mutex::new(Connection::open_in_memory()?)),
+            connection: Ok(Arc::new(Mutex::new(Connection::open_in_memory()?))),
         };
 
-        let first = database.connection();
-        let second = database.connection();
+        let first = database
+            .connection()
+            .expect("in-memory connection is available");
+        let second = database
+            .connection()
+            .expect("in-memory connection is available");
 
         assert!(Arc::ptr_eq(&first, &second));
         Ok(())
+    }
+
+    #[test]
+    fn retains_initialization_error_without_aborting_setup() {
+        let database = VectorDatabase {
+            connection: Err("cannot open database".to_string()),
+        };
+
+        assert_eq!(
+            database.connection().err().as_deref(),
+            Some("cannot open database")
+        );
     }
 }
