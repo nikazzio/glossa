@@ -30,7 +30,7 @@ describe('calculateCompositeQuality', () => {
   ): TranslationChunk =>
     makeTranslationChunk({
       id: 'chunk-test',
-      originalText: 'test',
+      sourceDisplayText: 'test',
       status: status === 'completed' ? 'completed' : 'ready',
       stageResults: {},
       judgeResult: { content: '', status, rating, issues: [] },

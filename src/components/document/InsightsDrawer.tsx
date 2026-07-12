@@ -186,9 +186,9 @@ export function DocumentInsightTabs({ onRunCoherenceAudit }: DocumentInsightTabs
   const setSelectedChunkId = useUiStore((state) => state.setSelectedChunkId);
   const focusIssueInChunk = useUiStore((state) => state.focusIssueInChunk);
   const { chunks, isProcessing, currentChunk } = useInsightData();
-  const allChunksTranslated = chunks.length > 0 && chunks.every((c) => c.currentDraft?.trim());
+  const allChunksTranslated = chunks.length > 0 && chunks.every((c) => c.translationDisplayText.trim());
   const allChunksLocked = chunks.length > 0 && chunks.every((c) => c.translationLocked);
-  const unlockedChunksCount = chunks.filter((c) => c.currentDraft?.trim() && !c.translationLocked).length;
+  const unlockedChunksCount = chunks.filter((c) => c.translationDisplayText.trim() && !c.translationLocked).length;
 
   const { stuckChunkIds, cancelStuckChunk } = useChunkWatchdog();
   const { config } = usePipelineStore();

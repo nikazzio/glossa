@@ -147,13 +147,10 @@ export interface TranslationChunk {
   sourceProcessingText: string;
   translationDisplayText: string;
   translationProcessingText: string;
-  // Legacy mirrors kept temporarily while the UI finishes migrating.
-  originalText: string;
   status: ChunkStatus;
   stageResults: Record<string, PipelineResult>;
   judgeResult: JudgeResult;
   coherenceResult?: CoherenceResult;
-  currentDraft?: string;
   translationLocked?: boolean;
   translationStale?: boolean;
   sourceEditable?: boolean;

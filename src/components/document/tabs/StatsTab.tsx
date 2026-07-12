@@ -61,8 +61,8 @@ export function StatsTab({ panelId, labelledBy, chunks }: StatsTabProps) {
     [logEntries, pricingOverrides],
   );
 
-  const sourceWords = chunks.reduce((acc, c) => acc + countWords(c.originalText), 0);
-  const translatedWords = chunks.reduce((acc, c) => acc + countWords(c.currentDraft || ''), 0);
+  const sourceWords = chunks.reduce((acc, c) => acc + countWords(c.sourceDisplayText), 0);
+  const translatedWords = chunks.reduce((acc, c) => acc + countWords(c.translationDisplayText), 0);
   const coverageRatio = sourceWords > 0 ? Math.round((translatedWords / sourceWords) * 100) : 0;
   const total = chunks.length;
   const idleCount = chunks.filter((c) => c.status === 'ready').length;

@@ -261,8 +261,6 @@ export async function initDatabase(): Promise<void> {
     CREATE TABLE IF NOT EXISTS translations (
       id TEXT PRIMARY KEY,
       project_id TEXT REFERENCES projects(id) ON DELETE CASCADE,
-      original_text TEXT NOT NULL,
-      final_translation TEXT DEFAULT '',
       source_display_text TEXT DEFAULT '',
       source_processing_text TEXT DEFAULT '',
       translation_display_text TEXT DEFAULT '',

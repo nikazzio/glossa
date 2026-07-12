@@ -190,8 +190,8 @@ describe('pipelineService', () => {
       const chunks = [
         makeTranslationChunk({
           id: 'chunk-b',
-          originalText: 'Beta',
-          currentDraft: 'Beta translated',
+          sourceDisplayText: 'Beta',
+          translationDisplayText: 'Beta translated',
           status: 'completed',
           translationLocked: true,
           blobId: 'blob-1',
@@ -202,8 +202,8 @@ describe('pipelineService', () => {
         }),
         makeTranslationChunk({
           id: 'chunk-a',
-          originalText: 'Alpha',
-          currentDraft: 'Alpha translated',
+          sourceDisplayText: 'Alpha',
+          translationDisplayText: 'Alpha translated',
           status: 'completed',
           stageResults: {},
           judgeResult: { content: 'Alpha translated', status: 'completed', rating: 'excellent', issues: [] },
@@ -237,8 +237,8 @@ describe('pipelineService', () => {
         saveFullState('proj-1', 'pipeline-1', baseConfig, [
           makeTranslationChunk({
             id: 'chunk-a',
-            originalText: 'Alpha',
-            currentDraft: 'Alpha translated',
+            sourceDisplayText: 'Alpha',
+            translationDisplayText: 'Alpha translated',
             status: 'completed',
             stageResults: {},
             judgeResult: { content: 'Alpha translated', status: 'completed', rating: 'excellent', issues: [] },
@@ -351,13 +351,15 @@ describe('pipelineService', () => {
   // ── restoreTranslations ──────────────────────────────────────────────
 
   describe('restoreTranslations', () => {
-    it('returns empty display fields when new columns are absent', () => {
+    it('restores canonical source and translation fields', () => {
       const restored = restoreTranslations([
         {
           id: 'chunk-1',
           project_id: 'proj-1',
-          original_text: 'Source',
-          final_translation: 'Old translation',
+          source_display_text: 'Source',
+          source_processing_text: 'Source',
+          translation_display_text: 'Old translation',
+          translation_processing_text: 'Old translation',
           chunk_status: 'completed',
           stage_results: JSON.stringify({ 'stg-1': { content: 'Stage translation', status: 'completed' } }),
           judge_status: 'completed',
@@ -367,11 +369,11 @@ describe('pipelineService', () => {
         },
       ]);
 
-      expect(restored[0]?.translationDisplayText).toBe('');
-      expect(restored[0]?.translationProcessingText).toBe('');
-      expect(restored[0]?.currentDraft).toBe('');
-      expect(restored[0]?.sourceDisplayText).toBe('');
-      expect(restored[0]?.sourceProcessingText).toBe('');
+      expect(restored[0]?.translationDisplayText).toBe('Old translation');
+      expect(restored[0]?.translationProcessingText).toBe('Old translation');
+      expect(restored[0]?.sourceDisplayText).toBe('Source');
+      expect(restored[0]?.sourceProcessingText).toBe('Source');
+      expect(restored[0]?.judgeResult.content).toBe('Old translation');
     });
 
     it('maps source_display_text and translation_display_text to chunk fields', () => {
@@ -379,8 +381,6 @@ describe('pipelineService', () => {
         {
           id: 'chunk-1',
           project_id: 'proj-1',
-          original_text: 'Legacy source',
-          final_translation: 'Legacy translation',
           source_display_text: 'Display source',
           source_processing_text: 'Processing source',
           translation_display_text: 'Display translation',
@@ -398,8 +398,6 @@ describe('pipelineService', () => {
       expect(restored[0]?.sourceProcessingText).toBe('Processing source');
       expect(restored[0]?.translationDisplayText).toBe('Display translation');
       expect(restored[0]?.translationProcessingText).toBe('Processing translation');
-      expect(restored[0]?.originalText).toBe('Legacy source');
-      expect(restored[0]?.currentDraft).toBe('Display translation');
     });
 
     it('restores persisted blob reference windows', () => {
@@ -407,8 +405,6 @@ describe('pipelineService', () => {
         {
           id: 'chunk-1',
           project_id: 'proj-1',
-          original_text: 'Source',
-          final_translation: 'Translation',
           source_display_text: 'Source',
           source_processing_text: 'Source',
           translation_display_text: 'Translation',

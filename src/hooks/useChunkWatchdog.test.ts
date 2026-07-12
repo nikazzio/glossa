@@ -21,8 +21,8 @@ const setChunksState = (partial: object) =>
   useChunksStore.setState(partial as unknown as PartialChunksState);
 
 const baseChunk = {
-  originalText: 'Hello',
-  currentDraft: 'Ciao',
+  sourceDisplayText: 'Hello',
+  translationDisplayText: 'Ciao',
   stageResults: {},
   judgeResult: { content: '', status: 'idle' as const, rating: 'fair' as const, issues: [] },
 };

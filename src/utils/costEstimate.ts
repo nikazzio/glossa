@@ -55,7 +55,7 @@ export interface EstimatePipelineCostOptions {
 }
 
 export function estimatePipelineCost(
-  chunks: { originalText: string }[],
+  chunks: { sourceText: string }[],
   config: PipelineConfig,
   pricingOverrides: Record<string, { input: number; output: number }> = {},
   options: EstimatePipelineCostOptions = {},
@@ -69,7 +69,7 @@ export function estimatePipelineCost(
   const numChunks = chunks.length;
 
   const totalWords = chunks.reduce(
-    (sum, c) => sum + c.originalText.trim().split(/\s+/).filter(Boolean).length,
+    (sum, c) => sum + c.sourceText.trim().split(/\s+/).filter(Boolean).length,
     0,
   );
   const docTokens = Math.max(1, Math.ceil(totalWords * 1.35));

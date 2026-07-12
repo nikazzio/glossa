@@ -68,7 +68,7 @@ export function IndexTab({ panelId, labelledBy, chunks, currentChunkId, stuckChu
           const index = virtualRow.index;
           const isActive = chunk.id === currentChunkId;
           const tone = qualityTone(chunk.judgeResult.status === 'completed' ? chunk.judgeResult.rating : null);
-          const wordCount = countWords(chunk.originalText);
+          const wordCount = countWords(chunk.sourceDisplayText);
           const isStuck = stuckChunkIds.has(chunk.id);
 
           const annotationCountsByType = (annotationsByChunkId.get(chunk.id) ?? []).reduce(
@@ -110,7 +110,7 @@ export function IndexTab({ panelId, labelledBy, chunks, currentChunkId, stuckChu
                     {indexPad(index + 1)}
                   </span>
                   <span className="flex-1 line-clamp-2 text-xs leading-snug text-editorial-muted">
-                    {chunk.originalText.replace(/\s+/g, ' ').trim()}
+                    {chunk.sourceDisplayText.replace(/\s+/g, ' ').trim()}
                   </span>
                   <span className="shrink-0 text-xs font-mono text-editorial-muted">
                     {wordCount}w

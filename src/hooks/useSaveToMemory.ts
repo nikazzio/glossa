@@ -23,12 +23,12 @@ export function useSaveToMemory() {
     const selectedIds = new Set(chunkIds);
     const requested = chunks.filter((c) => selectedIds.has(c.id));
     const selected = requested.filter(
-      (c) => c.sourceProcessingText?.trim() && c.currentDraft?.trim(),
+      (c) => c.sourceProcessingText.trim() && c.translationProcessingText.trim(),
     );
 
     for (const chunk of requested) {
-      const hasSource = !!chunk.sourceProcessingText?.trim();
-      const hasDraft = !!chunk.currentDraft?.trim();
+      const hasSource = !!chunk.sourceProcessingText.trim();
+      const hasDraft = !!chunk.translationProcessingText.trim();
       if (!hasSource || !hasDraft) {
         logOperation({
           level: 'warn',
@@ -89,7 +89,7 @@ export function useSaveToMemory() {
         chunks: selected.map((c) => ({
           id: c.id,
           sourceText: c.sourceProcessingText,
-          targetText: c.currentDraft!,
+          targetText: c.translationProcessingText,
         })),
         onProgress: (done, total) => {
           setProgress({ done, total });

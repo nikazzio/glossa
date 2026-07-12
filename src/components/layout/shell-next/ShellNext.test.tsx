@@ -51,9 +51,9 @@ describe('ShellNext (#291)', () => {
   it('moves chunk navigation into the operative rail', () => {
     useChunksStore.setState({
       chunks: [
-        makeTranslationChunk({ id: 'c1', originalText: 'One' }),
-        makeTranslationChunk({ id: 'c2', originalText: 'Two' }),
-        makeTranslationChunk({ id: 'c3', originalText: 'Three' }),
+        makeTranslationChunk({ id: 'c1', sourceDisplayText: 'One' }),
+        makeTranslationChunk({ id: 'c2', sourceDisplayText: 'Two' }),
+        makeTranslationChunk({ id: 'c3', sourceDisplayText: 'Three' }),
       ],
     });
     useUiStore.setState({ selectedChunkId: 'c2' });

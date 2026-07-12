@@ -22,14 +22,7 @@ import {
   deriveSourceDocumentState,
   updateChunkSourceFields,
   updateChunkTranslationFields,
-  withSyncedChunkFields,
 } from '../utils/documentState';
-import { stripFootnoteMarkers, stripSuperscriptMarkers } from '../utils/footnoteExtractor';
-
-function stripAllFootnoteMarkers(text: string): string {
-  return stripFootnoteMarkers(stripSuperscriptMarkers(text));
-}
-
 // --- Internal O(1) chunk index ---
 // Maps chunkId → array index. Kept as a module-level variable; never part of Zustand state.
 // Rebuilt automatically via store subscription whenever `chunks` reference changes —
@@ -150,8 +143,7 @@ interface ChunksState {
   updateChunkTranslationForce: (chunkId: string, draft: string) => void;
   toggleChunkTranslationLock: (chunkId: string) => void;
   updateChunkStatus: (chunkId: string, status: ChunkStatus) => void;
-  updateChunkOriginalText: (chunkId: string, text: string) => void;
-  restoreChunkSourceText: (chunkId: string) => void;
+  updateChunkSourceText: (chunkId: string, text: string) => void;
   toggleChunkSourceEditing: (chunkId: string) => void;
   updateChunkCoherence: (chunkId: string, result: CoherenceResult) => void;
   toggleCoherenceIssueResolved: (chunkId: string, key: string) => void;
@@ -313,41 +305,21 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
       })),
     })),
 
-  updateChunkOriginalText: (chunkId, text) =>
+  updateChunkSourceText: (chunkId, text) =>
     set((state) => {
       const chunkIdx = chunkIndex.get(chunkId);
       if (chunkIdx === undefined) return {};
       const chunk = state.chunks[chunkIdx];
-      if (!chunk || chunk.originalText === text) return {};
+      if (!chunk || chunk.sourceDisplayText === text) return {};
 
       const sourceFootnotes = usePipelineStore.getState().sourceFootnotes;
       const nextChunks = updateSingleChunk(state.chunks, chunkId, (current) => {
-        const hasTranslation = !!(current.currentDraft || Object.keys(current.stageResults).length > 0);
+        const hasTranslation = !!(current.translationDisplayText || Object.keys(current.stageResults).length > 0);
         const updated = updateChunkSourceFields(
           current,
           deriveChunkDisplayText(text, sourceFootnotes),
           text,
           buildChunkFootnotes(text, sourceFootnotes),
-        );
-        return hasTranslation ? { ...updated, translationStale: true } : updated;
-      });
-      syncProjectSourceDocument(nextChunks);
-      return { chunks: nextChunks };
-    }),
-
-  restoreChunkSourceText: (chunkId) =>
-    set((state) => {
-      const chunkIdx = chunkIndex.get(chunkId);
-      if (chunkIdx === undefined) return {};
-      const sourceFootnotes = usePipelineStore.getState().sourceFootnotes;
-      const nextChunks = updateSingleChunk(state.chunks, chunkId, (chunk) => {
-        if (chunk.sourceDisplayText === chunk.originalText) return chunk;
-        const hasTranslation = !!(chunk.currentDraft || Object.keys(chunk.stageResults).length > 0);
-        const updated = updateChunkSourceFields(
-          chunk,
-          chunk.originalText,
-          stripAllFootnoteMarkers(chunk.originalText),
-          chunk.footnotes,
         );
         return hasTranslation ? { ...updated, translationStale: true } : updated;
       });
@@ -456,7 +428,7 @@ function createEmptyJudgeResult(): JudgeResult {
 }
 
 function resetChunkForSourceEdit<T extends TranslationChunk>(chunk: T): T {
-  return withSyncedChunkFields({
+  return {
     ...chunk,
     status: 'ready',
     stageResults: {},
@@ -468,11 +440,10 @@ function resetChunkForSourceEdit<T extends TranslationChunk>(chunk: T): T {
     ),
     translationDisplayText: '',
     translationProcessingText: '',
-    currentDraft: '',
     translationLocked: false,
     translationStale: false,
     sourceEditable: false,
-  }) as T;
+  } as T;
 }
 
 function chunksFromTexts(
@@ -482,11 +453,10 @@ function chunksFromTexts(
   return chunkTexts.map((chunkTextValue) => {
     const displayText = deriveChunkDisplayText(chunkTextValue, sourceFootnotes);
     const footnotes = buildChunkFootnotes(chunkTextValue, sourceFootnotes);
-    return withSyncedChunkFields({
+    return {
       id: generateId('chunk'),
       sourceDisplayText: displayText,
       sourceProcessingText: stripFootnoteMarkers(chunkTextValue),
-      originalText: displayText,
       translationDisplayText: '',
       translationProcessingText: '',
       status: 'ready' as const,
@@ -495,7 +465,7 @@ function chunksFromTexts(
       translationLocked: false,
       sourceEditable: false,
       ...(footnotes?.length ? { footnotes } : {}),
-    });
+    };
   });
 }
 

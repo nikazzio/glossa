@@ -215,7 +215,7 @@ export const llmService = {
   },
 
   async judgeTranslation(
-    originalText: string,
+    sourceText: string,
     translation: string,
     config: PipelineConfig,
     onPrompt?: (info: PromptInfo) => void,
@@ -236,7 +236,7 @@ export const llmService = {
     try {
       const result = await invoke<Omit<JudgeResult, 'status'> & UsageResult>(
         'judge_translation',
-        { originalText, translation, config: withUiLanguage(config), streamId, ollamaBaseUrl: useConfigStore.getState().ollamaBaseUrl },
+        { sourceText, translation, config: withUiLanguage(config), streamId, ollamaBaseUrl: useConfigStore.getState().ollamaBaseUrl },
       );
       logOperation({
         level: 'info',

@@ -314,13 +314,12 @@ export async function saveChunkCheckpoint(
 ): Promise<void> {
   await execute(
     `INSERT INTO translations (
-       id, pipeline_id, project_id, original_text, final_translation, position, chunk_status, stage_results,
+       id, pipeline_id, project_id, position, chunk_status, stage_results,
        judge_status, judge_rating, translation_locked, judge_issues, coherence_result, footnotes,
        source_display_text, source_processing_text, translation_display_text, translation_processing_text,
        blob_id, blob_order, blob_reference_chunk_ids
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
      ON CONFLICT(pipeline_id, id) WHERE pipeline_id IS NOT NULL DO UPDATE SET
-       final_translation            = excluded.final_translation,
        position                     = excluded.position,
        chunk_status                 = excluded.chunk_status,
        stage_results                = excluded.stage_results,
@@ -341,8 +340,6 @@ export async function saveChunkCheckpoint(
       chunk.id,
       pipelineId,
       projectId,
-      chunk.originalText,
-      chunk.translationDisplayText || chunk.judgeResult.content || lastStageContent(chunk.stageResults) || '',
       position,
       chunk.status,
       JSON.stringify(chunk.stageResults),
@@ -387,13 +384,12 @@ async function saveTranslationsInternal(
   for (const [position, chunk] of chunks.entries()) {
     await run(
       `INSERT INTO translations (
-         id, pipeline_id, project_id, original_text, final_translation, position, chunk_status, stage_results,
+         id, pipeline_id, project_id, position, chunk_status, stage_results,
          judge_status, judge_rating, translation_locked, judge_issues, coherence_result, footnotes,
          source_display_text, source_processing_text, translation_display_text, translation_processing_text,
          blob_id, blob_order, blob_reference_chunk_ids
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
        ON CONFLICT(pipeline_id, id) WHERE pipeline_id IS NOT NULL DO UPDATE SET
-         final_translation            = excluded.final_translation,
          position                     = excluded.position,
          chunk_status                 = excluded.chunk_status,
          stage_results                = excluded.stage_results,
@@ -414,8 +410,6 @@ async function saveTranslationsInternal(
         chunk.id,
         pipelineId,
         projectId,
-        chunk.originalText,
-        chunk.translationDisplayText || chunk.judgeResult.content || lastStageContent(chunk.stageResults) || '',
         position,
         chunk.status,
         JSON.stringify(chunk.stageResults),
@@ -503,21 +497,12 @@ export async function saveFullState(
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
-function lastStageContent(stageResults: Record<string, PipelineResult>): string {
-  const entries = Object.values(stageResults);
-  for (let i = entries.length - 1; i >= 0; i--) {
-    const content = entries[i]?.content?.trim();
-    if (content) return content;
-  }
-  return '';
-}
-
 export function restoreTranslations(rows: SavedTranslation[]): TranslationChunk[] {
   return rows.map((row) => {
-    const judgeResult = restoreJudgeResult(row);
     const stageResults = parseJson<Record<string, PipelineResult>>(row.stage_results, {});
     const coherenceResult = parseJson<CoherenceResult>(row.coherence_result);
     const footnotes = row.footnotes ? parseJson<Footnote[]>(row.footnotes, []) : undefined;
+    const judgeResult = restoreJudgeResult(row);
     const blobReferenceChunkIds = (() => {
       if (!row.blob_reference_chunk_ids) return undefined;
       const parsed = parseJson<unknown>(row.blob_reference_chunk_ids);
@@ -526,15 +511,13 @@ export function restoreTranslations(rows: SavedTranslation[]): TranslationChunk[
 
     return {
       id: row.id,
-      sourceDisplayText: row.source_display_text ?? '',
-      sourceProcessingText: row.source_processing_text ?? '',
-      translationDisplayText: row.translation_display_text ?? '',
-      translationProcessingText: row.translation_processing_text ?? '',
-      originalText: row.original_text ?? row.source_display_text ?? '',
+      sourceDisplayText: row.source_display_text,
+      sourceProcessingText: row.source_processing_text,
+      translationDisplayText: row.translation_display_text,
+      translationProcessingText: row.translation_processing_text,
       status: (row.chunk_status || (judgeResult.status === 'completed' ? 'completed' : 'ready')) as TranslationChunk['status'],
       stageResults,
       judgeResult,
-      currentDraft: row.translation_display_text ?? '',
       translationLocked: row.translation_locked === 1,
       ...(coherenceResult ? { coherenceResult } : {}),
       ...(footnotes?.length ? { footnotes } : {}),
@@ -549,7 +532,7 @@ export function restoreTranslations(rows: SavedTranslation[]): TranslationChunk[
 
 function restoreJudgeResult(row: SavedTranslation): JudgeResult {
   return {
-    content: row.final_translation,
+    content: row.translation_display_text,
     status: (row.judge_status || 'idle') as JudgeResult['status'],
     rating: normalizeQualityRating(row.judge_rating),
     issues: parseJson<JudgeResult['issues']>(row.judge_issues, []),

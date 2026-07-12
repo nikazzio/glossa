@@ -8,7 +8,7 @@ const dbState = vi.hoisted(() => {
   const userObjects = new Set<string>();
   const columnsByTable = new Map<string, string[]>([
     ['pipeline_configs', ['id', 'project_id', 'stages', 'judge_prompt', 'judge_model', 'judge_provider', 'use_chunking']],
-    ['translations', ['id', 'project_id', 'original_text', 'final_translation', 'stage_results', 'judge_issues', 'created_at']],
+    ['translations', ['id', 'project_id', 'source_display_text', 'source_processing_text', 'translation_display_text', 'translation_processing_text', 'stage_results', 'judge_issues', 'created_at']],
     ['prompt_templates', []],
   ]);
 
@@ -205,7 +205,8 @@ describe('initDatabase migrations', () => {
     dbState.setSchemaVersion(null);
     dbState.setWorkspaceCount(0);
     dbState.columnsByTable.set('pipeline_configs', ['id', 'project_id', 'stages', 'judge_prompt', 'judge_model', 'judge_provider', 'use_chunking']);
-    dbState.columnsByTable.set('translations', ['id', 'project_id', 'original_text', 'final_translation', 'stage_results', 'judge_issues', 'created_at']);
+    dbState.columnsByTable.set('translations', ['id', 'project_id', 'source_display_text', 'source_processing_text', 'translation_display_text', 'translation_processing_text', 'stage_results', 'judge_issues', 'created_at']);
+    dbState.setColumns('projects', []);
     dbState.columnsByTable.set('prompt_templates', []);
     dbState.columnsByTable.set('operation_logs', []);
     dbState.setColumns('phrase_memory', []);
@@ -264,6 +265,11 @@ describe('initDatabase migrations', () => {
     expect(dbState.db.execute).toHaveBeenCalledWith(
       expect.stringContaining('blob_reference_chunk_ids TEXT DEFAULT NULL'),
     );
+    const translationSchema = dbState.db.execute.mock.calls.find(
+      ([query]) => typeof query === 'string' && query.includes('CREATE TABLE IF NOT EXISTS translations'),
+    )?.[0];
+    expect(translationSchema).toContain('source_display_text TEXT DEFAULT');
+    expect(translationSchema).toContain('translation_display_text TEXT DEFAULT');
     expect(dbState.db.execute).not.toHaveBeenCalledWith(
       expect.stringContaining('ALTER TABLE pipeline_configs'),
     );

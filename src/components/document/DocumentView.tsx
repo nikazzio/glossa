@@ -5,7 +5,6 @@ import {
   Languages,
   Lock,
   Pencil,
-  RotateCcw,
   ScanLine,
   Search,
   SlidersHorizontal,
@@ -195,8 +194,7 @@ export function DocumentView({
   const operationLogEntries = useOperationLogStore((s) => s.entries);
   const {
     updateChunkDraft,
-    updateChunkOriginalText,
-    restoreChunkSourceText,
+    updateChunkSourceText,
     toggleChunkTranslationLock,
     toggleChunkSourceEditing,
   } = useChunksStore();
@@ -498,16 +496,6 @@ export function DocumentView({
                   >
                     <Pencil size={14} />
                   </IconButton>
-                  {currentChunk.sourceDisplayText !== currentChunk.originalText && (
-                    <IconButton
-                      size="lg"
-                      onClick={() => restoreChunkSourceText(currentChunk.id)}
-                      title={t('document.restoreSourceText')}
-                      disabled={sourceEditDisabled}
-                    >
-                      <RotateCcw size={14} />
-                    </IconButton>
-                  )}
                 </div>
               }
               searchValue={sourcePaneSearch}
@@ -522,7 +510,7 @@ export function DocumentView({
                 menuOpen={sourceMenuOpen}
                 onMenuOpenChange={setSourceMenuOpen}
                 value={currentChunk.sourceDisplayText}
-                onChange={(nextValue) => updateChunkOriginalText(currentChunk.id, nextValue)}
+                onChange={(nextValue) => updateChunkSourceText(currentChunk.id, nextValue)}
                 markdownEnabled={config.markdownAware === true}
                 disabled={currentChunk.status === 'processing'}
                 readOnly={sourceReadOnly}
@@ -547,7 +535,7 @@ export function DocumentView({
                 tone={currentChunk.translationLocked ? 'success' : 'muted'}
                 title={currentChunk.translationLocked ? t('document.unlockTranslation') : t('document.lockTranslation')}
                 onClick={() => handleLockToggle(currentChunk)}
-                disabled={!currentChunk.currentDraft?.trim()}
+                disabled={!currentChunk.translationDisplayText.trim()}
                 ariaPressed={currentChunk.translationLocked === true}
               >
                 <Lock size={13} />

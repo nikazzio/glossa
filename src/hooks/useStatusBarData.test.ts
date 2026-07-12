@@ -39,8 +39,8 @@ describe('useStatusBarData', () => {
     } as any);
     useChunksStore.setState({
       chunks: [
-        { status: 'completed', originalText: 'hello world', currentDraft: 'ciao mondo' },
-        { status: 'ready', originalText: 'foo bar', currentDraft: '' },
+        { status: 'completed', sourceDisplayText: 'hello world', translationDisplayText: 'ciao mondo' },
+        { status: 'ready', sourceDisplayText: 'foo bar', translationDisplayText: '' },
       ],
     } as any);
     usePipelineStore.setState((s) => ({ runStatus: 'idle', config: { ...s.config, pipelineId: 'pipe1' } }));
