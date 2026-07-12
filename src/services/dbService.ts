@@ -156,12 +156,9 @@ export async function initDatabase(): Promise<void> {
   await conn.execute('PRAGMA synchronous=NORMAL');
   await conn.execute('PRAGMA busy_timeout=10000');
   await conn.execute('PRAGMA foreign_keys=ON');
-  // The SQL plugin owns a pool. Apply connection-local PRAGMAs to its warmed
-  // connections as well, so every frontend connection enforces the same policy.
-  for (let i = 0; i < 8; i++) {
-    await execute('PRAGMA busy_timeout=10000');
-    await execute('PRAGMA foreign_keys=ON');
-  }
+  // Runtime writes configure their acquired SQLx connection in the native
+  // transaction command, before BEGIN. SQLite ignores foreign_keys changes
+  // made inside an active transaction.
   await resetOutdatedBetaDatabase(conn);
   await dropDeprecatedTables(conn);
 

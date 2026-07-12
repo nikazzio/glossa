@@ -1,5 +1,6 @@
 use serde::Deserialize;
 use serde_json::Value as JsonValue;
+use sqlx::Acquire;
 use std::fs;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -41,7 +42,23 @@ pub async fn execute_transaction(
 
     match db_pool {
         DbPool::Sqlite(pool) => {
-            let mut transaction = pool.begin().await.map_err(|error| error.to_string())?;
+            // `foreign_keys` is per connection and SQLite ignores changes made
+            // while a transaction is open. Configure the exact pooled
+            // connection before beginning the transaction that carries a
+            // frontend write.
+            let mut connection = pool.acquire().await.map_err(|error| error.to_string())?;
+            sqlx::query("PRAGMA foreign_keys=ON")
+                .execute(&mut *connection)
+                .await
+                .map_err(|error| error.to_string())?;
+            sqlx::query("PRAGMA busy_timeout=10000")
+                .execute(&mut *connection)
+                .await
+                .map_err(|error| error.to_string())?;
+            let mut transaction = connection
+                .begin()
+                .await
+                .map_err(|error| error.to_string())?;
 
             for statement in statements {
                 let mut query = sqlx::query(&statement.query);
