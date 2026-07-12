@@ -268,6 +268,9 @@ impl StreamAccumulator {
     where
         E: FnMut(StreamToken),
     {
+        if let Some(error) = provider.streaming_completion_error(data) {
+            return Err(error);
+        }
         if let Some(text) = provider.extract_streaming_token(data) {
             if !text.is_empty() {
                 self.full_text.push_str(&text);

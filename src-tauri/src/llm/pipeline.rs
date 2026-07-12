@@ -10,7 +10,7 @@ use crate::llm::prompts::{
     REFINE_STAGE_SYSTEM_PROMPT,
 };
 use crate::llm::provider::{LlmProvider, LlmRequest};
-use crate::llm::providers::get_provider;
+use crate::llm::providers::{get_provider, with_retry_after};
 use crate::llm::stream::{stream_response, StreamGuard, StreamRegistry, STREAM_CANCELLED_ERROR};
 use crate::llm::types::{
     CoherenceChunkInput, CoherenceResponse, JudgeIssue, JudgeResponse, PipelineConfig,
@@ -67,6 +67,56 @@ fn pretty_json(value: &serde_json::Value, fallback: &str) -> String {
         log::warn!("Failed to pretty-print JSON response: {e}");
         fallback.to_string()
     })
+}
+
+fn verified_judge_phrase(value: Option<&str>, reference: &str, field: &str) -> Option<String> {
+    let phrase = value?.trim();
+    if phrase.is_empty() {
+        return None;
+    }
+    if reference.contains(phrase) {
+        return Some(phrase.to_string());
+    }
+
+    log::warn!(
+        "judge_response.discard_non_verbatim_phrase field={field} phrase_chars={}",
+        phrase.len()
+    );
+    None
+}
+
+fn parse_judge_issues(
+    parsed: &serde_json::Value,
+    source_text: &str,
+    target_text: &str,
+) -> Vec<JudgeIssue> {
+    parsed["issues"]
+        .as_array()
+        .map(|issues| {
+            issues
+                .iter()
+                .filter_map(|value| {
+                    Some(JudgeIssue {
+                        issue_type: value["type"].as_str()?.to_string(),
+                        severity: value["severity"].as_str()?.to_string(),
+                        description: value["description"].as_str()?.to_string(),
+                        suggested_fix: value["suggestedFix"].as_str().map(str::to_string),
+                        phrase: verified_judge_phrase(
+                            value["phrase"].as_str(),
+                            target_text,
+                            "phrase",
+                        ),
+                        source_phrase: verified_judge_phrase(
+                            value["sourcePhrase"].as_str(),
+                            source_text,
+                            "sourcePhrase",
+                        ),
+                        confidence: value["confidence"].as_f64().map(|value| value as f32),
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 #[derive(serde::Serialize)]
@@ -246,12 +296,16 @@ pub async fn run_stage_stream(
     );
     let resp = provider.build_streaming_request(&client, &req).await?;
     let status = resp.status();
+    let response_headers = resp.headers().clone();
     if !status.is_success() {
         let text = resp.text().await.unwrap_or_else(|e| {
             log::warn!("Failed to read error response body: {e}");
             String::new()
         });
-        return Err(provider.format_http_error(status, &text));
+        return Err(with_retry_after(
+            provider.format_http_error(status, &text),
+            &response_headers,
+        ));
     }
 
     let result = stream_response(
@@ -358,25 +412,11 @@ pub async fn judge_translation(
         }
     };
 
-    let rating = parse_judge_rating(&parsed);
-    let issues: Vec<JudgeIssue> = parsed["issues"]
-        .as_array()
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|v| {
-                    Some(JudgeIssue {
-                        issue_type: v["type"].as_str()?.to_string(),
-                        severity: v["severity"].as_str()?.to_string(),
-                        description: v["description"].as_str()?.to_string(),
-                        suggested_fix: v["suggestedFix"].as_str().map(|s| s.to_string()),
-                        phrase: v["phrase"].as_str().map(|s| s.to_string()),
-                        source_phrase: v["sourcePhrase"].as_str().map(|s| s.to_string()),
-                        confidence: v["confidence"].as_f64().map(|f| f as f32),
-                    })
-                })
-                .collect()
-        })
-        .unwrap_or_default();
+    let rating = parse_judge_rating(&parsed).map_err(|error| {
+        log::warn!("judge_response.invalid_rating error={error}");
+        error
+    })?;
+    let issues = parse_judge_issues(&parsed, &original_text, &translation);
 
     Ok(JudgeResponse {
         rating,
@@ -582,24 +622,7 @@ pub async fn run_coherence_for_chunk(
         }
     };
 
-    let issues: Vec<JudgeIssue> = parsed["issues"]
-        .as_array()
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|v| {
-                    Some(JudgeIssue {
-                        issue_type: v["type"].as_str()?.to_string(),
-                        severity: v["severity"].as_str()?.to_string(),
-                        description: v["description"].as_str()?.to_string(),
-                        suggested_fix: v["suggestedFix"].as_str().map(|s| s.to_string()),
-                        phrase: v["phrase"].as_str().map(|s| s.to_string()),
-                        source_phrase: v["sourcePhrase"].as_str().map(|s| s.to_string()),
-                        confidence: v["confidence"].as_f64().map(|f| f as f32),
-                    })
-                })
-                .collect()
-        })
-        .unwrap_or_default();
+    let issues = parse_judge_issues(&parsed, &input.original, &input.translation);
 
     Ok(CoherenceResponse {
         issues,

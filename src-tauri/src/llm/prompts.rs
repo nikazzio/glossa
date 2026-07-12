@@ -388,19 +388,15 @@ pub(crate) fn sanitize_llm_json_output(raw: &str) -> &str {
     }
 }
 
-pub(crate) fn parse_judge_rating(parsed: &serde_json::Value) -> String {
-    if let Some(raw) = parsed["rating"].as_str() {
-        match raw.trim().to_lowercase().as_str() {
-            "critical" | "critico" | "critica" => return "critical".to_string(),
-            "poor" | "scarso" => return "poor".to_string(),
-            "fair" | "sufficiente" | "accettabile" | "discreto" => return "fair".to_string(),
-            "good" | "buono" => return "good".to_string(),
-            "excellent" | "ottimo" => return "excellent".to_string(),
-            _ => {}
-        }
-    }
+pub(crate) fn parse_judge_rating(parsed: &serde_json::Value) -> Result<String, String> {
+    let raw = parsed["rating"]
+        .as_str()
+        .ok_or_else(|| "Judge response is missing rating".to_string())?;
 
-    "fair".to_string()
+    match raw.trim().to_lowercase().as_str() {
+        "critical" | "poor" | "fair" | "good" | "excellent" => Ok(raw.trim().to_lowercase()),
+        value => Err(format!("Invalid judge response rating: {value}")),
+    }
 }
 
 pub(crate) fn minimal_pipeline_config(

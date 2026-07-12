@@ -1,4 +1,4 @@
-use super::{format_api_error, provider_label_from_url};
+use super::{format_api_error, provider_label_from_url, with_retry_after};
 use crate::llm::provider::{
     LlmProvider, LlmRequest, LlmResponse, StreamFormat, TokenUsage, UsageAccumulator,
 };
@@ -297,17 +297,27 @@ impl OpenAiCompatibleProvider {
             .map_err(|e| format!("API request failed: {e}"))?;
 
         let status = resp.status();
+        let response_headers = resp.headers().clone();
         let text = resp
             .text()
             .await
             .map_err(|e| format!("Failed to read response: {e}"))?;
 
         if !status.is_success() {
-            return Err(format_api_error("OpenAI", status, &text));
+            return Err(with_retry_after(
+                format_api_error("OpenAI", status, &text),
+                &response_headers,
+            ));
         }
 
         let json: Value =
             serde_json::from_str(&text).map_err(|e| format!("Failed to parse response: {e}"))?;
+
+        if json["status"].as_str() == Some("incomplete")
+            || json["incomplete_details"]["reason"].as_str() == Some("max_output_tokens")
+        {
+            return Err("OpenAI response was truncated at the output token limit".to_string());
+        }
 
         let content = json["output"]
             .as_array()
@@ -461,6 +471,25 @@ impl LlmProvider for OpenAiCompatibleProvider {
         }
     }
 
+    fn streaming_completion_error(&self, data: &str) -> Option<String> {
+        let json: Value = serde_json::from_str(data).ok()?;
+        if self.use_responses_api {
+            if json["type"].as_str() == Some("response.completed")
+                && (json["response"]["status"].as_str() == Some("incomplete")
+                    || json["response"]["incomplete_details"]["reason"].as_str()
+                        == Some("max_output_tokens"))
+            {
+                return Some("OpenAI response was truncated at the output token limit".to_string());
+            }
+            return None;
+        }
+
+        if json["choices"][0]["finish_reason"].as_str() == Some("length") {
+            return Some("Provider response was truncated at the output token limit".to_string());
+        }
+        None
+    }
+
     async fn call(&self, client: &Client, req: &LlmRequest<'_>) -> Result<LlmResponse, String> {
         if self.use_responses_api_for(req) {
             return self.call_responses(client, req).await;
@@ -499,21 +528,25 @@ impl LlmProvider for OpenAiCompatibleProvider {
             .map_err(|e| format!("API request failed: {e}"))?;
 
         let status = resp.status();
+        let response_headers = resp.headers().clone();
         let text = resp
             .text()
             .await
             .map_err(|e| format!("Failed to read response: {e}"))?;
 
         if !status.is_success() {
-            return Err(format_api_error(
-                provider_label_from_url(&self.base_url),
-                status,
-                &text,
+            return Err(with_retry_after(
+                format_api_error(provider_label_from_url(&self.base_url), status, &text),
+                &response_headers,
             ));
         }
 
         let json: Value =
             serde_json::from_str(&text).map_err(|e| format!("Failed to parse response: {e}"))?;
+
+        if json["choices"][0]["finish_reason"].as_str() == Some("length") {
+            return Err("Provider response was truncated at the output token limit".to_string());
+        }
 
         let content = json["choices"][0]["message"]["content"]
             .as_str()

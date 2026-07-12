@@ -428,6 +428,45 @@ describe('usePipeline', () => {
     expect(toast.message).toHaveBeenCalledWith('pipeline.stopConfirmed');
   });
 
+  it('does not start the next stage or audit after cancellation between stages', async () => {
+    usePipelineStore.setState((state) => ({
+      ...state,
+      config: {
+        ...state.config,
+        stages: [
+          { id: 'stg-1', name: 'Stage 1', prompt: 'Translate', model: 'gemini-3-flash-preview', provider: 'gemini', enabled: true },
+          { id: 'stg-2', name: 'Stage 2', prompt: 'Refine', model: 'gemini-3-flash-preview', provider: 'gemini', enabled: true },
+        ],
+      },
+    }));
+    llmMocks.runStage.mockImplementationOnce(async () => {
+      useChunksStore.getState().requestCancel();
+      return { content: 'First output' };
+    });
+
+    const { result } = renderHook(() => usePipeline());
+    await act(async () => {
+      await result.current.runPipeline();
+    });
+
+    expect(llmMocks.runStage).toHaveBeenCalledTimes(1);
+    expect(llmMocks.judgeTranslation).not.toHaveBeenCalled();
+    expect(useChunksStore.getState().chunks[0].status).toBe('ready');
+  });
+
+  it('marks an empty translation stage as an error instead of silently skipping it', async () => {
+    llmMocks.runStage.mockResolvedValue({ content: ' \n ' });
+
+    const { result } = renderHook(() => usePipeline());
+    await act(async () => {
+      await result.current.runPipeline();
+    });
+
+    expect(llmMocks.judgeTranslation).not.toHaveBeenCalled();
+    expect(useChunksStore.getState().chunks[0].status).toBe('error');
+    expect(useChunksStore.getState().chunks[0].stageResults['stg-1']?.status).toBe('error');
+  });
+
   it('blocks the run when Ollama is offline', async () => {
     usePipelineStore.setState((state) => ({
       ...state,

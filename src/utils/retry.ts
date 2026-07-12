@@ -11,26 +11,32 @@ export async function withRetry<T>(
     baseDelayMs?: number;
     label?: string;
     onRetry?: (attempt: number, total: number, error: string, delayMs: number) => void;
+    shouldCancel?: () => boolean;
   } = {},
 ): Promise<T> {
-  const { maxRetries = 3, baseDelayMs = 1000, label = 'operation', onRetry } = opts;
+  const { maxRetries = 3, baseDelayMs = 1000, label = 'operation', onRetry, shouldCancel } = opts;
+  let timeoutRetried = false;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
+      throwIfCancelled(shouldCancel);
       return await fn();
-    } catch (err: any) {
-      const message: string = err?.message ?? String(err);
+    } catch (err: unknown) {
+      const message = errorMessage(err);
 
-      if (isConfigError(message) || message.includes(STREAM_CANCELLED_ERROR) || isTimeoutError(message)) throw err;
+      if (isConfigError(message) || isParseError(message) || message.includes(STREAM_CANCELLED_ERROR)) throw err;
       if (attempt === maxRetries) throw err;
+      if (isTimeoutError(message) && timeoutRetried) throw err;
+      if (isTimeoutError(message)) timeoutRetried = true;
 
-      const delay = baseDelayMs * Math.pow(2, attempt) + Math.random() * 500;
+      const retryAfterMs = retryAfterDelay(message);
+      const delay = retryAfterMs ?? baseDelayMs * Math.pow(2, attempt) + Math.random() * 500;
       const delayMs = Math.round(delay);
       console.warn(
         `[Glossa] ${label} failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delayMs}ms: ${message}`,
       );
       onRetry?.(attempt + 1, maxRetries + 1, message, delayMs);
-      await sleep(delay);
+      await sleep(delay, shouldCancel);
     }
   }
 
@@ -57,12 +63,50 @@ function isConfigError(message: string): boolean {
     'Unsupported provider',
     'Keyring error',
     'Set it in Settings',
+    'not authorized',
+    'unauthorized',
+    'forbidden',
+    'invalid api key',
   ];
-  return configPatterns.some((p) => message.includes(p));
+  return /\b(401|403)\b/.test(message) || configPatterns.some((p) => message.toLowerCase().includes(p.toLowerCase()));
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
+function isParseError(message: string): boolean {
+  return /parse|JSON|unexpected token|invalid judge response/i.test(message);
+}
+
+function retryAfterDelay(message: string): number | undefined {
+  const match = message.match(/retry-after-ms=(\d+)/i);
+  return match ? Number(match[1]) : undefined;
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function throwIfCancelled(shouldCancel: (() => boolean) | undefined): void {
+  if (shouldCancel?.()) throw new Error(STREAM_CANCELLED_ERROR);
+}
+
+function sleep(ms: number, shouldCancel?: () => boolean): Promise<void> {
+  if (!shouldCancel) return new Promise((resolve) => setTimeout(resolve, ms));
+
+  return new Promise((resolve, reject) => {
+    const intervalMs = Math.min(100, ms);
+    let elapsed = 0;
+    const timer = setInterval(() => {
+      if (shouldCancel()) {
+        clearInterval(timer);
+        reject(new Error(STREAM_CANCELLED_ERROR));
+        return;
+      }
+      elapsed += intervalMs;
+      if (elapsed >= ms) {
+        clearInterval(timer);
+        resolve();
+      }
+    }, intervalMs);
+  });
 }
 
 /** Classify an error string into a user-friendly category */

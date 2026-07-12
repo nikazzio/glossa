@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest';
 import { withRetry, classifyError, friendlyError } from './retry';
 
 describe('classifyError', () => {
@@ -86,6 +86,11 @@ describe('withRetry', () => {
     vi.useFakeTimers();
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
   it('returns result on first success', async () => {
     const fn = vi.fn().mockResolvedValue('ok');
     const result = await withRetry(fn, { maxRetries: 3, baseDelayMs: 10 });
@@ -121,6 +126,38 @@ describe('withRetry', () => {
     const fn = vi.fn().mockRejectedValue(new Error('network error'));
     await expect(withRetry(fn, { maxRetries: 2, baseDelayMs: 1 })).rejects.toThrow('network error');
     expect(fn).toHaveBeenCalledTimes(3);
-    vi.restoreAllMocks();
+  });
+
+  it('does not retry malformed model output', async () => {
+    const fn = vi.fn().mockRejectedValue(new Error('Failed to parse judge JSON'));
+
+    await expect(withRetry(fn, { baseDelayMs: 10 })).rejects.toThrow('parse judge JSON');
+
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries a timeout only once', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const fn = vi.fn().mockRejectedValue(new Error('request timed out'));
+
+    const promise = withRetry(fn, { maxRetries: 3, baseDelayMs: 10 });
+    const result = expect(promise).rejects.toThrow('timed out');
+    await vi.advanceTimersByTimeAsync(20);
+    await result;
+
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  it('uses the server retry delay when available', async () => {
+    const onRetry = vi.fn();
+    const fn = vi.fn()
+      .mockRejectedValueOnce(new Error('rate limited; retry-after-ms=250'))
+      .mockResolvedValue('recovered');
+
+    const promise = withRetry(fn, { baseDelayMs: 10, onRetry });
+    await vi.advanceTimersByTimeAsync(250);
+
+    await expect(promise).resolves.toBe('recovered');
+    expect(onRetry).toHaveBeenCalledWith(1, 4, expect.any(String), 250);
   });
 });
