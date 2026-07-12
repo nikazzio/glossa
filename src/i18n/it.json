@@ -535,6 +535,8 @@
   "errors": {
     "somethingWentWrong": "Qualcosa è andato storto",
     "unexpectedError": "Si è verificato un errore imprevisto.",
+    "databaseInitTitle": "Impossibile aprire il database",
+    "databaseInitDescription": "Riavvia Glossa. Se il problema persiste, chiudi ogni altra istanza dell'app eventualmente rimasta aperta e riprova.",
     "tryAgain": "Riprova",
     "unknownError": "Errore sconosciuto",
     "stageFailed": "Fase \"{{name}}\" fallita",
