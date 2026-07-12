@@ -43,9 +43,34 @@ pub fn register_vec_extension() {
 pub fn open_vec_connection(db_path: &PathBuf) -> RusqliteResult<Connection> {
     let conn = Connection::open(db_path)?;
     conn.execute_batch(
-        "PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA busy_timeout=10000;",
+        "PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA busy_timeout=10000;",
     )?;
     Ok(conn)
+}
+
+/// The frontend owns DDL. Native vector commands only verify the columns they
+/// require so a stale or partially initialized database fails clearly instead
+/// of attempting an ad-hoc migration.
+pub fn verify_phrase_memory_schema(conn: &Connection) -> Result<(), String> {
+    let mut statement = conn
+        .prepare("PRAGMA table_info(phrase_memory)")
+        .map_err(|error| error.to_string())?;
+    let columns = statement
+        .query_map([], |row| row.get::<_, String>(1))
+        .map_err(|error| error.to_string())?
+        .collect::<RusqliteResult<Vec<_>>>()
+        .map_err(|error| error.to_string())?;
+
+    if columns.is_empty() {
+        return Err("phrase_memory schema is not initialized yet".to_string());
+    }
+    if !columns.iter().any(|column| column == "embedding_model") {
+        return Err(
+            "phrase_memory.embedding_model is missing; run the frontend schema migration first"
+                .to_string(),
+        );
+    }
+    Ok(())
 }
 
 #[tauri::command]
@@ -80,6 +105,17 @@ mod tests {
         let second = database.connection();
 
         assert!(Arc::ptr_eq(&first, &second));
+        Ok(())
+    }
+
+    #[test]
+    fn rejects_a_phrase_memory_schema_without_embedding_model() -> RusqliteResult<()> {
+        let conn = Connection::open_in_memory()?;
+        conn.execute_batch("CREATE TABLE phrase_memory (id TEXT PRIMARY KEY)")?;
+
+        let error = verify_phrase_memory_schema(&conn).expect_err("expected missing column error");
+
+        assert!(error.contains("embedding_model"));
         Ok(())
     }
 }

@@ -173,6 +173,7 @@ pub async fn vec_list_phrase_memory(
     workspace_id: String,
 ) -> Result<Vec<PhraseMemoryEntryResult>, EmbeddingError> {
     run_blocking(database.connection(), move |conn| {
+        crate::vector::verify_phrase_memory_schema(conn).map_err(EmbeddingError::Http)?;
         let mut statement = conn
             .prepare(
                 "SELECT id, workspace_id, source_phrase, target_phrase, confidence, source_language, target_language, \
@@ -202,10 +203,13 @@ pub async fn vec_list_phrase_memory(
 #[tauri::command]
 pub async fn vec_delete_phrase_memory(
     database: State<'_, crate::vector::VectorDatabase>,
+    write_coordinator: State<'_, crate::db::DbWriteCoordinator>,
     workspace_id: String,
     phrase_memory_id: String,
 ) -> Result<u32, EmbeddingError> {
+    let _write_guard = write_coordinator.lock().await;
     run_blocking(database.connection(), move |conn| {
+        crate::vector::verify_phrase_memory_schema(conn).map_err(EmbeddingError::Http)?;
         conn.execute(
             "DELETE FROM phrase_memory WHERE id = ?1 AND workspace_id = ?2",
             rusqlite::params![phrase_memory_id, workspace_id],
@@ -219,13 +223,16 @@ pub async fn vec_delete_phrase_memory(
 #[tauri::command]
 pub async fn vec_update_phrase_memory(
     database: State<'_, crate::vector::VectorDatabase>,
+    write_coordinator: State<'_, crate::db::DbWriteCoordinator>,
     workspace_id: String,
     phrase_memory_id: String,
     source_phrase: String,
     target_phrase: String,
     embedding: Vec<f32>,
 ) -> Result<u32, EmbeddingError> {
+    let _write_guard = write_coordinator.lock().await;
     run_blocking(database.connection(), move |conn| {
+        crate::vector::verify_phrase_memory_schema(conn).map_err(EmbeddingError::Http)?;
         conn.execute(
             "UPDATE phrase_memory SET source_phrase = ?1, target_phrase = ?2, embedding = ?3 \
              WHERE id = ?4 AND workspace_id = ?5",
@@ -254,6 +261,7 @@ pub async fn vec_search_phrase_memory(
 ) -> Result<Vec<PhraseMatchResult>, EmbeddingError> {
     let blob = floats_to_blob(&query_embedding);
     run_blocking(database.connection(), move |conn| {
+        crate::vector::verify_phrase_memory_schema(conn).map_err(EmbeddingError::Http)?;
         let mut statement = conn
             .prepare(
                 "WITH ranked AS ( \
@@ -301,6 +309,7 @@ pub struct PhrasePair {
 #[tauri::command]
 pub async fn vec_save_locked_phrases(
     database: State<'_, crate::vector::VectorDatabase>,
+    write_coordinator: State<'_, crate::db::DbWriteCoordinator>,
     workspace_id: String,
     project_id: String,
     chunk_id: String,
@@ -318,7 +327,10 @@ pub async fn vec_save_locked_phrases(
         return Ok(0);
     }
 
+    let _write_guard = write_coordinator.lock().await;
     run_blocking(database.connection(), move |conn| {
+
+    crate::vector::verify_phrase_memory_schema(conn).map_err(EmbeddingError::Http)?;
 
     let workspace_exists: i64 = conn
         .query_row(
@@ -446,6 +458,7 @@ pub async fn vec_save_locked_phrases(
 pub async fn vec_regenerate_all_embeddings(
     app: tauri::AppHandle,
     database: State<'_, crate::vector::VectorDatabase>,
+    write_coordinator: State<'_, crate::db::DbWriteCoordinator>,
     workspace_id: String,
     model: String,
 ) -> Result<u32, EmbeddingError> {
@@ -457,6 +470,7 @@ pub async fn vec_regenerate_all_embeddings(
     let connection = database.connection();
     let query_workspace_id = workspace_id.clone();
     let entries: Vec<(String, String)> = run_blocking(Arc::clone(&connection), move |conn| {
+        crate::vector::verify_phrase_memory_schema(conn).map_err(EmbeddingError::Http)?;
         let mut statement = conn
             .prepare("SELECT id, source_phrase FROM phrase_memory WHERE workspace_id = ?1")
             .map_err(|error| EmbeddingError::Http(error.to_string()))?;
@@ -484,6 +498,7 @@ pub async fn vec_regenerate_all_embeddings(
 
     // Phase 3: update without blocking the async runtime.
     let update_model = model.clone();
+    let _write_guard = write_coordinator.lock().await;
     let updated: u32 = run_blocking(connection, move |conn| {
         entries
             .iter()

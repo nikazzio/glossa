@@ -1,9 +1,23 @@
 use serde::Deserialize;
 use serde_json::Value as JsonValue;
 use std::fs;
+use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{Manager, State};
 use tauri_plugin_sql::{DbInstances, DbPool};
+use tokio::sync::Mutex;
+
+/// Serializes every runtime write to glossa.db, including commands that use
+/// SQLx and commands that use the dedicated rusqlite vector connection.
+/// Schema setup is intentionally separate and happens before the UI renders.
+#[derive(Clone, Default)]
+pub struct DbWriteCoordinator(Arc<Mutex<()>>);
+
+impl DbWriteCoordinator {
+    pub async fn lock(&self) -> tokio::sync::OwnedMutexGuard<()> {
+        Arc::clone(&self.0).lock_owned().await
+    }
+}
 
 #[derive(Debug, Deserialize)]
 pub struct SqlStatement {
@@ -15,9 +29,11 @@ pub struct SqlStatement {
 #[tauri::command]
 pub async fn execute_transaction(
     db_instances: State<'_, DbInstances>,
+    write_coordinator: State<'_, DbWriteCoordinator>,
     db: String,
     statements: Vec<SqlStatement>,
 ) -> Result<(), String> {
+    let _write_guard = write_coordinator.lock().await;
     let instances = db_instances.0.read().await;
     let db_pool = instances
         .get(&db)
