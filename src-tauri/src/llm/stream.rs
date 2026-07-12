@@ -268,9 +268,6 @@ impl StreamAccumulator {
     where
         E: FnMut(StreamToken),
     {
-        if let Some(error) = provider.streaming_completion_error(data) {
-            return Err(error);
-        }
         if let Some(text) = provider.extract_streaming_token(data) {
             if !text.is_empty() {
                 self.full_text.push_str(&text);
@@ -278,6 +275,11 @@ impl StreamAccumulator {
             }
         }
         provider.update_streaming_usage(data, &mut self.usage);
+        if has_completion_marker(data) {
+            if let Some(error) = provider.streaming_completion_error(data) {
+                return Err(error);
+            }
+        }
         Ok(())
     }
 
@@ -360,6 +362,18 @@ impl StreamAccumulator {
             cache_miss_input_tokens: final_usage.as_ref().and_then(|u| u.cache_miss_input),
         });
     }
+}
+
+fn has_completion_marker(data: &str) -> bool {
+    [
+        "\"stop_reason\"",
+        "\"finish_reason\"",
+        "\"finishReason\"",
+        "\"done_reason\"",
+        "\"incomplete_details\"",
+    ]
+    .iter()
+    .any(|marker| data.contains(marker))
 }
 
 // ── Core streaming functions ──────────────────────────────────────────

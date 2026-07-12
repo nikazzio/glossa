@@ -31,7 +31,7 @@ export async function withRetry<T>(
 
       const retryAfterMs = retryAfterDelay(message);
       const delay = retryAfterMs ?? baseDelayMs * Math.pow(2, attempt) + Math.random() * 500;
-      const delayMs = Math.round(delay);
+      const delayMs = Math.max(1, Math.ceil(delay));
       console.warn(
         `[Glossa] ${label} failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delayMs}ms: ${message}`,
       );
@@ -89,10 +89,11 @@ function throwIfCancelled(shouldCancel: (() => boolean) | undefined): void {
 }
 
 function sleep(ms: number, shouldCancel?: () => boolean): Promise<void> {
-  if (!shouldCancel) return new Promise((resolve) => setTimeout(resolve, ms));
+  const delayMs = Math.max(1, Math.ceil(ms));
+  if (!shouldCancel) return new Promise((resolve) => setTimeout(resolve, delayMs));
 
   return new Promise((resolve, reject) => {
-    const intervalMs = Math.min(100, ms);
+    const intervalMs = Math.min(100, delayMs);
     let elapsed = 0;
     const timer = setInterval(() => {
       if (shouldCancel()) {
@@ -101,7 +102,7 @@ function sleep(ms: number, shouldCancel?: () => boolean): Promise<void> {
         return;
       }
       elapsed += intervalMs;
-      if (elapsed >= ms) {
+      if (elapsed >= delayMs) {
         clearInterval(timer);
         resolve();
       }

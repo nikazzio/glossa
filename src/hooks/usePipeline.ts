@@ -354,6 +354,7 @@ export function usePipeline() {
         if (useChunksStore.getState().cancelRequested) {
           updateChunkStage(chunk.id, stage.id, { content: '', status: 'idle' });
           updateChunkStatus(chunk.id, 'ready');
+          pipelineLog.stageCancelled(chunk.id, stage.id, stage.name, Date.now() - stageStartedAt);
           return 'cancelled';
         }
         const result = isFormatStage && !rawResult.trim() ? stageText : rawResult;
