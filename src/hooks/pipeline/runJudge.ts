@@ -1,6 +1,7 @@
 import { toast } from 'sonner';
 import { usePipelineStore } from '../../stores/pipelineStore';
-import { llmService } from '../../services/llmService';
+import { useChunksStore } from '../../stores/chunksStore';
+import { isStreamCancelledError, llmService } from '../../services/llmService';
 import { withRetry, friendlyError } from '../../utils/retry';
 import { qualityDefault, qualityFailure } from '../../utils';
 import { pipelineLog } from '../../utils/pipelineLogging';
@@ -31,6 +32,7 @@ export async function runJudgeForChunk(
 ): Promise<ChunkOutcome> {
   const config = effectiveConfig ?? usePipelineStore.getState().config;
   if (!textToAudit) return 'skipped';
+  if (useChunksStore.getState().cancelRequested) return 'cancelled';
 
   actions.updateChunkStatus(chunk.id, 'processing');
   const judgeRef = {
@@ -54,6 +56,7 @@ export async function runJudgeForChunk(
       ),
       {
         label: 'Audit',
+        shouldCancel: () => useChunksStore.getState().cancelRequested,
         onRetry: (attempt, total, error, delayMs) =>
           pipelineLog.auditRetry(chunk.id, attempt, total, error, delayMs),
       },
@@ -79,6 +82,16 @@ export async function runJudgeForChunk(
     pipelineLog.auditEnd(chunk.id, judgeRef, Date.now() - auditStartedAt, judgeTokenUsage);
     return 'completed';
   } catch (error: unknown) {
+    if (isStreamCancelledError(error)) {
+      actions.updateChunkJudge(chunk.id, {
+        content: textToAudit,
+        status: 'idle',
+        rating: qualityDefault(),
+        issues: [],
+      });
+      actions.updateChunkStatus(chunk.id, 'ready');
+      return 'cancelled';
+    }
     const msg = friendlyError(error instanceof Error ? error.message : String(error));
     actions.updateChunkJudge(chunk.id, {
       content: textToAudit,

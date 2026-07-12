@@ -105,6 +105,13 @@ pub trait LlmProvider: Send + Sync {
     /// Update usage counters from a single streaming event. Mutates `state` in place.
     fn update_streaming_usage(&self, data: &str, state: &mut UsageAccumulator);
 
+    /// Report a provider-declared terminal stream error, such as an output
+    /// truncated by the provider's token limit. Returning it here prevents a
+    /// partial response from being presented as a completed translation.
+    fn streaming_completion_error(&self, _data: &str) -> Option<String> {
+        None
+    }
+
     /// Non-streaming call. Returns content + optional token usage.
     async fn call(&self, client: &Client, req: &LlmRequest<'_>) -> Result<LlmResponse, String>;
 

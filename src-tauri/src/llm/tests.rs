@@ -94,6 +94,14 @@ impl LlmProvider for DelegatingTestProvider {
         self.inner.update_streaming_usage(data, state)
     }
 
+    fn streaming_completion_error(&self, data: &str) -> Option<String> {
+        self.inner.streaming_completion_error(data)
+    }
+
+    fn finalize_buffer(&self, buffer: &str) -> Option<String> {
+        self.inner.finalize_buffer(buffer)
+    }
+
     async fn call(&self, client: &Client, req: &LlmRequest<'_>) -> Result<LlmResponse, String> {
         self.inner.call(client, req).await
     }
@@ -304,6 +312,13 @@ fn stage_prompt_with_blob_context() {
     assert!(prompt.user.contains("Current chunk id: chunk-1"));
     assert!(system.contains("Reference document block"));
     assert!(system.contains("<chunk id=\"chunk-1\">"));
+    assert_eq!(prompt.system.len(), 3);
+    assert!(prompt.system[0].cacheable);
+    assert!(prompt.system[1].cacheable);
+    assert!(!prompt.system[2].cacheable);
+    assert!(prompt.system[0].text.contains("English to Italian"));
+    assert!(prompt.system[1].text.contains("Reference document block"));
+    assert!(prompt.system[2].text.contains("Core Instructions"));
 }
 
 #[test]
@@ -445,18 +460,18 @@ fn judge_prompt_includes_glossary_json() {
 }
 
 #[test]
-fn parses_semantic_judge_rating() {
-    let parsed = parse_judge_rating(&serde_json::json!({"rating": "sufficiente"}));
-    assert_eq!(parsed, "fair");
+fn parses_valid_judge_rating() {
+    let parsed = parse_judge_rating(&serde_json::json!({"rating": "fair"}));
+    assert_eq!(parsed.as_deref(), Ok("fair"));
 
-    let parsed = parse_judge_rating(&serde_json::json!({"rating": "ottimo"}));
-    assert_eq!(parsed, "excellent");
+    let parsed = parse_judge_rating(&serde_json::json!({"rating": "excellent"}));
+    assert_eq!(parsed.as_deref(), Ok("excellent"));
 }
 
 #[test]
-fn defaults_unknown_judge_rating_to_fair() {
+fn rejects_unknown_judge_rating() {
     let parsed = parse_judge_rating(&serde_json::json!({"rating": "ambiguous"}));
-    assert_eq!(parsed, "fair");
+    assert!(parsed.is_err());
 }
 
 #[test]
@@ -1110,7 +1125,7 @@ async fn call_openai_compatible_returns_content_on_success() {
     let prov = crate::llm::providers::openai::OpenAiCompatibleProvider::new_with_base_url(
         "openai",
         "OpenAI",
-        &format!("{}", server.uri()),
+        &server.uri().to_string(),
         "OPENAI_API_KEY",
         "gpt-4.1-mini",
         false,
@@ -1149,7 +1164,7 @@ async fn call_openai_compatible_maps_unauthorized_to_friendly_error() {
     let prov = crate::llm::providers::openai::OpenAiCompatibleProvider::new_with_base_url(
         "openai",
         "OpenAI",
-        &format!("{}", server.uri()),
+        &server.uri().to_string(),
         "OPENAI_API_KEY",
         "gpt-4.1-mini",
         false,
@@ -1189,7 +1204,7 @@ async fn call_openai_compatible_maps_rate_limit_to_friendly_error() {
     let prov = crate::llm::providers::openai::OpenAiCompatibleProvider::new_with_base_url(
         "openai",
         "OpenAI",
-        &format!("{}", server.uri()),
+        &server.uri().to_string(),
         "OPENAI_API_KEY",
         "gpt-4.1-mini",
         false,
@@ -1262,6 +1277,38 @@ async fn consume_stream_openai_sse_multi_token() {
         .collect();
     assert_eq!(content, vec!["Ciao", " mondo"]);
     assert!(tokens.last().unwrap().done);
+}
+
+#[tokio::test]
+async fn consume_stream_rejects_unterminated_ollama_truncation() {
+    let cancel = Arc::new(CancelToken::new());
+    let provider = DelegatingTestProvider::with_timeouts(
+        "ollama",
+        StreamTimeouts {
+            header: Duration::from_millis(100),
+            idle: Duration::from_millis(500),
+            total: Duration::from_millis(5000),
+        },
+    );
+    let mut source = MockChunkSource::new(vec![
+        MockChunk::Immediate(Ok(Some(Bytes::from_static(
+            br#"{"message":{"content":"ciao"},"done":true,"done_reason":"length"}"#,
+        )))),
+        MockChunk::Immediate(Ok(None)),
+    ]);
+
+    let result = consume_stream(
+        &provider,
+        "stream-ollama",
+        &cancel,
+        &mut source,
+        |_| {},
+        "test-model",
+        || {},
+    )
+    .await;
+
+    assert!(result.unwrap_err().contains("truncated"));
 }
 
 #[tokio::test]
@@ -1339,7 +1386,7 @@ async fn consume_stream_halts_immediately_when_pre_cancelled() {
 fn judge_response_parsed_from_raw_llm_output() {
     let raw = r#"```json
 {
-  "rating": "ottimo",
+  "rating": "excellent",
   "issues": [
     {
       "type": "fluency",
@@ -1354,7 +1401,7 @@ fn judge_response_parsed_from_raw_llm_output() {
     let sanitized = sanitize_llm_json_output(raw);
     let parsed: serde_json::Value =
         serde_json::from_str(sanitized).expect("should parse after sanitization");
-    let rating = parse_judge_rating(&parsed);
+    let rating = parse_judge_rating(&parsed).expect("valid rating");
     let issues: Vec<JudgeIssue> = parsed["issues"]
         .as_array()
         .into_iter()

@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use reqwest::Client;
 use serde_json::{json, Value};
 
-use super::format_api_error;
+use super::{format_api_error, with_retry_after};
 use crate::llm::provider::{
     LlmProvider, LlmRequest, LlmResponse, StreamFormat, TokenUsage, UsageAccumulator,
 };
@@ -36,6 +36,26 @@ fn build_anthropic_system(req: &LlmRequest<'_>, force_json: bool) -> Value {
     }
 
     Value::Array(blocks)
+}
+
+fn max_output_tokens(req: &LlmRequest<'_>) -> usize {
+    const MIN_OUTPUT_TOKENS: usize = 2_048;
+    const MAX_OUTPUT_TOKENS: usize = 8_192;
+    const OUTPUT_OVERHEAD_TOKENS: usize = 1_024;
+
+    let source_estimate = req.structured.user.chars().count().div_ceil(3);
+    (source_estimate + OUTPUT_OVERHEAD_TOKENS).clamp(MIN_OUTPUT_TOKENS, MAX_OUTPUT_TOKENS)
+}
+
+fn stop_reason_error(reason: Option<&str>) -> Option<String> {
+    match reason {
+        Some("end_turn" | "stop_sequence") => None,
+        Some("max_tokens") => {
+            Some("Anthropic response was truncated at the output token limit".to_string())
+        }
+        Some(reason) => Some(format!("Anthropic response ended unexpectedly: {reason}")),
+        None => Some("Anthropic response is missing a stop reason".to_string()),
+    }
 }
 
 pub struct AnthropicProvider;
@@ -105,11 +125,19 @@ impl LlmProvider for AnthropicProvider {
         }
     }
 
+    fn streaming_completion_error(&self, data: &str) -> Option<String> {
+        let json: Value = serde_json::from_str(data).ok()?;
+        if json["type"].as_str() != Some("message_delta") {
+            return None;
+        }
+        stop_reason_error(json["delta"]["stop_reason"].as_str())
+    }
+
     async fn call(&self, client: &Client, req: &LlmRequest<'_>) -> Result<LlmResponse, String> {
         let system = build_anthropic_system(req, req.json_mode);
         let body = json!({
             "model": req.model,
-            "max_tokens": 4096,
+            "max_tokens": max_output_tokens(req),
             "system": system,
             "messages": [{"role": "user", "content": req.structured.user}]
         });
@@ -126,21 +154,37 @@ impl LlmProvider for AnthropicProvider {
             .map_err(|e| format!("Anthropic request failed: {e}"))?;
 
         let status = resp.status();
+        let response_headers = resp.headers().clone();
         let text = resp
             .text()
             .await
             .map_err(|e| format!("Failed to read response: {e}"))?;
 
         if !status.is_success() {
-            return Err(format_api_error("Anthropic", status, &text));
+            return Err(with_retry_after(
+                format_api_error("Anthropic", status, &text),
+                &response_headers,
+            ));
         }
 
         let json: Value = serde_json::from_str(&text)
             .map_err(|e| format!("Failed to parse Anthropic response: {e}"))?;
 
-        let content = json["content"][0]["text"]
-            .as_str()
-            .map(String::from)
+        if let Some(error) = stop_reason_error(json["stop_reason"].as_str()) {
+            return Err(error);
+        }
+
+        let content = json["content"]
+            .as_array()
+            .map(|blocks| {
+                blocks
+                    .iter()
+                    .filter(|block| block["type"].as_str() == Some("text"))
+                    .filter_map(|block| block["text"].as_str())
+                    .collect::<Vec<_>>()
+                    .join("")
+            })
+            .filter(|content| !content.is_empty())
             .ok_or_else(|| "No text in Anthropic response".to_string())?;
 
         let usage = match (
@@ -171,7 +215,7 @@ impl LlmProvider for AnthropicProvider {
         let system = build_anthropic_system(req, false);
         let body = json!({
             "model": req.model,
-            "max_tokens": 4096,
+            "max_tokens": max_output_tokens(req),
             "system": system,
             "messages": [{"role": "user", "content": req.structured.user}],
             "stream": true
@@ -187,5 +231,43 @@ impl LlmProvider for AnthropicProvider {
             .send()
             .await
             .map_err(|e| format!("Anthropic request failed: {e}"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{max_output_tokens, stop_reason_error};
+    use crate::llm::provider::LlmRequest;
+    use crate::llm::types::{PromptBlock, StructuredPrompt};
+
+    fn request(user: String) -> LlmRequest<'static> {
+        let structured = Box::leak(Box::new(StructuredPrompt {
+            system: vec![PromptBlock {
+                text: "system".to_string(),
+                cacheable: false,
+            }],
+            user,
+        }));
+        LlmRequest {
+            model: "claude-test",
+            structured,
+            api_key: "key",
+            json_mode: false,
+            json_schema_strict: false,
+            provider_options: None,
+        }
+    }
+
+    #[test]
+    fn output_budget_scales_with_request_size_with_safe_bounds() {
+        assert_eq!(max_output_tokens(&request("short".to_string())), 2_048);
+        assert!(max_output_tokens(&request("x".repeat(12_000))) > 4_096);
+        assert_eq!(max_output_tokens(&request("x".repeat(100_000))), 8_192);
+    }
+
+    #[test]
+    fn max_tokens_stop_reason_is_reported_as_truncation() {
+        assert!(stop_reason_error(Some("max_tokens")).is_some());
+        assert_eq!(stop_reason_error(Some("end_turn")), None);
     }
 }

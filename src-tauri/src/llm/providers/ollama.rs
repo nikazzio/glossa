@@ -179,6 +179,14 @@ impl LlmProvider for OllamaProvider {
         }
     }
 
+    fn streaming_completion_error(&self, data: &str) -> Option<String> {
+        let json: Value = serde_json::from_str(data).ok()?;
+        if json["done_reason"].as_str() == Some("length") {
+            return Some("Ollama response was truncated at the output token limit".to_string());
+        }
+        None
+    }
+
     fn format_http_error(&self, status: reqwest::StatusCode, body: &str) -> String {
         format_ollama_api_error(status, body)
     }
@@ -237,6 +245,10 @@ impl LlmProvider for OllamaProvider {
 
         let json: Value = serde_json::from_str(&text)
             .map_err(|e| format!("Failed to parse Ollama response: {e}"))?;
+
+        if json["done_reason"].as_str() == Some("length") {
+            return Err("Ollama response was truncated at the output token limit".to_string());
+        }
 
         let content = json["message"]["content"]
             .as_str()

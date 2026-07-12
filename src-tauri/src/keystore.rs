@@ -259,10 +259,10 @@ pub fn get_api_key(app: &AppHandle, provider: &str) -> Result<String, String> {
     }
 
     // 3. Fallback to environment variable (custom: providers never have env vars)
-    if provider.starts_with("custom:") {
+    if let Some(provider_name) = provider.strip_prefix("custom:") {
         return Err(format!(
             "API key for custom endpoint '{}' is not configured. Add it in Settings.",
-            &provider["custom:".len()..]
+            provider_name
         ));
     }
     let env_key = match provider {

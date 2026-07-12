@@ -8,7 +8,7 @@ use std::hash::{Hash, Hasher};
 use std::sync::{LazyLock, Mutex};
 use std::time::{Duration, Instant};
 
-use super::format_api_error;
+use super::{format_api_error, with_retry_after};
 use crate::llm::provider::{
     LlmProvider, LlmRequest, LlmResponse, StreamFormat, TokenUsage, UsageAccumulator,
 };
@@ -93,6 +93,14 @@ impl LlmProvider for GeminiProvider {
         }
     }
 
+    fn streaming_completion_error(&self, data: &str) -> Option<String> {
+        let json: Value = serde_json::from_str(data).ok()?;
+        if json["candidates"][0]["finishReason"].as_str() == Some("MAX_TOKENS") {
+            return Some("Gemini response was truncated at the output token limit".to_string());
+        }
+        None
+    }
+
     async fn call(&self, client: &Client, req: &LlmRequest<'_>) -> Result<LlmResponse, String> {
         let url = format!(
             "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent?key={}",
@@ -126,6 +134,7 @@ impl LlmProvider for GeminiProvider {
             .map_err(|e| format!("Gemini request failed: {e}"))?;
 
         let status = resp.status();
+        let response_headers = resp.headers().clone();
         let text = resp
             .text()
             .await
@@ -137,11 +146,18 @@ impl LlmProvider for GeminiProvider {
             {
                 invalidate_gemini_cache(req);
             }
-            return Err(format_api_error("Gemini", status, &text));
+            return Err(with_retry_after(
+                format_api_error("Gemini", status, &text),
+                &response_headers,
+            ));
         }
 
         let json: Value = serde_json::from_str(&text)
             .map_err(|e| format!("Failed to parse Gemini response: {e}"))?;
+
+        if json["candidates"][0]["finishReason"].as_str() == Some("MAX_TOKENS") {
+            return Err("Gemini response was truncated at the output token limit".to_string());
+        }
 
         let content = json["candidates"][0]["content"]["parts"][0]["text"]
             .as_str()

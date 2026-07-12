@@ -4,6 +4,7 @@ pub mod ollama;
 pub mod openai;
 
 use crate::llm::provider::LlmProvider;
+use reqwest::header::HeaderMap;
 
 pub fn get_provider(
     id: &str,
@@ -50,6 +51,27 @@ pub(crate) fn format_api_error(
         _ => "unexpected response",
     };
     format!("{provider_label} API error ({status}): {user_message}")
+}
+
+/// Preserve a provider-supplied retry delay without exposing response bodies.
+/// The frontend consumes this compact marker to schedule the next attempt.
+pub(crate) fn with_retry_after(error: String, headers: &HeaderMap) -> String {
+    let Some(value) = headers.get(reqwest::header::RETRY_AFTER) else {
+        return error;
+    };
+    let Ok(value) = value.to_str() else {
+        return error;
+    };
+    let Ok(seconds) = value.parse::<f64>() else {
+        return error;
+    };
+    if !seconds.is_finite() || seconds < 0.0 {
+        return error;
+    }
+    format!(
+        "{error}; retry-after-ms={}",
+        (seconds * 1000.0).ceil() as u64
+    )
 }
 
 /// Log the raw provider response body. Compiles to a no-op in release

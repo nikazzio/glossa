@@ -338,6 +338,7 @@ export function usePipeline() {
           },
           {
             label: `Stage "${stage.name}"`,
+            shouldCancel: () => useChunksStore.getState().cancelRequested,
             onRetry: (attempt, total, error, delayMs) => {
               if (is429Error(error)) {
                 updateChunkStage(chunk.id, stage.id, { content: '', status: 'retrying', retryInfo: { attempt, total, delayMs } });
@@ -347,6 +348,15 @@ export function usePipeline() {
           },
         );
         const rawResult = stageResult.content;
+        if (!isFormatStage && !rawResult.trim()) {
+          throw new Error('Stage returned empty output');
+        }
+        if (useChunksStore.getState().cancelRequested) {
+          updateChunkStage(chunk.id, stage.id, { content: '', status: 'idle' });
+          updateChunkStatus(chunk.id, 'ready');
+          pipelineLog.stageCancelled(chunk.id, stage.id, stage.name, Date.now() - stageStartedAt);
+          return 'cancelled';
+        }
         const result = isFormatStage && !rawResult.trim() ? stageText : rawResult;
         if (isFormatStage && !rawResult.trim() && stageText.trim()) {
           pipelineLog.stageNote(chunk.id, stage.id, 'warn', 'Format stage returned empty output; using previous stage output');
@@ -389,13 +399,17 @@ export function usePipeline() {
     }
 
     if (!producedOutput) {
-      updateChunkStatus(chunk.id, 'ready');
-      return 'skipped';
+      updateChunkStatus(chunk.id, 'error');
+      return 'failed';
     }
 
     updateChunkDraft(chunk.id, lastResult);
 
     if (lastResult) {
+      if (useChunksStore.getState().cancelRequested) {
+        updateChunkStatus(chunk.id, 'ready');
+        return 'cancelled';
+      }
       const auditOutcome = await runJudgeForChunk(chunk, lastResult, judgeActions, lastEffectiveConfig);
       if (auditOutcome === 'failed') return 'failed';
       if (auditOutcome === 'cancelled') return 'cancelled';

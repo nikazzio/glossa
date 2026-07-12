@@ -51,7 +51,9 @@ function serializeWrite<T>(fn: () => Promise<T>): Promise<T> {
 // Any call with values outside this set is rejected to prevent SQL injection.
 // Columns baked into the initial CREATE TABLE statements don't need an entry here —
 // add one only when a future schema change adds a column via ensureColumn().
-const ALLOWED_MIGRATIONS = new Set<string>([]);
+const ALLOWED_MIGRATIONS = new Set<string>([
+  'phrase_memory.embedding_model',
+]);
 
 const VALID_COLUMN_DEFINITION = /^(INTEGER|TEXT|REAL|BLOB|NUMERIC)(\s+NOT\s+NULL)?(\s+DEFAULT\s+('[^']*'|NULL|-?\d+(\.\d+)?))?$/i;
 
@@ -403,9 +405,12 @@ export async function initDatabase(): Promise<void> {
       chunk_id TEXT,
       project_id TEXT REFERENCES projects(id),
       embedding BLOB NOT NULL,
+      embedding_model TEXT,
       created_at TEXT NOT NULL
     )
   `);
+
+  await ensureColumn('phrase_memory', 'embedding_model', 'TEXT');
 
   await conn.execute(`
     CREATE TABLE IF NOT EXISTS source_phrase_embeddings (
@@ -416,6 +421,21 @@ export async function initDatabase(): Promise<void> {
       embedding BLOB NOT NULL,
       created_at TEXT NOT NULL
     )
+  `);
+
+  await conn.execute(`
+    CREATE INDEX IF NOT EXISTS idx_phrase_memory_workspace_id
+    ON phrase_memory(workspace_id)
+  `);
+
+  await conn.execute(`
+    CREATE INDEX IF NOT EXISTS idx_phrase_memory_chunk_project
+    ON phrase_memory(chunk_id, project_id)
+  `);
+
+  await conn.execute(`
+    CREATE INDEX IF NOT EXISTS idx_source_phrase_embeddings_chunk_project
+    ON source_phrase_embeddings(chunk_id, project_id)
   `);
 
   await conn.execute(`

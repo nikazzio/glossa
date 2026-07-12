@@ -72,6 +72,9 @@ const dbState = vi.hoisted(() => {
     setWorkspaceCount: (value: number) => {
       workspaceCount = value;
     },
+    setColumns: (table: string, columns: string[]) => {
+      columnsByTable.set(table, columns);
+    },
     db: { execute, select },
     load: vi.fn(async () => ({ execute, select })),
   };
@@ -205,6 +208,7 @@ describe('initDatabase migrations', () => {
     dbState.columnsByTable.set('translations', ['id', 'project_id', 'original_text', 'final_translation', 'stage_results', 'judge_issues', 'created_at']);
     dbState.columnsByTable.set('prompt_templates', []);
     dbState.columnsByTable.set('operation_logs', []);
+    dbState.setColumns('phrase_memory', []);
   });
 
   it('backs up and resets a beta database with an old schema version', async () => {
@@ -278,7 +282,7 @@ describe('initDatabase migrations', () => {
     );
   });
 
-  it('creates phrase memory schema tables and workspace_id column', async () => {
+  it('creates and migrates the complete phrase memory schema at startup', async () => {
     const { initDatabase } = await import('./dbService');
 
     await initDatabase();
@@ -303,6 +307,21 @@ describe('initDatabase migrations', () => {
     expect(dbState.db.execute).toHaveBeenCalledWith(
       expect.stringContaining('confidence REAL NOT NULL DEFAULT 1.0'),
     );
+    expect(dbState.db.execute).toHaveBeenCalledWith(
+      expect.stringContaining('embedding_model TEXT'),
+    );
+    expect(dbState.db.execute).toHaveBeenCalledWith(
+      expect.stringContaining('ALTER TABLE phrase_memory ADD COLUMN embedding_model TEXT'),
+    );
+    for (const index of [
+      'idx_phrase_memory_workspace_id',
+      'idx_phrase_memory_chunk_project',
+      'idx_source_phrase_embeddings_chunk_project',
+    ]) {
+      expect(dbState.db.execute).toHaveBeenCalledWith(
+        expect.stringContaining(`CREATE INDEX IF NOT EXISTS ${index}`),
+      );
+    }
   });
 
   it('inserts active_workspace_id key into app_settings on fresh database', async () => {
