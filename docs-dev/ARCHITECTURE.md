@@ -329,6 +329,7 @@ No fallback locale: se extractor, JSON parsing o validazione falliscono, chunk n
 - Auto-search parte solo se `usePhraseMemory` attivo e `autoSearchPhraseMemory !== false`.
 - Tab Memory può sempre lanciare refresh manuale per chunk corrente quando memoria abilitata.
 - Query embedding usa solo testo sorgente del chunk; match selezionati sono unici iniettati nel prompt di run/rerun.
+- Lo schema della memoria frasi (colonne e indici inclusi) viene creato o aggiornato una volta all'avvio dal servizio database frontend. Il backend mantiene una sola connessione SQLite con sqlite-vec per tutta la sessione e la riusa serialmente per ricerca e salvataggio; non modifica più lo schema durante questi comandi.
 
 ---
 
@@ -400,10 +401,12 @@ app_settings
 phrase_memory
   id, workspace_id FK, source_phrase, target_phrase
   source_language, target_language, author, work, domain, tags, notes
-  chunk_id, project_id, confidence, embedding, created_at
+  chunk_id, project_id, confidence, embedding, embedding_model, created_at
+  idx: workspace_id; (chunk_id, project_id)
 
 source_phrase_embeddings
   id, project_id, chunk_id, source_phrase, embedding, created_at
+  idx: (chunk_id, project_id)
 
 custom_providers
   id TEXT PK, name TEXT, base_url TEXT, requires_api_key INTEGER (0|1)
@@ -467,4 +470,4 @@ In release (`!debug_assertions`) livello log predefinito è `Info`. `RUST_LOG` l
 
 **Implicazione**: impostare `RUST_LOG=debug` o `RUST_LOG=trace` su build release espone log verbosi, inclusi dettagli richieste LLM (provider, modello, timing). Non loggati contenuti prompt o risposte, ma provider e metadati sì. In contesto supporto tecnico, chiedere sempre verificare che `RUST_LOG` non sia impostato prima condividere log.
 
-*Ultimo aggiornamento: 2026-06-11 — branch security/issue-254-hardening*
+*Ultimo aggiornamento: 2026-07-13 — PR #329, connessione persistente memoria frasi*
