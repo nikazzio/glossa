@@ -226,7 +226,7 @@ describe('initDatabase migrations', () => {
     await initDatabase();
 
     expect(invoke).toHaveBeenCalledWith('backup_database_file', {
-      reason: 'schema-1-to-db-schema-v2',
+      reason: 'schema-1-to-db-schema-v3',
     });
     expect(dbState.db.execute).toHaveBeenCalledWith('PRAGMA wal_checkpoint(FULL)');
     expect(dbState.db.execute).toHaveBeenCalledWith('DROP TABLE IF EXISTS projects');
@@ -238,13 +238,27 @@ describe('initDatabase migrations', () => {
 
   it('does not reset a database with the current beta schema version', async () => {
     dbState.setExistingObjects(['app_settings', 'projects', 'workspaces']);
-    dbState.setSchemaVersion('db-schema-v2');
+    dbState.setSchemaVersion('db-schema-v3');
     const { initDatabase } = await import('./dbService');
 
     await initDatabase();
 
     expect(invoke).not.toHaveBeenCalledWith('backup_database_file', expect.anything());
     expect(dbState.db.execute).not.toHaveBeenCalledWith('DROP TABLE IF EXISTS projects');
+  });
+
+  it('resets the previous schema after removing legacy translation columns', async () => {
+    dbState.setExistingObjects(['app_settings', 'projects', 'translations']);
+    dbState.setSchemaVersion('db-schema-v2');
+    vi.mocked(invoke).mockResolvedValueOnce('/tmp/glossa.db-schema-v2.bak');
+    const { initDatabase } = await import('./dbService');
+
+    await initDatabase();
+
+    expect(invoke).toHaveBeenCalledWith('backup_database_file', {
+      reason: 'schema-db-schema-v2-to-db-schema-v3',
+    });
+    expect(dbState.db.execute).toHaveBeenCalledWith('DROP TABLE IF EXISTS translations');
   });
 
   it('bakes translation columns directly into the CREATE TABLE statement', async () => {

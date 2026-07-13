@@ -8,7 +8,7 @@ import {
 
 let db: Database | null = null;
 const DB_URL = 'sqlite:glossa.db';
-const CURRENT_SCHEMA_VERSION = 'db-schema-v2';
+const CURRENT_SCHEMA_VERSION = 'db-schema-v3';
 
 // These tables were introduced before their corresponding product features
 // existed. Keep the list explicit so an older beta DB is cleaned up on boot,
