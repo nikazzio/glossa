@@ -1,12 +1,19 @@
-import { AlertTriangle, FileText, RotateCcw, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, FileText, Languages, Network, RotateCcw, ShieldCheck, Wand2, type LucideIcon } from 'lucide-react';
 import type { Dispatch, SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { OllamaStatus, PipelineConfig, PipelineStageConfig, PromptTemplate } from '../../types';
+import type { OllamaStatus, PipelineConfig, PipelineStageConfig, PromptTemplate, StageRole } from '../../types';
 import type { ProviderKeyStatusMap } from '../../hooks/useProviderKeyStatus';
 import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
 import { calculateBlobBudget, getSelectableModelIds } from '../../models/catalog';
-import { IconButton, ToggleRow } from '../ui';
+import { IconButton, SectionLabel, ToggleRow } from '../ui';
 import { StageCard } from './StageCard';
+
+const STAGE_ROLE_ICON: Record<StageRole, LucideIcon> = {
+  translation: Languages,
+  refine: Wand2,
+  format: FileText,
+  'deepl-translation': Network,
+};
 
 interface TranslationTabPanelProps {
   config: PipelineConfig;
@@ -50,69 +57,75 @@ export function TranslationTabPanel({
   const auto = calculateBlobBudget(config.stages);
 
   const blobContextCard = (
-    <div className="space-y-3 border-l-4 border-l-editorial-charcoal/30 border-y border-editorial-border/70 bg-editorial-bg/65 px-5 py-4">
-      <ToggleRow
-        icon={<FileText size={13} />}
-        label={t('pipeline.blobContext')}
-        checked={isOverride}
-        disabled={translationsExist}
-        onChange={() => setConfig((prev) => ({
-          ...prev,
-          blobBudgetTokens: isOverride ? 0 : auto.budget,
-        }))}
-      />
-      {!isOverride && (
-        <span className="block pl-4 text-xs text-editorial-muted/70">
-          {t('pipeline.blobContextAutoDesc', { tokens: auto.budget.toLocaleString(), model: auto.modelId || 'ollama' })}
-        </span>
-      )}
+    <div className="space-y-3">
+      <SectionLabel icon={FileText} label={t('pipeline.blobContext')} />
+      <div className="space-y-3 border-l-4 border-l-editorial-charcoal/30 border-y border-editorial-border/70 bg-editorial-bg/65 px-5 py-4">
+        <p className="text-xs leading-relaxed text-editorial-muted/80">
+          {t('pipeline.blobContextExplainer')}
+        </p>
+        <ToggleRow
+          icon={<FileText size={13} />}
+          label={t('pipeline.blobOverrideToggle')}
+          checked={isOverride}
+          disabled={translationsExist}
+          onChange={() => setConfig((prev) => ({
+            ...prev,
+            blobBudgetTokens: isOverride ? 0 : auto.budget,
+          }))}
+        />
+        {!isOverride && (
+          <span className="block pl-4 text-xs text-editorial-muted/70">
+            {t('pipeline.blobContextAutoDesc', { tokens: auto.budget.toLocaleString(), model: auto.modelId || 'ollama' })}
+          </span>
+        )}
 
-      {isOverride && (
-        <div className="space-y-3 pt-1">
-          <div className="flex flex-wrap gap-4 items-center">
-            <div className="flex items-center gap-2">
-              <label className="text-[11px] font-sans font-bold uppercase tracking-[0.14em] text-editorial-muted">
-                {t('pipeline.blobBudgetTokens')}
-              </label>
-              <input
-                type="number"
-                min={1}
-                value={config.blobBudgetTokens ?? auto.budget}
-                onChange={(e) => setConfig((prev) => ({
-                  ...prev,
-                  blobBudgetTokens: Math.max(1, Number(e.target.value) || 1),
-                }))}
-                className="w-24 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                aria-label={t('pipeline.blobBudgetTokens')}
-              />
+        {isOverride && (
+          <div className="space-y-3 pt-1">
+            <div className="flex flex-wrap gap-4 items-center">
+              <div className="flex items-center gap-2">
+                <label className="text-[11px] font-sans font-bold uppercase tracking-[0.14em] text-editorial-muted">
+                  {t('pipeline.blobBudgetTokens')}
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  value={config.blobBudgetTokens ?? auto.budget}
+                  onChange={(e) => setConfig((prev) => ({
+                    ...prev,
+                    blobBudgetTokens: Math.max(1, Number(e.target.value) || 1),
+                  }))}
+                  className="w-24 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  aria-label={t('pipeline.blobBudgetTokens')}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-[11px] font-sans font-bold uppercase tracking-[0.14em] text-editorial-muted">
+                  {t('pipeline.blobOverlap')}
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  value={config.blobOverlap ?? 1}
+                  onChange={(e) => setConfig((prev) => ({
+                    ...prev,
+                    blobOverlap: Math.max(0, Number(e.target.value) || 0),
+                  }))}
+                  className="w-16 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  aria-label={t('pipeline.blobOverlap')}
+                />
+              </div>
+              <IconButton
+                onClick={() => setConfig((prev) => ({ ...prev, blobBudgetTokens: 0 }))}
+                title={t('pipeline.blobContextReset')}
+                size="sm"
+              >
+                <RotateCcw size={12} />
+              </IconButton>
             </div>
-            <div className="flex items-center gap-2">
-              <label className="text-[11px] font-sans font-bold uppercase tracking-[0.14em] text-editorial-muted">
-                {t('pipeline.blobOverlap')}
-              </label>
-              <input
-                type="number"
-                min={0}
-                value={config.blobOverlap ?? 1}
-                onChange={(e) => setConfig((prev) => ({
-                  ...prev,
-                  blobOverlap: Math.max(0, Number(e.target.value) || 0),
-                }))}
-                className="w-16 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                aria-label={t('pipeline.blobOverlap')}
-              />
-            </div>
-            <IconButton
-              onClick={() => setConfig((prev) => ({ ...prev, blobBudgetTokens: 0 }))}
-              title={t('pipeline.blobContextReset')}
-              size="sm"
-            >
-              <RotateCcw size={12} />
-            </IconButton>
+            <p className="text-[11px] text-editorial-muted/70">{t('pipeline.blobOverlapHint')}</p>
           </div>
-          <p className="text-[11px] text-editorial-muted/70">{t('pipeline.blobOverlapHint')}</p>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 
@@ -148,9 +161,10 @@ export function TranslationTabPanel({
         return (
           <div key={stage.id} className="space-y-3">
             <div className="flex items-center gap-2">
-              <span className="text-[11px] font-sans uppercase tracking-[0.14em] text-editorial-ink font-bold">
-                {t(`pipeline.stageRole.${stage.role ?? 'translation'}`)}
-              </span>
+              <SectionLabel
+                icon={STAGE_ROLE_ICON[stage.role ?? 'translation']}
+                label={t(`pipeline.stageRole.${stage.role ?? 'translation'}`)}
+              />
               <span className="h-px flex-1 bg-editorial-border/60" aria-hidden="true" />
             </div>
             <StageCard

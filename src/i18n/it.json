@@ -90,6 +90,8 @@
       "format": "Applica correzioni di formattazione senza vedere il testo sorgente (stage cieco). Non può ritradurre."
     },
     "blobContext": "Memoria di contesto",
+    "blobContextExplainer": "Quando il testo viene diviso in più blocchi da tradurre, questa opzione decide quanto del blocco precedente il modello vede, per non perdere il filo tra un blocco e l'altro.",
+    "blobOverrideToggle": "Override manuale",
     "blobContextAutoDesc": "Automatica — ~{{tokens}} token basati su {{model}}",
     "blobBudgetTokens": "Budget token",
     "blobContextReset": "Ripristina automatica",

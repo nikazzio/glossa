@@ -90,6 +90,8 @@
       "format": "Applies formatting corrections without seeing the source text (blind stage). Cannot retranslate."
     },
     "blobContext": "Context memory",
+    "blobContextExplainer": "When the text is split into multiple translation blocks, this option decides how much of the previous block the model sees, so it doesn't lose the thread between one block and the next.",
+    "blobOverrideToggle": "Manual override",
     "blobContextAutoDesc": "Automatic — ~{{tokens}} tokens based on {{model}}",
     "blobBudgetTokens": "Token budget",
     "blobContextReset": "Restore automatic",
