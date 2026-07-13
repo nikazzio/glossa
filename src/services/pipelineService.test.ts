@@ -376,6 +376,33 @@ describe('pipelineService', () => {
       expect(restored[0]?.judgeResult.content).toBe('Old translation');
     });
 
+    it('normalizes null canonical text fields to empty strings', () => {
+      const restored = restoreTranslations([
+        {
+          id: 'chunk-1',
+          project_id: 'proj-1',
+          source_display_text: null,
+          source_processing_text: null,
+          translation_display_text: null,
+          translation_processing_text: null,
+          chunk_status: 'ready',
+          stage_results: '{}',
+          judge_status: 'idle',
+          judge_rating: 'fair',
+          judge_issues: '[]',
+          created_at: '2026-04-29T00:00:00Z',
+        },
+      ]);
+
+      expect(restored[0]).toMatchObject({
+        sourceDisplayText: '',
+        sourceProcessingText: '',
+        translationDisplayText: '',
+        translationProcessingText: '',
+        judgeResult: expect.objectContaining({ content: '' }),
+      });
+    });
+
     it('maps source_display_text and translation_display_text to chunk fields', () => {
       const restored = restoreTranslations([
         {

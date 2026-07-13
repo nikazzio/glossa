@@ -502,7 +502,11 @@ export function restoreTranslations(rows: SavedTranslation[]): TranslationChunk[
     const stageResults = parseJson<Record<string, PipelineResult>>(row.stage_results, {});
     const coherenceResult = parseJson<CoherenceResult>(row.coherence_result);
     const footnotes = row.footnotes ? parseJson<Footnote[]>(row.footnotes, []) : undefined;
-    const judgeResult = restoreJudgeResult(row);
+    const sourceDisplayText = row.source_display_text ?? '';
+    const sourceProcessingText = row.source_processing_text ?? '';
+    const translationDisplayText = row.translation_display_text ?? '';
+    const translationProcessingText = row.translation_processing_text ?? '';
+    const judgeResult = restoreJudgeResult(row, translationDisplayText);
     const blobReferenceChunkIds = (() => {
       if (!row.blob_reference_chunk_ids) return undefined;
       const parsed = parseJson<unknown>(row.blob_reference_chunk_ids);
@@ -511,10 +515,10 @@ export function restoreTranslations(rows: SavedTranslation[]): TranslationChunk[
 
     return {
       id: row.id,
-      sourceDisplayText: row.source_display_text,
-      sourceProcessingText: row.source_processing_text,
-      translationDisplayText: row.translation_display_text,
-      translationProcessingText: row.translation_processing_text,
+      sourceDisplayText,
+      sourceProcessingText,
+      translationDisplayText,
+      translationProcessingText,
       status: (row.chunk_status || (judgeResult.status === 'completed' ? 'completed' : 'ready')) as TranslationChunk['status'],
       stageResults,
       judgeResult,
@@ -530,9 +534,9 @@ export function restoreTranslations(rows: SavedTranslation[]): TranslationChunk[
   });
 }
 
-function restoreJudgeResult(row: SavedTranslation): JudgeResult {
+function restoreJudgeResult(row: SavedTranslation, content: string): JudgeResult {
   return {
-    content: row.translation_display_text,
+    content,
     status: (row.judge_status || 'idle') as JudgeResult['status'],
     rating: normalizeQualityRating(row.judge_rating),
     issues: parseJson<JudgeResult['issues']>(row.judge_issues, []),

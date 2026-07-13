@@ -38,10 +38,10 @@ export interface SavedTranslation {
   id: string;
   project_id?: string | null;
   pipeline_id?: string | null;
-  source_display_text: string;
-  source_processing_text: string;
-  translation_display_text: string;
-  translation_processing_text: string;
+  source_display_text: string | null;
+  source_processing_text: string | null;
+  translation_display_text: string | null;
+  translation_processing_text: string | null;
   position?: number | null;
   chunk_status: string;
   stage_results: string;
