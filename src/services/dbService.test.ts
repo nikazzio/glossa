@@ -247,6 +247,33 @@ describe('initDatabase migrations', () => {
     expect(dbState.db.execute).not.toHaveBeenCalledWith('DROP TABLE IF EXISTS projects');
   });
 
+  it('isDatabaseSchemaOutdated reports a mismatch without resetting anything', async () => {
+    dbState.setExistingObjects(['app_settings', 'projects', 'translations']);
+    dbState.setSchemaVersion('db-schema-v1');
+    const { isDatabaseSchemaOutdated } = await import('./dbService');
+
+    await expect(isDatabaseSchemaOutdated()).resolves.toBe(true);
+
+    expect(invoke).not.toHaveBeenCalledWith('backup_database_file', expect.anything());
+    expect(dbState.db.execute).not.toHaveBeenCalledWith('DROP TABLE IF EXISTS projects');
+  });
+
+  it('isDatabaseSchemaOutdated is false for a matching schema version', async () => {
+    dbState.setExistingObjects(['app_settings', 'projects', 'workspaces']);
+    dbState.setSchemaVersion('db-schema-v3');
+    const { isDatabaseSchemaOutdated } = await import('./dbService');
+
+    await expect(isDatabaseSchemaOutdated()).resolves.toBe(false);
+  });
+
+  it('isDatabaseSchemaOutdated is false for a brand-new database with no tables yet', async () => {
+    dbState.setExistingObjects([]);
+    dbState.setSchemaVersion(null);
+    const { isDatabaseSchemaOutdated } = await import('./dbService');
+
+    await expect(isDatabaseSchemaOutdated()).resolves.toBe(false);
+  });
+
   it('resets the previous schema after removing legacy translation columns', async () => {
     dbState.setExistingObjects(['app_settings', 'projects', 'translations']);
     dbState.setSchemaVersion('db-schema-v2');

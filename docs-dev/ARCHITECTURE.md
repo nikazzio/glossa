@@ -401,6 +401,14 @@ annotations
 app_settings
   key PK, value
   — include 'schema_version' (identificatore migrazione DB) e 'active_workspace_id'
+  — 'schema_version' è gestito solo da dbService.ts/initDatabase, mai da backupService.ts:
+    l'import di un backup salta questa riga apposta (altrimenti un backup vecchio
+    sovrascriverebbe il marcatore e la riga sotto lo droppa al riavvio successivo)
+
+Boot (main.tsx): se il DB su disco ha uno schema_version diverso da CURRENT_SCHEMA_VERSION,
+prima di chiamare initDatabase() (che farebbe backup + DROP/ricrea tutte le tabelle) viene
+mostrato un prompt di conferma (SchemaResetPrompt) — nessun wipe silenzioso. Annullare
+lascia il DB intatto e blocca l'avvio (SchemaResetCancelled).
 
 phrase_memory
   id, workspace_id FK, source_phrase, target_phrase
