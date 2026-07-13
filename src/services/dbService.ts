@@ -375,7 +375,7 @@ export async function initDatabase(): Promise<void> {
       description TEXT,
       embedding_model TEXT NOT NULL DEFAULT 'text-embedding-3-small',
       memory_extractor_provider TEXT NOT NULL DEFAULT 'openai',
-      memory_extractor_model TEXT NOT NULL DEFAULT 'gpt-5-nano',
+      memory_extractor_model TEXT NOT NULL DEFAULT 'gpt-5.4-nano',
       memory_extractor_prompt TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL
     )

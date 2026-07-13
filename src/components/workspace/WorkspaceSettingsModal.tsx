@@ -26,7 +26,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
   const [description, setDescription] = useState('');
   const [embeddingModel, setEmbeddingModel] = useState<EmbeddingModel>('text-embedding-3-small');
   const [memoryExtractorProvider, setMemoryExtractorProvider] = useState<ModelProvider>('openai');
-  const [memoryExtractorModel, setMemoryExtractorModel] = useState('gpt-5-nano');
+  const [memoryExtractorModel, setMemoryExtractorModel] = useState('gpt-5.4-nano');
   const [memoryExtractorPrompt, setMemoryExtractorPrompt] = useState('');
   const [saving, setSaving] = useState(false);
   const [isBackupBusy, setIsBackupBusy] = useState(false);

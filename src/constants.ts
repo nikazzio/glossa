@@ -8,7 +8,7 @@ export const DEFAULT_STAGES: PipelineStageConfig[] = [
     name: 'Translation',
     role: 'translation',
     prompt: 'Translate the text accurately.',
-    model: 'gpt-5-nano',
+    model: 'gpt-5.4-nano',
     provider: 'openai',
     enabled: true,
   },
@@ -21,7 +21,7 @@ export const DEFAULT_COHERENCE_PROMPT =
   'Check for terminology consistency, narrative continuity, and glossary adherence across segment boundaries.';
 
 export const DEFAULT_MEMORY_EXTRACTOR_PROVIDER: ModelProvider = 'openai';
-export const DEFAULT_MEMORY_EXTRACTOR_MODEL = 'gpt-5-nano';
+export const DEFAULT_MEMORY_EXTRACTOR_MODEL = 'gpt-5.4-nano';
 export const DEFAULT_MEMORY_EXTRACTOR_PROMPT = `Extract phrase-memory pairs from an original source chunk and its final translation.
 
 Return only JSON in this shape:

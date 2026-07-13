@@ -7,10 +7,10 @@ const baseConfig: PipelineConfig = {
   sourceLanguage: 'English',
   targetLanguage: 'Italian',
   stages: [
-    { id: 'stg-1', name: 'Draft', prompt: 'Translate literally.', model: 'gpt-4.1-mini', provider: 'openai', enabled: true },
+    { id: 'stg-1', name: 'Draft', prompt: 'Translate literally.', model: 'gpt-5.4-nano', provider: 'openai', enabled: true },
   ],
   judgePrompt: 'Audit the translation.',
-  judgeModel: 'gpt-4.1-mini',
+  judgeModel: 'gpt-5.4-nano',
   judgeProvider: 'openai',
   glossary: [],
 };

@@ -43,6 +43,7 @@ const PROVIDER_LABELS: Record<ModelProvider, string> = {
 function getModelGroupLabel(provider: ModelProvider, modelId: string): string {
   switch (provider) {
     case 'openai':
+      if (modelId.startsWith('gpt-5.6')) return 'GPT-5.6';
       if (modelId.startsWith('gpt-5.4')) return 'GPT-5.4';
       if (modelId.startsWith('gpt-5')) return 'GPT-5';
       if (modelId.startsWith('gpt-4.1')) return 'GPT-4.1';
@@ -52,9 +53,12 @@ function getModelGroupLabel(provider: ModelProvider, modelId: string): string {
       if (/^o\d/.test(modelId)) return 'o-series';
       return 'Other';
     case 'anthropic':
-      if (modelId.includes('-4-') || modelId.includes('-4.')) return 'Claude 4';
-      if (modelId.includes('3-5')) return 'Claude 3.5';
-      if (modelId.includes('-3-')) return 'Claude 3';
+      // Grouped by model family (Anthropic keeps Opus on "4.x" numbering while Sonnet
+      // jumped to "5" — grouping by generation number mixes old/new models together).
+      if (modelId.includes('opus')) return 'Claude Opus';
+      if (modelId.includes('sonnet')) return 'Claude Sonnet';
+      if (modelId.includes('haiku')) return 'Claude Haiku';
+      if (modelId.includes('fable') || modelId.includes('mythos')) return 'Claude Fable';
       return 'Other';
     case 'gemini':
       if (modelId.startsWith('gemini-3.1')) return 'Gemini 3.1';

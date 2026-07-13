@@ -39,7 +39,7 @@ export interface ModelEntry {
   description: string;
 }
 
-// Last reviewed: 2026-05
+// Last reviewed: 2026-07-13
 // Source: official provider model/pricing pages.
 // This catalog is the single frontend source of truth for product-known models.
 export const MODEL_CATALOG: ModelEntry[] = [
@@ -51,22 +51,23 @@ export const MODEL_CATALOG: ModelEntry[] = [
   { id: 'gemini-3-flash-preview',   provider: 'gemini', status: 'preview', reasoning: 'optional', contextWindow: 1_048_576, pricing: { input: 0.50, output: 3.00 }, preferredFor: ['translation', 'refine'], description: 'Preview next-gen flash model with optional thinking' },
   { id: 'gemini-3.1-flash-lite',    provider: 'gemini', status: 'stable',  reasoning: 'optional', contextWindow: 1_048_576, pricing: { input: 0.25, output: 1.50 }, preferredFor: ['translation', 'format'], description: 'Cost-efficient stable 3.1 flash model' },
   { id: 'gemini-3.1-pro-preview',   provider: 'gemini', status: 'preview', reasoning: 'optional', contextWindow: 2_097_152, pricing: { input: 2.00, output: 12.00 }, preferredFor: ['judge', 'coherence', 'refine'], discouragedFor: ['format'], description: 'Preview pro model with 2M context for deep analysis' },
-  // OpenAI — GPT-4.1 line (non-reasoning, large context)
-  { id: 'gpt-4.1-mini', provider: 'openai', status: 'stable', reasoning: 'non_reasoning', contextWindow: 1_047_576, pricing: { input: 0.40,  output: 1.60  }, preferredFor: ['translation', 'format'], description: 'Lightweight non-reasoning model for format and bulk tasks' },
-  { id: 'gpt-4.1',      provider: 'openai', status: 'stable', reasoning: 'non_reasoning', contextWindow: 1_047_576, pricing: { input: 2.00,  output: 8.00  }, preferredFor: ['translation', 'refine', 'judge'], description: 'Large-context non-reasoning model for detailed translation' },
-  { id: 'o4-mini',      provider: 'openai', status: 'stable', reasoning: 'reasoning',     contextWindow: 200_000,   pricing: { input: 1.10,  output: 4.40  }, preferredFor: ['refine', 'judge', 'coherence'], discouragedFor: ['format'], description: 'Compact reasoning model for review and coherence' },
-  // OpenAI — GPT-5 line (optional reasoning, 2025-08)
-  { id: 'gpt-5-nano',   provider: 'openai', status: 'stable', reasoning: 'optional',      contextWindow: 128_000,   pricing: { input: 0.05,  output: 0.40  }, preferredFor: ['translation', 'format'], description: 'Ultra-fast optional-reasoning model for high-volume tasks' },
-  { id: 'gpt-5-mini',   provider: 'openai', status: 'stable', reasoning: 'optional',      contextWindow: 400_000,   pricing: { input: 0.25,  output: 2.00  }, preferredFor: ['translation', 'refine'], description: 'Fast optional-reasoning model for translation' },
-  { id: 'gpt-5',        provider: 'openai', status: 'stable', reasoning: 'optional',      contextWindow: 400_000,   pricing: { input: 1.25,  output: 10.00 }, preferredFor: ['translation', 'refine', 'judge'], description: 'Flagship GPT-5 model for quality translation and review' },
-  // OpenAI — GPT-5.4 line (optional reasoning, 2026-03)
-  { id: 'gpt-5.4-nano', provider: 'openai', status: 'stable', reasoning: 'optional',      contextWindow: 400_000,   pricing: { input: 0.20,  output: 1.25  }, preferredFor: ['translation', 'format'], description: 'Compact snapshot with optional reasoning, large context' },
-  { id: 'gpt-5.4-mini', provider: 'openai', status: 'stable', reasoning: 'optional',      contextWindow: 400_000,   pricing: { input: 0.75,  output: 4.50  }, preferredFor: ['translation', 'refine', 'judge'], description: 'Mid-tier snapshot with optional reasoning and large context' },
-  { id: 'gpt-5.4',      provider: 'openai', status: 'stable', reasoning: 'optional',      contextWindow: 1_000_000, pricing: { input: 2.50,  output: 15.00 }, preferredFor: ['judge', 'coherence', 'refine'], discouragedFor: ['format'], description: 'High-capacity snapshot for complex review tasks' },
+  // OpenAI — GPT-5.4 line (optional reasoning, 2026-03). Only the nano tier survives as the
+  // budget option: it undercuts GPT-5.6 Luna 5x on price, still worthwhile for bulk/simple work.
+  // gpt-4.1(-mini), o4-mini, gpt-5(-mini/-nano), gpt-5.4(-mini) dropped: superseded on price
+  // and/or quality by the optional-reasoning GPT-5.6 tiers below. GPT-5.5 was superseded by
+  // GPT-5.6 within weeks of release — not worth adding.
+  { id: 'gpt-5.4-nano', provider: 'openai', status: 'stable', reasoning: 'optional', contextWindow: 400_000, pricing: { input: 0.20, output: 1.25 }, preferredFor: ['translation', 'format'], description: 'Cheapest OpenAI option for bulk, low-complexity translation and formatting' },
+  // OpenAI — GPT-5.6 line (optional reasoning, 2026-07; replaces mini/nano naming with Luna/Terra/Sol tiers)
+  { id: 'gpt-5.6-luna',  provider: 'openai', status: 'stable', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 1.00, output: 6.00  }, preferredFor: ['translation', 'format'], description: 'Cost-sensitive, high-volume tier of the GPT-5.6 family' },
+  { id: 'gpt-5.6-terra', provider: 'openai', status: 'stable', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 2.50, output: 15.00 }, preferredFor: ['translation', 'refine', 'judge'], description: 'Balanced intermediate tier of the GPT-5.6 family' },
+  { id: 'gpt-5.6-sol',   provider: 'openai', status: 'stable', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 5.00, output: 30.00 }, preferredFor: ['judge', 'coherence', 'refine'], discouragedFor: ['format'], description: 'Flagship GPT-5.6 tier for complex reasoning and review' },
   // Anthropic (Claude 4 line — all support optional extended/adaptive thinking)
   { id: 'claude-haiku-4-5-20251001', provider: 'anthropic', status: 'stable', reasoning: 'optional', contextWindow: 200_000, pricing: { input: 1.00, output: 5.00 }, preferredFor: ['translation', 'format'], description: 'Fast and cost-efficient for high-volume translation' },
-  { id: 'claude-sonnet-4-6',         provider: 'anthropic', status: 'stable', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 3.00, output: 15.00 }, preferredFor: ['translation', 'refine', 'judge', 'coherence'], description: 'Balanced quality and speed for translation and review' },
-  { id: 'claude-opus-4-7',           provider: 'anthropic', status: 'stable', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 5.00, output: 25.00 }, preferredFor: ['refine', 'judge', 'coherence'], discouragedFor: ['format'], description: 'Most capable Anthropic model for deep analysis' },
+  { id: 'claude-sonnet-4-6',         provider: 'anthropic', status: 'stable', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 3.00, output: 15.00 }, preferredFor: ['translation', 'refine'], description: 'Balanced quality and speed for translation and review' },
+  { id: 'claude-opus-4-7',           provider: 'anthropic', status: 'stable', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 5.00, output: 25.00 }, preferredFor: ['refine'], discouragedFor: ['format'], description: 'Previous-generation Opus for deep analysis' },
+  // Anthropic — Claude 5 line (2026-07; Sonnet 5 reaches near-Opus quality at Sonnet cost)
+  { id: 'claude-sonnet-5', provider: 'anthropic', status: 'stable', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 3.00, output: 15.00 }, preferredFor: ['translation', 'refine', 'judge', 'coherence'], description: 'Near-Opus quality coding/agentic performance at Sonnet cost' },
+  { id: 'claude-opus-4-8', provider: 'anthropic', status: 'stable', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 5.00, output: 25.00 }, preferredFor: ['judge', 'coherence', 'refine'], discouragedFor: ['format'], description: 'Most capable Anthropic model for deep analysis and long-horizon review' },
   // DeepSeek (v4 line — 1M context, optional reasoning effort)
   // deepseek-chat / deepseek-reasoner retired 2026-07-24
   { id: 'deepseek-v4-flash', provider: 'deepseek', status: 'stable', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 0.14, output: 0.28 }, preferredFor: ['translation', 'format'], description: 'Extremely cost-effective with optional reasoning effort' },

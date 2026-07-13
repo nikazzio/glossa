@@ -69,7 +69,7 @@ describe('buildStagesForMode', () => {
       expect(stages[0].model).toBe('gemini-2.5-flash');
       expect(stages[1].model).toBe('claude-opus-4-7');
       expect(stages[2].role).toBe('format'); // no existing match → default
-      expect(stages[2].model).toBe('gpt-5-nano');
+      expect(stages[2].model).toBe('gpt-5.4-nano');
     });
 
     it('falls back to template defaults for stages without a matching existing role', () => {
