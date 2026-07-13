@@ -1,12 +1,14 @@
-import { AlertTriangle, Cpu, RefreshCw, Scale, Wand2 } from 'lucide-react';
+import { AlertTriangle, Cpu, History, RefreshCw, Scale, Wand2 } from 'lucide-react';
 import type { Dispatch, SetStateAction } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ModelProvider, PipelineConfig, PromptTemplate, ReasoningEffortLevel } from '../../types';
 import type { ProviderKeyStatusMap } from '../../hooks/useProviderKeyStatus';
 import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
-import { getKnownModelIds, getModelStatus, getResolvedModelReasoning, LLM_PROVIDER_ORDER } from '../../models/catalog';
+import { ensureModelInList, getKnownModelIds, getModelStatus, getResolvedModelReasoning, LLM_PROVIDER_ORDER } from '../../models/catalog';
 import { DEFAULT_COHERENCE_PROMPT, DEFAULT_JUDGE_PROMPT } from '../../constants';
-import { SectionLabel, ToggleRow } from '../ui';
+import { IconButton, SectionLabel, ToggleRow } from '../ui';
+import { DeprecatedModelBadge } from '../models/DeprecatedModelBadge';
 import { ReasoningPicker } from '../models/ReasoningPicker';
 import { ProviderRuntimeEditor } from './ProviderRuntimeEditor';
 import { AuditPromptEditor } from './AuditPromptEditor';
@@ -54,6 +56,14 @@ export function AuditTabPanel({
 }: AuditTabPanelProps) {
   const { t } = useTranslation();
   const judgeResolvedReasoning = getResolvedModelReasoning(config.judgeProvider, config.judgeModel);
+  const [showDeprecatedModels, setShowDeprecatedModels] = useState(false);
+  const canToggleDeprecated = config.judgeProvider !== 'ollama';
+  const effectiveJudgeModels = ensureModelInList(
+    showDeprecatedModels && canToggleDeprecated
+      ? getKnownModelIds(config.judgeProvider, { includeDeprecated: true })
+      : judgeModels,
+    config.judgeModel,
+  );
 
   return (
     <div
@@ -110,19 +120,35 @@ export function AuditTabPanel({
               <option key={p} value={p} disabled={p !== 'ollama' && (keyStatuses as Partial<Record<string, boolean>>)[p] === false}>{p}</option>
             ))}
           </select>
-          {judgeModels.length > 0 ? (
-            <select
-              value={config.judgeModel}
-              onChange={(e) => handleJudgeModelChange(e.target.value)}
-              className="flex-1 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              aria-label={t('pipeline.auditModelLabel')}
-            >
-              {judgeModels.map((m) => (
-                <option key={m} value={m}>
-                  {m}{getModelStatus(config.judgeProvider, m) === 'preview' ? ' (preview)' : ''}
-                </option>
-              ))}
-            </select>
+          {effectiveJudgeModels.length > 0 ? (
+            <div className="flex flex-1 items-center gap-1.5">
+              <select
+                value={config.judgeModel}
+                onChange={(e) => handleJudgeModelChange(e.target.value)}
+                className="flex-1 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                aria-label={t('pipeline.auditModelLabel')}
+              >
+                {effectiveJudgeModels.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                    {getModelStatus(config.judgeProvider, m) === 'preview' ? ' (preview)' : ''}
+                    {getModelStatus(config.judgeProvider, m) === 'deprecated' ? ' (superato)' : ''}
+                  </option>
+                ))}
+              </select>
+              <DeprecatedModelBadge provider={config.judgeProvider} model={config.judgeModel} />
+              {canToggleDeprecated && (
+                <IconButton
+                  size="sm"
+                  tone={showDeprecatedModels ? 'accent' : 'default'}
+                  onClick={() => setShowDeprecatedModels(!showDeprecatedModels)}
+                  title={t('pipeline.toggleDeprecatedModels')}
+                  ariaPressed={showDeprecatedModels}
+                >
+                  <History size={13} />
+                </IconButton>
+              )}
+            </div>
           ) : config.judgeProvider === 'ollama' ? (
             <input
               value={config.judgeModel}

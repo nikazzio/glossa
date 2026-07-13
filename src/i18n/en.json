@@ -242,6 +242,8 @@
     "modelLockedHint": "Model locked — existing translations must be preserved. Start a new project to change model.",
     "modelContextWindowChangedHint": "Context window changed since import — chunk size may no longer be optimal. Consider re-importing the document.",
     "stageModelLabel": "Translation Model",
+    "modelDeprecatedHint": "This model is no longer a recommended choice: it may still work, but the shown price and context window may be out of date.",
+    "toggleDeprecatedModels": "Show deprecated models too",
     "modelReasoning": {
       "reasoning": "Reasoning",
       "non_reasoning": "Direct",

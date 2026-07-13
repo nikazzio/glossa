@@ -5,6 +5,7 @@ import {
   Check,
   Cpu,
   FileText,
+  History,
   Loader2,
   Pencil,
   RefreshCw,
@@ -17,8 +18,9 @@ import {
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { GlossaryEntry, ModelProvider, OllamaStatus, PipelineStageConfig, PromptTemplate, PromptTemplateWorkflow } from '../../types';
-import { getKnownModelIds, getModelStatus, getResolvedModelReasoning, LLM_PROVIDER_ORDER } from '../../models/catalog';
+import { ensureModelInList, getKnownModelIds, getModelStatus, getResolvedModelReasoning, LLM_PROVIDER_ORDER } from '../../models/catalog';
 import type { ReasoningEffortLevel } from '../../types';
+import { DeprecatedModelBadge } from '../models/DeprecatedModelBadge';
 import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
 import { ReasoningPicker } from '../models/ReasoningPicker';
 import { ProviderRuntimeEditor } from './ProviderRuntimeEditor';
@@ -86,8 +88,16 @@ export function StageCard({
   const [templateName, setTemplateName] = useState('');
   const [showTemplateList, setShowTemplateList] = useState(false);
   const [templateSearch, setTemplateSearch] = useState('');
+  const [showDeprecatedModels, setShowDeprecatedModels] = useState(false);
 
   const role = stage.role ?? 'translation';
+  const canToggleDeprecated = stage.provider !== 'ollama' && stage.provider !== 'custom';
+  const effectiveModelOptions = ensureModelInList(
+    showDeprecatedModels && canToggleDeprecated
+      ? getKnownModelIds(stage.provider, { includeDeprecated: true })
+      : modelOptions,
+    stage.model,
+  );
   const isCustomPrompt = stage.prompt.trim() !== STAGE_TEMPLATES[role].defaultPrompt.trim();
   const promptEditable = isEditingPrompt && !translationsExist && !isProcessing;
   const canRefine = canRefineWithProvider(stage.provider, keyStatuses);
@@ -241,7 +251,7 @@ export function StageCard({
                 aria-label={t('pipeline.stageModelLabel')}
               />
             </div>
-          ) : modelOptions.length > 0 ? (
+          ) : effectiveModelOptions.length > 0 ? (
             <div className="flex flex-1 items-center gap-1.5">
               <select
                 value={stage.model}
@@ -250,13 +260,27 @@ export function StageCard({
                 className="flex-1 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
                 aria-label={t('pipeline.stageModelLabel')}
               >
-                {modelOptions.map((m) => (
+                {effectiveModelOptions.map((m) => (
                   <option key={m} value={m}>
-                    {m}{getModelStatus(stage.provider, m) === 'preview' ? ' (preview)' : ''}
+                    {m}
+                    {getModelStatus(stage.provider, m) === 'preview' ? ' (preview)' : ''}
+                    {getModelStatus(stage.provider, m) === 'deprecated' ? ' (superato)' : ''}
                   </option>
                 ))}
               </select>
               <ModelCapabilityHint provider={stage.provider} model={stage.model} iconOnly />
+              <DeprecatedModelBadge provider={stage.provider} model={stage.model} />
+              {canToggleDeprecated && (
+                <IconButton
+                  size="sm"
+                  tone={showDeprecatedModels ? 'accent' : 'default'}
+                  onClick={() => setShowDeprecatedModels(!showDeprecatedModels)}
+                  title={t('pipeline.toggleDeprecatedModels')}
+                  ariaPressed={showDeprecatedModels}
+                >
+                  <History size={13} />
+                </IconButton>
+              )}
             </div>
           ) : (
             <input

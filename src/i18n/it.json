@@ -242,6 +242,8 @@
     "modelLockedHint": "Modello bloccato — esistono traduzioni che devono essere preservate. Crea un nuovo progetto per cambiare modello.",
     "modelContextWindowChangedHint": "La context window è cambiata dall'importazione — la dimensione dei chunk potrebbe non essere più ottimale. Considera di re-importare il documento.",
     "stageModelLabel": "Modello di traduzione",
+    "modelDeprecatedHint": "Modello non più tra le scelte consigliate: potrebbe funzionare ancora, ma prezzo e capienza mostrati potrebbero non essere aggiornati.",
+    "toggleDeprecatedModels": "Mostra anche modelli superati",
     "modelReasoning": {
       "reasoning": "Reasoning",
       "non_reasoning": "Diretto",
