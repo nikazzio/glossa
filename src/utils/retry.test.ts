@@ -160,4 +160,20 @@ describe('withRetry', () => {
     await expect(promise).resolves.toBe('recovered');
     expect(onRetry).toHaveBeenCalledWith(1, 4, expect.any(String), 250);
   });
+
+  it('keeps Retry-After timing exact while polling for cancellation', async () => {
+    const shouldCancel = vi.fn(() => false);
+    const fn = vi.fn()
+      .mockRejectedValueOnce(new Error('rate limited; retry-after-ms=250'))
+      .mockResolvedValue('recovered');
+
+    const promise = withRetry(fn, { baseDelayMs: 10, shouldCancel });
+    await Promise.resolve();
+    await vi.advanceTimersByTimeAsync(249);
+    expect(fn).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(1);
+    await expect(promise).resolves.toBe('recovered');
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
 });

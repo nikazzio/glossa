@@ -22,23 +22,27 @@ fn db_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
 fn open_db(app: &tauri::AppHandle) -> Result<Connection, String> {
     let path = db_path(app)?;
     let conn = Connection::open(&path).map_err(|e| format!("DB open error: {e}"))?;
-    conn.execute_batch("PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL;")
+    conn.execute_batch(
+        "PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA busy_timeout=10000;",
+    )
         .map_err(|e| format!("PRAGMA error: {e}"))?;
-    ensure_schema(&conn)?;
+    verify_schema(&conn)?;
     Ok(conn)
 }
 
-fn ensure_schema(conn: &Connection) -> Result<(), String> {
-    conn.execute_batch(
-        "CREATE TABLE IF NOT EXISTS custom_providers (
-            id TEXT PRIMARY KEY,
-            name TEXT NOT NULL,
-            base_url TEXT NOT NULL,
-            requires_api_key INTEGER NOT NULL DEFAULT 1,
-            created_at TEXT DEFAULT (datetime('now'))
-        );",
-    )
-    .map_err(|e| format!("Schema error: {e}"))
+fn verify_schema(conn: &Connection) -> Result<(), String> {
+    let exists: bool = conn
+        .query_row(
+            "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'custom_providers')",
+            [],
+            |row| row.get(0),
+        )
+        .map_err(|e| format!("Schema verification error: {e}"))?;
+    if exists {
+        Ok(())
+    } else {
+        Err("Database schema is not initialized yet".to_string())
+    }
 }
 
 pub fn get_profile(app: &tauri::AppHandle, id: &str) -> Result<CustomProviderProfile, String> {
@@ -84,14 +88,16 @@ pub fn list_custom_provider_profiles(
 }
 
 #[tauri::command]
-pub fn save_custom_provider_profile(
+pub async fn save_custom_provider_profile(
     app: tauri::AppHandle,
+    write_coordinator: tauri::State<'_, crate::db::DbWriteCoordinator>,
     id: String,
     name: String,
     base_url: String,
     api_key: Option<String>,
     requires_api_key: bool,
 ) -> Result<(), String> {
+    let _write_guard = write_coordinator.lock().await;
     let conn = open_db(&app)?;
     conn.execute(
         "INSERT OR REPLACE INTO custom_providers (id, name, base_url, requires_api_key) VALUES (?1, ?2, ?3, ?4)",
@@ -113,7 +119,12 @@ pub fn save_custom_provider_profile(
 }
 
 #[tauri::command]
-pub fn delete_custom_provider_profile(app: tauri::AppHandle, id: String) -> Result<(), String> {
+pub async fn delete_custom_provider_profile(
+    app: tauri::AppHandle,
+    write_coordinator: tauri::State<'_, crate::db::DbWriteCoordinator>,
+    id: String,
+) -> Result<(), String> {
+    let _write_guard = write_coordinator.lock().await;
     let conn = open_db(&app)?;
     conn.execute("DELETE FROM custom_providers WHERE id = ?1", params![id])
         .map_err(|e| format!("Delete error: {e}"))?;

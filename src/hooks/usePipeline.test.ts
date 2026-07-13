@@ -464,6 +464,48 @@ describe('usePipeline', () => {
     expect(useChunksStore.getState().chunks[0].stageResults['stg-1']?.status).toBe('error');
   });
 
+  it('keeps chunks ready when the pipeline has no enabled stages', async () => {
+    usePipelineStore.setState((state) => ({
+      ...state,
+      config: {
+        ...state.config,
+        stages: state.config.stages.map((stage) => ({ ...stage, enabled: false })),
+      },
+    }));
+
+    const { result } = renderHook(() => usePipeline());
+    await act(async () => {
+      await result.current.runPipeline();
+    });
+
+    expect(llmMocks.runStage).not.toHaveBeenCalled();
+    expect(useChunksStore.getState().chunks.every((chunk) => chunk.status === 'ready')).toBe(true);
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it('keeps a format-only pipeline ready when there is no prior output', async () => {
+    usePipelineStore.setState((state) => ({
+      ...state,
+      config: {
+        ...state.config,
+        stages: [{
+          ...state.config.stages[0]!,
+          role: 'format',
+          enabled: true,
+        }],
+      },
+    }));
+    llmMocks.runStage.mockResolvedValue({ content: '' });
+
+    const { result } = renderHook(() => usePipeline());
+    await act(async () => {
+      await result.current.runPipeline();
+    });
+
+    expect(useChunksStore.getState().chunks.every((chunk) => chunk.status === 'ready')).toBe(true);
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
   it('blocks the run when Ollama is offline', async () => {
     usePipelineStore.setState((state) => ({
       ...state,

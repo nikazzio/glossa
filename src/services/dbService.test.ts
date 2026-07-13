@@ -195,6 +195,11 @@ describe('ensureColumn whitelist', () => {
     const { ensureColumn } = await import('./dbService');
     await expect(ensureColumn('translations', 'evil_col', 'TEXT')).rejects.toThrow('not allowed');
   });
+
+  it('rejects a whitelisted column with a different definition', async () => {
+    const { ensureColumn } = await import('./dbService');
+    await expect(ensureColumn('projects', 'workspace_id', 'TEXT')).rejects.toThrow('not allowed');
+  });
 });
 
 describe('initDatabase migrations', () => {
@@ -221,7 +226,7 @@ describe('initDatabase migrations', () => {
     await initDatabase();
 
     expect(invoke).toHaveBeenCalledWith('backup_database_file', {
-      reason: 'schema-1-to-db-schema-v1',
+      reason: 'schema-1-to-db-schema-v2',
     });
     expect(dbState.db.execute).toHaveBeenCalledWith('PRAGMA wal_checkpoint(FULL)');
     expect(dbState.db.execute).toHaveBeenCalledWith('DROP TABLE IF EXISTS projects');
@@ -233,7 +238,7 @@ describe('initDatabase migrations', () => {
 
   it('does not reset a database with the current beta schema version', async () => {
     dbState.setExistingObjects(['app_settings', 'projects', 'workspaces']);
-    dbState.setSchemaVersion('db-schema-v1');
+    dbState.setSchemaVersion('db-schema-v2');
     const { initDatabase } = await import('./dbService');
 
     await initDatabase();
@@ -288,7 +293,7 @@ describe('initDatabase migrations', () => {
     );
   });
 
-  it('creates and migrates the complete phrase memory schema at startup', async () => {
+  it('creates the active phrase-memory schema and removes deprecated tables at startup', async () => {
     const { initDatabase } = await import('./dbService');
 
     await initDatabase();
@@ -297,8 +302,7 @@ describe('initDatabase migrations', () => {
       'workspaces',
       'phrase_memory',
       'source_phrase_embeddings',
-      'historical_techniques',
-      'technique_tags',
+      'custom_providers',
     ]) {
       expect(dbState.db.execute).toHaveBeenCalledWith(
         expect.stringContaining(`CREATE TABLE IF NOT EXISTS ${table}`),
@@ -319,6 +323,9 @@ describe('initDatabase migrations', () => {
     expect(dbState.db.execute).toHaveBeenCalledWith(
       expect.stringContaining('ALTER TABLE phrase_memory ADD COLUMN embedding_model TEXT'),
     );
+    for (const table of ['technique_tags', 'historical_techniques', 'phrase_memory_presets', 'macro_blocks']) {
+      expect(dbState.db.execute).toHaveBeenCalledWith(`DROP TABLE IF EXISTS ${table}`);
+    }
     for (const index of [
       'idx_phrase_memory_workspace_id',
       'idx_phrase_memory_chunk_project',
@@ -391,14 +398,20 @@ describe('operation log pipeline scoping', () => {
       message: 'hello',
     });
 
-    expect(dbState.db.execute).toHaveBeenCalledWith(
-      expect.stringContaining('INSERT OR IGNORE INTO operation_logs'),
-      ['op-1', 'proj-1', 'pipe-1', '2026-01-01T00:00:00.000Z', 'info', 'pipeline', 'hello', null, null, null, null, null, null, null],
-    );
-    expect(dbState.db.execute).toHaveBeenCalledWith(
-      expect.stringContaining('DELETE FROM operation_logs'),
-      ['proj-1', 'pipe-1', 2000],
-    );
+    expect(invoke).toHaveBeenCalledWith('execute_transaction', {
+      db: 'sqlite:glossa.db',
+      statements: [{
+        query: expect.stringContaining('INSERT OR IGNORE INTO operation_logs'),
+        params: ['op-1', 'proj-1', 'pipe-1', '2026-01-01T00:00:00.000Z', 'info', 'pipeline', 'hello', null, null, null, null, null, null, null],
+      }],
+    });
+    expect(invoke).toHaveBeenCalledWith('execute_transaction', {
+      db: 'sqlite:glossa.db',
+      statements: [{
+        query: expect.stringContaining('DELETE FROM operation_logs'),
+        params: ['proj-1', 'pipe-1', 2000],
+      }],
+    });
   });
 
   it('scopes loadOperationLogs reads to project and pipeline', async () => {
@@ -417,9 +430,12 @@ describe('operation log pipeline scoping', () => {
 
     await clearOperationLogs('proj-1', 'pipe-1');
 
-    expect(dbState.db.execute).toHaveBeenCalledWith(
-      'DELETE FROM operation_logs WHERE project_id = $1 AND pipeline_id = $2',
-      ['proj-1', 'pipe-1'],
-    );
+    expect(invoke).toHaveBeenCalledWith('execute_transaction', {
+      db: 'sqlite:glossa.db',
+      statements: [{
+        query: 'DELETE FROM operation_logs WHERE project_id = $1 AND pipeline_id = $2',
+        params: ['proj-1', 'pipe-1'],
+      }],
+    });
   });
 });

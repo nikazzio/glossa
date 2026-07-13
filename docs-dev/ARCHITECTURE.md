@@ -40,6 +40,9 @@ devUrl Tauri (`src-tauri/tauri.conf.json`) e porta Vite (`package.json` → `dev
 | `stores/phraseMemoryStore.ts` | matchesByChunk, enabledMatchIds, jobStatus, searchStatus | Match Phrase Memory per chunk; match trovati read-only finché non selezionati |
 | `stores/operationLogStore.ts` | entries[], currentProjectId | Max 2000 in-memory, resto in DB |
 | `stores/annotationsStore.ts` | annotationsByChunkId Map<chunkId, Annotation[]> | CRUD annotations per chunk; load/add/update/delete con persistenza SQLite immediata |
+| `stores/confirmStore.ts` | open, request, resolver | Coda di conferma Promise-based: una nuova richiesta chiude la precedente con `false`. |
+| `stores/preflightStore.ts` | open, results, resolver | Dialog preflight Promise-based; restituisce se l'utente procede dopo controlli provider/modello. |
+| `stores/pricingStore.ts` | overrides | Override input/output per modello persistiti in LocalStorage (`glossa-pricing-overrides`). |
 | `stores/uiStore.ts` | selectedChunkId, highlightsEnabled, highlightColors, uiFont, searchQuery, activePanel, showInsightPanel, chunkRailTab, showConsoleDrawer, showSettings/Help/ConfigDrawer | UI-only state. highlightsEnabled + highlightColors + uiFont persisted (`glossa-ui-prefs` v14). activePanel enum sincronizzato coi boolean panel. `uiFont` ('jakarta'\|'geist'\|'inter'\|'plex') → `FontSync` (`App.tsx`) override runtime `--font-sans` su `:root`, come `HighlightColorSync` per colori. `showInsightPanel` (#296) sostituisce `showDocumentDrawer \|\| showChunkDrawer` come driver apertura `ProjectInspectorNext`. `chunkRailTab` (`ChunkRailTab = 'audit'\|'notes'\|'memory'`) seleziona scheda `ChunkInspectorPanel`, ora annidato in rail sinistra. `showConsoleDrawer` apre/chiude drawer Operazioni sopra `AppStatusBar`. `chunkDrawerTab`/`showChunkDrawer` restano legacy per dashboard (pre-#291). |
 | `stores/configStore.ts` | pipelineMode, pipelineTestChunkCount, ollamaStatus, ollamaModels, ollamaBaseUrl, newPipelineInit, maxPipelines, chunkPresetShort/Medium/Long, workMode | Config app. pipelineTestChunkCount, ollamaBaseUrl, newPipelineInit, maxPipelines, chunkPreset* persisted. ollamaStatus/Models transient. `workMode` (#296, `WorkMode = 'chunk'\|'all'`, default `'chunk'`) governa ramo `playFirst` di `PipelineSidebarRunSection`: `'chunk'` mostra § N + "Traduci chunk", `'all'` mostra Esegui tutto/Stop + progresso X/Y. Reset a `'chunk'` da `ConfigDrawer.handleResetAll`; letto da `useKeyboardShortcuts` per instradare `Ctrl+Enter`. |
 | `stores/libraryStore.ts` | glossaries[], loadedForWorkspaceId, isLoaded | Glossari filtrati per workspace attivo. `loadGlossaries(workspaceId)` e `reloadGlossaries(workspaceId)` accettano `string\|null`; skip se già caricato stesso workspace. |
@@ -52,7 +55,7 @@ devUrl Tauri (`src-tauri/tauri.conf.json`) e porta Vite (`package.json` → `dev
 
 | File | Responsabilità |
 |---|---|
-| `hooks/usePipeline.ts` | **Engine principale** — runPipeline, runSingleChunk, auditSingleChunk, cancelPipeline. 3 blocchi blob assembler duplicati (refactor pendente). |
+| `hooks/usePipeline.ts` | **Engine principale** — runPipeline, runSingleChunk, auditSingleChunk, cancelPipeline. Il contesto blob è costruito dal helper condiviso `hooks/pipeline/blobContext.ts` e riusato anche dagli audit. |
 
 > **INVARIANTE — non toccare senza motivo esplicito**: Ollama usa `runStageStream` (streaming). Tutti altri provider (OpenAI, Anthropic, Gemini, DeepSeek) usano `runStage` (non-streaming). Separazione intenzionale: cloud provider hanno timeout e gestione errori diversi. Non "uniformare" i due path.
 | `hooks/useProjectAutosave.ts` | Autosave con debounce |
@@ -70,7 +73,7 @@ devUrl Tauri (`src-tauri/tauri.conf.json`) e porta Vite (`package.json` → `dev
 | `services/pipelineService.ts` | CRUD pipeline, saveChunkCheckpoint, setPipelineRunState, computeBlobs, loadTranslations, restoreTranslations |
 | `services/projectService.ts` | CRUD project, persistenza sorgente (path, metadata) |
 | `services/fileService.ts` | Import DOCX/PDF (estrazione testo), export bilingue/monolingua |
-| `services/dbService.ts` | SQLite wrapper: execute, select, executeTransaction, initDatabase, ensureColumn |
+| `services/dbService.ts` | Owner dello schema SQLite: init, migrazioni allowlist via `PRAGMA table_info`, read via plugin SQL; tutte le write runtime passano a `execute_transaction` Rust. |
 | `services/customProviderService.ts` | Tauri invoke wrapper per comandi custom provider (list, save, delete, test_connection) |
 
 ---
@@ -84,7 +87,7 @@ devUrl Tauri (`src-tauri/tauri.conf.json`) e porta Vite (`package.json` → `dev
 | `components/layout/shell-next/ProjectRailNext.tsx` | Redesign #296. Header fisso `h-20`: collassa (ChevronLeft/Right) + Libreria. Corpo scrollabile: selezione/config pipeline (`PipelineSidebarPipelinesSection`) + comandi run (`PipelineSidebarRunSection`) + `ChunkInspectorPanel` annidato (Audit/Note/Memoria). Bottom fisso `h-12`: Workspace / Impostazioni / Importa / Esporta. Collassata: azione primaria per `workMode` + 4 icone bottom in colonna. Non riceve più `onDryRun`/`onRunAuditOnly`; riceve `onReauditChunk`. |
 | `components/layout/shell-next/ProjectInspectorNext.tsx` | Pannello destro collassabile: solo `DocumentInsightTabs` (schede Approfondimenti index/search/stats/glossary/coherence). Tab Frammento rimossa (#296) — frammento vive ora in `ChunkInspectorPanel` dentro rail sinistra. Header unico fisso `h-20` (icona + collassa con `PanelRightClose`/`PanelRightOpen`), speculare a `ProjectRailNext`; `DocumentInsightTabs` non ha più header/close proprio (rimosso doppio header, #296). |
 | `components/pipeline/ProductionStream.tsx` | Riga chunk — editor sorgente, risultati stage, judge issues, draft editor |
-| `components/pipeline/PipelineActions.tsx` | Run / Cancel / Audit buttons |
+| `components/layout/PipelineSidebarSections/PipelineSidebarRunSection.tsx` | Azione primaria run/cancel e controlli work-mode della pipeline; entry point reale dei comandi di esecuzione. |
 | `components/pipeline/StageCard.tsx` | Visualizza singolo stage (token, retry info) |
 | `components/document/ConfigDrawer.tsx` | Finestra (Radix `Dialog`) config pipeline: mode, lingue, stage, persona, glossary. Variante drawer laterale legacy (`variant='drawer'`) rimossa: nessun chiamante la usava più dopo migrazione shell nuova (#291), restava solo `variant='modal'`. |
 | `components/layout/Header.tsx` | Solo breadcrumb navigazione (Glossa // workspace // progetto); non contiene più pulsanti azione |
@@ -286,17 +289,18 @@ flushPendingTokenBatch() → un solo setState per frame (O(1) chunk update)
 | File | Responsabilità |
 |---|---|
 | `src-tauri/src/lib.rs` | Entry point Tauri, registrazione comandi, StreamRegistry state |
-| `src-tauri/src/llm/pipeline.rs` | Comandi Tauri: run_stage, run_stage_stream, judge_translation, run_coherence_for_chunk, preflight_pipeline, compute_blobs, extract_phrase_memory_pairs, cancel_stream |
+| `src-tauri/src/llm/pipeline.rs` | Comandi Tauri: run_stage, run_stage_stream, judge_translation, run_coherence_for_chunk, preflight_pipeline, compute_blobs, extract_phrase_memory_pairs, refine_prompt, test_provider_connection, cancel_stream |
 | `src-tauri/src/llm/blobs.rs` | Algoritmo assegnazione blob (globale vs finestre) |
 | `src-tauri/src/llm/prompts.rs` | Costruzione prompt 3-block, glossario, markdown rules, persona; `audit_context` iniettato nel user turn dei refine stage (cache-safe) |
 | `src-tauri/src/llm/provider.rs` | Trait LlmProvider, struct LlmRequest (`json_schema_strict: bool` per judge vs json_object per altri) |
 | `src-tauri/src/llm/providers/` | Anthropic (cache breakpoint espliciti), OpenAI (prefix), Gemini (cacheControl + thinking), DeepSeek (reasoning), Ollama (locale) |
 | `src-tauri/src/llm/stream.rs` | HTTP event stream reader, StreamGuard RAII |
-| `src-tauri/src/llm/custom_profiles.rs` | CRUD profili endpoint custom su `custom_providers` (rusqlite diretto); comandi: list_custom_provider_profiles, save_custom_provider_profile, delete_custom_provider_profile, test_custom_provider_connection. resolve_provider() in pipeline.rs usa questo modulo per istanziare OpenAiCompatibleProvider::custom_endpoint(base_url) al runtime |
+| `src-tauri/src/llm/custom_profiles.rs` | CRUD profili endpoint custom su `custom_providers` (rusqlite diretto); verifica soltanto che lo schema TypeScript sia pronto, non esegue DDL. Comandi: list_custom_provider_profiles, save_custom_provider_profile, delete_custom_provider_profile, test_custom_provider_connection. resolve_provider() in pipeline.rs usa questo modulo per istanziare OpenAiCompatibleProvider::custom_endpoint(base_url) al runtime |
 | `src-tauri/src/deepl/` | Client HTTP DeepL con comandi Tauri: run_deepl_stage, get_deepl_languages, list_deepl_glossaries, create_deepl_glossary, delete_deepl_glossary |
 | `src-tauri/src/keystore.rs` | OS credential store per API key; chiave custom: `custom:<profile_id>`; helper sync save_api_key_sync/delete_api_key_sync per operazioni sincrone nei comandi |
-| `src-tauri/src/db.rs` | execute_transaction wrapper SQLite |
-| `src-tauri/src/documents.rs` | Extract/export DOCX, PDF |
+| `src-tauri/src/db.rs` | `execute_transaction`, `backup_database_file` e `DbWriteCoordinator`: lock unico per tutte le write runtime. |
+| `src-tauri/src/vector/` | Connessione persistente sqlite-vec; comandi: vec_ping, get_embeddings, vec_list_phrase_memory, vec_delete_phrase_memory, vec_update_phrase_memory, vec_search_phrase_memory, vec_save_locked_phrases, vec_regenerate_all_embeddings. |
+| `src-tauri/src/documents/` | Extract/export DOCX e PDF: extract_docx_text, extract_docx_markdown, export_markdown_docx, extract_pdf_text. |
 
 ---
 
@@ -329,7 +333,7 @@ No fallback locale: se extractor, JSON parsing o validazione falliscono, chunk n
 - Auto-search parte solo se `usePhraseMemory` attivo e `autoSearchPhraseMemory !== false`.
 - Tab Memory può sempre lanciare refresh manuale per chunk corrente quando memoria abilitata.
 - Query embedding usa solo testo sorgente del chunk; match selezionati sono unici iniettati nel prompt di run/rerun.
-- Lo schema della memoria frasi (colonne e indici inclusi) viene creato o aggiornato una volta all'avvio dal servizio database frontend. Il backend mantiene una sola connessione SQLite con sqlite-vec per tutta la sessione e la riusa serialmente per ricerca e salvataggio; non modifica più lo schema durante questi comandi. Se quella connessione non è disponibile all'avvio, l'app può comunque mostrare l'errore di inizializzazione del database; i comandi della memoria restituiscono il motivo originale senza ricreare connessioni.
+- Lo schema della memoria frasi (colonne e indici inclusi) viene creato o aggiornato una volta all'avvio dal servizio database frontend. Il backend mantiene una sola connessione SQLite con sqlite-vec per tutta la sessione, verifica soltanto lo schema già pronto e non esegue DDL durante questi comandi. Se la connessione non è disponibile all'avvio, l'app continua ad avviarsi e i comandi memoria restituiscono il motivo originale senza ricreare connessioni.
 
 ---
 
@@ -339,6 +343,7 @@ No fallback locale: se extractor, JSON parsing o validazione falliscono, chunk n
 projects
   id, workspace_id FK, name, source_language, target_language, view_mode
   source_display_text, source_processing_text, source_footnotes JSON
+  document_format, render_profile, markdown_aware, experimental_import
   created_at, updated_at
 
 workspaces
@@ -382,10 +387,10 @@ prompt_templates
   default_model, default_provider
 
 operation_logs
-  id, project_id FK, at TIMESTAMP
+  id, project_id FK, pipeline_id, at TIMESTAMP
   level, scope, message, detail
-  chunk_id, stage_id, meta JSON, phase, duration_ms
-  idx: (project_id, at)
+  chunk_id, stage_id, meta JSON, phase, duration_ms, detail_kind
+  idx: (project_id, at); (project_id, pipeline_id, at)
 
 annotations
   id TEXT PK, chunk_id, pipeline_id FK (ON DELETE CASCADE)
@@ -395,7 +400,7 @@ annotations
 
 app_settings
   key PK, value
-  — include 'schema_version' (int) usato da backupService per compatibilità backup
+  — include 'schema_version' (identificatore migrazione DB) e 'active_workspace_id'
 
 phrase_memory
   id, workspace_id FK, source_phrase, target_phrase
@@ -404,15 +409,17 @@ phrase_memory
   idx: workspace_id; (chunk_id, project_id)
 
 source_phrase_embeddings
-  id, project_id, chunk_id, source_phrase, embedding, created_at
+  id, project_id FK, chunk_id, source_phrase, embedding, created_at
   idx: (chunk_id, project_id)
 
 custom_providers
   id TEXT PK, name TEXT, base_url TEXT, requires_api_key INTEGER (0|1)
   created_at TEXT (ISO datetime)
-  — gestita da src-tauri/src/llm/custom_profiles.rs via rusqlite diretto
+  — schema gestito da `services/dbService.ts`; CRUD Rust serializzata da `DbWriteCoordinator`
   — API key salvata nel keystore con chiave "custom:<id>", non in questa tabella
 ```
+
+**Ownership e policy connessioni:** `services/dbService.ts` è l'unica fonte di verità DDL. Tutte le connessioni impostano `foreign_keys=ON`, `journal_mode=WAL`, `synchronous=NORMAL`, `busy_timeout=10000`. Le write runtime frontend usano `db::execute_transaction`; vector e custom provider acquisiscono lo stesso `DbWriteCoordinator` prima di scrivere. Le tabelle senza consumatori (`macro_blocks`, `historical_techniques`, `technique_tags`, `phrase_memory_presets`) vengono eliminate dalla migrazione v2.
 
 **Persistito vs in-memory:**
 - ✅ Persistito: source, config, stage_results, translations, run_status, operation_logs
@@ -469,4 +476,4 @@ In release (`!debug_assertions`) livello log predefinito è `Info`. `RUST_LOG` l
 
 **Implicazione**: impostare `RUST_LOG=debug` o `RUST_LOG=trace` su build release espone log verbosi, inclusi dettagli richieste LLM (provider, modello, timing). Non loggati contenuti prompt o risposte, ma provider e metadati sì. In contesto supporto tecnico, chiedere sempre verificare che `RUST_LOG` non sia impostato prima condividere log.
 
-*Ultimo aggiornamento: 2026-07-13 — PR #329, connessione persistente memoria frasi*
+*Ultimo aggiornamento: 2026-07-13 — issue #320, ownership schema e write-path DB*
