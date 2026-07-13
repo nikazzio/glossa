@@ -32,14 +32,14 @@ describe('operationLogStore', () => {
     expect(entry.at).toContain('T');
   });
 
-  it('caps the log buffer', () => {
+  it('keeps the full log buffer without a cap (decided with the user 2026-07-14)', () => {
     for (let i = 0; i < 2100; i++) {
       logOperation({ level: 'info', scope: 'chunk', message: `entry-${i}` });
     }
 
     const entries = useOperationLogStore.getState().entries;
-    expect(entries).toHaveLength(2000);
-    expect(entries[0].message).toBe('entry-100');
+    expect(entries).toHaveLength(2100);
+    expect(entries[0].message).toBe('entry-0');
     expect(entries.at(-1)?.message).toBe('entry-2099');
   });
 

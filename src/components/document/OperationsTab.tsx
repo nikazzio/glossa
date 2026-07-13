@@ -12,6 +12,8 @@ import {
 } from '../../stores/operationLogStore';
 import { usePhraseMemoryStore } from '../../stores/phraseMemoryStore';
 import { usePricingStore } from '../../stores/pricingStore';
+import { confirm } from '../../stores/confirmStore';
+import { Tooltip } from '../ui';
 import {
   aggregateEntries,
   formatCacheHitRate,
@@ -137,6 +139,16 @@ export function OperationsTab({
     });
   }
 
+  async function handleClear(): Promise<void> {
+    const ok = await confirm({
+      title: t('document.operationsClearConfirmTitle'),
+      message: t('document.operationsClearConfirmMessage'),
+      confirmLabel: t('document.operationsClear'),
+      danger: true,
+    });
+    if (ok) clear();
+  }
+
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex h-full flex-col bg-terminal-bg">
       <ConsoleChrome
@@ -146,6 +158,7 @@ export function OperationsTab({
         memoryProgress={memoryProgress}
         processingChunkIndex={processingChunkIndex}
         chunksCount={chunks.length}
+        rowCount={entries.length}
         onClose={onClose}
       />
 
@@ -160,7 +173,7 @@ export function OperationsTab({
         onToggleGrouped={() => setGrouped((g) => !g)}
         showGoToChunk={isProcessing && processingChunk !== null}
         onGoToChunk={() => processingChunk && onSelectChunk(processingChunk.id)}
-        onClear={clear}
+        onClear={handleClear}
       />
 
       {filteredEntries.length === 0 ? (
@@ -193,6 +206,7 @@ interface ConsoleChromeProps {
   memoryProgress: { processed: number; total: number } | null;
   processingChunkIndex: number;
   chunksCount: number;
+  rowCount: number;
   onClose?: () => void;
 }
 
@@ -214,6 +228,7 @@ function ConsoleChrome({
   memoryProgress,
   processingChunkIndex,
   chunksCount,
+  rowCount,
   onClose,
 }: ConsoleChromeProps) {
   const { t } = useTranslation();
@@ -222,6 +237,7 @@ function ConsoleChrome({
       <div className="flex items-center gap-1.5 text-terminal-ink">
         <TerminalSquare size={13} className="text-terminal-accent shrink-0" />
         <span className="text-xs font-bold uppercase tracking-[0.1em]">{t('document.operationsShellTitle')}</span>
+        <span className="text-xs text-terminal-secondary">· {t('document.operationsRowCount', { count: rowCount })}</span>
       </div>
       {isProcessing && (
         <StatusPill
@@ -332,15 +348,16 @@ function ConsoleToolbar({
             <ExternalLink size={14} />
           </button>
         )}
-        <button
-          type="button"
-          onClick={onClear}
-          data-tooltip={t('document.operationsClear')}
-          aria-label={t('document.operationsClear')}
-          className="shrink-0 text-terminal-secondary transition-colors hover:text-terminal-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-terminal-accent"
-        >
-          <Trash2 size={14} />
-        </button>
+        <Tooltip label={t('document.operationsClearTooltip')} side="top">
+          <button
+            type="button"
+            onClick={onClear}
+            aria-label={t('document.operationsClear')}
+            className="shrink-0 text-terminal-error/70 transition-colors hover:text-terminal-error focus:outline-none focus-visible:ring-2 focus-visible:ring-terminal-error"
+          >
+            <Trash2 size={14} />
+          </button>
+        </Tooltip>
       </div>
 
       {filtersOpen && (

@@ -90,7 +90,7 @@ function ConsoleDrawer() {
 
   return (
     <div
-      className="absolute bottom-full left-0 right-0 z-50 flex flex-col border-t border-terminal-border bg-terminal-bg shadow-lg"
+      className="absolute bottom-full left-0 right-0 z-[150] flex flex-col border-t border-terminal-border bg-terminal-bg shadow-lg"
       style={{ height }}
     >
       {/* Maniglia di resize: trascina per cambiare l'altezza, persistita in uiStore. */}

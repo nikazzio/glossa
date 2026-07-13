@@ -46,8 +46,6 @@ interface OperationLogState {
   clear: () => void;
 }
 
-const MAX_ENTRIES = 2000;
-
 export const useOperationLogStore = create<OperationLogState>((set, get) => ({
   entries: [],
   currentProjectId: null,
@@ -63,9 +61,9 @@ export const useOperationLogStore = create<OperationLogState>((set, get) => ({
     if (hasFullContext && !hadFullContext) {
       const entriesToBackfill = get().entries;
       void (async () => {
-        // Sequential on purpose: up to MAX_ENTRIES saves, each already doing
-        // 2 serialized DB writes — firing them all concurrently would queue
-        // thousands of writes at once and stall the DB write queue.
+        // Sequential on purpose: each save already does a serialized DB write —
+        // firing them all concurrently would queue thousands of writes at once
+        // and stall the DB write queue.
         for (const entry of entriesToBackfill) {
           try {
             await saveOperationLogEntry(projectId as string, pipelineId as string, entry as PersistedLogEntry);
@@ -89,7 +87,7 @@ export const useOperationLogStore = create<OperationLogState>((set, get) => ({
       ...entry,
     };
     set((state) => ({
-      entries: [...state.entries, full].slice(-MAX_ENTRIES),
+      entries: [...state.entries, full],
     }));
     const { currentProjectId, currentPipelineId } = get();
     if (currentProjectId && currentPipelineId) {
