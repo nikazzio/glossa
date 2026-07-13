@@ -213,7 +213,7 @@ export function PipelineSidebarRunSection({
             </IconButton>
           )
         ) : workMode === 'chunk' ? (
-          <IconButton size="md" tone="charcoal" onClick={() => currentChunk && onRetranslateChunk?.(currentChunk.id)} disabled={!currentChunk || !currentChunk.hasOriginalText} title={t('pipeline.translateChunk')} tooltipSide="right" className="h-10 w-10">
+          <IconButton size="md" tone="charcoal" onClick={() => currentChunk && onRetranslateChunk?.(currentChunk.id)} disabled={!currentChunk || !currentChunk.hasSourceText} title={t('pipeline.translateChunk')} tooltipSide="right" className="h-10 w-10">
             <Languages size={15} />
           </IconButton>
         ) : (
@@ -281,7 +281,7 @@ export function PipelineSidebarRunSection({
               size="md"
               tone="charcoal"
               onClick={() => currentChunk && onRetranslateChunk?.(currentChunk.id)}
-              disabled={isProcessing || !currentChunk || !currentChunk.hasOriginalText}
+              disabled={isProcessing || !currentChunk || !currentChunk.hasSourceText}
               title={t('pipeline.translateChunk')}
               ariaLabel={t('pipeline.translateChunk')}
               tooltipSide="bottom"

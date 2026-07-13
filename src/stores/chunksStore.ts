@@ -23,6 +23,8 @@ import {
   updateChunkSourceFields,
   updateChunkTranslationFields,
 } from '../utils/documentState';
+import { stripFootnoteMarkers } from '../utils/footnoteExtractor';
+
 // --- Internal O(1) chunk index ---
 // Maps chunkId → array index. Kept as a module-level variable; never part of Zustand state.
 // Rebuilt automatically via store subscription whenever `chunks` reference changes —
