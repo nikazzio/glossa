@@ -24,7 +24,7 @@ import { HighlightedText, MarkdownEditor, DOC_FONT_SIZE_STEP_INDEX } from '../co
 import { IconButton, Tooltip, Popover, ScopeBreakdownCarousel, type IconButtonTone } from '../ui';
 import { composeAnnotatedMarkdown } from '../../utils/annotationMarkdown';
 import { restoreFootnoteMarkers } from '../../utils/footnoteExtractor';
-import { summarizeChunkUsage, formatUsd } from '../../utils/operationLogStats';
+import { summarizeChunkUsage, formatUsd, formatRunTimestamp } from '../../utils/operationLogStats';
 import { usePhraseMemoryAutoSearch } from '../../hooks/usePhraseMemoryAutoSearch';
 import { usePanelScrollSync } from '../../hooks/usePanelScrollSync';
 import { useAnnotationsStore } from '../../stores/annotationsStore';
@@ -390,6 +390,14 @@ export function DocumentView({
   const currentChunkUsage = summarizeChunkUsage(operationLogEntries, currentChunk.id, pricingOverrides);
   const currentChunkTokens = currentChunkUsage.total.totalInput + currentChunkUsage.total.totalOutput;
   const hasCurrentChunkUsage = currentChunkTokens > 0 || currentChunkUsage.total.totalUsd !== null;
+  // Solo audit/coerenza: sono operazioni singole, "N volte" = quante volte rieseguite.
+  // La traduzione invece è multi-fase (bozza, rifinitura, ...): sommare i completamenti
+  // di fase come "volte" sarebbe fuorviante (3 fasi attive → "3 volte" anche con un solo
+  // passaggio). Il dettaglio per fase sotto copre già la traduzione, con i nomi giusti.
+  const chunkUsageRuns = [
+    { label: t('log.scopeAudit'), count: currentChunkUsage.auditRuns, last: currentChunkUsage.lastAuditRun },
+    { label: t('log.scopeCoherence'), count: currentChunkUsage.coherenceRuns, last: currentChunkUsage.lastCoherenceRun },
+  ].filter((row) => row.count > 0);
 
   // Stati pipeline (icone con tone di stato) — condivisi fra shell vecchia e nuova.
   const stageStatusButtons = (
@@ -486,6 +494,22 @@ export function DocumentView({
                   </div>
                 }
               >
+                {chunkUsageRuns.length > 0 && (
+                  <div className="space-y-1.5 border-b border-editorial-border/60 pt-3 pb-2.5">
+                    <p className="text-[9px] font-sans uppercase tracking-[0.14em] text-editorial-muted/70">
+                      {t('cost.runsHistory')}
+                    </p>
+                    {chunkUsageRuns.map((row) => (
+                      <div key={row.label} className="flex items-baseline justify-between gap-3 text-[11px]">
+                        <span className="text-editorial-ink">{row.label}</span>
+                        <span className="text-editorial-muted tabular-nums">
+                          {t('cost.runsCount', { count: row.count })}
+                          {row.last ? ` · ${formatRunTimestamp(row.last.at)}` : ''}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {currentChunkUsage.scopeBreakdown.length > 0 ? (
                   <ScopeBreakdownCarousel entries={currentChunkUsage.scopeBreakdown} title={t('cost.breakdown')} />
                 ) : (

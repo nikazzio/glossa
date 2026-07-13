@@ -450,6 +450,15 @@ export function formatDurationMs(ms: number): string {
   return `${minutes}m ${remainder}s`;
 }
 
+export function formatRunTimestamp(at: string): string {
+  return new Date(at).toLocaleString(undefined, {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 export function formatUsd(usd: number | null): string {
   if (usd == null) return '—';
   if (usd === 0) return '$0';
