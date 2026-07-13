@@ -56,7 +56,7 @@ function buildStage(template: StageTemplate, existing?: PipelineStageConfig): Pi
     name: template.name,
     role: template.role,
     prompt: existing?.prompt ?? template.defaultPrompt,
-    model: existing?.model ?? (template.defaultProvider === 'deepl' ? '' : 'gpt-5-nano'),
+    model: existing?.model ?? (template.defaultProvider === 'deepl' ? '' : 'gpt-5.4-nano'),
     provider: existing?.provider ?? (template.defaultProvider ?? 'openai'),
     enabled: true,
     providerOptions,
