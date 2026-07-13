@@ -47,6 +47,14 @@ pub async fn execute_transaction(
             // connection before beginning the transaction that carries a
             // frontend write.
             let mut connection = pool.acquire().await.map_err(|error| error.to_string())?;
+            sqlx::query("PRAGMA journal_mode=WAL")
+                .execute(&mut *connection)
+                .await
+                .map_err(|error| error.to_string())?;
+            sqlx::query("PRAGMA synchronous=NORMAL")
+                .execute(&mut *connection)
+                .await
+                .map_err(|error| error.to_string())?;
             sqlx::query("PRAGMA foreign_keys=ON")
                 .execute(&mut *connection)
                 .await
