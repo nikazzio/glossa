@@ -220,8 +220,6 @@ describe('projectStore', () => {
       {
         id: 'chunk-0',
         project_id: 'proj-1',
-        original_text: 'Original paragraph',
-        final_translation: 'Translated paragraph',
         source_display_text: 'Original paragraph',
         source_processing_text: 'Original paragraph',
         translation_display_text: 'Translated paragraph',
@@ -242,7 +240,7 @@ describe('projectStore', () => {
     expect(usePipelineStore.getState().config.sourceLanguage).toBe('Latin');
     expect(usePipelineStore.getState().config.documentFormat).toBe('markdown');
     expect(usePipelineStore.getState().config.markdownAware).toBe(true);
-    expect(useChunksStore.getState().chunks[0]?.currentDraft).toBe('Translated paragraph');
+    expect(useChunksStore.getState().chunks[0]?.translationDisplayText).toBe('Translated paragraph');
     expect(useUiStore.getState().viewMode).toBe('document');
     expect(useUiStore.getState().selectedChunkId).toBe('chunk-0');
   });

@@ -31,7 +31,7 @@ describe('estimatePipelineCost', () => {
   });
 
   it('returns a positive totalUsd for known-priced models', () => {
-    const chunks = [{ originalText: 'The quick brown fox jumps over the lazy dog.' }];
+    const chunks = [{ sourceText: 'The quick brown fox jumps over the lazy dog.' }];
     const result = estimatePipelineCost(chunks, baseConfig);
     expect(result.totalUsd).toBeGreaterThan(0);
   });
@@ -43,7 +43,7 @@ describe('estimatePipelineCost', () => {
       judgeProvider: 'ollama',
       judgeModel: 'llama3',
     };
-    const result = estimatePipelineCost([{ originalText: 'Hello world' }], ollamaConfig);
+    const result = estimatePipelineCost([{ sourceText: 'Hello world' }], ollamaConfig);
     expect(result.isFree).toBe(true);
     expect(result.totalUsd).toBe(0);
   });
@@ -55,13 +55,13 @@ describe('estimatePipelineCost', () => {
       judgeProvider: 'openai',
       judgeModel: 'unknown-model-xyz',
     };
-    const result = estimatePipelineCost([{ originalText: 'Hello world' }], unknownConfig);
+    const result = estimatePipelineCost([{ sourceText: 'Hello world' }], unknownConfig);
     expect(result.totalUsd).toBeNull();
   });
 
   it('keeps judge output estimate based on the original document size', () => {
-    const chunks = [{ originalText: 'one two three four five six seven eight nine ten' }];
-    const docTokens = estimateTokens(chunks[0].originalText);
+    const chunks = [{ sourceText: 'one two three four five six seven eight nine ten' }];
+    const docTokens = estimateTokens(chunks[0].sourceText);
     const result = estimatePipelineCost(chunks, baseConfig);
 
     expect(result.judge?.inputTokens).toBe(docTokens * 2 + estimateTokens(baseConfig.judgePrompt));
@@ -71,14 +71,14 @@ describe('estimatePipelineCost', () => {
   it('pays the fixed prompt overhead once per chunk, not once for the whole document', () => {
     // Ogni chunk viene tradotto con una chiamata separata al modello: il prompt di sistema
     // va pagato ad ogni chiamata, non una sola volta sull'intero documento.
-    const oneChunk = [{ originalText: 'one two three four five six seven eight nine ten' }];
-    const tenChunks = Array.from({ length: 10 }, () => ({ originalText: 'one two three four five six seven eight nine ten' }));
+    const oneChunk = [{ sourceText: 'one two three four five six seven eight nine ten' }];
+    const tenChunks = Array.from({ length: 10 }, () => ({ sourceText: 'one two three four five six seven eight nine ten' }));
 
     const oneChunkResult = estimatePipelineCost(oneChunk, baseConfig);
     const tenChunksResult = estimatePipelineCost(tenChunks, baseConfig);
 
     const promptTokens = estimateTokens(baseConfig.stages[0].prompt);
-    const wordsPerChunk = oneChunk[0].originalText.trim().split(/\s+/).length;
+    const wordsPerChunk = oneChunk[0].sourceText.trim().split(/\s+/).length;
     const docTokensOne = Math.ceil(wordsPerChunk * 1.35);
     const docTokensTen = Math.ceil(wordsPerChunk * 10 * 1.35);
     expect(oneChunkResult.stages[0].inputTokens).toBe(docTokensOne + promptTokens);
@@ -88,7 +88,7 @@ describe('estimatePipelineCost', () => {
   });
 
   it('omits the coherence pass by default', () => {
-    const result = estimatePipelineCost([{ originalText: 'Hello world' }], {
+    const result = estimatePipelineCost([{ sourceText: 'Hello world' }], {
       ...baseConfig,
       coherencePrompt: 'Check consistency across chunks.',
     });
@@ -99,8 +99,8 @@ describe('estimatePipelineCost', () => {
     const withPrompt: PipelineConfig = { ...baseConfig, coherencePrompt: 'Check consistency across chunks.' };
     const withoutPrompt: PipelineConfig = { ...baseConfig, coherencePrompt: '' };
 
-    const included = estimatePipelineCost([{ originalText: 'Hello world' }], withPrompt, undefined, { includeCoherence: true });
-    const noPrompt = estimatePipelineCost([{ originalText: 'Hello world' }], withoutPrompt, undefined, { includeCoherence: true });
+    const included = estimatePipelineCost([{ sourceText: 'Hello world' }], withPrompt, undefined, { includeCoherence: true });
+    const noPrompt = estimatePipelineCost([{ sourceText: 'Hello world' }], withoutPrompt, undefined, { includeCoherence: true });
 
     expect(included.coherence).not.toBeNull();
     expect(noPrompt.coherence).toBeNull();

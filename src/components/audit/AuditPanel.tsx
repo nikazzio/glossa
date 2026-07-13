@@ -233,8 +233,8 @@ function ChunkAuditCard({
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onReaudit(); }}
-          disabled={isProcessing || !chunk.currentDraft}
-          data-tooltip={chunk.currentDraft ? t('pipeline.reauditChunk') : t('pipeline.auditSkippedNoDraft')}
+          disabled={isProcessing || !chunk.translationDisplayText}
+          data-tooltip={chunk.translationDisplayText ? t('pipeline.reauditChunk') : t('pipeline.auditSkippedNoDraft')}
           aria-label={t('pipeline.reauditChunk')}
           className="px-2 py-2 text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
         >

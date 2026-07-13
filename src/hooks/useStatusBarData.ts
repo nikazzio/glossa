@@ -64,8 +64,8 @@ export function useStatusBarData(): StatusBarContext {
 
     const { sourceWords, targetWords, completedChunks } = chunks.reduce(
       (acc, c) => ({
-        sourceWords: acc.sourceWords + countWords(c.originalText ?? ''),
-        targetWords: acc.targetWords + countWords(c.currentDraft ?? ''),
+        sourceWords: acc.sourceWords + countWords(c.sourceDisplayText),
+        targetWords: acc.targetWords + countWords(c.translationDisplayText),
         completedChunks: acc.completedChunks + (c.status === 'completed' ? 1 : 0),
       }),
       { sourceWords: 0, targetWords: 0, completedChunks: 0 }

@@ -3,11 +3,11 @@ import type { TranslationChunk } from '../types';
 export function makeTranslationChunk(
   overrides: Partial<TranslationChunk> & Pick<TranslationChunk, 'id'>,
 ): TranslationChunk {
-  const sourceDisplayText = overrides.sourceDisplayText ?? overrides.originalText ?? '';
+  const sourceDisplayText = overrides.sourceDisplayText ?? '';
   const sourceProcessingText =
     overrides.sourceProcessingText ?? sourceDisplayText;
   const translationDisplayText =
-    overrides.translationDisplayText ?? overrides.currentDraft ?? '';
+    overrides.translationDisplayText ?? '';
   const translationProcessingText =
     overrides.translationProcessingText ?? translationDisplayText;
 
@@ -17,7 +17,6 @@ export function makeTranslationChunk(
     sourceProcessingText,
     translationDisplayText,
     translationProcessingText,
-    originalText: overrides.originalText ?? sourceDisplayText,
     status: overrides.status ?? 'ready',
     stageResults: overrides.stageResults ?? {},
     judgeResult:
@@ -28,7 +27,6 @@ export function makeTranslationChunk(
         issues: [],
       },
     coherenceResult: overrides.coherenceResult,
-    currentDraft: overrides.currentDraft ?? translationDisplayText,
     translationLocked: overrides.translationLocked ?? false,
     footnotes: overrides.footnotes,
     blobId: overrides.blobId,

@@ -52,14 +52,14 @@ describe('useSaveToMemory', () => {
         makeTranslationChunk({
           id: 'c1',
           sourceProcessingText: 'Ciao mondo.',
-          currentDraft: 'Hello world.',
+          translationDisplayText: 'Hello world.',
           status: 'ready',
           translationLocked: false,
         }),
         makeTranslationChunk({
           id: 'c2',
           sourceProcessingText: 'Buona notte.',
-          currentDraft: 'Good night.',
+          translationDisplayText: 'Good night.',
           status: 'completed',
           translationLocked: true,
         }),

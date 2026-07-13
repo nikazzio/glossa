@@ -61,12 +61,12 @@ function matchesChunk(chunk: TranslationChunk, query: string): { scopes: MatchSc
   const scopes: MatchScope[] = [];
   let snippet = '';
 
-  if (chunk.originalText.toLowerCase().includes(q)) {
+  if (chunk.sourceDisplayText.toLowerCase().includes(q)) {
     scopes.push('source');
-    snippet = getSnippet(chunk.originalText, q);
+    snippet = getSnippet(chunk.sourceDisplayText, q);
   }
 
-  const draft = chunk.currentDraft ?? chunk.translationDisplayText ?? '';
+  const draft = chunk.translationDisplayText;
   if (draft.toLowerCase().includes(q)) {
     scopes.push('translation');
     if (!snippet) snippet = getSnippet(draft, q);

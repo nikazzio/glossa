@@ -28,23 +28,23 @@ const ChunkSourceText = memo(function ChunkSourceText({
   markdownEnabled: boolean;
   onUpdate: (text: string) => void;
 }) {
-  const { html: glossaryHtml } = useGlossaryHighlight(chunk.originalText, glossary, 'source');
-  const hasSuperscriptMarkers = /\[[⁰¹²³⁴⁵⁶⁷⁸⁹]/.test(chunk.originalText);
-  const hasMarkdownMarkers = /(?<!\\)\[\^[^\]]+\]/.test(chunk.originalText);
+  const { html: glossaryHtml } = useGlossaryHighlight(chunk.sourceDisplayText, glossary, 'source');
+  const hasSuperscriptMarkers = /\[[⁰¹²³⁴⁵⁶⁷⁸⁹]/.test(chunk.sourceDisplayText);
+  const hasMarkdownMarkers = /(?<!\\)\[\^[^\]]+\]/.test(chunk.sourceDisplayText);
   const hasFootnotes = hasSuperscriptMarkers || hasMarkdownMarkers;
   const showGlossary = showHighlight && chunk.status !== 'completed';
 
   const highlightHtml = useMemo(() => {
     if (!showGlossary && !hasFootnotes) return null;
-    let html = showGlossary ? glossaryHtml : escapeHtml(chunk.originalText);
+    let html = showGlossary ? glossaryHtml : escapeHtml(chunk.sourceDisplayText);
     if (hasSuperscriptMarkers) html = highlightSuperscriptMarkersHtml(html);
     if (hasMarkdownMarkers) html = highlightFootnoteMarkersHtml(html);
     return html;
-  }, [showGlossary, hasFootnotes, hasSuperscriptMarkers, hasMarkdownMarkers, glossaryHtml, chunk.originalText]);
+  }, [showGlossary, hasFootnotes, hasSuperscriptMarkers, hasMarkdownMarkers, glossaryHtml, chunk.sourceDisplayText]);
 
   return (
     <MarkdownEditor
-      value={chunk.originalText}
+      value={chunk.sourceDisplayText}
       onChange={onUpdate}
       markdownEnabled={markdownEnabled}
       disabled={isProcessing}
@@ -72,10 +72,10 @@ const ChunkDraftText = memo(function ChunkDraftText({
   onUpdate: (text: string) => void;
   placeholder: string;
 }) {
-  const { html } = useGlossaryHighlight(chunk.currentDraft ?? '', glossary, 'translation');
+  const { html } = useGlossaryHighlight(chunk.translationDisplayText, glossary, 'translation');
   return (
     <MarkdownEditor
-      value={chunk.currentDraft || ''}
+      value={chunk.translationDisplayText}
       onChange={onUpdate}
       markdownEnabled={markdownEnabled}
       minHeightClassName="min-h-[100px]"
@@ -159,7 +159,7 @@ const ChunkRow = memo(function ChunkRow({
               <button
                 type="button"
                 onClick={handleRetranslate}
-                disabled={isProcessing || chunk.originalText.trim().length === 0}
+                disabled={isProcessing || chunk.sourceDisplayText.trim().length === 0}
                 data-tooltip={t('pipeline.retranslateChunk')}
                 className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent flex items-center gap-1"
               >
@@ -168,8 +168,8 @@ const ChunkRow = memo(function ChunkRow({
               <button
                 type="button"
                 onClick={handleReaudit}
-                disabled={isProcessing || !chunk.currentDraft}
-                data-tooltip={chunk.currentDraft ? t('pipeline.reauditChunk') : t('pipeline.auditSkippedNoDraft')}
+                disabled={isProcessing || !chunk.translationDisplayText}
+                data-tooltip={chunk.translationDisplayText ? t('pipeline.reauditChunk') : t('pipeline.auditSkippedNoDraft')}
                 className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent flex items-center gap-1"
               >
                 <ScanLine size={11} /> {t('pipeline.reauditChunk')}
@@ -233,7 +233,7 @@ const ChunkRow = memo(function ChunkRow({
             <label className="block text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
               {t('pipeline.candidateTranslation')}
             </label>
-            <CopyButton text={chunk.currentDraft || ''} />
+            <CopyButton text={chunk.translationDisplayText} />
           </div>
           <ChunkDraftText
             chunk={chunk}
@@ -266,7 +266,7 @@ export function ProductionStream({
     loadDocument,
     clearChunks,
     updateChunkDraft,
-    updateChunkOriginalText,
+    updateChunkSourceText,
     unlockChunkForEdit,
   } = useChunksStore();
   const { highlightsEnabled, setHighlightsEnabled } = useUiStore();
@@ -306,8 +306,8 @@ export function ProductionStream({
   }, [t, unlockChunkForEdit]);
 
   const handleUpdateOriginal = useCallback(
-    (id: string, text: string) => updateChunkOriginalText(id, text),
-    [updateChunkOriginalText],
+    (id: string, text: string) => updateChunkSourceText(id, text),
+    [updateChunkSourceText],
   );
 
   const handleUpdateDraft = useCallback(

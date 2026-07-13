@@ -367,8 +367,7 @@ pipelines  ← multi-pipeline per progetto (feat/multi-pipeline)
   created_at, updated_at
 
 translations  ← chunks
-  id, project_id FK, pipeline_id (riferimento logico), position
-  original_text, final_translation
+  id, project_id FK, pipeline_id FK, position
   source_display_text, source_processing_text, translation_display_text, translation_processing_text
   chunk_status ('ready'|'processing'|'completed'|'preview'|'error')
   stage_results JSON (Record<stageId, PipelineResult>)

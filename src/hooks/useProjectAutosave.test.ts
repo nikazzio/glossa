@@ -37,7 +37,7 @@ describe('useProjectAutosave', () => {
       chunks: [
         makeTranslationChunk({
           id: 'chunk-0',
-          originalText: 'Original text',
+          sourceDisplayText: 'Original text',
           status: 'ready',
           stageResults: {},
           judgeResult: {
@@ -46,7 +46,7 @@ describe('useProjectAutosave', () => {
             rating: 'fair',
             issues: [],
           },
-          currentDraft: '',
+          translationDisplayText: '',
         }),
       ],
       isProcessing: false,
@@ -92,19 +92,19 @@ describe('useProjectAutosave', () => {
 
   it('snapshot uses inputText verbatim and does not reconstruct it by joining chunks (regression)', () => {
     // Triple newlines would be collapsed to double if reconstructed from chunks via join('\n\n')
-    const originalText = 'Paragraph one.\n\n\n\nParagraph two.';
+    const documentText = 'Paragraph one.\n\n\n\nParagraph two.';
 
     usePipelineStore.setState((state) => ({
       ...state,
-      inputText: originalText,
-      inputProcessingText: originalText,
+      inputText: documentText,
+      inputProcessingText: documentText,
       sourceFootnotes: [],
     }));
 
     useChunksStore.setState({
       chunks: [
-        makeTranslationChunk({ id: 'a', originalText: 'Paragraph one.' }),
-        makeTranslationChunk({ id: 'b', originalText: 'Paragraph two.' }),
+        makeTranslationChunk({ id: 'a', sourceDisplayText: 'Paragraph one.' }),
+        makeTranslationChunk({ id: 'b', sourceDisplayText: 'Paragraph two.' }),
       ],
       isProcessing: false,
       cancelRequested: false,
@@ -112,8 +112,8 @@ describe('useProjectAutosave', () => {
     });
 
     const snapshot = buildProjectSnapshot({
-      inputText: originalText,
-      inputProcessingText: originalText,
+      inputText: documentText,
+      inputProcessingText: documentText,
       sourceFootnotes: [],
       config: usePipelineStore.getState().config,
       chunks: useChunksStore.getState().chunks,
@@ -121,7 +121,7 @@ describe('useProjectAutosave', () => {
     });
 
     const parsed = JSON.parse(snapshot);
-    expect(parsed.inputText).toBe(originalText);
+    expect(parsed.inputText).toBe(documentText);
     // Prove the triple newline is preserved, not collapsed to double
     expect(parsed.inputText).toContain('\n\n\n\n');
   });

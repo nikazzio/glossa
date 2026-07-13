@@ -141,13 +141,13 @@ export function PipelineSidebarRunSection({
     ? t('pipeline.executeTestRun', { count: runChunkCount })
     : t('pipeline.executeAll');
   const costChunkTexts = useChunksStore(
-    useShallow((state) => state.chunks.map((chunk) => chunk.originalText)),
+    useShallow((state) => state.chunks.map((chunk) => chunk.sourceProcessingText)),
   );
   const currentChunk = useChunksStore(
     useShallow((state) => {
       const chunk = state.chunks.find((entry) => entry.id === selectedChunkId);
       return chunk
-        ? { id: chunk.id, hasOriginalText: chunk.originalText.trim().length > 0, originalText: chunk.originalText }
+        ? { id: chunk.id, hasSourceText: chunk.sourceProcessingText.trim().length > 0, sourceText: chunk.sourceProcessingText }
         : null;
     }),
   );
@@ -159,13 +159,13 @@ export function PipelineSidebarRunSection({
   const hasDocument = totalChunks > 0;
   // Preventivo per l'azione "esegui l'intera pipeline" (modalità 'all').
   const pipelineCostEstimate = useMemo(
-    () => estimatePipelineCost(costChunkTexts.map((originalText) => ({ originalText })), config, pricingOverrides),
+    () => estimatePipelineCost(costChunkTexts.map((sourceText) => ({ sourceText })), config, pricingOverrides),
     [costChunkTexts, config, pricingOverrides],
   );
   // Preventivo per l'azione "traduci solo il chunk corrente" (modalità 'chunk').
   const chunkCostEstimate = useMemo(
     () => estimatePipelineCost(
-      currentChunk?.hasOriginalText ? [{ originalText: currentChunk.originalText }] : [],
+      currentChunk?.hasSourceText ? [{ sourceText: currentChunk.sourceText }] : [],
       config,
       pricingOverrides,
     ),
@@ -213,7 +213,7 @@ export function PipelineSidebarRunSection({
             </IconButton>
           )
         ) : workMode === 'chunk' ? (
-          <IconButton size="md" tone="charcoal" onClick={() => currentChunk && onRetranslateChunk?.(currentChunk.id)} disabled={!currentChunk || !currentChunk.hasOriginalText} title={t('pipeline.translateChunk')} tooltipSide="right" className="h-10 w-10">
+          <IconButton size="md" tone="charcoal" onClick={() => currentChunk && onRetranslateChunk?.(currentChunk.id)} disabled={!currentChunk || !currentChunk.hasSourceText} title={t('pipeline.translateChunk')} tooltipSide="right" className="h-10 w-10">
             <Languages size={15} />
           </IconButton>
         ) : (
@@ -281,7 +281,7 @@ export function PipelineSidebarRunSection({
               size="md"
               tone="charcoal"
               onClick={() => currentChunk && onRetranslateChunk?.(currentChunk.id)}
-              disabled={isProcessing || !currentChunk || !currentChunk.hasOriginalText}
+              disabled={isProcessing || !currentChunk || !currentChunk.hasSourceText}
               title={t('pipeline.translateChunk')}
               ariaLabel={t('pipeline.translateChunk')}
               tooltipSide="bottom"

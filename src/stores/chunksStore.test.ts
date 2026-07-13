@@ -70,7 +70,7 @@ describe('chunksStore', () => {
     });
 
     expect(useChunksStore.getState().chunks).toHaveLength(1);
-    expect(useChunksStore.getState().chunks[0].originalText).toBe(
+    expect(useChunksStore.getState().chunks[0].sourceDisplayText).toBe(
       'Single imported paragraph.',
     );
     expect(useUiStore.getState().viewMode).toBe('document');
@@ -96,7 +96,6 @@ describe('chunksStore', () => {
       prev.map((chunk) => ({
         ...chunk,
         status: 'completed',
-        currentDraft: 'Translated',
         translationDisplayText: 'Translated',
         translationProcessingText: 'Translated',
         stageResults: {
@@ -106,12 +105,12 @@ describe('chunksStore', () => {
     );
 
     const chunkId = useChunksStore.getState().chunks[0].id;
-    useChunksStore.getState().updateChunkOriginalText(chunkId, 'Edited source');
+    useChunksStore.getState().updateChunkSourceText(chunkId, 'Edited source');
 
     const chunk = useChunksStore.getState().chunks[0];
-    expect(chunk.originalText).toBe('Original');
+    expect(chunk.sourceDisplayText).toBe('Edited source');
     expect(chunk.status).toBe('completed');
-    expect(chunk.currentDraft).toBe('Translated');
+    expect(chunk.translationDisplayText).toBe('Translated');
     expect(chunk.stageResults).toEqual({
       'stg-1': { content: 'Translated', status: 'completed' },
     });
@@ -125,7 +124,6 @@ describe('chunksStore', () => {
       prev.map((chunk) => ({
         ...chunk,
         status: 'completed',
-        currentDraft: 'Translated',
         translationDisplayText: 'Translated',
         translationProcessingText: 'Translated',
         stageResults: {
@@ -139,7 +137,7 @@ describe('chunksStore', () => {
     useChunksStore.getState().toggleChunkSourceEditing(chunkId);
     let chunk = useChunksStore.getState().chunks[0];
     expect(chunk.sourceEditable).toBe(true);
-    expect(chunk.currentDraft).toBe('Translated');
+    expect(chunk.translationDisplayText).toBe('Translated');
     expect(chunk.stageResults).toEqual({
       'stg-1': { content: 'Translated', status: 'completed' },
     });
@@ -147,7 +145,7 @@ describe('chunksStore', () => {
     useChunksStore.getState().toggleChunkSourceEditing(chunkId);
     chunk = useChunksStore.getState().chunks[0];
     expect(chunk.sourceEditable).toBe(false);
-    expect(chunk.currentDraft).toBe('Translated');
+    expect(chunk.translationDisplayText).toBe('Translated');
   });
 
   it('clears chunks and returns to sandbox mode', () => {
@@ -216,7 +214,6 @@ describe('chunksStore', () => {
         status: 'completed' as const,
         translationDisplayText: 'Tradotto',
         translationProcessingText: 'Tradotto',
-        currentDraft: 'Tradotto',
       })),
     );
 
@@ -224,27 +221,26 @@ describe('chunksStore', () => {
     expect(afterDisplayTexts).toEqual(originalDisplayTexts);
   });
 
-  it('updateChunkOriginalText updates sourceDisplayText and sourceProcessingText', () => {
+  it('updateChunkSourceText updates sourceDisplayText and sourceProcessingText', () => {
     usePipelineStore.getState().setInputText('Original text');
     useChunksStore.getState().generateChunks();
 
     const chunkId = useChunksStore.getState().chunks[0].id;
-    useChunksStore.getState().updateChunkOriginalText(chunkId, 'Edited text');
+    useChunksStore.getState().updateChunkSourceText(chunkId, 'Edited text');
 
     const chunk = useChunksStore.getState().chunks[0];
     expect(chunk?.sourceDisplayText).toBe('Edited text');
     expect(chunk?.sourceProcessingText).toBe('Edited text');
-    expect(chunk?.originalText).toBe('Original text');
   });
 
-  it('updateChunkOriginalText is a no-op when the source text is unchanged', () => {
+  it('updateChunkSourceText is a no-op when the source text is unchanged', () => {
     usePipelineStore.getState().setInputText('Original text');
     useChunksStore.getState().generateChunks();
 
     const before = useChunksStore.getState().chunks;
     const chunkId = before[0].id;
 
-    useChunksStore.getState().updateChunkOriginalText(chunkId, 'Original text');
+    useChunksStore.getState().updateChunkSourceText(chunkId, 'Original text');
 
     expect(useChunksStore.getState().chunks).toBe(before);
   });

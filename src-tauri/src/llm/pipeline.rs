@@ -331,7 +331,7 @@ pub fn cancel_stream(registry: State<'_, StreamRegistry>, stream_id: String) {
 pub async fn judge_translation(
     app: AppHandle,
     registry: State<'_, StreamRegistry>,
-    original_text: String,
+    source_text: String,
     translation: String,
     config: PipelineConfig,
     stream_id: String,
@@ -342,7 +342,7 @@ pub async fn judge_translation(
     provider.preflight(&config.judge_model).await?;
     let api_key = get_api_key(&app, &config.judge_provider)?;
     let client = provider.http_client()?;
-    let structured = build_judge_prompts(&original_text, &translation, &config);
+    let structured = build_judge_prompts(&source_text, &translation, &config);
     app.emit(
         "chunk-prompt",
         PromptEvent {
@@ -416,7 +416,7 @@ pub async fn judge_translation(
         log::warn!("judge_response.invalid_rating error={error}");
         error
     })?;
-    let issues = parse_judge_issues(&parsed, &original_text, &translation);
+    let issues = parse_judge_issues(&parsed, &source_text, &translation);
 
     Ok(JudgeResponse {
         rating,

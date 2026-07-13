@@ -121,7 +121,7 @@ function ChunkCenterStats() {
 
   if (!chunk || chunkIndex < 0) return null;
 
-  const wordCount = countWords(chunk.originalText ?? '');
+  const wordCount = countWords(chunk.sourceDisplayText);
   const chunkNum = chunkIndex + 1;
   const processing = isProcessing && chunk.status === 'processing';
 

@@ -8,7 +8,7 @@ const dbState = vi.hoisted(() => {
   const userObjects = new Set<string>();
   const columnsByTable = new Map<string, string[]>([
     ['pipeline_configs', ['id', 'project_id', 'stages', 'judge_prompt', 'judge_model', 'judge_provider', 'use_chunking']],
-    ['translations', ['id', 'project_id', 'original_text', 'final_translation', 'stage_results', 'judge_issues', 'created_at']],
+    ['translations', ['id', 'project_id', 'source_display_text', 'source_processing_text', 'translation_display_text', 'translation_processing_text', 'stage_results', 'judge_issues', 'created_at']],
     ['prompt_templates', []],
   ]);
 
@@ -210,7 +210,7 @@ describe('initDatabase migrations', () => {
     dbState.setSchemaVersion(null);
     dbState.setWorkspaceCount(0);
     dbState.columnsByTable.set('pipeline_configs', ['id', 'project_id', 'stages', 'judge_prompt', 'judge_model', 'judge_provider', 'use_chunking']);
-    dbState.columnsByTable.set('translations', ['id', 'project_id', 'original_text', 'final_translation', 'stage_results', 'judge_issues', 'created_at']);
+    dbState.columnsByTable.set('translations', ['id', 'project_id', 'source_display_text', 'source_processing_text', 'translation_display_text', 'translation_processing_text', 'stage_results', 'judge_issues', 'created_at']);
     dbState.setColumns('projects', []);
     dbState.columnsByTable.set('prompt_templates', []);
     dbState.columnsByTable.set('operation_logs', []);
@@ -226,7 +226,7 @@ describe('initDatabase migrations', () => {
     await initDatabase();
 
     expect(invoke).toHaveBeenCalledWith('backup_database_file', {
-      reason: 'schema-1-to-db-schema-v2',
+      reason: 'schema-1-to-db-schema-v3',
     });
     expect(dbState.db.execute).toHaveBeenCalledWith('PRAGMA wal_checkpoint(FULL)');
     expect(dbState.db.execute).toHaveBeenCalledWith('DROP TABLE IF EXISTS projects');
@@ -238,13 +238,27 @@ describe('initDatabase migrations', () => {
 
   it('does not reset a database with the current beta schema version', async () => {
     dbState.setExistingObjects(['app_settings', 'projects', 'workspaces']);
-    dbState.setSchemaVersion('db-schema-v2');
+    dbState.setSchemaVersion('db-schema-v3');
     const { initDatabase } = await import('./dbService');
 
     await initDatabase();
 
     expect(invoke).not.toHaveBeenCalledWith('backup_database_file', expect.anything());
     expect(dbState.db.execute).not.toHaveBeenCalledWith('DROP TABLE IF EXISTS projects');
+  });
+
+  it('resets the previous schema after removing legacy translation columns', async () => {
+    dbState.setExistingObjects(['app_settings', 'projects', 'translations']);
+    dbState.setSchemaVersion('db-schema-v2');
+    vi.mocked(invoke).mockResolvedValueOnce('/tmp/glossa.db-schema-v2.bak');
+    const { initDatabase } = await import('./dbService');
+
+    await initDatabase();
+
+    expect(invoke).toHaveBeenCalledWith('backup_database_file', {
+      reason: 'schema-db-schema-v2-to-db-schema-v3',
+    });
+    expect(dbState.db.execute).toHaveBeenCalledWith('DROP TABLE IF EXISTS translations');
   });
 
   it('bakes translation columns directly into the CREATE TABLE statement', async () => {
@@ -270,6 +284,11 @@ describe('initDatabase migrations', () => {
     expect(dbState.db.execute).toHaveBeenCalledWith(
       expect.stringContaining('blob_reference_chunk_ids TEXT DEFAULT NULL'),
     );
+    const translationSchema = dbState.db.execute.mock.calls.find(
+      ([query]) => typeof query === 'string' && query.includes('CREATE TABLE IF NOT EXISTS translations'),
+    )?.[0];
+    expect(translationSchema).toContain('source_display_text TEXT DEFAULT');
+    expect(translationSchema).toContain('translation_display_text TEXT DEFAULT');
     expect(dbState.db.execute).not.toHaveBeenCalledWith(
       expect.stringContaining('ALTER TABLE pipeline_configs'),
     );

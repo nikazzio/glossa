@@ -210,7 +210,7 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
 
   // Number anchored notes by reading order in the final draft — the same order
   // the preview footnotes use — so each card shows its footnote number.
-  const draft = currentChunk?.currentDraft ?? '';
+  const draft = currentChunk?.translationDisplayText ?? '';
   const numberById = useMemo(() => {
     const placed = annotations
       .map((a) => ({ id: a.id, index: a.anchorText?.trim() ? draft.indexOf(a.anchorText.trim()) : -1 }))

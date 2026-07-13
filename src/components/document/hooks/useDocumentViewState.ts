@@ -86,7 +86,7 @@ export function useDocumentViewState() {
   const effectiveSelectedStageId = selectedStageId || lastStageId;
   const isLastSelected = effectiveSelectedStageId === lastStageId;
   const rawStageContent = isLastSelected
-    ? (currentChunk?.currentDraft ?? '')
+    ? (currentChunk?.translationDisplayText ?? '')
     : (currentChunk?.stageResults[effectiveSelectedStageId]?.content ?? '');
   const deferredStageContent = useDeferredValue(rawStageContent);
 
@@ -175,11 +175,11 @@ export function useDocumentViewState() {
   const effectiveDiffStageIdB = activeDiffPair?.toId ?? '';
   const diffTextA =
     effectiveDiffStageIdA === lastStageId
-      ? (currentChunk?.currentDraft ?? '')
+      ? (currentChunk?.translationDisplayText ?? '')
       : (currentChunk?.stageResults[effectiveDiffStageIdA]?.content ?? '');
   const diffTextB =
     effectiveDiffStageIdB === lastStageId
-      ? (currentChunk?.currentDraft ?? '')
+      ? (currentChunk?.translationDisplayText ?? '')
       : (currentChunk?.stageResults[effectiveDiffStageIdB]?.content ?? '');
   const stageDiff = useStageDiff(showDiffMode ? diffTextA : '', showDiffMode ? diffTextB : '');
 

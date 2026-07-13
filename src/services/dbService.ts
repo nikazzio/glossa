@@ -8,7 +8,7 @@ import {
 
 let db: Database | null = null;
 const DB_URL = 'sqlite:glossa.db';
-const CURRENT_SCHEMA_VERSION = 'db-schema-v2';
+const CURRENT_SCHEMA_VERSION = 'db-schema-v3';
 
 // These tables were introduced before their corresponding product features
 // existed. Keep the list explicit so an older beta DB is cleaned up on boot,
@@ -267,8 +267,6 @@ export async function initDatabase(): Promise<void> {
     CREATE TABLE IF NOT EXISTS translations (
       id TEXT PRIMARY KEY,
       project_id TEXT REFERENCES projects(id) ON DELETE CASCADE,
-      original_text TEXT NOT NULL,
-      final_translation TEXT DEFAULT '',
       source_display_text TEXT DEFAULT '',
       source_processing_text TEXT DEFAULT '',
       translation_display_text TEXT DEFAULT '',

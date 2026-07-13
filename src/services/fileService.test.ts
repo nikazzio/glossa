@@ -100,16 +100,16 @@ describe('exportTranslation', () => {
   const markdownChunks = [
     makeTranslationChunk({
       id: 'chunk-1',
-      originalText: '# Title',
-      currentDraft: '# Titolo',
+      sourceDisplayText: '# Title',
+      translationDisplayText: '# Titolo',
       status: 'completed' as const,
       stageResults: {},
       judgeResult: { content: '# Titolo', status: 'completed' as const, rating: 'good' as const, issues: [] },
     }),
     makeTranslationChunk({
       id: 'chunk-2',
-      originalText: 'Text with note[^1].\n\n[^1]: Footnote body',
-      currentDraft: 'Testo con nota[^1].\n\n[^1]: Corpo nota',
+      sourceDisplayText: 'Text with note[^1].\n\n[^1]: Footnote body',
+      translationDisplayText: 'Testo con nota[^1].\n\n[^1]: Corpo nota',
       status: 'completed' as const,
       stageResults: {},
       judgeResult: { content: '', status: 'idle' as const, rating: 'fair' as const, issues: [] },
@@ -129,8 +129,8 @@ describe('exportTranslation', () => {
   it('plain-text export uses blank-line separator by default', async () => {
     saveMock.mockResolvedValueOnce('/tmp/translation.txt');
     const simple = [
-      makeTranslationChunk({ id: 'a', originalText: 'Source A', currentDraft: 'Traduzione A', status: 'completed' as const, stageResults: {}, judgeResult: { content: '', status: 'idle' as const, rating: 'fair' as const, issues: [] } }),
-      makeTranslationChunk({ id: 'b', originalText: 'Source B', currentDraft: 'Traduzione B', status: 'completed' as const, stageResults: {}, judgeResult: { content: '', status: 'idle' as const, rating: 'fair' as const, issues: [] } }),
+      makeTranslationChunk({ id: 'a', sourceDisplayText: 'Source A', translationDisplayText: 'Traduzione A', status: 'completed' as const, stageResults: {}, judgeResult: { content: '', status: 'idle' as const, rating: 'fair' as const, issues: [] } }),
+      makeTranslationChunk({ id: 'b', sourceDisplayText: 'Source B', translationDisplayText: 'Traduzione B', status: 'completed' as const, stageResults: {}, judgeResult: { content: '', status: 'idle' as const, rating: 'fair' as const, issues: [] } }),
     ];
 
     await exportTranslation(simple, 'txt');
@@ -142,8 +142,8 @@ describe('exportTranslation', () => {
   it('plain-text export respects hr separator', async () => {
     saveMock.mockResolvedValueOnce('/tmp/translation.txt');
     const simple = [
-      makeTranslationChunk({ id: 'a', originalText: 'A', currentDraft: 'Trad A', status: 'completed' as const, stageResults: {}, judgeResult: { content: '', status: 'idle' as const, rating: 'fair' as const, issues: [] } }),
-      makeTranslationChunk({ id: 'b', originalText: 'B', currentDraft: 'Trad B', status: 'completed' as const, stageResults: {}, judgeResult: { content: '', status: 'idle' as const, rating: 'fair' as const, issues: [] } }),
+      makeTranslationChunk({ id: 'a', sourceDisplayText: 'A', translationDisplayText: 'Trad A', status: 'completed' as const, stageResults: {}, judgeResult: { content: '', status: 'idle' as const, rating: 'fair' as const, issues: [] } }),
+      makeTranslationChunk({ id: 'b', sourceDisplayText: 'B', translationDisplayText: 'Trad B', status: 'completed' as const, stageResults: {}, judgeResult: { content: '', status: 'idle' as const, rating: 'fair' as const, issues: [] } }),
     ];
 
     await exportTranslation(simple, 'txt', { separator: '\n\n---\n\n' });
@@ -155,8 +155,8 @@ describe('exportTranslation', () => {
   it('markdown-aware TXT export uses asterisk separator literally without corrupting it', async () => {
     saveMock.mockResolvedValueOnce('/tmp/translation.txt');
     const simple = [
-      makeTranslationChunk({ id: 'a', originalText: 'Hello', currentDraft: 'Ciao', status: 'completed' as const, stageResults: {}, judgeResult: { content: '', status: 'idle' as const, rating: 'fair' as const, issues: [] } }),
-      makeTranslationChunk({ id: 'b', originalText: 'World', currentDraft: 'Mondo', status: 'completed' as const, stageResults: {}, judgeResult: { content: '', status: 'idle' as const, rating: 'fair' as const, issues: [] } }),
+      makeTranslationChunk({ id: 'a', sourceDisplayText: 'Hello', translationDisplayText: 'Ciao', status: 'completed' as const, stageResults: {}, judgeResult: { content: '', status: 'idle' as const, rating: 'fair' as const, issues: [] } }),
+      makeTranslationChunk({ id: 'b', sourceDisplayText: 'World', translationDisplayText: 'Mondo', status: 'completed' as const, stageResults: {}, judgeResult: { content: '', status: 'idle' as const, rating: 'fair' as const, issues: [] } }),
     ];
 
     await exportTranslation(simple, 'txt', { markdownAware: true, separator: '\n\n* * *\n\n' });

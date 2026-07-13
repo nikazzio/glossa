@@ -216,7 +216,7 @@ Do not return explanations, comments, JSON, diffs, or 'no changes'."
 }
 
 pub(crate) fn build_judge_prompts(
-    original_text: &str,
+    source_text: &str,
     translation: &str,
     config: &PipelineConfig,
 ) -> StructuredPrompt {
@@ -243,7 +243,7 @@ pub(crate) fn build_judge_prompts(
     };
 
     // Block 1 (cacheable): static judge context — role, instructions, glossary, format spec.
-    // original_text and translation are in the user turn so this block is constant for the
+    // The source text and translation are in the user turn so this block is constant for the
     // whole project run, enabling near-100% cache hit rate across all chunk judge calls.
     let system_block = format!(
         "You are a translation quality judge for {src}→{tgt} translations.\n\n\
@@ -276,7 +276,7 @@ pub(crate) fn build_judge_prompts(
     );
 
     let user = format!(
-        "Source ({src}): {original_text}\n\
+        "Source ({src}): {source_text}\n\
          Target ({tgt}): {translation}\n\n\
          Perform the audit now and return the JSON report."
     );

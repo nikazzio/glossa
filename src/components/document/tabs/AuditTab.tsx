@@ -56,7 +56,7 @@ export function AuditTab({ panelId, labelledBy, currentChunk, isProcessing, onRe
         <IconButton
           size="md"
           onClick={() => onReauditChunk(currentChunk.id)}
-          disabled={isProcessing || !currentChunk.currentDraft}
+          disabled={isProcessing || !currentChunk.translationDisplayText}
           title={t('pipeline.reauditChunk')}
           tooltipSide="left"
         >

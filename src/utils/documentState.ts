@@ -75,27 +75,18 @@ export function buildChunkFootnotes(
   return assigned.length > 0 ? assigned : undefined;
 }
 
-export function withSyncedChunkFields<T extends Omit<TranslationChunk, 'currentDraft'>>(
-  chunk: T,
-): TranslationChunk {
-  return {
-    ...chunk,
-    currentDraft: chunk.translationDisplayText,
-  };
-}
-
 export function updateChunkSourceFields(
   chunk: TranslationChunk,
   sourceDisplayText: string,
   sourceProcessingText: string,
   footnotes?: Footnote[],
 ): TranslationChunk {
-  return withSyncedChunkFields({
+  return {
     ...chunk,
     sourceDisplayText,
     sourceProcessingText,
     ...(footnotes?.length ? { footnotes } : { footnotes: undefined }),
-  });
+  };
 }
 
 export function updateChunkTranslationFields(
@@ -103,11 +94,11 @@ export function updateChunkTranslationFields(
   translationDisplayText: string,
   translationProcessingText = translationDisplayText,
 ): TranslationChunk {
-  return withSyncedChunkFields({
+  return {
     ...chunk,
     translationDisplayText,
     translationProcessingText,
-  });
+  };
 }
 
 export function composeDocumentProcessingText(chunks: TranslationChunk[]): string {

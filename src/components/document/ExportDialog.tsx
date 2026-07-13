@@ -32,7 +32,7 @@ export function ExportDialog({ chunks, markdownAware, onConfirm, onCancel }: Exp
   const [format, setFormat] = useState<ExportFormat>('txt');
   const [separatorKey, setSeparatorKey] = useState<'blank' | 'hr' | 'asterisk'>('blank');
 
-  const missingCount = chunks.filter((c) => !c.currentDraft?.trim()).length;
+  const missingCount = chunks.filter((c) => !c.translationDisplayText.trim()).length;
   const separatorValue = SEPARATOR_OPTIONS.find((s) => s.key === separatorKey)?.value ?? '\n\n';
   const showSeparator = FORMAT_SUPPORTS_SEPARATOR[format];
 

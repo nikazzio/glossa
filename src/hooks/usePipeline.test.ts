@@ -95,19 +95,19 @@ describe('usePipeline', () => {
       chunks: [
         makeTranslationChunk({
           id: 'chunk-0',
-          originalText: 'First',
+          sourceDisplayText: 'First',
           status: 'ready',
           stageResults: {},
           judgeResult: { content: '', status: 'idle', rating: 'fair', issues: [] },
-          currentDraft: '',
+          translationDisplayText: '',
         }),
         makeTranslationChunk({
           id: 'chunk-1',
-          originalText: 'Second',
+          sourceDisplayText: 'Second',
           status: 'ready',
           stageResults: {},
           judgeResult: { content: '', status: 'idle', rating: 'fair', issues: [] },
-          currentDraft: '',
+          translationDisplayText: '',
         }),
       ],
       isProcessing: false,
@@ -123,7 +123,7 @@ describe('usePipeline', () => {
           ? {
               ...chunk,
               status: 'completed',
-              currentDraft: 'Already translated',
+              translationDisplayText: 'Already translated',
               stageResults: {
                 'stg-1': { content: 'Already translated', status: 'completed' },
               },
@@ -151,8 +151,8 @@ describe('usePipeline', () => {
     });
 
     expect(llmMocks.runStage).toHaveBeenCalledTimes(1);
-    expect(useChunksStore.getState().chunks[0].currentDraft).toBe('Already translated');
-    expect(useChunksStore.getState().chunks[1].currentDraft).toBe('Second translated');
+    expect(useChunksStore.getState().chunks[0].translationDisplayText).toBe('Already translated');
+    expect(useChunksStore.getState().chunks[1].translationDisplayText).toBe('Second translated');
   });
 
   it('re-runs completed chunks on a new batch round unless they are locked', async () => {
@@ -164,9 +164,8 @@ describe('usePipeline', () => {
       chunks: [
         makeTranslationChunk({
           id: 'chunk-0',
-          originalText: 'First',
+          sourceDisplayText: 'First',
           status: 'completed',
-          currentDraft: 'Keep me',
           translationDisplayText: 'Keep me',
           translationProcessingText: 'Keep me',
           translationLocked: true,
@@ -177,9 +176,8 @@ describe('usePipeline', () => {
         }),
         makeTranslationChunk({
           id: 'chunk-1',
-          originalText: 'Second',
+          sourceDisplayText: 'Second',
           status: 'completed',
-          currentDraft: 'Old translation',
           translationDisplayText: 'Old translation',
           translationProcessingText: 'Old translation',
           translationLocked: false,
@@ -207,8 +205,8 @@ describe('usePipeline', () => {
     });
 
     expect(llmMocks.runStage).toHaveBeenCalledTimes(1);
-    expect(useChunksStore.getState().chunks[0].currentDraft).toBe('Keep me');
-    expect(useChunksStore.getState().chunks[1].currentDraft).toBe('Second retranslated');
+    expect(useChunksStore.getState().chunks[0].translationDisplayText).toBe('Keep me');
+    expect(useChunksStore.getState().chunks[1].translationDisplayText).toBe('Second retranslated');
     expect(usePipelineStore.getState().runStatus).toBe('completed');
   });
 
@@ -226,8 +224,8 @@ describe('usePipeline', () => {
     });
 
     expect(llmMocks.runStage).toHaveBeenCalledTimes(1);
-    expect(useChunksStore.getState().chunks[0].currentDraft).toBe('');
-    expect(useChunksStore.getState().chunks[1].currentDraft).toBe(
+    expect(useChunksStore.getState().chunks[0].translationDisplayText).toBe('');
+    expect(useChunksStore.getState().chunks[1].translationDisplayText).toBe(
       'Translated only chunk-1',
     );
   });
@@ -333,7 +331,6 @@ describe('usePipeline', () => {
         ...chunk,
         translationDisplayText: `draft-${index}`,
         translationProcessingText: `draft-${index}`,
-        currentDraft: `draft-${index}`,
       })),
     );
 
@@ -642,7 +639,7 @@ describe('usePipeline', () => {
     expect(llmMocks.runStage).toHaveBeenCalledTimes(2);
     const stage2Call = llmMocks.runStage.mock.calls[1];
     expect(stage2Call[3]).toBe('Stage 1 output');
-    expect(useChunksStore.getState().chunks[0].currentDraft).toBe('Stage 2 output');
+    expect(useChunksStore.getState().chunks[0].translationDisplayText).toBe('Stage 2 output');
   });
 
   it('passes refine output as format input without previousResult', async () => {
@@ -701,7 +698,7 @@ describe('usePipeline', () => {
     const formatCall = llmMocks.runStage.mock.calls[2];
     expect(formatCall[0]).toBe('Refined output');
     expect(formatCall[3]).toBeUndefined();
-    expect(useChunksStore.getState().chunks[0].currentDraft).toBe('Formatted output');
+    expect(useChunksStore.getState().chunks[0].translationDisplayText).toBe('Formatted output');
     expect(llmMocks.judgeTranslation.mock.calls[0][1]).toBe('Formatted output');
   });
 
@@ -758,7 +755,7 @@ describe('usePipeline', () => {
     });
 
     const chunk = useChunksStore.getState().chunks[0];
-    expect(chunk.currentDraft).toBe('Refined output');
+    expect(chunk.translationDisplayText).toBe('Refined output');
     expect(chunk.stageResults['stg-format']?.content).toBe('Refined output');
     expect(llmMocks.judgeTranslation.mock.calls[0][1]).toBe('Refined output');
   });
@@ -798,11 +795,10 @@ describe('usePipeline', () => {
       chunks: [
         makeTranslationChunk({
           id: 'chunk-0',
-          originalText: 'First',
+          sourceDisplayText: 'First',
           sourceProcessingText: 'First',
           translationDisplayText: 'Prima',
           translationProcessingText: 'Prima',
-          currentDraft: 'Prima',
           status: 'completed',
           blobId: 'blob-1',
           blobOrder: 0,
@@ -810,11 +806,10 @@ describe('usePipeline', () => {
         }),
         makeTranslationChunk({
           id: 'chunk-1',
-          originalText: 'Second',
+          sourceDisplayText: 'Second',
           sourceProcessingText: 'Second',
           translationDisplayText: 'Seconda',
           translationProcessingText: 'Seconda',
-          currentDraft: 'Seconda',
           status: 'completed',
           blobId: 'blob-1',
           blobOrder: 1,
@@ -844,21 +839,21 @@ describe('usePipeline', () => {
       chunks: [
         makeTranslationChunk({
           id: 'chunk-0',
-          originalText: 'First',
+          sourceDisplayText: 'First',
           sourceProcessingText: 'First',
           status: 'ready',
           stageResults: {},
           judgeResult: { content: '', status: 'idle', rating: 'fair', issues: [] },
-          currentDraft: '',
+          translationDisplayText: '',
         }),
         makeTranslationChunk({
           id: 'chunk-1',
-          originalText: 'Second',
+          sourceDisplayText: 'Second',
           sourceProcessingText: '',
           status: 'ready',
           stageResults: {},
           judgeResult: { content: '', status: 'idle', rating: 'fair', issues: [] },
-          currentDraft: '',
+          translationDisplayText: '',
         }),
       ],
       isProcessing: false,
@@ -919,8 +914,7 @@ describe('usePipeline', () => {
       chunks: [
         makeTranslationChunk({
           id: 'chunk-0',
-          originalText: 'First',
-          currentDraft: 'Prima',
+          sourceDisplayText: 'First',
           translationDisplayText: 'Prima',
           translationProcessingText: 'Prima',
           status: 'completed',
@@ -929,8 +923,7 @@ describe('usePipeline', () => {
         }),
         makeTranslationChunk({
           id: 'chunk-1',
-          originalText: 'Second',
-          currentDraft: 'Seconda',
+          sourceDisplayText: 'Second',
           translationDisplayText: 'Seconda',
           translationProcessingText: 'Seconda',
           status: 'completed',
@@ -962,8 +955,8 @@ describe('usePipeline', () => {
       chunks: [
         makeTranslationChunk({
           id: 'chunk-0',
-          originalText: 'First',
-          currentDraft: '',
+          sourceDisplayText: 'First',
+          translationDisplayText: '',
           status: 'ready',
           stageResults: {},
           judgeResult: { content: '', status: 'idle', rating: 'fair', issues: [] },

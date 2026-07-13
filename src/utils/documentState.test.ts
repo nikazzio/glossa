@@ -7,7 +7,6 @@ import {
   normalizeRenderProfile,
   updateChunkSourceFields,
   updateChunkTranslationFields,
-  withSyncedChunkFields,
 } from './documentState';
 import { makeTranslationChunk } from '../test/chunkFactory';
 
@@ -191,42 +190,16 @@ describe('composeDocumentDisplayText', () => {
   });
 });
 
-describe('withSyncedChunkFields', () => {
-  it('mirrors sourceDisplayText into originalText', () => {
-    const chunk = makeTranslationChunk({
-      id: 'c',
-      sourceDisplayText: 'Source display',
-      translationDisplayText: 'Translation display',
-    });
-    expect(chunk.originalText).toBe('Source display');
-  });
-
-  it('mirrors translationDisplayText into currentDraft', () => {
-    const chunk = makeTranslationChunk({
-      id: 'c',
-      sourceDisplayText: 'Source',
-      translationDisplayText: 'Draft',
-    });
-    expect(chunk.currentDraft).toBe('Draft');
-  });
-});
-
 describe('updateChunkSourceFields', () => {
   it('updates sourceDisplayText and sourceProcessingText independently', () => {
-    const chunk = makeTranslationChunk({ id: 'c', originalText: 'Old source' });
+    const chunk = makeTranslationChunk({ id: 'c', sourceDisplayText: 'Old source' });
     const updated = updateChunkSourceFields(chunk, 'New Display', 'New Processing');
     expect(updated.sourceDisplayText).toBe('New Display');
     expect(updated.sourceProcessingText).toBe('New Processing');
   });
 
-  it('preserves frozen originalText when source fields change', () => {
-    const chunk = makeTranslationChunk({ id: 'c', originalText: 'Old source' });
-    const updated = updateChunkSourceFields(chunk, 'New Display', 'New Processing');
-    expect(updated.originalText).toBe('Old source');
-  });
-
   it('attaches footnotes when provided', () => {
-    const chunk = makeTranslationChunk({ id: 'c', originalText: 'Text [^1].' });
+    const chunk = makeTranslationChunk({ id: 'c', sourceDisplayText: 'Text [^1].' });
     const footnote = { id: '1', marker: '[¹]', text: 'A note' };
     const updated = updateChunkSourceFields(chunk, 'Text [^1].', 'Text [^1].', [footnote]);
     expect(updated.footnotes).toEqual([footnote]);
@@ -234,7 +207,7 @@ describe('updateChunkSourceFields', () => {
 
   it('clears footnotes when none are provided', () => {
     const footnote = { id: '1', marker: '[¹]', text: 'Note' };
-    const chunk = makeTranslationChunk({ id: 'c', originalText: 'Text', footnotes: [footnote] });
+    const chunk = makeTranslationChunk({ id: 'c', sourceDisplayText: 'Text', footnotes: [footnote] });
     const updated = updateChunkSourceFields(chunk, 'New', 'New');
     expect(updated.footnotes).toBeUndefined();
   });
@@ -242,20 +215,14 @@ describe('updateChunkSourceFields', () => {
 
 describe('updateChunkTranslationFields', () => {
   it('sets both translationDisplayText and translationProcessingText', () => {
-    const chunk = makeTranslationChunk({ id: 'c', originalText: 'Source' });
+    const chunk = makeTranslationChunk({ id: 'c', sourceDisplayText: 'Source' });
     const updated = updateChunkTranslationFields(chunk, 'Display translation', 'Processing translation');
     expect(updated.translationDisplayText).toBe('Display translation');
     expect(updated.translationProcessingText).toBe('Processing translation');
   });
 
-  it('syncs the legacy currentDraft field to translationDisplayText', () => {
-    const chunk = makeTranslationChunk({ id: 'c', originalText: 'Source' });
-    const updated = updateChunkTranslationFields(chunk, 'Display translation', 'Processing translation');
-    expect(updated.currentDraft).toBe('Display translation');
-  });
-
   it('defaults translationProcessingText to translationDisplayText when omitted', () => {
-    const chunk = makeTranslationChunk({ id: 'c', originalText: 'Source' });
+    const chunk = makeTranslationChunk({ id: 'c', sourceDisplayText: 'Source' });
     const updated = updateChunkTranslationFields(chunk, 'Display only');
     expect(updated.translationProcessingText).toBe('Display only');
   });
