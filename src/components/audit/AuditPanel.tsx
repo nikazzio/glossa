@@ -169,6 +169,7 @@ function ChunkAuditCard({
   const isError = judgeResult.status === 'error';
   const issues = judgeResult.issues;
   const hasIssues = issues.length > 0;
+  const openIssuesCount = issues.filter((issue) => !issue.resolved && !issue.rejected).length;
 
   const ratingTone = qualityTone(judgeResult.rating);
   const ratingLabel = t(qualityLabelKey(judgeResult.rating));
@@ -201,7 +202,7 @@ function ChunkAuditCard({
             )}
           </span>
           <span className="text-[9px] uppercase tracking-widest text-editorial-muted">
-            {hasIssues ? t('audit.issuesCount', { count: issues.length }) : t('audit.noIssues')}
+            {hasIssues ? t('audit.issuesCount', { count: openIssuesCount }) : t('audit.noIssues')}
           </span>
         </button>
         <button
@@ -260,7 +261,7 @@ function ChunkAuditCard({
                               } else {
                                 setViewMode('document');
                                 setSelectedChunkId(chunk.id);
-                                focusIssueInChunk(chunk.id, issue.phrase);
+                                focusIssueInChunk(chunk.id, issue.phrase, issue.sourcePhrase ?? null);
                               }
                             }}
                             data-tooltip={t('audit.locateInTextTooltip')}

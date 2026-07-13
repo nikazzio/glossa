@@ -8,6 +8,7 @@ export { SectionLabel } from './SectionLabel';
 export { StatusDot, STATUS_TONE, type PipelineStatus } from './StatusDot';
 export { ToggleRow } from './ToggleRow';
 export { Tooltip, type TooltipSide } from './Tooltip';
+export { Popover } from './Popover';
 export { ScopeBreakdownCard } from './ScopeBreakdownCard';
 export { ScopeBreakdownCarousel } from './ScopeBreakdownCarousel';
 export { StatRow } from './StatRow';

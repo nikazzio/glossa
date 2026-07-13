@@ -21,7 +21,7 @@ import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { usePricingStore } from '../../stores/pricingStore';
 import { useOperationLogStore } from '../../stores/operationLogStore';
 import { HighlightedText, MarkdownEditor, DOC_FONT_SIZE_STEP_INDEX } from '../common';
-import { IconButton, Tooltip, ScopeBreakdownCarousel, type IconButtonTone } from '../ui';
+import { IconButton, Tooltip, Popover, ScopeBreakdownCarousel, type IconButtonTone } from '../ui';
 import { composeAnnotatedMarkdown } from '../../utils/annotationMarkdown';
 import { restoreFootnoteMarkers } from '../../utils/footnoteExtractor';
 import { summarizeChunkUsage, formatUsd } from '../../utils/operationLogStats';
@@ -220,7 +220,6 @@ export function DocumentView({
   // Shell nuova (#291): menu controlli testo, uno per pannello (sorgente / traduzione).
   const [sourceMenuOpen, setSourceMenuOpen] = useState(false);
   const [translationMenuOpen, setTranslationMenuOpen] = useState(false);
-  const [chunkUsageOpen, setChunkUsageOpen] = useState(false);
 
   // Minimap frammenti: tiene sempre in vista il pallino del frammento corrente,
   // anche quando la riga è scrollata altrove o il documento ha molti frammenti.
@@ -454,40 +453,45 @@ export function DocumentView({
               ) : null}
             </div>
             {hasCurrentChunkUsage && (
-              <div
-                className="relative flex shrink-0 flex-col justify-center gap-1 border-l border-editorial-border pl-5"
-                onMouseEnter={() => setChunkUsageOpen(true)}
-                onMouseLeave={() => setChunkUsageOpen(false)}
-              >
-                <span className="text-[9px] font-sans uppercase tracking-[0.14em] text-editorial-muted/70">
-                  {t('document.chunkUsageCaption')}
-                </span>
-                <div className="flex items-center gap-6">
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
-                      {t('header.tokenCount')}
-                    </span>
-                    <span className="font-display text-base italic text-editorial-ink tabular-nums">
-                      {currentChunkTokens.toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
-                      {t('header.estimatedCost')}
-                    </span>
-                    <span className="font-display text-base italic text-editorial-accent tabular-nums">
-                      {formatUsd(currentChunkUsage.total.totalUsd)}
-                    </span>
-                  </div>
-                </div>
-                {chunkUsageOpen && currentChunkUsage.scopeBreakdown.length > 0 && (
-                  <div className="absolute right-0 top-full z-50 w-72 pt-2">
-                    <div className="rounded-xl border border-editorial-border bg-editorial-page px-3 shadow-lg">
-                      <ScopeBreakdownCarousel entries={currentChunkUsage.scopeBreakdown} title={t('cost.breakdown')} />
+              <Popover
+                side="bottom"
+                align="end"
+                className="w-72 px-3"
+                trigger={
+                  <div className="flex shrink-0 items-center gap-6 border-l border-editorial-border pl-5 cursor-default">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
+                        {t('pipeline.unit')}
+                      </span>
+                      <span className="font-display text-base italic text-editorial-ink tabular-nums">
+                        {currentIndex + 1}<span className="text-editorial-muted">/{chunks.length}</span>
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
+                        {t('header.tokenCount')}
+                      </span>
+                      <span className="font-display text-base italic text-editorial-ink tabular-nums">
+                        {currentChunkTokens.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
+                        {t('header.estimatedCost')}
+                      </span>
+                      <span className="font-display text-base italic text-editorial-accent tabular-nums">
+                        {formatUsd(currentChunkUsage.total.totalUsd)}
+                      </span>
                     </div>
                   </div>
+                }
+              >
+                {currentChunkUsage.scopeBreakdown.length > 0 ? (
+                  <ScopeBreakdownCarousel entries={currentChunkUsage.scopeBreakdown} title={t('cost.breakdown')} />
+                ) : (
+                  <p className="py-4 text-center text-[11px] text-editorial-muted">{t('cost.unknown')}</p>
                 )}
-              </div>
+              </Popover>
             )}
           </div>
         </div>

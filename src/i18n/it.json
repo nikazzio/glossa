@@ -880,7 +880,6 @@
     "nextChunk": "Chunk successivo",
     "leftPage": "Pagina sorgente",
     "rightPage": "Pagina traduzione",
-    "chunkUsageCaption": "Frammento corrente · totale di tutte le fasi",
     "stageTrace": "Traccia delle fasi",
     "noStageTrace": "Nessun output disponibile per questa fase.",
     "viewStageResult": "Visualizza output: {{stage}}",

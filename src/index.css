@@ -392,6 +392,15 @@ a[data-footnote-backref] {
   display: none;
 }
 
+/* Apertura popover editoriali (breakdown token/costo, ecc.): dissolvenza + assestamento leggero. */
+@keyframes popover-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.popover-content[data-state="open"] {
+  animation: popover-in 140ms ease-out;
+}
+
 .custom-scrollbar {
   overscroll-behavior: contain;
   scrollbar-width: thin;

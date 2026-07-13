@@ -151,7 +151,9 @@ function ChunkCenterStats() {
     : chunk.status === 'error'
       ? t('statusBar.error')
       : null;
-  const issueCount = chunk.judgeResult?.status === 'completed' ? chunk.judgeResult.issues.length : 0;
+  const issueCount = chunk.judgeResult?.status === 'completed'
+    ? chunk.judgeResult.issues.filter((issue) => !issue.resolved && !issue.rejected).length
+    : 0;
   const noteCount = annotationsByChunkId.get(chunk.id)?.length ?? 0;
 
   return (

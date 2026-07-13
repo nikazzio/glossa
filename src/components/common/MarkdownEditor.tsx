@@ -208,6 +208,22 @@ export function MarkdownEditor({
     }
   };
 
+  // Incollare sopra una selezione può far scattare lo scorrimento del riquadro
+  // (il motore di scrittura lo riadatta per seguire il cursore). Ripristiniamo
+  // la posizione pre-incolla dopo che il riadattamento del motore è avvenuto.
+  const handlePaste = () => {
+    const element = textareaRef.current;
+    if (!element) return;
+    const savedScrollTop = element.scrollTop;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (!textareaRef.current) return;
+        textareaRef.current.scrollTop = savedScrollTop;
+        syncHighlightLayer();
+      });
+    });
+  };
+
   const updateSelection = (start: number, end: number) => {
     setSelection((current) =>
       current.start === start && current.end === end
@@ -339,6 +355,7 @@ export function MarkdownEditor({
       onKeyUp={syncSelection}
       onSelect={syncSelection}
       onScroll={syncHighlightLayer}
+      onPaste={handlePaste}
       spellCheck={false}
       autoCorrect="off"
       autoCapitalize="off"
@@ -531,6 +548,7 @@ export function MarkdownEditor({
               onKeyUp={syncSelection}
               onSelect={syncSelection}
               onScroll={syncHighlightLayer}
+              onPaste={handlePaste}
               spellCheck={false}
               autoCorrect="off"
               autoCapitalize="off"
