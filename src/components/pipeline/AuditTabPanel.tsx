@@ -1,17 +1,17 @@
-import { AlertTriangle, Cpu, History, RefreshCw, Scale, Wand2 } from 'lucide-react';
+import { AlertTriangle, Cpu, RefreshCw, Scale, Wand2 } from 'lucide-react';
 import type { Dispatch, SetStateAction } from 'react';
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ModelProvider, PipelineConfig, PromptTemplate, ReasoningEffortLevel } from '../../types';
 import type { ProviderKeyStatusMap } from '../../hooks/useProviderKeyStatus';
 import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
 import { ensureModelInList, getKnownModelIds, getModelStatus, getResolvedModelReasoning, LLM_PROVIDER_ORDER } from '../../models/catalog';
 import { DEFAULT_COHERENCE_PROMPT, DEFAULT_JUDGE_PROMPT } from '../../constants';
-import { IconButton, SectionLabel, ToggleRow } from '../ui';
+import { SectionLabel, ToggleRow } from '../ui';
 import { DeprecatedModelBadge } from '../models/DeprecatedModelBadge';
 import { ReasoningPicker } from '../models/ReasoningPicker';
 import { ProviderRuntimeEditor } from './ProviderRuntimeEditor';
 import { AuditPromptEditor } from './AuditPromptEditor';
+import { useUiStore } from '../../stores/uiStore';
 
 interface AuditTabPanelProps {
   config: PipelineConfig;
@@ -56,7 +56,7 @@ export function AuditTabPanel({
 }: AuditTabPanelProps) {
   const { t } = useTranslation();
   const judgeResolvedReasoning = getResolvedModelReasoning(config.judgeProvider, config.judgeModel);
-  const [showDeprecatedModels, setShowDeprecatedModels] = useState(false);
+  const showDeprecatedModels = useUiStore((s) => s.showDeprecatedModels);
   const canToggleDeprecated = config.judgeProvider !== 'ollama';
   const effectiveJudgeModels = ensureModelInList(
     showDeprecatedModels && canToggleDeprecated
@@ -137,17 +137,6 @@ export function AuditTabPanel({
                 ))}
               </select>
               <DeprecatedModelBadge provider={config.judgeProvider} model={config.judgeModel} />
-              {canToggleDeprecated && (
-                <IconButton
-                  size="sm"
-                  tone={showDeprecatedModels ? 'accent' : 'default'}
-                  onClick={() => setShowDeprecatedModels(!showDeprecatedModels)}
-                  title={t('pipeline.toggleDeprecatedModels')}
-                  ariaPressed={showDeprecatedModels}
-                >
-                  <History size={13} />
-                </IconButton>
-              )}
             </div>
           ) : config.judgeProvider === 'ollama' ? (
             <input

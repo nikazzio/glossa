@@ -4,7 +4,7 @@ import {
   AlertCircle, Server, RefreshCw, CheckCircle2, XCircle, HelpCircle,
   Sparkles, Columns2, BookOpen, ChevronDown, ChevronUp, SlidersHorizontal,
   ChevronsLeft, Copy, RotateCcw, Scissors, Layers, LayoutTemplate, Palette,
-  LibraryBig, FileText, Type, Sun, Moon, Monitor, Globe,
+  LibraryBig, FileText, Type, Sun, Moon, Monitor, Globe, History,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -19,7 +19,7 @@ import { getKnownModelIds, getModelEntry, MODEL_CATALOG, MODEL_PROVIDER_ORDER } 
 import { MODEL_PRICING } from '../../constants';
 import { usePricingStore } from '../../stores/pricingStore';
 import { ProviderLogo } from '../common';
-import { Dialog, IconButton, DialogCancelButton, Tooltip, ContrastBadge } from '../ui';
+import { Dialog, IconButton, DialogCancelButton, Tooltip, ContrastBadge, ToggleRow } from '../ui';
 import type { ModelProvider } from '../../types';
 import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
 import { useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
@@ -184,6 +184,8 @@ export function SettingsModal() {
     setDocumentLineHeight,
     settingsTab: activeTab,
     setSettingsTab: setActiveTab,
+    showDeprecatedModels,
+    setShowDeprecatedModels,
   } = useUiStore();
   const {
     ollamaStatus,
@@ -821,9 +823,18 @@ export function SettingsModal() {
 
                         {activeProviderTab !== 'ollama' && activeProviderTab !== 'custom' && (() => {
                           const hasKey = !!(keyStatuses as Partial<Record<string, boolean>>)[activeProviderTab];
-                          const groups = groupModelIds(activeProviderTab, getKnownModelIds(activeProviderTab));
+                          const groups = groupModelIds(
+                            activeProviderTab,
+                            getKnownModelIds(activeProviderTab, { includeDeprecated: showDeprecatedModels }),
+                          );
                           return (
                             <div className="space-y-3">
+                              <ToggleRow
+                                icon={<History size={13} />}
+                                label={t('settings.showDeprecatedModels')}
+                                checked={showDeprecatedModels}
+                                onChange={() => setShowDeprecatedModels(!showDeprecatedModels)}
+                              />
                               {groups.map(({ label, ids }) => (
                                 <div key={label || '_all'} className="space-y-1.5">
                                   {label && (
@@ -857,6 +868,11 @@ export function SettingsModal() {
                                             {entry?.status === 'preview' && (
                                               <span className="rounded-full border border-editorial-warning/40 bg-editorial-warning/10 px-2 py-0.5 text-[11px] font-mono text-editorial-warning">
                                                 preview
+                                              </span>
+                                            )}
+                                            {entry?.status === 'deprecated' && (
+                                              <span className="rounded-full border border-editorial-warning/40 bg-editorial-warning/10 px-2 py-0.5 text-[11px] font-mono text-editorial-warning">
+                                                {t('settings.deprecatedModelBadge')}
                                               </span>
                                             )}
                                           </div>
