@@ -19,13 +19,11 @@ const QUALITY_TONE_COLOR: Record<ReturnType<typeof qualityTone>, string> = {
 };
 
 export function AuditPanel({ onRunAuditOnly, onReauditChunk }: AuditPanelProps) {
-  const { chunks, clearChunks, isProcessing } = useChunksStore();
+  const { chunks, clearChunks, isProcessing, toggleJudgeIssueResolved, toggleJudgeIssueRejected } = useChunksStore();
   const { t } = useTranslation();
 
   // Track which chunks are expanded in the drill-down. Default closed.
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const [resolvedKeys, setResolvedKeys] = useState<Set<string>>(new Set());
-  const [rejectedKeys, setRejectedKeys] = useState<Set<string>>(new Set());
 
   const auditedChunks = useMemo(
     () => chunks.filter((c) => c.judgeResult.status === 'completed' || c.judgeResult.status === 'error'),
@@ -63,26 +61,6 @@ export function AuditPanel({ onRunAuditOnly, onReauditChunk }: AuditPanelProps) 
       const next = new Set(prev);
       if (next.has(chunkId)) next.delete(chunkId);
       else next.add(chunkId);
-      return next;
-    });
-  };
-
-  const toggleResolved = (key: string) => {
-    setResolvedKeys((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) { next.delete(key); return next; }
-      next.add(key);
-      setRejectedKeys((r) => { const rn = new Set(r); rn.delete(key); return rn; });
-      return next;
-    });
-  };
-
-  const toggleRejected = (key: string) => {
-    setRejectedKeys((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) { next.delete(key); return next; }
-      next.add(key);
-      setResolvedKeys((r) => { const rn = new Set(r); rn.delete(key); return rn; });
       return next;
     });
   };
@@ -126,10 +104,8 @@ export function AuditPanel({ onRunAuditOnly, onReauditChunk }: AuditPanelProps) 
                     onToggle={() => toggleExpanded(chunk.id)}
                     onReaudit={() => onReauditChunk(chunk.id)}
                     isProcessing={isProcessing}
-                    resolvedKeys={resolvedKeys}
-                    rejectedKeys={rejectedKeys}
-                    onToggleResolved={toggleResolved}
-                    onToggleRejected={toggleRejected}
+                    onToggleResolved={(issueIndex) => toggleJudgeIssueResolved(chunk.id, issueIndex)}
+                    onToggleRejected={(issueIndex) => toggleJudgeIssueRejected(chunk.id, issueIndex)}
                   />
                 );
               })}
@@ -179,15 +155,13 @@ interface ChunkAuditCardProps {
   onToggle: () => void;
   onReaudit: () => void;
   isProcessing: boolean;
-  resolvedKeys: Set<string>;
-  rejectedKeys: Set<string>;
-  onToggleResolved: (key: string) => void;
-  onToggleRejected: (key: string) => void;
+  onToggleResolved: (issueIndex: number) => void;
+  onToggleRejected: (issueIndex: number) => void;
 }
 
 function ChunkAuditCard({
   chunk, index, isExpanded, onToggle, onReaudit, isProcessing,
-  resolvedKeys, rejectedKeys, onToggleResolved, onToggleRejected,
+  onToggleResolved, onToggleRejected,
 }: ChunkAuditCardProps) {
   const { t } = useTranslation();
   const { focusIssueInChunk, clearFocusedIssue, focusedIssueQuery, setSelectedChunkId, setViewMode, setPendingAnnotationAnchor, setChunkRailTab, setProjectContextCollapsed } = useUiStore();
@@ -263,9 +237,8 @@ function ChunkAuditCard({
           {hasIssues && (
             <ul className="space-y-3">
               {issues.map((issue, i) => {
-                const issueKey = `${chunk.id}-${i}`;
-                const isResolved = resolvedKeys.has(issueKey);
-                const isRejected = rejectedKeys.has(issueKey);
+                const isResolved = issue.resolved ?? false;
+                const isRejected = issue.rejected ?? false;
                 const isActive = !!issue.phrase && focusedIssueQuery === issue.phrase;
                 return (
                   <li key={i} className={`space-y-1 transition-opacity ${isResolved || isRejected ? 'opacity-40' : ''}`}>
@@ -319,7 +292,7 @@ function ChunkAuditCard({
                           type="button"
                           onClick={() => {
                             if (isActive) clearFocusedIssue();
-                            onToggleResolved(issueKey);
+                            onToggleResolved(i);
                           }}
                           data-tooltip={isResolved ? t('audit.markUnresolved') : t('audit.markResolved')}
                           aria-label={isResolved ? t('audit.markUnresolved') : t('audit.markResolved')}
@@ -335,7 +308,7 @@ function ChunkAuditCard({
                           type="button"
                           onClick={() => {
                             if (isActive) clearFocusedIssue();
-                            onToggleRejected(issueKey);
+                            onToggleRejected(i);
                           }}
                           data-tooltip={isRejected ? t('audit.markUnrejected') : t('audit.markRejected')}
                           aria-label={isRejected ? t('audit.markUnrejected') : t('audit.markRejected')}

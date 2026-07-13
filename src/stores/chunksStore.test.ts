@@ -148,6 +148,37 @@ describe('chunksStore', () => {
     expect(chunk.translationDisplayText).toBe('Translated');
   });
 
+  it('marks a judge audit issue resolved/rejected on the chunk itself, so it survives reload', () => {
+    usePipelineStore.getState().setInputText('Original');
+    useChunksStore.getState().generateChunks();
+    useChunksStore.getState().setChunks((prev) =>
+      prev.map((chunk) => ({
+        ...chunk,
+        judgeResult: {
+          ...chunk.judgeResult,
+          status: 'completed',
+          issues: [
+            { type: 'fluency', severity: 'low', description: 'Issue A' },
+            { type: 'grammar', severity: 'medium', description: 'Issue B' },
+          ],
+        },
+      })),
+    );
+
+    const chunkId = useChunksStore.getState().chunks[0].id;
+
+    useChunksStore.getState().toggleJudgeIssueResolved(chunkId, 0);
+    let issues = useChunksStore.getState().chunks[0].judgeResult.issues;
+    expect(issues[0].resolved).toBe(true);
+    expect(issues[1].resolved).toBeUndefined();
+
+    // Marking the same issue rejected clears the resolved flag (mutually exclusive).
+    useChunksStore.getState().toggleJudgeIssueRejected(chunkId, 0);
+    issues = useChunksStore.getState().chunks[0].judgeResult.issues;
+    expect(issues[0].resolved).toBe(false);
+    expect(issues[0].rejected).toBe(true);
+  });
+
   it('clears chunks and returns to sandbox mode', () => {
     usePipelineStore.getState().setInputText('A\n\nB');
     useChunksStore.getState().generateChunks();

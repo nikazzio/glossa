@@ -216,12 +216,13 @@ export interface Issue {
   phrase?: string;
   sourcePhrase?: string;
   confidence?: number;
+  resolved?: boolean;
+  rejected?: boolean;
 }
 
 export interface CoherenceResult {
   status: 'idle' | 'processing' | 'completed' | 'error';
   issues: Issue[];
-  resolvedIssueKeys?: string[];
   error?: string;
   tokenUsage?: TokenUsage;
   promptInfo?: PromptInfo;

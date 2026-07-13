@@ -1,9 +1,10 @@
 import { CheckCircle2, Loader2, RefreshCcw } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconButton } from '../../ui';
 import { IssueList } from './IssueList';
 import { qualityLabelKey, qualityTone } from '../../../utils';
+import { useChunksStore } from '../../../stores/chunksStore';
 import type { TranslationChunk } from '../../../types';
 
 const QUALITY_TONE_COLOR: Record<ReturnType<typeof qualityTone>, string> = {
@@ -24,14 +25,10 @@ export interface AuditTabProps {
 
 export function AuditTab({ panelId, labelledBy, currentChunk, isProcessing, onReauditChunk, onSelectChunk, onFocusIssue }: AuditTabProps) {
   const { t } = useTranslation();
-  const [resolvedKeys, setResolvedKeys] = useState<Set<string>>(new Set());
-  const handleToggleResolved = useCallback((key: string) => {
-    setResolvedKeys((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key); else next.add(key);
-      return next;
-    });
-  }, []);
+  const toggleJudgeIssueResolved = useChunksStore((s) => s.toggleJudgeIssueResolved);
+  const handleToggleResolved = useCallback((issueIndex: number) => {
+    if (currentChunk) toggleJudgeIssueResolved(currentChunk.id, issueIndex);
+  }, [currentChunk, toggleJudgeIssueResolved]);
 
   if (!currentChunk) {
     return (
@@ -93,7 +90,6 @@ export function AuditTab({ panelId, labelledBy, currentChunk, isProcessing, onRe
           chunkId={currentChunk.id}
           onSelectChunk={onSelectChunk}
           onFocusIssue={onFocusIssue}
-          resolvedKeys={resolvedKeys}
           onToggleResolved={handleToggleResolved}
         />
       )}

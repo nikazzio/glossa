@@ -148,7 +148,9 @@ interface ChunksState {
   updateChunkSourceText: (chunkId: string, text: string) => void;
   toggleChunkSourceEditing: (chunkId: string) => void;
   updateChunkCoherence: (chunkId: string, result: CoherenceResult) => void;
-  toggleCoherenceIssueResolved: (chunkId: string, key: string) => void;
+  toggleCoherenceIssueResolved: (chunkId: string, issueIndex: number) => void;
+  toggleJudgeIssueResolved: (chunkId: string, issueIndex: number) => void;
+  toggleJudgeIssueRejected: (chunkId: string, issueIndex: number) => void;
   resetCompletedChunks: () => void;
   resetAllChunks: () => void;
   unlockChunkForEdit: (chunkId: string) => void;
@@ -345,15 +347,51 @@ export const useChunksStore = create<ChunksState>((set, get) => ({
       })),
     })),
 
-  toggleCoherenceIssueResolved: (chunkId, key) =>
+  toggleCoherenceIssueResolved: (chunkId, issueIndex) =>
     set((state) => ({
       chunks: updateSingleChunk(state.chunks, chunkId, (chunk) => {
         const current = chunk.coherenceResult;
         if (!current) return chunk;
-        const keys = current.resolvedIssueKeys ?? [];
-        const next = keys.includes(key) ? keys.filter((k) => k !== key) : [...keys, key];
-        return { ...chunk, coherenceResult: { ...current, resolvedIssueKeys: next } };
+        return {
+          ...chunk,
+          coherenceResult: {
+            ...current,
+            issues: current.issues.map((issue, i) =>
+              i === issueIndex ? { ...issue, resolved: !issue.resolved } : issue,
+            ),
+          },
+        };
       }),
+    })),
+
+  toggleJudgeIssueResolved: (chunkId, issueIndex) =>
+    set((state) => ({
+      chunks: updateSingleChunk(state.chunks, chunkId, (chunk) => ({
+        ...chunk,
+        judgeResult: {
+          ...chunk.judgeResult,
+          issues: chunk.judgeResult.issues.map((issue, i) =>
+            i === issueIndex
+              ? { ...issue, resolved: !issue.resolved, rejected: issue.resolved ? issue.rejected : false }
+              : issue,
+          ),
+        },
+      })),
+    })),
+
+  toggleJudgeIssueRejected: (chunkId, issueIndex) =>
+    set((state) => ({
+      chunks: updateSingleChunk(state.chunks, chunkId, (chunk) => ({
+        ...chunk,
+        judgeResult: {
+          ...chunk.judgeResult,
+          issues: chunk.judgeResult.issues.map((issue, i) =>
+            i === issueIndex
+              ? { ...issue, rejected: !issue.rejected, resolved: issue.rejected ? issue.resolved : false }
+              : issue,
+          ),
+        },
+      })),
     })),
 
   resetCompletedChunks: () =>

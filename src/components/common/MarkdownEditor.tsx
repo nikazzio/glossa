@@ -183,7 +183,8 @@ export function MarkdownEditor({
     if (!focusQuery) return;
     const normalizedQuery = focusQuery.trim();
     if (!normalizedQuery) return;
-    const lowerValue = value.toLowerCase();
+    const currentValue = lastValueRef.current;
+    const lowerValue = currentValue.toLowerCase();
     const lowerQuery = normalizedQuery.toLowerCase();
     const matchIndex = lowerValue.indexOf(lowerQuery);
     if (matchIndex === -1) return;
@@ -192,12 +193,14 @@ export function MarkdownEditor({
     requestAnimationFrame(() => {
       const element = textareaRef.current ?? readOnlyHighlightRef.current;
       if (!element) return;
-      element.scrollTop = Math.max(0, element.scrollHeight * (matchIndex / Math.max(1, value.length)) - 120);
+      element.scrollTop = Math.max(0, element.scrollHeight * (matchIndex / Math.max(1, currentValue.length)) - 120);
       syncHighlightLayer();
       element.dispatchEvent(new Event('scroll', { bubbles: true }));
       onFocusQueryHandled?.();
     });
-  }, [focusQuery, focusRequestId, onFocusQueryHandled, value]);
+    // Scatta solo su nuovo target audit (focusQuery/focusRequestId), non su ogni edit:
+    // altrimenti paste/typing rilancia lo scroll-to-match e salta la vista dell'utente.
+  }, [focusQuery, focusRequestId, onFocusQueryHandled]);
 
   const syncHighlightLayer = () => {
     if (highlightLayerRef.current && textareaRef.current) {

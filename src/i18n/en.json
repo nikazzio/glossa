@@ -880,6 +880,7 @@
     "nextChunk": "Next chunk",
     "leftPage": "Source page",
     "rightPage": "Translation page",
+    "chunkUsageCaption": "Current fragment · total across all stages",
     "stageTrace": "Stage Trace",
     "noStageTrace": "No output available for this stage.",
     "viewStageResult": "View output: {{stage}}",
@@ -1518,6 +1519,8 @@
   },
   "statusBar": {
     "saved": "Saved",
+    "lastSavedTooltip": "Last saved: {{time}}",
+    "neverSavedTooltip": "No save yet this session",
     "scrollLinked": "Scroll linked",
     "saving": "Saving…",
     "dirty": "Unsaved changes",

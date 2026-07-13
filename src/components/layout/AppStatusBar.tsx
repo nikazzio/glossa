@@ -22,17 +22,23 @@ const QUALITY_ICON = {
   weak: <AlertCircle size={11} className="text-editorial-danger" />,
 };
 
-function SaveIndicator({ state }: { state: 'idle' | 'dirty' | 'saving' | 'saved' | 'error' }) {
+function SaveIndicator({ state, lastSavedAt }: { state: 'idle' | 'dirty' | 'saving' | 'saved' | 'error'; lastSavedAt: number | null }) {
   const { t } = useTranslation();
 
   if (state === 'idle') return null;
 
+  const tooltipLabel = lastSavedAt
+    ? t('statusBar.lastSavedTooltip', { time: new Date(lastSavedAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) })
+    : t('statusBar.neverSavedTooltip');
+
   if (state === 'saving') {
     return (
-      <span className="flex items-center gap-1 text-editorial-muted">
-        <Loader2 size={10} className="animate-spin" />
-        <span className="text-xs">{t('statusBar.saving')}</span>
-      </span>
+      <Tooltip label={tooltipLabel} side="top">
+        <span className="flex items-center gap-1 text-editorial-muted">
+          <Loader2 size={10} className="animate-spin" />
+          <span className="text-xs">{t('statusBar.saving')}</span>
+        </span>
+      </Tooltip>
     );
   }
 
@@ -51,10 +57,12 @@ function SaveIndicator({ state }: { state: 'idle' | 'dirty' | 'saving' | 'saved'
         : t('statusBar.saveError');
 
   return (
-    <span className="flex items-center gap-1.5">
-      <span className={`h-1.5 w-1.5 rounded-full ${dot}`} aria-hidden="true" />
-      <span className="text-xs text-editorial-muted">{label}</span>
-    </span>
+    <Tooltip label={tooltipLabel} side="top">
+      <span className="flex items-center gap-1.5">
+        <span className={`h-1.5 w-1.5 rounded-full ${dot}`} aria-hidden="true" />
+        <span className="text-xs text-editorial-muted">{label}</span>
+      </span>
+    </Tooltip>
   );
 }
 
@@ -333,7 +341,7 @@ export function AppStatusBar() {
           {data.kind === 'project' && (
             <>
               <span className="h-3.5 w-px bg-editorial-border/60" aria-hidden="true" />
-              <SaveIndicator state={data.saveState} />
+              <SaveIndicator state={data.saveState} lastSavedAt={data.lastSavedAt} />
             </>
           )}
         </div>
