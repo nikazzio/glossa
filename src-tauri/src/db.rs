@@ -133,6 +133,27 @@ pub fn backup_database_file(
     Ok(Some(backup_path.to_string_lossy().into_owned()))
 }
 
+/// A JSON array of small non-negative integers is how the frontend represents
+/// a BLOB column (tauri-plugin-sql/JSON can't carry raw bytes otherwise) —
+/// e.g. phrase_memory.embedding, round-tripped through a workspace backup.
+/// Without this, such arrays fell through to the generic `JsonValue` bind
+/// below, which sqlx serializes as JSON *text* instead of raw bytes, silently
+/// corrupting the embedding for any semantic search that reads it back.
+fn json_array_as_blob(array: &[JsonValue]) -> Option<Vec<u8>> {
+    if array.is_empty() {
+        return None;
+    }
+    array
+        .iter()
+        .map(|element| {
+            element
+                .as_u64()
+                .filter(|byte| *byte <= u8::MAX as u64)
+                .map(|byte| byte as u8)
+        })
+        .collect()
+}
+
 fn bind_json_value<'q>(
     query: sqlx::query::Query<'q, sqlx::Sqlite, sqlx::sqlite::SqliteArguments<'q>>,
     value: JsonValue,
@@ -149,7 +170,48 @@ fn bind_json_value<'q>(
         query.bind(value as i64)
     } else if let Some(value) = value.as_f64() {
         query.bind(value)
+    } else if let Some(bytes) = value.as_array().and_then(|array| json_array_as_blob(array)) {
+        query.bind(bytes)
     } else {
         query.bind(value)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn converts_byte_array_to_blob() {
+        let array = vec![
+            JsonValue::from(0),
+            JsonValue::from(32),
+            JsonValue::from(169),
+            JsonValue::from(255),
+        ];
+        assert_eq!(json_array_as_blob(&array), Some(vec![0, 32, 169, 255]));
+    }
+
+    #[test]
+    fn rejects_empty_array() {
+        assert_eq!(json_array_as_blob(&[]), None);
+    }
+
+    #[test]
+    fn rejects_value_above_u8_range() {
+        let array = vec![JsonValue::from(0), JsonValue::from(256)];
+        assert_eq!(json_array_as_blob(&array), None);
+    }
+
+    #[test]
+    fn rejects_negative_value() {
+        let array = vec![JsonValue::from(-1)];
+        assert_eq!(json_array_as_blob(&array), None);
+    }
+
+    #[test]
+    fn rejects_non_numeric_element() {
+        let array = vec![JsonValue::from(1), JsonValue::from("nope")];
+        assert_eq!(json_array_as_blob(&array), None);
     }
 }
