@@ -118,6 +118,13 @@ export async function importWorkspace(t: (key: string) => string): Promise<boole
 
   await runInTransaction(async (run) => {
     for (const table of DELETE_ORDER) {
+      if (table === 'app_settings') {
+        // Never touch the running DB's migration marker — deleting it here
+        // leaves app_settings with no schema_version row at all, which reads
+        // as "outdated" on the next boot exactly like a stale value would.
+        await run(`DELETE FROM app_settings WHERE key != $1`, [DB_MIGRATION_SETTING_KEY]);
+        continue;
+      }
       await run(`DELETE FROM ${table}`);
     }
     for (const table of INSERT_ORDER) {

@@ -86,4 +86,28 @@ describe('importWorkspace', () => {
     );
     expect(insertedActiveWorkspaceRow).toBeDefined();
   });
+
+  it('never deletes the schema_version row, so the running DB keeps its current migration marker across an import', async () => {
+    // Regression: DELETE FROM app_settings (no WHERE) removed the marker
+    // entirely, and since the INSERT step skips restoring it, the row
+    // disappeared for good — read back as "no version" on the next boot,
+    // which looks exactly like an outdated schema and re-triggers the
+    // confirmation prompt forever, even though the data just imported fine.
+    fsState.raw = backupWith([
+      { key: 'schema_version', value: 'db-schema-v1' },
+      { key: 'active_workspace_id', value: 'ws_orafo' },
+    ]);
+
+    await importWorkspace(t);
+
+    const unconditionalDelete = runMock.mock.calls.find(
+      ([query]) => query.trim() === 'DELETE FROM app_settings',
+    );
+    expect(unconditionalDelete).toBeUndefined();
+
+    const scopedDelete = runMock.mock.calls.find(
+      ([query, params]) => query === 'DELETE FROM app_settings WHERE key != $1' && params?.[0] === 'schema_version',
+    );
+    expect(scopedDelete).toBeDefined();
+  });
 });
