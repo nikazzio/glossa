@@ -28,7 +28,7 @@ import { useCustomProviderStore } from '../../stores/customProviderStore';
 import { confirm } from '../../stores/confirmStore';
 import { STAGE_TEMPLATES } from '../../pipeline/pipelineModes';
 import { DeeplStageConfig } from './DeeplStageConfig';
-import { IconButton } from '../ui';
+import { IconButton, SectionLabel } from '../ui';
 
 interface StageCardProps {
   stage: PipelineStageConfig;
@@ -202,12 +202,7 @@ export function StageCard({
       <>
       {/* Model + provider card */}
       <div className="space-y-3 border-l-4 border-l-editorial-charcoal/30 border-y border-editorial-border/70 bg-editorial-bg/65 px-5 py-4">
-        <div className="flex items-center gap-1.5">
-          <Cpu size={11} className="text-editorial-accent shrink-0" />
-          <p className="text-[11px] font-sans font-bold uppercase tracking-[0.14em] text-editorial-muted">
-            {t('pipeline.stageModelLabel')}
-          </p>
-        </div>
+        <SectionLabel icon={Cpu} label={t('pipeline.stageModelLabel')} />
         <div className="flex gap-2">
           <select
             value={stage.provider}
@@ -318,10 +313,7 @@ export function StageCard({
       <div className="border-l-4 border-l-editorial-accent/40 border-y border-editorial-border/70 bg-editorial-bg/85 px-5 py-4 space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-1.5">
-            <FileText size={11} className="text-editorial-accent shrink-0" />
-            <span className="text-[11px] font-sans font-bold uppercase tracking-[0.14em] text-editorial-muted">
-              {t('pipeline.prompt')}
-            </span>
+            <SectionLabel icon={FileText} label={t('pipeline.prompt')} />
             {isCustomPrompt && !isEditingPrompt && (
               <span className="rounded-full bg-editorial-accent/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] text-editorial-accent">
                 {t('pipeline.promptCustomBadge')}
