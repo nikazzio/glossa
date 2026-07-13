@@ -113,10 +113,15 @@ function sleep(ms: number, shouldCancel?: () => boolean): Promise<void> {
 }
 
 /** Classify an error string into a user-friendly category */
-export type ErrorCategory = 'config' | 'network' | 'rate_limit' | 'context_overflow' | 'api' | 'parse' | 'unknown';
+export type ErrorCategory = 'config' | 'network' | 'rate_limit' | 'quota_exceeded' | 'context_overflow' | 'api' | 'parse' | 'unknown';
+
+// Distinct from a transient 429 rate limit: the account has no credit/plan
+// left, so retrying does nothing until billing is fixed.
+const QUOTA_EXCEEDED_PATTERN = /insufficient_quota|exceeded your current quota/i;
 
 export function classifyError(message: string): ErrorCategory {
   if (isConfigError(message)) return 'config';
+  if (QUOTA_EXCEEDED_PATTERN.test(message)) return 'quota_exceeded';
   if (/rate.?limit|429|quota/i.test(message)) return 'rate_limit';
   if (/context.window.exceeded|context_length_exceeded|maximum context|input too large|413/i.test(message)) return 'context_overflow';
   if (/network|fetch|timeout|ECONNREFUSED|ENOTFOUND/i.test(message)) return 'network';
@@ -134,6 +139,8 @@ export function friendlyError(message: string): string {
       return message; // Already user-friendly from backend
     case 'rate_limit':
       return 'Rate limit reached. The request will be retried automatically.';
+    case 'quota_exceeded':
+      return 'API quota exhausted. Check your plan and billing, then try again.';
     case 'context_overflow':
       return 'Context window exceeded. Reduce the chunk size in Settings or switch to a model with a larger context window.';
     case 'network':

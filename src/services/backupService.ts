@@ -6,6 +6,13 @@ import { confirm } from '../stores/confirmStore';
 const SCHEMA_VERSION = 1;
 const GLOSSA_VERSION = '0.9.0';
 
+// dbService.ts stores its own DB-migration marker under this app_settings key
+// (unrelated to SCHEMA_VERSION above). Importing an old backup must never
+// overwrite it — doing so makes the running app's next startup check think
+// the live DB is on an old schema and wipe every table via
+// resetOutdatedBetaDatabase().
+const DB_MIGRATION_SETTING_KEY = 'schema_version';
+
 // Ordered for FK safety: parents before children for INSERT,
 // children before parents for DELETE.
 const INSERT_ORDER = [
@@ -111,12 +118,22 @@ export async function importWorkspace(t: (key: string) => string): Promise<boole
 
   await runInTransaction(async (run) => {
     for (const table of DELETE_ORDER) {
+      if (table === 'app_settings') {
+        // Never touch the running DB's migration marker — deleting it here
+        // leaves app_settings with no schema_version row at all, which reads
+        // as "outdated" on the next boot exactly like a stale value would.
+        await run(`DELETE FROM app_settings WHERE key != $1`, [DB_MIGRATION_SETTING_KEY]);
+        continue;
+      }
       await run(`DELETE FROM ${table}`);
     }
     for (const table of INSERT_ORDER) {
       const rows = payload.tables[table] ?? [];
       const allowed = ALLOWED_COLUMNS[table];
       for (const row of rows) {
+        if (table === 'app_settings' && row.key === DB_MIGRATION_SETTING_KEY) {
+          continue;
+        }
         const cols = Object.keys(row).filter(
           (c) => allowed.has(c) && SAFE_COL.test(c),
         );

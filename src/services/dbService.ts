@@ -131,17 +131,31 @@ async function dropDeprecatedTables(conn: Database): Promise<void> {
   }
 }
 
-async function resetOutdatedBetaDatabase(conn: Database): Promise<void> {
+async function isSchemaOutdated(conn: Database): Promise<boolean> {
   const existingDatabase = await hasExistingUserDatabase(conn);
   if (!existingDatabase) {
+    return false;
+  }
+  const storedVersion = await getStoredSchemaVersion(conn);
+  return storedVersion !== CURRENT_SCHEMA_VERSION;
+}
+
+/**
+ * Checks whether the current database predates this build's schema, without
+ * resetting anything. Used by main.tsx to ask for confirmation before
+ * initDatabase() wipes the mismatched tables.
+ */
+export async function isDatabaseSchemaOutdated(): Promise<boolean> {
+  const conn = await getDb();
+  return isSchemaOutdated(conn);
+}
+
+async function resetOutdatedBetaDatabase(conn: Database): Promise<void> {
+  if (!(await isSchemaOutdated(conn))) {
     return;
   }
 
   const storedVersion = await getStoredSchemaVersion(conn);
-  if (storedVersion === CURRENT_SCHEMA_VERSION) {
-    return;
-  }
-
   await resetDatabaseForCurrentSchema(
     conn,
     storedVersion ? `schema-${storedVersion}-to-${CURRENT_SCHEMA_VERSION}` : `schema-missing-to-${CURRENT_SCHEMA_VERSION}`,

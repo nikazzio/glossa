@@ -9,12 +9,27 @@ import { usePhraseMemoryStore, type PhraseMemoryMatch } from '../../stores/phras
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { listPhraseMemoryEntries } from '../../services/phraseMemoryService';
+import { classifyError } from '../../utils/retry';
 import { IconButton, SectionLabel } from '../ui';
 import { ExtractTermDialog } from './ExtractTermDialog';
 
 const MIN_THRESHOLD = 0.5;
 const MAX_THRESHOLD = 1;
 const DEFAULT_THRESHOLD = 0.75;
+
+// classifyError() drives the pipeline's retry logic too; here we only use it
+// to pick which reason to show — a memory search never retries on its own.
+const MEMORY_SEARCH_ERROR_KEYS: Partial<Record<ReturnType<typeof classifyError>, string>> = {
+  quota_exceeded: 'memory.searchFailedQuota',
+  rate_limit: 'memory.searchFailedRateLimit',
+  config: 'memory.searchFailedConfig',
+  network: 'memory.searchFailedNetwork',
+};
+
+export function memorySearchErrorKey(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  return MEMORY_SEARCH_ERROR_KEYS[classifyError(message)] ?? 'memory.searchFailed';
+}
 
 interface MemoryTabProps {
   panelId: string;
@@ -65,8 +80,8 @@ export function MemoryTab({ panelId, labelledBy, currentChunkId }: MemoryTabProp
     if (!currentChunkId) return;
     try {
       await runSearchForChunk(currentChunkId);
-    } catch {
-      toast.error(t('memory.searchFailed'));
+    } catch (err) {
+      toast.error(t(memorySearchErrorKey(err)));
     }
   };
 

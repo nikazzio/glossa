@@ -14,6 +14,11 @@ describe('classifyError', () => {
     expect(classifyError('quota exceeded')).toBe('rate_limit');
   });
 
+  it('detects quota exceeded errors as distinct from a transient rate limit', () => {
+    expect(classifyError('HTTP request failed: 429: {"error":{"type":"insufficient_quota","message":"You exceeded your current quota, please check your plan and billing details."}}')).toBe('quota_exceeded');
+    expect(classifyError('429: insufficient_quota')).toBe('quota_exceeded');
+  });
+
   it('detects context overflow errors', () => {
     expect(classifyError('context window exceeded')).toBe('context_overflow');
     expect(classifyError('context_length_exceeded')).toBe('context_overflow');
@@ -51,6 +56,12 @@ describe('friendlyError', () => {
 
   it('returns friendly message for rate limits', () => {
     expect(friendlyError('rate limit 429')).toContain('Rate limit');
+  });
+
+  it('returns a distinct friendly message for quota exhaustion, without implying an automatic retry', () => {
+    const message = friendlyError('429: insufficient_quota');
+    expect(message).toContain('quota');
+    expect(message).not.toContain('retried automatically');
   });
 
   it('returns friendly message for network errors', () => {
