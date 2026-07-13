@@ -61,6 +61,17 @@ export const MODEL_CATALOG: ModelEntry[] = [
   { id: 'gpt-5.6-luna',  provider: 'openai', status: 'stable', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 1.00, output: 6.00  }, preferredFor: ['translation', 'format'], description: 'Cost-sensitive, high-volume tier of the GPT-5.6 family' },
   { id: 'gpt-5.6-terra', provider: 'openai', status: 'stable', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 2.50, output: 15.00 }, preferredFor: ['translation', 'refine', 'judge'], description: 'Balanced intermediate tier of the GPT-5.6 family' },
   { id: 'gpt-5.6-sol',   provider: 'openai', status: 'stable', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 5.00, output: 30.00 }, preferredFor: ['judge', 'coherence', 'refine'], discouragedFor: ['format'], description: 'Flagship GPT-5.6 tier for complex reasoning and review' },
+  // OpenAI — deprecated (superseded by GPT-5.6). Kept so pricing/context-window lookups stay
+  // correct for existing projects still configured with one of these; hidden from new-model
+  // pickers by default — see getSelectableModelIds's includeDeprecated option.
+  { id: 'gpt-4.1-mini', provider: 'openai', status: 'deprecated', reasoning: 'non_reasoning', contextWindow: 1_047_576, pricing: { input: 0.40, output: 1.60 }, preferredFor: ['translation', 'format'], description: 'Lightweight non-reasoning model for format and bulk tasks' },
+  { id: 'gpt-4.1', provider: 'openai', status: 'deprecated', reasoning: 'non_reasoning', contextWindow: 1_047_576, pricing: { input: 2.00, output: 8.00 }, preferredFor: ['translation', 'refine', 'judge'], description: 'Large-context non-reasoning model for detailed translation' },
+  { id: 'o4-mini', provider: 'openai', status: 'deprecated', reasoning: 'reasoning', contextWindow: 200_000, pricing: { input: 1.10, output: 4.40 }, preferredFor: ['refine', 'judge', 'coherence'], discouragedFor: ['format'], description: 'Compact reasoning model for review and coherence' },
+  { id: 'gpt-5-nano', provider: 'openai', status: 'deprecated', reasoning: 'optional', contextWindow: 128_000, pricing: { input: 0.05, output: 0.40 }, preferredFor: ['translation', 'format'], description: 'Ultra-fast optional-reasoning model for high-volume tasks' },
+  { id: 'gpt-5-mini', provider: 'openai', status: 'deprecated', reasoning: 'optional', contextWindow: 400_000, pricing: { input: 0.25, output: 2.00 }, preferredFor: ['translation', 'refine'], description: 'Fast optional-reasoning model for translation' },
+  { id: 'gpt-5', provider: 'openai', status: 'deprecated', reasoning: 'optional', contextWindow: 400_000, pricing: { input: 1.25, output: 10.00 }, preferredFor: ['translation', 'refine', 'judge'], description: 'Flagship GPT-5 model for quality translation and review' },
+  { id: 'gpt-5.4-mini', provider: 'openai', status: 'deprecated', reasoning: 'optional', contextWindow: 400_000, pricing: { input: 0.75, output: 4.50 }, preferredFor: ['translation', 'refine', 'judge'], description: 'Mid-tier snapshot with optional reasoning and large context' },
+  { id: 'gpt-5.4', provider: 'openai', status: 'deprecated', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 2.50, output: 15.00 }, preferredFor: ['judge', 'coherence', 'refine'], discouragedFor: ['format'], description: 'High-capacity snapshot for complex review tasks' },
   // Anthropic (Claude 4 line — all support optional extended/adaptive thinking)
   { id: 'claude-haiku-4-5-20251001', provider: 'anthropic', status: 'stable', reasoning: 'optional', contextWindow: 200_000, pricing: { input: 1.00, output: 5.00 }, preferredFor: ['translation', 'format'], description: 'Fast and cost-efficient for high-volume translation' },
   { id: 'claude-sonnet-4-6',         provider: 'anthropic', status: 'stable', reasoning: 'optional', contextWindow: 1_000_000, pricing: { input: 3.00, output: 15.00 }, preferredFor: ['translation', 'refine'], description: 'Balanced quality and speed for translation and review' },
@@ -78,12 +89,17 @@ export function getModelEntry(provider: ModelProvider, modelId: string): ModelEn
   return MODEL_CATALOG.find((e) => e.provider === provider && e.id === modelId);
 }
 
-export function getProviderCatalogEntries(provider: ModelProvider): ModelEntry[] {
-  return MODEL_CATALOG.filter((entry) => entry.provider === provider);
+export function getProviderCatalogEntries(
+  provider: ModelProvider,
+  options?: { includeDeprecated?: boolean },
+): ModelEntry[] {
+  return MODEL_CATALOG.filter(
+    (entry) => entry.provider === provider && (options?.includeDeprecated || entry.status !== 'deprecated'),
+  );
 }
 
-export function getKnownModelIds(provider: ModelProvider): string[] {
-  return getProviderCatalogEntries(provider).map((entry) => entry.id);
+export function getKnownModelIds(provider: ModelProvider, options?: { includeDeprecated?: boolean }): string[] {
+  return getProviderCatalogEntries(provider, options).map((entry) => entry.id);
 }
 
 export function getModelStatus(provider: ModelProvider, modelId: string): ModelStatus | undefined {
@@ -116,8 +132,14 @@ export function getModelUseCaseFit(
 export function getSelectableModelIds(
   provider: ModelProvider,
   ollamaModels?: string[],
+  options?: { includeDeprecated?: boolean },
 ): string[] {
-  return provider === 'ollama' ? (ollamaModels ?? []) : getKnownModelIds(provider);
+  return provider === 'ollama' ? (ollamaModels ?? []) : getKnownModelIds(provider, options);
+}
+
+/** Ensures a stage's currently-selected model stays in its option list even if filtered out (e.g. deprecated). */
+export function ensureModelInList(options: string[], currentModel: string): string[] {
+  return !currentModel || options.includes(currentModel) ? options : [...options, currentModel];
 }
 
 export function inferReasoningFromModelId(

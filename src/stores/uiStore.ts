@@ -64,6 +64,7 @@ interface UiState {
   documentLayout: DocumentLayoutPreference;
   documentPaneFocus: DocumentPaneFocus;
   syncScrollEnabled: boolean;
+  showDeprecatedModels: boolean;
   uiFont: UiFont;
   colorScheme: ColorScheme;
   documentFontSize: DocumentFontSize;
@@ -114,6 +115,7 @@ interface UiState {
   setDocumentLayout: (layout: DocumentLayoutPreference) => void;
   setDocumentPaneFocus: (focus: DocumentPaneFocus) => void;
   setSyncScrollEnabled: (enabled: boolean) => void;
+  setShowDeprecatedModels: (show: boolean) => void;
   setUiFont: (font: UiFont) => void;
   setColorScheme: (scheme: ColorScheme) => void;
   setDocumentFontSize: (size: DocumentFontSize) => void;
@@ -252,6 +254,7 @@ export const useUiStore = create<UiState>()(
       documentLayout: 'auto',
       documentPaneFocus: 'both',
       syncScrollEnabled: false,
+      showDeprecatedModels: false,
       uiFont: 'jakarta',
       colorScheme: 'system',
       documentFontSize: 'md',
@@ -304,6 +307,7 @@ export const useUiStore = create<UiState>()(
       setDocumentLayout: (layout) => set({ documentLayout: layout }),
       setDocumentPaneFocus: (focus) => set({ documentPaneFocus: focus }),
       setSyncScrollEnabled: (enabled) => set({ syncScrollEnabled: enabled }),
+      setShowDeprecatedModels: (show) => set({ showDeprecatedModels: show }),
       setUiFont: (font) => set({ uiFont: font }),
       setColorScheme: (scheme) => set({ colorScheme: scheme }),
       setDocumentFontSize: (size) => set({ documentFontSize: size }),
@@ -523,6 +527,7 @@ export const useUiStore = create<UiState>()(
         documentLayout: state.documentLayout,
         documentPaneFocus: state.documentPaneFocus,
         syncScrollEnabled: state.syncScrollEnabled,
+        showDeprecatedModels: state.showDeprecatedModels,
         uiFont: state.uiFont,
         colorScheme: state.colorScheme,
         documentFontSize: state.documentFontSize,

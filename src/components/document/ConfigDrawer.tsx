@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { LibraryBig, Save, Trash2 } from 'lucide-react';
+import { Check, LibraryBig, Pencil, Save, Trash2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Dialog, DialogCancelButton, IconButton, PillButton } from '../ui';
@@ -152,24 +152,56 @@ export function ConfigDrawer({
     </div>
   );
 
+  const isNameDirty = !!activePipelineId && !!activePipeline && nameValue.trim() !== activePipeline.name;
+
+  const commitName = () => {
+    const trimmed = nameValue.trim();
+    if (!trimmed) { setNameValue(activePipeline?.name ?? t('pipeline.globalSetup')); return; }
+    if (activePipelineId && activePipeline && trimmed !== activePipeline.name) {
+      void renamePipeline(activePipelineId, trimmed);
+    }
+  };
+
+  const cancelNameEdit = () => {
+    setNameValue(activePipeline?.name ?? '');
+  };
+
   const nameInput = (
-    <input
-      id="config-drawer-title"
-      type="text"
-      value={nameValue}
-      onChange={(e) => setNameValue(e.target.value)}
-      onBlur={() => {
-        const trimmed = nameValue.trim();
-        if (!trimmed) { setNameValue(activePipeline?.name ?? t('pipeline.globalSetup')); return; }
-        if (activePipelineId && activePipeline && trimmed !== activePipeline.name) {
-          void renamePipeline(activePipelineId, trimmed);
-        }
-      }}
-      onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
-      placeholder={t('pipeline.globalSetup')}
-      aria-label={t('pipeline.pipelineNameLabel')}
-      className="w-full bg-transparent font-display text-2xl italic tracking-tight text-editorial-ink outline-none placeholder:text-editorial-muted/40 transition-colors focus:text-editorial-accent"
-    />
+    <div className="flex items-center gap-2">
+      <div className="group relative flex-1">
+        <input
+          id="config-drawer-title"
+          type="text"
+          value={nameValue}
+          onChange={(e) => setNameValue(e.target.value)}
+          onBlur={() => { if (isNameDirty) commitName(); }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') { commitName(); e.currentTarget.blur(); }
+            if (e.key === 'Escape') { cancelNameEdit(); e.currentTarget.blur(); }
+          }}
+          placeholder={t('pipeline.globalSetup')}
+          aria-label={t('pipeline.pipelineNameLabel')}
+          className="w-full bg-transparent font-display text-2xl italic tracking-tight text-editorial-ink outline-none placeholder:text-editorial-muted/40 transition-colors focus:text-editorial-accent border-b border-transparent group-hover:border-editorial-border/60 focus:border-editorial-accent/50"
+        />
+        {!isNameDirty && (
+          <Pencil
+            size={13}
+            aria-hidden="true"
+            className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 text-editorial-muted/30 opacity-0 transition-opacity group-hover:opacity-100"
+          />
+        )}
+      </div>
+      {isNameDirty && (
+        <div className="flex items-center gap-1 shrink-0">
+          <IconButton size="sm" tone="accent" onClick={commitName} title={t('common.confirm')}>
+            <Check size={14} />
+          </IconButton>
+          <IconButton size="sm" onClick={cancelNameEdit} title={t('common.cancel')}>
+            <X size={14} />
+          </IconButton>
+        </div>
+      )}
+    </div>
   );
 
   const configForm = (
@@ -201,7 +233,6 @@ export function ConfigDrawer({
       open={showConfigDrawer}
       onOpenChange={(open) => { if (!open) setShowConfigDrawer(false); }}
       title={t('pipeline.configurePipeline')}
-      eyebrow={t('document.configDrawerTitle')}
       closeLabel={t('common.close')}
       closeDisabled={isProcessing}
       widthClassName="max-w-4xl"

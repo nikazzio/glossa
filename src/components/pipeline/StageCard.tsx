@@ -6,6 +6,7 @@ import {
   Cpu,
   FileText,
   Loader2,
+  LockOpen,
   Pencil,
   RefreshCw,
   RotateCcw,
@@ -17,18 +18,20 @@ import {
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { GlossaryEntry, ModelProvider, OllamaStatus, PipelineStageConfig, PromptTemplate, PromptTemplateWorkflow } from '../../types';
-import { getKnownModelIds, getModelStatus, getResolvedModelReasoning, LLM_PROVIDER_ORDER } from '../../models/catalog';
+import { ensureModelInList, getKnownModelIds, getModelStatus, getResolvedModelReasoning, LLM_PROVIDER_ORDER } from '../../models/catalog';
 import type { ReasoningEffortLevel } from '../../types';
+import { DeprecatedModelBadge } from '../models/DeprecatedModelBadge';
 import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
 import { ReasoningPicker } from '../models/ReasoningPicker';
 import { ProviderRuntimeEditor } from './ProviderRuntimeEditor';
 import { canRefineWithProvider, formatProviderModelLabel, type ProviderKeyStatusMap } from '../../hooks/useProviderKeyStatus';
 import { useConfigStore } from '../../stores/configStore';
 import { useCustomProviderStore } from '../../stores/customProviderStore';
+import { useUiStore } from '../../stores/uiStore';
 import { confirm } from '../../stores/confirmStore';
 import { STAGE_TEMPLATES } from '../../pipeline/pipelineModes';
 import { DeeplStageConfig } from './DeeplStageConfig';
-import { IconButton } from '../ui';
+import { IconButton, SectionLabel } from '../ui';
 
 interface StageCardProps {
   stage: PipelineStageConfig;
@@ -86,8 +89,18 @@ export function StageCard({
   const [templateName, setTemplateName] = useState('');
   const [showTemplateList, setShowTemplateList] = useState(false);
   const [templateSearch, setTemplateSearch] = useState('');
+  const [modelUnlocked, setModelUnlocked] = useState(false);
+  const showDeprecatedModels = useUiStore((s) => s.showDeprecatedModels);
 
   const role = stage.role ?? 'translation';
+  const canToggleDeprecated = stage.provider !== 'ollama' && stage.provider !== 'custom';
+  const effectiveModelOptions = ensureModelInList(
+    showDeprecatedModels && canToggleDeprecated
+      ? getKnownModelIds(stage.provider, { includeDeprecated: true })
+      : modelOptions,
+    stage.model,
+  );
+  const modelDisabled = isProcessing || (translationsExist && !modelUnlocked);
   const isCustomPrompt = stage.prompt.trim() !== STAGE_TEMPLATES[role].defaultPrompt.trim();
   const promptEditable = isEditingPrompt && !translationsExist && !isProcessing;
   const canRefine = canRefineWithProvider(stage.provider, keyStatuses);
@@ -202,17 +215,12 @@ export function StageCard({
       <>
       {/* Model + provider card */}
       <div className="space-y-3 border-l-4 border-l-editorial-charcoal/30 border-y border-editorial-border/70 bg-editorial-bg/65 px-5 py-4">
-        <div className="flex items-center gap-1.5">
-          <Cpu size={11} className="text-editorial-accent shrink-0" />
-          <p className="text-[11px] font-sans font-bold uppercase tracking-[0.14em] text-editorial-muted">
-            {t('pipeline.stageModelLabel')}
-          </p>
-        </div>
-        <div className="flex gap-2">
+        <SectionLabel icon={Cpu} label={t('pipeline.stageModelLabel')} />
+        <div className="flex items-center gap-2">
           <select
             value={stage.provider}
             onChange={(e) => handleProviderChange(e.target.value as ModelProvider)}
-            disabled={translationsExist || isProcessing}
+            disabled={modelDisabled}
             className="rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
             aria-label={t('models.provider')}
           >
@@ -226,7 +234,7 @@ export function StageCard({
               <select
                 value={stage.customProviderId ?? ''}
                 onChange={(e) => onUpdate({ customProviderId: e.target.value || undefined })}
-                disabled={translationsExist || isProcessing}
+                disabled={modelDisabled}
                 className="flex-1 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
                 aria-label={t('settings.customProvider.sectionTitle')}
               >
@@ -240,40 +248,60 @@ export function StageCard({
               <input
                 value={stage.model}
                 onChange={(e) => handleModelChange(e.target.value)}
-                disabled={translationsExist || isProcessing}
+                disabled={modelDisabled}
                 placeholder={t('ollama.modelPlaceholder')}
                 className="flex-1 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
                 aria-label={t('pipeline.stageModelLabel')}
               />
             </div>
-          ) : modelOptions.length > 0 ? (
+          ) : effectiveModelOptions.length > 0 ? (
             <div className="flex flex-1 items-center gap-1.5">
               <select
                 value={stage.model}
                 onChange={(e) => handleModelChange(e.target.value)}
-                disabled={translationsExist || isProcessing}
+                disabled={modelDisabled}
                 className="flex-1 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
                 aria-label={t('pipeline.stageModelLabel')}
               >
-                {modelOptions.map((m) => (
+                {effectiveModelOptions.map((m) => (
                   <option key={m} value={m}>
-                    {m}{getModelStatus(stage.provider, m) === 'preview' ? ' (preview)' : ''}
+                    {m}
+                    {getModelStatus(stage.provider, m) === 'preview' ? ' (preview)' : ''}
+                    {getModelStatus(stage.provider, m) === 'deprecated' ? ' (superato)' : ''}
                   </option>
                 ))}
               </select>
               <ModelCapabilityHint provider={stage.provider} model={stage.model} iconOnly />
+              <DeprecatedModelBadge provider={stage.provider} model={stage.model} />
             </div>
           ) : (
             <input
               value={stage.model}
               onChange={(e) => handleModelChange(e.target.value)}
-              disabled={translationsExist || isProcessing}
+              disabled={modelDisabled}
               placeholder={t('ollama.modelPlaceholder')}
               className="flex-1 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
               aria-label={t('pipeline.stageModelLabel')}
             />
           )}
+          {translationsExist && !isProcessing && (
+            <IconButton
+              size="sm"
+              tone={modelUnlocked ? 'accent' : 'default'}
+              onClick={() => setModelUnlocked(!modelUnlocked)}
+              title={t('pipeline.unlockModelChange')}
+              ariaPressed={modelUnlocked}
+              className="shrink-0"
+            >
+              <LockOpen size={13} />
+            </IconButton>
+          )}
         </div>
+        {modelUnlocked && translationsExist && (
+          <p className="text-[11px] leading-relaxed text-editorial-warning">
+            {t('pipeline.unlockModelChangeWarning')}
+          </p>
+        )}
         {resolvedReasoning !== undefined && resolvedReasoning !== 'non_reasoning' && stage.provider !== 'ollama' && (
           <div className="flex items-center gap-2">
             <Wand2 size={11} className="text-editorial-warning shrink-0" />
@@ -283,7 +311,7 @@ export function StageCard({
             <ReasoningPicker
               value={currentReasoningEffort}
               showNone={resolvedReasoning === 'optional'}
-              disabled={translationsExist || isProcessing}
+              disabled={modelDisabled}
               onChange={handleReasoningChange}
             />
           </div>
@@ -318,10 +346,7 @@ export function StageCard({
       <div className="border-l-4 border-l-editorial-accent/40 border-y border-editorial-border/70 bg-editorial-bg/85 px-5 py-4 space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-1.5">
-            <FileText size={11} className="text-editorial-accent shrink-0" />
-            <span className="text-[11px] font-sans font-bold uppercase tracking-[0.14em] text-editorial-muted">
-              {t('pipeline.prompt')}
-            </span>
+            <SectionLabel icon={FileText} label={t('pipeline.prompt')} />
             {isCustomPrompt && !isEditingPrompt && (
               <span className="rounded-full bg-editorial-accent/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] text-editorial-accent">
                 {t('pipeline.promptCustomBadge')}
