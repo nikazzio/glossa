@@ -399,8 +399,10 @@ export function usePipeline() {
     }
 
     if (!producedOutput) {
-      updateChunkStatus(chunk.id, 'error');
-      return 'failed';
+      // A pipeline with no enabled stages (or a format-only pipeline with no
+      // prior output) is a configuration no-op, not a stage failure.
+      updateChunkStatus(chunk.id, 'ready');
+      return 'skipped';
     }
 
     updateChunkDraft(chunk.id, lastResult);

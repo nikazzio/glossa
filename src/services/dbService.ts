@@ -8,18 +8,26 @@ import {
 
 let db: Database | null = null;
 const DB_URL = 'sqlite:glossa.db';
-const CURRENT_SCHEMA_VERSION = 'db-schema-v1';
+const CURRENT_SCHEMA_VERSION = 'db-schema-v2';
 
-const RESETTABLE_OBJECTS = [
+// These tables were introduced before their corresponding product features
+// existed. Keep the list explicit so an older beta DB is cleaned up on boot,
+// while new databases never create them.
+const DEPRECATED_TABLES = [
   'technique_tags',
   'historical_techniques',
+  'phrase_memory_presets',
+  'macro_blocks',
+];
+
+const RESETTABLE_OBJECTS = [
+  ...DEPRECATED_TABLES,
   'source_phrase_embeddings',
   'phrase_memory',
-  'phrase_memory_presets',
   'operation_logs',
   'annotations',
   'translations',
-  'macro_blocks',
+  'custom_providers',
   'project_glossaries',
   'glossary_entries',
   'glossaries',
@@ -37,25 +45,15 @@ export async function getDb(): Promise<Database> {
   return db;
 }
 
-// Serializza tutte le write su un'unica coda JS per evitare la contesa di lock
-// SQLite quando il plugin Tauri usa un connection pool interno.
-let writeQueue: Promise<unknown> = Promise.resolve();
-
-function serializeWrite<T>(fn: () => Promise<T>): Promise<T> {
-  const next = writeQueue.then(fn, fn);
-  writeQueue = next.then(() => {}, () => {});
-  return next;
-}
-
 // Whitelist of (table.column) pairs allowed to be added via migration.
-// Any call with values outside this set is rejected to prevent SQL injection.
-// Columns baked into the initial CREATE TABLE statements don't need an entry here —
-// add one only when a future schema change adds a column via ensureColumn().
-const ALLOWED_MIGRATIONS = new Set<string>([
-  'phrase_memory.embedding_model',
+// Definitions are kept with their table/column names so callers cannot alter
+// arbitrary schema even though SQLite does not bind identifiers.
+const ALLOWED_MIGRATIONS = new Map<string, string>([
+  ['projects.workspace_id', 'TEXT REFERENCES workspaces(id)'],
+  ['phrase_memory.embedding_model', 'TEXT'],
 ]);
 
-const VALID_COLUMN_DEFINITION = /^(INTEGER|TEXT|REAL|BLOB|NUMERIC)(\s+NOT\s+NULL)?(\s+DEFAULT\s+('[^']*'|NULL|-?\d+(\.\d+)?))?$/i;
+const VALID_COLUMN_DEFINITION = /^(INTEGER|TEXT|REAL|BLOB|NUMERIC)(\s+NOT\s+NULL)?(\s+DEFAULT\s+('[^']*'|NULL|-?\d+(\.\d+)?))?(\s+REFERENCES\s+[a-z_][a-z0-9_]*\([a-z_][a-z0-9_]*\))?$/i;
 
 export function validateColumnDefinition(definition: string): void {
   if (!VALID_COLUMN_DEFINITION.test(definition)) {
@@ -64,7 +62,9 @@ export function validateColumnDefinition(definition: string): void {
 }
 
 export async function ensureColumn(table: string, column: string, definition: string): Promise<void> {
-  if (!ALLOWED_MIGRATIONS.has(`${table}.${column}`)) {
+  const migrationKey = `${table}.${column}`;
+  const allowedDefinition = ALLOWED_MIGRATIONS.get(migrationKey);
+  if (allowedDefinition !== definition) {
     throw new Error(`[dbService] ensureColumn: migration not allowed for "${table}.${column}"`);
   }
   validateColumnDefinition(definition);
@@ -125,6 +125,12 @@ async function resetDatabaseForCurrentSchema(conn: Database, reason: string): Pr
   await conn.execute('PRAGMA foreign_keys=ON');
 }
 
+async function dropDeprecatedTables(conn: Database): Promise<void> {
+  for (const table of DEPRECATED_TABLES) {
+    await conn.execute(`DROP TABLE IF EXISTS ${table}`);
+  }
+}
+
 async function resetOutdatedBetaDatabase(conn: Database): Promise<void> {
   const existingDatabase = await hasExistingUserDatabase(conn);
   if (!existingDatabase) {
@@ -149,12 +155,12 @@ export async function initDatabase(): Promise<void> {
   await conn.execute('PRAGMA journal_mode=WAL');
   await conn.execute('PRAGMA synchronous=NORMAL');
   await conn.execute('PRAGMA busy_timeout=10000');
-  // Warm up additional pool connections with the same busy_timeout
-  // so write contention doesn't hit connections with the shorter default.
-  for (let i = 0; i < 8; i++) {
-    await execute('PRAGMA busy_timeout=10000');
-  }
+  await conn.execute('PRAGMA foreign_keys=ON');
+  // Runtime writes configure their acquired SQLx connection in the native
+  // transaction command, before BEGIN. SQLite ignores foreign_keys changes
+  // made inside an active transaction.
   await resetOutdatedBetaDatabase(conn);
+  await dropDeprecatedTables(conn);
 
   await conn.execute(`
     CREATE TABLE IF NOT EXISTS projects (
@@ -336,15 +342,6 @@ export async function initDatabase(): Promise<void> {
     ON operation_logs(project_id, pipeline_id, at)
   `);
 
-  await conn.execute(`
-    CREATE TABLE IF NOT EXISTS macro_blocks (
-      id TEXT PRIMARY KEY,
-      project_id TEXT REFERENCES projects(id) ON DELETE CASCADE,
-      blob_index INTEGER DEFAULT 0,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-
   // Unique constraint: translations are unique per (pipeline_id, chunk_id) so two pipelines
   // cannot overwrite each other's rows even if chunk IDs happen to collide.
   try {
@@ -356,13 +353,6 @@ export async function initDatabase(): Promise<void> {
   } catch (error) {
     console.warn('[Glossa] translations pipeline_chunk index failed', error);
   }
-
-  await conn.execute(
-    `INSERT INTO app_settings (key, value)
-     VALUES ('schema_version', $1)
-     ON CONFLICT(key) DO UPDATE SET value = $1`,
-    [CURRENT_SCHEMA_VERSION],
-  );
 
   // ── Phrase Memory schema ─────────────────────────────────────────────
 
@@ -379,14 +369,7 @@ export async function initDatabase(): Promise<void> {
     )
   `);
 
-  try {
-    await conn.execute(
-      `ALTER TABLE projects ADD COLUMN workspace_id TEXT REFERENCES workspaces(id)`
-    );
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (!msg.includes('duplicate column') && !msg.includes('already exists')) throw err;
-  }
+  await ensureColumn('projects', 'workspace_id', 'TEXT REFERENCES workspaces(id)');
 
   await conn.execute(`
     CREATE TABLE IF NOT EXISTS phrase_memory (
@@ -436,39 +419,6 @@ export async function initDatabase(): Promise<void> {
   await conn.execute(`
     CREATE INDEX IF NOT EXISTS idx_source_phrase_embeddings_chunk_project
     ON source_phrase_embeddings(chunk_id, project_id)
-  `);
-
-  await conn.execute(`
-    CREATE TABLE IF NOT EXISTS historical_techniques (
-      id TEXT PRIMARY KEY,
-      workspace_id TEXT NOT NULL REFERENCES workspaces(id),
-      source_text TEXT NOT NULL,
-      translated_text TEXT NOT NULL,
-      source_language TEXT NOT NULL,
-      target_language TEXT NOT NULL,
-      author TEXT,
-      work TEXT,
-      year TEXT,
-      embedding_source BLOB NOT NULL,
-      embedding_translated BLOB NOT NULL,
-      source_chunk_id TEXT,
-      translation_stale INTEGER DEFAULT 0,
-      created_at TEXT NOT NULL
-    )
-  `);
-
-  await conn.execute(`
-    CREATE TABLE IF NOT EXISTS technique_tags (
-      technique_id TEXT NOT NULL REFERENCES historical_techniques(id),
-      category TEXT NOT NULL,
-      value TEXT NOT NULL,
-      PRIMARY KEY (technique_id, category, value)
-    )
-  `);
-
-  await conn.execute(`
-    CREATE INDEX IF NOT EXISTS idx_technique_tags_category_value
-    ON technique_tags(category, value)
   `);
 
   const wsKeyCheck = await conn.select<Array<{ count: number }>>(
@@ -538,15 +488,35 @@ export async function initDatabase(): Promise<void> {
     ON annotations(pipeline_id, chunk_id)
   `);
 
+  // This DDL belongs here even though its consumers are native commands:
+  // TypeScript is the sole schema owner for glossa.db.
+  await conn.execute(`
+    CREATE TABLE IF NOT EXISTS custom_providers (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      base_url TEXT NOT NULL,
+      requires_api_key INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
+  await conn.execute(
+    `INSERT INTO app_settings (key, value)
+     VALUES ('schema_version', $1)
+     ON CONFLICT(key) DO UPDATE SET value = $1`,
+    [CURRENT_SCHEMA_VERSION],
+  );
+
   console.log('[Glossa] Database initialized');
 }
 
 // ── Generic query helpers ────────────────────────────────────────────
 
 export async function execute(query: string, params: unknown[] = []): Promise<void> {
-  return serializeWrite(async () => {
-    const conn = await getDb();
-    await conn.execute(query, params);
+  await getDb();
+  await invoke('execute_transaction', {
+    db: DB_URL,
+    statements: [{ query, params }],
   });
 }
 
@@ -558,25 +528,23 @@ export async function select<T>(query: string, params: unknown[] = []): Promise<
 export async function runInTransaction<T>(
   fn: (run: (query: string, params?: unknown[]) => Promise<void>) => Promise<T>,
 ): Promise<T> {
-  return serializeWrite(async () => {
-    await getDb();
-    const statements: Array<{ query: string; params: unknown[] }> = [];
-    // Tauri SQL uses a pool, so BEGIN/COMMIT issued from JS can land on
-    // different SQLite connections and deadlock. Stage writes here; the
-    // native command executes them on one connection inside a real transaction.
-    const run = async (query: string, params: unknown[] = []) => {
-      statements.push({ query, params });
-    };
+  await getDb();
+  const statements: Array<{ query: string; params: unknown[] }> = [];
+  // Tauri SQL uses a pool, so BEGIN/COMMIT issued from JS can land on
+  // different SQLite connections and deadlock. Stage writes here; the
+  // native command executes them on one connection inside a real transaction.
+  const run = async (query: string, params: unknown[] = []) => {
+    statements.push({ query, params });
+  };
 
-    const result = await fn(run);
-    if (statements.length > 0) {
-      await invoke('execute_transaction', {
-        db: DB_URL,
-        statements,
-      });
-    }
-    return result;
-  });
+  const result = await fn(run);
+  if (statements.length > 0) {
+    await invoke('execute_transaction', {
+      db: DB_URL,
+      statements,
+    });
+  }
+  return result;
 }
 
 // ── App Settings ─────────────────────────────────────────────────────

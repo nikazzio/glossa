@@ -93,20 +93,22 @@ function sleep(ms: number, shouldCancel?: () => boolean): Promise<void> {
   if (!shouldCancel) return new Promise((resolve) => setTimeout(resolve, delayMs));
 
   return new Promise((resolve, reject) => {
-    const intervalMs = Math.min(100, delayMs);
-    let elapsed = 0;
-    const timer = setInterval(() => {
+    if (shouldCancel()) {
+      reject(new Error(STREAM_CANCELLED_ERROR));
+      return;
+    }
+
+    const cancelTimer = setInterval(() => {
       if (shouldCancel()) {
-        clearInterval(timer);
+        clearTimeout(delayTimer);
+        clearInterval(cancelTimer);
         reject(new Error(STREAM_CANCELLED_ERROR));
-        return;
       }
-      elapsed += intervalMs;
-      if (elapsed >= delayMs) {
-        clearInterval(timer);
-        resolve();
-      }
-    }, intervalMs);
+    }, Math.min(100, delayMs));
+    const delayTimer = setTimeout(() => {
+      clearInterval(cancelTimer);
+      resolve();
+    }, delayMs);
   });
 }
 
