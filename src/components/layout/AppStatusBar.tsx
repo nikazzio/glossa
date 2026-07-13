@@ -77,6 +77,10 @@ function ConsoleDrawer() {
   const dragRef = useRef<{ startY: number; startHeight: number } | null>(null);
 
   const onGripPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    // Senza preventDefault, trascinare la maniglia seleziona/deseleziona il
+    // testo del documento sotto (comportamento nativo del browser per un
+    // mousedown+drag, non collegato al ridimensionamento in sé).
+    event.preventDefault();
     dragRef.current = { startY: event.clientY, startHeight: height };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
@@ -99,7 +103,7 @@ function ConsoleDrawer() {
         onPointerMove={onGripPointerMove}
         onPointerUp={onGripPointerUp}
         onPointerCancel={onGripPointerUp}
-        className="group flex h-2.5 shrink-0 cursor-ns-resize items-center justify-center bg-terminal-chrome"
+        className="group flex h-2.5 shrink-0 cursor-ns-resize select-none items-center justify-center bg-terminal-chrome"
       >
         <span className="h-[3px] w-8 rounded-full bg-terminal-dim transition-colors group-hover:bg-terminal-accent" />
       </div>

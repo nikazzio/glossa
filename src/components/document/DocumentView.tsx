@@ -161,7 +161,7 @@ function DocumentPage({
           </div>
         )}
       </div>
-      <div ref={scrollRef} className={`flex flex-col flex-1 min-h-0 ${readOnly ? 'opacity-90' : ''}`}>
+      <div ref={scrollRef} className={`flex flex-col flex-1 min-h-0 bg-editorial-page ${readOnly ? 'opacity-90' : ''}`}>
         {showSearch && onSearchChange && searchLabel ? (
           <PaneSearch
             value={searchValue ?? ''}

@@ -917,6 +917,8 @@
     "chunkPanelTitle": "Chunk",
     "openChunkPanel": "Open chunk panel",
     "operationsEmpty": "No frontend operation logs yet.",
+    "operationsEmptyFiltered": "No rows for the selected fragment or filters.",
+    "operationsEmptyFilteredHint": "This project has {{count}} log rows in total — switch fragment or filter to see them.",
     "operationsClear": "Clear log",
     "operationsClearTooltip": "Delete all history (log and stats) for this project — cannot be undone",
     "operationsClearConfirmTitle": "Delete all history?",

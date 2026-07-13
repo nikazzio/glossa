@@ -1,6 +1,6 @@
 import { Bold, CircleHelp, Columns2, Eye, Heading1, Heading2, Heading3, Italic, Link2, List, ListOrdered, Minus, PanelTopClose, PanelTopOpen, Pencil, Pilcrow, Plus, Type } from 'lucide-react';
 import type { KeyboardEvent as ReactKeyboardEvent, MutableRefObject, ReactNode } from 'react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUiStore } from '../../stores/uiStore';
 import { renderMarkdownToHtmlFragment } from '../../services/markdown';
@@ -208,21 +208,15 @@ export function MarkdownEditor({
     }
   };
 
-  // Incollare sopra una selezione può far scattare lo scorrimento del riquadro
-  // (il motore di scrittura lo riadatta per seguire il cursore). Ripristiniamo
-  // la posizione pre-incolla dopo che il riadattamento del motore è avvenuto.
-  const handlePaste = () => {
-    const element = textareaRef.current;
-    if (!element) return;
-    const savedScrollTop = element.scrollTop;
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (!textareaRef.current) return;
-        textareaRef.current.scrollTop = savedScrollTop;
-        syncHighlightLayer();
-      });
-    });
-  };
+  // Il livello colorato (dietro la textarea trasparente) sostituisce il suo
+  // contenuto ad ogni modifica (nuovo HTML evidenziato) — e i browser azzerano
+  // lo scrollTop di un elemento quando il suo contenuto viene sostituito. Senza
+  // questo, scrivere o incollare fa "saltare" il testo visibile (che vive lì,
+  // non nella textarea invisibile sopra) in cima al riquadro. Layout effect
+  // (non effect normale) per correggerlo prima che il browser disegni il frame.
+  useLayoutEffect(() => {
+    syncHighlightLayer();
+  }, [highlightHtml]);
 
   const updateSelection = (start: number, end: number) => {
     setSelection((current) =>
@@ -355,7 +349,6 @@ export function MarkdownEditor({
       onKeyUp={syncSelection}
       onSelect={syncSelection}
       onScroll={syncHighlightLayer}
-      onPaste={handlePaste}
       spellCheck={false}
       autoCorrect="off"
       autoCapitalize="off"
@@ -548,7 +541,6 @@ export function MarkdownEditor({
               onKeyUp={syncSelection}
               onSelect={syncSelection}
               onScroll={syncHighlightLayer}
-              onPaste={handlePaste}
               spellCheck={false}
               autoCorrect="off"
               autoCapitalize="off"

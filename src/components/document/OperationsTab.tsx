@@ -177,8 +177,13 @@ export function OperationsTab({
       />
 
       {filteredEntries.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center px-6 py-12 text-center text-sm text-terminal-secondary">
-          {t('document.operationsEmpty')}
+        <div className="flex flex-1 flex-col items-center justify-center gap-1.5 px-6 py-12 text-center text-sm text-terminal-secondary">
+          <span>{entries.length > 0 ? t('document.operationsEmptyFiltered') : t('document.operationsEmpty')}</span>
+          {entries.length > 0 && (
+            <span className="text-xs text-terminal-dim">
+              {t('document.operationsEmptyFilteredHint', { count: entries.length })}
+            </span>
+          )}
         </div>
       ) : (
         <div

@@ -917,6 +917,8 @@
     "chunkPanelTitle": "Chunk",
     "openChunkPanel": "Apri pannello chunk",
     "operationsEmpty": "Nessun log operativo frontend per ora.",
+    "operationsEmptyFiltered": "Nessuna riga per il frammento o i filtri selezionati.",
+    "operationsEmptyFilteredHint": "In tutto il progetto ci sono {{count}} righe di log — cambia frammento o filtro per vederle.",
     "operationsClear": "Pulisci log",
     "operationsClearTooltip": "Cancella tutto lo storico (log e statistiche) di questo progetto — non si può annullare",
     "operationsClearConfirmTitle": "Cancellare tutto lo storico?",
