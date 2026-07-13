@@ -883,7 +883,6 @@
     "translationLockedBadge": "Validated",
     "currentChunkBadge": "Current chunk",
     "translationStaleBadge": "Source changed",
-    "configDrawerTitle": "Pipeline configuration",
     "configDrawerHint": "Language, models, translation stages and glossary for the current project.",
     "insightTabsLabel": "Document tabs — Index, Search, Stats, Coherence, Glossary",
     "insightsDrawerHint": "Chunk index and judge findings for the current chunk.",
