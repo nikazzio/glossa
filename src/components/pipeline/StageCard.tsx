@@ -216,7 +216,7 @@ export function StageCard({
       {/* Model + provider card */}
       <div className="space-y-3 border-l-4 border-l-editorial-charcoal/30 border-y border-editorial-border/70 bg-editorial-bg/65 px-5 py-4">
         <SectionLabel icon={Cpu} label={t('pipeline.stageModelLabel')} />
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <select
             value={stage.provider}
             onChange={(e) => handleProviderChange(e.target.value as ModelProvider)}
