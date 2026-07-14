@@ -1,6 +1,6 @@
 import { Bold, CircleHelp, Columns2, Eye, Heading1, Heading2, Heading3, Italic, Link2, List, ListOrdered, Minus, PanelTopClose, PanelTopOpen, Pencil, Pilcrow, Plus, Type } from 'lucide-react';
 import type { KeyboardEvent as ReactKeyboardEvent, MutableRefObject, ReactNode } from 'react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUiStore } from '../../stores/uiStore';
 import { renderMarkdownToHtmlFragment } from '../../services/markdown';
@@ -183,7 +183,8 @@ export function MarkdownEditor({
     if (!focusQuery) return;
     const normalizedQuery = focusQuery.trim();
     if (!normalizedQuery) return;
-    const lowerValue = value.toLowerCase();
+    const currentValue = lastValueRef.current;
+    const lowerValue = currentValue.toLowerCase();
     const lowerQuery = normalizedQuery.toLowerCase();
     const matchIndex = lowerValue.indexOf(lowerQuery);
     if (matchIndex === -1) return;
@@ -192,18 +193,30 @@ export function MarkdownEditor({
     requestAnimationFrame(() => {
       const element = textareaRef.current ?? readOnlyHighlightRef.current;
       if (!element) return;
-      element.scrollTop = Math.max(0, element.scrollHeight * (matchIndex / Math.max(1, value.length)) - 120);
+      element.scrollTop = Math.max(0, element.scrollHeight * (matchIndex / Math.max(1, currentValue.length)) - 120);
       syncHighlightLayer();
       element.dispatchEvent(new Event('scroll', { bubbles: true }));
       onFocusQueryHandled?.();
     });
-  }, [focusQuery, focusRequestId, onFocusQueryHandled, value]);
+    // Scatta solo su nuovo target audit (focusQuery/focusRequestId), non su ogni edit:
+    // altrimenti paste/typing rilancia lo scroll-to-match e salta la vista dell'utente.
+  }, [focusQuery, focusRequestId, onFocusQueryHandled]);
 
   const syncHighlightLayer = () => {
     if (highlightLayerRef.current && textareaRef.current) {
       highlightLayerRef.current.scrollTop = textareaRef.current.scrollTop;
     }
   };
+
+  // Il livello colorato (dietro la textarea trasparente) sostituisce il suo
+  // contenuto ad ogni modifica (nuovo HTML evidenziato) — e i browser azzerano
+  // lo scrollTop di un elemento quando il suo contenuto viene sostituito. Senza
+  // questo, scrivere o incollare fa "saltare" il testo visibile (che vive lì,
+  // non nella textarea invisibile sopra) in cima al riquadro. Layout effect
+  // (non effect normale) per correggerlo prima che il browser disegni il frame.
+  useLayoutEffect(() => {
+    syncHighlightLayer();
+  }, [highlightHtml]);
 
   const updateSelection = (start: number, end: number) => {
     setSelection((current) =>
@@ -320,7 +333,7 @@ export function MarkdownEditor({
     });
   };
 
-  const textareaClassName = `${fillHeight ? 'flex-1 min-h-[100px] h-0' : minHeightClassName} w-full resize-y bg-transparent outline-none custom-scrollbar ${textClassName} disabled:opacity-70 read-only:cursor-not-allowed`;
+  const textareaClassName = `${fillHeight ? 'flex-1 min-h-[100px] h-0' : minHeightClassName} w-full ${fillHeight ? 'resize-none' : 'resize-y'} bg-transparent outline-none custom-scrollbar ${textClassName} disabled:opacity-70 read-only:cursor-not-allowed`;
 
   const textarea = (
     <textarea

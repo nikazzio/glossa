@@ -22,17 +22,23 @@ const QUALITY_ICON = {
   weak: <AlertCircle size={11} className="text-editorial-danger" />,
 };
 
-function SaveIndicator({ state }: { state: 'idle' | 'dirty' | 'saving' | 'saved' | 'error' }) {
+function SaveIndicator({ state, lastSavedAt }: { state: 'idle' | 'dirty' | 'saving' | 'saved' | 'error'; lastSavedAt: number | null }) {
   const { t } = useTranslation();
 
   if (state === 'idle') return null;
 
+  const tooltipLabel = lastSavedAt
+    ? t('statusBar.lastSavedTooltip', { time: new Date(lastSavedAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) })
+    : t('statusBar.neverSavedTooltip');
+
   if (state === 'saving') {
     return (
-      <span className="flex items-center gap-1 text-editorial-muted">
-        <Loader2 size={10} className="animate-spin" />
-        <span className="text-xs">{t('statusBar.saving')}</span>
-      </span>
+      <Tooltip label={tooltipLabel} side="top">
+        <span className="flex items-center gap-1 text-editorial-muted">
+          <Loader2 size={10} className="animate-spin" />
+          <span className="text-xs">{t('statusBar.saving')}</span>
+        </span>
+      </Tooltip>
     );
   }
 
@@ -51,10 +57,12 @@ function SaveIndicator({ state }: { state: 'idle' | 'dirty' | 'saving' | 'saved'
         : t('statusBar.saveError');
 
   return (
-    <span className="flex items-center gap-1.5">
-      <span className={`h-1.5 w-1.5 rounded-full ${dot}`} aria-hidden="true" />
-      <span className="text-xs text-editorial-muted">{label}</span>
-    </span>
+    <Tooltip label={tooltipLabel} side="top">
+      <span className="flex items-center gap-1.5">
+        <span className={`h-1.5 w-1.5 rounded-full ${dot}`} aria-hidden="true" />
+        <span className="text-xs text-editorial-muted">{label}</span>
+      </span>
+    </Tooltip>
   );
 }
 
@@ -69,6 +77,10 @@ function ConsoleDrawer() {
   const dragRef = useRef<{ startY: number; startHeight: number } | null>(null);
 
   const onGripPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    // Senza preventDefault, trascinare la maniglia seleziona/deseleziona il
+    // testo del documento sotto (comportamento nativo del browser per un
+    // mousedown+drag, non collegato al ridimensionamento in sé).
+    event.preventDefault();
     dragRef.current = { startY: event.clientY, startHeight: height };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
@@ -82,7 +94,7 @@ function ConsoleDrawer() {
 
   return (
     <div
-      className="absolute bottom-full left-0 right-0 z-50 flex flex-col border-t border-terminal-border bg-terminal-bg shadow-lg"
+      className="absolute bottom-full left-0 right-0 z-[150] flex flex-col border-t border-terminal-border bg-terminal-bg shadow-lg"
       style={{ height }}
     >
       {/* Maniglia di resize: trascina per cambiare l'altezza, persistita in uiStore. */}
@@ -91,7 +103,7 @@ function ConsoleDrawer() {
         onPointerMove={onGripPointerMove}
         onPointerUp={onGripPointerUp}
         onPointerCancel={onGripPointerUp}
-        className="group flex h-2.5 shrink-0 cursor-ns-resize items-center justify-center bg-terminal-chrome"
+        className="group flex h-2.5 shrink-0 cursor-ns-resize select-none items-center justify-center bg-terminal-chrome"
       >
         <span className="h-[3px] w-8 rounded-full bg-terminal-dim transition-colors group-hover:bg-terminal-accent" />
       </div>
@@ -143,7 +155,9 @@ function ChunkCenterStats() {
     : chunk.status === 'error'
       ? t('statusBar.error')
       : null;
-  const issueCount = chunk.judgeResult?.status === 'completed' ? chunk.judgeResult.issues.length : 0;
+  const issueCount = chunk.judgeResult?.status === 'completed'
+    ? chunk.judgeResult.issues.filter((issue) => !issue.resolved && !issue.rejected).length
+    : 0;
   const noteCount = annotationsByChunkId.get(chunk.id)?.length ?? 0;
 
   return (
@@ -333,7 +347,7 @@ export function AppStatusBar() {
           {data.kind === 'project' && (
             <>
               <span className="h-3.5 w-px bg-editorial-border/60" aria-hidden="true" />
-              <SaveIndicator state={data.saveState} />
+              <SaveIndicator state={data.saveState} lastSavedAt={data.lastSavedAt} />
             </>
           )}
         </div>

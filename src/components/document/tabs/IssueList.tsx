@@ -19,8 +19,7 @@ export interface IssueListProps {
   chunkId: string;
   onSelectChunk: (id: string) => void;
   onFocusIssue: (chunkId: string, query?: string | null, sourceQuery?: string | null) => void;
-  resolvedKeys?: Set<string>;
-  onToggleResolved?: (key: string) => void;
+  onToggleResolved?: (issueIndex: number) => void;
 }
 
 type Issue = TranslationChunk['judgeResult']['issues'][number];
@@ -45,7 +44,7 @@ const SEVERITY_META: Record<Issue['severity'], { textClass: string }> = {
   },
 };
 
-export function IssueList({ issues, chunkId, onSelectChunk, onFocusIssue, resolvedKeys, onToggleResolved }: IssueListProps) {
+export function IssueList({ issues, chunkId, onSelectChunk, onFocusIssue, onToggleResolved }: IssueListProps) {
   const { t } = useTranslation();
   const focusedIssueQuery = useUiStore((s) => s.focusedIssueQuery);
   const clearFocusedIssue = useUiStore((s) => s.clearFocusedIssue);
@@ -56,7 +55,7 @@ export function IssueList({ issues, chunkId, onSelectChunk, onFocusIssue, resolv
     <div className="mt-4 divide-y divide-editorial-border/55">
       {issues.map((issue, index) => {
         const issueKey = `${issue.type}-${index}`;
-        const isResolved = resolvedKeys?.has(issueKey) ?? false;
+        const isResolved = issue.resolved ?? false;
         const isActive = !!issue.phrase && focusedIssueQuery === issue.phrase;
         const IssueIcon = ISSUE_TYPE_ICON[issue.type] ?? BookOpen;
         const severityMeta = SEVERITY_META[issue.severity];
@@ -124,7 +123,7 @@ export function IssueList({ issues, chunkId, onSelectChunk, onFocusIssue, resolv
                     tone={isResolved ? 'success' : 'default'}
                     onClick={() => {
                       if (isActive) clearFocusedIssue();
-                      onToggleResolved(issueKey);
+                      onToggleResolved(index);
                     }}
                     title={isResolved ? t('audit.markUnresolved') : t('audit.markResolved')}
                     ariaLabel={isResolved ? t('audit.markUnresolved') : t('audit.markResolved')}

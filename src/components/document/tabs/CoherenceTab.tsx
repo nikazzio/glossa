@@ -5,7 +5,6 @@ import {
   Loader2,
   ScanLine,
 } from 'lucide-react';
-import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useChunksStore } from '../../../stores/chunksStore';
 import { IconButton } from '../../ui';
@@ -37,13 +36,8 @@ export function CoherenceTab({ panelId, labelledBy, currentChunk, isProcessing, 
       ? t('coherence.rerun')
       : t('coherence.runAudit');
 
-  const resolvedKeys = useMemo(
-    () => new Set(coherence?.resolvedIssueKeys ?? []),
-    [coherence?.resolvedIssueKeys],
-  );
-
   const handleToggleResolved = currentChunk
-    ? (key: string) => toggleCoherenceIssueResolved(currentChunk.id, key)
+    ? (issueIndex: number) => toggleCoherenceIssueResolved(currentChunk.id, issueIndex)
     : undefined;
 
   return (
@@ -93,7 +87,6 @@ export function CoherenceTab({ panelId, labelledBy, currentChunk, isProcessing, 
           chunkId={currentChunk.id}
           onSelectChunk={onSelectChunk}
           onFocusIssue={onFocusIssue}
-          resolvedKeys={resolvedKeys}
           onToggleResolved={handleToggleResolved}
         />
       ) : null}

@@ -21,6 +21,20 @@ when-to-read: prima di creare o modificare qualsiasi componente visivo
 
 > `editorial-warning` (#666666) = grigio, avvisi generici. Stato *in esecuzione* usa `editorial-running` (giallo).
 
+### Superfici (`bg-surface-*`) — usa questi, non i toni grezzi
+
+I toni grezzi `editorial-bg` / `editorial-page` / `editorial-paper` / `editorial-textbox` sono molto vicini fra loro: usati direttamente a caso (con opacità diverse a piacere) hanno prodotto sfumature leggermente diverse per lo stesso tipo di superficie in punti diversi dell'app (verificato con audit 14 lug 2026 — 65 punti, 9 gruppi di incoerenza diretta). Per componenti **nuovi**, usa i ruoli semantici (definiti in `index.css` come alias dei toni grezzi, un solo punto da cambiare per tema chiaro e scuro):
+
+| Classe | Alias di | Quando |
+|---|---|---|
+| `bg-surface-elevated` | `editorial-page` | Superficie "staccata dal fondo": dialog, menu, popover, header sticky di pannello |
+| `bg-surface-panel` | `editorial-bg` | Wrapper strutturale: colonna documento, sidebar, pannello laterale |
+| `bg-surface-hover` (con `/50`) | `editorial-textbox` | Hover su riga/voce cliccabile — sempre `/50`, non altre opacità |
+
+Per campi input/select/textarea e badge "riempiti" resta corretto `editorial-textbox` pieno (nessuna opacità) — non è un ruolo di superficie ma di controllo, non copiare l'opacità `/50` degli hover.
+
+> Componenti esistenti non ancora migrati ai ruoli semantici restano con i toni grezzi diretti finché non li tocchi per altro motivo — non serve una sweep dedicata solo per questo.
+
 **Font:**
 - `font-display` (Elstob variable) — heading corsivi, label attive barre filtro. `size-adjust: 110%`.
 - `font-sans` — UI generica, etichette, body. Default **Plus Jakarta Sans**, **scelto dall'utente** in Impostazioni → Tipografia (Plus Jakarta Sans / Geist / Inter / IBM Plex Sans). Override runtime `--font-sans` su `:root` via `FontSync` (`App.tsx`), preferenza persistita in `uiStore.uiFont`. Ogni `@font-face` alternativo ha `size-adjust` tarato, no salto dimensione allo switch.

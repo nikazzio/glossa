@@ -42,6 +42,7 @@ interface ProjectState {
   showProjectPanel: boolean;
   saveState: 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
   lastSaveError: string | null;
+  lastSavedAt: number | null;
   trackedSnapshot: string | null;
   runInterrupted: boolean;
   lastRunConfig: string | null;
@@ -71,6 +72,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   showProjectPanel: false,
   saveState: 'idle',
   lastSaveError: null,
+  lastSavedAt: null,
   trackedSnapshot: null,
   runInterrupted: false,
   lastRunConfig: null,
@@ -123,7 +125,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
     useOperationLogStore.getState().setContext(id, activePipelineId);
     void get().loadProjects().catch(() => {});
-    set({ currentProjectId: id, activePipelineId, pipelines, saveState: 'saved', lastSaveError: null, trackedSnapshot });
+    set({ currentProjectId: id, activePipelineId, pipelines, saveState: 'saved', lastSaveError: null, lastSavedAt: Date.now(), trackedSnapshot });
   },
 
   openProject: async (id: string) => {
@@ -202,6 +204,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       activePipelineId,
       saveState: 'saved',
       lastSaveError: null,
+      lastSavedAt: null,
       trackedSnapshot: null,
     });
 
@@ -211,7 +214,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   removeProject: async (id: string) => {
     await deleteProject(id);
     if (get().currentProjectId === id) {
-      set({ currentProjectId: null, pipelines: [], activePipelineId: null, saveState: 'idle', lastSaveError: null, trackedSnapshot: null });
+      set({ currentProjectId: null, pipelines: [], activePipelineId: null, saveState: 'idle', lastSaveError: null, lastSavedAt: null, trackedSnapshot: null });
     }
     await get().loadProjects();
   },
@@ -229,6 +232,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       activePipelineId: null,
       saveState: 'idle',
       lastSaveError: null,
+      lastSavedAt: null,
       trackedSnapshot: null,
       runInterrupted: false,
       lastRunConfig: null,
@@ -303,6 +307,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
           currentProjectId,
           saveState: 'saved',
           lastSaveError: null,
+          lastSavedAt: Date.now(),
           trackedSnapshot: effectiveSnapshot,
           // Only set activePipelineId/pipelines when we just created the project —
           // otherwise we'd overwrite a switchPipeline that ran during the async save.

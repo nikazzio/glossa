@@ -575,7 +575,6 @@ export async function setSetting(key: string, value: string): Promise<void> {
 
 // ── Operation Logs ───────────────────────────────────────────────────
 
-const MAX_OPERATION_LOG_ENTRIES = 2000;
 const MAX_DETAIL_LENGTH = 500_000;
 
 const VALID_PHASES = new Set(['start', 'end', 'retry', 'cache']);
@@ -639,35 +638,9 @@ export async function saveOperationLogEntry(
       entry.detailKind ?? null,
     ],
   );
-  await execute(
-    `DELETE FROM operation_logs
-     WHERE project_id = $1
-       AND pipeline_id = $2
-       AND id NOT IN (
-         SELECT id FROM operation_logs
-         WHERE project_id = $1
-           AND pipeline_id = $2
-         ORDER BY at DESC
-         LIMIT $3
-       )`,
-    [projectId, pipelineId, MAX_OPERATION_LOG_ENTRIES],
-  );
 }
 
 export async function loadOperationLogs(projectId: string, pipelineId: string): Promise<PersistedLogEntry[]> {
-  await execute(
-    `DELETE FROM operation_logs
-     WHERE project_id = $1
-       AND pipeline_id = $2
-       AND id NOT IN (
-         SELECT id FROM operation_logs
-         WHERE project_id = $1
-           AND pipeline_id = $2
-         ORDER BY at DESC
-         LIMIT $3
-       )`,
-    [projectId, pipelineId, MAX_OPERATION_LOG_ENTRIES],
-  );
   const rows = await select<DbOperationLogRow>(
     `SELECT * FROM operation_logs WHERE project_id = $1 AND pipeline_id = $2 ORDER BY at ASC`,
     [projectId, pipelineId],

@@ -21,7 +21,7 @@ import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { usePricingStore } from '../../stores/pricingStore';
 import { useOperationLogStore } from '../../stores/operationLogStore';
 import { HighlightedText, MarkdownEditor, DOC_FONT_SIZE_STEP_INDEX } from '../common';
-import { IconButton, Tooltip, type IconButtonTone } from '../ui';
+import { IconButton, Tooltip, Popover, ScopeBreakdownCarousel, type IconButtonTone } from '../ui';
 import { composeAnnotatedMarkdown } from '../../utils/annotationMarkdown';
 import { restoreFootnoteMarkers } from '../../utils/footnoteExtractor';
 import { summarizeChunkUsage, formatUsd } from '../../utils/operationLogStats';
@@ -125,7 +125,7 @@ function DocumentPage({
   ) : null;
 
   return (
-    <section className={`relative bg-editorial-page px-12 py-8 flex flex-col flex-1 min-h-0 ${
+    <section className={`relative bg-editorial-bg px-12 py-8 flex flex-col flex-1 min-h-0 ${
       highlighted ? 'ring-2 ring-inset ring-editorial-accent/40' : ''
     }`}>
       {/* Header: riga unica allineata al titolo — controlli pagina + pulsante menu testo a destra. */}
@@ -161,7 +161,10 @@ function DocumentPage({
           </div>
         )}
       </div>
-      <div ref={scrollRef} className={`flex flex-col flex-1 min-h-0 ${readOnly ? 'opacity-90' : ''}`}>
+      <div
+        ref={scrollRef}
+        className={`flex flex-col flex-1 min-h-0 rounded-2xl border border-editorial-border/50 bg-editorial-page px-7 py-4 shadow-[var(--shadow-page-card)] ${readOnly ? 'opacity-90' : ''}`}
+      >
         {showSearch && onSearchChange && searchLabel ? (
           <PaneSearch
             value={searchValue ?? ''}
@@ -453,24 +456,45 @@ export function DocumentView({
               ) : null}
             </div>
             {hasCurrentChunkUsage && (
-              <div className="flex shrink-0 items-center gap-6 border-l border-editorial-border pl-5">
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
-                    {t('header.tokenCount')}
-                  </span>
-                  <span className="font-display text-base italic text-editorial-ink tabular-nums">
-                    {currentChunkTokens.toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
-                    {t('header.estimatedCost')}
-                  </span>
-                  <span className="font-display text-base italic text-editorial-accent tabular-nums">
-                    {formatUsd(currentChunkUsage.total.totalUsd)}
-                  </span>
-                </div>
-              </div>
+              <Popover
+                side="bottom"
+                align="end"
+                className="w-72 px-3"
+                trigger={
+                  <div className="flex shrink-0 items-center gap-6 border-l border-editorial-border pl-5 cursor-default">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
+                        {t('pipeline.unit')}
+                      </span>
+                      <span className="font-display text-base italic text-editorial-ink tabular-nums">
+                        {currentIndex + 1}<span className="text-editorial-muted">/{chunks.length}</span>
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
+                        {t('header.tokenCount')}
+                      </span>
+                      <span className="font-display text-base italic text-editorial-ink tabular-nums">
+                        {currentChunkTokens.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
+                        {t('header.estimatedCost')}
+                      </span>
+                      <span className="font-display text-base italic text-editorial-accent tabular-nums">
+                        {formatUsd(currentChunkUsage.total.totalUsd)}
+                      </span>
+                    </div>
+                  </div>
+                }
+              >
+                {currentChunkUsage.scopeBreakdown.length > 0 ? (
+                  <ScopeBreakdownCarousel entries={currentChunkUsage.scopeBreakdown} title={t('cost.breakdown')} />
+                ) : (
+                  <p className="py-4 text-center text-[11px] text-editorial-muted">{t('cost.unknown')}</p>
+                )}
+              </Popover>
             )}
           </div>
         </div>

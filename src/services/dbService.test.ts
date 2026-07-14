@@ -446,13 +446,11 @@ describe('operation log pipeline scoping', () => {
         params: ['op-1', 'proj-1', 'pipe-1', '2026-01-01T00:00:00.000Z', 'info', 'pipeline', 'hello', null, null, null, null, null, null, null],
       }],
     });
-    expect(invoke).toHaveBeenCalledWith('execute_transaction', {
-      db: 'sqlite:glossa.db',
-      statements: [{
-        query: expect.stringContaining('DELETE FROM operation_logs'),
-        params: ['proj-1', 'pipe-1', 2000],
-      }],
-    });
+    // Storico operazioni senza limite (deciso con l'utente 2026-07-14): nessuna
+    // riga più vecchia va cancellata a ogni scrittura.
+    expect(invoke).not.toHaveBeenCalledWith('execute_transaction', expect.objectContaining({
+      statements: [expect.objectContaining({ query: expect.stringContaining('DELETE FROM operation_logs') })],
+    }));
   });
 
   it('scopes loadOperationLogs reads to project and pipeline', async () => {

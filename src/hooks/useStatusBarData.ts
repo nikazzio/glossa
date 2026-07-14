@@ -24,6 +24,7 @@ export type StatusBarContext =
       targetWords: number;
       coveragePct: number;
       saveState: 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
+      lastSavedAt: number | null;
       runStatus: PipelineRunStatus;
       completedChunks: number;
       totalChunks: number;
@@ -39,6 +40,7 @@ export function useStatusBarData(): StatusBarContext {
   const pipelines = useProjectStore((s) => s.pipelines);
   const activePipelineId = useProjectStore((s) => s.activePipelineId);
   const saveState = useProjectStore((s) => s.saveState);
+  const lastSavedAt = useProjectStore((s) => s.lastSavedAt);
   const chunks = useChunksStore((s) => s.chunks);
   const runStatus = usePipelineStore((s) => s.runStatus);
   const pipelineConfigId = usePipelineStore((s) => s.config.pipelineId);
@@ -81,6 +83,7 @@ export function useStatusBarData(): StatusBarContext {
       targetWords,
       coveragePct,
       saveState,
+      lastSavedAt,
       runStatus,
       completedChunks,
       totalChunks,
@@ -96,6 +99,7 @@ export function useStatusBarData(): StatusBarContext {
     activePipelineId,
     pipelineConfigId,
     saveState,
+    lastSavedAt,
     chunks,
     runStatus,
     activePanel,

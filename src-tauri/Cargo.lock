@@ -1907,6 +1907,7 @@ dependencies = [
  "aes-gcm",
  "async-trait",
  "bytes",
+ "gtk",
  "keyring",
  "log",
  "pdf-extract",

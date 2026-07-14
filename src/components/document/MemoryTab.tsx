@@ -343,7 +343,7 @@ function MatchCard({ match, enabled, onToggle, onExtractTerm }: MatchCardProps) 
             {match.sourcePhrase}
           </div>
         </div>
-        <div className="rounded-md border border-editorial-border/60 bg-editorial-bg px-3 py-2">
+        <div className="rounded-md bg-editorial-textbox/45 px-3 py-2">
           <p className="mb-1 text-[10px] uppercase tracking-[0.28em] text-editorial-muted">
             {t('glossary.translation')}
           </p>

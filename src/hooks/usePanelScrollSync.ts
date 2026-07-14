@@ -2,6 +2,11 @@ import { useEffect, useRef } from 'react';
 
 const SCROLL_TARGET_SELECTOR = '[data-scroll-sync="true"], [data-scroll], textarea, .custom-scrollbar';
 const PROGRAMMATIC_SCROLL_IGNORE_MS = 180;
+// Digitare/incollare in un riquadro può far scrollare quel riquadro da solo
+// (il browser tiene visibile il cursore, o il testo si riadatta). Quello scroll
+// non è l'utente che sta leggendo: non va copiato nell'altro riquadro, altrimenti
+// la vista di chi sta scrivendo salta via ad ogni modifica.
+const RECENT_EDIT_IGNORE_MS = 400;
 
 function isScrollable(el: HTMLElement): boolean {
   return el.scrollHeight - el.clientHeight > 1;
@@ -41,6 +46,10 @@ export function usePanelScrollSync(enabled: boolean): {
   const translationRef = useRef<HTMLDivElement | null>(null);
   const isSyncing = useRef(false);
   const ignoredTargetRef = useRef<{ el: HTMLElement; until: number } | null>(null);
+  const lastEditAtRef = useRef<{ sourceCtr: number; translationCtr: number }>({
+    sourceCtr: 0,
+    translationCtr: 0,
+  });
 
   useEffect(() => {
     if (!enabled) return;
@@ -49,8 +58,9 @@ export function usePanelScrollSync(enabled: boolean): {
     const translationCtr = translationRef.current;
     if (!sourceCtr || !translationCtr) return;
 
-    const syncFrom = (toCtr: HTMLElement, fromCtr: HTMLElement) => (e: Event) => {
+    const syncFrom = (toCtr: HTMLElement, fromCtr: HTMLElement, editedAtKey: keyof typeof lastEditAtRef.current) => (e: Event) => {
       if (isSyncing.current) return;
+      if (performance.now() - lastEditAtRef.current[editedAtKey] < RECENT_EDIT_IGNORE_MS) return;
       const from = getEventScrollTarget(e.target, fromCtr);
       if (!from || !isScrollable(from)) return;
       const ignored = ignoredTargetRef.current;
@@ -68,15 +78,21 @@ export function usePanelScrollSync(enabled: boolean): {
       }, 0);
     };
 
-    const onSourceScroll = syncFrom(translationCtr, sourceCtr);
-    const onTranslationScroll = syncFrom(sourceCtr, translationCtr);
+    const onSourceScroll = syncFrom(translationCtr, sourceCtr, 'sourceCtr');
+    const onTranslationScroll = syncFrom(sourceCtr, translationCtr, 'translationCtr');
+    const onSourceInput = () => { lastEditAtRef.current.sourceCtr = performance.now(); };
+    const onTranslationInput = () => { lastEditAtRef.current.translationCtr = performance.now(); };
 
     sourceCtr.addEventListener('scroll', onSourceScroll, { capture: true, passive: true });
     translationCtr.addEventListener('scroll', onTranslationScroll, { capture: true, passive: true });
+    sourceCtr.addEventListener('input', onSourceInput, { capture: true });
+    translationCtr.addEventListener('input', onTranslationInput, { capture: true });
 
     return () => {
       sourceCtr.removeEventListener('scroll', onSourceScroll, { capture: true });
       translationCtr.removeEventListener('scroll', onTranslationScroll, { capture: true });
+      sourceCtr.removeEventListener('input', onSourceInput, { capture: true });
+      translationCtr.removeEventListener('input', onTranslationInput, { capture: true });
       ignoredTargetRef.current = null;
     };
   }, [enabled]);
