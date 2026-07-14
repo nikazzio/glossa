@@ -163,7 +163,7 @@ function DocumentPage({
       </div>
       <div
         ref={scrollRef}
-        className={`flex flex-col flex-1 min-h-0 rounded-2xl border border-editorial-border/50 bg-editorial-page p-4 shadow-sm ${readOnly ? 'opacity-90' : ''}`}
+        className={`flex flex-col flex-1 min-h-0 rounded-2xl border border-editorial-border/50 bg-editorial-page p-4 shadow-[var(--shadow-page-card)] ${readOnly ? 'opacity-90' : ''}`}
       >
         {showSearch && onSearchChange && searchLabel ? (
           <PaneSearch

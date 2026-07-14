@@ -97,6 +97,14 @@
   --color-editorial-divider: #d8cfbf;
   --color-editorial-divider-soft: #ede4d6;
 
+  /* ── Ruoli di superficie — usa questi, non i toni grezzi sopra, per nuovi
+     componenti (vedi UI_DESIGN_SYSTEM.md § Superfici). Un solo punto da
+     cambiare per ritoccare il ruolo ovunque, invece di toni grezzi sparsi
+     con opacità diverse a caso. ────────────────────────────────────────── */
+  --color-surface-elevated: var(--color-editorial-page); /* dialog, menu, popover, header sticky */
+  --color-surface-panel: var(--color-editorial-bg);       /* wrapper strutturali di pannello/colonna/sidebar */
+  --color-surface-hover: var(--color-editorial-textbox);  /* usa con /50 — hover su riga/voce cliccabile */
+
   /* ── Dark mode — token overrides attivi su html.dark ────────────────────── */
   /* Vedi ThemeSync in App.tsx */
 
