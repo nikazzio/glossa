@@ -333,7 +333,7 @@ export function MarkdownEditor({
     });
   };
 
-  const textareaClassName = `${fillHeight ? 'flex-1 min-h-[100px] h-0' : minHeightClassName} w-full resize-y bg-transparent outline-none custom-scrollbar ${textClassName} disabled:opacity-70 read-only:cursor-not-allowed`;
+  const textareaClassName = `${fillHeight ? 'flex-1 min-h-[100px] h-0' : minHeightClassName} w-full ${fillHeight ? 'resize-none' : 'resize-y'} bg-transparent outline-none custom-scrollbar ${textClassName} disabled:opacity-70 read-only:cursor-not-allowed`;
 
   const textarea = (
     <textarea

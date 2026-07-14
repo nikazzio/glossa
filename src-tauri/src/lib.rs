@@ -29,6 +29,32 @@ pub fn run() {
 
     builder
         .setup(|app| {
+            // GTK_OVERLAY_SCROLLING è disattivato (vedi main.rs) per evitare che le
+            // scrollbar sfondino lo z-index della pagina. Contropartita: WebKitGTK
+            // passa alla scrollbar "classica", che disegna anche la rotaia (trough)
+            // dietro al cursore — la CSS ::-webkit-scrollbar della pagina non la
+            // tocca perché è un widget GTK nativo, non contenuto web. La nascondiamo
+            // via CSS provider GTK, lasciando visibile solo il cursore.
+            #[cfg(target_os = "linux")]
+            {
+                use gtk::prelude::*;
+                if let Some(window) = app.get_webview_window("main") {
+                    if let Ok(gtk_window) = window.gtk_window() {
+                        if let Some(screen) = gtk::prelude::WidgetExt::screen(&gtk_window) {
+                            let provider = gtk::CssProvider::new();
+                            let css = "scrollbar trough { background-color: transparent; border-style: none; box-shadow: none; }";
+                            if provider.load_from_data(css.as_bytes()).is_ok() {
+                                gtk::StyleContext::add_provider_for_screen(
+                                    &screen,
+                                    &provider,
+                                    gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+
             let vector_database = vector::VectorDatabase::initialize(app.handle());
             app.manage(vector_database);
             #[allow(unused_mut)]
