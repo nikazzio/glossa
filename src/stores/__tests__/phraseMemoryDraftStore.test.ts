@@ -49,17 +49,6 @@ describe('phraseMemoryDraftStore', () => {
     expect(usePhraseMemoryDraftStore.getState().draftsByChunk.get('c1')?.candidates[0].accepted).toBe(true);
   });
 
-  it('removeCandidate toglie la candidate indicata dalla lista', () => {
-    const store = usePhraseMemoryDraftStore.getState();
-    store.setDraftCandidates('c1', [
-      { id: 'p1', sourcePhrase: 'ciao', targetPhrase: 'hello', confidence: 0.9, origin: 'ai', accepted: true },
-      { id: 'p2', sourcePhrase: 'notte', targetPhrase: 'night', confidence: 0.9, origin: 'ai', accepted: true },
-    ]);
-    store.removeCandidate('c1', 'p1');
-    const entry = usePhraseMemoryDraftStore.getState().draftsByChunk.get('c1');
-    expect(entry?.candidates.map((c) => c.id)).toEqual(['p2']);
-  });
-
   it('addManualCandidate aggiunge una riga vuota di origine manuale, accettata di default', () => {
     const store = usePhraseMemoryDraftStore.getState();
     store.setDraftCandidates('c1', []);

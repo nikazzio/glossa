@@ -30,10 +30,11 @@ function noMatches() {
 describe('ReferencesTab', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('mostra il testo di stato vuoto quando non ci sono match', () => {
+  it('mostra lo stato vuoto (icona + titolo) quando non ci sono match', () => {
     mockUseMatches.mockReturnValue(noMatches());
     const chunk = makeTranslationChunk({ id: 'c1' });
-    render(<ReferencesTab panelId="p" labelledBy="l" currentChunk={chunk} glossary={[]} />);
+    render(<ReferencesTab panelId="p" labelledBy="l" currentChunk={chunk} />);
+    expect(screen.getByText('memory.coldStartTitle')).toBeInTheDocument();
     expect(screen.getByText('memory.coldStartBodyShort')).toBeInTheDocument();
   });
 
@@ -48,33 +49,11 @@ describe('ReferencesTab', () => {
     });
     const chunk = makeTranslationChunk({ id: 'c1' });
     const user = userEvent.setup();
-    render(<ReferencesTab panelId="p" labelledBy="l" currentChunk={chunk} glossary={[]} />);
+    render(<ReferencesTab panelId="p" labelledBy="l" currentChunk={chunk} />);
 
     expect(screen.getByText('ciao')).toBeInTheDocument();
     expect(screen.getByText('hello')).toBeInTheDocument();
     await user.click(screen.getByRole('checkbox', { name: 'memory.enableMatch' }));
     expect(toggleEnabled).toHaveBeenCalledWith('m1');
-  });
-
-  it('mostra il glossario del progetto per intero, senza filtro', () => {
-    mockUseMatches.mockReturnValue(noMatches());
-    const chunk = makeTranslationChunk({ id: 'c1' });
-    render(
-      <ReferencesTab
-        panelId="p"
-        labelledBy="l"
-        currentChunk={chunk}
-        glossary={[{ id: 'g1', term: 'ciao', translation: 'hello' }]}
-      />,
-    );
-    expect(screen.getByText('ciao')).toBeInTheDocument();
-    expect(screen.getByText('hello')).toBeInTheDocument();
-  });
-
-  it('mostra il messaggio di glossario assente quando non è assegnato nessun glossario', () => {
-    mockUseMatches.mockReturnValue(noMatches());
-    const chunk = makeTranslationChunk({ id: 'c1' });
-    render(<ReferencesTab panelId="p" labelledBy="l" currentChunk={chunk} glossary={[]} />);
-    expect(screen.getByText('memory.referencesGlossaryEmpty')).toBeInTheDocument();
   });
 });

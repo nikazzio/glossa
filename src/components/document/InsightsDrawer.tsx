@@ -18,7 +18,6 @@ import { ReferencesTab } from './tabs/ReferencesTab';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunkWatchdog } from '../../hooks/useChunkWatchdog';
 import { SearchTab } from './SearchTab';
-import { IconButton } from '../ui';
 import { TabButton } from './tabs/TabButton';
 import { IndexTab } from './tabs/IndexTab';
 import { StatsTab } from './tabs/StatsTab';
@@ -84,7 +83,6 @@ export function ChunkInspectorPanel({ onReauditChunk }: ChunkInspectorPanelProps
   const focusIssueInChunk = useUiStore((state) => state.focusIssueInChunk);
   const clearFocusedIssue = useUiStore((state) => state.clearFocusedIssue);
   const { chunks, isProcessing, currentChunk, currentChunkIndex } = useInsightData();
-  const { config } = usePipelineStore();
 
   const tabButtonRefs = useRef<Partial<Record<ChunkRailTab, HTMLButtonElement | null>>>({});
 
@@ -176,7 +174,6 @@ export function ChunkInspectorPanel({ onReauditChunk }: ChunkInspectorPanelProps
             panelId={CHUNK_RAIL_TAB_PANEL_IDS.references}
             labelledBy={CHUNK_RAIL_TAB_BUTTON_IDS.references}
             currentChunk={currentChunk}
-            glossary={config.glossary}
           />
         )}
       </div>

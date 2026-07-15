@@ -30,7 +30,6 @@ function baseDraft(overrides: Partial<ReturnType<typeof useMemoryExtractionDraft
     addManualCandidate: vi.fn(),
     updateCandidate: vi.fn(),
     toggleAccepted: vi.fn(),
-    removeCandidate: vi.fn(),
     toggleExpanded: vi.fn(),
     confirm: vi.fn(),
     ...overrides,
@@ -59,10 +58,9 @@ describe('MemoryTab', () => {
     expect(extract).toHaveBeenCalled();
   });
 
-  it('mostra le candidate in revisione (lista espansa) e permette di modificarle e scartarle', async () => {
+  it('mostra le candidate in revisione (lista espansa) e permette di modificarle', async () => {
     const toggleAccepted = vi.fn();
     const updateCandidate = vi.fn();
-    const removeCandidate = vi.fn();
     mockUseDraft.mockReturnValue(baseDraft({
       status: 'reviewing',
       expanded: true,
@@ -71,7 +69,6 @@ describe('MemoryTab', () => {
       ],
       toggleAccepted,
       updateCandidate,
-      removeCandidate,
     }));
     const chunk = makeTranslationChunk({ id: 'c1', translationLocked: true });
     const user = userEvent.setup();
@@ -82,9 +79,6 @@ describe('MemoryTab', () => {
 
     await user.click(screen.getByRole('checkbox'));
     expect(toggleAccepted).toHaveBeenCalledWith('p1');
-
-    await user.click(screen.getByRole('button', { name: 'memory.removeCandidateButton' }));
-    expect(removeCandidate).toHaveBeenCalledWith('p1');
   });
 
   it('la lista di revisione non è visibile se la lista non è espansa', () => {

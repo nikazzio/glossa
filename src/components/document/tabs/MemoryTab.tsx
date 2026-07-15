@@ -1,11 +1,11 @@
-import { Brain, ChevronDown, ChevronUp, Database, Loader2, Trash2 } from 'lucide-react';
+import { Brain, ChevronDown, ChevronUp, Database, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useMemoryExtractionDraft } from '../../../hooks/useMemoryExtractionDraft';
 import { useWorkspaceStore } from '../../../stores/workspaceStore';
 import { listPhraseMemoryEntries } from '../../../services/phraseMemoryService';
-import { IconButton, SectionLabel } from '../../ui';
+import { IconButton, PillButton, SectionLabel } from '../../ui';
 import type { PhraseCandidateDraft } from '../../../stores/phraseMemoryDraftStore';
 import type { TranslationChunk } from '../../../types';
 
@@ -21,7 +21,7 @@ export function MemoryTab({ panelId, labelledBy, currentChunk }: MemoryTabProps)
   const [chunkMemoryCount, setChunkMemoryCount] = useState<number | null>(null);
   const {
     status, candidates, expanded, canExtract, extract, addManualCandidate,
-    updateCandidate, toggleAccepted, removeCandidate, toggleExpanded, confirm,
+    updateCandidate, toggleAccepted, toggleExpanded, confirm,
   } = useMemoryExtractionDraft(currentChunk);
   const isLocked = Boolean(currentChunk?.translationLocked);
 
@@ -111,18 +111,12 @@ export function MemoryTab({ panelId, labelledBy, currentChunk }: MemoryTabProps)
           </div>
         )}
         {showList && (
-          <div className="mt-3 flex items-center justify-between gap-2 border-t border-editorial-border pt-3">
-            <p className="text-xs leading-relaxed text-editorial-muted">{t('memory.unsavedChangesHint')}</p>
-            <button
-              type="button"
-              onClick={() => void handleConfirm()}
-              disabled={!canUpdateMemory}
-              className="shrink-0 rounded-md bg-editorial-accent px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40"
-            >
+          <div className="mt-3 flex justify-end border-t border-editorial-border pt-3">
+            <PillButton variant="accent" onClick={() => void handleConfirm()} disabled={!canUpdateMemory}>
               {status === 'saving'
                 ? <Loader2 size={13} className="mx-auto animate-spin" />
                 : t('memory.confirmSaveButton')}
-            </button>
+            </PillButton>
           </div>
         )}
       </div>
@@ -139,7 +133,6 @@ export function MemoryTab({ panelId, labelledBy, currentChunk }: MemoryTabProps)
                 candidate={candidate}
                 onToggle={() => toggleAccepted(candidate.id)}
                 onChange={(changes) => updateCandidate(candidate.id, changes)}
-                onRemove={() => removeCandidate(candidate.id)}
               />
             ))}
             <button
@@ -156,7 +149,7 @@ export function MemoryTab({ panelId, labelledBy, currentChunk }: MemoryTabProps)
         <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-12 text-center">
           <Brain size={28} className="text-editorial-border" />
           <p className="text-sm font-medium text-editorial-muted">
-            {!currentChunk?.translationLocked ? t('memory.extractDisabledLockHint') : t('memory.coldStartTitle')}
+            {!currentChunk?.translationLocked ? t('memory.extractDisabledLockHint') : t('memory.extractColdStartTitle')}
           </p>
         </div>
       )}
@@ -168,51 +161,55 @@ interface CandidateCardProps {
   candidate: PhraseCandidateDraft;
   onToggle: () => void;
   onChange: (changes: Partial<Pick<PhraseCandidateDraft, 'sourcePhrase' | 'targetPhrase'>>) => void;
-  onRemove: () => void;
 }
 
-function CandidateCard({ candidate, onToggle, onChange, onRemove }: CandidateCardProps) {
+function CandidateCard({ candidate, onToggle, onChange }: CandidateCardProps) {
   const { t } = useTranslation();
   return (
-    <article className={`space-y-2 rounded-lg border bg-editorial-bg p-3 transition-colors ${candidate.accepted ? 'border-editorial-accent/70' : 'border-editorial-border'}`}>
-      <div className="flex items-center justify-between gap-2">
-        <label className="flex min-w-0 cursor-pointer items-center gap-2">
-          <input
-            type="checkbox"
-            checked={candidate.accepted}
-            onChange={onToggle}
-            className="h-4 w-4 shrink-0 rounded border-editorial-border accent-editorial-accent focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            aria-label={t('memory.acceptCandidateLabel')}
-          />
-          {candidate.origin === 'ai' && (
-            <span className="shrink-0 font-mono text-xs font-bold text-editorial-accent">
-              {Math.round(candidate.confidence * 100)}%
-            </span>
-          )}
-          {candidate.origin === 'saved' && (
-            <span className="shrink-0 text-xs font-medium text-editorial-muted">
-              {t('memory.savedCandidateLabel')}
-            </span>
-          )}
-        </label>
-        <IconButton size="sm" title={t('memory.removeCandidateButton')} onClick={onRemove} tooltipSide="left">
-          <Trash2 size={13} />
-        </IconButton>
+    <article className={`space-y-3 rounded-lg border bg-editorial-bg p-3 transition-colors ${candidate.accepted ? 'border-editorial-accent/70' : 'border-editorial-border'}`}>
+      <label className="flex min-w-0 cursor-pointer items-center gap-2">
+        <input
+          type="checkbox"
+          checked={candidate.accepted}
+          onChange={onToggle}
+          className="h-4 w-4 shrink-0 rounded border-editorial-border accent-editorial-accent focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          aria-label={t('memory.acceptCandidateLabel')}
+        />
+        {candidate.origin === 'ai' && (
+          <span className="shrink-0 font-mono text-xs font-bold text-editorial-accent">
+            {Math.round(candidate.confidence * 100)}%
+          </span>
+        )}
+        {candidate.origin === 'saved' && (
+          <span className="shrink-0 text-xs font-medium text-editorial-muted">
+            {t('memory.savedCandidateLabel')}
+          </span>
+        )}
+      </label>
+      <div className="rounded-md bg-editorial-textbox/45 px-3 py-2">
+        <p className="mb-1 text-[10px] uppercase tracking-[0.28em] text-editorial-muted">
+          {t('memory.sourcePhraseLabel')}
+        </p>
+        <input
+          type="text"
+          value={candidate.sourcePhrase}
+          onChange={(e) => onChange({ sourcePhrase: e.target.value })}
+          placeholder={t('memory.manualSourcePlaceholder')}
+          className="w-full bg-transparent text-sm text-editorial-charcoal outline-none"
+        />
       </div>
-      <input
-        type="text"
-        value={candidate.sourcePhrase}
-        onChange={(e) => onChange({ sourcePhrase: e.target.value })}
-        placeholder={t('memory.manualSourcePlaceholder')}
-        className="w-full rounded-md bg-editorial-textbox/45 px-3 py-2 text-sm text-editorial-charcoal outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-      />
-      <input
-        type="text"
-        value={candidate.targetPhrase}
-        onChange={(e) => onChange({ targetPhrase: e.target.value })}
-        placeholder={t('memory.manualTargetPlaceholder')}
-        className="w-full rounded-md bg-editorial-textbox/45 px-3 py-2 text-sm text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-      />
+      <div className="rounded-md bg-editorial-textbox/45 px-3 py-2">
+        <p className="mb-1 text-[10px] uppercase tracking-[0.28em] text-editorial-muted">
+          {t('glossary.translation')}
+        </p>
+        <input
+          type="text"
+          value={candidate.targetPhrase}
+          onChange={(e) => onChange({ targetPhrase: e.target.value })}
+          placeholder={t('memory.manualTargetPlaceholder')}
+          className="w-full bg-transparent text-sm text-editorial-ink outline-none"
+        />
+      </div>
     </article>
   );
 }

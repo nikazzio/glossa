@@ -36,7 +36,6 @@ type PhraseMemoryDraftState = {
     changes: Partial<Pick<PhraseCandidateDraft, 'sourcePhrase' | 'targetPhrase'>>,
   ) => void;
   toggleAccepted: (chunkId: string, candidateId: string) => void;
-  removeCandidate: (chunkId: string, candidateId: string) => void;
   addManualCandidate: (chunkId: string) => void;
   seedSavedCandidates: (chunkId: string, pairs: SavedPhrasePair[]) => void;
   toggleExpanded: (chunkId: string) => void;
@@ -82,14 +81,6 @@ export const usePhraseMemoryDraftStore = create<PhraseMemoryDraftState>((set) =>
         ...entry,
         candidates: entry.candidates.map((c) =>
           c.id === candidateId ? { ...c, accepted: !c.accepted } : c),
-      })),
-    })),
-
-  removeCandidate: (chunkId, candidateId) =>
-    set((state) => ({
-      draftsByChunk: updateEntry(state, chunkId, (entry) => ({
-        ...entry,
-        candidates: entry.candidates.filter((c) => c.id !== candidateId),
       })),
     })),
 

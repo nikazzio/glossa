@@ -11,7 +11,6 @@ import { classifyError } from '../../../utils/retry';
 import { IconButton, SectionLabel } from '../../ui';
 import { ExtractTermDialog } from '../ExtractTermDialog';
 import type { TranslationChunk } from '../../../types';
-import type { GlossaryEntry } from '../../../types';
 
 const MIN_THRESHOLD = 0.5;
 const MAX_THRESHOLD = 1;
@@ -35,10 +34,9 @@ interface ReferencesTabProps {
   panelId: string;
   labelledBy: string;
   currentChunk: TranslationChunk | null;
-  glossary: GlossaryEntry[];
 }
 
-export function ReferencesTab({ panelId, labelledBy, currentChunk, glossary }: ReferencesTabProps) {
+export function ReferencesTab({ panelId, labelledBy, currentChunk }: ReferencesTabProps) {
   const { t } = useTranslation();
   const currentChunkId = currentChunk?.id ?? null;
   const { matches, enabledMatchIds, hasMatches, toggleEnabled } = usePhraseMemoryMatches(currentChunkId);
@@ -87,9 +85,6 @@ export function ReferencesTab({ panelId, labelledBy, currentChunk, glossary }: R
               : <RefreshCcw size={13} />}
           </IconButton>
         </div>
-        <p className="text-xs leading-relaxed text-editorial-muted">
-          {hasMatches ? t('memory.selectionHint') : t('memory.coldStartBodyShort')}
-        </p>
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <label
@@ -116,8 +111,9 @@ export function ReferencesTab({ panelId, labelledBy, currentChunk, glossary }: R
         </div>
       </div>
 
-      {hasMatches && (
-        <div className="shrink-0 space-y-3 overflow-y-auto px-4 py-4 custom-scrollbar">
+      {hasMatches ? (
+        <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4 custom-scrollbar">
+          <p className="text-xs leading-relaxed text-editorial-muted">{t('memory.selectionHint')}</p>
           {matches.map((match) => (
             <MatchCard
               key={match.id}
@@ -128,33 +124,13 @@ export function ReferencesTab({ panelId, labelledBy, currentChunk, glossary }: R
             />
           ))}
         </div>
+      ) : (
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-12 text-center">
+          <Layers size={28} className="text-editorial-border" />
+          <p className="text-sm font-medium text-editorial-muted">{t('memory.coldStartTitle')}</p>
+          <p className="text-xs leading-relaxed text-editorial-muted">{t('memory.coldStartBodyShort')}</p>
+        </div>
       )}
-
-      <div className="shrink-0 border-b border-t border-editorial-border px-4 py-3">
-        <p className="mb-2 text-xs font-sans uppercase tracking-[0.22em] text-editorial-muted">
-          {t('memory.referencesGlossarySectionTitle')}
-        </p>
-        <p className="mb-3 text-xs leading-relaxed text-editorial-muted">
-          {t('memory.referencesGlossaryHint')}
-        </p>
-      </div>
-      <div className="flex-1 overflow-y-auto px-4 py-2 custom-scrollbar">
-        {glossary.length === 0 ? (
-          <p className="py-6 text-center text-sm text-editorial-muted">{t('memory.referencesGlossaryEmpty')}</p>
-        ) : (
-          <table className="w-full text-sm">
-            <tbody>
-              {glossary.map((entry, i) => (
-                <tr key={entry.id ?? i} className="border-b border-editorial-border/40 last:border-0">
-                  <td className="py-2 pr-3 font-medium text-editorial-ink">{entry.term}</td>
-                  <td className="py-2 text-editorial-muted/60">→</td>
-                  <td className="py-2 pl-3 text-editorial-ink">{entry.translation}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
 
       {extractingMatch && (
         <ExtractTermDialog
