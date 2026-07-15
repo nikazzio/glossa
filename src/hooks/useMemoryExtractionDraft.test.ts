@@ -199,6 +199,25 @@ describe('useMemoryExtractionDraft', () => {
     expect(result.current.expanded).toBe(true);
   });
 
+  it('extract non perde le modifiche fatte alla bozza mentre la richiesta IA è in corso', async () => {
+    let resolveExtract: (value: Array<{ sourcePhrase: string; targetPhrase: string; confidence: number }>) => void = () => {};
+    mockExtract.mockImplementationOnce(() => new Promise((resolve) => { resolveExtract = resolve; }));
+    const { result } = renderHook(() => useMemoryExtractionDraft(lockedChunk));
+    act(() => { result.current.addManualCandidate(); });
+    await waitFor(() => expect(result.current.candidates).toHaveLength(1));
+    const manualId = result.current.candidates[0].id;
+
+    let extractPromise: Promise<void> = Promise.resolve();
+    act(() => { extractPromise = result.current.extract(); });
+    act(() => { result.current.toggleAccepted(manualId); }); // modifica fatta mentre l'estrazione è in corso
+
+    resolveExtract([{ sourcePhrase: 'Ciao mondo', targetPhrase: 'Hello world', confidence: 0.9 }]);
+    await act(async () => { await extractPromise; });
+
+    await waitFor(() => expect(result.current.candidates).toHaveLength(2));
+    expect(result.current.candidates.find((c) => c.id === manualId)?.accepted).toBe(false);
+  });
+
   it('toggleExpanded inverte la visibilita della lista', async () => {
     const { result } = renderHook(() => useMemoryExtractionDraft(lockedChunk));
     await waitFor(() => expect(mockListEntries).toHaveBeenCalled());

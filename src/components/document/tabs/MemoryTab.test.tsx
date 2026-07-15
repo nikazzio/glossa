@@ -188,6 +188,20 @@ describe('MemoryTab', () => {
     expect(toggleExpanded).toHaveBeenCalled();
   });
 
+  it('disabilita i controlli della lista di revisione mentre estrazione o salvataggio sono in corso', () => {
+    mockUseDraft.mockReturnValue(baseDraft({
+      status: 'saving',
+      expanded: true,
+      candidates: [
+        { id: 'p1', sourcePhrase: 'ciao', targetPhrase: 'hello', confidence: 0.9, origin: 'ai', accepted: true },
+      ],
+    }));
+    const chunk = makeTranslationChunk({ id: 'c1', translationLocked: true });
+    render(<MemoryTab panelId="p" labelledBy="l" currentChunk={chunk} />);
+    expect(screen.getByRole('checkbox')).toBeDisabled();
+    expect(screen.getByDisplayValue('ciao')).toBeDisabled();
+  });
+
   it('non mostra il bottone mostra/nascondi se non ci sono memorie salvate per il frammento', async () => {
     mockUseDraft.mockReturnValue(baseDraft());
     const chunk = makeTranslationChunk({ id: 'c1', translationLocked: false });

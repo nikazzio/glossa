@@ -132,23 +132,25 @@ export function MemoryTab({ panelId, labelledBy, currentChunk }: MemoryTabProps)
           <p className="text-xs leading-relaxed text-editorial-muted">
             {candidates.length > 0 ? t('memory.reviewHint') : t('memory.extractEmptyResult')}
           </p>
-          {candidates.map((candidate) => (
-            <CandidateCard
-              key={candidate.id}
-              candidate={candidate}
-              onToggle={() => toggleAccepted(candidate.id)}
-              onChange={(changes) => updateCandidate(candidate.id, changes)}
-              onRemove={() => removeCandidate(candidate.id)}
-            />
-          ))}
-          <button
-            type="button"
-            onClick={addManualCandidate}
-            disabled={!isLocked}
-            className="text-xs font-medium text-editorial-accent hover:underline disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {t('memory.addManualPairButton')}
-          </button>
+          <fieldset disabled={status === 'extracting' || status === 'saving'} className="m-0 min-w-0 space-y-3 border-0 p-0">
+            {candidates.map((candidate) => (
+              <CandidateCard
+                key={candidate.id}
+                candidate={candidate}
+                onToggle={() => toggleAccepted(candidate.id)}
+                onChange={(changes) => updateCandidate(candidate.id, changes)}
+                onRemove={() => removeCandidate(candidate.id)}
+              />
+            ))}
+            <button
+              type="button"
+              onClick={addManualCandidate}
+              disabled={!isLocked}
+              className="text-xs font-medium text-editorial-accent hover:underline disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {t('memory.addManualPairButton')}
+            </button>
+          </fieldset>
         </div>
       ) : (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-12 text-center">
