@@ -1,4 +1,4 @@
-import { Brain, Database, Loader2, Trash2 } from 'lucide-react';
+import { Brain, ChevronDown, ChevronUp, Database, Loader2, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -20,9 +20,10 @@ export function MemoryTab({ panelId, labelledBy, currentChunk }: MemoryTabProps)
   const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace);
   const [chunkMemoryCount, setChunkMemoryCount] = useState<number | null>(null);
   const {
-    status, candidates, canExtract, extract, addManualCandidate,
-    updateCandidate, toggleAccepted, removeCandidate, confirm,
+    status, candidates, expanded, canExtract, extract, addManualCandidate,
+    updateCandidate, toggleAccepted, removeCandidate, toggleExpanded, confirm,
   } = useMemoryExtractionDraft(currentChunk);
+  const isLocked = Boolean(currentChunk?.translationLocked);
 
   const currentChunkId = currentChunk?.id ?? null;
 
@@ -71,8 +72,10 @@ export function MemoryTab({ panelId, labelledBy, currentChunk }: MemoryTabProps)
     }
   };
 
-  const isReviewing = status === 'reviewing' || status === 'saving';
   const hasAcceptedCandidate = candidates.some((c) => c.accepted && c.sourcePhrase.trim() && c.targetPhrase.trim());
+  const canUpdateMemory = hasAcceptedCandidate && status !== 'saving' && status !== 'extracting' && isLocked;
+  const showToggle = (chunkMemoryCount ?? 0) > 0;
+  const showList = expanded && status !== 'idle';
 
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex min-h-0 flex-1 flex-col">
@@ -95,11 +98,36 @@ export function MemoryTab({ panelId, labelledBy, currentChunk }: MemoryTabProps)
               {chunkMemoryCount}
             </div>
             <p className="text-xs text-editorial-muted">{t('memory.memoriesLabel')}</p>
+            {showToggle && (
+              <IconButton
+                size="sm"
+                title={expanded ? t('memory.toggleSavedListHide') : t('memory.toggleSavedListShow')}
+                onClick={toggleExpanded}
+                tooltipSide="left"
+              >
+                {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+              </IconButton>
+            )}
+          </div>
+        )}
+        {showList && (
+          <div className="mt-3 flex items-center justify-between gap-2 border-t border-editorial-border pt-3">
+            <p className="text-xs leading-relaxed text-editorial-muted">{t('memory.unsavedChangesHint')}</p>
+            <button
+              type="button"
+              onClick={() => void handleConfirm()}
+              disabled={!canUpdateMemory}
+              className="shrink-0 rounded-md bg-editorial-accent px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40"
+            >
+              {status === 'saving'
+                ? <Loader2 size={13} className="mx-auto animate-spin" />
+                : t('memory.confirmSaveButton')}
+            </button>
           </div>
         )}
       </div>
 
-      {isReviewing ? (
+      {showList ? (
         <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4 custom-scrollbar">
           <p className="text-xs leading-relaxed text-editorial-muted">
             {candidates.length > 0 ? t('memory.reviewHint') : t('memory.extractEmptyResult')}
@@ -113,25 +141,14 @@ export function MemoryTab({ panelId, labelledBy, currentChunk }: MemoryTabProps)
               onRemove={() => removeCandidate(candidate.id)}
             />
           ))}
-          <div className="flex items-center justify-between gap-2 pt-1">
-            <button
-              type="button"
-              onClick={addManualCandidate}
-              className="text-xs font-medium text-editorial-accent hover:underline"
-            >
-              {t('memory.addManualPairButton')}
-            </button>
-            <button
-              type="button"
-              onClick={() => void handleConfirm()}
-              disabled={!hasAcceptedCandidate || status === 'saving'}
-              className="rounded-md bg-editorial-accent px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40"
-            >
-              {status === 'saving'
-                ? <Loader2 size={13} className="mx-auto animate-spin" />
-                : t('memory.confirmSaveButton')}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={addManualCandidate}
+            disabled={!isLocked}
+            className="text-xs font-medium text-editorial-accent hover:underline disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {t('memory.addManualPairButton')}
+          </button>
         </div>
       ) : (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-12 text-center">
@@ -168,6 +185,11 @@ function CandidateCard({ candidate, onToggle, onChange, onRemove }: CandidateCar
           {candidate.origin === 'ai' && (
             <span className="shrink-0 font-mono text-xs font-bold text-editorial-accent">
               {Math.round(candidate.confidence * 100)}%
+            </span>
+          )}
+          {candidate.origin === 'saved' && (
+            <span className="shrink-0 text-xs font-medium text-editorial-muted">
+              {t('memory.savedCandidateLabel')}
             </span>
           )}
         </label>

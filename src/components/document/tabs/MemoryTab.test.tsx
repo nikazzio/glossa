@@ -24,12 +24,14 @@ function baseDraft(overrides: Partial<ReturnType<typeof useMemoryExtractionDraft
   return {
     status: 'idle' as const,
     candidates: [],
+    expanded: false,
     canExtract: false,
     extract: vi.fn(),
     addManualCandidate: vi.fn(),
     updateCandidate: vi.fn(),
     toggleAccepted: vi.fn(),
     removeCandidate: vi.fn(),
+    toggleExpanded: vi.fn(),
     confirm: vi.fn(),
     ...overrides,
   };
@@ -57,12 +59,13 @@ describe('MemoryTab', () => {
     expect(extract).toHaveBeenCalled();
   });
 
-  it('mostra le candidate in revisione e permette di modificarle e scartarle', async () => {
+  it('mostra le candidate in revisione (lista espansa) e permette di modificarle e scartarle', async () => {
     const toggleAccepted = vi.fn();
     const updateCandidate = vi.fn();
     const removeCandidate = vi.fn();
     mockUseDraft.mockReturnValue(baseDraft({
       status: 'reviewing',
+      expanded: true,
       candidates: [
         { id: 'p1', sourcePhrase: 'ciao', targetPhrase: 'hello', confidence: 0.9, origin: 'ai', accepted: true },
       ],
@@ -84,9 +87,35 @@ describe('MemoryTab', () => {
     expect(removeCandidate).toHaveBeenCalledWith('p1');
   });
 
-  it('il bottone aggiungi manuale richiama addManualCandidate', async () => {
+  it('la lista di revisione non è visibile se la lista non è espansa', () => {
+    mockUseDraft.mockReturnValue(baseDraft({
+      status: 'reviewing',
+      expanded: false,
+      candidates: [
+        { id: 'p1', sourcePhrase: 'ciao', targetPhrase: 'hello', confidence: 0.9, origin: 'ai', accepted: true },
+      ],
+    }));
+    const chunk = makeTranslationChunk({ id: 'c1', translationLocked: true });
+    render(<MemoryTab panelId="p" labelledBy="l" currentChunk={chunk} />);
+    expect(screen.queryByDisplayValue('ciao')).not.toBeInTheDocument();
+  });
+
+  it('una candidate di origine "saved" mostra l\'etichetta già salvata invece della percentuale', () => {
+    mockUseDraft.mockReturnValue(baseDraft({
+      status: 'reviewing',
+      expanded: true,
+      candidates: [
+        { id: 'p1', sourcePhrase: 'ciao', targetPhrase: 'hello', confidence: 1, origin: 'saved', accepted: true },
+      ],
+    }));
+    const chunk = makeTranslationChunk({ id: 'c1', translationLocked: true });
+    render(<MemoryTab panelId="p" labelledBy="l" currentChunk={chunk} />);
+    expect(screen.getByText('memory.savedCandidateLabel')).toBeInTheDocument();
+  });
+
+  it('il bottone aggiungi manuale richiama addManualCandidate se il frammento è bloccato', async () => {
     const addManualCandidate = vi.fn();
-    mockUseDraft.mockReturnValue(baseDraft({ status: 'reviewing', candidates: [], addManualCandidate }));
+    mockUseDraft.mockReturnValue(baseDraft({ status: 'reviewing', expanded: true, candidates: [], addManualCandidate }));
     const chunk = makeTranslationChunk({ id: 'c1', translationLocked: true });
     const user = userEvent.setup();
     render(<MemoryTab panelId="p" labelledBy="l" currentChunk={chunk} />);
@@ -94,9 +123,17 @@ describe('MemoryTab', () => {
     expect(addManualCandidate).toHaveBeenCalled();
   });
 
-  it('il bottone conferma è disabilitato se nessuna riga è accettata e valida', () => {
+  it('il bottone aggiungi manuale è disabilitato se il frammento non è bloccato', () => {
+    mockUseDraft.mockReturnValue(baseDraft({ status: 'reviewing', expanded: true, candidates: [] }));
+    const chunk = makeTranslationChunk({ id: 'c1', translationLocked: false });
+    render(<MemoryTab panelId="p" labelledBy="l" currentChunk={chunk} />);
+    expect(screen.getByText('memory.addManualPairButton').closest('button')).toBeDisabled();
+  });
+
+  it('il bottone aggiorna è nell\'intestazione, disabilitato se nessuna riga è accettata e valida', () => {
     mockUseDraft.mockReturnValue(baseDraft({
       status: 'reviewing',
+      expanded: true,
       candidates: [
         { id: 'p1', sourcePhrase: 'ciao', targetPhrase: 'hello', confidence: 0.9, origin: 'ai', accepted: false },
         { id: 'p2', sourcePhrase: '', targetPhrase: '', confidence: 1, origin: 'manual', accepted: true },
@@ -107,10 +144,24 @@ describe('MemoryTab', () => {
     expect(screen.getByText('memory.confirmSaveButton')).toBeDisabled();
   });
 
-  it('conferma chiama confirm() quando ci sono righe accettate valide', async () => {
+  it('il bottone aggiorna è disabilitato se il frammento non è bloccato, anche con righe accettate', () => {
+    mockUseDraft.mockReturnValue(baseDraft({
+      status: 'reviewing',
+      expanded: true,
+      candidates: [
+        { id: 'p1', sourcePhrase: 'ciao', targetPhrase: 'hello', confidence: 1, origin: 'saved', accepted: true },
+      ],
+    }));
+    const chunk = makeTranslationChunk({ id: 'c1', translationLocked: false });
+    render(<MemoryTab panelId="p" labelledBy="l" currentChunk={chunk} />);
+    expect(screen.getByText('memory.confirmSaveButton')).toBeDisabled();
+  });
+
+  it('aggiorna chiama confirm() quando ci sono righe accettate valide su frammento bloccato', async () => {
     const confirm = vi.fn(() => Promise.resolve(1));
     mockUseDraft.mockReturnValue(baseDraft({
       status: 'reviewing',
+      expanded: true,
       candidates: [
         { id: 'p1', sourcePhrase: 'ciao', targetPhrase: 'hello', confidence: 0.9, origin: 'ai', accepted: true },
       ],
@@ -123,13 +174,25 @@ describe('MemoryTab', () => {
     expect(confirm).toHaveBeenCalled();
   });
 
-  it('mostra il conteggio delle memorie già salvate per il frammento', async () => {
+  it('mostra il conteggio delle memorie già salvate per il frammento e il bottone per mostrarle/nasconderle', async () => {
     vi.mocked(listPhraseMemoryEntries).mockResolvedValueOnce([
       { id: 'm1', workspaceId: 'ws-1', sourcePhrase: 'a', targetPhrase: 'b', confidence: 1, sourceLanguage: 'it', targetLanguage: 'en', author: null, work: null, domain: null, tags: null, notes: null, chunkId: 'c1', projectId: 'p1', embeddingModel: null, createdAt: '2026-01-01' },
     ]);
+    const toggleExpanded = vi.fn();
+    mockUseDraft.mockReturnValue(baseDraft({ toggleExpanded }));
+    const chunk = makeTranslationChunk({ id: 'c1', translationLocked: false });
+    const user = userEvent.setup();
+    render(<MemoryTab panelId="p" labelledBy="l" currentChunk={chunk} />);
+    expect(await screen.findByText('1')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'memory.toggleSavedListShow' }));
+    expect(toggleExpanded).toHaveBeenCalled();
+  });
+
+  it('non mostra il bottone mostra/nascondi se non ci sono memorie salvate per il frammento', async () => {
     mockUseDraft.mockReturnValue(baseDraft());
     const chunk = makeTranslationChunk({ id: 'c1', translationLocked: false });
     render(<MemoryTab panelId="p" labelledBy="l" currentChunk={chunk} />);
-    expect(await screen.findByText('1')).toBeInTheDocument();
+    await screen.findByText('0');
+    expect(screen.queryByRole('button', { name: 'memory.toggleSavedListShow' })).not.toBeInTheDocument();
   });
 });

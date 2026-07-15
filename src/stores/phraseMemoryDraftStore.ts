@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { generateId } from '../utils';
 
-export type PhraseCandidateOrigin = 'ai' | 'manual';
+export type PhraseCandidateOrigin = 'ai' | 'manual' | 'saved';
 
 export interface PhraseCandidateDraft {
   id: string;
@@ -12,11 +12,18 @@ export interface PhraseCandidateDraft {
   accepted: boolean;
 }
 
+export interface SavedPhrasePair {
+  sourcePhrase: string;
+  targetPhrase: string;
+  confidence: number;
+}
+
 export type MemoryExtractionStatus = 'idle' | 'extracting' | 'reviewing' | 'saving' | 'error';
 
 export interface DraftEntry {
   status: MemoryExtractionStatus;
   candidates: PhraseCandidateDraft[];
+  expanded: boolean;
 }
 
 type PhraseMemoryDraftState = {
@@ -31,16 +38,20 @@ type PhraseMemoryDraftState = {
   toggleAccepted: (chunkId: string, candidateId: string) => void;
   removeCandidate: (chunkId: string, candidateId: string) => void;
   addManualCandidate: (chunkId: string) => void;
+  seedSavedCandidates: (chunkId: string, pairs: SavedPhrasePair[]) => void;
+  toggleExpanded: (chunkId: string) => void;
   clearDraft: (chunkId: string) => void;
   reset: () => void;
 };
+
+const EMPTY_ENTRY: DraftEntry = { status: 'idle', candidates: [], expanded: false };
 
 function updateEntry(
   state: PhraseMemoryDraftState,
   chunkId: string,
   update: (entry: DraftEntry) => DraftEntry,
 ): Map<string, DraftEntry> {
-  const current = state.draftsByChunk.get(chunkId) ?? { status: 'idle' as MemoryExtractionStatus, candidates: [] };
+  const current = state.draftsByChunk.get(chunkId) ?? EMPTY_ENTRY;
   const next = new Map(state.draftsByChunk);
   next.set(chunkId, update(current));
   return next;
@@ -54,7 +65,7 @@ export const usePhraseMemoryDraftStore = create<PhraseMemoryDraftState>((set) =>
 
   setDraftCandidates: (chunkId, candidates) =>
     set((state) => ({
-      draftsByChunk: updateEntry(state, chunkId, () => ({ status: 'reviewing', candidates })),
+      draftsByChunk: updateEntry(state, chunkId, (entry) => ({ ...entry, status: 'reviewing', candidates })),
     })),
 
   updateCandidate: (chunkId, candidateId, changes) =>
@@ -85,6 +96,7 @@ export const usePhraseMemoryDraftStore = create<PhraseMemoryDraftState>((set) =>
   addManualCandidate: (chunkId) =>
     set((state) => ({
       draftsByChunk: updateEntry(state, chunkId, (entry) => ({
+        ...entry,
         status: 'reviewing',
         candidates: [
           ...entry.candidates,
@@ -98,6 +110,30 @@ export const usePhraseMemoryDraftStore = create<PhraseMemoryDraftState>((set) =>
           },
         ],
       })),
+    })),
+
+  seedSavedCandidates: (chunkId, pairs) =>
+    set((state) => {
+      if (state.draftsByChunk.has(chunkId) || pairs.length === 0) return state;
+      const next = new Map(state.draftsByChunk);
+      next.set(chunkId, {
+        status: 'reviewing',
+        expanded: false,
+        candidates: pairs.map((pair) => ({
+          id: generateId('pmcand'),
+          sourcePhrase: pair.sourcePhrase,
+          targetPhrase: pair.targetPhrase,
+          confidence: pair.confidence,
+          origin: 'saved' as const,
+          accepted: true,
+        })),
+      });
+      return { draftsByChunk: next };
+    }),
+
+  toggleExpanded: (chunkId) =>
+    set((state) => ({
+      draftsByChunk: updateEntry(state, chunkId, (entry) => ({ ...entry, expanded: !entry.expanded })),
     })),
 
   clearDraft: (chunkId) =>

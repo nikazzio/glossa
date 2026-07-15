@@ -5,16 +5,19 @@ import { usePipelineStore } from '../stores/pipelineStore';
 import { useProjectStore } from '../stores/projectStore';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { makeTranslationChunk } from '../test/chunkFactory';
-import { extractPhraseMemoryPairs, saveApprovedPhrasePairs } from '../services/phraseMemoryService';
+import { extractPhraseMemoryPairs, saveApprovedPhrasePairs, listPhraseMemoryEntries } from '../services/phraseMemoryService';
+import type { PhraseMemoryEntry } from '../services/phraseMemoryService';
 import { useMemoryExtractionDraft } from './useMemoryExtractionDraft';
 
 vi.mock('../services/phraseMemoryService', () => ({
   extractPhraseMemoryPairs: vi.fn(),
   saveApprovedPhrasePairs: vi.fn(),
+  listPhraseMemoryEntries: vi.fn(),
 }));
 
 const mockExtract = vi.mocked(extractPhraseMemoryPairs);
 const mockSaveApproved = vi.mocked(saveApprovedPhrasePairs);
+const mockListEntries = vi.mocked(listPhraseMemoryEntries);
 
 const workspace = {
   id: 'ws-1',
@@ -33,9 +36,32 @@ const lockedChunk = makeTranslationChunk({
   translationLocked: true,
 });
 
+function makeSavedEntry(overrides: Partial<PhraseMemoryEntry>): PhraseMemoryEntry {
+  return {
+    id: 'pm-1',
+    workspaceId: 'ws-1',
+    sourcePhrase: 'Buongiorno',
+    targetPhrase: 'Good morning',
+    confidence: 1,
+    sourceLanguage: 'it',
+    targetLanguage: 'en',
+    author: null,
+    work: null,
+    domain: null,
+    tags: null,
+    notes: null,
+    chunkId: 'c1',
+    projectId: 'proj-1',
+    embeddingModel: 'text-embedding-3-small',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    ...overrides,
+  };
+}
+
 describe('useMemoryExtractionDraft', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockListEntries.mockResolvedValue([]);
     usePhraseMemoryDraftStore.getState().reset();
     useWorkspaceStore.setState({ activeWorkspace: workspace, workspaces: [], loading: false, isLoaded: true });
     useProjectStore.setState({ currentProjectId: 'proj-1' });
@@ -124,5 +150,60 @@ describe('useMemoryExtractionDraft', () => {
 
     expect(mockSaveApproved).not.toHaveBeenCalled();
     expect(savedCount).toBe(0);
+  });
+
+  it('carica in automatico le frasi già salvate per il frammento, collassate di default', async () => {
+    mockListEntries.mockResolvedValueOnce([
+      makeSavedEntry({ id: 'pm-1', sourcePhrase: 'Buongiorno', targetPhrase: 'Good morning' }),
+      makeSavedEntry({ id: 'pm-2', sourcePhrase: 'Buonasera', targetPhrase: 'Good evening', chunkId: 'other-chunk' }),
+    ]);
+    const { result } = renderHook(() => useMemoryExtractionDraft(lockedChunk));
+
+    await waitFor(() => expect(result.current.candidates).toHaveLength(1));
+    expect(result.current.candidates[0]).toMatchObject({
+      sourcePhrase: 'Buongiorno', targetPhrase: 'Good morning', origin: 'saved', accepted: true,
+    });
+    expect(result.current.expanded).toBe(false);
+  });
+
+  it('non ricarica le frasi salvate se esiste già una bozza in corso per il frammento', async () => {
+    mockListEntries.mockResolvedValue([
+      makeSavedEntry({ id: 'pm-1', sourcePhrase: 'Buongiorno', targetPhrase: 'Good morning' }),
+    ]);
+    const { result, rerender } = renderHook(() => useMemoryExtractionDraft(lockedChunk));
+    await waitFor(() => expect(result.current.candidates).toHaveLength(1));
+
+    act(() => { result.current.toggleAccepted(result.current.candidates[0].id); });
+    rerender();
+    await waitFor(() => expect(mockListEntries).toHaveBeenCalledTimes(1));
+
+    expect(result.current.candidates[0].accepted).toBe(false);
+  });
+
+  it('extract aggiunge le nuove frasi a quelle già in bozza senza duplicare i testi identici ed espande la lista', async () => {
+    mockListEntries.mockResolvedValueOnce([
+      makeSavedEntry({ id: 'pm-1', sourcePhrase: 'Buongiorno', targetPhrase: 'Good morning' }),
+    ]);
+    mockExtract.mockResolvedValueOnce([
+      { sourcePhrase: 'buongiorno', targetPhrase: 'good morning', confidence: 0.9 },
+      { sourcePhrase: 'Buona notte', targetPhrase: 'Good night', confidence: 0.8 },
+    ]);
+    const { result } = renderHook(() => useMemoryExtractionDraft(lockedChunk));
+    await waitFor(() => expect(result.current.candidates).toHaveLength(1));
+
+    await act(async () => { await result.current.extract(); });
+
+    await waitFor(() => expect(result.current.candidates).toHaveLength(2));
+    expect(result.current.candidates.map((c) => c.origin)).toEqual(['saved', 'ai']);
+    expect(result.current.candidates[1]).toMatchObject({ sourcePhrase: 'Buona notte', targetPhrase: 'Good night' });
+    expect(result.current.expanded).toBe(true);
+  });
+
+  it('toggleExpanded inverte la visibilita della lista', async () => {
+    const { result } = renderHook(() => useMemoryExtractionDraft(lockedChunk));
+    await waitFor(() => expect(mockListEntries).toHaveBeenCalled());
+    expect(result.current.expanded).toBe(false);
+    act(() => { result.current.toggleExpanded(); });
+    await waitFor(() => expect(result.current.expanded).toBe(true));
   });
 });

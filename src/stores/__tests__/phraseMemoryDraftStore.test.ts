@@ -78,6 +78,39 @@ describe('phraseMemoryDraftStore', () => {
     expect(usePhraseMemoryDraftStore.getState().draftsByChunk.has('c1')).toBe(false);
   });
 
+  it('seedSavedCandidates popola le candidate salvate solo se non esiste ancora una bozza per il frammento', () => {
+    const store = usePhraseMemoryDraftStore.getState();
+    store.seedSavedCandidates('c1', [
+      { sourcePhrase: 'ciao', targetPhrase: 'hello', confidence: 1 },
+    ]);
+    const entry = usePhraseMemoryDraftStore.getState().draftsByChunk.get('c1');
+    expect(entry?.status).toBe('reviewing');
+    expect(entry?.expanded).toBe(false);
+    expect(entry?.candidates).toHaveLength(1);
+    expect(entry?.candidates[0]).toMatchObject({ origin: 'saved', accepted: true, sourcePhrase: 'ciao', targetPhrase: 'hello' });
+  });
+
+  it('seedSavedCandidates non tocca una bozza già esistente per il frammento', () => {
+    const store = usePhraseMemoryDraftStore.getState();
+    store.setDraftCandidates('c1', [
+      { id: 'p1', sourcePhrase: 'notte', targetPhrase: 'night', confidence: 0.9, origin: 'ai', accepted: false },
+    ]);
+    store.seedSavedCandidates('c1', [
+      { sourcePhrase: 'ciao', targetPhrase: 'hello', confidence: 1 },
+    ]);
+    const entry = usePhraseMemoryDraftStore.getState().draftsByChunk.get('c1');
+    expect(entry?.candidates).toHaveLength(1);
+    expect(entry?.candidates[0].sourcePhrase).toBe('notte');
+  });
+
+  it('toggleExpanded inverte il flag di visibilita per il frammento indicato', () => {
+    const store = usePhraseMemoryDraftStore.getState();
+    store.toggleExpanded('c1');
+    expect(usePhraseMemoryDraftStore.getState().draftsByChunk.get('c1')?.expanded).toBe(true);
+    store.toggleExpanded('c1');
+    expect(usePhraseMemoryDraftStore.getState().draftsByChunk.get('c1')?.expanded).toBe(false);
+  });
+
   it('la bozza di un frammento resta intatta cambiando frammento e tornando indietro', () => {
     const store = usePhraseMemoryDraftStore.getState();
     store.setDraftCandidates('c1', [
