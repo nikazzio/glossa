@@ -37,7 +37,8 @@ devUrl Tauri (`src-tauri/tauri.conf.json`) e porta Vite (`package.json` → `dev
 | `stores/chunksStore.ts` | chunks[], isProcessing, cancelRequested, activeStreamId | RAF batching per token stream; Map O(1) per chunk lookup |
 | `stores/projectStore.ts` | projects[], currentProjectId, pipelines[], activePipelineId | Multi-pipeline per progetto |
 | `stores/workspaceStore.ts` | workspaces[], activeWorkspace, loading/isLoaded | Boundary traduzioni: switch/create/update workspace, un workspace attivo per volta |
-| `stores/phraseMemoryStore.ts` | matchesByChunk, enabledMatchIds, jobStatus, searchStatus | Match Phrase Memory per chunk; match trovati read-only finché non selezionati |
+| `stores/phraseMemoryStore.ts` | matchesByChunk, enabledMatchIds, jobStatus, searchStatus | Match Phrase Memory per chunk (Tab Riferimenti); match trovati read-only finché non selezionati, spunte preservate tra refresh per gli id che ricompaiono |
+| `stores/phraseMemoryDraftStore.ts` | draftsByChunk (candidate estratte, non persistito su disco) | Bozza di revisione per-chunk (Tab Memoria): estrai→rivedi/modifica/aggiungi manuale→conferma; cambiare frammento non perde la bozza in sospeso |
 | `stores/operationLogStore.ts` | entries[], currentProjectId | Max 2000 in-memory, resto in DB |
 | `stores/annotationsStore.ts` | annotationsByChunkId Map<chunkId, Annotation[]> | CRUD annotations per chunk; load/add/update/delete con persistenza SQLite immediata |
 | `stores/confirmStore.ts` | open, request, resolver | Coda di conferma Promise-based: una nuova richiesta chiude la precedente con `false`. |
@@ -84,7 +85,7 @@ devUrl Tauri (`src-tauri/tauri.conf.json`) e porta Vite (`package.json` → `dev
 |---|---|
 | `components/document/DocumentView.tsx` | Layout principale documento con barra navigazione fissa in alto (`h-20`, allineata testate pannelli laterali): sinistra due righe (indicatori stadi frammento + minimap pallini frammenti), destra (frecce prev/next + contatore m/n). Due pannelli bianchi a filo (Originale/Candidata) con header titolo + separatore; controlli testo in menu unico a scomparsa (non barra sempre visibile) aperto da pulsante header pagina. |
 | `components/layout/shell-next/ShellNext.tsx` | Layout tre colonne shell nuova (#291): `ProjectRailNext` sinistra · documento centro · `ProjectInspectorNext` destra (solo Approfondimenti, #296). `inspectorOpen` guidato da `showInsightPanel` (era `showDocumentDrawer \|\| showChunkDrawer`). Collasso e larghezze persistiti su uiStore. |
-| `components/layout/shell-next/ProjectRailNext.tsx` | Redesign #296. Header fisso `h-20`: collassa (ChevronLeft/Right) + Libreria. Corpo scrollabile: selezione/config pipeline (`PipelineSidebarPipelinesSection`) + comandi run (`PipelineSidebarRunSection`) + `ChunkInspectorPanel` annidato (Audit/Note/Memoria). Bottom fisso `h-12`: Workspace / Impostazioni / Importa / Esporta. Collassata: azione primaria per `workMode` + 4 icone bottom in colonna. Non riceve più `onDryRun`/`onRunAuditOnly`; riceve `onReauditChunk`. |
+| `components/layout/shell-next/ProjectRailNext.tsx` | Redesign #296. Header fisso `h-20`: collassa (ChevronLeft/Right) + Libreria. Corpo scrollabile: selezione/config pipeline (`PipelineSidebarPipelinesSection`) + comandi run (`PipelineSidebarRunSection`) + `ChunkInspectorPanel` annidato (Audit/Note/Memoria/Riferimenti). Bottom fisso `h-12`: Workspace / Impostazioni / Importa / Esporta. Collassata: azione primaria per `workMode` + 4 icone bottom in colonna. Non riceve più `onDryRun`/`onRunAuditOnly`; riceve `onReauditChunk`. |
 | `components/layout/shell-next/ProjectInspectorNext.tsx` | Pannello destro collassabile: solo `DocumentInsightTabs` (schede Approfondimenti index/search/stats/glossary/coherence). Tab Frammento rimossa (#296) — frammento vive ora in `ChunkInspectorPanel` dentro rail sinistra. Header unico fisso `h-20` (icona + collassa con `PanelRightClose`/`PanelRightOpen`), speculare a `ProjectRailNext`; `DocumentInsightTabs` non ha più header/close proprio (rimosso doppio header, #296). |
 | `components/pipeline/ProductionStream.tsx` | Riga chunk — editor sorgente, risultati stage, judge issues, draft editor |
 | `components/layout/PipelineSidebarSections/PipelineSidebarRunSection.tsx` | Azione primaria run/cancel e controlli work-mode della pipeline; entry point reale dei comandi di esecuzione. |
@@ -134,7 +135,7 @@ Workspace attuale specifico per area **Traduzioni**. Biblioteca e Trascrizioni f
 ### Shell UI — Layout Progetto
 
 Layout tre colonne (#291, rail ridisegnata #296) — `ShellNext` con `react-resizable-panels`:
-- **Colonna sinistra (`ProjectRailNext`)**: header fisso `h-20` (collassa + Libreria) · corpo scrollabile con selezione/config pipeline, comandi run (switch Chunk/Tutto + azione primaria icon-only, guidati da `configStore.workMode`) e `ChunkInspectorPanel` annidato (tab Audit/Note/Memoria, scroll confinato al contenuto tab) · bottom fisso `h-12` (Workspace/Impostazioni/Importa/Esporta). Collassata: stesse 4 icone in colonna + azione primaria pipeline. Larghezze (default 240px, collassato 64px, min 180px, max 320px) e stato collapse sincronizzati con `uiStore.projectSidebarWidth` e `useUiStore.projectContextCollapsed`. Azione primaria (Traduci chunk / Esegui tutto) porta badge preventivo costi opzionale (`SidebarCostPanel`, visibile solo se `estimatePipelineCost` produce almeno uno stage con prezzo noto): in `workMode='chunk'` stima solo chunk selezionato, in `workMode='all'` intera pipeline (2026-07-02, era badge unico non distinto per scope).
+- **Colonna sinistra (`ProjectRailNext`)**: header fisso `h-20` (collassa + Libreria) · corpo scrollabile con selezione/config pipeline, comandi run (switch Chunk/Tutto + azione primaria icon-only, guidati da `configStore.workMode`) e `ChunkInspectorPanel` annidato (tab Audit/Note/Memoria/Riferimenti, scroll confinato al contenuto tab) · bottom fisso `h-12` (Workspace/Impostazioni/Importa/Esporta). Collassata: stesse 4 icone in colonna + azione primaria pipeline. Larghezze (default 240px, collassato 64px, min 180px, max 320px) e stato collapse sincronizzati con `uiStore.projectSidebarWidth` e `useUiStore.projectContextCollapsed`. Azione primaria (Traduci chunk / Esegui tutto) porta badge preventivo costi opzionale (`SidebarCostPanel`, visibile solo se `estimatePipelineCost` produce almeno uno stage con prezzo noto): in `workMode='chunk'` stima solo chunk selezionato, in `workMode='all'` intera pipeline (2026-07-02, era badge unico non distinto per scope).
 - **Colonna centro**: Vista documento (`DocumentView`) — barra navigazione fissa in alto (h-24, indicatori stadi + minimap frammenti sinistra, token/costo frammento corrente destra); controlli frammento precedente/successivo spostati in testata rail sinistra (#296), non più testata centrale. Minimap: pallino "sei qui" segnalato da freccetta sotto (non più da dimensione/anello, per non sovrapporsi colore stato); riga si centra da sola su frammento corrente ogni cambio. Token/costo somma tutti stage/passaggi del frammento, senza indicare modello (pipeline può usarne più di uno). Due pannelli bianchi a filo (Originale/Candidata).
 - **Colonna destra (`ProjectInspectorNext`)**: Pannello collapsabile, solo schede Approfondimenti (index/search/stats/coherence/glossary). Tab Frammento rimossa (#296): frammento vive in `ChunkInspectorPanel` in rail sinistra. Aperto quando `showInsightPanel` è `true`. Larghezze (default 430px, min 300px, max 620px, collassato 56px) sincronizzate con `uiStore.projectFlyoutWidth`.
 
@@ -310,29 +311,33 @@ flushPendingTokenBatch() → un solo setState per frame (O(1) chunk update)
 - Workspace: `memoryExtractorProvider`, `memoryExtractorModel`, `memoryExtractorPrompt`; prompt templates con context `memory`.
 - Pipeline: `usePhraseMemory`, `autoSearchPhraseMemory`, `phraseMemorySimilarityThreshold`, `phraseMemoryMaxResults`.
 
-**Salvataggio memoria:**
+**Due tab distinti nel pannello del frammento** (`ChunkInspectorPanel`, rail sinistra): **Memoria** (`tabs/MemoryTab.tsx`, estrazione/cura) e **Riferimenti** (`tabs/ReferencesTab.tsx`, ricerca match + glossario, sola lettura). Le due responsabilità non condividono più stato né componenti.
+
+**Estrazione e salvataggio (Tab Memoria):**
 ```
-Chunk originale + draft/traduzione finale
+Frammento bloccato (translationLocked === true) — precondizione, bottone di estrazione disabilitato altrimenti
   ↓
-phraseMemoryService.savePhrasePairs()
+click utente → phraseMemoryDraftStore (bozza in-memoria, per-chunk, non persistita su disco)
   ↓
-Tauri: extract_phrase_memory_pairs(provider, model, prompt, sourceText, targetText, languages)
+extractPhraseMemoryPairs() → Tauri: extract_phrase_memory_pairs(provider, model, prompt, sourceText, targetText, languages)
   ↓
 LLM JSON mode → { pairs: [{ sourcePhrase, targetPhrase, confidence }] }
   ↓
 Validazione verbatim frontend + backend su source e target
   ↓
-Embedding solo su sourcePhrase
+Revisione utente: accetta/scarta/modifica ciascuna candidate, aggiunta manuale libera (useMemoryExtractionDraft)
   ↓
-vec_save_locked_phrases(..., confidence)
+Conferma → saveApprovedPhrasePairs() — embedding solo su sourcePhrase, poi vec_save_locked_phrases(..., confidence)
 ```
 
-No fallback locale: se extractor, JSON parsing o validazione falliscono, chunk non salva coppie. Coppie vecchie e preset purgati dal bump schema perché formato precedente non compatibile.
+Nessun salvataggio automatico o in blocco: l'unico percorso di scrittura passa dal blocco del frammento + estrazione + revisione esplicita. No fallback locale: se extractor, JSON parsing o validazione falliscono, il frammento non salva coppie. Coppie vecchie e preset purgati dal bump schema perché formato precedente non compatibile.
 
-**Ricerca memoria:**
+Cambiando frammento a metà revisione, la bozza non confermata resta intatta in `phraseMemoryDraftStore` (Map per-chunk) — nessuna perdita, nessun blocco alla navigazione.
+
+**Ricerca memoria (Tab Riferimenti):**
 - Auto-search parte solo se `usePhraseMemory` attivo e `autoSearchPhraseMemory !== false`.
-- Tab Memory può sempre lanciare refresh manuale per chunk corrente quando memoria abilitata.
-- Query embedding usa solo testo sorgente del chunk; match selezionati sono unici iniettati nel prompt di run/rerun.
+- Tab Riferimenti può sempre lanciare refresh manuale per chunk corrente quando memoria abilitata; mostra anche l'intero glossario di progetto (`config.glossary`, sola lettura, nessun filtro per chunk — è già così che viene iniettato nel prompt reale).
+- Query embedding usa solo testo sorgente del chunk; match selezionati sono gli unici iniettati nel prompt di run/rerun. Le spunte di abilitazione sono preservate tra una ricerca e l'altra per gli id di match che ricompaiono (`phraseMemoryStore.setMatches` interseca gli abilitati precedenti con i nuovi risultati, non li azzera).
 - Lo schema della memoria frasi (colonne e indici inclusi) viene creato o aggiornato una volta all'avvio dal servizio database frontend. Il backend mantiene una sola connessione SQLite con sqlite-vec per tutta la sessione, verifica soltanto lo schema già pronto e non esegue DDL durante questi comandi. Se la connessione non è disponibile all'avvio, l'app continua ad avviarsi e i comandi memoria restituiscono il motivo originale senza ricreare connessioni.
 
 ---

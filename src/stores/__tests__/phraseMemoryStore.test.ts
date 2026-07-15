@@ -38,6 +38,27 @@ describe('phraseMemoryStore', () => {
     expect(entry?.enabledMatchIds.size).toBe(0);
   });
 
+  it('setMatches preserva un match abilitato se lo stesso id ricompare nel nuovo risultato', () => {
+    const store = usePhraseMemoryStore.getState();
+    store.setMatches('c1', [makeRaw('m1'), makeRaw('m2')]);
+    store.toggleMatchEnabled('c1', 'm1');
+    store.setMatches('c1', [makeRaw('m1'), makeRaw('m3')]);
+    const entry = usePhraseMemoryStore.getState().matchesByChunk.get('c1');
+    expect(entry?.enabledMatchIds.has('m1')).toBe(true);
+    expect(entry?.enabledMatchIds.has('m3')).toBe(false);
+  });
+
+  it('setMatches rimuove dagli abilitati gli id non più presenti nel nuovo risultato', () => {
+    const store = usePhraseMemoryStore.getState();
+    store.setMatches('c1', [makeRaw('m1'), makeRaw('m2')]);
+    store.toggleMatchEnabled('c1', 'm1');
+    store.toggleMatchEnabled('c1', 'm2');
+    store.setMatches('c1', [makeRaw('m2')]);
+    const entry = usePhraseMemoryStore.getState().matchesByChunk.get('c1');
+    expect(entry?.enabledMatchIds.has('m1')).toBe(false);
+    expect(entry?.enabledMatchIds.has('m2')).toBe(true);
+  });
+
   it('clearMatches rimuove solo il chunk specificato', () => {
     const store = usePhraseMemoryStore.getState();
     store.setMatches('chunk-1', [makeRaw('pm-1')]);

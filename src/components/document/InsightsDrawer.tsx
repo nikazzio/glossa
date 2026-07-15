@@ -2,6 +2,7 @@ import {
   BarChart2,
   BookText,
   Brain,
+  Layers,
   Link2,
   List,
   NotebookText,
@@ -12,7 +13,8 @@ import { useTranslation } from 'react-i18next';
 import { type KeyboardEvent, useEffect, useRef } from 'react';
 import { useUiStore, type InsightsDrawerTab, type ChunkRailTab } from '../../stores/uiStore';
 import { useChunksStore } from '../../stores/chunksStore';
-import { MemoryTab } from './MemoryTab';
+import { MemoryTab } from './tabs/MemoryTab';
+import { ReferencesTab } from './tabs/ReferencesTab';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunkWatchdog } from '../../hooks/useChunkWatchdog';
 import { SearchTab } from './SearchTab';
@@ -26,7 +28,7 @@ import { NotesTab } from './tabs/NotesTab';
 import { GlossaryTab } from './tabs/GlossaryTab';
 
 const DOC_TAB_ORDER: InsightsDrawerTab[] = ['index', 'search', 'stats', 'coherence', 'glossary'];
-const CHUNK_RAIL_TAB_ORDER: ChunkRailTab[] = ['audit', 'notes', 'memory'];
+const CHUNK_RAIL_TAB_ORDER: ChunkRailTab[] = ['audit', 'notes', 'memory', 'references'];
 
 const DOC_TAB_BUTTON_IDS: Record<InsightsDrawerTab, string> = {
   index: 'insights-tab-button-index',
@@ -48,12 +50,14 @@ const CHUNK_RAIL_TAB_BUTTON_IDS: Record<ChunkRailTab, string> = {
   audit: 'chunk-rail-tab-button-audit',
   notes: 'chunk-rail-tab-button-notes',
   memory: 'chunk-rail-tab-button-memory',
+  references: 'chunk-rail-tab-button-references',
 };
 
 const CHUNK_RAIL_TAB_PANEL_IDS: Record<ChunkRailTab, string> = {
   audit: 'chunk-rail-tab-panel-audit',
   notes: 'chunk-rail-tab-panel-notes',
   memory: 'chunk-rail-tab-panel-memory',
+  references: 'chunk-rail-tab-panel-references',
 };
 
 /** Stato condiviso letto da entrambi i pannelli del fly-out. */
@@ -80,6 +84,7 @@ export function ChunkInspectorPanel({ onReauditChunk }: ChunkInspectorPanelProps
   const focusIssueInChunk = useUiStore((state) => state.focusIssueInChunk);
   const clearFocusedIssue = useUiStore((state) => state.clearFocusedIssue);
   const { chunks, isProcessing, currentChunk, currentChunkIndex } = useInsightData();
+  const { config } = usePipelineStore();
 
   const tabButtonRefs = useRef<Partial<Record<ChunkRailTab, HTMLButtonElement | null>>>({});
 
@@ -91,11 +96,13 @@ export function ChunkInspectorPanel({ onReauditChunk }: ChunkInspectorPanelProps
     audit: <ShieldCheck size={16} />,
     notes: <NotebookText size={16} />,
     memory: <Brain size={16} />,
+    references: <Layers size={16} />,
   };
   const CHUNK_RAIL_TAB_LABEL: Record<ChunkRailTab, string> = {
     audit: t('document.insightsTabAudit'),
     notes: t('document.insightsTabNotes'),
     memory: t('document.insightsTabMemory'),
+    references: t('document.insightsTabReferences'),
   };
 
   const activateTab = (tab: ChunkRailTab) => {
@@ -158,11 +165,18 @@ export function ChunkInspectorPanel({ onReauditChunk }: ChunkInspectorPanelProps
             labelledBy={CHUNK_RAIL_TAB_BUTTON_IDS.notes}
             currentChunk={currentChunk}
           />
-        ) : (
+        ) : chunkRailTab === 'memory' ? (
           <MemoryTab
             panelId={CHUNK_RAIL_TAB_PANEL_IDS.memory}
             labelledBy={CHUNK_RAIL_TAB_BUTTON_IDS.memory}
-            currentChunkId={currentChunk?.id ?? null}
+            currentChunk={currentChunk}
+          />
+        ) : (
+          <ReferencesTab
+            panelId={CHUNK_RAIL_TAB_PANEL_IDS.references}
+            labelledBy={CHUNK_RAIL_TAB_BUTTON_IDS.references}
+            currentChunk={currentChunk}
+            glossary={config.glossary}
           />
         )}
       </div>

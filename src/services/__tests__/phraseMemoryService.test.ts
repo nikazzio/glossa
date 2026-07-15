@@ -19,8 +19,7 @@ import {
   listPhraseMemoryEntries,
   searchPhraseMemory,
   searchPhraseMemoryBatch,
-  saveSelectedPhrases,
-  savePhrasePairs,
+  saveApprovedPhrasePairs,
   updatePhraseMemoryEntry,
 } from '../phraseMemoryService';
 
@@ -225,77 +224,21 @@ describe('phrase memory entry management', () => {
   });
 });
 
-describe('saveSelectedPhrases', () => {
+describe('saveApprovedPhrasePairs', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('extracts and saves only explicitly selected chunks', async () => {
-    mockInvoke
-      .mockResolvedValueOnce({
-        pairs: [{ sourcePhrase: 'Ciao mondo', targetPhrase: 'Hello world', confidence: 0.91 }],
-      })
-      .mockResolvedValueOnce(1)
-      .mockResolvedValueOnce({
-        pairs: [{ sourcePhrase: 'Buona notte', targetPhrase: 'Good night', confidence: 0.9 }],
-      })
-      .mockResolvedValueOnce(1);
-    mockFetchEmbeddings.mockResolvedValue([[0.1, 0.2]]);
-    const onProgress = vi.fn();
-
-    const savedCount = await saveSelectedPhrases({
-      workspaceId: 'ws-1',
-      projectId: 'proj-1',
-      embeddingModel: 'text-embedding-3-small',
-      extractorProvider: 'openai',
-      extractorModel: 'gpt-5-nano',
-      extractorPrompt: 'Extract',
-      sourceLanguage: 'it',
-      targetLanguage: 'en',
-      chunks: [
-        { id: 'c1', sourceText: 'Ciao mondo.', targetText: 'Hello world.' },
-        { id: 'c3', sourceText: 'Buona notte.', targetText: 'Good night.' },
-      ],
-      onProgress,
-    });
-
-    expect(mockInvoke).toHaveBeenCalledWith(
-      'vec_save_locked_phrases',
-      expect.objectContaining({ workspaceId: 'ws-1', projectId: 'proj-1', chunkId: 'c1' }),
-    );
-    expect(mockInvoke).toHaveBeenCalledWith(
-      'vec_save_locked_phrases',
-      expect.objectContaining({ workspaceId: 'ws-1', projectId: 'proj-1', chunkId: 'c3' }),
-    );
-    expect(onProgress).toHaveBeenCalledWith(1, 2);
-    expect(onProgress).toHaveBeenCalledWith(2, 2);
-    expect(savedCount).toBe(2);
-  });
-});
-
-describe('savePhrasePairs', () => {
-  beforeEach(() => vi.clearAllMocks());
-
-  it('saves extracted verbatim pairs with source embeddings and confidence', async () => {
-    mockInvoke
-      .mockResolvedValueOnce({
-        pairs: [
-          { sourcePhrase: 'Ciao mondo', targetPhrase: 'Hello world', confidence: 0.93 },
-        ],
-      })
-      .mockResolvedValueOnce(1);
+  it('embeds and saves the approved pairs as given, without calling the extractor', async () => {
     mockFetchEmbeddings.mockResolvedValueOnce([[0.1, 0.2]]);
+    mockInvoke.mockResolvedValueOnce(1);
 
-    const savedCount = await savePhrasePairs({
+    const savedCount = await saveApprovedPhrasePairs({
       workspaceId: 'ws-1',
       projectId: 'proj-1',
       chunkId: 'c1',
       embeddingModel: 'text-embedding-3-small',
-      extractorProvider: 'openai',
-      extractorModel: 'gpt-5-nano',
-      extractorPrompt: 'Extract',
-      sourceText: 'Ciao mondo.',
-      targetText: 'Hello world.',
       sourceLanguage: 'it',
       targetLanguage: 'en',
+      pairs: [{ sourcePhrase: 'Ciao mondo', targetPhrase: 'Hello world', confidence: 0.93 }],
     });
 
     expect(mockFetchEmbeddings).toHaveBeenCalledWith(['Ciao mondo'], 'text-embedding-3-small');
@@ -318,48 +261,69 @@ describe('savePhrasePairs', () => {
     expect(savedCount).toBe(1);
   });
 
-  it('does not fallback or save when extractor fails', async () => {
-    mockInvoke.mockRejectedValueOnce(new Error('extractor failed'));
-
-    await expect(savePhrasePairs({
+  it('throws when called with no pairs, instead of silently doing nothing', async () => {
+    await expect(saveApprovedPhrasePairs({
       workspaceId: 'ws-1',
       projectId: 'proj-1',
       chunkId: 'c1',
       embeddingModel: 'text-embedding-3-small',
-      extractorProvider: 'openai',
-      extractorModel: 'gpt-5-nano',
-      extractorPrompt: 'Extract',
-      sourceText: 'Ciao mondo.',
-      targetText: 'Hello world.',
       sourceLanguage: 'it',
       targetLanguage: 'en',
-    })).rejects.toThrow('extractor failed');
+      pairs: [],
+    })).rejects.toThrow();
 
     expect(mockFetchEmbeddings).not.toHaveBeenCalled();
-    expect(mockInvoke).not.toHaveBeenCalledWith('vec_save_locked_phrases', expect.anything());
   });
 
-  it('skips non-verbatim extracted pairs before embedding', async () => {
-    mockInvoke.mockResolvedValueOnce({
-      pairs: [{ sourcePhrase: 'not in source', targetPhrase: 'Hello world', confidence: 0.9 }],
-    });
-
-    const savedCount = await savePhrasePairs({
+  it('throws when a pair has empty source or target text after trim', async () => {
+    await expect(saveApprovedPhrasePairs({
       workspaceId: 'ws-1',
       projectId: 'proj-1',
       chunkId: 'c1',
       embeddingModel: 'text-embedding-3-small',
-      extractorProvider: 'openai',
-      extractorModel: 'gpt-5-nano',
-      extractorPrompt: 'Extract',
-      sourceText: 'Ciao mondo.',
-      targetText: 'Hello world.',
       sourceLanguage: 'it',
       targetLanguage: 'en',
+      pairs: [{ sourcePhrase: '   ', targetPhrase: 'Hello world', confidence: 1 }],
+    })).rejects.toThrow();
+
+    expect(mockFetchEmbeddings).not.toHaveBeenCalled();
+  });
+
+  it('drops a pair whose embedding could not be generated and saves the rest', async () => {
+    mockFetchEmbeddings.mockResolvedValueOnce([[0.1, 0.2], []]);
+    mockInvoke.mockResolvedValueOnce(1);
+
+    const savedCount = await saveApprovedPhrasePairs({
+      workspaceId: 'ws-1',
+      projectId: 'proj-1',
+      chunkId: 'c1',
+      embeddingModel: 'text-embedding-3-small',
+      sourceLanguage: 'it',
+      targetLanguage: 'en',
+      pairs: [
+        { sourcePhrase: 'Ciao mondo', targetPhrase: 'Hello world', confidence: 0.9 },
+        { sourcePhrase: 'Buona notte', targetPhrase: 'Good night', confidence: 0.9 },
+      ],
     });
 
-    expect(savedCount).toBe(0);
-    expect(mockFetchEmbeddings).not.toHaveBeenCalled();
-    expect(mockInvoke).not.toHaveBeenCalledWith('vec_save_locked_phrases', expect.anything());
+    expect(mockInvoke).toHaveBeenCalledWith('vec_save_locked_phrases', expect.objectContaining({
+      pairs: [expect.objectContaining({ sourcePhrase: 'Ciao mondo' })],
+    }));
+    expect(savedCount).toBe(1);
+  });
+
+  it('propagates the backend save error without a silent fallback', async () => {
+    mockFetchEmbeddings.mockResolvedValueOnce([[0.1, 0.2]]);
+    mockInvoke.mockRejectedValueOnce(new Error('db locked'));
+
+    await expect(saveApprovedPhrasePairs({
+      workspaceId: 'ws-1',
+      projectId: 'proj-1',
+      chunkId: 'c1',
+      embeddingModel: 'text-embedding-3-small',
+      sourceLanguage: 'it',
+      targetLanguage: 'en',
+      pairs: [{ sourcePhrase: 'Ciao mondo', targetPhrase: 'Hello world', confidence: 0.9 }],
+    })).rejects.toThrow('db locked');
   });
 });

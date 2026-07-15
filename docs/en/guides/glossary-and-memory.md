@@ -52,9 +52,9 @@ be perfect in one chapter and wrong in another: it should be selected, not merel
 
 1. Start with a small glossary for names, terms, and non-negotiable translations.
 2. Run a few chunks in Test mode.
-3. Keep only good outputs.
-4. Let Glossa save or search phrase-memory matches from approved work.
-5. Review suggested matches before injecting them into a production run.
+3. Keep only the genuinely good outputs: lock those segments (the translation is final).
+4. On a locked segment's Memory tab, extract phrases, review them (accept/discard/fix, or add manually), and confirm only when you're sure — nothing is ever saved automatically.
+5. On later segments' References tab, check the suggested matches and only tick the relevant ones before running.
 
 ## Good practice
 

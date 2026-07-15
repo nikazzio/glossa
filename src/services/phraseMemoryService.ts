@@ -79,31 +79,20 @@ export interface BatchSearchOptions {
   maxResults: number;
 }
 
-export interface SaveSelectedPhrasesOptions {
-  workspaceId: string;
-  projectId: string;
-  embeddingModel: EmbeddingModel;
-  extractorProvider: ModelProvider;
-  extractorModel: string;
-  extractorPrompt: string;
-  sourceLanguage: string;
-  targetLanguage: string;
-  chunks: Array<{ id: string; sourceText: string; targetText: string }>;
-  onProgress?: (done: number, total: number) => void;
+export interface ApprovedPhrasePair {
+  sourcePhrase: string;
+  targetPhrase: string;
+  confidence: number;
 }
 
-export interface SavePhrasePairsOptions {
+export interface SaveApprovedPhrasePairsOptions {
   workspaceId: string;
   projectId: string;
   chunkId: string;
   embeddingModel: EmbeddingModel;
-  extractorProvider: ModelProvider;
-  extractorModel: string;
-  extractorPrompt: string;
-  sourceText: string;
-  targetText: string;
   sourceLanguage: string;
   targetLanguage: string;
+  pairs: ApprovedPhrasePair[];
 }
 
 function toPhraseMatch(raw: RawPhraseMatch): PhraseMatch {
@@ -413,198 +402,71 @@ export async function updatePhraseMemoryEntry(options: {
   });
 }
 
-export async function saveSelectedPhrases(options: SaveSelectedPhrasesOptions): Promise<number> {
-  const {
-    workspaceId, projectId, embeddingModel, extractorProvider, extractorModel, extractorPrompt,
-    sourceLanguage, targetLanguage, chunks, onProgress,
-  } = options;
-  const singleChunkId = chunks.length === 1 ? chunks[0].id : undefined;
-  logger.debug('phrase_memory.save_selected.start', {
+export async function saveApprovedPhrasePairs(options: SaveApprovedPhrasePairsOptions): Promise<number> {
+  const { workspaceId, projectId, chunkId, embeddingModel, sourceLanguage, targetLanguage } = options;
+
+  if (options.pairs.length === 0) {
+    throw new Error('saveApprovedPhrasePairs called with no pairs to save.');
+  }
+
+  const trimmedPairs = options.pairs.map((pair) => ({
+    sourcePhrase: pair.sourcePhrase.trim(),
+    targetPhrase: pair.targetPhrase.trim(),
+    confidence: clampConfidence(pair.confidence),
+  }));
+  if (trimmedPairs.some((pair) => !pair.sourcePhrase || !pair.targetPhrase)) {
+    throw new Error('saveApprovedPhrasePairs called with an empty source or target phrase.');
+  }
+
+  logger.debug('phrase_memory.save_approved.start', {
     workspaceId,
     projectId,
-    chunkCount: chunks.length,
-    embeddingModel,
-    extractorProvider,
-    extractorModel,
-    sourceLanguage,
-    targetLanguage,
+    chunkId,
+    candidatePairCount: trimmedPairs.length,
   });
   logOperation({
     level: 'info',
     scope: 'memory',
     phase: 'start',
-    chunkId: singleChunkId,
+    chunkId,
     message: 'Phrase memory save started',
-    meta: {
-      workspaceId,
-      projectId,
-      chunkCount: chunks.length,
-      embeddingModel,
-      extractorProvider,
-      extractorModel,
-      sourceLanguage,
-      targetLanguage,
-    },
+    meta: { workspaceId, projectId, candidatePairCount: trimmedPairs.length },
   });
-
-  const total = chunks.length;
-  let savedTotal = 0;
-  for (let i = 0; i < chunks.length; i++) {
-    const chunk = chunks[i];
-    const savedForChunk = await savePhrasePairs({
-      workspaceId,
-      projectId,
-      chunkId: chunk.id,
-      embeddingModel,
-      extractorProvider,
-      extractorModel,
-      extractorPrompt,
-      sourceText: chunk.sourceText,
-      targetText: chunk.targetText,
-      sourceLanguage,
-      targetLanguage,
-    });
-    savedTotal += savedForChunk;
-    logger.debug('phrase_memory.save_selected.chunk_done', {
-      workspaceId,
-      projectId,
-      chunkId: chunk.id,
-      savedForChunk,
-      savedTotal,
-    });
-    logOperation({
-      level: savedForChunk > 0 ? 'success' : 'warn',
-      scope: 'memory',
-      chunkId: chunk.id,
-      message: savedForChunk > 0
-        ? 'Phrase memory chunk saved'
-        : 'Phrase memory chunk produced no saved pairs',
-      meta: {
-        workspaceId,
-        projectId,
-        savedForChunk,
-        savedTotal,
-      },
-    });
-    onProgress?.(i + 1, total);
-  }
-
-  logger.info('phrase_memory.save_selected.done', {
-    workspaceId,
-    projectId,
-    chunkCount: chunks.length,
-    savedTotal,
-  });
-  logOperation({
-    level: savedTotal > 0 ? 'success' : 'warn',
-    scope: 'memory',
-    phase: 'end',
-    chunkId: singleChunkId,
-    message: savedTotal > 0
-      ? 'Phrase memory save completed'
-      : 'Phrase memory save completed without saved pairs',
-    meta: {
-      workspaceId,
-      projectId,
-      chunkCount: chunks.length,
-      savedTotal,
-    },
-  });
-  return savedTotal;
-}
-
-export async function savePhrasePairs(options: SavePhrasePairsOptions): Promise<number> {
-  const {
-    workspaceId, projectId, chunkId, embeddingModel, extractorProvider, extractorModel,
-    extractorPrompt, sourceText, targetText, sourceLanguage, targetLanguage,
-  } = options;
-
-  const extractedPairs = await extractPhraseMemoryPairs({
-    provider: extractorProvider,
-    model: extractorModel,
-    prompt: extractorPrompt,
-    sourceText,
-    targetText,
-    sourceLanguage,
-    targetLanguage,
-    chunkId,
-  });
-
-  logger.debug('phrase_memory.save_pairs.extracted', {
-    workspaceId,
-    projectId,
-    chunkId,
-    extractedPairCount: extractedPairs.length,
-    extractorProvider,
-    extractorModel,
-  });
-  logOperation({
-    level: extractedPairs.length > 0 ? 'success' : 'warn',
-    scope: 'memory',
-    chunkId,
-    message: extractedPairs.length > 0
-      ? 'Phrase memory extractor produced usable pairs'
-      : 'Phrase memory extractor produced no usable pairs',
-    meta: {
-      workspaceId,
-      projectId,
-      candidatePairCount: extractedPairs.length,
-      extractorProvider,
-      extractorModel,
-    },
-  });
-
-  if (extractedPairs.length === 0) return 0;
 
   const sourceVectors = await fetchEmbeddings(
-    extractedPairs.map((pair) => pair.sourcePhrase),
+    trimmedPairs.map((pair) => pair.sourcePhrase),
     embeddingModel,
   );
 
-  const pairs = extractedPairs.flatMap((pair, i) => {
+  const pairs = trimmedPairs.flatMap((pair, i) => {
     const sourceEmbedding = sourceVectors[i];
-    return sourceEmbedding?.length
-      ? [{ ...pair, sourceEmbedding }]
-      : [];
+    return sourceEmbedding?.length ? [{ ...pair, sourceEmbedding }] : [];
   });
 
-  const droppedCount = extractedPairs.length - pairs.length;
+  const droppedCount = trimmedPairs.length - pairs.length;
   if (droppedCount > 0 && pairs.length > 0) {
-    logger.warn('phrase_memory.save_pairs.partial_embedding_drop', {
-      workspaceId,
-      projectId,
-      chunkId,
-      candidatePairCount: extractedPairs.length,
-      droppedCount,
+    logger.warn('phrase_memory.save_approved.partial_embedding_drop', {
+      workspaceId, projectId, chunkId, candidatePairCount: trimmedPairs.length, droppedCount,
     });
     logOperation({
       level: 'warn',
       scope: 'memory',
       chunkId,
       message: `${droppedCount} pair(s) discarded — embedding unavailable`,
-      meta: { workspaceId, projectId, candidatePairCount: extractedPairs.length, droppedCount },
+      meta: { workspaceId, projectId, candidatePairCount: trimmedPairs.length, droppedCount },
     });
   }
 
   if (pairs.length === 0) {
-    logger.warn('phrase_memory.save_pairs.no_valid_embeddings', {
-      workspaceId,
-      projectId,
-      chunkId,
-      candidatePairCount: extractedPairs.length,
-      embeddingCount: sourceVectors.length,
+    logger.warn('phrase_memory.save_approved.no_valid_embeddings', {
+      workspaceId, projectId, chunkId, candidatePairCount: trimmedPairs.length, embeddingCount: sourceVectors.length,
     });
     logOperation({
       level: 'warn',
       scope: 'memory',
       chunkId,
       message: 'Phrase memory save skipped because embeddings could not be generated',
-      meta: {
-        workspaceId,
-        projectId,
-        candidatePairCount: extractedPairs.length,
-        embeddingCount: sourceVectors.length,
-      },
+      meta: { workspaceId, projectId, candidatePairCount: trimmedPairs.length, embeddingCount: sourceVectors.length },
     });
     return 0;
   }
@@ -618,29 +480,16 @@ export async function savePhrasePairs(options: SavePhrasePairsOptions): Promise<
     targetLanguage,
     embeddingModel,
   });
-  logger.info('phrase_memory.save_pairs.insert_done', {
-    workspaceId,
-    projectId,
-    chunkId,
-    candidatePairCount: extractedPairs.length,
-    embeddingCount: sourceVectors.length,
-    savedCount,
+  logger.info('phrase_memory.save_approved.insert_done', {
+    workspaceId, projectId, chunkId, candidatePairCount: trimmedPairs.length, embeddingCount: sourceVectors.length, savedCount,
   });
   logOperation({
     level: savedCount > 0 ? 'success' : 'warn',
     scope: 'memory',
     chunkId,
     phase: 'end',
-    message: savedCount > 0
-      ? 'Phrase memory pairs inserted'
-      : 'Phrase memory insert finished without saved rows',
-    meta: {
-      workspaceId,
-      projectId,
-      candidatePairCount: extractedPairs.length,
-      embeddingCount: sourceVectors.length,
-      savedCount,
-    },
+    message: savedCount > 0 ? 'Phrase memory pairs inserted' : 'Phrase memory insert finished without saved rows',
+    meta: { workspaceId, projectId, candidatePairCount: trimmedPairs.length, embeddingCount: sourceVectors.length, savedCount },
   });
   return savedCount;
 }

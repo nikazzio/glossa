@@ -52,9 +52,9 @@ essere perfetto in un capitolo e sbagliato in un altro: va scelto, non solo acce
 
 1. Parti con un piccolo glossario per nomi, termini e traduzioni non negoziabili.
 2. Esegui alcuni chunk in Test mode.
-3. Conserva solo gli output davvero buoni.
-4. Lascia che Glossa salvi o cerchi match di phrase memory a partire dal lavoro approvato.
-5. Rivedi i match suggeriti prima di iniettarli in una run di produzione.
+3. Conserva solo gli output davvero buoni: blocca quei frammenti (la traduzione è definitiva).
+4. Nella scheda Memoria del frammento bloccato, estrai le frasi, rivedile (accetta/scarta/correggi, anche a mano) e conferma solo quando sei sicuro — nessun salvataggio è mai automatico.
+5. Nella scheda Riferimenti dei frammenti successivi, controlla i match suggeriti e spunta solo quelli pertinenti prima di lanciare la run.
 
 ## Buone pratiche
 

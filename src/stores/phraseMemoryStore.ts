@@ -51,8 +51,10 @@ export const usePhraseMemoryStore = create<PhraseMemoryState>((set) => ({
 
   setMatches: (chunkId, raw) => {
     const matches = raw.map(toMemoryMatch);
-    const enabledMatchIds = new Set<string>();
     set((state) => {
+      const previousEnabled = state.matchesByChunk.get(chunkId)?.enabledMatchIds ?? new Set<string>();
+      const nextIds = new Set(matches.map((m) => m.id));
+      const enabledMatchIds = new Set([...previousEnabled].filter((id) => nextIds.has(id)));
       const next = new Map(state.matchesByChunk);
       next.set(chunkId, { chunkId, matches, enabledMatchIds });
       return { matchesByChunk: next };
