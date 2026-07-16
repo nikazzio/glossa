@@ -6,6 +6,7 @@ import { useDebounce } from '../../hooks/useDebounce';
 import { useUiStore } from '../../stores/uiStore';
 import { indexPad } from '../../utils';
 import type { TranslationChunk } from '../../types';
+import { Tooltip } from '../ui';
 
 interface SearchTabProps {
   panelId: string;
@@ -128,15 +129,16 @@ export function SearchTab({ panelId, labelledBy, chunks, currentChunkId, onSelec
             aria-label={t('document.searchPlaceholder')}
           />
           {searchQuery && (
-            <button
-              type="button"
-              onClick={() => { setSearchQuery(''); inputRef.current?.focus(); }}
-              data-tooltip={t('common.clear')}
-              aria-label={t('common.clear')}
-              className="shrink-0 text-editorial-muted hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent rounded-full"
-            >
-              <X size={12} />
-            </button>
+            <Tooltip label={t('common.clear')}>
+              <button
+                type="button"
+                onClick={() => { setSearchQuery(''); inputRef.current?.focus(); }}
+                aria-label={t('common.clear')}
+                className="shrink-0 text-editorial-muted hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent rounded-full"
+              >
+                <X size={12} />
+              </button>
+            </Tooltip>
           )}
         </div>
       </div>

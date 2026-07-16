@@ -10,6 +10,6 @@ describe('DeprecatedModelBadge', () => {
 
   it('renders a warning indicator for a deprecated model', () => {
     const { container } = render(<DeprecatedModelBadge provider="openai" model="gpt-4.1-mini" />);
-    expect(container.querySelector('[data-tooltip]')).not.toBeNull();
+    expect(container.querySelector('svg')).not.toBeNull();
   });
 });

@@ -16,7 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { useAnnotationsStore } from '../../../stores/annotationsStore';
 import { useProjectStore } from '../../../stores/projectStore';
 import { useUiStore } from '../../../stores/uiStore';
-import { IconButton, PillButton } from '../../ui';
+import { IconButton, PillButton, Tooltip } from '../../ui';
 import type { AnnotationType, TranslationChunk } from '../../../types';
 import type { Annotation } from '../../../types';
 
@@ -141,9 +141,11 @@ function AnnotationCard({
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2">
             {number !== null && (
-              <span className="shrink-0 font-display text-sm font-bold text-editorial-danger" data-tooltip={`[^${number}]`}>
-                {number}
-              </span>
+              <Tooltip label={`[^${number}]`}>
+                <span className="shrink-0 font-display text-sm font-bold text-editorial-danger">
+                  {number}
+                </span>
+              </Tooltip>
             )}
             <Icon size={13} className={`shrink-0 ${meta.colorClass}`} />
             <span className={`truncate text-[11px] font-bold uppercase tracking-[0.14em] ${meta.colorClass}`}>

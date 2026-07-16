@@ -2,6 +2,7 @@ import { AlertTriangle, ChevronDown, ChevronUp, Merge, Scissors } from 'lucide-r
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { type ParagraphChunks, countWords } from '../../utils/paragraphChunks';
+import { Tooltip } from '../ui';
 
 const COLLAPSE_CHAR_THRESHOLD = 200;
 const PREVIEW_HEAD_CHARS = Math.round(COLLAPSE_CHAR_THRESHOLD * 0.9);
@@ -61,9 +62,11 @@ export function ChunkCard({
             <span className="font-normal opacity-50"> / {total}</span>
           </span>
           {anomaly && (
-            <span data-tooltip={anomalyTitle} className="shrink-0 cursor-help">
-              <AlertTriangle size={12} className="text-editorial-warning" />
-            </span>
+            <Tooltip label={anomalyTitle}>
+              <span className="shrink-0 cursor-help">
+                <AlertTriangle size={12} className="text-editorial-warning" />
+              </span>
+            </Tooltip>
           )}
           <span className={`text-xs font-mono tabular-nums ${anomaly ? 'text-editorial-warning' : 'text-editorial-muted'}`}>
             {words}w
@@ -71,24 +74,28 @@ export function ChunkCard({
         </div>
         <div className="flex items-center gap-1.5">
           {canSplit && (
+            <Tooltip label={t('files.boundarySplit')}>
+              <button
+                type="button"
+                onClick={onSplit}
+                aria-label={t('files.boundarySplit')}
+                className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              >
+                <Scissors size={13} />
+              </button>
+            </Tooltip>
+          )}
+          <Tooltip label={isExpanded ? t('files.collapseChunk') : t('files.expandChunk')}>
             <button
               type="button"
-              onClick={onSplit}
-              data-tooltip={t('files.boundarySplit')}
-              className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              onClick={onToggleExpand}
+              disabled={!isLong}
+              aria-label={isExpanded ? t('files.collapseChunk') : t('files.expandChunk')}
+              className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-default disabled:opacity-20"
             >
-              <Scissors size={13} />
+              {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
             </button>
-          )}
-          <button
-            type="button"
-            onClick={onToggleExpand}
-            disabled={!isLong}
-            data-tooltip={isExpanded ? t('files.collapseChunk') : t('files.expandChunk')}
-            className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-default disabled:opacity-20"
-          >
-            {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-          </button>
+          </Tooltip>
         </div>
       </div>
       <div className="px-4 pb-4 text-base leading-7 text-editorial-ink">
@@ -127,32 +134,38 @@ export function BoundaryDivider({ onGive, onTake, onMerge, canGive, canTake }: B
   return (
     <div className="flex items-center gap-1.5 px-2 py-1">
       <div className="h-px flex-1 bg-editorial-border" />
-      <button
-        type="button"
-        onClick={onTake}
-        disabled={!canTake}
-        data-tooltip={t('files.boundaryTake')}
-        className="rounded-full border border-editorial-border bg-editorial-bg p-1 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-30"
-      >
-        <ChevronUp size={11} />
-      </button>
-      <button
-        type="button"
-        onClick={onMerge}
-        data-tooltip={t('files.boundaryMerge')}
-        className="rounded-full border border-editorial-border bg-editorial-bg p-1 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-      >
-        <Merge size={11} />
-      </button>
-      <button
-        type="button"
-        onClick={onGive}
-        disabled={!canGive}
-        data-tooltip={t('files.boundaryGive')}
-        className="rounded-full border border-editorial-border bg-editorial-bg p-1 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-30"
-      >
-        <ChevronDown size={11} />
-      </button>
+      <Tooltip label={t('files.boundaryTake')}>
+        <button
+          type="button"
+          onClick={onTake}
+          disabled={!canTake}
+          aria-label={t('files.boundaryTake')}
+          className="rounded-full border border-editorial-border bg-editorial-bg p-1 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-30"
+        >
+          <ChevronUp size={11} />
+        </button>
+      </Tooltip>
+      <Tooltip label={t('files.boundaryMerge')}>
+        <button
+          type="button"
+          onClick={onMerge}
+          aria-label={t('files.boundaryMerge')}
+          className="rounded-full border border-editorial-border bg-editorial-bg p-1 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+        >
+          <Merge size={11} />
+        </button>
+      </Tooltip>
+      <Tooltip label={t('files.boundaryGive')}>
+        <button
+          type="button"
+          onClick={onGive}
+          disabled={!canGive}
+          aria-label={t('files.boundaryGive')}
+          className="rounded-full border border-editorial-border bg-editorial-bg p-1 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-30"
+        >
+          <ChevronDown size={11} />
+        </button>
+      </Tooltip>
       <div className="h-px flex-1 bg-editorial-border" />
     </div>
   );
@@ -218,37 +231,39 @@ export function SegmentEditor({
             {chunkIdx > 0 && (
               <div className="group relative flex items-center gap-3 py-2">
                 <div className={`h-[2px] flex-1 rounded-full ${accentLine}`} />
-                <div
-                  className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] ${accentBadge} ${accentText}`}
-                  data-tooltip={anomaly ? anomalyTitle : undefined}
-                >
-                  {anomaly && <AlertTriangle size={10} />}
-                  {t('pipeline.unit')} {chunkIdx + 1}
-                  {anomaly && <span className="font-normal opacity-70">· {chunkWords}w</span>}
-                </div>
+                <Tooltip label={anomaly ? anomalyTitle : undefined}>
+                  <div
+                    className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] ${accentBadge} ${accentText}`}
+                  >
+                    {anomaly && <AlertTriangle size={10} />}
+                    {t('pipeline.unit')} {chunkIdx + 1}
+                    {anomaly && <span className="font-normal opacity-70">· {chunkWords}w</span>}
+                  </div>
+                </Tooltip>
                 <div className={`h-[2px] flex-1 rounded-full ${accentLine}`} />
-                <button
-                  type="button"
-                  onClick={() => onRemoveBoundary(chunkStart)}
-                  data-tooltip={t('files.boundaryMerge')}
-                  className="absolute -right-2 rounded-full border border-editorial-border bg-editorial-bg p-1 text-editorial-muted opacity-0 transition-all group-hover:opacity-100 hover:border-editorial-warning hover:text-editorial-warning focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                >
-                  <Merge size={12} />
-                </button>
+                <Tooltip label={t('files.boundaryMerge')}>
+                  <button
+                    type="button"
+                    onClick={() => onRemoveBoundary(chunkStart)}
+                    aria-label={t('files.boundaryMerge')}
+                    className="absolute -right-2 rounded-full border border-editorial-border bg-editorial-bg p-1 text-editorial-muted opacity-0 transition-all group-hover:opacity-100 hover:border-editorial-warning hover:text-editorial-warning focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  >
+                    <Merge size={12} />
+                  </button>
+                </Tooltip>
               </div>
             )}
 
             {chunkIdx === 0 && (
-              <div
-                className="mb-2 flex items-center gap-3"
-                data-tooltip={anomaly ? anomalyTitle : undefined}
-              >
+              <div className="mb-2 flex items-center gap-3">
                 <div className={`h-[2px] flex-1 rounded-full ${accentLine}`} />
-                <div className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] ${accentBadge} ${accentText}`}>
-                  {anomaly && <AlertTriangle size={10} />}
-                  {t('pipeline.unit')} 1
-                  {anomaly && <span className="font-normal opacity-70">· {chunkWords}w</span>}
-                </div>
+                <Tooltip label={anomaly ? anomalyTitle : undefined}>
+                  <div className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] ${accentBadge} ${accentText}`}>
+                    {anomaly && <AlertTriangle size={10} />}
+                    {t('pipeline.unit')} 1
+                    {anomaly && <span className="font-normal opacity-70">· {chunkWords}w</span>}
+                  </div>
+                </Tooltip>
                 <div className={`h-[2px] flex-1 rounded-full ${accentLine}`} />
               </div>
             )}
@@ -267,33 +282,36 @@ export function SegmentEditor({
                     >
                       <p className="whitespace-pre-wrap pr-8">{para}</p>
                       {para.length > 200 && (
-                        <button
-                          type="button"
-                          onClick={() => onSplitParagraph(globalIdx)}
-                          data-tooltip={t('files.boundarySplit')}
-                          className={`absolute right-0 top-2 rounded-full border border-editorial-border bg-editorial-bg p-1 text-editorial-muted transition-all hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${hoveredPara === globalIdx ? 'opacity-100' : 'opacity-0'}`}
-                        >
-                          <Scissors size={13} />
-                        </button>
+                        <Tooltip label={t('files.boundarySplit')}>
+                          <button
+                            type="button"
+                            onClick={() => onSplitParagraph(globalIdx)}
+                            aria-label={t('files.boundarySplit')}
+                            className={`absolute right-0 top-2 rounded-full border border-editorial-border bg-editorial-bg p-1 text-editorial-muted transition-all hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${hoveredPara === globalIdx ? 'opacity-100' : 'opacity-0'}`}
+                          >
+                            <Scissors size={13} />
+                          </button>
+                        </Tooltip>
                       )}
                     </div>
 
                     {localIdx < paras.length - 1 && (
-                      <button
-                        type="button"
-                        className="group relative flex w-full cursor-pointer items-center gap-2 py-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                        onMouseEnter={() => setHoveredGap(gapIdx)}
-                        onMouseLeave={() => setHoveredGap(null)}
-                        onClick={() => onAddBoundary(gapIdx)}
-                        aria-label={t('files.boundaryAddHere')}
-                        data-tooltip={t('files.boundaryAddHere')}
-                      >
-                        <div className="h-px flex-1 bg-editorial-border/60 transition-colors group-hover:bg-editorial-border" />
-                        <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-dashed text-xs font-bold transition-all ${hoveredGap === gapIdx ? 'border-editorial-ink text-editorial-ink' : 'border-editorial-border text-editorial-muted'}`}>
-                          +
-                        </div>
-                        <div className="h-px flex-1 bg-editorial-border/60 transition-colors group-hover:bg-editorial-border" />
-                      </button>
+                      <Tooltip label={t('files.boundaryAddHere')} className="w-full">
+                        <button
+                          type="button"
+                          className="group relative flex w-full cursor-pointer items-center gap-2 py-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                          onMouseEnter={() => setHoveredGap(gapIdx)}
+                          onMouseLeave={() => setHoveredGap(null)}
+                          onClick={() => onAddBoundary(gapIdx)}
+                          aria-label={t('files.boundaryAddHere')}
+                        >
+                          <div className="h-px flex-1 bg-editorial-border/60 transition-colors group-hover:bg-editorial-border" />
+                          <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-dashed text-xs font-bold transition-all ${hoveredGap === gapIdx ? 'border-editorial-ink text-editorial-ink' : 'border-editorial-border text-editorial-muted'}`}>
+                            +
+                          </div>
+                          <div className="h-px flex-1 bg-editorial-border/60 transition-colors group-hover:bg-editorial-border" />
+                        </button>
+                      </Tooltip>
                     )}
                   </div>
                 );

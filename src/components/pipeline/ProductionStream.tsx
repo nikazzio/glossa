@@ -12,6 +12,7 @@ import { escapeHtml, useGlossaryHighlight } from '../../hooks/useGlossaryHighlig
 import { highlightFootnoteMarkersHtml, highlightSuperscriptMarkersHtml } from '../../utils/footnoteExtractor';
 import { logger } from '../../utils/logger';
 import type { GlossaryEntry, PipelineStageConfig, TranslationChunk } from '../../types';
+import { Tooltip } from '../ui';
 
 const ChunkSourceText = memo(function ChunkSourceText({
   chunk,
@@ -156,34 +157,37 @@ const ChunkRow = memo(function ChunkRow({
               {t('pipeline.originalSource')}
             </label>
             <div role="toolbar" aria-label={t('pipeline.chunkActions')} className="flex items-center gap-2 flex-wrap">
-              <button
-                type="button"
-                onClick={handleRetranslate}
-                disabled={isProcessing || chunk.sourceDisplayText.trim().length === 0}
-                data-tooltip={t('pipeline.retranslateChunk')}
-                className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent flex items-center gap-1"
-              >
-                <RotateCcw size={11} /> {t('pipeline.retranslateChunk')}
-              </button>
-              <button
-                type="button"
-                onClick={handleReaudit}
-                disabled={isProcessing || !chunk.translationDisplayText}
-                data-tooltip={chunk.translationDisplayText ? t('pipeline.reauditChunk') : t('pipeline.auditSkippedNoDraft')}
-                className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent flex items-center gap-1"
-              >
-                <ScanLine size={11} /> {t('pipeline.reauditChunk')}
-              </button>
-              {chunk.status === 'completed' ? (
+              <Tooltip label={t('pipeline.retranslateChunk')}>
                 <button
                   type="button"
-                  onClick={handleUnlock}
-                  disabled={isProcessing}
+                  onClick={handleRetranslate}
+                  disabled={isProcessing || chunk.sourceDisplayText.trim().length === 0}
                   className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent flex items-center gap-1"
-                  data-tooltip={t('pipeline.unlockSourceHint')}
                 >
-                  <Pencil size={11} /> {t('pipeline.unlockSource')}
+                  <RotateCcw size={11} /> {t('pipeline.retranslateChunk')}
                 </button>
+              </Tooltip>
+              <Tooltip label={chunk.translationDisplayText ? t('pipeline.reauditChunk') : t('pipeline.auditSkippedNoDraft')}>
+                <button
+                  type="button"
+                  onClick={handleReaudit}
+                  disabled={isProcessing || !chunk.translationDisplayText}
+                  className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent flex items-center gap-1"
+                >
+                  <ScanLine size={11} /> {t('pipeline.reauditChunk')}
+                </button>
+              </Tooltip>
+              {chunk.status === 'completed' ? (
+                <Tooltip label={t('pipeline.unlockSourceHint')}>
+                  <button
+                    type="button"
+                    onClick={handleUnlock}
+                    disabled={isProcessing}
+                    className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent flex items-center gap-1"
+                  >
+                    <Pencil size={11} /> {t('pipeline.unlockSource')}
+                  </button>
+                </Tooltip>
               ) : null}
             </div>
           </div>
@@ -331,28 +335,30 @@ export function ProductionStream({
         <h2 className="font-display text-sm uppercase tracking-wider inline-block">{t('pipeline.productionStream')}</h2>
         <div className="flex items-center gap-3">
           {hasGlossary && (
-            <button
-              type="button"
-              onClick={() => setHighlightsEnabled(!highlightsEnabled)}
-              aria-pressed={highlightsEnabled}
-              data-tooltip={t('library.glossaryHighlightToggle')}
-              className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                highlightsEnabled ? 'text-editorial-ink' : 'text-editorial-muted hover:text-editorial-ink'
-              }`}
-            >
-              <Highlighter size={12} />
-              {t('library.glossaryHighlightToggle')}
-            </button>
+            <Tooltip label={t('library.glossaryHighlightToggle')}>
+              <button
+                type="button"
+                onClick={() => setHighlightsEnabled(!highlightsEnabled)}
+                aria-pressed={highlightsEnabled}
+                className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                  highlightsEnabled ? 'text-editorial-ink' : 'text-editorial-muted hover:text-editorial-ink'
+                }`}
+              >
+                <Highlighter size={12} />
+                {t('library.glossaryHighlightToggle')}
+              </button>
+            </Tooltip>
           )}
           {chunks.length > 0 && (
-            <button
-              onClick={handleClearStream}
-              disabled={isProcessing}
-              data-tooltip={t('pipeline.clearStream')}
-              className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent transition-colors flex items-center gap-1 disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            >
-              <Trash2 size={12} /> {t('pipeline.clearStream')}
-            </button>
+            <Tooltip label={t('pipeline.clearStream')}>
+              <button
+                onClick={handleClearStream}
+                disabled={isProcessing}
+                className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent transition-colors flex items-center gap-1 disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              >
+                <Trash2 size={12} /> {t('pipeline.clearStream')}
+              </button>
+            </Tooltip>
           )}
         </div>
       </div>

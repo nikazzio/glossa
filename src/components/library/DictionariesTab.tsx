@@ -18,7 +18,7 @@ import { confirm } from '../../stores/confirmStore';
 import type { GlossaryEntry } from '../../types';
 import { DictionaryEntryEditor } from './DictionaryEntryEditor';
 import { CsvImportDialog } from './CsvImportDialog';
-import { Dialog, DialogCancelButton, IconButton } from '../ui';
+import { Dialog, DialogCancelButton, IconButton, Tooltip } from '../ui';
 
 export function DictionariesTab() {
   const { t } = useTranslation();
@@ -195,23 +195,25 @@ export function DictionariesTab() {
             className="flex-1 rounded-md border border-editorial-border bg-editorial-bg/80 px-4 py-2.5 text-sm font-display italic text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
           />
           <div className="flex items-center justify-end gap-2">
-            <button
-              onClick={() => setCreating(false)}
-              data-tooltip={t('common.cancel')}
-              aria-label={t('common.cancel')}
-              className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            >
-              <X size={14} />
-            </button>
-            <button
-              onClick={handleCreate}
-              disabled={!newName.trim()}
-              data-tooltip={t('common.save')}
-              aria-label={t('common.save')}
-              className="rounded-full bg-editorial-accent p-2 text-white transition-colors hover:bg-editorial-accent/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <Check size={14} />
-            </button>
+            <Tooltip label={t('common.cancel')}>
+              <button
+                onClick={() => setCreating(false)}
+                aria-label={t('common.cancel')}
+                className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              >
+                <X size={14} />
+              </button>
+            </Tooltip>
+            <Tooltip label={t('common.save')}>
+              <button
+                onClick={handleCreate}
+                disabled={!newName.trim()}
+                aria-label={t('common.save')}
+                className="rounded-full bg-editorial-accent p-2 text-white transition-colors hover:bg-editorial-accent/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <Check size={14} />
+              </button>
+            </Tooltip>
           </div>
         </div>
       )}
@@ -257,13 +259,14 @@ export function DictionariesTab() {
                       className="flex-1 border-b border-editorial-accent/60 bg-transparent text-sm font-display italic outline-none"
                     />
                   ) : (
-                    <span
-                      className="truncate font-display text-base italic text-editorial-ink"
-                      onDoubleClick={(e) => { e.stopPropagation(); setRenamingId(g.id); setRenameValue(g.name); }}
-                      data-tooltip={t('library.doubleClickRename')}
-                    >
-                      {g.name}
-                    </span>
+                    <Tooltip label={t('library.doubleClickRename')}>
+                      <span
+                        className="truncate font-display text-base italic text-editorial-ink"
+                        onDoubleClick={(e) => { e.stopPropagation(); setRenamingId(g.id); setRenameValue(g.name); }}
+                      >
+                        {g.name}
+                      </span>
+                    </Tooltip>
                   )}
                   {isAssigned && (
                     <span className="shrink-0 rounded-full bg-editorial-accent/20 px-3 py-0.5 text-[9px] font-bold uppercase tracking-[0.25em] text-editorial-accent">
@@ -281,30 +284,33 @@ export function DictionariesTab() {
                       <Check size={13} />
                     </IconButton>
                   )}
-                  <button
-                    onClick={() => setExportTarget({ id: g.id, name: g.name })}
-                    data-tooltip={t('library.exportGlossary')}
-                    aria-label={t('library.exportGlossary')}
-                    className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:bg-editorial-textbox/30 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  >
-                    <Download size={13} />
-                  </button>
-                  <button
-                    onClick={() => handleFork(g.id, g.name)}
-                    data-tooltip={t('library.forkDictionary')}
-                    aria-label={t('library.forkDictionary')}
-                    className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:bg-editorial-textbox/30 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  >
-                    <Copy size={13} />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(g.id, g.name)}
-                    data-tooltip={t('common.delete')}
-                    aria-label={`${t('common.delete')}: ${g.name}`}
-                    className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:bg-editorial-textbox/30 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  >
-                    <Trash2 size={13} />
-                  </button>
+                  <Tooltip label={t('library.exportGlossary')}>
+                    <button
+                      onClick={() => setExportTarget({ id: g.id, name: g.name })}
+                      aria-label={t('library.exportGlossary')}
+                      className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:bg-editorial-textbox/30 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    >
+                      <Download size={13} />
+                    </button>
+                  </Tooltip>
+                  <Tooltip label={t('library.forkDictionary')}>
+                    <button
+                      onClick={() => handleFork(g.id, g.name)}
+                      aria-label={t('library.forkDictionary')}
+                      className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:bg-editorial-textbox/30 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    >
+                      <Copy size={13} />
+                    </button>
+                  </Tooltip>
+                  <Tooltip label={t('common.delete')}>
+                    <button
+                      onClick={() => handleDelete(g.id, g.name)}
+                      aria-label={`${t('common.delete')}: ${g.name}`}
+                      className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:bg-editorial-textbox/30 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </Tooltip>
                 </div>
               </div>
 

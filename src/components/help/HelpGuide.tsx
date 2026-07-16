@@ -12,7 +12,7 @@ import { StyleGuide } from './StyleGuide';
 import { appLogDir } from '@tauri-apps/api/path';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Dialog, DialogCancelButton } from '../ui';
+import { Dialog, DialogCancelButton, Tooltip } from '../ui';
 import { useUiStore, type HelpSection } from '../../stores/uiStore';
 
 interface HelpGuideProps {
@@ -213,16 +213,17 @@ function VersionWidget() {
   return (
     <div className="mt-8 flex items-center gap-3 border-y border-editorial-border/70 py-3">
       <span className="font-mono text-[11px] text-editorial-muted/70">v{__APP_VERSION__}</span>
-      <button
-        type="button"
-        onClick={checkForUpdates}
-        disabled={status === 'loading'}
-        data-tooltip={t('help.version.check')}
-        aria-label={t('help.version.check')}
-        className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
-      >
-        <RefreshCw size={13} className={status === 'loading' ? 'animate-spin' : ''} />
-      </button>
+      <Tooltip label={t('help.version.check')}>
+        <button
+          type="button"
+          onClick={checkForUpdates}
+          disabled={status === 'loading'}
+          aria-label={t('help.version.check')}
+          className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
+        >
+          <RefreshCw size={13} className={status === 'loading' ? 'animate-spin' : ''} />
+        </button>
+      </Tooltip>
       {status === 'up-to-date' && (
         <span className="text-[11px] text-editorial-success">{t('help.version.upToDate')}</span>
       )}
@@ -718,17 +719,18 @@ function TroubleshootingSection() {
       <P>{t('help.troubleshooting.logFileDesc')}</P>
       <div className="flex items-center gap-2 border-y border-editorial-border/70 py-3 font-mono text-xs text-editorial-ink/80">
         <span className="flex-1 break-all">{logPath ?? '…'}</span>
-        <button
-          type="button"
-          onClick={handleCopy}
-          disabled={!logPath}
-          data-tooltip={t('common.copy')}
-          aria-label={copied ? t('pipeline.copied') : t('common.copy')}
-          aria-live="polite"
-          className="shrink-0 rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-30"
-        >
-          {copied ? <Check size={13} /> : <Copy size={13} />}
-        </button>
+        <Tooltip label={t('common.copy')}>
+          <button
+            type="button"
+            onClick={handleCopy}
+            disabled={!logPath}
+            aria-label={copied ? t('pipeline.copied') : t('common.copy')}
+            aria-live="polite"
+            className="shrink-0 rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-30"
+          >
+            {copied ? <Check size={13} /> : <Copy size={13} />}
+          </button>
+        </Tooltip>
       </div>
 
       <SubTitle>{t('help.troubleshooting.rustLogTitle')}</SubTitle>

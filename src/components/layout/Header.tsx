@@ -9,6 +9,7 @@ import { useChunksStore } from '../../stores/chunksStore';
 import { EASE_EDITORIAL } from './motion';
 import { ShellNavFooter } from './ShellNav';
 import glossaAppIcon from '../../assets/glossa-app-icon.png';
+import { Tooltip } from '../ui';
 
 const HelpGuide = lazy(() =>
   import('../help/HelpGuide').then((m) => ({ default: m.HelpGuide })),
@@ -56,15 +57,16 @@ export function Header() {
                 //
               </span>
               {currentProjectId ? (
-                <button
-                  type="button"
-                  onClick={closeProject}
-                  disabled={isProcessing}
-                  className="min-w-0 truncate font-display text-lg italic text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-55 md:text-xl"
-                  data-tooltip={t('sidebar.backToWorkspace')}
-                >
-                  {workspaceLabel}
-                </button>
+                <Tooltip label={t('sidebar.backToWorkspace')}>
+                  <button
+                    type="button"
+                    onClick={closeProject}
+                    disabled={isProcessing}
+                    className="min-w-0 truncate font-display text-lg italic text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-55 md:text-xl"
+                  >
+                    {workspaceLabel}
+                  </button>
+                </Tooltip>
               ) : (
                 <span className="min-w-0 truncate font-display text-lg italic text-editorial-muted md:text-xl">
                   {workspaceLabel}

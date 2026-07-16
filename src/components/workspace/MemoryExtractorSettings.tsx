@@ -22,6 +22,7 @@ import { llmService } from '../../services/llmService';
 import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
 import { useConfigStore } from '../../stores/configStore';
 import type { ModelProvider, PromptTemplate } from '../../types';
+import { Tooltip } from '../ui';
 
 interface MemoryExtractorSettingsProps {
   provider: ModelProvider;
@@ -190,69 +191,75 @@ export function MemoryExtractorSettings({
           <div className="flex items-center gap-1.5">
             {isEditingPrompt ? (
               <>
-                <button
-                  type="button"
-                  onClick={() => void handleRefine()}
-                  disabled={isRefining || !prompt.trim() || !canRefine}
-                  data-tooltip={t('pipeline.refinePromptWithModel', { model: refineLabel })}
-                  aria-label={t('pipeline.refinePromptWithModel', { model: refineLabel })}
-                  className="text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40"
-                >
-                  {isRefining ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setShowSaveName(!showSaveName); setShowTemplateList(false); }}
-                  data-tooltip={t('pipeline.templates.save')}
-                  aria-label={t('pipeline.templates.save')}
-                  className="text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
-                >
-                  <BookmarkPlus size={16} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setShowTemplateList(!showTemplateList); setShowSaveName(false); }}
-                  data-tooltip={t('pipeline.templates.load')}
-                  aria-label={t('pipeline.templates.load')}
-                  className="text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
-                >
-                  <BookOpen size={16} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setIsEditingPrompt(false); setShowSaveName(false); setShowTemplateList(false); }}
-                  data-tooltip={t('common.close')}
-                  aria-label={t('common.close')}
-                  className="text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
-                >
-                  <X size={16} />
-                </button>
+                <Tooltip label={t('pipeline.refinePromptWithModel', { model: refineLabel })}>
+                  <button
+                    type="button"
+                    onClick={() => void handleRefine()}
+                    disabled={isRefining || !prompt.trim() || !canRefine}
+                    aria-label={t('pipeline.refinePromptWithModel', { model: refineLabel })}
+                    className="text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40"
+                  >
+                    {isRefining ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
+                  </button>
+                </Tooltip>
+                <Tooltip label={t('pipeline.templates.save')}>
+                  <button
+                    type="button"
+                    onClick={() => { setShowSaveName(!showSaveName); setShowTemplateList(false); }}
+                    aria-label={t('pipeline.templates.save')}
+                    className="text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                  >
+                    <BookmarkPlus size={16} />
+                  </button>
+                </Tooltip>
+                <Tooltip label={t('pipeline.templates.load')}>
+                  <button
+                    type="button"
+                    onClick={() => { setShowTemplateList(!showTemplateList); setShowSaveName(false); }}
+                    aria-label={t('pipeline.templates.load')}
+                    className="text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                  >
+                    <BookOpen size={16} />
+                  </button>
+                </Tooltip>
+                <Tooltip label={t('common.close')}>
+                  <button
+                    type="button"
+                    onClick={() => { setIsEditingPrompt(false); setShowSaveName(false); setShowTemplateList(false); }}
+                    aria-label={t('common.close')}
+                    className="text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                  >
+                    <X size={16} />
+                  </button>
+                </Tooltip>
               </>
             ) : (
               <>
                 {isCustomPrompt && (
+                  <Tooltip label={t('workspace.resetMemoryExtractorPrompt')}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onProviderChange(DEFAULT_MEMORY_EXTRACTOR_PROVIDER, DEFAULT_MEMORY_EXTRACTOR_MODEL);
+                        onPromptChange(DEFAULT_MEMORY_EXTRACTOR_PROMPT);
+                      }}
+                      aria-label={t('workspace.resetMemoryExtractorPrompt')}
+                      className="text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                    >
+                      <RotateCcw size={16} />
+                    </button>
+                  </Tooltip>
+                )}
+                <Tooltip label={t('pipeline.editPrompt')}>
                   <button
                     type="button"
-                    onClick={() => {
-                      onProviderChange(DEFAULT_MEMORY_EXTRACTOR_PROVIDER, DEFAULT_MEMORY_EXTRACTOR_MODEL);
-                      onPromptChange(DEFAULT_MEMORY_EXTRACTOR_PROMPT);
-                    }}
-                    data-tooltip={t('workspace.resetMemoryExtractorPrompt')}
-                    aria-label={t('workspace.resetMemoryExtractorPrompt')}
+                    onClick={() => setIsEditingPrompt(true)}
+                    aria-label={t('pipeline.editPrompt')}
                     className="text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
                   >
-                    <RotateCcw size={16} />
+                    <Pencil size={16} />
                   </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setIsEditingPrompt(true)}
-                  data-tooltip={t('pipeline.editPrompt')}
-                  aria-label={t('pipeline.editPrompt')}
-                  className="text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
-                >
-                  <Pencil size={16} />
-                </button>
+                </Tooltip>
               </>
             )}
           </div>

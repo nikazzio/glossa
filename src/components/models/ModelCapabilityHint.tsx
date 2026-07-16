@@ -2,6 +2,7 @@ import { Bot, Brain, Wand2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { ModelProvider } from '../../types';
 import { getModelUseCaseFit, getResolvedModelReasoning, type ModelUseCase } from '../../models/catalog';
+import { Tooltip } from '../ui';
 
 interface ModelCapabilityHintProps {
   provider: ModelProvider;
@@ -48,12 +49,11 @@ export function ModelCapabilityHint({
 
   if (iconOnly) {
     return (
-      <span
-        className={`inline-flex items-center justify-center rounded-full border p-1 ${reasoningMeta.className}`}
-        data-tooltip={t(`pipeline.modelReasoning.${reasoning}`)}
-      >
-        <reasoningMeta.Icon size={10} />
-      </span>
+      <Tooltip label={t(`pipeline.modelReasoning.${reasoning}`)}>
+        <span className={`inline-flex items-center justify-center rounded-full border p-1 ${reasoningMeta.className}`}>
+          <reasoningMeta.Icon size={10} />
+        </span>
+      </Tooltip>
     );
   }
 

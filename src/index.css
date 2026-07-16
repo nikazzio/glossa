@@ -271,13 +271,15 @@ mark.hl-annot {
 }
 
 /* Tooltip CSS-only, stesso stile visivo del componente Tooltip Radix
-   (src/components/ui/Tooltip.tsx). Due usi:
-   - evidenziazioni glossario: il testo è HTML iniettato via
-     dangerouslySetInnerHTML (useGlossaryHighlight.ts), non componenti React,
-     non può montare un Tooltip Radix;
-   - elementi già Trigger di un altro primitive Radix (es. RadixDialog.Close):
-     annidare lì un secondo Tooltip Radix rompe la gestione Escape del
-     dismissable layer del primitive esterno (verificato con test regression). */
+   (src/components/ui/Tooltip.tsx). Unico uso rimasto: evidenziazioni
+   glossario, il cui testo è HTML iniettato via dangerouslySetInnerHTML
+   (useGlossaryHighlight.ts) — non componenti React, non può montare un
+   Tooltip Radix. Tutti gli altri usi sono stati migrati al componente
+   (#323). Non riusare per elementi già Trigger di un altro primitive Radix
+   (es. RadixDialog.Close): annidare lì un secondo Tooltip Radix rompe la
+   gestione Escape del dismissable layer del primitive esterno (verificato
+   con test regression) — per quei casi preferire il `title` nativo, come
+   fa già Dialog.tsx. */
 [data-tooltip] {
   position: relative;
 }
