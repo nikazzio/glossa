@@ -59,7 +59,7 @@ This page covers the common failures you are likely to hit while setting up or r
 
 ## Build or CI problems
 
-- `npm run lint` checks the frontend TypeScript surface
+- `npm run lint:all` checks TypeScript types and ESLint rules for the frontend
 - `npm test` runs the frontend test suite
 - `npm run docs:build` validates the VitePress site
 - `cargo check --all-targets` and `cargo test` validate the Tauri backend

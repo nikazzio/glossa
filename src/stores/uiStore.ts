@@ -154,6 +154,9 @@ interface UiState {
 
 /** Esportata per test di regressione sulle migrazioni dello stato persistito. */
 export function migrateUiStorePersistedState(persisted: unknown, fromVersion: number): Record<string, unknown> {
+  // Un blob di localStorage corrotto o non-oggetto non deve propagarsi nelle
+  // migrazioni sotto (che assumono `in`/proprietà su un oggetto): riparti dai default.
+  if (typeof persisted !== 'object' || persisted === null) return {};
   const s = persisted as Record<string, unknown>;
   if (fromVersion < 1) {
     if ('glossaryHighlightEnabled' in s) {

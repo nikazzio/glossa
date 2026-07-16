@@ -16,7 +16,8 @@ export const usePricingStore = create<PricingState>()(
         set((state) => ({ overrides: { ...state.overrides, [key]: pricing } })),
       resetOverride: (key) =>
         set((state) => {
-          const { [key]: _, ...rest } = state.overrides;
+          const rest = { ...state.overrides };
+          delete rest[key];
           return { overrides: rest };
         }),
       resetAll: () => set({ overrides: {} }),

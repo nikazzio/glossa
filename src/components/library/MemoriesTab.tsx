@@ -360,6 +360,7 @@ export function MemoriesTab() {
                       label={t('memory.sourcePhraseLabel')}
                       value={draftSource}
                       onChange={setDraftSource}
+                      // eslint-disable-next-line jsx-a11y/no-autofocus -- form che compare da un click esplicito (nuova frase)
                       autoFocus
                     />
                     <MemoryTextarea
@@ -510,6 +511,7 @@ function MemoryTextarea({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         rows={3}
+        // eslint-disable-next-line jsx-a11y/no-autofocus -- il chiamante lo passa solo per il campo aperto da un click esplicito
         autoFocus={autoFocus}
         className="w-full resize-y rounded-md border border-editorial-border bg-editorial-bg/80 px-4 py-3 text-sm leading-relaxed text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
       />

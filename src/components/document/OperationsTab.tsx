@@ -22,6 +22,11 @@ import {
 import { indexPad } from '../../utils';
 import type { TranslationChunk } from '../../types';
 
+/** Condivisa tra FlatView e GroupedView, che la usavano identica duplicata. */
+function useChunkIndexMap(chunks: TranslationChunk[]): Map<string, number> {
+  return useMemo(() => new Map(chunks.map((c, i) => [c.id, i])), [chunks]);
+}
+
 interface OperationsTabProps {
   panelId: string;
   labelledBy: string;
@@ -407,7 +412,7 @@ function ConsoleToolbar({
 
 function FlatView({ entries, chunks }: { entries: OperationLogEntry[]; chunks: TranslationChunk[] }) {
   const { t } = useTranslation();
-  const chunkIndexMap = useMemo(() => new Map(chunks.map((c, i) => [c.id, i])), [chunks]);
+  const chunkIndexMap = useChunkIndexMap(chunks);
   return (
     <div className="space-y-2">
       {entries.map((entry) => (
@@ -427,7 +432,7 @@ interface GroupedViewProps {
 
 function GroupedView({ entries, chunks, stats }: GroupedViewProps) {
   const { t } = useTranslation();
-  const chunkIndexMap = useMemo(() => new Map(chunks.map((c, i) => [c.id, i])), [chunks]);
+  const chunkIndexMap = useChunkIndexMap(chunks);
 
   const groups = useMemo(() => groupEntries(entries), [entries]);
 

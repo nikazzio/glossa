@@ -64,6 +64,11 @@ interface ProjectState {
   duplicatePipeline: (pipelineId: string, newName: string) => Promise<void>;
 }
 
+// Ordina le richieste di caricamento progetti: se cambio workspace prima che
+// la richiesta precedente risponda, quella risposta tardiva non deve più
+// sovrascrivere l'elenco progetti del workspace corrente.
+let loadProjectsRequestId = 0;
+
 export const useProjectStore = create<ProjectState>((set, get) => ({
   projects: [],
   currentProjectId: null,
@@ -88,8 +93,13 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   loadProjects: async () => {
     const { activeWorkspace } = useWorkspaceStore.getState();
-    if (!activeWorkspace) { set({ projects: [] }); return; }
+    const requestId = ++loadProjectsRequestId;
+    if (!activeWorkspace) {
+      if (requestId === loadProjectsRequestId) set({ projects: [] });
+      return;
+    }
     const projects = await listProjects(activeWorkspace.id);
+    if (requestId !== loadProjectsRequestId) return;
     set({ projects });
   },
 

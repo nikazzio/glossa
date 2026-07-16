@@ -101,10 +101,13 @@ export function useDocumentViewState() {
     }
   }, [chunks, selectedChunkId, setSelectedChunkId]);
 
-  // Reset to last stage whenever the chunk changes
-  useEffect(() => {
+  // Reset to last stage whenever the chunk changes. Adjusted during render
+  // (not in an effect) so the previous chunk's stage never flashes for a frame.
+  const [lastSeenChunkId, setLastSeenChunkId] = useState(currentChunk?.id);
+  if (currentChunk?.id !== lastSeenChunkId) {
+    setLastSeenChunkId(currentChunk?.id);
     setSelectedStageId(lastStageId);
-  }, [currentChunk?.id, lastStageId]);
+  }
 
   // Diff mode is only available in translation-only pane
   useEffect(() => {
@@ -222,7 +225,6 @@ export function useDocumentViewState() {
     enabledStages,
     lastStageId,
     isEditorialMode,
-    selectedStageId,
     setSelectedStageId,
     effectiveSelectedStageId,
     isLastSelected,
@@ -241,11 +243,8 @@ export function useDocumentViewState() {
     translationPaneSearch,
     setTranslationPaneSearch,
     // Highlights
-    showHighlight,
     sourceHighlightHtml,
-    translationHighlight,
     translationHighlightHtml,
-    translationEffectiveSearch,
     // Navigation
     setSelectedChunkId,
   };

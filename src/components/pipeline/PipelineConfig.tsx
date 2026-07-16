@@ -2,12 +2,11 @@ import { ArrowRightLeft, BookOpen, Eye, Globe, Languages, Loader2, Play, RotateC
 import { useMemo, useState, useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import type { ModelProvider, PipelineMode, ReasoningEffortLevel } from '../../types';
+import type { ModelProvider, ReasoningEffortLevel } from '../../types';
 import { LANGUAGES } from '../../constants';
 import { getContextWindow, getResolvedModelReasoning, getSelectableModelIds } from '../../models/catalog';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
-import { useUiStore } from '../../stores/uiStore';
 import { useConfigStore } from '../../stores/configStore';
 import { confirm } from '../../stores/confirmStore';
 import { CostBadge } from './CostBadge';
@@ -91,7 +90,7 @@ export function PipelineConfig({
         description: err instanceof Error ? err.message : String(err),
       });
     });
-  }, [loadTemplates]);
+  }, [loadTemplates, t]);
 
   const auditTemplates = templates.filter((tmpl) => tmpl.context === 'audit');
   const personaTemplates = templates.filter((tmpl) => tmpl.context === 'persona');
@@ -316,7 +315,7 @@ export function PipelineConfig({
         <div className="shrink-0 border-b border-editorial-border px-6 py-5 space-y-5">
           <div className="space-y-2">
             <SectionLabel icon={Globe} label={t('pipeline.languagePair')} />
-            <div className={`flex items-center gap-3 transition-opacity ${!!config.persona ? 'opacity-40 pointer-events-none' : ''}`}>
+            <div className={`flex items-center gap-3 transition-opacity ${config.persona ? 'opacity-40 pointer-events-none' : ''}`}>
               <select
                 value={config.sourceLanguage}
                 onChange={(e) => setConfig((prev) => ({ ...prev, sourceLanguage: e.target.value }))}

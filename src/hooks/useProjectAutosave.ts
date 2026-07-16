@@ -36,7 +36,7 @@ export function useProjectSnapshot(enabled = true): string {
     });
     lastStableSnapshotRef.current = next;
     return next;
-  }, [chunks, config, inputProcessingText, inputText, isProcessing, sourceFootnotes, viewMode]);
+  }, [chunks, config, enabled, inputProcessingText, inputText, isProcessing, sourceFootnotes, viewMode]);
 }
 
 export function useProjectAutosave(delayMs = 1200) {

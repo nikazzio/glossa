@@ -30,13 +30,19 @@ interface PromptTemplateState {
   deleteTemplate: (id: string) => Promise<void>;
 }
 
+// Evita fetch duplicati se il componente monta/rimonta prima che la prima
+// richiesta risponda: solo l'ultima chiamata avviata applica il risultato.
+let loadTemplatesRequestId = 0;
+
 export const usePromptTemplateStore = create<PromptTemplateState>((set, get) => ({
   templates: [],
   isLoaded: false,
 
   loadTemplates: async () => {
     if (get().isLoaded) return;
+    const requestId = ++loadTemplatesRequestId;
     const templates = await getPromptTemplates();
+    if (requestId !== loadTemplatesRequestId) return;
     set({ templates, isLoaded: true });
   },
 

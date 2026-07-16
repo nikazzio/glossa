@@ -241,12 +241,17 @@ export function usePipeline() {
       pipelineLog.singlePipelineCompleted(chunkId);
       toast.success(t('pipeline.singleChunkCompleted'));
     }
+    // executePipelineForChunk is a plain function (not memoized) redefined every
+    // render; listing it here is accurate but can't stop this callback from
+    // recreating too. Memoizing it needs the orchestration/UI split already
+    // tracked separately (see docs-dev audit notes) — out of scope here.
   }, [computeBlobAssignments, ensureProvidersReady, executePipelineForChunk, setIsProcessing, t]);
 
   /**
    * Run all enabled translation stages and the audit for a single chunk.
    * Returns an outcome so the caller can aggregate batch counters.
    */
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- see note above runChunkExecution's useCallback; executePipelineForChunk is intentionally a plain function, not memoized (deferred orchestration/UI split).
   async function executePipelineForChunk(
     chunk: TranslationChunk,
     options: { batchMode?: BatchRunMode; memoryBlock?: string },
@@ -502,7 +507,11 @@ export function usePipeline() {
       pipelineLog.batchPipelineCompletedWithErrors(errorCount);
       toast.warning(t('errors.pipelineCompletedWithErrors', { count: errorCount }));
     }
-  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureProvidersReady, setBlobAssignments]);
+    // executePipelineForChunk is a plain function (not memoized) redefined every
+    // render — see the note on the sibling callback above; same deferred
+    // architectural split, out of scope here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [config, t, setIsProcessing, updateChunkStage, appendChunkStageContent, setChunkStagePromptInfo, updateChunkJudge, updateChunkDraft, updateChunkStatus, clearChunkStages, ensureProvidersReady, setBlobAssignments, computeBlobAssignments, executePipelineForChunk, persistChunkCheckpoint, persistPipelineStatus]);
 
   const runSingleChunk = useCallback(async (chunkId: string) => {
     await runChunkExecution(chunkId);

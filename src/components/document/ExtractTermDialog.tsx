@@ -172,6 +172,7 @@ export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSucce
                 onChange={(e) => setNewGlossaryName(e.target.value)}
                 placeholder={t('glossary.newGlossaryNamePlaceholder')}
                 aria-label={t('glossary.newGlossaryNamePlaceholder')}
+                // eslint-disable-next-line jsx-a11y/no-autofocus -- campo che compare da un click esplicito (crea nuovo glossario)
                 autoFocus
                 className="mt-2 w-full rounded-md border border-editorial-border bg-editorial-textbox/60 px-3 py-2 text-sm text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent" />
             )}

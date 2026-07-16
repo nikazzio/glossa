@@ -2,6 +2,12 @@ import { create } from 'zustand';
 import { select, execute } from '../services/dbService';
 import type { Annotation, AnnotationType } from '../types';
 
+const ANNOTATION_TYPES: readonly AnnotationType[] = ['comment', 'doubt', 'problem', 'approved'];
+
+function isAnnotationType(value: string): value is AnnotationType {
+  return (ANNOTATION_TYPES as readonly string[]).includes(value);
+}
+
 interface DbAnnotationRow {
   id: string;
   chunk_id: string;
@@ -18,7 +24,7 @@ function fromRow(row: DbAnnotationRow): Annotation {
     id: row.id,
     chunkId: row.chunk_id,
     pipelineId: row.pipeline_id,
-    type: row.type as AnnotationType,
+    type: isAnnotationType(row.type) ? row.type : 'comment',
     content: row.content,
     anchorText: row.anchor_text ?? undefined,
     sequence: row.sequence,

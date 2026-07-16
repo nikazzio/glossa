@@ -1,5 +1,5 @@
 import { BookPlus, Check, Clipboard, Layers, Loader2, RefreshCcw } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { usePhraseMemoryAutoSearch } from '../../../hooks/usePhraseMemoryAutoSearch';
@@ -150,13 +150,19 @@ interface MatchCardProps {
 function MatchCard({ match, enabled, onToggle, onExtractTerm }: MatchCardProps) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
+  const resetTimer = useRef<number | null>(null);
+
+  useEffect(() => () => {
+    if (resetTimer.current !== null) window.clearTimeout(resetTimer.current);
+  }, []);
 
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(match.targetPhrase);
       setCopied(true);
       toast.success(t('memory.appliedToClipboard'));
-      setTimeout(() => setCopied(false), 2000);
+      if (resetTimer.current !== null) window.clearTimeout(resetTimer.current);
+      resetTimer.current = window.setTimeout(() => setCopied(false), 2000);
     } catch {
       toast.error(t('errors.clipboardFailed'));
     }

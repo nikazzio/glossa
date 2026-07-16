@@ -19,9 +19,11 @@ export function ApiKeyInput({ label, provider, onKeyChange }: ApiKeyInputProps) 
   const { t } = useTranslation();
 
   useEffect(() => {
+    let cancelled = false;
     settingsService.isKeyConfigured(provider)
-      .then(setIsConfigured)
-      .catch(() => setIsConfigured(false));
+      .then((configured) => { if (!cancelled) setIsConfigured(configured); })
+      .catch(() => { if (!cancelled) setIsConfigured(false); });
+    return () => { cancelled = true; };
   }, [provider]);
 
   const handleSave = async () => {
@@ -38,9 +40,9 @@ export function ApiKeyInput({ label, provider, onKeyChange }: ApiKeyInputProps) 
       } else {
         toast.success(t('settings.keySaved', { provider: label }));
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error(t('settings.keySaveFailed', { provider: label }), {
-        description: err?.message,
+        description: err instanceof Error ? err.message : String(err),
       });
     } finally {
       setSaving(false);
@@ -53,9 +55,9 @@ export function ApiKeyInput({ label, provider, onKeyChange }: ApiKeyInputProps) 
       setIsConfigured(false);
       onKeyChange?.();
       toast.success(t('settings.keyDeleted', { provider: label }));
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error(t('settings.keyDeleteFailed', { provider: label }), {
-        description: err?.message,
+        description: err instanceof Error ? err.message : String(err),
       });
     }
   };
@@ -75,6 +77,7 @@ export function ApiKeyInput({ label, provider, onKeyChange }: ApiKeyInputProps) 
               if (e.key === 'Enter') handleSave();
               if (e.key === 'Escape') { setEditing(false); setKeyValue(''); }
             }}
+            // eslint-disable-next-line jsx-a11y/no-autofocus -- campo che compare da un click esplicito (modifica chiave)
             autoFocus
           />
           <Tooltip label={t('settings.save')}>

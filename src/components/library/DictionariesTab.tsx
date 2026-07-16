@@ -69,8 +69,8 @@ export function DictionariesTab() {
         await assignGlossary(id);
       }
       toast.success(t('library.dictionarySaved'));
-    } catch (err: any) {
-      toast.error(t('library.dictionarySaveError'), { description: err?.message });
+    } catch (err: unknown) {
+      toast.error(t('library.dictionarySaveError'), { description: err instanceof Error ? err.message : String(err) });
     }
   };
 
@@ -80,8 +80,8 @@ export function DictionariesTab() {
       await createGlossary(newName.trim(), undefined, undefined, undefined, activeWorkspace?.id ?? null);
       setNewName('');
       setCreating(false);
-    } catch (err: any) {
-      toast.error(t('library.dictionaryCreateError'), { description: err?.message });
+    } catch (err: unknown) {
+      toast.error(t('library.dictionaryCreateError'), { description: err instanceof Error ? err.message : String(err) });
     }
   };
 
@@ -95,8 +95,8 @@ export function DictionariesTab() {
     if (!ok) return;
     try {
       await deleteGlossary(id);
-    } catch (err: any) {
-      toast.error(t('library.dictionaryDeleteError'), { description: err?.message });
+    } catch (err: unknown) {
+      toast.error(t('library.dictionaryDeleteError'), { description: err instanceof Error ? err.message : String(err) });
     }
   };
 
@@ -105,8 +105,8 @@ export function DictionariesTab() {
       const newId = await forkGlossary(id, `${name} (copia)`);
       const forkedEntries = await getGlossaryEntries(newId);
       setGlossaryEntries(newId, forkedEntries);
-    } catch (err: any) {
-      toast.error(t('library.dictionaryForkError'), { description: err?.message });
+    } catch (err: unknown) {
+      toast.error(t('library.dictionaryForkError'), { description: err instanceof Error ? err.message : String(err) });
     }
   };
 
@@ -114,8 +114,8 @@ export function DictionariesTab() {
     if (!renameValue.trim()) { setRenamingId(null); return; }
     try {
       await renameGlossary(id, renameValue.trim());
-    } catch (err: any) {
-      toast.error(t('library.dictionaryRenameError'), { description: err?.message });
+    } catch (err: unknown) {
+      toast.error(t('library.dictionaryRenameError'), { description: err instanceof Error ? err.message : String(err) });
     }
     setRenamingId(null);
   };
@@ -127,8 +127,8 @@ export function DictionariesTab() {
       }
       await assignGlossary(glossaryId);
       toast.success(t('library.dictionaryAssigned'));
-    } catch (err: any) {
-      toast.error(t('library.dictionaryAssignError'), { description: err?.message });
+    } catch (err: unknown) {
+      toast.error(t('library.dictionaryAssignError'), { description: err instanceof Error ? err.message : String(err) });
     }
   };
 
@@ -186,6 +186,7 @@ export function DictionariesTab() {
       {creating && (
         <div className="flex flex-col gap-3 border-y border-editorial-border/70 py-4 sm:flex-row sm:items-center">
           <input
+            // eslint-disable-next-line jsx-a11y/no-autofocus -- campo che compare da un click esplicito (crea nuovo glossario)
             autoFocus
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
@@ -246,6 +247,7 @@ export function DictionariesTab() {
                     : <ChevronDown size={14} className="shrink-0 text-editorial-muted" />}
                   {renamingId === g.id ? (
                     <input
+                      // eslint-disable-next-line jsx-a11y/no-autofocus -- campo rinomina che compare da un click esplicito
                       autoFocus
                       value={renameValue}
                       onChange={(e) => setRenameValue(e.target.value)}

@@ -212,5 +212,9 @@ export function useGlossaryHighlight(
       : 0;
 
     return { html: buildHtml(debouncedText, spans), matchCount, totalTerms: validEntries.length };
+    // anchorsKey is a derived stable digest of annotationAnchors (label+text) —
+    // depending on the array itself would recompute on every render since its
+    // reference changes even when the content doesn't.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [text, debouncedText, patterns, mode, validEntries.length, searchQuery, auditQuery, anchorsKey]);
 }

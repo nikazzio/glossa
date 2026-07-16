@@ -41,14 +41,17 @@ export function WorkspaceWizard() {
         <input
           className={inputClass}
           placeholder={t('workspace.namePlaceholder')}
+          aria-label={t('workspace.namePlaceholder')}
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') void handleCreate(); }}
+          // eslint-disable-next-line jsx-a11y/no-autofocus -- procedura guidata aperta da un click esplicito
           autoFocus
         />
         <input
           className={inputClass}
           placeholder={t('workspace.descriptionPlaceholder')}
+          aria-label={t('workspace.descriptionPlaceholder')}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />

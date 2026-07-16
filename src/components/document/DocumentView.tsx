@@ -170,6 +170,7 @@ function DocumentPage({
             value={searchValue ?? ''}
             onChange={onSearchChange}
             label={searchLabel}
+            // eslint-disable-next-line jsx-a11y/no-autofocus -- si apre da un'azione esplicita dell'utente (mostra ricerca)
             autoFocus
           />
         ) : null}
@@ -237,7 +238,6 @@ export function DocumentView({
     enabledStages,
     lastStageId,
     isEditorialMode,
-    selectedStageId: _selectedStageId,
     setSelectedStageId,
     effectiveSelectedStageId,
     isLastSelected,
@@ -253,11 +253,8 @@ export function DocumentView({
     setSourcePaneSearch,
     translationPaneSearch,
     setTranslationPaneSearch,
-    showHighlight,
     sourceHighlightHtml,
-    translationHighlight,
     translationHighlightHtml,
-    translationEffectiveSearch,
     setSelectedChunkId,
   } = useDocumentViewState();
 

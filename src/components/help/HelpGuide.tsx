@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ChevronRight, HelpCircle,
-  FolderOpen, Upload, SlidersHorizontal, Save,
+  FolderOpen, Upload,
   LibraryBig, Globe, Settings,
   LayoutTemplate, PanelRight,
   CheckCheck, PanelTopClose, ScanLine,
@@ -681,9 +681,18 @@ function TroubleshootingSection() {
   const { t } = useTranslation();
   const [logPath, setLogPath] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const resetTimer = useRef<number | null>(null);
 
   useEffect(() => {
-    appLogDir().then(setLogPath).catch(() => setLogPath(null));
+    let cancelled = false;
+    appLogDir()
+      .then((dir) => { if (!cancelled) setLogPath(dir); })
+      .catch(() => { if (!cancelled) setLogPath(null); });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => () => {
+    if (resetTimer.current !== null) window.clearTimeout(resetTimer.current);
   }, []);
 
   const handleCopy = async () => {
@@ -691,7 +700,8 @@ function TroubleshootingSection() {
     try {
       await navigator.clipboard.writeText(logPath);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      if (resetTimer.current !== null) window.clearTimeout(resetTimer.current);
+      resetTimer.current = window.setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       toast.error(t('pipeline.copyFailed'), {
         description: err instanceof Error ? err.message : undefined,

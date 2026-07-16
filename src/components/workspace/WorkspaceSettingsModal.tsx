@@ -193,6 +193,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                     onChange={(e) => setName(e.target.value)}
                     placeholder={t('workspace.namePlaceholder')}
                     className="w-full rounded-md border border-editorial-border bg-editorial-textbox/30 px-4 py-3 text-sm text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    // eslint-disable-next-line jsx-a11y/no-autofocus -- finestra impostazioni aperta da un click esplicito
                     autoFocus
                   />
                   <textarea

@@ -3,9 +3,6 @@ import { logger } from '../utils/logger';
 import { generateId, normalizeQualityRating, qualityDefault } from '../utils';
 import type {
   CoherenceResult,
-  DocumentFormat,
-  DocumentRenderProfile,
-  ExperimentalImportMode,
   Footnote,
   FootnoteDefinition,
   GlossaryEntry,
@@ -358,14 +355,6 @@ export async function saveChunkCheckpoint(
       chunk.blobId ? JSON.stringify(chunk.blobReferenceChunkIds ?? []) : null,
     ],
   );
-}
-
-async function saveTranslations(
-  projectId: string,
-  pipelineId: string,
-  chunks: TranslationChunk[],
-): Promise<void> {
-  await saveTranslationsInternal(projectId, pipelineId, chunks, execute);
 }
 
 type ExecuteQuery = (query: string, params?: unknown[]) => Promise<void>;
