@@ -54,23 +54,23 @@ function PipelineNameSlot({ children }: { children?: ReactNode }) {
     t('pipeline.pipelineNumber', { number: 1 });
 
   return (
-    <div className="border-b border-editorial-border/70 px-4 py-4">
+    <div className="border-b border-editorial-border/70 px-4 pt-4 pb-6">
       <div className="flex items-center gap-2">
-        <span className="min-w-0 flex-1 truncate font-display text-xl italic leading-tight text-editorial-ink">
+        <span className="min-w-0 flex-1 truncate font-display text-2xl italic leading-tight text-editorial-ink">
           {activeName}
         </span>
         {pipelines.length > 0 && (
           <Popover.Root open={popoverOpen} onOpenChange={setPopoverOpen}>
             <Popover.Trigger asChild>
               <IconButton
-                size="sm"
-                tone={popoverOpen ? 'accent' : 'muted'}
+                size="md"
+                tone={popoverOpen ? 'accent' : 'default'}
                 title={t('pipeline.changePipeline')}
                 ariaLabel={t('pipeline.changePipeline')}
                 tooltipSide="right"
-                className="h-7 w-7 shrink-0 p-0"
+                className={`h-9 w-9 shrink-0 ${popoverOpen ? '' : 'bg-editorial-bg'}`}
               >
-                <ArrowLeftRight size={12} />
+                <ArrowLeftRight size={14} />
               </IconButton>
             </Popover.Trigger>
             <Popover.Portal>
@@ -125,7 +125,7 @@ function PipelineNameSlot({ children }: { children?: ReactNode }) {
           </Popover.Root>
         )}
       </div>
-      {children ? <div className="mt-3">{children}</div> : null}
+      {children ? <div className="mt-5">{children}</div> : null}
     </div>
   );
 }
@@ -150,63 +150,63 @@ function ChunkRailNavigator({ collapsed }: { collapsed: boolean }) {
       <div className="flex flex-col items-center gap-1.5 px-1 pb-3">
         <IconButton
           size="md"
-          tone="muted"
+          tone="default"
           onClick={() => prevChunk && setSelectedChunkId(prevChunk.id)}
           title={t('document.previousChunk')}
           disabled={!prevChunk}
           tooltipSide="right"
-          className="h-10 w-10"
+          className="h-9 w-9 bg-editorial-bg"
         >
-          <ChevronUp size={16} />
+          <ChevronUp size={14} />
         </IconButton>
         <span className="font-display text-base italic leading-none text-editorial-ink tabular-nums">
           {indexPad(currentIndex + 1)}
         </span>
-        <span className="text-[10px] font-semibold leading-none text-editorial-muted tabular-nums">
+        <span className="font-display text-base italic leading-none text-editorial-ink tabular-nums">
           /{indexPad(chunks.length)}
         </span>
         <IconButton
           size="md"
-          tone="muted"
+          tone="default"
           onClick={() => nextChunk && setSelectedChunkId(nextChunk.id)}
           title={t('document.nextChunk')}
           disabled={!nextChunk}
           tooltipSide="right"
-          className="h-10 w-10"
+          className="h-9 w-9 bg-editorial-bg"
         >
-          <ChevronDown size={16} />
+          <ChevronDown size={14} />
         </IconButton>
       </div>
     );
   }
 
   return (
-    <div className="flex min-w-0 flex-1 items-center justify-end">
+    <div className="flex min-w-0 flex-1 items-center justify-start">
       <div className="flex items-center gap-2">
         <IconButton
           size="md"
-          tone="muted"
+          tone="default"
           onClick={() => prevChunk && setSelectedChunkId(prevChunk.id)}
           title={t('document.previousChunk')}
           disabled={!prevChunk}
           tooltipSide="bottom"
-          className="h-9 w-9"
+          className="h-9 w-9 bg-editorial-bg"
         >
-          <ChevronLeft size={16} />
+          <ChevronLeft size={14} />
         </IconButton>
         <span className="shrink-0 font-display text-base italic leading-none text-editorial-ink tabular-nums">
           {indexPad(currentIndex + 1)}<span className="px-0.5 text-editorial-muted">/</span>{indexPad(chunks.length)}
         </span>
         <IconButton
           size="md"
-          tone="muted"
+          tone="default"
           onClick={() => nextChunk && setSelectedChunkId(nextChunk.id)}
           title={t('document.nextChunk')}
           disabled={!nextChunk}
           tooltipSide="bottom"
-          className="h-9 w-9"
+          className="h-9 w-9 bg-editorial-bg"
         >
-          <ChevronRight size={16} />
+          <ChevronRight size={14} />
         </IconButton>
       </div>
     </div>
@@ -242,50 +242,55 @@ function RailBottomActions({
       {includeBack && (
         <IconButton
           size="md"
-          tone="muted"
+          tone="default"
           onClick={() => closeProject()}
           disabled={isProcessing}
           title={t('sidebar.backToWorkspace')}
           tooltipSide={tooltipSide}
+          className="h-9 w-9 bg-editorial-bg"
         >
           <ArrowLeft size={14} />
         </IconButton>
       )}
       <IconButton
         size="md"
-        tone="muted"
+        tone="default"
         onClick={() => setShowLibraryPanel(true)}
         title={t('library.openLibrary')}
         tooltipSide={tooltipSide}
+        className="h-9 w-9 bg-editorial-bg"
       >
         <LibraryBig size={14} />
       </IconButton>
       <IconButton
         size="md"
-        tone="muted"
+        tone="default"
         onClick={() => setShowConfigDrawer(true)}
         title={t('pipeline.configurePipeline')}
         tooltipSide={tooltipSide}
+        className="h-9 w-9 bg-editorial-bg"
       >
         <Settings2 size={14} />
       </IconButton>
       <IconButton
         size="md"
-        tone="muted"
+        tone="default"
         onClick={onImportDocument}
         disabled={!onImportDocument || hasDocument}
         title={t('files.import')}
         tooltipSide={tooltipSide}
+        className="h-9 w-9 bg-editorial-bg"
       >
         <Upload size={14} />
       </IconButton>
       <IconButton
         size="md"
-        tone="muted"
+        tone="default"
         onClick={() => setShowExportDialog(true)}
         disabled={!hasDocument}
         title={t('header.exportLabel')}
         tooltipSide={tooltipSide}
+        className="h-9 w-9 bg-editorial-bg"
       >
         <FileOutput size={14} />
       </IconButton>
@@ -318,10 +323,11 @@ export function ProjectRailNext({
         <div className="flex h-20 w-full shrink-0 items-center justify-center">
           <IconButton
             size="md"
-            tone="muted"
+            tone="default"
             onClick={() => setProjectContextCollapsed(false)}
             title={t('sidebar.expand')}
             tooltipSide="right"
+            className="h-9 w-9 bg-editorial-bg"
           >
             <PanelLeftOpen size={14} />
           </IconButton>
@@ -360,18 +366,19 @@ export function ProjectRailNext({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {/* Header: solo pulsante collassa, allineato al global header */}
+      {/* Header: navigazione frammento a sx, collassa a dx, allineato al global header */}
       <div className="flex h-20 shrink-0 items-center gap-3 px-3">
+        <ChunkRailNavigator collapsed={false} />
         <IconButton
           size="md"
-          tone="muted"
+          tone="default"
           onClick={() => setProjectContextCollapsed(true)}
           title={t('sidebar.collapse')}
           tooltipSide="bottom"
+          className="h-9 w-9 shrink-0 bg-editorial-bg"
         >
           <PanelLeftClose size={14} />
         </IconButton>
-        <ChunkRailNavigator collapsed={false} />
       </div>
 
       {/* Contenuto operativo: testata fissa + tab con contenuto scrollabile */}

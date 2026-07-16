@@ -4,7 +4,6 @@ import { useShallow } from 'zustand/react/shallow';
 import { usePipelineStore } from '../../../stores/pipelineStore';
 import { useChunksStore } from '../../../stores/chunksStore';
 import { useUiStore } from '../../../stores/uiStore';
-import { useConfigStore } from '../../../stores/configStore';
 import { useAnnotationsStore } from '../../../stores/annotationsStore';
 import { useGlossaryHighlight, escapeHtml, type AnnotationAnchor } from '../../../hooks/useGlossaryHighlight';
 import { useStageDiff } from '../../../hooks/useStageDiff';
@@ -41,9 +40,6 @@ export function useDocumentViewState() {
     })),
   );
 
-  const pipelineTestChunkCount = useConfigStore((state) => state.pipelineTestChunkCount);
-  const setPipelineTestChunkCount = useConfigStore((state) => state.setPipelineTestChunkCount);
-
   const [viewportWidth, setViewportWidth] = useState(
     typeof window === 'undefined' ? 0 : window.innerWidth,
   );
@@ -59,11 +55,6 @@ export function useDocumentViewState() {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  useEffect(() => {
-    if (chunks.length > 0 && pipelineTestChunkCount > chunks.length) {
-      setPipelineTestChunkCount(chunks.length);
-    }
-  }, [chunks.length, pipelineTestChunkCount, setPipelineTestChunkCount]);
 
   const resolvedLayout =
     documentLayout === 'auto'

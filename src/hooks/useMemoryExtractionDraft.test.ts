@@ -152,7 +152,7 @@ describe('useMemoryExtractionDraft', () => {
     expect(savedCount).toBe(0);
   });
 
-  it('carica in automatico le frasi già salvate per il frammento, collassate di default', async () => {
+  it('carica in automatico le frasi già salvate per il frammento', async () => {
     mockListEntries.mockResolvedValueOnce([
       makeSavedEntry({ id: 'pm-1', sourcePhrase: 'Buongiorno', targetPhrase: 'Good morning' }),
       makeSavedEntry({ id: 'pm-2', sourcePhrase: 'Buonasera', targetPhrase: 'Good evening', chunkId: 'other-chunk' }),
@@ -163,7 +163,6 @@ describe('useMemoryExtractionDraft', () => {
     expect(result.current.candidates[0]).toMatchObject({
       sourcePhrase: 'Buongiorno', targetPhrase: 'Good morning', origin: 'saved', accepted: true,
     });
-    expect(result.current.expanded).toBe(false);
   });
 
   it('non ricarica le frasi salvate se esiste già una bozza in corso per il frammento', async () => {
@@ -180,7 +179,7 @@ describe('useMemoryExtractionDraft', () => {
     expect(result.current.candidates[0].accepted).toBe(false);
   });
 
-  it('extract aggiunge le nuove frasi a quelle già in bozza senza duplicare i testi identici ed espande la lista', async () => {
+  it('extract aggiunge le nuove frasi a quelle già in bozza senza duplicare i testi identici', async () => {
     mockListEntries.mockResolvedValueOnce([
       makeSavedEntry({ id: 'pm-1', sourcePhrase: 'Buongiorno', targetPhrase: 'Good morning' }),
     ]);
@@ -196,7 +195,6 @@ describe('useMemoryExtractionDraft', () => {
     await waitFor(() => expect(result.current.candidates).toHaveLength(2));
     expect(result.current.candidates.map((c) => c.origin)).toEqual(['saved', 'ai']);
     expect(result.current.candidates[1]).toMatchObject({ sourcePhrase: 'Buona notte', targetPhrase: 'Good night' });
-    expect(result.current.expanded).toBe(true);
   });
 
   it('extract non perde le modifiche fatte alla bozza mentre la richiesta IA è in corso', async () => {
@@ -216,13 +214,5 @@ describe('useMemoryExtractionDraft', () => {
 
     await waitFor(() => expect(result.current.candidates).toHaveLength(2));
     expect(result.current.candidates.find((c) => c.id === manualId)?.accepted).toBe(false);
-  });
-
-  it('toggleExpanded inverte la visibilita della lista', async () => {
-    const { result } = renderHook(() => useMemoryExtractionDraft(lockedChunk));
-    await waitFor(() => expect(mockListEntries).toHaveBeenCalled());
-    expect(result.current.expanded).toBe(false);
-    act(() => { result.current.toggleExpanded(); });
-    await waitFor(() => expect(result.current.expanded).toBe(true));
   });
 });

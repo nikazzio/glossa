@@ -8,7 +8,7 @@ import { usePhraseMemoryStore } from '../../../stores/phraseMemoryStore';
 import type { PhraseMemoryMatch } from '../../../stores/phraseMemoryStore';
 import { usePipelineStore } from '../../../stores/pipelineStore';
 import { classifyError } from '../../../utils/retry';
-import { IconButton, SectionLabel } from '../../ui';
+import { IconButton } from '../../ui';
 import { ExtractTermDialog } from '../ExtractTermDialog';
 import type { TranslationChunk } from '../../../types';
 
@@ -63,10 +63,6 @@ export function ReferencesTab({ panelId, labelledBy, currentChunk }: ReferencesT
 
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex min-h-0 flex-1 flex-col">
-      <div className="shrink-0 border-b border-editorial-border px-4 py-3">
-        <SectionLabel icon={Layers} label={t('document.insightsTabReferences')} />
-      </div>
-
       <div className="shrink-0 space-y-3 border-b border-editorial-border px-4 py-3">
         <div className="flex items-center justify-between gap-2">
           <p className="text-xs font-sans uppercase tracking-[0.22em] text-editorial-muted">

@@ -74,7 +74,6 @@ describe('phraseMemoryDraftStore', () => {
     ]);
     const entry = usePhraseMemoryDraftStore.getState().draftsByChunk.get('c1');
     expect(entry?.status).toBe('reviewing');
-    expect(entry?.expanded).toBe(false);
     expect(entry?.candidates).toHaveLength(1);
     expect(entry?.candidates[0]).toMatchObject({ origin: 'saved', accepted: true, sourcePhrase: 'ciao', targetPhrase: 'hello' });
   });
@@ -90,14 +89,6 @@ describe('phraseMemoryDraftStore', () => {
     const entry = usePhraseMemoryDraftStore.getState().draftsByChunk.get('c1');
     expect(entry?.candidates).toHaveLength(1);
     expect(entry?.candidates[0].sourcePhrase).toBe('notte');
-  });
-
-  it('toggleExpanded inverte il flag di visibilita per il frammento indicato', () => {
-    const store = usePhraseMemoryDraftStore.getState();
-    store.toggleExpanded('c1');
-    expect(usePhraseMemoryDraftStore.getState().draftsByChunk.get('c1')?.expanded).toBe(true);
-    store.toggleExpanded('c1');
-    expect(usePhraseMemoryDraftStore.getState().draftsByChunk.get('c1')?.expanded).toBe(false);
   });
 
   it('la bozza di un frammento resta intatta cambiando frammento e tornando indietro', () => {

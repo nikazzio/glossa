@@ -1,11 +1,11 @@
-import { Brain, ChevronDown, ChevronUp, Database, Loader2 } from 'lucide-react';
+import { Brain, Database, Loader2, Save } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useMemoryExtractionDraft } from '../../../hooks/useMemoryExtractionDraft';
 import { useWorkspaceStore } from '../../../stores/workspaceStore';
 import { listPhraseMemoryEntries } from '../../../services/phraseMemoryService';
-import { IconButton, PillButton, SectionLabel } from '../../ui';
+import { IconButton } from '../../ui';
 import type { PhraseCandidateDraft } from '../../../stores/phraseMemoryDraftStore';
 import type { TranslationChunk } from '../../../types';
 
@@ -19,9 +19,10 @@ export function MemoryTab({ panelId, labelledBy, currentChunk }: MemoryTabProps)
   const { t } = useTranslation();
   const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace);
   const [chunkMemoryCount, setChunkMemoryCount] = useState<number | null>(null);
+  const [isCountLoading, setIsCountLoading] = useState(false);
   const {
-    status, candidates, expanded, canExtract, extract, addManualCandidate,
-    updateCandidate, toggleAccepted, toggleExpanded, confirm,
+    status, candidates, canExtract, isLoadingSaved, extract, addManualCandidate,
+    updateCandidate, toggleAccepted, confirm,
   } = useMemoryExtractionDraft(currentChunk);
   const isLocked = Boolean(currentChunk?.translationLocked);
 
@@ -31,9 +32,10 @@ export function MemoryTab({ panelId, labelledBy, currentChunk }: MemoryTabProps)
     let cancelled = false;
     async function loadCount(): Promise<void> {
       if (!activeWorkspace || !currentChunkId) {
-        if (!cancelled) setChunkMemoryCount(null);
+        if (!cancelled) { setChunkMemoryCount(null); setIsCountLoading(false); }
         return;
       }
+      setIsCountLoading(true);
       try {
         const entries = await listPhraseMemoryEntries(activeWorkspace.id);
         if (!cancelled) {
@@ -41,6 +43,8 @@ export function MemoryTab({ panelId, labelledBy, currentChunk }: MemoryTabProps)
         }
       } catch {
         if (!cancelled) setChunkMemoryCount(null);
+      } finally {
+        if (!cancelled) setIsCountLoading(false);
       }
     }
     void loadCount();
@@ -74,58 +78,49 @@ export function MemoryTab({ panelId, labelledBy, currentChunk }: MemoryTabProps)
 
   const hasAcceptedCandidate = candidates.some((c) => c.accepted && c.sourcePhrase.trim() && c.targetPhrase.trim());
   const canUpdateMemory = hasAcceptedCandidate && status !== 'saving' && status !== 'extracting' && isLocked;
-  const showToggle = (chunkMemoryCount ?? 0) > 0;
-  const showList = expanded && status !== 'idle';
+  const showList = status !== 'idle';
 
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex min-h-0 flex-1 flex-col">
       <div className="shrink-0 border-b border-editorial-border px-4 py-3">
-        <div className="flex items-center justify-between gap-3">
-          <SectionLabel icon={Brain} label={t('document.insightsTabMemory')} />
+        <div className="flex items-center gap-2">
           <IconButton
             size="md"
             title={!currentChunk?.translationLocked ? t('memory.extractDisabledLockHint') : t('memory.extractButton')}
             onClick={() => void handleExtract()}
             disabled={!canExtract}
-            tooltipSide="left"
+            tooltipSide="right"
           >
             {status === 'extracting' ? <Loader2 size={13} className="animate-spin" /> : <Database size={13} />}
           </IconButton>
-        </div>
-        {chunkMemoryCount !== null && (
-          <div className="mt-2 flex items-center gap-2">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-editorial-success/35 bg-editorial-success/10 font-display text-sm italic text-editorial-success">
-              {chunkMemoryCount}
-            </div>
-            <p className="text-xs text-editorial-muted">{t('memory.memoriesLabel')}</p>
-            {showToggle && (
+          {isCountLoading ? (
+            <Loader2 size={14} className="animate-spin text-editorial-muted" aria-label={t('memory.loadingMemories')} />
+          ) : chunkMemoryCount !== null && (
+            <>
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-editorial-success/35 bg-editorial-success/10 font-display text-sm italic text-editorial-success">
+                {chunkMemoryCount}
+              </div>
+              <p className="text-xs text-editorial-muted">{t('memory.memoriesLabel')}</p>
+            </>
+          )}
+          {showList && (
+            <div className="ml-auto">
               <IconButton
-                size="sm"
-                title={expanded ? t('memory.toggleSavedListHide') : t('memory.toggleSavedListShow')}
-                onClick={toggleExpanded}
+                size="md"
+                title={t('memory.confirmSaveButton')}
+                onClick={() => void handleConfirm()}
+                disabled={!canUpdateMemory}
                 tooltipSide="left"
               >
-                {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                {status === 'saving' ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
               </IconButton>
-            )}
-          </div>
-        )}
-        {showList && (
-          <div className="mt-3 flex justify-end border-t border-editorial-border pt-3">
-            <PillButton variant="accent" onClick={() => void handleConfirm()} disabled={!canUpdateMemory}>
-              {status === 'saving'
-                ? <Loader2 size={13} className="mx-auto animate-spin" />
-                : t('memory.confirmSaveButton')}
-            </PillButton>
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </div>
 
       {showList ? (
         <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4 custom-scrollbar">
-          <p className="text-xs leading-relaxed text-editorial-muted">
-            {candidates.length > 0 ? t('memory.reviewHint') : t('memory.extractEmptyResult')}
-          </p>
           <fieldset disabled={status === 'extracting' || status === 'saving'} className="m-0 min-w-0 space-y-3 border-0 p-0">
             {candidates.map((candidate) => (
               <CandidateCard
@@ -145,12 +140,17 @@ export function MemoryTab({ panelId, labelledBy, currentChunk }: MemoryTabProps)
             </button>
           </fieldset>
         </div>
+      ) : isLoadingSaved ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-12 text-center">
+          <Loader2 size={28} className="animate-spin text-editorial-border" />
+          <p className="text-sm font-medium text-editorial-muted">{t('memory.loadingMemories')}</p>
+        </div>
       ) : (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-12 text-center">
           <Brain size={28} className="text-editorial-border" />
-          <p className="text-sm font-medium text-editorial-muted">
-            {!currentChunk?.translationLocked ? t('memory.extractDisabledLockHint') : t('memory.extractColdStartTitle')}
-          </p>
+          {!currentChunk?.translationLocked && (
+            <p className="text-sm font-medium text-editorial-muted">{t('memory.extractDisabledLockHint')}</p>
+          )}
         </div>
       )}
     </div>
@@ -161,6 +161,12 @@ interface CandidateCardProps {
   candidate: PhraseCandidateDraft;
   onToggle: () => void;
   onChange: (changes: Partial<Pick<PhraseCandidateDraft, 'sourcePhrase' | 'targetPhrase'>>) => void;
+}
+
+function autoResizeTextarea(el: HTMLTextAreaElement | null) {
+  if (!el) return;
+  el.style.height = 'auto';
+  el.style.height = `${el.scrollHeight}px`;
 }
 
 function CandidateCard({ candidate, onToggle, onChange }: CandidateCardProps) {
@@ -190,24 +196,24 @@ function CandidateCard({ candidate, onToggle, onChange }: CandidateCardProps) {
         <p className="mb-1 text-[10px] uppercase tracking-[0.28em] text-editorial-muted">
           {t('memory.sourcePhraseLabel')}
         </p>
-        <input
-          type="text"
+        <textarea
+          ref={autoResizeTextarea}
+          rows={1}
           value={candidate.sourcePhrase}
-          onChange={(e) => onChange({ sourcePhrase: e.target.value })}
-          placeholder={t('memory.manualSourcePlaceholder')}
-          className="w-full bg-transparent text-sm text-editorial-charcoal outline-none"
+          onChange={(e) => { onChange({ sourcePhrase: e.target.value }); autoResizeTextarea(e.target); }}
+          className="w-full resize-none overflow-hidden bg-transparent text-sm leading-relaxed text-editorial-charcoal outline-none"
         />
       </div>
       <div className="rounded-md bg-editorial-textbox/45 px-3 py-2">
         <p className="mb-1 text-[10px] uppercase tracking-[0.28em] text-editorial-muted">
           {t('glossary.translation')}
         </p>
-        <input
-          type="text"
+        <textarea
+          ref={autoResizeTextarea}
+          rows={1}
           value={candidate.targetPhrase}
-          onChange={(e) => onChange({ targetPhrase: e.target.value })}
-          placeholder={t('memory.manualTargetPlaceholder')}
-          className="w-full bg-transparent text-sm text-editorial-ink outline-none"
+          onChange={(e) => { onChange({ targetPhrase: e.target.value }); autoResizeTextarea(e.target); }}
+          className="w-full resize-none overflow-hidden bg-transparent text-sm leading-relaxed text-editorial-ink outline-none"
         />
       </div>
     </article>

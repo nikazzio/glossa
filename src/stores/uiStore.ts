@@ -5,7 +5,6 @@ import type {
   ViewMode,
 } from '../types';
 
-export type { RunPhase } from './configStore';
 export type InsightsDrawerTab = 'index' | 'search' | 'stats' | 'coherence' | 'glossary';
 export type ChunkDrawerTab = 'summary' | 'audit' | 'notes' | 'operations' | 'memory';
 export type ChunkRailTab = 'audit' | 'notes' | 'memory' | 'references';

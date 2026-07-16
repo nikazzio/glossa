@@ -23,7 +23,6 @@ export type MemoryExtractionStatus = 'idle' | 'extracting' | 'reviewing' | 'savi
 export interface DraftEntry {
   status: MemoryExtractionStatus;
   candidates: PhraseCandidateDraft[];
-  expanded: boolean;
 }
 
 type PhraseMemoryDraftState = {
@@ -38,12 +37,11 @@ type PhraseMemoryDraftState = {
   toggleAccepted: (chunkId: string, candidateId: string) => void;
   addManualCandidate: (chunkId: string) => void;
   seedSavedCandidates: (chunkId: string, pairs: SavedPhrasePair[]) => void;
-  toggleExpanded: (chunkId: string) => void;
   clearDraft: (chunkId: string) => void;
   reset: () => void;
 };
 
-const EMPTY_ENTRY: DraftEntry = { status: 'idle', candidates: [], expanded: false };
+const EMPTY_ENTRY: DraftEntry = { status: 'idle', candidates: [] };
 
 function updateEntry(
   state: PhraseMemoryDraftState,
@@ -109,7 +107,6 @@ export const usePhraseMemoryDraftStore = create<PhraseMemoryDraftState>((set) =>
       const next = new Map(state.draftsByChunk);
       next.set(chunkId, {
         status: 'reviewing',
-        expanded: false,
         candidates: pairs.map((pair) => ({
           id: generateId('pmcand'),
           sourcePhrase: pair.sourcePhrase,
@@ -121,11 +118,6 @@ export const usePhraseMemoryDraftStore = create<PhraseMemoryDraftState>((set) =>
       });
       return { draftsByChunk: next };
     }),
-
-  toggleExpanded: (chunkId) =>
-    set((state) => ({
-      draftsByChunk: updateEntry(state, chunkId, (entry) => ({ ...entry, expanded: !entry.expanded })),
-    })),
 
   clearDraft: (chunkId) =>
     set((state) => {

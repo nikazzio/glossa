@@ -64,7 +64,7 @@ describe('usePipeline', () => {
     preflightMocks.showPreflightDialog.mockResolvedValue(true);
     usePhraseMemoryStore.getState().reset();
 
-    useConfigStore.setState({ pipelineMode: 'production' });
+    useConfigStore.setState({ repeatChunkCount: null });
     usePipelineStore.setState((state) => ({
       ...state,
       activePipelineId: 'cfg-proj-test',
