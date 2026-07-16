@@ -22,7 +22,7 @@ export function DeeplStageConfig({
   sourceLang,
   targetLanguage,
   glossaryEntries,
-  glossaryName,
+  glossaryName: _glossaryName,
   onChange,
 }: DeeplStageConfigProps) {
   const { t } = useTranslation();

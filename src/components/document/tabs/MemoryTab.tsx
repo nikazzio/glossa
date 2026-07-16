@@ -49,6 +49,10 @@ export function MemoryTab({ panelId, labelledBy, currentChunk }: MemoryTabProps)
     }
     void loadCount();
     return () => { cancelled = true; };
+    // Depending on the id (not the whole activeWorkspace object) on purpose:
+    // this only needs to refetch when the workspace actually changes, not on
+    // every re-render that happens to produce a new object reference.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeWorkspace?.id, currentChunkId]);
 
   const handleExtract = async () => {

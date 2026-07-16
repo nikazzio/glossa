@@ -116,6 +116,7 @@ function AnnotationCard({
           value={editAnchor}
           onChange={(e) => setEditAnchor(e.target.value)}
           placeholder={t('annotations.anchorPlaceholder')}
+          aria-label={t('annotations.anchorPlaceholder')}
           className="mt-2 w-full rounded-xl border border-editorial-border bg-editorial-textbox px-3 py-1.5 text-xs text-editorial-ink placeholder:text-editorial-muted/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
         />
         <div className="mt-3 flex items-center gap-2">
@@ -206,7 +207,11 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const footnotes = currentChunk?.footnotes ?? [];
-  const annotations = currentChunk ? (annotationsByChunkId.get(currentChunk.id) ?? []) : [];
+  const currentChunkId = currentChunk?.id;
+  const annotations = useMemo(
+    () => (currentChunkId ? annotationsByChunkId.get(currentChunkId) ?? [] : []),
+    [annotationsByChunkId, currentChunkId],
+  );
 
   // Number anchored notes by reading order in the final draft — the same order
   // the preview footnotes use — so each card shows its footnote number.

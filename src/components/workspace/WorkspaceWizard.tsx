@@ -41,6 +41,7 @@ export function WorkspaceWizard() {
         <input
           className={inputClass}
           placeholder={t('workspace.namePlaceholder')}
+          aria-label={t('workspace.namePlaceholder')}
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') void handleCreate(); }}
@@ -50,6 +51,7 @@ export function WorkspaceWizard() {
         <input
           className={inputClass}
           placeholder={t('workspace.descriptionPlaceholder')}
+          aria-label={t('workspace.descriptionPlaceholder')}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />

@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronRight, Crosshair, NotebookPen, ScanLine, ShieldCheck, RefreshCcw, AlertTriangle, Check, X } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useUiStore } from '../../stores/uiStore';
@@ -56,14 +56,14 @@ export function AuditPanel({ onRunAuditOnly, onReauditChunk }: AuditPanelProps) 
     if (ok) clearChunks();
   };
 
-  const toggleExpanded = (chunkId: string) => {
+  const toggleExpanded = useCallback((chunkId: string) => {
     setExpanded((prev) => {
       const next = new Set(prev);
       if (next.has(chunkId)) next.delete(chunkId);
       else next.add(chunkId);
       return next;
     });
-  };
+  }, []);
 
   return (
     <section className="col-span-1 md:col-span-3 p-8 bg-editorial-bg overflow-y-auto min-h-0 h-full flex flex-col gap-10 custom-scrollbar">
@@ -101,11 +101,11 @@ export function AuditPanel({ onRunAuditOnly, onReauditChunk }: AuditPanelProps) 
                     chunk={chunk}
                     index={index}
                     isExpanded={expanded.has(chunk.id)}
-                    onToggle={() => toggleExpanded(chunk.id)}
-                    onReaudit={() => onReauditChunk(chunk.id)}
+                    onToggle={toggleExpanded}
+                    onReaudit={onReauditChunk}
                     isProcessing={isProcessing}
-                    onToggleResolved={(issueIndex) => toggleJudgeIssueResolved(chunk.id, issueIndex)}
-                    onToggleRejected={(issueIndex) => toggleJudgeIssueRejected(chunk.id, issueIndex)}
+                    onToggleResolved={toggleJudgeIssueResolved}
+                    onToggleRejected={toggleJudgeIssueRejected}
                   />
                 );
               })}
@@ -152,19 +152,30 @@ interface ChunkAuditCardProps {
   chunk: TranslationChunk;
   index: number;
   isExpanded: boolean;
-  onToggle: () => void;
-  onReaudit: () => void;
+  onToggle: (chunkId: string) => void;
+  onReaudit: (chunkId: string) => void;
   isProcessing: boolean;
-  onToggleResolved: (issueIndex: number) => void;
-  onToggleRejected: (issueIndex: number) => void;
+  onToggleResolved: (chunkId: string, issueIndex: number) => void;
+  onToggleRejected: (chunkId: string, issueIndex: number) => void;
 }
 
-function ChunkAuditCard({
+const ChunkAuditCard = memo(function ChunkAuditCard({
   chunk, index, isExpanded, onToggle, onReaudit, isProcessing,
   onToggleResolved, onToggleRejected,
 }: ChunkAuditCardProps) {
   const { t } = useTranslation();
   const { focusIssueInChunk, clearFocusedIssue, focusedIssueQuery, setSelectedChunkId, setViewMode, setPendingAnnotationAnchor, setChunkRailTab, setProjectContextCollapsed } = useUiStore();
+  const chunkId = chunk.id;
+  const handleToggle = useCallback(() => onToggle(chunkId), [chunkId, onToggle]);
+  const handleReaudit = useCallback(() => onReaudit(chunkId), [chunkId, onReaudit]);
+  const handleToggleResolved = useCallback(
+    (issueIndex: number) => onToggleResolved(chunkId, issueIndex),
+    [chunkId, onToggleResolved],
+  );
+  const handleToggleRejected = useCallback(
+    (issueIndex: number) => onToggleRejected(chunkId, issueIndex),
+    [chunkId, onToggleRejected],
+  );
   const { judgeResult } = chunk;
   const isError = judgeResult.status === 'error';
   const issues = judgeResult.issues;
@@ -185,7 +196,7 @@ function ChunkAuditCard({
           id={cardId}
           aria-expanded={isExpanded}
           aria-controls={panelId}
-          onClick={onToggle}
+          onClick={handleToggle}
           className="flex-1 flex items-center justify-between gap-2 px-3 py-2 text-left hover:bg-editorial-textbox/40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
         >
           <span className="flex items-center gap-2 text-[10px] font-mono">
@@ -207,7 +218,7 @@ function ChunkAuditCard({
         </button>
         <button
           type="button"
-          onClick={(e) => { e.stopPropagation(); onReaudit(); }}
+          onClick={(e) => { e.stopPropagation(); handleReaudit(); }}
           disabled={isProcessing || !chunk.translationDisplayText}
           data-tooltip={chunk.translationDisplayText ? t('pipeline.reauditChunk') : t('pipeline.auditSkippedNoDraft')}
           aria-label={t('pipeline.reauditChunk')}
@@ -293,7 +304,7 @@ function ChunkAuditCard({
                           type="button"
                           onClick={() => {
                             if (isActive) clearFocusedIssue();
-                            onToggleResolved(i);
+                            handleToggleResolved(i);
                           }}
                           data-tooltip={isResolved ? t('audit.markUnresolved') : t('audit.markResolved')}
                           aria-label={isResolved ? t('audit.markUnresolved') : t('audit.markResolved')}
@@ -309,7 +320,7 @@ function ChunkAuditCard({
                           type="button"
                           onClick={() => {
                             if (isActive) clearFocusedIssue();
-                            onToggleRejected(i);
+                            handleToggleRejected(i);
                           }}
                           data-tooltip={isRejected ? t('audit.markUnrejected') : t('audit.markRejected')}
                           aria-label={isRejected ? t('audit.markUnrejected') : t('audit.markRejected')}
@@ -362,4 +373,4 @@ function ChunkAuditCard({
       )}
     </div>
   );
-}
+});

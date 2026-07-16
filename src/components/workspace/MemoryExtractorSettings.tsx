@@ -268,6 +268,7 @@ export function MemoryExtractorSettings({
                 if (e.key === 'Escape') { setShowSaveName(false); setTemplateName(''); }
               }}
               placeholder={t('pipeline.templates.namePlaceholder')}
+              aria-label={t('pipeline.templates.namePlaceholder')}
               // eslint-disable-next-line jsx-a11y/no-autofocus -- campo che compare da un click esplicito (salva template)
               autoFocus
               className="flex-1 rounded border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
@@ -299,6 +300,7 @@ export function MemoryExtractorSettings({
                 value={templateSearch}
                 onChange={(e) => setTemplateSearch(e.target.value)}
                 placeholder={t('pipeline.templates.searchPlaceholder')}
+                aria-label={t('pipeline.templates.searchPlaceholder')}
                 // eslint-disable-next-line jsx-a11y/no-autofocus -- casella di ricerca che compare aprendo l'elenco template
                 autoFocus
                 className="w-full rounded border border-editorial-border/40 bg-editorial-textbox/60 px-2 py-1 text-sm font-mono outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"

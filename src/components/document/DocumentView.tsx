@@ -238,7 +238,6 @@ export function DocumentView({
     enabledStages,
     lastStageId,
     isEditorialMode,
-    selectedStageId: _selectedStageId,
     setSelectedStageId,
     effectiveSelectedStageId,
     isLastSelected,
@@ -254,11 +253,8 @@ export function DocumentView({
     setSourcePaneSearch,
     translationPaneSearch,
     setTranslationPaneSearch,
-    showHighlight,
     sourceHighlightHtml,
-    translationHighlight,
     translationHighlightHtml,
-    translationEffectiveSearch,
     setSelectedChunkId,
   } = useDocumentViewState();
 

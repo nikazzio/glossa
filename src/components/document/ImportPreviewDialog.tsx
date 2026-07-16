@@ -7,15 +7,12 @@ import {
   AlertTriangle,
   ArrowLeftRight,
   CheckCircle2,
-  ChevronDown,
-  ChevronUp,
   Cpu,
   FileText,
   Globe,
   Hash,
   Info,
   LayoutGrid,
-  Merge,
   RotateCcw,
   Scissors,
   SplitSquareVertical,
@@ -29,7 +26,6 @@ import { usePipelineStore } from '../../stores/pipelineStore';
 import { checkContextOverflow, estimateCharTokens } from '../../utils/tokenEstimate';
 import { LANGUAGES } from '../../constants';
 import { getSelectableModelIds, LLM_PROVIDER_ORDER } from '../../models/catalog';
-import { useUiStore } from '../../stores/uiStore';
 import { useConfigStore } from '../../stores/configStore';
 import type { ModelProvider } from '../../types';
 import { IconButton, DialogConfirmButton, DialogCancelButton } from '../ui';
@@ -163,7 +159,7 @@ export function ImportPreviewDialog({
       format,
       experimental,
     }),
-    [useChunking, effectiveWordsPerChunk, markdownAware, activePresetWords, headingAware, carryTrailingShortBlocks, format, experimental, text],
+    [useChunking, effectiveWordsPerChunk, markdownAware, effectiveMinWords, effectiveMaxWords, headingAware, carryTrailingShortBlocks, format, experimental, text],
   );
 
   const algorithmicParaChunks = useMemo(

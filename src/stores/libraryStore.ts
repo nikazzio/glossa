@@ -44,6 +44,11 @@ interface LibraryState {
   saveAllDirty: () => Promise<void>;
 }
 
+// Ordina le richieste di caricamento glossari: se cambio workspace prima che
+// la richiesta precedente risponda, quella risposta tardiva non deve più
+// sovrascrivere lo stato del workspace corrente.
+let loadGlossariesRequestId = 0;
+
 export const useLibraryStore = create<LibraryState>((set, get) => ({
   showLibraryPanel: false,
   activeTab: 'dictionaries',
@@ -61,7 +66,9 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   loadGlossaries: async (workspaceId) => {
     const state = get();
     if (state.isLoaded && state.loadedForWorkspaceId === workspaceId) return;
+    const requestId = ++loadGlossariesRequestId;
     const glossaries = await listGlossaries(workspaceId);
+    if (requestId !== loadGlossariesRequestId) return;
     set({ glossaries, isLoaded: true, loadedForWorkspaceId: workspaceId });
   },
 
@@ -86,7 +93,8 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   deleteGlossary: async (id) => {
     await deleteGlossary(id);
     set((state) => {
-      const { [id]: _removed, ...restEntries } = state.entriesMap;
+      const restEntries = { ...state.entriesMap };
+      delete restEntries[id];
       return {
         glossaries: state.glossaries.filter((g) => g.id !== id),
         entriesMap: restEntries,

@@ -81,8 +81,8 @@ export function PromptTemplatesTab() {
       const refined = await llmService.refinePrompt(newPrompt, refineProvider, refineModel, newContext);
       setNewPrompt(refined);
       toast.success(t('pipeline.refined'));
-    } catch (err: any) {
-      toast.error(t('pipeline.refineFailed'), { description: err?.message });
+    } catch (err: unknown) {
+      toast.error(t('pipeline.refineFailed'), { description: err instanceof Error ? err.message : String(err) });
     } finally {
       setIsRefining(false);
     }
@@ -114,8 +114,8 @@ export function PromptTemplatesTab() {
       setNewName('');
       setNewPrompt('');
       setCreating(false);
-    } catch (err: any) {
-      toast.error(t('errors.somethingWentWrong'), { description: err?.message });
+    } catch (err: unknown) {
+      toast.error(t('errors.somethingWentWrong'), { description: err instanceof Error ? err.message : String(err) });
     }
   };
 
@@ -130,8 +130,8 @@ export function PromptTemplatesTab() {
     try {
       await deleteTemplate(id);
       toast.success(t('pipeline.templates.deleted'));
-    } catch (err: any) {
-      toast.error(t('errors.somethingWentWrong'), { description: err?.message });
+    } catch (err: unknown) {
+      toast.error(t('errors.somethingWentWrong'), { description: err instanceof Error ? err.message : String(err) });
     }
   };
 

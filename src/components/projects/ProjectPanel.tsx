@@ -60,8 +60,8 @@ export function ProjectPanel() {
     try {
       await saveCurrentProject();
       toast.success(t('projects.saved'));
-    } catch (err: any) {
-      toast.error(t('projects.saveFailed'), { description: err?.message });
+    } catch (err: unknown) {
+      toast.error(t('projects.saveFailed'), { description: err instanceof Error ? err.message : String(err) });
     }
   };
 
@@ -76,8 +76,8 @@ export function ProjectPanel() {
     try {
       await removeProject(project.id);
       toast.success(t('projects.deleted'));
-    } catch (err: any) {
-      toast.error(t('projects.deleteFailed'), { description: err?.message });
+    } catch (err: unknown) {
+      toast.error(t('projects.deleteFailed'), { description: err instanceof Error ? err.message : String(err) });
     }
   };
 

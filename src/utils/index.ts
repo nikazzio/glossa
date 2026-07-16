@@ -382,11 +382,6 @@ function splitLargeChunks(chunks: string[], maxWords: number, options: ChunkText
   return result;
 }
 
-function splitMarkdownBlocks(text: string): string[] {
-  const mergedBlocks = mergeMarkdownFootnoteBlocks(text, getBlockRanges(text));
-  return mergedBlocks.map(({ start, end }) => text.slice(start, end));
-}
-
 function findNearestMarkdownBoundary(text: string, pivot: number): number | null {
   const candidates = Array.from(text.matchAll(/\n{2,}/g))
     .map((match) => (match.index ?? 0) + match[0].length)

@@ -160,7 +160,7 @@ interface ChunksState {
   ) => void;
 }
 
-export const useChunksStore = create<ChunksState>((set, get) => ({
+export const useChunksStore = create<ChunksState>((set) => ({
   chunks: [],
   isProcessing: false,
   cancelRequested: false,

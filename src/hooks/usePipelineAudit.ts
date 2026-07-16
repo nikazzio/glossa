@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { usePipelineStore } from '../stores/pipelineStore';
@@ -102,7 +102,10 @@ export function usePipelineAudit(ensureProvidersReady: EnsureProvidersReady) {
   const { config } = usePipelineStore();
   const { t } = useTranslation();
 
-  const judgeActions = { updateChunkJudge, updateChunkStatus, t };
+  const judgeActions = useMemo(
+    () => ({ updateChunkJudge, updateChunkStatus, t }),
+    [updateChunkJudge, updateChunkStatus, t],
+  );
 
   const runAuditOnly = useCallback(async () => {
     if (useChunksStore.getState().isProcessing) return;
@@ -143,7 +146,7 @@ export function usePipelineAudit(ensureProvidersReady: EnsureProvidersReady) {
       pipelineLog.auditBatchCompleted();
       toast.success(t('errors.reEvalCompleted'));
     }
-  }, [config, t, setIsProcessing, updateChunkJudge, updateChunkStatus, updateChunkDraft, ensureProvidersReady]);
+  }, [config, t, setIsProcessing, judgeActions, updateChunkDraft, ensureProvidersReady]);
 
   const auditSingleChunk = useCallback(async (chunkId: string) => {
     if (useChunksStore.getState().isProcessing) return;
@@ -176,7 +179,7 @@ export function usePipelineAudit(ensureProvidersReady: EnsureProvidersReady) {
       pipelineLog.auditSingleCompleted(chunkId);
       toast.success(t('pipeline.singleChunkAudited'));
     }
-  }, [config, t, setIsProcessing, updateChunkJudge, updateChunkStatus, updateChunkDraft, ensureProvidersReady]);
+  }, [config, t, setIsProcessing, judgeActions, updateChunkDraft, ensureProvidersReady]);
 
   const runCoherenceAudit = useCallback(async () => {
     if (useChunksStore.getState().isProcessing) return;

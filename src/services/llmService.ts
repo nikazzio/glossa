@@ -129,7 +129,8 @@ export const llmService = {
         streamId,
         ollamaBaseUrl: useConfigStore.getState().ollamaBaseUrl,
       });
-      const { content: _usageContent, ...usageMeta } = result;
+      const usageMeta: Record<string, unknown> = { ...result };
+      delete usageMeta.content;
       logOperation({
         level: 'info',
         scope: 'invoke',

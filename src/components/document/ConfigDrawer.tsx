@@ -35,7 +35,7 @@ export function ConfigDrawer({
   const [isSavingGlossary, setIsSavingGlossary] = useState(false);
   const { config, setConfig, assignGlossary } = usePipelineStore();
   const { chunks, resetAllChunks, isProcessing } = useChunksStore();
-  const { glossaries, setShowLibraryPanel, loadGlossaries, isLoaded } = useLibraryStore();
+  const { glossaries, setShowLibraryPanel, loadGlossaries } = useLibraryStore();
   const { activeWorkspace } = useWorkspaceStore();
   const { currentProjectId, pipelines, activePipelineId, renamePipeline } = useProjectStore();
   const activePipeline = pipelines.find((p) => p.id === activePipelineId);
@@ -78,8 +78,8 @@ export function ConfigDrawer({
       } else {
         await assignGlossary(null);
       }
-    } catch (err: any) {
-      toast.error(t('library.dictionaryAssignError'), { description: err?.message });
+    } catch (err: unknown) {
+      toast.error(t('library.dictionaryAssignError'), { description: err instanceof Error ? err.message : String(err) });
     }
   };
 
@@ -90,8 +90,8 @@ export function ConfigDrawer({
       await upsertGlossaryEntries(config.assignedGlossaryId, config.glossary);
       setGlossaryDirty(false);
       toast.success(t('library.dictionarySaved'));
-    } catch (err: any) {
-      toast.error(t('library.dictionarySaveError'), { description: err?.message });
+    } catch (err: unknown) {
+      toast.error(t('library.dictionarySaveError'), { description: err instanceof Error ? err.message : String(err) });
     } finally {
       setIsSavingGlossary(false);
     }
