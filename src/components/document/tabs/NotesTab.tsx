@@ -292,7 +292,6 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
           </div>
           <TypeSelector selected={formType} onSelect={setFormType} />
           <textarea
-            // eslint-disable-next-line jsx-a11y/no-autofocus -- form nota che si apre da un click esplicito (nuova nota)
             autoFocus
             value={formContent}
             onChange={(e) => setFormContent(e.target.value)}

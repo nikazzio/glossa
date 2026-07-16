@@ -77,7 +77,7 @@ npm run docs:build
 ### Check di sviluppo
 
 ```bash
-npm run lint:all
+npm run lint
 npm test
 npm run build
 ```

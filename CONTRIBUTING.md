@@ -23,7 +23,7 @@ npm run tauri:build  # production build
 ### Checks
 
 ```bash
-npm run lint:all                  # TypeScript type-check + ESLint
+npm run lint                      # TypeScript type-check
 cd src-tauri && cargo check       # Rust type-check
 ```
 

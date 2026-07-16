@@ -172,7 +172,6 @@ export function PromptTemplatesTab() {
         <div className="space-y-4 border-l-4 border-l-editorial-accent/35 border-y border-editorial-border/70 bg-editorial-bg/45 px-4 py-5">
           <div className="grid gap-3 sm:grid-cols-[2fr_1fr_1fr]">
             <input
-              // eslint-disable-next-line jsx-a11y/no-autofocus -- campo che compare da un click esplicito (crea nuovo template)
               autoFocus
               value={newName}
               onChange={(e) => setNewName(e.target.value)}

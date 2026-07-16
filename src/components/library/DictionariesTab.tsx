@@ -186,7 +186,6 @@ export function DictionariesTab() {
       {creating && (
         <div className="flex flex-col gap-3 border-y border-editorial-border/70 py-4 sm:flex-row sm:items-center">
           <input
-            // eslint-disable-next-line jsx-a11y/no-autofocus -- campo che compare da un click esplicito (crea nuovo glossario)
             autoFocus
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
@@ -247,7 +246,6 @@ export function DictionariesTab() {
                     : <ChevronDown size={14} className="shrink-0 text-editorial-muted" />}
                   {renamingId === g.id ? (
                     <input
-                      // eslint-disable-next-line jsx-a11y/no-autofocus -- campo rinomina che compare da un click esplicito
                       autoFocus
                       value={renameValue}
                       onChange={(e) => setRenameValue(e.target.value)}

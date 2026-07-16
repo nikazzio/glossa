@@ -201,7 +201,6 @@ function WorkspaceSection({ collapsed }: { collapsed: boolean }) {
               }}
               placeholder={t('workspace.namePlaceholder')}
               className="w-full rounded-md border border-editorial-border bg-editorial-textbox/30 px-3 py-2.5 text-sm text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              // eslint-disable-next-line jsx-a11y/no-autofocus -- campo che compare da un click esplicito (crea nuovo workspace)
               autoFocus
             />
           </label>

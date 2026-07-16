@@ -35,7 +35,6 @@ export function PillButton({
       type={type}
       onClick={onClick}
       disabled={disabled}
-      // eslint-disable-next-line jsx-a11y/no-autofocus -- il chiamante lo passa solo per il pulsante aperto da un'azione esplicita
       autoFocus={autoFocus}
       className={`${BASE} ${VARIANT_CLASS[variant]} ${className}`}
     >

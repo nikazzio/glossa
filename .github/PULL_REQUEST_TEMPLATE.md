@@ -12,7 +12,7 @@
 
 ## Checklist
 
-- [ ] `npm run lint:all` passes (typecheck + ESLint)
+- [ ] `npm run lint` passes
 - [ ] `cargo check` passes (if Rust changes)
 - [ ] Tested locally
 - [ ] i18n keys added for both EN and IT (if UI changes)

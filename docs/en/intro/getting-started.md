@@ -89,7 +89,7 @@ npm run docs:build
 ## Development checks
 
 ```bash
-npm run lint:all
+npm run lint
 npm test
 npm run build
 ```

@@ -75,7 +75,6 @@ export function ApiKeyInput({ label, provider, onKeyChange }: ApiKeyInputProps) 
               if (e.key === 'Enter') handleSave();
               if (e.key === 'Escape') { setEditing(false); setKeyValue(''); }
             }}
-            // eslint-disable-next-line jsx-a11y/no-autofocus -- campo che compare da un click esplicito (modifica chiave)
             autoFocus
           />
           <Tooltip label={t('settings.save')}>

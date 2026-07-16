@@ -44,7 +44,6 @@ export function WorkspaceWizard() {
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') void handleCreate(); }}
-          // eslint-disable-next-line jsx-a11y/no-autofocus -- procedura guidata aperta da un click esplicito
           autoFocus
         />
         <input

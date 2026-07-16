@@ -182,7 +182,7 @@ Bundles are in `src-tauri/target/release/bundle/`.
 ### Development checks
 
 ```bash
-npm run lint:all
+npm run lint
 npm test
 npm run build
 cd src-tauri

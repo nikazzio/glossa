@@ -147,13 +147,12 @@ export function friendlyError(message: string): string {
       return 'Network error. Please check your internet connection.';
     case 'parse':
       return 'The AI returned an unexpected response format.';
-    case 'api': {
+    case 'api':
       // Extract status code if present, strip raw response body
       const statusMatch = message.match(/\((\d{3})\)/);
       return statusMatch
         ? `API error (HTTP ${statusMatch[1]}). Please try again.`
         : 'API error. Please try again.';
-    }
     default:
       return message.length > 120 ? message.slice(0, 120) + '…' : message;
   }
