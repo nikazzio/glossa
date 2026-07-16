@@ -126,10 +126,11 @@ export function TranslationsSettingsTab({
         </div>
         <div className="grid grid-cols-3 gap-4">
           <div className="space-y-1.5">
-            <label className="block text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
+            <label htmlFor="settings-chunk-preset-short" className="block text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
               {t('settings.chunkPresetShort')}
             </label>
             <input
+              id="settings-chunk-preset-short"
               type="number"
               min={50}
               max={chunkPresetMedium - 50}
@@ -140,10 +141,11 @@ export function TranslationsSettingsTab({
             />
           </div>
           <div className="space-y-1.5">
-            <label className="block text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
+            <label htmlFor="settings-chunk-preset-medium" className="block text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
               {t('settings.chunkPresetMedium')}
             </label>
             <input
+              id="settings-chunk-preset-medium"
               type="number"
               min={chunkPresetShort + 50}
               max={chunkPresetLong - 50}
@@ -154,10 +156,11 @@ export function TranslationsSettingsTab({
             />
           </div>
           <div className="space-y-1.5">
-            <label className="block text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
+            <label htmlFor="settings-chunk-preset-long" className="block text-[11px] font-sans uppercase tracking-[0.16em] text-editorial-muted">
               {t('settings.chunkPresetLong')}
             </label>
             <input
+              id="settings-chunk-preset-long"
               type="number"
               min={chunkPresetMedium + 50}
               step={50}
