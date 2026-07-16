@@ -168,7 +168,7 @@ export function SettingsTabPanel({
       {/* Language pair */}
       <div className="space-y-2">
         <SectionLabel icon={Globe} label={t('pipeline.languagePair')} />
-        <div className={`flex items-center gap-3 transition-opacity ${!!config.persona ? 'opacity-40 pointer-events-none' : ''}`}>
+        <div className={`flex items-center gap-3 transition-opacity ${config.persona ? 'opacity-40 pointer-events-none' : ''}`}>
           <select
             value={config.sourceLanguage}
             onChange={(e) => setConfig((prev) => ({ ...prev, sourceLanguage: e.target.value }))}

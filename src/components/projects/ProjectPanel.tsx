@@ -177,6 +177,7 @@ export function ProjectPanel() {
                             }}
                             placeholder={t('projects.namePlaceholder')}
                             className="w-full rounded-md border border-editorial-border bg-editorial-bg/80 px-4 py-3 text-sm text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                            // eslint-disable-next-line jsx-a11y/no-autofocus -- campo rinomina che compare da un click esplicito
                             autoFocus
                           />
                         </label>

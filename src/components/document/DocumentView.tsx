@@ -170,6 +170,7 @@ function DocumentPage({
             value={searchValue ?? ''}
             onChange={onSearchChange}
             label={searchLabel}
+            // eslint-disable-next-line jsx-a11y/no-autofocus -- si apre da un'azione esplicita dell'utente (mostra ricerca)
             autoFocus
           />
         ) : null}

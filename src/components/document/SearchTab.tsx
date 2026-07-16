@@ -203,7 +203,6 @@ export function SearchTab({ panelId, labelledBy, chunks, currentChunkId, onSelec
                     </div>
                     <p
                       className="text-xs leading-snug text-editorial-muted"
-                      // eslint-disable-next-line react/no-danger
                       dangerouslySetInnerHTML={{ __html: highlightSnippet(snippet, debouncedQuery) }}
                     />
                   </button>

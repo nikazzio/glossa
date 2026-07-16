@@ -316,7 +316,7 @@ export function PipelineConfig({
         <div className="shrink-0 border-b border-editorial-border px-6 py-5 space-y-5">
           <div className="space-y-2">
             <SectionLabel icon={Globe} label={t('pipeline.languagePair')} />
-            <div className={`flex items-center gap-3 transition-opacity ${!!config.persona ? 'opacity-40 pointer-events-none' : ''}`}>
+            <div className={`flex items-center gap-3 transition-opacity ${config.persona ? 'opacity-40 pointer-events-none' : ''}`}>
               <select
                 value={config.sourceLanguage}
                 onChange={(e) => setConfig((prev) => ({ ...prev, sourceLanguage: e.target.value }))}

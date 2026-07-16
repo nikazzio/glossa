@@ -27,6 +27,7 @@ export function PaneSearch({ value, onChange, label, autoFocus = false }: PaneSe
           onChange={(event) => onChange(event.target.value)}
           placeholder={t('document.searchChunkPlaceholder')}
           aria-label={label}
+          // eslint-disable-next-line jsx-a11y/no-autofocus -- il chiamante lo passa solo quando la ricerca si apre da un'azione esplicita
           autoFocus={autoFocus}
           className="min-w-0 flex-1 bg-transparent text-xs text-editorial-ink placeholder:text-editorial-muted/55 focus:outline-none"
         />

@@ -15,7 +15,6 @@ export const HighlightedText = forwardRef<HTMLDivElement, Props>(
         className={`w-full whitespace-pre-wrap break-words ${className}`}
         style={style}
         {...rest}
-        // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: html }}
       />
     );
