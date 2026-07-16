@@ -195,7 +195,7 @@
     "translateChunk": "Traduci chunk",
     "executeAll": "Esegui tutto",
     "executeLimited": "Esegui ({{count}} blocchi)",
-    "repeatModeLabel": "Chunck multipli",
+    "repeatModeLabel": "Blocchi multipli",
     "repeatChunkCountLabel": "Numero di blocchi da elaborare",
     "repeatChunkCountDecrease": "Riduci numero di blocchi",
     "repeatChunkCountIncrease": "Aumenta numero di blocchi",
@@ -1498,7 +1498,8 @@
     "toggleSavedListHide": "Nascondi frasi già salvate",
     "savedCandidateLabel": "Già salvata",
     "referencesGlossaryHint": "L'intero glossario del progetto viene sempre incluso nella traduzione di questo frammento.",
-    "referencesMemorySectionTitle": "Frasi simili in memoria"
+    "referencesMemorySectionTitle": "Frasi simili in memoria",
+    "selectionHint": "Seleziona le frasi da usare per la traduzione di questo frammento."
   },
   "glossary": {
     "translation": "Traduzione",

@@ -4,6 +4,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { usePipelineStore } from '../../../stores/pipelineStore';
 import { useChunksStore } from '../../../stores/chunksStore';
 import { useUiStore } from '../../../stores/uiStore';
+import { useConfigStore } from '../../../stores/configStore';
 import { useAnnotationsStore } from '../../../stores/annotationsStore';
 import { useGlossaryHighlight, escapeHtml, type AnnotationAnchor } from '../../../hooks/useGlossaryHighlight';
 import { useStageDiff } from '../../../hooks/useStageDiff';
@@ -40,6 +41,9 @@ export function useDocumentViewState() {
     })),
   );
 
+  const repeatChunkCount = useConfigStore((state) => state.repeatChunkCount);
+  const setRepeatChunkCount = useConfigStore((state) => state.setRepeatChunkCount);
+
   const [viewportWidth, setViewportWidth] = useState(
     typeof window === 'undefined' ? 0 : window.innerWidth,
   );
@@ -54,6 +58,15 @@ export function useDocumentViewState() {
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
+
+  useEffect(() => {
+    // Un limite persistito più alto del documento corrente (es. aperto un
+    // documento più corto di uno precedente) non deve bloccare "Blocchi
+    // multipli" a un numero incoerente: torna a "nessun limite".
+    if (chunks.length > 0 && repeatChunkCount !== null && repeatChunkCount > chunks.length) {
+      setRepeatChunkCount(null);
+    }
+  }, [chunks.length, repeatChunkCount, setRepeatChunkCount]);
 
 
   const resolvedLayout =

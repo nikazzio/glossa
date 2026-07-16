@@ -1499,7 +1499,8 @@
     "toggleSavedListHide": "Hide already saved phrases",
     "savedCandidateLabel": "Already saved",
     "referencesGlossaryHint": "The entire project glossary is always included when translating this segment.",
-    "referencesMemorySectionTitle": "Similar phrases in memory"
+    "referencesMemorySectionTitle": "Similar phrases in memory",
+    "selectionHint": "Select the phrases to use for translating this segment."
   },
   "glossary": {
     "translation": "Translation",

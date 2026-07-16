@@ -51,7 +51,7 @@ be perfect in one chapter and wrong in another: it should be selected, not merel
 ## Recommended workflow
 
 1. Start with a small glossary for names, terms, and non-negotiable translations.
-2. Run a few chunks in Test mode.
+2. Run a few chunks at a time: turn on the "Multiple chunks" toggle and use +/- to set a low number of segments to process.
 3. Keep only the genuinely good outputs: lock those segments (the translation is final).
 4. On a locked segment's Memory tab, extract phrases, review them (accept/discard/fix, or add manually), and confirm only when you're sure — nothing is ever saved automatically.
 5. On later segments' References tab, check the suggested matches and only tick the relevant ones before running.
