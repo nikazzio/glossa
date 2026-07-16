@@ -134,7 +134,7 @@ export function AuditPanel({ onRunAuditOnly, onReauditChunk }: AuditPanelProps) 
           <button
             onClick={onRunAuditOnly}
             disabled={cannotRun}
-            className="w-full bg-transparent border border-editorial-ink text-editorial-ink px-4 py-4 text-[11px] font-bold uppercase tracking-[3px] hover:bg-editorial-ink hover:text-white transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed group shadow-sm active:translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
+            className="w-full bg-transparent border border-editorial-ink text-editorial-ink px-4 py-4 text-xs font-bold uppercase tracking-[3px] hover:bg-editorial-ink hover:text-white transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed group shadow-sm active:translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
           >
             <RefreshCcw size={14} className={isProcessing ? 'animate-spin' : ''} /> {t('audit.reEvaluate')}
           </button>
@@ -146,7 +146,7 @@ export function AuditPanel({ onRunAuditOnly, onReauditChunk }: AuditPanelProps) 
           <button
             onClick={handleClearStream}
             disabled={chunks.length === 0 || isProcessing}
-            className="w-full border border-editorial-border px-4 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-editorial-textbox/50 hover:text-editorial-accent transition-all flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
+            className="w-full border border-editorial-border px-4 py-3 text-xs font-bold uppercase tracking-widest hover:bg-editorial-textbox/50 hover:text-editorial-accent transition-all flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {t('audit.clearStream')}
           </button>
@@ -355,7 +355,7 @@ const ChunkAuditCard = memo(function ChunkAuditCard({
                         {issue.phrase && (
                           <div>
                             <span className="block text-[9px] font-bold uppercase tracking-widest text-editorial-accent">{t('audit.issuePhraseContext')}</span>
-                            <p className="mt-0.5 text-[11px] leading-relaxed text-editorial-ink">&ldquo;{issue.phrase}&rdquo;</p>
+                            <p className="mt-0.5 text-xs leading-relaxed text-editorial-ink">&ldquo;{issue.phrase}&rdquo;</p>
                           </div>
                         )}
                         {issue.sourcePhrase && (
@@ -367,13 +367,13 @@ const ChunkAuditCard = memo(function ChunkAuditCard({
                         {chunk.sourceDisplayText && (
                           <div>
                             <span className="block text-[9px] font-bold uppercase tracking-widest text-editorial-muted">{t('audit.issueSourceContext')}</span>
-                            <p className="mt-0.5 text-[11px] leading-relaxed text-editorial-muted line-clamp-3">{chunk.sourceDisplayText}</p>
+                            <p className="mt-0.5 text-xs leading-relaxed text-editorial-muted line-clamp-3">{chunk.sourceDisplayText}</p>
                           </div>
                         )}
                       </div>
                     )}
                     {issue.suggestedFix && (
-                      <div className="rounded-xl border border-editorial-border/70 bg-editorial-bg px-3 py-2 text-[11px] leading-relaxed text-editorial-muted">
+                      <div className="rounded-xl border border-editorial-border/70 bg-editorial-bg px-3 py-2 text-xs leading-relaxed text-editorial-muted">
                         {t('audit.fix')}: {issue.suggestedFix}
                       </div>
                     )}

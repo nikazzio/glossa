@@ -2,7 +2,7 @@ import { AlertTriangle, ChevronDown, ChevronUp, Merge, Scissors } from 'lucide-r
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { type ParagraphChunks, countWords } from '../../utils/paragraphChunks';
-import { Tooltip } from '../ui';
+import { IconButton, Tooltip } from '../ui';
 
 const COLLAPSE_CHAR_THRESHOLD = 200;
 const PREVIEW_HEAD_CHARS = Math.round(COLLAPSE_CHAR_THRESHOLD * 0.9);
@@ -74,16 +74,9 @@ export function ChunkCard({
         </div>
         <div className="flex items-center gap-1.5">
           {canSplit && (
-            <Tooltip label={t('files.boundarySplit')}>
-              <button
-                type="button"
-                onClick={onSplit}
-                aria-label={t('files.boundarySplit')}
-                className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              >
-                <Scissors size={13} />
-              </button>
-            </Tooltip>
+            <IconButton size="sm" onClick={onSplit} title={t('files.boundarySplit')}>
+              <Scissors size={13} />
+            </IconButton>
           )}
           <Tooltip label={isExpanded ? t('files.collapseChunk') : t('files.expandChunk')}>
             <button

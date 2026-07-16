@@ -340,7 +340,7 @@ export function ProductionStream({
                 type="button"
                 onClick={() => setHighlightsEnabled(!highlightsEnabled)}
                 aria-pressed={highlightsEnabled}
-                className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                className={`flex items-center gap-1 text-xs font-bold uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
                   highlightsEnabled ? 'text-editorial-ink' : 'text-editorial-muted hover:text-editorial-ink'
                 }`}
               >
@@ -354,7 +354,7 @@ export function ProductionStream({
               <button
                 onClick={handleClearStream}
                 disabled={isProcessing}
-                className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent transition-colors flex items-center gap-1 disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="text-xs font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent transition-colors flex items-center gap-1 disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               >
                 <Trash2 size={12} /> {t('pipeline.clearStream')}
               </button>
@@ -404,7 +404,7 @@ export function ProductionStream({
                     type="button"
                     onClick={() => setConfig((prev) => ({ ...prev, wordsPerChunk: chunkPresetMedium }))}
                     disabled={recommendedChunks === 0}
-                    className="text-[10px] font-bold uppercase tracking-widest text-editorial-accent disabled:text-editorial-muted disabled:opacity-50"
+                    className="text-xs font-bold uppercase tracking-widest text-editorial-accent disabled:text-editorial-muted disabled:opacity-50"
                   >
                     {t('pipeline.useRecommendation')}
                   </button>
@@ -416,7 +416,7 @@ export function ProductionStream({
             </div>
             <button
               onClick={generateChunks}
-              className="w-full bg-editorial-ink text-white px-6 py-5 text-[11px] font-bold uppercase tracking-[3px] hover:shadow-xl transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
+              className="w-full bg-editorial-ink text-white px-6 py-5 text-xs font-bold uppercase tracking-[3px] hover:shadow-xl transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
             >
               {t('pipeline.stageContent')}
             </button>
@@ -424,7 +424,7 @@ export function ProductionStream({
               <button
                 type="button"
                 onClick={() => loadDocument(inputText, { useChunking: config.useChunking, targetWordsPerChunk: config.wordsPerChunk, markdownAware: config.markdownAware })}
-                className="w-full rounded-full border border-editorial-border px-6 py-4 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink"
+                className="w-full rounded-full border border-editorial-border px-6 py-4 text-xs font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink"
               >
                 {t('document.openInReader')}
               </button>
@@ -448,7 +448,7 @@ export function ProductionStream({
             <button
               type="button"
               onClick={() => loadDocument(inputText, { useChunking: config.useChunking, targetWordsPerChunk: config.wordsPerChunk, markdownAware: config.markdownAware })}
-              className="rounded-full border border-editorial-border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink"
+              className="rounded-full border border-editorial-border px-4 py-2 text-xs font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink"
             >
               {t('document.openInReader')}
             </button>
