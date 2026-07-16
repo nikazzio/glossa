@@ -1,10 +1,11 @@
 import {
-  FileText,
-  Files,
   Info,
   Languages,
   Loader2,
+  Minus,
   Play,
+  Plus,
+  Repeat,
   Square,
 } from 'lucide-react';
 import {
@@ -27,7 +28,7 @@ import { useUiStore } from '../../../stores/uiStore';
 import { useConfigStore } from '../../../stores/configStore';
 import { estimatePipelineCost } from '../../../utils/costEstimate';
 import { CostBreakdownPanel } from '../../pipeline/CostBadge';
-import { IconButton } from '../../ui';
+import { IconButton, Tooltip } from '../../ui';
 
 const COST_PANEL_OFFSET = 12;
 const COST_PANEL_WIDTH = 256;
@@ -125,20 +126,31 @@ export function PipelineSidebarRunSection({
   const isProcessing = useChunksStore((state) => state.isProcessing);
   const cancelRequested = useChunksStore((state) => state.cancelRequested);
   const totalChunks = useChunksStore((state) => state.chunks.length);
-  const pipelineMode = useConfigStore((state) => state.pipelineMode);
-  const pipelineTestChunkCount = useConfigStore((state) => state.pipelineTestChunkCount);
-  const isTestRun = pipelineMode === 'test';
-  // In modalità Test la pipeline elabora solo i primi N chunk: tooltip e
-  // contatore devono riflettere il run reale, non l'intero documento.
-  const runChunkCount = isTestRun ? Math.min(pipelineTestChunkCount, totalChunks) : totalChunks;
+  const repeatChunkCount = useConfigStore((state) => state.repeatChunkCount);
+  const setRepeatChunkCount = useConfigStore((state) => state.setRepeatChunkCount);
+  const isLimitedRun = repeatChunkCount !== null && repeatChunkCount < totalChunks;
+  // Se l'utente ha impostato un numero, il run reale si ferma lì: tooltip e
+  // contatore devono riflettere quel numero, non l'intero documento.
+  const runChunkCount = isLimitedRun ? repeatChunkCount : totalChunks;
+  // Senza limite esplicito il contatore mostra il totale (equivale a "tutti");
+  // +/- partono sempre da un numero concreto, mai da un valore vuoto.
+  const effectiveRepeatCount = repeatChunkCount ?? totalChunks;
+  const canDecreaseRepeatCount = !isProcessing && effectiveRepeatCount > 1;
+  const canIncreaseRepeatCount = !isProcessing && effectiveRepeatCount < totalChunks;
+  const decreaseRepeatCount = () => setRepeatChunkCount(Math.max(1, effectiveRepeatCount - 1));
+  const increaseRepeatCount = () => {
+    const next = effectiveRepeatCount + 1;
+    // Tornare al totale del documento equivale a "nessun limite".
+    setRepeatChunkCount(next >= totalChunks ? null : next);
+  };
   const completedCount = useChunksStore((state) =>
     state.chunks.slice(0, runChunkCount).reduce(
       (count, chunk) => count + (chunk.status === 'completed' ? 1 : 0),
       0,
     ),
   );
-  const runActionLabel = isTestRun
-    ? t('pipeline.executeTestRun', { count: runChunkCount })
+  const runActionLabel = isLimitedRun
+    ? t('pipeline.executeLimited', { count: runChunkCount })
     : t('pipeline.executeAll');
   const costChunkTexts = useChunksStore(
     useShallow((state) => state.chunks.map((chunk) => chunk.sourceProcessingText)),
@@ -157,10 +169,15 @@ export function PipelineSidebarRunSection({
   const costPanelCloseTimer = useRef<number | null>(null);
 
   const hasDocument = totalChunks > 0;
-  // Preventivo per l'azione "esegui l'intera pipeline" (modalità 'all').
+  // Preventivo per l'azione "esegui" in modalità Blocchi multipli: si ferma
+  // al numero impostato, non all'intero documento se è più corto/lungo.
   const pipelineCostEstimate = useMemo(
-    () => estimatePipelineCost(costChunkTexts.map((sourceText) => ({ sourceText })), config, pricingOverrides),
-    [costChunkTexts, config, pricingOverrides],
+    () => estimatePipelineCost(
+      costChunkTexts.slice(0, runChunkCount).map((sourceText) => ({ sourceText })),
+      config,
+      pricingOverrides,
+    ),
+    [costChunkTexts, runChunkCount, config, pricingOverrides],
   );
   // Preventivo per l'azione "traduci solo il chunk corrente" (modalità 'chunk').
   const chunkCostEstimate = useMemo(
@@ -213,12 +230,12 @@ export function PipelineSidebarRunSection({
             </IconButton>
           )
         ) : workMode === 'chunk' ? (
-          <IconButton size="md" tone="charcoal" onClick={() => currentChunk && onRetranslateChunk?.(currentChunk.id)} disabled={!currentChunk || !currentChunk.hasSourceText} title={t('pipeline.translateChunk')} tooltipSide="right" className="h-10 w-10">
-            <Languages size={15} />
+          <IconButton size="md" tone="charcoal" onClick={() => currentChunk && onRetranslateChunk?.(currentChunk.id)} disabled={!currentChunk || !currentChunk.hasSourceText} title={t('pipeline.translateChunk')} tooltipSide="right" className="h-9 w-9">
+            <Languages size={14} />
           </IconButton>
         ) : (
-          <IconButton size="md" tone="charcoal" onClick={onRunPipeline} disabled={!hasDocument} title={runActionLabel} tooltipSide="right" className="h-10 w-10">
-            <Play size={15} fill="currentColor" />
+          <IconButton size="md" tone="charcoal" onClick={onRunPipeline} disabled={!hasDocument} title={runActionLabel} tooltipSide="right" className="h-9 w-9">
+            <Play size={14} fill="currentColor" />
           </IconButton>
         )}
         {workMode === 'all' && hasDocument && (
@@ -232,131 +249,150 @@ export function PipelineSidebarRunSection({
 
   return (
     <div className="flex min-w-0 items-center gap-3">
-      <div className="flex min-w-0 flex-1 items-center gap-2">
-        <div className="flex items-center gap-1">
+      <div className="relative shrink-0">
+        {workMode === 'chunk' ? (
           <IconButton
             size="md"
-            tone="muted"
-            onClick={() => setWorkMode('chunk')}
-              disabled={isProcessing}
-              title={t('pipeline.workModeChunk')}
-              ariaLabel={t('pipeline.workModeChunk')}
-              ariaPressed={workMode === 'chunk'}
-              tooltipSide="bottom"
-              className={`h-9 w-9 ${
-                workMode === 'chunk'
-                  ? 'border-editorial-accent/55 bg-editorial-accent/10 text-editorial-accent'
-                  : 'bg-editorial-bg'
-              }`}
-            >
-              <FileText size={14} />
-            </IconButton>
+            tone="charcoal"
+            onClick={() => currentChunk && onRetranslateChunk?.(currentChunk.id)}
+            disabled={isProcessing || !currentChunk || !currentChunk.hasSourceText}
+            title={t('pipeline.translateChunk')}
+            ariaLabel={t('pipeline.translateChunk')}
+            tooltipSide="bottom"
+            className="h-14 w-14 border-editorial-charcoal/40 bg-editorial-bg hover:border-editorial-charcoal/65 hover:bg-editorial-textbox/70"
+          >
+            <Languages size={22} />
+          </IconButton>
+        ) : isProcessing ? (
+          cancelRequested ? (
             <IconButton
               size="md"
-              tone="muted"
-              onClick={() => setWorkMode('all')}
-              disabled={isProcessing}
-              title={t('pipeline.workModeAll')}
-              ariaLabel={t('pipeline.workModeAll')}
-              ariaPressed={workMode === 'all'}
+              tone="default"
+              disabled
+              title={t('pipeline.stopping')}
               tooltipSide="bottom"
-              className={`h-9 w-9 ${
-                workMode === 'all'
-                  ? 'border-editorial-accent/55 bg-editorial-accent/10 text-editorial-accent'
-                  : 'bg-editorial-bg'
-              }`}
+              className="h-14 w-14 bg-editorial-bg opacity-50"
             >
-              <Files size={14} />
+              <Loader2 size={22} className="animate-spin" />
             </IconButton>
-          </div>
-          {workMode === 'all' && hasDocument ? (
-            <span className="ml-auto shrink-0 text-[11px] font-semibold tabular-nums tracking-[0.08em] text-editorial-muted">
-              {completedCount}/{runChunkCount}
-            </span>
-          ) : null}
-        </div>
-        <div className="relative shrink-0">
-          {workMode === 'chunk' ? (
-            <IconButton
-              size="md"
-              tone="charcoal"
-              onClick={() => currentChunk && onRetranslateChunk?.(currentChunk.id)}
-              disabled={isProcessing || !currentChunk || !currentChunk.hasSourceText}
-              title={t('pipeline.translateChunk')}
-              ariaLabel={t('pipeline.translateChunk')}
-              tooltipSide="bottom"
-              className="h-10 w-10 border-editorial-charcoal/40 bg-editorial-bg hover:border-editorial-charcoal/65 hover:bg-editorial-textbox/70"
-            >
-              <Languages size={16} />
-            </IconButton>
-          ) : isProcessing ? (
-            cancelRequested ? (
-              <IconButton
-                size="md"
-                tone="muted"
-                disabled
-                title={t('pipeline.stopping')}
-                tooltipSide="bottom"
-                className="h-10 w-10 bg-editorial-bg opacity-50"
-              >
-                <Loader2 size={15} className="animate-spin" />
-              </IconButton>
-            ) : (
-              <IconButton
-                size="md"
-                tone="danger"
-                onClick={onCancelPipeline}
-                title={t('pipeline.stopPipeline')}
-                ariaLabel={t('pipeline.stopPipeline')}
-                tooltipSide="bottom"
-                className="h-10 w-10 bg-editorial-bg"
-              >
-                <Square size={15} fill="currentColor" />
-              </IconButton>
-            )
           ) : (
             <IconButton
               size="md"
-              tone="charcoal"
-              onClick={onRunPipeline}
-              disabled={!hasDocument}
-              title={runActionLabel}
-              ariaLabel={runActionLabel}
+              tone="danger"
+              onClick={onCancelPipeline}
+              title={t('pipeline.stopPipeline')}
+              ariaLabel={t('pipeline.stopPipeline')}
               tooltipSide="bottom"
-              className="h-10 w-10 border-editorial-charcoal/40 bg-editorial-bg hover:border-editorial-charcoal/65 hover:bg-editorial-textbox/70"
+              className="h-14 w-14 bg-editorial-bg"
             >
-              <Play size={16} fill="currentColor" />
+              <Square size={20} fill="currentColor" />
             </IconButton>
-          )}
-          {runActionCostEstimate.stages.length > 0 && (
-            <div
-              ref={costButtonRef}
-              className="absolute -bottom-1 -right-1"
-              onMouseEnter={openCostPanel}
-              onMouseLeave={scheduleCloseCostPanel}
-            >
-              <IconButton
-                size="sm"
-                tone="charcoal"
-                onFocus={openCostPanel}
-                onBlur={scheduleCloseCostPanel}
-                title=""
-                ariaLabel={t('cost.breakdown')}
-                tooltipSide="bottom"
-                className="h-5 w-5 bg-editorial-bg p-0"
-              >
-                <Info size={9} />
-              </IconButton>
-            </div>
-          )}
-          <SidebarCostPanel
-            anchorRef={costButtonRef}
-            estimate={runActionCostEstimate}
-            open={showCostPanel && runActionCostEstimate.stages.length > 0}
+          )
+        ) : (
+          <IconButton
+            size="md"
+            tone="charcoal"
+            onClick={onRunPipeline}
+            disabled={!hasDocument}
+            title={runActionLabel}
+            ariaLabel={runActionLabel}
+            tooltipSide="bottom"
+            className="h-14 w-14 border-editorial-charcoal/40 bg-editorial-bg hover:border-editorial-charcoal/65 hover:bg-editorial-textbox/70"
+          >
+            <Play size={22} fill="currentColor" />
+          </IconButton>
+        )}
+        {runActionCostEstimate.stages.length > 0 && (
+          <div
+            ref={costButtonRef}
+            className="absolute -bottom-1 -right-1"
             onMouseEnter={openCostPanel}
             onMouseLeave={scheduleCloseCostPanel}
-          />
+          >
+            <IconButton
+              size="sm"
+              tone="charcoal"
+              onFocus={openCostPanel}
+              onBlur={scheduleCloseCostPanel}
+              title=""
+              ariaLabel={t('cost.breakdown')}
+              tooltipSide="bottom"
+              className="h-5 w-5 bg-editorial-bg p-0"
+            >
+              <Info size={9} />
+            </IconButton>
+          </div>
+        )}
+        <SidebarCostPanel
+          anchorRef={costButtonRef}
+          estimate={runActionCostEstimate}
+          open={showCostPanel && runActionCostEstimate.stages.length > 0}
+          onMouseEnter={openCostPanel}
+          onMouseLeave={scheduleCloseCostPanel}
+        />
+      </div>
+
+      <div className="flex min-w-0 flex-1 flex-col items-end gap-1.5">
+        <Tooltip label={t('pipeline.repeatModeLabel')} side="bottom">
+          <button
+            type="button"
+            role="switch"
+            aria-label={t('pipeline.repeatModeLabel')}
+            aria-checked={workMode === 'all'}
+            disabled={isProcessing}
+            onClick={() => setWorkMode(workMode === 'all' ? 'chunk' : 'all')}
+            className={`relative inline-flex h-8 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40 ${
+              workMode === 'all' ? 'bg-editorial-accent' : 'bg-editorial-border'
+            }`}
+          >
+            <span
+              className={`inline-flex h-7 w-7 transform items-center justify-center rounded-full bg-white shadow-sm transition-transform ${
+                workMode === 'all' ? 'translate-x-6' : 'translate-x-0'
+              }`}
+            >
+              <Repeat size={14} className={workMode === 'all' ? 'text-editorial-accent' : 'text-editorial-muted'} />
+            </span>
+          </button>
+        </Tooltip>
+        {/* Altezza fissa: sempre presente per non spostare il pulsante
+            principale quando si accende/spegne il toggle sopra. */}
+        <div className="flex h-7 items-center gap-1.5">
+          {workMode === 'all' && hasDocument ? (
+            <>
+              <IconButton
+                size="sm"
+                tone="default"
+                onClick={decreaseRepeatCount}
+                disabled={!canDecreaseRepeatCount}
+                title={t('pipeline.repeatChunkCountDecrease')}
+                ariaLabel={t('pipeline.repeatChunkCountDecrease')}
+                tooltipSide="bottom"
+                className="h-6 w-6 bg-editorial-bg"
+              >
+                <Minus size={11} />
+              </IconButton>
+              <span
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-editorial-accent/35 bg-editorial-accent/10 font-display text-sm italic text-editorial-accent tabular-nums"
+                aria-label={t('pipeline.repeatChunkCountLabel')}
+              >
+                {effectiveRepeatCount}
+              </span>
+              <IconButton
+                size="sm"
+                tone="default"
+                onClick={increaseRepeatCount}
+                disabled={!canIncreaseRepeatCount}
+                title={t('pipeline.repeatChunkCountIncrease')}
+                ariaLabel={t('pipeline.repeatChunkCountIncrease')}
+                tooltipSide="bottom"
+                className="h-6 w-6 bg-editorial-bg"
+              >
+                <Plus size={11} />
+              </IconButton>
+            </>
+          ) : null}
         </div>
       </div>
-    );
+    </div>
+  );
 }

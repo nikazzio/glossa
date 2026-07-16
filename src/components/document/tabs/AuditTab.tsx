@@ -1,4 +1,4 @@
-import { CheckCircle2, Loader2, RefreshCcw } from 'lucide-react';
+import { Loader2, RefreshCcw } from 'lucide-react';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconButton } from '../../ui';
@@ -47,7 +47,7 @@ export function AuditTab({ panelId, labelledBy, currentChunk, isProcessing, onRe
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="px-4 py-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">{t('audit.title')}</div>
+          <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">{t('audit.qualityCaption')}</div>
           <div className={`mt-1.5 font-display text-xl italic ${QUALITY_TONE_COLOR[tone]}`}>{qualityLabel}</div>
         </div>
         <IconButton
@@ -77,11 +77,6 @@ export function AuditTab({ panelId, labelledBy, currentChunk, isProcessing, onRe
         && currentChunk.judgeResult.status !== 'processing' && (
         <div className="mt-3 text-sm text-editorial-muted">
           {t('document.insightsAuditEmpty')}
-        </div>
-      )}
-      {currentChunk.judgeResult.status === 'completed' && currentChunk.judgeResult.issues.length === 0 && (
-        <div className="mt-3 flex items-center gap-2 text-sm text-editorial-success">
-          <CheckCircle2 size={14} /> {t('document.insightsAuditNoIssues')}
         </div>
       )}
       {currentChunk.judgeResult.issues.length > 0 && (

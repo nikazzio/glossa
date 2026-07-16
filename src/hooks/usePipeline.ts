@@ -427,9 +427,9 @@ export function usePipeline() {
     const allChunks = useChunksStore.getState().chunks;
     if (allChunks.length === 0) return;
 
-    const { pipelineMode, pipelineTestChunkCount } = useConfigStore.getState();
-    const isTestMode = pipelineMode === 'test';
-    const liveChunks = isTestMode ? allChunks.slice(0, pipelineTestChunkCount) : allChunks;
+    const { repeatChunkCount } = useConfigStore.getState();
+    const isPartialRun = repeatChunkCount !== null && repeatChunkCount < allChunks.length;
+    const liveChunks = isPartialRun ? allChunks.slice(0, repeatChunkCount) : allChunks;
     if (config.usePhraseMemory) {
       const liveChunkIds = new Set(liveChunks.map((chunk) => chunk.id));
       const blockedChunks = getChunksWithAllMatchesDisabled(
@@ -447,7 +447,10 @@ export function usePipeline() {
     setIsProcessing(true);
 
     const pipelineState = usePipelineStore.getState();
-    const batchMode: BatchRunMode = isTestMode || pipelineState.runStatus === 'completed'
+    // Un run limitato (conteggio impostato dall'utente sotto al totale) va
+    // sempre rieseguito da capo: serve per iterare rapidamente su un
+    // sottoinsieme, non per continuare un run interrotto.
+    const batchMode: BatchRunMode = isPartialRun || pipelineState.runStatus === 'completed'
       ? 'rerun-unlocked'
       : 'resume';
     const activePipelineId = useProjectStore.getState().activePipelineId;

@@ -17,10 +17,11 @@ when similar wording appears again.
 
 ## How it is used
 
-1. Enable phrase memory in the workspace or pipeline settings.
-2. Let Glossa search for matching phrases automatically, or trigger a manual refresh.
-3. Review the matches that come back for the current chunk.
-4. Select only the matches you want to inject into the run.
+The segment panel has two separate tabs, for two different moments of the work:
+
+**Memory tab — creating new phrases**: a phrase only enters the collection from a segment you have **locked** (the translation is final). Phrases already saved for that segment load automatically when you open the tab, already checked and labeled "already saved". Lock the segment and click "Extract phrases" (a separate button) to have Glossa propose new ones: they are added below the ones already shown, without identical duplicates. Review each row — check/uncheck it, fix the text if needed — and you can also add pairs manually. The "Save" button is always visible at the top: pressing it saves whatever is checked at that moment — if you unchecked an already-saved phrase, it is genuinely removed from the collection (no separate delete button needed). If you switch to another segment mid-review, the unconfirmed work is still there waiting for you when you come back.
+
+**References tab — reusing already-saved phrases**: here you see the matches found for the open segment, with an adjustable similarity threshold. Only the matches you check are actually sent as reference the next time you translate or rerun that segment — matches that are found but left unchecked stay visible but are ignored. The project glossary isn't repeated here: it's always shown in full in its own tab on the right-hand panel.
 
 ## When to avoid it
 

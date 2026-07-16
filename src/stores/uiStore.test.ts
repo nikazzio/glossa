@@ -16,12 +16,15 @@ beforeEach(() => {
 });
 
 describe('uiStore drawer mutual exclusion', () => {
-  it('defaults the test chunk count to three and clamps it to at least one', () => {
+  it('defaults the repeat chunk count to unlimited and clamps explicit values to at least one', () => {
     const state = useConfigStore.getState();
-    expect(state.pipelineTestChunkCount).toBe(3);
+    expect(state.repeatChunkCount).toBeNull();
 
-    state.setPipelineTestChunkCount(0);
-    expect(useConfigStore.getState().pipelineTestChunkCount).toBe(1);
+    state.setRepeatChunkCount(0);
+    expect(useConfigStore.getState().repeatChunkCount).toBe(1);
+
+    state.setRepeatChunkCount(null);
+    expect(useConfigStore.getState().repeatChunkCount).toBeNull();
   });
 
   it('opening the config drawer closes settings, help and both insight drawers', () => {

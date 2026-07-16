@@ -41,8 +41,8 @@ export function useDocumentViewState() {
     })),
   );
 
-  const pipelineTestChunkCount = useConfigStore((state) => state.pipelineTestChunkCount);
-  const setPipelineTestChunkCount = useConfigStore((state) => state.setPipelineTestChunkCount);
+  const repeatChunkCount = useConfigStore((state) => state.repeatChunkCount);
+  const setRepeatChunkCount = useConfigStore((state) => state.setRepeatChunkCount);
 
   const [viewportWidth, setViewportWidth] = useState(
     typeof window === 'undefined' ? 0 : window.innerWidth,
@@ -60,10 +60,14 @@ export function useDocumentViewState() {
   }, []);
 
   useEffect(() => {
-    if (chunks.length > 0 && pipelineTestChunkCount > chunks.length) {
-      setPipelineTestChunkCount(chunks.length);
+    // Un limite persistito più alto del documento corrente (es. aperto un
+    // documento più corto di uno precedente) non deve bloccare "Blocchi
+    // multipli" a un numero incoerente: torna a "nessun limite".
+    if (chunks.length > 0 && repeatChunkCount !== null && repeatChunkCount > chunks.length) {
+      setRepeatChunkCount(null);
     }
-  }, [chunks.length, pipelineTestChunkCount, setPipelineTestChunkCount]);
+  }, [chunks.length, repeatChunkCount, setRepeatChunkCount]);
+
 
   const resolvedLayout =
     documentLayout === 'auto'

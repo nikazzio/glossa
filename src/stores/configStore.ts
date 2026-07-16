@@ -2,15 +2,12 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { OllamaStatus } from '../types';
 
-export type RunPhase = 'test' | 'production';
 export type WorkMode = 'chunk' | 'all';
 
 interface ConfigState {
-  pipelineMode: RunPhase;
-  setPipelineMode: (mode: RunPhase) => void;
-
-  pipelineTestChunkCount: number;
-  setPipelineTestChunkCount: (count: number) => void;
+  /** null = nessun limite, la modalità "Blocchi multipli" elabora tutti i frammenti */
+  repeatChunkCount: number | null;
+  setRepeatChunkCount: (count: number | null) => void;
 
   workMode: WorkMode;
   setWorkMode: (mode: WorkMode) => void;
@@ -41,16 +38,17 @@ interface ConfigState {
 export const useConfigStore = create<ConfigState>()(
   persist(
     (set) => ({
-      pipelineMode: 'test',
-      setPipelineMode: (mode) => set({ pipelineMode: mode }),
-
       workMode: 'chunk',
       setWorkMode: (mode) => set({ workMode: mode }),
 
-      pipelineTestChunkCount: 3,
-      setPipelineTestChunkCount: (count) => {
+      repeatChunkCount: null,
+      setRepeatChunkCount: (count) => {
+        if (count === null) {
+          set({ repeatChunkCount: null });
+          return;
+        }
         const normalized = Number.isFinite(count) ? Math.floor(count) : 1;
-        set({ pipelineTestChunkCount: Math.max(1, normalized) });
+        set({ repeatChunkCount: Math.max(1, normalized) });
       },
 
       ollamaStatus: 'unknown',
@@ -82,11 +80,10 @@ export const useConfigStore = create<ConfigState>()(
       name: 'glossa-config',
       version: 1,
       storage: createJSONStorage(() => localStorage),
-      // pipelineMode resets to 'test' on reload (intentional safe default).
       // ollamaStatus/ollamaModels are runtime-probed state, not persisted.
       migrate: (state) => state,
       partialize: (state) => ({
-        pipelineTestChunkCount: state.pipelineTestChunkCount,
+        repeatChunkCount: state.repeatChunkCount,
         ollamaBaseUrl: state.ollamaBaseUrl,
         newPipelineInit: state.newPipelineInit,
         maxPipelines: state.maxPipelines,

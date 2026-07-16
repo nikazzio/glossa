@@ -32,6 +32,9 @@ export function GlossaryTab({ panelId, labelledBy, glossary }: GlossaryTabProps)
           <Highlighter size={13} />
         </IconButton>
       </div>
+      <p className="border-b border-editorial-border px-5 py-2 text-xs leading-relaxed text-editorial-muted">
+        {t('memory.referencesGlossaryHint')}
+      </p>
       <div className="flex-1 overflow-y-auto custom-scrollbar px-4 py-2">
         <table className="w-full text-sm">
           <tbody>
