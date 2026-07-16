@@ -20,6 +20,7 @@ const iconButton = cva(
         charcoal: 'border-editorial-border text-editorial-muted hover:border-editorial-charcoal/60 hover:text-editorial-charcoal',
         muted:    'border-editorial-border/60 text-editorial-muted/50 hover:border-editorial-accent/40 hover:text-editorial-accent',
         running:  'border-editorial-running/45 bg-editorial-running/12 text-editorial-running animate-pulse',
+        warning:  'border-editorial-warning bg-editorial-warning/20 text-editorial-warning hover:bg-editorial-warning/30',
       },
     },
     defaultVariants: { size: 'md', tone: 'default' },

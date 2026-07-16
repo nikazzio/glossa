@@ -493,70 +493,36 @@ export function ImportPreviewDialog({
               <ArrowLeftRight size={14} />
             </IconButton>
 
-            {/* Separator — solo in stato normale */}
-            {useChunking && !hasManualEdits && (
+            {/* Separator */}
+            {useChunking && (
               <span className="select-none text-editorial-border">·</span>
             )}
 
-            {/* Preset inline — solo in stato normale */}
-            {useChunking && !hasManualEdits && CHUNK_PRESETS.map(({ words, titleKey, Icon }) => (
+            {/* Preset — stessa posizione sempre, si colora d'avviso se ci sono modifiche a mano */}
+            {useChunking && CHUNK_PRESETS.map(({ words, titleKey, Icon }) => (
               <IconButton
                 key={words}
                 size="md"
-                tone={activePresetWords === words ? 'accent' : 'default'}
+                tone={activePresetWords === words ? (hasManualEdits ? 'warning' : 'accent') : 'default'}
                 onClick={() => handleWordsPerChunkChange(words)}
-                title={t(titleKey)}
+                title={hasManualEdits ? `${t(titleKey)} — ${t('files.recalculateHint')}` : t(titleKey)}
                 ariaPressed={activePresetWords === words}
               >
                 <Icon size={14} />
               </IconButton>
             ))}
 
-            {/* Con modifiche manuali: preset + ricalcola raggruppati a destra in warning */}
-            {useChunking && hasManualEdits && (
-              <div className="ml-auto flex items-center gap-1.5">
-                {CHUNK_PRESETS.map(({ words, titleKey, Icon }) => (
-                  <Tooltip key={words} label={t(titleKey)}>
-                    <button
-                      type="button"
-                      onClick={() => handleWordsPerChunkChange(words)}
-                      aria-label={t(titleKey)}
-                      className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-warning ${
-                        activePresetWords === words
-                          ? 'border-editorial-warning bg-editorial-warning/20 text-editorial-warning'
-                          : 'border-editorial-warning/40 text-editorial-warning/60 hover:border-editorial-warning hover:text-editorial-warning hover:bg-editorial-warning/10'
-                      }`}
-                    >
-                      <Icon size={14} />
-                    </button>
-                  </Tooltip>
-                ))}
-                <Tooltip label={t('files.recalculateHint')}>
-                  <button
-                    type="button"
-                    onClick={recalculate}
-                    aria-label={t('files.recalculateHint')}
-                    className="rounded-full border border-editorial-warning bg-editorial-warning/10 p-2 text-editorial-warning transition-colors hover:bg-editorial-warning/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-warning"
-                  >
-                    <RotateCcw size={13} />
-                  </button>
-                </Tooltip>
-              </div>
-            )}
-
-            {/* Ricalcola spento — nessuna modifica manuale */}
-            {!hasManualEdits && (
-              <Tooltip label={t('files.recalculateHint')}>
-                <button
-                  type="button"
-                  disabled
-                  aria-label={t('files.recalculateHint')}
-                  className="ml-auto cursor-not-allowed rounded-full border border-editorial-border p-2 text-editorial-muted opacity-25 focus:outline-none"
-                >
-                  <RotateCcw size={13} />
-                </button>
-              </Tooltip>
-            )}
+            {/* Ricalcola — sempre nello stesso punto, attivo solo con modifiche a mano */}
+            <IconButton
+              size="md"
+              tone={hasManualEdits ? 'warning' : 'default'}
+              disabled={!hasManualEdits}
+              onClick={recalculate}
+              title={t('files.recalculateHint')}
+              className="ml-auto"
+            >
+              <RotateCcw size={13} />
+            </IconButton>
           </div>
 
           {/* Row 5: pipeline setup — language pair + model */}
