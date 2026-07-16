@@ -78,17 +78,15 @@ export function ChunkCard({
               <Scissors size={13} />
             </IconButton>
           )}
-          <Tooltip label={isExpanded ? t('files.collapseChunk') : t('files.expandChunk')}>
-            <button
-              type="button"
-              onClick={onToggleExpand}
-              disabled={!isLong}
-              aria-label={isExpanded ? t('files.collapseChunk') : t('files.expandChunk')}
-              className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-default disabled:opacity-20"
-            >
-              {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-            </button>
-          </Tooltip>
+          <IconButton
+            size="sm"
+            onClick={onToggleExpand}
+            disabled={!isLong}
+            disabledStyle="inactive"
+            title={isExpanded ? t('files.collapseChunk') : t('files.expandChunk')}
+          >
+            {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+          </IconButton>
         </div>
       </div>
       <div className="px-4 pb-4 text-base leading-7 text-editorial-ink">
@@ -127,38 +125,34 @@ export function BoundaryDivider({ onGive, onTake, onMerge, canGive, canTake }: B
   return (
     <div className="flex items-center gap-1.5 px-2 py-1">
       <div className="h-px flex-1 bg-editorial-border" />
-      <Tooltip label={t('files.boundaryTake')}>
-        <button
-          type="button"
-          onClick={onTake}
-          disabled={!canTake}
-          aria-label={t('files.boundaryTake')}
-          className="rounded-full border border-editorial-border bg-editorial-bg p-1 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-30"
-        >
-          <ChevronUp size={11} />
-        </button>
-      </Tooltip>
-      <Tooltip label={t('files.boundaryMerge')}>
-        <button
-          type="button"
-          onClick={onMerge}
-          aria-label={t('files.boundaryMerge')}
-          className="rounded-full border border-editorial-border bg-editorial-bg p-1 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-        >
-          <Merge size={11} />
-        </button>
-      </Tooltip>
-      <Tooltip label={t('files.boundaryGive')}>
-        <button
-          type="button"
-          onClick={onGive}
-          disabled={!canGive}
-          aria-label={t('files.boundaryGive')}
-          className="rounded-full border border-editorial-border bg-editorial-bg p-1 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-30"
-        >
-          <ChevronDown size={11} />
-        </button>
-      </Tooltip>
+      <IconButton
+        size="xs"
+        onClick={onTake}
+        disabled={!canTake}
+        disabledStyle="soft"
+        title={t('files.boundaryTake')}
+        className="bg-editorial-bg"
+      >
+        <ChevronUp size={11} />
+      </IconButton>
+      <IconButton
+        size="xs"
+        onClick={onMerge}
+        title={t('files.boundaryMerge')}
+        className="bg-editorial-bg"
+      >
+        <Merge size={11} />
+      </IconButton>
+      <IconButton
+        size="xs"
+        onClick={onGive}
+        disabled={!canGive}
+        disabledStyle="soft"
+        title={t('files.boundaryGive')}
+        className="bg-editorial-bg"
+      >
+        <ChevronDown size={11} />
+      </IconButton>
       <div className="h-px flex-1 bg-editorial-border" />
     </div>
   );

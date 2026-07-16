@@ -3,7 +3,7 @@ import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { Tooltip, type TooltipSide } from './Tooltip';
 
 const iconButton = cva(
-  'inline-flex items-center justify-center rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40',
+  'inline-flex items-center justify-center rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent',
   {
     variants: {
       size: {
@@ -22,13 +22,22 @@ const iconButton = cva(
         running:  'border-editorial-running/45 bg-editorial-running/12 text-editorial-running animate-pulse',
         warning:  'border-editorial-warning bg-editorial-warning/20 text-editorial-warning hover:bg-editorial-warning/30',
       },
+      // Non tutti i pulsanti disattivati significano "azione vietata": alcuni
+      // sono solo "non applicabile qui" (es. non c'è un paragrafo da spostare)
+      // e vogliono un cursore/opacità meno "bloccati".
+      disabledStyle: {
+        blocked:  'disabled:cursor-not-allowed disabled:opacity-40',
+        soft:     'disabled:cursor-not-allowed disabled:opacity-30',
+        inactive: 'disabled:cursor-default disabled:opacity-20',
+      },
     },
-    defaultVariants: { size: 'md', tone: 'default' },
+    defaultVariants: { size: 'md', tone: 'default', disabledStyle: 'blocked' },
   },
 );
 
 export type IconButtonTone = NonNullable<VariantProps<typeof iconButton>['tone']>;
 export type IconButtonSize = NonNullable<VariantProps<typeof iconButton>['size']>;
+export type IconButtonDisabledStyle = NonNullable<VariantProps<typeof iconButton>['disabledStyle']>;
 
 type IconButtonProps = VariantProps<typeof iconButton> &
   Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onClick' | 'aria-pressed' | 'aria-label'> & {
@@ -49,6 +58,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
   ariaPressed,
   size,
   tone,
+  disabledStyle,
   className,
   tooltipSide,
   ...rest
@@ -63,7 +73,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
           disabled={disabled}
           aria-label={ariaLabel ?? title}
           aria-pressed={ariaPressed}
-          className={iconButton({ size, tone, className })}
+          className={iconButton({ size, tone, disabledStyle, className })}
           {...rest}
         >
           {children}
