@@ -183,6 +183,7 @@ export function PromptTemplatesTab() {
               value={newContext}
               onChange={(e) => setNewContext(e.target.value as PromptTemplateContext)}
               className="rounded-md border border-editorial-border bg-editorial-bg/80 px-3 py-2.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              aria-label={t('library.templateContextLabel')}
             >
               <option value="stage">{t('pipeline.tabStages')}</option>
               <option value="audit">{t('pipeline.tabAudit')}</option>
@@ -193,6 +194,7 @@ export function PromptTemplatesTab() {
               value={newWorkflow}
               onChange={(e) => setNewWorkflow(e.target.value as PromptTemplateWorkflow)}
               className="rounded-md border border-editorial-border bg-editorial-bg/80 px-3 py-2.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              aria-label={t('library.templateWorkflowLabel')}
             >
               {WORKFLOW_OPTIONS.map((w) => (
                 <option key={w} value={w}>
@@ -225,6 +227,7 @@ export function PromptTemplatesTab() {
                     setRefineModel(getProviderModels(p)[0] ?? '');
                   }}
                   className="rounded-md border border-editorial-border bg-editorial-bg px-3 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  aria-label={t('library.templateRefineProviderLabel')}
                 >
                   {LLM_PROVIDER_ORDER.map((p) => (
                     <option key={p} value={p}>{p}</option>
@@ -234,6 +237,7 @@ export function PromptTemplatesTab() {
                   value={refineModel}
                   onChange={(e) => setRefineModel(e.target.value)}
                   className="max-w-[160px] rounded-md border border-editorial-border bg-editorial-bg px-3 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  aria-label={t('pipeline.stageModelLabel')}
                 >
                   {modelOptions.map((m) => (
                     <option key={m} value={m}>{m}</option>

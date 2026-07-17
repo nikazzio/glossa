@@ -200,10 +200,11 @@ export function CsvImportDialog({ workspaceId, onImported, onClose }: Props) {
                   { key: 'notesKey', label: t('library.xlsxNotesCol'), required: false },
                 ] as const).map(({ key, label, required }) => (
                   <div key={key} className="flex items-center gap-3">
-                    <label className="w-36 shrink-0 text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">
+                    <label htmlFor={`csv-map-${key}`} className="w-36 shrink-0 text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">
                       {label}
                     </label>
                     <select
+                      id={`csv-map-${key}`}
                       value={columnMap[key] ?? ''}
                       onChange={(e) => setColumnMap((m) => ({ ...m, [key]: e.target.value || undefined }))}
                       className="flex-1 rounded-md border border-editorial-border bg-editorial-bg px-3 py-2 text-xs text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"

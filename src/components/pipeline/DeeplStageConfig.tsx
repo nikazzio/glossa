@@ -117,10 +117,11 @@ export function DeeplStageConfig({
       <div className="space-y-3">
         <SectionLabel icon={Network} label={t('pipeline.deepl.sectionTranslation', 'Traduzione DeepL')} />
         <div className="space-y-2">
-          <label className="text-xs font-sans uppercase tracking-[0.1em] text-editorial-muted">
+          <label htmlFor="deepl-model-type" className="text-xs font-sans uppercase tracking-[0.1em] text-editorial-muted">
             {t('pipeline.deepl.modelType', 'Modalità traduzione')}
           </label>
           <select
+            id="deepl-model-type"
             className="w-full rounded-md border border-editorial-border bg-editorial-textbox px-2 py-1.5 text-xs font-sans text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             value={config.modelType ?? 'prefer_quality_optimized'}
             onChange={(e) => update({ modelType: e.target.value as DeeplConfig['modelType'] })}
@@ -134,10 +135,11 @@ export function DeeplStageConfig({
         {/* 3. Registro formalità (condizionale) */}
         {supportsFormality && (
           <div className="space-y-2">
-            <label className="text-xs font-sans uppercase tracking-[0.1em] text-editorial-muted">
+            <label htmlFor="deepl-formality" className="text-xs font-sans uppercase tracking-[0.1em] text-editorial-muted">
               {t('pipeline.deepl.formality', 'Registro')}
             </label>
             <select
+              id="deepl-formality"
               className="w-full rounded-md border border-editorial-border bg-editorial-textbox px-2 py-1.5 text-xs font-sans text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               value={config.formality ?? 'default'}
               onChange={(e) => update({ formality: e.target.value as DeeplConfig['formality'] })}
@@ -161,6 +163,7 @@ export function DeeplStageConfig({
               className="flex-1 rounded-md border border-editorial-border bg-editorial-textbox px-2 py-1.5 text-xs font-sans text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               value={config.glossaryId ?? ''}
               onChange={(e) => update({ glossaryId: e.target.value || undefined })}
+              aria-label={t('pipeline.deepl.glossary', 'Glossario DeepL')}
             >
               <option value="">
                 {glossariesLoading

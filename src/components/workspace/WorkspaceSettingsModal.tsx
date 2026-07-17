@@ -221,6 +221,7 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                         value={embeddingModel}
                         onChange={(e) => setEmbeddingModel(e.target.value as EmbeddingModel)}
                         className="flex-1 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-2 text-xs font-mono text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                        aria-label={t('workspace.embeddingModel')}
                       >
                         <option value="text-embedding-3-small">text-embedding-3-small</option>
                         <option value="text-embedding-3-large">text-embedding-3-large</option>
