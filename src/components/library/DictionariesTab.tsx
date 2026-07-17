@@ -195,25 +195,17 @@ export function DictionariesTab() {
             className="flex-1 rounded-md border border-editorial-border bg-editorial-bg/80 px-4 py-2.5 text-sm font-display italic text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
           />
           <div className="flex items-center justify-end gap-2">
-            <Tooltip label={t('common.cancel')}>
-              <button
-                onClick={() => setCreating(false)}
-                aria-label={t('common.cancel')}
-                className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              >
-                <X size={14} />
-              </button>
-            </Tooltip>
-            <Tooltip label={t('common.save')}>
-              <button
-                onClick={handleCreate}
-                disabled={!newName.trim()}
-                aria-label={t('common.save')}
-                className="rounded-full bg-editorial-accent p-2 text-white transition-colors hover:bg-editorial-accent/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <Check size={14} />
-              </button>
-            </Tooltip>
+            <IconButton onClick={() => setCreating(false)} title={t('common.cancel')}>
+              <X size={14} />
+            </IconButton>
+            <IconButton
+              onClick={handleCreate}
+              disabled={!newName.trim()}
+              title={t('common.save')}
+              tone="accent"
+            >
+              <Check size={14} />
+            </IconButton>
           </div>
         </div>
       )}
