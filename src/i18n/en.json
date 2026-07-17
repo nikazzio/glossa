@@ -689,12 +689,10 @@
       },
       "library": {
         "title": "Library",
-        "body": "Future area for catalogues, texts, and study material, separated from translation memory.",
         "sidebarHint": "Texts and catalogues"
       },
       "transcriptions": {
         "title": "Transcriptions",
-        "body": "Future area for OCR, transcription, and source preparation before translation.",
         "sidebarHint": "OCR and source prep"
       }
     },
@@ -738,9 +736,6 @@
     "activityTitle": "Recent activity",
     "activityEmpty": "No runs recorded yet.",
     "workspacesTitle": "Workspaces",
-    "systemTitle": "System status",
-    "providersLabel": "AI providers",
-    "comingTitle": "Coming up",
     "runOutcome": {
       "success": "Run completed",
       "warn": "Run partial or cancelled",

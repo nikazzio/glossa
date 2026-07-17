@@ -1,9 +1,7 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import {
   Archive,
   BookOpenText,
-  Check,
-  ChevronsUpDown,
   FilePen,
   LayoutDashboard,
   LibraryBig,
@@ -16,7 +14,7 @@ import { useProjectStore } from '../../../stores/projectStore';
 import { useWorkspaceStore } from '../../../stores/workspaceStore';
 import { useUiStore } from '../../../stores/uiStore';
 import type { Workspace } from '../../../types';
-import { IconButton, Menu, type MenuItem } from '../../ui';
+import { IconButton } from '../../ui';
 import { CreateWorkspaceDialog } from '../../workspace/CreateWorkspaceDialog';
 import { ShellNavItem, ShellNavSection } from '../ShellNav';
 
@@ -50,75 +48,8 @@ function DashboardItem({ collapsed }: { collapsed: boolean }) {
 }
 
 /**
- * Switcher del workspace attivo: contesto, non navigazione — una riga col nome
- * corrente che apre il menu di cambio/creazione. Niente stato "attivo" da nav:
- * la selezione di navigazione resta una sola (Dashboard o un'area).
- */
-function WorkspaceSwitcher({ collapsed }: { collapsed: boolean }) {
-  const { t } = useTranslation();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [menuAnchor, setMenuAnchor] = useState<{ x: number; y: number } | null>(null);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-
-  const workspaces = useWorkspaceStore((s) => s.workspaces);
-  const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace);
-  const setActive = useWorkspaceStore((s) => s.setActive);
-  const closeProject = useProjectStore((s) => s.closeProject);
-  const loadProjects = useProjectStore((s) => s.loadProjects);
-
-  const handleSwitchWorkspace = async (ws: Workspace) => {
-    if (ws.id === activeWorkspace?.id) return;
-    closeProject();
-    await setActive(ws);
-    await loadProjects();
-  };
-
-  const openMenu = () => {
-    const rect = triggerRef.current?.getBoundingClientRect();
-    setMenuAnchor(rect ? { x: rect.left, y: rect.bottom } : null);
-    setMenuOpen(true);
-  };
-
-  const menuItems: MenuItem[] = [
-    ...workspaces.map((ws) => ({
-      id: ws.id,
-      label: ws.name,
-      icon: ws.id === activeWorkspace?.id ? <Check size={13} /> : <span className="inline-block w-[13px]" />,
-      onSelect: () => void handleSwitchWorkspace(ws),
-    })),
-    {
-      id: 'create-workspace',
-      label: t('workspace.create'),
-      icon: <Plus size={13} />,
-      onSelect: () => setShowCreateDialog(true),
-    },
-  ];
-
-  return (
-    <>
-      <ShellNavSection icon={Archive} label={t('sidebar.workspaceSection')} collapsed={collapsed}>
-        <ShellNavItem
-          active={false}
-          collapsed={collapsed}
-          labelFont="display"
-          onClick={openMenu}
-          buttonRef={triggerRef}
-          icon={<span className="h-2 w-2 shrink-0 rounded-full bg-editorial-accent" aria-hidden="true" />}
-          label={activeWorkspace?.name ?? t('workspace.noActive')}
-          trailing={<ChevronsUpDown size={13} className="text-editorial-muted" aria-hidden="true" />}
-        />
-      </ShellNavSection>
-      <Menu open={menuOpen} onOpenChange={setMenuOpen} items={menuItems} anchorRect={menuAnchor} />
-      <CreateWorkspaceDialog open={showCreateDialog} onClose={() => setShowCreateDialog(false)} />
-    </>
-  );
-}
-
-/**
- * Aree del workspace attivo. Semantica radio con la Dashboard: sempre
- * esattamente una selezione di navigazione, click sull'attiva = no-op,
- * mai deselezione.
+ * Aree del workspace attivo. Radio con Dashboard e workspace: sempre
+ * esattamente una vista attiva, click sull'attiva = no-op, mai deselezione.
  */
 function AreaSection({ collapsed }: { collapsed: boolean }) {
   const { t } = useTranslation();
@@ -160,6 +91,80 @@ function AreaSection({ collapsed }: { collapsed: boolean }) {
   );
 }
 
+/**
+ * Workspace: lista sciolta, sempre visibile. Il click NAVIGA alla pagina del
+ * workspace (e lo rende attivo): il pallino indica il contesto attivo, la
+ * barra accent indica la vista corrente — due semantiche, due indicatori.
+ */
+function WorkspaceSection({ collapsed }: { collapsed: boolean }) {
+  const { t } = useTranslation();
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+
+  const workspaces = useWorkspaceStore((s) => s.workspaces);
+  const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace);
+  const setActive = useWorkspaceStore((s) => s.setActive);
+  const closeProject = useProjectStore((s) => s.closeProject);
+  const loadProjects = useProjectStore((s) => s.loadProjects);
+  const activeWorkspaceView = useUiStore((state) => state.activeWorkspaceView);
+  const setActiveWorkspaceView = useUiStore((state) => state.setActiveWorkspaceView);
+
+  const handleOpenWorkspace = async (ws: Workspace) => {
+    if (ws.id !== activeWorkspace?.id) {
+      closeProject();
+      await setActive(ws);
+      await loadProjects();
+    }
+    setActiveWorkspaceView('workspace');
+  };
+
+  return (
+    <>
+      <ShellNavSection
+        icon={Archive}
+        label={t('sidebar.workspaceSection')}
+        collapsed={collapsed}
+        action={
+          <IconButton
+            size="sm"
+            tone="muted"
+            onClick={() => setShowCreateDialog(true)}
+            title={t('workspace.create')}
+            tooltipSide="right"
+            className="bg-editorial-textbox/25 hover:bg-editorial-textbox/45"
+          >
+            <Plus size={11} />
+          </IconButton>
+        }
+      >
+        {workspaces.map((ws) => {
+          const isContext = ws.id === activeWorkspace?.id;
+          const isCurrentView = isContext && activeWorkspaceView === 'workspace';
+          return (
+            <ShellNavItem
+              key={ws.id}
+              active={isCurrentView}
+              collapsed={collapsed}
+              labelFont="display"
+              onClick={() => void handleOpenWorkspace(ws)}
+              ariaCurrent={isCurrentView ? 'page' : undefined}
+              icon={
+                <span
+                  className={`h-2 w-2 shrink-0 rounded-full transition-colors duration-200 ${
+                    isContext ? 'bg-editorial-accent' : 'border border-editorial-border bg-transparent'
+                  }`}
+                  aria-hidden="true"
+                />
+              }
+              label={ws.name}
+            />
+          );
+        })}
+      </ShellNavSection>
+      <CreateWorkspaceDialog open={showCreateDialog} onClose={() => setShowCreateDialog(false)} />
+    </>
+  );
+}
+
 export interface WorkspaceRailNextProps {
   collapsed: boolean;
 }
@@ -184,8 +189,8 @@ export function WorkspaceRailNext({ collapsed }: WorkspaceRailNextProps) {
         </div>
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden custom-scrollbar pb-4 pt-2">
           <DashboardItem collapsed />
-          <WorkspaceSwitcher collapsed />
           <AreaSection collapsed />
+          <WorkspaceSection collapsed />
         </div>
       </div>
     );
@@ -206,8 +211,8 @@ export function WorkspaceRailNext({ collapsed }: WorkspaceRailNextProps) {
       </div>
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden custom-scrollbar pb-4">
         <DashboardItem collapsed={false} />
-        <WorkspaceSwitcher collapsed={false} />
         <AreaSection collapsed={false} />
+        <WorkspaceSection collapsed={false} />
       </div>
     </div>
   );

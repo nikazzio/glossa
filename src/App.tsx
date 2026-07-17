@@ -21,6 +21,7 @@ import { usePipelineStore } from './stores/pipelineStore';
 import { useWorkspaceStore } from './stores/workspaceStore';
 import { WorkspaceWizard } from './components/workspace/WorkspaceWizard';
 import { AppDashboard } from './components/dashboard/AppDashboard';
+import { WorkspaceOverview } from './components/workspace/WorkspaceOverview';
 import { TranslationsArea } from './components/workspace/TranslationsArea';
 import { importTextFile } from './services/fileService';
 import { savePipelineConfig } from './services/pipelineService';
@@ -501,11 +502,19 @@ export default function App() {
               <div className="relative flex min-w-0 flex-1">
                 {activeWorkspaceView === 'translations' ? (
                   <TranslationsArea />
+                ) : activeWorkspaceView === 'workspace' ? (
+                  <WorkspaceOverview />
                 ) : (
                   <AppDashboard />
                 )}
                 <PanelTransitionVeil
-                  panelKey={activeWorkspaceView === 'translations' ? 'area-translations' : 'app-dashboard'}
+                  panelKey={
+                    activeWorkspaceView === 'translations'
+                      ? 'area-translations'
+                      : activeWorkspaceView === 'workspace'
+                        ? `workspace-${activeWorkspace?.id ?? 'none'}`
+                        : 'app-dashboard'
+                  }
                   tone="paper"
                   variant="workspace"
                 />

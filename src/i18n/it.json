@@ -689,12 +689,10 @@
       },
       "library": {
         "title": "Biblioteca",
-        "body": "Area futura per catalogo, testi e materiali di studio, separata dalla memoria di traduzione.",
         "sidebarHint": "Testi e catalogo"
       },
       "transcriptions": {
         "title": "Trascrizioni",
-        "body": "Area futura per OCR, trascrizione e lavorazione del sorgente prima della traduzione.",
         "sidebarHint": "OCR e preparazione"
       }
     },
@@ -738,9 +736,6 @@
     "activityTitle": "Attività recente",
     "activityEmpty": "Nessuna esecuzione registrata.",
     "workspacesTitle": "Workspace",
-    "systemTitle": "Stato sistema",
-    "providersLabel": "Provider AI",
-    "comingTitle": "In arrivo",
     "runOutcome": {
       "success": "Esecuzione completata",
       "warn": "Esecuzione parziale o annullata",

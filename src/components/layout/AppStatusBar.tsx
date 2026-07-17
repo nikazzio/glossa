@@ -239,6 +239,11 @@ export function AppStatusBar() {
             (data.areaName === 'dashboard' ? (
               // La Dashboard è app-level: nessun prefisso workspace nel breadcrumb.
               <span className="truncate font-medium text-editorial-ink">{t('dashboard.title')}</span>
+            ) : data.areaName === 'workspace' ? (
+              <>
+                <span className="truncate font-medium text-editorial-ink">{data.workspaceName}</span>
+                <span>{t('workspace.projectsMetric', { count: data.projectCount })}</span>
+              </>
             ) : (
               <>
                 <span className="truncate font-medium text-editorial-ink">{data.workspaceName}</span>

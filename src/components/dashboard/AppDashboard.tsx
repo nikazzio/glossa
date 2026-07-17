@@ -3,14 +3,9 @@ import {
   Activity,
   Archive,
   BookOpenText,
-  FilePen,
   History,
   KeyRound,
-  LibraryBig,
-  Lock,
   Plus,
-  Settings2,
-  Trash2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -24,13 +19,10 @@ import {
 } from '../../services/projectService';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
-import { useLibraryStore } from '../../stores/libraryStore';
 import { useUiStore } from '../../stores/uiStore';
-import { confirm } from '../../stores/confirmStore';
 import { useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
 import { IconButton, PillButton, SectionLabel, Spinner } from '../ui';
 import { CreateWorkspaceDialog } from '../workspace/CreateWorkspaceDialog';
-import { WorkspaceSettingsModal } from '../workspace/WorkspaceSettingsModal';
 
 const RESUME_LIMIT = 5;
 const ACTIVITY_LIMIT = 6;
@@ -50,12 +42,11 @@ export function AppDashboard() {
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace);
   const setActive = useWorkspaceStore((s) => s.setActive);
-  const removeWorkspace = useWorkspaceStore((s) => s.removeWorkspace);
   const closeProject = useProjectStore((s) => s.closeProject);
   const loadProjects = useProjectStore((s) => s.loadProjects);
   const openProject = useProjectStore((s) => s.openProject);
-  const setShowLibraryPanel = useLibraryStore((s) => s.setShowLibraryPanel);
   const setShowSettings = useUiStore((s) => s.setShowSettings);
+  const setActiveWorkspaceView = useUiStore((s) => s.setActiveWorkspaceView);
   const { statuses: keyStatuses, isLoading: keyStatusLoading } = useProviderKeyStatus();
 
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
@@ -63,7 +54,6 @@ export function AppDashboard() {
   const [wsCounts, setWsCounts] = useState<WorkspaceProjectCount[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [showWorkspaceSettings, setShowWorkspaceSettings] = useState(false);
 
   const loadDashboardData = useCallback(async () => {
     try {
@@ -116,24 +106,16 @@ export function AppDashboard() {
     }
   };
 
-  const handleSwitchWorkspace = async (workspaceId: string) => {
+  /** Naviga alla pagina del workspace (attivandolo se serve): il click ha sempre un effetto visibile. */
+  const handleOpenWorkspace = async (workspaceId: string) => {
     const ws = workspaces.find((w) => w.id === workspaceId);
-    if (!ws || ws.id === activeWorkspace?.id) return;
-    closeProject();
-    await setActive(ws);
-    await loadProjects();
-  };
-
-  const handleDeleteWorkspace = async () => {
-    if (!activeWorkspace) return;
-    const ok = await confirm({
-      title: t('workspace.deleteTitle'),
-      message: t('workspace.deleteMessage', { name: activeWorkspace.name }),
-      confirmLabel: t('common.delete'),
-      danger: true,
-    });
-    if (!ok) return;
-    await removeWorkspace(activeWorkspace.id);
+    if (!ws) return;
+    if (ws.id !== activeWorkspace?.id) {
+      closeProject();
+      await setActive(ws);
+      await loadProjects();
+    }
+    setActiveWorkspaceView('workspace');
   };
 
   return (
@@ -237,34 +219,26 @@ export function AppDashboard() {
           )}
         </section>
 
-        {/* Workspace — riepilogo e gestione */}
+        {/* Workspace — righe che navigano alla pagina del workspace */}
         <section className="mt-6">
           <div className="mb-2 flex items-center justify-between px-1">
             <SectionLabel icon={Archive} label={t('dashboard.workspacesTitle')} />
-            <PillButton variant="secondary" onClick={() => setShowCreateDialog(true)}>
-              <span className="flex items-center gap-1.5">
-                <Plus size={11} /> {t('workspace.create')}
-              </span>
-            </PillButton>
+            <IconButton size="sm" tone="muted" onClick={() => setShowCreateDialog(true)} title={t('workspace.create')}>
+              <Plus size={12} />
+            </IconButton>
           </div>
           <div className="space-y-1.5">
             {workspaces.map((ws) => {
               const isActive = ws.id === activeWorkspace?.id;
               const count = wsCounts.find((c) => c.workspace_id === ws.id);
               return (
-                <div
+                <button
                   key={ws.id}
-                  className={`flex items-center justify-between gap-4 rounded-[16px] border px-4 py-3 transition-colors ${
-                    isActive
-                      ? 'border-editorial-accent/45 bg-editorial-paper'
-                      : 'border-editorial-border bg-editorial-bg/40 hover:border-editorial-accent/45 hover:bg-editorial-paper'
-                  }`}
+                  type="button"
+                  onClick={() => void handleOpenWorkspace(ws.id)}
+                  className={ROW_CLASS}
                 >
-                  <button
-                    type="button"
-                    onClick={() => void handleSwitchWorkspace(ws.id)}
-                    className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  >
+                  <span className="flex min-w-0 items-center gap-3">
                     <span
                       className={`h-2 w-2 shrink-0 rounded-full ${
                         isActive ? 'bg-editorial-accent' : 'border border-editorial-border bg-transparent'
@@ -275,99 +249,18 @@ export function AppDashboard() {
                     <span className="shrink-0 text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
                       {t('workspace.projectsMetric', { count: count?.project_count ?? 0 })}
                     </span>
-                  </button>
-                  {isActive ? (
-                    <span className="flex shrink-0 items-center gap-0.5">
-                      <IconButton
-                        size="sm"
-                        tone="muted"
-                        onClick={() => setShowLibraryPanel(true)}
-                        title={t('library.openLibrary')}
-                      >
-                        <LibraryBig size={12} />
-                      </IconButton>
-                      <IconButton
-                        size="sm"
-                        tone="muted"
-                        onClick={() => setShowWorkspaceSettings(true)}
-                        title={t('workspace.configure')}
-                      >
-                        <Settings2 size={12} />
-                      </IconButton>
-                      <IconButton
-                        size="sm"
-                        tone="muted"
-                        onClick={() => void handleDeleteWorkspace()}
-                        title={t('workspace.delete')}
-                      >
-                        <Trash2 size={12} />
-                      </IconButton>
-                    </span>
-                  ) : (
-                    <span className="shrink-0 text-xs text-editorial-muted">
-                      {count?.last_updated_at ? formatWhen(count.last_updated_at) : null}
-                    </span>
-                  )}
-                </div>
+                  </span>
+                  <span className="shrink-0 text-xs text-editorial-muted">
+                    {count?.last_updated_at ? formatWhen(count.last_updated_at) : null}
+                  </span>
+                </button>
               );
             })}
-          </div>
-        </section>
-
-        {/* Stato sistema — provider configurati */}
-        {!shouldShowProviderBanner && (
-          <section className="mt-6">
-            <div className="mb-2 px-1">
-              <SectionLabel icon={KeyRound} label={t('dashboard.systemTitle')} />
-            </div>
-            <div className="flex items-center justify-between gap-4 rounded-[16px] border border-editorial-border/60 bg-editorial-bg/30 px-4 py-3">
-              <span className="flex items-baseline gap-3">
-                <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
-                  {t('dashboard.providersLabel')}
-                </span>
-                <span className="font-display text-sm italic text-editorial-ink">
-                  {keyStatusLoading ? '…' : configuredProviders.join(' · ')}
-                </span>
-              </span>
-              <IconButton size="sm" tone="muted" onClick={() => setShowSettings(true, 'provider')} title={t('workspace.providerBannerCta')}>
-                <Settings2 size={12} />
-              </IconButton>
-            </div>
-          </section>
-        )}
-
-        {/* In arrivo (2.0) — slot predisposti per Biblioteca e Trascrizioni */}
-        <section className="mt-6">
-          <div className="mb-2 px-1">
-            <SectionLabel icon={Lock} label={t('dashboard.comingTitle')} />
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {([
-              { id: 'library', icon: LibraryBig },
-              { id: 'transcriptions', icon: FilePen },
-            ] as const).map(({ id, icon: Icon }) => (
-              <div key={id} className="rounded-[16px] border border-editorial-border/60 bg-editorial-bg/30 px-4 py-3 opacity-60">
-                <span className="flex items-center gap-2">
-                  <Icon size={14} className="shrink-0 text-editorial-muted" />
-                  <span className="font-display text-base italic text-editorial-muted">
-                    {t(`workspace.areas.${id}.title`)}
-                  </span>
-                  <span className="inline-flex items-center gap-1 rounded-full border border-editorial-border bg-editorial-bg px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
-                    <Lock size={8} />
-                    2.0
-                  </span>
-                </span>
-                <p className="mt-1.5 text-xs text-editorial-muted [text-wrap:pretty]">
-                  {t(`workspace.areas.${id}.body`)}
-                </p>
-              </div>
-            ))}
           </div>
         </section>
       </div>
 
       <CreateWorkspaceDialog open={showCreateDialog} onClose={() => setShowCreateDialog(false)} />
-      <WorkspaceSettingsModal open={showWorkspaceSettings} onClose={() => setShowWorkspaceSettings(false)} />
     </main>
   );
 }

@@ -6,25 +6,19 @@ import { toast } from 'sonner';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { confirm } from '../../stores/confirmStore';
-import { Dialog, DialogCancelButton, DialogConfirmButton, IconButton } from '../ui';
+import { IconButton } from '../ui';
+import { CreateProjectDialog } from '../projects/CreateProjectDialog';
 
 type SortKey = 'updatedAt' | 'name';
 
 export function TranslationsArea() {
   const { t, i18n } = useTranslation();
   const { activeWorkspace } = useWorkspaceStore();
-  const { projects, loadProjects, createAndOpen, openProject, removeProject } = useProjectStore();
+  const { projects, loadProjects, openProject, removeProject } = useProjectStore();
 
   const [sortKey, setSortKey] = useState<SortKey>('updatedAt');
   const [showNewProjectForm, setShowNewProjectForm] = useState(false);
-  const [newProjectName, setNewProjectName] = useState('');
-  const [creatingProject, setCreatingProject] = useState(false);
   const [openingProjectId, setOpeningProjectId] = useState<string | null>(null);
-
-  const closeNewProjectForm = () => {
-    setShowNewProjectForm(false);
-    setNewProjectName('');
-  };
 
   useEffect(() => { void loadProjects(); }, [activeWorkspace?.id, loadProjects]);
   useEffect(() => { setOpeningProjectId(null); }, [activeWorkspace?.id]);
@@ -42,22 +36,6 @@ export function TranslationsArea() {
     new Intl.DateTimeFormat(i18n.language, {
       day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
     }).format(new Date(updatedAt));
-
-  const handleCreateProject = async () => {
-    if (!newProjectName.trim()) return;
-    setCreatingProject(true);
-    try {
-      await createAndOpen(newProjectName.trim());
-      setShowNewProjectForm(false);
-      setNewProjectName('');
-    } catch (err: unknown) {
-      toast.error(t('projects.saveFailed'), {
-        description: err instanceof Error ? err.message : String(err),
-      });
-    } finally {
-      setCreatingProject(false);
-    }
-  };
 
   const handleOpenProject = async (projectId: string) => {
     setOpeningProjectId(projectId);
@@ -216,49 +194,7 @@ export function TranslationsArea() {
         </div>
       </div>
 
-      <Dialog
-        open={showNewProjectForm}
-        onOpenChange={(open) => {
-          if (!open) closeNewProjectForm();
-        }}
-        title={t('projects.create')}
-        eyebrow={activeWorkspace?.name ?? t('workspace.noActive')}
-        closeLabel={t('common.cancel')}
-        icon={<BookOpenText size={22} />}
-        widthClassName="max-w-lg"
-        bodyClassName="px-6 py-6 md:px-8"
-        footer={
-          <div className="flex justify-end gap-2">
-            <DialogCancelButton onClick={closeNewProjectForm}>
-              {t('common.cancel')}
-            </DialogCancelButton>
-            <DialogConfirmButton
-              onClick={() => void handleCreateProject()}
-              disabled={!newProjectName.trim() || creatingProject}
-            >
-              {creatingProject ? t('workspace.saving') : t('projects.create')}
-            </DialogConfirmButton>
-          </div>
-        }
-      >
-        <label className="block space-y-1.5">
-          <span className="text-xs font-bold uppercase tracking-[0.1em] text-editorial-muted">
-            {t('workspace.newBookCard')}
-          </span>
-          <input
-            value={newProjectName}
-            onChange={(e) => setNewProjectName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') void handleCreateProject();
-              if (e.key === 'Escape') closeNewProjectForm();
-            }}
-            placeholder={t('projects.namePlaceholder')}
-            className="w-full rounded-md border border-editorial-border bg-editorial-textbox/30 px-4 py-3 text-sm text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            // eslint-disable-next-line jsx-a11y/no-autofocus -- campo che compare da un click esplicito (nuovo progetto)
-            autoFocus
-          />
-        </label>
-      </Dialog>
+      <CreateProjectDialog open={showNewProjectForm} onClose={() => setShowNewProjectForm(false)} />
     </main>
   );
 }

@@ -49,23 +49,34 @@ describe('WorkspaceShellNext (#294)', () => {
     expect(useUiStore.getState().dashboardSidebarCollapsed).toBe(false);
   });
 
-  it('switches workspace from the switcher menu', async () => {
+  it('clicking a workspace in the rail activates it and navigates to its page', () => {
     renderShell();
 
-    fireEvent.click(screen.getByRole('button', { name: /Alpha/ }));
-    fireEvent.click(await screen.findByText('Beta'));
+    fireEvent.click(screen.getByText('Beta'));
 
     expect(useWorkspaceStore.getState().setActive).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'ws-2' }),
     );
   });
 
-  it('offers workspace creation from the switcher menu', async () => {
+  it('clicking the active workspace navigates to its page without re-activating', () => {
     renderShell();
 
-    fireEvent.click(screen.getByRole('button', { name: /Alpha/ }));
+    fireEvent.click(screen.getByText('Alpha'));
 
-    expect(await screen.findByText('workspace.create')).toBeInTheDocument();
+    expect(useUiStore.getState().activeWorkspaceView).toBe('workspace');
+    expect(useWorkspaceStore.getState().setActive).not.toHaveBeenCalled();
+  });
+
+  it('keeps the workspace list reachable when the rail is collapsed', () => {
+    renderShell();
+
+    fireEvent.click(screen.getByRole('button', { name: 'sidebar.collapse' }));
+    fireEvent.click(screen.getByRole('button', { name: /Beta/ }));
+
+    expect(useWorkspaceStore.getState().setActive).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'ws-2' }),
+    );
   });
 
   it('selects the translations area and keeps it selected on a second click (radio, no toggle)', () => {

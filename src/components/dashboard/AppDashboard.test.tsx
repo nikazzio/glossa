@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppDashboard } from './AppDashboard';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { useUiStore } from '../../stores/uiStore';
 
 vi.mock('../../hooks/useProviderKeyStatus', () => ({
   useProviderKeyStatus: () => ({
@@ -31,6 +32,7 @@ const WS_BETA = { id: 'ws-2', name: 'Beta' };
 describe('AppDashboard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useUiStore.setState({ activeWorkspaceView: 'dashboard' });
     mockListRecent.mockResolvedValue([]);
     mockListRuns.mockResolvedValue([]);
     mockCounts.mockResolvedValue([]);
@@ -108,7 +110,7 @@ describe('AppDashboard', () => {
     expect(await screen.findByText('dashboard.runOutcome.success')).toBeInTheDocument();
   });
 
-  it('lists workspaces with project counts and switches on click', async () => {
+  it('clicking a workspace row activates it and navigates to its page', async () => {
     mockCounts.mockResolvedValue([
       { workspace_id: 'ws-1', project_count: 3, last_updated_at: '2026-07-15T10:00:00.000Z' },
       { workspace_id: 'ws-2', project_count: 1, last_updated_at: null },
@@ -123,21 +125,27 @@ describe('AppDashboard', () => {
       expect(useWorkspaceStore.getState().setActive).toHaveBeenCalledWith(
         expect.objectContaining({ id: 'ws-2' }),
       );
+      expect(useUiStore.getState().activeWorkspaceView).toBe('workspace');
     });
   });
 
-  it('exposes library, configure and delete actions only on the active workspace row', async () => {
+  it('clicking the active workspace row navigates to its page without re-activating', async () => {
+    render(<AppDashboard />);
+
+    const alphaRow = await screen.findByRole('button', { name: /Alpha/ });
+    await userEvent.click(alphaRow);
+
+    await waitFor(() => {
+      expect(useUiStore.getState().activeWorkspaceView).toBe('workspace');
+    });
+    expect(useWorkspaceStore.getState().setActive).not.toHaveBeenCalled();
+  });
+
+  it('offers workspace creation as an icon-only action', async () => {
     render(<AppDashboard />);
 
     await screen.findByText('dashboard.resumeEmpty');
-    expect(screen.getByRole('button', { name: 'library.openLibrary' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'workspace.configure' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'workspace.delete' })).toBeInTheDocument();
-  });
-
-  it('shows configured providers in the system section', async () => {
-    render(<AppDashboard />);
-
-    expect(await screen.findByText('Openai')).toBeInTheDocument();
+    const createButton = screen.getByRole('button', { name: 'workspace.create' });
+    expect(createButton.textContent ?? '').not.toMatch(/workspace\.create/);
   });
 });

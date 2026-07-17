@@ -23,8 +23,13 @@ export const DOC_FONT_SIZE_CSS: Record<DocumentFontSize, string> = {
 export type DocumentLineHeight = 'tight' | 'normal' | 'relaxed';
 export type SettingsTab = 'translations' | 'provider' | 'typography';
 export type WorkspaceArea = 'translations' | 'library' | 'transcriptions';
-/** Vista corrente della home workspace: la Dashboard è la vista di riepilogo, le aree sono le sezioni operative. Sempre esattamente una attiva (semantica radio, mai deselezione). */
-export type WorkspaceView = 'dashboard' | WorkspaceArea;
+/**
+ * Vista corrente della shell: Dashboard (home app-level), pagina del workspace
+ * attivo ('workspace'), o un'area del workspace attivo. Sempre esattamente una
+ * attiva (semantica radio, mai deselezione) — ogni voce del rail naviga al
+ * proprio contenuto.
+ */
+export type WorkspaceView = 'dashboard' | 'workspace' | WorkspaceArea;
 
 export interface HLColorSet {
   sourceTerm: string;
