@@ -486,6 +486,10 @@
     "panelTitle": "Configurazione",
     "providerTab": "Provider",
     "phraseMemoryTab": "Phrase Memory",
+    "phraseMemoryToggle": "Memoria",
+    "phraseMemoryAutoSearch": "Ricerca automatica",
+    "phraseMemoryMaxResults": "Risultati massimi",
+    "phraseMemoryManualRefreshHint": "L'aggiornamento manuale resta disponibile nel pannello Memoria del frammento.",
     "customProvider": {
       "sectionTitle": "Endpoint custom",
       "add": "Aggiungi endpoint custom",

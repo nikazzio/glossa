@@ -493,6 +493,10 @@
     "backupImportConfirmMessage": "This will overwrite all current projects, pipelines, translations, glossaries and settings. The operation cannot be undone.",
     "backupImportConfirm": "Restore",
     "phraseMemoryTab": "Phrase Memory",
+    "phraseMemoryToggle": "Memory",
+    "phraseMemoryAutoSearch": "Auto-search",
+    "phraseMemoryMaxResults": "Max results",
+    "phraseMemoryManualRefreshHint": "Manual refresh remains available in the chunk Memory panel.",
     "customProvider": {
       "sectionTitle": "Custom Endpoints",
       "add": "Add custom endpoint",
