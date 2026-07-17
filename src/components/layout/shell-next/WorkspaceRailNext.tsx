@@ -3,6 +3,7 @@ import {
   Archive,
   BookOpenText,
   FilePen,
+  LayoutDashboard,
   LibraryBig,
   PanelLeftClose,
   PanelLeftOpen,
@@ -18,21 +19,26 @@ import { Dialog, DialogCancelButton, DialogConfirmButton, IconButton } from '../
 import { ShellNavItem, ShellNavSection } from '../ShellNav';
 
 const AREA_ITEMS = [
+  { id: 'dashboard', icon: LayoutDashboard, enabled: true },
   { id: 'translations', icon: BookOpenText, enabled: true },
   { id: 'library', icon: LibraryBig, enabled: false },
   { id: 'transcriptions', icon: FilePen, enabled: false },
 ] as const;
 
-/** Aree: livello principale della barra — a quale tipo di contenuto stai lavorando. */
+/**
+ * Viste workspace: livello principale della barra. Semantica radio — sempre
+ * esattamente una vista attiva, il click sulla vista già attiva è un no-op,
+ * mai deselezione (niente stato "nessuna area" non interpretabile).
+ */
 function AreaSection({ collapsed }: { collapsed: boolean }) {
   const { t } = useTranslation();
-  const activeWorkspaceArea = useUiStore((state) => state.activeWorkspaceArea);
-  const setActiveWorkspaceArea = useUiStore((state) => state.setActiveWorkspaceArea);
+  const activeWorkspaceView = useUiStore((state) => state.activeWorkspaceView);
+  const setActiveWorkspaceView = useUiStore((state) => state.setActiveWorkspaceView);
 
   return (
     <ShellNavSection icon={BookOpenText} label={t('sidebar.areaLabel')} collapsed={collapsed}>
       {AREA_ITEMS.map(({ id, icon: Icon, enabled }) => {
-        const active = enabled && activeWorkspaceArea === id;
+        const active = enabled && activeWorkspaceView === id;
         return (
           <ShellNavItem
             key={id}
@@ -40,11 +46,7 @@ function AreaSection({ collapsed }: { collapsed: boolean }) {
             disabled={!enabled}
             collapsed={collapsed}
             labelFont="display"
-            onClick={
-              enabled
-                ? () => setActiveWorkspaceArea(activeWorkspaceArea === id ? null : id)
-                : undefined
-            }
+            onClick={enabled ? () => setActiveWorkspaceView(id) : undefined}
             ariaCurrent={active ? 'page' : undefined}
             icon={
               <span

@@ -671,6 +671,7 @@
     "saveFailed": "Salvataggio workspace fallito",
     "saving": "Salvataggio...",
     "projectsMetric": "{{count}} progetti",
+    "resumeTitle": "Riprendi",
     "projectsMetric_one": "{{count}} progetto",
     "workspacesMetric": "Workspace",
     "pipelineMetric": "Pipeline",
@@ -683,6 +684,10 @@
     "pipelineBadge_other": "{{count}} pipeline",
     "pipelineNamesFallback": "Nessuna pipeline",
     "areas": {
+      "dashboard": {
+        "title": "Dashboard",
+        "sidebarHint": "Riepilogo e ripresa"
+      },
       "translations": {
         "title": "Traduzioni",
         "body": "Area operativa attuale: progetti, pipeline, Phrase Memory e preset di traduzione vivono qui.",
@@ -727,19 +732,13 @@
       "backupTab": "Backup"
     },
     "translationsArea": {
-      "backLabel": "Torna a {{name}}",
       "sort": {
         "updatedAt": "Recenti",
         "name": "Nome"
       }
     },
     "hub": {
-      "lockedArea": "In arrivo nella versione 2.0",
-      "goToArea": "Vai all'area",
-      "projects": "Progetti",
-      "colName": "Nome",
-      "colModified": "Modificato",
-      "noProjects": "Nessun progetto in questo workspace."
+      "lockedArea": "In arrivo nella versione 2.0"
     }
   },
   "files": {
@@ -1567,6 +1566,7 @@
       "weak": "Qualità bassa",
       "tooltipPrefix": "Qualità"
     },
+    "areaDashboard": "Dashboard",
     "areaTranslations": "Traduzioni",
     "areaLibrary": "Biblioteca",
     "areaTranscriptions": "Trascrizioni",

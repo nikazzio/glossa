@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowLeft, ArrowUpAZ, BookOpenText, Clock, Plus, Trash2 } from 'lucide-react';
+import { ArrowUpAZ, BookOpenText, Clock, Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
-import { useUiStore } from '../../stores/uiStore';
 import { confirm } from '../../stores/confirmStore';
 import { Dialog, DialogCancelButton, DialogConfirmButton, IconButton } from '../ui';
 
@@ -14,7 +13,6 @@ type SortKey = 'updatedAt' | 'name';
 export function TranslationsArea() {
   const { t, i18n } = useTranslation();
   const { activeWorkspace } = useWorkspaceStore();
-  const { setActiveWorkspaceArea } = useUiStore();
   const { projects, loadProjects, createAndOpen, openProject, removeProject } = useProjectStore();
 
   const [sortKey, setSortKey] = useState<SortKey>('updatedAt');
@@ -94,20 +92,11 @@ export function TranslationsArea() {
   return (
     <main className="flex flex-1 h-full min-h-0 flex-col overflow-y-auto bg-editorial-paper custom-scrollbar">
       <div className="px-5 py-5 md:px-6">
-        {/* Back nav */}
-        <div className="mb-4">
-          <button
-            type="button"
-            onClick={() => setActiveWorkspaceArea(null)}
-            aria-label={t('workspace.translationsArea.backLabel', { name: activeWorkspace?.name ?? '' })}
-            className="flex items-center gap-1.5 text-xs text-editorial-muted hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent rounded-md"
-          >
-            <ArrowLeft size={11} />
-            <span>{activeWorkspace?.name ?? t('workspace.noActive')}</span>
-          </button>
+        {/* Header — il nome workspace fa da eyebrow di contesto; si torna alla
+            Dashboard dalla voce in barra laterale, non da un back dedicato. */}
+        <div className="mb-4 text-xs text-editorial-muted">
+          {activeWorkspace?.name ?? t('workspace.noActive')}
         </div>
-
-        {/* Header */}
         <div className="mb-5 flex items-end justify-between gap-3">
           <h1 className="font-display text-4xl italic text-editorial-ink md:text-5xl">
             {t('workspace.areas.translations.title')}

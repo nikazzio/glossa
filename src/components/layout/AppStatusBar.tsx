@@ -11,6 +11,7 @@ import { countWords, qualityLabelKey, qualityTone } from '../../utils';
 import { OperationsTab } from '../document/OperationsTab';
 
 const AREA_KEY: Record<string, string> = {
+  dashboard: 'statusBar.areaDashboard',
   translations: 'statusBar.areaTranslations',
   library: 'statusBar.areaLibrary',
   transcriptions: 'statusBar.areaTranscriptions',
@@ -238,14 +239,8 @@ export function AppStatusBar() {
           {data.kind === 'workspace' && (
             <>
               <span className="truncate font-medium text-editorial-ink">{data.workspaceName}</span>
-              {data.areaName ? (
-                <>
-                  <span className="text-editorial-border">/</span>
-                  <span className="truncate">{t(AREA_KEY[data.areaName] ?? data.areaName)}</span>
-                </>
-              ) : (
-                <span className="text-editorial-border">·</span>
-              )}
+              <span className="text-editorial-border">/</span>
+              <span className="truncate">{t(AREA_KEY[data.areaName] ?? data.areaName)}</span>
               <span>{t('workspace.projectsMetric', { count: data.projectCount })}</span>
             </>
           )}

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   BookOpenText,
   FilePen,
+  History,
   KeyRound,
   LibraryBig,
   Lock,
@@ -30,7 +31,7 @@ const AREA_ICONS: Record<WorkspaceArea, React.ComponentType<{ size?: number }>> 
 export function WorkspaceHome() {
   const { t, i18n } = useTranslation();
   const { activeWorkspace, removeWorkspace } = useWorkspaceStore();
-  const setActiveWorkspaceArea = useUiStore((s) => s.setActiveWorkspaceArea);
+  const setActiveWorkspaceView = useUiStore((s) => s.setActiveWorkspaceView);
   const setShowSettings = useUiStore((state) => state.setShowSettings);
   const setShowLibraryPanel = useLibraryStore((s) => s.setShowLibraryPanel);
   const { statuses: keyStatuses, isLoading: keyStatusLoading } = useProviderKeyStatus();
@@ -175,13 +176,49 @@ export function WorkspaceHome() {
           </section>
         ) : null}
 
+        {/* Riprendi — ultimi progetti toccati, la Dashboard risponde a "dove ero rimasto";
+            l'inventario completo con gestione vive nell'area Traduzioni. */}
+        {sortedProjects.length > 0 && (
+          <section className="mt-6">
+            <div className="mb-2 px-1">
+              <SectionLabel icon={History} label={t('workspace.resumeTitle')} />
+            </div>
+            <div className="space-y-1.5">
+              {sortedProjects.slice(0, 3).map((project) => (
+                <button
+                  key={project.id}
+                  type="button"
+                  onClick={() => {
+                    openProject(project.id).catch((err: unknown) => {
+                      toast.error(t('projects.openFailed'), {
+                        description: err instanceof Error ? err.message : String(err),
+                      });
+                    });
+                  }}
+                  className="flex w-full cursor-pointer items-center justify-between gap-4 rounded-[16px] border border-editorial-border bg-editorial-bg/40 px-4 py-3 text-left transition-colors hover:border-editorial-accent/45 hover:bg-editorial-paper focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                >
+                  <span className="flex min-w-0 items-center gap-3">
+                    <BookOpenText size={14} className="shrink-0 text-editorial-muted" />
+                    <span className="truncate font-display text-base italic text-editorial-ink">
+                      {project.name}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-xs text-editorial-muted">
+                    {formatSavedAt(project.updated_at)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Area cards */}
         <section className="mt-6">
           <div className="grid gap-3 sm:grid-cols-3">
             {/* Translations — active */}
             <button
               type="button"
-              onClick={() => setActiveWorkspaceArea('translations')}
+              onClick={() => setActiveWorkspaceView('translations')}
               className="group rounded-[24px] border border-editorial-border bg-editorial-paper/75 px-5 py-4 text-left shadow-[var(--inset-highlight)] transition-colors hover:border-editorial-accent/45 hover:bg-editorial-paper focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             >
               <span className="flex items-start gap-3">
@@ -210,55 +247,6 @@ export function WorkspaceHome() {
           </div>
         </section>
 
-        {/* Project list */}
-        <section className="mt-6">
-          <div className="mb-2 px-1">
-            <SectionLabel icon={BookOpenText} label={t('workspace.hub.projects')} />
-          </div>
-          {sortedProjects.length > 0 ? (
-            <>
-              {/* Column headers */}
-              <div className="mb-1 flex items-center justify-between px-4">
-                <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
-                  {t('workspace.hub.colName')}
-                </span>
-                <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
-                  {t('workspace.hub.colModified')}
-                </span>
-              </div>
-              <div className="space-y-1.5">
-                {sortedProjects.map((project) => (
-                  <button
-                    key={project.id}
-                    type="button"
-                    onClick={() => {
-                      openProject(project.id).catch((err: unknown) => {
-                        toast.error(t('projects.openFailed'), {
-                          description: err instanceof Error ? err.message : String(err),
-                        });
-                      });
-                    }}
-                    className="flex w-full cursor-pointer items-center justify-between gap-4 rounded-[16px] border border-editorial-border bg-editorial-bg/40 px-4 py-3 text-left transition-colors hover:border-editorial-accent/45 hover:bg-editorial-paper focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  >
-                    <span className="flex min-w-0 items-center gap-3">
-                      <BookOpenText size={14} className="shrink-0 text-editorial-muted" />
-                      <span className="truncate font-display text-base italic text-editorial-ink">
-                        {project.name}
-                      </span>
-                    </span>
-                    <span className="shrink-0 text-xs text-editorial-muted">
-                      {formatSavedAt(project.updated_at)}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </>
-          ) : (
-            <p className="px-1 text-sm text-editorial-muted">
-              {t('workspace.hub.noProjects')}
-            </p>
-          )}
-        </section>
       </div>
 
       <Dialog

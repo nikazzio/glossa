@@ -80,13 +80,50 @@ describe('WorkspaceHome provider onboarding', () => {
     expect(screen.getByRole('button', { name: 'workspace.delete' })).toBeInTheDocument();
   });
 
-  it('clicking Translations area card calls setActiveWorkspaceArea("translations")', async () => {
-    const mockSetArea = vi.fn();
-    useUiStore.setState({ setActiveWorkspaceArea: mockSetArea }, false);
+  it('clicking Translations area card calls setActiveWorkspaceView("translations")', async () => {
+    const mockSetView = vi.fn();
+    useUiStore.setState({ setActiveWorkspaceView: mockSetView }, false);
 
     render(<WorkspaceHome />);
     const translationsCard = screen.getByRole('button', { name: /workspace\.areas\.translations\.title/ });
     await userEvent.click(translationsCard);
-    expect(mockSetArea).toHaveBeenCalledWith('translations');
+    expect(mockSetView).toHaveBeenCalledWith('translations');
+  });
+
+  it('shows the resume section with the most recent projects when projects exist', () => {
+    useProjectStore.setState({
+      projects: [
+        { id: 'p1', name: 'Alpha', updated_at: '2026-07-01T10:00:00.000Z', pipeline_count: 1 },
+        { id: 'p2', name: 'Beta', updated_at: '2026-07-15T10:00:00.000Z', pipeline_count: 2 },
+        { id: 'p3', name: 'Gamma', updated_at: '2026-07-10T10:00:00.000Z', pipeline_count: 0 },
+        { id: 'p4', name: 'Delta', updated_at: '2026-06-01T10:00:00.000Z', pipeline_count: 0 },
+      ],
+    } as never, false);
+
+    render(<WorkspaceHome />);
+
+    expect(screen.getByText('workspace.resumeTitle')).toBeInTheDocument();
+    // Solo i 3 più recenti, ordinati per data: Beta, Gamma, Alpha (Delta escluso).
+    expect(screen.getByRole('button', { name: /Beta/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Gamma/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Alpha/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Delta/ })).not.toBeInTheDocument();
+  });
+
+  it('hides the resume section when the workspace has no projects', () => {
+    render(<WorkspaceHome />);
+    expect(screen.queryByText('workspace.resumeTitle')).not.toBeInTheDocument();
+  });
+
+  it('opens a project when clicking a resume row', async () => {
+    const mockOpen = vi.fn().mockResolvedValue(undefined);
+    useProjectStore.setState({
+      projects: [{ id: 'p1', name: 'Alpha', updated_at: '2026-07-01T10:00:00.000Z', pipeline_count: 1 }],
+      openProject: mockOpen,
+    } as never, false);
+
+    render(<WorkspaceHome />);
+    await userEvent.click(screen.getByRole('button', { name: /Alpha/ }));
+    expect(mockOpen).toHaveBeenCalledWith('p1');
   });
 });

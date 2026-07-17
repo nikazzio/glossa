@@ -23,6 +23,8 @@ export const DOC_FONT_SIZE_CSS: Record<DocumentFontSize, string> = {
 export type DocumentLineHeight = 'tight' | 'normal' | 'relaxed';
 export type SettingsTab = 'translations' | 'provider' | 'typography';
 export type WorkspaceArea = 'translations' | 'library' | 'transcriptions';
+/** Vista corrente della home workspace: la Dashboard è la vista di riepilogo, le aree sono le sezioni operative. Sempre esattamente una attiva (semantica radio, mai deselezione). */
+export type WorkspaceView = 'dashboard' | WorkspaceArea;
 
 export interface HLColorSet {
   sourceTerm: string;
@@ -106,9 +108,9 @@ interface UiState {
   projectSidebarWidth: number;
   projectFlyoutWidth: number;
   pendingAnnotationAnchor: { chunkId: string; text: string; content?: string } | null;
-  activeWorkspaceArea: WorkspaceArea | null;
+  activeWorkspaceView: WorkspaceView;
   setTraceStageId: (id: string | null) => void;
-  setActiveWorkspaceArea: (area: WorkspaceArea | null) => void;
+  setActiveWorkspaceView: (view: WorkspaceView) => void;
   setPendingAnnotationAnchor: (anchor: { chunkId: string; text: string; content?: string } | null) => void;
   setViewMode: (mode: ViewMode) => void;
   setDocumentLayout: (layout: DocumentLayoutPreference) => void;
@@ -295,7 +297,7 @@ export const useUiStore = create<UiState>()(
       projectSidebarWidth: 300,
       projectFlyoutWidth: 430,
       pendingAnnotationAnchor: null,
-      activeWorkspaceArea: null,
+      activeWorkspaceView: 'dashboard',
       setViewMode: (mode) =>
         set((state) => ({
           viewMode: mode,
@@ -436,7 +438,7 @@ export const useUiStore = create<UiState>()(
       clearAnnotationFocus: () => set({ focusedIssueQuery: null, focusIsAnnotation: false }),
       setTraceStageId: (id) => set({ traceStageId: id }),
       setPendingAnnotationAnchor: (anchor) => set({ pendingAnnotationAnchor: anchor }),
-      setActiveWorkspaceArea: (area) => set({ activeWorkspaceArea: area }),
+      setActiveWorkspaceView: (view) => set({ activeWorkspaceView: view }),
       setActiveProjectPanel: (panel) =>
         set((state) => {
           if (panel === 'insight') {

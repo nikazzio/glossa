@@ -367,6 +367,7 @@ Regole:
 - **Azioni di riga**: comandi contestuali (es. modifica/elimina workspace attivo) vanno nel `trailing` di `ShellNavItem` (wrapper div + button interno + trailing fratelli — mai button annidati), non in barre azione separate nel canvas.
 - Dashboard/home: no card bianche generiche. Usa `editorial-paper`, bordi `editorial-border`, icone tonde, metadati proporzionati.
 - Area nav: testi `workspace.areas.<id>.title` e `workspace.areas.<id>.sidebarHint`. No badge "Attiva".
+- **Viste workspace = semantica radio**: Dashboard + aree (Traduzioni, Biblioteca, Trascrizioni) sono scelte esclusive — sempre esattamente una attiva, default Dashboard, click sulla vista attiva = no-op, mai deselezione (nessuno stato "nessuna area"). La Dashboard è riepilogo/ripresa (blocco Riprendi con gli ultimi progetti, card aree con conteggi); l'inventario completo con gestione vive nell'area dedicata. Dentro un'area si torna alla Dashboard dalla voce in barra, non da back dedicati.
 - Aree future possono essere disabilitate ma mantengono forma e gerarchia.
 
 ### Colonne progetto (shell #291)

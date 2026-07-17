@@ -70,13 +70,21 @@ describe('WorkspaceShellNext (#294)', () => {
     );
   });
 
-  it('selects the translations area and returns to the hub on a second click', () => {
+  it('selects the translations area and keeps it selected on a second click (radio, no toggle)', () => {
     renderShell();
 
     fireEvent.click(screen.getByText('workspace.areas.translations.title'));
-    expect(useUiStore.getState().activeWorkspaceArea).toBe('translations');
+    expect(useUiStore.getState().activeWorkspaceView).toBe('translations');
 
     fireEvent.click(screen.getByText('workspace.areas.translations.title'));
-    expect(useUiStore.getState().activeWorkspaceArea).toBe(null);
+    expect(useUiStore.getState().activeWorkspaceView).toBe('translations');
+  });
+
+  it('returns to the dashboard from the dashboard nav item', () => {
+    renderShell();
+
+    fireEvent.click(screen.getByText('workspace.areas.translations.title'));
+    fireEvent.click(screen.getByText('workspace.areas.dashboard.title'));
+    expect(useUiStore.getState().activeWorkspaceView).toBe('dashboard');
   });
 });

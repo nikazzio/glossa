@@ -1,24 +1,17 @@
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TranslationsArea } from './TranslationsArea';
-import { useUiStore } from '../../stores/uiStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import '../../test/i18n-mock';
 
-vi.mock('../../stores/uiStore');
 vi.mock('../../stores/projectStore');
 vi.mock('../../stores/workspaceStore');
 
-const mockSetActiveWorkspaceArea = vi.fn();
 const mockLoadProjects = vi.fn().mockResolvedValue(undefined);
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(useUiStore).mockReturnValue({
-    setActiveWorkspaceArea: mockSetActiveWorkspaceArea,
-  } as ReturnType<typeof useUiStore>);
   vi.mocked(useProjectStore).mockReturnValue({
     projects: [],
     loadProjects: mockLoadProjects,
@@ -37,11 +30,10 @@ describe('TranslationsArea', () => {
     expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
   });
 
-  it('back button calls setActiveWorkspaceArea(null)', async () => {
+  it('shows the workspace name as context eyebrow without a back button', () => {
     render(<TranslationsArea />);
-    const backBtn = screen.getByRole('button', { name: /back|backLabel|test workspace/i });
-    await userEvent.click(backBtn);
-    expect(mockSetActiveWorkspaceArea).toHaveBeenCalledWith(null);
+    expect(screen.getByText('Test Workspace')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /back|backLabel/i })).not.toBeInTheDocument();
   });
 
   it('renders sort toggle buttons', () => {

@@ -40,7 +40,7 @@ describe('AppStatusBar', () => {
       kind: 'workspace',
       workspaceName: 'Test WS',
       projectCount: 3,
-      areaName: null,
+      areaName: 'dashboard',
     });
     render(<AppStatusBar />);
     expect(screen.getByText('Test WS')).toBeInTheDocument();

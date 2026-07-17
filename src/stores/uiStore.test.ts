@@ -212,24 +212,24 @@ describe('uiStore uiFont preference', () => {
   });
 });
 
-describe('uiStore — activeWorkspaceArea', () => {
+describe('uiStore — activeWorkspaceView', () => {
   beforeEach(() => {
-    useUiStore.setState({ activeWorkspaceArea: null });
+    useUiStore.setState({ activeWorkspaceView: 'dashboard' });
   });
 
-  it('defaults to null', () => {
-    expect(useUiStore.getState().activeWorkspaceArea).toBeNull();
+  it('defaults to dashboard (never an empty selection)', () => {
+    expect(useUiStore.getState().activeWorkspaceView).toBe('dashboard');
   });
 
-  it('setActiveWorkspaceArea sets the area', () => {
-    useUiStore.getState().setActiveWorkspaceArea('translations');
-    expect(useUiStore.getState().activeWorkspaceArea).toBe('translations');
+  it('setActiveWorkspaceView switches to an area', () => {
+    useUiStore.getState().setActiveWorkspaceView('translations');
+    expect(useUiStore.getState().activeWorkspaceView).toBe('translations');
   });
 
-  it('setActiveWorkspaceArea(null) resets to hub', () => {
-    useUiStore.getState().setActiveWorkspaceArea('translations');
-    useUiStore.getState().setActiveWorkspaceArea(null);
-    expect(useUiStore.getState().activeWorkspaceArea).toBeNull();
+  it('setActiveWorkspaceView returns to the dashboard', () => {
+    useUiStore.getState().setActiveWorkspaceView('translations');
+    useUiStore.getState().setActiveWorkspaceView('dashboard');
+    expect(useUiStore.getState().activeWorkspaceView).toBe('dashboard');
   });
 });
 
