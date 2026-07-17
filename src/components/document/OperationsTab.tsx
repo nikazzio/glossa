@@ -661,7 +661,7 @@ function DetailBlock({
             type="button"
             onClick={onCopy}
             aria-label={t('log.copy')}
-            className="flex items-center gap-1 text-xs text-terminal-muted transition-colors hover:text-terminal-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            className="flex items-center gap-1 text-xs text-terminal-muted transition-colors hover:text-terminal-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-terminal-accent"
           >
             <Copy size={10} />
             {t('log.copy')}
