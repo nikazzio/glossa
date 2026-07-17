@@ -18,7 +18,7 @@ import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useLibraryStore } from '../../stores/libraryStore';
 import { confirm } from '../../stores/confirmStore';
 import { generateId } from '../../utils';
-import { IconButton, SectionLabel } from '../ui';
+import { EmptyState, IconButton, SectionLabel, Spinner } from '../ui';
 import type { Workspace } from '../../types';
 
 export function MemoriesTab() {
@@ -253,17 +253,17 @@ export function MemoriesTab() {
       })()}
 
       {isLoading ? (
-        <div className="flex items-center justify-center gap-2 border-y border-editorial-border/70 py-8 text-xs text-editorial-muted">
-          <Loader2 size={14} className="animate-spin" />
-          {t('common.loading')}
-        </div>
+        <Spinner
+          size={14}
+          label={t('common.loading')}
+          className="flex items-center justify-center gap-2 border-y border-editorial-border/70 py-8 text-xs text-editorial-muted"
+        />
       ) : entries.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-3 border-y border-dashed border-editorial-border/70 py-12 text-center">
-          <Brain size={28} className="text-editorial-border" />
-          <p className="font-display text-lg italic text-editorial-muted">
-            {t('library.noMemories')}
-          </p>
-        </div>
+        <EmptyState
+          icon={<Brain size={28} />}
+          message={t('library.noMemories')}
+          className="flex flex-col items-center justify-center gap-3 border-y border-dashed border-editorial-border/70 py-12 text-center"
+        />
       ) : (
         <div className="space-y-3">
           {entries.map((entry) => {

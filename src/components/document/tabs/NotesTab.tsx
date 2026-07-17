@@ -16,7 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { useAnnotationsStore } from '../../../stores/annotationsStore';
 import { useProjectStore } from '../../../stores/projectStore';
 import { useUiStore } from '../../../stores/uiStore';
-import { IconButton, PillButton, Tooltip } from '../../ui';
+import { EmptyState, IconButton, PillButton, Tooltip } from '../../ui';
 import type { AnnotationType, TranslationChunk } from '../../../types';
 import type { Annotation } from '../../../types';
 
@@ -238,9 +238,8 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
 
   if (!currentChunk) {
     return (
-      <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex flex-col items-center justify-center gap-3 px-6 py-12 text-center">
-        <NotebookText size={28} className="text-editorial-border" />
-        <p className="text-sm font-medium text-editorial-muted">{t('annotations.emptyNoChunk')}</p>
+      <div id={panelId} role="tabpanel" aria-labelledby={labelledBy}>
+        <EmptyState icon={<NotebookText size={28} />} message={t('annotations.emptyNoChunk')} />
       </div>
     );
   }

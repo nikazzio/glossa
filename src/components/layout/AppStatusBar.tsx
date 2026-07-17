@@ -6,7 +6,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useAnnotationsStore } from '../../stores/annotationsStore';
-import { IconButton, Tooltip } from '../ui';
+import { IconButton, Spinner, Tooltip } from '../ui';
 import { countWords, qualityLabelKey, qualityTone } from '../../utils';
 import { OperationsTab } from '../document/OperationsTab';
 
@@ -34,10 +34,7 @@ function SaveIndicator({ state, lastSavedAt }: { state: 'idle' | 'dirty' | 'savi
   if (state === 'saving') {
     return (
       <Tooltip label={tooltipLabel} side="top">
-        <span className="flex items-center gap-1 text-editorial-muted">
-          <Loader2 size={10} className="animate-spin" />
-          <span className="text-xs">{t('statusBar.saving')}</span>
-        </span>
+        <Spinner size={10} label={t('statusBar.saving')} className="flex items-center gap-1 text-xs text-editorial-muted" />
       </Tooltip>
     );
   }

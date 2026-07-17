@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useChunksStore } from '../../../stores/chunksStore';
-import { IconButton } from '../../ui';
+import { IconButton, Spinner } from '../../ui';
 import { IssueList } from './IssueList';
 import type { TranslationChunk } from '../../../types';
 
@@ -70,9 +70,7 @@ export function CoherenceTab({ panelId, labelledBy, currentChunk, isProcessing, 
           {!allChunksTranslated ? t('coherence.translationsRequired') : t('coherence.idle')}
         </p>
       ) : coherence.status === 'processing' ? (
-        <div className="mt-3 flex items-center gap-2 text-sm text-editorial-muted">
-          <Loader2 size={13} className="animate-spin shrink-0" /> {t('coherence.running')}
-        </div>
+        <Spinner size={13} label={t('coherence.running')} className="mt-3 flex items-center gap-2 text-sm text-editorial-muted" />
       ) : coherence.status === 'error' ? (
         <div className="mt-3 border-t border-editorial-danger/30 pt-3 text-sm text-editorial-danger">
           {coherence.error || t('errors.coherenceFailed')}

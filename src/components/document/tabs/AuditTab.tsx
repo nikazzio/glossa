@@ -1,7 +1,7 @@
-import { Loader2, RefreshCcw } from 'lucide-react';
+import { RefreshCcw } from 'lucide-react';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { IconButton } from '../../ui';
+import { IconButton, Spinner } from '../../ui';
 import { IssueList } from './IssueList';
 import { qualityLabelKey, qualityTone } from '../../../utils';
 import { useChunksStore } from '../../../stores/chunksStore';
@@ -67,10 +67,7 @@ export function AuditTab({ panelId, labelledBy, currentChunk, isProcessing, onRe
         </div>
       )}
       {currentChunk.judgeResult.status === 'processing' && (
-        <div className="mt-3 flex items-center gap-2 text-sm text-editorial-running">
-          <Loader2 size={13} className="animate-spin shrink-0" />
-          <span>{t('document.insightsAuditProcessing')}</span>
-        </div>
+        <Spinner size={13} label={t('document.insightsAuditProcessing')} className="mt-3 flex items-center gap-2 text-sm text-editorial-running" />
       )}
       {currentChunk.judgeResult.status !== 'error'
         && currentChunk.judgeResult.status !== 'completed'

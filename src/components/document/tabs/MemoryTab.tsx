@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { useMemoryExtractionDraft } from '../../../hooks/useMemoryExtractionDraft';
 import { useWorkspaceStore } from '../../../stores/workspaceStore';
 import { listPhraseMemoryEntries } from '../../../services/phraseMemoryService';
-import { IconButton } from '../../ui';
+import { EmptyState, IconButton, Spinner } from '../../ui';
 import type { PhraseCandidateDraft } from '../../../stores/phraseMemoryDraftStore';
 import type { TranslationChunk } from '../../../types';
 
@@ -146,16 +146,13 @@ export function MemoryTab({ panelId, labelledBy, currentChunk }: MemoryTabProps)
         </div>
       ) : isLoadingSaved ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-12 text-center">
-          <Loader2 size={28} className="animate-spin text-editorial-border" />
-          <p className="text-sm font-medium text-editorial-muted">{t('memory.loadingMemories')}</p>
+          <Spinner size={28} label={t('memory.loadingMemories')} className="flex flex-col items-center gap-3 text-sm font-medium text-editorial-muted" />
         </div>
       ) : (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-12 text-center">
-          <Brain size={28} className="text-editorial-border" />
-          {!currentChunk?.translationLocked && (
-            <p className="text-sm font-medium text-editorial-muted">{t('memory.extractDisabledLockHint')}</p>
-          )}
-        </div>
+        <EmptyState
+          icon={<Brain size={28} />}
+          message={currentChunk?.translationLocked ? undefined : t('memory.extractDisabledLockHint')}
+        />
       )}
     </div>
   );

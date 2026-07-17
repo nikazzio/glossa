@@ -19,7 +19,7 @@ import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
 import { useOperationLogStore } from '../../stores/operationLogStore';
 import { PromptPreviewTab } from './PromptPreviewTab';
 import { canRefineWithProvider, formatProviderModelLabel, useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
-import { IconButton, SectionLabel, Tooltip } from '../ui';
+import { IconButton, SectionLabel, Spinner, Tooltip } from '../ui';
 import { PersonaEditor } from './PersonaEditor';
 import { SettingsTabPanel } from './SettingsTabPanel';
 import { TranslationTabPanel } from './TranslationTabPanel';
@@ -452,10 +452,11 @@ export function PipelineConfig({
       <div className="relative flex-1 min-h-0">
         {isProcessing && (
           <div className="absolute inset-0 z-10 flex items-start justify-center bg-editorial-bg/70 backdrop-blur-[2px]">
-            <div className="mt-10 flex items-center gap-2 rounded-full border border-editorial-border bg-editorial-bg px-4 py-2 text-xs font-sans uppercase tracking-widest text-editorial-muted shadow-sm">
-              <Loader2 size={12} className="animate-spin" />
-              {t('pipeline.settingsLockedWhileRunning')}
-            </div>
+            <Spinner
+              size={12}
+              label={t('pipeline.settingsLockedWhileRunning')}
+              className="mt-10 flex items-center gap-2 rounded-full border border-editorial-border bg-editorial-bg px-4 py-2 text-xs font-sans uppercase tracking-widest text-editorial-muted shadow-sm"
+            />
           </div>
         )}
         <div className="overflow-y-auto custom-scrollbar px-6 py-6 space-y-6 h-full">
