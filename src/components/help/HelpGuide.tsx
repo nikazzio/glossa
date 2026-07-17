@@ -212,7 +212,7 @@ function VersionWidget() {
 
   return (
     <div className="mt-8 flex items-center gap-3 border-y border-editorial-border/70 py-3">
-      <span className="font-mono text-[11px] text-editorial-muted/70">v{__APP_VERSION__}</span>
+      <span className="font-mono text-xs text-editorial-muted/70">v{__APP_VERSION__}</span>
       <Tooltip label={t('help.version.check')}>
         <button
           type="button"
@@ -225,13 +225,13 @@ function VersionWidget() {
         </button>
       </Tooltip>
       {status === 'up-to-date' && (
-        <span className="text-[11px] text-editorial-success">{t('help.version.upToDate')}</span>
+        <span className="text-xs text-editorial-success">{t('help.version.upToDate')}</span>
       )}
       {status === 'update-available' && latestTag && (
-        <span className="text-[11px] text-editorial-accent">{t('help.version.updateAvailable', { tag: latestTag })}</span>
+        <span className="text-xs text-editorial-accent">{t('help.version.updateAvailable', { tag: latestTag })}</span>
       )}
       {status === 'error' && (
-        <span className="text-[11px] text-editorial-muted/60">{t('help.version.error')}</span>
+        <span className="text-xs text-editorial-muted/60">{t('help.version.error')}</span>
       )}
     </div>
   );
@@ -291,7 +291,7 @@ function ModeRow({ name, stages, desc }: { name: string; stages: string; desc: s
     <div className="border-b border-editorial-border/70 py-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <span className="font-display text-base italic text-editorial-ink">{name}</span>
-        <span className="font-mono text-[11px] text-editorial-accent">{stages}</span>
+        <span className="font-mono text-xs text-editorial-accent">{stages}</span>
       </div>
       <p className="mt-2 text-[13px] leading-relaxed text-editorial-ink/75">{desc}</p>
     </div>
@@ -415,7 +415,7 @@ function ContextSection() {
       <div className="my-6 space-y-2">
         {(['layer1', 'layer2', 'layer3'] as const).map((key) => (
           <div key={key} className="flex items-start gap-4 border-b border-editorial-border/70 py-4">
-            <span className="mt-0.5 shrink-0 rounded-full border border-editorial-accent/40 bg-editorial-bg px-3 py-1 font-mono text-[11px] font-bold text-editorial-accent">
+            <span className="mt-0.5 shrink-0 rounded-full border border-editorial-accent/40 bg-editorial-bg px-3 py-1 font-mono text-xs font-bold text-editorial-accent">
               {t(`help.context.${key}Label`)}
             </span>
             <span className="text-[13px] leading-relaxed text-editorial-ink/80">
@@ -431,7 +431,7 @@ function ContextSection() {
       <div className="my-6 space-y-2">
         {(['translation', 'refine', 'format', 'coherence'] as const).map((key) => (
           <div key={key} className="flex items-start gap-4 border-b border-editorial-border/70 py-4">
-            <span className="mt-0.5 w-20 shrink-0 font-mono text-[11px] font-bold text-editorial-accent">
+            <span className="mt-0.5 w-20 shrink-0 font-mono text-xs font-bold text-editorial-accent">
               {t(`help.context.stage${key.charAt(0).toUpperCase() + key.slice(1)}`)}
             </span>
             <span className="text-[13px] leading-relaxed text-editorial-ink/80">
@@ -525,7 +525,7 @@ function ProvidersSection() {
           <div key={row.name} className="border-b border-editorial-border/70 py-4">
             <div className="flex flex-wrap items-baseline justify-between gap-3">
               <span className="font-display text-base italic text-editorial-ink">{row.name}</span>
-              <span className="font-mono text-[11px] text-editorial-accent">{t(row.modelsKey)}</span>
+              <span className="font-mono text-xs text-editorial-accent">{t(row.modelsKey)}</span>
             </div>
             <p className="mt-2 text-[13px] leading-relaxed text-editorial-ink/75">{t(row.noteKey)}</p>
           </div>

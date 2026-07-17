@@ -43,7 +43,7 @@ export function CoherenceTab({ panelId, labelledBy, currentChunk, isProcessing, 
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="px-5 py-5">
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+        <div className="flex items-center gap-2 text-xs font-sans uppercase tracking-[0.35em] text-editorial-muted">
           <Link2 size={11} className="text-editorial-accent shrink-0" /> {t('coherence.title')}
         </div>
         <IconButton
@@ -66,7 +66,7 @@ export function CoherenceTab({ panelId, labelledBy, currentChunk, isProcessing, 
       )}
 
       {!coherence || coherence.status === 'idle' ? (
-        <p className="mt-3 text-[11px] text-editorial-muted/70 leading-relaxed">
+        <p className="mt-3 text-xs text-editorial-muted/70 leading-relaxed">
           {!allChunksTranslated ? t('coherence.translationsRequired') : t('coherence.idle')}
         </p>
       ) : coherence.status === 'processing' ? (

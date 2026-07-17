@@ -118,7 +118,7 @@ export function TranslationTabPanel({
                 <RotateCcw size={12} />
               </IconButton>
             </div>
-            <p className="text-[11px] text-editorial-muted/70">{t('pipeline.blobOverlapHint')}</p>
+            <p className="text-xs text-editorial-muted/70">{t('pipeline.blobOverlapHint')}</p>
           </div>
         )}
       </div>

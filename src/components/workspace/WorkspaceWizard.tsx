@@ -58,7 +58,7 @@ export function WorkspaceWizard() {
 
         <button
           type="button"
-          className="rounded-full bg-editorial-ink px-5 py-3 text-[10px] font-bold uppercase tracking-[0.25em] text-white transition-colors hover:bg-editorial-ink/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-35"
+          className="rounded-full bg-editorial-ink px-5 py-3 text-xs font-bold uppercase tracking-[0.25em] text-white transition-colors hover:bg-editorial-ink/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-35"
           onClick={handleCreate}
           disabled={!name.trim() || loading}
         >

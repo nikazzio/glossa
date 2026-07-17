@@ -65,7 +65,7 @@ export function ApiKeyInput({ label, provider, onKeyChange }: ApiKeyInputProps) 
   if (editing) {
     return (
       <div className="space-y-2">
-        <span className="text-[10px] font-bold uppercase text-editorial-muted">{label}</span>
+        <span className="text-[11px] font-bold uppercase text-editorial-muted">{label}</span>
         <div className="flex items-center gap-2">
           <input
             type="password"
@@ -107,7 +107,7 @@ export function ApiKeyInput({ label, provider, onKeyChange }: ApiKeyInputProps) 
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-1.5">
-        <span className="text-[10px] font-bold uppercase text-editorial-muted">{label}</span>
+        <span className="text-[11px] font-bold uppercase text-editorial-muted">{label}</span>
         {isConfigured && <Shield size={10} className="text-editorial-accent" />}
       </div>
       <div className="flex items-center gap-2">

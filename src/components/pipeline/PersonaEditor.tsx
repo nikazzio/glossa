@@ -226,7 +226,7 @@ export function PersonaEditor({
                     className="flex-1 text-left min-w-0 focus:outline-none"
                   >
                     <div className="text-xs font-bold text-editorial-ink truncate">{tmpl.name}</div>
-                    <div className="text-[11px] text-editorial-muted truncate mt-0.5 font-mono">{tmpl.prompt}</div>
+                    <div className="text-xs text-editorial-muted truncate mt-0.5 font-mono">{tmpl.prompt}</div>
                   </button>
                   <button
                     type="button"

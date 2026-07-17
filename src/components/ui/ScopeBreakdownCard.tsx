@@ -22,7 +22,7 @@ export function ScopeBreakdownCard({ entry }: ScopeBreakdownCardProps) {
         <span className="shrink-0 font-display text-sm italic text-editorial-ink">{totalTok.toLocaleString()} tok</span>
       </div>
       {model && (
-        <div className="mt-0.5 truncate font-mono text-[11px] text-editorial-muted">{model}</div>
+        <div className="mt-0.5 truncate font-mono text-xs text-editorial-muted">{model}</div>
       )}
       <dl className="mt-2 space-y-1">
         <div className="flex items-baseline justify-between gap-3">

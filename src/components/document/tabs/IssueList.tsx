@@ -72,7 +72,7 @@ export function IssueList({ issues, chunkId, onSelectChunk, onFocusIssue, onTogg
                     {issue.type}
                   </span>
                   <span className="h-1 w-1 shrink-0 rounded-full bg-editorial-border" aria-hidden="true" />
-                  <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-editorial-muted">
+                  <span className="shrink-0 text-xs font-semibold uppercase tracking-[0.12em] text-editorial-muted">
                     {issue.severity}
                   </span>
                 </div>
@@ -143,7 +143,7 @@ export function IssueList({ issues, chunkId, onSelectChunk, onFocusIssue, onTogg
               <div className="mt-3 ml-5 space-y-3 border-l border-editorial-border/70 pl-3">
                 {issue.phrase && (
                   <div className="min-w-0">
-                    <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-editorial-accent">
+                    <span className="text-xs font-bold uppercase tracking-[0.12em] text-editorial-accent">
                       {t('audit.issuePhraseContext')}
                     </span>
                     <p className="mt-0.5 w-full font-display text-sm italic leading-snug text-editorial-ink">
@@ -153,7 +153,7 @@ export function IssueList({ issues, chunkId, onSelectChunk, onFocusIssue, onTogg
                 )}
                 {issue.sourcePhrase && (
                   <div className="min-w-0">
-                    <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-editorial-muted">
+                    <span className="text-xs font-bold uppercase tracking-[0.12em] text-editorial-muted">
                       {t('audit.issueSourcePhraseContext')}
                     </span>
                     <p className="mt-0.5 w-full font-display text-sm italic leading-snug text-editorial-muted">
@@ -166,7 +166,7 @@ export function IssueList({ issues, chunkId, onSelectChunk, onFocusIssue, onTogg
 
             {issue.suggestedFix && (
               <div className="mt-3 ml-5 min-w-0 border-l border-editorial-border/70 pl-3">
-                <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-editorial-accent">
+                <span className="text-xs font-bold uppercase tracking-[0.12em] text-editorial-accent">
                   {t('audit.fix')}
                 </span>
                 <p className="mt-0.5 w-full text-sm leading-relaxed text-editorial-muted">{issue.suggestedFix}</p>

@@ -133,7 +133,7 @@ const ChunkRow = memo(function ChunkRow({
           <span className="font-display italic text-2xl text-editorial-accent tracking-tighter">
             {t('pipeline.unit')} {indexPad(idx + 1)}
           </span>
-          <span className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted border border-editorial-border px-2 py-1">
+          <span className="text-xs font-bold uppercase tracking-widest text-editorial-muted border border-editorial-border px-2 py-1">
             {t(`pipeline.chunkStatus.${chunk.status}`)}
           </span>
         </div>
@@ -153,7 +153,7 @@ const ChunkRow = memo(function ChunkRow({
       <div className="space-y-4">
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
+            <label className="text-xs font-bold uppercase tracking-widest text-editorial-muted">
               {t('pipeline.originalSource')}
             </label>
             <div role="toolbar" aria-label={t('pipeline.chunkActions')} className="flex items-center gap-2 flex-wrap">
@@ -162,7 +162,7 @@ const ChunkRow = memo(function ChunkRow({
                   type="button"
                   onClick={handleRetranslate}
                   disabled={isProcessing || chunk.sourceDisplayText.trim().length === 0}
-                  className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent flex items-center gap-1"
+                  className="text-xs font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent flex items-center gap-1"
                 >
                   <RotateCcw size={11} /> {t('pipeline.retranslateChunk')}
                 </button>
@@ -172,7 +172,7 @@ const ChunkRow = memo(function ChunkRow({
                   type="button"
                   onClick={handleReaudit}
                   disabled={isProcessing || !chunk.translationDisplayText}
-                  className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent flex items-center gap-1"
+                  className="text-xs font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent flex items-center gap-1"
                 >
                   <ScanLine size={11} /> {t('pipeline.reauditChunk')}
                 </button>
@@ -183,7 +183,7 @@ const ChunkRow = memo(function ChunkRow({
                     type="button"
                     onClick={handleUnlock}
                     disabled={isProcessing}
-                    className="text-[9px] font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent flex items-center gap-1"
+                    className="text-xs font-bold uppercase tracking-widest text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent flex items-center gap-1"
                   >
                     <Pencil size={11} /> {t('pipeline.unlockSource')}
                   </button>
@@ -213,7 +213,7 @@ const ChunkRow = memo(function ChunkRow({
                   : 'border-editorial-border'
               }`}
             >
-              <span className="absolute -top-3 left-6 bg-editorial-bg border border-editorial-border px-2 font-display italic text-[10px]">
+              <span className="absolute -top-3 left-6 bg-editorial-bg border border-editorial-border px-2 font-display italic text-xs">
                 {stage.name}
               </span>
               <div className="text-sm leading-relaxed overflow-hidden">
@@ -234,7 +234,7 @@ const ChunkRow = memo(function ChunkRow({
 
         <div className="space-y-3 mt-8">
           <div className="flex items-center justify-between">
-            <label className="block text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
+            <label className="block text-xs font-bold uppercase tracking-widest text-editorial-muted">
               {t('pipeline.candidateTranslation')}
             </label>
             <CopyButton text={chunk.translationDisplayText} />
@@ -367,7 +367,7 @@ export function ProductionStream({
         {!chunks.length && (
           <div className="space-y-8 max-w-2xl mx-auto py-12">
             <div className="space-y-4">
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
+              <label className="block text-xs font-bold uppercase tracking-widest text-editorial-muted">
                 {t('pipeline.inputContent')}
               </label>
               <MarkdownEditor
@@ -379,14 +379,14 @@ export function ProductionStream({
                 textClassName="border-none bg-editorial-textbox p-8 text-sm font-mono leading-relaxed text-editorial-ink"
                 previewClassName="min-h-[400px] text-sm leading-relaxed text-editorial-ink"
               />
-              <div className="grid grid-cols-3 gap-3 text-[10px] font-mono text-editorial-muted">
+              <div className="grid grid-cols-3 gap-3 text-xs font-mono text-editorial-muted">
                 <span>{t('pipeline.words')}: {stats.words}</span>
                 <span>{t('pipeline.paragraphs')}: {stats.paragraphs}</span>
                 <span>{t('pipeline.recommendedChunks')}: {recommendedChunks || '-'}</span>
               </div>
               {config.useChunking !== false && (
                 <div className="flex flex-col sm:flex-row gap-3 sm:items-center bg-editorial-textbox/50 border border-editorial-border p-4">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
+                  <label className="text-xs font-bold uppercase tracking-widest text-editorial-muted">
                     {t('pipeline.targetChunks')}
                   </label>
                   <input
@@ -408,7 +408,7 @@ export function ProductionStream({
                   >
                     {t('pipeline.useRecommendation')}
                   </button>
-                  <span className="text-[10px] text-editorial-muted">
+                  <span className="text-xs text-editorial-muted">
                     {t('pipeline.zeroMeansAuto')}
                   </span>
                 </div>
@@ -435,14 +435,14 @@ export function ProductionStream({
         {chunks.length > 0 && (
           <div className="border border-editorial-border bg-editorial-textbox/30 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-widest text-editorial-muted">
+              <div className="text-xs font-bold uppercase tracking-widest text-editorial-muted">
                 {t('pipeline.chunkPreview')}
               </div>
               <div className="text-xs font-mono text-editorial-ink">
                 {chunks.length} {t('pipeline.unitsReady')}
               </div>
             </div>
-            <div className="text-[10px] text-editorial-muted leading-relaxed max-w-md">
+            <div className="text-xs text-editorial-muted leading-relaxed max-w-md">
               {t('pipeline.chunkPreviewHint')}
             </div>
             <button

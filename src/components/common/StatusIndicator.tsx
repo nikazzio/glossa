@@ -49,12 +49,12 @@ export function StatusIndicator({ status, label, retryInfo }: StatusIndicatorPro
     >
       <span className={`h-2 w-2 rounded-full ring-2 ${tone.dot}`} />
       <span
-        className={`text-[10px] font-bold uppercase tracking-[0.18em] ${tone.label}`}
+        className={`text-[11px] font-bold uppercase tracking-[0.18em] ${tone.label}`}
       >
         {label}
       </span>
       {status === 'retrying' && retryInfo && (
-        <span className={`text-[9px] ${tone.label}`}>
+        <span className={`text-xs ${tone.label}`}>
           {t('pipeline.retrying', {
             seconds: Math.round(retryInfo.delayMs / 1000),
             attempt: retryInfo.attempt,

@@ -215,7 +215,7 @@ export function TranslationsSettingsTab({
               {t('settings.highlights')}
             </p>
           </div>
-          <span className="flex items-center gap-1 rounded-full border border-editorial-border px-2 py-0.5 text-[11px] font-sans text-editorial-muted">
+          <span className="flex items-center gap-1 rounded-full border border-editorial-border px-2 py-0.5 text-xs font-sans text-editorial-muted">
             {hlMode === 'dark' ? <Moon size={10} /> : <Sun size={10} />}
             {t(hlMode === 'dark' ? 'settings.colorScheme_dark' : 'settings.colorScheme_light')}
           </span>
@@ -239,7 +239,7 @@ export function TranslationsSettingsTab({
           },
         ]).map(({ groupLabel, items }) => (
           <div key={groupLabel} className="space-y-1.5">
-            <p className="text-[10px] font-sans uppercase tracking-[0.14em] text-editorial-muted/70">
+            <p className="text-[11px] font-sans uppercase tracking-[0.14em] text-editorial-muted/70">
               {groupLabel}
             </p>
             <div className="divide-y divide-editorial-border/70 border-y border-editorial-border/70">

@@ -220,7 +220,7 @@ export function SegmentEditor({
                 <div className={`h-[2px] flex-1 rounded-full ${accentLine}`} />
                 <Tooltip label={anomaly ? anomalyTitle : undefined}>
                   <div
-                    className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] ${accentBadge} ${accentText}`}
+                    className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-bold uppercase tracking-[0.2em] ${accentBadge} ${accentText}`}
                   >
                     {anomaly && <AlertTriangle size={10} />}
                     {t('pipeline.unit')} {chunkIdx + 1}
@@ -245,7 +245,7 @@ export function SegmentEditor({
               <div className="mb-2 flex items-center gap-3">
                 <div className={`h-[2px] flex-1 rounded-full ${accentLine}`} />
                 <Tooltip label={anomaly ? anomalyTitle : undefined}>
-                  <div className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] ${accentBadge} ${accentText}`}>
+                  <div className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-bold uppercase tracking-[0.2em] ${accentBadge} ${accentText}`}>
                     {anomaly && <AlertTriangle size={10} />}
                     {t('pipeline.unit')} 1
                     {anomaly && <span className="font-normal opacity-70">· {chunkWords}w</span>}

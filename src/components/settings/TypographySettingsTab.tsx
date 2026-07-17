@@ -126,7 +126,7 @@ export function TypographySettingsTab({
           {(['light', 'dark'] as const).map((mode) => (
             <label
               key={mode}
-              className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md border border-editorial-border bg-editorial-bg/60 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted transition-colors hover:border-editorial-accent/40"
+              className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md border border-editorial-border bg-editorial-bg/60 py-2.5 text-xs font-bold uppercase tracking-[0.14em] text-editorial-muted transition-colors hover:border-editorial-accent/40"
             >
               <span className="relative h-3.5 w-3.5 shrink-0 overflow-hidden rounded-full">
                 <span className="absolute inset-0" style={{ backgroundColor: editorialAccentColor[mode] }} />

@@ -436,7 +436,7 @@ function OriginLine({
 
   const stale = entry.embeddingModel !== workspaceEmbeddingModel;
   return (
-    <p className={`mt-1 font-mono text-[11px] ${stale ? 'text-editorial-accent/80' : 'text-editorial-muted/50'}`}>
+    <p className={`mt-1 font-mono text-xs ${stale ? 'text-editorial-accent/80' : 'text-editorial-muted/50'}`}>
       {parts.join(' · ')}
     </p>
   );

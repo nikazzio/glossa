@@ -156,7 +156,7 @@ function AnnotationCard({
         <div className="flex shrink-0 items-center gap-1 opacity-70 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
           {confirmingDelete ? (
             <>
-              <span className="text-[10px] text-editorial-danger">{t('annotations.confirmDelete')}</span>
+              <span className="text-xs text-editorial-danger">{t('annotations.confirmDelete')}</span>
               <IconButton size="sm" tone="danger" onClick={onDelete} title={t('annotations.confirmDeleteYes')}>
                 <Trash2 size={11} />
               </IconButton>
@@ -346,7 +346,7 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
         <>
           <div className="mx-0 my-1 h-px bg-editorial-border/40" />
           <details className="group">
-            <summary className="flex cursor-pointer list-none items-center gap-1.5 py-0.5 text-[10px] font-sans font-bold uppercase tracking-[0.16em] text-editorial-danger/80 transition-colors hover:text-editorial-danger">
+            <summary className="flex cursor-pointer list-none items-center gap-1.5 py-0.5 text-xs font-sans font-bold uppercase tracking-[0.16em] text-editorial-danger/80 transition-colors hover:text-editorial-danger">
               <ChevronRight size={11} className="shrink-0 text-editorial-danger/70 transition-transform group-open:rotate-90" />
               {t('annotations.sourceTitle')}
             </summary>

@@ -23,7 +23,7 @@ export function InlineStatusBadge({ tone, icon, label, ariaLabel }: InlineStatus
       >
         {icon}
         {label && (
-          <span className="text-[10px] font-bold uppercase tracking-[0.18em]">{label}</span>
+          <span className="text-xs font-bold uppercase tracking-[0.18em]">{label}</span>
         )}
       </span>
     </Tooltip>

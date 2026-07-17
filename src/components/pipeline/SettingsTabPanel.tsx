@@ -233,7 +233,7 @@ export function SettingsTabPanel({
       <div className="space-y-2">
         <SectionLabel icon={KeyRound} label={t('pipeline.refineKeyLabel')} />
         {!keyStatusLoading && (
-          <p className="text-[11px] leading-relaxed text-editorial-muted">
+          <p className="text-xs leading-relaxed text-editorial-muted">
             {missingRefineProviders.length > 0
               ? t('pipeline.refineKeyMissingHint', { providers: missingRefineProviders.join(', ') })
               : t('pipeline.refineKeyReadyHint')}

@@ -11,7 +11,7 @@ export function ContrastBadge({ fg, bg }: ContrastBadgeProps) {
   const pass = ratio >= 4.5;
   const large = ratio >= 3 && ratio < 4.5;
   return (
-    <span className={`font-mono text-[10px] px-1.5 py-0.5 rounded border ${
+    <span className={`font-mono text-xs px-1.5 py-0.5 rounded border ${
       pass  ? 'bg-editorial-success/10 text-editorial-success border-editorial-success/30' :
       large ? 'bg-editorial-warning/10 text-editorial-warning border-editorial-warning/30' :
               'bg-editorial-danger/10 text-editorial-danger border-editorial-danger/30'

@@ -59,7 +59,7 @@ export function DictionaryEntryEditor({ entries, onChange, readOnly = false }: P
       </div>
 
       {entries.length === 0 ? (
-        <p className="border-y border-dashed border-editorial-border/70 py-6 text-center text-[11px] italic text-editorial-muted/60">
+        <p className="border-y border-dashed border-editorial-border/70 py-6 text-center text-xs italic text-editorial-muted/60">
           {t('pipeline.glossaryEmpty')}
         </p>
       ) : (
@@ -123,7 +123,7 @@ export function DictionaryEntryEditor({ entries, onChange, readOnly = false }: P
                   readOnly={readOnly}
                   placeholder={t('pipeline.glossaryNotes')}
                   aria-label={`${t('pipeline.glossaryNotes')} ${i + 1}`}
-                  className="w-full border-t border-editorial-border/25 bg-editorial-textbox/20 px-3 py-1.5 pl-5 text-[11px] font-mono text-editorial-muted/70 outline-none placeholder:text-editorial-muted/30 focus:bg-editorial-accent/5 read-only:opacity-60"
+                  className="w-full border-t border-editorial-border/25 bg-editorial-textbox/20 px-3 py-1.5 pl-5 text-xs font-mono text-editorial-muted/70 outline-none placeholder:text-editorial-muted/30 focus:bg-editorial-accent/5 read-only:opacity-60"
                 />
                 {isDuplicate && (
                   <div className="border-t border-editorial-warning/30 bg-editorial-warning/8 px-3 py-1">

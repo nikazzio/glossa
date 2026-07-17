@@ -82,7 +82,7 @@ export function AuditPanel({ onRunAuditOnly, onReauditChunk }: AuditPanelProps) 
                   <div className={`text-5xl font-display text-center tracking-tighter ${QUALITY_TONE_COLOR[compositeTone]}`}>
                     {compositeLevelLabel}
                   </div>
-                  <div className="text-[8px] text-center uppercase font-bold tracking-[4px] text-editorial-muted">
+                  <div className="text-xs text-center uppercase font-bold tracking-[4px] text-editorial-muted">
                     {t('audit.compositeQuality')}
                   </div>
                 </div>
@@ -91,7 +91,7 @@ export function AuditPanel({ onRunAuditOnly, onReauditChunk }: AuditPanelProps) 
 
             {/* Per-chunk drill-down */}
             <div className="space-y-3">
-              <label className="block text-[9px] font-bold uppercase tracking-[2px] text-editorial-muted border-b border-editorial-border pb-1">
+              <label className="block text-xs font-bold uppercase tracking-[2px] text-editorial-muted border-b border-editorial-border pb-1">
                 {t('audit.chunkQuality')}
               </label>
               {chunks.map((chunk, index) => {
@@ -117,14 +117,14 @@ export function AuditPanel({ onRunAuditOnly, onReauditChunk }: AuditPanelProps) 
             {allClear && (
               <div className="text-center py-12 opacity-25 italic font-display flex flex-col items-center gap-4">
                 <ShieldCheck size={40} strokeWidth={1} />
-                <span className="text-[10px] uppercase tracking-widest">{t('audit.pipelineClear')}</span>
+                <span className="text-xs uppercase tracking-widest">{t('audit.pipelineClear')}</span>
               </div>
             )}
           </div>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center opacity-10 font-display text-center px-6">
             <ShieldCheck size={48} strokeWidth={1} />
-            <span className="text-[10px] uppercase tracking-[4px] font-bold mt-4">{t('audit.noRecord')}</span>
+            <span className="text-xs uppercase tracking-[4px] font-bold mt-4">{t('audit.noRecord')}</span>
           </div>
         )}
       </div>
@@ -207,7 +207,7 @@ const ChunkAuditCard = memo(function ChunkAuditCard({
           onClick={handleToggle}
           className="flex-1 flex items-center justify-between gap-2 px-3 py-2 text-left hover:bg-editorial-textbox/40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
         >
-          <span className="flex items-center gap-2 text-[10px] font-mono">
+          <span className="flex items-center gap-2 text-xs font-mono">
             {isExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
             <span className="text-editorial-muted">
               {t('pipeline.unit')} {indexPad(index + 1)}
@@ -220,7 +220,7 @@ const ChunkAuditCard = memo(function ChunkAuditCard({
               <span className={QUALITY_TONE_COLOR[ratingTone]}>{ratingLabel}</span>
             )}
           </span>
-          <span className="text-[9px] uppercase tracking-widest text-editorial-muted">
+          <span className="text-xs uppercase tracking-widest text-editorial-muted">
             {hasIssues ? t('audit.issuesCount', { count: openIssuesCount }) : t('audit.noIssues')}
           </span>
         </button>
@@ -245,13 +245,13 @@ const ChunkAuditCard = memo(function ChunkAuditCard({
           className="border-t border-editorial-border/50 px-3 py-3 space-y-3 animate-in fade-in duration-200"
         >
           {isError && (
-            <div className="flex items-start gap-2 text-editorial-accent text-[10px] font-mono">
+            <div className="flex items-start gap-2 text-editorial-accent text-xs font-mono">
               <AlertTriangle size={12} className="mt-0.5 shrink-0" />
               <span>{judgeResult.error || t('audit.auditFailed')}</span>
             </div>
           )}
           {!isError && !hasIssues && (
-            <div className="text-[10px] italic text-editorial-muted py-2">
+            <div className="text-xs italic text-editorial-muted py-2">
               {t('audit.noIssues')}
             </div>
           )}
@@ -265,7 +265,7 @@ const ChunkAuditCard = memo(function ChunkAuditCard({
                   <li key={i} className={`space-y-1 transition-opacity ${isResolved || isRejected ? 'opacity-40' : ''}`}>
                     <div className="flex items-center justify-between gap-2">
                       <span
-                        className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-sm ${
+                        className={`text-xs font-bold uppercase px-1.5 py-0.5 rounded-sm ${
                           issue.severity === 'high' ? 'bg-editorial-danger text-editorial-bg' : 'bg-editorial-ink text-white'
                         }`}
                       >
@@ -285,7 +285,7 @@ const ChunkAuditCard = memo(function ChunkAuditCard({
                                   focusIssueInChunk(chunk.id, issue.phrase, issue.sourcePhrase ?? null);
                                 }
                               }}
-                              className={`flex items-center gap-1 rounded-full border px-2 py-1 text-[9px] font-bold uppercase tracking-[0.18em] transition-colors ${isActive ? 'border-editorial-accent text-editorial-accent' : 'border-editorial-border text-editorial-muted hover:text-editorial-ink'}`}
+                              className={`flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-bold uppercase tracking-[0.18em] transition-colors ${isActive ? 'border-editorial-accent text-editorial-accent' : 'border-editorial-border text-editorial-muted hover:text-editorial-ink'}`}
                             >
                               <Crosshair size={10} />
                               {t('audit.locateInText')}
@@ -354,19 +354,19 @@ const ChunkAuditCard = memo(function ChunkAuditCard({
                       <div className="space-y-2 rounded-xl border border-editorial-border/50 bg-editorial-textbox/20 px-3 py-2">
                         {issue.phrase && (
                           <div>
-                            <span className="block text-[9px] font-bold uppercase tracking-widest text-editorial-accent">{t('audit.issuePhraseContext')}</span>
+                            <span className="block text-xs font-bold uppercase tracking-widest text-editorial-accent">{t('audit.issuePhraseContext')}</span>
                             <p className="mt-0.5 text-xs leading-relaxed text-editorial-ink">&ldquo;{issue.phrase}&rdquo;</p>
                           </div>
                         )}
                         {issue.sourcePhrase && (
                           <div>
-                            <span className="block text-[9px] font-bold uppercase tracking-widest text-editorial-muted">{t('audit.issueSourcePhraseContext')}</span>
+                            <span className="block text-xs font-bold uppercase tracking-widest text-editorial-muted">{t('audit.issueSourcePhraseContext')}</span>
                             <p className="mt-0.5 text-xs leading-relaxed text-editorial-muted">&ldquo;{issue.sourcePhrase}&rdquo;</p>
                           </div>
                         )}
                         {chunk.sourceDisplayText && (
                           <div>
-                            <span className="block text-[9px] font-bold uppercase tracking-widest text-editorial-muted">{t('audit.issueSourceContext')}</span>
+                            <span className="block text-xs font-bold uppercase tracking-widest text-editorial-muted">{t('audit.issueSourceContext')}</span>
                             <p className="mt-0.5 text-xs leading-relaxed text-editorial-muted line-clamp-3">{chunk.sourceDisplayText}</p>
                           </div>
                         )}

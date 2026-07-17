@@ -232,7 +232,7 @@ export function ShellNavItem({
       ) : (
         <span className="min-w-0 flex-1">
           <span className={`block truncate ${labelClassName}`}>{label}</span>
-          {hint ? <span className="mt-0.5 block truncate text-[11px] text-editorial-muted">{hint}</span> : null}
+          {hint ? <span className="mt-0.5 block truncate text-xs text-editorial-muted">{hint}</span> : null}
         </span>
       )}
     </button>

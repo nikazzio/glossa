@@ -122,7 +122,7 @@ export function ExportDialog({ chunks, markdownAware, onConfirm, onCancel }: Exp
                   >
                     <span className="flex items-center gap-3">
                       <span className="text-sm">{t(`files.exportSeparator_${opt.key}`)}</span>
-                      <span className="font-mono text-[11px] text-editorial-muted/70">
+                      <span className="font-mono text-xs text-editorial-muted/70">
                         {opt.key === 'blank' ? '↵↵' : opt.key === 'hr' ? '---' : '* * *'}
                       </span>
                     </span>

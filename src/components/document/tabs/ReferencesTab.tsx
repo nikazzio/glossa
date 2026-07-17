@@ -85,7 +85,7 @@ export function ReferencesTab({ panelId, labelledBy, currentChunk }: ReferencesT
           <div className="flex items-center justify-between">
             <label
               htmlFor="memory-threshold"
-              className="text-[10px] font-sans uppercase tracking-[0.28em] text-editorial-muted"
+              className="text-xs font-sans uppercase tracking-[0.28em] text-editorial-muted"
             >
               {t('memory.similarityThreshold')}
             </label>
@@ -190,7 +190,7 @@ function MatchCard({ match, enabled, onToggle, onExtractTerm }: MatchCardProps) 
 
       <div className="space-y-3">
         <div className="rounded-md bg-editorial-textbox/45 px-3 py-2">
-          <p className="mb-1 text-[10px] uppercase tracking-[0.28em] text-editorial-muted">
+          <p className="mb-1 text-xs uppercase tracking-[0.28em] text-editorial-muted">
             {t('memory.sourcePhraseShort')}
           </p>
           <div className="text-sm leading-relaxed text-editorial-charcoal">
@@ -198,7 +198,7 @@ function MatchCard({ match, enabled, onToggle, onExtractTerm }: MatchCardProps) 
           </div>
         </div>
         <div className="rounded-md bg-editorial-textbox/45 px-3 py-2">
-          <p className="mb-1 text-[10px] uppercase tracking-[0.28em] text-editorial-muted">
+          <p className="mb-1 text-xs uppercase tracking-[0.28em] text-editorial-muted">
             {t('glossary.translation')}
           </p>
           <div className="text-sm leading-relaxed text-editorial-ink">

@@ -58,7 +58,7 @@ export function ModelCapabilityHint({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2 text-[10px]">
+    <div className="flex flex-wrap items-center gap-2 text-xs">
       <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 font-mono ${reasoningMeta.className}`}>
         <reasoningMeta.Icon size={11} />
         {t(`pipeline.modelReasoning.${reasoning}`)}

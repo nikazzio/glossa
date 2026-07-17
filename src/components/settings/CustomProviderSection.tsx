@@ -257,7 +257,7 @@ export function CustomProviderSection() {
                 </span>
               )}
             </div>
-            <div className="truncate font-mono text-[11px] text-editorial-muted mt-0.5">
+            <div className="truncate font-mono text-xs text-editorial-muted mt-0.5">
               {profile.baseUrl}
             </div>
           </div>

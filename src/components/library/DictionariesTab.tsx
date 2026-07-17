@@ -172,7 +172,7 @@ export function DictionariesTab() {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-[11px] leading-relaxed text-editorial-muted">{t('library.dictionariesDesc')}</p>
+        <p className="text-xs leading-relaxed text-editorial-muted">{t('library.dictionariesDesc')}</p>
         <div className="flex shrink-0 items-center gap-1.5">
           <IconButton onClick={() => setShowImport(true)} title={t('library.importCsv')}>
             <Upload size={13} />
@@ -261,7 +261,7 @@ export function DictionariesTab() {
                     </Tooltip>
                   )}
                   {isAssigned && (
-                    <span className="shrink-0 rounded-full bg-editorial-accent/20 px-3 py-0.5 text-[9px] font-bold uppercase tracking-[0.25em] text-editorial-accent">
+                    <span className="shrink-0 rounded-full bg-editorial-accent/20 px-3 py-0.5 text-xs font-bold uppercase tracking-[0.25em] text-editorial-accent">
                       {t('library.assignedBadge')}
                     </span>
                   )}
@@ -311,7 +311,7 @@ export function DictionariesTab() {
                     <div className="mt-4 flex justify-end">
                       <button
                         onClick={() => handleSaveEntries(g.id)}
-                        className="flex items-center gap-2 rounded-full bg-editorial-accent px-5 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-white transition-colors hover:bg-editorial-accent/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                        className="flex items-center gap-2 rounded-full bg-editorial-accent px-5 py-2 text-xs font-bold uppercase tracking-[0.25em] text-white transition-colors hover:bg-editorial-accent/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                       >
                         <Check size={13} />
                         {t('common.save')}

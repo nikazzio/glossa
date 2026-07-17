@@ -298,7 +298,7 @@ export function DocumentView({
     return (
       <section className="flex min-h-0 w-full flex-1 items-center justify-center overflow-y-auto bg-editorial-paper px-6 py-10">
         <div className="mx-auto flex w-full max-w-3xl flex-col items-center text-center">
-          <div className="flex flex-wrap items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-[0.28em] text-editorial-muted">
+          <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-bold uppercase tracking-[0.28em] text-editorial-muted">
               <span>{activeWorkspace?.name ?? t('workspace.noActive')}</span>
               <span className="h-1 w-1 rounded-full bg-editorial-accent/60" aria-hidden="true" />
               <span>{t('document.projectHomeEyebrow')}</span>
@@ -461,7 +461,7 @@ export function DocumentView({
                 trigger={
                   <div className="flex shrink-0 items-center gap-6 border-l border-editorial-border pl-5 cursor-default">
                     <div className="flex flex-col gap-0.5">
-                      <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
+                      <span className="text-xs font-bold uppercase tracking-[0.1em] text-editorial-muted">
                         {t('pipeline.unit')}
                       </span>
                       <span className="font-display text-base italic text-editorial-ink tabular-nums">
@@ -469,7 +469,7 @@ export function DocumentView({
                       </span>
                     </div>
                     <div className="flex flex-col gap-0.5">
-                      <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
+                      <span className="text-xs font-bold uppercase tracking-[0.1em] text-editorial-muted">
                         {t('header.tokenCount')}
                       </span>
                       <span className="font-display text-base italic text-editorial-ink tabular-nums">
@@ -477,7 +477,7 @@ export function DocumentView({
                       </span>
                     </div>
                     <div className="flex flex-col gap-0.5">
-                      <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
+                      <span className="text-xs font-bold uppercase tracking-[0.1em] text-editorial-muted">
                         {t('header.estimatedCost')}
                       </span>
                       <span className="font-display text-base italic text-editorial-accent tabular-nums">
@@ -490,7 +490,7 @@ export function DocumentView({
                 {currentChunkUsage.scopeBreakdown.length > 0 ? (
                   <ScopeBreakdownCarousel entries={currentChunkUsage.scopeBreakdown} title={t('cost.breakdown')} />
                 ) : (
-                  <p className="py-4 text-center text-[11px] text-editorial-muted">{t('cost.unknown')}</p>
+                  <p className="py-4 text-center text-xs text-editorial-muted">{t('cost.unknown')}</p>
                 )}
               </Popover>
             )}
