@@ -127,7 +127,7 @@ export function StyleGuide() {
   return (
     <div className="space-y-10">
       <div className="border-b border-editorial-border pb-6">
-        <p className="font-sans text-xs font-bold uppercase tracking-[0.35em] text-editorial-muted mb-2">Glossa</p>
+        <p className="font-sans text-xs font-bold uppercase tracking-[0.16em] text-editorial-muted mb-2">Glossa</p>
         <h2 className="font-display text-3xl text-editorial-ink mb-2" style={{ fontVariationSettings: '"wght" 560' }}>Design System</h2>
         <p className="font-sans text-[13px] text-editorial-muted">Token, tipografia e componenti base dell'interfaccia. I valori dei colori sono letti in tempo reale dai CSS custom properties.</p>
       </div>

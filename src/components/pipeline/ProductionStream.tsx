@@ -416,7 +416,7 @@ export function ProductionStream({
             </div>
             <button
               onClick={generateChunks}
-              className="w-full bg-editorial-ink text-white px-6 py-5 text-xs font-bold uppercase tracking-[3px] hover:shadow-xl transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
+              className="w-full bg-editorial-ink text-white px-6 py-5 text-xs font-bold uppercase tracking-[0.16em] hover:shadow-xl transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
             >
               {t('pipeline.stageContent')}
             </button>
@@ -424,7 +424,7 @@ export function ProductionStream({
               <button
                 type="button"
                 onClick={() => loadDocument(inputText, { useChunking: config.useChunking, targetWordsPerChunk: config.wordsPerChunk, markdownAware: config.markdownAware })}
-                className="w-full rounded-full border border-editorial-border px-6 py-4 text-xs font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink"
+                className="w-full rounded-full border border-editorial-border px-6 py-4 text-xs font-bold uppercase tracking-[0.16em] text-editorial-muted transition-colors hover:text-editorial-ink"
               >
                 {t('document.openInReader')}
               </button>
@@ -448,7 +448,7 @@ export function ProductionStream({
             <button
               type="button"
               onClick={() => loadDocument(inputText, { useChunking: config.useChunking, targetWordsPerChunk: config.wordsPerChunk, markdownAware: config.markdownAware })}
-              className="rounded-full border border-editorial-border px-4 py-2 text-xs font-bold uppercase tracking-[0.25em] text-editorial-muted transition-colors hover:text-editorial-ink"
+              className="rounded-full border border-editorial-border px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-editorial-muted transition-colors hover:text-editorial-ink"
             >
               {t('document.openInReader')}
             </button>

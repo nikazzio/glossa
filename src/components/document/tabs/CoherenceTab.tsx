@@ -43,7 +43,7 @@ export function CoherenceTab({ panelId, labelledBy, currentChunk, isProcessing, 
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="px-5 py-5">
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-xs font-sans uppercase tracking-[0.35em] text-editorial-muted">
+        <div className="flex items-center gap-2 text-xs font-sans uppercase tracking-[0.16em] text-editorial-muted">
           <Link2 size={11} className="text-editorial-accent shrink-0" /> {t('coherence.title')}
         </div>
         <IconButton

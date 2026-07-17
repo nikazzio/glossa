@@ -57,7 +57,7 @@ export function ChunkCard({
     >
       <div className="flex items-center justify-between gap-3 px-4 py-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold uppercase tracking-[0.25em] text-editorial-muted">
+          <span className="text-xs font-bold uppercase tracking-[0.1em] text-editorial-muted">
             {index + 1}
             <span className="font-normal opacity-50"> / {total}</span>
           </span>

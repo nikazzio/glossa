@@ -290,7 +290,7 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
       {showForm && (
         <div className="border-y border-editorial-border/55 py-3">
           <div className="mb-1 flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-[0.25em] text-editorial-muted">
+            <span className="text-xs font-bold uppercase tracking-[0.16em] text-editorial-muted">
               {t('annotations.addButton')}
             </span>
             <IconButton size="sm" tone="default" onClick={closeForm} title={t('annotations.cancelButton')}>

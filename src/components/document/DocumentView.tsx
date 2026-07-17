@@ -298,7 +298,7 @@ export function DocumentView({
     return (
       <section className="flex min-h-0 w-full flex-1 items-center justify-center overflow-y-auto bg-editorial-paper px-6 py-10">
         <div className="mx-auto flex w-full max-w-3xl flex-col items-center text-center">
-          <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-bold uppercase tracking-[0.28em] text-editorial-muted">
+          <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-editorial-muted">
               <span>{activeWorkspace?.name ?? t('workspace.noActive')}</span>
               <span className="h-1 w-1 rounded-full bg-editorial-accent/60" aria-hidden="true" />
               <span>{t('document.projectHomeEyebrow')}</span>

@@ -261,7 +261,7 @@ export function DictionariesTab() {
                     </Tooltip>
                   )}
                   {isAssigned && (
-                    <span className="shrink-0 rounded-full bg-editorial-accent/20 px-3 py-0.5 text-xs font-bold uppercase tracking-[0.25em] text-editorial-accent">
+                    <span className="shrink-0 rounded-full bg-editorial-accent/20 px-3 py-0.5 text-xs font-bold uppercase tracking-[0.1em] text-editorial-accent">
                       {t('library.assignedBadge')}
                     </span>
                   )}
@@ -311,7 +311,7 @@ export function DictionariesTab() {
                     <div className="mt-4 flex justify-end">
                       <button
                         onClick={() => handleSaveEntries(g.id)}
-                        className="flex items-center gap-2 rounded-full bg-editorial-accent px-5 py-2 text-xs font-bold uppercase tracking-[0.25em] text-white transition-colors hover:bg-editorial-accent/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                        className="flex items-center gap-2 rounded-full bg-editorial-accent px-5 py-2 text-xs font-bold uppercase tracking-[0.16em] text-white transition-colors hover:bg-editorial-accent/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                       >
                         <Check size={13} />
                         {t('common.save')}

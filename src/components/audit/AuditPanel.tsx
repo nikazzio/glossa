@@ -82,7 +82,7 @@ export function AuditPanel({ onRunAuditOnly, onReauditChunk }: AuditPanelProps) 
                   <div className={`text-5xl font-display text-center tracking-tighter ${QUALITY_TONE_COLOR[compositeTone]}`}>
                     {compositeLevelLabel}
                   </div>
-                  <div className="text-xs text-center uppercase font-bold tracking-[4px] text-editorial-muted">
+                  <div className="text-xs text-center uppercase font-bold tracking-[0.1em] text-editorial-muted">
                     {t('audit.compositeQuality')}
                   </div>
                 </div>
@@ -91,7 +91,7 @@ export function AuditPanel({ onRunAuditOnly, onReauditChunk }: AuditPanelProps) 
 
             {/* Per-chunk drill-down */}
             <div className="space-y-3">
-              <label className="block text-xs font-bold uppercase tracking-[2px] text-editorial-muted border-b border-editorial-border pb-1">
+              <label className="block text-xs font-bold uppercase tracking-[0.16em] text-editorial-muted border-b border-editorial-border pb-1">
                 {t('audit.chunkQuality')}
               </label>
               {chunks.map((chunk, index) => {
@@ -124,7 +124,7 @@ export function AuditPanel({ onRunAuditOnly, onReauditChunk }: AuditPanelProps) 
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center opacity-10 font-display text-center px-6">
             <ShieldCheck size={48} strokeWidth={1} />
-            <span className="text-xs uppercase tracking-[4px] font-bold mt-4">{t('audit.noRecord')}</span>
+            <span className="text-xs uppercase tracking-[0.16em] font-bold mt-4">{t('audit.noRecord')}</span>
           </div>
         )}
       </div>
@@ -134,7 +134,7 @@ export function AuditPanel({ onRunAuditOnly, onReauditChunk }: AuditPanelProps) 
           <button
             onClick={onRunAuditOnly}
             disabled={cannotRun}
-            className="w-full bg-transparent border border-editorial-ink text-editorial-ink px-4 py-4 text-xs font-bold uppercase tracking-[3px] hover:bg-editorial-ink hover:text-white transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed group shadow-sm active:translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
+            className="w-full bg-transparent border border-editorial-ink text-editorial-ink px-4 py-4 text-xs font-bold uppercase tracking-[0.16em] hover:bg-editorial-ink hover:text-white transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed group shadow-sm active:translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
           >
             <RefreshCcw size={14} className={isProcessing ? 'animate-spin' : ''} /> {t('audit.reEvaluate')}
           </button>
