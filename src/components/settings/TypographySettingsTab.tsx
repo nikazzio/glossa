@@ -1,7 +1,7 @@
 import { Type, Sun, Moon, Monitor, Palette, SlidersHorizontal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { UiFont, DocumentFontSize, DocumentLineHeight, ColorScheme } from '../../stores/uiStore';
-import { ContrastBadge } from '../ui';
+import { ContrastBadge, SegmentedControl } from '../ui';
 
 /** Sfondo editoriale di riferimento per il controllo contrasto AA dell'accento. */
 const ACCENT_CONTRAST_BG: Record<'light' | 'dark', string> = {
@@ -101,32 +101,16 @@ export function TypographySettingsTab({
             {t('settings.colorScheme')}
           </p>
         </div>
-        <div role="radiogroup" aria-label={t('settings.colorScheme')} className="flex gap-2">
-          {([
-            { value: 'light' as ColorScheme, icon: <Sun size={14} />, labelKey: 'settings.colorScheme_light' },
-            { value: 'dark'  as ColorScheme, icon: <Moon size={14} />, labelKey: 'settings.colorScheme_dark' },
-            { value: 'system' as ColorScheme, icon: <Monitor size={14} />, labelKey: 'settings.colorScheme_system' },
-          ]).map(({ value, icon, labelKey }) => {
-            const isActive = colorScheme === value;
-            return (
-              <button
-                key={value}
-                type="button"
-                role="radio"
-                aria-checked={isActive}
-                onClick={() => setColorScheme(value)}
-                className={`flex flex-1 items-center justify-center gap-2 rounded-md border py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                  isActive
-                    ? 'border-editorial-accent bg-editorial-accent/10 text-editorial-accent'
-                    : 'border-editorial-border bg-editorial-bg/60 text-editorial-muted hover:border-editorial-accent/40'
-                }`}
-              >
-                {icon}
-                {t(labelKey)}
-              </button>
-            );
-          })}
-        </div>
+        <SegmentedControl
+          ariaLabel={t('settings.colorScheme')}
+          value={colorScheme}
+          onChange={setColorScheme}
+          options={[
+            { value: 'light' as ColorScheme, icon: <Sun size={14} />, label: t('settings.colorScheme_light') },
+            { value: 'dark' as ColorScheme, icon: <Moon size={14} />, label: t('settings.colorScheme_dark') },
+            { value: 'system' as ColorScheme, icon: <Monitor size={14} />, label: t('settings.colorScheme_system') },
+          ]}
+        />
       </div>
 
       {/* Accento */}
@@ -169,27 +153,15 @@ export function TypographySettingsTab({
             {t('settings.docFontSize')}
           </p>
         </div>
-        <div role="radiogroup" aria-label={t('settings.docFontSize')} className="flex gap-2">
-          {(['sm', 'md', 'lg'] as DocumentFontSize[]).map((size) => {
-            const isActive = documentFontSize === size;
-            return (
-              <button
-                key={size}
-                type="button"
-                role="radio"
-                aria-checked={isActive}
-                onClick={() => setDocumentFontSize(size)}
-                className={`flex-1 rounded-md border py-2.5 text-center text-[11px] font-bold uppercase tracking-[0.14em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                  isActive
-                    ? 'border-editorial-accent bg-editorial-accent/10 text-editorial-accent'
-                    : 'border-editorial-border bg-editorial-bg/60 text-editorial-muted hover:border-editorial-accent/40'
-                }`}
-              >
-                {t(`settings.docFontSize_${size}`)}
-              </button>
-            );
-          })}
-        </div>
+        <SegmentedControl
+          ariaLabel={t('settings.docFontSize')}
+          value={documentFontSize}
+          onChange={setDocumentFontSize}
+          options={(['sm', 'md', 'lg'] as DocumentFontSize[]).map((size) => ({
+            value: size,
+            label: t(`settings.docFontSize_${size}`),
+          }))}
+        />
       </div>
 
       {/* Interlinea documento */}
@@ -200,27 +172,15 @@ export function TypographySettingsTab({
             {t('settings.docLineHeight')}
           </p>
         </div>
-        <div role="radiogroup" aria-label={t('settings.docLineHeight')} className="flex gap-2">
-          {(['tight', 'normal', 'relaxed'] as DocumentLineHeight[]).map((lh) => {
-            const isActive = documentLineHeight === lh;
-            return (
-              <button
-                key={lh}
-                type="button"
-                role="radio"
-                aria-checked={isActive}
-                onClick={() => setDocumentLineHeight(lh)}
-                className={`flex-1 rounded-md border py-2.5 text-center text-[11px] font-bold uppercase tracking-[0.14em] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                  isActive
-                    ? 'border-editorial-accent bg-editorial-accent/10 text-editorial-accent'
-                    : 'border-editorial-border bg-editorial-bg/60 text-editorial-muted hover:border-editorial-accent/40'
-                }`}
-              >
-                {t(`settings.docLineHeight_${lh}`)}
-              </button>
-            );
-          })}
-        </div>
+        <SegmentedControl
+          ariaLabel={t('settings.docLineHeight')}
+          value={documentLineHeight}
+          onChange={setDocumentLineHeight}
+          options={(['tight', 'normal', 'relaxed'] as DocumentLineHeight[]).map((lh) => ({
+            value: lh,
+            label: t(`settings.docLineHeight_${lh}`),
+          }))}
+        />
       </div>
     </div>
   );
