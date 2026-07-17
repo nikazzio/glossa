@@ -22,6 +22,29 @@ export interface Project {
   pipeline_names: string | null;
 }
 
+export interface RecentProject {
+  id: string;
+  name: string;
+  updated_at: string;
+  workspace_id: string;
+  workspace_name: string;
+}
+
+export interface RecentPipelineRun {
+  at: string;
+  level: string;
+  project_id: string;
+  project_name: string;
+  workspace_id: string;
+  workspace_name: string;
+}
+
+export interface WorkspaceProjectCount {
+  workspace_id: string;
+  project_count: number;
+  last_updated_at: string | null;
+}
+
 export interface ProjectSource {
   sourceDisplayText: string;
   sourceProcessingText: string;
@@ -71,6 +94,56 @@ export async function listProjects(workspaceId: string): Promise<Project[]> {
      GROUP BY p.id
      ORDER BY p.updated_at DESC`,
     [workspaceId],
+  );
+}
+
+/** Ultimi progetti toccati in TUTTI i workspace — alimenta il blocco Riprendi della Dashboard. */
+export async function listRecentProjectsAllWorkspaces(limit: number): Promise<RecentProject[]> {
+  return select<RecentProject>(
+    `SELECT
+       p.id,
+       p.name,
+       p.updated_at,
+       p.workspace_id,
+       w.name AS workspace_name
+     FROM projects p
+     JOIN workspaces w ON w.id = p.workspace_id
+     ORDER BY p.updated_at DESC
+     LIMIT $1`,
+    [limit],
+  );
+}
+
+/** Ultime esecuzioni pipeline concluse (scope='pipeline', phase='end') a livello globale. */
+export async function listRecentPipelineRuns(limit: number): Promise<RecentPipelineRun[]> {
+  return select<RecentPipelineRun>(
+    `SELECT
+       ol.at,
+       ol.level,
+       p.id AS project_id,
+       p.name AS project_name,
+       p.workspace_id,
+       w.name AS workspace_name
+     FROM operation_logs ol
+     JOIN projects p ON p.id = ol.project_id
+     JOIN workspaces w ON w.id = p.workspace_id
+     WHERE ol.scope = 'pipeline' AND ol.phase = 'end'
+     ORDER BY ol.at DESC
+     LIMIT $1`,
+    [limit],
+  );
+}
+
+/** Conteggio progetti e ultima attività per workspace — alimenta la sezione workspace della Dashboard. */
+export async function countProjectsByWorkspace(): Promise<WorkspaceProjectCount[]> {
+  return select<WorkspaceProjectCount>(
+    `SELECT
+       w.id AS workspace_id,
+       COUNT(p.id) AS project_count,
+       MAX(p.updated_at) AS last_updated_at
+     FROM workspaces w
+     LEFT JOIN projects p ON p.workspace_id = w.id
+     GROUP BY w.id`,
   );
 }
 

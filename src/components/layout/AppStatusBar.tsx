@@ -11,7 +11,6 @@ import { countWords, qualityLabelKey, qualityTone } from '../../utils';
 import { OperationsTab } from '../document/OperationsTab';
 
 const AREA_KEY: Record<string, string> = {
-  dashboard: 'statusBar.areaDashboard',
   translations: 'statusBar.areaTranslations',
   library: 'statusBar.areaLibrary',
   transcriptions: 'statusBar.areaTranscriptions',
@@ -236,14 +235,18 @@ export function AppStatusBar() {
       >
         {/* Left: pannello attivo */}
         <div className="flex min-w-0 items-center gap-2 overflow-hidden">
-          {data.kind === 'workspace' && (
-            <>
-              <span className="truncate font-medium text-editorial-ink">{data.workspaceName}</span>
-              <span className="text-editorial-border">/</span>
-              <span className="truncate">{t(AREA_KEY[data.areaName] ?? data.areaName)}</span>
-              <span>{t('workspace.projectsMetric', { count: data.projectCount })}</span>
-            </>
-          )}
+          {data.kind === 'workspace' &&
+            (data.areaName === 'dashboard' ? (
+              // La Dashboard è app-level: nessun prefisso workspace nel breadcrumb.
+              <span className="truncate font-medium text-editorial-ink">{t('dashboard.title')}</span>
+            ) : (
+              <>
+                <span className="truncate font-medium text-editorial-ink">{data.workspaceName}</span>
+                <span className="text-editorial-border">/</span>
+                <span className="truncate">{t(AREA_KEY[data.areaName] ?? data.areaName)}</span>
+                <span>{t('workspace.projectsMetric', { count: data.projectCount })}</span>
+              </>
+            ))}
           {data.kind === 'project' && data.activePanel && (
             <span className="text-editorial-accent">
               {t(`statusBar.panel.${data.activePanel}`)}

@@ -94,7 +94,8 @@ devUrl Tauri (`src-tauri/tauri.conf.json`) e porta Vite (`package.json` → `dev
 | `components/layout/Header.tsx` | Solo breadcrumb navigazione (Glossa // workspace // progetto); non contiene più pulsanti azione |
 | `components/layout/AppStatusBar.tsx` | Barra stato basso. Shell nuova (#291), ridisegnata #296: sinistra solo pannello attivo (rimosso breadcrumb progetto/pipeline); centro `ChunkCenterStats` (§ N · X w · icona qualità reale via `qualityLabelKey` · stato, con tooltip su parole e qualità); destra console toggle (`Terminal`) + separatore + controlli vista documento + indicatore salvataggio. |
 | `components/layout/ConsoleDrawer` (in `AppStatusBar.tsx`) | Drawer Operazioni (`OperationsTab` embedded) aperto da `showConsoleDrawer`, posizionato `absolute bottom-full` sopra status bar, altezza `h-64`. #296. |
-| `components/workspace/WorkspaceHome.tsx` | Hub workspace: titolo + pulsanti azione (Libreria, Nuovo progetto) alto destra; lista completa progetti stile filesystem (colonne Nome / Modificato, senza limite); area cards; banner provider |
+| `components/dashboard/AppDashboard.tsx` | Dashboard app-level (home dell'applicazione, 2026-07-18): Riprendi cross-workspace (ultimi 5 progetti, `listRecentProjectsAllWorkspaces`), attività recente pipeline (`listRecentPipelineRuns`, scope='pipeline' phase='end'), riepilogo workspace con conteggi (`countProjectsByWorkspace`) e azioni Libreria/Configura/Elimina sull'attivo, stato provider, strip "In arrivo (2.0)". Sostituisce `WorkspaceHome` (rimossa) |
+| `components/workspace/CreateWorkspaceDialog.tsx` | Dialog creazione workspace condiviso (rail switcher + dashboard) |
 | `components/workspace/WorkspaceWizard.tsx` | Primo avvio: crea primo workspace reale |
 | `components/document/AnnotationContextMenu.tsx` | Menu contestuale (clic destro su testo traduzione) → «Aggiungi annotazione» con anchor pre-compilato |
 | `utils/annotationMarkdown.ts` | `composeAnnotatedMarkdown()` — compone vista GFM con marcatori `[^a1]` e definizioni piè pagina; non modifica draft salvato |
@@ -112,7 +113,7 @@ Finestre modali, tooltip, menu poggiano su **Radix UI** (`@radix-ui/react-dialog
 | `Menu` | Menu contestuale/tendina su Radix DropdownMenu (ancora virtuale `anchorRect`). |
 | `IconButton` | Pulsante icona con tipp. CVA: size (`xs`/`sm`/`md`/`lg`), tone (`default`/`accent`/`success`/`charcoal`/`muted`/`running`). **Shell nuova (#291)**: taglia `xs` (`p-1`) per barre compatte (AppStatusBar). |
 
-> **Stato 2026-07-03:** `EditorialModalShell` e `useFocusTrap` rimossi. `LibraryPanel`, `ProjectPanel`, `WorkspaceHome`, `TranslationsArea` e `DashboardSidebar` usano `Dialog`; conferme usano `AlertDialog`.
+> **Stato 2026-07-03:** `EditorialModalShell` e `useFocusTrap` rimossi. `LibraryPanel`, `ProjectPanel`, `AppDashboard` (ex `WorkspaceHome`), `TranslationsArea` e `DashboardSidebar` usano `Dialog`; conferme usano `AlertDialog`.
 
 > **Audit modali pipeline (2026-07-03):** `ImportPreviewDialog` e `ExportDialog`/`StageTraceDialog`/`ExtractTermDialog`/`PreflightDialog`/`ConfirmDialog` tutti allineati chrome `Dialog`/`AlertDialog` (stesso overlay `bg-editorial-ink/30 backdrop-blur-sm`, stesso `max-h-[90vh]`). `ImportPreviewDialog` costruisce proprio `RadixDialog.Content` invece usare wrapper `Dialog` perché header multi-riga (nome file, toggle vista, statistiche, preset, lingue/modello) non entra negli slot generici wrapper — classi overlay/contenuto tenute manualmente identiche a `Dialog` per coerenza visiva. Stile interno modali evita card arrotondate: sezioni piatte con `border-y`, barre laterali tonali e prompt alta leggibilità.
 
@@ -127,7 +128,7 @@ Glossa 2.0 separa tre livelli:
 | Livello | Dove si configura | Cosa contiene |
 |---|---|---|
 | App | `SettingsModal` | Provider/API key, Ollama, segmentazione default, layout, backup/pricing |
-| Workspace traduzioni | `WorkspaceHome` | Progetti traduzione, modello embedding, extractor Phrase Memory, memoria condivisa |
+| Workspace traduzioni | `WorkspaceSettingsModal` (da `AppDashboard`, riga workspace attivo) | Progetti traduzione, modello embedding, extractor Phrase Memory, memoria condivisa |
 | Pipeline/progetto | `ConfigDrawer` | Lingue, persona, stage, prompt, glossario assegnato, toggle/search Phrase Memory |
 
 Workspace attuale specifico per area **Traduzioni**. Biblioteca e Trascrizioni future macro-aree separate; non devono condividere implicitamente Phrase Memory delle traduzioni.
@@ -141,7 +142,7 @@ Layout tre colonne (#291, rail ridisegnata #296) — `ShellNext` con `react-resi
 
 `uiStore.activeProjectPanel` (`run|pipeline|document|insight|chunk`) è source-of-truth del rail. Setter `setShowInsightPanel` (#296) sostituisce `setShowDocumentDrawer`/`setShowChunkDrawer` come driver apertura pannello destro; `chunkRailTab`/`setChunkRailTab` selezionano scheda `ChunkInspectorPanel` in rail sinistra. `insight`/`chunk` non persistiti come pannello attivo (clamp a `run`).
 
-**Dashboard:** schermata workspace-home migrata alla shell nuova (#294, 2026-07-03) — `react-resizable-panels` come la vista progetto, pulsante di collasso esplicito, azioni Salva/Impostazioni/Help/Lingua nell'header globale. Aree (Traduzioni/Biblioteca/Trascrizioni) a livello principale del rail, workspace sotto come lista verticale sempre visibile anche a barra collassata. `PipelineSidebar`/`useEdgeResize` (sistema pre-#291) rimossi: risultavano codice morto al 100%, zero altri consumatori.
+**Shell home (ridisegnata 2026-07-18, #323):** rail con gerarchia a tre livelli e **una sola selezione di navigazione** — `Dashboard` voce standalone in cima (home app-level), sotto lo **switcher workspace** (`WorkspaceSwitcher` in `WorkspaceRailNext`: riga col nome del workspace attivo che apre un `Menu` con lista + crea; è contesto, mai evidenziato come voce attiva), sotto le **aree** del workspace attivo (Traduzioni/Biblioteca/Trascrizioni, semantica radio con la Dashboard). `uiStore.activeWorkspaceView` (`'dashboard' | WorkspaceArea`, default `'dashboard'`, non persistito) è la source-of-truth; cambiare workspace NON cambia la vista. Il contenuto: `AppDashboard` (vista dashboard) o `TranslationsArea` (area). `PipelineSidebar`/`useEdgeResize` (sistema pre-#291) rimossi: risultavano codice morto al 100%, zero altri consumatori.
 
 **Sandbox (`viewMode='sandbox'`, legacy, non raggiungibile da menu):** fallback layout automatico — griglia `md:grid-cols-12` con `PipelineConfig`/`ProductionStream`/`AuditPanel` al posto `ShellNext`. Non sezione con suo pulsante: `EditorView` (`App.tsx`) sceglie ramo quando `uiStore.viewMode === 'sandbox'`, valore derivato in `projectStore.ts` al caricamento progetto **senza chunk generati** (testo importato senza chunking, o progetto salvato in stato). Congelata di proposito (vedi `CLAUDE.md`: "UI sandbox si tocca solo per regressioni bloccanti"). Tracciata da issue #309 per verificare se percorso "documento senza chunking" ancora caso d'uso reale prima decidere rimozione.
 

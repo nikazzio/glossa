@@ -35,7 +35,7 @@ describe('AppStatusBar', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('renders workspace name in workspace context', () => {
+  it('renders only the dashboard label when on the app dashboard', () => {
     vi.mocked(useStatusBarDataModule.useStatusBarData).mockReturnValue({
       kind: 'workspace',
       workspaceName: 'Test WS',
@@ -43,7 +43,20 @@ describe('AppStatusBar', () => {
       areaName: 'dashboard',
     });
     render(<AppStatusBar />);
+    expect(screen.getByText('dashboard.title')).toBeInTheDocument();
+    expect(screen.queryByText('Test WS')).not.toBeInTheDocument();
+  });
+
+  it('renders workspace name and area when inside an area', () => {
+    vi.mocked(useStatusBarDataModule.useStatusBarData).mockReturnValue({
+      kind: 'workspace',
+      workspaceName: 'Test WS',
+      projectCount: 3,
+      areaName: 'translations',
+    });
+    render(<AppStatusBar />);
     expect(screen.getByText('Test WS')).toBeInTheDocument();
+    expect(screen.getByText('Translations')).toBeInTheDocument();
   });
 
   it('renders console toggle and save indicator in project context', () => {

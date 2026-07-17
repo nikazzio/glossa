@@ -49,25 +49,23 @@ describe('WorkspaceShellNext (#294)', () => {
     expect(useUiStore.getState().dashboardSidebarCollapsed).toBe(false);
   });
 
-  it('switches workspace from the always-visible workspace list', () => {
+  it('switches workspace from the switcher menu', async () => {
     renderShell();
 
-    fireEvent.click(screen.getByText('Beta'));
+    fireEvent.click(screen.getByRole('button', { name: /Alpha/ }));
+    fireEvent.click(await screen.findByText('Beta'));
 
     expect(useWorkspaceStore.getState().setActive).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'ws-2' }),
     );
   });
 
-  it('keeps the workspace list reachable when the rail is collapsed', () => {
+  it('offers workspace creation from the switcher menu', async () => {
     renderShell();
 
-    fireEvent.click(screen.getByRole('button', { name: 'sidebar.collapse' }));
-    fireEvent.click(screen.getByText('Beta'));
+    fireEvent.click(screen.getByRole('button', { name: /Alpha/ }));
 
-    expect(useWorkspaceStore.getState().setActive).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'ws-2' }),
-    );
+    expect(await screen.findByText('workspace.create')).toBeInTheDocument();
   });
 
   it('selects the translations area and keeps it selected on a second click (radio, no toggle)', () => {
@@ -80,11 +78,11 @@ describe('WorkspaceShellNext (#294)', () => {
     expect(useUiStore.getState().activeWorkspaceView).toBe('translations');
   });
 
-  it('returns to the dashboard from the dashboard nav item', () => {
+  it('returns to the dashboard from the standalone dashboard nav item', () => {
     renderShell();
 
     fireEvent.click(screen.getByText('workspace.areas.translations.title'));
-    fireEvent.click(screen.getByText('workspace.areas.dashboard.title'));
+    fireEvent.click(screen.getByText('dashboard.title'));
     expect(useUiStore.getState().activeWorkspaceView).toBe('dashboard');
   });
 });

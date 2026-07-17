@@ -671,7 +671,6 @@
     "saveFailed": "Failed to save workspace",
     "saving": "Saving...",
     "projectsMetric": "{{count}} projects",
-    "resumeTitle": "Resume",
     "projectsMetric_one": "{{count}} project",
     "workspacesMetric": "Workspaces",
     "pipelineMetric": "Pipelines",
@@ -684,13 +683,8 @@
     "pipelineBadge_other": "{{count}} pipelines",
     "pipelineNamesFallback": "No pipelines",
     "areas": {
-      "dashboard": {
-        "title": "Dashboard",
-        "sidebarHint": "Overview and resume"
-      },
       "translations": {
         "title": "Translations",
-        "body": "Current operating area: projects, pipelines, Phrase Memory, and translation presets live here.",
         "sidebarHint": "Projects and pipelines"
       },
       "library": {
@@ -704,13 +698,7 @@
         "sidebarHint": "OCR and source prep"
       }
     },
-    "projectsTitle": "Workspace projects",
-    "emptyProjectsTitle": "No projects in this workspace",
-    "emptyProjectsBody": "Create a project to start translating inside this workspace.",
-    "switcherTitle": "Switch workspace",
     "newBookCard": "New book",
-    "phraseMemoryTitle": "Workspace Phrase Memory",
-    "phraseMemoryBody": "The active workspace owns phrase-memory extraction settings. Pipelines decide whether to search memory and how many matches to use.",
     "memoryExtractorModel": "Memory Extractor Model",
     "memoryExtractorPrompt": "Memory Extractor Prompt",
     "memoryExtractorTemplates": "Memory Prompt Templates",
@@ -739,6 +727,24 @@
     },
     "hub": {
       "lockedArea": "Coming in version 2.0"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "navHint": "Application home",
+    "loadFailed": "Failed to load the dashboard",
+    "resumeTitle": "Resume",
+    "resumeEmpty": "No projects yet: create one from the Translations area.",
+    "activityTitle": "Recent activity",
+    "activityEmpty": "No runs recorded yet.",
+    "workspacesTitle": "Workspaces",
+    "systemTitle": "System status",
+    "providersLabel": "AI providers",
+    "comingTitle": "Coming up",
+    "runOutcome": {
+      "success": "Run completed",
+      "warn": "Run partial or cancelled",
+      "error": "Run failed"
     }
   },
   "files": {
@@ -1483,7 +1489,6 @@
     "loadingMemories": "Checking saved memories…",
     "chunkAlreadySaved_one": "This chunk already has {{count}} saved phrase.",
     "chunkAlreadySaved_other": "This chunk already has {{count}} saved phrases.",
-
     "matchBadge_one": "{{count}} match",
     "matchBadge_other": "{{count}} matches",
     "matchBadge": "{{count}} match",
@@ -1567,7 +1572,6 @@
       "weak": "Low quality",
       "tooltipPrefix": "Quality"
     },
-    "areaDashboard": "Dashboard",
     "areaTranslations": "Translations",
     "areaLibrary": "Library",
     "areaTranscriptions": "Transcriptions",
