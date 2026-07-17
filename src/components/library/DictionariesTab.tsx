@@ -284,33 +284,28 @@ export function DictionariesTab() {
                       <Check size={13} />
                     </IconButton>
                   )}
-                  <Tooltip label={t('library.exportGlossary')}>
-                    <button
-                      onClick={() => setExportTarget({ id: g.id, name: g.name })}
-                      aria-label={t('library.exportGlossary')}
-                      className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:bg-editorial-textbox/30 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                    >
-                      <Download size={13} />
-                    </button>
-                  </Tooltip>
-                  <Tooltip label={t('library.forkDictionary')}>
-                    <button
-                      onClick={() => handleFork(g.id, g.name)}
-                      aria-label={t('library.forkDictionary')}
-                      className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:bg-editorial-textbox/30 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                    >
-                      <Copy size={13} />
-                    </button>
-                  </Tooltip>
-                  <Tooltip label={t('common.delete')}>
-                    <button
-                      onClick={() => handleDelete(g.id, g.name)}
-                      aria-label={`${t('common.delete')}: ${g.name}`}
-                      className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:bg-editorial-textbox/30 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  </Tooltip>
+                  <IconButton
+                    onClick={() => setExportTarget({ id: g.id, name: g.name })}
+                    title={t('library.exportGlossary')}
+                    className="hover:bg-editorial-textbox/30"
+                  >
+                    <Download size={13} />
+                  </IconButton>
+                  <IconButton
+                    onClick={() => handleFork(g.id, g.name)}
+                    title={t('library.forkDictionary')}
+                    className="hover:bg-editorial-textbox/30"
+                  >
+                    <Copy size={13} />
+                  </IconButton>
+                  <IconButton
+                    onClick={() => handleDelete(g.id, g.name)}
+                    title={t('common.delete')}
+                    ariaLabel={`${t('common.delete')}: ${g.name}`}
+                    className="hover:bg-editorial-textbox/30"
+                  >
+                    <Trash2 size={13} />
+                  </IconButton>
                 </div>
               </div>
 

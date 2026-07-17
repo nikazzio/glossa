@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import type { PromptTemplate } from '../../types';
 import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
 import { confirm } from '../../stores/confirmStore';
-import { IconButton } from '../ui';
+import { IconButton, FieldLabel } from '../ui';
 
 export interface AuditPromptEditorProps {
   label: string;
@@ -106,8 +106,9 @@ export function AuditPromptEditor({
       <div className="space-y-1">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-1.5">
-            {icon && <span className="text-editorial-accent shrink-0">{icon}</span>}
-            <span className="text-[11px] font-sans font-bold uppercase tracking-[0.14em] text-editorial-muted">{label}</span>
+            <FieldLabel icon={icon && <span className="text-editorial-accent shrink-0">{icon}</span>}>
+              {label}
+            </FieldLabel>
             {isCustomPrompt && (
               <span className="border-l-2 border-l-editorial-accent bg-editorial-accent/10 px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-accent">
                 {t('pipeline.promptCustomBadge')}

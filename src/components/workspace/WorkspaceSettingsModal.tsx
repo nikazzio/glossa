@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { exportWorkspace, importWorkspace } from '../../services/backupService';
 import { regenerateAllEmbeddings } from '../../services/phraseMemoryService';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
-import { Dialog, IconButton, DialogConfirmButton } from '../ui';
+import { Dialog, IconButton, DialogConfirmButton, FieldLabel } from '../ui';
 import { MemoryExtractorSettings } from './MemoryExtractorSettings';
 import type { EmbeddingModel, ModelProvider } from '../../types';
 
@@ -213,12 +213,9 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                   className="space-y-4"
                 >
                   <div className="space-y-3 border-y border-editorial-border/70 py-4">
-                    <div className="flex items-center gap-1.5">
-                      <Cpu size={11} className="shrink-0 text-editorial-accent" />
-                      <p className="text-[11px] font-sans font-bold uppercase tracking-[0.14em] text-editorial-muted">
-                        {t('workspace.embeddingModel')}
-                      </p>
-                    </div>
+                    <FieldLabel icon={<Cpu size={11} className="shrink-0 text-editorial-accent" />}>
+                      {t('workspace.embeddingModel')}
+                    </FieldLabel>
                     <div className="flex items-center gap-2">
                       <select
                         value={embeddingModel}

@@ -22,7 +22,7 @@ import { llmService } from '../../services/llmService';
 import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
 import { useConfigStore } from '../../stores/configStore';
 import type { ModelProvider, PromptTemplate } from '../../types';
-import { Tooltip } from '../ui';
+import { FieldLabel, Tooltip } from '../ui';
 
 interface MemoryExtractorSettingsProps {
   provider: ModelProvider;
@@ -128,12 +128,9 @@ export function MemoryExtractorSettings({
   return (
     <div className="space-y-4">
       <div className="space-y-3 border-y border-editorial-border/70 py-4">
-        <div className="flex items-center gap-1.5">
-          <Cpu size={11} className="shrink-0 text-editorial-accent" />
-          <p className="text-[11px] font-sans font-bold uppercase tracking-[0.14em] text-editorial-muted">
-            {t('workspace.memoryExtractorModel')}
-          </p>
-        </div>
+        <FieldLabel icon={<Cpu size={11} className="shrink-0 text-editorial-accent" />}>
+          {t('workspace.memoryExtractorModel')}
+        </FieldLabel>
         <div className="flex gap-2">
           <select
             value={provider}
@@ -178,10 +175,9 @@ export function MemoryExtractorSettings({
       <div className="space-y-3 border-y border-editorial-border/70 py-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-1.5">
-            <FileText size={11} className="shrink-0 text-editorial-accent" />
-            <p className="text-[11px] font-sans font-bold uppercase tracking-[0.14em] text-editorial-muted">
+            <FieldLabel icon={<FileText size={11} className="shrink-0 text-editorial-accent" />}>
               {t('workspace.memoryExtractorPrompt')}
-            </p>
+            </FieldLabel>
             {isCustomPrompt && !isEditingPrompt && (
               <span className="rounded-full bg-editorial-accent/15 px-2 py-0.5 text-xs font-bold uppercase tracking-[0.14em] text-editorial-accent">
                 {t('pipeline.promptCustomBadge')}

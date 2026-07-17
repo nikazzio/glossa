@@ -31,7 +31,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { confirm } from '../../stores/confirmStore';
 import { STAGE_TEMPLATES } from '../../pipeline/pipelineModes';
 import { DeeplStageConfig } from './DeeplStageConfig';
-import { IconButton, SectionLabel } from '../ui';
+import { IconButton, SectionLabel, FieldLabel } from '../ui';
 
 interface StageCardProps {
   stage: PipelineStageConfig;
@@ -304,10 +304,9 @@ export function StageCard({
         )}
         {resolvedReasoning !== undefined && resolvedReasoning !== 'non_reasoning' && stage.provider !== 'ollama' && (
           <div className="flex items-center gap-2">
-            <Wand2 size={11} className="text-editorial-warning shrink-0" />
-            <span className="text-[11px] font-sans font-bold uppercase tracking-[0.14em] text-editorial-muted">
+            <FieldLabel icon={<Wand2 size={11} className="text-editorial-warning shrink-0" />}>
               {t('pipeline.reasoningEffort')}
-            </span>
+            </FieldLabel>
             <ReasoningPicker
               value={currentReasoningEffort}
               showNone={resolvedReasoning === 'optional'}
