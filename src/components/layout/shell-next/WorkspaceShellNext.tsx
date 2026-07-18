@@ -4,6 +4,7 @@ import { useUiStore } from '../../../stores/uiStore';
 import { WorkspaceRailNext } from './WorkspaceRailNext';
 import { PANEL_FLEX_TRANSITION_CLASS } from '../motion';
 import { resetStrayResizeCursor } from './resetStrayResizeCursor';
+import { useResizeDragging } from './useResizeDragging';
 
 /**
  * Shell dashboard/workspace-home (#294) — mirror a 2 colonne di ShellNext:
@@ -33,7 +34,7 @@ export function WorkspaceShellNext({ children }: WorkspaceShellNextProps) {
 
   const [railPanel, setRailPanel] = usePanelCallbackRef();
   const [collapsed, setCollapsed] = useState(storeCollapsed);
-  const [dragging, setDragging] = useState(false);
+  const [dragging, setDragging] = useResizeDragging();
   const initialWidth = useRef(
     clampPanelWidth(storeWidth || SIDEBAR_DEFAULT, SIDEBAR_MIN, SIDEBAR_MAX),
   );
@@ -45,17 +46,6 @@ export function WorkspaceShellNext({ children }: WorkspaceShellNextProps) {
       resetStrayResizeCursor();
     };
   }, []);
-
-  useEffect(() => {
-    if (!dragging) return;
-    const stop = () => setDragging(false);
-    window.addEventListener('pointerup', stop);
-    window.addEventListener('pointercancel', stop);
-    return () => {
-      window.removeEventListener('pointerup', stop);
-      window.removeEventListener('pointercancel', stop);
-    };
-  }, [dragging]);
 
   useEffect(() => {
     if (!railPanel) return;

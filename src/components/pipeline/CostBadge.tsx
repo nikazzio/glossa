@@ -3,7 +3,7 @@ import { Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { PipelineCostEstimate } from '../../utils/costEstimate';
 
-export function formatCost(usd: number): string {
+function formatCost(usd: number): string {
   if (usd === 0) return '$0.00';
   if (usd < 0.01) return `~$${usd.toFixed(4)}`;
   return `~$${usd.toFixed(2)}`;

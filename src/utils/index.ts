@@ -416,7 +416,7 @@ type BlockRange = {
   end: number;
 };
 
-export function trimOuterBlankLines(text: string): string {
+function trimOuterBlankLines(text: string): string {
   return text
     .replace(/^(?:[ \t]*\r?\n)+/, '')
     .replace(/(?:\r?\n[ \t]*)+$/, '');
@@ -531,5 +531,3 @@ export function formatDateTime(value: string | number | Date): string {
   const p = (n: number) => String(n).padStart(2, '0');
   return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
-
-export { withRetry, friendlyError, classifyError } from './retry';

@@ -224,12 +224,12 @@ export async function deletePipeline(pipelineId: string): Promise<void> {
   await execute('DELETE FROM pipelines WHERE id = $1', [pipelineId]);
 }
 
-export async function savePipelineConfig(
+function buildPipelineConfigUpdate(
   pipelineId: string,
   config: PipelineConfig,
-): Promise<void> {
-  await execute(
-    `UPDATE pipelines SET
+): { query: string; params: unknown[] } {
+  return {
+    query: `UPDATE pipelines SET
        source_language          = $1,
        target_language          = $2,
        pipeline_mode            = $3,
@@ -252,7 +252,7 @@ export async function savePipelineConfig(
        phrase_memory_max_results = $20,
        updated_at               = CURRENT_TIMESTAMP
      WHERE id = $21`,
-    [
+    params: [
       config.sourceLanguage,
       config.targetLanguage,
       config.mode ?? 'standard',
@@ -275,7 +275,15 @@ export async function savePipelineConfig(
       config.phraseMemoryMaxResults ?? 10,
       pipelineId,
     ],
-  );
+  };
+}
+
+export async function savePipelineConfig(
+  pipelineId: string,
+  config: PipelineConfig,
+): Promise<void> {
+  const { query, params } = buildPipelineConfigUpdate(pipelineId, config);
+  await execute(query, params);
 }
 
 export async function setPipelineRunState(
@@ -433,54 +441,8 @@ export async function saveFullState(
   chunks: TranslationChunk[],
   run: ExecuteQuery,
 ): Promise<void> {
-  await run(
-    `UPDATE pipelines SET
-       source_language          = $1,
-       target_language          = $2,
-       pipeline_mode            = $3,
-       stages                   = $4,
-       judge_prompt             = $5,
-       judge_model              = $6,
-       judge_provider           = $7,
-       use_chunking             = $8,
-       words_per_chunk       = $9,
-       review_provider_options  = $10,
-       persona                  = $11,
-       custom_source_language   = $12,
-       custom_target_language   = $13,
-       blob_budget_tokens       = $14,
-       blob_overlap             = $15,
-       coherence_prompt         = $16,
-       use_phrase_memory        = $17,
-       auto_search_phrase_memory = $18,
-       phrase_memory_similarity_threshold = $19,
-       phrase_memory_max_results = $20,
-       updated_at               = CURRENT_TIMESTAMP
-     WHERE id = $21`,
-    [
-      config.sourceLanguage,
-      config.targetLanguage,
-      config.mode ?? 'standard',
-      JSON.stringify(config.stages),
-      config.judgePrompt,
-      config.judgeModel,
-      config.judgeProvider,
-      config.useChunking !== false ? 1 : 0,
-      config.wordsPerChunk ?? 0,
-      config.reviewProviderOptions ? JSON.stringify(config.reviewProviderOptions) : null,
-      config.persona?.trim() || null,
-      config.customSourceLanguage || null,
-      config.customTargetLanguage || null,
-      config.blobBudgetTokens ?? 0,
-      config.blobOverlap ?? 1,
-      config.coherencePrompt?.trim() || null,
-      config.usePhraseMemory ? 1 : 0,
-      config.autoSearchPhraseMemory === false ? 0 : 1,
-      config.phraseMemorySimilarityThreshold ?? 0.75,
-      config.phraseMemoryMaxResults ?? 10,
-      pipelineId,
-    ],
-  );
+  const { query, params } = buildPipelineConfigUpdate(pipelineId, config);
+  await run(query, params);
   await saveTranslationsInternal(projectId, pipelineId, chunks, run);
 }
 

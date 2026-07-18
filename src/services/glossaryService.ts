@@ -203,6 +203,15 @@ export async function importEntriesFromCsv(
       notes: notesKey ? (row[notesKey]?.trim() || undefined) : undefined,
     }));
 
+  return applyGlossaryImportStrategy(glossaryId, parsed, strategy);
+}
+
+/** Persiste le voci importate (CSV/XLSX): 'replace' svuota e riscrive, 'merge' aggiunge solo i termini nuovi. */
+async function applyGlossaryImportStrategy(
+  glossaryId: string,
+  parsed: GlossaryEntry[],
+  strategy: 'replace' | 'merge',
+): Promise<number> {
   if (strategy === 'replace') {
     await runInTransaction(async (run) => {
       await run('DELETE FROM glossary_entries WHERE glossary_id = $1', [glossaryId]);
@@ -213,29 +222,28 @@ export async function importEntriesFromCsv(
         );
       }
     });
-  } else {
-    const [{ count: before }] = await select<{ count: number }>(
-      'SELECT COUNT(*) as count FROM glossary_entries WHERE glossary_id = $1',
-      [glossaryId],
-    );
-    await runInTransaction(async (run) => {
-      for (const entry of parsed) {
-        await run(
-          `INSERT INTO glossary_entries (id, glossary_id, term, translation, notes)
-           VALUES ($1, $2, $3, $4, $5)
-           ON CONFLICT(glossary_id, term) DO NOTHING`,
-          [entry.id, glossaryId, entry.term, entry.translation, entry.notes ?? ''],
-        );
-      }
-    });
-    const [{ count: after }] = await select<{ count: number }>(
-      'SELECT COUNT(*) as count FROM glossary_entries WHERE glossary_id = $1',
-      [glossaryId],
-    );
-    return after - before;
+    return parsed.length;
   }
 
-  return parsed.length;
+  const [{ count: before }] = await select<{ count: number }>(
+    'SELECT COUNT(*) as count FROM glossary_entries WHERE glossary_id = $1',
+    [glossaryId],
+  );
+  await runInTransaction(async (run) => {
+    for (const entry of parsed) {
+      await run(
+        `INSERT INTO glossary_entries (id, glossary_id, term, translation, notes)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT(glossary_id, term) DO NOTHING`,
+        [entry.id, glossaryId, entry.term, entry.translation, entry.notes ?? ''],
+      );
+    }
+  });
+  const [{ count: after }] = await select<{ count: number }>(
+    'SELECT COUNT(*) as count FROM glossary_entries WHERE glossary_id = $1',
+    [glossaryId],
+  );
+  return after - before;
 }
 
 export function exportGlossaryToCsv(entries: GlossaryEntry[]): string {
@@ -292,38 +300,7 @@ export async function importEntriesFromXlsx(
       notes: columnMap.notesKey ? (String(row[columnMap.notesKey]).trim() || undefined) : undefined,
     }));
 
-  if (strategy === 'replace') {
-    await runInTransaction(async (run) => {
-      await run('DELETE FROM glossary_entries WHERE glossary_id = $1', [glossaryId]);
-      for (const entry of parsed) {
-        await run(
-          'INSERT INTO glossary_entries (id, glossary_id, term, translation, notes) VALUES ($1, $2, $3, $4, $5)',
-          [entry.id, glossaryId, entry.term, entry.translation, entry.notes ?? ''],
-        );
-      }
-    });
-  } else {
-    const [{ count: before }] = await select<{ count: number }>(
-      'SELECT COUNT(*) as count FROM glossary_entries WHERE glossary_id = $1',
-      [glossaryId],
-    );
-    await runInTransaction(async (run) => {
-      for (const entry of parsed) {
-        await run(
-          `INSERT INTO glossary_entries (id, glossary_id, term, translation, notes)
-           VALUES ($1, $2, $3, $4, $5)
-           ON CONFLICT(glossary_id, term) DO NOTHING`,
-          [entry.id, glossaryId, entry.term, entry.translation, entry.notes ?? ''],
-        );
-      }
-    });
-    const [{ count: after }] = await select<{ count: number }>(
-      'SELECT COUNT(*) as count FROM glossary_entries WHERE glossary_id = $1',
-      [glossaryId],
-    );
-    return after - before;
-  }
-  return parsed.length;
+  return applyGlossaryImportStrategy(glossaryId, parsed, strategy);
 }
 
 export async function addGlossaryEntry(

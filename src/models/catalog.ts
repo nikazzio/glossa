@@ -89,7 +89,7 @@ export function getModelEntry(provider: ModelProvider, modelId: string): ModelEn
   return MODEL_CATALOG.find((e) => e.provider === provider && e.id === modelId);
 }
 
-export function getProviderCatalogEntries(
+function getProviderCatalogEntries(
   provider: ModelProvider,
   options?: { includeDeprecated?: boolean },
 ): ModelEntry[] {
@@ -106,7 +106,7 @@ export function getModelStatus(provider: ModelProvider, modelId: string): ModelS
   return getModelEntry(provider, modelId)?.status;
 }
 
-export function getModelReasoning(provider: ModelProvider, modelId: string): ModelReasoningClass | undefined {
+function getModelReasoning(provider: ModelProvider, modelId: string): ModelReasoningClass | undefined {
   return getModelEntry(provider, modelId)?.reasoning;
 }
 
@@ -142,7 +142,7 @@ export function ensureModelInList(options: string[], currentModel: string): stri
   return !currentModel || options.includes(currentModel) ? options : [...options, currentModel];
 }
 
-export function inferReasoningFromModelId(
+function inferReasoningFromModelId(
   provider: ModelProvider,
   modelId: string,
 ): ModelReasoningClass | undefined {

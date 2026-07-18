@@ -6,6 +6,7 @@ import { ProjectInspectorNext } from './ProjectInspectorNext';
 import { AppStatusBar } from '../AppStatusBar';
 import { PANEL_FLEX_TRANSITION_CLASS } from '../motion';
 import { resetStrayResizeCursor } from './resetStrayResizeCursor';
+import { useResizeDragging } from './useResizeDragging';
 
 /**
  * Shell nuova (#291) — split principale del progetto in modalità documento.
@@ -61,7 +62,7 @@ export function ShellNext({
   const [collapsed, setCollapsed] = useState(storeCollapsed);
   const [inspectorCollapsed, setInspectorCollapsed] = useState(!inspectorOpen);
   // Drag attivo su una maniglia: durante il trascinamento niente transizione CSS.
-  const [dragging, setDragging] = useState(false);
+  const [dragging, setDragging] = useResizeDragging();
   const initialWidth = useRef(
     clampPanelWidth(storeWidth || SIDEBAR_DEFAULT, SIDEBAR_MIN, SIDEBAR_MAX),
   );
@@ -95,18 +96,6 @@ export function ShellNext({
       resetStrayResizeCursor();
     };
   }, []);
-
-  // La libreria non espone uno stato di drag: lo ricaviamo dal pointer sulle maniglie.
-  useEffect(() => {
-    if (!dragging) return;
-    const stop = () => setDragging(false);
-    window.addEventListener('pointerup', stop);
-    window.addEventListener('pointercancel', stop);
-    return () => {
-      window.removeEventListener('pointerup', stop);
-      window.removeEventListener('pointercancel', stop);
-    };
-  }, [dragging]);
 
   // Sync store → rail (collasso comandato da apertura flyout / cambio sezione / persistenza).
   useEffect(() => {

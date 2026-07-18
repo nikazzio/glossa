@@ -426,35 +426,35 @@ export function MarkdownEditor({
   const formattingControls = (
     <>
       <ToolbarLabel>{t('editor.inlineLabel')}</ToolbarLabel>
-      <CommandButton active={activeCommands.bold} onClick={() => applyCommand('bold')} title={t('editor.bold')} ariaLabel={t('editor.bold')} disabled={commandEditingDisabled}>
+      <ToolbarButton active={activeCommands.bold} onClick={() => applyCommand('bold')} title={t('editor.bold')} ariaLabel={t('editor.bold')} disabled={commandEditingDisabled}>
         <Bold size={15} />
-      </CommandButton>
-      <CommandButton active={activeCommands.italic} onClick={() => applyCommand('italic')} title={t('editor.italic')} ariaLabel={t('editor.italic')} disabled={commandEditingDisabled}>
+      </ToolbarButton>
+      <ToolbarButton active={activeCommands.italic} onClick={() => applyCommand('italic')} title={t('editor.italic')} ariaLabel={t('editor.italic')} disabled={commandEditingDisabled}>
         <Italic size={15} />
-      </CommandButton>
-      <CommandButton active={activeCommands.link} onClick={() => applyCommand('link')} title={t('editor.link')} ariaLabel={t('editor.link')} disabled={commandEditingDisabled}>
+      </ToolbarButton>
+      <ToolbarButton active={activeCommands.link} onClick={() => applyCommand('link')} title={t('editor.link')} ariaLabel={t('editor.link')} disabled={commandEditingDisabled}>
         <Link2 size={15} />
-      </CommandButton>
-      <CommandButton active={activeCommands.footnote} onClick={() => applyCommand('footnote')} title={t('editor.footnote')} ariaLabel={t('editor.footnote')} disabled={commandEditingDisabled}>
+      </ToolbarButton>
+      <ToolbarButton active={activeCommands.footnote} onClick={() => applyCommand('footnote')} title={t('editor.footnote')} ariaLabel={t('editor.footnote')} disabled={commandEditingDisabled}>
         <Pilcrow size={15} />
-      </CommandButton>
+      </ToolbarButton>
       <ToolbarSeparator />
       <ToolbarLabel>{t('editor.structureLabel')}</ToolbarLabel>
-      <CommandButton active={activeCommands['heading-1']} onClick={() => applyCommand('heading-1')} title={t('editor.heading1')} ariaLabel={t('editor.heading1')} disabled={commandEditingDisabled}>
+      <ToolbarButton active={activeCommands['heading-1']} onClick={() => applyCommand('heading-1')} title={t('editor.heading1')} ariaLabel={t('editor.heading1')} disabled={commandEditingDisabled}>
         <Heading1 size={15} />
-      </CommandButton>
-      <CommandButton active={activeCommands['heading-2']} onClick={() => applyCommand('heading-2')} title={t('editor.heading2')} ariaLabel={t('editor.heading2')} disabled={commandEditingDisabled}>
+      </ToolbarButton>
+      <ToolbarButton active={activeCommands['heading-2']} onClick={() => applyCommand('heading-2')} title={t('editor.heading2')} ariaLabel={t('editor.heading2')} disabled={commandEditingDisabled}>
         <Heading2 size={15} />
-      </CommandButton>
-      <CommandButton active={activeCommands['heading-3']} onClick={() => applyCommand('heading-3')} title={t('editor.heading3')} ariaLabel={t('editor.heading3')} disabled={commandEditingDisabled}>
+      </ToolbarButton>
+      <ToolbarButton active={activeCommands['heading-3']} onClick={() => applyCommand('heading-3')} title={t('editor.heading3')} ariaLabel={t('editor.heading3')} disabled={commandEditingDisabled}>
         <Heading3 size={15} />
-      </CommandButton>
-      <CommandButton active={activeCommands['unordered-list']} onClick={() => applyCommand('unordered-list')} title={t('editor.unorderedList')} ariaLabel={t('editor.unorderedList')} disabled={commandEditingDisabled}>
+      </ToolbarButton>
+      <ToolbarButton active={activeCommands['unordered-list']} onClick={() => applyCommand('unordered-list')} title={t('editor.unorderedList')} ariaLabel={t('editor.unorderedList')} disabled={commandEditingDisabled}>
         <List size={15} />
-      </CommandButton>
-      <CommandButton active={activeCommands['ordered-list']} onClick={() => applyCommand('ordered-list')} title={t('editor.orderedList')} ariaLabel={t('editor.orderedList')} disabled={commandEditingDisabled}>
+      </ToolbarButton>
+      <ToolbarButton active={activeCommands['ordered-list']} onClick={() => applyCommand('ordered-list')} title={t('editor.orderedList')} ariaLabel={t('editor.orderedList')} disabled={commandEditingDisabled}>
         <ListOrdered size={15} />
-      </CommandButton>
+      </ToolbarButton>
     </>
   );
 
@@ -603,38 +603,6 @@ export function MarkdownEditor({
 }
 
 function ToolbarButton({
-  active,
-  onClick,
-  title,
-  ariaLabel,
-  disabled = false,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  title: string;
-  ariaLabel: string;
-  disabled?: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <IconButton
-      size="md"
-      tone={active ? 'accent' : 'default'}
-      onMouseDown={(event) => event.preventDefault()}
-      onClick={onClick}
-      title={title}
-      ariaLabel={ariaLabel}
-      disabled={disabled}
-      ariaPressed={active}
-      tooltipSide="bottom"
-    >
-      {children}
-    </IconButton>
-  );
-}
-
-function CommandButton({
   active,
   onClick,
   title,

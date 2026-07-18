@@ -25,7 +25,7 @@ const MEMORY_SEARCH_ERROR_KEYS: Partial<Record<ReturnType<typeof classifyError>,
   network: 'memory.searchFailedNetwork',
 };
 
-export function memorySearchErrorKey(error: unknown): string {
+function memorySearchErrorKey(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   return MEMORY_SEARCH_ERROR_KEYS[classifyError(message)] ?? 'memory.searchFailed';
 }

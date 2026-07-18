@@ -3,7 +3,7 @@ import type { TranslationChunk } from '../../types';
 export type ChunkOutcome = 'completed' | 'failed' | 'cancelled' | 'skipped';
 export type BatchRunMode = 'resume' | 'rerun-unlocked';
 
-export function escapeChunkId(value: string): string {
+function escapeChunkId(value: string): string {
   return value
     .replace(/&/g, '&amp;')
     .replace(/"/g, '&quot;')
@@ -11,7 +11,7 @@ export function escapeChunkId(value: string): string {
     .replace(/>/g, '&gt;');
 }
 
-export function formatReferenceChunk(chunkId: string, text: string): string {
+function formatReferenceChunk(chunkId: string, text: string): string {
   return `<chunk id="${escapeChunkId(chunkId)}">\n${text}\n</chunk>`;
 }
 

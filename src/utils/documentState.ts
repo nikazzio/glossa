@@ -53,7 +53,7 @@ export function normalizeRenderProfile(options: {
   return 'plain-text';
 }
 
-export function buildFootnoteMap(footnotes: FootnoteDefinition[]): Map<string, string> {
+function buildFootnoteMap(footnotes: FootnoteDefinition[]): Map<string, string> {
   return new Map(footnotes.map((footnote) => [footnote.id, footnote.text]));
 }
 
