@@ -38,13 +38,13 @@ describe('PhraseMemoryConfig', () => {
   it('shows auto-search and max results when memory is enabled', () => {
     renderConfig({ usePhraseMemory: true });
 
-    expect(screen.getByRole('switch', { name: /autosearch/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/maxresults/i)).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: /auto-?search/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/max\s*results/i)).toBeInTheDocument();
   });
 
   it('toggling auto-search emits false while preserving search limits', () => {
     const onChange = renderConfig({ usePhraseMemory: true });
-    fireEvent.click(screen.getByRole('switch', { name: /autosearch/i }));
+    fireEvent.click(screen.getByRole('switch', { name: /auto-?search/i }));
 
     expect(onChange).toHaveBeenCalledWith({
       usePhraseMemory: true,
@@ -56,7 +56,7 @@ describe('PhraseMemoryConfig', () => {
   it('updates max results', () => {
     const onChange = renderConfig({ usePhraseMemory: true });
 
-    fireEvent.change(screen.getByLabelText(/maxresults/i), {
+    fireEvent.change(screen.getByLabelText(/max\s*results/i), {
       target: { value: '7' },
     });
 

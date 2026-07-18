@@ -37,12 +37,12 @@ export function PhraseMemoryConfig({
 
   return (
     <div className="space-y-3">
-      <SectionLabel icon={Brain} label={t('pipeline.phraseMemoryTab')} />
+      <SectionLabel icon={Brain} label={t('settings.phraseMemoryTab')} />
 
       <div className="space-y-3 border-l-4 border-l-editorial-success/35 border-y border-editorial-border/70 bg-editorial-bg/65 px-5 py-4">
         <ToggleRow
           icon={<Brain size={13} />}
-          label={t('pipeline.phraseMemoryToggle')}
+          label={t('settings.phraseMemoryToggle')}
           checked={usePhraseMemory}
           disabled={disabled}
           onChange={() => emit({ usePhraseMemory: !usePhraseMemory })}
@@ -52,7 +52,7 @@ export function PhraseMemoryConfig({
           <>
             <ToggleRow
               icon={<Search size={13} />}
-              label={t('pipeline.phraseMemoryAutoSearch')}
+              label={t('settings.phraseMemoryAutoSearch')}
               checked={autoSearchPhraseMemory}
               disabled={disabled}
               onChange={() => emit({ autoSearchPhraseMemory: !autoSearchPhraseMemory })}
@@ -63,7 +63,7 @@ export function PhraseMemoryConfig({
                 htmlFor="pm-max-results"
                 className="block text-xs font-sans uppercase tracking-[0.22em] text-editorial-muted"
               >
-                {t('pipeline.phraseMemoryMaxResults')}
+                {t('settings.phraseMemoryMaxResults')}
               </label>
               <input
                 id="pm-max-results"
@@ -82,7 +82,7 @@ export function PhraseMemoryConfig({
             {!autoSearchPhraseMemory && (
               <div className="flex items-center gap-2 border-l-4 border-l-editorial-accent/35 border-y border-editorial-border/50 bg-editorial-bg/60 px-3 py-2 text-xs leading-relaxed text-editorial-muted">
                 <RefreshCcw size={13} className="shrink-0 text-editorial-accent" />
-                <span>{t('pipeline.phraseMemoryManualRefreshHint')}</span>
+                <span>{t('settings.phraseMemoryManualRefreshHint')}</span>
               </div>
             )}
           </>

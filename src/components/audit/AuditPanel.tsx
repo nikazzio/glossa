@@ -78,14 +78,14 @@ export function AuditPanel({ onRunAuditOnly, onReauditChunk }: AuditPanelProps) 
             {/* Composite Score */}
             {hasCompletedAudits && (
               <Tooltip label={compositeTitle} className="w-full">
-                <div className="space-y-2" aria-label={compositeTitle}>
-                  <div className={`text-5xl font-display text-center tracking-tighter ${QUALITY_TONE_COLOR[compositeTone]}`}>
+                <span className="block space-y-2" aria-label={compositeTitle}>
+                  <span className={`block text-5xl font-display text-center tracking-tighter ${QUALITY_TONE_COLOR[compositeTone]}`}>
                     {compositeLevelLabel}
-                  </div>
-                  <div className="text-xs text-center uppercase font-bold tracking-[0.1em] text-editorial-muted">
+                  </span>
+                  <span className="block text-xs text-center uppercase font-bold tracking-[0.1em] text-editorial-muted">
                     {t('audit.compositeQuality')}
-                  </div>
-                </div>
+                  </span>
+                </span>
               </Tooltip>
             )}
 
