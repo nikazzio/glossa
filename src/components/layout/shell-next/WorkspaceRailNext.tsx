@@ -108,8 +108,8 @@ function AreaSection({ collapsed }: { collapsed: boolean }) {
 
 /**
  * Workspace: lista sciolta, sempre visibile. Il click NAVIGA alla pagina del
- * workspace (e lo rende attivo): il pallino indica il contesto attivo, la
- * barra accent indica la vista corrente — due semantiche, due indicatori.
+ * workspace (e lo rende attivo). Un solo indicatore, come nel resto del rail:
+ * acceso solo quando quella riga è la vista corrente.
  */
 function WorkspaceSection({ collapsed }: { collapsed: boolean }) {
   const { t } = useTranslation();
@@ -152,8 +152,7 @@ function WorkspaceSection({ collapsed }: { collapsed: boolean }) {
         }
       >
         {workspaces.map((ws) => {
-          const isContext = ws.id === activeWorkspace?.id;
-          const isCurrentView = isContext && activeWorkspaceView === 'workspace';
+          const isCurrentView = ws.id === activeWorkspace?.id && activeWorkspaceView === 'workspace';
           return (
             <ShellNavItem
               key={ws.id}
@@ -170,7 +169,7 @@ function WorkspaceSection({ collapsed }: { collapsed: boolean }) {
                 >
                   <span
                     className={`rounded-full transition-colors duration-200 ${collapsed ? 'h-2.5 w-2.5' : 'h-2 w-2'} ${
-                      isContext ? 'bg-editorial-accent' : 'border border-editorial-border bg-transparent'
+                      isCurrentView ? 'bg-editorial-accent' : 'border border-editorial-border bg-transparent'
                     }`}
                   />
                 </span>

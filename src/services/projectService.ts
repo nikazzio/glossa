@@ -22,6 +22,11 @@ export interface Project {
   pipeline_names: string | null;
 }
 
+export interface WorkspaceProject extends Project {
+  workspace_id: string;
+  workspace_name: string;
+}
+
 export interface RecentProject {
   id: string;
   name: string;
@@ -37,12 +42,6 @@ export interface RecentPipelineRun {
   project_name: string;
   workspace_id: string;
   workspace_name: string;
-}
-
-export interface WorkspaceProjectCount {
-  workspace_id: string;
-  project_count: number;
-  last_updated_at: string | null;
 }
 
 export interface ProjectSource {
@@ -97,6 +96,22 @@ export async function listProjects(workspaceId: string): Promise<Project[]> {
   );
 }
 
+/** Tutti i progetti di traduzione di TUTTI i workspace — alimenta l'area Traduzioni. */
+export async function listAllProjects(): Promise<WorkspaceProject[]> {
+  return select<WorkspaceProject>(
+    `SELECT
+       p.*,
+       COUNT(pi.id) AS pipeline_count,
+       GROUP_CONCAT(pi.name, ' · ') AS pipeline_names,
+       w.name AS workspace_name
+     FROM projects p
+     LEFT JOIN pipelines pi ON pi.project_id = p.id
+     JOIN workspaces w ON w.id = p.workspace_id
+     GROUP BY p.id
+     ORDER BY p.updated_at DESC`,
+  );
+}
+
 /** Ultimi progetti toccati in TUTTI i workspace — alimenta il blocco Riprendi della Dashboard. */
 export async function listRecentProjectsAllWorkspaces(limit: number): Promise<RecentProject[]> {
   return select<RecentProject>(
@@ -131,19 +146,6 @@ export async function listRecentPipelineRuns(limit: number): Promise<RecentPipel
      ORDER BY ol.at DESC
      LIMIT $1`,
     [limit],
-  );
-}
-
-/** Conteggio progetti e ultima attività per workspace — alimenta la sezione workspace della Dashboard. */
-export async function countProjectsByWorkspace(): Promise<WorkspaceProjectCount[]> {
-  return select<WorkspaceProjectCount>(
-    `SELECT
-       w.id AS workspace_id,
-       COUNT(p.id) AS project_count,
-       MAX(p.updated_at) AS last_updated_at
-     FROM workspaces w
-     LEFT JOIN projects p ON p.workspace_id = w.id
-     GROUP BY w.id`,
   );
 }
 

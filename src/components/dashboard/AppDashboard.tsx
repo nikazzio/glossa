@@ -1,28 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  Activity,
-  Archive,
-  BookOpenText,
-  History,
-  KeyRound,
-  Plus,
-} from 'lucide-react';
+import { Activity, BookOpenText, History, KeyRound } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import {
-  countProjectsByWorkspace,
   listRecentPipelineRuns,
   listRecentProjectsAllWorkspaces,
   type RecentPipelineRun,
   type RecentProject,
-  type WorkspaceProjectCount,
 } from '../../services/projectService';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
-import { IconButton, PillButton, SectionLabel, Spinner } from '../ui';
-import { CreateWorkspaceDialog } from '../workspace/CreateWorkspaceDialog';
+import { PillButton, SectionLabel, Spinner } from '../ui';
 
 const RESUME_LIMIT = 5;
 const ACTIVITY_LIMIT = 6;
@@ -46,25 +36,20 @@ export function AppDashboard() {
   const loadProjects = useProjectStore((s) => s.loadProjects);
   const openProject = useProjectStore((s) => s.openProject);
   const setShowSettings = useUiStore((s) => s.setShowSettings);
-  const setActiveWorkspaceView = useUiStore((s) => s.setActiveWorkspaceView);
   const { statuses: keyStatuses, isLoading: keyStatusLoading } = useProviderKeyStatus();
 
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
   const [recentRuns, setRecentRuns] = useState<RecentPipelineRun[]>([]);
-  const [wsCounts, setWsCounts] = useState<WorkspaceProjectCount[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   const loadDashboardData = useCallback(async () => {
     try {
-      const [projects, runs, counts] = await Promise.all([
+      const [projects, runs] = await Promise.all([
         listRecentProjectsAllWorkspaces(RESUME_LIMIT),
         listRecentPipelineRuns(ACTIVITY_LIMIT),
-        countProjectsByWorkspace(),
       ]);
       setRecentProjects(projects);
       setRecentRuns(runs);
-      setWsCounts(counts);
     } catch (err: unknown) {
       toast.error(t('dashboard.loadFailed'), {
         description: err instanceof Error ? err.message : String(err),
@@ -104,18 +89,6 @@ export function AppDashboard() {
         description: err instanceof Error ? err.message : String(err),
       });
     }
-  };
-
-  /** Naviga alla pagina del workspace (attivandolo se serve): il click ha sempre un effetto visibile. */
-  const handleOpenWorkspace = async (workspaceId: string) => {
-    const ws = workspaces.find((w) => w.id === workspaceId);
-    if (!ws) return;
-    if (ws.id !== activeWorkspace?.id) {
-      closeProject();
-      await setActive(ws);
-      await loadProjects();
-    }
-    setActiveWorkspaceView('workspace');
   };
 
   return (
@@ -218,49 +191,7 @@ export function AppDashboard() {
             <p className="px-1 text-sm text-editorial-muted">{t('dashboard.activityEmpty')}</p>
           )}
         </section>
-
-        {/* Workspace — righe che navigano alla pagina del workspace */}
-        <section className="mt-6">
-          <div className="mb-2 flex items-center justify-between px-1">
-            <SectionLabel icon={Archive} label={t('dashboard.workspacesTitle')} />
-            <IconButton size="sm" tone="muted" onClick={() => setShowCreateDialog(true)} title={t('workspace.create')}>
-              <Plus size={12} />
-            </IconButton>
-          </div>
-          <div className="space-y-1.5">
-            {workspaces.map((ws) => {
-              const isActive = ws.id === activeWorkspace?.id;
-              const count = wsCounts.find((c) => c.workspace_id === ws.id);
-              return (
-                <button
-                  key={ws.id}
-                  type="button"
-                  onClick={() => void handleOpenWorkspace(ws.id)}
-                  className={ROW_CLASS}
-                >
-                  <span className="flex min-w-0 items-center gap-3">
-                    <span
-                      className={`h-2 w-2 shrink-0 rounded-full ${
-                        isActive ? 'bg-editorial-accent' : 'border border-editorial-border bg-transparent'
-                      }`}
-                      aria-hidden="true"
-                    />
-                    <span className="truncate font-display text-base italic text-editorial-ink">{ws.name}</span>
-                    <span className="shrink-0 text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
-                      {t('workspace.projectsMetric', { count: count?.project_count ?? 0 })}
-                    </span>
-                  </span>
-                  <span className="shrink-0 text-xs text-editorial-muted">
-                    {count?.last_updated_at ? formatWhen(count.last_updated_at) : null}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </section>
       </div>
-
-      <CreateWorkspaceDialog open={showCreateDialog} onClose={() => setShowCreateDialog(false)} />
     </main>
   );
 }

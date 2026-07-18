@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { ArrowUpAZ, BookOpenText, Clock, Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -6,30 +6,51 @@ import { toast } from 'sonner';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { confirm } from '../../stores/confirmStore';
-import { IconButton } from '../ui';
+import { listAllProjects, type WorkspaceProject } from '../../services/projectService';
+import { IconButton, Spinner } from '../ui';
 import { CreateProjectDialog } from '../projects/CreateProjectDialog';
 
 type SortKey = 'updatedAt' | 'name';
 
+/** Area Traduzioni: tutti i progetti di TUTTI i workspace — a differenza della
+ * pagina Workspace, che mostra solo i progetti del workspace attivo. */
 export function TranslationsArea() {
   const { t, i18n } = useTranslation();
-  const { activeWorkspace } = useWorkspaceStore();
-  const { projects, loadProjects, openProject, removeProject } = useProjectStore();
+  const workspaces = useWorkspaceStore((s) => s.workspaces);
+  const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace);
+  const setActive = useWorkspaceStore((s) => s.setActive);
+  const closeProject = useProjectStore((s) => s.closeProject);
+  const loadProjects = useProjectStore((s) => s.loadProjects);
+  const openProject = useProjectStore((s) => s.openProject);
+  const removeProject = useProjectStore((s) => s.removeProject);
 
+  const [allProjects, setAllProjects] = useState<WorkspaceProject[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [sortKey, setSortKey] = useState<SortKey>('updatedAt');
   const [showNewProjectForm, setShowNewProjectForm] = useState(false);
   const [openingProjectId, setOpeningProjectId] = useState<string | null>(null);
 
-  useEffect(() => { void loadProjects(); }, [activeWorkspace?.id, loadProjects]);
-  useEffect(() => { setOpeningProjectId(null); }, [activeWorkspace?.id]);
+  const loadAllProjects = useCallback(async () => {
+    try {
+      setAllProjects(await listAllProjects());
+    } catch (err: unknown) {
+      toast.error(t('dashboard.loadFailed'), {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [t]);
+
+  useEffect(() => { void loadAllProjects(); }, [loadAllProjects]);
 
   const sortedProjects = useMemo(() =>
-    [...projects].sort((a, b) =>
+    [...allProjects].sort((a, b) =>
       sortKey === 'name'
         ? a.name.localeCompare(b.name)
         : new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
     ),
-    [projects, sortKey]
+    [allProjects, sortKey]
   );
 
   const formatSavedAt = (updatedAt: string) =>
@@ -37,10 +58,18 @@ export function TranslationsArea() {
       day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
     }).format(new Date(updatedAt));
 
-  const handleOpenProject = async (projectId: string) => {
-    setOpeningProjectId(projectId);
+  /** Apre un progetto da qualunque workspace: se serve, attiva prima il suo workspace. */
+  const handleOpenProject = async (project: WorkspaceProject) => {
+    setOpeningProjectId(project.id);
     try {
-      await openProject(projectId);
+      if (project.workspace_id !== activeWorkspace?.id) {
+        const ws = workspaces.find((w) => w.id === project.workspace_id);
+        if (!ws) return;
+        closeProject();
+        await setActive(ws);
+        await loadProjects();
+      }
+      await openProject(project.id);
     } catch (err: unknown) {
       setOpeningProjectId(null);
       toast.error(t('projects.loadFailed'), {
@@ -59,6 +88,7 @@ export function TranslationsArea() {
     if (!ok) return;
     try {
       await removeProject(project.id);
+      await loadAllProjects();
       toast.success(t('projects.deleted'));
     } catch (err: unknown) {
       toast.error(t('projects.deleteFailed'), {
@@ -70,11 +100,6 @@ export function TranslationsArea() {
   return (
     <main className="flex flex-1 h-full min-h-0 flex-col overflow-y-auto bg-editorial-paper custom-scrollbar">
       <div className="px-5 py-5 md:px-6">
-        {/* Header — il nome workspace fa da eyebrow di contesto; si torna alla
-            Dashboard dalla voce in barra laterale, non da un back dedicato. */}
-        <div className="mb-4 text-xs text-editorial-muted">
-          {activeWorkspace?.name ?? t('workspace.noActive')}
-        </div>
         <div className="mb-5 flex items-end justify-between gap-3">
           <h1 className="font-display text-4xl italic text-editorial-ink md:text-5xl">
             {t('workspace.areas.translations.title')}
@@ -104,7 +129,9 @@ export function TranslationsArea() {
           </div>
         </div>
 
-        {/* Grid — always shown, new project card always last */}
+        {isLoading ? (
+          <Spinner size={14} label={t('common.loading')} className="flex items-center gap-2 px-1 py-2 text-xs text-editorial-muted" />
+        ) : (
         <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
           {sortedProjects.map((project) => {
             const isOpening = openingProjectId === project.id;
@@ -135,7 +162,7 @@ export function TranslationsArea() {
                 <div className="relative z-10 flex items-start gap-3">
                   <button
                     type="button"
-                    onClick={() => void handleOpenProject(project.id)}
+                    onClick={() => void handleOpenProject(project)}
                     disabled={openingProjectId !== null}
                     aria-busy={isOpening}
                     className="min-w-0 flex-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-wait"
@@ -152,8 +179,13 @@ export function TranslationsArea() {
                         <span className="block truncate font-display text-xl italic text-editorial-ink">
                           {project.name}
                         </span>
-                        <span className="mt-1 block text-xs text-editorial-muted">
-                          {formatSavedAt(project.updated_at)}
+                        <span className="mt-1 flex items-center gap-2">
+                          <span className="shrink-0 rounded-full border border-editorial-border bg-editorial-bg px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
+                            {project.workspace_name}
+                          </span>
+                          <span className="text-xs text-editorial-muted">
+                            {formatSavedAt(project.updated_at)}
+                          </span>
                         </span>
                         <span className="mt-2 block text-xs text-editorial-ink">
                           {t('workspace.pipelineBadge', { count: project.pipeline_count })}
@@ -192,6 +224,7 @@ export function TranslationsArea() {
             </span>
           </motion.button>
         </div>
+        )}
       </div>
 
       <CreateProjectDialog open={showNewProjectForm} onClose={() => setShowNewProjectForm(false)} />

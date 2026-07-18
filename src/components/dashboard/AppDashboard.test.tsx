@@ -16,11 +16,9 @@ vi.mock('../../hooks/useProviderKeyStatus', () => ({
 
 const mockListRecent = vi.fn();
 const mockListRuns = vi.fn();
-const mockCounts = vi.fn();
 vi.mock('../../services/projectService', () => ({
   listRecentProjectsAllWorkspaces: (...args: unknown[]) => mockListRecent(...args),
   listRecentPipelineRuns: (...args: unknown[]) => mockListRuns(...args),
-  countProjectsByWorkspace: (...args: unknown[]) => mockCounts(...args),
 }));
 
 const originalProjectState = useProjectStore.getState();
@@ -35,7 +33,6 @@ describe('AppDashboard', () => {
     useUiStore.setState({ activeWorkspaceView: 'dashboard' });
     mockListRecent.mockResolvedValue([]);
     mockListRuns.mockResolvedValue([]);
-    mockCounts.mockResolvedValue([]);
     useProjectStore.setState({
       ...originalProjectState,
       openProject: vi.fn().mockResolvedValue(undefined),
@@ -110,42 +107,4 @@ describe('AppDashboard', () => {
     expect(await screen.findByText('dashboard.runOutcome.success')).toBeInTheDocument();
   });
 
-  it('clicking a workspace row activates it and navigates to its page', async () => {
-    mockCounts.mockResolvedValue([
-      { workspace_id: 'ws-1', project_count: 3, last_updated_at: '2026-07-15T10:00:00.000Z' },
-      { workspace_id: 'ws-2', project_count: 1, last_updated_at: null },
-    ]);
-
-    render(<AppDashboard />);
-
-    const betaRow = await screen.findByRole('button', { name: /Beta/ });
-    await userEvent.click(betaRow);
-
-    await waitFor(() => {
-      expect(useWorkspaceStore.getState().setActive).toHaveBeenCalledWith(
-        expect.objectContaining({ id: 'ws-2' }),
-      );
-      expect(useUiStore.getState().activeWorkspaceView).toBe('workspace');
-    });
-  });
-
-  it('clicking the active workspace row navigates to its page without re-activating', async () => {
-    render(<AppDashboard />);
-
-    const alphaRow = await screen.findByRole('button', { name: /Alpha/ });
-    await userEvent.click(alphaRow);
-
-    await waitFor(() => {
-      expect(useUiStore.getState().activeWorkspaceView).toBe('workspace');
-    });
-    expect(useWorkspaceStore.getState().setActive).not.toHaveBeenCalled();
-  });
-
-  it('offers workspace creation as an icon-only action', async () => {
-    render(<AppDashboard />);
-
-    await screen.findByText('dashboard.resumeEmpty');
-    const createButton = screen.getByRole('button', { name: 'workspace.create' });
-    expect(createButton.textContent ?? '').not.toMatch(/workspace\.create/);
-  });
 });

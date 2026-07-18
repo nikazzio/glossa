@@ -735,7 +735,6 @@
     "resumeEmpty": "No projects yet: create one from the Translations area.",
     "activityTitle": "Recent activity",
     "activityEmpty": "No runs recorded yet.",
-    "workspacesTitle": "Workspaces",
     "runOutcome": {
       "success": "Run completed",
       "warn": "Run partial or cancelled",

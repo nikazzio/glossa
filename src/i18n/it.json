@@ -735,7 +735,6 @@
     "resumeEmpty": "Nessun progetto ancora: creane uno dall'area Traduzioni.",
     "activityTitle": "Attività recente",
     "activityEmpty": "Nessuna esecuzione registrata.",
-    "workspacesTitle": "Workspace",
     "runOutcome": {
       "success": "Esecuzione completata",
       "warn": "Esecuzione parziale o annullata",
