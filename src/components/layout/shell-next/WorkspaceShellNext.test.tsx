@@ -49,7 +49,7 @@ describe('WorkspaceShellNext (#294)', () => {
     expect(useUiStore.getState().dashboardSidebarCollapsed).toBe(false);
   });
 
-  it('switches workspace from the always-visible workspace list', () => {
+  it('clicking a workspace in the rail activates it and navigates to its page', () => {
     renderShell();
 
     fireEvent.click(screen.getByText('Beta'));
@@ -57,26 +57,43 @@ describe('WorkspaceShellNext (#294)', () => {
     expect(useWorkspaceStore.getState().setActive).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'ws-2' }),
     );
+  });
+
+  it('clicking the active workspace navigates to its page without re-activating', () => {
+    renderShell();
+
+    fireEvent.click(screen.getByText('Alpha'));
+
+    expect(useUiStore.getState().activeWorkspaceView).toBe('workspace');
+    expect(useWorkspaceStore.getState().setActive).not.toHaveBeenCalled();
   });
 
   it('keeps the workspace list reachable when the rail is collapsed', () => {
     renderShell();
 
     fireEvent.click(screen.getByRole('button', { name: 'sidebar.collapse' }));
-    fireEvent.click(screen.getByText('Beta'));
+    fireEvent.click(screen.getByRole('button', { name: /Beta/ }));
 
     expect(useWorkspaceStore.getState().setActive).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'ws-2' }),
     );
   });
 
-  it('selects the translations area and returns to the hub on a second click', () => {
+  it('selects the translations area and keeps it selected on a second click (radio, no toggle)', () => {
     renderShell();
 
     fireEvent.click(screen.getByText('workspace.areas.translations.title'));
-    expect(useUiStore.getState().activeWorkspaceArea).toBe('translations');
+    expect(useUiStore.getState().activeWorkspaceView).toBe('translations');
 
     fireEvent.click(screen.getByText('workspace.areas.translations.title'));
-    expect(useUiStore.getState().activeWorkspaceArea).toBe(null);
+    expect(useUiStore.getState().activeWorkspaceView).toBe('translations');
+  });
+
+  it('returns to the dashboard from the standalone dashboard nav item', () => {
+    renderShell();
+
+    fireEvent.click(screen.getByText('workspace.areas.translations.title'));
+    fireEvent.click(screen.getByText('dashboard.title'));
+    expect(useUiStore.getState().activeWorkspaceView).toBe('dashboard');
   });
 });

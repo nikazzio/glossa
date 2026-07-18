@@ -16,7 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { useAnnotationsStore } from '../../../stores/annotationsStore';
 import { useProjectStore } from '../../../stores/projectStore';
 import { useUiStore } from '../../../stores/uiStore';
-import { IconButton, PillButton } from '../../ui';
+import { EmptyState, IconButton, PillButton, Tooltip } from '../../ui';
 import type { AnnotationType, TranslationChunk } from '../../../types';
 import type { Annotation } from '../../../types';
 
@@ -141,9 +141,11 @@ function AnnotationCard({
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2">
             {number !== null && (
-              <span className="shrink-0 font-display text-sm font-bold text-editorial-danger" data-tooltip={`[^${number}]`}>
-                {number}
-              </span>
+              <Tooltip label={`[^${number}]`}>
+                <span className="shrink-0 font-display text-sm font-bold text-editorial-danger">
+                  {number}
+                </span>
+              </Tooltip>
             )}
             <Icon size={13} className={`shrink-0 ${meta.colorClass}`} />
             <span className={`truncate text-[11px] font-bold uppercase tracking-[0.14em] ${meta.colorClass}`}>
@@ -154,7 +156,7 @@ function AnnotationCard({
         <div className="flex shrink-0 items-center gap-1 opacity-70 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
           {confirmingDelete ? (
             <>
-              <span className="text-[10px] text-editorial-danger">{t('annotations.confirmDelete')}</span>
+              <span className="text-xs text-editorial-danger">{t('annotations.confirmDelete')}</span>
               <IconButton size="sm" tone="danger" onClick={onDelete} title={t('annotations.confirmDeleteYes')}>
                 <Trash2 size={11} />
               </IconButton>
@@ -236,9 +238,8 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
 
   if (!currentChunk) {
     return (
-      <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="flex flex-col items-center justify-center gap-3 px-6 py-12 text-center">
-        <NotebookText size={28} className="text-editorial-border" />
-        <p className="text-sm font-medium text-editorial-muted">{t('annotations.emptyNoChunk')}</p>
+      <div id={panelId} role="tabpanel" aria-labelledby={labelledBy}>
+        <EmptyState icon={<NotebookText size={28} />} message={t('annotations.emptyNoChunk')} />
       </div>
     );
   }
@@ -288,7 +289,7 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
       {showForm && (
         <div className="border-y border-editorial-border/55 py-3">
           <div className="mb-1 flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-[0.25em] text-editorial-muted">
+            <span className="text-xs font-bold uppercase tracking-[0.16em] text-editorial-muted">
               {t('annotations.addButton')}
             </span>
             <IconButton size="sm" tone="default" onClick={closeForm} title={t('annotations.cancelButton')}>
@@ -344,7 +345,7 @@ export function NotesTab({ panelId, labelledBy, currentChunk }: NotesTabProps) {
         <>
           <div className="mx-0 my-1 h-px bg-editorial-border/40" />
           <details className="group">
-            <summary className="flex cursor-pointer list-none items-center gap-1.5 py-0.5 text-[10px] font-sans font-bold uppercase tracking-[0.16em] text-editorial-danger/80 transition-colors hover:text-editorial-danger">
+            <summary className="flex cursor-pointer list-none items-center gap-1.5 py-0.5 text-xs font-sans font-bold uppercase tracking-[0.16em] text-editorial-danger/80 transition-colors hover:text-editorial-danger">
               <ChevronRight size={11} className="shrink-0 text-editorial-danger/70 transition-transform group-open:rotate-90" />
               {t('annotations.sourceTitle')}
             </summary>

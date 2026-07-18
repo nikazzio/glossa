@@ -367,6 +367,7 @@ Regole:
 - **Azioni di riga**: comandi contestuali (es. modifica/elimina workspace attivo) vanno nel `trailing` di `ShellNavItem` (wrapper div + button interno + trailing fratelli — mai button annidati), non in barre azione separate nel canvas.
 - Dashboard/home: no card bianche generiche. Usa `editorial-paper`, bordi `editorial-border`, icone tonde, metadati proporzionati.
 - Area nav: testi `workspace.areas.<id>.title` e `workspace.areas.<id>.sidebarHint`. No badge "Attiva".
+- **Rail home = una sola selezione di navigazione, ogni voce naviga al proprio contenuto**: ordine `Dashboard` (voce standalone in cima, home app-level) → sezione **Aree** (del workspace attivo) → sezione **Workspace** (lista sciolta sempre visibile, `+` icon-only nell'header). Viste esclusive: `dashboard` | `workspace` (pagina del workspace attivo: identità, azioni icon-only Libreria/Configura/Elimina, progetti) | area. Click su un workspace = lo attiva E naviga alla sua pagina (mai selezione senza effetto visibile). Due indicatori con semantiche diverse: pallino accent = workspace attivo (contesto), barra accent + tint = vista corrente (nav). La Dashboard è asciutta: Riprendi cross-workspace, attività recente, righe workspace navigabili, banner provider solo se manca (niente sezioni informative non azionabili, niente teaser). Nessun back dedicato: si naviga sempre dalla barra.
 - Aree future possono essere disabilitate ma mantengono forma e gerarchia.
 
 ### Colonne progetto (shell #291)

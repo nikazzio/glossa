@@ -7,7 +7,7 @@ import { useProjectStore } from '../../stores/projectStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { confirm } from '../../stores/confirmStore';
 import { relativeDateUnit, formatDateTime } from '../../utils';
-import { Dialog, DialogCancelButton, IconButton, PillButton, SectionLabel } from '../ui';
+import { Dialog, DialogCancelButton, IconButton, PillButton, SectionLabel, Tooltip } from '../ui';
 
 export function ProjectPanel() {
   const { t } = useTranslation();
@@ -250,12 +250,11 @@ export function ProjectPanel() {
                             <span className="block truncate font-display text-lg italic text-editorial-ink">
                               {project.name}
                             </span>
-                            <span
-                              className="mt-1 block truncate font-mono text-xs text-editorial-muted"
-                              data-tooltip={absoluteDate}
-                            >
-                              {project.source_language} → {project.target_language} · {relativeLabel}
-                            </span>
+                            <Tooltip label={absoluteDate}>
+                              <span className="mt-1 block truncate font-mono text-xs text-editorial-muted">
+                                {project.source_language} → {project.target_language} · {relativeLabel}
+                              </span>
+                            </Tooltip>
                           </span>
                         </button>
                         <IconButton

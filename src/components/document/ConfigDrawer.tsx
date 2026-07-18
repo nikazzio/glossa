@@ -119,6 +119,7 @@ export function ConfigDrawer({
         value={config.assignedGlossaryId ?? ''}
         onChange={(e) => handleDictChange(e.target.value)}
         className="w-full rounded-md border border-editorial-border/60 bg-editorial-bg px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent text-editorial-ink"
+        aria-label={t('library.assignedDictionary')}
       >
         <option value="">{t('library.noDictionaryAssigned')}</option>
         {glossaries.map((g) => (

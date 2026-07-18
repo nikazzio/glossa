@@ -3,18 +3,19 @@ import {
   Archive,
   BookOpenText,
   FilePen,
+  LayoutDashboard,
   LibraryBig,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
 import { useProjectStore } from '../../../stores/projectStore';
 import { useWorkspaceStore } from '../../../stores/workspaceStore';
 import { useUiStore } from '../../../stores/uiStore';
 import type { Workspace } from '../../../types';
-import { Dialog, DialogCancelButton, DialogConfirmButton, IconButton } from '../../ui';
+import { IconButton } from '../../ui';
+import { CreateWorkspaceDialog } from '../../workspace/CreateWorkspaceDialog';
 import { ShellNavItem, ShellNavSection } from '../ShellNav';
 
 const AREA_ITEMS = [
@@ -23,16 +24,55 @@ const AREA_ITEMS = [
   { id: 'transcriptions', icon: FilePen, enabled: false },
 ] as const;
 
-/** Aree: livello principale della barra — a quale tipo di contenuto stai lavorando. */
+/** Dashboard: home dell'applicazione — sopra e fuori dalle aree del workspace. */
+function DashboardItem({ collapsed }: { collapsed: boolean }) {
+  const { t } = useTranslation();
+  const activeWorkspaceView = useUiStore((state) => state.activeWorkspaceView);
+  const setActiveWorkspaceView = useUiStore((state) => state.setActiveWorkspaceView);
+  const active = activeWorkspaceView === 'dashboard';
+
+  return (
+    <div className="px-2.5 pt-1">
+      <ShellNavItem
+        active={active}
+        collapsed={collapsed}
+        labelFont="display"
+        onClick={() => setActiveWorkspaceView('dashboard')}
+        ariaCurrent={active ? 'page' : undefined}
+        icon={
+          // Cerchietto sempre in tinta accent: la home dell'app spicca sulle voci di sezione.
+          <span
+            className={`inline-flex shrink-0 items-center justify-center rounded-full border transition-colors duration-200 ${
+              collapsed ? 'h-9 w-9' : 'h-7 w-7'
+            } ${
+              active
+                ? 'border-editorial-accent/60 bg-editorial-accent/15 text-editorial-accent'
+                : 'border-editorial-accent/35 bg-editorial-accent/5 text-editorial-accent'
+            }`}
+          >
+            <LayoutDashboard size={collapsed ? 16 : 14} />
+          </span>
+        }
+        label={t('dashboard.title')}
+        hint={t('dashboard.navHint')}
+      />
+    </div>
+  );
+}
+
+/**
+ * Aree del workspace attivo. Radio con Dashboard e workspace: sempre
+ * esattamente una vista attiva, click sull'attiva = no-op, mai deselezione.
+ */
 function AreaSection({ collapsed }: { collapsed: boolean }) {
   const { t } = useTranslation();
-  const activeWorkspaceArea = useUiStore((state) => state.activeWorkspaceArea);
-  const setActiveWorkspaceArea = useUiStore((state) => state.setActiveWorkspaceArea);
+  const activeWorkspaceView = useUiStore((state) => state.activeWorkspaceView);
+  const setActiveWorkspaceView = useUiStore((state) => state.setActiveWorkspaceView);
 
   return (
     <ShellNavSection icon={BookOpenText} label={t('sidebar.areaLabel')} collapsed={collapsed}>
       {AREA_ITEMS.map(({ id, icon: Icon, enabled }) => {
-        const active = enabled && activeWorkspaceArea === id;
+        const active = enabled && activeWorkspaceView === id;
         return (
           <ShellNavItem
             key={id}
@@ -40,15 +80,13 @@ function AreaSection({ collapsed }: { collapsed: boolean }) {
             disabled={!enabled}
             collapsed={collapsed}
             labelFont="display"
-            onClick={
-              enabled
-                ? () => setActiveWorkspaceArea(activeWorkspaceArea === id ? null : id)
-                : undefined
-            }
+            onClick={enabled ? () => setActiveWorkspaceView(id) : undefined}
             ariaCurrent={active ? 'page' : undefined}
             icon={
               <span
-                className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-colors duration-200 ${
+                className={`inline-flex shrink-0 items-center justify-center rounded-full border transition-colors duration-200 ${
+                  collapsed ? 'h-9 w-9' : 'h-6 w-6'
+                } ${
                   active
                     ? 'border-editorial-accent/45 bg-editorial-accent/10 text-editorial-accent'
                     : enabled
@@ -56,7 +94,7 @@ function AreaSection({ collapsed }: { collapsed: boolean }) {
                       : 'border-editorial-border bg-editorial-textbox/30 text-editorial-muted'
                 }`}
               >
-                <Icon size={12} />
+                <Icon size={collapsed ? 15 : 12} />
               </span>
             }
             label={t(`workspace.areas.${id}.title`)}
@@ -69,58 +107,29 @@ function AreaSection({ collapsed }: { collapsed: boolean }) {
 }
 
 /**
- * Workspace: cartelle secondarie dentro un'area (aggregano gli oggetti di
- * quell'area). Lista verticale sempre visibile, anche a barra collassata —
- * a differenza del cambio pipeline, qui non è un popover: sono contenitori,
- * non una modalità alternativa.
+ * Workspace: lista sciolta, sempre visibile. Il click NAVIGA alla pagina del
+ * workspace (e lo rende attivo). Un solo indicatore, come nel resto del rail:
+ * acceso solo quando quella riga è la vista corrente.
  */
 function WorkspaceSection({ collapsed }: { collapsed: boolean }) {
   const { t } = useTranslation();
-  const [showCreateWsForm, setShowCreateWsForm] = useState(false);
-  const [newWsName, setNewWsName] = useState('');
-  const [newWsDesc, setNewWsDesc] = useState('');
-  const [savingWs, setSavingWs] = useState(false);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace);
-  const createAndActivate = useWorkspaceStore((s) => s.createAndActivate);
   const setActive = useWorkspaceStore((s) => s.setActive);
   const closeProject = useProjectStore((s) => s.closeProject);
   const loadProjects = useProjectStore((s) => s.loadProjects);
+  const activeWorkspaceView = useUiStore((state) => state.activeWorkspaceView);
+  const setActiveWorkspaceView = useUiStore((state) => state.setActiveWorkspaceView);
 
-  const closeCreateWorkspaceForm = () => {
-    setShowCreateWsForm(false);
-    setNewWsName('');
-    setNewWsDesc('');
-  };
-
-  const handleSwitchWorkspace = async (ws: Workspace) => {
-    if (ws.id === activeWorkspace?.id) return;
-    closeProject();
-    await setActive(ws);
-    await loadProjects();
-  };
-
-  const handleCreateWorkspace = async () => {
-    if (!newWsName.trim()) return;
-    setSavingWs(true);
-    try {
+  const handleOpenWorkspace = async (ws: Workspace) => {
+    if (ws.id !== activeWorkspace?.id) {
       closeProject();
-      await createAndActivate({
-        name: newWsName.trim(),
-        description: newWsDesc.trim() || undefined,
-        embeddingModel: 'text-embedding-3-small',
-      });
+      await setActive(ws);
       await loadProjects();
-      toast.success(t('workspace.created'));
-      closeCreateWorkspaceForm();
-    } catch (err: unknown) {
-      toast.error(t('workspace.saveFailed'), {
-        description: err instanceof Error ? err.message : String(err),
-      });
-    } finally {
-      setSavingWs(false);
     }
+    setActiveWorkspaceView('workspace');
   };
 
   return (
@@ -133,7 +142,7 @@ function WorkspaceSection({ collapsed }: { collapsed: boolean }) {
           <IconButton
             size="sm"
             tone="muted"
-            onClick={() => setShowCreateWsForm(true)}
+            onClick={() => setShowCreateDialog(true)}
             title={t('workspace.create')}
             tooltipSide="right"
             className="bg-editorial-textbox/25 hover:bg-editorial-textbox/45"
@@ -143,81 +152,34 @@ function WorkspaceSection({ collapsed }: { collapsed: boolean }) {
         }
       >
         {workspaces.map((ws) => {
-          const isActive = ws.id === activeWorkspace?.id;
+          const isCurrentView = ws.id === activeWorkspace?.id && activeWorkspaceView === 'workspace';
           return (
             <ShellNavItem
               key={ws.id}
-              active={isActive}
+              active={isCurrentView}
               collapsed={collapsed}
-              onClick={() => void handleSwitchWorkspace(ws)}
-              ariaCurrent={isActive ? 'page' : undefined}
+              labelFont="display"
+              onClick={() => void handleOpenWorkspace(ws)}
+              ariaCurrent={isCurrentView ? 'page' : undefined}
               icon={
+                // Da collassata il pallino vive in uno slot h-9: righe alte quanto la barra progetto.
                 <span
-                  className={`h-2 w-2 shrink-0 rounded-full transition-colors duration-200 ${
-                    isActive ? 'bg-editorial-accent' : 'border border-editorial-border bg-transparent'
-                  }`}
+                  className={`inline-flex shrink-0 items-center justify-center ${collapsed ? 'h-9 w-9' : ''}`}
                   aria-hidden="true"
-                />
+                >
+                  <span
+                    className={`rounded-full transition-colors duration-200 ${collapsed ? 'h-2.5 w-2.5' : 'h-2 w-2'} ${
+                      isCurrentView ? 'bg-editorial-accent' : 'border border-editorial-border bg-transparent'
+                    }`}
+                  />
+                </span>
               }
               label={ws.name}
             />
           );
         })}
       </ShellNavSection>
-
-      <Dialog
-        open={showCreateWsForm}
-        onOpenChange={(open) => {
-          if (!open) closeCreateWorkspaceForm();
-        }}
-        title={t('workspace.create')}
-        closeLabel={t('common.cancel')}
-        widthClassName="max-w-lg"
-        bodyClassName="px-5 py-5"
-        footer={
-          <div className="flex justify-end gap-2">
-            <DialogCancelButton onClick={closeCreateWorkspaceForm}>
-              {t('common.cancel')}
-            </DialogCancelButton>
-            <DialogConfirmButton
-              onClick={() => void handleCreateWorkspace()}
-              disabled={!newWsName.trim() || savingWs}
-            >
-              {savingWs ? t('workspace.saving') : t('common.save')}
-            </DialogConfirmButton>
-          </div>
-        }
-      >
-        <div className="space-y-4">
-          <label className="block space-y-1.5">
-            <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
-              {t('workspace.nameLabel')}
-            </span>
-            <input
-              value={newWsName}
-              onChange={(e) => setNewWsName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') void handleCreateWorkspace();
-              }}
-              placeholder={t('workspace.namePlaceholder')}
-              className="w-full rounded-md border border-editorial-border bg-editorial-textbox/30 px-3 py-2.5 text-sm text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              // eslint-disable-next-line jsx-a11y/no-autofocus -- campo che compare da un click esplicito (crea nuovo workspace)
-              autoFocus
-            />
-          </label>
-          <label className="block space-y-1.5">
-            <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
-              {t('workspace.descriptionLabel')}
-            </span>
-            <textarea
-              value={newWsDesc}
-              onChange={(e) => setNewWsDesc(e.target.value)}
-              placeholder={t('workspace.descriptionPlaceholder')}
-              className="min-h-16 w-full rounded-md border border-editorial-border bg-editorial-textbox/30 px-3 py-2.5 text-sm text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            />
-          </label>
-        </div>
-      </Dialog>
+      <CreateWorkspaceDialog open={showCreateDialog} onClose={() => setShowCreateDialog(false)} />
     </>
   );
 }
@@ -236,15 +198,17 @@ export function WorkspaceRailNext({ collapsed }: WorkspaceRailNextProps) {
         <div className="flex h-20 w-full shrink-0 items-center justify-center">
           <IconButton
             size="md"
-            tone="muted"
+            tone="default"
             onClick={() => setCollapsed(false)}
             title={t('sidebar.expand')}
             tooltipSide="right"
+            className="h-9 w-9 bg-editorial-bg"
           >
             <PanelLeftOpen size={14} />
           </IconButton>
         </div>
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden custom-scrollbar pb-4 pt-2">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden custom-scrollbar pb-4">
+          <DashboardItem collapsed />
           <AreaSection collapsed />
           <WorkspaceSection collapsed />
         </div>
@@ -254,18 +218,21 @@ export function WorkspaceRailNext({ collapsed }: WorkspaceRailNextProps) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex h-20 shrink-0 items-center gap-3 px-3">
+      {/* Header: collassa a destra, allineato alla barra progetto */}
+      <div className="flex h-20 shrink-0 items-center justify-end px-3">
         <IconButton
           size="md"
-          tone="muted"
+          tone="default"
           onClick={() => setCollapsed(true)}
           title={t('sidebar.collapse')}
           tooltipSide="bottom"
+          className="h-9 w-9 shrink-0 bg-editorial-bg"
         >
           <PanelLeftClose size={14} />
         </IconButton>
       </div>
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden custom-scrollbar pb-4">
+        <DashboardItem collapsed={false} />
         <AreaSection collapsed={false} />
         <WorkspaceSection collapsed={false} />
       </div>

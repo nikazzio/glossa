@@ -668,7 +668,7 @@ function CommandButton({
 
 function ToolbarLabel({ children }: { children: ReactNode }) {
   return (
-    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted">
+    <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-editorial-muted">
       {children}
     </span>
   );

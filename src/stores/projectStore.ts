@@ -51,6 +51,7 @@ interface ProjectState {
   loadProjects: () => Promise<void>;
   createAndOpen: (name: string) => Promise<void>;
   openProject: (id: string) => Promise<void>;
+  openProjectInWorkspace: (id: string, workspaceId: string) => Promise<void>;
   removeProject: (id: string) => Promise<void>;
   saveCurrentProject: (name?: string) => Promise<void>;
   closeProject: () => void;
@@ -219,6 +220,19 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     });
 
     logger.info('openProject: done', { id, activePipelineId, chunksCount: restoredChunks.length });
+  },
+
+  /** Apre un progetto di un workspace qualsiasi: attiva prima quel workspace se non è già quello attivo. */
+  openProjectInWorkspace: async (id: string, workspaceId: string) => {
+    const { activeWorkspace, workspaces, setActive } = useWorkspaceStore.getState();
+    if (workspaceId !== activeWorkspace?.id) {
+      const ws = workspaces.find((w) => w.id === workspaceId);
+      if (!ws) throw new Error(`Workspace not found: ${workspaceId}`);
+      get().closeProject();
+      await setActive(ws);
+      await get().loadProjects();
+    }
+    await get().openProject(id);
   },
 
   removeProject: async (id: string) => {

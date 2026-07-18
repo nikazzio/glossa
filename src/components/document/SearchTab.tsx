@@ -6,6 +6,7 @@ import { useDebounce } from '../../hooks/useDebounce';
 import { useUiStore } from '../../stores/uiStore';
 import { indexPad } from '../../utils';
 import type { TranslationChunk } from '../../types';
+import { Tooltip } from '../ui';
 
 interface SearchTabProps {
   panelId: string;
@@ -128,22 +129,23 @@ export function SearchTab({ panelId, labelledBy, chunks, currentChunkId, onSelec
             aria-label={t('document.searchPlaceholder')}
           />
           {searchQuery && (
-            <button
-              type="button"
-              onClick={() => { setSearchQuery(''); inputRef.current?.focus(); }}
-              data-tooltip={t('common.clear')}
-              aria-label={t('common.clear')}
-              className="shrink-0 text-editorial-muted hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent rounded-full"
-            >
-              <X size={12} />
-            </button>
+            <Tooltip label={t('common.clear')}>
+              <button
+                type="button"
+                onClick={() => { setSearchQuery(''); inputRef.current?.focus(); }}
+                aria-label={t('common.clear')}
+                className="shrink-0 text-editorial-muted hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent rounded-full"
+              >
+                <X size={12} />
+              </button>
+            </Tooltip>
           )}
         </div>
       </div>
 
       {/* Contatore risultati */}
       {debouncedQuery.trim() && (
-        <div className="px-5 pb-2 shrink-0 text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted">
+        <div className="px-5 pb-2 shrink-0 text-xs font-bold uppercase tracking-[0.2em] text-editorial-muted">
           {matches.length > 0
             ? t('document.searchResults', { count: matches.length })
             : t('document.searchNoResults')}
@@ -193,7 +195,7 @@ export function SearchTab({ panelId, labelledBy, chunks, currentChunkId, onSelec
                         {scopes.map((scope) => (
                           <span
                             key={scope}
-                            className="flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.15em] bg-editorial-textbox text-editorial-muted"
+                            className="flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-xs font-bold uppercase tracking-[0.15em] bg-editorial-textbox text-editorial-muted"
                           >
                             {SCOPE_ICON[scope]}
                             {t(`document.searchScope_${scope}`)}

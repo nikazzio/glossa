@@ -20,7 +20,8 @@ import { useChunksStore } from './stores/chunksStore';
 import { usePipelineStore } from './stores/pipelineStore';
 import { useWorkspaceStore } from './stores/workspaceStore';
 import { WorkspaceWizard } from './components/workspace/WorkspaceWizard';
-import { WorkspaceHome } from './components/workspace/WorkspaceHome';
+import { AppDashboard } from './components/dashboard/AppDashboard';
+import { WorkspaceOverview } from './components/workspace/WorkspaceOverview';
 import { TranslationsArea } from './components/workspace/TranslationsArea';
 import { importTextFile } from './services/fileService';
 import { savePipelineConfig } from './services/pipelineService';
@@ -449,14 +450,11 @@ export default function App() {
 
   const { isLoaded, workspaces, activeWorkspace, loadWorkspaces } = useWorkspaceStore();
   const currentProjectId = useProjectStore((s) => s.currentProjectId);
-  const isWorkspaceHome = Boolean(activeWorkspace && !currentProjectId);
+  const isShellView = Boolean(activeWorkspace && !currentProjectId);
 
-  const activeWorkspaceArea = useUiStore((s) => s.activeWorkspaceArea);
-  const setActiveWorkspaceArea = useUiStore((s) => s.setActiveWorkspaceArea);
-
-  useEffect(() => {
-    setActiveWorkspaceArea(null);
-  }, [activeWorkspace?.id, setActiveWorkspaceArea]);
+  // La Dashboard è app-level: cambiare workspace non tocca la vista corrente
+  // (un'area mostra il contenuto del nuovo workspace, la Dashboard è globale).
+  const activeWorkspaceView = useUiStore((s) => s.activeWorkspaceView);
 
   useEffect(() => {
     loadWorkspaces().catch((err: unknown) => console.error('[App] loadWorkspaces failed:', err));
@@ -498,17 +496,25 @@ export default function App() {
         <div className="flex-shrink-0">
           <Header />
         </div>
-        {isWorkspaceHome ? (
+        {isShellView ? (
           <div className="flex flex-1 min-h-0">
             <WorkspaceShellNext>
               <div className="relative flex min-w-0 flex-1">
-                {activeWorkspaceArea === 'translations' ? (
+                {activeWorkspaceView === 'translations' ? (
                   <TranslationsArea />
+                ) : activeWorkspaceView === 'workspace' ? (
+                  <WorkspaceOverview />
                 ) : (
-                  <WorkspaceHome />
+                  <AppDashboard />
                 )}
                 <PanelTransitionVeil
-                  panelKey={activeWorkspaceArea === 'translations' ? 'area-translations' : `workspace-home-${activeWorkspace?.id ?? 'none'}`}
+                  panelKey={
+                    activeWorkspaceView === 'translations'
+                      ? 'area-translations'
+                      : activeWorkspaceView === 'workspace'
+                        ? `workspace-${activeWorkspace?.id ?? 'none'}`
+                        : 'app-dashboard'
+                  }
                   tone="paper"
                   variant="workspace"
                 />
@@ -520,7 +526,7 @@ export default function App() {
             <EditorView />
           </div>
         )}
-        {isWorkspaceHome ? (
+        {isShellView ? (
           <Suspense fallback={null}>
             <SettingsModal />
             <ProjectPanel />
@@ -529,7 +535,7 @@ export default function App() {
         ) : null}
         {/* In vista progetto la barra di stato vive dentro ShellNext (solo sotto rail+documento,
             non sotto l'ispettore destro); qui resta solo per la vista workspace/home. */}
-        {isWorkspaceHome && <AppStatusBar />}
+        {isShellView && <AppStatusBar />}
         <ConfirmDialog />
       </div>
       <Toaster

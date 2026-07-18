@@ -12,7 +12,7 @@ interface TooltipProps {
 }
 
 const TOOLTIP_BOX =
-  'pointer-events-none z-[210] w-max max-w-[16rem] rounded-[14px] border border-editorial-border bg-editorial-bg/98 px-3.5 py-2.5 text-center font-display text-[14px] italic leading-tight text-editorial-ink shadow-[var(--shadow-tooltip)]';
+  'pointer-events-none z-[210] w-max max-w-[16rem] whitespace-pre-line rounded-[14px] border border-editorial-border bg-editorial-bg/98 px-3.5 py-2.5 text-center font-display text-[14px] italic leading-tight text-editorial-ink shadow-[var(--shadow-tooltip)]';
 
 export function Tooltip({
   label,

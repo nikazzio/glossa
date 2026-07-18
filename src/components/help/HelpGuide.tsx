@@ -12,7 +12,7 @@ import { StyleGuide } from './StyleGuide';
 import { appLogDir } from '@tauri-apps/api/path';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Dialog, DialogCancelButton } from '../ui';
+import { Dialog, DialogCancelButton, Tooltip } from '../ui';
 import { useUiStore, type HelpSection } from '../../stores/uiStore';
 
 interface HelpGuideProps {
@@ -212,25 +212,26 @@ function VersionWidget() {
 
   return (
     <div className="mt-8 flex items-center gap-3 border-y border-editorial-border/70 py-3">
-      <span className="font-mono text-[11px] text-editorial-muted/70">v{__APP_VERSION__}</span>
-      <button
-        type="button"
-        onClick={checkForUpdates}
-        disabled={status === 'loading'}
-        data-tooltip={t('help.version.check')}
-        aria-label={t('help.version.check')}
-        className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
-      >
-        <RefreshCw size={13} className={status === 'loading' ? 'animate-spin' : ''} />
-      </button>
+      <span className="font-mono text-xs text-editorial-muted/70">v{__APP_VERSION__}</span>
+      <Tooltip label={t('help.version.check')}>
+        <button
+          type="button"
+          onClick={checkForUpdates}
+          disabled={status === 'loading'}
+          aria-label={t('help.version.check')}
+          className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40"
+        >
+          <RefreshCw size={13} className={status === 'loading' ? 'animate-spin' : ''} />
+        </button>
+      </Tooltip>
       {status === 'up-to-date' && (
-        <span className="text-[11px] text-editorial-success">{t('help.version.upToDate')}</span>
+        <span className="text-xs text-editorial-success">{t('help.version.upToDate')}</span>
       )}
       {status === 'update-available' && latestTag && (
-        <span className="text-[11px] text-editorial-accent">{t('help.version.updateAvailable', { tag: latestTag })}</span>
+        <span className="text-xs text-editorial-accent">{t('help.version.updateAvailable', { tag: latestTag })}</span>
       )}
       {status === 'error' && (
-        <span className="text-[11px] text-editorial-muted/60">{t('help.version.error')}</span>
+        <span className="text-xs text-editorial-muted/60">{t('help.version.error')}</span>
       )}
     </div>
   );
@@ -290,7 +291,7 @@ function ModeRow({ name, stages, desc }: { name: string; stages: string; desc: s
     <div className="border-b border-editorial-border/70 py-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <span className="font-display text-base italic text-editorial-ink">{name}</span>
-        <span className="font-mono text-[11px] text-editorial-accent">{stages}</span>
+        <span className="font-mono text-xs text-editorial-accent">{stages}</span>
       </div>
       <p className="mt-2 text-[13px] leading-relaxed text-editorial-ink/75">{desc}</p>
     </div>
@@ -414,7 +415,7 @@ function ContextSection() {
       <div className="my-6 space-y-2">
         {(['layer1', 'layer2', 'layer3'] as const).map((key) => (
           <div key={key} className="flex items-start gap-4 border-b border-editorial-border/70 py-4">
-            <span className="mt-0.5 shrink-0 rounded-full border border-editorial-accent/40 bg-editorial-bg px-3 py-1 font-mono text-[11px] font-bold text-editorial-accent">
+            <span className="mt-0.5 shrink-0 rounded-full border border-editorial-accent/40 bg-editorial-bg px-3 py-1 font-mono text-xs font-bold text-editorial-accent">
               {t(`help.context.${key}Label`)}
             </span>
             <span className="text-[13px] leading-relaxed text-editorial-ink/80">
@@ -430,7 +431,7 @@ function ContextSection() {
       <div className="my-6 space-y-2">
         {(['translation', 'refine', 'format', 'coherence'] as const).map((key) => (
           <div key={key} className="flex items-start gap-4 border-b border-editorial-border/70 py-4">
-            <span className="mt-0.5 w-20 shrink-0 font-mono text-[11px] font-bold text-editorial-accent">
+            <span className="mt-0.5 w-20 shrink-0 font-mono text-xs font-bold text-editorial-accent">
               {t(`help.context.stage${key.charAt(0).toUpperCase() + key.slice(1)}`)}
             </span>
             <span className="text-[13px] leading-relaxed text-editorial-ink/80">
@@ -524,7 +525,7 @@ function ProvidersSection() {
           <div key={row.name} className="border-b border-editorial-border/70 py-4">
             <div className="flex flex-wrap items-baseline justify-between gap-3">
               <span className="font-display text-base italic text-editorial-ink">{row.name}</span>
-              <span className="font-mono text-[11px] text-editorial-accent">{t(row.modelsKey)}</span>
+              <span className="font-mono text-xs text-editorial-accent">{t(row.modelsKey)}</span>
             </div>
             <p className="mt-2 text-[13px] leading-relaxed text-editorial-ink/75">{t(row.noteKey)}</p>
           </div>
@@ -718,17 +719,18 @@ function TroubleshootingSection() {
       <P>{t('help.troubleshooting.logFileDesc')}</P>
       <div className="flex items-center gap-2 border-y border-editorial-border/70 py-3 font-mono text-xs text-editorial-ink/80">
         <span className="flex-1 break-all">{logPath ?? '…'}</span>
-        <button
-          type="button"
-          onClick={handleCopy}
-          disabled={!logPath}
-          data-tooltip={t('common.copy')}
-          aria-label={copied ? t('pipeline.copied') : t('common.copy')}
-          aria-live="polite"
-          className="shrink-0 rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-30"
-        >
-          {copied ? <Check size={13} /> : <Copy size={13} />}
-        </button>
+        <Tooltip label={t('common.copy')}>
+          <button
+            type="button"
+            onClick={handleCopy}
+            disabled={!logPath}
+            aria-label={copied ? t('pipeline.copied') : t('common.copy')}
+            aria-live="polite"
+            className="shrink-0 rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-30"
+          >
+            {copied ? <Check size={13} /> : <Copy size={13} />}
+          </button>
+        </Tooltip>
       </div>
 
       <SubTitle>{t('help.troubleshooting.rustLogTitle')}</SubTitle>

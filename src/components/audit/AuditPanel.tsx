@@ -6,6 +6,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { calculateCompositeQuality, indexPad, qualityLabelKey, qualityTone } from '../../utils';
 import { confirm } from '../../stores/confirmStore';
 import type { TranslationChunk } from '../../types';
+import { Tooltip } from '../ui';
 
 interface AuditPanelProps {
   onRunAuditOnly: () => void;
@@ -76,19 +77,21 @@ export function AuditPanel({ onRunAuditOnly, onReauditChunk }: AuditPanelProps) 
           <div className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-500">
             {/* Composite Score */}
             {hasCompletedAudits && (
-              <div className="space-y-2" data-tooltip={compositeTitle} aria-label={compositeTitle}>
-                <div className={`text-5xl font-display text-center tracking-tighter ${QUALITY_TONE_COLOR[compositeTone]}`}>
-                  {compositeLevelLabel}
-                </div>
-                <div className="text-[8px] text-center uppercase font-bold tracking-[4px] text-editorial-muted">
-                  {t('audit.compositeQuality')}
-                </div>
-              </div>
+              <Tooltip label={compositeTitle} className="w-full">
+                <span className="block space-y-2" aria-label={compositeTitle}>
+                  <span className={`block text-5xl font-display text-center tracking-tighter ${QUALITY_TONE_COLOR[compositeTone]}`}>
+                    {compositeLevelLabel}
+                  </span>
+                  <span className="block text-xs text-center uppercase font-bold tracking-[0.1em] text-editorial-muted">
+                    {t('audit.compositeQuality')}
+                  </span>
+                </span>
+              </Tooltip>
             )}
 
             {/* Per-chunk drill-down */}
             <div className="space-y-3">
-              <label className="block text-[9px] font-bold uppercase tracking-[2px] text-editorial-muted border-b border-editorial-border pb-1">
+              <label className="block text-xs font-bold uppercase tracking-[0.16em] text-editorial-muted border-b border-editorial-border pb-1">
                 {t('audit.chunkQuality')}
               </label>
               {chunks.map((chunk, index) => {
@@ -114,35 +117,40 @@ export function AuditPanel({ onRunAuditOnly, onReauditChunk }: AuditPanelProps) 
             {allClear && (
               <div className="text-center py-12 opacity-25 italic font-display flex flex-col items-center gap-4">
                 <ShieldCheck size={40} strokeWidth={1} />
-                <span className="text-[10px] uppercase tracking-widest">{t('audit.pipelineClear')}</span>
+                <span className="text-xs uppercase tracking-widest">{t('audit.pipelineClear')}</span>
               </div>
             )}
           </div>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center opacity-10 font-display text-center px-6">
             <ShieldCheck size={48} strokeWidth={1} />
-            <span className="text-[10px] uppercase tracking-[4px] font-bold mt-4">{t('audit.noRecord')}</span>
+            <span className="text-xs uppercase tracking-[0.16em] font-bold mt-4">{t('audit.noRecord')}</span>
           </div>
         )}
       </div>
 
       <div className="mt-auto space-y-4">
-        <button
-          onClick={onRunAuditOnly}
-          disabled={cannotRun}
-          data-tooltip={reEvaluateReason ?? t('audit.reEvaluate')}
-          className="w-full bg-transparent border border-editorial-ink text-editorial-ink px-4 py-4 text-[11px] font-bold uppercase tracking-[3px] hover:bg-editorial-ink hover:text-white transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed group shadow-sm active:translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
+        <Tooltip label={reEvaluateReason ?? t('audit.reEvaluate')} className="w-full">
+          <button
+            onClick={onRunAuditOnly}
+            disabled={cannotRun}
+            className="w-full bg-transparent border border-editorial-ink text-editorial-ink px-4 py-4 text-xs font-bold uppercase tracking-[0.16em] hover:bg-editorial-ink hover:text-white transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed group shadow-sm active:translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
+          >
+            <RefreshCcw size={14} className={isProcessing ? 'animate-spin' : ''} /> {t('audit.reEvaluate')}
+          </button>
+        </Tooltip>
+        <Tooltip
+          label={chunks.length === 0 ? t('pipeline.runDisabledNoChunks') : isProcessing ? t('pipeline.runDisabledProcessing') : t('audit.clearStream')}
+          className="w-full"
         >
-          <RefreshCcw size={14} className={isProcessing ? 'animate-spin' : ''} /> {t('audit.reEvaluate')}
-        </button>
-        <button
-          onClick={handleClearStream}
-          disabled={chunks.length === 0 || isProcessing}
-          data-tooltip={chunks.length === 0 ? t('pipeline.runDisabledNoChunks') : isProcessing ? t('pipeline.runDisabledProcessing') : t('audit.clearStream')}
-          className="w-full border border-editorial-border px-4 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-editorial-textbox/50 hover:text-editorial-accent transition-all flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          {t('audit.clearStream')}
-        </button>
+          <button
+            onClick={handleClearStream}
+            disabled={chunks.length === 0 || isProcessing}
+            className="w-full border border-editorial-border px-4 py-3 text-xs font-bold uppercase tracking-widest hover:bg-editorial-textbox/50 hover:text-editorial-accent transition-all flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {t('audit.clearStream')}
+          </button>
+        </Tooltip>
       </div>
     </section>
   );
@@ -199,7 +207,7 @@ const ChunkAuditCard = memo(function ChunkAuditCard({
           onClick={handleToggle}
           className="flex-1 flex items-center justify-between gap-2 px-3 py-2 text-left hover:bg-editorial-textbox/40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
         >
-          <span className="flex items-center gap-2 text-[10px] font-mono">
+          <span className="flex items-center gap-2 text-xs font-mono">
             {isExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
             <span className="text-editorial-muted">
               {t('pipeline.unit')} {indexPad(index + 1)}
@@ -212,20 +220,21 @@ const ChunkAuditCard = memo(function ChunkAuditCard({
               <span className={QUALITY_TONE_COLOR[ratingTone]}>{ratingLabel}</span>
             )}
           </span>
-          <span className="text-[9px] uppercase tracking-widest text-editorial-muted">
+          <span className="text-xs uppercase tracking-widest text-editorial-muted">
             {hasIssues ? t('audit.issuesCount', { count: openIssuesCount }) : t('audit.noIssues')}
           </span>
         </button>
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); handleReaudit(); }}
-          disabled={isProcessing || !chunk.translationDisplayText}
-          data-tooltip={chunk.translationDisplayText ? t('pipeline.reauditChunk') : t('pipeline.auditSkippedNoDraft')}
-          aria-label={t('pipeline.reauditChunk')}
-          className="px-2 py-2 text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-        >
-          <ScanLine size={12} />
-        </button>
+        <Tooltip label={chunk.translationDisplayText ? t('pipeline.reauditChunk') : t('pipeline.auditSkippedNoDraft')}>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); handleReaudit(); }}
+            disabled={isProcessing || !chunk.translationDisplayText}
+            aria-label={t('pipeline.reauditChunk')}
+            className="px-2 py-2 text-editorial-muted hover:text-editorial-accent disabled:opacity-30 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+          >
+            <ScanLine size={12} />
+          </button>
+        </Tooltip>
       </div>
 
       {isExpanded && (
@@ -236,13 +245,13 @@ const ChunkAuditCard = memo(function ChunkAuditCard({
           className="border-t border-editorial-border/50 px-3 py-3 space-y-3 animate-in fade-in duration-200"
         >
           {isError && (
-            <div className="flex items-start gap-2 text-editorial-accent text-[10px] font-mono">
+            <div className="flex items-start gap-2 text-editorial-accent text-xs font-mono">
               <AlertTriangle size={12} className="mt-0.5 shrink-0" />
               <span>{judgeResult.error || t('audit.auditFailed')}</span>
             </div>
           )}
           {!isError && !hasIssues && (
-            <div className="text-[10px] italic text-editorial-muted py-2">
+            <div className="text-xs italic text-editorial-muted py-2">
               {t('audit.noIssues')}
             </div>
           )}
@@ -256,7 +265,7 @@ const ChunkAuditCard = memo(function ChunkAuditCard({
                   <li key={i} className={`space-y-1 transition-opacity ${isResolved || isRejected ? 'opacity-40' : ''}`}>
                     <div className="flex items-center justify-between gap-2">
                       <span
-                        className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-sm ${
+                        className={`text-xs font-bold uppercase px-1.5 py-0.5 rounded-sm ${
                           issue.severity === 'high' ? 'bg-editorial-danger text-editorial-bg' : 'bg-editorial-ink text-white'
                         }`}
                       >
@@ -264,74 +273,78 @@ const ChunkAuditCard = memo(function ChunkAuditCard({
                       </span>
                       <div className="flex items-center gap-1">
                         {issue.phrase ? (
+                          <Tooltip label={t('audit.locateInTextTooltip')}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (isActive) {
+                                  clearFocusedIssue();
+                                } else {
+                                  setViewMode('document');
+                                  setSelectedChunkId(chunk.id);
+                                  focusIssueInChunk(chunk.id, issue.phrase, issue.sourcePhrase ?? null);
+                                }
+                              }}
+                              className={`flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-bold uppercase tracking-[0.18em] transition-colors ${isActive ? 'border-editorial-accent text-editorial-accent' : 'border-editorial-border text-editorial-muted hover:text-editorial-ink'}`}
+                            >
+                              <Crosshair size={10} />
+                              {t('audit.locateInText')}
+                            </button>
+                          </Tooltip>
+                        ) : null}
+                        <Tooltip label={t('annotations.createFromIssue')}>
                           <button
                             type="button"
                             onClick={() => {
-                              if (isActive) {
-                                clearFocusedIssue();
-                              } else {
-                                setViewMode('document');
-                                setSelectedChunkId(chunk.id);
-                                focusIssueInChunk(chunk.id, issue.phrase, issue.sourcePhrase ?? null);
-                              }
+                              setViewMode('document');
+                              setSelectedChunkId(chunk.id);
+                              setProjectContextCollapsed(false);
+                              setPendingAnnotationAnchor({
+                                chunkId: chunk.id,
+                                text: issue.phrase ?? '',
+                                content: `[Audit] ${issue.description}`,
+                              });
+                              setChunkRailTab('notes');
                             }}
-                            data-tooltip={t('audit.locateInTextTooltip')}
-                            className={`flex items-center gap-1 rounded-full border px-2 py-1 text-[9px] font-bold uppercase tracking-[0.18em] transition-colors ${isActive ? 'border-editorial-accent text-editorial-accent' : 'border-editorial-border text-editorial-muted hover:text-editorial-ink'}`}
+                            className="rounded-full border border-editorial-border p-1 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                           >
-                            <Crosshair size={10} />
-                            {t('audit.locateInText')}
+                            <NotebookPen size={10} />
                           </button>
-                        ) : null}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setViewMode('document');
-                            setSelectedChunkId(chunk.id);
-                            setProjectContextCollapsed(false);
-                            setPendingAnnotationAnchor({
-                              chunkId: chunk.id,
-                              text: issue.phrase ?? '',
-                              content: `[Audit] ${issue.description}`,
-                            });
-                            setChunkRailTab('notes');
-                          }}
-                          data-tooltip={t('annotations.createFromIssue')}
-                          className="rounded-full border border-editorial-border p-1 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                        >
-                          <NotebookPen size={10} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (isActive) clearFocusedIssue();
-                            handleToggleResolved(i);
-                          }}
-                          data-tooltip={isResolved ? t('audit.markUnresolved') : t('audit.markResolved')}
-                          aria-label={isResolved ? t('audit.markUnresolved') : t('audit.markResolved')}
-                          className={`rounded-full border p-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                            isResolved
-                              ? 'border-editorial-success bg-editorial-success/10 text-editorial-success'
-                              : 'border-editorial-border text-editorial-muted hover:border-editorial-success/60 hover:text-editorial-success'
-                          }`}
-                        >
-                          <Check size={10} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (isActive) clearFocusedIssue();
-                            handleToggleRejected(i);
-                          }}
-                          data-tooltip={isRejected ? t('audit.markUnrejected') : t('audit.markRejected')}
-                          aria-label={isRejected ? t('audit.markUnrejected') : t('audit.markRejected')}
-                          className={`rounded-full border p-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
-                            isRejected
-                              ? 'border-editorial-accent bg-editorial-accent/10 text-editorial-accent'
-                              : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent'
-                          }`}
-                        >
-                          <X size={10} />
-                        </button>
+                        </Tooltip>
+                        <Tooltip label={isResolved ? t('audit.markUnresolved') : t('audit.markResolved')}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (isActive) clearFocusedIssue();
+                              handleToggleResolved(i);
+                            }}
+                            aria-label={isResolved ? t('audit.markUnresolved') : t('audit.markResolved')}
+                            className={`rounded-full border p-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                              isResolved
+                                ? 'border-editorial-success bg-editorial-success/10 text-editorial-success'
+                                : 'border-editorial-border text-editorial-muted hover:border-editorial-success/60 hover:text-editorial-success'
+                            }`}
+                          >
+                            <Check size={10} />
+                          </button>
+                        </Tooltip>
+                        <Tooltip label={isRejected ? t('audit.markUnrejected') : t('audit.markRejected')}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (isActive) clearFocusedIssue();
+                              handleToggleRejected(i);
+                            }}
+                            aria-label={isRejected ? t('audit.markUnrejected') : t('audit.markRejected')}
+                            className={`rounded-full border p-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${
+                              isRejected
+                                ? 'border-editorial-accent bg-editorial-accent/10 text-editorial-accent'
+                                : 'border-editorial-border text-editorial-muted hover:border-editorial-accent/60 hover:text-editorial-accent'
+                            }`}
+                          >
+                            <X size={10} />
+                          </button>
+                        </Tooltip>
                       </div>
                     </div>
                     <p className={`text-sm leading-relaxed text-editorial-ink ${isResolved ? 'line-through' : ''}`}>
@@ -341,26 +354,26 @@ const ChunkAuditCard = memo(function ChunkAuditCard({
                       <div className="space-y-2 rounded-xl border border-editorial-border/50 bg-editorial-textbox/20 px-3 py-2">
                         {issue.phrase && (
                           <div>
-                            <span className="block text-[9px] font-bold uppercase tracking-widest text-editorial-accent">{t('audit.issuePhraseContext')}</span>
-                            <p className="mt-0.5 text-[11px] leading-relaxed text-editorial-ink">&ldquo;{issue.phrase}&rdquo;</p>
+                            <span className="block text-xs font-bold uppercase tracking-widest text-editorial-accent">{t('audit.issuePhraseContext')}</span>
+                            <p className="mt-0.5 text-xs leading-relaxed text-editorial-ink">&ldquo;{issue.phrase}&rdquo;</p>
                           </div>
                         )}
                         {issue.sourcePhrase && (
                           <div>
-                            <span className="block text-[9px] font-bold uppercase tracking-widest text-editorial-muted">{t('audit.issueSourcePhraseContext')}</span>
+                            <span className="block text-xs font-bold uppercase tracking-widest text-editorial-muted">{t('audit.issueSourcePhraseContext')}</span>
                             <p className="mt-0.5 text-xs leading-relaxed text-editorial-muted">&ldquo;{issue.sourcePhrase}&rdquo;</p>
                           </div>
                         )}
                         {chunk.sourceDisplayText && (
                           <div>
-                            <span className="block text-[9px] font-bold uppercase tracking-widest text-editorial-muted">{t('audit.issueSourceContext')}</span>
-                            <p className="mt-0.5 text-[11px] leading-relaxed text-editorial-muted line-clamp-3">{chunk.sourceDisplayText}</p>
+                            <span className="block text-xs font-bold uppercase tracking-widest text-editorial-muted">{t('audit.issueSourceContext')}</span>
+                            <p className="mt-0.5 text-xs leading-relaxed text-editorial-muted line-clamp-3">{chunk.sourceDisplayText}</p>
                           </div>
                         )}
                       </div>
                     )}
                     {issue.suggestedFix && (
-                      <div className="rounded-xl border border-editorial-border/70 bg-editorial-bg px-3 py-2 text-[11px] leading-relaxed text-editorial-muted">
+                      <div className="rounded-xl border border-editorial-border/70 bg-editorial-bg px-3 py-2 text-xs leading-relaxed text-editorial-muted">
                         {t('audit.fix')}: {issue.suggestedFix}
                       </div>
                     )}

@@ -168,7 +168,7 @@ export function CsvImportDialog({ workspaceId, onImported, onClose }: Props) {
     >
       <div>
           {error && (
-            <div className="mb-4 flex items-start gap-2 border-y border-editorial-warning/60 bg-editorial-warning/10 py-3 text-[11px] text-editorial-warning">
+            <div className="mb-4 flex items-start gap-2 border-y border-editorial-warning/60 bg-editorial-warning/10 py-3 text-xs text-editorial-warning">
               <AlertCircle size={14} className="mt-0.5 shrink-0" />
               <span>{error}</span>
             </div>
@@ -181,7 +181,7 @@ export function CsvImportDialog({ workspaceId, onImported, onClose }: Props) {
               </p>
               <button
                 onClick={handlePickFile}
-                className="w-full border-y border-dashed border-editorial-border/60 py-6 text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted hover:border-editorial-accent hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                className="w-full border-y border-dashed border-editorial-border/60 py-6 text-xs font-bold uppercase tracking-[0.14em] text-editorial-muted hover:border-editorial-accent hover:text-editorial-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
               >
                 {t('library.importPickButton')}
               </button>
@@ -190,7 +190,7 @@ export function CsvImportDialog({ workspaceId, onImported, onClose }: Props) {
 
           {step === 'map' && (
             <div className="space-y-4">
-              <p className="text-[11px] text-editorial-muted leading-relaxed">
+              <p className="text-xs text-editorial-muted leading-relaxed">
                 {t('library.xlsxMapDesc')}
               </p>
               <div className="space-y-3">
@@ -200,10 +200,11 @@ export function CsvImportDialog({ workspaceId, onImported, onClose }: Props) {
                   { key: 'notesKey', label: t('library.xlsxNotesCol'), required: false },
                 ] as const).map(({ key, label, required }) => (
                   <div key={key} className="flex items-center gap-3">
-                    <label className="w-36 shrink-0 text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">
+                    <label htmlFor={`csv-map-${key}`} className="w-36 shrink-0 text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">
                       {label}
                     </label>
                     <select
+                      id={`csv-map-${key}`}
                       value={columnMap[key] ?? ''}
                       onChange={(e) => setColumnMap((m) => ({ ...m, [key]: e.target.value || undefined }))}
                       className="flex-1 rounded-md border border-editorial-border bg-editorial-bg px-3 py-2 text-xs text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
@@ -233,7 +234,7 @@ export function CsvImportDialog({ workspaceId, onImported, onClose }: Props) {
                 {t('library.csvPreviewDesc', { count: totalRows })}
               </p>
               <div className="overflow-x-auto border-y border-editorial-border/70">
-                <table className="w-full text-[11px] font-mono">
+                <table className="w-full text-xs font-mono">
                   <thead className="bg-editorial-textbox/30">
                     <tr>
                       {previewHeaders.map((h, i) => (
@@ -257,7 +258,7 @@ export function CsvImportDialog({ workspaceId, onImported, onClose }: Props) {
                 </table>
               </div>
               {totalRows > PREVIEW_ROWS && (
-                <p className="text-[11px] text-editorial-muted/60 text-center">
+                <p className="text-xs text-editorial-muted/60 text-center">
                   + {totalRows - PREVIEW_ROWS} {t('library.csvMoreRows')}
                 </p>
               )}

@@ -28,7 +28,7 @@ import { LANGUAGES } from '../../constants';
 import { getSelectableModelIds, LLM_PROVIDER_ORDER } from '../../models/catalog';
 import { useConfigStore } from '../../stores/configStore';
 import type { ModelProvider } from '../../types';
-import { IconButton, DialogConfirmButton, DialogCancelButton } from '../ui';
+import { IconButton, DialogConfirmButton, DialogCancelButton, Tooltip } from '../ui';
 import { ChunkCard, BoundaryDivider, SegmentEditor } from './ChunkEditor';
 import { type ParagraphChunks, toParagraphChunks, countWords, toFlatModel, fromFlatModel } from '../../utils/paragraphChunks';
 
@@ -377,39 +377,46 @@ export function ImportPreviewDialog({
               <FileText size={15} className="shrink-0 text-editorial-muted" />
               <span className="truncate text-sm font-mono text-editorial-muted">{fileName}</span>
               {preview.experimental && (
-                <span data-tooltip={t('files.importExperimentalDocxMarkdown')} className="shrink-0 cursor-help">
-                  <Info size={14} className="text-editorial-accent" />
-                </span>
+                <Tooltip label={t('files.importExperimentalDocxMarkdown')}>
+                  <span className="shrink-0 cursor-help">
+                    <Info size={14} className="text-editorial-accent" />
+                  </span>
+                </Tooltip>
               )}
             </div>
             <div className="flex shrink-0 items-center gap-3">
               <div className="flex items-center gap-0 rounded-full border border-editorial-border bg-editorial-bg px-1 py-1 shadow-sm">
-                <button
-                  type="button"
-                  onClick={() => setEditorMode('cards')}
-                  data-tooltip={t('files.viewCards')}
-                  className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${editorMode === 'cards' ? 'bg-editorial-accent text-white' : 'text-editorial-muted hover:text-editorial-accent'}`}
-                >
-                  <LayoutGrid size={16} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEditorMode('segments')}
-                  data-tooltip={t('files.viewSegments')}
-                  className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${editorMode === 'segments' ? 'bg-editorial-accent text-white' : 'text-editorial-muted hover:text-editorial-accent'}`}
-                >
-                  <SplitSquareVertical size={16} />
-                </button>
+                <Tooltip label={t('files.viewCards')}>
+                  <button
+                    type="button"
+                    onClick={() => setEditorMode('cards')}
+                    aria-label={t('files.viewCards')}
+                    className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${editorMode === 'cards' ? 'bg-editorial-accent text-white' : 'text-editorial-muted hover:text-editorial-accent'}`}
+                  >
+                    <LayoutGrid size={16} />
+                  </button>
+                </Tooltip>
+                <Tooltip label={t('files.viewSegments')}>
+                  <button
+                    type="button"
+                    onClick={() => setEditorMode('segments')}
+                    aria-label={t('files.viewSegments')}
+                    className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent ${editorMode === 'segments' ? 'bg-editorial-accent text-white' : 'text-editorial-muted hover:text-editorial-accent'}`}
+                  >
+                    <SplitSquareVertical size={16} />
+                  </button>
+                </Tooltip>
               </div>
-              <button
-                type="button"
-                onClick={onCancel}
-                data-tooltip={t('common.close')}
-                aria-label={t('common.close')}
-                className="shrink-0 rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              >
-                <X size={16} />
-              </button>
+              <Tooltip label={t('common.close')}>
+                <button
+                  type="button"
+                  onClick={onCancel}
+                  aria-label={t('common.close')}
+                  className="shrink-0 rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:bg-editorial-textbox/50 hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                >
+                  <X size={16} />
+                </button>
+              </Tooltip>
             </div>
           </div>
 
@@ -436,9 +443,11 @@ export function ImportPreviewDialog({
               <span className="ml-2 italic text-editorial-warning">{t('files.manualEditsActive')}</span>
             )}
             {preview.warnings.length > 0 && (
-              <span className="ml-1" data-tooltip={preview.warnings.map((w) => t(`files.importWarning.${w}`)).join('\n')}>
-                <Info size={12} className="inline align-middle text-editorial-muted/60 cursor-help" />
-              </span>
+              <Tooltip label={preview.warnings.map((w) => t(`files.importWarning.${w}`)).join('\n')}>
+                <span className="ml-1">
+                  <Info size={12} className="inline align-middle text-editorial-muted/60 cursor-help" />
+                </span>
+              </Tooltip>
             )}
           </p>
 
@@ -484,65 +493,36 @@ export function ImportPreviewDialog({
               <ArrowLeftRight size={14} />
             </IconButton>
 
-            {/* Separator — solo in stato normale */}
-            {useChunking && !hasManualEdits && (
+            {/* Separator */}
+            {useChunking && (
               <span className="select-none text-editorial-border">·</span>
             )}
 
-            {/* Preset inline — solo in stato normale */}
-            {useChunking && !hasManualEdits && CHUNK_PRESETS.map(({ words, titleKey, Icon }) => (
+            {/* Preset — stessa posizione sempre, si colora d'avviso se ci sono modifiche a mano */}
+            {useChunking && CHUNK_PRESETS.map(({ words, titleKey, Icon }) => (
               <IconButton
                 key={words}
                 size="md"
-                tone={activePresetWords === words ? 'accent' : 'default'}
+                tone={activePresetWords === words ? (hasManualEdits ? 'warning' : 'accent') : 'default'}
                 onClick={() => handleWordsPerChunkChange(words)}
-                title={t(titleKey)}
+                title={hasManualEdits ? `${t(titleKey)} — ${t('files.recalculateHint')}` : t(titleKey)}
                 ariaPressed={activePresetWords === words}
               >
                 <Icon size={14} />
               </IconButton>
             ))}
 
-            {/* Con modifiche manuali: preset + ricalcola raggruppati a destra in warning */}
-            {useChunking && hasManualEdits && (
-              <div className="ml-auto flex items-center gap-1.5">
-                {CHUNK_PRESETS.map(({ words, titleKey, Icon }) => (
-                  <button
-                    key={words}
-                    type="button"
-                    onClick={() => handleWordsPerChunkChange(words)}
-                    data-tooltip={t(titleKey)}
-                    className={`rounded-full border p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-warning ${
-                      activePresetWords === words
-                        ? 'border-editorial-warning bg-editorial-warning/20 text-editorial-warning'
-                        : 'border-editorial-warning/40 text-editorial-warning/60 hover:border-editorial-warning hover:text-editorial-warning hover:bg-editorial-warning/10'
-                    }`}
-                  >
-                    <Icon size={14} />
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  onClick={recalculate}
-                  data-tooltip={t('files.recalculateHint')}
-                  className="rounded-full border border-editorial-warning bg-editorial-warning/10 p-2 text-editorial-warning transition-colors hover:bg-editorial-warning/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-warning"
-                >
-                  <RotateCcw size={13} />
-                </button>
-              </div>
-            )}
-
-            {/* Ricalcola spento — nessuna modifica manuale */}
-            {!hasManualEdits && (
-              <button
-                type="button"
-                disabled
-                data-tooltip={t('files.recalculateHint')}
-                className="ml-auto cursor-not-allowed rounded-full border border-editorial-border p-2 text-editorial-muted opacity-25 focus:outline-none"
-              >
-                <RotateCcw size={13} />
-              </button>
-            )}
+            {/* Ricalcola — sempre nello stesso punto, attivo solo con modifiche a mano */}
+            <IconButton
+              size="md"
+              tone={hasManualEdits ? 'warning' : 'default'}
+              disabled={!hasManualEdits}
+              onClick={recalculate}
+              title={t('files.recalculateHint')}
+              className="ml-auto"
+            >
+              <RotateCcw size={13} />
+            </IconButton>
           </div>
 
           {/* Row 5: pipeline setup — language pair + model */}
@@ -561,15 +541,16 @@ export function ImportPreviewDialog({
                     <option key={lang} value={lang}>{t(`languages.${lang}`)}</option>
                   ))}
                 </select>
-                <button
-                  type="button"
-                  onClick={handleSwapLanguages}
-                  data-tooltip={t('pipeline.swapLanguages')}
-                  aria-label={t('pipeline.swapLanguages')}
-                  className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                >
-                  <ArrowLeftRight size={12} />
-                </button>
+                <Tooltip label={t('pipeline.swapLanguages')}>
+                  <button
+                    type="button"
+                    onClick={handleSwapLanguages}
+                    aria-label={t('pipeline.swapLanguages')}
+                    className="rounded-full border border-editorial-border p-1.5 text-editorial-muted transition-colors hover:border-editorial-accent/40 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  >
+                    <ArrowLeftRight size={12} />
+                  </button>
+                </Tooltip>
                 <select
                   value={targetLanguage}
                   onChange={(e) => handleTargetLanguageChange(e.target.value)}

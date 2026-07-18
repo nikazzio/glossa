@@ -18,7 +18,7 @@ import { confirm } from '../../stores/confirmStore';
 import type { GlossaryEntry } from '../../types';
 import { DictionaryEntryEditor } from './DictionaryEntryEditor';
 import { CsvImportDialog } from './CsvImportDialog';
-import { Dialog, DialogCancelButton, IconButton } from '../ui';
+import { Dialog, DialogCancelButton, IconButton, Tooltip } from '../ui';
 
 export function DictionariesTab() {
   const { t } = useTranslation();
@@ -172,7 +172,7 @@ export function DictionariesTab() {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-[11px] leading-relaxed text-editorial-muted">{t('library.dictionariesDesc')}</p>
+        <p className="text-xs leading-relaxed text-editorial-muted">{t('library.dictionariesDesc')}</p>
         <div className="flex shrink-0 items-center gap-1.5">
           <IconButton onClick={() => setShowImport(true)} title={t('library.importCsv')}>
             <Upload size={13} />
@@ -195,23 +195,17 @@ export function DictionariesTab() {
             className="flex-1 rounded-md border border-editorial-border bg-editorial-bg/80 px-4 py-2.5 text-sm font-display italic text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
           />
           <div className="flex items-center justify-end gap-2">
-            <button
-              onClick={() => setCreating(false)}
-              data-tooltip={t('common.cancel')}
-              aria-label={t('common.cancel')}
-              className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            >
+            <IconButton onClick={() => setCreating(false)} title={t('common.cancel')}>
               <X size={14} />
-            </button>
-            <button
+            </IconButton>
+            <IconButton
               onClick={handleCreate}
               disabled={!newName.trim()}
-              data-tooltip={t('common.save')}
-              aria-label={t('common.save')}
-              className="rounded-full bg-editorial-accent p-2 text-white transition-colors hover:bg-editorial-accent/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
+              title={t('common.save')}
+              tone="accent"
             >
               <Check size={14} />
-            </button>
+            </IconButton>
           </div>
         </div>
       )}
@@ -257,16 +251,17 @@ export function DictionariesTab() {
                       className="flex-1 border-b border-editorial-accent/60 bg-transparent text-sm font-display italic outline-none"
                     />
                   ) : (
-                    <span
-                      className="truncate font-display text-base italic text-editorial-ink"
-                      onDoubleClick={(e) => { e.stopPropagation(); setRenamingId(g.id); setRenameValue(g.name); }}
-                      data-tooltip={t('library.doubleClickRename')}
-                    >
-                      {g.name}
-                    </span>
+                    <Tooltip label={t('library.doubleClickRename')}>
+                      <span
+                        className="truncate font-display text-base italic text-editorial-ink"
+                        onDoubleClick={(e) => { e.stopPropagation(); setRenamingId(g.id); setRenameValue(g.name); }}
+                      >
+                        {g.name}
+                      </span>
+                    </Tooltip>
                   )}
                   {isAssigned && (
-                    <span className="shrink-0 rounded-full bg-editorial-accent/20 px-3 py-0.5 text-[9px] font-bold uppercase tracking-[0.25em] text-editorial-accent">
+                    <span className="shrink-0 rounded-full bg-editorial-accent/20 px-3 py-0.5 text-xs font-bold uppercase tracking-[0.1em] text-editorial-accent">
                       {t('library.assignedBadge')}
                     </span>
                   )}
@@ -281,30 +276,28 @@ export function DictionariesTab() {
                       <Check size={13} />
                     </IconButton>
                   )}
-                  <button
+                  <IconButton
                     onClick={() => setExportTarget({ id: g.id, name: g.name })}
-                    data-tooltip={t('library.exportGlossary')}
-                    aria-label={t('library.exportGlossary')}
-                    className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:bg-editorial-textbox/30 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    title={t('library.exportGlossary')}
+                    className="hover:bg-editorial-textbox/30"
                   >
                     <Download size={13} />
-                  </button>
-                  <button
+                  </IconButton>
+                  <IconButton
                     onClick={() => handleFork(g.id, g.name)}
-                    data-tooltip={t('library.forkDictionary')}
-                    aria-label={t('library.forkDictionary')}
-                    className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:bg-editorial-textbox/30 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    title={t('library.forkDictionary')}
+                    className="hover:bg-editorial-textbox/30"
                   >
                     <Copy size={13} />
-                  </button>
-                  <button
+                  </IconButton>
+                  <IconButton
                     onClick={() => handleDelete(g.id, g.name)}
-                    data-tooltip={t('common.delete')}
-                    aria-label={`${t('common.delete')}: ${g.name}`}
-                    className="rounded-full border border-editorial-border p-2 text-editorial-muted transition-colors hover:border-editorial-accent/60 hover:bg-editorial-textbox/30 hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                    title={t('common.delete')}
+                    ariaLabel={`${t('common.delete')}: ${g.name}`}
+                    className="hover:bg-editorial-textbox/30"
                   >
                     <Trash2 size={13} />
-                  </button>
+                  </IconButton>
                 </div>
               </div>
 
@@ -318,7 +311,7 @@ export function DictionariesTab() {
                     <div className="mt-4 flex justify-end">
                       <button
                         onClick={() => handleSaveEntries(g.id)}
-                        className="flex items-center gap-2 rounded-full bg-editorial-accent px-5 py-2 text-[10px] font-bold uppercase tracking-[0.25em] text-white transition-colors hover:bg-editorial-accent/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                        className="flex items-center gap-2 rounded-full bg-editorial-accent px-5 py-2 text-xs font-bold uppercase tracking-[0.16em] text-white transition-colors hover:bg-editorial-accent/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                       >
                         <Check size={13} />
                         {t('common.save')}

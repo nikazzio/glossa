@@ -42,10 +42,10 @@ function ColorSection() {
             style={{ backgroundColor: value }}
           />
           <div className="flex-1 min-w-0">
-            <p className="font-mono text-[10px] text-editorial-muted">editorial-{name}</p>
-            <p className="font-mono text-[10px] text-editorial-ink/50">{value || '…'}</p>
+            <p className="font-mono text-xs text-editorial-muted">editorial-{name}</p>
+            <p className="font-mono text-xs text-editorial-ink/50">{value || '…'}</p>
           </div>
-          <p className="text-[11px] text-editorial-muted shrink-0 hidden sm:block">{label}</p>
+          <p className="text-xs text-editorial-muted shrink-0 hidden sm:block">{label}</p>
           {value && bg && name !== 'bg' && <ContrastBadge fg={value} bg={bg} />}
         </div>
       ))}
@@ -58,7 +58,7 @@ const TYPE_SCALE = [
   { label: 'Heading',   specimen: 'Configurazione pipeline',                              cls: 'font-display text-lg text-editorial-ink' },
   { label: 'Body',      specimen: 'Testo principale dell\'interfaccia — leggibile.',       cls: 'font-sans text-[15px] text-editorial-ink' },
   { label: 'Secondary', specimen: 'Descrizione contestuale, nota breve.',                 cls: 'font-sans text-[13px] text-editorial-muted' },
-  { label: 'Label',     specimen: 'IMPOSTAZIONI PIPELINE',                                cls: 'font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted' },
+  { label: 'Label',     specimen: 'IMPOSTAZIONI PIPELINE',                                cls: 'font-sans text-[11px] font-bold uppercase tracking-[0.2em] text-editorial-muted' },
   { label: 'Micro',     specimen: 'DEV · v0.9.1',                                        cls: 'font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-editorial-muted' },
 ];
 
@@ -67,7 +67,7 @@ function TypographySection() {
     <div className="space-y-4">
       {TYPE_SCALE.map(({ label, specimen, cls }) => (
         <div key={label} className="flex items-baseline gap-4 border-b border-editorial-border pb-3 last:border-0">
-          <span className="w-20 shrink-0 font-mono text-[9px] text-editorial-muted uppercase tracking-wider">{label}</span>
+          <span className="w-20 shrink-0 font-mono text-xs text-editorial-muted uppercase tracking-wider">{label}</span>
           <p className={cls}>{specimen}</p>
         </div>
       ))}
@@ -79,7 +79,7 @@ function ComponentsSection() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted mb-3">Icon buttons</p>
+        <p className="font-sans text-xs font-bold uppercase tracking-[0.2em] text-editorial-muted mb-3">Icon buttons</p>
         <div className="flex items-center gap-3 flex-wrap">
           <IconButton title="Default"><Settings size={14} /></IconButton>
           <IconButton title="Accent" tone="accent"><Save size={14} /></IconButton>
@@ -88,13 +88,13 @@ function ComponentsSection() {
           <IconButton title="Nuovo" className="border-dashed"><Plus size={14} /></IconButton>
           <PillButton variant="primary"><span className="flex items-center gap-1.5"><Play size={11} className="fill-current" /> Avvia</span></PillButton>
         </div>
-        <div className="mt-1.5 flex gap-6 text-[9px] text-editorial-muted font-mono">
+        <div className="mt-1.5 flex gap-6 text-xs text-editorial-muted font-mono">
           <span>default</span><span>accent</span><span>success</span><span>disabled</span><span>+ nuovo</span><span>start</span>
         </div>
       </div>
 
       <div>
-        <p className="font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted mb-3">Pill buttons</p>
+        <p className="font-sans text-xs font-bold uppercase tracking-[0.2em] text-editorial-muted mb-3">Pill buttons</p>
         <div className="flex items-center gap-2 flex-wrap">
           <PillButton variant="primary">Primary</PillButton>
           <PillButton variant="secondary">Secondary</PillButton>
@@ -103,7 +103,7 @@ function ComponentsSection() {
       </div>
 
       <div>
-        <p className="font-sans text-[10px] font-bold uppercase tracking-[0.2em] text-editorial-muted mb-3">Status badges</p>
+        <p className="font-sans text-xs font-bold uppercase tracking-[0.2em] text-editorial-muted mb-3">Status badges</p>
         <div className="flex items-center gap-3 flex-wrap">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-editorial-success/50 bg-editorial-success/10 px-2.5 py-1 text-[10px] text-editorial-success">
             <CircleCheck size={11} /> Salvato
@@ -127,7 +127,7 @@ export function StyleGuide() {
   return (
     <div className="space-y-10">
       <div className="border-b border-editorial-border pb-6">
-        <p className="font-sans text-[10px] font-bold uppercase tracking-[0.35em] text-editorial-muted mb-2">Glossa</p>
+        <p className="font-sans text-xs font-bold uppercase tracking-[0.16em] text-editorial-muted mb-2">Glossa</p>
         <h2 className="font-display text-3xl text-editorial-ink mb-2" style={{ fontVariationSettings: '"wght" 560' }}>Design System</h2>
         <p className="font-sans text-[13px] text-editorial-muted">Token, tipografia e componenti base dell'interfaccia. I valori dei colori sono letti in tempo reale dai CSS custom properties.</p>
       </div>

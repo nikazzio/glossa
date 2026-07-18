@@ -31,7 +31,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { confirm } from '../../stores/confirmStore';
 import { STAGE_TEMPLATES } from '../../pipeline/pipelineModes';
 import { DeeplStageConfig } from './DeeplStageConfig';
-import { IconButton, SectionLabel } from '../ui';
+import { IconButton, SectionLabel, FieldLabel } from '../ui';
 
 interface StageCardProps {
   stage: PipelineStageConfig;
@@ -195,7 +195,7 @@ export function StageCard({
     <div className="space-y-4">
       {/* Role hint for non-translation stages */}
       {(stage.role ?? 'translation') !== 'translation' && (stage.role ?? 'translation') !== 'deepl-translation' && (
-        <p className="text-[10px] leading-relaxed text-editorial-muted/70">
+        <p className="text-xs leading-relaxed text-editorial-muted/70">
           {t(`pipeline.stageRoleHint.${stage.role ?? 'translation'}`)}
         </p>
       )}
@@ -298,16 +298,15 @@ export function StageCard({
           )}
         </div>
         {modelUnlocked && translationsExist && (
-          <p className="text-[11px] leading-relaxed text-editorial-warning">
+          <p className="text-xs leading-relaxed text-editorial-warning">
             {t('pipeline.unlockModelChangeWarning')}
           </p>
         )}
         {resolvedReasoning !== undefined && resolvedReasoning !== 'non_reasoning' && stage.provider !== 'ollama' && (
           <div className="flex items-center gap-2">
-            <Wand2 size={11} className="text-editorial-warning shrink-0" />
-            <span className="text-[11px] font-sans font-bold uppercase tracking-[0.14em] text-editorial-muted">
+            <FieldLabel icon={<Wand2 size={11} className="text-editorial-warning shrink-0" />}>
               {t('pipeline.reasoningEffort')}
-            </span>
+            </FieldLabel>
             <ReasoningPicker
               value={currentReasoningEffort}
               showNone={resolvedReasoning === 'optional'}
@@ -348,7 +347,7 @@ export function StageCard({
           <div className="flex items-center gap-1.5">
             <SectionLabel icon={FileText} label={t('pipeline.prompt')} />
             {isCustomPrompt && !isEditingPrompt && (
-              <span className="rounded-full bg-editorial-accent/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] text-editorial-accent">
+              <span className="rounded-full bg-editorial-accent/15 px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-accent">
                 {t('pipeline.promptCustomBadge')}
               </span>
             )}

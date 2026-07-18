@@ -493,6 +493,10 @@
     "backupImportConfirmMessage": "This will overwrite all current projects, pipelines, translations, glossaries and settings. The operation cannot be undone.",
     "backupImportConfirm": "Restore",
     "phraseMemoryTab": "Phrase Memory",
+    "phraseMemoryToggle": "Memory",
+    "phraseMemoryAutoSearch": "Auto-search",
+    "phraseMemoryMaxResults": "Max results",
+    "phraseMemoryManualRefreshHint": "Manual refresh remains available in the chunk Memory panel.",
     "customProvider": {
       "sectionTitle": "Custom Endpoints",
       "add": "Add custom endpoint",
@@ -681,27 +685,18 @@
     "areas": {
       "translations": {
         "title": "Translations",
-        "body": "Current operating area: projects, pipelines, Phrase Memory, and translation presets live here.",
         "sidebarHint": "Projects and pipelines"
       },
       "library": {
         "title": "Library",
-        "body": "Future area for catalogues, texts, and study material, separated from translation memory.",
         "sidebarHint": "Texts and catalogues"
       },
       "transcriptions": {
         "title": "Transcriptions",
-        "body": "Future area for OCR, transcription, and source preparation before translation.",
         "sidebarHint": "OCR and source prep"
       }
     },
-    "projectsTitle": "Workspace projects",
-    "emptyProjectsTitle": "No projects in this workspace",
-    "emptyProjectsBody": "Create a project to start translating inside this workspace.",
-    "switcherTitle": "Switch workspace",
     "newBookCard": "New book",
-    "phraseMemoryTitle": "Workspace Phrase Memory",
-    "phraseMemoryBody": "The active workspace owns phrase-memory extraction settings. Pipelines decide whether to search memory and how many matches to use.",
     "memoryExtractorModel": "Memory Extractor Model",
     "memoryExtractorPrompt": "Memory Extractor Prompt",
     "memoryExtractorTemplates": "Memory Prompt Templates",
@@ -723,19 +718,38 @@
       "backupTab": "Backup"
     },
     "translationsArea": {
-      "backLabel": "Back to {{name}}",
       "sort": {
         "updatedAt": "Recent",
         "name": "Name"
       }
     },
     "hub": {
-      "lockedArea": "Coming in version 2.0",
-      "goToArea": "Go to area",
+      "lockedArea": "Coming in version 2.0"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "navHint": "Application home",
+    "loadFailed": "Failed to load the dashboard",
+    "stats": {
       "projects": "Projects",
-      "colName": "Name",
-      "colModified": "Modified",
-      "noProjects": "No projects in this workspace."
+      "chunks": "Chunks translated",
+      "chunksValue": "{{completed}} / {{total}}",
+      "phrases": "Phrases in memory",
+      "glossaryTerms": "Glossary terms"
+    },
+    "attentionTitle": "Needs attention",
+    "attentionEmpty": "All good: no chunks need review.",
+    "attentionCount": "{{count}} chunks to review",
+    "attentionCount_one": "{{count}} chunk to review",
+    "resumeTitle": "Resume",
+    "resumeEmpty": "No projects yet: create one from the Translations area.",
+    "activityTitle": "Recent activity",
+    "activityEmpty": "No runs recorded yet.",
+    "runOutcome": {
+      "success": "Run completed",
+      "warn": "Run partial or cancelled",
+      "error": "Run failed"
     }
   },
   "files": {
@@ -1316,6 +1330,9 @@
     "newTemplate": "New",
     "saveTemplate": "Save template",
     "templateNamePlaceholder": "Template name...",
+    "templateContextLabel": "Template scope",
+    "templateWorkflowLabel": "Template workflow",
+    "templateRefineProviderLabel": "Provider to refine the prompt",
     "templatePromptPlaceholder": "Prompt text...",
     "templateStageHint": "Stage templates only appear in translation stages and can store a default provider and model.",
     "templateAuditHint": "Audit templates are shared by both the Judge Prompt and the Coherence Prompt and can store the default audit provider and model.",
@@ -1477,7 +1494,6 @@
     "loadingMemories": "Checking saved memories…",
     "chunkAlreadySaved_one": "This chunk already has {{count}} saved phrase.",
     "chunkAlreadySaved_other": "This chunk already has {{count}} saved phrases.",
-
     "matchBadge_one": "{{count}} match",
     "matchBadge_other": "{{count}} matches",
     "matchBadge": "{{count}} match",

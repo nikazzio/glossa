@@ -235,7 +235,7 @@ export function ProviderRuntimeEditor({
               </div>
 
               <div className="space-y-2">
-                <label htmlFor={textareaId} className="block text-[11px] font-sans uppercase tracking-[0.28em] text-editorial-muted">
+                <label htmlFor={textareaId} className="block text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
                   {t('pipeline.providerOptions.advancedJson')}
                 </label>
                 <textarea
@@ -286,7 +286,7 @@ function LabeledField({
 }) {
   return (
     <label className="space-y-1.5">
-      <span className="block text-[11px] font-sans uppercase tracking-[0.28em] text-editorial-muted">
+      <span className="block text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
         {label}
       </span>
       {children}

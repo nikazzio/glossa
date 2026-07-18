@@ -321,24 +321,24 @@ export function ProviderSettingsTab({
                                 <span className="text-xs font-mono text-editorial-ink">{modelId}</span>
                                 <ModelCapabilityHint provider={activeProviderTab} model={modelId} iconOnly />
                                 {entry?.contextWindow && (
-                                  <span className="rounded-full border border-editorial-border px-2 py-0.5 text-[11px] font-mono text-editorial-muted">
+                                  <span className="rounded-full border border-editorial-border px-2 py-0.5 text-xs font-mono text-editorial-muted">
                                     {entry.contextWindow >= 1_000_000
                                       ? `${(entry.contextWindow / 1_000_000).toFixed(0)}M`
                                       : `${Math.round(entry.contextWindow / 1_000)}K`}
                                   </span>
                                 )}
                                 {entry?.pricing && (
-                                  <span className="rounded-full border border-editorial-border px-2 py-0.5 text-[11px] font-mono text-editorial-muted">
+                                  <span className="rounded-full border border-editorial-border px-2 py-0.5 text-xs font-mono text-editorial-muted">
                                     ${entry.pricing.input}/${entry.pricing.output}
                                   </span>
                                 )}
                                 {entry?.status === 'preview' && (
-                                  <span className="rounded-full border border-editorial-warning/40 bg-editorial-warning/10 px-2 py-0.5 text-[11px] font-mono text-editorial-warning">
+                                  <span className="rounded-full border border-editorial-warning/40 bg-editorial-warning/10 px-2 py-0.5 text-xs font-mono text-editorial-warning">
                                     preview
                                   </span>
                                 )}
                                 {entry?.status === 'deprecated' && (
-                                  <span className="rounded-full border border-editorial-warning/40 bg-editorial-warning/10 px-2 py-0.5 text-[11px] font-mono text-editorial-warning">
+                                  <span className="rounded-full border border-editorial-warning/40 bg-editorial-warning/10 px-2 py-0.5 text-xs font-mono text-editorial-warning">
                                     {t('settings.deprecatedModelBadge')}
                                   </span>
                                 )}
@@ -437,7 +437,7 @@ export function ProviderSettingsTab({
                 <button
                   type="button"
                   onClick={resetAll}
-                  className="text-[11px] font-bold uppercase tracking-[0.16em] text-editorial-accent hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+                  className="text-xs font-bold uppercase tracking-[0.16em] text-editorial-accent hover:text-editorial-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
                 >
                   {t('cost.resetAll')}
                 </button>

@@ -6,7 +6,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useAnnotationsStore } from '../../stores/annotationsStore';
-import { IconButton, Tooltip } from '../ui';
+import { IconButton, Spinner, Tooltip } from '../ui';
 import { countWords, qualityLabelKey, qualityTone } from '../../utils';
 import { OperationsTab } from '../document/OperationsTab';
 
@@ -34,10 +34,7 @@ function SaveIndicator({ state, lastSavedAt }: { state: 'idle' | 'dirty' | 'savi
   if (state === 'saving') {
     return (
       <Tooltip label={tooltipLabel} side="top">
-        <span className="flex items-center gap-1 text-editorial-muted">
-          <Loader2 size={10} className="animate-spin" />
-          <span className="text-xs">{t('statusBar.saving')}</span>
-        </span>
+        <Spinner size={10} label={t('statusBar.saving')} className="flex items-center gap-1 text-xs text-editorial-muted" />
       </Tooltip>
     );
   }
@@ -238,20 +235,23 @@ export function AppStatusBar() {
       >
         {/* Left: pannello attivo */}
         <div className="flex min-w-0 items-center gap-2 overflow-hidden">
-          {data.kind === 'workspace' && (
-            <>
-              <span className="truncate font-medium text-editorial-ink">{data.workspaceName}</span>
-              {data.areaName ? (
-                <>
-                  <span className="text-editorial-border">/</span>
-                  <span className="truncate">{t(AREA_KEY[data.areaName] ?? data.areaName)}</span>
-                </>
-              ) : (
-                <span className="text-editorial-border">·</span>
-              )}
-              <span>{t('workspace.projectsMetric', { count: data.projectCount })}</span>
-            </>
-          )}
+          {data.kind === 'workspace' &&
+            (data.areaName === 'dashboard' ? (
+              // La Dashboard è app-level: nessun prefisso workspace nel breadcrumb.
+              <span className="truncate font-medium text-editorial-ink">{t('dashboard.title')}</span>
+            ) : data.areaName === 'workspace' ? (
+              <>
+                <span className="truncate font-medium text-editorial-ink">{data.workspaceName}</span>
+                <span>{t('workspace.projectsMetric', { count: data.projectCount })}</span>
+              </>
+            ) : (
+              <>
+                <span className="truncate font-medium text-editorial-ink">{data.workspaceName}</span>
+                <span className="text-editorial-border">/</span>
+                <span className="truncate">{t(AREA_KEY[data.areaName] ?? data.areaName)}</span>
+                <span>{t('workspace.projectsMetric', { count: data.projectCount })}</span>
+              </>
+            ))}
           {data.kind === 'project' && data.activePanel && (
             <span className="text-editorial-accent">
               {t(`statusBar.panel.${data.activePanel}`)}

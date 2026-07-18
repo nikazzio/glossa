@@ -6,7 +6,7 @@ import { invoke } from '@tauri-apps/api/core';
 import type { PipelineConfig, PipelineMode, PromptTemplate } from '../../types';
 import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
 import { LANGUAGES } from '../../constants';
-import { IconButton, SectionLabel } from '../ui';
+import { IconButton, SectionLabel, Tooltip } from '../ui';
 import { PersonaEditor } from './PersonaEditor';
 import { PhraseMemoryConfig } from './PhraseMemoryConfig';
 
@@ -149,13 +149,14 @@ export function SettingsTabPanel({
                   {stages.map(({ role, Icon, labelKey }, i) => (
                     <span key={role} className="flex items-center gap-1.5">
                       {i > 0 && <span className="text-editorial-muted/40 text-xs">›</span>}
-                      <span
-                        data-tooltip={t(labelKey)}
-                        aria-label={t(labelKey)}
-                        className={`inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors ${isActive ? 'border-editorial-success/40 bg-editorial-success/12 text-editorial-success' : 'border-editorial-border bg-editorial-bg text-editorial-muted'}`}
-                      >
-                        <Icon size={14} strokeWidth={1.9} />
-                      </span>
+                      <Tooltip label={t(labelKey)}>
+                        <span
+                          aria-label={t(labelKey)}
+                          className={`inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors ${isActive ? 'border-editorial-success/40 bg-editorial-success/12 text-editorial-success' : 'border-editorial-border bg-editorial-bg text-editorial-muted'}`}
+                        >
+                          <Icon size={14} strokeWidth={1.9} />
+                        </span>
+                      </Tooltip>
                     </span>
                   ))}
                 </div>
@@ -232,7 +233,7 @@ export function SettingsTabPanel({
       <div className="space-y-2">
         <SectionLabel icon={KeyRound} label={t('pipeline.refineKeyLabel')} />
         {!keyStatusLoading && (
-          <p className="text-[11px] leading-relaxed text-editorial-muted">
+          <p className="text-xs leading-relaxed text-editorial-muted">
             {missingRefineProviders.length > 0
               ? t('pipeline.refineKeyMissingHint', { providers: missingRefineProviders.join(', ') })
               : t('pipeline.refineKeyReadyHint')}

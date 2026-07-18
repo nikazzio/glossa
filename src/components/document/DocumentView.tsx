@@ -298,7 +298,7 @@ export function DocumentView({
     return (
       <section className="flex min-h-0 w-full flex-1 items-center justify-center overflow-y-auto bg-editorial-paper px-6 py-10">
         <div className="mx-auto flex w-full max-w-3xl flex-col items-center text-center">
-          <div className="flex flex-wrap items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-[0.28em] text-editorial-muted">
+          <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-editorial-muted">
               <span>{activeWorkspace?.name ?? t('workspace.noActive')}</span>
               <span className="h-1 w-1 rounded-full bg-editorial-accent/60" aria-hidden="true" />
               <span>{t('document.projectHomeEyebrow')}</span>
@@ -310,11 +310,11 @@ export function DocumentView({
             {t('document.projectHomeEmpty')}
           </p>
 
+          <Tooltip label={t('document.projectHomeImport')} className="w-full max-w-xl">
           <button
             type="button"
             onClick={onImportDocument}
             aria-label={t('document.projectHomeImport')}
-            data-tooltip={t('document.projectHomeImport')}
             className="group mt-8 flex w-full max-w-xl flex-col items-center rounded-[30px] border border-dashed border-editorial-border bg-editorial-bg/65 px-6 py-8 text-center shadow-[var(--inset-highlight)] transition-colors hover:border-editorial-accent/40 hover:bg-editorial-bg focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
           >
             <span className="inline-flex h-14 w-14 items-center justify-center rounded-full border border-editorial-border bg-editorial-paper text-editorial-muted transition-colors group-hover:border-editorial-accent/45 group-hover:text-editorial-accent">
@@ -324,6 +324,7 @@ export function DocumentView({
               {t('document.projectHomeImport')}
             </span>
           </button>
+          </Tooltip>
         </div>
       </section>
     );
@@ -460,7 +461,7 @@ export function DocumentView({
                 trigger={
                   <div className="flex shrink-0 items-center gap-6 border-l border-editorial-border pl-5 cursor-default">
                     <div className="flex flex-col gap-0.5">
-                      <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
+                      <span className="text-xs font-bold uppercase tracking-[0.1em] text-editorial-muted">
                         {t('pipeline.unit')}
                       </span>
                       <span className="font-display text-base italic text-editorial-ink tabular-nums">
@@ -468,7 +469,7 @@ export function DocumentView({
                       </span>
                     </div>
                     <div className="flex flex-col gap-0.5">
-                      <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
+                      <span className="text-xs font-bold uppercase tracking-[0.1em] text-editorial-muted">
                         {t('header.tokenCount')}
                       </span>
                       <span className="font-display text-base italic text-editorial-ink tabular-nums">
@@ -476,7 +477,7 @@ export function DocumentView({
                       </span>
                     </div>
                     <div className="flex flex-col gap-0.5">
-                      <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
+                      <span className="text-xs font-bold uppercase tracking-[0.1em] text-editorial-muted">
                         {t('header.estimatedCost')}
                       </span>
                       <span className="font-display text-base italic text-editorial-accent tabular-nums">
@@ -489,7 +490,7 @@ export function DocumentView({
                 {currentChunkUsage.scopeBreakdown.length > 0 ? (
                   <ScopeBreakdownCarousel entries={currentChunkUsage.scopeBreakdown} title={t('cost.breakdown')} />
                 ) : (
-                  <p className="py-4 text-center text-[11px] text-editorial-muted">{t('cost.unknown')}</p>
+                  <p className="py-4 text-center text-xs text-editorial-muted">{t('cost.unknown')}</p>
                 )}
               </Popover>
             )}

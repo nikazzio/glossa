@@ -5,7 +5,7 @@ import type { OllamaStatus, PipelineConfig, PipelineStageConfig, PromptTemplate,
 import type { ProviderKeyStatusMap } from '../../hooks/useProviderKeyStatus';
 import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
 import { calculateBlobBudget, getSelectableModelIds } from '../../models/catalog';
-import { IconButton, SectionLabel, ToggleRow } from '../ui';
+import { IconButton, SectionLabel, ToggleRow, FieldLabel } from '../ui';
 import { StageCard } from './StageCard';
 
 const STAGE_ROLE_ICON: Record<StageRole, LucideIcon> = {
@@ -83,9 +83,7 @@ export function TranslationTabPanel({
           <div className="space-y-3 pt-1">
             <div className="flex flex-wrap gap-4 items-center">
               <div className="flex items-center gap-2">
-                <label className="text-[11px] font-sans font-bold uppercase tracking-[0.14em] text-editorial-muted">
-                  {t('pipeline.blobBudgetTokens')}
-                </label>
+                <FieldLabel>{t('pipeline.blobBudgetTokens')}</FieldLabel>
                 <input
                   type="number"
                   min={1}
@@ -99,9 +97,7 @@ export function TranslationTabPanel({
                 />
               </div>
               <div className="flex items-center gap-2">
-                <label className="text-[11px] font-sans font-bold uppercase tracking-[0.14em] text-editorial-muted">
-                  {t('pipeline.blobOverlap')}
-                </label>
+                <FieldLabel>{t('pipeline.blobOverlap')}</FieldLabel>
                 <input
                   type="number"
                   min={0}
@@ -122,7 +118,7 @@ export function TranslationTabPanel({
                 <RotateCcw size={12} />
               </IconButton>
             </div>
-            <p className="text-[11px] text-editorial-muted/70">{t('pipeline.blobOverlapHint')}</p>
+            <p className="text-xs text-editorial-muted/70">{t('pipeline.blobOverlapHint')}</p>
           </div>
         )}
       </div>

@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useChunksStore } from '../../../stores/chunksStore';
-import { IconButton } from '../../ui';
+import { IconButton, Spinner } from '../../ui';
 import { IssueList } from './IssueList';
 import type { TranslationChunk } from '../../../types';
 
@@ -43,7 +43,7 @@ export function CoherenceTab({ panelId, labelledBy, currentChunk, isProcessing, 
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="px-5 py-5">
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-[10px] font-sans uppercase tracking-[0.35em] text-editorial-muted">
+        <div className="flex items-center gap-2 text-xs font-sans uppercase tracking-[0.16em] text-editorial-muted">
           <Link2 size={11} className="text-editorial-accent shrink-0" /> {t('coherence.title')}
         </div>
         <IconButton
@@ -66,13 +66,11 @@ export function CoherenceTab({ panelId, labelledBy, currentChunk, isProcessing, 
       )}
 
       {!coherence || coherence.status === 'idle' ? (
-        <p className="mt-3 text-[11px] text-editorial-muted/70 leading-relaxed">
+        <p className="mt-3 text-xs text-editorial-muted/70 leading-relaxed">
           {!allChunksTranslated ? t('coherence.translationsRequired') : t('coherence.idle')}
         </p>
       ) : coherence.status === 'processing' ? (
-        <div className="mt-3 flex items-center gap-2 text-sm text-editorial-muted">
-          <Loader2 size={13} className="animate-spin shrink-0" /> {t('coherence.running')}
-        </div>
+        <Spinner size={13} label={t('coherence.running')} className="mt-3 flex items-center gap-2 text-sm text-editorial-muted" />
       ) : coherence.status === 'error' ? (
         <div className="mt-3 border-t border-editorial-danger/30 pt-3 text-sm text-editorial-danger">
           {coherence.error || t('errors.coherenceFailed')}

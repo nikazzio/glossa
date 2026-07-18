@@ -14,7 +14,7 @@ export type StatusBarContext =
       kind: 'workspace';
       workspaceName: string;
       projectCount: number;
-      areaName: string | null;
+      areaName: string;
     }
   | {
       kind: 'project';
@@ -34,7 +34,7 @@ export type StatusBarContext =
 
 export function useStatusBarData(): StatusBarContext {
   const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace);
-  const activeWorkspaceArea = useUiStore((s) => s.activeWorkspaceArea);
+  const activeWorkspaceView = useUiStore((s) => s.activeWorkspaceView);
   const currentProjectId = useProjectStore((s) => s.currentProjectId);
   const projects = useProjectStore((s) => s.projects);
   const pipelines = useProjectStore((s) => s.pipelines);
@@ -56,7 +56,7 @@ export function useStatusBarData(): StatusBarContext {
         kind: 'workspace',
         workspaceName: activeWorkspace.name,
         projectCount: projects.length,
-        areaName: activeWorkspaceArea,
+        areaName: activeWorkspaceView,
       };
     }
 
@@ -92,7 +92,7 @@ export function useStatusBarData(): StatusBarContext {
     };
   }, [
     activeWorkspace,
-    activeWorkspaceArea,
+    activeWorkspaceView,
     currentProjectId,
     projects,
     pipelines,

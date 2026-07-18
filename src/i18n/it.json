@@ -486,6 +486,10 @@
     "panelTitle": "Configurazione",
     "providerTab": "Provider",
     "phraseMemoryTab": "Phrase Memory",
+    "phraseMemoryToggle": "Memoria",
+    "phraseMemoryAutoSearch": "Ricerca automatica",
+    "phraseMemoryMaxResults": "Risultati massimi",
+    "phraseMemoryManualRefreshHint": "L'aggiornamento manuale resta disponibile nel pannello Memoria del frammento.",
     "customProvider": {
       "sectionTitle": "Endpoint custom",
       "add": "Aggiungi endpoint custom",
@@ -681,27 +685,18 @@
     "areas": {
       "translations": {
         "title": "Traduzioni",
-        "body": "Area operativa attuale: progetti, pipeline, Phrase Memory e preset di traduzione vivono qui.",
         "sidebarHint": "Progetti e pipeline"
       },
       "library": {
         "title": "Biblioteca",
-        "body": "Area futura per catalogo, testi e materiali di studio, separata dalla memoria di traduzione.",
         "sidebarHint": "Testi e catalogo"
       },
       "transcriptions": {
         "title": "Trascrizioni",
-        "body": "Area futura per OCR, trascrizione e lavorazione del sorgente prima della traduzione.",
         "sidebarHint": "OCR e preparazione"
       }
     },
-    "projectsTitle": "Progetti del workspace",
-    "emptyProjectsTitle": "Nessun progetto in questo workspace",
-    "emptyProjectsBody": "Crea un progetto per iniziare una traduzione dentro questo workspace.",
-    "switcherTitle": "Cambia workspace",
     "newBookCard": "Nuovo libro",
-    "phraseMemoryTitle": "Phrase Memory del workspace",
-    "phraseMemoryBody": "Il workspace attivo possiede la configurazione dell'estrattore phrase memory. Le pipeline decidono se cercare in memoria e quanti match usare.",
     "memoryExtractorModel": "Modello estrattore Memory",
     "memoryExtractorPrompt": "Prompt estrattore Memory",
     "memoryExtractorTemplates": "Template prompt Memory",
@@ -723,19 +718,38 @@
       "backupTab": "Backup"
     },
     "translationsArea": {
-      "backLabel": "Torna a {{name}}",
       "sort": {
         "updatedAt": "Recenti",
         "name": "Nome"
       }
     },
     "hub": {
-      "lockedArea": "In arrivo nella versione 2.0",
-      "goToArea": "Vai all'area",
+      "lockedArea": "In arrivo nella versione 2.0"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "navHint": "Home dell'applicazione",
+    "loadFailed": "Caricamento della dashboard non riuscito",
+    "stats": {
       "projects": "Progetti",
-      "colName": "Nome",
-      "colModified": "Modificato",
-      "noProjects": "Nessun progetto in questo workspace."
+      "chunks": "Frammenti tradotti",
+      "chunksValue": "{{completed}} / {{total}}",
+      "phrases": "Frasi in memoria",
+      "glossaryTerms": "Termini glossario"
+    },
+    "attentionTitle": "Richiede attenzione",
+    "attentionEmpty": "Tutto a posto: nessun frammento da rivedere.",
+    "attentionCount": "{{count}} frammenti da rivedere",
+    "attentionCount_one": "{{count}} frammento da rivedere",
+    "resumeTitle": "Riprendi",
+    "resumeEmpty": "Nessun progetto ancora: creane uno dall'area Traduzioni.",
+    "activityTitle": "Attività recente",
+    "activityEmpty": "Nessuna esecuzione registrata.",
+    "runOutcome": {
+      "success": "Esecuzione completata",
+      "warn": "Esecuzione parziale o annullata",
+      "error": "Esecuzione fallita"
     }
   },
   "files": {
@@ -1316,6 +1330,9 @@
     "newTemplate": "Nuovo",
     "saveTemplate": "Salva modello",
     "templateNamePlaceholder": "Nome modello...",
+    "templateContextLabel": "Ambito del template",
+    "templateWorkflowLabel": "Flusso di lavoro del template",
+    "templateRefineProviderLabel": "Provider per affinare il prompt",
     "templatePromptPlaceholder": "Testo del prompt...",
     "templateStageHint": "I template Fase compaiono solo nelle fasi di traduzione e possono salvare provider e modello di default.",
     "templateAuditHint": "I template Audit sono condivisi tra Prompt Giudice e Prompt Coerenza e possono salvare provider e modello audit di default.",

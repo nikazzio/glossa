@@ -6,7 +6,7 @@ import type { ProviderKeyStatusMap } from '../../hooks/useProviderKeyStatus';
 import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
 import { ensureModelInList, getKnownModelIds, getModelStatus, getResolvedModelReasoning, LLM_PROVIDER_ORDER } from '../../models/catalog';
 import { DEFAULT_COHERENCE_PROMPT, DEFAULT_JUDGE_PROMPT } from '../../constants';
-import { SectionLabel, ToggleRow } from '../ui';
+import { SectionLabel, ToggleRow, FieldLabel } from '../ui';
 import { DeprecatedModelBadge } from '../models/DeprecatedModelBadge';
 import { ReasoningPicker } from '../models/ReasoningPicker';
 import { ProviderRuntimeEditor } from './ProviderRuntimeEditor';
@@ -83,12 +83,9 @@ export function AuditTabPanel({
         />
         {config.judgeRefineLoop && (
           <div className="space-y-1.5 pt-1">
-            <label
-              htmlFor="judge-refine-loop-max-iter"
-              className="block text-[11px] font-sans font-bold uppercase tracking-[0.14em] text-editorial-muted"
-            >
+            <FieldLabel htmlFor="judge-refine-loop-max-iter" block>
               {t('pipeline.judgeRefineLoopMaxIter')}
-            </label>
+            </FieldLabel>
             <input
               id="judge-refine-loop-max-iter"
               type="number"
@@ -163,10 +160,9 @@ export function AuditTabPanel({
         </div>
         {judgeResolvedReasoning !== undefined && judgeResolvedReasoning !== 'non_reasoning' && config.judgeProvider !== 'ollama' && (
           <div className="flex items-center gap-2">
-            <Wand2 size={11} className="text-editorial-warning shrink-0" />
-            <span className="text-[11px] font-sans font-bold uppercase tracking-[0.14em] text-editorial-muted">
+            <FieldLabel icon={<Wand2 size={11} className="text-editorial-warning shrink-0" />}>
               {t('pipeline.reasoningEffort')}
-            </span>
+            </FieldLabel>
             <ReasoningPicker
               value={currentJudgeReasoningEffort}
               showNone={judgeResolvedReasoning === 'optional'}

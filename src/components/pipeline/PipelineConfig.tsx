@@ -19,7 +19,7 @@ import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
 import { useOperationLogStore } from '../../stores/operationLogStore';
 import { PromptPreviewTab } from './PromptPreviewTab';
 import { canRefineWithProvider, formatProviderModelLabel, useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
-import { IconButton, SectionLabel } from '../ui';
+import { IconButton, SectionLabel, Spinner, Tooltip } from '../ui';
 import { PersonaEditor } from './PersonaEditor';
 import { SettingsTabPanel } from './SettingsTabPanel';
 import { TranslationTabPanel } from './TranslationTabPanel';
@@ -452,10 +452,11 @@ export function PipelineConfig({
       <div className="relative flex-1 min-h-0">
         {isProcessing && (
           <div className="absolute inset-0 z-10 flex items-start justify-center bg-editorial-bg/70 backdrop-blur-[2px]">
-            <div className="mt-10 flex items-center gap-2 rounded-full border border-editorial-border bg-editorial-bg px-4 py-2 text-[11px] font-sans uppercase tracking-widest text-editorial-muted shadow-sm">
-              <Loader2 size={12} className="animate-spin" />
-              {t('pipeline.settingsLockedWhileRunning')}
-            </div>
+            <Spinner
+              size={12}
+              label={t('pipeline.settingsLockedWhileRunning')}
+              className="mt-10 flex items-center gap-2 rounded-full border border-editorial-border bg-editorial-bg px-4 py-2 text-xs font-sans uppercase tracking-widest text-editorial-muted shadow-sm"
+            />
           </div>
         )}
         <div className="overflow-y-auto custom-scrollbar px-6 py-6 space-y-6 h-full">
@@ -579,53 +580,57 @@ export function PipelineConfig({
       {showActions && (
         <div className="shrink-0 border-t border-editorial-border/60 px-8 py-6 flex flex-col gap-3">
           <CostBadge estimate={costEstimate} />
-          <button
-            type="button"
-            onClick={onRunPipeline}
-            disabled={cannotRun}
-            data-tooltip={runReason ?? t('pipeline.beginPipeline')}
-            className="bg-editorial-ink text-white px-6 py-4 text-sm font-bold uppercase tracking-[2px] transition-all hover:bg-editorial-ink/90 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
-          >
-            {isProcessing ? (
-              <span className="flex items-center justify-center gap-2">
-                <Loader2 className="animate-spin" size={14} />
-                {t('pipeline.executing')}
-              </span>
-            ) : (
-              <span className="flex items-center justify-center gap-2">
-                <Play size={14} fill="currentColor" /> {t('pipeline.beginPipeline')}
-              </span>
-            )}
-          </button>
+          <Tooltip label={runReason ?? t('pipeline.beginPipeline')} className="w-full">
+            <button
+              type="button"
+              onClick={onRunPipeline}
+              disabled={cannotRun}
+              className="w-full bg-editorial-ink text-white px-6 py-4 text-sm font-bold uppercase tracking-[0.16em] transition-all hover:bg-editorial-ink/90 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
+            >
+              {isProcessing ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="animate-spin" size={14} />
+                  {t('pipeline.executing')}
+                </span>
+              ) : (
+                <span className="flex items-center justify-center gap-2">
+                  <Play size={14} fill="currentColor" /> {t('pipeline.beginPipeline')}
+                </span>
+              )}
+            </button>
+          </Tooltip>
           {canRerunAll && (
-            <button
-              type="button"
-              onClick={handleRerunAll}
-              data-tooltip={t('pipeline.rerunAllHint', { count: completedCount })}
-              className="bg-transparent border border-editorial-accent text-editorial-accent px-6 py-3 text-sm font-bold uppercase tracking-[2px] transition-all hover:bg-editorial-accent/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2 flex items-center justify-center gap-2"
-            >
-              <RotateCcw size={13} /> {t('pipeline.rerunAll')}
-            </button>
+            <Tooltip label={t('pipeline.rerunAllHint', { count: completedCount })} className="w-full">
+              <button
+                type="button"
+                onClick={handleRerunAll}
+                className="w-full bg-transparent border border-editorial-accent text-editorial-accent px-6 py-3 text-sm font-bold uppercase tracking-[0.16em] transition-all hover:bg-editorial-accent/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2 flex items-center justify-center gap-2"
+              >
+                <RotateCcw size={13} /> {t('pipeline.rerunAll')}
+              </button>
+            </Tooltip>
           )}
-          <button
-            type="button"
-            onClick={onRunAuditOnly}
-            disabled={cannotRun}
-            data-tooltip={runReason ?? t('pipeline.runAuditOnly')}
-            className="bg-transparent border border-editorial-ink text-editorial-ink px-6 py-4 text-sm font-bold uppercase tracking-[2px] transition-all hover:bg-editorial-ink/5 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
-          >
-            {t('pipeline.runAuditOnly')}
-          </button>
-          {isProcessing && (
+          <Tooltip label={runReason ?? t('pipeline.runAuditOnly')} className="w-full">
             <button
               type="button"
-              onClick={onCancelPipeline}
-              disabled={cancelRequested}
-              data-tooltip={cancelRequested ? t('pipeline.stopping') : t('pipeline.stopPipeline')}
-              className="bg-transparent border border-editorial-accent text-editorial-accent px-6 py-4 text-sm font-bold uppercase tracking-[2px] transition-all hover:bg-editorial-accent/5 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
+              onClick={onRunAuditOnly}
+              disabled={cannotRun}
+              className="w-full bg-transparent border border-editorial-ink text-editorial-ink px-6 py-4 text-sm font-bold uppercase tracking-[0.16em] transition-all hover:bg-editorial-ink/5 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
             >
-              {cancelRequested ? t('pipeline.stopping') : t('pipeline.stopPipeline')}
+              {t('pipeline.runAuditOnly')}
             </button>
+          </Tooltip>
+          {isProcessing && (
+            <Tooltip label={cancelRequested ? t('pipeline.stopping') : t('pipeline.stopPipeline')} className="w-full">
+              <button
+                type="button"
+                onClick={onCancelPipeline}
+                disabled={cancelRequested}
+                className="w-full bg-transparent border border-editorial-accent text-editorial-accent px-6 py-4 text-sm font-bold uppercase tracking-[0.16em] transition-all hover:bg-editorial-accent/5 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent focus-visible:ring-offset-2"
+              >
+                {cancelRequested ? t('pipeline.stopping') : t('pipeline.stopPipeline')}
+              </button>
+            </Tooltip>
           )}
         </div>
       )}

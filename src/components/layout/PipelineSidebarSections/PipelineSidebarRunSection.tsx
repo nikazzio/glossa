@@ -239,7 +239,7 @@ export function PipelineSidebarRunSection({
           </IconButton>
         )}
         {workMode === 'all' && hasDocument && (
-          <span className="text-[11px] font-bold tabular-nums tracking-[0.1em] text-editorial-muted">
+          <span className="text-xs font-bold tabular-nums tracking-[0.1em] text-editorial-muted">
             {completedCount}/{runChunkCount}
           </span>
         )}

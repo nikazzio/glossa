@@ -265,15 +265,16 @@ function ConsoleChrome({
       )}
       <div className="flex-1" />
       {onClose && (
-        <button
-          type="button"
-          onClick={onClose}
-          data-tooltip={t('common.close')}
-          aria-label={t('common.close')}
-          className="flex h-6.5 w-6.5 items-center justify-center rounded-full border border-terminal-border text-terminal-secondary transition-colors hover:border-terminal-accent/60 hover:text-terminal-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-terminal-accent"
-        >
-          <X size={12} />
-        </button>
+        <Tooltip label={t('common.close')}>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t('common.close')}
+            className="flex h-6.5 w-6.5 items-center justify-center rounded-full border border-terminal-border text-terminal-secondary transition-colors hover:border-terminal-accent/60 hover:text-terminal-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-terminal-accent"
+          >
+            <X size={12} />
+          </button>
+        </Tooltip>
       )}
     </div>
   );
@@ -348,15 +349,16 @@ function ConsoleToolbar({
         </button>
         <span className="h-3.5 w-px shrink-0 bg-terminal-line" aria-hidden="true" />
         {showGoToChunk && (
-          <button
-            type="button"
-            onClick={onGoToChunk}
-            data-tooltip={t('document.operationsGoToChunk')}
-            aria-label={t('document.operationsGoToChunk')}
-            className="shrink-0 text-terminal-secondary transition-colors hover:text-terminal-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-terminal-accent"
-          >
-            <ExternalLink size={14} />
-          </button>
+          <Tooltip label={t('document.operationsGoToChunk')}>
+            <button
+              type="button"
+              onClick={onGoToChunk}
+              aria-label={t('document.operationsGoToChunk')}
+              className="shrink-0 text-terminal-secondary transition-colors hover:text-terminal-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-terminal-accent"
+            >
+              <ExternalLink size={14} />
+            </button>
+          </Tooltip>
         )}
         <Tooltip label={t('document.operationsClearTooltip')} side="top">
           <button
@@ -654,16 +656,17 @@ function DetailBlock({
     <details className="mt-1 pl-4">
       <summary className="flex cursor-pointer select-none items-center justify-between gap-2 text-xs text-terminal-muted hover:text-terminal-secondary">
         <span>▶ {summaryLabel}</span>
-        <button
-          type="button"
-          onClick={onCopy}
-          data-tooltip={t('log.copy')}
-          aria-label={t('log.copy')}
-          className="flex items-center gap-1 text-xs text-terminal-muted transition-colors hover:text-terminal-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-        >
-          <Copy size={10} />
-          {t('log.copy')}
-        </button>
+        <Tooltip label={t('log.copy')}>
+          <button
+            type="button"
+            onClick={onCopy}
+            aria-label={t('log.copy')}
+            className="flex items-center gap-1 text-xs text-terminal-muted transition-colors hover:text-terminal-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-terminal-accent"
+          >
+            <Copy size={10} />
+            {t('log.copy')}
+          </button>
+        </Tooltip>
       </summary>
       <pre
         className={`mt-1 max-h-[480px] overflow-y-auto whitespace-pre-wrap text-xs leading-relaxed terminal-scrollbar ${
