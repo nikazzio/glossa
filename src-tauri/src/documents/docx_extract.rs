@@ -269,8 +269,7 @@ fn build_markdown_from_document_xml(
                     in_table_cell = false;
                 } else if local.ends_with(b":tr") || local == b"tr" {
                     if !current_table_row.is_empty() {
-                        current_table_rows.push(current_table_row.clone());
-                        current_table_row.clear();
+                        current_table_rows.push(std::mem::take(&mut current_table_row));
                     }
                 } else if local.ends_with(b":tbl") || local == b"tbl" {
                     if let Some(table_md) = format_markdown_table(&current_table_rows) {

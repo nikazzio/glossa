@@ -309,6 +309,8 @@ pub struct PhrasePair {
     pub source_embedding: Vec<f32>,
 }
 
+// 2 State injection + 7 parametri di dominio: raggruppabili in una request struct,
+// ma cambierebbe la firma del comando Tauri — rimandato a un refactor dedicato.
 #[allow(clippy::too_many_arguments)]
 #[tauri::command]
 pub async fn vec_save_locked_phrases(

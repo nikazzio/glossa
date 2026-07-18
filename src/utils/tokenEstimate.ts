@@ -1,7 +1,7 @@
 import { MODEL_CATALOG } from '../models/catalog';
 
 /** Safety margin: warn if chunk exceeds this fraction of context window */
-export const CONTEXT_OVERFLOW_THRESHOLD = 0.8;
+const CONTEXT_OVERFLOW_THRESHOLD = 0.8;
 
 export interface ContextOverflowWarning {
   estimatedTokens: number;

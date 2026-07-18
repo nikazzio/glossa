@@ -38,7 +38,7 @@ const RESETTABLE_OBJECTS = [
   'app_settings',
 ];
 
-export async function getDb(): Promise<Database> {
+async function getDb(): Promise<Database> {
   if (!db) {
     db = await Database.load(DB_URL);
   }

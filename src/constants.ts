@@ -65,7 +65,7 @@ export const LANGUAGES = [
   'Russian',
 ];
 
-export const LANGUAGE_TO_DEEPL_CODE: Record<string, string> = {
+const LANGUAGE_TO_DEEPL_CODE: Record<string, string> = {
   'Italian': 'IT',
   'English': 'EN',
   'French': 'FR',

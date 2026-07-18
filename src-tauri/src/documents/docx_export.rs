@@ -271,7 +271,9 @@ fn parse_markdown_inlines(text: &str) -> Vec<MarkdownInline> {
         if next == index {
             next += 1;
         }
-        let content = String::from_utf8(bytes[index..next].to_vec()).unwrap_or_default();
+        // Lossy invece di unwrap_or_default: un confine byte sbagliato qui deve produrre
+        // un carattere di rimpiazzo visibile, non far sparire silenziosamente il testo.
+        let content = String::from_utf8_lossy(&bytes[index..next]).into_owned();
         nodes.push(MarkdownInline::Text(content));
         index = next;
     }

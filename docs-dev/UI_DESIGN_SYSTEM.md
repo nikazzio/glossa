@@ -159,22 +159,6 @@ Regole:
 
 ---
 
-### StatusDot — indicatore stato compatto
-
-Indicatori stato non interattivi (stage pipeline, stato chunk, ecc.):
-
-```tsx
-import { StatusDot } from '../ui';
-
-<StatusDot tone="success" />
-<StatusDot tone="running" />
-<StatusDot tone="accent" />
-```
-
-**Tone disponibili:** stessi di `IconButton` — solo token `editorial-*`. No classi Tailwind dirette tipo `bg-emerald-500`, `bg-amber-400`, ecc.
-
----
-
 ### Badge numerico rotondo con tooltip — conteggi compatti non interattivi
 
 Conteggi compatti dove basta colore + numero (es. numero note su frammento nell'Indice), no etichetta testuale a fianco: pallino colorato con numero dentro, descrizione completa in `Tooltip` all'hover.
@@ -460,7 +444,7 @@ Regole:
 
 Prima di aggiungere nuovo pulsante, tab, o filtro:
 1. Cerca nell'app componente analogo
-2. Usa primitiva condivisa corrispondente (`IconButton`, `StatusDot`, `SectionLabel`, `Tooltip`)
+2. Usa primitiva condivisa corrispondente (`IconButton`, `SectionLabel`, `Tooltip`)
 3. Deviazioni richiedono approvazione esplicita dell'utente
 
 Colori da **non usare** fuori dai componenti UI (`StyleGuide.tsx` per riferimento):

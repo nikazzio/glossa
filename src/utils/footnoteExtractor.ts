@@ -8,9 +8,9 @@ const FOOTNOTE_MARKER = /(?<!\\)\[\^[^\]]+\]/g;
 const SUPERSCRIPT_DIGITS = '⁰¹²³⁴⁵⁶⁷⁸⁹';
 // Matches [¹], [²], [¹²], etc. — bracketed superscript markers in source display text.
 // ⁰ U+2070, ¹ U+00B9, ² U+00B2, ³ U+00B3 are not contiguous — enumerate explicitly.
-export const BRACKETED_SUPERSCRIPT_RE = /\[[⁰¹²³⁴⁵⁶⁷⁸⁹]+\]/g;
+const BRACKETED_SUPERSCRIPT_RE = /\[[⁰¹²³⁴⁵⁶⁷⁸⁹]+\]/g;
 
-export function toSuperscript(n: number): string {
+function toSuperscript(n: number): string {
   return String(n)
     .split('')
     .map((d) => SUPERSCRIPT_DIGITS[Number(d)] ?? d)

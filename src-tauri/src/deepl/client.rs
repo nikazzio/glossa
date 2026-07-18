@@ -6,31 +6,24 @@ use crate::deepl::types::{
     DeeplTranslateResponse,
 };
 
-fn translate_endpoint(api_key: &str) -> String {
-    let host = if api_key.ends_with(":fx") {
+fn deepl_host(api_key: &str) -> &'static str {
+    if api_key.ends_with(":fx") {
         "api-free.deepl.com"
     } else {
         "api.deepl.com"
-    };
-    format!("https://{host}/v2/translate")
+    }
+}
+
+fn translate_endpoint(api_key: &str) -> String {
+    format!("https://{}/v2/translate", deepl_host(api_key))
 }
 
 fn languages_endpoint(api_key: &str) -> String {
-    let host = if api_key.ends_with(":fx") {
-        "api-free.deepl.com"
-    } else {
-        "api.deepl.com"
-    };
-    format!("https://{host}/v2/languages")
+    format!("https://{}/v2/languages", deepl_host(api_key))
 }
 
 fn glossaries_endpoint(api_key: &str) -> String {
-    let host = if api_key.ends_with(":fx") {
-        "api-free.deepl.com"
-    } else {
-        "api.deepl.com"
-    };
-    format!("https://{host}/v3/glossaries")
+    format!("https://{}/v3/glossaries", deepl_host(api_key))
 }
 
 pub async fn translate(

@@ -1,5 +1,3 @@
-import type { Transition } from 'motion/react';
-
 /**
  * Token di motion condivisi della shell multibar.
  * Centralizzano spring/curve/durate per evitare magic number duplicati tra le superfici.
@@ -7,9 +5,6 @@ import type { Transition } from 'motion/react';
 
 /** Curva editoriale (ease-out morbido) per gli ingressi delle barre. */
 export const EASE_EDITORIAL: [number, number, number, number] = [0.22, 1, 0.36, 1];
-
-/** Spring dei pannelli fly-out (ProjectFlyout, ConfigDrawer): apertura/chiusura larghezza. */
-export const SPRING_PANEL: Transition = { type: 'spring', damping: 30, stiffness: 280 };
 
 /** Transizione flex dei pannelli react-resizable-panels nella shell progetto. */
 export const PANEL_FLEX_TRANSITION_CLASS =

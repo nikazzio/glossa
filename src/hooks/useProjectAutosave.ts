@@ -8,7 +8,7 @@ import { logger } from '../utils/logger';
 
 export { buildProjectSnapshot };
 
-export function useProjectSnapshot(enabled = true): string {
+function useProjectSnapshot(enabled = true): string {
   const inputText = usePipelineStore((state) => state.inputText);
   const inputProcessingText = usePipelineStore((state) => state.inputProcessingText);
   const sourceFootnotes = usePipelineStore((state) => state.sourceFootnotes);
