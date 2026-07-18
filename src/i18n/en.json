@@ -731,6 +731,17 @@
     "title": "Dashboard",
     "navHint": "Application home",
     "loadFailed": "Failed to load the dashboard",
+    "stats": {
+      "projects": "Projects",
+      "chunks": "Chunks translated",
+      "chunksValue": "{{completed}} / {{total}}",
+      "phrases": "Phrases in memory",
+      "glossaryTerms": "Glossary terms"
+    },
+    "attentionTitle": "Needs attention",
+    "attentionEmpty": "All good: no chunks need review.",
+    "attentionCount": "{{count}} chunks to review",
+    "attentionCount_one": "{{count}} chunk to review",
     "resumeTitle": "Resume",
     "resumeEmpty": "No projects yet: create one from the Translations area.",
     "activityTitle": "Recent activity",

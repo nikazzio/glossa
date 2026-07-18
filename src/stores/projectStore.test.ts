@@ -11,19 +11,23 @@ import { buildProjectSnapshot } from '../utils/projectSnapshot';
 
 // ── workspaceStore mock ───────────────────────────────────────────────
 
+const workspaceState = vi.hoisted(() => ({
+  activeWorkspace: {
+    id: 'ws-test',
+    name: 'Test',
+    embeddingModel: 'text-embedding-3-small',
+    memoryExtractorProvider: 'openai',
+    memoryExtractorModel: 'gpt-5-nano',
+    memoryExtractorPrompt: 'Extract',
+    createdAt: '2024-01-01T00:00:00Z',
+  },
+  workspaces: [] as Array<{ id: string; name: string }>,
+  setActive: vi.fn(),
+}));
+
 vi.mock('./workspaceStore', () => ({
   useWorkspaceStore: {
-    getState: () => ({
-      activeWorkspace: {
-        id: 'ws-test',
-        name: 'Test',
-        embeddingModel: 'text-embedding-3-small',
-        memoryExtractorProvider: 'openai',
-        memoryExtractorModel: 'gpt-5-nano',
-        memoryExtractorPrompt: 'Extract',
-        createdAt: '2024-01-01T00:00:00Z',
-      },
-    }),
+    getState: () => workspaceState,
   },
 }));
 
@@ -98,6 +102,7 @@ const makePipeline = (overrides: Partial<Pipeline> = {}): Pipeline => ({
 describe('projectStore', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    workspaceState.workspaces = [];
 
     // runInTransaction calls its callback with a no-op execute
     dbMocks.runInTransaction.mockImplementation(
@@ -421,5 +426,46 @@ describe('projectStore', () => {
       viewMode: 'document',
     });
     expect(useProjectStore.getState().trackedSnapshot).toBe(expectedSnapshot);
+  });
+
+  it('openProjectInWorkspace opens directly, without switching, when the project is already in the active workspace', async () => {
+    const mockOpenProject = vi.fn().mockResolvedValue(undefined);
+    useProjectStore.setState({ openProject: mockOpenProject });
+
+    await useProjectStore.getState().openProjectInWorkspace('proj-1', 'ws-test');
+
+    expect(mockOpenProject).toHaveBeenCalledWith('proj-1');
+    expect(workspaceState.setActive).not.toHaveBeenCalled();
+  });
+
+  it('openProjectInWorkspace switches workspace first when the project belongs to a different one', async () => {
+    const mockOpenProject = vi.fn().mockResolvedValue(undefined);
+    const mockCloseProject = vi.fn();
+    const mockLoadProjects = vi.fn().mockResolvedValue(undefined);
+    useProjectStore.setState({
+      openProject: mockOpenProject,
+      closeProject: mockCloseProject,
+      loadProjects: mockLoadProjects,
+    });
+    workspaceState.workspaces = [{ id: 'ws-other', name: 'Other' }];
+    workspaceState.setActive.mockResolvedValue(undefined);
+
+    await useProjectStore.getState().openProjectInWorkspace('proj-2', 'ws-other');
+
+    expect(mockCloseProject).toHaveBeenCalled();
+    expect(workspaceState.setActive).toHaveBeenCalledWith({ id: 'ws-other', name: 'Other' });
+    expect(mockLoadProjects).toHaveBeenCalled();
+    expect(mockOpenProject).toHaveBeenCalledWith('proj-2');
+  });
+
+  it('openProjectInWorkspace throws without opening anything when the target workspace cannot be found', async () => {
+    const mockOpenProject = vi.fn().mockResolvedValue(undefined);
+    useProjectStore.setState({ openProject: mockOpenProject });
+    workspaceState.workspaces = [];
+
+    await expect(
+      useProjectStore.getState().openProjectInWorkspace('proj-3', 'ws-missing'),
+    ).rejects.toThrow('ws-missing');
+    expect(mockOpenProject).not.toHaveBeenCalled();
   });
 });

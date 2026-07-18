@@ -1,13 +1,21 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Activity, BookOpenText, History, KeyRound } from 'lucide-react';
+import {
+  Activity, AlertTriangle, BookMarked, BookOpenText, Brain, CheckCircle2, FolderOpen, History, KeyRound,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import {
+  getDashboardOverviewStats,
+  listProjectsNeedingAttention,
   listRecentPipelineRuns,
   listRecentProjectsAllWorkspaces,
+  type DashboardOverviewStats,
+  type ProjectNeedingAttention,
   type RecentPipelineRun,
   type RecentProject,
 } from '../../services/projectService';
+import { countGlossaryEntries } from '../../services/glossaryService';
+import { countPhraseMemoryEntries } from '../../services/phraseMemoryService';
 import { useProjectStore } from '../../stores/projectStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useUiStore } from '../../stores/uiStore';
@@ -16,6 +24,16 @@ import { PillButton, SectionLabel, Spinner } from '../ui';
 
 const RESUME_LIMIT = 5;
 const ACTIVITY_LIMIT = 6;
+const ATTENTION_LIMIT = 8;
+
+interface OverviewStats extends DashboardOverviewStats {
+  totalPhrases: number;
+  totalGlossaryTerms: number;
+}
+
+const EMPTY_OVERVIEW: OverviewStats = {
+  totalProjects: 0, totalChunks: 0, completedChunks: 0, totalPhrases: 0, totalGlossaryTerms: 0,
+};
 
 /** Esiti delle esecuzioni pipeline: il registro chiude le run con success/warn/error. */
 const RUN_TONE: Record<string, { dot: string; labelKey: string }> = {
@@ -31,25 +49,30 @@ export function AppDashboard() {
   const { t, i18n } = useTranslation();
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace);
-  const setActive = useWorkspaceStore((s) => s.setActive);
-  const closeProject = useProjectStore((s) => s.closeProject);
-  const loadProjects = useProjectStore((s) => s.loadProjects);
-  const openProject = useProjectStore((s) => s.openProject);
+  const openProjectInWorkspace = useProjectStore((s) => s.openProjectInWorkspace);
   const setShowSettings = useUiStore((s) => s.setShowSettings);
   const { statuses: keyStatuses, isLoading: keyStatusLoading } = useProviderKeyStatus();
 
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
   const [recentRuns, setRecentRuns] = useState<RecentPipelineRun[]>([]);
+  const [attentionProjects, setAttentionProjects] = useState<ProjectNeedingAttention[]>([]);
+  const [overview, setOverview] = useState<OverviewStats>(EMPTY_OVERVIEW);
   const [isLoadingData, setIsLoadingData] = useState(true);
 
   const loadDashboardData = useCallback(async () => {
     try {
-      const [projects, runs] = await Promise.all([
+      const [projects, runs, attention, overviewStats, totalPhrases, totalGlossaryTerms] = await Promise.all([
         listRecentProjectsAllWorkspaces(RESUME_LIMIT),
         listRecentPipelineRuns(ACTIVITY_LIMIT),
+        listProjectsNeedingAttention(ATTENTION_LIMIT),
+        getDashboardOverviewStats(),
+        countPhraseMemoryEntries(),
+        countGlossaryEntries(),
       ]);
       setRecentProjects(projects);
       setRecentRuns(runs);
+      setAttentionProjects(attention);
+      setOverview({ ...overviewStats, totalPhrases, totalGlossaryTerms });
     } catch (err: unknown) {
       toast.error(t('dashboard.loadFailed'), {
         description: err instanceof Error ? err.message : String(err),
@@ -74,22 +97,22 @@ export function AppDashboard() {
     }).format(new Date(iso));
 
   /** Apre un progetto da qualunque workspace: se serve, attiva prima il suo workspace. */
-  const handleResume = async (project: RecentProject) => {
+  const handleOpenProject = async (projectId: string, workspaceId: string) => {
     try {
-      if (project.workspace_id !== activeWorkspace?.id) {
-        const ws = workspaces.find((w) => w.id === project.workspace_id);
-        if (!ws) return;
-        closeProject();
-        await setActive(ws);
-        await loadProjects();
-      }
-      await openProject(project.id);
+      await openProjectInWorkspace(projectId, workspaceId);
     } catch (err: unknown) {
       toast.error(t('projects.openFailed'), {
         description: err instanceof Error ? err.message : String(err),
       });
     }
   };
+
+  const overviewTiles = [
+    { key: 'projects', icon: FolderOpen, label: t('dashboard.stats.projects'), value: String(overview.totalProjects) },
+    { key: 'chunks', icon: CheckCircle2, label: t('dashboard.stats.chunks'), value: t('dashboard.stats.chunksValue', { completed: overview.completedChunks, total: overview.totalChunks }) },
+    { key: 'phrases', icon: Brain, label: t('dashboard.stats.phrases'), value: String(overview.totalPhrases) },
+    { key: 'glossary', icon: BookMarked, label: t('dashboard.stats.glossaryTerms'), value: String(overview.totalGlossaryTerms) },
+  ];
 
   return (
     <main className="flex flex-1 h-full min-h-0 flex-col overflow-y-auto bg-editorial-paper custom-scrollbar">
@@ -123,6 +146,55 @@ export function AppDashboard() {
           </section>
         ) : null}
 
+        {/* Panoramica — numeri complessivi su tutti i workspace */}
+        <section className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {overviewTiles.map(({ key, icon: Icon, label, value }) => (
+            <div key={key} className="rounded-[20px] border border-editorial-border bg-editorial-bg/40 px-4 py-3">
+              <div className="flex items-center gap-1.5 text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
+                <Icon size={12} className="shrink-0" />
+                {label}
+              </div>
+              <div className="mt-1.5 font-display text-2xl italic text-editorial-ink">{value}</div>
+            </div>
+          ))}
+        </section>
+
+        {/* Richiede attenzione — frammenti con giudizio scarso/critico o problemi aperti */}
+        <section className="mt-6">
+          <div className="mb-2 px-1">
+            <SectionLabel icon={AlertTriangle} label={t('dashboard.attentionTitle')} />
+          </div>
+          {isLoadingData ? (
+            <Spinner size={14} label={t('common.loading')} className="flex items-center gap-2 px-1 py-2 text-xs text-editorial-muted" />
+          ) : attentionProjects.length > 0 ? (
+            <div className="space-y-1.5">
+              {attentionProjects.map((project) => (
+                <button
+                  key={project.project_id}
+                  type="button"
+                  onClick={() => void handleOpenProject(project.project_id, project.workspace_id)}
+                  className={ROW_CLASS}
+                >
+                  <span className="flex min-w-0 items-center gap-3">
+                    <BookOpenText size={14} className="shrink-0 text-editorial-muted" />
+                    <span className="truncate font-display text-base italic text-editorial-ink">
+                      {project.project_name}
+                    </span>
+                    <span className="shrink-0 rounded-full border border-editorial-border bg-editorial-bg px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.1em] text-editorial-muted">
+                      {project.workspace_name}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-xs text-editorial-warning">
+                    {t('dashboard.attentionCount', { count: project.issue_count })}
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="px-1 text-sm text-editorial-muted">{t('dashboard.attentionEmpty')}</p>
+          )}
+        </section>
+
         {/* Riprendi — cross-workspace */}
         <section className="mt-6">
           <div className="mb-2 px-1">
@@ -136,7 +208,7 @@ export function AppDashboard() {
                 <button
                   key={project.id}
                   type="button"
-                  onClick={() => void handleResume(project)}
+                  onClick={() => void handleOpenProject(project.id, project.workspace_id)}
                   className={ROW_CLASS}
                 >
                   <span className="flex min-w-0 items-center gap-3">

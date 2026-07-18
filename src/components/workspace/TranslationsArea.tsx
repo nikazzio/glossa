@@ -4,7 +4,6 @@ import { ArrowUpAZ, BookOpenText, Clock, Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useProjectStore } from '../../stores/projectStore';
-import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { confirm } from '../../stores/confirmStore';
 import { listAllProjects, type WorkspaceProject } from '../../services/projectService';
 import { IconButton, Spinner } from '../ui';
@@ -16,12 +15,7 @@ type SortKey = 'updatedAt' | 'name';
  * pagina Workspace, che mostra solo i progetti del workspace attivo. */
 export function TranslationsArea() {
   const { t, i18n } = useTranslation();
-  const workspaces = useWorkspaceStore((s) => s.workspaces);
-  const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace);
-  const setActive = useWorkspaceStore((s) => s.setActive);
-  const closeProject = useProjectStore((s) => s.closeProject);
-  const loadProjects = useProjectStore((s) => s.loadProjects);
-  const openProject = useProjectStore((s) => s.openProject);
+  const openProjectInWorkspace = useProjectStore((s) => s.openProjectInWorkspace);
   const removeProject = useProjectStore((s) => s.removeProject);
 
   const [allProjects, setAllProjects] = useState<WorkspaceProject[]>([]);
@@ -58,18 +52,10 @@ export function TranslationsArea() {
       day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
     }).format(new Date(updatedAt));
 
-  /** Apre un progetto da qualunque workspace: se serve, attiva prima il suo workspace. */
   const handleOpenProject = async (project: WorkspaceProject) => {
     setOpeningProjectId(project.id);
     try {
-      if (project.workspace_id !== activeWorkspace?.id) {
-        const ws = workspaces.find((w) => w.id === project.workspace_id);
-        if (!ws) return;
-        closeProject();
-        await setActive(ws);
-        await loadProjects();
-      }
-      await openProject(project.id);
+      await openProjectInWorkspace(project.id, project.workspace_id);
     } catch (err: unknown) {
       setOpeningProjectId(null);
       toast.error(t('projects.loadFailed'), {
@@ -212,7 +198,7 @@ export function TranslationsArea() {
             type="button"
             layout
             onClick={() => setShowNewProjectForm(true)}
-            disabled={!activeWorkspace || showNewProjectForm}
+            disabled={showNewProjectForm}
             className="group flex min-h-[100px] w-full items-center justify-center gap-3 rounded-[26px] border border-dashed border-editorial-border bg-transparent transition-colors hover:border-editorial-accent/45 hover:bg-editorial-paper/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-40"
             aria-label={t('workspace.newBookCard')}
           >

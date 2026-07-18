@@ -363,6 +363,12 @@ export async function searchPhraseMemoryBatch(
   return result;
 }
 
+/** Frasi totali in memoria su tutti i workspace — alimenta la Dashboard. */
+export async function countPhraseMemoryEntries(): Promise<number> {
+  const rows = await select<{ count: number }>('SELECT COUNT(*) AS count FROM phrase_memory');
+  return rows[0]?.count ?? 0;
+}
+
 export async function listPhraseMemoryEntries(workspaceId: string): Promise<PhraseMemoryEntry[]> {
   const raw = await invoke<RawPhraseMemoryEntry[]>('vec_list_phrase_memory', { workspaceId });
   return raw.map(toPhraseMemoryEntry);

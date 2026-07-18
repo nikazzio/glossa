@@ -731,6 +731,17 @@
     "title": "Dashboard",
     "navHint": "Home dell'applicazione",
     "loadFailed": "Caricamento della dashboard non riuscito",
+    "stats": {
+      "projects": "Progetti",
+      "chunks": "Frammenti tradotti",
+      "chunksValue": "{{completed}} / {{total}}",
+      "phrases": "Frasi in memoria",
+      "glossaryTerms": "Termini glossario"
+    },
+    "attentionTitle": "Richiede attenzione",
+    "attentionEmpty": "Tutto a posto: nessun frammento da rivedere.",
+    "attentionCount": "{{count}} frammenti da rivedere",
+    "attentionCount_one": "{{count}} frammento da rivedere",
     "resumeTitle": "Riprendi",
     "resumeEmpty": "Nessun progetto ancora: creane uno dall'area Traduzioni.",
     "activityTitle": "Attività recente",

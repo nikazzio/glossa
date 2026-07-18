@@ -8,7 +8,10 @@ const dbMocks = vi.hoisted(() => ({
 
 vi.mock('./dbService', () => dbMocks);
 
-const { deleteProject, getProjectSource, listProjects, saveProjectSource } = await import('./projectService');
+const {
+  deleteProject, getProjectSource, listProjects, saveProjectSource,
+  getDashboardOverviewStats, listProjectsNeedingAttention,
+} = await import('./projectService');
 
 describe('projectService — source text', () => {
   beforeEach(() => {
@@ -179,5 +182,51 @@ describe('projectService — listProjects', () => {
       pipeline_count: 2,
       pipeline_names: 'Default · Editorial',
     });
+  });
+});
+
+describe('projectService — getDashboardOverviewStats', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('combines project count and chunk completion into one object', async () => {
+    dbMocks.select
+      .mockResolvedValueOnce([{ count: 7 }])
+      .mockResolvedValueOnce([{ total: 42, completed: 30 }]);
+
+    const result = await getDashboardOverviewStats();
+
+    expect(result).toEqual({ totalProjects: 7, totalChunks: 42, completedChunks: 30 });
+  });
+
+  it('defaults to zero when there is no data yet', async () => {
+    dbMocks.select
+      .mockResolvedValueOnce([{ count: 0 }])
+      .mockResolvedValueOnce([{ total: 0, completed: null }]);
+
+    const result = await getDashboardOverviewStats();
+
+    expect(result).toEqual({ totalProjects: 0, totalChunks: 0, completedChunks: 0 });
+  });
+});
+
+describe('projectService — listProjectsNeedingAttention', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('queries chunks with a poor/critical judge rating or open issues, grouped by project', async () => {
+    dbMocks.select.mockResolvedValueOnce([
+      { project_id: 'proj-1', project_name: 'Project A', workspace_id: 'ws-1', workspace_name: 'Alpha', issue_count: 3 },
+    ]);
+
+    const result = await listProjectsNeedingAttention(8);
+
+    expect(dbMocks.select).toHaveBeenCalledWith(
+      expect.stringContaining("judge_rating IN ('critical', 'poor')"),
+      [8],
+    );
+    expect(result[0]).toMatchObject({ project_id: 'proj-1', issue_count: 3 });
   });
 });

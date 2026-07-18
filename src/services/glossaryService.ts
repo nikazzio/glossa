@@ -60,6 +60,12 @@ export async function listGlossaries(workspaceId?: string | null): Promise<Gloss
   return rows.map(rowToGlossary);
 }
 
+/** Termini totali su tutti i glossari — alimenta la Dashboard. */
+export async function countGlossaryEntries(): Promise<number> {
+  const rows = await select<{ count: number }>('SELECT COUNT(*) AS count FROM glossary_entries');
+  return rows[0]?.count ?? 0;
+}
+
 export async function createGlossary(
   name: string,
   description = '',

@@ -16,9 +16,23 @@ vi.mock('../../hooks/useProviderKeyStatus', () => ({
 
 const mockListRecent = vi.fn();
 const mockListRuns = vi.fn();
+const mockListAttention = vi.fn();
+const mockOverviewStats = vi.fn();
 vi.mock('../../services/projectService', () => ({
   listRecentProjectsAllWorkspaces: (...args: unknown[]) => mockListRecent(...args),
   listRecentPipelineRuns: (...args: unknown[]) => mockListRuns(...args),
+  listProjectsNeedingAttention: (...args: unknown[]) => mockListAttention(...args),
+  getDashboardOverviewStats: () => mockOverviewStats(),
+}));
+
+const mockCountGlossaryEntries = vi.fn();
+vi.mock('../../services/glossaryService', () => ({
+  countGlossaryEntries: () => mockCountGlossaryEntries(),
+}));
+
+const mockCountPhraseMemoryEntries = vi.fn();
+vi.mock('../../services/phraseMemoryService', () => ({
+  countPhraseMemoryEntries: () => mockCountPhraseMemoryEntries(),
 }));
 
 const originalProjectState = useProjectStore.getState();
@@ -33,18 +47,18 @@ describe('AppDashboard', () => {
     useUiStore.setState({ activeWorkspaceView: 'dashboard' });
     mockListRecent.mockResolvedValue([]);
     mockListRuns.mockResolvedValue([]);
+    mockListAttention.mockResolvedValue([]);
+    mockOverviewStats.mockResolvedValue({ totalProjects: 0, totalChunks: 0, completedChunks: 0 });
+    mockCountGlossaryEntries.mockResolvedValue(0);
+    mockCountPhraseMemoryEntries.mockResolvedValue(0);
     useProjectStore.setState({
       ...originalProjectState,
-      openProject: vi.fn().mockResolvedValue(undefined),
-      loadProjects: vi.fn().mockResolvedValue(undefined),
-      closeProject: vi.fn(),
+      openProjectInWorkspace: vi.fn().mockResolvedValue(undefined),
     });
     useWorkspaceStore.setState({
       ...originalWorkspaceState,
       workspaces: [WS_ALPHA, WS_BETA] as never,
       activeWorkspace: WS_ALPHA as never,
-      setActive: vi.fn().mockResolvedValue(undefined),
-      removeWorkspace: vi.fn().mockResolvedValue(undefined),
     });
   });
 
@@ -60,7 +74,7 @@ describe('AppDashboard', () => {
     expect(within(projectRow as HTMLElement).getByText('Beta')).toBeInTheDocument();
   });
 
-  it('resuming a project from another workspace activates that workspace first', async () => {
+  it('resuming a project delegates to the store with its id and workspace', async () => {
     mockListRecent.mockResolvedValue([
       { id: 'p1', name: 'Fiore dei Liberi', updated_at: '2026-07-15T10:00:00.000Z', workspace_id: 'ws-2', workspace_name: 'Beta' },
     ]);
@@ -69,32 +83,16 @@ describe('AppDashboard', () => {
     await userEvent.click(await screen.findByText('Fiore dei Liberi'));
 
     await waitFor(() => {
-      expect(useWorkspaceStore.getState().setActive).toHaveBeenCalledWith(
-        expect.objectContaining({ id: 'ws-2' }),
-      );
-      expect(useProjectStore.getState().openProject).toHaveBeenCalledWith('p1');
+      expect(useProjectStore.getState().openProjectInWorkspace).toHaveBeenCalledWith('p1', 'ws-2');
     });
   });
 
-  it('resuming a project of the active workspace opens it without switching', async () => {
-    mockListRecent.mockResolvedValue([
-      { id: 'p9', name: 'Vadi', updated_at: '2026-07-15T10:00:00.000Z', workspace_id: 'ws-1', workspace_name: 'Alpha' },
-    ]);
-
-    render(<AppDashboard />);
-    await userEvent.click(await screen.findByText('Vadi'));
-
-    await waitFor(() => {
-      expect(useProjectStore.getState().openProject).toHaveBeenCalledWith('p9');
-    });
-    expect(useWorkspaceStore.getState().setActive).not.toHaveBeenCalled();
-  });
-
-  it('shows empty states for resume and activity when there is no data', async () => {
+  it('shows empty states for resume, activity and attention when there is no data', async () => {
     render(<AppDashboard />);
 
     expect(await screen.findByText('dashboard.resumeEmpty')).toBeInTheDocument();
     expect(screen.getByText('dashboard.activityEmpty')).toBeInTheDocument();
+    expect(screen.getByText('dashboard.attentionEmpty')).toBeInTheDocument();
   });
 
   it('shows recent pipeline runs with their outcome', async () => {
@@ -107,4 +105,34 @@ describe('AppDashboard', () => {
     expect(await screen.findByText('dashboard.runOutcome.success')).toBeInTheDocument();
   });
 
+  it('shows the overview tiles with real aggregate numbers', async () => {
+    mockOverviewStats.mockResolvedValue({ totalProjects: 12, totalChunks: 300, completedChunks: 210 });
+    mockCountPhraseMemoryEntries.mockResolvedValue(48);
+    mockCountGlossaryEntries.mockResolvedValue(120);
+
+    render(<AppDashboard />);
+
+    expect(await screen.findByText('12')).toBeInTheDocument();
+    expect(screen.getByText('dashboard.stats.chunksValue')).toBeInTheDocument();
+    expect(screen.getByText('48')).toBeInTheDocument();
+    expect(screen.getByText('120')).toBeInTheDocument();
+  });
+
+  it('shows projects needing attention and opens one on click', async () => {
+    mockListAttention.mockResolvedValue([
+      { project_id: 'p1', project_name: 'Fiore dei Liberi', workspace_id: 'ws-2', workspace_name: 'Beta', issue_count: 3 },
+    ]);
+
+    render(<AppDashboard />);
+
+    const row = (await screen.findByText('Fiore dei Liberi')).closest('button');
+    expect(row).not.toBeNull();
+    expect(within(row as HTMLElement).getByText('Beta')).toBeInTheDocument();
+
+    await userEvent.click(row as HTMLElement);
+
+    await waitFor(() => {
+      expect(useProjectStore.getState().openProjectInWorkspace).toHaveBeenCalledWith('p1', 'ws-2');
+    });
+  });
 });
