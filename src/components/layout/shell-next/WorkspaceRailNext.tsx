@@ -32,14 +32,27 @@ function DashboardItem({ collapsed }: { collapsed: boolean }) {
   const active = activeWorkspaceView === 'dashboard';
 
   return (
-    <div className="px-2.5 pt-3">
+    <div className="px-2.5 pt-1">
       <ShellNavItem
         active={active}
         collapsed={collapsed}
         labelFont="display"
         onClick={() => setActiveWorkspaceView('dashboard')}
         ariaCurrent={active ? 'page' : undefined}
-        icon={<LayoutDashboard size={14} />}
+        icon={
+          // Cerchietto sempre in tinta accent: la home dell'app spicca sulle voci di sezione.
+          <span
+            className={`inline-flex shrink-0 items-center justify-center rounded-full border transition-colors duration-200 ${
+              collapsed ? 'h-9 w-9' : 'h-7 w-7'
+            } ${
+              active
+                ? 'border-editorial-accent/60 bg-editorial-accent/15 text-editorial-accent'
+                : 'border-editorial-accent/35 bg-editorial-accent/5 text-editorial-accent'
+            }`}
+          >
+            <LayoutDashboard size={collapsed ? 16 : 14} />
+          </span>
+        }
         label={t('dashboard.title')}
         hint={t('dashboard.navHint')}
       />
@@ -71,7 +84,9 @@ function AreaSection({ collapsed }: { collapsed: boolean }) {
             ariaCurrent={active ? 'page' : undefined}
             icon={
               <span
-                className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-colors duration-200 ${
+                className={`inline-flex shrink-0 items-center justify-center rounded-full border transition-colors duration-200 ${
+                  collapsed ? 'h-9 w-9' : 'h-6 w-6'
+                } ${
                   active
                     ? 'border-editorial-accent/45 bg-editorial-accent/10 text-editorial-accent'
                     : enabled
@@ -79,7 +94,7 @@ function AreaSection({ collapsed }: { collapsed: boolean }) {
                       : 'border-editorial-border bg-editorial-textbox/30 text-editorial-muted'
                 }`}
               >
-                <Icon size={12} />
+                <Icon size={collapsed ? 15 : 12} />
               </span>
             }
             label={t(`workspace.areas.${id}.title`)}
@@ -148,12 +163,17 @@ function WorkspaceSection({ collapsed }: { collapsed: boolean }) {
               onClick={() => void handleOpenWorkspace(ws)}
               ariaCurrent={isCurrentView ? 'page' : undefined}
               icon={
+                // Da collassata il pallino vive in uno slot h-9: righe alte quanto la barra progetto.
                 <span
-                  className={`h-2 w-2 shrink-0 rounded-full transition-colors duration-200 ${
-                    isContext ? 'bg-editorial-accent' : 'border border-editorial-border bg-transparent'
-                  }`}
+                  className={`inline-flex shrink-0 items-center justify-center ${collapsed ? 'h-9 w-9' : ''}`}
                   aria-hidden="true"
-                />
+                >
+                  <span
+                    className={`rounded-full transition-colors duration-200 ${collapsed ? 'h-2.5 w-2.5' : 'h-2 w-2'} ${
+                      isContext ? 'bg-editorial-accent' : 'border border-editorial-border bg-transparent'
+                    }`}
+                  />
+                </span>
               }
               label={ws.name}
             />
@@ -179,15 +199,16 @@ export function WorkspaceRailNext({ collapsed }: WorkspaceRailNextProps) {
         <div className="flex h-20 w-full shrink-0 items-center justify-center">
           <IconButton
             size="md"
-            tone="muted"
+            tone="default"
             onClick={() => setCollapsed(false)}
             title={t('sidebar.expand')}
             tooltipSide="right"
+            className="h-9 w-9 bg-editorial-bg"
           >
             <PanelLeftOpen size={14} />
           </IconButton>
         </div>
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden custom-scrollbar pb-4 pt-2">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden custom-scrollbar pb-4">
           <DashboardItem collapsed />
           <AreaSection collapsed />
           <WorkspaceSection collapsed />
@@ -198,13 +219,15 @@ export function WorkspaceRailNext({ collapsed }: WorkspaceRailNextProps) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex h-20 shrink-0 items-center gap-3 px-3">
+      {/* Header: collassa a destra, allineato alla barra progetto */}
+      <div className="flex h-20 shrink-0 items-center justify-end px-3">
         <IconButton
           size="md"
-          tone="muted"
+          tone="default"
           onClick={() => setCollapsed(true)}
           title={t('sidebar.collapse')}
           tooltipSide="bottom"
+          className="h-9 w-9 shrink-0 bg-editorial-bg"
         >
           <PanelLeftClose size={14} />
         </IconButton>

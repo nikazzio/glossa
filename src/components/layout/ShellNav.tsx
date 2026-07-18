@@ -28,13 +28,13 @@ export function ShellNavSection({ icon: Icon, label, action, collapsed = false, 
   return (
     <div className="px-2.5">
       {!collapsed ? (
-        <div className="flex items-center justify-between gap-2 px-1.5 pb-1.5 pt-3">
+        <div className="flex items-center justify-between gap-2 px-1.5 pb-1 pt-2">
           <SectionLabel icon={Icon} label={label} />
           {action}
         </div>
       ) : (
         // Da collassata resta l'icona della sezione (header stabile): niente salto verticale.
-        <div className="flex justify-center pb-1.5 pt-3">
+        <div className="flex justify-center pb-1 pt-2">
           <Tooltip label={label} side="right">
             <Icon size={13} className="text-editorial-muted/70" aria-hidden="true" />
           </Tooltip>
