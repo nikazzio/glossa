@@ -107,6 +107,14 @@ workflow lighter.
 - If the formatting stage starts changing meaning, remove or simplify it.
 - If a chunk is difficult, [annotate it](./annotations) instead of relying on memory alone.
 
+## Previewing the message before you launch
+
+In the chunk panel, the **Preview** tab (after References) shows the literal message —
+system instructions and user text — that would be sent to the engine for the chosen
+stage on the open chunk. Build it on demand with the dedicated button: nothing runs
+for real, nothing costs, nothing gets written to the chunk. Useful for checking exactly
+what the model will receive before starting a translation or an editing stage.
+
 ## See also
 
 - [Annotations](./annotations) — for tracking editorial findings per chunk
