@@ -1,22 +1,33 @@
-import { RotateCcw, Thermometer } from 'lucide-react';
+import { Thermometer } from 'lucide-react';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { IconButton, Tooltip } from '../ui';
+import { Tooltip } from '../ui';
 
 interface TemperatureControlProps {
   value: number | undefined;
   max: number;
   disabled?: boolean;
-  onChange: (value: number | undefined) => void;
+  onChange: (value: number) => void;
 }
 
 const MIN = 0;
 const STEP = 0.1;
-const DEFAULT_DISPLAY = 1;
+const DEFAULT_VALUE = 0;
 
-/** Temperature slider for a single stage/judge call. Untouched = provider default. */
+/**
+ * Temperature slider for a single stage/judge call. Always a real, concrete
+ * value — no hidden "let the provider decide" state that could show one
+ * number while a different one is actually in effect.
+ */
 export function TemperatureControl({ value, max, disabled, onChange }: TemperatureControlProps) {
   const { t } = useTranslation();
-  const displayValue = value ?? Math.min(DEFAULT_DISPLAY, max);
+
+  useEffect(() => {
+    if (value === undefined) onChange(DEFAULT_VALUE);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo al primo render di questo controllo, onChange non serve nelle dep
+  }, []);
+
+  const displayValue = value ?? DEFAULT_VALUE;
 
   return (
     <div className="flex flex-1 items-center gap-1.5">
@@ -37,16 +48,6 @@ export function TemperatureControl({ value, max, disabled, onChange }: Temperatu
       <span className="w-7 shrink-0 text-right font-mono text-xs font-bold text-editorial-accent">
         {displayValue.toFixed(1)}
       </span>
-      {value !== undefined && (
-        <IconButton
-          size="xs"
-          title={t('pipeline.temperatureReset')}
-          onClick={() => onChange(undefined)}
-          disabled={disabled}
-        >
-          <RotateCcw size={10} />
-        </IconButton>
-      )}
     </div>
   );
 }
