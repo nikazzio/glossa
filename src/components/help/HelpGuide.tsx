@@ -282,6 +282,9 @@ function PipelineSection() {
       </Step>
 
       <Tip title={t('help.pipeline.tipTitle')}>{t('help.pipeline.tipDesc')}</Tip>
+
+      <SubTitle>{t('help.pipeline.temperatureTitle')}</SubTitle>
+      <P>{t('help.pipeline.temperatureDesc')}</P>
     </>
   );
 }
