@@ -57,6 +57,30 @@ export function AuditTabPanel({
 }: AuditTabPanelProps) {
   const { t } = useTranslation();
   const judgeResolvedReasoning = getResolvedModelReasoning(config.judgeProvider, config.judgeModel);
+  const judgeTemperatureAllowed =
+    config.judgeProvider === 'anthropic' ||
+    config.judgeProvider === 'gemini' ||
+    ((config.judgeProvider === 'openai' || config.judgeProvider === 'deepseek') &&
+      (judgeResolvedReasoning === 'non_reasoning' || currentJudgeReasoningEffort === 'none'));
+  const currentJudgeTemperature = (() => {
+    if (config.judgeProvider === 'anthropic') return config.reviewProviderOptions?.anthropic?.temperature;
+    if (config.judgeProvider === 'openai') return config.reviewProviderOptions?.openai?.temperature;
+    if (config.judgeProvider === 'deepseek') return config.reviewProviderOptions?.deepseek?.temperature;
+    if (config.judgeProvider === 'gemini') return config.reviewProviderOptions?.gemini?.temperature;
+    return undefined;
+  })();
+  const handleJudgeTemperatureChange = (temperature: number | undefined) => {
+    const opts = config.reviewProviderOptions ?? {};
+    if (config.judgeProvider === 'anthropic') {
+      setConfig((prev) => ({ ...prev, reviewProviderOptions: { ...opts, anthropic: { ...opts.anthropic, temperature } } }));
+    } else if (config.judgeProvider === 'openai') {
+      setConfig((prev) => ({ ...prev, reviewProviderOptions: { ...opts, openai: { ...opts.openai, temperature } } }));
+    } else if (config.judgeProvider === 'deepseek') {
+      setConfig((prev) => ({ ...prev, reviewProviderOptions: { ...opts, deepseek: { ...opts.deepseek, temperature } } }));
+    } else if (config.judgeProvider === 'gemini') {
+      setConfig((prev) => ({ ...prev, reviewProviderOptions: { ...opts, gemini: { ...opts.gemini, temperature } } }));
+    }
+  };
   const showDeprecatedModels = useUiStore((s) => s.showDeprecatedModels);
   const canToggleDeprecated = config.judgeProvider !== 'ollama';
   const effectiveJudgeModels = ensureModelInList(
@@ -166,20 +190,14 @@ export function AuditTabPanel({
             />
           </div>
         )}
-        {config.judgeProvider === 'anthropic' && (
+        {judgeTemperatureAllowed && (
           <div className="flex items-center gap-2">
             <FieldLabel icon={<Thermometer size={11} className="text-editorial-warning shrink-0" />}>
               {t('pipeline.temperature')}
             </FieldLabel>
             <TemperatureControl
-              value={config.reviewProviderOptions?.anthropic?.temperature}
-              onChange={(temperature) => {
-                const opts = config.reviewProviderOptions ?? {};
-                setConfig((prev) => ({
-                  ...prev,
-                  reviewProviderOptions: { ...opts, anthropic: { ...opts.anthropic, temperature } },
-                }));
-              }}
+              value={currentJudgeTemperature}
+              onChange={handleJudgeTemperatureChange}
             />
           </div>
         )}

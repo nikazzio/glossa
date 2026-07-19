@@ -125,6 +125,35 @@ export function StageCard({
     return defaultEffort;
   })();
 
+  // OpenAI/DeepSeek reject or silently ignore temperature while actively reasoning;
+  // Anthropic has no such restriction, and Gemini accepts it alongside thinking budget.
+  const temperatureAllowed =
+    stage.provider === 'anthropic' ||
+    stage.provider === 'gemini' ||
+    ((stage.provider === 'openai' || stage.provider === 'deepseek') &&
+      (resolvedReasoning === 'non_reasoning' || currentReasoningEffort === 'none'));
+
+  const currentTemperature = (() => {
+    if (stage.provider === 'anthropic') return stage.providerOptions?.anthropic?.temperature;
+    if (stage.provider === 'openai') return stage.providerOptions?.openai?.temperature;
+    if (stage.provider === 'deepseek') return stage.providerOptions?.deepseek?.temperature;
+    if (stage.provider === 'gemini') return stage.providerOptions?.gemini?.temperature;
+    return undefined;
+  })();
+
+  const handleTemperatureChange = (temperature: number | undefined) => {
+    const opts = stage.providerOptions ?? {};
+    if (stage.provider === 'anthropic') {
+      onUpdate({ providerOptions: { ...opts, anthropic: { ...opts.anthropic, temperature } } });
+    } else if (stage.provider === 'openai') {
+      onUpdate({ providerOptions: { ...opts, openai: { ...opts.openai, temperature } } });
+    } else if (stage.provider === 'deepseek') {
+      onUpdate({ providerOptions: { ...opts, deepseek: { ...opts.deepseek, temperature } } });
+    } else if (stage.provider === 'gemini') {
+      onUpdate({ providerOptions: { ...opts, gemini: { ...opts.gemini, temperature } } });
+    }
+  };
+
   const handleReasoningChange = (effort: ReasoningEffortLevel) => {
     const opts = stage.providerOptions ?? {};
     if (stage.provider === 'openai') {
@@ -315,18 +344,15 @@ export function StageCard({
             />
           </div>
         )}
-        {stage.provider === 'anthropic' && (
+        {temperatureAllowed && (
           <div className="flex items-center gap-2">
             <FieldLabel icon={<Thermometer size={11} className="text-editorial-warning shrink-0" />}>
               {t('pipeline.temperature')}
             </FieldLabel>
             <TemperatureControl
-              value={stage.providerOptions?.anthropic?.temperature}
+              value={currentTemperature}
               disabled={modelDisabled}
-              onChange={(temperature) => {
-                const opts = stage.providerOptions ?? {};
-                onUpdate({ providerOptions: { ...opts, anthropic: { ...opts.anthropic, temperature } } });
-              }}
+              onChange={handleTemperatureChange}
             />
           </div>
         )}

@@ -57,6 +57,9 @@ pub struct OpenAiCacheConfig {
     pub prompt_cache_key: Option<String>,
     pub prompt_cache_retention: Option<String>,
     pub reasoning_effort: Option<String>,
+    /// 0.0-2.0. Only applied when reasoning is effectively off — GPT-5.x and
+    /// DeepSeek-v4 both reject/ignore temperature while actively reasoning.
+    pub temperature: Option<f32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -65,6 +68,8 @@ pub struct GeminiCacheConfig {
     pub explicit_caching: Option<bool>,
     pub cache_ttl_seconds: Option<u32>,
     pub thinking_budget: Option<i32>,
+    /// 0.0-2.0. Coexists with thinkingBudget without conflict on Gemini's API.
+    pub temperature: Option<f32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -192,6 +192,19 @@ impl OpenAiCompatibleProvider {
         }
     }
 
+    /// Attaches `temperature` to the request body, but only when reasoning is
+    /// effectively off — GPT-5.x rejects the parameter outright while actively
+    /// reasoning, and DeepSeek-v4 thinking mode silently ignores it, so sending
+    /// it there would be misleading (looks configured, has zero effect).
+    fn apply_temperature(&self, req: &LlmRequest<'_>, body: &mut Value) {
+        if self.reasoning_requested(req) {
+            return;
+        }
+        if let Some(temperature) = self.openai_cache_config(req).and_then(|cfg| cfg.temperature) {
+            body["temperature"] = serde_json::json!(temperature.clamp(0.0, 2.0));
+        }
+    }
+
     /// Attaches `prompt_cache_key` (and optionally `prompt_cache_retention`) to
     /// a request body. Applies to both Chat Completions and Responses API paths.
     fn apply_cache_fields(&self, req: &LlmRequest<'_>, body: &mut Value) {
@@ -286,6 +299,7 @@ impl OpenAiCompatibleProvider {
             }
         }
         self.apply_reasoning_effort(req, &mut body);
+        self.apply_temperature(req, &mut body);
         self.apply_cache_fields(req, &mut body);
 
         let resp = client
@@ -362,6 +376,7 @@ impl OpenAiCompatibleProvider {
             }
         }
         self.apply_reasoning_effort(req, &mut body);
+        self.apply_temperature(req, &mut body);
         self.apply_cache_fields(req, &mut body);
 
         client
@@ -516,6 +531,7 @@ impl LlmProvider for OpenAiCompatibleProvider {
         }
         self.apply_cache_fields(req, &mut body);
         self.apply_reasoning_effort(req, &mut body);
+        self.apply_temperature(req, &mut body);
 
         let mut request = client.post(&url).json(&body);
         if !req.api_key.is_empty() {
@@ -580,6 +596,7 @@ impl LlmProvider for OpenAiCompatibleProvider {
         });
         self.apply_cache_fields(req, &mut body);
         self.apply_reasoning_effort(req, &mut body);
+        self.apply_temperature(req, &mut body);
 
         let mut request = client.post(&url).json(&body);
         if !req.api_key.is_empty() {
@@ -590,5 +607,74 @@ impl LlmProvider for OpenAiCompatibleProvider {
             .send()
             .await
             .map_err(|e| format!("API request failed: {e}"))
+    }
+}
+
+#[cfg(test)]
+mod temperature_tests {
+    use super::*;
+    use crate::llm::types::{OpenAiCacheConfig, PromptBlock, ProviderRuntimeConfig, StructuredPrompt};
+
+    fn request_with(
+        provider_options: Option<&'static ProviderRuntimeConfig>,
+    ) -> LlmRequest<'static> {
+        let structured = Box::leak(Box::new(StructuredPrompt {
+            system: vec![PromptBlock {
+                text: "system".to_string(),
+                cacheable: false,
+            }],
+            user: "hello".to_string(),
+        }));
+        LlmRequest {
+            model: "gpt-5.1",
+            structured,
+            api_key: "key",
+            json_mode: false,
+            json_schema_strict: false,
+            provider_options,
+        }
+    }
+
+    fn openai_config(reasoning_effort: Option<&str>, temperature: Option<f32>) -> &'static ProviderRuntimeConfig {
+        Box::leak(Box::new(ProviderRuntimeConfig {
+            ollama: None,
+            openai: Some(OpenAiCacheConfig {
+                prompt_cache_key: None,
+                prompt_cache_retention: None,
+                reasoning_effort: reasoning_effort.map(str::to_string),
+                temperature,
+            }),
+            deepseek: None,
+            gemini: None,
+            deepl: None,
+            anthropic: None,
+        }))
+    }
+
+    #[test]
+    fn applies_temperature_when_reasoning_not_requested() {
+        let prov = openai();
+        let req = request_with(Some(openai_config(None, Some(0.3))));
+        let mut body = serde_json::json!({});
+        prov.apply_temperature(&req, &mut body);
+        assert_eq!(body["temperature"], serde_json::json!(0.3_f32));
+    }
+
+    #[test]
+    fn skips_temperature_when_reasoning_is_active() {
+        let prov = openai();
+        let req = request_with(Some(openai_config(Some("high"), Some(0.3))));
+        let mut body = serde_json::json!({});
+        prov.apply_temperature(&req, &mut body);
+        assert!(body.get("temperature").is_none());
+    }
+
+    #[test]
+    fn clamps_out_of_range_temperature() {
+        let prov = openai();
+        let req = request_with(Some(openai_config(None, Some(5.0))));
+        let mut body = serde_json::json!({});
+        prov.apply_temperature(&req, &mut body);
+        assert_eq!(body["temperature"], serde_json::json!(2.0));
     }
 }

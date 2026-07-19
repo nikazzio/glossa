@@ -113,6 +113,7 @@ impl LlmProvider for GeminiProvider {
             serde_json::json!({})
         };
         apply_thinking_config(req, &mut gen_config);
+        apply_temperature_config(req, &mut gen_config);
 
         let mut body = serde_json::json!({
             "contents": [{ "role": "user", "parts": [{"text": req.structured.user}] }],
@@ -197,6 +198,7 @@ impl LlmProvider for GeminiProvider {
 
         let mut gen_config = serde_json::json!({});
         apply_thinking_config(req, &mut gen_config);
+        apply_temperature_config(req, &mut gen_config);
 
         let mut body = serde_json::json!({
             "contents": [{ "role": "user", "parts": [{"text": req.structured.user}] }],
@@ -226,6 +228,15 @@ fn gemini_cache_config<'a>(req: &'a LlmRequest<'_>) -> Option<&'a GeminiCacheCon
 fn apply_thinking_config(req: &LlmRequest<'_>, gen_config: &mut Value) {
     if let Some(budget) = gemini_cache_config(req).and_then(|cfg| cfg.thinking_budget) {
         gen_config["thinkingConfig"] = json!({ "thinkingBudget": budget });
+    }
+}
+
+/// Attaches `temperature` to `generationConfig`. Unlike OpenAI/DeepSeek reasoning
+/// models, Gemini's API accepts temperature alongside thinkingConfig without
+/// conflict, so this is applied unconditionally when set.
+fn apply_temperature_config(req: &LlmRequest<'_>, gen_config: &mut Value) {
+    if let Some(temperature) = gemini_cache_config(req).and_then(|cfg| cfg.temperature) {
+        gen_config["temperature"] = json!(temperature.clamp(0.0, 2.0));
     }
 }
 
@@ -345,4 +356,75 @@ async fn ensure_gemini_cached_content(
     }
 
     Ok(Some(cache_name))
+}
+
+#[cfg(test)]
+mod temperature_tests {
+    use super::*;
+    use crate::llm::provider::LlmRequest;
+    use crate::llm::types::{GeminiCacheConfig, PromptBlock, ProviderRuntimeConfig, StructuredPrompt};
+
+    fn request_with(gemini: Option<GeminiCacheConfig>) -> LlmRequest<'static> {
+        let structured = Box::leak(Box::new(StructuredPrompt {
+            system: vec![PromptBlock {
+                text: "system".to_string(),
+                cacheable: false,
+            }],
+            user: "hello".to_string(),
+        }));
+        let provider_options = gemini.map(|gemini| {
+            &*Box::leak(Box::new(ProviderRuntimeConfig {
+                ollama: None,
+                openai: None,
+                deepseek: None,
+                gemini: Some(gemini),
+                deepl: None,
+                anthropic: None,
+            }))
+        });
+        LlmRequest {
+            model: "gemini-3-pro",
+            structured,
+            api_key: "key",
+            json_mode: false,
+            json_schema_strict: false,
+            provider_options,
+        }
+    }
+
+    #[test]
+    fn sets_temperature_when_configured() {
+        let req = request_with(Some(GeminiCacheConfig {
+            explicit_caching: None,
+            cache_ttl_seconds: None,
+            thinking_budget: None,
+            temperature: Some(0.4),
+        }));
+        let mut gen_config = serde_json::json!({});
+        apply_temperature_config(&req, &mut gen_config);
+        assert_eq!(gen_config["temperature"], serde_json::json!(0.4_f32));
+    }
+
+    #[test]
+    fn coexists_with_thinking_budget() {
+        let req = request_with(Some(GeminiCacheConfig {
+            explicit_caching: None,
+            cache_ttl_seconds: None,
+            thinking_budget: Some(8192),
+            temperature: Some(0.2),
+        }));
+        let mut gen_config = serde_json::json!({});
+        apply_thinking_config(&req, &mut gen_config);
+        apply_temperature_config(&req, &mut gen_config);
+        assert_eq!(gen_config["thinkingConfig"]["thinkingBudget"], serde_json::json!(8192));
+        assert_eq!(gen_config["temperature"], serde_json::json!(0.2_f32));
+    }
+
+    #[test]
+    fn omits_temperature_when_unset() {
+        let req = request_with(None);
+        let mut gen_config = serde_json::json!({});
+        apply_temperature_config(&req, &mut gen_config);
+        assert!(gen_config.get("temperature").is_none());
+    }
 }

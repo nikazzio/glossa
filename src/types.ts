@@ -64,16 +64,22 @@ export interface OpenAICacheConfig {
   promptCacheKey?: string;
   promptCacheRetention?: 'in_memory' | '24h';
   reasoningEffort?: ReasoningEffortLevel;
+  /** 0.0-2.0. Only applied when reasoning is effectively off (GPT-5.x rejects it while reasoning). */
+  temperature?: number;
 }
 
 export interface DeepSeekConfig {
   reasoningEffort?: ReasoningEffortLevel;
+  /** 0.0-2.0. Ignored (no-op, no error) while DeepSeek-v4 thinking mode is active. */
+  temperature?: number;
 }
 
 export interface GeminiCacheConfig {
   explicitCaching?: boolean;
   cacheTtlSeconds?: number;
   thinkingBudget?: number | null; // 0 = disabled, null = provider default
+  /** 0.0-2.0. Coexists with thinkingBudget without conflict on Gemini's API. */
+  temperature?: number;
 }
 
 export interface DeeplConfig {
