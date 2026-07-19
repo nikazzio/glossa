@@ -91,12 +91,18 @@ export interface DeeplLanguageInfo {
   supportsFormality?: boolean;
 }
 
+export interface AnthropicConfig {
+  /** 0.0-1.0. Unset lets Anthropic use its own default (1.0). */
+  temperature?: number;
+}
+
 export interface ProviderRuntimeConfig {
   ollama?: OllamaConfig;
   openai?: OpenAICacheConfig;
   deepseek?: DeepSeekConfig;
   gemini?: GeminiCacheConfig;
   deepl?: DeeplConfig;
+  anthropic?: AnthropicConfig;
 }
 
 export interface GlossaryEntry {

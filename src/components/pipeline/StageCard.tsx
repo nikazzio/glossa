@@ -10,6 +10,7 @@ import {
   Pencil,
   RefreshCw,
   RotateCcw,
+  Thermometer,
   Trash2,
   Wand2,
   WifiOff,
@@ -23,6 +24,7 @@ import type { ReasoningEffortLevel } from '../../types';
 import { DeprecatedModelBadge } from '../models/DeprecatedModelBadge';
 import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
 import { ReasoningPicker } from '../models/ReasoningPicker';
+import { TemperatureControl } from '../models/TemperatureControl';
 import { ProviderRuntimeEditor } from './ProviderRuntimeEditor';
 import { canRefineWithProvider, formatProviderModelLabel, type ProviderKeyStatusMap } from '../../hooks/useProviderKeyStatus';
 import { useConfigStore } from '../../stores/configStore';
@@ -310,6 +312,21 @@ export function StageCard({
               showNone={resolvedReasoning === 'optional'}
               disabled={modelDisabled}
               onChange={handleReasoningChange}
+            />
+          </div>
+        )}
+        {stage.provider === 'anthropic' && (
+          <div className="flex items-center gap-2">
+            <FieldLabel icon={<Thermometer size={11} className="text-editorial-warning shrink-0" />}>
+              {t('pipeline.temperature')}
+            </FieldLabel>
+            <TemperatureControl
+              value={stage.providerOptions?.anthropic?.temperature}
+              disabled={modelDisabled}
+              onChange={(temperature) => {
+                const opts = stage.providerOptions ?? {};
+                onUpdate({ providerOptions: { ...opts, anthropic: { ...opts.anthropic, temperature } } });
+              }}
             />
           </div>
         )}

@@ -253,6 +253,8 @@
       "non_reasoning": "Diretto",
       "optional": "Adattivo"
     },
+    "temperature": "Temperature",
+    "temperatureDefault": "predefinito",
     "reasoningEffort": "Ragionamento",
     "reasoningEffortNone": "Off",
     "reasoningEffortLow": "Basso",

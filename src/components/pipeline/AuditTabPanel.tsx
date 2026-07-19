@@ -1,4 +1,4 @@
-import { AlertTriangle, Cpu, RefreshCw, Scale, Wand2 } from 'lucide-react';
+import { AlertTriangle, Cpu, RefreshCw, Scale, Thermometer, Wand2 } from 'lucide-react';
 import type { Dispatch, SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ModelProvider, PipelineConfig, PromptTemplate, ReasoningEffortLevel } from '../../types';
@@ -9,6 +9,7 @@ import { DEFAULT_COHERENCE_PROMPT, DEFAULT_JUDGE_PROMPT } from '../../constants'
 import { SectionLabel, ToggleRow, FieldLabel, Select } from '../ui';
 import { DeprecatedModelBadge } from '../models/DeprecatedModelBadge';
 import { ReasoningPicker } from '../models/ReasoningPicker';
+import { TemperatureControl } from '../models/TemperatureControl';
 import { ProviderRuntimeEditor } from './ProviderRuntimeEditor';
 import { AuditPromptEditor } from './AuditPromptEditor';
 import { useUiStore } from '../../stores/uiStore';
@@ -162,6 +163,23 @@ export function AuditTabPanel({
               value={currentJudgeReasoningEffort}
               showNone={judgeResolvedReasoning === 'optional'}
               onChange={handleJudgeReasoningChange}
+            />
+          </div>
+        )}
+        {config.judgeProvider === 'anthropic' && (
+          <div className="flex items-center gap-2">
+            <FieldLabel icon={<Thermometer size={11} className="text-editorial-warning shrink-0" />}>
+              {t('pipeline.temperature')}
+            </FieldLabel>
+            <TemperatureControl
+              value={config.reviewProviderOptions?.anthropic?.temperature}
+              onChange={(temperature) => {
+                const opts = config.reviewProviderOptions ?? {};
+                setConfig((prev) => ({
+                  ...prev,
+                  reviewProviderOptions: { ...opts, anthropic: { ...opts.anthropic, temperature } },
+                }));
+              }}
             />
           </div>
         )}

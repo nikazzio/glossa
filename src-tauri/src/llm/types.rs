@@ -69,12 +69,20 @@ pub struct GeminiCacheConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct AnthropicConfig {
+    /// 0.0-1.0. `None` lets Anthropic use its own default (1.0).
+    pub temperature: Option<f32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProviderRuntimeConfig {
     pub ollama: Option<OllamaConfig>,
     pub openai: Option<OpenAiCacheConfig>,
     pub deepseek: Option<OpenAiCacheConfig>,
     pub gemini: Option<GeminiCacheConfig>,
     pub deepl: Option<crate::deepl::types::DeeplConfig>,
+    pub anthropic: Option<AnthropicConfig>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
