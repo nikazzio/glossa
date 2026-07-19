@@ -485,7 +485,7 @@
     "contextWindowBadge": "{{count}} ctx",
     "panelTitle": "Configurazione",
     "providerTab": "Provider",
-    "phraseMemoryTab": "Phrase Memory",
+    "phraseMemoryTab": "Memoria frasi",
     "phraseMemoryToggle": "Memoria",
     "phraseMemoryAutoSearch": "Ricerca automatica",
     "phraseMemoryMaxResults": "Risultati massimi",
