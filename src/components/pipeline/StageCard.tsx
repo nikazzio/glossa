@@ -31,7 +31,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { confirm } from '../../stores/confirmStore';
 import { STAGE_TEMPLATES } from '../../pipeline/pipelineModes';
 import { DeeplStageConfig } from './DeeplStageConfig';
-import { IconButton, SectionLabel, FieldLabel } from '../ui';
+import { IconButton, SectionLabel, FieldLabel, Select } from '../ui';
 
 interface StageCardProps {
   stage: PipelineStageConfig;
@@ -217,34 +217,36 @@ export function StageCard({
       <div className="space-y-3 border-l-4 border-l-editorial-charcoal/30 border-y border-editorial-border/70 bg-editorial-bg/65 px-5 py-4">
         <SectionLabel icon={Cpu} label={t('pipeline.stageModelLabel')} />
         <div className="flex items-center gap-2">
-          <select
+          <Select
             value={stage.provider}
-            onChange={(e) => handleProviderChange(e.target.value as ModelProvider)}
+            onChange={(value) => handleProviderChange(value as ModelProvider)}
             disabled={modelDisabled}
-            className="rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
-            aria-label={t('models.provider')}
-          >
-            {LLM_PROVIDER_ORDER.map((p) => (
-              <option key={p} value={p} disabled={p !== 'ollama' && (keyStatuses as Partial<Record<string, boolean>>)[p] === false}>{p}</option>
-            ))}
-            <option key="custom" value="custom">custom</option>
-          </select>
+            className="font-bold uppercase"
+            ariaLabel={t('models.provider')}
+            options={[
+              ...LLM_PROVIDER_ORDER.map((p) => ({
+                value: p,
+                label: p,
+                disabled: p !== 'ollama' && (keyStatuses as Partial<Record<string, boolean>>)[p] === false,
+              })),
+              { value: 'custom', label: 'custom' },
+            ]}
+          />
           {stage.provider === 'custom' ? (
             <div className="flex flex-1 flex-col gap-1.5">
-              <select
+              <Select
                 value={stage.customProviderId ?? ''}
-                onChange={(e) => onUpdate({ customProviderId: e.target.value || undefined })}
+                onChange={(value) => onUpdate({ customProviderId: value || undefined })}
                 disabled={modelDisabled}
-                className="flex-1 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
-                aria-label={t('settings.customProvider.sectionTitle')}
-              >
-                {customProfiles.length === 0 && (
-                  <option value="">{t('settings.customProvider.add')}</option>
-                )}
-                {customProfiles.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
+                className="flex-1"
+                ariaLabel={t('settings.customProvider.sectionTitle')}
+                options={[
+                  ...(customProfiles.length === 0
+                    ? [{ value: '', label: t('settings.customProvider.add') }]
+                    : []),
+                  ...customProfiles.map((p) => ({ value: p.id, label: p.name })),
+                ]}
+              />
               <input
                 value={stage.model}
                 onChange={(e) => handleModelChange(e.target.value)}
@@ -256,21 +258,17 @@ export function StageCard({
             </div>
           ) : effectiveModelOptions.length > 0 ? (
             <div className="flex flex-1 items-center gap-1.5">
-              <select
+              <Select
                 value={stage.model}
-                onChange={(e) => handleModelChange(e.target.value)}
+                onChange={handleModelChange}
                 disabled={modelDisabled}
-                className="flex-1 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-40 disabled:cursor-not-allowed"
-                aria-label={t('pipeline.stageModelLabel')}
-              >
-                {effectiveModelOptions.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                    {getModelStatus(stage.provider, m) === 'preview' ? ' (preview)' : ''}
-                    {getModelStatus(stage.provider, m) === 'deprecated' ? ' (superato)' : ''}
-                  </option>
-                ))}
-              </select>
+                className="flex-1"
+                ariaLabel={t('pipeline.stageModelLabel')}
+                options={effectiveModelOptions.map((m) => ({
+                  value: m,
+                  label: `${m}${getModelStatus(stage.provider, m) === 'preview' ? ' (preview)' : ''}${getModelStatus(stage.provider, m) === 'deprecated' ? ' (superato)' : ''}`,
+                }))}
+              />
               <ModelCapabilityHint provider={stage.provider} model={stage.model} iconOnly />
               <DeprecatedModelBadge provider={stage.provider} model={stage.model} />
             </div>

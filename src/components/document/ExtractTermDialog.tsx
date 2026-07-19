@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Dialog, DialogConfirmButton, DialogCancelButton } from '../ui';
+import { Dialog, DialogConfirmButton, DialogCancelButton, Select } from '../ui';
 import { listGlossaries, addGlossaryEntry, createGlossary } from '../../services/glossaryService';
 import { extractTermFromPhrase } from '../../services/llmService';
 import { usePipelineStore } from '../../stores/pipelineStore';
@@ -159,14 +159,16 @@ export function ExtractTermDialog({ sourcePhrase, targetPhrase, onClose, onSucce
               className="mb-1 block text-[11px] font-sans uppercase tracking-[0.1em] text-editorial-muted">
               {t('glossary.selectGlossary')}
             </label>
-            <select id="extract-glossary-select" value={selectedGlossaryId ?? ''}
-              onChange={(e) => setSelectedGlossaryId(e.target.value || null)}
-              aria-label={t('glossary.selectGlossary')}
-              className="w-full rounded-md border border-editorial-border bg-editorial-textbox/60 px-3 py-2 text-sm text-editorial-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent">
-              <option value="">{t('glossary.noGlossarySelected')}</option>
-              {glossaries.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-              <option value={CREATE_NEW_GLOSSARY}>{t('glossary.createNewInline')}</option>
-            </select>
+            <Select id="extract-glossary-select" value={selectedGlossaryId ?? ''}
+              onChange={(value) => setSelectedGlossaryId(value || null)}
+              ariaLabel={t('glossary.selectGlossary')}
+              className="w-full"
+              options={[
+                { value: '', label: t('glossary.noGlossarySelected') },
+                ...glossaries.map((g) => ({ value: g.id, label: g.name })),
+                { value: CREATE_NEW_GLOSSARY, label: t('glossary.createNewInline') },
+              ]}
+            />
             {isCreatingNew && (
               <input type="text" value={newGlossaryName}
                 onChange={(e) => setNewGlossaryName(e.target.value)}

@@ -5,7 +5,7 @@ import { deeplService } from '../../services/deeplService';
 import type { DeeplConfig, DeeplLanguageInfo, GlossaryEntry } from '../../types';
 import type { DeeplGlossaryInfo } from '../../services/deeplService';
 import { DEFAULT_DEEPL_STAGE_OPTIONS, toDeeplCode } from '../../constants';
-import { IconButton, SectionLabel, ToggleRow } from '../ui';
+import { IconButton, SectionLabel, Select, ToggleRow } from '../ui';
 import { confirm } from '../../stores/confirmStore';
 
 interface DeeplStageConfigProps {
@@ -120,16 +120,17 @@ export function DeeplStageConfig({
           <label htmlFor="deepl-model-type" className="text-xs font-sans uppercase tracking-[0.1em] text-editorial-muted">
             {t('pipeline.deepl.modelType', 'Modalità traduzione')}
           </label>
-          <select
+          <Select
             id="deepl-model-type"
-            className="w-full rounded-md border border-editorial-border bg-editorial-textbox px-2 py-1.5 text-xs font-sans text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            className="w-full"
             value={config.modelType ?? 'prefer_quality_optimized'}
-            onChange={(e) => update({ modelType: e.target.value as DeeplConfig['modelType'] })}
-          >
-            <option value="prefer_quality_optimized">{t('pipeline.deepl.preferQuality', 'Qualità (raccomandato)')}</option>
-            <option value="quality_optimized">{t('pipeline.deepl.qualityOnly', 'Solo qualità')}</option>
-            <option value="latency_optimized">{t('pipeline.deepl.latency', 'Velocità')}</option>
-          </select>
+            onChange={(value) => update({ modelType: value as DeeplConfig['modelType'] })}
+            options={[
+              { value: 'prefer_quality_optimized', label: t('pipeline.deepl.preferQuality', 'Qualità (raccomandato)') },
+              { value: 'quality_optimized', label: t('pipeline.deepl.qualityOnly', 'Solo qualità') },
+              { value: 'latency_optimized', label: t('pipeline.deepl.latency', 'Velocità') },
+            ]}
+          />
         </div>
 
         {/* 3. Registro formalità (condizionale) */}
@@ -138,18 +139,19 @@ export function DeeplStageConfig({
             <label htmlFor="deepl-formality" className="text-xs font-sans uppercase tracking-[0.1em] text-editorial-muted">
               {t('pipeline.deepl.formality', 'Registro')}
             </label>
-            <select
+            <Select
               id="deepl-formality"
-              className="w-full rounded-md border border-editorial-border bg-editorial-textbox px-2 py-1.5 text-xs font-sans text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+              className="w-full"
               value={config.formality ?? 'default'}
-              onChange={(e) => update({ formality: e.target.value as DeeplConfig['formality'] })}
-            >
-              <option value="default">{t('pipeline.deepl.formalityDefault', 'Predefinito')}</option>
-              <option value="prefer_more">{t('pipeline.deepl.formalityPreferMore', 'Formale (se supportato)')}</option>
-              <option value="more">{t('pipeline.deepl.formalityMore', 'Formale')}</option>
-              <option value="prefer_less">{t('pipeline.deepl.formalityPreferLess', 'Informale (se supportato)')}</option>
-              <option value="less">{t('pipeline.deepl.formalityLess', 'Informale')}</option>
-            </select>
+              onChange={(value) => update({ formality: value as DeeplConfig['formality'] })}
+              options={[
+                { value: 'default', label: t('pipeline.deepl.formalityDefault', 'Predefinito') },
+                { value: 'prefer_more', label: t('pipeline.deepl.formalityPreferMore', 'Formale (se supportato)') },
+                { value: 'more', label: t('pipeline.deepl.formalityMore', 'Formale') },
+                { value: 'prefer_less', label: t('pipeline.deepl.formalityPreferLess', 'Informale (se supportato)') },
+                { value: 'less', label: t('pipeline.deepl.formalityLess', 'Informale') },
+              ]}
+            />
           </div>
         )}
       </div>
@@ -159,23 +161,24 @@ export function DeeplStageConfig({
         <div className="space-y-3">
           <SectionLabel icon={BookOpen} label={t('pipeline.deepl.glossary', 'Glossario DeepL')} />
           <div className="flex items-center gap-2">
-            <select
-              className="flex-1 rounded-md border border-editorial-border bg-editorial-textbox px-2 py-1.5 text-xs font-sans text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
+            <Select
+              className="flex-1"
               value={config.glossaryId ?? ''}
-              onChange={(e) => update({ glossaryId: e.target.value || undefined })}
-              aria-label={t('pipeline.deepl.glossary', 'Glossario DeepL')}
-            >
-              <option value="">
-                {glossariesLoading
-                  ? t('common.loading', 'Caricamento…')
-                  : t('pipeline.deepl.noGlossary', 'Nessun glossario')}
-              </option>
-              {filteredGlossaries.map((g) => (
-                <option key={g.glossaryId} value={g.glossaryId}>
-                  {g.name} ({g.entryCount} termini)
-                </option>
-              ))}
-            </select>
+              onChange={(value) => update({ glossaryId: value || undefined })}
+              ariaLabel={t('pipeline.deepl.glossary', 'Glossario DeepL')}
+              options={[
+                {
+                  value: '',
+                  label: glossariesLoading
+                    ? t('common.loading', 'Caricamento…')
+                    : t('pipeline.deepl.noGlossary', 'Nessun glossario'),
+                },
+                ...filteredGlossaries.map((g) => ({
+                  value: g.glossaryId,
+                  label: `${g.name} (${g.entryCount} termini)`,
+                })),
+              ]}
+            />
             {config.glossaryId && (
               <IconButton
                 size="sm"

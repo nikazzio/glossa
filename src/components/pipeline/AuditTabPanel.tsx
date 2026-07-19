@@ -6,7 +6,7 @@ import type { ProviderKeyStatusMap } from '../../hooks/useProviderKeyStatus';
 import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
 import { ensureModelInList, getKnownModelIds, getModelStatus, getResolvedModelReasoning, LLM_PROVIDER_ORDER } from '../../models/catalog';
 import { DEFAULT_COHERENCE_PROMPT, DEFAULT_JUDGE_PROMPT } from '../../constants';
-import { SectionLabel, ToggleRow, FieldLabel } from '../ui';
+import { SectionLabel, ToggleRow, FieldLabel, Select } from '../ui';
 import { DeprecatedModelBadge } from '../models/DeprecatedModelBadge';
 import { ReasoningPicker } from '../models/ReasoningPicker';
 import { ProviderRuntimeEditor } from './ProviderRuntimeEditor';
@@ -107,32 +107,29 @@ export function AuditTabPanel({
       <div className="space-y-3 border-l-4 border-l-editorial-charcoal/30 border-y border-editorial-border/70 bg-editorial-bg/65 px-5 py-4">
         <SectionLabel icon={Cpu} label={t('pipeline.auditModelLabel')} />
         <div className="flex gap-2">
-          <select
+          <Select
             value={config.judgeProvider}
-            onChange={(e) => handleJudgeProviderChange(e.target.value as ModelProvider)}
-            className="rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-bold uppercase outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            aria-label={t('models.provider')}
-          >
-            {LLM_PROVIDER_ORDER.map((p) => (
-              <option key={p} value={p} disabled={p !== 'ollama' && (keyStatuses as Partial<Record<string, boolean>>)[p] === false}>{p}</option>
-            ))}
-          </select>
+            onChange={(value) => handleJudgeProviderChange(value as ModelProvider)}
+            className="font-bold uppercase"
+            ariaLabel={t('models.provider')}
+            options={LLM_PROVIDER_ORDER.map((p) => ({
+              value: p,
+              label: p,
+              disabled: p !== 'ollama' && (keyStatuses as Partial<Record<string, boolean>>)[p] === false,
+            }))}
+          />
           {effectiveJudgeModels.length > 0 ? (
             <div className="flex flex-1 items-center gap-1.5">
-              <select
+              <Select
                 value={config.judgeModel}
-                onChange={(e) => handleJudgeModelChange(e.target.value)}
-                className="flex-1 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                aria-label={t('pipeline.auditModelLabel')}
-              >
-                {effectiveJudgeModels.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                    {getModelStatus(config.judgeProvider, m) === 'preview' ? ' (preview)' : ''}
-                    {getModelStatus(config.judgeProvider, m) === 'deprecated' ? ' (superato)' : ''}
-                  </option>
-                ))}
-              </select>
+                onChange={handleJudgeModelChange}
+                className="flex-1"
+                ariaLabel={t('pipeline.auditModelLabel')}
+                options={effectiveJudgeModels.map((m) => ({
+                  value: m,
+                  label: `${m}${getModelStatus(config.judgeProvider, m) === 'preview' ? ' (preview)' : ''}${getModelStatus(config.judgeProvider, m) === 'deprecated' ? ' (superato)' : ''}`,
+                }))}
+              />
               <DeprecatedModelBadge provider={config.judgeProvider} model={config.judgeModel} />
             </div>
           ) : config.judgeProvider === 'ollama' ? (
@@ -144,18 +141,16 @@ export function AuditTabPanel({
               aria-label={t('pipeline.auditModelLabel')}
             />
           ) : (
-            <select
+            <Select
               value={config.judgeModel}
-              onChange={(e) => handleJudgeModelChange(e.target.value)}
-              className="flex-1 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              aria-label={t('pipeline.auditModelLabel')}
-            >
-              {getKnownModelIds(config.judgeProvider).map((m) => (
-                <option key={m} value={m}>
-                  {m}{getModelStatus(config.judgeProvider, m) === 'preview' ? ' (preview)' : ''}
-                </option>
-              ))}
-            </select>
+              onChange={handleJudgeModelChange}
+              className="flex-1"
+              ariaLabel={t('pipeline.auditModelLabel')}
+              options={getKnownModelIds(config.judgeProvider).map((m) => ({
+                value: m,
+                label: `${m}${getModelStatus(config.judgeProvider, m) === 'preview' ? ' (preview)' : ''}`,
+              }))}
+            />
           )}
         </div>
         {judgeResolvedReasoning !== undefined && judgeResolvedReasoning !== 'non_reasoning' && config.judgeProvider !== 'ollama' && (

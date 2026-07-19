@@ -36,7 +36,7 @@ export function Menu({ open, onOpenChange, items, anchorRect }: MenuProps) {
           side="bottom"
           align="start"
           sideOffset={4}
-          className="z-[210] min-w-[200px] overflow-hidden rounded-2xl border border-editorial-border bg-editorial-page py-1.5 shadow-[var(--shadow-warm-md)]"
+          className="z-[210] min-w-[200px] overflow-hidden rounded-xl border border-editorial-border bg-editorial-page py-1.5 shadow-[var(--shadow-warm-md)]"
         >
           {items.map((item) => (
             <DropdownMenu.Item

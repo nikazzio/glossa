@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { exportWorkspace, importWorkspace } from '../../services/backupService';
 import { regenerateAllEmbeddings } from '../../services/phraseMemoryService';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
-import { Dialog, IconButton, DialogConfirmButton, FieldLabel } from '../ui';
+import { Dialog, IconButton, DialogConfirmButton, FieldLabel, Select } from '../ui';
 import { MemoryExtractorSettings } from './MemoryExtractorSettings';
 import type { EmbeddingModel, ModelProvider } from '../../types';
 
@@ -217,15 +217,16 @@ export function WorkspaceSettingsModal({ open, onClose }: Props) {
                       {t('workspace.embeddingModel')}
                     </FieldLabel>
                     <div className="flex items-center gap-2">
-                      <select
+                      <Select
                         value={embeddingModel}
-                        onChange={(e) => setEmbeddingModel(e.target.value as EmbeddingModel)}
-                        className="flex-1 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-3 py-2 text-xs font-mono text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                        aria-label={t('workspace.embeddingModel')}
-                      >
-                        <option value="text-embedding-3-small">text-embedding-3-small</option>
-                        <option value="text-embedding-3-large">text-embedding-3-large</option>
-                      </select>
+                        onChange={(value) => setEmbeddingModel(value as EmbeddingModel)}
+                        className="flex-1 font-mono"
+                        ariaLabel={t('workspace.embeddingModel')}
+                        options={[
+                          { value: 'text-embedding-3-small', label: 'text-embedding-3-small' },
+                          { value: 'text-embedding-3-large', label: 'text-embedding-3-large' },
+                        ]}
+                      />
                       <IconButton
                         size="md"
                         tone="default"

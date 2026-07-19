@@ -375,7 +375,7 @@ export function MarkdownEditor({
   const preview = (
     <div
       data-scroll-sync="true"
-      className={`${fillHeight ? 'flex-1 min-h-0 overflow-y-auto custom-scrollbar' : minHeightClassName} rounded-2xl border border-editorial-border bg-editorial-textbox/60 p-4 ${previewClassName}`}
+      className={`${fillHeight ? 'flex-1 min-h-0 overflow-y-auto custom-scrollbar' : minHeightClassName} rounded-xl border border-editorial-border bg-editorial-textbox/60 p-4 ${previewClassName}`}
       style={effectiveStyle}
     >
       {value.trim() ? (
@@ -492,7 +492,7 @@ export function MarkdownEditor({
         <div className={`sticky top-0 z-20 bg-editorial-page/95 backdrop-blur${fillHeight ? ' shrink-0' : ''}${
           flatToolbar
             ? ' border-b border-editorial-border/60 px-1 py-2'
-            : ' rounded-2xl border border-editorial-border/70 px-3 py-3 shadow-sm'
+            : ' rounded-xl border border-editorial-border/70 px-3 py-3 shadow-sm'
         }`}>
           <div className="flex items-center gap-1.5">
             {markdownEnabled && (

@@ -6,7 +6,7 @@ import { invoke } from '@tauri-apps/api/core';
 import type { PipelineConfig, PipelineMode, PromptTemplate } from '../../types';
 import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
 import { LANGUAGES } from '../../constants';
-import { IconButton, SectionLabel, Tooltip } from '../ui';
+import { IconButton, SectionLabel, Select, Tooltip } from '../ui';
 import { PersonaEditor } from './PersonaEditor';
 import { PhraseMemoryConfig } from './PhraseMemoryConfig';
 
@@ -170,17 +170,14 @@ export function SettingsTabPanel({
       <div className="space-y-2">
         <SectionLabel icon={Globe} label={t('pipeline.languagePair')} />
         <div className={`flex items-center gap-3 transition-opacity ${config.persona ? 'opacity-40 pointer-events-none' : ''}`}>
-          <select
+          <Select
             value={config.sourceLanguage}
-            onChange={(e) => setConfig((prev) => ({ ...prev, sourceLanguage: e.target.value }))}
-            className="w-full rounded-md border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
-            aria-label={t('pipeline.sourceLanguage')}
+            onChange={(value) => setConfig((prev) => ({ ...prev, sourceLanguage: value }))}
+            options={LANGUAGES.map((lang) => ({ value: lang, label: t(`languages.${lang}`) }))}
+            className="w-full font-mono appearance-none"
+            ariaLabel={t('pipeline.sourceLanguage')}
             disabled={!!config.persona}
-          >
-            {LANGUAGES.map((lang) => (
-              <option key={lang} value={lang}>{t(`languages.${lang}`)}</option>
-            ))}
-          </select>
+          />
           <IconButton
             size="md"
             className="shrink-0"
@@ -196,17 +193,14 @@ export function SettingsTabPanel({
           >
             <ArrowRightLeft size={13} />
           </IconButton>
-          <select
+          <Select
             value={config.targetLanguage}
-            onChange={(e) => setConfig((prev) => ({ ...prev, targetLanguage: e.target.value }))}
-            className="w-full rounded-md border border-editorial-border bg-editorial-bg/80 px-3 py-2 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent appearance-none"
-            aria-label={t('pipeline.targetLanguage')}
+            onChange={(value) => setConfig((prev) => ({ ...prev, targetLanguage: value }))}
+            options={LANGUAGES.map((lang) => ({ value: lang, label: t(`languages.${lang}`) }))}
+            className="w-full font-mono appearance-none"
+            ariaLabel={t('pipeline.targetLanguage')}
             disabled={!!config.persona}
-          >
-            {LANGUAGES.map((lang) => (
-              <option key={lang} value={lang}>{t(`languages.${lang}`)}</option>
-            ))}
-          </select>
+          />
         </div>
         {!!config.persona && (
           <p className="text-xs leading-relaxed text-editorial-muted/60">
