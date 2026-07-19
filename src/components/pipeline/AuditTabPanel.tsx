@@ -1,4 +1,4 @@
-import { AlertTriangle, Cpu, RefreshCw, Scale, Thermometer, Wand2 } from 'lucide-react';
+import { AlertTriangle, Cpu, RefreshCw, Scale, Wand2 } from 'lucide-react';
 import type { Dispatch, SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ModelProvider, PipelineConfig, PromptTemplate, ReasoningEffortLevel } from '../../types';
@@ -6,7 +6,7 @@ import type { ProviderKeyStatusMap } from '../../hooks/useProviderKeyStatus';
 import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
 import { ensureModelInList, getKnownModelIds, getModelStatus, getResolvedModelReasoning, LLM_PROVIDER_ORDER } from '../../models/catalog';
 import { DEFAULT_COHERENCE_PROMPT, DEFAULT_JUDGE_PROMPT } from '../../constants';
-import { SectionLabel, ToggleRow, FieldLabel, Select } from '../ui';
+import { SectionLabel, ToggleRow, FieldLabel, Select, Tooltip } from '../ui';
 import { DeprecatedModelBadge } from '../models/DeprecatedModelBadge';
 import { ReasoningPicker } from '../models/ReasoningPicker';
 import { TemperatureControl } from '../models/TemperatureControl';
@@ -57,6 +57,8 @@ export function AuditTabPanel({
 }: AuditTabPanelProps) {
   const { t } = useTranslation();
   const judgeResolvedReasoning = getResolvedModelReasoning(config.judgeProvider, config.judgeModel);
+  const judgeShowReasoningPicker =
+    judgeResolvedReasoning !== undefined && judgeResolvedReasoning !== 'non_reasoning' && config.judgeProvider !== 'ollama';
   const judgeTemperatureAllowed =
     config.judgeProvider === 'anthropic' ||
     config.judgeProvider === 'gemini' ||
@@ -178,27 +180,27 @@ export function AuditTabPanel({
             />
           )}
         </div>
-        {judgeResolvedReasoning !== undefined && judgeResolvedReasoning !== 'non_reasoning' && config.judgeProvider !== 'ollama' && (
-          <div className="flex items-center gap-2">
-            <FieldLabel icon={<Wand2 size={11} className="text-editorial-warning shrink-0" />}>
-              {t('pipeline.reasoningEffort')}
-            </FieldLabel>
-            <ReasoningPicker
-              value={currentJudgeReasoningEffort}
-              showNone={judgeResolvedReasoning === 'optional'}
-              onChange={handleJudgeReasoningChange}
-            />
-          </div>
-        )}
-        {judgeTemperatureAllowed && (
-          <div className="flex items-center gap-2">
-            <FieldLabel icon={<Thermometer size={11} className="text-editorial-warning shrink-0" />}>
-              {t('pipeline.temperature')}
-            </FieldLabel>
-            <TemperatureControl
-              value={currentJudgeTemperature}
-              onChange={handleJudgeTemperatureChange}
-            />
+        {(judgeShowReasoningPicker || judgeTemperatureAllowed) && (
+          <div className="flex items-center gap-3">
+            {judgeShowReasoningPicker && (
+              <div className="flex items-center gap-1.5">
+                <Tooltip label={t('pipeline.reasoningEffort')} side="top">
+                  <Wand2 size={11} className="shrink-0 text-editorial-warning" aria-hidden="true" />
+                </Tooltip>
+                <ReasoningPicker
+                  value={currentJudgeReasoningEffort}
+                  showNone={judgeResolvedReasoning === 'optional'}
+                  onChange={handleJudgeReasoningChange}
+                />
+              </div>
+            )}
+            {judgeTemperatureAllowed && (
+              <TemperatureControl
+                value={currentJudgeTemperature}
+                max={config.judgeProvider === 'anthropic' ? 1 : 2}
+                onChange={handleJudgeTemperatureChange}
+              />
+            )}
           </div>
         )}
         {judgeOllamaOffline && (

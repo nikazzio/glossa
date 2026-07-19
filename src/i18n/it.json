@@ -254,7 +254,7 @@
       "optional": "Adattivo"
     },
     "temperature": "Temperature",
-    "temperatureDefault": "predefinito",
+    "temperatureReset": "Torna al valore predefinito",
     "reasoningEffort": "Ragionamento",
     "reasoningEffortNone": "Off",
     "reasoningEffortLow": "Basso",

@@ -10,7 +10,6 @@ import {
   Pencil,
   RefreshCw,
   RotateCcw,
-  Thermometer,
   Trash2,
   Wand2,
   WifiOff,
@@ -33,7 +32,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { confirm } from '../../stores/confirmStore';
 import { STAGE_TEMPLATES } from '../../pipeline/pipelineModes';
 import { DeeplStageConfig } from './DeeplStageConfig';
-import { IconButton, SectionLabel, FieldLabel, Select } from '../ui';
+import { IconButton, SectionLabel, Select, Tooltip } from '../ui';
 
 interface StageCardProps {
   stage: PipelineStageConfig;
@@ -124,6 +123,9 @@ export function StageCard({
     }
     return defaultEffort;
   })();
+
+  const showReasoningPicker =
+    resolvedReasoning !== undefined && resolvedReasoning !== 'non_reasoning' && stage.provider !== 'ollama';
 
   // OpenAI/DeepSeek reject or silently ignore temperature while actively reasoning;
   // Anthropic has no such restriction, and Gemini accepts it alongside thinking budget.
@@ -331,29 +333,29 @@ export function StageCard({
             {t('pipeline.unlockModelChangeWarning')}
           </p>
         )}
-        {resolvedReasoning !== undefined && resolvedReasoning !== 'non_reasoning' && stage.provider !== 'ollama' && (
-          <div className="flex items-center gap-2">
-            <FieldLabel icon={<Wand2 size={11} className="text-editorial-warning shrink-0" />}>
-              {t('pipeline.reasoningEffort')}
-            </FieldLabel>
-            <ReasoningPicker
-              value={currentReasoningEffort}
-              showNone={resolvedReasoning === 'optional'}
-              disabled={modelDisabled}
-              onChange={handleReasoningChange}
-            />
-          </div>
-        )}
-        {temperatureAllowed && (
-          <div className="flex items-center gap-2">
-            <FieldLabel icon={<Thermometer size={11} className="text-editorial-warning shrink-0" />}>
-              {t('pipeline.temperature')}
-            </FieldLabel>
-            <TemperatureControl
-              value={currentTemperature}
-              disabled={modelDisabled}
-              onChange={handleTemperatureChange}
-            />
+        {(showReasoningPicker || temperatureAllowed) && (
+          <div className="flex items-center gap-3">
+            {showReasoningPicker && (
+              <div className="flex items-center gap-1.5">
+                <Tooltip label={t('pipeline.reasoningEffort')} side="top">
+                  <Wand2 size={11} className="shrink-0 text-editorial-warning" aria-hidden="true" />
+                </Tooltip>
+                <ReasoningPicker
+                  value={currentReasoningEffort}
+                  showNone={resolvedReasoning === 'optional'}
+                  disabled={modelDisabled}
+                  onChange={handleReasoningChange}
+                />
+              </div>
+            )}
+            {temperatureAllowed && (
+              <TemperatureControl
+                value={currentTemperature}
+                max={stage.provider === 'anthropic' ? 1 : 2}
+                disabled={modelDisabled}
+                onChange={handleTemperatureChange}
+              />
+            )}
           </div>
         )}
         {ollamaOffline && !translationsExist && (
