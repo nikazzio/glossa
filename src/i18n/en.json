@@ -1005,7 +1005,22 @@
     "watchdogStuck": "Stuck",
     "watchdogCancel": "Cancel & retry",
     "insightsTabMemory": "Memory",
-    "insightsTabReferences": "References"
+    "insightsTabReferences": "References",
+    "insightsTabPromptPreview": "Preview"
+  },
+  "promptPreview": {
+    "title": "Message preview",
+    "stageLabel": "Stage to preview",
+    "buildButton": "Build preview",
+    "building": "Building…",
+    "systemLabel": "System instructions",
+    "userLabel": "User message",
+    "copyBlock": "Copy this block",
+    "copiedToClipboard": "Copied to clipboard",
+    "emptyNoChunk": "Select a chunk to build the preview.",
+    "emptyBeforeBuild": "Press \"Build preview\" to see the full message for this stage.",
+    "deeplNotice": "This stage uses DeepL: it doesn't generate a text message for a language model.",
+    "buildFailed": "Couldn't build the preview."
   },
   "help": {
     "title": "User Guide",
@@ -1157,7 +1172,9 @@
       "tipTitle": "What this means in practice",
       "tipDesc": "After the first chunk in a group is processed, subsequent chunks in the same group cost less because the provider reuses the cached layers. On long documents with many chunks the savings are significant, especially in editorial mode where three stages run per chunk.",
       "cacheRetentionTitle": "Cache retention per model",
-      "cacheRetentionDesc": "OpenAI uses two different cache policies. Full models (gpt-5.4 and above) use extended retention: the prefix stays cached for up to 24 hours, so each subsequent chunk benefits from the previous run's warm cache. Mini and nano models use in-memory retention only: the prefix expires after 5–10 minutes of inactivity. This explains why Refine (typically on gpt-5.4-mini) can show 0% cache hit even when the prompt is identical: if more than ~10 minutes passed between chunks, the cache has already expired."
+      "cacheRetentionDesc": "OpenAI uses two different cache policies. Full models (gpt-5.4 and above) use extended retention: the prefix stays cached for up to 24 hours, so each subsequent chunk benefits from the previous run's warm cache. Mini and nano models use in-memory retention only: the prefix expires after 5–10 minutes of inactivity. This explains why Refine (typically on gpt-5.4-mini) can show 0% cache hit even when the prompt is identical: if more than ~10 minutes passed between chunks, the cache has already expired.",
+      "previewTitle": "Previewing the message for a chunk",
+      "previewDesc": "In the Chunk panel, the Preview tab shows the actual, complete message that would be sent to the engine for the open chunk: pick a pipeline stage and build it on demand. Nothing runs and nothing is charged — useful for checking exactly what the model will receive before launching the translation."
     },
     "streaming": {
       "title": "Real-time streaming",

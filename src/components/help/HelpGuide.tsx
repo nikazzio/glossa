@@ -445,6 +445,9 @@ function ContextSection() {
 
       <SubTitle>{t('help.context.cacheRetentionTitle')}</SubTitle>
       <P>{t('help.context.cacheRetentionDesc')}</P>
+
+      <SubTitle>{t('help.context.previewTitle')}</SubTitle>
+      <P>{t('help.context.previewDesc')}</P>
     </>
   );
 }

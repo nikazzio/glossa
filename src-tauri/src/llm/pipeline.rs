@@ -237,6 +237,36 @@ pub async fn run_stage(
     })
 }
 
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StagePromptPreview {
+    pub system_prompt: String,
+    pub user_prompt: String,
+}
+
+/// Builds the exact prompt a stage would send, without contacting any provider.
+/// Lets the UI show the user what will be sent before they launch the pipeline.
+#[tauri::command]
+pub fn preview_stage_prompt(
+    text: String,
+    stage: StageConfig,
+    config: PipelineConfig,
+    previous_result: Option<String>,
+    audit_context: Option<String>,
+) -> StagePromptPreview {
+    let structured = build_stage_prompts(
+        &text,
+        &stage,
+        &config,
+        previous_result.as_deref(),
+        audit_context.as_deref(),
+    );
+    StagePromptPreview {
+        system_prompt: structured.flatten_system(),
+        user_prompt: structured.user.clone(),
+    }
+}
+
 #[tauri::command]
 #[allow(clippy::too_many_arguments)]
 pub async fn run_stage_stream(

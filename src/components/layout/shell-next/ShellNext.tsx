@@ -19,7 +19,7 @@ import { useResizeDragging } from './useResizeDragging';
 const SIDEBAR_DEFAULT = 300;
 const SIDEBAR_COLLAPSED = 64;
 const SIDEBAR_MIN = 280;
-const SIDEBAR_MAX = 420;
+const SIDEBAR_MAX = 520;
 
 // Ispettore destro (eredita le larghezze del vecchio fly-out).
 const INSPECTOR_DEFAULT = 430;

@@ -7,7 +7,7 @@ import type {
 
 export type InsightsDrawerTab = 'index' | 'search' | 'stats' | 'coherence' | 'glossary';
 export type ChunkDrawerTab = 'summary' | 'audit' | 'notes' | 'operations' | 'memory';
-export type ChunkRailTab = 'audit' | 'notes' | 'memory' | 'references';
+export type ChunkRailTab = 'audit' | 'notes' | 'memory' | 'references' | 'promptPreview';
 export type DocumentPaneFocus = 'both' | 'source' | 'translation';
 export type HelpSection = 'overview' | 'pipeline' | 'features' | 'context' | 'audit' | 'projects' | 'providers' | 'ollama' | 'glossary' | 'shortcuts' | 'troubleshooting' | 'design';
 export type ActivePanel = 'config' | 'insights' | 'chunk' | 'settings' | 'help' | null;

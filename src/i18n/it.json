@@ -1005,7 +1005,22 @@
     "watchdogStuck": "Bloccato",
     "watchdogCancel": "Annulla e riprova",
     "insightsTabMemory": "Memoria",
-    "insightsTabReferences": "Riferimenti"
+    "insightsTabReferences": "Riferimenti",
+    "insightsTabPromptPreview": "Anteprima"
+  },
+  "promptPreview": {
+    "title": "Anteprima messaggio",
+    "stageLabel": "Fase da vedere in anteprima",
+    "buildButton": "Costruisci anteprima",
+    "building": "Costruzione in corso…",
+    "systemLabel": "Istruzioni di sistema",
+    "userLabel": "Messaggio utente",
+    "copyBlock": "Copia questo blocco",
+    "copiedToClipboard": "Copiato negli appunti",
+    "emptyNoChunk": "Seleziona un chunk per costruire l'anteprima.",
+    "emptyBeforeBuild": "Premi \"Costruisci anteprima\" per vedere il messaggio completo di questa fase.",
+    "deeplNotice": "Questa fase usa DeepL: non genera un messaggio testuale per un modello linguistico.",
+    "buildFailed": "Non sono riuscito a costruire l'anteprima."
   },
   "help": {
     "title": "Guida Utente",
@@ -1157,7 +1172,9 @@
       "tipTitle": "Cosa significa in pratica",
       "tipDesc": "Dopo che il primo chunk di un gruppo viene elaborato, i chunk successivi dello stesso gruppo costano meno perché il provider riusa gli strati cachati. Su documenti lunghi con molti chunk il risparmio è significativo, specialmente in modalità editoriale dove tre stage vengono eseguiti per chunk.",
       "cacheRetentionTitle": "Cache retention per modello",
-      "cacheRetentionDesc": "OpenAI distingue due politiche di cache. I modelli completi (gpt-5.4 e superiori) usano la extended retention: il prefisso rimane in cache fino a 24 ore, quindi ogni chunk successivo beneficia del riscaldamento del run precedente. I modelli mini e nano usano invece la in-memory retention: il prefisso scade dopo 5–10 minuti di inattività. Questo spiega perché Refine (tipicamente su gpt-5.4-mini) può mostrare 0% di cache hit anche quando il prompt è identico: se sono passati più di 10 minuti tra un chunk e il successivo, la cache è già scaduta."
+      "cacheRetentionDesc": "OpenAI distingue due politiche di cache. I modelli completi (gpt-5.4 e superiori) usano la extended retention: il prefisso rimane in cache fino a 24 ore, quindi ogni chunk successivo beneficia del riscaldamento del run precedente. I modelli mini e nano usano invece la in-memory retention: il prefisso scade dopo 5–10 minuti di inattività. Questo spiega perché Refine (tipicamente su gpt-5.4-mini) può mostrare 0% di cache hit anche quando il prompt è identico: se sono passati più di 10 minuti tra un chunk e il successivo, la cache è già scaduta.",
+      "previewTitle": "Anteprima del messaggio per un chunk",
+      "previewDesc": "Nel pannello Chunk, la scheda Anteprima mostra il messaggio completo e reale che verrebbe inviato al motore per il chunk aperto: scegli una fase della pipeline e costruiscilo a comando. Non parte nessuna elaborazione né alcun costo — utile per controllare cosa riceverà davvero il modello prima di lanciare la traduzione."
     },
     "streaming": {
       "title": "Streaming in tempo reale",

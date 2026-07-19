@@ -2,6 +2,7 @@ import {
   BarChart2,
   BookText,
   Brain,
+  Eye,
   Layers,
   Link2,
   List,
@@ -15,6 +16,7 @@ import { useUiStore, type InsightsDrawerTab, type ChunkRailTab } from '../../sto
 import { useChunksStore } from '../../stores/chunksStore';
 import { MemoryTab } from './tabs/MemoryTab';
 import { ReferencesTab } from './tabs/ReferencesTab';
+import { ChunkPromptPreviewTab } from './tabs/ChunkPromptPreviewTab';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useChunkWatchdog } from '../../hooks/useChunkWatchdog';
 import { SearchTab } from './SearchTab';
@@ -27,7 +29,7 @@ import { NotesTab } from './tabs/NotesTab';
 import { GlossaryTab } from './tabs/GlossaryTab';
 
 const DOC_TAB_ORDER: InsightsDrawerTab[] = ['index', 'search', 'stats', 'coherence', 'glossary'];
-const CHUNK_RAIL_TAB_ORDER: ChunkRailTab[] = ['audit', 'notes', 'memory', 'references'];
+const CHUNK_RAIL_TAB_ORDER: ChunkRailTab[] = ['audit', 'notes', 'memory', 'references', 'promptPreview'];
 
 const DOC_TAB_BUTTON_IDS: Record<InsightsDrawerTab, string> = {
   index: 'insights-tab-button-index',
@@ -50,6 +52,7 @@ const CHUNK_RAIL_TAB_BUTTON_IDS: Record<ChunkRailTab, string> = {
   notes: 'chunk-rail-tab-button-notes',
   memory: 'chunk-rail-tab-button-memory',
   references: 'chunk-rail-tab-button-references',
+  promptPreview: 'chunk-rail-tab-button-prompt-preview',
 };
 
 const CHUNK_RAIL_TAB_PANEL_IDS: Record<ChunkRailTab, string> = {
@@ -57,6 +60,7 @@ const CHUNK_RAIL_TAB_PANEL_IDS: Record<ChunkRailTab, string> = {
   notes: 'chunk-rail-tab-panel-notes',
   memory: 'chunk-rail-tab-panel-memory',
   references: 'chunk-rail-tab-panel-references',
+  promptPreview: 'chunk-rail-tab-panel-prompt-preview',
 };
 
 /** Stato condiviso letto da entrambi i pannelli del fly-out. */
@@ -95,12 +99,14 @@ export function ChunkInspectorPanel({ onReauditChunk }: ChunkInspectorPanelProps
     notes: <NotebookText size={16} />,
     memory: <Brain size={16} />,
     references: <Layers size={16} />,
+    promptPreview: <Eye size={16} />,
   };
   const CHUNK_RAIL_TAB_LABEL: Record<ChunkRailTab, string> = {
     audit: t('document.insightsTabAudit'),
     notes: t('document.insightsTabNotes'),
     memory: t('document.insightsTabMemory'),
     references: t('document.insightsTabReferences'),
+    promptPreview: t('document.insightsTabPromptPreview'),
   };
 
   const activateTab = (tab: ChunkRailTab) => {
@@ -169,10 +175,16 @@ export function ChunkInspectorPanel({ onReauditChunk }: ChunkInspectorPanelProps
             labelledBy={CHUNK_RAIL_TAB_BUTTON_IDS.memory}
             currentChunk={currentChunk}
           />
-        ) : (
+        ) : chunkRailTab === 'references' ? (
           <ReferencesTab
             panelId={CHUNK_RAIL_TAB_PANEL_IDS.references}
             labelledBy={CHUNK_RAIL_TAB_BUTTON_IDS.references}
+            currentChunk={currentChunk}
+          />
+        ) : (
+          <ChunkPromptPreviewTab
+            panelId={CHUNK_RAIL_TAB_PANEL_IDS.promptPreview}
+            labelledBy={CHUNK_RAIL_TAB_BUTTON_IDS.promptPreview}
             currentChunk={currentChunk}
           />
         )}
