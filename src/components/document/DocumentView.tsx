@@ -342,11 +342,11 @@ export function DocumentView({
       ? chunks.map((chunk, idx) => {
           const segmentTone =
             chunk.status === 'completed'
-              ? 'bg-editorial-success/18 shadow-[inset_0_0_0_1px_rgba(58,122,101,0.16)]'
+              ? 'bg-editorial-success/18 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--color-editorial-success)_16%,transparent)]'
               : chunk.status === 'error'
-                ? 'bg-editorial-danger/18 shadow-[inset_0_0_0_1px_rgba(166,78,66,0.18)]'
+                ? 'bg-editorial-danger/18 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--color-editorial-danger)_18%,transparent)]'
                 : chunk.status === 'processing'
-                  ? 'bg-editorial-running/24 animate-pulse shadow-[inset_0_0_0_1px_rgba(196,155,42,0.22)]'
+                  ? 'bg-editorial-running/24 animate-pulse shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--color-editorial-running)_22%,transparent)]'
                   : 'bg-editorial-border/40';
           const isCurrent = idx === currentIndex;
           const chunkAnnotations = annotationsByChunkId.get(chunk.id) ?? [];

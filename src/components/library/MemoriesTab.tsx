@@ -18,7 +18,7 @@ import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useLibraryStore } from '../../stores/libraryStore';
 import { confirm } from '../../stores/confirmStore';
 import { generateId } from '../../utils';
-import { EmptyState, IconButton, SectionLabel, Spinner } from '../ui';
+import { EmptyState, IconButton, SectionLabel, Select, Spinner } from '../ui';
 import type { Workspace } from '../../types';
 
 export function MemoriesTab() {
@@ -205,18 +205,15 @@ export function MemoriesTab() {
             <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">
               {t('library.workspaceFilter')}
             </span>
-            <select
+            <Select
               value={workspaceFilter}
-              onChange={(event) => setWorkspaceFilter(event.target.value)}
-              className="max-w-[220px] rounded-md border border-editorial-border bg-editorial-bg px-3 py-2 text-xs text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            >
-              <option value="all">{t('library.allWorkspaces')}</option>
-              {workspaces.map((workspace) => (
-                <option key={workspace.id} value={workspace.id}>
-                  {workspace.name}
-                </option>
-              ))}
-            </select>
+              onChange={setWorkspaceFilter}
+              className="max-w-[220px]"
+              options={[
+                { value: 'all', label: t('library.allWorkspaces') },
+                ...workspaces.map((workspace) => ({ value: workspace.id, label: workspace.name })),
+              ]}
+            />
           </label>
           <IconButton
             size="md"
@@ -457,17 +454,14 @@ function GlossaryPicker({ glossaries, selectedId, isAdding, onSelect, onConfirm,
   const { t } = useTranslation();
   return (
     <div className="mt-3 flex items-center gap-2 border-t border-editorial-accent/30 pt-3">
-      <select
+      <Select
         value={selectedId}
-        onChange={(e) => onSelect(e.target.value)}
+        onChange={onSelect}
         disabled={isAdding}
-        className="min-w-0 flex-1 rounded-md border border-editorial-border bg-editorial-bg px-3 py-1.5 text-xs text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:opacity-50"
-        aria-label={t('glossary.selectGlossary')}
-      >
-        {glossaries.map((g) => (
-          <option key={g.id} value={g.id}>{g.name}</option>
-        ))}
-      </select>
+        className="min-w-0 flex-1"
+        ariaLabel={t('glossary.selectGlossary')}
+        options={glossaries.map((g) => ({ value: g.id, label: g.name }))}
+      />
       <IconButton
         size="sm"
         tone="accent"

@@ -10,7 +10,7 @@ import type { ModelProvider, PromptTemplateContext, PromptTemplateWorkflow } fro
 import { llmService } from '../../services/llmService';
 import { getSelectableModelIds, LLM_PROVIDER_ORDER } from '../../models/catalog';
 import { canRefineWithProvider, formatProviderModelLabel, useProviderKeyStatus } from '../../hooks/useProviderKeyStatus';
-import { IconButton } from '../ui';
+import { IconButton, Select } from '../ui';
 
 const WORKFLOW_OPTIONS = ['translation', 'transcription'] as const;
 
@@ -179,29 +179,28 @@ export function PromptTemplatesTab() {
               placeholder={t('library.templateNamePlaceholder')}
               className="rounded-md border border-editorial-border bg-editorial-bg/80 px-4 py-2.5 text-sm font-display italic text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             />
-            <select
+            <Select
               value={newContext}
-              onChange={(e) => setNewContext(e.target.value as PromptTemplateContext)}
-              className="rounded-md border border-editorial-border bg-editorial-bg/80 px-3 py-2.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              aria-label={t('library.templateContextLabel')}
-            >
-              <option value="stage">{t('pipeline.tabStages')}</option>
-              <option value="audit">{t('pipeline.tabAudit')}</option>
-              <option value="persona">{t('pipeline.tabPersona')}</option>
-              <option value="memory">{t('workspace.settings.memoryTab')}</option>
-            </select>
-            <select
+              onChange={(value) => setNewContext(value as PromptTemplateContext)}
+              className="font-mono"
+              ariaLabel={t('library.templateContextLabel')}
+              options={[
+                { value: 'stage', label: t('pipeline.tabStages') },
+                { value: 'audit', label: t('pipeline.tabAudit') },
+                { value: 'persona', label: t('pipeline.tabPersona') },
+                { value: 'memory', label: t('workspace.settings.memoryTab') },
+              ]}
+            />
+            <Select
               value={newWorkflow}
-              onChange={(e) => setNewWorkflow(e.target.value as PromptTemplateWorkflow)}
-              className="rounded-md border border-editorial-border bg-editorial-bg/80 px-3 py-2.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-              aria-label={t('library.templateWorkflowLabel')}
-            >
-              {WORKFLOW_OPTIONS.map((w) => (
-                <option key={w} value={w}>
-                  {w === 'translation' ? t('workflow.translation') : t('workflow.transcription')}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => setNewWorkflow(value as PromptTemplateWorkflow)}
+              className="font-mono"
+              ariaLabel={t('library.templateWorkflowLabel')}
+              options={WORKFLOW_OPTIONS.map((w) => ({
+                value: w,
+                label: w === 'translation' ? t('workflow.translation') : t('workflow.transcription'),
+              }))}
+            />
           </div>
           <p className="text-xs leading-relaxed text-editorial-muted">
             {newContext === 'audit'
@@ -219,30 +218,24 @@ export function PromptTemplatesTab() {
                 {t('pipeline.prompt')}
               </span>
               <div className="flex flex-wrap items-center gap-2">
-                <select
+                <Select
                   value={refineProvider}
-                  onChange={(e) => {
-                    const p = e.target.value as ModelProvider;
+                  onChange={(value) => {
+                    const p = value as ModelProvider;
                     setRefineProvider(p);
                     setRefineModel(getProviderModels(p)[0] ?? '');
                   }}
-                  className="rounded-md border border-editorial-border bg-editorial-bg px-3 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  aria-label={t('library.templateRefineProviderLabel')}
-                >
-                  {LLM_PROVIDER_ORDER.map((p) => (
-                    <option key={p} value={p}>{p}</option>
-                  ))}
-                </select>
-                <select
+                  className="font-mono"
+                  ariaLabel={t('library.templateRefineProviderLabel')}
+                  options={LLM_PROVIDER_ORDER.map((p) => ({ value: p, label: p }))}
+                />
+                <Select
                   value={refineModel}
-                  onChange={(e) => setRefineModel(e.target.value)}
-                  className="max-w-[160px] rounded-md border border-editorial-border bg-editorial-bg px-3 py-1.5 text-xs font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  aria-label={t('pipeline.stageModelLabel')}
-                >
-                  {modelOptions.map((m) => (
-                    <option key={m} value={m}>{m}</option>
-                  ))}
-                </select>
+                  onChange={setRefineModel}
+                  className="max-w-[160px] font-mono"
+                  ariaLabel={t('pipeline.stageModelLabel')}
+                  options={modelOptions.map((m) => ({ value: m, label: m }))}
+                />
                 <IconButton
                   onClick={handleRefine}
                   disabled={isRefining || !newPrompt.trim() || !canRefine}

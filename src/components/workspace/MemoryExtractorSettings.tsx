@@ -22,7 +22,7 @@ import { llmService } from '../../services/llmService';
 import { usePromptTemplateStore } from '../../stores/promptTemplateStore';
 import { useConfigStore } from '../../stores/configStore';
 import type { ModelProvider, PromptTemplate } from '../../types';
-import { FieldLabel, Tooltip } from '../ui';
+import { FieldLabel, IconButton, Select } from '../ui';
 
 interface MemoryExtractorSettingsProps {
   provider: ModelProvider;
@@ -132,32 +132,29 @@ export function MemoryExtractorSettings({
           {t('workspace.memoryExtractorModel')}
         </FieldLabel>
         <div className="flex gap-2">
-          <select
+          <Select
             value={provider}
-            onChange={(e) => handleProviderChange(e.target.value as ModelProvider)}
-            className="rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-bold uppercase text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-            aria-label={t('models.provider')}
-          >
-            {LLM_PROVIDER_ORDER.map((entry) => (
-              <option key={entry} value={entry} disabled={entry !== 'ollama' && (keyStatuses as Partial<Record<string, boolean>>)[entry] === false}>
-                {entry}
-              </option>
-            ))}
-          </select>
+            onChange={(value) => handleProviderChange(value as ModelProvider)}
+            className="font-bold uppercase"
+            ariaLabel={t('models.provider')}
+            options={LLM_PROVIDER_ORDER.map((entry) => ({
+              value: entry,
+              label: entry,
+              disabled: entry !== 'ollama' && (keyStatuses as Partial<Record<string, boolean>>)[entry] === false,
+            }))}
+          />
           {modelOptions.length > 0 ? (
             <div className="flex flex-1 items-center gap-1.5">
-              <select
+              <Select
                 value={model}
-                onChange={(e) => onModelChange(e.target.value)}
-                className="flex-1 rounded-md border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1.5 text-xs font-mono text-editorial-ink outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                aria-label={t('workspace.memoryExtractorModel')}
-              >
-                {modelOptions.map((entry) => (
-                  <option key={entry} value={entry}>
-                    {entry}{getModelStatus(provider, entry) === 'preview' ? ' (preview)' : ''}
-                  </option>
-                ))}
-              </select>
+                onChange={onModelChange}
+                className="flex-1 font-mono"
+                ariaLabel={t('workspace.memoryExtractorModel')}
+                options={modelOptions.map((entry) => ({
+                  value: entry,
+                  label: `${entry}${getModelStatus(provider, entry) === 'preview' ? ' (preview)' : ''}`,
+                }))}
+              />
               <ModelCapabilityHint provider={provider} model={model} iconOnly />
             </div>
           ) : (
@@ -187,75 +184,53 @@ export function MemoryExtractorSettings({
           <div className="flex items-center gap-1.5">
             {isEditingPrompt ? (
               <>
-                <Tooltip label={t('pipeline.refinePromptWithModel', { model: refineLabel })}>
-                  <button
-                    type="button"
-                    onClick={() => void handleRefine()}
-                    disabled={isRefining || !prompt.trim() || !canRefine}
-                    aria-label={t('pipeline.refinePromptWithModel', { model: refineLabel })}
-                    className="text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent disabled:opacity-40"
-                  >
-                    {isRefining ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
-                  </button>
-                </Tooltip>
-                <Tooltip label={t('pipeline.templates.save')}>
-                  <button
-                    type="button"
-                    onClick={() => { setShowSaveName(!showSaveName); setShowTemplateList(false); }}
-                    aria-label={t('pipeline.templates.save')}
-                    className="text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
-                  >
-                    <BookmarkPlus size={16} />
-                  </button>
-                </Tooltip>
-                <Tooltip label={t('pipeline.templates.load')}>
-                  <button
-                    type="button"
-                    onClick={() => { setShowTemplateList(!showTemplateList); setShowSaveName(false); }}
-                    aria-label={t('pipeline.templates.load')}
-                    className="text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
-                  >
-                    <BookOpen size={16} />
-                  </button>
-                </Tooltip>
-                <Tooltip label={t('common.close')}>
-                  <button
-                    type="button"
-                    onClick={() => { setIsEditingPrompt(false); setShowSaveName(false); setShowTemplateList(false); }}
-                    aria-label={t('common.close')}
-                    className="text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
-                  >
-                    <X size={16} />
-                  </button>
-                </Tooltip>
+                <IconButton
+                  size="sm"
+                  onClick={() => void handleRefine()}
+                  disabled={isRefining || !prompt.trim() || !canRefine}
+                  title={t('pipeline.refinePromptWithModel', { model: refineLabel })}
+                >
+                  {isRefining ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
+                </IconButton>
+                <IconButton
+                  size="sm"
+                  onClick={() => { setShowSaveName(!showSaveName); setShowTemplateList(false); }}
+                  title={t('pipeline.templates.save')}
+                >
+                  <BookmarkPlus size={16} />
+                </IconButton>
+                <IconButton
+                  size="sm"
+                  onClick={() => { setShowTemplateList(!showTemplateList); setShowSaveName(false); }}
+                  title={t('pipeline.templates.load')}
+                >
+                  <BookOpen size={16} />
+                </IconButton>
+                <IconButton
+                  size="sm"
+                  onClick={() => { setIsEditingPrompt(false); setShowSaveName(false); setShowTemplateList(false); }}
+                  title={t('common.close')}
+                >
+                  <X size={16} />
+                </IconButton>
               </>
             ) : (
               <>
                 {isCustomPrompt && (
-                  <Tooltip label={t('workspace.resetMemoryExtractorPrompt')}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onProviderChange(DEFAULT_MEMORY_EXTRACTOR_PROVIDER, DEFAULT_MEMORY_EXTRACTOR_MODEL);
-                        onPromptChange(DEFAULT_MEMORY_EXTRACTOR_PROMPT);
-                      }}
-                      aria-label={t('workspace.resetMemoryExtractorPrompt')}
-                      className="text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
-                    >
-                      <RotateCcw size={16} />
-                    </button>
-                  </Tooltip>
-                )}
-                <Tooltip label={t('pipeline.editPrompt')}>
-                  <button
-                    type="button"
-                    onClick={() => setIsEditingPrompt(true)}
-                    aria-label={t('pipeline.editPrompt')}
-                    className="text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-1 focus-visible:ring-editorial-accent"
+                  <IconButton
+                    size="sm"
+                    onClick={() => {
+                      onProviderChange(DEFAULT_MEMORY_EXTRACTOR_PROVIDER, DEFAULT_MEMORY_EXTRACTOR_MODEL);
+                      onPromptChange(DEFAULT_MEMORY_EXTRACTOR_PROMPT);
+                    }}
+                    title={t('workspace.resetMemoryExtractorPrompt')}
                   >
-                    <Pencil size={16} />
-                  </button>
-                </Tooltip>
+                    <RotateCcw size={16} />
+                  </IconButton>
+                )}
+                <IconButton size="sm" onClick={() => setIsEditingPrompt(true)} title={t('pipeline.editPrompt')}>
+                  <Pencil size={16} />
+                </IconButton>
               </>
             )}
           </div>
@@ -276,23 +251,21 @@ export function MemoryExtractorSettings({
               autoFocus
               className="flex-1 rounded border border-editorial-border/60 bg-editorial-textbox/60 px-2 py-1 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
             />
-            <button
-              type="button"
+            <IconButton
+              size="sm"
               onClick={() => void handleSaveTemplate()}
               disabled={!templateName.trim()}
-              className="text-editorial-ink transition-colors hover:text-editorial-accent focus:outline-none disabled:opacity-40"
-              aria-label={t('common.confirm')}
+              title={t('common.confirm')}
             >
               <Check size={16} />
-            </button>
-            <button
-              type="button"
+            </IconButton>
+            <IconButton
+              size="sm"
               onClick={() => { setShowSaveName(false); setTemplateName(''); }}
-              className="text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none"
-              aria-label={t('common.cancel')}
+              title={t('common.cancel')}
             >
               <X size={16} />
-            </button>
+            </IconButton>
           </div>
         )}
 
@@ -329,14 +302,14 @@ export function MemoryExtractorSettings({
                       <div className="truncate text-sm font-bold text-editorial-ink">{template.name}</div>
                       <div className="mt-0.5 truncate font-mono text-xs text-editorial-muted">{template.prompt}</div>
                     </button>
-                    <button
-                      type="button"
+                    <IconButton
+                      size="sm"
                       onClick={() => void handleDeleteTemplate(template.id)}
-                      className="mt-0.5 shrink-0 text-editorial-muted/40 opacity-0 transition-colors hover:text-editorial-accent focus:opacity-100 focus:outline-none group-hover:opacity-100"
-                      aria-label={t('common.delete')}
+                      title={t('common.delete')}
+                      className="mt-0.5 shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
                     >
                       <Trash2 size={14} />
-                    </button>
+                    </IconButton>
                   </li>
                 ))
               )}

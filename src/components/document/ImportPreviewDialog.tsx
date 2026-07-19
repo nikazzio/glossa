@@ -28,7 +28,7 @@ import { LANGUAGES } from '../../constants';
 import { getSelectableModelIds, LLM_PROVIDER_ORDER } from '../../models/catalog';
 import { useConfigStore } from '../../stores/configStore';
 import type { ModelProvider } from '../../types';
-import { IconButton, DialogConfirmButton, DialogCancelButton, Tooltip } from '../ui';
+import { IconButton, DialogConfirmButton, DialogCancelButton, Select, Tooltip } from '../ui';
 import { ChunkCard, BoundaryDivider, SegmentEditor } from './ChunkEditor';
 import { type ParagraphChunks, toParagraphChunks, countWords, toFlatModel, fromFlatModel } from '../../utils/paragraphChunks';
 
@@ -531,16 +531,13 @@ export function ImportPreviewDialog({
               {/* Language pair */}
               <Globe size={11} className="text-editorial-accent shrink-0" />
               <div className="flex items-center gap-1.5">
-                <select
+                <Select
                   value={sourceLanguage}
-                  onChange={(e) => handleSourceLanguageChange(e.target.value)}
-                  className="w-32 rounded-md border border-editorial-border bg-editorial-bg px-2 py-1.5 text-xs font-mono outline-none focus:border-editorial-ink/40 appearance-none"
-                  aria-label={t('pipeline.sourceLanguage')}
-                >
-                  {LANGUAGES.map((lang) => (
-                    <option key={lang} value={lang}>{t(`languages.${lang}`)}</option>
-                  ))}
-                </select>
+                  onChange={handleSourceLanguageChange}
+                  options={LANGUAGES.map((lang) => ({ value: lang, label: t(`languages.${lang}`) }))}
+                  className="w-32 font-mono appearance-none"
+                  ariaLabel={t('pipeline.sourceLanguage')}
+                />
                 <Tooltip label={t('pipeline.swapLanguages')}>
                   <button
                     type="button"
@@ -551,43 +548,36 @@ export function ImportPreviewDialog({
                     <ArrowLeftRight size={12} />
                   </button>
                 </Tooltip>
-                <select
+                <Select
                   value={targetLanguage}
-                  onChange={(e) => handleTargetLanguageChange(e.target.value)}
-                  className="w-32 rounded-md border border-editorial-border bg-editorial-bg px-2 py-1.5 text-xs font-mono outline-none focus:border-editorial-ink/40 appearance-none"
-                  aria-label={t('pipeline.targetLanguage')}
-                >
-                  {LANGUAGES.map((lang) => (
-                    <option key={lang} value={lang}>{t(`languages.${lang}`)}</option>
-                  ))}
-                </select>
+                  onChange={handleTargetLanguageChange}
+                  options={LANGUAGES.map((lang) => ({ value: lang, label: t(`languages.${lang}`) }))}
+                  className="w-32 font-mono appearance-none"
+                  ariaLabel={t('pipeline.targetLanguage')}
+                />
               </div>
               {/* Model */}
               <Cpu size={11} className="text-editorial-accent shrink-0" />
               <div className="flex items-center gap-1.5">
-                <select
+                <Select
                   value={selectedProvider}
-                  onChange={(e) => handleProviderChange(e.target.value as ModelProvider)}
-                  className="w-24 rounded-md border border-editorial-border bg-editorial-bg px-2 py-1.5 text-xs font-bold uppercase outline-none focus:border-editorial-ink/40 appearance-none"
-                  aria-label={t('pipeline.source')}
-                >
-                  {LLM_PROVIDER_ORDER.map((p) => (
-                    <option key={p} value={p}>{p}</option>
-                  ))}
-                </select>
-                <select
+                  onChange={(value) => handleProviderChange(value as ModelProvider)}
+                  options={LLM_PROVIDER_ORDER.map((p) => ({ value: p, label: p }))}
+                  className="w-24 font-bold uppercase appearance-none"
+                  ariaLabel={t('pipeline.source')}
+                />
+                <Select
                   value={selectedModel}
-                  onChange={(e) => handleModelChange(e.target.value)}
+                  onChange={handleModelChange}
                   disabled={availableModels.length === 0}
-                  className="flex-1 min-w-0 rounded-md border border-editorial-border bg-editorial-bg px-2 py-1.5 text-xs font-mono outline-none focus:border-editorial-ink/40 appearance-none disabled:opacity-40"
-                  aria-label={t('pipeline.stageModelLabel')}
-                >
-                  {availableModels.length === 0 ? (
-                    <option value="">{t('ollama.noModels')}</option>
-                  ) : (
-                    availableModels.map((m) => <option key={m} value={m}>{m}</option>)
-                  )}
-                </select>
+                  className="flex-1 min-w-0 font-mono appearance-none"
+                  ariaLabel={t('pipeline.stageModelLabel')}
+                  options={
+                    availableModels.length === 0
+                      ? [{ value: '', label: t('ollama.noModels') }]
+                      : availableModels.map((m) => ({ value: m, label: m }))
+                  }
+                />
               </div>
             </div>
           </div>

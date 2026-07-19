@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Check, LibraryBig, Pencil, Save, Trash2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Dialog, DialogCancelButton, IconButton, PillButton } from '../ui';
+import { Dialog, DialogCancelButton, IconButton, PillButton, Select } from '../ui';
 import { PipelineConfig } from '../pipeline/PipelineConfig';
 import { useUiStore } from '../../stores/uiStore';
 import { useConfigStore } from '../../stores/configStore';
@@ -115,17 +115,16 @@ export function ConfigDrawer({
           <LibraryBig size={16} />
         </IconButton>
       </div>
-      <select
+      <Select
         value={config.assignedGlossaryId ?? ''}
-        onChange={(e) => handleDictChange(e.target.value)}
-        className="w-full rounded-md border border-editorial-border/60 bg-editorial-bg px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent text-editorial-ink"
-        aria-label={t('library.assignedDictionary')}
-      >
-        <option value="">{t('library.noDictionaryAssigned')}</option>
-        {glossaries.map((g) => (
-          <option key={g.id} value={g.id}>{g.name}</option>
-        ))}
-      </select>
+        onChange={handleDictChange}
+        className="w-full font-mono"
+        ariaLabel={t('library.assignedDictionary')}
+        options={[
+          { value: '', label: t('library.noDictionaryAssigned') },
+          ...glossaries.map((g) => ({ value: g.id, label: g.name })),
+        ]}
+      />
       {config.assignedGlossaryId && (
         <DictionaryEntryEditor
           entries={config.glossary}

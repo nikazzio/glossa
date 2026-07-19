@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import type { ModelProvider, OllamaConfig, ProviderRuntimeConfig } from '../../types';
 import { defaultOllamaConfig } from '../../utils/providerOptions';
-import { ToggleRow } from '../ui';
+import { Select, ToggleRow } from '../ui';
 
 interface ProviderRuntimeEditorProps {
   provider: ModelProvider;
@@ -193,26 +193,26 @@ export function ProviderRuntimeEditor({
 
               <div className="grid grid-cols-2 gap-3">
                 <LabeledField label={t('pipeline.providerOptions.think')}>
-                  <select
+                  <Select
                     value={String(ollama.think)}
-                    onChange={(e) => {
-                      const next = e.target.value;
+                    onChange={(value) => {
                       patchOllama({
-                        think: next === 'false'
+                        think: value === 'false'
                           ? false
-                          : next === 'true'
+                          : value === 'true'
                             ? true
-                            : next as 'low' | 'medium' | 'high',
+                            : value as 'low' | 'medium' | 'high',
                       });
                     }}
-                    className="w-full rounded-md border border-editorial-border/60 bg-editorial-bg/80 px-3 py-2 text-sm font-mono outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent"
-                  >
-                    <option value="false">{t('pipeline.providerOptions.thinkDisabled')}</option>
-                    <option value="true">{t('pipeline.providerOptions.thinkEnabled')}</option>
-                    <option value="low">{t('pipeline.providerOptions.thinkLow')}</option>
-                    <option value="medium">{t('pipeline.providerOptions.thinkMedium')}</option>
-                    <option value="high">{t('pipeline.providerOptions.thinkHigh')}</option>
-                  </select>
+                    className="w-full"
+                    options={[
+                      { value: 'false', label: t('pipeline.providerOptions.thinkDisabled') },
+                      { value: 'true', label: t('pipeline.providerOptions.thinkEnabled') },
+                      { value: 'low', label: t('pipeline.providerOptions.thinkLow') },
+                      { value: 'medium', label: t('pipeline.providerOptions.thinkMedium') },
+                      { value: 'high', label: t('pipeline.providerOptions.thinkHigh') },
+                    ]}
+                  />
                 </LabeledField>
               </div>
 
