@@ -84,14 +84,14 @@ fn judge_json_schema() -> serde_json::Value {
                         "additionalProperties": false
                     }
                 },
-                "checkedSentences": {
+                "checkedSentenceIndices": {
                     "anyOf": [
-                        {"type": "array", "items": {"type": "string"}},
+                        {"type": "array", "items": {"type": "integer"}},
                         {"type": "null"}
                     ]
                 }
             },
-            "required": ["rating", "issues", "checkedSentences"],
+            "required": ["rating", "issues", "checkedSentenceIndices"],
             "additionalProperties": false
         }
     })

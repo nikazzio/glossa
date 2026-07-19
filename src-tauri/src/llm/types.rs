@@ -188,9 +188,11 @@ pub struct JudgeResponse {
     pub system_prompt: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub user_prompt: Option<String>,
-    /// Sentences the model checked during the audit scan (self-verification list).
+    /// 1-based source sentence indices the model checked during the audit scan
+    /// (self-verification list — indices instead of full text to avoid billing
+    /// the whole source back at output-token rates).
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub checked_sentences: Option<Vec<String>>,
+    pub checked_sentence_indices: Option<Vec<u32>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
