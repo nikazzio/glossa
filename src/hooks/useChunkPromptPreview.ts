@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useChunksStore } from '../stores/chunksStore';
 import { usePipelineStore } from '../stores/pipelineStore';
 import { usePhraseMemoryStore } from '../stores/phraseMemoryStore';
@@ -28,8 +28,13 @@ export function useChunkPromptPreview(chunk: TranslationChunk | null): ChunkProm
   const [isBuilding, setIsBuilding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDeeplStage, setIsDeeplStage] = useState(false);
+  // Bumped on every reset()/build() so a build() that resolves after the user
+  // already switched chunk/stage (or started a newer build) can detect it's
+  // stale and discard its result instead of overwriting the current view.
+  const requestIdRef = useRef(0);
 
   const reset = () => {
+    requestIdRef.current += 1;
     setPreview(null);
     setError(null);
     setIsDeeplStage(false);
@@ -41,6 +46,7 @@ export function useChunkPromptPreview(chunk: TranslationChunk | null): ChunkProm
     const stage = config.stages.find((s) => s.id === stageId);
     if (!stage) return;
 
+    const requestId = ++requestIdRef.current;
     setPreview(null);
     setError(null);
     setIsDeeplStage(false);
@@ -86,11 +92,13 @@ export function useChunkPromptPreview(chunk: TranslationChunk | null): ChunkProm
       const stagePrevious = isFormatStage ? undefined : previousResult;
 
       const result = await llmService.previewStagePrompt(stageText, effectiveStage, effectiveConfig, stagePrevious);
+      if (requestIdRef.current !== requestId) return; // stale: chunk/fase è già cambiata
       setPreview(result);
     } catch (err) {
+      if (requestIdRef.current !== requestId) return;
       setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setIsBuilding(false);
+      if (requestIdRef.current === requestId) setIsBuilding(false);
     }
   };
 

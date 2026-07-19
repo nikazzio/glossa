@@ -16,7 +16,7 @@ import { useResizeDragging } from './useResizeDragging';
 const SIDEBAR_DEFAULT = 300;
 const SIDEBAR_COLLAPSED = 64;
 const SIDEBAR_MIN = 280;
-const SIDEBAR_MAX = 420;
+const SIDEBAR_MAX = 520;
 
 function clampPanelWidth(width: number, min: number, max: number) {
   return Math.min(Math.max(width, min), max);

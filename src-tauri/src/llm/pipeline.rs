@@ -261,9 +261,10 @@ pub fn preview_stage_prompt(
         previous_result.as_deref(),
         audit_context.as_deref(),
     );
+    let system_prompt = structured.flatten_system();
     StagePromptPreview {
-        system_prompt: structured.flatten_system(),
-        user_prompt: structured.user.clone(),
+        system_prompt,
+        user_prompt: structured.user,
     }
 }
 
