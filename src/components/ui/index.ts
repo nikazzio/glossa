@@ -7,6 +7,7 @@ export { PillButton } from './PillButton';
 export { SectionLabel } from './SectionLabel';
 export { FieldLabel } from './FieldLabel';
 export { SegmentedControl, type SegmentedControlOption } from './SegmentedControl';
+export { Select, type SelectOption } from './Select';
 export { ToggleRow } from './ToggleRow';
 export { Tooltip, type TooltipSide } from './Tooltip';
 export { Popover } from './Popover';
