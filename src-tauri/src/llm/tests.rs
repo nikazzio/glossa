@@ -171,6 +171,7 @@ fn make_config() -> PipelineConfig {
             translation: "API".into(),
             notes: Some("Keep as-is".into()),
         }],
+        few_shot_examples: vec![],
         use_chunking: Some(true),
         markdown_aware: None,
         coherence_prompt: None,

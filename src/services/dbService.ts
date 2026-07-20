@@ -51,6 +51,7 @@ async function getDb(): Promise<Database> {
 const ALLOWED_MIGRATIONS = new Map<string, string>([
   ['projects.workspace_id', 'TEXT REFERENCES workspaces(id)'],
   ['phrase_memory.embedding_model', 'TEXT'],
+  ['pipelines.few_shot_examples', "TEXT NOT NULL DEFAULT '[]'"],
 ]);
 
 const VALID_COLUMN_DEFINITION = /^(INTEGER|TEXT|REAL|BLOB|NUMERIC)(\s+NOT\s+NULL)?(\s+DEFAULT\s+('[^']*'|NULL|-?\d+(\.\d+)?))?(\s+REFERENCES\s+[a-z_][a-z0-9_]*\([a-z_][a-z0-9_]*\))?$/i;
@@ -223,6 +224,7 @@ export async function initDatabase(): Promise<void> {
       blob_budget_tokens INTEGER DEFAULT 0,
       blob_overlap INTEGER DEFAULT 1,
       coherence_prompt TEXT DEFAULT NULL,
+      few_shot_examples TEXT NOT NULL DEFAULT '[]',
       use_phrase_memory INTEGER NOT NULL DEFAULT 0,
       auto_search_phrase_memory INTEGER NOT NULL DEFAULT 1,
       phrase_memory_similarity_threshold REAL NOT NULL DEFAULT 0.75,
@@ -382,6 +384,7 @@ export async function initDatabase(): Promise<void> {
   `);
 
   await ensureColumn('projects', 'workspace_id', 'TEXT REFERENCES workspaces(id)');
+  await ensureColumn('pipelines', 'few_shot_examples', "TEXT NOT NULL DEFAULT '[]'");
 
   await conn.execute(`
     CREATE TABLE IF NOT EXISTS phrase_memory (

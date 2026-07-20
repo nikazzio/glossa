@@ -118,6 +118,17 @@ export interface GlossaryEntry {
   notes?: string;
 }
 
+// A hand-picked, already-approved chunk translation used as a few-shot style
+// example. Folded into the cacheable static block (unlike Phrase Memory,
+// which is per-chunk and lives in the non-cacheable stage-instructions block).
+export interface FewShotExample {
+  id: string;
+  sourceChunkId?: string;
+  sourceText: string;
+  targetText: string;
+  label?: string;
+}
+
 export interface Glossary {
   id: string;
   name: string;
@@ -251,6 +262,7 @@ export interface PipelineConfig {
   judgeProvider: ModelProvider;
   glossary: GlossaryEntry[];
   assignedGlossaryId?: string | null;
+  fewShotExamples?: FewShotExample[];
   useChunking?: boolean;
   wordsPerChunk?: number;
   minWords?: number;

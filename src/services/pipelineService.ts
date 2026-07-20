@@ -3,6 +3,7 @@ import { logger } from '../utils/logger';
 import { generateId, normalizeQualityRating, qualityDefault } from '../utils';
 import type {
   CoherenceResult,
+  FewShotExample,
   Footnote,
   FootnoteDefinition,
   GlossaryEntry,
@@ -43,6 +44,7 @@ interface DbPipeline {
   blob_budget_tokens: number | null;
   blob_overlap: number | null;
   coherence_prompt: string | null;
+  few_shot_examples: string;
   use_phrase_memory: number;
   auto_search_phrase_memory: number | null;
   phrase_memory_similarity_threshold: number | null;
@@ -104,6 +106,7 @@ function rowToPipelineConfig(row: DbPipeline, glossary: GlossaryEntry[], assigne
     blobBudgetTokens: row.blob_budget_tokens ?? undefined,
     blobOverlap: row.blob_overlap ?? undefined,
     coherencePrompt: row.coherence_prompt?.trim() || undefined,
+    fewShotExamples: parseJson<FewShotExample[]>(row.few_shot_examples, []),
     usePhraseMemory: row.use_phrase_memory === 1,
     autoSearchPhraseMemory: row.auto_search_phrase_memory !== 0,
     phraseMemorySimilarityThreshold: row.phrase_memory_similarity_threshold ?? 0.75,
@@ -197,9 +200,9 @@ export async function duplicatePipeline(sourcePipelineId: string, newName: strin
        stages, judge_prompt, judge_model, judge_provider,
        use_chunking, words_per_chunk,
        review_provider_options, persona, custom_source_language, custom_target_language,
-       blob_budget_tokens, blob_overlap,
+       blob_budget_tokens, blob_overlap, few_shot_examples,
        use_phrase_memory, auto_search_phrase_memory, phrase_memory_similarity_threshold, phrase_memory_max_results
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)`,
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`,
     [
       newId, source.project_id, newName,
       source.source_language, source.target_language,
@@ -209,6 +212,7 @@ export async function duplicatePipeline(sourcePipelineId: string, newName: strin
       source.review_provider_options, source.persona,
       source.custom_source_language, source.custom_target_language,
       source.blob_budget_tokens ?? 0, source.blob_overlap ?? 1,
+      source.few_shot_examples ?? '[]',
       source.use_phrase_memory ?? 0,
       source.auto_search_phrase_memory ?? 1,
       source.phrase_memory_similarity_threshold ?? 0.75,
@@ -246,12 +250,13 @@ function buildPipelineConfigUpdate(
        blob_budget_tokens       = $14,
        blob_overlap             = $15,
        coherence_prompt         = $16,
-       use_phrase_memory        = $17,
-       auto_search_phrase_memory = $18,
-       phrase_memory_similarity_threshold = $19,
-       phrase_memory_max_results = $20,
+       few_shot_examples        = $17,
+       use_phrase_memory        = $18,
+       auto_search_phrase_memory = $19,
+       phrase_memory_similarity_threshold = $20,
+       phrase_memory_max_results = $21,
        updated_at               = CURRENT_TIMESTAMP
-     WHERE id = $21`,
+     WHERE id = $22`,
     params: [
       config.sourceLanguage,
       config.targetLanguage,
@@ -269,6 +274,7 @@ function buildPipelineConfigUpdate(
       config.blobBudgetTokens ?? 0,
       config.blobOverlap ?? 1,
       config.coherencePrompt?.trim() || null,
+      JSON.stringify(config.fewShotExamples ?? []),
       config.usePhraseMemory ? 1 : 0,
       config.autoSearchPhraseMemory === false ? 0 : 1,
       config.phraseMemorySimilarityThreshold ?? 0.75,

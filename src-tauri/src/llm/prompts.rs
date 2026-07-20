@@ -1,6 +1,6 @@
 use crate::llm::types::{
-    CoherenceChunkInput, PipelineConfig, PromptBlock, ProviderRuntimeConfig, StageConfig,
-    StructuredPrompt,
+    CoherenceChunkInput, FewShotExample, PipelineConfig, PromptBlock, ProviderRuntimeConfig,
+    StageConfig, StructuredPrompt,
 };
 
 pub(crate) const REFINE_STAGE_SYSTEM_PROMPT: &str = "\
@@ -39,6 +39,26 @@ fn format_glossary_table(glossary: &[crate::llm::types::GlossaryEntry]) -> Strin
         ));
     }
     table
+}
+
+/// Formats hand-picked example translations for the cacheable static block.
+/// Returns an empty string when there are none, so the static block is
+/// byte-identical to before this feature for pipelines without examples.
+fn format_few_shot_block(examples: &[FewShotExample]) -> String {
+    if examples.is_empty() {
+        return String::new();
+    }
+    let mut block =
+        "\n\nExample Translations (match this style, register, and tone):\n".to_string();
+    for (i, example) in examples.iter().enumerate() {
+        block.push_str(&format!(
+            "\nExample {}:\nSource: {}\nTarget: {}\n",
+            i + 1,
+            example.source_text,
+            example.target_text,
+        ));
+    }
+    block
 }
 
 fn effective_source(config: &PipelineConfig) -> &str {
@@ -106,14 +126,18 @@ pub(crate) fn build_stage_prompts(
         .filter(|p| !p.trim().is_empty())
         .unwrap_or(&default_opener);
 
-    // Block 1 (cacheable): static project-level context — persona, constraints, glossary.
-    // Identical for every chunk in the run, so caches across the whole document.
+    let few_shot_block = format_few_shot_block(&config.few_shot_examples);
+
+    // Block 1 (cacheable): static project-level context — persona, constraints, glossary,
+    // few-shot examples. Identical for every chunk in the run, so caches across the whole
+    // document. Few-shot examples are folded into this same block (not a separate one) so
+    // they consume no extra Anthropic cache breakpoint.
     let static_block = format!(
         "{opener}\n\n\
          Structural Preservation Rules:\n\
          - Preserve paragraph boundaries and line breaks unless the source is clearly malformed\n\
          - Do not collapse repeated spaces, tabs, list structure, or footnote placement when they carry formatting meaning\n\n\
-         {glossary_rules}{markdown_rules}",
+         {glossary_rules}{markdown_rules}{few_shot_block}",
     );
 
     let mut system = vec![PromptBlock {
@@ -612,5 +636,94 @@ mod tests {
         };
         let prompt = build_stage_prompts("Hello world", &stage, &config, Some("Ciao mondo"), None);
         assert!(!prompt.user.contains("Previous audit findings to address:"));
+    }
+
+    // ── few-shot examples ──────────────────────────────────────────────
+
+    fn translation_stage() -> StageConfig {
+        StageConfig {
+            id: "stg-translate".to_string(),
+            role: Some("translation".to_string()),
+            prompt: "Translate accurately.".to_string(),
+            name: "translate".to_string(),
+            provider: "test".to_string(),
+            model: "test".to_string(),
+            enabled: true,
+            provider_options: None,
+            custom_provider_id: None,
+        }
+    }
+
+    #[test]
+    fn static_block_unchanged_when_no_few_shot_examples() {
+        let with_empty = build_stage_prompts(
+            "Hello world",
+            &translation_stage(),
+            &en_it_config(),
+            None,
+            None,
+        );
+        let config_without_field = PipelineConfig {
+            few_shot_examples: vec![],
+            ..en_it_config()
+        };
+        let without_field = build_stage_prompts(
+            "Hello world",
+            &translation_stage(),
+            &config_without_field,
+            None,
+            None,
+        );
+        assert_eq!(with_empty.system[0].text, without_field.system[0].text);
+        assert!(!with_empty.system[0].text.contains("Example Translations"));
+    }
+
+    #[test]
+    fn static_block_includes_few_shot_examples_when_present() {
+        let config = PipelineConfig {
+            few_shot_examples: vec![
+                FewShotExample {
+                    source_text: "Hello world".to_string(),
+                    target_text: "Ciao mondo".to_string(),
+                    label: None,
+                },
+                FewShotExample {
+                    source_text: "Good morning".to_string(),
+                    target_text: "Buongiorno".to_string(),
+                    label: Some("greeting".to_string()),
+                },
+            ],
+            ..en_it_config()
+        };
+        let prompt = build_stage_prompts("Some text", &translation_stage(), &config, None, None);
+
+        // Still exactly one static PromptBlock — no extra cache breakpoint consumed.
+        assert_eq!(prompt.system.len(), 2); // static (index 0) + stage-instructions (index 1), no blob configured
+        assert!(prompt.system[0].cacheable);
+        assert!(prompt.system[0].text.contains("Example Translations"));
+        assert!(prompt.system[0].text.contains("Hello world"));
+        assert!(prompt.system[0].text.contains("Ciao mondo"));
+        assert!(prompt.system[0].text.contains("Good morning"));
+        assert!(prompt.system[0].text.contains("Buongiorno"));
+    }
+
+    #[test]
+    fn few_shot_examples_do_not_move_blob_or_stage_instructions() {
+        let config = PipelineConfig {
+            few_shot_examples: vec![FewShotExample {
+                source_text: "Hello world".to_string(),
+                target_text: "Ciao mondo".to_string(),
+                label: None,
+            }],
+            blob_context: Some("Adjacent chunk context".to_string()),
+            ..en_it_config()
+        };
+        let prompt = build_stage_prompts("Some text", &translation_stage(), &config, None, None);
+
+        assert_eq!(prompt.system.len(), 3);
+        assert!(prompt.system[0].text.contains("Example Translations"));
+        assert!(prompt.system[1].text.contains("Adjacent chunk context"));
+        assert!(prompt.system[1].cacheable);
+        assert!(!prompt.system[2].cacheable);
     }
 }

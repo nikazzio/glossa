@@ -226,6 +226,66 @@ describe('buildPromptPreviewStages', () => {
 
     expect(stage?.blocks[2]?.body).toBe('Glossary Constraints:\n- No glossary entries were provided.');
   });
+
+  it('renders a static few-shot-examples block after glossary constraints when examples are set', () => {
+    const config = createConfig({
+      fewShotExamples: [
+        { id: 'fs-1', sourceText: 'Hello world', targetText: 'Ciao mondo' },
+        { id: 'fs-2', sourceText: 'Good morning', targetText: 'Buongiorno', label: 'greeting' },
+      ],
+      stages: [
+        {
+          id: 'stg-translation',
+          name: 'Translation',
+          role: 'translation',
+          prompt: 'Translate faithfully.',
+          model: 'gpt-4o-mini',
+          provider: 'openai',
+          enabled: true,
+        },
+      ],
+    });
+
+    const [stage] = buildPromptPreviewStages(config);
+
+    expect(stage?.blocks.map((block) => block.id)).toEqual([
+      'system-opener',
+      'structural-rules',
+      'glossary-constraints',
+      'few-shot-examples',
+      'blob-context',
+      'stage-instructions',
+      'current-chunk-id',
+      'source-chunk-text',
+      'runtime-task',
+      'output-contract',
+    ]);
+    const fewShotBlock = stage?.blocks.find((block) => block.id === 'few-shot-examples');
+    expect(fewShotBlock?.kind).toBe('static');
+    expect(fewShotBlock?.body).toContain('Hello world');
+    expect(fewShotBlock?.body).toContain('Ciao mondo');
+    expect(fewShotBlock?.body).toContain('Good morning');
+    expect(fewShotBlock?.body).toContain('Buongiorno');
+  });
+
+  it('omits the few-shot-examples block when no examples are set', () => {
+    const config = createConfig({
+      stages: [
+        {
+          id: 'stg-translation',
+          name: 'Translation',
+          role: 'translation',
+          prompt: 'Translate faithfully.',
+          model: 'gpt-4o-mini',
+          provider: 'openai',
+          enabled: true,
+        },
+      ],
+    });
+
+    const [stage] = buildPromptPreviewStages(config);
+    expect(stage?.blocks.map((block) => block.id)).not.toContain('few-shot-examples');
+  });
 });
 
 describe('PromptPreviewTab accessibility', () => {

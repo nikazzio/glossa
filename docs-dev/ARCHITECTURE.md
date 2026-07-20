@@ -297,7 +297,7 @@ flushPendingTokenBatch() → un solo setState per frame (O(1) chunk update)
 | `src-tauri/src/lib.rs` | Entry point Tauri, registrazione comandi, StreamRegistry state |
 | `src-tauri/src/llm/pipeline.rs` | Comandi Tauri: run_stage, run_stage_stream, judge_translation, run_coherence_for_chunk, preflight_pipeline, compute_blobs, extract_phrase_memory_pairs, refine_prompt, test_provider_connection, cancel_stream, preview_stage_prompt (costruisce il prompt di uno stage senza contattare il provider, per la scheda Anteprima del pannello frammento) |
 | `src-tauri/src/llm/blobs.rs` | Algoritmo assegnazione blob (globale vs finestre); `estimate_tokens` usa il massimo tra stima a parole e stima char-based (`/4`), per non sottostimare lingue con parole molto lunghe (composti tedeschi, forme latine) |
-| `src-tauri/src/llm/prompts.rs` | Costruzione prompt 3-block, glossario, markdown rules, persona; `audit_context` iniettato nel user turn dei refine stage (cache-safe); blocco di riferimento della coherence audit è nel `system` (cacheable), non nello `user`; giudice restituisce `checkedSentenceIndices` (indici, non testo delle frasi) |
+| `src-tauri/src/llm/prompts.rs` | Costruzione prompt 3-block, glossario, markdown rules, persona; `few_shot_examples` (esempi di traduzione scelti a mano) piegati nello stesso blocco static cacheable, non un blocco a parte (nessun breakpoint Anthropic aggiuntivo) — distinti dalla Phrase Memory, che resta nello stage-instructions non cacheable; `audit_context` iniettato nel user turn dei refine stage (cache-safe); blocco di riferimento della coherence audit è nel `system` (cacheable), non nello `user`; giudice restituisce `checkedSentenceIndices` (indici, non testo delle frasi) |
 | `src-tauri/src/llm/provider.rs` | Trait LlmProvider, struct LlmRequest (`json_schema_strict: bool` per judge vs json_object per altri) |
 | `src-tauri/src/llm/providers/` | Anthropic (cache breakpoint espliciti, `AnthropicConfig.temperature` 0-1 applicato sempre se impostato), OpenAI (prefix, `temperature` 0-2 applicato solo se il ragionamento non è attivo), Gemini (cacheControl + thinking, `temperature` 0-2 sempre applicabile insieme al thinking budget), DeepSeek (reasoning, stesso vincolo `temperature` di OpenAI), Ollama (locale) |
 | `src-tauri/src/llm/stream.rs` | HTTP event stream reader, StreamGuard RAII |
@@ -347,6 +347,17 @@ Cambiando frammento a metà revisione, la bozza non confermata resta intatta in 
 
 ---
 
+## Few-shot examples
+
+Distinti dalla Phrase Memory: non è ricerca vettoriale per-chunk, ma un set fisso (tetto soft 5, consigliati 2-3) di traduzioni intere scelte a mano, persistito su `pipelines.few_shot_examples` (colonna JSON, stesso pattern di `stages`) e iniettato nel blocco **static** cacheable (`prompts.rs::format_few_shot_block`, dentro `build_stage_prompts`) invece che nello stage-instructions non cacheable.
+
+- **Selezione**: bottone in `tabs/AuditTab.tsx` (non in `MemoryTab.tsx` — scelta deliberata: il momento naturale è quando l'audit del chunk è a posto e lo si blocca come definitivo), stesso gate `translationLocked`. Mostra anche il conteggio corrente (`N/5`) accanto al bottone. Copia `sourceDisplayText`/`translationDisplayText` del chunk corrente in un nuovo `FewShotExample` su `usePipelineStore().config.fewShotExamples`, con dedup per `sourceChunkId`.
+- **Revisione**: `components/pipeline/FewShotExamplesConfig.tsx`, montato in `SettingsTabPanel.tsx` dopo `PhraseMemoryConfig` — sola gestione (edit/rimozione) di ciò che è stato pinnato dal chunk, nessun inserimento da zero qui.
+- **Anteprima**: `promptPreview.ts` replica l'ordine reale (`few-shot-examples` dopo `glossary-constraints`, prima di `blob-context`, `kind: 'static'`).
+- **Persistenza**: `pipelineService.ts` — colonna aggiunta a `ALLOWED_MIGRATIONS` in `dbService.ts` per i DB esistenti.
+
+---
+
 ## Schema DB (SQLite)
 
 ```
@@ -370,6 +381,7 @@ pipelines  ← multi-pipeline per progetto (feat/multi-pipeline)
   persona, custom_source_language, custom_target_language
   blob_budget_tokens, blob_overlap
   review_provider_options JSON
+  few_shot_examples JSON[] (esempi di traduzione scelti a mano, tetto soft 5)
   use_phrase_memory, auto_search_phrase_memory
   phrase_memory_similarity_threshold, phrase_memory_max_results
   run_status ('idle'|'running'|'completed'|'interrupted')

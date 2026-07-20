@@ -34,3 +34,16 @@ chunk and in the document you are translating.
 - Keep the source text stable when you want reliable phrase reuse.
 - Treat phrase memory as a helper, not an automatic replacement for editorial judgment.
 - Review the selected matches before relying on them in production.
+
+## Translation examples (different from phrase memory)
+
+Beyond single phrases, you can pin 2-3 whole segment translations as a style example
+for the entire pipeline: they steer register and tone on every following segment,
+rather than suggesting specific pairs like phrase memory does.
+
+To add one: lock a segment whose translation you consider a good example — usually
+after checking the Audit tab and confirming it looks right — then in that same Audit
+tab click "Use as style example", which also shows how many examples you've saved so
+far. The example shows up right away in the pipeline Settings, where you can review it,
+shorten it, or remove it. A small cap (5 examples) keeps every following translation
+from being weighed down unnecessarily.

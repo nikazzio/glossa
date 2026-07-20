@@ -37,6 +37,19 @@ pub struct GlossaryEntry {
     pub notes: Option<String>,
 }
 
+/// A hand-picked, already-approved chunk translation used as a few-shot style
+/// example. Injected into the cacheable static block (unlike Phrase Memory,
+/// which is per-chunk vector search appended to the non-cacheable
+/// stage-instructions block), so the marginal cost stays near zero after the
+/// first chunk of a run.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FewShotExample {
+    pub source_text: String,
+    pub target_text: String,
+    pub label: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OllamaConfig {
@@ -116,6 +129,11 @@ pub struct PipelineConfig {
     pub judge_model: String,
     pub judge_provider: String,
     pub glossary: Vec<GlossaryEntry>,
+    /// Hand-picked example translations, folded into the cacheable static
+    /// block (see `prompts::format_few_shot_block`). Defaults to empty for
+    /// pipelines saved before this field existed.
+    #[serde(default)]
+    pub few_shot_examples: Vec<FewShotExample>,
     pub use_chunking: Option<bool>,
     pub markdown_aware: Option<bool>,
     pub coherence_prompt: Option<String>,
