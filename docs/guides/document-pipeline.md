@@ -107,6 +107,15 @@ il workflow più leggero.
 - Se il format stage inizia a cambiare il significato, semplificalo o rimuovilo.
 - Se un chunk è difficile, [annotalo](./annotations) invece di affidarti solo alla memoria.
 
+## Anteprima del messaggio prima di lanciare
+
+Nel pannello del frammento, la scheda **Anteprima** (dopo Riferimenti) mostra il messaggio
+letterale — istruzioni di sistema e testo utente — che verrebbe inviato al motore per la
+fase scelta sul frammento aperto. Costruiscilo a comando con il tasto dedicato: nessuna
+chiamata reale parte, nessun costo, nessun risultato viene scritto sul frammento. Utile per
+controllare cosa riceverà davvero il modello prima di avviare una traduzione o una fase di
+editing.
+
 ## Vedi anche
 
 - [Annotazioni](./annotations) — per tracciare issue editoriali per chunk

@@ -38,6 +38,17 @@ fn build_anthropic_system(req: &LlmRequest<'_>, force_json: bool) -> Value {
     Value::Array(blocks)
 }
 
+/// Temperature override for this request, clamped to Anthropic's valid 0.0-1.0
+/// range. `None` when unset, letting Anthropic use its own default (1.0).
+fn temperature_override(req: &LlmRequest<'_>) -> Option<f32> {
+    req.provider_options
+        .as_ref()?
+        .anthropic
+        .as_ref()?
+        .temperature
+        .map(|t| t.clamp(0.0, 1.0))
+}
+
 fn max_output_tokens(req: &LlmRequest<'_>) -> usize {
     const MIN_OUTPUT_TOKENS: usize = 2_048;
     const MAX_OUTPUT_TOKENS: usize = 8_192;
@@ -135,12 +146,15 @@ impl LlmProvider for AnthropicProvider {
 
     async fn call(&self, client: &Client, req: &LlmRequest<'_>) -> Result<LlmResponse, String> {
         let system = build_anthropic_system(req, req.json_mode);
-        let body = json!({
+        let mut body = json!({
             "model": req.model,
             "max_tokens": max_output_tokens(req),
             "system": system,
             "messages": [{"role": "user", "content": req.structured.user}]
         });
+        if let Some(temperature) = temperature_override(req) {
+            body["temperature"] = json!(temperature);
+        }
 
         let resp = client
             .post("https://api.anthropic.com/v1/messages")
@@ -213,13 +227,16 @@ impl LlmProvider for AnthropicProvider {
         req: &LlmRequest<'_>,
     ) -> Result<reqwest::Response, String> {
         let system = build_anthropic_system(req, false);
-        let body = json!({
+        let mut body = json!({
             "model": req.model,
             "max_tokens": max_output_tokens(req),
             "system": system,
             "messages": [{"role": "user", "content": req.structured.user}],
             "stream": true
         });
+        if let Some(temperature) = temperature_override(req) {
+            body["temperature"] = json!(temperature);
+        }
 
         client
             .post("https://api.anthropic.com/v1/messages")
@@ -236,11 +253,15 @@ impl LlmProvider for AnthropicProvider {
 
 #[cfg(test)]
 mod tests {
-    use super::{max_output_tokens, stop_reason_error};
+    use super::{max_output_tokens, stop_reason_error, temperature_override};
     use crate::llm::provider::LlmRequest;
-    use crate::llm::types::{PromptBlock, StructuredPrompt};
+    use crate::llm::types::{AnthropicConfig, PromptBlock, ProviderRuntimeConfig, StructuredPrompt};
 
     fn request(user: String) -> LlmRequest<'static> {
+        request_with_temperature(user, None)
+    }
+
+    fn request_with_temperature(user: String, temperature: Option<f32>) -> LlmRequest<'static> {
         let structured = Box::leak(Box::new(StructuredPrompt {
             system: vec![PromptBlock {
                 text: "system".to_string(),
@@ -248,14 +269,49 @@ mod tests {
             }],
             user,
         }));
+        let provider_options = temperature.map(|t| {
+            &*Box::leak(Box::new(ProviderRuntimeConfig {
+                ollama: None,
+                openai: None,
+                deepseek: None,
+                gemini: None,
+                deepl: None,
+                anthropic: Some(AnthropicConfig { temperature: Some(t) }),
+            }))
+        });
         LlmRequest {
             model: "claude-test",
             structured,
             api_key: "key",
             json_mode: false,
             json_schema_strict: false,
-            provider_options: None,
+            provider_options,
         }
+    }
+
+    #[test]
+    fn temperature_override_is_none_when_not_configured() {
+        assert_eq!(temperature_override(&request("hi".to_string())), None);
+    }
+
+    #[test]
+    fn temperature_override_passes_through_value_in_range() {
+        assert_eq!(
+            temperature_override(&request_with_temperature("hi".to_string(), Some(0.3))),
+            Some(0.3)
+        );
+    }
+
+    #[test]
+    fn temperature_override_clamps_out_of_range_values() {
+        assert_eq!(
+            temperature_override(&request_with_temperature("hi".to_string(), Some(5.0))),
+            Some(1.0)
+        );
+        assert_eq!(
+            temperature_override(&request_with_temperature("hi".to_string(), Some(-1.0))),
+            Some(0.0)
+        );
     }
 
     #[test]

@@ -253,6 +253,7 @@
       "non_reasoning": "Diretto",
       "optional": "Adattivo"
     },
+    "temperature": "Temperatura",
     "reasoningEffort": "Ragionamento",
     "reasoningEffortNone": "Off",
     "reasoningEffortLow": "Basso",
@@ -1080,7 +1081,9 @@
       "editTitle": "Revisione e iterazione",
       "editDesc": "La traduzione candidata è modificabile inline. Dopo le correzioni manuali puoi cliccare 'Rivaluta' nel pannello audit per rilanciare il giudice solo sul chunk modificato, oppure 'Blocca traduzione' (spunta verde) per marcarlo come definitivo e proteggerlo da rielaborazioni accidentali.",
       "tipTitle": "Consiglio: mescola i provider",
-      "tipDesc": "Usa un modello rapido per traduzione (Gemini Flash, DeepSeek, modelli Ollama leggeri), un modello capace per refine (Claude Sonnet, GPT-5), un modello rigoroso per il giudice. Le scelte per stage sono indipendenti e i costi vengono aggregati nel pannello statistiche."
+      "tipDesc": "Usa un modello rapido per traduzione (Gemini Flash, DeepSeek, modelli Ollama leggeri), un modello capace per refine (Claude Sonnet, GPT-5), un modello rigoroso per il giudice. Le scelte per stage sono indipendenti e i costi vengono aggregati nel pannello statistiche.",
+      "temperatureTitle": "Temperature per stage e per il giudice",
+      "temperatureDesc": "Accanto al controllo di ragionamento (dove presente), ogni stage e il giudice hanno uno slider facoltativo di temperature: quanto il modello varia rispetto alla risposta più probabile. Per Anthropic e Gemini è sempre disponibile (0-1 per Anthropic, 0-2 per Gemini). Per OpenAI e DeepSeek compare solo quando il ragionamento per quella fase è su \"nessuno\" o il modello non ragiona affatto — questi due rifiutano o ignorano il parametro mentre stanno ragionando attivamente. Se non lo tocchi resta a 0 (massima precisione)."
     },
     "features": {
       "title": "Funzionalità",

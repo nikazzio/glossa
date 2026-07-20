@@ -493,6 +493,7 @@ pub async fn refine_prompt(
         deepseek: None,
         gemini: None,
         deepl: None,
+        anthropic: None,
     }));
     let structured = crate::llm::types::StructuredPrompt {
         system: vec![crate::llm::types::PromptBlock {

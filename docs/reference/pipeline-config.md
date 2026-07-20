@@ -87,6 +87,21 @@ Passando il mouse sull'icona informazioni vicino al costo stimato (nel pannello 
 - È una stima approssimativa basata sul conteggio parole e sul prezzo per token del modello scelto: il costo reale può variare leggermente.
 - Gli stage DeepL sono misurati in caratteri fatturati da DeepL: Glossa può mostrarli dopo la run, ma il preventivo in dollari resta basato sui provider LLM con prezzo per token.
 
+## Temperature per stage e per il giudice
+
+Accanto al controllo di ragionamento (dove presente), ogni stage e il giudice hanno un
+controllo facoltativo di temperature — quanto il modello varia rispetto alla risposta più
+probabile. Valore basso = output più deterministico e ripetibile; valore alto = più
+variazione.
+
+- **Anthropic** e **Gemini**: sempre disponibile, intervallo 0–1 per Anthropic, 0–2 per Gemini.
+- **OpenAI** e **DeepSeek**: disponibile solo quando il ragionamento per quella fase è
+  impostato su "nessuno" o il modello non ragiona affatto — questi due provider rifiutano
+  o ignorano il parametro mentre stanno ragionando attivamente. Intervallo 0–2.
+
+Se non tocchi il controllo resta a 0 (massima precisione). Alzalo se vuoi più varietà
+stilistica, tienilo basso per traduzioni tecniche o filologiche dove serve precisione.
+
 ## Vedi anche
 
 - [Provider supportati](./provider-support) — confronto tra provider e guida alla scelta del modello

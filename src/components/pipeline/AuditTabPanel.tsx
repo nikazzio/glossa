@@ -6,9 +6,10 @@ import type { ProviderKeyStatusMap } from '../../hooks/useProviderKeyStatus';
 import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
 import { ensureModelInList, getKnownModelIds, getModelStatus, getResolvedModelReasoning, LLM_PROVIDER_ORDER } from '../../models/catalog';
 import { DEFAULT_COHERENCE_PROMPT, DEFAULT_JUDGE_PROMPT } from '../../constants';
-import { SectionLabel, ToggleRow, FieldLabel, Select } from '../ui';
+import { SectionLabel, ToggleRow, FieldLabel, Select, Tooltip } from '../ui';
 import { DeprecatedModelBadge } from '../models/DeprecatedModelBadge';
 import { ReasoningPicker } from '../models/ReasoningPicker';
+import { TemperatureControl } from '../models/TemperatureControl';
 import { ProviderRuntimeEditor } from './ProviderRuntimeEditor';
 import { AuditPromptEditor } from './AuditPromptEditor';
 import { useUiStore } from '../../stores/uiStore';
@@ -56,6 +57,35 @@ export function AuditTabPanel({
 }: AuditTabPanelProps) {
   const { t } = useTranslation();
   const judgeResolvedReasoning = getResolvedModelReasoning(config.judgeProvider, config.judgeModel);
+  const judgeShowReasoningPicker =
+    judgeResolvedReasoning !== undefined && judgeResolvedReasoning !== 'non_reasoning' && config.judgeProvider !== 'ollama';
+  const judgeSupportsTemperature =
+    config.judgeProvider === 'anthropic' ||
+    config.judgeProvider === 'gemini' ||
+    config.judgeProvider === 'openai' ||
+    config.judgeProvider === 'deepseek';
+  const judgeTemperatureDisabledByReasoning =
+    (config.judgeProvider === 'openai' || config.judgeProvider === 'deepseek') &&
+    !(judgeResolvedReasoning === 'non_reasoning' || currentJudgeReasoningEffort === 'none');
+  const currentJudgeTemperature = (() => {
+    if (config.judgeProvider === 'anthropic') return config.reviewProviderOptions?.anthropic?.temperature;
+    if (config.judgeProvider === 'openai') return config.reviewProviderOptions?.openai?.temperature;
+    if (config.judgeProvider === 'deepseek') return config.reviewProviderOptions?.deepseek?.temperature;
+    if (config.judgeProvider === 'gemini') return config.reviewProviderOptions?.gemini?.temperature;
+    return undefined;
+  })();
+  const handleJudgeTemperatureChange = (temperature: number | undefined) => {
+    const opts = config.reviewProviderOptions ?? {};
+    if (config.judgeProvider === 'anthropic') {
+      setConfig((prev) => ({ ...prev, reviewProviderOptions: { ...opts, anthropic: { ...opts.anthropic, temperature } } }));
+    } else if (config.judgeProvider === 'openai') {
+      setConfig((prev) => ({ ...prev, reviewProviderOptions: { ...opts, openai: { ...opts.openai, temperature } } }));
+    } else if (config.judgeProvider === 'deepseek') {
+      setConfig((prev) => ({ ...prev, reviewProviderOptions: { ...opts, deepseek: { ...opts.deepseek, temperature } } }));
+    } else if (config.judgeProvider === 'gemini') {
+      setConfig((prev) => ({ ...prev, reviewProviderOptions: { ...opts, gemini: { ...opts.gemini, temperature } } }));
+    }
+  };
   const showDeprecatedModels = useUiStore((s) => s.showDeprecatedModels);
   const canToggleDeprecated = config.judgeProvider !== 'ollama';
   const effectiveJudgeModels = ensureModelInList(
@@ -153,16 +183,28 @@ export function AuditTabPanel({
             />
           )}
         </div>
-        {judgeResolvedReasoning !== undefined && judgeResolvedReasoning !== 'non_reasoning' && config.judgeProvider !== 'ollama' && (
-          <div className="flex items-center gap-2">
-            <FieldLabel icon={<Wand2 size={11} className="text-editorial-warning shrink-0" />}>
-              {t('pipeline.reasoningEffort')}
-            </FieldLabel>
-            <ReasoningPicker
-              value={currentJudgeReasoningEffort}
-              showNone={judgeResolvedReasoning === 'optional'}
-              onChange={handleJudgeReasoningChange}
-            />
+        {(judgeShowReasoningPicker || judgeSupportsTemperature) && (
+          <div className="flex items-center gap-3">
+            {judgeShowReasoningPicker && (
+              <div className="flex items-center gap-1.5">
+                <Tooltip label={t('pipeline.reasoningEffort')} side="top">
+                  <Wand2 size={11} className="shrink-0 text-editorial-warning" aria-hidden="true" />
+                </Tooltip>
+                <ReasoningPicker
+                  value={currentJudgeReasoningEffort}
+                  showNone={judgeResolvedReasoning === 'optional'}
+                  onChange={handleJudgeReasoningChange}
+                />
+              </div>
+            )}
+            {judgeSupportsTemperature && (
+              <TemperatureControl
+                value={currentJudgeTemperature}
+                max={config.judgeProvider === 'anthropic' ? 1 : 2}
+                disabled={judgeTemperatureDisabledByReasoning}
+                onChange={handleJudgeTemperatureChange}
+              />
+            )}
           </div>
         )}
         {judgeOllamaOffline && (

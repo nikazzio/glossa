@@ -87,6 +87,21 @@ Hovering over the info icon next to the estimated cost (in the pipeline settings
 - This is an approximation based on word count and the chosen model's per-token price: the real cost may vary slightly.
 - DeepL stages are measured in billed characters by DeepL: Glossa can show those after the run, but the dollar estimate remains based on token-priced LLM providers.
 
+## Temperature for stages and the judge
+
+Next to the reasoning control (where present), every stage and the judge have an
+optional temperature control — how much the model varies from the most likely
+response. Low value = more deterministic, repeatable output; high value = more variation.
+
+- **Anthropic** and **Gemini**: always available, range 0–1 for Anthropic, 0–2 for Gemini.
+- **OpenAI** and **DeepSeek**: only available when reasoning for that stage is set to
+  "none" or the model doesn't reason at all — both providers reject or ignore the
+  parameter while actively reasoning. Range 0–2.
+
+If you don't touch the control it stays at 0 (maximum precision). Raise it for more
+stylistic variety, keep it low for technical or philological translation where precision
+matters.
+
 ## See also
 
 - [Provider support](./provider-support) — provider comparison and model selection guide

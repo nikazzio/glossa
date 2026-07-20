@@ -23,6 +23,7 @@ import type { ReasoningEffortLevel } from '../../types';
 import { DeprecatedModelBadge } from '../models/DeprecatedModelBadge';
 import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
 import { ReasoningPicker } from '../models/ReasoningPicker';
+import { TemperatureControl } from '../models/TemperatureControl';
 import { ProviderRuntimeEditor } from './ProviderRuntimeEditor';
 import { canRefineWithProvider, formatProviderModelLabel, type ProviderKeyStatusMap } from '../../hooks/useProviderKeyStatus';
 import { useConfigStore } from '../../stores/configStore';
@@ -31,7 +32,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { confirm } from '../../stores/confirmStore';
 import { STAGE_TEMPLATES } from '../../pipeline/pipelineModes';
 import { DeeplStageConfig } from './DeeplStageConfig';
-import { IconButton, SectionLabel, FieldLabel, Select } from '../ui';
+import { IconButton, SectionLabel, Select, Tooltip } from '../ui';
 
 interface StageCardProps {
   stage: PipelineStageConfig;
@@ -122,6 +123,42 @@ export function StageCard({
     }
     return defaultEffort;
   })();
+
+  const showReasoningPicker =
+    resolvedReasoning !== undefined && resolvedReasoning !== 'non_reasoning' && stage.provider !== 'ollama';
+
+  const supportsTemperature =
+    stage.provider === 'anthropic' ||
+    stage.provider === 'gemini' ||
+    stage.provider === 'openai' ||
+    stage.provider === 'deepseek';
+
+  // OpenAI/DeepSeek reject or silently ignore temperature while actively reasoning;
+  // Anthropic has no such restriction, and Gemini accepts it alongside thinking budget.
+  const temperatureDisabledByReasoning =
+    (stage.provider === 'openai' || stage.provider === 'deepseek') &&
+    !(resolvedReasoning === 'non_reasoning' || currentReasoningEffort === 'none');
+
+  const currentTemperature = (() => {
+    if (stage.provider === 'anthropic') return stage.providerOptions?.anthropic?.temperature;
+    if (stage.provider === 'openai') return stage.providerOptions?.openai?.temperature;
+    if (stage.provider === 'deepseek') return stage.providerOptions?.deepseek?.temperature;
+    if (stage.provider === 'gemini') return stage.providerOptions?.gemini?.temperature;
+    return undefined;
+  })();
+
+  const handleTemperatureChange = (temperature: number | undefined) => {
+    const opts = stage.providerOptions ?? {};
+    if (stage.provider === 'anthropic') {
+      onUpdate({ providerOptions: { ...opts, anthropic: { ...opts.anthropic, temperature } } });
+    } else if (stage.provider === 'openai') {
+      onUpdate({ providerOptions: { ...opts, openai: { ...opts.openai, temperature } } });
+    } else if (stage.provider === 'deepseek') {
+      onUpdate({ providerOptions: { ...opts, deepseek: { ...opts.deepseek, temperature } } });
+    } else if (stage.provider === 'gemini') {
+      onUpdate({ providerOptions: { ...opts, gemini: { ...opts.gemini, temperature } } });
+    }
+  };
 
   const handleReasoningChange = (effort: ReasoningEffortLevel) => {
     const opts = stage.providerOptions ?? {};
@@ -300,17 +337,29 @@ export function StageCard({
             {t('pipeline.unlockModelChangeWarning')}
           </p>
         )}
-        {resolvedReasoning !== undefined && resolvedReasoning !== 'non_reasoning' && stage.provider !== 'ollama' && (
-          <div className="flex items-center gap-2">
-            <FieldLabel icon={<Wand2 size={11} className="text-editorial-warning shrink-0" />}>
-              {t('pipeline.reasoningEffort')}
-            </FieldLabel>
-            <ReasoningPicker
-              value={currentReasoningEffort}
-              showNone={resolvedReasoning === 'optional'}
-              disabled={modelDisabled}
-              onChange={handleReasoningChange}
-            />
+        {(showReasoningPicker || supportsTemperature) && (
+          <div className="flex items-center gap-3">
+            {showReasoningPicker && (
+              <div className="flex items-center gap-1.5">
+                <Tooltip label={t('pipeline.reasoningEffort')} side="top">
+                  <Wand2 size={11} className="shrink-0 text-editorial-warning" aria-hidden="true" />
+                </Tooltip>
+                <ReasoningPicker
+                  value={currentReasoningEffort}
+                  showNone={resolvedReasoning === 'optional'}
+                  disabled={modelDisabled}
+                  onChange={handleReasoningChange}
+                />
+              </div>
+            )}
+            {supportsTemperature && (
+              <TemperatureControl
+                value={currentTemperature}
+                max={stage.provider === 'anthropic' ? 1 : 2}
+                disabled={modelDisabled || temperatureDisabledByReasoning}
+                onChange={handleTemperatureChange}
+              />
+            )}
           </div>
         )}
         {ollamaOffline && !translationsExist && (

@@ -567,6 +567,7 @@ fn effective_review_ollama_config_merges_user_overrides() {
         deepseek: None,
         gemini: None,
         deepl: None,
+        anthropic: None,
     });
 
     let ollama = merge_ollama_config(
