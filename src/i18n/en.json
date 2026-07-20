@@ -254,7 +254,6 @@
       "optional": "Adaptive"
     },
     "temperature": "Temperature",
-    "temperatureReset": "Reset to default",
     "reasoningEffort": "Reasoning",
     "reasoningEffortNone": "Off",
     "reasoningEffortLow": "Low",
@@ -1068,7 +1067,7 @@
       "editDesc": "The candidate translation is editable inline. After manual corrections you can click 'Re-evaluate' in the audit panel to rerun the judge on the edited chunk only, or 'Lock translation' (green tick) to mark it final and protect it from accidental reprocessing.",
       "tipTitle": "Tip: mix providers",
       "tipDesc": "Use a fast model for translation (Gemini Flash, DeepSeek, light Ollama models), a capable model for refine (Claude Sonnet, GPT-5), a strict model for the judge. Stage choices are independent and costs are aggregated in the stats panel.",
-      "temperatureTitle": "Temperature per stage and for the judge",
+      "temperatureTitle": "Temperature for stages and the judge",
       "temperatureDesc": "Next to the reasoning control (where present), every stage and the judge have an optional temperature slider: how much the model varies from the most likely response. For Anthropic and Gemini it's always available (0-1 for Anthropic, 0-2 for Gemini). For OpenAI and DeepSeek it only appears when reasoning for that stage is set to \"none\" or the model doesn't reason at all — both reject or ignore the parameter while actively reasoning. If you don't touch it, it stays at 0 (maximum precision)."
     },
     "features": {

@@ -98,7 +98,7 @@ export interface DeeplLanguageInfo {
 }
 
 export interface AnthropicConfig {
-  /** 0.0-1.0. Unset lets Anthropic use its own default (1.0). */
+  /** 0.0-1.0. The UI always resolves this to a concrete value (default 0) once the control renders. */
   temperature?: number;
 }
 

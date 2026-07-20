@@ -23,9 +23,8 @@ export function TemperatureControl({ value, max, disabled, onChange }: Temperatu
   const { t } = useTranslation();
 
   useEffect(() => {
-    if (value === undefined) onChange(DEFAULT_VALUE);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo al primo render di questo controllo, onChange non serve nelle dep
-  }, []);
+    if (value === undefined && !disabled) onChange(DEFAULT_VALUE);
+  }, [value, disabled, onChange]);
 
   const displayValue = value ?? DEFAULT_VALUE;
 

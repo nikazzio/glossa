@@ -87,7 +87,7 @@ Hovering over the info icon next to the estimated cost (in the pipeline settings
 - This is an approximation based on word count and the chosen model's per-token price: the real cost may vary slightly.
 - DeepL stages are measured in billed characters by DeepL: Glossa can show those after the run, but the dollar estimate remains based on token-priced LLM providers.
 
-## Temperature per stage and for the judge
+## Temperature for stages and the judge
 
 Next to the reasoning control (where present), every stage and the judge have an
 optional temperature control — how much the model varies from the most likely
