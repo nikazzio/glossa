@@ -256,7 +256,8 @@ pub(crate) fn build_judge_prompts(
          Report EVERY issue you find and EVERY occurrence separately — do not merge, suppress, or \
          limit repeated issues.\n\n\
          You MUST respond with a valid JSON object containing:\n\
-         - checkedSentences: array of source sentences you verified (list them verbatim as you scanned them)\n\
+         - checkedSentenceIndices: array of 1-based source sentence numbers you verified, in scan order \
+           (e.g. [1, 2, 3] for a 3-sentence source) — indices only, never the sentence text itself\n\
          - rating: one of 'critical', 'poor', 'fair', 'good', 'excellent' \
            (semantic translation quality: critical=unusable, poor=weak, fair=usable with revision, \
            good=solid, excellent=publication-ready)\n\
@@ -325,9 +326,7 @@ pub(crate) fn build_coherence_prompts(
     };
 
     // Block 1 (cacheable): static coherence context — role, instructions, glossary, format spec.
-    // Constant for the whole project run. blob_context stays in the user turn, but is
-    // placed before the current segment so provider prefix caches can reuse the stable
-    // reference block for every chunk in the same blob.
+    // Constant for the whole project run.
     let system_block = format!(
         "You are a translation coherence auditor for {src}→{tgt} translations.\n\
          Your task: identify cross-segment inconsistencies between a translated segment and its surrounding context.\n\
@@ -342,6 +341,9 @@ pub(crate) fn build_coherence_prompts(
          \"phrase\": \"exact verbatim substring of the WRONG text as it appears in the target translation, not the source term nor the correction; first occurrence only\"}}]}}",
     );
 
+    // Block 2 (cacheable): reference document block. Identical for every chunk in the same
+    // blob, so it's a second cache breakpoint — placed in system, not the user turn, so
+    // providers actually cache it instead of rebilling it at full price on every chunk.
     let context_block = input
         .blob_context
         .as_deref()
@@ -351,9 +353,8 @@ pub(crate) fn build_coherence_prompts(
              This block may include the current chunk. Use it to compare terminology and continuity across the document block.\n\
              The current chunk to audit is identified below.\n\
              {ctx}\n\
-             [End reference translated document block]\n\n"
-        ))
-        .unwrap_or_default();
+             [End reference translated document block]"
+        ));
 
     let current_chunk_line = input
         .current_chunk_id
@@ -363,20 +364,25 @@ pub(crate) fn build_coherence_prompts(
         .unwrap_or_default();
 
     let user = format!(
-        "{context_block}{current_chunk_line}[Current segment]\nOriginal: {original}\nTranslation: {translation}\n\
+        "{current_chunk_line}[Current segment]\nOriginal: {original}\nTranslation: {translation}\n\
          [End of current segment]\n\n\
          Identify cross-segment coherence issues and return the JSON. If no issues, return {{\"issues\": []}}.",
         original = input.original,
         translation = input.translation,
     );
 
-    StructuredPrompt {
-        system: vec![PromptBlock {
-            text: system_block,
+    let mut system = vec![PromptBlock {
+        text: system_block,
+        cacheable: true,
+    }];
+    if let Some(ctx) = context_block {
+        system.push(PromptBlock {
+            text: ctx,
             cacheable: true,
-        }],
-        user,
+        });
     }
+
+    StructuredPrompt { system, user }
 }
 
 /// Strips markdown code fences and any preamble text that LLMs sometimes wrap around JSON output.
@@ -508,17 +514,24 @@ mod tests {
     fn user_omits_reference_block_when_no_blob_context() {
         let prompt = build_coherence_prompts(&simple_input(), &en_it_config());
         assert!(!prompt.user.contains("Reference translated document block"));
+        assert_eq!(prompt.system.len(), 1);
     }
 
+    // The reference block lives in `system` (not `user`) so it forms a second cache
+    // breakpoint reused across every chunk in the same blob, instead of being rebilled
+    // at full price on every coherence call.
     #[test]
-    fn user_includes_reference_block_when_blob_context_provided() {
+    fn system_includes_cacheable_reference_block_when_blob_context_provided() {
         let input = CoherenceChunkInput {
             blob_context: Some("Adjacent chunk translation".to_string()),
             ..simple_input()
         };
         let prompt = build_coherence_prompts(&input, &en_it_config());
-        assert!(prompt.user.contains("Reference translated document block"));
-        assert!(prompt.user.contains("Adjacent chunk translation"));
+        assert_eq!(prompt.system.len(), 2);
+        assert!(prompt.system[1].text.contains("Reference translated document block"));
+        assert!(prompt.system[1].text.contains("Adjacent chunk translation"));
+        assert!(prompt.system[1].cacheable);
+        assert!(!prompt.user.contains("Reference translated document block"));
     }
 
     #[test]
@@ -545,6 +558,7 @@ mod tests {
         };
         let prompt = build_coherence_prompts(&input, &en_it_config());
         assert!(!prompt.user.contains("Reference translated document block"));
+        assert_eq!(prompt.system.len(), 1);
     }
 
     // ── build_stage_prompts audit_context ─────────────────────────────

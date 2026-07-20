@@ -19,10 +19,17 @@ pub struct BlobAssignment {
     pub reference_chunk_ids: Arc<[String]>,
 }
 
-/// Rough token estimate: ~1.33 tokens per word (works for Latin-script languages).
+/// Rough token estimate. Word-based (~1.33 tokens/word) approximates common
+/// Latin-script text well, but undercounts dense/inflected languages (German
+/// compounds, Latin) where a single whitespace-separated "word" is unusually
+/// long — those need more subword tokens than the word count alone implies.
+/// A character-based floor (~4 chars/token) catches that case without
+/// changing the estimate for ordinary text.
 pub fn estimate_tokens(text: &str) -> usize {
     let words = text.split_whitespace().count();
-    words + words / 3
+    let word_based = words + words / 3;
+    let char_based = text.chars().count() / 4;
+    word_based.max(char_based)
 }
 
 /// Groups chunks into static reference blobs for prompt caching.
@@ -245,5 +252,16 @@ mod tests {
         assert_eq!(estimate_tokens("one two three"), 4);
         let text = words(30);
         assert_eq!(estimate_tokens(&text), 40);
+    }
+
+    #[test]
+    fn estimate_tokens_uses_char_floor_for_long_compound_words() {
+        // A single very long compound word (German-style) has a tiny word count,
+        // so the word-based formula alone would badly undercount it.
+        let compound = "Rindfleischetikettierungsueberwachungsaufgabenuebertragungsgesetz";
+        let word_based_only = 1 + 1 / 3;
+        assert_eq!(word_based_only, 1);
+        assert!(estimate_tokens(compound) > word_based_only);
+        assert_eq!(estimate_tokens(compound), compound.chars().count() / 4);
     }
 }

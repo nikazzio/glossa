@@ -459,9 +459,11 @@ pub async fn judge_translation(
         cache_miss_input_tokens: usage.as_ref().and_then(|u| u.cache_miss_input),
         system_prompt: None,
         user_prompt: None,
-        checked_sentences: parsed["checkedSentences"].as_array().map(|arr| {
+        checked_sentence_indices: parsed["checkedSentenceIndices"].as_array().map(|arr| {
             arr.iter()
-                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                .filter_map(|v| v.as_u64())
+                .filter_map(|n| u32::try_from(n).ok())
+                .filter(|&n| n >= 1)
                 .collect()
         }),
     })
