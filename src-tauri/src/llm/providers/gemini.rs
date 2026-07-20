@@ -8,7 +8,7 @@ use std::hash::{Hash, Hasher};
 use std::sync::{LazyLock, Mutex};
 use std::time::{Duration, Instant};
 
-use super::{format_api_error, with_retry_after};
+use super::{format_api_error, translation_audit_schema, with_retry_after};
 use crate::llm::provider::{
     LlmProvider, LlmRequest, LlmResponse, StreamFormat, TokenUsage, UsageAccumulator,
 };
@@ -107,11 +107,7 @@ impl LlmProvider for GeminiProvider {
             req.model, req.api_key
         );
 
-        let mut gen_config = if req.json_mode {
-            serde_json::json!({ "responseMimeType": "application/json" })
-        } else {
-            serde_json::json!({})
-        };
+        let mut gen_config = generation_config(req);
         apply_thinking_config(req, &mut gen_config);
         apply_temperature_config(req, &mut gen_config);
 
@@ -196,7 +192,7 @@ impl LlmProvider for GeminiProvider {
             req.model, req.api_key
         );
 
-        let mut gen_config = serde_json::json!({});
+        let mut gen_config = generation_config(req);
         apply_thinking_config(req, &mut gen_config);
         apply_temperature_config(req, &mut gen_config);
 
@@ -223,6 +219,25 @@ impl LlmProvider for GeminiProvider {
 
 fn gemini_cache_config<'a>(req: &'a LlmRequest<'_>) -> Option<&'a GeminiCacheConfig> {
     req.provider_options.as_ref()?.gemini.as_ref()
+}
+
+fn generation_config(req: &LlmRequest<'_>) -> Value {
+    if req.json_schema_strict {
+        return json!({
+            "responseFormat": {
+                "text": {
+                    "mimeType": "application/json",
+                    "schema": translation_audit_schema()
+                }
+            }
+        });
+    }
+
+    if req.json_mode {
+        json!({ "responseMimeType": "application/json" })
+    } else {
+        json!({})
+    }
 }
 
 fn apply_thinking_config(req: &LlmRequest<'_>, gen_config: &mut Value) {
@@ -362,7 +377,9 @@ async fn ensure_gemini_cached_content(
 mod temperature_tests {
     use super::*;
     use crate::llm::provider::LlmRequest;
-    use crate::llm::types::{GeminiCacheConfig, PromptBlock, ProviderRuntimeConfig, StructuredPrompt};
+    use crate::llm::types::{
+        GeminiCacheConfig, PromptBlock, ProviderRuntimeConfig, StructuredPrompt,
+    };
 
     fn request_with(gemini: Option<GeminiCacheConfig>) -> LlmRequest<'static> {
         let structured = Box::leak(Box::new(StructuredPrompt {
@@ -416,7 +433,10 @@ mod temperature_tests {
         let mut gen_config = serde_json::json!({});
         apply_thinking_config(&req, &mut gen_config);
         apply_temperature_config(&req, &mut gen_config);
-        assert_eq!(gen_config["thinkingConfig"]["thinkingBudget"], serde_json::json!(8192));
+        assert_eq!(
+            gen_config["thinkingConfig"]["thinkingBudget"],
+            serde_json::json!(8192)
+        );
         assert_eq!(gen_config["temperature"], serde_json::json!(0.2_f32));
     }
 
@@ -426,5 +446,20 @@ mod temperature_tests {
         let mut gen_config = serde_json::json!({});
         apply_temperature_config(&req, &mut gen_config);
         assert!(gen_config.get("temperature").is_none());
+    }
+
+    #[test]
+    fn strict_json_uses_response_format_schema() {
+        let mut req = request_with(None);
+        req.json_mode = true;
+        req.json_schema_strict = true;
+
+        let config = generation_config(&req);
+
+        assert_eq!(
+            config["responseFormat"]["text"]["mimeType"],
+            "application/json"
+        );
+        assert_eq!(config["responseFormat"]["text"]["schema"]["type"], "object");
     }
 }
