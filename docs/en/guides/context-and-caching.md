@@ -77,6 +77,19 @@ the cache has already expired.
 
 The figures above (24 hours, 5–10 minutes) reflect observed behaviour and are not contractual guarantees — providers may change them without notice. Check your provider's documentation for the retention policy of the model you are using.
 
+## Anthropic: opt-in caching with extended TTL
+
+Unlike other providers, Anthropic caching is **off by default** and must be turned
+on by hand in the pipeline settings. Reason: with Glossa's typical usage pattern
+(one chunk at a time, often minutes or hours apart) the default 5-minute cache
+would almost always expire before it's reread, and turning it on without a reason
+would only cost the write surcharge, never save anything.
+
+If needed, you can also extend the cache lifetime to 1 hour instead of the default
+5 minutes — useful when a slow stage sits between two Anthropic chunks in the
+pipeline (e.g. a local provider). It costs double on writes instead of 1.25x. See
+[Pipeline config](../reference/pipeline-config) for details on both controls.
+
 ## See also
 
 - [Pipeline config](../reference/pipeline-config) — how to configure stages and models

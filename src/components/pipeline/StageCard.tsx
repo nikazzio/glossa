@@ -24,6 +24,7 @@ import { DeprecatedModelBadge } from '../models/DeprecatedModelBadge';
 import { ModelCapabilityHint } from '../models/ModelCapabilityHint';
 import { ReasoningPicker } from '../models/ReasoningPicker';
 import { TemperatureControl } from '../models/TemperatureControl';
+import { AnthropicCacheConfig } from './AnthropicCacheConfig';
 import { ProviderRuntimeEditor } from './ProviderRuntimeEditor';
 import { canRefineWithProvider, formatProviderModelLabel, type ProviderKeyStatusMap } from '../../hooks/useProviderKeyStatus';
 import { useConfigStore } from '../../stores/configStore';
@@ -386,6 +387,15 @@ export function StageCard({
           title={t('pipeline.providerOptions.stageTitle')}
           hint={t('pipeline.providerOptions.stageHint')}
         />
+        {stage.provider === 'anthropic' && (
+          <AnthropicCacheConfig
+            value={stage.providerOptions?.anthropic}
+            onChange={(anthropic) =>
+              onUpdate({ providerOptions: { ...stage.providerOptions, anthropic } })
+            }
+            disabled={isProcessing}
+          />
+        )}
       </div>
 
       {/* Prompt editor */}

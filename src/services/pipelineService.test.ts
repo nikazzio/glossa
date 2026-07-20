@@ -348,6 +348,53 @@ describe('pipelineService', () => {
     });
   });
 
+  // ── few-shot examples persistence ────────────────────────────────────
+
+  describe('few-shot examples persistence', () => {
+    it('loads fewShotExamples from the stored JSON column', async () => {
+      const row = {
+        ...basePipelineRow,
+        few_shot_examples: JSON.stringify([
+          { id: 'fs-1', sourceText: 'Hello world', targetText: 'Ciao mondo' },
+        ]),
+      };
+      dbMocks.select
+        .mockResolvedValueOnce([row])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+      const result = await getPipelineConfig('pipeline-1');
+      expect(result?.config.fewShotExamples).toEqual([
+        { id: 'fs-1', sourceText: 'Hello world', targetText: 'Ciao mondo' },
+      ]);
+    });
+
+    it('defaults fewShotExamples to an empty array when the column is null', async () => {
+      dbMocks.select
+        .mockResolvedValueOnce([{ ...basePipelineRow, few_shot_examples: null }])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+      const result = await getPipelineConfig('pipeline-1');
+      expect(result?.config.fewShotExamples).toEqual([]);
+    });
+
+    it('savePipelineConfig serializes fewShotExamples as JSON', async () => {
+      const config: PipelineConfig = {
+        ...baseConfig,
+        fewShotExamples: [
+          { id: 'fs-1', sourceChunkId: 'c1', sourceText: 'Hello world', targetText: 'Ciao mondo' },
+        ],
+      };
+      await savePipelineConfig('pipeline-1', config);
+      const [query, params] = dbMocks.execute.mock.calls[0] as [string, unknown[]];
+      expect(query).toContain('few_shot_examples');
+      expect(params).toContain(
+        JSON.stringify([
+          { id: 'fs-1', sourceChunkId: 'c1', sourceText: 'Hello world', targetText: 'Ciao mondo' },
+        ]),
+      );
+    });
+  });
+
   // ── restoreTranslations ──────────────────────────────────────────────
 
   describe('restoreTranslations', () => {

@@ -102,6 +102,31 @@ variazione.
 Se non tocchi il controllo resta a 0 (massima precisione). Alzalo se vuoi più varietà
 stilistica, tienilo basso per traduzioni tecniche o filologiche dove serve precisione.
 
+## Esempi di traduzione (few-shot)
+
+Nelle Impostazioni della pipeline puoi tenere un piccolo set di traduzioni intere
+(tetto 5, consigliati 2-3) scelte a mano come esempio di stile per tutta la run —
+diverso dalla phrase memory, che suggerisce coppie puntuali frase per frase.
+
+Per aggiungerne uno: nella scheda Audit del frammento, dopo averlo bloccato con una
+resa che consideri esemplare, premi il bottone dedicato (mostra anche quanti esempi
+hai già salvato). L'esempio compare subito qui nelle Impostazioni, dove puoi
+rivederlo, accorciarlo o rimuoverlo.
+
+## Cache Anthropic con TTL esteso
+
+Per i provider Anthropic, il caching del prompt è **spento di default** e va acceso
+esplicitamente nelle Impostazioni della pipeline:
+
+- Con l'uso tipico di Glossa (un frammento alla volta, spesso a distanza di minuti
+  o ore), la cache di default scadrebbe prima di essere riletta — accenderla senza
+  motivo costerebbe solo il sovrapprezzo di scrittura, senza mai far risparmiare.
+- Attiva la cache solo se lavori frammenti in rapida successione.
+- Se nella pipeline c'è uno stage lento tra un frammento Anthropic e l'altro (es. un
+  provider locale), estendi la durata della cache a 1 ora invece dei 5 minuti di
+  default — costa il doppio in scrittura invece di 1,25 volte, ma evita di perdere
+  la cache per l'attesa dello stage lento.
+
 ## Vedi anche
 
 - [Provider supportati](./provider-support) — confronto tra provider e guida alla scelta del modello

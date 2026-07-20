@@ -1,4 +1,4 @@
-import type { PipelineConfig, PipelineStageConfig, GlossaryEntry, StageRole } from '../../types';
+import type { FewShotExample, PipelineConfig, PipelineStageConfig, GlossaryEntry, StageRole } from '../../types';
 import { defaultPersonaText } from '../../constants';
 
 export type PromptPreviewKind = 'static' | 'runtime';
@@ -9,6 +9,7 @@ export interface PromptPreviewBlock {
     | 'structural-rules'
     | 'glossary-constraints'
     | 'markdown-rules'
+    | 'few-shot-examples'
     | 'blob-context'
     | 'stage-instructions'
     | 'phrase-memory'
@@ -54,6 +55,19 @@ function buildGlossaryConstraints(glossary: GlossaryEntry[]): string {
   ].join('\n');
 }
 
+function buildFewShotBlock(examples: FewShotExample[]): string {
+  const lines = [
+    'Example Translations (match this style, register, and tone):',
+    ...examples.flatMap((example, i) => [
+      '',
+      `Example ${i + 1}:`,
+      `Source: ${example.sourceText}`,
+      `Target: ${example.targetText}`,
+    ]),
+  ];
+  return lines.join('\n');
+}
+
 function buildSourceAwareBlocks(config: PipelineConfig, stage: PipelineStageConfig): PromptPreviewBlock[] {
   const src = config.customSourceLanguage?.trim() || config.sourceLanguage;
   const tgt = config.customTargetLanguage?.trim() || config.targetLanguage;
@@ -95,6 +109,14 @@ function buildSourceAwareBlocks(config: PipelineConfig, stage: PipelineStageConf
         'Do not remove, reformat, or invent Markdown structure.',
         'Translate only the human-language content while keeping Markdown syntax valid.',
       ].join('\n'),
+      kind: 'static',
+    });
+  }
+
+  if (config.fewShotExamples?.length) {
+    blocks.push({
+      id: 'few-shot-examples',
+      body: buildFewShotBlock(config.fewShotExamples),
       kind: 'static',
     });
   }

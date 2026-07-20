@@ -327,6 +327,12 @@ function FeaturesSection() {
       <P>{t('help.features.phraseMemoryAutomationDesc')}</P>
       <Tip title={t('help.features.phraseMemoryTipTitle')}>{t('help.features.phraseMemoryTipDesc')}</Tip>
 
+      <SubTitle>{t('help.features.fewShotTitle')}</SubTitle>
+      <P>{t('help.features.fewShotDesc')}</P>
+
+      <SubTitle>{t('help.features.anthropicCacheTitle')}</SubTitle>
+      <P>{t('help.features.anthropicCacheDesc')}</P>
+
       <SubTitle>{t('help.features.statsTitle')}</SubTitle>
       <P>{t('help.features.statsDesc')}</P>
 

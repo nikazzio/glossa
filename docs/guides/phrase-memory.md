@@ -34,3 +34,16 @@ corrente e nel documento che stai traducendo.
 - Mantieni stabile il testo sorgente per ottenere un riuso affidabile delle frasi.
 - Tratta la phrase memory come un supporto, non come sostituto del giudizio editoriale.
 - Controlla i match selezionati prima di usarli in produzione.
+
+## Esempi di traduzione (diverso dalla phrase memory)
+
+Oltre alle singole frasi, puoi fissare 2-3 traduzioni intere di un frammento come esempio
+di stile per l'intera pipeline: servono a orientare registro e tono su ogni frammento
+successivo, non a suggerire coppie puntuali come la phrase memory.
+
+Per aggiungerne uno: blocca un frammento con la traduzione che ritieni un buon esempio —
+di solito dopo aver controllato la scheda Audit e verificato che vada tutto bene — poi
+nella stessa scheda Audit premi il bottone "Usa come esempio di stile", che mostra anche
+quanti esempi hai già salvato. L'esempio compare da subito nelle Impostazioni della
+pipeline, dove puoi rivederlo, accorciarlo o rimuoverlo. Un piccolo tetto (5 esempi) evita
+di appesantire inutilmente ogni traduzione successiva.

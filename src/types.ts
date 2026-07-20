@@ -100,6 +100,13 @@ export interface DeeplLanguageInfo {
 export interface AnthropicConfig {
   /** 0.0-1.0. The UI always resolves this to a concrete value (default 0) once the control renders. */
   temperature?: number;
+  /** Opt-in, off by default: attach cache_control to cacheable blocks. Off by
+   * default because Anthropic caching (unlike OpenAI/Gemini/DeepSeek) costs a
+   * write premium with no benefit unless chunks are worked through close together. */
+  enableCaching?: boolean;
+  /** Only meaningful when enableCaching is true: use the 1-hour TTL instead of
+   * the 5-minute default (2x write cost instead of 1.25x). */
+  extendedCacheTtl?: boolean;
 }
 
 export interface ProviderRuntimeConfig {
@@ -116,6 +123,17 @@ export interface GlossaryEntry {
   term: string;
   translation: string;
   notes?: string;
+}
+
+// A hand-picked, already-approved chunk translation used as a few-shot style
+// example. Folded into the cacheable static block (unlike Phrase Memory,
+// which is per-chunk and lives in the non-cacheable stage-instructions block).
+export interface FewShotExample {
+  id: string;
+  sourceChunkId?: string;
+  sourceText: string;
+  targetText: string;
+  label?: string;
 }
 
 export interface Glossary {
@@ -251,6 +269,7 @@ export interface PipelineConfig {
   judgeProvider: ModelProvider;
   glossary: GlossaryEntry[];
   assignedGlossaryId?: string | null;
+  fewShotExamples?: FewShotExample[];
   useChunking?: boolean;
   wordsPerChunk?: number;
   minWords?: number;

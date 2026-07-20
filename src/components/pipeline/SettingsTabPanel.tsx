@@ -7,6 +7,7 @@ import type { PipelineConfig, PipelineMode, PromptTemplate } from '../../types';
 import type { SaveTemplateFn } from '../../stores/promptTemplateStore';
 import { LANGUAGES } from '../../constants';
 import { IconButton, SectionLabel, Select, Tooltip } from '../ui';
+import { FewShotExamplesConfig } from './FewShotExamplesConfig';
 import { PersonaEditor } from './PersonaEditor';
 import { PhraseMemoryConfig } from './PhraseMemoryConfig';
 
@@ -240,6 +241,13 @@ export function SettingsTabPanel({
           autoSearchPhraseMemory={autoSearchPhraseMemory}
           phraseMemoryMaxResults={phraseMemoryMaxResults}
           onChange={onPhraseMemoryChange}
+          disabled={isProcessing}
+        />
+      )}
+      {config.mode !== 'deepl-hybrid' && (
+        <FewShotExamplesConfig
+          examples={config.fewShotExamples ?? []}
+          onChange={(fewShotExamples) => setConfig((prev) => ({ ...prev, fewShotExamples }))}
           disabled={isProcessing}
         />
       )}

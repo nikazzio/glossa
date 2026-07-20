@@ -13,6 +13,7 @@ import type {
 export interface Project {
   id: string;
   name: string;
+  workspace_id: string | null;
   source_language: string;
   target_language: string;
   view_mode?: ViewMode | null;

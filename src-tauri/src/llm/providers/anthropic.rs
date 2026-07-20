@@ -8,19 +8,53 @@ use crate::llm::provider::{
 };
 use crate::llm::stream::{build_default_http_client, default_stream_timeouts, StreamTimeouts};
 
+/// Whether to attach `cache_control` at all for this request. Opt-in and off by
+/// default: unlike OpenAI/Gemini/DeepSeek (automatic prefix caching, no cost
+/// tradeoff), Anthropic caching costs a 1.25x-2x write premium on the first
+/// hit — worth it only when chunks are worked through close together. Glossa's
+/// normal usage (manual review between chunks, sometimes hours apart) would
+/// otherwise pay that premium on every call for a cache that never gets read.
+fn caching_enabled(req: &LlmRequest<'_>) -> bool {
+    req.provider_options
+        .as_ref()
+        .and_then(|o| o.anthropic.as_ref())
+        .and_then(|a| a.enable_caching)
+        .unwrap_or(false)
+}
+
+/// Whether to request the 1-hour cache TTL instead of the 5-minute default.
+/// Only meaningful when `caching_enabled` is true.
+fn extended_cache_ttl_enabled(req: &LlmRequest<'_>) -> bool {
+    req.provider_options
+        .as_ref()
+        .and_then(|o| o.anthropic.as_ref())
+        .and_then(|a| a.extended_cache_ttl)
+        .unwrap_or(false)
+}
+
+fn cache_control_value(extended_ttl: bool) -> Value {
+    if extended_ttl {
+        json!({ "type": "ephemeral", "ttl": "1h" })
+    } else {
+        json!({ "type": "ephemeral" })
+    }
+}
+
 /// Build the `system` field for Anthropic requests. Each block in the structured
-/// prompt becomes a `{ type: "text", text: "..." }` object. Blocks marked cacheable
-/// receive `cache_control: { type: "ephemeral" }`, telling Anthropic to cache the
-/// prefix up to and including that block.
+/// prompt becomes a `{ type: "text", text: "..." }` object. When caching is
+/// enabled (`caching_enabled`), blocks marked cacheable receive `cache_control`,
+/// telling Anthropic to cache the prefix up to and including that block.
 fn build_anthropic_system(req: &LlmRequest<'_>, force_json: bool) -> Value {
+    let caching = caching_enabled(req);
+    let extended_ttl = extended_cache_ttl_enabled(req);
     let mut blocks: Vec<Value> = req
         .structured
         .system
         .iter()
         .map(|block| {
             let mut obj = json!({ "type": "text", "text": block.text });
-            if block.cacheable {
-                obj["cache_control"] = json!({ "type": "ephemeral" });
+            if block.cacheable && caching {
+                obj["cache_control"] = cache_control_value(extended_ttl);
             }
             obj
         })
@@ -253,30 +287,47 @@ impl LlmProvider for AnthropicProvider {
 
 #[cfg(test)]
 mod tests {
-    use super::{max_output_tokens, stop_reason_error, temperature_override};
+    use super::{
+        build_anthropic_system, max_output_tokens, stop_reason_error, temperature_override,
+    };
     use crate::llm::provider::LlmRequest;
-    use crate::llm::types::{AnthropicConfig, PromptBlock, ProviderRuntimeConfig, StructuredPrompt};
+    use crate::llm::types::{
+        AnthropicConfig, PromptBlock, ProviderRuntimeConfig, StructuredPrompt,
+    };
 
     fn request(user: String) -> LlmRequest<'static> {
         request_with_temperature(user, None)
     }
 
     fn request_with_temperature(user: String, temperature: Option<f32>) -> LlmRequest<'static> {
-        let structured = Box::leak(Box::new(StructuredPrompt {
-            system: vec![PromptBlock {
+        request_with_system_and_anthropic_config(
+            vec![PromptBlock {
                 text: "system".to_string(),
                 cacheable: false,
             }],
             user,
-        }));
-        let provider_options = temperature.map(|t| {
+            temperature.map(|t| AnthropicConfig {
+                temperature: Some(t),
+                enable_caching: None,
+                extended_cache_ttl: None,
+            }),
+        )
+    }
+
+    fn request_with_system_and_anthropic_config(
+        system: Vec<PromptBlock>,
+        user: String,
+        anthropic: Option<AnthropicConfig>,
+    ) -> LlmRequest<'static> {
+        let structured = Box::leak(Box::new(StructuredPrompt { system, user }));
+        let provider_options = anthropic.map(|anthropic| {
             &*Box::leak(Box::new(ProviderRuntimeConfig {
                 ollama: None,
                 openai: None,
                 deepseek: None,
                 gemini: None,
                 deepl: None,
-                anthropic: Some(AnthropicConfig { temperature: Some(t) }),
+                anthropic: Some(anthropic),
             }))
         });
         LlmRequest {
@@ -325,5 +376,94 @@ mod tests {
     fn max_tokens_stop_reason_is_reported_as_truncation() {
         assert!(stop_reason_error(Some("max_tokens")).is_some());
         assert_eq!(stop_reason_error(Some("end_turn")), None);
+    }
+
+    // ── caching opt-in ──────────────────────────────────────────────────
+
+    fn cacheable_block(text: &str) -> PromptBlock {
+        PromptBlock {
+            text: text.to_string(),
+            cacheable: true,
+        }
+    }
+
+    #[test]
+    fn caching_disabled_by_default_omits_cache_control() {
+        let req = request_with_system_and_anthropic_config(
+            vec![cacheable_block("static")],
+            "hi".to_string(),
+            None,
+        );
+        let system = build_anthropic_system(&req, false);
+        assert!(system[0].get("cache_control").is_none());
+    }
+
+    #[test]
+    fn enable_caching_false_omits_cache_control_even_with_extended_ttl() {
+        let req = request_with_system_and_anthropic_config(
+            vec![cacheable_block("static")],
+            "hi".to_string(),
+            Some(AnthropicConfig {
+                temperature: None,
+                enable_caching: Some(false),
+                extended_cache_ttl: Some(true),
+            }),
+        );
+        let system = build_anthropic_system(&req, false);
+        assert!(system[0].get("cache_control").is_none());
+    }
+
+    #[test]
+    fn enable_caching_attaches_default_5m_cache_control() {
+        let req = request_with_system_and_anthropic_config(
+            vec![cacheable_block("static")],
+            "hi".to_string(),
+            Some(AnthropicConfig {
+                temperature: None,
+                enable_caching: Some(true),
+                extended_cache_ttl: None,
+            }),
+        );
+        let system = build_anthropic_system(&req, false);
+        assert_eq!(
+            system[0]["cache_control"],
+            serde_json::json!({ "type": "ephemeral" })
+        );
+    }
+
+    #[test]
+    fn enable_caching_with_extended_ttl_requests_1h_cache_control() {
+        let req = request_with_system_and_anthropic_config(
+            vec![cacheable_block("static")],
+            "hi".to_string(),
+            Some(AnthropicConfig {
+                temperature: None,
+                enable_caching: Some(true),
+                extended_cache_ttl: Some(true),
+            }),
+        );
+        let system = build_anthropic_system(&req, false);
+        assert_eq!(
+            system[0]["cache_control"],
+            serde_json::json!({ "type": "ephemeral", "ttl": "1h" })
+        );
+    }
+
+    #[test]
+    fn non_cacheable_blocks_never_get_cache_control_even_when_caching_enabled() {
+        let req = request_with_system_and_anthropic_config(
+            vec![PromptBlock {
+                text: "instructions".to_string(),
+                cacheable: false,
+            }],
+            "hi".to_string(),
+            Some(AnthropicConfig {
+                temperature: None,
+                enable_caching: Some(true),
+                extended_cache_ttl: None,
+            }),
+        );
+        let system = build_anthropic_system(&req, false);
+        assert!(system[0].get("cache_control").is_none());
     }
 }
