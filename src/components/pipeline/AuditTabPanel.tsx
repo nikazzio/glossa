@@ -59,11 +59,14 @@ export function AuditTabPanel({
   const judgeResolvedReasoning = getResolvedModelReasoning(config.judgeProvider, config.judgeModel);
   const judgeShowReasoningPicker =
     judgeResolvedReasoning !== undefined && judgeResolvedReasoning !== 'non_reasoning' && config.judgeProvider !== 'ollama';
-  const judgeTemperatureAllowed =
+  const judgeSupportsTemperature =
     config.judgeProvider === 'anthropic' ||
     config.judgeProvider === 'gemini' ||
-    ((config.judgeProvider === 'openai' || config.judgeProvider === 'deepseek') &&
-      (judgeResolvedReasoning === 'non_reasoning' || currentJudgeReasoningEffort === 'none'));
+    config.judgeProvider === 'openai' ||
+    config.judgeProvider === 'deepseek';
+  const judgeTemperatureDisabledByReasoning =
+    (config.judgeProvider === 'openai' || config.judgeProvider === 'deepseek') &&
+    !(judgeResolvedReasoning === 'non_reasoning' || currentJudgeReasoningEffort === 'none');
   const currentJudgeTemperature = (() => {
     if (config.judgeProvider === 'anthropic') return config.reviewProviderOptions?.anthropic?.temperature;
     if (config.judgeProvider === 'openai') return config.reviewProviderOptions?.openai?.temperature;
@@ -180,7 +183,7 @@ export function AuditTabPanel({
             />
           )}
         </div>
-        {(judgeShowReasoningPicker || judgeTemperatureAllowed) && (
+        {(judgeShowReasoningPicker || judgeSupportsTemperature) && (
           <div className="flex items-center gap-3">
             {judgeShowReasoningPicker && (
               <div className="flex items-center gap-1.5">
@@ -194,10 +197,11 @@ export function AuditTabPanel({
                 />
               </div>
             )}
-            {judgeTemperatureAllowed && (
+            {judgeSupportsTemperature && (
               <TemperatureControl
                 value={currentJudgeTemperature}
                 max={config.judgeProvider === 'anthropic' ? 1 : 2}
+                disabled={judgeTemperatureDisabledByReasoning}
                 onChange={handleJudgeTemperatureChange}
               />
             )}

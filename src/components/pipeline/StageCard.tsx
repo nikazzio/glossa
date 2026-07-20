@@ -127,13 +127,17 @@ export function StageCard({
   const showReasoningPicker =
     resolvedReasoning !== undefined && resolvedReasoning !== 'non_reasoning' && stage.provider !== 'ollama';
 
-  // OpenAI/DeepSeek reject or silently ignore temperature while actively reasoning;
-  // Anthropic has no such restriction, and Gemini accepts it alongside thinking budget.
-  const temperatureAllowed =
+  const supportsTemperature =
     stage.provider === 'anthropic' ||
     stage.provider === 'gemini' ||
-    ((stage.provider === 'openai' || stage.provider === 'deepseek') &&
-      (resolvedReasoning === 'non_reasoning' || currentReasoningEffort === 'none'));
+    stage.provider === 'openai' ||
+    stage.provider === 'deepseek';
+
+  // OpenAI/DeepSeek reject or silently ignore temperature while actively reasoning;
+  // Anthropic has no such restriction, and Gemini accepts it alongside thinking budget.
+  const temperatureDisabledByReasoning =
+    (stage.provider === 'openai' || stage.provider === 'deepseek') &&
+    !(resolvedReasoning === 'non_reasoning' || currentReasoningEffort === 'none');
 
   const currentTemperature = (() => {
     if (stage.provider === 'anthropic') return stage.providerOptions?.anthropic?.temperature;
@@ -333,7 +337,7 @@ export function StageCard({
             {t('pipeline.unlockModelChangeWarning')}
           </p>
         )}
-        {(showReasoningPicker || temperatureAllowed) && (
+        {(showReasoningPicker || supportsTemperature) && (
           <div className="flex items-center gap-3">
             {showReasoningPicker && (
               <div className="flex items-center gap-1.5">
@@ -348,11 +352,11 @@ export function StageCard({
                 />
               </div>
             )}
-            {temperatureAllowed && (
+            {supportsTemperature && (
               <TemperatureControl
                 value={currentTemperature}
                 max={stage.provider === 'anthropic' ? 1 : 2}
-                disabled={modelDisabled}
+                disabled={modelDisabled || temperatureDisabledByReasoning}
                 onChange={handleTemperatureChange}
               />
             )}
