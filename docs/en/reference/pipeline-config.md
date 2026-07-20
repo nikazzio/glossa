@@ -102,6 +102,31 @@ If you don't touch the control it stays at 0 (maximum precision). Raise it for m
 stylistic variety, keep it low for technical or philological translation where precision
 matters.
 
+## Translation examples (few-shot)
+
+In the pipeline settings you can keep a small set of whole translations (cap of 5,
+2-3 recommended) picked by hand as a style example for the whole run — different
+from phrase memory, which suggests one-off sentence pairs.
+
+To add one: in the chunk's Audit tab, after locking it with a rendering you consider
+exemplary, press the dedicated button (it also shows how many examples you've
+already saved). The example shows up immediately here in the settings, where you
+can review, shorten, or remove it.
+
+## Anthropic caching with extended TTL
+
+For Anthropic providers, prompt caching is **off by default** and must be turned on
+explicitly in the pipeline settings:
+
+- With Glossa's typical usage pattern (one chunk at a time, often minutes or hours
+  apart), the default cache would expire before it's ever reread — turning it on
+  without a reason would only cost the write surcharge, never save anything.
+- Turn caching on only if you're working through chunks in quick succession.
+- If a slow stage sits between two Anthropic chunks in the pipeline (e.g. a local
+  provider), extend the cache lifetime to 1 hour instead of the 5-minute default —
+  it costs double on writes instead of 1.25x, but avoids losing the cache while
+  waiting on the slow stage.
+
 ## See also
 
 - [Provider support](./provider-support) — provider comparison and model selection guide

@@ -78,6 +78,20 @@ un chunk e il successivo, la cache è già scaduta.
 
 I valori indicati (24 ore, 5–10 minuti) riflettono il comportamento osservato e non costituiscono garanzie contrattuali — i provider possono modificarli senza preavviso. Controlla la documentazione del tuo provider per la politica di retention del modello che stai usando.
 
+## Anthropic: cache opt-in con TTL esteso
+
+A differenza degli altri provider, per Anthropic il caching è **spento di default** e
+va acceso a mano nelle Impostazioni della pipeline. Motivo: con l'uso tipico di
+Glossa (un frammento alla volta, spesso a distanza di minuti o ore) la cache di
+default da 5 minuti scadrebbe quasi sempre prima di essere riletta, e accenderla
+senza motivo costerebbe solo il sovrapprezzo di scrittura senza mai risparmiare.
+
+Se serve, puoi anche estendere la durata della cache a 1 ora invece dei 5 minuti
+di default — utile quando nella pipeline c'è uno stage lento (es. un provider
+locale) tra un frammento Anthropic e l'altro. Costa il doppio in scrittura invece
+di 1,25 volte. Vedi [Configurazione pipeline](../reference/pipeline-config) per i
+dettagli dei due controlli.
+
 ## Vedi anche
 
 - [Configurazione pipeline](../reference/pipeline-config) — come configurare stage e modelli
