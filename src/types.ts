@@ -100,6 +100,13 @@ export interface DeeplLanguageInfo {
 export interface AnthropicConfig {
   /** 0.0-1.0. The UI always resolves this to a concrete value (default 0) once the control renders. */
   temperature?: number;
+  /** Opt-in, off by default: attach cache_control to cacheable blocks. Off by
+   * default because Anthropic caching (unlike OpenAI/Gemini/DeepSeek) costs a
+   * write premium with no benefit unless chunks are worked through close together. */
+  enableCaching?: boolean;
+  /** Only meaningful when enableCaching is true: use the 1-hour TTL instead of
+   * the 5-minute default (2x write cost instead of 1.25x). */
+  extendedCacheTtl?: boolean;
 }
 
 export interface ProviderRuntimeConfig {

@@ -90,6 +90,15 @@ pub struct GeminiCacheConfig {
 pub struct AnthropicConfig {
     /// 0.0-1.0. `None` lets Anthropic use its own default (1.0).
     pub temperature: Option<f32>,
+    /// Opt-in: attach `cache_control` to cacheable system blocks. `None`/`false`
+    /// means no caching at all for this call — the right default for pipelines
+    /// where chunks are worked on minutes or hours apart, where the 5-minute
+    /// cache would never hit and the write premium would be pure waste.
+    pub enable_caching: Option<bool>,
+    /// Only meaningful when `enable_caching` is true: use Anthropic's 1-hour
+    /// cache TTL instead of the 5-minute default (2x write cost instead of
+    /// 1.25x), for mixed pipelines with slow non-Anthropic stages in between.
+    pub extended_cache_ttl: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

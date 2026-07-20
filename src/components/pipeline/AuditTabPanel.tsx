@@ -10,6 +10,7 @@ import { SectionLabel, ToggleRow, FieldLabel, Select, Tooltip } from '../ui';
 import { DeprecatedModelBadge } from '../models/DeprecatedModelBadge';
 import { ReasoningPicker } from '../models/ReasoningPicker';
 import { TemperatureControl } from '../models/TemperatureControl';
+import { AnthropicCacheConfig } from './AnthropicCacheConfig';
 import { ProviderRuntimeEditor } from './ProviderRuntimeEditor';
 import { AuditPromptEditor } from './AuditPromptEditor';
 import { useUiStore } from '../../stores/uiStore';
@@ -220,6 +221,17 @@ export function AuditTabPanel({
           title={t('pipeline.providerOptions.reviewTitle')}
           hint={t('pipeline.providerOptions.reviewHint')}
         />
+        {config.judgeProvider === 'anthropic' && (
+          <AnthropicCacheConfig
+            value={config.reviewProviderOptions?.anthropic}
+            onChange={(anthropic) =>
+              setConfig((prev) => ({
+                ...prev,
+                reviewProviderOptions: { ...prev.reviewProviderOptions, anthropic },
+              }))
+            }
+          />
+        )}
       </div>
 
       <AuditPromptEditor

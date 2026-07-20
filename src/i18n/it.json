@@ -239,6 +239,12 @@
       "invalidJson": "Il blocco JSON avanzato non è ancora valido.",
       "optional": "Opzionale"
     },
+    "anthropicCache": {
+      "toggle": "Usa cache Anthropic",
+      "hint": "Spenta di default: conviene solo se i frammenti si susseguono a pochi minuti di distanza. Se lavori un frammento alla volta con pause lunghe, lasciala spenta — pagheresti solo il sovrapprezzo di scrittura senza mai risparmiare.",
+      "extendedTtlToggle": "Estendi a 1 ora",
+      "extendedTtlHint": "La cache resta valida un'ora invece di 5 minuti — utile se nella pipeline c'è uno stage lento (es. Ollama) tra un frammento Anthropic e l'altro. Costa il doppio in scrittura invece di 1.25 volte."
+    },
     "tabSettings": "Impostazioni",
     "tabStages": "Traduzione",
     "tabTranslation": "Traduzione",

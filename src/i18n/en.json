@@ -239,6 +239,12 @@
       "invalidJson": "The advanced JSON block is not valid yet.",
       "optional": "Optional"
     },
+    "anthropicCache": {
+      "toggle": "Use Anthropic cache",
+      "hint": "Off by default: only worth it when chunks follow each other within a few minutes. If you work one chunk at a time with long pauses, leave it off — you'd only pay the write premium without ever saving.",
+      "extendedTtlToggle": "Extend to 1 hour",
+      "extendedTtlHint": "Keeps the cache valid for an hour instead of 5 minutes — useful when the pipeline has a slow stage (e.g. Ollama) between one Anthropic chunk and the next. Costs 2x on writes instead of 1.25x."
+    },
     "tabSettings": "Settings",
     "tabStages": "Translation",
     "tabTranslation": "Translation",
