@@ -16,27 +16,49 @@ const HelpGuide = lazy(() =>
 );
 
 export function Header() {
-  const { setShowHelp, showHelp } = useUiStore(
+  const { setShowHelp, showHelp, setActiveWorkspaceView } = useUiStore(
     useShallow((state) => ({
       setShowHelp: state.setShowHelp,
       showHelp: state.showHelp,
+      setActiveWorkspaceView: state.setActiveWorkspaceView,
     })),
   );
-  const { currentProjectId, currentProjectName, closeProject } = useProjectStore(
+  const { currentProjectId, currentProject, closeProject } = useProjectStore(
     useShallow((state) => ({
       currentProjectId: state.currentProjectId,
-      currentProjectName: state.projects.find((p) => p.id === state.currentProjectId)?.name ?? null,
+      currentProject: state.projects.find((p) => p.id === state.currentProjectId),
       closeProject: state.closeProject,
     })),
   );
-  const activeWorkspace = useWorkspaceStore((state) => state.activeWorkspace);
+  const { activeWorkspace, workspaces } = useWorkspaceStore(
+    useShallow((state) => ({
+      activeWorkspace: state.activeWorkspace,
+      workspaces: state.workspaces,
+    })),
+  );
+  const activeWorkspaceView = useUiStore((state) => state.activeWorkspaceView);
   const isProcessing = useChunksStore((s) => s.isProcessing);
   const { t } = useTranslation();
 
   const helpLoaded = useRef(false);
   if (showHelp) helpLoaded.current = true;
 
-  const workspaceLabel = activeWorkspace?.name ?? t('header.brandArea');
+  const currentProjectName = currentProject?.name ?? null;
+  const projectWithoutWorkspace = currentProject?.workspace_id === null;
+  const projectWorkspace = currentProject?.workspace_id
+    ? workspaces.find((workspace) => workspace.id === currentProject.workspace_id)
+    : activeWorkspace;
+  const workspaceLabel = projectWorkspace?.name ?? activeWorkspace?.name ?? t('header.brandArea');
+  const translationsLabel = t('workspace.areas.translations.title');
+  const isTranslationsContext = activeWorkspaceView === 'translations' || projectWithoutWorkspace;
+  const contextLabel = isTranslationsContext ? translationsLabel : workspaceLabel;
+  const showContextBreadcrumb = Boolean(currentProjectId || activeWorkspaceView !== 'dashboard');
+  const backToContextLabel = t(projectWithoutWorkspace ? 'sidebar.backToTranslations' : 'sidebar.backToWorkspace');
+
+  const handleReturnToProjectContext = () => {
+    closeProject();
+    if (projectWithoutWorkspace) setActiveWorkspaceView('translations');
+  };
 
   return (
     <header className="border-b border-editorial-border bg-[linear-gradient(180deg,var(--header-bg-from)_0%,var(--header-bg-to)_100%)] px-5 py-4 md:px-8">
@@ -53,24 +75,28 @@ export function Header() {
               <span className="shrink-0 font-display text-4xl italic text-editorial-ink md:text-5xl">
                 {t('app.brand')}
               </span>
-              <span className="shrink-0 font-display text-lg italic text-editorial-muted md:text-xl">
-                //
-              </span>
-              {currentProjectId ? (
-                <Tooltip label={t('sidebar.backToWorkspace')}>
-                  <button
-                    type="button"
-                    onClick={closeProject}
-                    disabled={isProcessing}
-                    className="min-w-0 truncate font-display text-lg italic text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-55 md:text-xl"
-                  >
-                    {workspaceLabel}
-                  </button>
-                </Tooltip>
-              ) : (
-                <span className="min-w-0 truncate font-display text-lg italic text-editorial-muted md:text-xl">
-                  {workspaceLabel}
-                </span>
+              {showContextBreadcrumb && (
+                <>
+                  <span className="shrink-0 font-display text-lg italic text-editorial-muted md:text-xl">
+                    //
+                  </span>
+                  {currentProjectId ? (
+                    <Tooltip label={backToContextLabel}>
+                      <button
+                        type="button"
+                        onClick={handleReturnToProjectContext}
+                        disabled={isProcessing}
+                        className="min-w-0 truncate font-display text-lg italic text-editorial-muted transition-colors hover:text-editorial-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-editorial-accent disabled:cursor-not-allowed disabled:opacity-55 md:text-xl"
+                      >
+                        {contextLabel}
+                      </button>
+                    </Tooltip>
+                  ) : (
+                    <span className="min-w-0 truncate font-display text-lg italic text-editorial-muted md:text-xl">
+                      {contextLabel}
+                    </span>
+                  )}
+                </>
               )}
               <AnimatePresence mode="popLayout">
                 {currentProjectId && currentProjectName ? (

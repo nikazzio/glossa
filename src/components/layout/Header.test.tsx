@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Header } from './Header';
 import { useChunksStore } from '../../stores/chunksStore';
 import { useProjectStore } from '../../stores/projectStore';
+import { useUiStore } from '../../stores/uiStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 
 const originalCloseProject = useProjectStore.getState().closeProject;
@@ -23,6 +24,55 @@ describe('Header', () => {
     useChunksStore.setState({
       isProcessing: false,
     });
+    useUiStore.setState({ activeWorkspaceView: 'dashboard' });
+  });
+
+  it('hides the workspace breadcrumb on the app dashboard', () => {
+    useWorkspaceStore.setState({
+      activeWorkspace: { id: 'workspace-1', name: 'Scholars' } as never,
+      workspaces: [{ id: 'workspace-1', name: 'Scholars' } as never],
+    });
+
+    render(<Header />);
+
+    expect(screen.queryByText('Scholars')).not.toBeInTheDocument();
+  });
+
+  it('shows the translations area in the breadcrumb', () => {
+    useWorkspaceStore.setState({
+      activeWorkspace: { id: 'workspace-1', name: 'Scholars' } as never,
+      workspaces: [{ id: 'workspace-1', name: 'Scholars' } as never],
+    });
+    useUiStore.setState({ activeWorkspaceView: 'translations' });
+
+    render(<Header />);
+
+    expect(screen.getByText('workspace.areas.translations.title')).toBeInTheDocument();
+    expect(screen.queryByText('Scholars')).not.toBeInTheDocument();
+  });
+
+  it('uses translations as the parent of a project without a workspace', () => {
+    const closeProject = vi.fn();
+    useWorkspaceStore.setState({
+      activeWorkspace: { id: 'workspace-1', name: 'Scholars' } as never,
+      workspaces: [{ id: 'workspace-1', name: 'Scholars' } as never],
+    });
+    useProjectStore.setState({
+      currentProjectId: 'project-1',
+      projects: [{ id: 'project-1', name: 'Draft', workspace_id: null } as never],
+      closeProject,
+    });
+
+    render(<Header />);
+
+    expect(screen.getByText('workspace.areas.translations.title')).toBeInTheDocument();
+    expect(screen.getByText('Draft')).toBeInTheDocument();
+    expect(screen.queryByText('Scholars')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'workspace.areas.translations.title' }));
+
+    expect(closeProject).toHaveBeenCalledTimes(1);
+    expect(useUiStore.getState().activeWorkspaceView).toBe('translations');
   });
 
   it('renders the project breadcrumb and returns to the workspace dashboard', () => {
@@ -33,7 +83,7 @@ describe('Header', () => {
     });
     useProjectStore.setState({
       currentProjectId: 'project-1',
-      projects: [{ id: 'project-1', name: 'Draft' } as never],
+      projects: [{ id: 'project-1', name: 'Draft', workspace_id: 'workspace-1' } as never],
       closeProject,
     });
 
