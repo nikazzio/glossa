@@ -74,7 +74,7 @@ describe('AuditTab — bottone "usa come esempio di stile"', () => {
     expect(toast.success).toHaveBeenCalledWith('memory.addFewShotSuccess');
   });
 
-  it('non duplica se il chunk è già stato aggiunto come esempio', async () => {
+  it('rimuove l\'esempio se il chunk è già stato aggiunto e il bottone viene ricliccato', async () => {
     usePipelineStore.setState((state) => ({
       ...state,
       config: {
@@ -85,10 +85,28 @@ describe('AuditTab — bottone "usa come esempio di stile"', () => {
     const chunk = makeTranslationChunk({ id: 'c1', translationLocked: true });
     const user = userEvent.setup();
     renderAuditTab(chunk);
-    const button = screen.getByRole('button', { name: 'memory.addFewShotAlreadyAdded' });
-    expect(button).toBeDisabled();
+    const button = screen.getByRole('button', { name: 'memory.removeFewShotButton' });
+    expect(button).not.toBeDisabled();
     await user.click(button);
-    expect(usePipelineStore.getState().config.fewShotExamples).toHaveLength(1);
+    expect(usePipelineStore.getState().config.fewShotExamples).toHaveLength(0);
+    expect(toast.message).toHaveBeenCalledWith('memory.removeFewShotSuccess');
+  });
+
+  it('permette di rimuovere un esempio anche se il frammento non è più bloccato', async () => {
+    usePipelineStore.setState((state) => ({
+      ...state,
+      config: {
+        ...state.config,
+        fewShotExamples: [{ id: 'fs-1', sourceChunkId: 'c1', sourceText: 'a', targetText: 'b' }],
+      },
+    }));
+    const chunk = makeTranslationChunk({ id: 'c1', translationLocked: false });
+    const user = userEvent.setup();
+    renderAuditTab(chunk);
+    const button = screen.getByRole('button', { name: 'memory.removeFewShotButton' });
+    expect(button).not.toBeDisabled();
+    await user.click(button);
+    expect(usePipelineStore.getState().config.fewShotExamples).toHaveLength(0);
   });
 
   it('rispetta il tetto massimo di esempi', async () => {

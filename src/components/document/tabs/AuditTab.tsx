@@ -38,12 +38,18 @@ export function AuditTab({ panelId, labelledBy, currentChunk, isProcessing, onRe
   const isLocked = Boolean(currentChunk?.translationLocked);
   const fewShotExamples = config.fewShotExamples ?? [];
   const isAlreadyFewShotExample = fewShotExamples.some((example) => example.sourceChunkId === currentChunk?.id);
-  const canAddFewShot = isLocked && !isAlreadyFewShotExample;
+  const canToggleFewShot = isAlreadyFewShotExample || isLocked;
 
-  const handleAddFewShot = () => {
+  const handleToggleFewShot = () => {
     if (!currentChunk) return;
     if (isAlreadyFewShotExample) {
-      toast.message(t('memory.addFewShotAlreadyAdded'));
+      setConfig((prev) => ({
+        ...prev,
+        fewShotExamples: (prev.fewShotExamples ?? []).filter(
+          (example) => example.sourceChunkId !== currentChunk.id,
+        ),
+      }));
+      toast.message(t('memory.removeFewShotSuccess'));
       return;
     }
     if (fewShotExamples.length >= MAX_FEW_SHOT_EXAMPLES) {
@@ -80,21 +86,30 @@ export function AuditTab({ panelId, labelledBy, currentChunk, isProcessing, onRe
 
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={labelledBy} className="px-4 py-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-editorial-muted">{t('audit.qualityCaption')}</div>
-          <div className={`mt-1.5 font-display text-xl italic ${QUALITY_TONE_COLOR[tone]}`}>{qualityLabel}</div>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <IconButton
+            size="md"
+            onClick={() => onReauditChunk(currentChunk.id)}
+            disabled={isProcessing || !currentChunk.translationDisplayText}
+            title={t('pipeline.reauditChunk')}
+            tooltipSide="right"
+          >
+            <RefreshCcw size={14} className={currentChunk.judgeResult.status === 'processing' ? 'animate-spin' : ''} />
+          </IconButton>
+          <div className={`font-display text-xl italic ${QUALITY_TONE_COLOR[tone]}`}>{qualityLabel}</div>
         </div>
         <div className="flex items-center gap-1.5">
           <IconButton
             size="md"
-            onClick={handleAddFewShot}
-            disabled={!canAddFewShot}
+            tone={isAlreadyFewShotExample ? 'accent' : 'default'}
+            onClick={handleToggleFewShot}
+            disabled={!canToggleFewShot}
             title={
-              !isLocked
-                ? t('memory.addFewShotDisabledLockHint')
-                : isAlreadyFewShotExample
-                  ? t('memory.addFewShotAlreadyAdded')
+              isAlreadyFewShotExample
+                ? t('memory.removeFewShotButton')
+                : !isLocked
+                  ? t('memory.addFewShotDisabledLockHint')
                   : t('memory.addFewShotButton')
             }
             tooltipSide="left"
@@ -107,15 +122,6 @@ export function AuditTab({ panelId, labelledBy, currentChunk, isProcessing, onRe
           >
             {fewShotExamples.length}/{MAX_FEW_SHOT_EXAMPLES}
           </span>
-          <IconButton
-            size="md"
-            onClick={() => onReauditChunk(currentChunk.id)}
-            disabled={isProcessing || !currentChunk.translationDisplayText}
-            title={t('pipeline.reauditChunk')}
-            tooltipSide="left"
-          >
-            <RefreshCcw size={14} className={currentChunk.judgeResult.status === 'processing' ? 'animate-spin' : ''} />
-          </IconButton>
         </div>
       </div>
 

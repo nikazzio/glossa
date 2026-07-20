@@ -1545,6 +1545,8 @@
     "addFewShotSuccess": "Example added to the pipeline",
     "addFewShotAlreadyAdded": "This chunk is already a pipeline example",
     "addFewShotCapReached": "You've reached the maximum number of examples: remove one from the pipeline Settings",
+    "removeFewShotButton": "Remove as style example",
+    "removeFewShotSuccess": "Example removed from the pipeline",
     "fewShotCountLabel": "{{count}} of {{max}} style examples saved for this pipeline",
     "acceptCandidateLabel": "Include this phrase when saving",
     "addManualPairButton": "Add manual pair",
