@@ -86,7 +86,7 @@ fn judge_json_schema() -> serde_json::Value {
                 },
                 "checkedSentenceIndices": {
                     "anyOf": [
-                        {"type": "array", "items": {"type": "integer"}},
+                        {"type": "array", "items": {"type": "integer", "minimum": 1}},
                         {"type": "null"}
                     ]
                 }

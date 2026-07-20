@@ -430,7 +430,9 @@ pub async fn judge_translation(
         user_prompt: None,
         checked_sentence_indices: parsed["checkedSentenceIndices"].as_array().map(|arr| {
             arr.iter()
-                .filter_map(|v| v.as_u64().map(|n| n as u32))
+                .filter_map(|v| v.as_u64())
+                .filter_map(|n| u32::try_from(n).ok())
+                .filter(|&n| n >= 1)
                 .collect()
         }),
     })
