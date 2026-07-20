@@ -375,7 +375,7 @@ Gerarchia obbligatoria, dall'alto:
 5. **Footer progetto**: azioni globali ancorate in basso (workspace, libreria, config, import/export).
 
 Regole:
-- Rail aperta: default 300px, minimo 280px, massimo 420px. Larghezze salvate vanno clamped in questo intervallo.
+- Rail aperta: default 300px, minimo 280px, massimo 520px. Larghezze salvate vanno clamped in questo intervallo.
 - Rail collassata: solo icone con tooltip; no label visibile, tranne micro valori necessari (es. contatore frammento).
 - Comandi icon-only: sempre `IconButton`, tooltip obbligatorio, `ariaPressed` solo per toggle (`Chunk/Tutto`), `aria-selected` solo per tab.
 - Stop/errori/distruttive: `editorial-danger`; accento attivo/selezione: `editorial-accent`.
@@ -388,7 +388,7 @@ Regole:
 ### Resize (drag + tastiera) — pannelli progetto
 
 Vista progetto usa `react-resizable-panels`. Larghezze e stato collapse persistiti in `uiStore`.
-- Rail sinistra: default 300px, collapsed 64px, min 280px, max 420px.
+- Rail sinistra: default 300px, collapsed 64px, min 280px, max 520px.
 - Ispettore destro: default 430px, collapsed 56px, min 300px, max 620px.
 - Durante drag transizione disattivata (movimento 1:1); allo snap/chiusura riprende animazione tramite token motion condiviso.
 - Grip sottile sempre visibile, accentuato in hover/drag/focus. No larghezze hard-coded nei consumer: leggere da `uiStore`.

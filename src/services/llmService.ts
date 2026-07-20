@@ -146,6 +146,27 @@ export const llmService = {
   },
 
   /**
+   * Builds the exact prompt a stage would send, without running it — no provider
+   * call, no cost, no result written anywhere. Used for the prompt preview tab.
+   */
+  async previewStagePrompt(
+    text: string,
+    stage: PipelineStageConfig,
+    config: PipelineConfig,
+    previousResult: string | undefined,
+    auditContext?: string,
+  ): Promise<PromptInfo> {
+    const result = await invoke<{ systemPrompt: string; userPrompt: string }>('preview_stage_prompt', {
+      text,
+      stage,
+      config,
+      previousResult: previousResult || null,
+      auditContext: auditContext || null,
+    });
+    return { systemPrompt: result.systemPrompt, userPrompt: result.userPrompt };
+  },
+
+  /**
    * Streaming stage execution — sets up event listener, invokes backend,
    * calls onToken for each token, cleans up listener, returns full text.
    */

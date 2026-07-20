@@ -99,6 +99,7 @@ pub fn run() {
             llm::pipeline::compute_blobs,
             llm::pipeline::run_stage,
             llm::pipeline::run_stage_stream,
+            llm::pipeline::preview_stage_prompt,
             llm::pipeline::cancel_stream,
             llm::pipeline::judge_translation,
             llm::pipeline::refine_prompt,
