@@ -1,5 +1,35 @@
 # Changelog
 
+## [1.2.0](https://github.com/nikazzio/glossa/compare/glossa-v1.1.2...glossa-v1.2.0) (2026-07-20)
+
+
+### ✨ Features
+
+* **326:** anteprima messaggio pipeline per chunk prima del lancio ([#351](https://github.com/nikazzio/glossa/issues/351)) ([d5e881c](https://github.com/nikazzio/glossa/commit/d5e881c9adb8a33a77cc4caf2f369785de592ee6))
+* **326:** esempi di traduzione fissi + cache Anthropic opt-in ([#354](https://github.com/nikazzio/glossa/issues/354)) ([ad8413d](https://github.com/nikazzio/glossa/commit/ad8413d96070dce08bd4e35dd5b198f18a903992))
+* **326:** temperature opzionale per fase e giudice su tutti i provider ([#352](https://github.com/nikazzio/glossa/issues/352)) ([830d827](https://github.com/nikazzio/glossa/commit/830d827cc89e4868c0ae0672ddc21ac7c0481c78))
+* componente Select condiviso, migra i 30 select grezzi ([#323](https://github.com/nikazzio/glossa/issues/323)) ([#349](https://github.com/nikazzio/glossa/issues/349)) ([a63171f](https://github.com/nikazzio/glossa/commit/a63171f89bbbee69f8c46947bbdd5970976e3976))
+* **memory:** separa estrazione e riuso della memoria frasi in due schede ([#337](https://github.com/nikazzio/glossa/issues/337)) ([a8fc05a](https://github.com/nikazzio/glossa/commit/a8fc05a47fd337612a248a3368269926804fc515))
+* **models:** update OpenAI/Anthropic catalog, curate for translation use ([#334](https://github.com/nikazzio/glossa/issues/334)) ([fccfb1a](https://github.com/nikazzio/glossa/commit/fccfb1a6059cd2e3e8a4b9f3dad01d48e19fc478))
+
+
+### 🐛 Bug Fixes
+
+* **323:** traduce in italiano il nome della sezione Phrase Memory ([#350](https://github.com/nikazzio/glossa/issues/350)) ([a8003cc](https://github.com/nikazzio/glossa/commit/a8003ccd41ba76747f2aa89a2c11a0edc87c8893))
+* **326:** 3 correzioni pipeline a basso sforzo (cache, giudice, token) ([#353](https://github.com/nikazzio/glossa/issues/353)) ([c8a7665](https://github.com/nikazzio/glossa/commit/c8a7665058e33c5e768e8c04e4fc2f2189996723))
+* **backup:** non sovrascrivere schema_version + conferma prima del reset DB ([#333](https://github.com/nikazzio/glossa/issues/333)) ([cf68c3e](https://github.com/nikazzio/glossa/commit/cf68c3eddc54851eb15a888b5674ceb39701bbc8))
+* elimina il sistema tooltip parallelo, migra a Radix ([#323](https://github.com/nikazzio/glossa/issues/323)) ([#339](https://github.com/nikazzio/glossa/issues/339)) ([e85795e](https://github.com/nikazzio/glossa/commit/e85795e3dc0c6884d1ce0f05baaad339b2699569))
+* introduce ESLint e sistema i finding collegati ([#322](https://github.com/nikazzio/glossa/issues/322)) ([#338](https://github.com/nikazzio/glossa/issues/338)) ([a51c700](https://github.com/nikazzio/glossa/commit/a51c700d3e61f3cfaaf6fb826da93a5743c4d630))
+* persisti risoluzione audit e ferma il salto di scorrimento in editing ([#336](https://github.com/nikazzio/glossa/issues/336)) ([6ea5c21](https://github.com/nikazzio/glossa/commit/6ea5c215c051fa4ec348a3d4328b7a10ba394922))
+* **pipeline:** modal style cleanup + deprecated-model system ([#335](https://github.com/nikazzio/glossa/issues/335)) ([fb30b21](https://github.com/nikazzio/glossa/commit/fb30b2179bac1dcb523caa4950a495b890fc93ee))
+* stabilizzare cancellazione e output pipeline ([#329](https://github.com/nikazzio/glossa/issues/329)) ([fd32bb8](https://github.com/nikazzio/glossa/commit/fd32bb87c9aebc4573d5a8687dd0e1714c4f30f1))
+
+
+### ♻️ Refactoring
+
+* **chunks:** remove legacy mirrors ([#332](https://github.com/nikazzio/glossa/issues/332)) ([f104f42](https://github.com/nikazzio/glossa/commit/f104f421048b1b6cb6f12d6a3312c3d29558f1ec))
+* consolida ownership schema e write DB ([#330](https://github.com/nikazzio/glossa/issues/330)) ([ffdafc2](https://github.com/nikazzio/glossa/commit/ffdafc2a579dd0fd92fb79891eeb133b63fcc846))
+
 ## [1.1.2](https://github.com/nikazzio/glossa/compare/glossa-v1.1.1...glossa-v1.1.2) (2026-07-10)
 
 
