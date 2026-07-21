@@ -20,23 +20,15 @@ const backupBlobSchema = z.array(z.number().int().min(0).max(255)).nonempty();
 const backupValueSchema = z.union([z.string(), z.number(), z.boolean(), z.null(), backupBlobSchema]);
 const backupRowSchema = z.record(z.string(), backupValueSchema);
 
+const backupTablesShape = Object.fromEntries(
+  BACKUP_TABLES.map((table) => [table, backupTableSchema]),
+) as Record<BackupTable, typeof backupTableSchema>;
+
 export const backupPayloadSchema = z.object({
   glossa_version: z.string().trim().min(1),
   schema_version: z.number().int().nonnegative(),
   exported_at: z.string().datetime({ offset: true }),
-  tables: z.object({
-    workspaces: backupTableSchema,
-    glossaries: backupTableSchema,
-    projects: backupTableSchema,
-    app_settings: backupTableSchema,
-    prompt_templates: backupTableSchema,
-    pipelines: backupTableSchema,
-    project_glossaries: backupTableSchema,
-    glossary_entries: backupTableSchema,
-    translations: backupTableSchema,
-    phrase_memory: backupTableSchema,
-    source_phrase_embeddings: backupTableSchema,
-  }).passthrough(),
+  tables: z.object(backupTablesShape).passthrough(),
 });
 
 export type BackupPayload = z.infer<typeof backupPayloadSchema>;
