@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use reqwest::Client;
 use serde_json::{json, Value};
 
-use super::{format_api_error, with_retry_after};
+use super::{format_api_error, translation_audit_schema, with_retry_after};
 use crate::llm::provider::{
     LlmProvider, LlmRequest, LlmResponse, StreamFormat, TokenUsage, UsageAccumulator,
 };
@@ -70,6 +70,32 @@ fn build_anthropic_system(req: &LlmRequest<'_>, force_json: bool) -> Value {
     }
 
     Value::Array(blocks)
+}
+
+fn build_anthropic_body(req: &LlmRequest<'_>, stream: bool) -> Value {
+    let mut body = json!({
+        "model": req.model,
+        "max_tokens": max_output_tokens(req),
+        "system": build_anthropic_system(req, req.json_mode && !req.json_schema_strict),
+        "messages": [{"role": "user", "content": req.structured.user}]
+    });
+
+    if stream {
+        body["stream"] = json!(true);
+    }
+    if req.json_schema_strict {
+        body["output_config"] = json!({
+            "format": {
+                "type": "json_schema",
+                "schema": translation_audit_schema()
+            }
+        });
+    }
+    if let Some(temperature) = temperature_override(req) {
+        body["temperature"] = json!(temperature);
+    }
+
+    body
 }
 
 /// Temperature override for this request, clamped to Anthropic's valid 0.0-1.0
@@ -179,16 +205,7 @@ impl LlmProvider for AnthropicProvider {
     }
 
     async fn call(&self, client: &Client, req: &LlmRequest<'_>) -> Result<LlmResponse, String> {
-        let system = build_anthropic_system(req, req.json_mode);
-        let mut body = json!({
-            "model": req.model,
-            "max_tokens": max_output_tokens(req),
-            "system": system,
-            "messages": [{"role": "user", "content": req.structured.user}]
-        });
-        if let Some(temperature) = temperature_override(req) {
-            body["temperature"] = json!(temperature);
-        }
+        let body = build_anthropic_body(req, false);
 
         let resp = client
             .post("https://api.anthropic.com/v1/messages")
@@ -260,17 +277,7 @@ impl LlmProvider for AnthropicProvider {
         client: &Client,
         req: &LlmRequest<'_>,
     ) -> Result<reqwest::Response, String> {
-        let system = build_anthropic_system(req, false);
-        let mut body = json!({
-            "model": req.model,
-            "max_tokens": max_output_tokens(req),
-            "system": system,
-            "messages": [{"role": "user", "content": req.structured.user}],
-            "stream": true
-        });
-        if let Some(temperature) = temperature_override(req) {
-            body["temperature"] = json!(temperature);
-        }
+        let body = build_anthropic_body(req, true);
 
         client
             .post("https://api.anthropic.com/v1/messages")
@@ -288,7 +295,8 @@ impl LlmProvider for AnthropicProvider {
 #[cfg(test)]
 mod tests {
     use super::{
-        build_anthropic_system, max_output_tokens, stop_reason_error, temperature_override,
+        build_anthropic_body, build_anthropic_system, max_output_tokens, stop_reason_error,
+        temperature_override,
     };
     use crate::llm::provider::LlmRequest;
     use crate::llm::types::{
@@ -376,6 +384,19 @@ mod tests {
     fn max_tokens_stop_reason_is_reported_as_truncation() {
         assert!(stop_reason_error(Some("max_tokens")).is_some());
         assert_eq!(stop_reason_error(Some("end_turn")), None);
+    }
+
+    #[test]
+    fn strict_json_uses_native_output_schema_without_extra_prompt_instruction() {
+        let mut req = request("hi".to_string());
+        req.json_mode = true;
+        req.json_schema_strict = true;
+
+        let body = build_anthropic_body(&req, false);
+
+        assert_eq!(body["output_config"]["format"]["type"], "json_schema");
+        assert_eq!(body["output_config"]["format"]["schema"]["type"], "object");
+        assert_eq!(body["system"].as_array().unwrap().len(), 1);
     }
 
     // ── caching opt-in ──────────────────────────────────────────────────

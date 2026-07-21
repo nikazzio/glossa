@@ -6,6 +6,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use super::translation_audit_schema;
 use crate::llm::provider::{
     LlmProvider, LlmRequest, LlmResponse, StreamFormat, TokenUsage, UsageAccumulator,
 };
@@ -224,6 +225,7 @@ impl LlmProvider for OllamaProvider {
             &ollama,
             false,
             req.json_mode,
+            req.json_schema_strict,
         );
 
         let resp = client
@@ -284,6 +286,7 @@ impl LlmProvider for OllamaProvider {
             &ollama,
             true,
             req.json_mode,
+            req.json_schema_strict,
         );
 
         with_stream_header_timeout(
@@ -402,6 +405,7 @@ pub(crate) fn build_ollama_chat_body(
     ollama: &OllamaConfig,
     stream: bool,
     json_mode: bool,
+    json_schema_strict: bool,
 ) -> Value {
     let options = build_ollama_options(ollama);
     let mut body = serde_json::json!({
@@ -420,11 +424,49 @@ pub(crate) fn build_ollama_chat_body(
     if let Some(keep_alive) = ollama.keep_alive.clone() {
         body["keep_alive"] = keep_alive;
     }
-    if json_mode {
+    if json_schema_strict {
+        body["format"] = translation_audit_schema();
+    } else if json_mode {
         body["format"] = serde_json::json!("json");
     }
 
     body
+}
+
+#[cfg(test)]
+mod structured_output_tests {
+    use super::{build_ollama_chat_body, default_ollama_config};
+
+    #[test]
+    fn strict_json_passes_the_schema_to_ollama() {
+        let body = build_ollama_chat_body(
+            "model",
+            "system",
+            "user",
+            &default_ollama_config(),
+            false,
+            true,
+            true,
+        );
+
+        assert_eq!(body["format"]["type"], "object");
+        assert!(body["format"].get("properties").is_some());
+    }
+
+    #[test]
+    fn ordinary_json_mode_keeps_the_compatible_format() {
+        let body = build_ollama_chat_body(
+            "model",
+            "system",
+            "user",
+            &default_ollama_config(),
+            false,
+            true,
+            false,
+        );
+
+        assert_eq!(body["format"], "json");
+    }
 }
 
 pub(crate) fn parse_ollama_usage(json: &Value) -> Option<(u32, u32)> {

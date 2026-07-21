@@ -1,4 +1,6 @@
-use super::{format_api_error, provider_label_from_url, with_retry_after};
+use super::{
+    format_api_error, provider_label_from_url, translation_audit_schema, with_retry_after,
+};
 use crate::llm::provider::{
     LlmProvider, LlmRequest, LlmResponse, StreamFormat, TokenUsage, UsageAccumulator,
 };
@@ -60,40 +62,7 @@ fn judge_json_schema() -> serde_json::Value {
     serde_json::json!({
         "name": "translation_audit",
         "strict": true,
-        "schema": {
-            "type": "object",
-            "properties": {
-                "rating": {
-                    "type": "string",
-                    "enum": ["critical", "poor", "fair", "good", "excellent"]
-                },
-                "issues": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "type": {"type": "string", "enum": ["glossary", "fluency", "accuracy", "grammar"]},
-                            "severity": {"type": "string", "enum": ["low", "medium", "high"]},
-                            "description": {"type": "string"},
-                            "suggestedFix": {"type": "string"},
-                            "phrase": {"anyOf": [{"type": "string"}, {"type": "null"}]},
-                            "sourcePhrase": {"anyOf": [{"type": "string"}, {"type": "null"}]},
-                            "confidence": {"anyOf": [{"type": "number"}, {"type": "null"}]}
-                        },
-                        "required": ["type", "severity", "description", "suggestedFix", "phrase", "sourcePhrase", "confidence"],
-                        "additionalProperties": false
-                    }
-                },
-                "checkedSentenceIndices": {
-                    "anyOf": [
-                        {"type": "array", "items": {"type": "integer", "minimum": 1}},
-                        {"type": "null"}
-                    ]
-                }
-            },
-            "required": ["rating", "issues", "checkedSentenceIndices"],
-            "additionalProperties": false
-        }
+        "schema": translation_audit_schema()
     })
 }
 
@@ -173,6 +142,13 @@ impl OpenAiCompatibleProvider {
         req.model.starts_with("gpt-5") || self.reasoning_requested(req)
     }
 
+    /// Schema-constrained direct responses are supported by OpenAI, but not by
+    /// all OpenAI-compatible endpoints. DeepSeek and custom profiles retain
+    /// ordinary JSON mode and the existing local validation.
+    fn supports_json_schema(&self) -> bool {
+        self.id == "openai"
+    }
+
     /// Attaches reasoning effort to the request body.
     /// Responses API → `reasoning.effort`; Chat Completions → `reasoning_effort`.
     /// No-op when effort is unset or not one of: low, medium, high, xhigh.
@@ -200,7 +176,10 @@ impl OpenAiCompatibleProvider {
         if self.reasoning_requested(req) {
             return;
         }
-        if let Some(temperature) = self.openai_cache_config(req).and_then(|cfg| cfg.temperature) {
+        if let Some(temperature) = self
+            .openai_cache_config(req)
+            .and_then(|cfg| cfg.temperature)
+        {
             body["temperature"] = serde_json::json!(temperature.clamp(0.0, 2.0));
         }
     }
@@ -285,7 +264,7 @@ impl OpenAiCompatibleProvider {
         });
 
         if req.json_mode {
-            if req.json_schema_strict {
+            if req.json_schema_strict && self.supports_json_schema() {
                 // Responses API: fields go directly in text.format, no "json_schema" wrapper
                 let s = judge_json_schema();
                 body["text"] = serde_json::json!({"format": {
@@ -362,7 +341,7 @@ impl OpenAiCompatibleProvider {
             "stream": true,
         });
         if req.json_mode {
-            if req.json_schema_strict {
+            if req.json_schema_strict && self.supports_json_schema() {
                 // Responses API: fields go directly in text.format, no "json_schema" wrapper
                 let s = judge_json_schema();
                 body["text"] = serde_json::json!({"format": {
@@ -522,7 +501,7 @@ impl LlmProvider for OpenAiCompatibleProvider {
         });
 
         if req.json_mode {
-            if req.json_schema_strict {
+            if req.json_schema_strict && self.supports_json_schema() {
                 body["response_format"] =
                     serde_json::json!({"type": "json_schema", "json_schema": judge_json_schema()});
             } else {
@@ -594,6 +573,14 @@ impl LlmProvider for OpenAiCompatibleProvider {
             "stream": true,
             "stream_options": {"include_usage": true}
         });
+        if req.json_mode {
+            if req.json_schema_strict && self.supports_json_schema() {
+                body["response_format"] =
+                    serde_json::json!({"type": "json_schema", "json_schema": judge_json_schema()});
+            } else {
+                body["response_format"] = serde_json::json!({"type": "json_object"});
+            }
+        }
         self.apply_cache_fields(req, &mut body);
         self.apply_reasoning_effort(req, &mut body);
         self.apply_temperature(req, &mut body);
@@ -613,7 +600,9 @@ impl LlmProvider for OpenAiCompatibleProvider {
 #[cfg(test)]
 mod temperature_tests {
     use super::*;
-    use crate::llm::types::{OpenAiCacheConfig, PromptBlock, ProviderRuntimeConfig, StructuredPrompt};
+    use crate::llm::types::{
+        OpenAiCacheConfig, PromptBlock, ProviderRuntimeConfig, StructuredPrompt,
+    };
 
     fn request_with(
         provider_options: Option<&'static ProviderRuntimeConfig>,
@@ -635,7 +624,10 @@ mod temperature_tests {
         }
     }
 
-    fn openai_config(reasoning_effort: Option<&str>, temperature: Option<f32>) -> &'static ProviderRuntimeConfig {
+    fn openai_config(
+        reasoning_effort: Option<&str>,
+        temperature: Option<f32>,
+    ) -> &'static ProviderRuntimeConfig {
         Box::leak(Box::new(ProviderRuntimeConfig {
             ollama: None,
             openai: Some(OpenAiCacheConfig {
@@ -676,5 +668,12 @@ mod temperature_tests {
         let mut body = serde_json::json!({});
         prov.apply_temperature(&req, &mut body);
         assert_eq!(body["temperature"], serde_json::json!(2.0));
+    }
+
+    #[test]
+    fn only_openai_uses_the_native_schema_format() {
+        assert!(openai().supports_json_schema());
+        assert!(!deepseek().supports_json_schema());
+        assert!(!custom_endpoint("https://example.test".to_string()).supports_json_schema());
     }
 }

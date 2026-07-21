@@ -5,6 +5,59 @@ pub mod openai;
 
 use crate::llm::provider::LlmProvider;
 use reqwest::header::HeaderMap;
+use serde_json::{json, Value};
+
+/// JSON Schema shared by every provider that can constrain the translation
+/// audit response natively. Providers wrap it in their API-specific envelope.
+pub(crate) fn translation_audit_schema() -> Value {
+    json!({
+        "type": "object",
+        "properties": {
+            "rating": {
+                "type": "string",
+                "enum": ["critical", "poor", "fair", "good", "excellent"]
+            },
+            "issues": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "type": {"type": "string", "enum": ["glossary", "fluency", "accuracy", "grammar"]},
+                        "severity": {"type": "string", "enum": ["low", "medium", "high"]},
+                        "description": {"type": "string"},
+                        "suggestedFix": {"type": "string"},
+                        "phrase": {"type": ["string", "null"]},
+                        "sourcePhrase": {"type": ["string", "null"]},
+                        "confidence": {"type": ["number", "null"]}
+                    },
+                    "required": ["type", "severity", "description", "suggestedFix", "phrase", "sourcePhrase", "confidence"],
+                    "additionalProperties": false
+                }
+            },
+            "checkedSentenceIndices": {
+                "type": ["array", "null"],
+                "items": {"type": "integer", "minimum": 1}
+            }
+        },
+        "required": ["rating", "issues", "checkedSentenceIndices"],
+        "additionalProperties": false
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::translation_audit_schema;
+
+    #[test]
+    fn audit_schema_requires_one_based_checked_sentence_indices() {
+        let schema = translation_audit_schema();
+
+        assert_eq!(
+            schema["properties"]["checkedSentenceIndices"]["items"]["minimum"],
+            1
+        );
+    }
+}
 
 pub fn get_provider(
     id: &str,
