@@ -28,12 +28,15 @@ function validBackup(): BackupPayload {
 }
 
 describe('external data validation', () => {
-  it('accepts a complete backup with database values', () => {
-    const backup = validBackup();
-    backup.tables.workspaces.push({ id: 'workspace-1', name: 'Archivio', created_at: null });
-
-    expect(backupPayloadSchema.safeParse(backup).success).toBe(true);
+it('accepts a backup containing BLOB columns encoded as byte arrays', () => {
+  const backup = validBackup();
+  backup.tables.phrase_memory.push({
+    id: 'pm-1',
+    embedding: [0, 32, 169, 255],
   });
+
+  expect(backupPayloadSchema.safeParse(backup).success).toBe(true);
+});
 
   it('rejects a backup with a missing table or a non-database value', () => {
     const missingTable = validBackup();
