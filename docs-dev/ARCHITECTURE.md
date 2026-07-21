@@ -87,7 +87,6 @@ devUrl Tauri (`src-tauri/tauri.conf.json`) e porta Vite (`package.json` → `dev
 | `components/layout/shell-next/ShellNext.tsx` | Layout tre colonne shell nuova (#291): `ProjectRailNext` sinistra · documento centro · `ProjectInspectorNext` destra (solo Approfondimenti, #296). `inspectorOpen` guidato da `showInsightPanel` (era `showDocumentDrawer \|\| showChunkDrawer`). Collasso e larghezze persistiti su uiStore. |
 | `components/layout/shell-next/ProjectRailNext.tsx` | Redesign #296. Header fisso `h-20`: collassa (ChevronLeft/Right) + Libreria. Corpo scrollabile: selezione/config pipeline inline + comandi run (`PipelineSidebarRunSection`) + `ChunkInspectorPanel` annidato (Audit/Note/Memoria/Riferimenti). Bottom fisso `h-12`: Workspace / Impostazioni / Importa / Esporta. Collassata: azione primaria per `workMode` + 4 icone bottom in colonna. Non riceve più `onDryRun`/`onRunAuditOnly`; riceve `onReauditChunk`. `PipelineSidebarPipelinesSection`/`PipelineSidebarDocumentSection` (sotto-componenti dedicati previsti per questo, mai collegati) rimossi come dead code nella pulizia #324 — il contenuto vive direttamente qui. |
 | `components/layout/shell-next/ProjectInspectorNext.tsx` | Pannello destro collassabile: solo `DocumentInsightTabs` (schede Approfondimenti index/search/stats/glossary/coherence). Tab Frammento rimossa (#296) — frammento vive ora in `ChunkInspectorPanel` dentro rail sinistra. Header unico fisso `h-20` (icona + collassa con `PanelRightClose`/`PanelRightOpen`), speculare a `ProjectRailNext`; `DocumentInsightTabs` non ha più header/close proprio (rimosso doppio header, #296). |
-| `components/pipeline/ProductionStream.tsx` | Riga chunk — editor sorgente, risultati stage, judge issues, draft editor |
 | `components/layout/PipelineSidebarSections/PipelineSidebarRunSection.tsx` | Azione primaria run/cancel e controlli work-mode della pipeline; entry point reale dei comandi di esecuzione. |
 | `components/pipeline/StageCard.tsx` | Visualizza singolo stage (token, retry info) |
 | `components/document/ConfigDrawer.tsx` | Finestra (Radix `Dialog`) config pipeline: mode, lingue, stage, persona, glossary. Variante drawer laterale legacy (`variant='drawer'`) rimossa: nessun chiamante la usava più dopo migrazione shell nuova (#291), restava solo `variant='modal'`. |
@@ -148,7 +147,7 @@ Layout tre colonne (#291, rail ridisegnata #296) — `ShellNext` con `react-resi
 
 **Shell home (ridisegnata 2026-07-18, #323):** rail con **una sola selezione di navigazione, ogni voce naviga al proprio contenuto**. Ordine: `Dashboard` voce standalone in cima (home app-level) → sezione Aree del workspace attivo (Traduzioni/Biblioteca/Trascrizioni) → sezione Workspace (lista sciolta sempre visibile, `+` icon-only nell'header, click su un workspace = `setActive` + naviga alla sua pagina). `uiStore.activeWorkspaceView` (`'dashboard' | 'workspace' | WorkspaceArea`, default `'dashboard'`, non persistito) è la source-of-truth. Contenuto: `AppDashboard` (dashboard) | `WorkspaceOverview` (pagina workspace: **solo** i progetti del workspace attivo) | `TranslationsArea` (area: **tutti** i progetti di tutti i workspace, badge workspace per riga — non un duplicato di `WorkspaceOverview`). Indicatore rail: un solo pallino accent per riga workspace, acceso solo quando quella riga è la vista corrente (coerente col resto del rail; niente più "contesto" separato dalla vista, corretto 2026-07-18). `CreateProjectDialog`/`CreateWorkspaceDialog` condivisi. `PipelineSidebar`/`useEdgeResize` (sistema pre-#291) rimossi: risultavano codice morto al 100%, zero altri consumatori.
 
-**Vista unica del progetto:** ogni progetto usa `ShellNext`, anche quando contiene un solo frammento. All'apertura di un progetto storico che ha testo ma nessun frammento salvato, `projectStore` ne genera uno unico dalla sorgente e mantiene il contenuto; il vecchio valore persistito della vista viene ignorato per compatibilità con i dati esistenti. Non esiste più un layout alternativo per documenti non segmentati.
+**Vista unica del progetto:** ogni progetto usa `ShellNext`, anche quando contiene un solo frammento. Se non c'è ancora un documento, la vista mostra il normale invito all'importazione. Non esiste un layout alternativo per documenti non segmentati.
 
 #### Vista Documento
 
@@ -362,7 +361,7 @@ Distinti dalla Phrase Memory: non è ricerca vettoriale per-chunk, ma un set fis
 
 ```
 projects
-  id, workspace_id FK, name, source_language, target_language, view_mode
+  id, workspace_id FK, name, source_language, target_language
   source_display_text, source_processing_text, source_footnotes JSON
   document_format, render_profile, markdown_aware, experimental_import
   created_at, updated_at

@@ -29,7 +29,7 @@ import { logger } from '../utils/logger';
 import { runInTransaction } from '../services/dbService';
 import { useWorkspaceStore } from './workspaceStore';
 import { useAnnotationsStore } from './annotationsStore';
-import type { Pipeline, PipelineConfig } from '../types';
+import type { Pipeline, PipelineConfig, TranslationChunk } from '../types';
 
 let saveInFlight: Promise<void> | null = null;
 let createPipelineInFlight: Promise<void> | null = null;
@@ -149,7 +149,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
     const activePipelineId = allPipelines[0]?.id ?? null;
 
-    let restoredChunks = useChunksStore.getState().chunks.filter(() => false); // empty typed array
+    let restoredChunks: TranslationChunk[] = [];
 
     if (activePipelineId) {
       const [pipelineData, savedTranslations] = await Promise.all([
@@ -194,12 +194,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       }
     }
 
-    if (restoredChunks.length === 0 && source.sourceProcessingText.trim()) {
-      useChunksStore.getState().generateChunks();
-      restoredChunks = useChunksStore.getState().chunks;
-    } else {
-      useChunksStore.getState().setChunks(restoredChunks);
-    }
+    useChunksStore.getState().setChunks(restoredChunks);
 
     if (activePipelineId) {
       const annStore = useAnnotationsStore.getState();

@@ -226,7 +226,7 @@ describe('initDatabase migrations', () => {
     await initDatabase();
 
     expect(invoke).toHaveBeenCalledWith('backup_database_file', {
-      reason: 'schema-1-to-db-schema-v3',
+      reason: 'schema-1-to-db-schema-v4',
     });
     expect(dbState.db.execute).toHaveBeenCalledWith('PRAGMA wal_checkpoint(FULL)');
     expect(dbState.db.execute).toHaveBeenCalledWith('DROP TABLE IF EXISTS projects');
@@ -238,7 +238,7 @@ describe('initDatabase migrations', () => {
 
   it('does not reset a database with the current beta schema version', async () => {
     dbState.setExistingObjects(['app_settings', 'projects', 'workspaces']);
-    dbState.setSchemaVersion('db-schema-v3');
+    dbState.setSchemaVersion('db-schema-v4');
     const { initDatabase } = await import('./dbService');
 
     await initDatabase();
@@ -260,7 +260,7 @@ describe('initDatabase migrations', () => {
 
   it('isDatabaseSchemaOutdated is false for a matching schema version', async () => {
     dbState.setExistingObjects(['app_settings', 'projects', 'workspaces']);
-    dbState.setSchemaVersion('db-schema-v3');
+    dbState.setSchemaVersion('db-schema-v4');
     const { isDatabaseSchemaOutdated } = await import('./dbService');
 
     await expect(isDatabaseSchemaOutdated()).resolves.toBe(false);
@@ -274,18 +274,18 @@ describe('initDatabase migrations', () => {
     await expect(isDatabaseSchemaOutdated()).resolves.toBe(false);
   });
 
-  it('resets the previous schema after removing legacy translation columns', async () => {
+  it('resets the previous schema after removing legacy project view state', async () => {
     dbState.setExistingObjects(['app_settings', 'projects', 'translations']);
-    dbState.setSchemaVersion('db-schema-v2');
-    vi.mocked(invoke).mockResolvedValueOnce('/tmp/glossa.db-schema-v2.bak');
+    dbState.setSchemaVersion('db-schema-v3');
+    vi.mocked(invoke).mockResolvedValueOnce('/tmp/glossa.db-schema-v3.bak');
     const { initDatabase } = await import('./dbService');
 
     await initDatabase();
 
     expect(invoke).toHaveBeenCalledWith('backup_database_file', {
-      reason: 'schema-db-schema-v2-to-db-schema-v3',
+      reason: 'schema-db-schema-v3-to-db-schema-v4',
     });
-    expect(dbState.db.execute).toHaveBeenCalledWith('DROP TABLE IF EXISTS translations');
+    expect(dbState.db.execute).toHaveBeenCalledWith('DROP TABLE IF EXISTS projects');
   });
 
   it('bakes translation columns directly into the CREATE TABLE statement', async () => {
@@ -319,6 +319,17 @@ describe('initDatabase migrations', () => {
     expect(dbState.db.execute).not.toHaveBeenCalledWith(
       expect.stringContaining('ALTER TABLE pipeline_configs'),
     );
+  });
+
+  it('does not create the removed legacy project view state', async () => {
+    const { initDatabase } = await import('./dbService');
+
+    await initDatabase();
+
+    const projectSchema = dbState.db.execute.mock.calls.find(
+      ([query]) => typeof query === 'string' && query.includes('CREATE TABLE IF NOT EXISTS projects'),
+    )?.[0];
+    expect(projectSchema).not.toContain('view_mode');
   });
 
   it('creates the prompt_templates table and unique index on name/context/workflow', async () => {

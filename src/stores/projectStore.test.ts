@@ -247,7 +247,7 @@ describe('projectStore', () => {
     expect(useUiStore.getState().selectedChunkId).toBe('chunk-0');
   });
 
-  it('migrates an unchunked legacy project into one document chunk', async () => {
+  it('opens a project without saved chunks in the normal empty workspace', async () => {
     const pipeline = makePipeline({ projectId: 'proj-empty', id: 'pipeline-empty' });
 
     projectServiceMocks.getProjectSource.mockResolvedValue({
@@ -285,8 +285,8 @@ describe('projectStore', () => {
 
     await useProjectStore.getState().openProject('proj-empty');
 
-    expect(useChunksStore.getState().chunks).toHaveLength(1);
-    expect(useChunksStore.getState().chunks[0]?.sourceDisplayText).toBe('Unchunked draft source');
+    expect(useChunksStore.getState().chunks).toEqual([]);
+    expect(useUiStore.getState().selectedChunkId).toBeNull();
     expect(usePipelineStore.getState().inputText).toBe('Unchunked draft source');
   });
 
