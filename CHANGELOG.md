@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/nikazzio/glossa/compare/glossa-v1.2.0...glossa-v1.2.1) (2026-07-21)
+
+
+### 🐛 Bug Fixes
+
+* **326:** enforce native judge schemas ([#355](https://github.com/nikazzio/glossa/issues/355)) ([743fcba](https://github.com/nikazzio/glossa/commit/743fcba73a6c0758eb958576d8301a350af3f858))
+
 ## [1.2.0](https://github.com/nikazzio/glossa/compare/glossa-v1.1.2...glossa-v1.2.0) (2026-07-20)
 
 
