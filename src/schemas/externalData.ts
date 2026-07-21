@@ -16,9 +16,9 @@ export const BACKUP_TABLES = [
 
 export type BackupTable = (typeof BACKUP_TABLES)[number];
 
-const backupValueSchema = z.union([z.string(), z.number(), z.null()]);
+const backupBlobSchema = z.array(z.number().int().min(0).max(255)).nonempty();
+const backupValueSchema = z.union([z.string(), z.number(), z.boolean(), z.null(), backupBlobSchema]);
 const backupRowSchema = z.record(z.string(), backupValueSchema);
-const backupTableSchema = z.array(backupRowSchema);
 
 export const backupPayloadSchema = z.object({
   glossa_version: z.string().trim().min(1),
