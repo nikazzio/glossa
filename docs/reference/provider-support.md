@@ -33,6 +33,9 @@ Tramite **Impostazioni → Custom** puoi definire profili endpoint arbitrari. Og
 - **Richiede API key** — toggle; se attivo la chiave viene salvata nel portachiavi OS
 - **Test connessione** — verifica la raggiungibilità dell'endpoint con un modello di tua scelta
 
+Per salvare o testare un profilo, nome e URL base devono essere completi e validi.
+Glossa non conserva un profilo incompleto o con un indirizzo non riconoscibile.
+
 Nello stage della pipeline, selezionando il provider *Custom* appare un secondo menu a tendina per scegliere il profilo e un campo di testo libero per il nome del modello.
 
 ## Guida alla scelta del provider

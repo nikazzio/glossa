@@ -33,6 +33,9 @@ Via **Settings → Custom** you can define arbitrary endpoint profiles. Each pro
 - **Requires API key** — toggle; when on, the key is stored in the OS keychain
 - **Test connection** — verifies the endpoint is reachable with a model of your choice
 
+To save or test a profile, both its name and base URL must be complete and valid.
+Glossa does not keep an incomplete profile or one with an unrecognizable address.
+
 In the pipeline stage, selecting the *Custom* provider shows a second dropdown to choose the profile and a free-text field for the model name.
 
 ## Provider selection guide

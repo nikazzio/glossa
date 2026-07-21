@@ -84,6 +84,7 @@ devUrl Tauri (`src-tauri/tauri.conf.json`) e porta Vite (`package.json` → `dev
 | `services/fileService.ts` | Import DOCX/PDF (estrazione testo), export bilingue/monolingua |
 | `services/dbService.ts` | Owner dello schema SQLite: init, migrazioni allowlist via `PRAGMA table_info`, read via plugin SQL; tutte le write runtime passano a `execute_transaction` Rust. |
 | `services/customProviderService.ts` | Tauri invoke wrapper per comandi custom provider (list, save, delete, test_connection) |
+| `schemas/externalData.ts` | Schemi Zod ai confini esterni: backup completo prima dell'import, oggetto JSON per opzioni avanzate, profilo provider con nome e URL validi. |
 
 ---
 

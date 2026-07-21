@@ -34,6 +34,12 @@ note manualmente: nelle traduzioni reali spesso cambiano formulazione e posizion
 Vedi anche [Annotazioni](../guides/annotations) per la distinzione tra note sorgente
 importate e annotazioni create durante la revisione.
 
+## Backup del workspace
+
+Prima di chiederti di sostituire i dati locali, Glossa controlla che il backup sia
+completo e compatibile. Un file incompleto, alterato o creato da una versione più
+recente viene rifiutato senza modificare il workspace corrente.
+
 ## Export
 
 I target di export tipici includono:

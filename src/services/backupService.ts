@@ -2,6 +2,12 @@ import { open, save } from '@tauri-apps/plugin-dialog';
 import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { select, runInTransaction } from './dbService';
 import { confirm } from '../stores/confirmStore';
+import {
+  BACKUP_TABLES,
+  backupPayloadSchema,
+  type BackupPayload,
+  type BackupTable,
+} from '../schemas/externalData';
 
 const SCHEMA_VERSION = 1;
 const GLOSSA_VERSION = '0.9.0';
@@ -15,19 +21,7 @@ const DB_MIGRATION_SETTING_KEY = 'schema_version';
 
 // Ordered for FK safety: parents before children for INSERT,
 // children before parents for DELETE.
-const INSERT_ORDER = [
-  'workspaces',
-  'glossaries',
-  'projects',
-  'app_settings',
-  'prompt_templates',
-  'pipelines',
-  'project_glossaries',
-  'glossary_entries',
-  'translations',
-  'phrase_memory',
-  'source_phrase_embeddings',
-] as const;
+const INSERT_ORDER = BACKUP_TABLES;
 
 const SAFE_COL = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
 
@@ -58,15 +52,6 @@ const DELETE_ORDER = [
   'app_settings',
   'workspaces',
 ] as const;
-
-type BackupTable = typeof INSERT_ORDER[number];
-
-interface BackupPayload {
-  glossa_version: string;
-  schema_version: number;
-  exported_at: string;
-  tables: Record<BackupTable, Record<string, unknown>[]>;
-}
 
 export async function exportWorkspace(): Promise<void> {
   const now = new Date().toISOString();
@@ -151,18 +136,12 @@ export async function importWorkspace(t: (key: string) => string): Promise<boole
 }
 
 function validateBackup(json: unknown): BackupPayload {
-  if (typeof json !== 'object' || json === null) {
+  const parsed = backupPayloadSchema.safeParse(json);
+  if (!parsed.success) {
     throw new Error('invalid_backup');
   }
-  const p = json as Record<string, unknown>;
-  if (typeof p.schema_version !== 'number') {
-    throw new Error('invalid_backup');
-  }
-  if (p.schema_version > SCHEMA_VERSION) {
+  if (parsed.data.schema_version > SCHEMA_VERSION) {
     throw new Error('incompatible_schema_version');
   }
-  if (typeof p.tables !== 'object' || p.tables === null) {
-    throw new Error('invalid_backup');
-  }
-  return p as unknown as BackupPayload;
+  return parsed.data;
 }

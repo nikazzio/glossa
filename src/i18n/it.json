@@ -235,6 +235,7 @@
       "advancedJson": "JSON avanzato",
       "advancedHint": "Opzioni raw del provider fuse nella richiesta nativa.",
       "invalidJson": "Il blocco JSON avanzato non è ancora valido.",
+      "invalidJsonObject": "Il JSON avanzato deve essere un oggetto (es. { \"chiave\": \"valore\" }).",
       "optional": "Opzionale"
     },
     "anthropicCache": {
@@ -522,6 +523,7 @@
       "deleteFailed": "Eliminazione profilo fallita",
       "testOk": "Connessione riuscita",
       "testFailed": "Connessione fallita",
+      "invalidProfile": "Inserisci un nome e un indirizzo completo validi.",
       "testModelRequired": "Inserisci un modello per testare"
     },
     "backup": "Backup e ripristino",

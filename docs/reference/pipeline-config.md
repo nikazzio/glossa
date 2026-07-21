@@ -60,6 +60,12 @@ Lascia stare tutto il resto finché non capisci quale parte sta causando il prob
 - Tieni il format stretto, così non altera il significato in modo silenzioso.
 - Usa il judge per segnalare problemi, non per sostituire la review umana.
 
+## Opzioni avanzate di Ollama
+
+Usa il blocco JSON avanzato solo se il provider locale ti ha indicato opzioni
+specifiche da inviare. Deve contenere un **oggetto JSON**: un elenco, un valore
+singolo o testo JSON non valido non viene salvato nella configurazione della pipeline.
+
 ## Regole di esecuzione
 
 - Il Test mode processa un chunk e lascia la configurazione modificabile.

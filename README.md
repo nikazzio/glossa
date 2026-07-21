@@ -36,7 +36,7 @@ Glossa is a desktop application first. If you want to use it, download a release
 Latest release:
 
 - [GitHub Releases](https://github.com/nikazzio/glossa/releases/latest)
-- Current latest tag as of June 12, 2026: [`glossa-v0.11.0`](https://github.com/nikazzio/glossa/releases/tag/glossa-v0.11.0)
+- Current latest tag as of July 21, 2026: [`glossa-v1.2.1`](https://github.com/nikazzio/glossa/releases/tag/glossa-v1.2.1)
 
 Use the source repository only if you want to develop Glossa, test changes locally, or contribute code.
 
@@ -86,7 +86,7 @@ Translations stream token-by-token in real time. You can edit the candidate tran
 
 | Category | Details |
 |----------|---------|
-| **5 LLM providers** | Gemini, OpenAI, Anthropic, DeepSeek, **Ollama** (local models) |
+| **LLM providers** | Gemini, OpenAI, Anthropic, DeepSeek, **Ollama** (local models), and custom OpenAI-compatible endpoints; DeepL supports the first translation pass |
 | **Streaming** | Real-time token display during translation |
 | **Responsive stop** | Stop requests cancel in-flight Ollama and cloud-provider stage calls, then halt after the current unit |
 | **Standard pipeline** | Single translation pass with model, provider, prompt, and optional persona |
@@ -235,7 +235,7 @@ No API key is needed. All data stays on your machine.
 
 ### 1. Set up the pipeline
 
-In the configuration panel (sidebar in **Sandbox** mode, gear icon in **Document** mode):
+In the configuration panel (gear icon in **Document** mode):
 
 - Choose source and target languages
 - Configure the translation pass (Translation tab):
@@ -246,13 +246,6 @@ In the configuration panel (sidebar in **Sandbox** mode, gear icon in **Document
 - Add terms to the **Term Registry** tab to enforce consistent terminology
 
 ### 2. Run the pipeline
-
-**Sandbox mode** — single text, no chunking:
-
-1. Paste your source text in the center panel
-2. Click **"Stage Content"** to prepare it
-3. Click **"Begin Pipeline"** — tokens stream in real time for each stage
-4. Review the candidate translation and edit it manually if needed
 
 **Document mode** — long texts split into chunks:
 
@@ -273,7 +266,7 @@ If a batch is interrupted, the next run resumes and skips chunks already complet
 
 ### 3. Review the audit
 
-**Chunk-level** (Insights panel → Audit tab, Document mode / right panel in Sandbox):
+**Chunk-level** (Insights panel → Audit tab):
 
 - **Quality rating** for each chunk
 - **Issues** categorized by type (glossary, fluency, accuracy, grammar, consistency) and severity
@@ -294,7 +287,7 @@ If a batch is interrupted, the next run resumes and skips chunks already complet
 - **⬆ Import**: Load `.txt`, `.md`, `.docx`, or `.pdf` files via native OS dialog
 - **⬇ Export**: Save as `.txt`, `.md`, `.html`, `.docx`, or bilingual `.md` (source + translation + audit)
 - **💾 Save**: Persist the current project state to SQLite
-- **🗄 Backup**: Open **Settings → Backup and restore** to export the full workspace (all projects, pipelines, translations, glossaries, templates) as a portable `.glossa-backup` file. Import it on any device to restore everything.
+- **🗄 Backup**: Open **Settings → Backup and restore** to export the full workspace (all projects, pipelines, translations, glossaries, templates) as a portable `.glossa-backup` file. Before replacing local data, Glossa checks that the backup is complete and compatible.
 
 ### 5. Stop, resume, and rerun
 
