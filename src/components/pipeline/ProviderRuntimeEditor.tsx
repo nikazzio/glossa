@@ -245,14 +245,20 @@ export function ProviderRuntimeEditor({
                   onChange={(e) => {
                     const next = e.target.value;
                     setAdvancedJson(next);
+                    let parsedJson: unknown;
                     try {
-                      const parsed = advancedOptionsSchema.safeParse(JSON.parse(next));
-                      if (!parsed.success) throw new Error('invalid_advanced_options');
-                      patchOllama({ advancedOptions: parsed.data });
-                      setJsonError(null);
+                      parsedJson = JSON.parse(next);
                     } catch {
                       setJsonError(t('pipeline.providerOptions.invalidJson'));
+                      return;
                     }
+                    const parsed = advancedOptionsSchema.safeParse(parsedJson);
+                    if (!parsed.success) {
+                      setJsonError(t('pipeline.providerOptions.invalidJsonObject'));
+                      return;
+                    }
+                    patchOllama({ advancedOptions: parsed.data });
+                    setJsonError(null);
                   }}
                   disabled={!advancedEnabled}
                   rows={6}

@@ -235,6 +235,7 @@
       "advancedJson": "Advanced JSON",
       "advancedHint": "Raw provider options merged into the native request.",
       "invalidJson": "The advanced JSON block is not valid yet.",
+      "invalidJsonObject": "The advanced JSON must be an object (e.g. { \"key\": \"value\" }).",
       "optional": "Optional"
     },
     "anthropicCache": {

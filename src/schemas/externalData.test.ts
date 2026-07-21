@@ -28,15 +28,25 @@ function validBackup(): BackupPayload {
 }
 
 describe('external data validation', () => {
-it('accepts a backup containing BLOB columns encoded as byte arrays', () => {
-  const backup = validBackup();
-  backup.tables.phrase_memory.push({
-    id: 'pm-1',
-    embedding: [0, 32, 169, 255],
+  it('accepts a backup containing BLOB columns encoded as byte arrays', () => {
+    const backup = validBackup();
+    backup.tables.phrase_memory.push({
+      id: 'pm-1',
+      embedding: [0, 32, 169, 255],
+    });
+
+    expect(backupPayloadSchema.safeParse(backup).success).toBe(true);
   });
 
-  expect(backupPayloadSchema.safeParse(backup).success).toBe(true);
-});
+  it('accepts an empty BLOB column encoded as an empty byte array', () => {
+    const backup = validBackup();
+    backup.tables.phrase_memory.push({
+      id: 'pm-2',
+      embedding: [],
+    });
+
+    expect(backupPayloadSchema.safeParse(backup).success).toBe(true);
+  });
 
   it('rejects a backup with a missing table or a non-database value', () => {
     const missingTable = validBackup();

@@ -235,6 +235,7 @@
       "advancedJson": "JSON avanzato",
       "advancedHint": "Opzioni raw del provider fuse nella richiesta nativa.",
       "invalidJson": "Il blocco JSON avanzato non è ancora valido.",
+      "invalidJsonObject": "Il JSON avanzato deve essere un oggetto (es. { \"chiave\": \"valore\" }).",
       "optional": "Opzionale"
     },
     "anthropicCache": {
