@@ -5,6 +5,8 @@ docs/.vitepress/cache/
 docs/.vitepress/dist/
 dist/
 coverage/
+playwright-report/
+test-results/
 local/
 local/test-data/
 .DS_Store
