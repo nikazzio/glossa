@@ -5,7 +5,6 @@ import type {
   ExperimentalImportMode,
   FootnoteDefinition,
   PipelineConfig,
-  ViewMode,
 } from '../types';
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -16,7 +15,6 @@ export interface Project {
   workspace_id: string | null;
   source_language: string;
   target_language: string;
-  view_mode?: ViewMode | null;
   created_at: string;
   updated_at: string;
   pipeline_count: number;
@@ -53,7 +51,6 @@ export interface ProjectSource {
   renderProfile: DocumentRenderProfile;
   markdownAware: boolean;
   experimentalImport: ExperimentalImportMode | null;
-  viewMode: ViewMode | null;
 }
 
 // Shared type used by pipelineService for raw translation rows.
@@ -247,10 +244,9 @@ export async function getProjectSource(projectId: string): Promise<ProjectSource
     render_profile: DocumentRenderProfile | null;
     markdown_aware: number | null;
     experimental_import: ExperimentalImportMode | null;
-    view_mode: ViewMode | null;
   }>(
     `SELECT source_display_text, source_processing_text, source_footnotes,
-            document_format, render_profile, markdown_aware, experimental_import, view_mode
+            document_format, render_profile, markdown_aware, experimental_import
      FROM projects WHERE id = $1`,
     [projectId],
   );
@@ -270,7 +266,6 @@ export async function getProjectSource(projectId: string): Promise<ProjectSource
     renderProfile: row.render_profile ?? 'plain-text',
     markdownAware: row.markdown_aware === 1,
     experimentalImport: row.experimental_import ?? null,
-    viewMode: row.view_mode ?? null,
   };
 }
 
@@ -280,7 +275,6 @@ export async function saveProjectSource(
   inputProcessingText: string,
   sourceFootnotes: FootnoteDefinition[],
   config: Pick<PipelineConfig, 'documentFormat' | 'renderProfile' | 'markdownAware' | 'experimentalImport' | 'sourceLanguage' | 'targetLanguage'>,
-  viewMode: ViewMode,
 ): Promise<void> {
   await execute(
     `UPDATE projects SET
@@ -293,9 +287,8 @@ export async function saveProjectSource(
        experimental_import    = $7,
        source_language        = $8,
        target_language        = $9,
-       view_mode              = $10,
        updated_at             = CURRENT_TIMESTAMP
-     WHERE id = $11`,
+     WHERE id = $10`,
     [
       inputText,
       inputProcessingText,
@@ -306,7 +299,6 @@ export async function saveProjectSource(
       config.experimentalImport ?? null,
       config.sourceLanguage,
       config.targetLanguage,
-      viewMode,
       projectId,
     ],
   );

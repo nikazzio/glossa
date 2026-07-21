@@ -1,5 +1,5 @@
 import type { FootnoteDefinition } from '../types';
-import type { PipelineConfig, TranslationChunk, ViewMode } from '../types';
+import type { PipelineConfig, TranslationChunk } from '../types';
 
 export interface ProjectSnapshotInput {
   inputText: string;
@@ -7,7 +7,6 @@ export interface ProjectSnapshotInput {
   sourceFootnotes: FootnoteDefinition[];
   config: PipelineConfig;
   chunks: TranslationChunk[];
-  viewMode: ViewMode;
 }
 
 export function buildProjectSnapshot(input: ProjectSnapshotInput): string {
@@ -17,6 +16,5 @@ export function buildProjectSnapshot(input: ProjectSnapshotInput): string {
     sourceFootnotes: input.sourceFootnotes,
     config: input.config,
     chunks: input.chunks,
-    viewMode: input.viewMode,
   });
 }

@@ -4,7 +4,6 @@ import { useProjectAutosave, buildProjectSnapshot } from './useProjectAutosave';
 import { useProjectStore } from '../stores/projectStore';
 import { usePipelineStore } from '../stores/pipelineStore';
 import { useChunksStore } from '../stores/chunksStore';
-import { useUiStore } from '../stores/uiStore';
 import { useConfigStore } from '../stores/configStore';
 import { makeTranslationChunk } from '../test/chunkFactory';
 
@@ -54,13 +53,6 @@ describe('useProjectAutosave', () => {
       activeStreamId: null,
     });
 
-    useUiStore.setState({
-      viewMode: 'document',
-      documentLayout: 'auto',
-      selectedChunkId: 'chunk-0',
-      showSettings: false,
-      showHelp: false,
-    });
     useConfigStore.setState({
       ollamaModels: [],
       ollamaStatus: 'unknown',
@@ -117,7 +109,6 @@ describe('useProjectAutosave', () => {
       sourceFootnotes: [],
       config: usePipelineStore.getState().config,
       chunks: useChunksStore.getState().chunks,
-      viewMode: 'document',
     });
 
     const parsed = JSON.parse(snapshot);
@@ -140,7 +131,6 @@ describe('useProjectAutosave', () => {
       sourceFootnotes: [{ id: '1', text: 'A note.' }],
       config: usePipelineStore.getState().config,
       chunks: [],
-      viewMode: 'document',
     });
 
     const parsed = JSON.parse(snapshot);

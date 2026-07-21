@@ -36,7 +36,6 @@ describe('projectService — source text', () => {
         render_profile: null,
         markdown_aware: null,
         experimental_import: null,
-        view_mode: null,
       },
     ]);
 
@@ -63,7 +62,6 @@ describe('projectService — source text', () => {
         render_profile: 'markdown',
         markdown_aware: 1,
         experimental_import: 'docx-markdown',
-        view_mode: 'document',
       },
     ]);
 
@@ -72,7 +70,6 @@ describe('projectService — source text', () => {
     expect(result?.sourceFootnotes).toEqual(footnotes);
     expect(result?.markdownAware).toBe(true);
     expect(result?.documentFormat).toBe('markdown');
-    expect(result?.viewMode).toBe('document');
   });
 
   it('returns empty footnotes array when stored JSON is corrupted', async () => {
@@ -85,7 +82,6 @@ describe('projectService — source text', () => {
         render_profile: 'plain-text',
         markdown_aware: 0,
         experimental_import: null,
-        view_mode: null,
       },
     ]);
 
@@ -108,7 +104,6 @@ describe('projectService — source text', () => {
         sourceLanguage: 'Latin',
         targetLanguage: 'English',
       },
-      'document',
     );
 
     expect(dbMocks.execute).toHaveBeenCalledOnce();
@@ -124,7 +119,6 @@ describe('projectService — source text', () => {
       'docx-markdown',
       'Latin',
       'English',
-      'document',
       'proj-1',
     ]);
   });

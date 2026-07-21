@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef } from 'react';
 import { usePipelineStore } from '../stores/pipelineStore';
 import { useChunksStore } from '../stores/chunksStore';
 import { useProjectStore } from '../stores/projectStore';
-import { useUiStore } from '../stores/uiStore';
 import { buildProjectSnapshot } from '../utils/projectSnapshot';
 import { logger } from '../utils/logger';
 
@@ -15,7 +14,6 @@ function useProjectSnapshot(enabled = true): string {
   const config = usePipelineStore((state) => state.config);
   const chunks = useChunksStore((state) => state.chunks);
   const isProcessing = useChunksStore((state) => state.isProcessing);
-  const viewMode = useUiStore((state) => state.viewMode);
   const lastStableSnapshotRef = useRef<string | null>(null);
 
   return useMemo(() => {
@@ -32,11 +30,10 @@ function useProjectSnapshot(enabled = true): string {
       sourceFootnotes,
       config,
       chunks,
-      viewMode,
     });
     lastStableSnapshotRef.current = next;
     return next;
-  }, [chunks, config, enabled, inputProcessingText, inputText, isProcessing, sourceFootnotes, viewMode]);
+  }, [chunks, config, enabled, inputProcessingText, inputText, isProcessing, sourceFootnotes]);
 }
 
 export function useProjectAutosave(delayMs = 1200) {

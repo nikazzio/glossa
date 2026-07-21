@@ -129,7 +129,6 @@ describe('projectStore', () => {
     });
 
     useUiStore.setState({
-      viewMode: 'document',
       documentLayout: 'auto',
       selectedChunkId: null,
       showSettings: false,
@@ -187,7 +186,6 @@ describe('projectStore', () => {
       renderProfile: 'markdown',
       markdownAware: true,
       experimentalImport: 'docx-markdown',
-      viewMode: 'document',
     });
     pipelineServiceMocks.listPipelines.mockResolvedValue([pipeline]);
     pipelineServiceMocks.getPipelineConfig.mockResolvedValue({
@@ -246,11 +244,10 @@ describe('projectStore', () => {
     expect(usePipelineStore.getState().config.documentFormat).toBe('markdown');
     expect(usePipelineStore.getState().config.markdownAware).toBe(true);
     expect(useChunksStore.getState().chunks[0]?.translationDisplayText).toBe('Translated paragraph');
-    expect(useUiStore.getState().viewMode).toBe('document');
     expect(useUiStore.getState().selectedChunkId).toBe('chunk-0');
   });
 
-  it('derives sandbox mode when no explicit view mode is saved and there are no chunks', async () => {
+  it('migrates an unchunked legacy project into one document chunk', async () => {
     const pipeline = makePipeline({ projectId: 'proj-empty', id: 'pipeline-empty' });
 
     projectServiceMocks.getProjectSource.mockResolvedValue({
@@ -261,7 +258,6 @@ describe('projectStore', () => {
       renderProfile: 'plain-text',
       markdownAware: false,
       experimentalImport: null,
-      viewMode: null,
     });
     pipelineServiceMocks.listPipelines.mockResolvedValue([pipeline]);
     pipelineServiceMocks.getPipelineConfig.mockResolvedValue({
@@ -289,14 +285,13 @@ describe('projectStore', () => {
 
     await useProjectStore.getState().openProject('proj-empty');
 
-    expect(useChunksStore.getState().chunks).toEqual([]);
+    expect(useChunksStore.getState().chunks).toHaveLength(1);
+    expect(useChunksStore.getState().chunks[0]?.sourceDisplayText).toBe('Unchunked draft source');
     expect(usePipelineStore.getState().inputText).toBe('Unchunked draft source');
-    expect(useUiStore.getState().viewMode).toBe('sandbox');
   });
 
-  it('saves current project with input text, chunk data and current view mode', async () => {
+  it('saves current project with input text and chunk data', async () => {
     useProjectStore.setState({ currentProjectId: 'proj-1', activePipelineId: 'pipeline-1' });
-    useUiStore.getState().setViewMode('document');
     usePipelineStore.getState().setInputText('Original source draft');
 
     await useProjectStore.getState().saveCurrentProject();
@@ -307,7 +302,6 @@ describe('projectStore', () => {
       'Original source draft',
       [],
       expect.objectContaining({ sourceLanguage: 'English', targetLanguage: 'Italian' }),
-      'document',
     );
     expect(pipelineServiceMocks.saveFullState).toHaveBeenCalledWith(
       'proj-1',
@@ -325,7 +319,6 @@ describe('projectStore', () => {
       makePipeline({ id: 'pipeline-first-save', projectId: 'proj-first-save' }),
     ]);
     usePipelineStore.getState().setInputText('Draft text');
-    useUiStore.getState().setViewMode('sandbox');
 
     await useProjectStore.getState().saveCurrentProject('My Draft');
 
@@ -336,7 +329,6 @@ describe('projectStore', () => {
       'Draft text',
       [],
       expect.objectContaining({ sourceLanguage: 'English', targetLanguage: 'Italian' }),
-      'sandbox',
     );
     expect(pipelineServiceMocks.saveFullState).toHaveBeenCalledWith(
       'proj-first-save',
@@ -371,13 +363,12 @@ describe('projectStore', () => {
     expect(projectServiceMocks.saveProjectSource).not.toHaveBeenCalled();
   });
 
-  it('creates a new project and persists the current sandbox state immediately', async () => {
+  it('creates a new project without recording a legacy screen state', async () => {
     projectServiceMocks.createProject.mockResolvedValue('proj-new');
     pipelineServiceMocks.listPipelines.mockResolvedValue([
       makePipeline({ id: 'pipeline-new', projectId: 'proj-new' }),
     ]);
     usePipelineStore.getState().setInputText('Unchunked text to preserve');
-    useUiStore.getState().setViewMode('sandbox');
 
     await useProjectStore.getState().createAndOpen('New Project');
 
@@ -387,7 +378,6 @@ describe('projectStore', () => {
       'Unchunked text to preserve',
       [],
       expect.objectContaining({ sourceLanguage: 'English', targetLanguage: 'Italian' }),
-      'sandbox',
     );
     expect(pipelineServiceMocks.saveFullState).toHaveBeenCalledWith(
       'proj-new',
@@ -410,9 +400,8 @@ describe('projectStore', () => {
     expect(useProjectStore.getState().saveState).toBe('saved');
   });
 
-  it('computes the tracked snapshot that includes input text, config, and view mode', async () => {
+  it('computes the tracked snapshot that includes input text and config', async () => {
     useProjectStore.setState({ currentProjectId: 'proj-1', activePipelineId: 'pipeline-1' });
-    useUiStore.getState().setViewMode('document');
     usePipelineStore.getState().setInputText('Sample text');
 
     await useProjectStore.getState().saveCurrentProject();
@@ -423,7 +412,6 @@ describe('projectStore', () => {
       sourceFootnotes: [],
       config: usePipelineStore.getState().config,
       chunks: [],
-      viewMode: 'document',
     });
     expect(useProjectStore.getState().trackedSnapshot).toBe(expectedSnapshot);
   });

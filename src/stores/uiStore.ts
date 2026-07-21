@@ -1,9 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type {
-  DocumentLayoutPreference,
-  ViewMode,
-} from '../types';
+import type { DocumentLayoutPreference } from '../types';
 
 export type InsightsDrawerTab = 'index' | 'search' | 'stats' | 'coherence' | 'glossary';
 export type ChunkDrawerTab = 'summary' | 'audit' | 'notes' | 'operations' | 'memory';
@@ -66,7 +63,6 @@ export type ProjectPanelTab = 'run' | 'pipeline' | 'document' | 'insight' | 'chu
 const INLINE_PROJECT_PANELS: ReadonlyArray<ProjectPanelTab> = ['run', 'pipeline', 'document'];
 
 interface UiState {
-  viewMode: ViewMode;
   documentLayout: DocumentLayoutPreference;
   documentPaneFocus: DocumentPaneFocus;
   syncScrollEnabled: boolean;
@@ -117,7 +113,6 @@ interface UiState {
   setTraceStageId: (id: string | null) => void;
   setActiveWorkspaceView: (view: WorkspaceView) => void;
   setPendingAnnotationAnchor: (anchor: { chunkId: string; text: string; content?: string } | null) => void;
-  setViewMode: (mode: ViewMode) => void;
   setDocumentLayout: (layout: DocumentLayoutPreference) => void;
   setDocumentPaneFocus: (focus: DocumentPaneFocus) => void;
   setSyncScrollEnabled: (enabled: boolean) => void;
@@ -259,7 +254,6 @@ export function migrateUiStorePersistedState(persisted: unknown, fromVersion: nu
 export const useUiStore = create<UiState>()(
   persist(
     (set) => ({
-      viewMode: 'document',
       documentLayout: 'auto',
       documentPaneFocus: 'both',
       syncScrollEnabled: false,
@@ -303,16 +297,6 @@ export const useUiStore = create<UiState>()(
       projectFlyoutWidth: 430,
       pendingAnnotationAnchor: null,
       activeWorkspaceView: 'dashboard',
-      setViewMode: (mode) =>
-        set((state) => ({
-          viewMode: mode,
-          showConfigDrawer: false,
-          showDocumentDrawer: mode !== 'document' ? false : state.showDocumentDrawer,
-          showChunkDrawer: false,
-          activePanel: mode !== 'document'
-            ? null
-            : state.activePanel === 'chunk' ? null : state.activePanel,
-        })),
       setDocumentLayout: (layout) => set({ documentLayout: layout }),
       setDocumentPaneFocus: (focus) => set({ documentPaneFocus: focus }),
       setSyncScrollEnabled: (enabled) => set({ syncScrollEnabled: enabled }),
