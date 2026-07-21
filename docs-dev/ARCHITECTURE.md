@@ -12,7 +12,7 @@
 | Frontend | React 19, TypeScript, Tailwind v4, Zustand, Vite |
 | Backend | Rust, Tauri v2, tokio, reqwest |
 | DB | SQLite via SQLx (WAL mode) |
-| Test FE | Vitest + Testing Library |
+| Test FE | Vitest + Testing Library; Playwright (2 smoke E2E Chromium) |
 | Test BE | tokio-test, wiremock |
 
 ---
@@ -26,6 +26,14 @@ devUrl Tauri (`src-tauri/tauri.conf.json`) e porta Vite (`package.json` → `dev
 - Override: `GLOSSA_DEV_PORT=9999 npm run tauri:dev` (PowerShell: `$env:GLOSSA_DEV_PORT=9999; npm run tauri:dev`) — variabile letta sia da Vite (`scripts/dev.mjs`) sia da Tauri (`scripts/tauri-dev.mjs`, inietta stesso valore in `devUrl` via `tauri dev --config`)
 - Script Node (`scripts/dev.mjs`/`scripts/tauri-dev.mjs`), non bash: npm su Windows esegue gli script tramite cmd.exe, che non capisce `${VAR:-default}` né richiede bash disponibile
 - Meccanismo esiste solo in sviluppo: build produzione (`npm run tauri:build`) carica `frontendDist` diretto, no dev server né porta coinvolti
+
+---
+
+## Strategia test
+
+- `npm test` resta la copertura capillare e veloce della logica e dei componenti.
+- `npm run test:e2e` esegue solo due smoke test Chromium: primo avvio/creazione workspace e creazione/apertura progetto. Il bridge locale viene simulato, quindi non avvia provider, import o export reali.
+- La CI esegue gli smoke test su ogni PR e conserva tracce e schermate soltanto quando falliscono. Non serve ripetere l'intera suite manualmente dopo l'apertura della PR.
 
 ---
 
