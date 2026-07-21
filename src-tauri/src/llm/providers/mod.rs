@@ -36,12 +36,27 @@ pub(crate) fn translation_audit_schema() -> Value {
             },
             "checkedSentenceIndices": {
                 "type": ["array", "null"],
-                "items": {"type": "integer"}
+                "items": {"type": "integer", "minimum": 1}
             }
         },
         "required": ["rating", "issues", "checkedSentenceIndices"],
         "additionalProperties": false
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::translation_audit_schema;
+
+    #[test]
+    fn audit_schema_requires_one_based_checked_sentence_indices() {
+        let schema = translation_audit_schema();
+
+        assert_eq!(
+            schema["properties"]["checkedSentenceIndices"]["items"]["minimum"],
+            1
+        );
+    }
 }
 
 pub fn get_provider(
