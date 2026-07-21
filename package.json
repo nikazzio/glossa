@@ -57,6 +57,7 @@
     "unified": "^11.0.5",
     "vite": "^8.0.16",
     "write-excel-file": "^4.1.1",
+    "zod": "^4.4.3",
     "zustand": "^5.0.0"
   },
   "devDependencies": {

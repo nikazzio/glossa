@@ -9,6 +9,7 @@ import {
   deleteCustomProviderProfile,
   testCustomProviderConnection,
 } from '../../services/customProviderService';
+import { customProviderProfileSchema } from '../../schemas/externalData';
 import { IconButton, ToggleRow } from '../ui';
 import type { CustomProviderProfile } from '../../types';
 
@@ -62,22 +63,40 @@ function ProfileForm({
   const [form, setForm] = useState(initial);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
-  const set = (patch: Partial<ProfileFormState>) => setForm((f) => ({ ...f, ...patch }));
+  const set = (patch: Partial<ProfileFormState>) => {
+    setForm((f) => ({ ...f, ...patch }));
+    setValidationError(null);
+  };
+
+  const validatedProfile = () => {
+    const parsed = customProviderProfileSchema.safeParse({
+      name: form.name,
+      baseUrl: form.baseUrl,
+      requiresApiKey: form.requiresApiKey,
+    });
+    if (!parsed.success) {
+      setValidationError(t('settings.customProvider.invalidProfile'));
+      return null;
+    }
+    return parsed.data;
+  };
 
   const handleSave = async () => {
-    if (!form.name.trim() || !form.baseUrl.trim()) return;
+    const profile = validatedProfile();
+    if (!profile) return;
     setSaving(true);
     try {
       await saveCustomProviderProfile(
         profileId,
-        form.name.trim(),
-        form.baseUrl.trim(),
+        profile.name,
+        profile.baseUrl,
         form.requiresApiKey && form.apiKey.trim() ? form.apiKey.trim() : null,
-        form.requiresApiKey
+        profile.requiresApiKey
       );
-      toast.success(t('settings.customProvider.saved', { name: form.name.trim() }));
-      onSave({ id: profileId, name: form.name.trim(), baseUrl: form.baseUrl.trim(), requiresApiKey: form.requiresApiKey });
+      toast.success(t('settings.customProvider.saved', { name: profile.name }));
+      onSave({ id: profileId, ...profile });
     } catch (err: unknown) {
       toast.error(t('settings.customProvider.saveFailed'), {
         description: err instanceof Error ? err.message : String(err),
@@ -88,6 +107,8 @@ function ProfileForm({
   };
 
   const handleTest = async () => {
+    const profile = validatedProfile();
+    if (!profile) return;
     if (!form.testModel.trim()) {
       toast.warning(t('settings.customProvider.testModelRequired'));
       return;
@@ -96,10 +117,10 @@ function ProfileForm({
     try {
       await saveCustomProviderProfile(
         profileId,
-        form.name.trim() || profileId,
-        form.baseUrl.trim(),
+        profile.name,
+        profile.baseUrl,
         form.requiresApiKey && form.apiKey.trim() ? form.apiKey.trim() : null,
-        form.requiresApiKey
+        profile.requiresApiKey
       );
       await testCustomProviderConnection(profileId, form.testModel.trim());
       toast.success(t('settings.customProvider.testOk'));
@@ -135,6 +156,9 @@ function ProfileForm({
           className={`${inputCls} font-mono`}
         />
       </FormField>
+      {validationError && (
+        <p role="alert" className="text-xs text-editorial-accent">{validationError}</p>
+      )}
 
       <div className="border-y border-editorial-border/60 py-3">
         <ToggleRow

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import type { ModelProvider, OllamaConfig, ProviderRuntimeConfig } from '../../types';
 import { defaultOllamaConfig } from '../../utils/providerOptions';
+import { advancedOptionsSchema } from '../../schemas/externalData';
 import { Select, ToggleRow } from '../ui';
 
 interface ProviderRuntimeEditorProps {
@@ -245,8 +246,9 @@ export function ProviderRuntimeEditor({
                     const next = e.target.value;
                     setAdvancedJson(next);
                     try {
-                      const parsed = JSON.parse(next) as Record<string, unknown>;
-                      patchOllama({ advancedOptions: parsed });
+                      const parsed = advancedOptionsSchema.safeParse(JSON.parse(next));
+                      if (!parsed.success) throw new Error('invalid_advanced_options');
+                      patchOllama({ advancedOptions: parsed.data });
                       setJsonError(null);
                     } catch {
                       setJsonError(t('pipeline.providerOptions.invalidJson'));

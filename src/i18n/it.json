@@ -522,6 +522,7 @@
       "deleteFailed": "Eliminazione profilo fallita",
       "testOk": "Connessione riuscita",
       "testFailed": "Connessione fallita",
+      "invalidProfile": "Inserisci un nome e un indirizzo completo validi.",
       "testModelRequired": "Inserisci un modello per testare"
     },
     "backup": "Backup e ripristino",

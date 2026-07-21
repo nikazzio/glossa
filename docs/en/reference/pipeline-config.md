@@ -60,6 +60,12 @@ Leave everything else alone until you know which part is causing the failure.
 - Keep format narrow so it does not silently alter meaning.
 - Use the judge to report issues, not to replace human review.
 
+## Advanced Ollama options
+
+Use the advanced JSON block only when the local provider has given you specific
+options to send. It must contain a **JSON object**: a list, a single value, or
+invalid JSON is not saved in the pipeline configuration.
+
 ## Execution rules
 
 - Test mode processes one chunk and leaves the configuration editable.

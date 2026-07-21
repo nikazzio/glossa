@@ -30,6 +30,7 @@ vi.mock('./dbService', () => ({
 }));
 
 import { importWorkspace } from './backupService';
+import { confirm } from '../stores/confirmStore';
 
 const t = (key: string) => key;
 
@@ -57,6 +58,29 @@ function backupWith(appSettings: Array<{ key: string; value: string }>): string 
 describe('importWorkspace', () => {
   beforeEach(() => {
     runMock.mockClear();
+    vi.mocked(confirm).mockClear();
+    fsState.raw = backupWith([]);
+  });
+
+  it('rejects an incomplete backup before opening the replacement confirmation or changing data', async () => {
+    fsState.raw = JSON.stringify({
+      glossa_version: '1.2.1',
+      schema_version: 1,
+      exported_at: '2026-07-21T12:00:00.000Z',
+      tables: { workspaces: [] },
+    });
+
+    await expect(importWorkspace(t)).rejects.toThrow('invalid_backup');
+    expect(confirm).not.toHaveBeenCalled();
+    expect(runMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects a backup created by a newer schema before changing data', async () => {
+    fsState.raw = backupWith([]).replace('"schema_version":1', '"schema_version":2');
+
+    await expect(importWorkspace(t)).rejects.toThrow('incompatible_schema_version');
+    expect(confirm).not.toHaveBeenCalled();
+    expect(runMock).not.toHaveBeenCalled();
   });
 
   it('does not restore the schema_version app_settings row, preventing resetOutdatedBetaDatabase from wiping the DB on next startup', async () => {
