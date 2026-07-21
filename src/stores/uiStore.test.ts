@@ -94,21 +94,6 @@ describe('uiStore drawer mutual exclusion', () => {
     expect(state.showSettings).toBe(true);
   });
 
-  it('changing view mode closes document drawers', () => {
-    useUiStore.setState({
-      viewMode: 'document',
-      showConfigDrawer: true,
-      showDocumentDrawer: true,
-    });
-
-    useUiStore.getState().setViewMode('sandbox');
-
-    const state = useUiStore.getState();
-    expect(state.viewMode).toBe('sandbox');
-    expect(state.showConfigDrawer).toBe(false);
-    expect(state.showDocumentDrawer).toBe(false);
-  });
-
   it('opening the chunk drawer closes config drawer and remembers the tab', () => {
     useUiStore.setState({ showConfigDrawer: true, chunkDrawerTab: 'audit' });
 

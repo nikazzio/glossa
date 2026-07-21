@@ -29,7 +29,7 @@ import { logger } from '../utils/logger';
 import { runInTransaction } from '../services/dbService';
 import { useWorkspaceStore } from './workspaceStore';
 import { useAnnotationsStore } from './annotationsStore';
-import type { Pipeline, PipelineConfig } from '../types';
+import type { Pipeline, PipelineConfig, TranslationChunk } from '../types';
 
 let saveInFlight: Promise<void> | null = null;
 let createPipelineInFlight: Promise<void> | null = null;
@@ -106,7 +106,6 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   createAndOpen: async (name: string) => {
     const pipeline = usePipelineStore.getState();
-    const ui = useUiStore.getState();
     const chunks = useChunksStore.getState().chunks;
     const { activeWorkspace } = useWorkspaceStore.getState();
     if (!activeWorkspace) throw new Error('No active workspace');
@@ -118,7 +117,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
     // saveProjectSource uses execute() directly — must run outside the transaction
     // to avoid deadlocking on the shared write-serialization queue.
-    await saveProjectSource(id, pipeline.inputText, pipeline.inputProcessingText, pipeline.sourceFootnotes, pipeline.config, ui.viewMode);
+    await saveProjectSource(id, pipeline.inputText, pipeline.inputProcessingText, pipeline.sourceFootnotes, pipeline.config);
     if (activePipelineId) {
       await runInTransaction(async (run) => {
         await saveFullState(id, activePipelineId, pipeline.config, chunks, run);
@@ -131,7 +130,6 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       sourceFootnotes: pipeline.sourceFootnotes,
       config: pipeline.config,
       chunks,
-      viewMode: ui.viewMode,
     });
 
     useOperationLogStore.getState().setContext(id, activePipelineId);
@@ -151,7 +149,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
     const activePipelineId = allPipelines[0]?.id ?? null;
 
-    let restoredChunks = useChunksStore.getState().chunks.filter(() => false); // empty typed array
+    let restoredChunks: TranslationChunk[] = [];
 
     if (activePipelineId) {
       const [pipelineData, savedTranslations] = await Promise.all([
@@ -204,9 +202,6 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       await annStore.loadAnnotations(activePipelineId);
     }
 
-    useUiStore.getState().setViewMode(
-      source.viewMode ?? (restoredChunks.length === 0 && source.sourceDisplayText.trim() ? 'sandbox' : 'document'),
-    );
     useUiStore.getState().setSelectedChunkId(restoredChunks[0]?.id ?? null);
 
     set({
@@ -245,7 +240,6 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   closeProject: () => {
     useUiStore.getState().setSelectedChunkId(null);
-    useUiStore.getState().setViewMode('document');
     useChunksStore.setState({ chunks: [], isProcessing: false, cancelRequested: false, activeStreamId: null });
     usePipelineStore.getState().resetToDefaults();
     useOperationLogStore.setState({ entries: [], currentProjectId: null, currentPipelineId: null });
@@ -277,14 +271,12 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       if (chunksStore.isProcessing) throw new Error('Cannot save while the pipeline is processing.');
 
       const pipeline = usePipelineStore.getState();
-      const ui = useUiStore.getState();
       const effectiveSnapshot = buildProjectSnapshot({
         inputText: pipeline.inputText,
         inputProcessingText: pipeline.inputProcessingText,
         sourceFootnotes: pipeline.sourceFootnotes,
         config: pipeline.config,
         chunks: chunksStore.chunks,
-        viewMode: ui.viewMode,
       });
 
       logger.info('saveCurrentProject: start', {
@@ -315,7 +307,6 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
           pipeline.inputProcessingText,
           pipeline.sourceFootnotes,
           pipeline.config,
-          ui.viewMode,
         );
 
         if (activePipelineId) {

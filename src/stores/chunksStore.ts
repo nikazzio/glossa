@@ -194,8 +194,6 @@ export const useChunksStore = create<ChunksState>((set) => ({
       carryTrailingShortBlocks: config.carryTrailingShortBlocks,
     }, sourceFootnotes);
 
-    const ui = useUiStore.getState();
-    ui.setViewMode(chunks.length > 1 ? 'document' : 'sandbox');
     syncSelectedChunk(chunks);
     set({ chunks });
   },
@@ -206,14 +204,12 @@ export const useChunksStore = create<ChunksState>((set) => ({
 
     const chunkTexts = precomputedChunks ?? chunkText(sourceDocument.processingText, options);
     const chunks = chunksFromTexts(chunkTexts, sourceDocument.footnotes);
-    const ui = useUiStore.getState();
     usePipelineStore.getState().setSourceDocument({
       displayText: sourceDocument.displayText,
       processingText: sourceDocument.processingText,
       sourceFootnotes: sourceDocument.footnotes,
       renderProfile: sourceDocument.renderProfile,
     });
-    ui.setViewMode('document');
     // Niente auto-apertura del Chunk drawer: con la shell multibar spingerebbe il documento.
     // Il pannello Chunk si apre solo su azione esplicita (click su chunk/problema o rail).
     syncSelectedChunk(chunks);
@@ -222,7 +218,6 @@ export const useChunksStore = create<ChunksState>((set) => ({
 
   clearChunks: () => {
     useUiStore.getState().setSelectedChunkId(null);
-    useUiStore.getState().setViewMode('sandbox');
     set({ chunks: [] });
   },
 

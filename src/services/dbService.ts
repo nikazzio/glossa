@@ -8,7 +8,7 @@ import {
 
 let db: Database | null = null;
 const DB_URL = 'sqlite:glossa.db';
-const CURRENT_SCHEMA_VERSION = 'db-schema-v3';
+const CURRENT_SCHEMA_VERSION = 'db-schema-v4';
 
 // These tables were introduced before their corresponding product features
 // existed. Keep the list explicit so an older beta DB is cleaned up on boot,
@@ -183,7 +183,6 @@ export async function initDatabase(): Promise<void> {
       name TEXT NOT NULL,
       source_language TEXT NOT NULL DEFAULT 'English',
       target_language TEXT NOT NULL DEFAULT 'Italian',
-      view_mode TEXT DEFAULT NULL,
       source_display_text TEXT DEFAULT '',
       source_processing_text TEXT DEFAULT '',
       source_footnotes TEXT DEFAULT '[]',

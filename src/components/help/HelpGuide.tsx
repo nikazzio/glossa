@@ -3,7 +3,7 @@ import {
   ChevronRight, HelpCircle,
   FolderOpen, Upload,
   LibraryBig, Globe, Settings,
-  LayoutTemplate, PanelRight,
+  PanelRight,
   CheckCheck, PanelTopClose, ScanLine,
   Wand2, BookmarkPlus, BookOpen, Brain,
   Copy, Check, RefreshCw,
@@ -387,9 +387,6 @@ function FeaturesSection() {
       <SubTitle>{t('help.features.watchdogTitle')}</SubTitle>
       <P>{t('help.features.watchdogDesc')}</P>
 
-      <SubTitle>{t('help.features.sandboxTitle')}</SubTitle>
-      <P>{t('help.features.sandboxDesc')}</P>
-
       <SubTitle>{t('help.features.footnotesTitle')}</SubTitle>
       <P>{t('help.features.footnotesDesc')}</P>
       <Tip title={t('help.features.footnotesTipTitle')}>{t('help.features.footnotesTipDesc')}</Tip>
@@ -639,7 +636,6 @@ function ShortcutsSection() {
     { label: t('help.shortcuts.openLibrary'),   icon: <LibraryBig size={14} /> },
     { label: t('help.shortcuts.switchLang'),    icon: <Globe size={14} /> },
     { label: t('help.shortcuts.openSettings'),  icon: <Settings size={14} /> },
-    { label: t('help.shortcuts.sandbox'),       icon: <LayoutTemplate size={14} /> },
     { label: t('help.shortcuts.openInsights'),  icon: <PanelRight size={14} /> },
     { label: t('help.shortcuts.toggleEditorTools'), icon: <PanelTopClose size={14} /> },
     { label: t('help.shortcuts.markdownHelp'), icon: <HelpCircle size={14} /> },

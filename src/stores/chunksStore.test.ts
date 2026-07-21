@@ -28,7 +28,6 @@ describe('chunksStore', () => {
     });
 
     useUiStore.setState({
-      viewMode: 'sandbox',
       documentLayout: 'auto',
       selectedChunkId: null,
       showSettings: false,
@@ -44,26 +43,25 @@ describe('chunksStore', () => {
     flushPendingTokenBatch();
   });
 
-  it('generates chunks and switches to document mode for multi-chunk texts', () => {
+  it('generates chunks and selects the first one for multi-chunk texts', () => {
     usePipelineStore.getState().setInputText('First paragraph.\n\nSecond paragraph.');
     useChunksStore.getState().generateChunks();
 
     expect(useChunksStore.getState().chunks).toHaveLength(2);
-    expect(useUiStore.getState().viewMode).toBe('document');
     expect(useUiStore.getState().selectedChunkId).toBe(useChunksStore.getState().chunks[0].id);
   });
 
-  it('keeps sandbox mode for a single generated chunk', () => {
+  it('creates a single chunk when chunking is disabled', () => {
     usePipelineStore.getState().setInputText('Single paragraph only.');
     usePipelineStore.getState().setConfig((prev) => ({ ...prev, useChunking: false }));
 
     useChunksStore.getState().generateChunks();
 
     expect(useChunksStore.getState().chunks).toHaveLength(1);
-    expect(useUiStore.getState().viewMode).toBe('sandbox');
+    expect(useUiStore.getState().selectedChunkId).toBe(useChunksStore.getState().chunks[0].id);
   });
 
-  it('loads imported text into document mode even when it becomes a single chunk', () => {
+  it('loads imported text as one selected chunk when chunking is disabled', () => {
     useChunksStore.getState().loadDocument('Single imported paragraph.', {
       useChunking: false,
       targetWordsPerChunk: 0,
@@ -73,7 +71,6 @@ describe('chunksStore', () => {
     expect(useChunksStore.getState().chunks[0].sourceDisplayText).toBe(
       'Single imported paragraph.',
     );
-    expect(useUiStore.getState().viewMode).toBe('document');
     expect(useUiStore.getState().selectedChunkId).toBe(useChunksStore.getState().chunks[0].id);
   });
 
@@ -179,14 +176,13 @@ describe('chunksStore', () => {
     expect(issues[0].rejected).toBe(true);
   });
 
-  it('clears chunks and returns to sandbox mode', () => {
+  it('clears chunks and the current selection', () => {
     usePipelineStore.getState().setInputText('A\n\nB');
     useChunksStore.getState().generateChunks();
 
     useChunksStore.getState().clearChunks();
 
     expect(useChunksStore.getState().chunks).toEqual([]);
-    expect(useUiStore.getState().viewMode).toBe('sandbox');
     expect(useUiStore.getState().selectedChunkId).toBeNull();
   });
 

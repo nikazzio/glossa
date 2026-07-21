@@ -34,7 +34,7 @@ const SAFE_COL = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
 const ALLOWED_COLUMNS: Record<BackupTable, ReadonlySet<string>> = {
   workspaces:               new Set(['id','name','description','embedding_model','memory_extractor_provider','memory_extractor_model','memory_extractor_prompt','created_at']),
   glossaries:               new Set(['id','name','description','source_language','target_language','created_at']),
-  projects:                 new Set(['id','name','source_language','target_language','workspace_id','created_at','updated_at','view_mode','source_display_text']),
+  projects:                 new Set(['id','name','source_language','target_language','workspace_id','created_at','updated_at','source_display_text']),
   app_settings:             new Set(['key','value']),
   prompt_templates:         new Set(['id','name','prompt','default_model','default_provider','created_at','updated_at','context']),
   pipelines:                new Set(['id','project_id','name','source_language','target_language','pipeline_mode','stages','judge_prompt','judge_model','judge_provider','use_chunking','words_per_chunk','source_display_text','source_processing_text','source_footnotes','review_provider_options','persona','custom_source_language','custom_target_language','blob_budget_tokens','blob_overlap','coherence_prompt','run_status','last_run_config','run_in_progress','created_at','updated_at','use_phrase_memory','auto_search_phrase_memory','phrase_memory_similarity_threshold','phrase_memory_max_results']),

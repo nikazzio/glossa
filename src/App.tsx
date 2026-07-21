@@ -148,15 +148,6 @@ function RunStatusAnnouncer() {
   );
 }
 
-const PipelineConfig = lazy(() =>
-  import('./components/pipeline').then((m) => ({ default: m.PipelineConfig })),
-);
-const ProductionStream = lazy(() =>
-  import('./components/pipeline').then((m) => ({ default: m.ProductionStream })),
-);
-const AuditPanel = lazy(() =>
-  import('./components/audit').then((m) => ({ default: m.AuditPanel })),
-);
 const ConfigDrawer = lazy(() =>
   import('./components/document/ConfigDrawer').then((m) => ({ default: m.ConfigDrawer })),
 );
@@ -209,7 +200,6 @@ function EditorView() {
   }, [runSingleChunk]);
   useProjectAutosave();
   useKeyboardShortcuts({ onRunPipeline: runPipeline, onRunSingleChunk: handleRetranslateChunk });
-  const viewMode = useUiStore((state) => state.viewMode);
   const setShowConfigDrawer = useUiStore((state) => state.setShowConfigDrawer);
   const showSettings = useUiStore((state) => state.showSettings);
   const chunkPresetMedium = useConfigStore((state) => state.chunkPresetMedium);
@@ -230,7 +220,7 @@ function EditorView() {
   if (showLibraryPanel) libraryPanelLoaded.current = true;
 
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
-  const editorContentKey = `editor-panel-${currentProjectId ?? 'none'}-${viewMode}`;
+  const editorContentKey = `editor-panel-${currentProjectId ?? 'none'}`;
 
   const handleImportDocument = useCallback(async () => {
     try {
@@ -346,52 +336,31 @@ function EditorView() {
 
   return (
     <>
-      {viewMode === 'document' ? (
-        <Suspense fallback={null}>
-          <main className="relative flex flex-1 min-h-0 overflow-hidden">
-            <ShellNext
+      <Suspense fallback={null}>
+        <main className="relative flex flex-1 min-h-0 overflow-hidden">
+          <ShellNext
+            onRunPipeline={runPipeline}
+            onCancelPipeline={cancelPipeline}
+            onRetranslateChunk={handleRetranslateChunk}
+            onImportDocument={handleImportDocument}
+            onReauditChunk={auditSingleChunk}
+            onRunCoherenceAudit={runCoherenceAudit}
+          >
+            <ConfigDrawer
               onRunPipeline={runPipeline}
+              onRunAuditOnly={runAuditOnly}
               onCancelPipeline={cancelPipeline}
-              onRetranslateChunk={handleRetranslateChunk}
-              onImportDocument={handleImportDocument}
-              onReauditChunk={auditSingleChunk}
-              onRunCoherenceAudit={runCoherenceAudit}
-            >
-              <ConfigDrawer
-                onRunPipeline={runPipeline}
-                onRunAuditOnly={runAuditOnly}
-                onCancelPipeline={cancelPipeline}
+            />
+            <div className="relative flex min-w-0 flex-1">
+              <DocumentView
+                onRetranslateChunk={handleRetranslateChunk}
+                onImportDocument={handleImportDocument}
               />
-              <div className="relative flex min-w-0 flex-1">
-                <DocumentView
-                  onRetranslateChunk={handleRetranslateChunk}
-                  onImportDocument={handleImportDocument}
-                />
-                <PanelTransitionVeil panelKey={editorContentKey} tone="paper" variant="project" />
-              </div>
-            </ShellNext>
-          </main>
-        </Suspense>
-      ) : (
-        <Suspense fallback={null}>
-          <main className="relative grid grid-cols-1 md:grid-cols-12 flex-1 min-h-0">
-            <PipelineConfig
-              onRunPipeline={runPipeline}
-              onRunAuditOnly={runAuditOnly}
-              onCancelPipeline={cancelPipeline}
-            />
-            <ProductionStream
-              onRetranslateChunk={runSingleChunk}
-              onReauditChunk={auditSingleChunk}
-            />
-            <AuditPanel
-              onRunAuditOnly={runAuditOnly}
-              onReauditChunk={auditSingleChunk}
-            />
-            <PanelTransitionVeil panelKey={editorContentKey} tone="bg" variant="project" />
-          </main>
-        </Suspense>
-      )}
+              <PanelTransitionVeil panelKey={editorContentKey} tone="paper" variant="project" />
+            </div>
+          </ShellNext>
+        </main>
+      </Suspense>
 
       {settingsLoaded.current && (
         <Suspense fallback={null}>
