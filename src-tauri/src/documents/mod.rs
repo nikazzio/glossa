@@ -5,7 +5,7 @@ use tauri::Manager;
 const MAX_DOCX_BYTES: u64 = 100 * 1024 * 1024;
 const MAX_PDF_BYTES: u64 = 50 * 1024 * 1024;
 
-fn check_file_size(path: &str, limit: u64) -> Result<(), String> {
+fn check_file_size(path: &std::path::Path, limit: u64) -> Result<(), String> {
     let size = fs::metadata(path)
         .map_err(|e| format!("Failed to read file metadata: {e}"))?
         .len();
@@ -23,14 +23,9 @@ fn is_within_allowed_roots(canonical: &std::path::Path, allowed_roots: &[PathBuf
     allowed_roots.iter().any(|root| canonical.starts_with(root))
 }
 
-/// Restricts document imports to the same directories granted to the frontend
-/// file-selection dialog (see `capabilities/default.json`), so a compromised
-/// webview cannot use these commands to read arbitrary files (e.g. `/etc/passwd`,
-/// SSH keys) via a raw `fs::read` that bypasses the Tauri fs-plugin scope.
-fn validate_document_path(app: &tauri::AppHandle, path: &str) -> Result<PathBuf, String> {
-    let canonical = fs::canonicalize(path).map_err(|e| format!("Failed to read file: {e}"))?;
+fn resolve_allowed_roots(app: &tauri::AppHandle) -> Vec<PathBuf> {
     let resolver = app.path();
-    let allowed_roots: Vec<PathBuf> = [
+    [
         resolver.document_dir(),
         resolver.download_dir(),
         resolver.desktop_dir(),
@@ -41,13 +36,27 @@ fn validate_document_path(app: &tauri::AppHandle, path: &str) -> Result<PathBuf,
     .into_iter()
     .filter_map(Result::ok)
     .filter_map(|dir| fs::canonicalize(&dir).ok())
-    .collect();
+    .collect()
+}
 
-    if is_within_allowed_roots(&canonical, &allowed_roots) {
+/// Canonicalizes `path` and checks it against `allowed_roots`, rejecting
+/// anything outside them (and any path that doesn't resolve, e.g. via a
+/// symlink to a missing target) before it is ever read from disk.
+fn validate_path_against_roots(path: &str, allowed_roots: &[PathBuf]) -> Result<PathBuf, String> {
+    let canonical = fs::canonicalize(path).map_err(|e| format!("Failed to read file: {e}"))?;
+    if is_within_allowed_roots(&canonical, allowed_roots) {
         Ok(canonical)
     } else {
         Err("File location not permitted".to_string())
     }
+}
+
+/// Restricts document imports to the same directories granted to the frontend
+/// file-selection dialog (see `capabilities/default.json`), so a compromised
+/// webview cannot use these commands to read arbitrary files (e.g. `/etc/passwd`,
+/// SSH keys) via a raw `fs::read` that bypasses the Tauri fs-plugin scope.
+fn validate_document_path(app: &tauri::AppHandle, path: &str) -> Result<PathBuf, String> {
+    validate_path_against_roots(path, &resolve_allowed_roots(app))
 }
 
 pub mod docx_export;
@@ -67,7 +76,7 @@ pub(crate) use pdf_extract::normalize_pdf_text;
 #[tauri::command]
 pub async fn extract_docx_text(app: tauri::AppHandle, path: String) -> Result<String, String> {
     let canonical = validate_document_path(&app, &path)?;
-    check_file_size(&path, MAX_DOCX_BYTES)?;
+    check_file_size(&canonical, MAX_DOCX_BYTES)?;
     tauri::async_runtime::spawn_blocking(move || {
         let bytes = fs::read(&canonical).map_err(|e| format!("Failed to read file: {}", e))?;
         extract_docx_text_from_bytes(&bytes)
@@ -79,7 +88,7 @@ pub async fn extract_docx_text(app: tauri::AppHandle, path: String) -> Result<St
 #[tauri::command]
 pub async fn extract_docx_markdown(app: tauri::AppHandle, path: String) -> Result<String, String> {
     let canonical = validate_document_path(&app, &path)?;
-    check_file_size(&path, MAX_DOCX_BYTES)?;
+    check_file_size(&canonical, MAX_DOCX_BYTES)?;
     tauri::async_runtime::spawn_blocking(move || {
         let bytes = fs::read(&canonical).map_err(|e| format!("Failed to read file: {}", e))?;
         extract_docx_markdown_from_bytes(&bytes)
@@ -91,7 +100,7 @@ pub async fn extract_docx_markdown(app: tauri::AppHandle, path: String) -> Resul
 #[tauri::command]
 pub async fn extract_pdf_text(app: tauri::AppHandle, path: String) -> Result<String, String> {
     let canonical = validate_document_path(&app, &path)?;
-    check_file_size(&path, MAX_PDF_BYTES)?;
+    check_file_size(&canonical, MAX_PDF_BYTES)?;
     tauri::async_runtime::spawn_blocking(move || {
         let bytes = fs::read(&canonical).map_err(|e| format!("Failed to read file: {}", e))?;
         extract_pdf_text_from_bytes(&bytes)
@@ -149,7 +158,7 @@ mod tests {
     fn check_file_size_accepts_file_within_limit() {
         let path = std::env::temp_dir().join("glossa_test_size_ok.bin");
         std::fs::write(&path, b"small content").unwrap();
-        assert!(check_file_size(path.to_str().unwrap(), MAX_DOCX_BYTES).is_ok());
+        assert!(check_file_size(&path, MAX_DOCX_BYTES).is_ok());
         let _ = std::fs::remove_file(&path);
     }
 
@@ -157,7 +166,7 @@ mod tests {
     fn check_file_size_rejects_file_over_limit() {
         let path = std::env::temp_dir().join("glossa_test_size_over.bin");
         std::fs::write(&path, b"data").unwrap();
-        let result = check_file_size(path.to_str().unwrap(), 1);
+        let result = check_file_size(&path, 1);
         let _ = std::fs::remove_file(&path);
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("File too large"));
@@ -165,7 +174,10 @@ mod tests {
 
     #[test]
     fn check_file_size_rejects_missing_file() {
-        let result = check_file_size("/nonexistent_glossa_test_path_xyz.docx", MAX_DOCX_BYTES);
+        let result = check_file_size(
+            std::path::Path::new("/nonexistent_glossa_test_path_xyz.docx"),
+            MAX_DOCX_BYTES,
+        );
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("Failed to read file metadata"));
     }
@@ -198,6 +210,43 @@ mod tests {
     fn is_within_allowed_roots_rejects_when_no_roots_resolved() {
         let file = std::env::temp_dir().join("glossa_test.docx");
         assert!(!is_within_allowed_roots(&file, &[]));
+    }
+
+    #[test]
+    fn validate_path_against_roots_accepts_real_file_inside_allowed_root() {
+        let root = std::env::temp_dir();
+        let file = root.join("glossa_test_validate_ok.docx");
+        std::fs::write(&file, b"content").unwrap();
+
+        let result = validate_path_against_roots(file.to_str().unwrap(), &[root]);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), std::fs::canonicalize(&file).unwrap());
+        let _ = std::fs::remove_file(&file);
+    }
+
+    #[test]
+    fn validate_path_against_roots_rejects_real_file_outside_allowed_roots() {
+        let allowed_root = std::env::temp_dir().join("glossa_allowed_only");
+        let file = std::env::temp_dir().join("glossa_test_validate_reject.docx");
+        std::fs::write(&file, b"content").unwrap();
+
+        let result = validate_path_against_roots(file.to_str().unwrap(), &[allowed_root]);
+
+        let _ = std::fs::remove_file(&file);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "File location not permitted");
+    }
+
+    #[test]
+    fn validate_path_against_roots_rejects_missing_file() {
+        let root = std::env::temp_dir();
+        let result = validate_path_against_roots(
+            root.join("glossa_does_not_exist.docx").to_str().unwrap(),
+            &[root],
+        );
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Failed to read file"));
     }
 
     #[test]
