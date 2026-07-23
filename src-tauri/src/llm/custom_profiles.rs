@@ -1,7 +1,38 @@
 use rusqlite::{params, Connection};
 use tauri::Manager;
+use url::Url;
 
 use crate::llm::provider::LlmProvider;
+
+fn is_loopback_host(host: &url::Host<&str>) -> bool {
+    match host {
+        url::Host::Domain(domain) => domain.eq_ignore_ascii_case("localhost"),
+        url::Host::Ipv4(ip) => ip.is_loopback(),
+        url::Host::Ipv6(ip) => ip.is_loopback(),
+    }
+}
+
+/// Rejects custom endpoints that would send credentials over an unencrypted
+/// connection to anything other than the local machine (e.g. a self-hosted
+/// Ollama instance on 127.0.0.1). A plain-HTTP endpoint reachable over the
+/// network could leak the API key to anyone able to observe the traffic.
+fn validate_base_url(base_url: &str) -> Result<(), String> {
+    let parsed = Url::parse(base_url).map_err(|e| format!("Invalid provider URL: {e}"))?;
+    match parsed.scheme() {
+        "https" => Ok(()),
+        "http" => {
+            let host = parsed
+                .host()
+                .ok_or_else(|| "Provider URL is missing a host".to_string())?;
+            if is_loopback_host(&host) {
+                Ok(())
+            } else {
+                Err("Non-local HTTP endpoints are not allowed — use HTTPS, or point to a loopback address (localhost/127.0.0.1) for local providers".to_string())
+            }
+        }
+        other => Err(format!("Unsupported provider URL scheme: {other}")),
+    }
+}
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -47,19 +78,22 @@ fn verify_schema(conn: &Connection) -> Result<(), String> {
 
 pub fn get_profile(app: &tauri::AppHandle, id: &str) -> Result<CustomProviderProfile, String> {
     let conn = open_db(app)?;
-    conn.query_row(
-        "SELECT id, name, base_url, requires_api_key FROM custom_providers WHERE id = ?1",
-        params![id],
-        |row| {
-            Ok(CustomProviderProfile {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                base_url: row.get(2)?,
-                requires_api_key: row.get::<_, i64>(3)? != 0,
-            })
-        },
-    )
-    .map_err(|e| format!("Profile not found ({id}): {e}"))
+    let profile = conn
+        .query_row(
+            "SELECT id, name, base_url, requires_api_key FROM custom_providers WHERE id = ?1",
+            params![id],
+            |row| {
+                Ok(CustomProviderProfile {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    base_url: row.get(2)?,
+                    requires_api_key: row.get::<_, i64>(3)? != 0,
+                })
+            },
+        )
+        .map_err(|e| format!("Profile not found ({id}): {e}"))?;
+    validate_base_url(&profile.base_url)?;
+    Ok(profile)
 }
 
 #[tauri::command]
@@ -97,6 +131,7 @@ pub async fn save_custom_provider_profile(
     api_key: Option<String>,
     requires_api_key: bool,
 ) -> Result<(), String> {
+    validate_base_url(&base_url)?;
     let _write_guard = write_coordinator.lock().await;
     let conn = open_db(&app)?;
     conn.execute(
@@ -171,5 +206,56 @@ pub async fn test_custom_provider_connection(
     match provider.call(&client, &req).await {
         Ok(_) => Ok(true),
         Err(e) => Err(e),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn accepts_https_endpoint() {
+        assert!(validate_base_url("https://api.example.com/v1").is_ok());
+    }
+
+    #[test]
+    fn accepts_http_localhost() {
+        assert!(validate_base_url("http://localhost:11434/v1").is_ok());
+    }
+
+    #[test]
+    fn accepts_http_loopback_ipv4() {
+        assert!(validate_base_url("http://127.0.0.1:11434/v1").is_ok());
+    }
+
+    #[test]
+    fn accepts_http_loopback_ipv6() {
+        assert!(validate_base_url("http://[::1]:11434/v1").is_ok());
+    }
+
+    #[test]
+    fn rejects_http_public_host() {
+        let result = validate_base_url("http://api.example.com/v1");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Non-local HTTP"));
+    }
+
+    #[test]
+    fn rejects_http_public_ip() {
+        assert!(validate_base_url("http://93.184.216.34/v1").is_err());
+    }
+
+    #[test]
+    fn rejects_unsupported_scheme() {
+        let result = validate_base_url("ftp://example.com/v1");
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .contains("Unsupported provider URL scheme"));
+    }
+
+    #[test]
+    fn rejects_malformed_url() {
+        assert!(validate_base_url("not a url").is_err());
     }
 }
