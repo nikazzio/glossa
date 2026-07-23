@@ -3,7 +3,7 @@ import type { TranslationChunk } from '../../types';
 export type ChunkOutcome = 'completed' | 'failed' | 'cancelled' | 'skipped';
 export type BatchRunMode = 'resume' | 'rerun-unlocked';
 
-function escapeChunkId(value: string): string {
+function escapeXmlText(value: string): string {
   return value
     .replace(/&/g, '&amp;')
     .replace(/"/g, '&quot;')
@@ -12,7 +12,7 @@ function escapeChunkId(value: string): string {
 }
 
 function formatReferenceChunk(chunkId: string, text: string): string {
-  return `<chunk id="${escapeChunkId(chunkId)}">\n${text}\n</chunk>`;
+  return `<chunk id="${escapeXmlText(chunkId)}">\n${escapeXmlText(text)}\n</chunk>`;
 }
 
 export function buildBlobContext(
