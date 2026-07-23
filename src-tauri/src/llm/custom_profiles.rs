@@ -27,7 +27,7 @@ fn validate_base_url(base_url: &str) -> Result<(), String> {
             if is_loopback_host(&host) {
                 Ok(())
             } else {
-                Err("Non-local HTTP endpoints are not allowed — use HTTPS, or point to a loopback address (localhost/127.0.0.1) for local providers".to_string())
+                Err("Non-local HTTP endpoints are not allowed — use HTTPS, or point to a loopback address (localhost/127.0.0.1/::1) for local providers".to_string())
             }
         }
         other => Err(format!("Unsupported provider URL scheme: {other}")),
