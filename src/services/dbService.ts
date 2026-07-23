@@ -26,8 +26,9 @@ async function resolveDbUrl(): Promise<string> {
   try {
     const status = await invoke<DataDirStatus>('get_data_dir');
     if (!status?.path) return 'sqlite:glossa.db';
-    const separator = status.path.includes('\\') ? '\\' : '/';
-    return `sqlite:${status.path}${separator}glossa.db`;
+    const trimmedPath = status.path.replace(/[/\\]+$/, '');
+    const separator = trimmedPath.includes('\\') ? '\\' : '/';
+    return `sqlite:${trimmedPath}${separator}glossa.db`;
   } catch {
     // Falls back to the plugin's own relative-path resolution (OS default
     // app config dir) if the backend command is unavailable for any reason.

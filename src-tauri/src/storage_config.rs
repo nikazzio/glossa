@@ -143,6 +143,19 @@ pub async fn set_data_dir(
     }
 
     let new_db = new_dir.join(DB_FILE_NAME);
+    if new_db.exists() {
+        return Err(
+            "Destination folder already contains a glossa.db — choose an empty folder".to_string(),
+        );
+    }
+    for suffix in ["wal", "shm"] {
+        if new_dir.join(format!("glossa.db-{suffix}")).exists() {
+            return Err(format!(
+                "Destination folder already contains glossa.db-{suffix} — choose an empty folder"
+            ));
+        }
+    }
+
     fs::copy(&current_db, &new_db).map_err(|e| format!("Copy failed: {e}"))?;
     for suffix in ["wal", "shm"] {
         let sidecar = current_dir.join(format!("glossa.db-{suffix}"));
